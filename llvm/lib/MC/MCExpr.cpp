@@ -374,6 +374,12 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_VE_TLS_GD_LO32: return "tls_gd_lo";
   case VK_VE_TPOFF_HI32: return "tpoff_hi";
   case VK_VE_TPOFF_LO32: return "tpoff_lo";
+  case VK_MOS_ADDR16_LO: return "mos16lo";
+  case VK_MOS_ADDR16_HI: return "mos16hi";
+  case VK_MOS_ADDR24_SEGMENT: return "mos24segment";
+  case VK_MOS_ADDR24_BANK: return "mos24bank";
+  case VK_MOS_ADDR24_BANK_LO: return "mos24banklo";
+  case VK_MOS_ADDR24_BANK_HI: return "mos24bankhi";
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -515,6 +521,12 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("tls_gd_lo", VK_VE_TLS_GD_LO32)
     .Case("tpoff_hi", VK_VE_TPOFF_HI32)
     .Case("tpoff_lo", VK_VE_TPOFF_LO32)
+    .Case("mos16lo", VK_MOS_ADDR16_LO)
+    .Case("mos16hi", VK_MOS_ADDR16_HI)
+    .Case("mos24segment", VK_MOS_ADDR24_SEGMENT)
+    .Case("mos24bank", VK_MOS_ADDR24_BANK)
+    .Case("mos24banklo", VK_MOS_ADDR24_BANK_LO)
+    .Case("mos24bankhi", VK_MOS_ADDR24_BANK_HI)
     .Default(VK_Invalid);
 }
 
