@@ -20,15 +20,15 @@ namespace llvm {
 namespace {
 
 const struct ModifierEntry {
-  const char * const Spelling;
+  const char *const Spelling;
   MOSMCExpr::VariantKind VariantKind;
 } ModifierNames[] = {
     {"mos16lo", MOSMCExpr::VK_MOS_ADDR16_LO},
     {"mos16hi", MOSMCExpr::VK_MOS_ADDR16_HI},
-    {"mos24segment", MOSMCExpr::VK_MOS_ADDR24_SEGMENT},
     {"mos24bank", MOSMCExpr::VK_MOS_ADDR24_BANK},
-    {"mos24banklo", MOSMCExpr::VK_MOS_ADDR24_BANK_LO},
-    {"mos24bankhi", MOSMCExpr::VK_MOS_ADDR24_BANK_HI},
+    {"mos24segment", MOSMCExpr::VK_MOS_ADDR24_SEGMENT},
+    {"mos24segmentlo", MOSMCExpr::VK_MOS_ADDR24_SEGMENT_LO},
+    {"mos24segmenthi", MOSMCExpr::VK_MOS_ADDR24_SEGMENT_HI},
 };
 
 } // end of anonymous namespace
@@ -41,8 +41,9 @@ const MOSMCExpr *MOSMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 void MOSMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   assert(Kind != VK_MOS_NONE);
 
-  if (isNegated())
+  if (isNegated()) {
     OS << '-';
+  }
 
   OS << getName() << '(';
   getSubExpr()->print(OS, MAI);
@@ -55,8 +56,9 @@ bool MOSMCExpr::evaluateAsConstant(int64_t &Result) const {
   bool isRelocatable =
       getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr);
 
-  if (!isRelocatable)
+  if (!isRelocatable) {
     return false;
+  }
 
   if (Value.isAbsolute()) {
     Result = evaluateAsInt64(Value.getConstant());
@@ -78,13 +80,16 @@ bool MOSMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
   if (Value.isAbsolute()) {
     Result = MCValue::get(evaluateAsInt64(Value.getConstant()));
   } else {
-    if (!Layout) return false;
+    if (!Layout) {
+      return false;
+    }
 
     MCContext &Context = Layout->getAssembler().getContext();
     const MCSymbolRefExpr *Sym = Value.getSymA();
     MCSymbolRefExpr::VariantKind Modifier = Sym->getKind();
-    if (Modifier != MCSymbolRefExpr::VK_None)
+    if (Modifier != MCSymbolRefExpr::VK_None) {
       return false;
+    }
 
     Sym = MCSymbolRefExpr::create(&Sym->getSymbol(), Modifier, Context);
     Result = MCValue::get(Sym, Value.getSymB(), Value.getConstant());
@@ -94,24 +99,25 @@ bool MOSMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
 }
 
 int64_t MOSMCExpr::evaluateAsInt64(int64_t Value) const {
-  if (Negated)
+  if (Negated) {
     Value *= -1;
+  }
 
   switch (Kind) {
   case MOSMCExpr::VK_MOS_ADDR16_LO:
-  case MOSMCExpr::VK_MOS_ADDR24_BANK_LO:
+  case MOSMCExpr::VK_MOS_ADDR24_SEGMENT_LO:
     Value &= 0xff;
     break;
   case MOSMCExpr::VK_MOS_ADDR16_HI:
-  case MOSMCExpr::VK_MOS_ADDR24_BANK_HI:
+  case MOSMCExpr::VK_MOS_ADDR24_SEGMENT_HI:
     Value &= 0xff00;
     Value >>= 8;
     break;
-  case MOSMCExpr::VK_MOS_ADDR24_SEGMENT:
+  case MOSMCExpr::VK_MOS_ADDR24_BANK:
     Value &= 0xff0000;
     Value >>= 16;
     break;
-  case MOSMCExpr::VK_MOS_ADDR24_BANK:
+  case MOSMCExpr::VK_MOS_ADDR24_SEGMENT:
     Value &= 0xffff;
     break;
 
@@ -137,11 +143,11 @@ MOS::Fixups MOSMCExpr::getFixupKind() const {
   case VK_MOS_ADDR24_SEGMENT:
     Kind = MOS::Addr24_Segment;
     break;
-  case VK_MOS_ADDR24_BANK_HI:
-    Kind = MOS::Addr24_Bank_High;
+  case VK_MOS_ADDR24_SEGMENT_HI:
+    Kind = MOS::Addr24_Segment_High;
     break;
-  case VK_MOS_ADDR24_BANK_LO:
-    Kind = MOS::Addr24_Bank_Low;
+  case VK_MOS_ADDR24_SEGMENT_LO:
+    Kind = MOS::Addr24_Segment_Low;
     break;
   case VK_MOS_NONE:
     llvm_unreachable("Uninitialized expression");
@@ -177,4 +183,3 @@ MOSMCExpr::VariantKind MOSMCExpr::getKindByName(StringRef Name) {
 }
 
 } // end of namespace llvm
-
