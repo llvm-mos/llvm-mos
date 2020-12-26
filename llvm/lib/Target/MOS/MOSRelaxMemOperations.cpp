@@ -46,14 +46,14 @@ private:
 
   const TargetInstrInfo *TII;
 
+  MachineInstrBuilder buildMI(Block &MBB, BlockIt MBBI, unsigned Opcode) {
+    return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode));
+  }
   template <unsigned OP> bool relax(Block &MBB, BlockIt MBBI);
 
   bool runOnBasicBlock(Block &MBB);
   bool runOnInstruction(Block &MBB, BlockIt MBBI);
 
-  MachineInstrBuilder buildMI(Block &MBB, BlockIt MBBI, unsigned Opcode) {
-    return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode));
-  }
 };
 
 char MOSRelaxMem::ID = 0;

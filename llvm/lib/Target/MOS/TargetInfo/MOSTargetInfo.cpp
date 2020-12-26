@@ -18,6 +18,6 @@ Target &getTheMOSTarget() {
 
 extern "C" void LLVMInitializeMOSTargetInfo() {
   llvm::RegisterTarget<llvm::Triple::mos> X(llvm::getTheMOSTarget(), "mos",
-                                            "MOS Technologies 65xx", "MOS");
+                                            "MOS Technologies 65xx and variants", "MOS");
 }
 
