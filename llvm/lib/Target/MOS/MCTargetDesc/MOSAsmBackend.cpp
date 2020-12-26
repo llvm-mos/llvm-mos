@@ -224,12 +224,23 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   for (const auto &Symbol : Layout.getAssembler().symbols()) {
     const auto SymbolName = Symbol.getName();
     if (FixupName == SymbolName) {
+      // If this symbol has not been assigned to a section, then it can't
+      // be in zero page
+      if (!Symbol.isInSection()) {
+        return true;
+      }
       const auto &Section = Symbol.getSection();
       const auto *ELFSection = dyn_cast_or_null<MCSectionELF>(&Section);
       /// If we're not writing to ELF, punt on this whole idea, just do the
       /// relaxation for safety's sake
       if (ELFSection == nullptr) {
         return true;
+      }
+      /// If the section of the symbol is marked with special zero-page flag
+      /// then this is an 8 bit instruction and it doesn't need
+      /// relaxation.
+      if ((ELFSection->getFlags() & ELF::SHF_MOS_ZEROPAGE) != 0) {
+        return false;
       }
       const auto &ELFSectionName = ELFSection->getName();
       /// If the section of the symbol is one of the prenamed zero page
@@ -307,14 +318,14 @@ bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   }
   int64_t Imm;
   Operand.evaluateAsConstantImm(Imm);
-  if ((Imm >= 0x01) && (Imm <= 0xff)) {
+  if ((Imm >= 0x00) && (Imm <= 0xff)) {
     // If the expression evaluates cleanly to an 8-bit value, then it doesn't
     // need relaxation.
     return false;
   }
   // okay you got us, it MAY need relaxation, if the instruction CAN be
   // relaxed.
-  return (relaxInstructionTo(Inst) != 0);
+  return true;
 }
 
 void MOSAsmBackend::relaxInstruction(MCInst &Inst,

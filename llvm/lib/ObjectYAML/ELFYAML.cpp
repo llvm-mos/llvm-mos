@@ -574,6 +574,9 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
   case ELF::EM_X86_64:
     BCase(SHF_X86_64_LARGE);
     break;
+  case ELF::EM_MOS:
+    BCase(SHF_MOS_ZEROPAGE);
+    break;
   default:
     // Nothing to do.
     break;
