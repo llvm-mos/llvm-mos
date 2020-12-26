@@ -86,7 +86,7 @@ private:
                                  const MCSubtargetInfo &STI) const;
 
   unsigned getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
-                          const MCSubtargetInfo &STI) const;
+                          const MCSubtargetInfo &STI, unsigned int Offset ) const;
 
   /// Returns the binary encoding of operand.
   ///
