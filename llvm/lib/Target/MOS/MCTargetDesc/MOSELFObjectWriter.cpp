@@ -40,7 +40,6 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx,
                                           const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
-  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
   switch ((unsigned) Fixup.getKind()) {
   case MOS::Imm8:
     return ELF::R_MOS_IMM8;

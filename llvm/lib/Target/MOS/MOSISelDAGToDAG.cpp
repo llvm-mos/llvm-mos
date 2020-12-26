@@ -28,7 +28,7 @@ namespace llvm {
 class MOSDAGToDAGISel : public SelectionDAGISel {
 public:
   MOSDAGToDAGISel(MOSTargetMachine &TM, CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TM, OptLevel), Subtarget(nullptr) {}
+      : SelectionDAGISel(TM, OptLevel) {}
 
   StringRef getPassName() const override {
     return "MOS DAG->DAG Instruction Selection";
@@ -38,9 +38,6 @@ public:
 
 
 #include "MOSGenDAGISel.inc"
-
-private:
-  const MOSSubtarget *Subtarget;
 };
 
 FunctionPass *createMOSISelDag(MOSTargetMachine &TM,

@@ -47,12 +47,12 @@ class MOSReg16Class< dag RegList, int priority = 33 >:
     let AllocationPriority = priority;
   }
 
-def A : MOSReg< 64, "A" >, DwarfRegNum<[64]>;
+def A : MOSReg< 64, "a" >, DwarfRegNum<[64]>;
 def AClass : MOSReg8Class<(add A), 0>;
 
-def X : MOSReg< 65, "X" >, DwarfRegNum<[65]>;
+def X : MOSReg< 65, "x" >, DwarfRegNum<[65]>;
 def XClass : MOSReg8Class<(add X), 1>;
 
-def Y : MOSReg< 66, "Y" >, DwarfRegNum<[66]>;
+def Y : MOSReg< 66, "y" >, DwarfRegNum<[66]>;
 def YClass : MOSReg8Class<(add Y), 2>;
 
