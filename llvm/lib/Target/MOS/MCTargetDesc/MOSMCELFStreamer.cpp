@@ -38,7 +38,7 @@ void MOSMCELFStreamer::InitSections(bool NoExecStack) {
 void MOSMCELFStreamer::emitValueForModiferKind(
     const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc,
     MOSMCExpr::VariantKind ModifierKind) {
-  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_MOS_NONE;
+  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_Invalid;
   if (ModifierKind == MOSMCExpr::VK_MOS_ADDR16_LO) {
     Kind = MCSymbolRefExpr::VK_MOS_ADDR16_LO;
   } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR16_HI) {

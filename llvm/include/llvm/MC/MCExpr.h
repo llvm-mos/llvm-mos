@@ -352,7 +352,6 @@ public:
     VK_TPREL,
     VK_DTPREL,
 
-    VK_MOS_NONE,
     VK_MOS_ADDR16_LO,
     VK_MOS_ADDR16_HI,
     VK_MOS_ADDR24_BANK,

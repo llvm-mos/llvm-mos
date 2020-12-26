@@ -231,7 +231,7 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
       if (ELFSection == nullptr) {
         return true;
       }
-      const auto &ELFSectionName = ELFSection->getSectionName();
+      const auto &ELFSectionName = ELFSection->getName();
       /// If the section of the symbol is one of the prenamed zero page
       /// sections, then this is an 8 bit instruction and it doesn't need
       /// relaxation.
@@ -317,13 +317,12 @@ bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   return (relaxInstructionTo(Inst) != 0);
 }
 
-void MOSAsmBackend::relaxInstruction(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI,
-                                     MCInst &Res) const {
-  Res = Inst;
+void MOSAsmBackend::relaxInstruction(MCInst &Inst,
+                                     const MCSubtargetInfo &STI) const {
+
   unsigned Opcode = relaxInstructionTo(Inst);
   if (Opcode != 0) {
-    Res.setOpcode(Opcode);
+    Inst.setOpcode(Opcode);
   }
 }
 

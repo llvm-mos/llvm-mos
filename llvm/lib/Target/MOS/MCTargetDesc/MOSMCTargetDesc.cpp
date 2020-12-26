@@ -57,7 +57,7 @@ static MCSubtargetInfo *createMOSMCSubtargetInfo(const Triple &TT,
   if (CPU.empty()) {
     CPU = "mos6502";
   }
-  return createMOSMCSubtargetInfoImpl(TT, CPU, FS);
+  return createMOSMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCInstPrinter *createMOSMCInstPrinter(const Triple &T,
