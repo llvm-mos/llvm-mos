@@ -1,0 +1,20 @@
+/* vic20.ld */
+__stack_size = 1k;
+
+MEMORY
+{
+	ram (wxa!r) : ORIGIN =  0xfff, LENGTH = 0x9fff - 0xfff
+}
+
+REGION_ALIAS("REGION_LOAD_ADDRESS", ram);
+REGION_ALIAS("REGION_INIT", ram);
+REGION_ALIAS("REGION_TEXT", ram);
+REGION_ALIAS("REGION_RODATA", ram);
+REGION_ALIAS("REGION_INIT_ARRAY", ram);
+REGION_ALIAS("REGION_CTORS", ram);
+REGION_ALIAS("REGION_DATA", ram);
+REGION_ALIAS("REGION_TDATA", ram);
+REGION_ALIAS("REGION_BSS", ram);
+
+INCLUDE picolibc.ld
+
