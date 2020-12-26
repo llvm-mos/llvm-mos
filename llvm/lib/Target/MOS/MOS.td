@@ -55,17 +55,23 @@ def MOSAsmWriter : AsmWriter {
 //===---------------------------------------------------------------------===//
 
 def MOSAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 1;
   let ShouldEmitMatchRegisterAltName = 1;
+  let ReportMultipleNearMisses = 0;
+  string RegisterPrefix = "";
+  string TokenizingCharacters = "(),[]*!";
 }
 
 def MOSAsmParserVariant : AsmParserVariant {
   int Variant = 0;
-
   // Recognize hard coded registers.
-  string RegisterPrefix = "$";
-  string TokenizingCharacters = "+";
 }
+
+def MOSAsmParserVariantCA65 : AsmParserVariant {
+  int Variant = 1;
+  let Name = "ca65";
+  string RegisterPrefix = "";
+}
+
 
 //===---------------------------------------------------------------------===//
 // Target Declaration
@@ -76,6 +82,6 @@ def MOS : Target {
   let AssemblyWriters        = [MOSAsmWriter];
 
   let AssemblyParsers        = [MOSAsmParser];
-  let AssemblyParserVariants = [MOSAsmParserVariant];
+  let AssemblyParserVariants = [MOSAsmParserVariant, MOSAsmParserVariantCA65];
 }
 

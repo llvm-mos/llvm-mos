@@ -25,19 +25,16 @@ class MCSymbol;
 /// Lowers `MachineInstr` objects into `MCInst` objects.
 class MOSMCInstLower {
 public:
-  MOSMCInstLower(MCContext &Ctx, AsmPrinter &Printer)
-      : Ctx(Ctx), Printer(Printer) {}
-
-  /// Lowers a `MachineInstr` into a `MCInst`.
-  void lowerInstruction(const MachineInstr &MI, MCInst &OutMI) const;
-  MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
+  MOSMCInstLower(MCContext &, AsmPrinter &) {}
+  //  MOSMCInstLower(MCContext &Ctx, AsmPrinter &Printer)
+  //      : Ctx(Ctx), Printer(Printer) {
+  //      }
 
 private:
-  MCContext &Ctx;
-  AsmPrinter &Printer;
+  // MCContext &Ctx;
+  // AsmPrinter &Printer;
 };
 
 } // end namespace llvm
 
 #endif // LLVM_MOS_MCINST_LOWER_H
-

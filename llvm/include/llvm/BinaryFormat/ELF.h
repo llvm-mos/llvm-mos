@@ -490,7 +490,12 @@ enum : unsigned {
 };
 
 enum : unsigned {
-  EF_MOS_ARCH_GENERIC = 1,
+  EF_MOS_ARCH_GENERIC = 0x10,
+  EF_MOS_ARCH_6502    = 0x20,
+  EF_MOS_ARCH_6502X   = 0x30,
+  EF_MOS_ARCH_65SC02  = 0x40,
+  EF_MOS_ARCH_65C02   = 0x50,
+  EF_MOS_ARCH_SWEET16 = 0x60
 };
 
 // ELF Relocation types for AVR

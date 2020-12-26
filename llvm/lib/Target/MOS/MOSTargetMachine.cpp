@@ -66,9 +66,9 @@ public:
   }
 
   bool addInstSelector() override;
-  void addPreSched2() override;
   void addPreEmitPass() override;
   void addPreRegAlloc() override;
+  void addPreSched2() override;
 };
 } // namespace
 
@@ -106,6 +106,11 @@ bool MOSPassConfig::addInstSelector() {
   return false;
 }
 
+void MOSPassConfig::addPreEmitPass() {
+  // Must run branch selection immediately preceding the asm printer.
+  addPass(&BranchRelaxationPassID);
+}
+
 void MOSPassConfig::addPreRegAlloc() {
   // Create the dynalloc SP save/restore pass to handle variable sized allocas.
   addPass(createMOSDynAllocaSRPass());
@@ -114,11 +119,6 @@ void MOSPassConfig::addPreRegAlloc() {
 void MOSPassConfig::addPreSched2() {
   addPass(createMOSRelaxMemPass());
   addPass(createMOSExpandPseudoPass());
-}
-
-void MOSPassConfig::addPreEmitPass() {
-  // Must run branch selection immediately preceding the asm printer.
-  addPass(&BranchRelaxationPassID);
 }
 
 } // end of namespace llvm

@@ -110,7 +110,6 @@ private:
   MCContext &Ctx;
 };
 
-} // end namespace of llvm.
+} // namespace llvm
 
 #endif // LLVM_MOS_CODE_EMITTER_H
-
