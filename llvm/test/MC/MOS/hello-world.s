@@ -1,4 +1,14 @@
-; RUN: llvm-mc -triple mos -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -triple mos --filetype=obj -I %S/Inputs -o=%t.obj %s 
+; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.obj 
+; RUN: llvm-readelf --all %t.obj
+; RUN: lld -flavor gnu %t.obj -o %t.elf -L %S/Inputs %S/Inputs/c64.ld
+; RUN: llvm-readelf --all %t.elf 
+; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.elf
+; RUN: llvm-objcopy --output-target binary --strip-unneeded %t.elf %t.bin
+
+.include "c64.inc"
+
+_start:
 	ldx	#$0                     ; CHECK: encoding: [0xa2,0x00]
 loop:
 	lda	hello,x                 ; CHECK: encoding: [0xb5,A]
@@ -10,6 +20,11 @@ loop:
 	bne	loop                    ; CHECK: encoding: [0xd0,A]
                                 ; CHECK:  fixup A - offset: 1, value: loop, kind: PCRel8
 done:
-	rts                             ; CHECK: encoding: [0x60]
+	jmp exit
+	brk
+exit:
+	rts                         ; CHECK: encoding: [0x60]
 hello:  
-    .asciz "HELLO, WORLD!"
+    .ascii "HELLO, LLVM MOS ASSEMBLER!"
+	.byte 0x0d
+	.asciz "WELCOME TO 2020!"

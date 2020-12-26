@@ -25,6 +25,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -36,6 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <memory>
+#include <stdint.h>
 #include <string>
 
 namespace llvm {
@@ -61,6 +63,66 @@ MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
   return new MOSAsmBackend(STI.getTargetTriple().getOS());
 }
 
+void MOSAsmBackend::adjustFixupValue(const MCFixup &Fixup,
+                                     const MCValue &Target, uint64_t &Value,
+                                     MCContext *Ctx) const {
+  unsigned Kind = Fixup.getKind();
+
+  // Parsed LLVM-generated temporary labels are already
+  // adjusted for instruction size, but normal labels aren't.
+  //
+  // To handle both cases, we simply un-adjust the temporary label
+  // case so it acts like all other labels.
+  if (const MCSymbolRefExpr *A = Target.getSymA()) {
+    if (A->getSymbol().isTemporary()) {
+      switch (Kind) {
+      case FK_Data_1:
+      case FK_Data_2:
+      case FK_Data_4:
+      case FK_Data_8:
+        // Don't shift value for absolute addresses.
+        break;
+      default:
+        Value += 2;
+      }
+    }
+  }
+
+  switch (Kind) {
+  case MOS::PCRel8:
+    /* MOS pc-relative instructions are counted from the end of the instruction,
+     * not the middle of it.
+     */
+    Value = (Value - 1) & 0xff;
+    break;
+  case MOS::Addr16_Low:
+  case MOS::Addr24_Bank_Low:
+    Value = Value & 0xff;
+    break;
+  case MOS::Addr16_High:
+  case MOS::Addr24_Bank_High:
+    Value = (Value >> 8) & 0xff;
+    break;
+  case MOS::Addr24_Bank:
+    Value = Value & 0xffff;
+    break;
+  case MOS::Addr24_Segment:
+    Value = (Value >> 16) & 0xff;
+    break;
+
+  // Fixups which do not require adjustments.
+  case FK_Data_1:
+  case FK_Data_2:
+  case FK_Data_4:
+  case FK_Data_8:
+    break;
+
+  default:
+    llvm_unreachable("don't know how to adjust this fixup");
+    break;
+  }
+}
+
 void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
@@ -75,13 +137,18 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   case MOS::Addr16_Low:
   case MOS::Addr24_Segment:
   case MOS::PCRel8:
+  case FK_Data_1:
     Bytes = 1;
     break;
+  case FK_Data_2:
   case MOS::Addr16:
     Bytes = 2;
     break;
   case MOS::Addr24:
     Bytes = 3;
+    break;
+  case FK_Data_4:
+    Bytes = 4;
     break;
   default:
     llvm_unreachable("unknown fixup kind");
@@ -98,6 +165,35 @@ bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                                          const MCRelaxableFragment *DF,
                                          const MCAsmLayout &Layout) const {
   return true;
+}
+
+bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
+                                        const MCAsmLayout &Layout,
+                                        const MCFixup &Fixup,
+                                        const MCFragment *DF,
+                                        const MCValue &Target, uint64_t &Value,
+                                        bool &WasForced) {
+  assert(Fixup.getKind() == (MCFixupKind)MOS::PCRel8 &&
+         "unexpected target fixup kind");
+  Value = Target.getConstant();
+  if (const MCSymbolRefExpr *A = Target.getSymA()) {
+    const MCSymbol &Sym = A->getSymbol();
+    if (Sym.isDefined())
+      Value += Layout.getSymbolOffset(Sym);
+  }
+  if (const MCSymbolRefExpr *B = Target.getSymB()) {
+    const MCSymbol &Sym = B->getSymbol();
+    if (Sym.isDefined())
+      Value -= Layout.getSymbolOffset(Sym);
+  }
+  uint32_t Offset = Layout.getFragmentOffset(DF) + Fixup.getOffset();
+  Value -= Offset;
+  // MOS's PC relative addressing is off by one from the standard LLVM
+  // PC relative convention.
+  --Value;
+  // If this result fits safely into 8 bits, we're done
+  int64_t SignedValue = Value;
+  return (INT8_MIN <= SignedValue && SignedValue <= INT8_MAX);
 }
 
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -130,7 +226,7 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
     if (FixupName == SymbolName) {
       const auto &Section = Symbol.getSection();
       const auto *ELFSection = dyn_cast_or_null<MCSectionELF>(&Section);
-      /// If we're not writing to ELF, punt on this whole idea, just do the 
+      /// If we're not writing to ELF, punt on this whole idea, just do the
       /// relaxation for safety's sake
       if (ELFSection == nullptr) {
         return true;
@@ -160,15 +256,18 @@ MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // MOSFixupKinds.h.
       //
       // name, offset, bits, flags
-      {"Imm8", 0, 8, 0},           // An 8 bit immediate value.
-      {"Addr8", 0, 8, 0},          // An 8 bit zero page address.
-      {"Addr16", 0, 16, 0},        // A 16-bit address.
-      {"Addr16_Low", 0, 8, 0},     // The low byte of a 16-bit address.
-      {"Addr16_High", 0, 8, 0},    // The high byte of a 16-bit address.
-      {"Addr24", 0, 24, 0},        // A 24-bit 65816 address.
-      {"Addr24_Segment", 0, 8, 0}, // The segment byte of a 24-bit address.
-      {"PCRel8", 0, 8, MCFixupKindInfo::FKF_IsPCRel}};
-
+      {"Imm8", 0, 8, 0},            // An 8 bit immediate value.
+      {"Addr8", 0, 8, 0},           // An 8 bit zero page address.
+      {"Addr16", 0, 16, 0},         // A 16-bit address.
+      {"Addr16_Low", 0, 8, 0},      // The low byte of a 16-bit address.
+      {"Addr16_High", 0, 8, 0},     // The high byte of a 16-bit address.
+      {"Addr24", 0, 24, 0},         // A 24-bit 65816 address.
+      {"Addr24_Segment", 0, 8, 0},  // The segment byte of a 24-bit address.
+      {"Addr24_Bank", 0, 16, 0},    // The bank of a 24-byte address.
+      {"Addr24_Bank_Low", 0, 8, 0}, // The low byte of the bank of a 24-bit addr
+      {"Addr24_Bank_High", 8, 8, 0}, // The hi byte of the bank of a 24-bit addr
+      {"PCRel8", 0, 8,
+       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget}};
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
   assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
