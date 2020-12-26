@@ -1579,7 +1579,7 @@ bool MOSExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(MOSExpandPseudo, "avr-expand-pseudo",
+INITIALIZE_PASS(MOSExpandPseudo, "mos-expand-pseudo",
                 MOS_EXPAND_PSEUDO_NAME, false, false)
 namespace llvm {
 

@@ -20,7 +20,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "avr-isel"
+#define DEBUG_TYPE "mos-isel"
 
 namespace llvm {
 
