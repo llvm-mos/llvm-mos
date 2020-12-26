@@ -6,3 +6,4 @@
 ELF_RELOC(R_MOS_NONE,                  0)
 ELF_RELOC(R_MOS_ADDR8,                 1)
 ELF_RELOC(R_MOS_ADDR16,                2)
+ELF_RELOC(R_MOS_CALL,                  3)

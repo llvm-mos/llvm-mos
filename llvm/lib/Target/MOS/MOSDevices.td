@@ -3,26 +3,51 @@
 //===---------------------------------------------------------------------===//
 
 def Feature6502
-    : SubtargetFeature<"mos-insns-6502", "m_has6502Insns", "true",
+    : SubtargetFeature<"mos-insns-6502", "m_Has6502Insns", "false",
                        "The original documented 6502 instruction set">;
 
+def Feature6502BCD
+    : SubtargetFeature<"mos-insns-6502-bcd", "m_Has6502BCDInsns", "false",
+                       "BCD instruction support, including SED and CLD (most "
+                       "6502 series CPUs support this)">;
+
 def Feature6502X
-    : SubtargetFeature<"mos-insns-6502x", "m_has6502XInsns", "false",
+    : SubtargetFeature<"mos-insns-6502x", "m_Has6502XInsns", "false",
                        "The 'illegal' opcodes present on some early variants of "
                        "the original 6502 processor">;
 
-def Feature65SC02
-    : SubtargetFeature<"mos-insns-65sc02", "m_has65SC02Insns", "false",
-                       "The new and modified instructions present on the 65sc02 "
-                       "and variants">;
-
 def Feature65C02
-    : SubtargetFeature<"mos-insns-65c02", "m_has65C02Insns", "false",
-                       "The new and modified instructions present on the 65c02 "
-                       "and variants">;
+    : SubtargetFeature<"mos-insns-65c02", "m_Has65C02Insns", "false",
+                       "The new and modified instructions present on the generic "
+                       "65c02 and variants">;
+
+def FeatureR65C02
+    : SubtargetFeature<"mos-insns-r65c02", "m_HasR65C02Insns", "false",
+                       "The new and modified instructions present on Rockwell "
+                       "and WDC 65c02">;
+
+def FeatureW65C02
+    : SubtargetFeature<"mos-insns-w65c02", "m_HasW65C02Insns", "false",
+                       "The new and modified instructions present on "
+                       "WDC 65c02">;
+
+def FeatureW65816
+    : SubtargetFeature<"mos-insns-w65816", "m_HasW65816Insns", "false",
+                       "The new and modified instructions present on "
+                       "WDC 65816">;
+
+def Feature65EL02
+    : SubtargetFeature<"mos-insns-65el02", "m_Has65EL02Insns", "false",
+                       "The new and modified instructions present on "
+                       "65EL02">;
+
+def Feature65CE02
+    : SubtargetFeature<"mos-insns-65ce02", "m_Has65CE02Insns", "false",
+                       "The new and modified instructions present on "
+                       "WDC 65CE02">;
 
 def FeatureSWEET16
-    : SubtargetFeature<"mos-insns-sweet16", "m_hasSweet16Insns", "false",
+    : SubtargetFeature<"mos-insns-sweet16", "m_HasSWEET16Insns", "false",
                         "The SWEET16 instruction set">;
 
 // A feature set aggregates features, grouping them. We don't want to create a
@@ -39,37 +64,67 @@ class Family<string name, string desc, list<SubtargetFeature> i>
 
 
 def Family6502 
-    : Family<"mos-6502", "The device is a member of the original MOS 6502 "
-             "family", [Feature6502]>;
+    : Family<
+      "mos6502",
+      "Generic MOS 6502, with support for BCD instructions",
+      [Feature6502, Feature6502BCD]>;
 
 def Family6502X
-    : Family<"mos-6502x", 
-      "The device is a member of the original MOS 6502 family, with illegal "
-      "opcode support", [Feature6502, Feature6502X]>;
-
-def Family65SC02
-    : Family<"mos-65sc02",  
-      "The device is a member of the MOS 65SC02 family",
-      [Feature6502, Feature65SC02]>;
+    : Family<"mos6502x", 
+      "NMOS 6502, with illegal opcode support", 
+      [Feature6502, Feature6502BCD, Feature6502X]>;
 
 def Family65C02
-    : Family<"mos-65c02",  
-      "The device is a member of the MOS 65C02 family",
-      [Feature6502, Feature65SC02, Feature65C02]>;
+    : Family<"mos65c02",  
+      "Generic MOS 65C02",
+      [Feature6502, Feature6502BCD, Feature65C02]>;
+
+def FamilyR65C02
+    : Family<"mosr65c02",  
+      "Rockwell 65C02",
+      [Feature6502, Feature65C02, FeatureR65C02]>;
+
+def FamilyW65C02
+    : Family<"mosw65c02",  
+      "WDC 65C02",
+      [Feature6502, Feature65C02, FeatureR65C02, FeatureW65C02]>;
+
+def FamilyW65816
+    : Family<"mosw65816",  
+      "WDC 65816",
+      [Feature6502, Feature65C02, FeatureR65C02, FeatureW65C02,
+      FeatureW65816]>;
+
+def Family65EL02
+    : Family<"mos65el02",  
+      "65EL02 virtual machine",
+      [Feature6502, Feature65C02, FeatureR65C02, FeatureW65C02,
+      Feature65EL02]>;
+
+def Family65CE02
+    : Family<"mos65ce02",  
+      "Commodore 65CE02",
+      [Feature6502, Feature65C02, FeatureR65C02, FeatureW65C02,
+      Feature65CE02]>;
 
 def FamilySWEET16
-    : Family<"mos-sweet16",
-      "The device is a member of the MOS 6502 family, with SWEET16 virtual "
-      "machine support", [Feature6502, FeatureSWEET16]>;
+    : Family<"mossweet16",
+      "MOS 6502 compatible with SWEET16 virtual machine support", 
+      [FeatureSWEET16]>;
 
 class ELFArch<string name>  : SubtargetFeature<"", "ELFArch",
                                     !strconcat("ELF::",name), "">;
 // ELF e_flags architecture values
-def ELFArchMOS6502 : ELFArch<"EF_MOS_ARCH_6502">;
-def ELFArchMOS6502X : ELFArch<"EF_MOS_ARCH_6502X">;
-def ELFArchMOS65SC02 : ELFArch<"EF_MOS_ARCH_65SC02">;
-def ELFArchMOS65C02 : ELFArch<"EF_MOS_ARCH_65C02">;
-def ELFArchMOSSweet16 : ELFArch<"EF_MOS_ARCH_SWEET16">;
+def ELFArchMOS6502 : ELFArch<"EM_MOS_ARCH_6502">;
+def ELFArchMOS6502BCD : ELFArch<"EM_MOS_ARCH_6502_BCD">;
+def ELFArchMOS6502X : ELFArch<"EM_MOS_ARCH_6502X">;
+def ELFArchMOS65C02 : ELFArch<"EM_MOS_ARCH_65C02">;
+def ELFArchMOSR65C02 : ELFArch<"EM_MOS_ARCH_R65C02">;
+def ELFArchMOSW65C02 : ELFArch<"EM_MOS_ARCH_W65C02">;
+def ELFArchMOSW65816 : ELFArch<"EM_MOS_ARCH_W65816">;
+def ELFArchMOS65EL02 : ELFArch<"EM_MOS_ARCH_65EL02">;
+def ELFArchMOS65CE02 : ELFArch<"EM_MOS_ARCH_65CE02">;
+def ELFArchMOSSWEET16 : ELFArch<"EM_MOS_ARCH_SWEET16">;
 
 //===---------------------------------------------------------------------===//
 // MOS Families
@@ -79,9 +134,13 @@ class Device<string Name, Family Fam, ELFArch Arch,
              list<SubtargetFeature> ExtraFeatures = []>
   : Processor<Name, NoItineraries, !listconcat([Fam,Arch],ExtraFeatures)>;
 
-def : Device<"mos-6502",  Family6502, ELFArchMOS6502>;
-def : Device<"mos-6502x", Family6502X, ELFArchMOS6502X>;
-def : Device<"mos-65c02", Family65C02, ELFArchMOS65C02>;
-def : Device<"mos-65sc02", Family65SC02, ELFArchMOS65SC02>;
-def : Device<"mos-sweet16", FamilySWEET16, ELFArchMOSSweet16>;
+def : Device<"mos6502",  Family6502, ELFArchMOS6502>;
+def : Device<"mos6502x", Family6502X, ELFArchMOS6502X>;
+def : Device<"mos65c02", Family65C02, ELFArchMOS65C02>;
+def : Device<"mosr65c02", FamilyR65C02, ELFArchMOSR65C02>;
+def : Device<"mosw65c02", FamilyR65C02, ELFArchMOSW65C02>;
+def : Device<"mosw65816", FamilyW65816, ELFArchMOSW65816>;
+def : Device<"mosw65el02", Family65EL02, ELFArchMOS65EL02>;
+def : Device<"mosw65ce02", Family65CE02, ELFArchMOS65CE02>;
+def : Device<"mossweet16", FamilySWEET16, ELFArchMOSSWEET16>;
 

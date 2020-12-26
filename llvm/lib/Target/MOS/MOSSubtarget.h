@@ -74,11 +74,16 @@ private:
   // See MOS.td for details.
   bool m_hasTinyEncoding;
 
-  bool m_has6502Insns;
-  bool m_has6502XInsns;
-  bool m_has65C02Insns;
-  bool m_has65SC02Insns;
-  bool m_hasSweet16Insns;
+  bool m_Has6502Insns;
+  bool m_Has6502BCDInsns;
+  bool m_Has6502XInsns;
+  bool m_Has65C02Insns;
+  bool m_HasR65C02Insns;
+  bool m_HasW65C02Insns;
+  bool m_HasW65816Insns;
+  bool m_Has65EL02Insns;
+  bool m_Has65CE02Insns;
+  bool m_HasSWEET16Insns;
 
   /// The ELF e_flags architecture.
   unsigned ELFArch;
