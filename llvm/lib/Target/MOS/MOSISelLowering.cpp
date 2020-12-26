@@ -165,13 +165,6 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
   setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
 
-  // Expand multiplications to libcalls when there is
-  // no hardware MUL.
-  if (!Subtarget.supportsMultiplication()) {
-    setOperationAction(ISD::SMUL_LOHI, MVT::i8, Expand);
-    setOperationAction(ISD::UMUL_LOHI, MVT::i8, Expand);
-  }
-
   for (MVT VT : MVT::integer_valuetypes()) {
     setOperationAction(ISD::MULHS, VT, Expand);
     setOperationAction(ISD::MULHU, VT, Expand);
@@ -228,10 +221,12 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   setLibcallName(RTLIB::UDIVREM_I128, "__udivmodti4");
 
   // Several of the runtime library functions use a special calling conv
+  /*
   setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::MOS_BUILTIN);
   setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::MOS_BUILTIN);
   setLibcallCallingConv(RTLIB::UDIVREM_I8, CallingConv::MOS_BUILTIN);
   setLibcallCallingConv(RTLIB::UDIVREM_I16, CallingConv::MOS_BUILTIN);
+  */
 
   // Trigonometric rtlib functions
   setLibcallName(RTLIB::SIN_F32, "sin");
@@ -1032,12 +1027,14 @@ static void analyzeArguments(TargetLowering::CallLoweringInfo *CLI,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              CCState &CCInfo, bool IsCall, bool IsVarArg) {
   switch (CallConv) {
+    /* 
     case CallingConv::MOS_BUILTIN: {
       analyzeBuiltinArguments(*CLI, F, TD, Outs, Ins,
                               CallConv, ArgLocs, CCInfo,
                               IsCall, IsVarArg);
       return;
     }
+    */
     default: {
       analyzeStandardArguments(CLI, F, TD, Outs, Ins,
                                CallConv, ArgLocs, CCInfo,
@@ -1314,31 +1311,6 @@ SDValue MOSTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl, SelectionDAG &DAG,
     SmallVectorImpl<SDValue> &InVals) const {
-
-  // Assign locations to each value returned by this call.
-  SmallVector<CCValAssign, 16> RVLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
-                 *DAG.getContext());
-
-  // Handle runtime calling convs.
-  auto CCFunction = CCAssignFnForReturn(CallConv);
-  CCInfo.AnalyzeCallResult(Ins, CCFunction);
-
-  if (CallConv != CallingConv::MOS_BUILTIN && RVLocs.size() > 1) {
-    // Reverse splitted return values to get the "big endian" format required
-    // to agree with the calling convention ABI.
-    std::reverse(RVLocs.begin(), RVLocs.end());
-  }
-
-  // Copy all of the result registers out of their specified physreg.
-  for (CCValAssign const &RVLoc : RVLocs) {
-    Chain = DAG.getCopyFromReg(Chain, dl, RVLoc.getLocReg(), RVLoc.getValVT(),
-                               InFlag)
-                .getValue(1);
-    InFlag = Chain.getValue(2);
-    InVals.push_back(Chain.getValue(0));
-  }
-
   return Chain;
 }
 
@@ -1348,8 +1320,10 @@ SDValue MOSTargetLowering::LowerCallResult(
 
 CCAssignFn *MOSTargetLowering::CCAssignFnForReturn(CallingConv::ID CC) const {
   switch (CC) {
-  case CallingConv::MOS_BUILTIN:
-    return RetCC_MOS_BUILTIN;
+    /*
+    case CallingConv::MOS_BUILTIN:
+      return RetCC_MOS_BUILTIN;
+    */
   default:
     return RetCC_MOS;
   }
@@ -1417,10 +1391,12 @@ MOSTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     return Chain;
   }
 
-  unsigned RetOpc =
+  unsigned RetOpc = /*
       (CallConv == CallingConv::MOS_INTR || CallConv == CallingConv::MOS_SIGNAL)
           ? MOSISD::RETI_FLAG
           : MOSISD::RET_FLAG;
+      */
+     MOSISD::RET_FLAG;
 
   RetOps[0] = Chain; // Update chain.
 

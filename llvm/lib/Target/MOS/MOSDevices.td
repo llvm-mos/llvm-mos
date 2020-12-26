@@ -2,12 +2,6 @@
 // MOS Device Definitions
 //===---------------------------------------------------------------------===//
 
-// :TODO: Implement the skip errata, see `gcc/config/avr/avr-arch.h` for details
-// :TODO: We define all devices with SRAM to have all variants of LD/ST/LDD/STD.
-//        In reality, avr1 (no SRAM) has one variant each of `LD` and `ST`.
-//        avr2 (with SRAM) adds the rest of the variants.
-
-
 // A feature set aggregates features, grouping them. We don't want to create a
 // new member in MOSSubtarget (to store a value) for each set because we do not
 // care if the set is supported, only the subfeatures inside the set. We fix
@@ -21,110 +15,22 @@ class Family<string name, list<SubtargetFeature> i>
   : FeatureSet<name, !strconcat("The device is a part of the ",
                name, " family"), i>;
 
-// The device has SRAM, and supports the bare minimum of
-// SRAM-relevant instructions.
-//
-// These are:
-// LD - all 9 variants
-// ST - all 9 variants
-// LDD - two variants for Y and Z
-// STD - two variants for Y and Z
-// `LDS Rd, K`
-// `STS k, Rr`
-// `PUSH`/`POP`
-def FeatureSRAM           : SubtargetFeature<"sram", "m_hasSRAM", "true",
-                                  "The device has random access memory">;
+// Features as described by http://nparker.llx.com/a2/opcodes.html
+def FeatureGreen          : SubtargetFeature<"green", "m_hasGreenInsns", "true",
+                            "The device supports 6502 core instructions">;
 
-// The device supports the `JMP k` and `CALL k` instructions.
-def FeatureJMPCALL        : SubtargetFeature<"jmpcall", "m_hasJMPCALL", "true",
-                                  "The device supports the `JMP` and "
-                                  "`CALL` instructions">;
+def FeatureYellow         : SubtargetFeature<"yellow", "m_hasYellowInsns", "true",
+                            "The device supports 65C02 additional instructions">;
 
-
-// The device supports the indirect branches `IJMP` and `ICALL`.
-def FeatureIJMPCALL       : SubtargetFeature<"ijmpcall", "m_hasIJMPCALL",
-                                  "true",
-                                  "The device supports `IJMP`/`ICALL`"
-                                  "instructions">;
-
-// The device supports the extended indirect branches `EIJMP` and `EICALL`.
-def FeatureEIJMPCALL      : SubtargetFeature<"eijmpcall", "m_hasEIJMPCALL",
-                                  "true", "The device supports the "
-                                  "`EIJMP`/`EICALL` instructions">;
-
-// The device supports `ADDI Rd, K`, `SUBI Rd, K`.
-def FeatureADDSUBIW       : SubtargetFeature<"addsubiw", "m_hasADDSUBIW",
-                                  "true", "Enable 16-bit register-immediate "
-                                  "addition and subtraction instructions">;
-
-// The device has an 8-bit stack pointer (SP) register.
-def FeatureSmallStack     : SubtargetFeature<"smallstack", "m_hasSmallStack",
-                                  "true", "The device has an 8-bit "
-                                  "stack pointer">;
-
-// The device supports the 16-bit GPR pair MOVW instruction.
-def FeatureMOVW           : SubtargetFeature<"movw", "m_hasMOVW", "true",
-                                  "The device supports the 16-bit MOVW "
-                                  "instruction">;
-
-// The device supports the `LPM` instruction, with implied destination being r0.
-def FeatureLPM            : SubtargetFeature<"lpm", "m_hasLPM", "true",
-                                  "The device supports the `LPM` instruction">;
-
-// The device supports the `LPM Rd, Z[+] instruction.
-def FeatureLPMX           : SubtargetFeature<"lpmx", "m_hasLPMX", "true",
-                                  "The device supports the `LPM Rd, Z[+]` "
-                                  "instruction">;
-
-// The device supports the `ELPM` instruction.
-def FeatureELPM           : SubtargetFeature<"elpm", "m_hasELPM", "true",
-                                  "The device supports the ELPM instruction">;
-
-// The device supports the `ELPM Rd, Z[+]` instructions.
-def FeatureELPMX          : SubtargetFeature<"elpmx", "m_hasELPMX", "true",
-                                  "The device supports the `ELPM Rd, Z[+]` "
-                                  "instructions">;
-
-// The device supports the `SPM` instruction.
-def FeatureSPM            : SubtargetFeature<"spm", "m_hasSPM", "true",
-                                  "The device supports the `SPM` instruction">;
-
-// The device supports the `SPM Z+` instruction.
-def FeatureSPMX           : SubtargetFeature<"spmx", "m_hasSPMX", "true",
-                                  "The device supports the `SPM Z+` "
-                                  "instruction">;
-
-// The device supports the `DES k` instruction.
-def FeatureDES            : SubtargetFeature<"des", "m_hasDES", "true",
-                                  "The device supports the `DES k` encryption "
-                                  "instruction">;
-
-// The device supports the Read-Write-Modify instructions
-// XCH, LAS, LAC, and LAT.
-def FeatureRMW            : SubtargetFeature<"rmw", "m_supportsRMW", "true",
-                                  "The device supports the read-write-modify "
-                                  "instructions: XCH, LAS, LAC, LAT">;
-
-// The device supports the `[F]MUL[S][U]` family of instructions.
-def FeatureMultiplication : SubtargetFeature<"mul", "m_supportsMultiplication",
-                                  "true", "The device supports the "
-                                  "multiplication instructions">;
-
-// The device supports the `BREAK` instruction.
-def FeatureBREAK          : SubtargetFeature<"break", "m_hasBREAK", "true",
-                                  "The device supports the `BREAK` debugging "
-                                  "instruction">;
-
-// The device has instruction encodings specific to the Tiny core.
-def FeatureTinyEncoding   : SubtargetFeature<"tinyencoding",
-                                  "m_hasTinyEncoding", "true",
-                                  "The device has Tiny core specific "
-                                  "instruction encodings">;
+def FeatureRed            : SubtargetFeature<"red", "m_hasRedInsns", "true",
+                            "The device supports 65816 additional instructions">;
 
 class ELFArch<string name>  : SubtargetFeature<"", "ELFArch",
                                     !strconcat("ELF::",name), "">;
 
 // ELF e_flags architecture values
+def ELFArchMOSGeneric : ELFArch<"EF_MOS_ARCH_GENERIC">;
+/*
 def ELFArchMOS1    : ELFArch<"EF_MOS_ARCH_MOS1">;
 def ELFArchMOS2    : ELFArch<"EF_MOS_ARCH_MOS2">;
 def ELFArchMOS25   : ELFArch<"EF_MOS_ARCH_MOS25">;
@@ -143,72 +49,16 @@ def ELFArchXMEGA4  : ELFArch<"EF_MOS_ARCH_XMEGA4">;
 def ELFArchXMEGA5  : ELFArch<"EF_MOS_ARCH_XMEGA5">;
 def ELFArchXMEGA6  : ELFArch<"EF_MOS_ARCH_XMEGA6">;
 def ELFArchXMEGA7  : ELFArch<"EF_MOS_ARCH_XMEGA7">;
+*/
 
 //===---------------------------------------------------------------------===//
 // MOS Families
 //===---------------------------------------------------------------------===//
 
-// The device has at least the bare minimum that **every** single MOS
-// device should have.
-def FamilyMOS0           : Family<"avr0", []>;
+def FamilyMOS6502           : Family<"mos6502", [FeatureGreen]>;
+def FamilyMOS65C02          : Family<"mos65C02", [FeatureGreen, FeatureYellow]>;
+def FamilyMOS65816          : Family<"mos65816", [FeatureGreen, FeatureYellow, FeatureRed]>;
 
-def FamilyMOS1           : Family<"avr1", [FamilyMOS0, FeatureLPM]>;
-
-def FamilyMOS2           : Family<"avr2",
-                                 [FamilyMOS1, FeatureIJMPCALL, FeatureADDSUBIW,
-                                  FeatureSRAM]>;
-
-def FamilyMOS25          : Family<"avr25",
-                                 [FamilyMOS2, FeatureMOVW, FeatureLPMX,
-                                  FeatureSPM, FeatureBREAK]>;
-
-def FamilyMOS3           : Family<"avr3",
-                                 [FamilyMOS2, FeatureJMPCALL]>;
-
-def FamilyMOS31          : Family<"avr31",
-                                 [FamilyMOS3, FeatureELPM]>;
-
-def FamilyMOS35          : Family<"avr35",
-                                 [FamilyMOS3, FeatureMOVW, FeatureLPMX,
-                                  FeatureSPM, FeatureBREAK]>;
-
-def FamilyMOS4           : Family<"avr4",
-                                 [FamilyMOS2, FeatureMultiplication,
-                                  FeatureMOVW, FeatureLPMX, FeatureSPM,
-                                  FeatureBREAK]>;
-
-def FamilyMOS5           : Family<"avr5",
-                                 [FamilyMOS3, FeatureMultiplication,
-                                  FeatureMOVW, FeatureLPMX, FeatureSPM,
-                                  FeatureBREAK]>;
-
-def FamilyMOS51          : Family<"avr51",
-                                 [FamilyMOS5, FeatureELPM, FeatureELPMX]>;
-
-def FamilyMOS6           : Family<"avr6",
-                                 [FamilyMOS51]>;
-
-def FamilyTiny           : Family<"avrtiny",
-                                 [FamilyMOS0, FeatureBREAK, FeatureSRAM,
-                                  FeatureTinyEncoding]>;
-
-def FamilyXMEGA          : Family<"xmega",
-                                 [FamilyMOS51, FeatureEIJMPCALL, FeatureSPMX,
-                                  FeatureDES]>;
-
-def FamilyXMEGAU         : Family<"xmegau",
-                                  [FamilyXMEGA, FeatureRMW]>;
-
-def FeatureSetSpecial    : FeatureSet<"special",
-                                      "Enable use of the entire instruction "
-                                      "set - used for debugging",
-                                      [FeatureSRAM, FeatureJMPCALL,
-                                       FeatureIJMPCALL, FeatureEIJMPCALL,
-                                       FeatureADDSUBIW, FeatureMOVW,
-                                       FeatureLPM, FeatureLPMX, FeatureELPM,
-                                       FeatureELPMX, FeatureSPM, FeatureSPMX,
-                                       FeatureDES, FeatureRMW,
-                                       FeatureMultiplication, FeatureBREAK]>;
 
 //===---------------------------------------------------------------------===//
 // MOS microcontrollers supported.
@@ -222,6 +72,8 @@ class Device<string Name, Family Fam, ELFArch Arch,
 // Note that several versions of GCC has strange ELF architecture
 // settings for backwards compatibility - see `gas/config/tc-avr.c`
 // in MOS binutils. We do not replicate this.
+def : Device<"mos-generic",  FamilyMOS6502, ELFArchMOSGeneric>;
+/*
 def : Device<"avr1",      FamilyMOS1,    ELFArchMOS1>;
 def : Device<"avr2",      FamilyMOS2,    ELFArchMOS2>;
 def : Device<"avr25",     FamilyMOS25,   ELFArchMOS25>;
@@ -487,4 +339,4 @@ def : Device<"attiny20",           FamilyTiny, ELFArchTiny>;
 def : Device<"attiny40",           FamilyTiny, ELFArchTiny>;
 def : Device<"attiny102",          FamilyTiny, ELFArchTiny>;
 def : Device<"attiny104",          FamilyTiny, ELFArchTiny>;
-
+*/

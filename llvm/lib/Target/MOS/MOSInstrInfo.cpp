@@ -49,10 +49,7 @@ void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // Not all MOS devices support the 16-bit `MOVW` instruction.
   if (MOS::DREGSRegClass.contains(DestReg, SrcReg)) {
-    if (STI.hasMOVW()) {
-      BuildMI(MBB, MI, DL, get(MOS::MOVWRdRr), DestReg)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-    } else {
+     {
       unsigned DestLo, DestHi, SrcLo, SrcHi;
 
       TRI.splitReg(DestReg, DestLo, DestHi);
@@ -82,38 +79,11 @@ void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
-  switch (MI.getOpcode()) {
-  case MOS::LDDRdPtrQ:
-  case MOS::LDDWRdYQ: { //:FIXME: remove this once PR13375 gets fixed
-    if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
-        MI.getOperand(2).getImm() == 0) {
-      FrameIndex = MI.getOperand(1).getIndex();
-      return MI.getOperand(0).getReg();
-    }
-    break;
-  }
-  default:
-    break;
-  }
-
   return 0;
 }
 
 unsigned MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
-  switch (MI.getOpcode()) {
-  case MOS::STDPtrQRr:
-  case MOS::STDWPtrQRr: {
-    if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
-        MI.getOperand(1).getImm() == 0) {
-      FrameIndex = MI.getOperand(0).getIndex();
-      return MI.getOperand(2).getReg();
-    }
-    break;
-  }
-  default:
-    break;
-  }
 
   return 0;
 }
@@ -142,13 +112,7 @@ void MOSInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectAlignment(FrameIndex));
 
   unsigned Opcode = 0;
-  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
-    Opcode = MOS::STDPtrQRr;
-  } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
-    Opcode = MOS::STDWPtrQRr;
-  } else {
-    llvm_unreachable("Cannot store this register into a stack slot!");
-  }
+  llvm_unreachable("Cannot store this register into a stack slot!");
 
   BuildMI(MBB, MI, DL, get(Opcode))
       .addFrameIndex(FrameIndex)
@@ -181,7 +145,7 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
     // Opcode = MOS::LDDWRdPtrQ;
     //:FIXME: remove this once PR13375 gets fixed
-    Opcode = MOS::LDDWRdYQ;
+    // Opcode = MOS::LDDWRdYQ;
   } else {
     llvm_unreachable("Cannot load this register from a stack slot!");
   }
@@ -506,7 +470,6 @@ MOSInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   default:
     llvm_unreachable("unexpected opcode!");
   case MOS::JMPk:
-  case MOS::CALLk:
   case MOS::RCALLk:
   case MOS::RJMPk:
   case MOS::BREQk:
@@ -536,7 +499,6 @@ bool MOSInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   default:
     llvm_unreachable("unexpected opcode!");
   case MOS::JMPk:
-  case MOS::CALLk:
     return true;
   case MOS::RCALLk:
   case MOS::RJMPk:

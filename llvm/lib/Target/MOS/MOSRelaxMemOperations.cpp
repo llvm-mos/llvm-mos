@@ -78,64 +78,13 @@ bool MOSRelaxMem::runOnBasicBlock(Block &MBB) {
   BlockIt MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     BlockIt NMBBI = std::next(MBBI);
-    Modified |= runOnInstruction(MBB, MBBI);
     MBBI = NMBBI;
   }
 
   return Modified;
 }
 
-template <>
-bool MOSRelaxMem::relax<MOS::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
 
-  MachineOperand &Ptr = MI.getOperand(0);
-  MachineOperand &Src = MI.getOperand(2);
-  int64_t Imm = MI.getOperand(1).getImm();
-
-  // We can definitely optimise this better.
-  if (Imm > 63) {
-    // Push the previous state of the pointer register.
-    // This instruction must preserve the value.
-    buildMI(MBB, MBBI, MOS::PUSHWRr)
-      .addReg(Ptr.getReg());
-
-    // Add the immediate to the pointer register.
-    buildMI(MBB, MBBI, MOS::SBCIWRdK)
-      .addReg(Ptr.getReg(), RegState::Define)
-      .addReg(Ptr.getReg())
-      .addImm(-Imm);
-
-    // Store the value in the source register to the address
-    // pointed to by the pointer register.
-    buildMI(MBB, MBBI, MOS::STWPtrRr)
-      .addReg(Ptr.getReg())
-      .addReg(Src.getReg(), getKillRegState(Src.isKill()));
-
-    // Pop the original state of the pointer register.
-    buildMI(MBB, MBBI, MOS::POPWRd)
-      .addReg(Ptr.getReg(), getKillRegState(Ptr.isKill()));
-
-    MI.removeFromParent();
-  }
-
-  return false;
-}
-
-bool MOSRelaxMem::runOnInstruction(Block &MBB, BlockIt MBBI) {
-  MachineInstr &MI = *MBBI;
-  int Opcode = MBBI->getOpcode();
-
-#define RELAX(Op)                \
-  case Op:                       \
-    return relax<Op>(MBB, MI)
-
-  switch (Opcode) {
-    RELAX(MOS::STDWPtrQRr);
-  }
-#undef RELAX
-  return false;
-}
 
 } // end of anonymous namespace
 

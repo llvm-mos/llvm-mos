@@ -34,11 +34,7 @@ MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)), TSInfo(),
 
       // Subtarget features
-      m_hasSRAM(false), m_hasJMPCALL(false), m_hasIJMPCALL(false),
-      m_hasEIJMPCALL(false), m_hasADDSUBIW(false), m_hasSmallStack(false),
-      m_hasMOVW(false), m_hasLPM(false), m_hasLPMX(false),  m_hasELPM(false),
-      m_hasELPMX(false), m_hasSPM(false), m_hasSPMX(false), m_hasDES(false),
-      m_supportsRMW(false), m_supportsMultiplication(false), m_hasBREAK(false),
+      m_hasGreenInsns(false), m_hasYellowInsns(false), m_hasRedInsns(false),
       m_hasTinyEncoding(false), ELFArch(false), m_FeatureSetDummy(false) {
   // Parse features string.
   ParseSubtargetFeatures(CPU, FS);
