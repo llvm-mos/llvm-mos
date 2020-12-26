@@ -16,52 +16,67 @@
 
 namespace llvm {
 
-/// A expression in MOS machine code.
+/// A expression in AVR machine code.
 class MOSMCExpr : public MCTargetExpr {
 public:
   /// Specifies the type of an expression.
   enum VariantKind {
-    VK_MOS_None,
-    VK_MOS_Imm8,
-    VK_MOS_Imm16,
-    VK_MOS_PCRel8,
-    VK_MOS_Addr8,
-    VK_MOS_Addr16
+    VK_MOS_NONE,
+    VK_MOS_ADDR16_HI, 
+    VK_MOS_ADDR16_LO,
+    VK_MOS_ADDR24_SEGMENT,
+    VK_MOS_ADDR24_BANK,
+    VK_MOS_ADDR24_BANK_LO,
+    VK_MOS_ADDR24_BANK_HI
   };
 
-  /// Creates an MOS machine code expression.
+public:
+  /// Creates an AVR machine code expression.
   static const MOSMCExpr *create(VariantKind Kind, const MCExpr *Expr,
-                                 MCContext &Ctx);
+                                 bool isNegated, MCContext &Ctx);
 
-  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
-                                         const MCAsmLayout *Layout,
-                                         const MCFixup *Fixup) const override {
-    // todo
-    return true;
-  }
-  virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
-    // todo
-    SubExpr->print(OS, MAI);
-  }
-  virtual void visitUsedExpr(MCStreamer &Streamer) const override {
-    // todo
+  /// Gets the type of the expression.
+  VariantKind getKind() const { return Kind; }
+  /// Gets the name of the expression.
+  const char *getName() const;
+  const MCExpr *getSubExpr() const { return SubExpr; }
+  /// Gets the fixup which corresponds to the expression.
+  MOS::Fixups getFixupKind() const;
+  /// Evaluates the fixup as a constant value.
+  bool evaluateAsConstant(int64_t &Result) const;
 
-  }
-  virtual MCFragment *findAssociatedFragment() const override {
-    // todo
-    return (MCFragment *)nullptr;
+  bool isNegated() const { return Negated; }
+  void setNegated(bool negated = true) { Negated = negated; }
+
+  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
+                                 const MCFixup *Fixup) const override;
+
+  void visitUsedExpr(MCStreamer &streamer) const override;
+
+  MCFragment *findAssociatedFragment() const override {
+    return getSubExpr()->findAssociatedFragment();
   }
 
-  virtual void fixELFSymbolsInTLSFixups(MCAssembler &) const override {
-    // todo
+  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
+
+  static bool classof(const MCExpr *E) {
+    return E->getKind() == MCExpr::Target;
   }
+
+public:
+  static VariantKind getKindByName(StringRef Name);
+
+private:
+  int64_t evaluateAsInt64(int64_t Value) const;
 
   const VariantKind Kind;
   const MCExpr *SubExpr;
+  bool Negated;
 
 private:
-  explicit MOSMCExpr(VariantKind Kind, const MCExpr *Expr)
-      : Kind(Kind), SubExpr(Expr) {}
+  explicit MOSMCExpr(VariantKind Kind, const MCExpr *Expr, bool Negated)
+      : Kind(Kind), SubExpr(Expr), Negated(Negated) {}
   ~MOSMCExpr() {}
 };
 

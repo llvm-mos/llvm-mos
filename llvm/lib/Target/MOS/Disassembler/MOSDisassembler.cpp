@@ -73,6 +73,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CStream) const {
+  Size = 0;
   for (size_t InsnSize = 1; InsnSize <= 3; InsnSize++) {
     uint32_t Insn = 0;
     DecodeStatus Result;
@@ -90,7 +91,6 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return Result;
     }
   }
-  Size = 1;
   return MCDisassembler::Fail;
 };
 

@@ -61,6 +61,9 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
+  void adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
+                        uint64_t &Value, MCContext *Ctx = nullptr) const;
+
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
@@ -71,6 +74,12 @@ public:
                           const MCValue &Target, MutableArrayRef<char> Data,
                           uint64_t Value, bool IsResolved,
                           const MCSubtargetInfo *STI) const override;
+
+  bool evaluateTargetFixup(const MCAssembler &Asm,
+                                   const MCAsmLayout &Layout,
+                                   const MCFixup &Fixup, const MCFragment *DF,
+                                   const MCValue &Target, uint64_t &Value,
+                                   bool &WasForced) override;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,

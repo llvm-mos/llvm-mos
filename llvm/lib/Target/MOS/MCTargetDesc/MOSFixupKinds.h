@@ -32,6 +32,9 @@ enum Fixups {
   Addr16_High, // The high byte of a 16-bit address.
   Addr24, // A 24-bit 65816 address.
   Addr24_Segment, // The segment byte of a 24-bit address.
+  Addr24_Bank, // The bank 16-bits of a 24-bit address.
+  Addr24_Bank_Low, // The low 8 bits of the bank of a 24-bit address.
+  Addr24_Bank_High, // The high 8 bits of the bank of a 24-bit address.
   PCRel8, // An 8-bit PC relative value.
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

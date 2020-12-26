@@ -94,17 +94,15 @@ unsigned MOSMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
     Kind = Expr->getKind();
   }
 
-  if (Kind == MCExpr::Target) {
-    /*
+  if (Kind == MOSMCExpr::Target) {
     MOSMCExpr const *MOSExpr = cast<MOSMCExpr>(Expr);
     int64_t Result;
-    if (AVRExpr->evaluateAsConstant(Result)) {
+    if (MOSExpr->evaluateAsConstant(Result)) {
       return Result;
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(MOSExpr->getFixupKind());
-    Fixups.push_back(MCFixup::create(0, AVRExpr, FixupKind));
-    */
+    Fixups.push_back(MCFixup::create(0, MOSExpr, FixupKind));
     return 0;
   }
 

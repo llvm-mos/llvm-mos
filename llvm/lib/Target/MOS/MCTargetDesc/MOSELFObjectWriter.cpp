@@ -14,6 +14,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
@@ -42,55 +43,29 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx,
                                           bool IsPCRel) const {
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
   switch ((unsigned) Fixup.getKind()) {
-  case FK_Data_1:
-    switch (Modifier) {
-    default:
-      llvm_unreachable("Unsupported Modifier");
-    case MCSymbolRefExpr::VK_None:
-      return ELF::R_AVR_8;
-    case MCSymbolRefExpr::VK_AVR_DIFF8:
-      return ELF::R_AVR_DIFF8;
-    case MCSymbolRefExpr::VK_AVR_LO8:
-      return ELF::R_AVR_8_LO8;
-    case MCSymbolRefExpr::VK_AVR_HI8:
-      return ELF::R_AVR_8_HI8;
-    case MCSymbolRefExpr::VK_AVR_HLO8:
-      return ELF::R_AVR_8_HLO8;
-    }
-  case FK_Data_4:
-    switch (Modifier) {
-    default:
-      llvm_unreachable("Unsupported Modifier");
-    case MCSymbolRefExpr::VK_None:
-      return ELF::R_AVR_32;
-    case MCSymbolRefExpr::VK_AVR_DIFF32:
-      return ELF::R_AVR_DIFF32;
-    }
-  case FK_Data_2:
-    switch (Modifier) {
-    default:
-      llvm_unreachable("Unsupported Modifier");
-    case MCSymbolRefExpr::VK_None:
-      return ELF::R_AVR_16;
-    case MCSymbolRefExpr::VK_AVR_NONE:
-      return ELF::R_AVR_16_PM;
-    case MCSymbolRefExpr::VK_AVR_DIFF16:
-      return ELF::R_AVR_DIFF16;
-    }
   case MOS::Imm8:
     return ELF::R_MOS_IMM8;
   case MOS::Addr8:
+  case FK_Data_1:
     return ELF::R_MOS_ADDR8;
+  case FK_Data_2:
   case MOS::Addr16:
     return ELF::R_MOS_ADDR16;
   case MOS::Addr16_Low:
-    return ELF::R_MOS_ADDR16_LOW;
+    return ELF::R_MOS_ADDR16_LO;
   case MOS::Addr16_High:
-    return ELF::R_MOS_ADDR16_HIGH;
+    return ELF::R_MOS_ADDR16_HI;
   case MOS::Addr24:
+  case FK_Data_4:
     return ELF::R_MOS_ADDR24;
   case MOS::Addr24_Segment:
     return ELF::R_MOS_ADDR24_SEGMENT;
+  case MOS::Addr24_Bank:
+    return ELF::R_MOS_ADDR24_BANK;
+  case MOS::Addr24_Bank_Low:
+    return ELF::R_MOS_ADDR24_BANK_LO;
+  case MOS::Addr24_Bank_High:
+    return ELF::R_MOS_ADDR24_BANK_HI;
   case MOS::PCRel8:
     return ELF::R_MOS_PCREL_8;
   default:

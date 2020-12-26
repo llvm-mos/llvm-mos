@@ -179,6 +179,7 @@ class MOSAsmParser : public MCTargetAsmParser {
   const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
+  const std::string GENERATE_STUBS = "gs";
 
 #define GET_ASSEMBLER_HEADER
 #include "MOSGenAsmMatcher.inc"
@@ -204,6 +205,10 @@ public:
 
   // #define GET_REGISTER_MATCHER
   // #include "MOSGenAsmMatcher.inc"
+
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override {
+    return MCTargetAsmParser::parsePrimaryExpr(Res, EndLoc);
+  }
 
   bool invalidOperand(SMLoc const &Loc, OperandVector const &Operands,
                       uint64_t const &ErrorInfo) {
@@ -328,7 +333,96 @@ public:
     Lex();
   }
 
+  bool tryParseRelocExpression(OperandVector &Operands) {
+    bool IsNegated = false;
+    MOSMCExpr::VariantKind ModifierKind = MOSMCExpr::VK_MOS_NONE;
+
+    SMLoc S = Parser.getTok().getLoc();
+
+    // Check for sign
+    AsmToken tokens[2];
+    size_t ReadCount = Parser.getLexer().peekTokens(tokens);
+
+    if (ReadCount == 2) {
+      if ((tokens[0].getKind() == AsmToken::Identifier &&
+           tokens[1].getKind() == AsmToken::LParen) ||
+          (tokens[0].getKind() == AsmToken::LParen &&
+           tokens[1].getKind() == AsmToken::Minus)) {
+
+        AsmToken::TokenKind CurTok = Parser.getLexer().getKind();
+        if (CurTok == AsmToken::Minus ||
+            tokens[1].getKind() == AsmToken::Minus) {
+          IsNegated = true;
+        } else {
+          assert(CurTok == AsmToken::Plus);
+          IsNegated = false;
+        }
+
+        // Eat the sign
+        if (CurTok == AsmToken::Minus || CurTok == AsmToken::Plus)
+          Parser.Lex();
+      }
+    }
+
+    // Check if we have a target specific modifier (lo8, hi8, &c)
+    if (Parser.getTok().getKind() != AsmToken::Identifier ||
+        Parser.getLexer().peekTok().getKind() != AsmToken::LParen) {
+      // Not a reloc expr
+      return true;
+    }
+    StringRef ModifierName = Parser.getTok().getString();
+    ModifierKind = MOSMCExpr::getKindByName(ModifierName.str());
+
+    if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
+      Parser.Lex();
+      Parser.Lex(); // Eat modifier name and parenthesis
+      if (Parser.getTok().getString() == GENERATE_STUBS &&
+          Parser.getTok().getKind() == AsmToken::Identifier) {
+        std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
+        ModifierKind = MOSMCExpr::getKindByName(GSModName);
+        if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
+          Parser.Lex(); // Eat gs modifier name
+        }
+      }
+    } else {
+      return Error(Parser.getTok().getLoc(), "unknown modifier");
+    }
+
+    if (tokens[1].getKind() == AsmToken::Minus ||
+        tokens[1].getKind() == AsmToken::Plus) {
+      Parser.Lex();
+      assert(Parser.getTok().getKind() == AsmToken::LParen);
+      Parser.Lex(); // Eat the sign and parenthesis
+    }
+
+    MCExpr const *InnerExpression;
+    if (getParser().parseExpression(InnerExpression))
+      return true;
+
+    if (tokens[1].getKind() == AsmToken::Minus ||
+        tokens[1].getKind() == AsmToken::Plus) {
+      assert(Parser.getTok().getKind() == AsmToken::RParen);
+      Parser.Lex(); // Eat closing parenthesis
+    }
+
+    // If we have a modifier wrap the inner expression
+    assert(Parser.getTok().getKind() == AsmToken::RParen);
+    Parser.Lex(); // Eat closing parenthesis
+
+    MCExpr const *Expression = MOSMCExpr::create(ModifierKind, InnerExpression,
+                                                 IsNegated, getContext());
+
+    SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+    Operands.push_back(MOSOperand::createImm(Expression, S, E));
+
+    return false;
+  }
+
   bool tryParseExpr(OperandVector &Operands, StringRef ErrorMsg) {
+    if (!tryParseRelocExpression(Operands)) {
+      return false;
+    }
+
     MCExpr const *Expression;
     SMLoc S = getLexer().getLoc();
     SMLoc E = getLexer().getTok().getEndLoc();
@@ -340,12 +434,10 @@ public:
     return false;
   }
 
-  OperandMatchResultTy
-  tryParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override
-  {
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override {
     return MatchOperand_NoMatch;
   }
-
 
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Mnemonic,
                         SMLoc NameLoc, OperandVector &Operands) override {
