@@ -4,6 +4,12 @@
 #endif
 
 ELF_RELOC(R_MOS_NONE,                  0)
-ELF_RELOC(R_MOS_ADDR8,                 1)
-ELF_RELOC(R_MOS_ADDR16,                2)
-ELF_RELOC(R_MOS_CALL,                  3)
+ELF_RELOC(R_MOS_IMM8,                  1)
+ELF_RELOC(R_MOS_ADDR8,                 2)
+ELF_RELOC(R_MOS_ADDR16,                3)
+ELF_RELOC(R_MOS_ADDR16_LOW,            4)
+ELF_RELOC(R_MOS_ADDR16_HIGH,           5)
+ELF_RELOC(R_MOS_ADDR24,                6)
+ELF_RELOC(R_MOS_ADDR24_SEGMENT,        7)
+ELF_RELOC(R_MOS_PCREL_8,               8)
+ELF_RELOC(R_MOS_CALL,                  9)
