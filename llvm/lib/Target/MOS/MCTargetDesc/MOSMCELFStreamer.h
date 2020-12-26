@@ -20,9 +20,6 @@
 
 namespace llvm {
 
-const int SIZE_LONG = 4;
-const int SIZE_WORD = 2;
-
 class MOSMCELFStreamer : public MCELFStreamer {
   std::unique_ptr<MCInstrInfo> MCII;
 
