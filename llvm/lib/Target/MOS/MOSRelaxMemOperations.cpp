@@ -139,7 +139,7 @@ bool MOSRelaxMem::runOnInstruction(Block &MBB, BlockIt MBBI) {
 
 } // end of anonymous namespace
 
-INITIALIZE_PASS(MOSRelaxMem, "avr-relax-mem",
+INITIALIZE_PASS(MOSRelaxMem, "mos-relax-mem",
                 MOS_RELAX_MEM_OPS_NAME, false, false)
 
 namespace llvm {
