@@ -20,7 +20,7 @@
 #include "MOSTargetMachine.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 
-#define DEBUG_TYPE "avr-subtarget"
+#define DEBUG_TYPE "mos-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR

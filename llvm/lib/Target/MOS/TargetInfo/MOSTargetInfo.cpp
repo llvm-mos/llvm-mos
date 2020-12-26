@@ -17,7 +17,7 @@ Target &getTheMOSTarget() {
 }
 
 extern "C" void LLVMInitializeMOSTargetInfo() {
-  llvm::RegisterTarget<llvm::Triple::avr> X(llvm::getTheMOSTarget(), "avr",
-                                            "Atmel MOS Microcontroller", "MOS");
+  llvm::RegisterTarget<llvm::Triple::mos> X(llvm::getTheMOSTarget(), "mos",
+                                            "MOS 65xx", "MOS");
 }
 

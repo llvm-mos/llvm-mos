@@ -11,7 +11,7 @@
 // instructions on to the real streamer.
 //
 //===----------------------------------------------------------------------===//
-#define DEBUG_TYPE "avrmcelfstreamer"
+#define DEBUG_TYPE "mosmcelfstreamer"
 
 #include "MCTargetDesc/MOSMCELFStreamer.h"
 #include "llvm/MC/MCContext.h"

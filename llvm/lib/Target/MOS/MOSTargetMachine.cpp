@@ -30,7 +30,7 @@ static const char *MOSDataLayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
   if (CPU.empty() || CPU == "generic") {
-    return "avr2";
+    return "mos";
   }
 
   return CPU;

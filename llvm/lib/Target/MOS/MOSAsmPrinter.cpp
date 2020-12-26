@@ -30,7 +30,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "avr-asm-printer"
+#define DEBUG_TYPE "mos-asm-printer"
 
 namespace llvm {
 

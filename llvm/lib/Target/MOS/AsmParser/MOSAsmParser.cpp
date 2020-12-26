@@ -32,7 +32,7 @@
 
 #include <sstream>
 
-#define DEBUG_TYPE "avr-asm-parser"
+#define DEBUG_TYPE "mos-asm-parser"
 
 using namespace llvm;
 
