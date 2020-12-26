@@ -25,8 +25,7 @@ namespace llvm {
 /// Writes MOS machine code into an ELF32 object file.
 class MOSELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  MOSELFObjectWriter(uint8_t OSABI);
-  virtual ~MOSELFObjectWriter() {}
+  explicit MOSELFObjectWriter(uint8_t OSABI);
 
   unsigned getRelocType(MCContext &Ctx,
                         const MCValue &Target,
@@ -56,16 +55,15 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx,
   case MOS::Addr16_High:
     return ELF::R_MOS_ADDR16_HI;
   case MOS::Addr24:
-  case FK_Data_4:
     return ELF::R_MOS_ADDR24;
-  case MOS::Addr24_Segment:
-    return ELF::R_MOS_ADDR24_SEGMENT;
   case MOS::Addr24_Bank:
     return ELF::R_MOS_ADDR24_BANK;
-  case MOS::Addr24_Bank_Low:
-    return ELF::R_MOS_ADDR24_BANK_LO;
-  case MOS::Addr24_Bank_High:
-    return ELF::R_MOS_ADDR24_BANK_HI;
+  case MOS::Addr24_Segment:
+    return ELF::R_MOS_ADDR24_SEGMENT;
+  case MOS::Addr24_Segment_Low:
+    return ELF::R_MOS_ADDR24_SEGMENT_LO;
+  case MOS::Addr24_Segment_High:
+    return ELF::R_MOS_ADDR24_SEGMENT_HI;
   case MOS::PCRel8:
     return ELF::R_MOS_PCREL_8;
   default:

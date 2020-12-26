@@ -10,7 +10,9 @@
 #ifndef LLVM_MOS_FIXUP_KINDS_H
 #define LLVM_MOS_FIXUP_KINDS_H
 
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFixupKindInfo.h"
 
 namespace llvm {
 namespace MOS {
@@ -26,22 +28,28 @@ namespace MOS {
 ///       in `MOSAsmBackend.cpp`.
 enum Fixups {
   Imm8 = FirstTargetFixupKind, // An 8 bit zero page address.
-  Addr8, // An 8 bit zero page address.
-  Addr16, // A 16-bit address.
-  Addr16_Low, // The low byte of a 16-bit address.
-  Addr16_High, // The high byte of a 16-bit address.
-  Addr24, // A 24-bit 65816 address.
-  Addr24_Segment, // The segment byte of a 24-bit address.
-  Addr24_Bank, // The bank 16-bits of a 24-bit address.
-  Addr24_Bank_Low, // The low 8 bits of the bank of a 24-bit address.
-  Addr24_Bank_High, // The high 8 bits of the bank of a 24-bit address.
-  PCRel8, // An 8-bit PC relative value.
+  Addr8,                       // An 8 bit zero page address.
+  Addr16,                      // A 16-bit address.
+  Addr16_Low,                  // The low byte of a 16-bit address.
+  Addr16_High,                 // The high byte of a 16-bit address.
+  Addr24,                      // A 24-bit 65816 address.
+  Addr24_Bank,                 // The bank byte of a 24-bit address.
+  Addr24_Segment,              // The segment 16-bits of a 24-bit address.
+  Addr24_Segment_Low,  // The low 8 bits of the segment of a 24-bit address.
+  Addr24_Segment_High, // The high 8 bits of the segment of a 24-bit address.
+  PCRel8,              // An 8-bit PC relative value.
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
 };
 
 namespace fixups {} // end of namespace fixups
 } // namespace MOS
+
+class MOSFixupKinds {
+public:
+  const static MCFixupKindInfo &getFixupKindInfo(const MOS::Fixups Kind,
+                                                 const MCAsmBackend *Alternative);
+};
 } // namespace llvm
 
 #endif // LLVM_MOS_FIXUP_KINDS_H

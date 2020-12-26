@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/MOSFixupKinds.h"
 #include "MCTargetDesc/MOSMCELFStreamer.h"
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
@@ -65,6 +66,28 @@ public:
     if (!isImm()) {
       return false;
     }
+
+    // if it's a MOS-specific modifier, we need to figure out the size based
+    // on the type of expression.  If the largest value that the modifier
+    // can produce is larger than the expression that this immediate can hold,
+    // we have to refuse to match it, so that we don't inadvertently match
+    // zero-page addresses against 16-bit modifiers.
+    const auto *MME = dyn_cast<MOSMCExpr>(getImm());
+    if (MME) {
+      const MOS::Fixups Kind = MME->getFixupKind();
+      const MCFixupKindInfo &Info =
+          MOSFixupKinds::getFixupKindInfo(Kind, nullptr);
+      int64_t MaxValue = (1 << Info.TargetSize) - 1;
+      bool Evaluated = false;
+      int64_t Constant = 0;
+      Evaluated = MME->evaluateAsConstant(Constant);
+      // if the constant is non-zero, evaluate for size now
+      if (Evaluated && Constant > 0) {
+        return (Constant <= MaxValue);
+      }
+      return (MaxValue <= High);
+    }
+
     // if it's a symbol ref, we'll replace it later
     const auto *SRE = dyn_cast<MCSymbolRefExpr>(getImm());
     if (SRE) {
@@ -364,50 +387,71 @@ public:
       }
     }
 
-    // Check if we have a target specific modifier (lo8, hi8, &c)
-    if (Parser.getTok().getKind() != AsmToken::Identifier ||
-        Parser.getLexer().peekTok().getKind() != AsmToken::LParen) {
-      // Not a reloc expr
-      return true;
-    }
-    StringRef ModifierName = Parser.getTok().getString();
-    ModifierKind = MOSMCExpr::getKindByName(ModifierName.str());
-
-    if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
-      Parser.Lex();
-      Parser.Lex(); // Eat modifier name and parenthesis
-      if (Parser.getTok().getString() == GENERATE_STUBS &&
-          Parser.getTok().getKind() == AsmToken::Identifier) {
-        std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
-        ModifierKind = MOSMCExpr::getKindByName(GSModName);
-        if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
-          Parser.Lex(); // Eat gs modifier name
-        }
-      }
-    } else {
-      return Error(Parser.getTok().getLoc(), "unknown modifier");
-    }
-
-    if (tokens[1].getKind() == AsmToken::Minus ||
-        tokens[1].getKind() == AsmToken::Plus) {
-      Parser.Lex();
-      assert(Parser.getTok().getKind() == AsmToken::LParen);
-      Parser.Lex(); // Eat the sign and parenthesis
-    }
-
     MCExpr const *InnerExpression;
-    if (getParser().parseExpression(InnerExpression))
-      return true;
+    if (Parser.getTok().getKind() == AsmToken::Less ||
+        Parser.getTok().getKind() == AsmToken::Greater) {
 
-    if (tokens[1].getKind() == AsmToken::Minus ||
-        tokens[1].getKind() == AsmToken::Plus) {
+      switch (Parser.getTok().getKind()) {
+      case AsmToken::Less:
+        ModifierKind = MOSMCExpr::VK_MOS_ADDR16_LO;
+        break;
+      case AsmToken::Greater:
+        ModifierKind = MOSMCExpr::VK_MOS_ADDR16_HI;
+        break;
+      default:
+        assert(false);
+      }
+
+      Parser.Lex();
+
+      if (getParser().parseExpression(InnerExpression))
+        return true;
+
+    } else {
+      // Check if we have a target specific modifier (lo8, hi8, &c)
+      if (Parser.getTok().getKind() != AsmToken::Identifier ||
+          Parser.getLexer().peekTok().getKind() != AsmToken::LParen) {
+        // Not a reloc expr
+        return true;
+      }
+      StringRef ModifierName = Parser.getTok().getString();
+      ModifierKind = MOSMCExpr::getKindByName(ModifierName.str());
+
+      if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
+        Parser.Lex();
+        Parser.Lex(); // Eat modifier name and parenthesis
+        if (Parser.getTok().getString() == GENERATE_STUBS &&
+            Parser.getTok().getKind() == AsmToken::Identifier) {
+          std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
+          ModifierKind = MOSMCExpr::getKindByName(GSModName);
+          if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
+            Parser.Lex(); // Eat gs modifier name
+          }
+        }
+      } else {
+        return Error(Parser.getTok().getLoc(), "unknown modifier");
+      }
+
+      if (tokens[1].getKind() == AsmToken::Minus ||
+          tokens[1].getKind() == AsmToken::Plus) {
+        Parser.Lex();
+        assert(Parser.getTok().getKind() == AsmToken::LParen);
+        Parser.Lex(); // Eat the sign and parenthesis
+      }
+
+      if (getParser().parseExpression(InnerExpression))
+        return true;
+
+      if (tokens[1].getKind() == AsmToken::Minus ||
+          tokens[1].getKind() == AsmToken::Plus) {
+        assert(Parser.getTok().getKind() == AsmToken::RParen);
+        Parser.Lex(); // Eat closing parenthesis
+      }
+
+      // If we have a modifier wrap the inner expression
       assert(Parser.getTok().getKind() == AsmToken::RParen);
       Parser.Lex(); // Eat closing parenthesis
     }
-
-    // If we have a modifier wrap the inner expression
-    assert(Parser.getTok().getKind() == AsmToken::RParen);
-    Parser.Lex(); // Eat closing parenthesis
 
     MCExpr const *Expression = MOSMCExpr::create(ModifierKind, InnerExpression,
                                                  IsNegated, getContext());

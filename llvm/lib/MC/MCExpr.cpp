@@ -376,10 +376,10 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_VE_TPOFF_LO32: return "tpoff_lo";
   case VK_MOS_ADDR16_LO: return "mos16lo";
   case VK_MOS_ADDR16_HI: return "mos16hi";
-  case VK_MOS_ADDR24_SEGMENT: return "mos24segment";
   case VK_MOS_ADDR24_BANK: return "mos24bank";
-  case VK_MOS_ADDR24_BANK_LO: return "mos24banklo";
-  case VK_MOS_ADDR24_BANK_HI: return "mos24bankhi";
+  case VK_MOS_ADDR24_SEGMENT: return "mos24segment";
+  case VK_MOS_ADDR24_SEGMENT_LO: return "mos24segmentlo";
+  case VK_MOS_ADDR24_SEGMENT_HI: return "mos24segmenthi";
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -523,10 +523,10 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("tpoff_lo", VK_VE_TPOFF_LO32)
     .Case("mos16lo", VK_MOS_ADDR16_LO)
     .Case("mos16hi", VK_MOS_ADDR16_HI)
-    .Case("mos24segment", VK_MOS_ADDR24_SEGMENT)
     .Case("mos24bank", VK_MOS_ADDR24_BANK)
-    .Case("mos24banklo", VK_MOS_ADDR24_BANK_LO)
-    .Case("mos24bankhi", VK_MOS_ADDR24_BANK_HI)
+    .Case("mos24segment", VK_MOS_ADDR24_SEGMENT)
+    .Case("mos24segmentlo", VK_MOS_ADDR24_SEGMENT_LO)
+    .Case("mos24segmenthi", VK_MOS_ADDR24_SEGMENT_HI)
     .Default(VK_Invalid);
 }
 
