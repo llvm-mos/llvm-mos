@@ -53,6 +53,9 @@ static MCRegisterInfo *createMOSMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *createMOSMCSubtargetInfo(const Triple &TT,
                                                  StringRef CPU, StringRef FS) {
+  // If we've received no advice on which CPU to use, let's use our own default.
+  if ( CPU.empty() )
+    CPU = "mos-generic";
   return createMOSMCSubtargetInfoImpl(TT, CPU, FS);
 }
 

@@ -23,6 +23,7 @@ MOSTargetAsmStreamer::MOSTargetAsmStreamer(MCStreamer &S)
     : MOSTargetStreamer(S) {}
 
 void MOSTargetStreamer::finish() {
+#ifdef LLVM_MOS_USE_MOS_SYMBOLS_ON_MC
   MCStreamer &OS = getStreamer();
   MCContext &Context = OS.getContext();
 
@@ -38,6 +39,7 @@ void MOSTargetStreamer::finish() {
   OS.emitRawComment(" Declaring this symbol tells the CRT that it should");
   OS.emitRawComment("clear the zeroed data section on startup");
   OS.EmitSymbolAttribute(DoClearBss, MCSA_Global);
+  #endif //  LLVM_MOS_USE_AVR_SYMBOLS_ON_MC
 }
 
 } // end namespace llvm

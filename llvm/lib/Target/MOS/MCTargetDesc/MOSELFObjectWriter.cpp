@@ -40,26 +40,7 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx,
                                           const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
-  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
-  switch ((unsigned) Fixup.getKind()) {
-  case FK_Data_1:
-    switch (Modifier) {
-    default:
-      llvm_unreachable("Unsupported Modifier");
-    }
-  case FK_Data_4:
-    switch (Modifier) {
-    default:
-      llvm_unreachable("Unsupported Modifier");
-    }
-  case FK_Data_2:
-    switch (Modifier) {
-    default:
-      llvm_unreachable("Unsupported Modifier");
-    }
-  default:
-    llvm_unreachable("invalid fixup kind!");
-  }
+  return 0;                       
 }
 
 std::unique_ptr<MCObjectTargetWriter> createMOSELFObjectWriter(uint8_t OSABI) {
