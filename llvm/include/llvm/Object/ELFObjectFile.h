@@ -1235,6 +1235,8 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
     default:
       report_fatal_error("Invalid ELFCLASS!");
     }
+  case ELF::EM_MOS:
+    return Triple::mos;
   case ELF::EM_MSP430:
     return Triple::msp430;
   case ELF::EM_PPC:

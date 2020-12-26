@@ -56,9 +56,7 @@ public:
 class MOSAsmBackend : public MCAsmBackend {
 public:
   MOSAsmBackend(Triple::OSType OSType)
-      : llvm::MCAsmBackend(support::little)
-  // , OSType(OSType)
-  {}
+      : llvm::MCAsmBackend(support::little), OSType(OSType) {}
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
@@ -71,15 +69,14 @@ public:
                           uint64_t Value, bool IsResolved,
                           const MCSubtargetInfo *STI) const override;
 
-  virtual std::unique_ptr<MCObjectTargetWriter>
+  std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
-  virtual unsigned getNumFixupKinds() const override;
-  virtual MCFixupKindInfo const &
-  getFixupKindInfo(MCFixupKind Kind) const override;
+  unsigned getNumFixupKinds() const override;
+  MCFixupKindInfo const &getFixupKindInfo(MCFixupKind Kind) const override;
 
   /// Check whether the given instruction may need relaxation.
   ///
@@ -105,7 +102,7 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 
 private:
-  // Triple::OSType OSType;
+  Triple::OSType OSType;
 };
 
 } // end namespace llvm
