@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MOSELFObjectWriter.h"
 #include "MCTargetDesc/MOSFixupKinds.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MCTargetDesc/MOSMCExpr.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -36,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <climits>
 #include <memory>
 #include <cstdint>
 #include <string>
@@ -209,15 +211,19 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  const MCRelaxableFragment *DF,
                                                  const MCAsmLayout &Layout,
                                                  const bool WasForced) const {
-  // Before doing a deeper analysis based on the name of the fixup: if the
-  // fixup kind requires more than 8 bits to render, we will require relaxation.
   auto Info = getFixupKindInfo(Fixup.getKind());
+  const auto *MME = dyn_cast<MOSMCExpr>(Fixup.getValue());
+  // If this is a target-specific relaxation, e.g. a modifier, then the Info
+  // field already knows the exact width of the answer, so decide now.
+  if (MME != nullptr)
+  {
+    return (Info.TargetSize > 8);
+  }
+  // Now the fixup kind is not target-specific.  Yet, if it requires more than
+  // 8 bits, then relaxation is needed.
   if (Info.TargetSize > 8)
   {
     return true;
-  }
-  if (Info.TargetSize == 8) {
-    return false;
   }
   // In order to resolve an eight to sixteen bit possible relaxation, we need to
   // figure out whether the symbol in question is in zero page or not.  If it is
@@ -322,8 +328,7 @@ bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
     return false;
   }
   int64_t Imm;
-  Operand.evaluateAsConstantImm(Imm);
-  if ((Imm >= 0x00) && (Imm <= 0xff)) {
+  if (Operand.evaluateAsConstantImm(Imm) && Imm >= 0 && Imm <= UCHAR_MAX) {
     // If the expression evaluates cleanly to an 8-bit value, then it doesn't
     // need relaxation.
     return false;
