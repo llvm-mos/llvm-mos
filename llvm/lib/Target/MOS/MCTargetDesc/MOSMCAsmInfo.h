@@ -23,7 +23,7 @@ class Triple;
 /// Specifies the format of MOS assembly files.
 class MOSMCAsmInfo : public MCAsmInfo {
 public:
-  explicit MOSMCAsmInfo(const Triple &TT);
+  explicit MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
 };
 
 } // end namespace llvm

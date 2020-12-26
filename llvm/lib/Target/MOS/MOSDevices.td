@@ -2,16 +2,6 @@
 // MOS Device Definitions
 //===---------------------------------------------------------------------===//
 
-/*
-all valid 6502 mnemonics when in 6502 mode (the default or after the .P02 command was given).
-all valid 6502 mnemonics plus a set of illegal instructions when in 6502X mode.
-all valid 65SC02 mnemonics when in 65SC02 mode (after the .PSC02 command was given).
-all valid 65C02 mnemonics when in 65C02 mode (after the .PC02 command was given).
-all valid 65618 mnemonics when in 65816 mode (after the .P816 command was given).
-all valid SunPlus mnemonics when in SunPlus mode (after the .SUNPLUS command was given).
-SWEET16
-*/
-
 def Feature6502
     : SubtargetFeature<"mos-insns-6502", "m_has6502Insns", "true",
                        "The original documented 6502 instruction set">;
@@ -49,12 +39,13 @@ class Family<string name, string desc, list<SubtargetFeature> i>
 
 
 def Family6502 
-    : Family<"mos-6502", "The device is a member of the original MOS 6502 family", [Feature6502]>;
+    : Family<"mos-6502", "The device is a member of the original MOS 6502 "
+             "family", [Feature6502]>;
 
 def Family6502X
     : Family<"mos-6502x", 
-      "The device is a member of the original MOS 6502 family, with illegal opcode support",
-      [Feature6502, Feature6502X]>;
+      "The device is a member of the original MOS 6502 family, with illegal "
+      "opcode support", [Feature6502, Feature6502X]>;
 
 def Family65SC02
     : Family<"mos-65sc02",  
@@ -68,14 +59,12 @@ def Family65C02
 
 def FamilySWEET16
     : Family<"mos-sweet16",
-      "The device is a member of the MOS 6502 family, with SWEET16 virtual machine support",
-      [Feature6502, FeatureSWEET16]>;
-// Features as described by http://nparker.llx.com/a2/opcodes.html
+      "The device is a member of the MOS 6502 family, with SWEET16 virtual "
+      "machine support", [Feature6502, FeatureSWEET16]>;
 
 class ELFArch<string name>  : SubtargetFeature<"", "ELFArch",
                                     !strconcat("ELF::",name), "">;
 // ELF e_flags architecture values
-def ELFArchMOSGeneric : ELFArch<"EF_MOS_ARCH_GENERIC">;
 def ELFArchMOS6502 : ELFArch<"EF_MOS_ARCH_6502">;
 def ELFArchMOS6502X : ELFArch<"EF_MOS_ARCH_6502X">;
 def ELFArchMOS65SC02 : ELFArch<"EF_MOS_ARCH_65SC02">;
@@ -90,7 +79,6 @@ class Device<string Name, Family Fam, ELFArch Arch,
              list<SubtargetFeature> ExtraFeatures = []>
   : Processor<Name, NoItineraries, !listconcat([Fam,Arch],ExtraFeatures)>;
 
-def : Device<"mos-generic", Family6502, ELFArchMOSGeneric>;
 def : Device<"mos-6502",  Family6502, ELFArchMOS6502>;
 def : Device<"mos-6502x", Family6502X, ELFArchMOS6502X>;
 def : Device<"mos-65c02", Family65C02, ELFArchMOS65C02>;

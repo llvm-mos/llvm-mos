@@ -24,7 +24,6 @@ namespace llvm {
 class MOSELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   MOSELFObjectWriter(uint8_t OSABI);
-
   virtual ~MOSELFObjectWriter() {}
 
   unsigned getRelocType(MCContext &Ctx,
@@ -44,7 +43,7 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 std::unique_ptr<MCObjectTargetWriter> createMOSELFObjectWriter(uint8_t OSABI) {
-  return make_unique<MOSELFObjectWriter>(OSABI);
+  return std::make_unique<MOSELFObjectWriter>(OSABI);
 }
 
 } // end of namespace llvm

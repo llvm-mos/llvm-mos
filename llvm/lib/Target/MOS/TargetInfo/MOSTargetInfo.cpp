@@ -14,9 +14,9 @@ Target &getTheMOSTarget() {
   static Target TheMOSTarget;
   return TheMOSTarget;
 }
-}
+} // namespace llvm
 
-extern "C" void LLVMInitializeMOSTargetInfo() {
+extern "C" void LLVMInitializeMOSTargetInfo() { // NOLINT
   llvm::RegisterTarget<llvm::Triple::mos> X(llvm::getTheMOSTarget(), "mos",
                                             "MOS Technologies 65xx and variants", "MOS");
 }

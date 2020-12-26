@@ -28,6 +28,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <memory>
+
 namespace llvm {
 MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                   const MCRegisterInfo &MRI,
@@ -38,11 +40,43 @@ MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
 void MOSAsmBackend::relaxInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI,
                                      MCInst &Res) const {
-  // todo
+  Res = Inst;
 }
 
+MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // NOTE: Many AVR fixups work on sets of non-contignous bits. We work around
+  // this by saying that the fixup is the size of the entire instruction.
+  const static MCFixupKindInfo Infos[MOS::NumTargetFixupKinds] = {
+      // This table *must* be in same the order of fixup_* kinds in
+      // MOSFixupKinds.h.
+      //
+      // name, offset, bits, flags
+      {"Imm8", 0, 8, 0},
+      {"Imm16", 0, 16, 0},
+      {"PCRel8", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
+      {"Addr8", 0, 8, 0},
+      {"Addr16", 0, 16, 0}
+  };
+
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
+
+  return Infos[Kind - FirstTargetFixupKind];
+}
+
+
 bool MOSAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
-  return false;
+  // todo: fix for virtual targets
+  while ((Count--) > 0)
+  {
+    OS << 0xEA; // Sports. It's in the game.  Knowing the 6502 hexadecimal
+                // representation of a NOP on 6502, used to be an interview
+                // question at Electronic Arts.
+  }
+  return true;
 }
 
 bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
@@ -50,7 +84,9 @@ bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   return false;
 }
 
-unsigned MOSAsmBackend::getNumFixupKinds() const { return 0; }
+unsigned MOSAsmBackend::getNumFixupKinds() const {
+  return MOS::Fixups::NumTargetFixupKinds;
+}
 
 void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target,
@@ -63,7 +99,7 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                                          const MCRelaxableFragment *DF,
                                          const MCAsmLayout &Layout) const {
-  return true;
+  return false;
 }
 
 std::unique_ptr<llvm::MCObjectTargetWriter>
@@ -71,4 +107,4 @@ MOSAsmBackend::createObjectTargetWriter() const {
   return std::make_unique<MOSObjectTargetWriter>();
 }
 
-}; // namespace LLVM
+} // namespace llvm

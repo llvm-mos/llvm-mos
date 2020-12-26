@@ -11,20 +11,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MOSMCTargetDesc.h"
+#include "MOSInstPrinter.h"
 #include "MOSELFStreamer.h"
 #include "MOSMCAsmInfo.h"
 #include "MOSMCELFStreamer.h"
-#include "MOSMCTargetDesc.h"
 #include "MOSTargetStreamer.h"
-#include "InstPrinter/MOSInstPrinter.h"
+
 
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/TargetRegistry.h"
+
 
 #define GET_INSTRINFO_MC_DESC
 #include "MOSGenInstrInfo.inc"
@@ -54,8 +56,8 @@ static MCRegisterInfo *createMOSMCRegisterInfo(const Triple &TT) {
 static MCSubtargetInfo *createMOSMCSubtargetInfo(const Triple &TT,
                                                  StringRef CPU, StringRef FS) {
   // If we've received no advice on which CPU to use, let's use our own default.
-  if ( CPU.empty() )
-    CPU = "mos-generic";
+  if (CPU.empty())
+    CPU = "mos-6502";
   return createMOSMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
@@ -64,20 +66,19 @@ static MCInstPrinter *createMOSMCInstPrinter(const Triple &T,
                                              const MCAsmInfo &MAI,
                                              const MCInstrInfo &MII,
                                              const MCRegisterInfo &MRI) {
-  if (SyntaxVariant == 0) {
+  switch (SyntaxVariant) {
+  case 0:
     return new MOSInstPrinter(MAI, MII, MRI);
+    break;
+  case 1:
+    return new MOSInstPrinterCA65(MAI, MII, MRI);
+    break;
+  case 2:
+    return new MOSInstPrinterXA65(MAI, MII, MRI);
+    break;
+  default:
+    return nullptr;
   }
-
-  return nullptr;
-}
-
-static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
-                                    std::unique_ptr<MCAsmBackend> &&MAB,
-                                    std::unique_ptr<MCObjectWriter> &&OW,
-                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                    bool RelaxAll) {
-  return createELFStreamer(Context, std::move(MAB), std::move(OW),
-                           std::move(Emitter), RelaxAll);
 }
 
 static MCTargetStreamer *
@@ -111,10 +112,11 @@ extern "C" void LLVMInitializeMOSTargetMC() {
                                         createMOSMCInstPrinter);
 
   // Register the MC Code Emitter
-  TargetRegistry::RegisterMCCodeEmitter(getTheMOSTarget(), createMOSMCCodeEmitter);
+  TargetRegistry::RegisterMCCodeEmitter(getTheMOSTarget(),
+                                        createMOSMCCodeEmitter);
 
   // Register the obj streamer
-  TargetRegistry::RegisterELFStreamer(getTheMOSTarget(), createMCStreamer);
+  TargetRegistry::RegisterELFStreamer(getTheMOSTarget(), createMOSMCELFStreamer);
 
   // Register the obj target streamer.
   TargetRegistry::RegisterObjectTargetStreamer(getTheMOSTarget(),
@@ -127,4 +129,3 @@ extern "C" void LLVMInitializeMOSTargetMC() {
   // Register the asm backend (as little endian).
   TargetRegistry::RegisterMCAsmBackend(getTheMOSTarget(), createMOSAsmBackend);
 }
-

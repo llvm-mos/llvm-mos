@@ -30,17 +30,7 @@ public:
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
-  bool
-  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MI,
-                              std::vector<CalleeSavedInfo> &CSI,
-                              const TargetRegisterInfo *TRI) const override;
-  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MI,
-                                 const std::vector<CalleeSavedInfo> &CSI,
-                                 const TargetRegisterInfo *TRI) const override;
-};
-
+  };
 } // end namespace llvm
 
 #endif // LLVM_MOS_FRAME_LOWERING_H
