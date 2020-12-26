@@ -144,19 +144,19 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   case FK_Data_1:
     Bytes = 1;
     break;
-
   case FK_Data_2:
   case MOS::Addr16:
   case MOS::Addr24_Segment:
     Bytes = 2;
     break;
-
   case MOS::Addr24:
     Bytes = 3;
     break;
-
   case FK_Data_4:
     Bytes = 4;
+    break;
+  case FK_Data_8:
+    Bytes = 8;
     break;
   default:
     llvm_unreachable("unknown fixup kind");
