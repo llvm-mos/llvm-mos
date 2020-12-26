@@ -25,15 +25,11 @@ namespace MOS {
 ///       MCFixupKindInfo Infos[MOS::NumTargetFixupKinds]
 ///       in `MOSAsmBackend.cpp`.
 enum Fixups {
-  /// A 7-bit PC-relative fixup for the family of conditional
-  /// branches which take 7-bit targets (BRNE,BRGT,etc).
-  fixup_7_pcrel = FirstTargetFixupKind,
-  /// A 16-bit address.
-  fixup_16,
-  /// A 16-bit program memory address.
-  fixup_16_pm,
-  /// Replaces the 8-bit immediate with another value.
-  fixup_ldi,
+  Imm8 = FirstTargetFixupKind, // An 8 bit immediate value.
+  Imm16, // A 16 bit immediate value.
+  PCRel8, // An 8-bit PC relative value.
+  Addr8, // An 8-bit (zero page) address.
+  Addr16, // A 16-bit address.
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
 };
