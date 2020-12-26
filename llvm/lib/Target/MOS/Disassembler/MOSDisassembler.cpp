@@ -25,7 +25,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "avr-disassembler"
+#define DEBUG_TYPE "mos-disassembler"
 
 typedef MCDisassembler::DecodeStatus DecodeStatus;
 
