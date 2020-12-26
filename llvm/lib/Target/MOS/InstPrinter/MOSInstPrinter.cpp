@@ -42,32 +42,15 @@ void MOSInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
   // TODO: We should be able to rewrite this using TableGen data.
   switch (Opcode) {
   case MOS::LDRdPtr:
-  case MOS::LDRdPtrPi:
-  case MOS::LDRdPtrPd:
     O << "\tld\t";
     printOperand(MI, 0, O);
     O << ", ";
 
-    if (Opcode == MOS::LDRdPtrPd)
-      O << '-';
-
     printOperand(MI, 1, O);
 
-    if (Opcode == MOS::LDRdPtrPi)
-      O << '+';
-    break;
-  case MOS::STPtrRr:
-    O << "\tst\t";
-    printOperand(MI, 0, O);
-    O << ", ";
-    printOperand(MI, 1, O);
     break;
   case MOS::STPtrPiRr:
-  case MOS::STPtrPdRr:
     O << "\tst\t";
-
-    if (Opcode == MOS::STPtrPdRr)
-      O << '-';
 
     printOperand(MI, 1, O);
 

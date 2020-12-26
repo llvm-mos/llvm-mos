@@ -54,23 +54,10 @@ public:
 
   // Subtarget feature getters.
   // See MOS.td for details.
-  bool hasSRAM() const { return m_hasSRAM; }
-  bool hasJMPCALL() const { return m_hasJMPCALL; }
-  bool hasIJMPCALL() const { return m_hasIJMPCALL; }
-  bool hasEIJMPCALL() const { return m_hasEIJMPCALL; }
-  bool hasADDSUBIW() const { return m_hasADDSUBIW; }
-  bool hasSmallStack() const { return m_hasSmallStack; }
-  bool hasMOVW() const { return m_hasMOVW; }
-  bool hasLPM() const { return m_hasLPM; }
-  bool hasLPMX() const { return m_hasLPMX; }
-  bool hasELPM() const { return m_hasELPM; }
-  bool hasELPMX() const { return m_hasELPMX; }
-  bool hasSPM() const { return m_hasSPM; }
-  bool hasSPMX() const { return m_hasSPMX; }
-  bool hasDES() const { return m_hasDES; }
-  bool supportsRMW() const { return m_supportsRMW; }
-  bool supportsMultiplication() const { return m_supportsMultiplication; }
-  bool hasBREAK() const { return m_hasBREAK; }
+  bool hasGreenInsns() const { return m_hasGreenInsns; }
+  bool hasYellowInsns() const { return m_hasYellowInsns; }
+  bool hasRedInsns() const { return m_hasRedInsns; }
+
   bool hasTinyEncoding() const { return m_hasTinyEncoding; }
 
   /// Gets the ELF architecture for the e_flags field
@@ -89,24 +76,11 @@ private:
 
   // Subtarget feature settings
   // See MOS.td for details.
-  bool m_hasSRAM;
-  bool m_hasJMPCALL;
-  bool m_hasIJMPCALL;
-  bool m_hasEIJMPCALL;
-  bool m_hasADDSUBIW;
-  bool m_hasSmallStack;
-  bool m_hasMOVW;
-  bool m_hasLPM;
-  bool m_hasLPMX;
-  bool m_hasELPM;
-  bool m_hasELPMX;
-  bool m_hasSPM;
-  bool m_hasSPMX;
-  bool m_hasDES;
-  bool m_supportsRMW;
-  bool m_supportsMultiplication;
-  bool m_hasBREAK;
   bool m_hasTinyEncoding;
+
+  bool m_hasGreenInsns;
+  bool m_hasYellowInsns;
+  bool m_hasRedInsns;
 
   /// The ELF e_flags architecture.
   unsigned ELFArch;

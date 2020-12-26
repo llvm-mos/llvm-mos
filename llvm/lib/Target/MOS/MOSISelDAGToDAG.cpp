@@ -142,7 +142,6 @@ bool MOSDAGToDAGISel::selectIndexedLoad(SDNode *N) {
       return false;
     }
 
-    Opcode = (isPre) ? MOS::LDRdPtrPd : MOS::LDRdPtrPi;
     break;
   }
   case MVT::i16: {
@@ -150,7 +149,6 @@ bool MOSDAGToDAGISel::selectIndexedLoad(SDNode *N) {
       return false;
     }
 
-    Opcode = (isPre) ? MOS::LDWRdPtrPd : MOS::LDWRdPtrPi;
     break;
   }
   default:
@@ -190,7 +188,6 @@ unsigned MOSDAGToDAGISel::selectIndexedProgMemLoad(const LoadSDNode *LD,
     if (Offs != 2) {
       return 0;
     }
-    Opcode = MOS::LPMWRdZPi;
     break;
   }
   default:
@@ -364,8 +361,6 @@ template <> bool MOSDAGToDAGISel::select<ISD::LOAD>(SDNode *N) {
     // Check if the opcode can be converted into an indexed load.
     return selectIndexedLoad(N);
   }
-
-  assert(Subtarget->hasLPM() && "cannot load from program memory on this mcu");
 
   // This is a flash memory load, move the pointer into R31R30 and emit
   // the lpm instruction.
