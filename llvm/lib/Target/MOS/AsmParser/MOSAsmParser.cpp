@@ -36,6 +36,9 @@
 
 namespace llvm {
 
+#define GET_REGISTER_MATCHER
+#include "MOSGenAsmMatcher.inc"
+
 class MOSOperand : public MCParsedAsmOperand {
 public:
   MOSOperand() = delete;
@@ -202,7 +205,7 @@ class MOSAsmParser : public MCTargetAsmParser {
   const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
-  const std::string GENERATE_STUBS = "gs";
+  const std::string GenerateStubs = "gs";
 
 #define GET_ASSEMBLER_HEADER
 #include "MOSGenAsmMatcher.inc"
@@ -225,9 +228,6 @@ public:
   }
   MCAsmLexer &getLexer() const { return Parser.getLexer(); }
   MCAsmParser &getParser() const { return Parser; }
-
-  // #define GET_REGISTER_MATCHER
-  // #include "MOSGenAsmMatcher.inc"
 
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override {
     return MCTargetAsmParser::parsePrimaryExpr(Res, EndLoc);
@@ -420,9 +420,9 @@ public:
       if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
         Parser.Lex();
         Parser.Lex(); // Eat modifier name and parenthesis
-        if (Parser.getTok().getString() == GENERATE_STUBS &&
+        if (Parser.getTok().getString() == GenerateStubs &&
             Parser.getTok().getKind() == AsmToken::Identifier) {
-          std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
+          std::string GSModName = ModifierName.str() + "_" + GenerateStubs;
           ModifierKind = MOSMCExpr::getKindByName(GSModName);
           if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
             Parser.Lex(); // Eat gs modifier name
@@ -480,7 +480,27 @@ public:
 
   OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override {
-    return MatchOperand_NoMatch;
+    std::string AnyCase(StartLoc.getPointer(),
+                        EndLoc.getPointer() - StartLoc.getPointer());
+    std::transform(AnyCase.begin(), AnyCase.end(), AnyCase.begin(),
+                   [](unsigned char C) { return std::tolower(C); });
+    StringRef RegisterName(AnyCase.c_str(), AnyCase.size());
+    RegNo = MatchRegisterName(RegisterName);
+    if (RegNo == 0) {
+      RegNo = MatchRegisterAltName(RegisterName);
+    }
+    return (RegNo != 0) ? MatchOperand_Success : MatchOperand_NoMatch;
+  }
+
+  bool tryParseRegister(OperandVector &Operands) {
+    unsigned RegNo = 0;
+    SMLoc S = getLexer().getLoc();
+    SMLoc E = getLexer().getTok().getEndLoc();
+    if (tryParseRegister(RegNo, S, E) == MatchOperand_Success) {
+      Operands.push_back(MOSOperand::createReg(RegNo, S, E));
+      return false;
+    }
+    return true;
   }
 
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Mnemonic,
@@ -539,9 +559,17 @@ public:
       TokName = getLexer().getTok().getString();
       TokLoc = getLexer().getTok().getLoc();
 
+      // We'll only ever see this on rol a or asl a commands, so handle it 
+      // as a special case
       if (FirstTime && (TokName == "a" || TokName == "A")) {
         eatThatToken(Operands);
         FirstTime = false;
+        continue;
+      }
+
+      // We'll only ever see a register name on the third or later parameter.
+      if (!FirstTime && !tryParseRegister(Operands)) {
+        Parser.Lex();
         continue;
       }
 
@@ -559,15 +587,14 @@ public:
   }
 
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override {
-    return true;
+
+    auto Result = tryParseRegister(RegNo, StartLoc, EndLoc);
+    return (Result != MatchOperand_Success);
   }
 
 }; // class MOSAsmParser
 
 #define GET_MATCHER_IMPLEMENTATION
-// #define GET_SUBTARGET_FEATURE_NAME
-#define GET_REGISTER_MATCHER
-// #define GET_MNEMONIC_SPELL_CHECKER
 #include "MOSGenAsmMatcher.inc"
 
 extern "C" void LLVMInitializeMOSAsmParser() { // NOLINT
