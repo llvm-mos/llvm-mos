@@ -58,6 +58,9 @@ public:
   MOSAsmBackend(Triple::OSType OSType)
       : llvm::MCAsmBackend(support::little), OSType(OSType) {}
 
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override;
+
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
@@ -69,15 +72,20 @@ public:
                           uint64_t Value, bool IsResolved,
                           const MCSubtargetInfo *STI) const override;
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override;
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
+  /// Carefully determine whether the instruction in question requires
+  /// relaxation.  This implementation considers the fixup as well as
+  /// the section that the symbol points to.
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+                                    uint64_t Value,
+                                    const MCRelaxableFragment *DF,
+                                    const MCAsmLayout &Layout,
+                                    const bool WasForced) const override;
   unsigned getNumFixupKinds() const override;
   MCFixupKindInfo const &getFixupKindInfo(MCFixupKind Kind) const override;
-
   /// Check whether the given instruction may need relaxation.
   ///
   /// \param Inst - The instruction to test.
@@ -94,6 +102,11 @@ public:
   /// \param [out] Res On return, the relaxed instruction.
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override;
+
+  /// If the instruction can be relaxed, return the opcode of the instruction
+  /// that this instruction can be relaxed to.  If the instruction cannot
+  /// be relaxed, return zero.
+  unsigned relaxInstructionTo(const MCInst &Inst) const;
 
   /// Write an (optimal) nop sequence of Count bytes to the given output. If the
   /// target cannot generate such a sequence, it should return an error.
