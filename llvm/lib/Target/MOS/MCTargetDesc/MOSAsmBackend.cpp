@@ -14,7 +14,10 @@
 #include "MCTargetDesc/MOSAsmBackend.h"
 #include "MCTargetDesc/MOSFixupKinds.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MCTargetDesc/MOSELFObjectWriter.h"
 
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -51,11 +54,14 @@ MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // MOSFixupKinds.h.
       //
       // name, offset, bits, flags
-      {"Imm8", 0, 8, 0},
-      {"Imm16", 0, 16, 0},
-      {"PCRel8", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
-      {"Addr8", 0, 8, 0},
-      {"Addr16", 0, 16, 0}
+      {"Imm8", 0, 8, 0}, // An 8 bit immediate value.
+      {"Addr8", 0, 8, 0}, // An 8 bit zero page address.
+      {"Addr16", 0, 16, 0}, // A 16-bit address.
+      {"Addr16_Low", 0, 8, 0}, // The low byte of a 16-bit address.
+      {"Addr16_High", 0, 8, 0}, // The high byte of a 16-bit address.
+      {"Addr24", 0, 24, 0}, // A 24-bit 65816 address.
+      {"Addr24_Segment", 0, 8, 0}, // The segment byte of a 24-bit address.
+      {"PCRel8", 0, 8, MCFixupKindInfo::FKF_IsPCRel}
   };
 
   if (Kind < FirstTargetFixupKind)
@@ -70,6 +76,7 @@ MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
 bool MOSAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   // todo: fix for virtual targets
+
   while ((Count--) > 0)
   {
     OS << 0xEA; // Sports. It's in the game.  Knowing the 6502 hexadecimal
@@ -93,7 +100,36 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved,
                                const MCSubtargetInfo *STI) const {
-  // todo
+  unsigned int Bytes = 0;
+  unsigned int Kind = Fixup.getKind();
+  switch( Kind )
+  {
+    case MOS::Imm8:
+    case MOS::Addr8:
+    case MOS::Addr16_High:
+    case MOS::Addr16_Low:
+    case MOS::Addr24_Segment:
+    case MOS::PCRel8:
+      Bytes = 1;
+      break;
+    case MOS::Addr16:
+      Bytes = 2;
+      break;
+    case MOS::Addr24:
+      Bytes = 3;
+      break;
+    default:
+      llvm_unreachable("unknown fixup kind");
+      return;
+  }
+
+  auto Offset = Fixup.getOffset();
+
+  for (unsigned int T = Offset; T < (Bytes + Offset); T++)
+  {
+    Data[T] = Value & 0xff;
+    Value = Value >> 8;
+  }
 }
 
 bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -104,7 +140,7 @@ bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
 
 std::unique_ptr<llvm::MCObjectTargetWriter>
 MOSAsmBackend::createObjectTargetWriter() const {
-  return std::make_unique<MOSObjectTargetWriter>();
+  return std::make_unique<MOSELFObjectWriter>(OSType);
 }
 
 } // namespace llvm

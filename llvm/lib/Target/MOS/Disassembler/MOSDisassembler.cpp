@@ -90,6 +90,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return Result;
     }
   }
+  Size = 1;
   return MCDisassembler::Fail;
 };
 

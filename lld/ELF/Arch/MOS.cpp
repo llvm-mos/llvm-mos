@@ -42,11 +42,16 @@ RelExpr MOS::getRelExpr(RelType type, const Symbol &s,
 
 void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (rel.type) {
-  case R_AVR_CALL: { 
-    uint16_t hi = val >> 17;
-    uint16_t lo = val >> 1;
-    write16le(loc, read16le(loc) | ((hi >> 1) << 4) | (hi & 1));
-    write16le(loc + 2, lo);
+  case R_MOS_IMM8:
+  case R_MOS_ADDR8:
+  case R_MOS_ADDR16_HIGH:
+  case R_MOS_ADDR16_LOW:
+  case R_MOS_PCREL_8:
+  case R_MOS_ADDR24_SEGMENT:
+    *loc = static_cast<unsigned char>(val);
+    break;
+  case R_MOS_ADDR16: {
+    write16le(loc, static_cast<unsigned short>(val));
     break;
   }
   default:
