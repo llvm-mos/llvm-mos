@@ -18,8 +18,11 @@
 #include "MCTargetDesc/MOSFixupKinds.h"
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSectionELF.h"
 
 namespace llvm {
 
@@ -28,12 +31,25 @@ class Target;
 
 struct MCFixupKindInfo;
 
-class MOSObjectTargetWriter : public MCObjectTargetWriter
-{
-  virtual Triple::ObjectFormatType getFormat() const override
-  {
+class MOSObjectTargetWriter : public MCELFObjectTargetWriter {
+public:
+  MOSObjectTargetWriter()
+      : MCELFObjectTargetWriter(false, 0, ELF::EM_MOS, false) {
+    val = ELF::EM_MOS;
+  }
+
+  ~MOSObjectTargetWriter() override { val = 0; }
+
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override {
+    return 0;
+  }
+
+  Triple::ObjectFormatType getFormat() const override {
     return Triple::ObjectFormatType::ELF;
   }
+
+  int val;
 };
 
 /// Utilities for manipulating generated MOS machine code.
@@ -41,8 +57,8 @@ class MOSAsmBackend : public MCAsmBackend {
 public:
   MOSAsmBackend(Triple::OSType OSType)
       : llvm::MCAsmBackend(support::little)
-      // , OSType(OSType) 
-      {}
+  // , OSType(OSType)
+  {}
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
@@ -58,36 +74,38 @@ public:
   virtual std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
   /// Simple predicate for targets where !Resolved implies requiring relaxation
-  virtual bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const MCAsmLayout &Layout) const override;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
+                            const MCRelaxableFragment *DF,
+                            const MCAsmLayout &Layout) const override;
   virtual unsigned getNumFixupKinds() const override;
+  virtual MCFixupKindInfo const &
+  getFixupKindInfo(MCFixupKind Kind) const override;
+
   /// Check whether the given instruction may need relaxation.
   ///
   /// \param Inst - The instruction to test.
   /// \param STI - The MCSubtargetInfo in effect when the instruction was
   /// encoded.
-  virtual bool mayNeedRelaxation(const MCInst &Inst,
-                                 const MCSubtargetInfo &STI) const override;
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override;
 
-    /// Relax the instruction in the given fragment to the next wider instruction.
+  /// Relax the instruction in the given fragment to the next wider instruction.
   ///
   /// \param Inst The instruction to relax, which may be the same as the
   /// output.
   /// \param STI the subtarget information for the associated instruction.
   /// \param [out] Res On return, the relaxed instruction.
-  virtual void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                                MCInst &Res) const override;
-
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override;
 
   /// Write an (optimal) nop sequence of Count bytes to the given output. If the
   /// target cannot generate such a sequence, it should return an error.
   ///
   /// \return - True on success.
-  virtual bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 
 private:
- // Triple::OSType OSType;
+  // Triple::OSType OSType;
 };
 
 } // end namespace llvm

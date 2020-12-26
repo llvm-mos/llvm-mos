@@ -31,7 +31,7 @@
 namespace llvm {
 
 MOSFrameLowering::MOSFrameLowering()
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 1, -2) {}
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1), -2) {}
 
 bool MOSFrameLowering::canSimplifyCallFramePseudos(
     const MachineFunction &MF) const {
@@ -85,19 +85,6 @@ bool MOSFrameLowering::hasFP(const MachineFunction &MF) const { return true; }
 
 bool MOSFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
   return false;
-}
-
-bool MOSFrameLowering::restoreCalleeSavedRegisters(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    std::vector<CalleeSavedInfo> &CSI, const TargetRegisterInfo *TRI) const {
-  return true;
-}
-
-bool MOSFrameLowering::spillCalleeSavedRegisters(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    const std::vector<CalleeSavedInfo> &CSI,
-    const TargetRegisterInfo *TRI) const {
-  return true;
 }
 
 /// The frame analyzer pass.
