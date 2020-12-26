@@ -1,3 +1,5 @@
+add_llvm_component_group(MOS)
+
 set(LLVM_TARGET_DEFINITIONS MOS.td)
 
 tablegen(LLVM MOSGenAsmMatcher.inc -gen-asm-matcher)
@@ -32,6 +34,20 @@ add_llvm_target(MOSCodeGen
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  MOSDesc
+  MOSInfo
+  SelectionDAG
+  Support
+  Target
+
+  ADD_TO_COMPONENT
+  MOS
 )
 
 add_subdirectory(AsmParser)
