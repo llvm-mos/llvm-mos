@@ -70,7 +70,7 @@ unsigned MOSMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
       // we shouldn't perform any more fixups. Without this check, we would
       // instead create a fixup to the symbol named 'lo8(symbol)' which
       // is not correct.
-      return getExprOpValue(MO.getExpr(), Fixups, STI);
+      return getExprOpValue(MO.getExpr(), Fixups, STI, Offset);
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(Fixup);
@@ -85,7 +85,8 @@ unsigned MOSMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
 
 unsigned MOSMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
                                           SmallVectorImpl<MCFixup> &Fixups,
-                                          const MCSubtargetInfo &STI) const {
+                                          const MCSubtargetInfo &STI,
+                                          unsigned int Offset ) const {
 
   MCExpr::ExprKind Kind = Expr->getKind();
 
@@ -102,7 +103,7 @@ unsigned MOSMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(MOSExpr->getFixupKind());
-    Fixups.push_back(MCFixup::create(0, MOSExpr, FixupKind));
+    Fixups.push_back(MCFixup::create(Offset, MOSExpr, FixupKind));
     return 0;
   }
 
