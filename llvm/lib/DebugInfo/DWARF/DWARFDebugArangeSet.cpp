@@ -87,7 +87,8 @@ Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
                              "the length of address range table at offset "
                              "0x%" PRIx64 " exceeds section size",
                              Offset);
-  if (HeaderData.AddrSize != 4 && HeaderData.AddrSize != 8)
+  if (HeaderData.AddrSize != 2 && HeaderData.AddrSize != 4 && 
+      HeaderData.AddrSize != 8)
     return createStringError(errc::invalid_argument,
                              "address range table at offset 0x%" PRIx64
                              " has unsupported address size: %d "

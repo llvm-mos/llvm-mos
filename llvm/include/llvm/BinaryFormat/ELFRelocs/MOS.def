@@ -52,3 +52,7 @@ ELF_RELOC(R_MOS_ADDR24_SEGMENT_LO,       10)
 
 // The high byte from the segment value in a 24-bit address.
 ELF_RELOC(R_MOS_ADDR24_SEGMENT_HI,       11)
+
+// Relocations for DWARF.
+ELF_RELOC(R_MOS_FK_DATA_4,               12)
+ELF_RELOC(R_MOS_FK_DATA_8,               13)

@@ -51,7 +51,7 @@ def FeatureSWEET16
                         "The SWEET16 instruction set">;
 
 // A feature set aggregates features, grouping them. We don't want to create a
-// new member in AVRSubtarget (to store a value) for each set because we do not
+// new member in MOSSubtarget (to store a value) for each set because we do not
 // care if the set is supported, only the subfeatures inside the set. We fix
 // this by simply setting the same dummy member for all feature sets, which is
 // then ignored.

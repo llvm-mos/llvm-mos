@@ -65,6 +65,11 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MOS_ADDR24_SEGMENT_HI;
   case MOS::PCRel8:
     return ELF::R_MOS_PCREL_8;
+  case MCFixupKind::FK_Data_4:
+    return ELF::R_MOS_FK_DATA_4;
+  case MCFixupKind::FK_Data_8:
+    return ELF::R_MOS_FK_DATA_8;
+
   default:
     llvm_unreachable("invalid fixup kind!");
   }

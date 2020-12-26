@@ -59,6 +59,12 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_MOS_ADDR24_SEGMENT:
     write16le(loc, static_cast<unsigned short>(val));
     break;
+  case R_MOS_FK_DATA_4:
+    write32le(loc, static_cast<unsigned long>(val));
+    break;
+  case R_MOS_FK_DATA_8:
+    write64le(loc, static_cast<unsigned long long>(val));
+    break;  
   default:
     error(getErrorLocation(loc) + "unrecognized relocation " +
           toString(rel.type));

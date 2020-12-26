@@ -1,9 +1,10 @@
-; RUN: llvm-mc -triple mos --filetype=obj -I %S/Inputs -o=%t.obj %s 
+; RUN: llvm-mc -g -triple mos --filetype=obj -I %S/Inputs -o=%t.obj %s 
 ; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.obj 
 ; RUN: llvm-readelf --all %t.obj
 ; RUN: lld -flavor gnu %t.obj -o %t.elf -L %S/Inputs %S/Inputs/c64.ld
 ; RUN: llvm-readelf --all %t.elf 
 ; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.elf
+; RUN: llvm-dwarfdump --all -v %t.elf
 ; RUN: llvm-objcopy --output-target binary --strip-unneeded %t.elf %t.bin
 
 .include "c64.inc"

@@ -80,6 +80,8 @@ private:
   bool m_Has65CE02Insns;
   bool m_HasSWEET16Insns;
 
+  bool m_LongRegisterNames;
+
   /// The ELF e_flags architecture.
   unsigned ELFArch;
 
