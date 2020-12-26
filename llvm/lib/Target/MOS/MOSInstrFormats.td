@@ -489,7 +489,7 @@ class ConditionalBranch<string opcodestr = "unknown", dag outs, dag ins,
 /// Predicates. Useful for limiting instructions to particular hardware modes
 /// or particular hardware implementations.
 def Has6502 : Predicate<"Subtarget->has6502()">,
-                         AssemblerPredicate<"Feature6502">
+                         AssemblerPredicate<(all_of Feature6502), "Feature6502">
 {
   let PredicateName = "Feature6502";
 }

@@ -109,8 +109,7 @@ public:
   /// output.
   /// \param STI the subtarget information for the associated instruction.
   /// \param [out] Res On return, the relaxed instruction.
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override;
+  void relaxInstruction(MCInst &Inst, const MCSubtargetInfo &STI) const override;
 
   /// If the instruction can be relaxed, return the opcode of the instruction
   /// that this instruction can be relaxed to.  If the instruction cannot
