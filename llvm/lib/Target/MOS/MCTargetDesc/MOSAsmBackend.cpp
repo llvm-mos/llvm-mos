@@ -37,7 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <memory>
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 
 namespace llvm {
@@ -96,17 +96,17 @@ void MOSAsmBackend::adjustFixupValue(const MCFixup &Fixup,
     Value = (Value - 1) & 0xff;
     break;
   case MOS::Addr16_Low:
-  case MOS::Addr24_Bank_Low:
+  case MOS::Addr24_Segment_Low:
     Value = Value & 0xff;
     break;
   case MOS::Addr16_High:
-  case MOS::Addr24_Bank_High:
+  case MOS::Addr24_Segment_High:
     Value = (Value >> 8) & 0xff;
     break;
-  case MOS::Addr24_Bank:
+  case MOS::Addr24_Segment:
     Value = Value & 0xffff;
     break;
-  case MOS::Addr24_Segment:
+  case MOS::Addr24_Bank:
     Value = (Value >> 16) & 0xff;
     break;
 
@@ -135,18 +135,24 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   case MOS::Addr8:
   case MOS::Addr16_High:
   case MOS::Addr16_Low:
-  case MOS::Addr24_Segment:
+  case MOS::Addr24_Bank:
+  case MOS::Addr24_Segment_Low:
+  case MOS::Addr24_Segment_High:
   case MOS::PCRel8:
   case FK_Data_1:
     Bytes = 1;
     break;
+
   case FK_Data_2:
   case MOS::Addr16:
+  case MOS::Addr24_Segment:
     Bytes = 2;
     break;
+
   case MOS::Addr24:
     Bytes = 3;
     break;
+
   case FK_Data_4:
     Bytes = 4;
     break;
@@ -155,6 +161,8 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     return;
   }
   auto Offset = Fixup.getOffset();
+  assert(((Bytes + Offset) <= Data.size()) && 
+    "Invalid offset within MOS instruction for modifier!");
   for (unsigned int T = Offset; T < (Bytes + Offset); T++) {
     Data[T] = Value & 0xff;
     Value = Value >> 8;
@@ -201,11 +209,27 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  const MCRelaxableFragment *DF,
                                                  const MCAsmLayout &Layout,
                                                  const bool WasForced) const {
+  // Before doing a deeper analysis based on the name of the fixup: if the
+  // fixup kind requires more than 8 bits to render, we will require relaxation.
+  auto Info = getFixupKindInfo(Fixup.getKind());
+  if (Info.TargetSize > 8)
+  {
+    return true;
+  }
+  if (Info.TargetSize == 8) {
+    return false;
+  }
   // In order to resolve an eight to sixteen bit possible relaxation, we need to
   // figure out whether the symbol in question is in zero page or not.  If it is
   // in zero page, then we don't need to do anything.  If not, we need to relax
   // the instruction to 16 bits.
   const char *FixupNameStart = Fixup.getValue()->getLoc().getPointer();
+  // If there's no symbol name, and if the fixup does not have a known size,
+  // then  we can't assume it lives in zero page.
+  if (FixupNameStart == nullptr)
+  {
+    return true;
+  }
   size_t FixupLength = 0;
   bool Finished = false;
   do {
@@ -260,30 +284,11 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
 }
 
 MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
-  // NOTE: Many AVR fixups work on sets of non-contignous bits. We work around
-  // this by saying that the fixup is the size of the entire instruction.
-  const static MCFixupKindInfo Infos[MOS::NumTargetFixupKinds] = {
-      // This table *must* be in same the order of fixup_* kinds in
-      // MOSFixupKinds.h.
-      //
-      // name, offset, bits, flags
-      {"Imm8", 0, 8, 0},            // An 8 bit immediate value.
-      {"Addr8", 0, 8, 0},           // An 8 bit zero page address.
-      {"Addr16", 0, 16, 0},         // A 16-bit address.
-      {"Addr16_Low", 0, 8, 0},      // The low byte of a 16-bit address.
-      {"Addr16_High", 0, 8, 0},     // The high byte of a 16-bit address.
-      {"Addr24", 0, 24, 0},         // A 24-bit 65816 address.
-      {"Addr24_Segment", 0, 8, 0},  // The segment byte of a 24-bit address.
-      {"Addr24_Bank", 0, 16, 0},    // The bank of a 24-byte address.
-      {"Addr24_Bank_Low", 0, 8, 0}, // The low byte of the bank of a 24-bit addr
-      {"Addr24_Bank_High", 8, 8, 0}, // The hi byte of the bank of a 24-bit addr
-      {"PCRel8", 0, 8,
-       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget}};
-  if (Kind < FirstTargetFixupKind)
+  if (Kind < FirstTargetFixupKind) {
     return MCAsmBackend::getFixupKindInfo(Kind);
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-         "Invalid kind!");
-  return Infos[Kind - FirstTargetFixupKind];
+  }
+  
+  return MOSFixupKinds::getFixupKindInfo(static_cast<MOS::Fixups>(Kind), this);
 }
 
 unsigned MOSAsmBackend::getNumFixupKinds() const {

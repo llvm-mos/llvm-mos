@@ -352,12 +352,12 @@ public:
     VK_TPREL,
     VK_DTPREL,
 
-    VK_MOS_ADDR16_LO,
-    VK_MOS_ADDR16_HI,
-    VK_MOS_ADDR24_BANK,
-    VK_MOS_ADDR24_SEGMENT,
-    VK_MOS_ADDR24_BANK_LO,
-    VK_MOS_ADDR24_BANK_HI
+    VK_MOS_ADDR16_LO,           // mos16lo()
+    VK_MOS_ADDR16_HI,           // mos16hi()
+    VK_MOS_ADDR24_BANK,         // mos24bank()
+    VK_MOS_ADDR24_SEGMENT,      // mos24segment()
+    VK_MOS_ADDR24_SEGMENT_LO,   // mos24segmentlo()
+    VK_MOS_ADDR24_SEGMENT_HI    // mos24segmenthi()
   };
 
 private:

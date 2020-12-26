@@ -43,14 +43,14 @@ void MOSMCELFStreamer::emitValueForModiferKind(
     Kind = MCSymbolRefExpr::VK_MOS_ADDR16_LO;
   } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR16_HI) {
     Kind = MCSymbolRefExpr::VK_MOS_ADDR16_HI;
-  } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR24_SEGMENT) {
-    Kind = MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT;
   } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR24_BANK) {
     Kind = MCSymbolRefExpr::VK_MOS_ADDR24_BANK;
-  } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR24_BANK_LO) {
-    Kind = MCSymbolRefExpr::VK_MOS_ADDR24_BANK_LO;
-  } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR24_BANK_HI) {
-    Kind = MCSymbolRefExpr::VK_MOS_ADDR24_BANK_HI;
+  } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR24_SEGMENT) {
+    Kind = MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT;
+  } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR24_SEGMENT_LO) {
+    Kind = MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT_LO;
+  } else if (ModifierKind == MOSMCExpr::VK_MOS_ADDR24_SEGMENT_HI) {
+    Kind = MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT_HI;
   }
   MCELFStreamer::emitValue(MCSymbolRefExpr::create(Sym, Kind, getContext()),
                            SizeInBytes, Loc);

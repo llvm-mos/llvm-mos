@@ -3,15 +3,52 @@
 #error "ELF_RELOC must be defined"
 #endif
 
+// The following are relocation types defined for the MOS series of processors.
+// Other ELF readers and writers are welcome to use this information to 
+// further understand MOS-compatible ELF files.
+// See also:
+// https://github.com/johnwbyrd/llvm-mos/wiki/ELF-format-for-MOS-compatible-processors
+
+// No relocation type.  Should not be emitted by the writer.  Readers should
+// recognize this as an error in the ELF file.
 ELF_RELOC(R_MOS_NONE,                  0)
+
+// An 8-bit immediate value.
 ELF_RELOC(R_MOS_IMM8,                  1)
+
+// An 8-bit (e.g. zero page or direct page) address.
 ELF_RELOC(R_MOS_ADDR8,                 2)
+
+// A 16-bit address.  Standard for most MOS processors.
 ELF_RELOC(R_MOS_ADDR16,                3)
+
+// The least significant byte of a 16-bit address.  All MOS processors
+// are little endian, so this would also be the leftmost byte in a 16-bit
+// address.
 ELF_RELOC(R_MOS_ADDR16_LO,             4)
+
+// The most significant byte of a 16-bit address.
 ELF_RELOC(R_MOS_ADDR16_HI,             5)
+
+// A PC-relative jump value.  Used for the B?? series of instructions.
 ELF_RELOC(R_MOS_PCREL_8,               6)
+
+// The following relocation types only have meaning for the 65816 series 
+// of processors and similar, which utilize an 8-bit bank byte in addition
+// to the 16-bit address as above.  THe 16-bit address is generally referred
+// to as a segment in MOS parlance.
+
+// A 24-bit address.
 ELF_RELOC(R_MOS_ADDR24,                7)
+
+// The 8-bit bank value from a 24-bit address.  The most signficant byte.
 ELF_RELOC(R_MOS_ADDR24_BANK,           8)
+
+// The 16-bit segment value from a 24-bit address.
 ELF_RELOC(R_MOS_ADDR24_SEGMENT,        9)
-ELF_RELOC(R_MOS_ADDR24_BANK_LO,       10)
-ELF_RELOC(R_MOS_ADDR24_BANK_HI,       11)
+
+// The low byte from the segment value in a 24-bit address.
+ELF_RELOC(R_MOS_ADDR24_SEGMENT_LO,       10)
+
+// The high byte from the segment value in a 24-bit address.
+ELF_RELOC(R_MOS_ADDR24_SEGMENT_HI,       11)

@@ -2,6 +2,7 @@ add_llvm_library(LLVMMOSDesc
   MOSAsmBackend.cpp
   MOSELFObjectWriter.cpp
   MOSELFStreamer.cpp
+  MOSFixupKinds.cpp
   MOSInstPrinter.cpp
   MOSMCAsmInfo.cpp
   MOSMCCodeEmitter.cpp

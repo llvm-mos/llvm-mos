@@ -11,7 +11,6 @@
 #define LLVM_MOS_MCEXPR_H
 
 #include "llvm/MC/MCExpr.h"
-
 #include "MCTargetDesc/MOSFixupKinds.h"
 
 namespace llvm {
@@ -24,13 +23,13 @@ public:
     VK_MOS_NONE,
     VK_MOS_ADDR16_HI, 
     VK_MOS_ADDR16_LO,
-    VK_MOS_ADDR24_SEGMENT,
     VK_MOS_ADDR24_BANK,
-    VK_MOS_ADDR24_BANK_LO,
-    VK_MOS_ADDR24_BANK_HI
+    VK_MOS_ADDR24_SEGMENT,
+    VK_MOS_ADDR24_SEGMENT_LO,
+    VK_MOS_ADDR24_SEGMENT_HI
   };
 
-public:
+
   /// Creates an AVR machine code expression.
   static const MOSMCExpr *create(VariantKind Kind, const MCExpr *Expr,
                                  bool isNegated, MCContext &Ctx);
@@ -38,10 +37,10 @@ public:
   /// Gets the type of the expression.
   VariantKind getKind() const { return Kind; }
   /// Gets the name of the expression.
+  MOS::Fixups getFixupKind() const;
   const char *getName() const;
   const MCExpr *getSubExpr() const { return SubExpr; }
   /// Gets the fixup which corresponds to the expression.
-  MOS::Fixups getFixupKind() const;
   /// Evaluates the fixup as a constant value.
   bool evaluateAsConstant(int64_t &Result) const;
 
@@ -64,7 +63,6 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-public:
   static VariantKind getKindByName(StringRef Name);
 
 private:
@@ -74,12 +72,10 @@ private:
   const MCExpr *SubExpr;
   bool Negated;
 
-private:
   explicit MOSMCExpr(VariantKind Kind, const MCExpr *Expr, bool Negated)
       : Kind(Kind), SubExpr(Expr), Negated(Negated) {}
-  ~MOSMCExpr() {}
 };
 
-} // end namespace llvm
+}; // end namespace llvm
 
 #endif // LLVM_MOS_MCEXPR_H
