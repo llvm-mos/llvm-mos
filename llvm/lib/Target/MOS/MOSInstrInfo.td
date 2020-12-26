@@ -45,7 +45,6 @@ def : InstAlias<"rol a", (ROL_Accumulator)>;
 def : InstAlias<"lsr a", (LSR_Accumulator)>;
 def : InstAlias<"ror a", (ROR_Accumulator)>;
 
-defm LDX : CC2_NonShift< 0b101, (outs), (ins), "ldx", []>;
 defm DEC : CC2_NonShift< 0b110, (outs), (ins), "dec", []>;
 defm INC : CC2_NonShift< 0b111, (outs), (ins), "inc", []>;
 
@@ -64,10 +63,18 @@ def STX_ZeroPageY :
 	Inst16<(outs), (ins), "stx", [], OpcodeC2<0b100, 0b101>, ZeroPageY>;
 def STX_Absolute :
 	Inst24<(outs), (ins), "stx", [], OpcodeC2<0b100, 0b011>, Absolute>;
+
 def LDX_Immediate : 
 	Inst16<(outs), (ins), "ldx", [], OpcodeC2<0b101, 0b000>, Immediate>;
+def LDX_ZeroPage : 
+	Inst16<(outs), (ins), "ldx", [], OpcodeC2<0b101, 0b001>, ZeroPage>;
+def LDX_Absolute : 
+	Inst24<(outs), (ins), "ldx", [], OpcodeC2<0b101, 0b011>, Absolute>;
+def LDX_ZeroPageY : 
+	Inst16<(outs), (ins), "ldx", [], OpcodeC2<0b101, 0b101>, ZeroPageY>;
 def LDX_AbsoluteY : 
 	Inst24<(outs), (ins), "ldx", [], OpcodeC2<0b101, 0b111>, AbsoluteY>;
+
 def DEC_AbsoluteX : 
 	Inst24<(outs), (ins), "dec", [], OpcodeC2<0b110, 0b111>, AbsoluteX>;
 def INC_AbsoluteX : 
@@ -149,14 +156,14 @@ def LDY_AbsoluteX :
 /// BPL BMI BVC BVS BCC BCS BNE BEQ
 /// 10  30  50  70  90  B0  D0  F0
 
-def BPL : ConditionalBranch< "bpl", (outs), (ins), [], 0b00, 0b0 >;
-def BMI : ConditionalBranch< "bmi", (outs), (ins), [], 0b00, 0b1 >;
-def BVC : ConditionalBranch< "bvc", (outs), (ins), [], 0b01, 0b0 >;
-def BVS : ConditionalBranch< "bvs", (outs), (ins), [], 0b01, 0b1 >;
-def BCC : ConditionalBranch< "bcc", (outs), (ins), [], 0b10, 0b0 >;
-def BCS : ConditionalBranch< "bcs", (outs), (ins), [], 0b10, 0b1 >;
-def BNE : ConditionalBranch< "bne", (outs), (ins), [], 0b11, 0b0 >;
-def BEQ : ConditionalBranch< "beq", (outs), (ins), [], 0b11, 0b1 >;
+def BPL_Relative : ConditionalBranch< "bpl", (outs), (ins), [], 0b00, 0b0 >;
+def BMI_Relative : ConditionalBranch< "bmi", (outs), (ins), [], 0b00, 0b1 >;
+def BVC_Relative : ConditionalBranch< "bvc", (outs), (ins), [], 0b01, 0b0 >;
+def BVS_Relative : ConditionalBranch< "bvs", (outs), (ins), [], 0b01, 0b1 >;
+def BCC_Relative : ConditionalBranch< "bcc", (outs), (ins), [], 0b10, 0b0 >;
+def BCS_Relative : ConditionalBranch< "bcs", (outs), (ins), [], 0b10, 0b1 >;
+def BNE_Relative : ConditionalBranch< "bne", (outs), (ins), [], 0b11, 0b0 >;
+def BEQ_Relative : ConditionalBranch< "beq", (outs), (ins), [], 0b11, 0b1 >;
 
 /// Single-byte opcodes
 /// BRK JSR abs RTI RTS
@@ -205,3 +212,5 @@ def DEX_Implied: InstLowA<(outs), (ins), "dex", [], 0b1100>;
 def NOP_Implied: InstLowA<(outs), (ins), "nop", [], 0b1110>;
 
 } // Predicates = [Has6502]
+
+include "MOSInstrInfoTables.td"

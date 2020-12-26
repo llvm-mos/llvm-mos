@@ -106,7 +106,7 @@
  	lda	($ea),y                 ; CHECK: encoding: [0xb1,0xea]
  	ldy	$ea,x                   ; CHECK: encoding: [0xb4,0xea]
  	lda	$ea,x                   ; CHECK: encoding: [0xb5,0xea]
- 	ldx	$ea,x                   ; CHECK: encoding: [0xb6,0xea]
+ 	ldx	$ea,y                   ; CHECK: encoding: [0xb6,0xea]
  	clv                         ; CHECK: encoding: [0xb8]
  	lda	$eaea,y                 ; CHECK: encoding: [0xb9,0xea,0xea]
  	tsx                         ; CHECK: encoding: [0xba]
