@@ -70,4 +70,4 @@ MOSSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   return *this;
 }
 
-} // end of namespace llvm
+} // namespace llvm

@@ -118,6 +118,10 @@ protected:
   /// the current PC.  Defaults to false.
   bool DollarIsPC = false;
 
+  /// The '$' token, when followed immediately by hex characters, refers to
+  /// a hex constant.  Defaults to false.
+  bool DollarIsHexPrefix = false;
+
   /// This string, if specified, is used to separate instructions from each
   /// other when on the same line.  Defaults to ';'
   const char *SeparatorString;
@@ -536,6 +540,7 @@ public:
 
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
+  bool getDollarIsHexPrefix() const { return DollarIsHexPrefix; }
   const char *getSeparatorString() const { return SeparatorString; }
 
   /// This indicates the column (zero-based) at which asm comments should be

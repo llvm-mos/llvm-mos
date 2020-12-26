@@ -1157,6 +1157,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf32-lanai";
     case ELF::EM_MIPS:
       return "elf32-mips";
+    case ELF::EM_MOS:
+     return "elf32-mos";
     case ELF::EM_MSP430:
       return "elf32-msp430";
     case ELF::EM_PPC:

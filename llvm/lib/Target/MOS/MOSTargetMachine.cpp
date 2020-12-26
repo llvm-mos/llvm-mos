@@ -19,13 +19,15 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
 
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSTargetObjectFile.h"
-#include "MCTargetDesc/MOSMCTargetDesc.h"
+
 
 namespace llvm {
 
-static const char *MOSDataLayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8";
+static const char *MOSDataLayout =
+    "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8";
 
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
@@ -49,8 +51,8 @@ MOSTargetMachine::MOSTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, MOSDataLayout, TT, getCPU(CPU), FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      SubTarget(TT, getCPU(CPU), FS, *this) {
-  this->TLOF = make_unique<MOSTargetObjectFile>();
+     SubTarget(TT, getCPU(CPU).str(), FS.str(), *this)                    {
+  this->TLOF = std::make_unique<MOSTargetObjectFile>();
   initAsmInfo();
 }
 

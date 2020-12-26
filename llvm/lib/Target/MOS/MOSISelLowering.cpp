@@ -36,4 +36,4 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
                                      const MOSSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
 }
-}
+} // namespace llvm

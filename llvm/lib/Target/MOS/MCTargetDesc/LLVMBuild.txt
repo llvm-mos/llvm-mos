@@ -19,5 +19,5 @@
 type = Library
 name = MOSDesc
 parent = MOS
-required_libraries = MC MOSAsmPrinter MOSInfo Support
+required_libraries = MC MOSInfo Support
 add_to_library_groups = MOS

@@ -1,0 +1,8 @@
+
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+ELF_RELOC(R_MOS_NONE,                  0)
+ELF_RELOC(R_MOS_ADDR8,                 1)
+ELF_RELOC(R_MOS_ADDR16,                2)

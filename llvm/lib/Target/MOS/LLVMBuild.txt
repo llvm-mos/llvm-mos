@@ -16,7 +16,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmParser Disassembler InstPrinter MCTargetDesc TargetInfo
+subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -30,6 +30,6 @@ has_disassembler = 1
 type = Library
 name = MOSCodeGen
 parent = MOS
-required_libraries = AsmPrinter CodeGen Core MC MOSAsmPrinter MOSDesc MOSInfo SelectionDAG Support Target
+required_libraries = AsmPrinter CodeGen Core MC MOSDesc MOSInfo SelectionDAG Support Target
 add_to_library_groups = MOS
 

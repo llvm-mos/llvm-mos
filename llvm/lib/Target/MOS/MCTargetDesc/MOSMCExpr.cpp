@@ -24,13 +24,17 @@ struct ModifierEntry {
   MOSMCExpr::VariantKind VariantKind;
 };
 
-const ModifierEntry ModifierNames[] = {{"none", MOSMCExpr::VK_MOS_None}};
+/*
+const ModifierEntry ModifierNames[] = 
+  {{"none", MOSMCExpr::VK_MOS_None}
+};
+*/
 
 } // end of anonymous namespace
 
 const MOSMCExpr *MOSMCExpr::create(VariantKind Kind, const MCExpr *Expr,
-                                   bool Negated, MCContext &Ctx) {
-  return new (Ctx) MOSMCExpr(Kind, Expr, Negated);
+                                  MCContext &Ctx) {
+  return new (Ctx) MOSMCExpr(Kind, Expr);
 }
 
 } // end of namespace llvm

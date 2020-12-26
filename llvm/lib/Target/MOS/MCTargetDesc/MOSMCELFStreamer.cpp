@@ -16,18 +16,22 @@
 #include "MCTargetDesc/MOSMCELFStreamer.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSymbol.h"
 
 using namespace llvm;
 
 namespace llvm {
-MCStreamer *createMOSELFStreamer(Triple const &TT, MCContext &Context,
-                                 std::unique_ptr<MCAsmBackend> MAB,
-                                 std::unique_ptr<MCObjectWriter> OW,
-                                 std::unique_ptr<MCCodeEmitter> CE) {
-  return new MOSMCELFStreamer(Context, std::move(MAB), std::move(OW),
-                              std::move(CE));
+MCStreamer *createMOSMCELFStreamer(
+    const Triple & /*T*/, MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+    std::unique_ptr<MCObjectWriter> &&OW,
+    std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
+  auto *S = new MOSMCELFStreamer(Ctx, std::move(TAB), std::move(OW),
+                                 std::move(Emitter));
+  if (RelaxAll) {
+    S->getAssembler().setRelaxAll(true);
+  }
+  return S;
 }
 
 } // end namespace llvm

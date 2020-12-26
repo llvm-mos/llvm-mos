@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/MOSInstPrinter.h"
+#include "MCTargetDesc/MOSInstPrinter.h"
 #include "MOS.h"
 #include "MOSMCInstLower.h"
 #include "MOSSubtarget.h"
@@ -41,7 +41,6 @@ public:
       : AsmPrinter(TM, std::move(Streamer)), MRI(*TM.getMCRegisterInfo()) {}
 
   StringRef getPassName() const override { return "MOS Assembly Printer"; }
-  void EmitInstruction(const MachineInstr *MI) override { int i = 0; i++ };
 
 private:
   const MCRegisterInfo &MRI;

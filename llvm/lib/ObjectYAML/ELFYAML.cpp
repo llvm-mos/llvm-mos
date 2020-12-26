@@ -232,6 +232,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
   ECase(EM_BPF);
   ECase(EM_VE);
   ECase(EM_CSKY);
+  ECase(EM_MOS);
 #undef ECase
   IO.enumFallback<Hex16>(Value);
 }
