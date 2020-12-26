@@ -24,19 +24,19 @@ using namespace llvm;
 void MOSMCELFStreamer::EmitValueForModiferKind(
     const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc,
     MOSMCExpr::VariantKind ModifierKind) {
-  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_MOS_NONE;
+  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_AVR_NONE;
   if (ModifierKind == MOSMCExpr::VK_MOS_None) {
-    Kind = MCSymbolRefExpr::VK_MOS_DIFF8;
+    Kind = MCSymbolRefExpr::VK_AVR_DIFF8;
     if (SizeInBytes == SIZE_LONG)
-      Kind = MCSymbolRefExpr::VK_MOS_DIFF32;
+      Kind = MCSymbolRefExpr::VK_AVR_DIFF32;
     else if (SizeInBytes == SIZE_WORD)
-      Kind = MCSymbolRefExpr::VK_MOS_DIFF16;
+      Kind = MCSymbolRefExpr::VK_AVR_DIFF16;
   } else if (ModifierKind == MOSMCExpr::VK_MOS_LO8)
-    Kind = MCSymbolRefExpr::VK_MOS_LO8;
+    Kind = MCSymbolRefExpr::VK_AVR_LO8;
   else if (ModifierKind == MOSMCExpr::VK_MOS_HI8)
-    Kind = MCSymbolRefExpr::VK_MOS_HI8;
+    Kind = MCSymbolRefExpr::VK_AVR_HI8;
   else if (ModifierKind == MOSMCExpr::VK_MOS_HH8)
-    Kind = MCSymbolRefExpr::VK_MOS_HLO8;
+    Kind = MCSymbolRefExpr::VK_AVR_HLO8;
   MCELFStreamer::EmitValue(MCSymbolRefExpr::create(Sym, Kind, getContext()),
                            SizeInBytes, Loc);
 }

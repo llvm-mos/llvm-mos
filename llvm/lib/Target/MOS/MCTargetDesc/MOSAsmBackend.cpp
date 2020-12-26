@@ -31,7 +31,7 @@
 // FIXME: we should be doing checks to make sure asm operands
 // are not out of bounds.
 
-namespace adjust {
+namespace mos_adjust {
 
 using namespace llvm;
 
@@ -253,93 +253,93 @@ void MOSAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   default:
     llvm_unreachable("unhandled fixup");
   case MOS::fixup_7_pcrel:
-    adjust::fixup_7_pcrel(Size, Fixup, Value, Ctx);
+    mos_adjust::fixup_7_pcrel(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_13_pcrel:
-    adjust::fixup_13_pcrel(Size, Fixup, Value, Ctx);
+    mos_adjust::fixup_13_pcrel(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_call:
-    adjust::fixup_call(Size, Fixup, Value, Ctx);
+    mos_adjust::fixup_call(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_ldi:
-    adjust::ldi::fixup(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::fixup(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_lo8_ldi:
-    adjust::ldi::lo8(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::lo8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_lo8_ldi_pm:
   case MOS::fixup_lo8_ldi_gs:
-    adjust::pm(Value);
-    adjust::ldi::lo8(Size, Fixup, Value, Ctx);
+    mos_adjust::pm(Value);
+    mos_adjust::ldi::lo8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_hi8_ldi:
-    adjust::ldi::hi8(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::hi8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_hi8_ldi_pm:
   case MOS::fixup_hi8_ldi_gs:
-    adjust::pm(Value);
-    adjust::ldi::hi8(Size, Fixup, Value, Ctx);
+    mos_adjust::pm(Value);
+    mos_adjust::ldi::hi8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_hh8_ldi:
   case MOS::fixup_hh8_ldi_pm:
-    if (Kind == MOS::fixup_hh8_ldi_pm) adjust::pm(Value);
+    if (Kind == MOS::fixup_hh8_ldi_pm) mos_adjust::pm(Value);
 
-    adjust::ldi::hh8(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::hh8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_ms8_ldi:
-    adjust::ldi::ms8(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::ms8(Size, Fixup, Value, Ctx);
     break;
 
   case MOS::fixup_lo8_ldi_neg:
   case MOS::fixup_lo8_ldi_pm_neg:
-    if (Kind == MOS::fixup_lo8_ldi_pm_neg) adjust::pm(Value);
+    if (Kind == MOS::fixup_lo8_ldi_pm_neg) mos_adjust::pm(Value);
 
-    adjust::ldi::neg(Value);
-    adjust::ldi::lo8(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::neg(Value);
+    mos_adjust::ldi::lo8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_hi8_ldi_neg:
   case MOS::fixup_hi8_ldi_pm_neg:
-    if (Kind == MOS::fixup_hi8_ldi_pm_neg) adjust::pm(Value);
+    if (Kind == MOS::fixup_hi8_ldi_pm_neg) mos_adjust::pm(Value);
 
-    adjust::ldi::neg(Value);
-    adjust::ldi::hi8(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::neg(Value);
+    mos_adjust::ldi::hi8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_hh8_ldi_neg:
   case MOS::fixup_hh8_ldi_pm_neg:
-    if (Kind == MOS::fixup_hh8_ldi_pm_neg) adjust::pm(Value);
+    if (Kind == MOS::fixup_hh8_ldi_pm_neg) mos_adjust::pm(Value);
 
-    adjust::ldi::neg(Value);
-    adjust::ldi::hh8(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::neg(Value);
+    mos_adjust::ldi::hh8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_ms8_ldi_neg:
-    adjust::ldi::neg(Value);
-    adjust::ldi::ms8(Size, Fixup, Value, Ctx);
+    mos_adjust::ldi::neg(Value);
+    mos_adjust::ldi::ms8(Size, Fixup, Value, Ctx);
     break;
   case MOS::fixup_16:
-    adjust::unsigned_width(16, Value, std::string("port number"), Fixup, Ctx);
+    mos_adjust::unsigned_width(16, Value, std::string("port number"), Fixup, Ctx);
 
     Value &= 0xffff;
     break;
   case MOS::fixup_16_pm:
     Value >>= 1; // Flash addresses are always shifted.
-    adjust::unsigned_width(16, Value, std::string("port number"), Fixup, Ctx);
+    mos_adjust::unsigned_width(16, Value, std::string("port number"), Fixup, Ctx);
 
     Value &= 0xffff;
     break;
 
   case MOS::fixup_6_adiw:
-    adjust::fixup_6_adiw(Fixup, Value, Ctx);
+    mos_adjust::fixup_6_adiw(Fixup, Value, Ctx);
     break;
 
   case MOS::fixup_port5:
-    adjust::fixup_port5(Fixup, Value, Ctx);
+    mos_adjust::fixup_port5(Fixup, Value, Ctx);
     break;
 
   case MOS::fixup_port6:
-    adjust::fixup_port6(Fixup, Value, Ctx);
+    mos_adjust::fixup_port6(Fixup, Value, Ctx);
     break;
 
-  // Fixups which do not require adjustments.
+  // Fixups which do not require mos_adjustments.
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -347,7 +347,7 @@ void MOSAsmBackend::adjustFixupValue(const MCFixup &Fixup,
     break;
 
   case FK_GPRel_4:
-    llvm_unreachable("don't know how to adjust this fixup");
+    llvm_unreachable("don't know how to mos_adjust this fixup");
     break;
   }
 }
