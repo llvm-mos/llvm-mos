@@ -318,7 +318,7 @@ enum {
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
 
-  EM_MOS = 6502,          // MOS Technologies 65xx
+  EM_MOS = EM_HUANY,      // MOS Technologies 65xx
 };
 
 // Object file classes.
@@ -489,13 +489,23 @@ enum : unsigned {
   EF_AVR_ARCH_XMEGA7 = 107
 };
 
+// ELF relocation types for MOS
+enum {
+#include "ELFRelocs/MOS.def"
+};
+
+// https://github.com/johnwbyrd/llvm-mos/wiki/ELF-format-for-MOS-compatible-processors
 enum : unsigned {
-  EF_MOS_ARCH_GENERIC = 0x10,
-  EF_MOS_ARCH_6502    = 0x20,
-  EF_MOS_ARCH_6502X   = 0x30,
-  EF_MOS_ARCH_65SC02  = 0x40,
-  EF_MOS_ARCH_65C02   = 0x50,
-  EF_MOS_ARCH_SWEET16 = 0x60
+  EM_MOS_ARCH_6502 = 0x00000001, // Core NMOS 6502 instruction set, no BCD
+  EM_MOS_ARCH_6502_BCD = 0x00000002, // BCD support, including CLD and SED
+  EM_MOS_ARCH_6502X = 0x00000004, // "Illegal" NMOS 6502 instructions
+  EM_MOS_ARCH_65C02 = 0x00000008, // Core 65C02 instruction set
+  EM_MOS_ARCH_R65C02 = 0x00000010, // Rockwell and WDC extended 65C02 insns
+  EM_MOS_ARCH_W65C02 = 0x00000020, // WDC only 65C02 instructions
+  EM_MOS_ARCH_W65816 = 0x00000100, // 65816 instructions
+  EM_MOS_ARCH_65EL02 = 0x00000200, // 65EL02 instructions
+  EM_MOS_ARCH_65CE02 = 0x00000400,  // 65CE02 instructions
+  EM_MOS_ARCH_SWEET16 = 0x00010000  // SWEET16 instructions
 };
 
 // ELF Relocation types for AVR

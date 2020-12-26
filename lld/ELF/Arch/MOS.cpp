@@ -1,0 +1,64 @@
+//===- MOS.cpp ------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "InputFiles.h"
+#include "Symbols.h"
+#include "Target.h"
+#include "lld/Common/ErrorHandler.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/ELF.h"
+#include "llvm/Support/Endian.h"
+
+using namespace llvm;
+using namespace llvm::object;
+using namespace llvm::support::endian;
+using namespace llvm::ELF;
+
+namespace lld {
+namespace elf {
+
+namespace {
+class MOS final : public TargetInfo {
+public:
+  MOS();
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
+};
+} // namespace
+
+MOS::MOS() { noneRel = R_MOS_NONE; }
+
+RelExpr MOS::getRelExpr(RelType type, const Symbol &s,
+                        const uint8_t *loc) const {
+  return R_ABS;
+}
+
+void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
+  case R_AVR_CALL: { 
+    uint16_t hi = val >> 17;
+    uint16_t lo = val >> 1;
+    write16le(loc, read16le(loc) | ((hi >> 1) << 4) | (hi & 1));
+    write16le(loc + 2, lo);
+    break;
+  }
+  default:
+    error(getErrorLocation(loc) + "unrecognized relocation " +
+          toString(rel.type));
+  }
+}
+
+TargetInfo *getMOSTargetInfo() {
+  static MOS target;
+  return &target;
+}
+
+} // namespace elf
+} // namespace lld
