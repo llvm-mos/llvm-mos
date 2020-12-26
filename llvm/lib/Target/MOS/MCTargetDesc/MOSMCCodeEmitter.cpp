@@ -77,8 +77,8 @@ MOSMCCodeEmitter::loadStorePostEncoder(const MCInst &MI, unsigned EncodedValue,
   bool IsRegX = MI.getOperand(0).getReg() == MOS::R27R26 ||
                   MI.getOperand(1).getReg() == MOS::R27R26;
 
-  bool IsPredec = Opcode == MOS::LDRdPtrPd || Opcode == MOS::STPtrPdRr;
-  bool IsPostinc = Opcode == MOS::LDRdPtrPi || Opcode == MOS::STPtrPiRr;
+  bool IsPredec = false;
+  bool IsPostinc = false;
 
   // Check if we need to set the inconsistent bit
   if (IsRegX || IsPredec || IsPostinc) {

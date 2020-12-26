@@ -48,6 +48,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case mips64el:       return "mips64el";
   case mips:           return "mips";
   case mipsel:         return "mipsel";
+  case mos:            return "mos";
   case msp430:         return "msp430";
   case nvptx64:        return "nvptx64";
   case nvptx:          return "nvptx";
@@ -419,6 +420,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("thumb", Triple::thumb)
     .Case("thumbeb", Triple::thumbeb)
     .Case("avr", Triple::avr)
+    .Case("mos", Triple::mos)
     .Case("msp430", Triple::msp430)
     .Cases("mips", "mipseb", "mipsallegrex", "mipsisa32r6",
            "mipsr6", Triple::mips)
@@ -707,6 +709,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::mips64el:
   case Triple::mips:
   case Triple::mipsel:
+  case Triple::mos:
   case Triple::msp430:
   case Triple::nvptx64:
   case Triple::nvptx:
@@ -1262,6 +1265,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
     return 0;
 
   case llvm::Triple::avr:
+  case llvm::Triple::mos:
   case llvm::Triple::msp430:
     return 16;
 
@@ -1343,6 +1347,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::avr:
   case Triple::bpfeb:
   case Triple::bpfel:
+  case Triple::mos:
   case Triple::msp430:
   case Triple::systemz:
   case Triple::ve:
@@ -1412,6 +1417,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::hexagon:
   case Triple::kalimba:
   case Triple::lanai:
+  case Triple::mos:
   case Triple::msp430:
   case Triple::r600:
   case Triple::shave:
@@ -1486,6 +1492,7 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::kalimba:
   case Triple::le32:
   case Triple::le64:
+  case Triple::mos:
   case Triple::msp430:
   case Triple::nvptx64:
   case Triple::nvptx:
@@ -1577,6 +1584,7 @@ bool Triple::isLittleEndian() const {
   case Triple::le64:
   case Triple::mips64el:
   case Triple::mipsel:
+  case Triple::mos:
   case Triple::msp430:
   case Triple::nvptx64:
   case Triple::nvptx:
