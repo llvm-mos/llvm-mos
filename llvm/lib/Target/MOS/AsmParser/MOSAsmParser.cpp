@@ -487,7 +487,11 @@ public:
     StringRef RegisterName(AnyCase.c_str(), AnyCase.size());
     RegNo = MatchRegisterName(RegisterName);
     if (RegNo == 0) {
-      RegNo = MatchRegisterAltName(RegisterName);
+      // If the user has requested to ignore short register names, then ignore
+      // them
+      if (getSTI().getFeatureBits()[MOS::FeatureAltRegisterNamesOnly] == false) {
+        RegNo = MatchRegisterAltName(RegisterName);
+      }
     }
     return (RegNo != 0) ? MatchOperand_Success : MatchOperand_NoMatch;
   }
