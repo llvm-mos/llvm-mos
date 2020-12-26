@@ -326,6 +326,9 @@ static unsigned parseSectionFlags(StringRef flagsStr, bool *UseLastGroup) {
     case 'G':
       flags |= ELF::SHF_GROUP;
       break;
+    case 'z':
+      flags |= ELF::SHF_MOS_ZEROPAGE;
+      break;
     case '?':
       *UseLastGroup = true;
       break;

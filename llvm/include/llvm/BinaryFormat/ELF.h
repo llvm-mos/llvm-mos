@@ -1029,7 +1029,10 @@ enum : unsigned {
   SHF_MIPS_STRING = 0x80000000,
 
   // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000
+  SHF_ARM_PURECODE = 0x20000000,
+
+  // 8-bit addressable section
+  SHF_MOS_ZEROPAGE = 0x10000000
 };
 
 // Section Group Flags
