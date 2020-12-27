@@ -40,8 +40,6 @@ add_llvm_target(MOSCodeGen
   CodeGen
   Core
   MC
-  MOSDesc
-  MOSInfo
   SelectionDAG
   Support
   Target
