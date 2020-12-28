@@ -1,4 +1,4 @@
-add_llvm_library(LLVMMOSDesc
+add_llvm_component_library(LLVMMOSDesc
   MOSAsmBackend.cpp
   MOSELFObjectWriter.cpp
   MOSELFStreamer.cpp
@@ -10,7 +10,14 @@ add_llvm_library(LLVMMOSDesc
   MOSMCExpr.cpp
   MOSMCTargetDesc.cpp
   MOSTargetStreamer.cpp
+
+  LINK_COMPONENTS
+  MC
+  MOSInfo
+  Support
+
+  ADD_TO_COMPONENT
+  MOS
 )
 
 add_dependencies(LLVMMOSDesc MOSCommonTableGen)
-
