@@ -1,4 +1,4 @@
-; c65.inc
+; mos-c65.inc
 
 ; The BASIC stub asserted at the beginning of all programs.
 .ifndef __llvm_mos_no_basic_header
