@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS project.
+
 #include "TargetInfo.h"
 #include "ABIInfo.h"
 #include "CGBlocks.h"
@@ -10856,6 +10858,48 @@ public:
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
+// MOS ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class MOSABIInfo : public DefaultABIInfo {
+public:
+  MOSABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+
+  ABIArgInfo classifyArgumentType(QualType RetTy) const;
+
+  void computeInfo(CGFunctionInfo &FI) const override {
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    for (auto &I : FI.arguments())
+      I.info = classifyArgumentType(I.type);
+  }
+
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override {
+    return EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty));
+  }
+};
+
+class MOSTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  MOSTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<MOSABIInfo>(CGT)) {}
+};
+
+ABIArgInfo MOSABIInfo::classifyArgumentType(QualType Ty) const {
+  ABIArgInfo Info = DefaultABIInfo::classifyArgumentType(Ty);
+  // Byval is not supported; they must be passed by pointer to a copy made by
+  // the caller in the frontend.
+  if (Info.isIndirect())
+    Info.setIndirectByVal(false);
+  return Info;
+}
+
+} // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
 // Driver code
 //===----------------------------------------------------------------------===//
 
@@ -11064,6 +11108,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     return SetCGInfo(new SPIRTargetCodeGenInfo(Types));
   case llvm::Triple::ve:
     return SetCGInfo(new VETargetCodeGenInfo(Types));
+  case llvm::Triple::mos:
+    return SetCGInfo(new MOSTargetCodeGenInfo(Types));
   }
 }
 

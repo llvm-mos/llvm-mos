@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS project.
+
 #include "Clang.h"
 #include "AMDGPU.h"
 #include "Arch/AArch64.h"
@@ -1426,6 +1428,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
     return false;
 
   case llvm::Triple::hexagon:
+  case llvm::Triple::mos:
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
@@ -1651,6 +1654,10 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
     AddMIPSTargetArgs(Args, CmdArgs);
+    break;
+
+  case llvm::Triple::mos:
+    AddMOSTargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::ppc:
@@ -1948,6 +1955,24 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
       CmdArgs.push_back("-mips-jalr-reloc=0");
     }
   }
+}
+
+void Clang::AddMOSTargetArgs(const ArgList &Args,
+                                 ArgStringList &CmdArgs) const {
+  // Give machine block placement an accurate cost assessment of branches and
+  // fallthroughs. (By default, it considers unconditional branches cheaper than
+  // taken conditional branches.)
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-force-precise-rotation-cost");
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-jump-inst-cost=6");
+
+  // Never fold control flow into selects; control flow is already the most
+  // efficient way to implement select.
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-phi-node-folding-threshold=0");
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-two-entry-phi-node-folding-threshold=0");
 }
 
 void Clang::AddPPCTargetArgs(const ArgList &Args,
