@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS project.
+
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENFUNCTION_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENFUNCTION_H
 
@@ -501,6 +503,9 @@ public:
 
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
+
+  /// True if the current statement has leaf attribute.
+  bool InLeafAttributedStmt = false;
 
   /// True if the current function should be marked mustprogress.
   bool FnIsMustProgress = false;

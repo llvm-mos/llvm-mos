@@ -24,3 +24,10 @@ void test_y() {
   // CHECK: call void asm sideeffect "", "y"(i8 [[V]])
   asm volatile("" :: "y"(c));
 }
+
+void test_leaf_asm() {
+  // CHECK-LABEL: define dso_local void @test_leaf_asm() {{.*}} {
+  // CHECK: call void asm sideeffect "", ""() #2
+  // CHECK: #2 = { nocallback nounwind }
+  __attribute__((leaf)) asm volatile("");
+}

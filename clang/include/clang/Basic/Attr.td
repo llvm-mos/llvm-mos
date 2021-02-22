@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS project.
+
 // The documentation is organized by category. Attributes can have category-
 // specific documentation that is collated within the larger document.
 class DocumentationCategory<string name> {
@@ -1471,9 +1473,9 @@ def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
   let Documentation = [LayoutVersionDocs];
 }
 
-def Leaf : InheritableAttr {
+def Leaf : DeclOrStmtAttr {
   let Spellings = [GCC<"leaf">];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function], WarnDiag, "functions and statements">;
   let Documentation = [LeafDocs];
   let SimpleHandler = 1;
 }
