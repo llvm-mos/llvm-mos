@@ -1,0 +1,39 @@
+name: LLVM Tests
+
+on:
+  push:
+    paths:
+      - 'llvm/**'
+      - '.github/workflows/llvm-tests.yml'
+  pull_request:
+    paths:
+      - 'llvm/**'
+      - '.github/workflows/llvm-tests.yml'
+
+jobs:
+  build_llvm:
+    name: llvm check-all
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+    steps:
+    - name: Setup Windows
+      if: startsWith(matrix.os, 'windows')
+      uses: llvm/actions/setup-windows@main
+      with:
+        arch: amd64
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@main
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 250
+    - name: Test llvm
+      uses: llvm/actions/build-test-llvm-project@main
+      with:
+        cmake_args: -G Ninja -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="mos" -DCMAKE_BUILD_TYPE=Release
+
