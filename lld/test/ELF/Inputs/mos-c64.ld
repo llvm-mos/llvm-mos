@@ -1,9 +1,9 @@
-/* vic20.ld */
+/* mos-c64.ld */
 __stack_size = 1k;
 
 MEMORY
 {
-	ram (wxa!r) : ORIGIN =  0xfff, LENGTH = 0x9fff - 0xfff
+	ram (wxa!r) : ORIGIN =  0x7ff, LENGTH = 0x9fff - 0x7ff
 }
 
 REGION_ALIAS("REGION_LOAD_ADDRESS", ram);
@@ -16,5 +16,5 @@ REGION_ALIAS("REGION_DATA", ram);
 REGION_ALIAS("REGION_TDATA", ram);
 REGION_ALIAS("REGION_BSS", ram);
 
-INCLUDE picolibc.ld
+INCLUDE mos-picolibc.ld
 
