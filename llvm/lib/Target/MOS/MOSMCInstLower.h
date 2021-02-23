@@ -26,13 +26,6 @@ class MCSymbol;
 class MOSMCInstLower {
 public:
   MOSMCInstLower(MCContext &, AsmPrinter &) {}
-  //  MOSMCInstLower(MCContext &Ctx, AsmPrinter &Printer)
-  //      : Ctx(Ctx), Printer(Printer) {
-  //      }
-
-private:
-  // MCContext &Ctx;
-  // AsmPrinter &Printer;
 };
 
 } // end namespace llvm

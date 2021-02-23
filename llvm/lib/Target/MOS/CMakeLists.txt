@@ -20,13 +20,10 @@ add_public_tablegen_target(MOSCommonTableGen)
 
 add_llvm_target(MOSCodeGen
   MOSAsmPrinter.cpp
-  MOSExpandPseudoInsts.cpp
   MOSFrameLowering.cpp
   MOSInstrInfo.cpp
-  MOSISelDAGToDAG.cpp
   MOSISelLowering.cpp
   MOSMCInstLower.cpp
-  MOSRelaxMemOperations.cpp
   MOSRegisterInfo.cpp
   MOSSubtarget.cpp
   MOSTargetMachine.cpp

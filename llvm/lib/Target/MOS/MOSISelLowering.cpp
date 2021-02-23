@@ -25,7 +25,6 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include "MOS.h"
-#include "MOSMachineFunctionInfo.h"
 #include "MOSSubtarget.h"
 #include "MOSTargetMachine.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"

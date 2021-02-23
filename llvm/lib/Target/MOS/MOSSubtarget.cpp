@@ -30,9 +30,8 @@ namespace llvm {
 
 MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const MOSTargetMachine &TM)
-    : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), InstrInfo(),
+    : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), InstrInfo(), RegInfo(),
       FrameLowering(), TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)),
-      TSInfo(),
 
       // Subtarget features
       m_hasTinyEncoding(false),
@@ -58,11 +57,7 @@ const llvm::MOSInstrInfo *MOSSubtarget::getInstrInfo() const {
 }
 
 const llvm::MOSRegisterInfo *MOSSubtarget::getRegisterInfo() const {
-  return &InstrInfo.getRegisterInfo();
-}
-
-const llvm::MOSSelectionDAGInfo *MOSSubtarget::getSelectionDAGInfo() const {
-  return &TSInfo;
+  return &RegInfo;
 }
 
 const llvm::MOSTargetLowering *MOSSubtarget::getTargetLowering() const {

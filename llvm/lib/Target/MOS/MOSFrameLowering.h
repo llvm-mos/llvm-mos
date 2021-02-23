@@ -20,17 +20,11 @@ public:
   explicit MOSFrameLowering();
 
 public:
-  bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
-  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
-                            RegScavenger *RS = nullptr) const override;
-  MachineBasicBlock::iterator
-  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MI) const override;
   bool hasFP(const MachineFunction &MF) const override;
-  bool hasReservedCallFrame(const MachineFunction &MF) const override;
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
-  };
+};
+
 } // end namespace llvm
 
 #endif // LLVM_MOS_FRAME_LOWERING_H

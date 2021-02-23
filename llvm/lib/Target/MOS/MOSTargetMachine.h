@@ -20,7 +20,6 @@
 #include "MOSFrameLowering.h"
 #include "MOSISelLowering.h"
 #include "MOSInstrInfo.h"
-#include "MOSSelectionDAGInfo.h"
 #include "MOSSubtarget.h"
 
 namespace llvm {
@@ -42,10 +41,6 @@ public:
   }
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
-
-  bool isMachineVerifierClean() const override {
-    return false;
-  }
 
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;

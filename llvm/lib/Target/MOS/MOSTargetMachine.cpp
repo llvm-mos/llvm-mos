@@ -66,11 +66,6 @@ public:
   MOSTargetMachine &getMOSTargetMachine() const {
     return getTM<MOSTargetMachine>();
   }
-
-  bool addInstSelector() override;
-  void addPreEmitPass() override;
-  void addPreRegAlloc() override;
-  void addPreSched2() override;
 };
 } // namespace
 
@@ -81,10 +76,6 @@ TargetPassConfig *MOSTargetMachine::createPassConfig(PassManagerBase &PM) {
 extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   // Register the target.
   RegisterTargetMachine<MOSTargetMachine> X(getTheMOSTarget());
-
-  auto &PR = *PassRegistry::getPassRegistry();
-  initializeMOSExpandPseudoPass(PR);
-  initializeMOSRelaxMemPass(PR);
 }
 
 const MOSSubtarget *MOSTargetMachine::getSubtargetImpl() const {
@@ -98,29 +89,5 @@ const MOSSubtarget *MOSTargetMachine::getSubtargetImpl(const Function &) const {
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration
 //===----------------------------------------------------------------------===//
-
-bool MOSPassConfig::addInstSelector() {
-  // Install an instruction selector.
-  addPass(createMOSISelDag(getMOSTargetMachine(), getOptLevel()));
-  // Create the frame analyzer pass used by the PEI pass.
-  addPass(createMOSFrameAnalyzerPass());
-
-  return false;
-}
-
-void MOSPassConfig::addPreEmitPass() {
-  // Must run branch selection immediately preceding the asm printer.
-  addPass(&BranchRelaxationPassID);
-}
-
-void MOSPassConfig::addPreRegAlloc() {
-  // Create the dynalloc SP save/restore pass to handle variable sized allocas.
-  addPass(createMOSDynAllocaSRPass());
-}
-
-void MOSPassConfig::addPreSched2() {
-  addPass(createMOSRelaxMemPass());
-  addPass(createMOSExpandPseudoPass());
-}
 
 } // end of namespace llvm

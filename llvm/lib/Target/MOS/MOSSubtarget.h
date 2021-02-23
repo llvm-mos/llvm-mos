@@ -21,7 +21,7 @@
 #include "MOSFrameLowering.h"
 #include "MOSISelLowering.h"
 #include "MOSInstrInfo.h"
-#include "MOSSelectionDAGInfo.h"
+#include "MOSRegisterInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "MOSGenSubtargetInfo.inc"
@@ -46,7 +46,6 @@ public:
   const MOSInstrInfo *getInstrInfo() const override;
   const MOSRegisterInfo *getRegisterInfo() const override;
 
-  const MOSSelectionDAGInfo *getSelectionDAGInfo() const override;
   const MOSTargetLowering *getTargetLowering() const override;
   // Subtarget feature getters.
   // See MOS.td for details.
@@ -61,9 +60,9 @@ public:
 
 private:
   MOSInstrInfo InstrInfo;
+  MOSRegisterInfo RegInfo;
   MOSFrameLowering FrameLowering;
   MOSTargetLowering TLInfo;
-  MOSSelectionDAGInfo TSInfo;
 
   // Subtarget feature settings
   // See MOS.td for details.

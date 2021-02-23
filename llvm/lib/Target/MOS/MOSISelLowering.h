@@ -20,18 +20,6 @@
 
 namespace llvm {
 
-namespace MOSISD {
-
-/// MOS Specific DAG Nodes
-enum NodeType {
-  /// Start the numbering where the builtin ops leave off.
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  /// Return from subroutine.
-  RET_FLAG,
-};
-
-} // end of namespace MOSISD
-
 class MOSSubtarget;
 class MOSTargetMachine;
 

@@ -17,13 +17,14 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/Function.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/ErrorHandling.h"
 
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSInstrInfo.h"
 #include "MOSTargetMachine.h"
-#include "MCTargetDesc/MOSMCTargetDesc.h"
 
 #define GET_REGINFO_TARGET_DESC
 #include "MOSGenRegisterInfo.inc"
@@ -35,44 +36,21 @@ MOSRegisterInfo::MOSRegisterInfo() : MOSGenRegisterInfo(0) {}
 void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                           int SPAdj, unsigned FIOperandNum,
                                           RegScavenger *RS /*= NULL*/) const {
-  // todo
+  report_fatal_error("Not yet implemented.");
 }
 
 const uint16_t *
 MOSRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF /*= 0*/) const {
-  return nullptr;
-}
-
-const uint32_t *
-MOSRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
-                                      CallingConv::ID CC) const {
-  return nullptr;
+  report_fatal_error("Not yet implemented.");
 }
 
 Register MOSRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return 0;
-}
-
-const llvm::TargetRegisterClass *
-MOSRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
-                                           const MachineFunction &MF) const {
-  return nullptr;
-}
-
-const llvm::TargetRegisterClass *
-MOSRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                    unsigned Kind /*= 0*/) const {
-  return nullptr;
+  report_fatal_error("Not yet implemented.");
 }
 
 llvm::BitVector
 MOSRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-  return BitVector(1);
-}
-
-bool MOSRegisterInfo::trackLivenessAfterRegAlloc(
-    const MachineFunction &) const {
-  return true;
+  report_fatal_error("Not yet implemented.");
 }
 
 } // end of namespace llvm

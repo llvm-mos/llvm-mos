@@ -26,7 +26,6 @@
 #include "llvm/Support/TargetRegistry.h"
 
 #include "MOS.h"
-#include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSTargetMachine.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
@@ -36,9 +35,7 @@
 
 namespace llvm {
 
-MOSInstrInfo::MOSInstrInfo()
-    : MOSGenInstrInfo(0, 0), RI(), ID() {}
-
+MOSInstrInfo::MOSInstrInfo() : MOSGenInstrInfo(0, 0) {}
 
 } // end of namespace llvm
 
