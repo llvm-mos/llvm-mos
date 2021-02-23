@@ -29,8 +29,7 @@ class MOSTargetMachine : public LLVMTargetMachine {
 public:
   MOSTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
-                   Optional<Reloc::Model> RM,
-                   Optional<CodeModel::Model> CM,
+                   Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
                    CodeGenOpt::Level OL, bool JIT);
 
   const MOSSubtarget *getSubtargetImpl() const;
@@ -39,6 +38,11 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return this->TLOF.get();
   }
+
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+
+  void registerPassBuilderCallbacks(PassBuilder &,
+                                    bool DebugPassManager) override;
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 

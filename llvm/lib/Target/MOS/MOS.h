@@ -12,9 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MOS_H
-#define LLVM_MOS_H
+#ifndef LLVM_LIB_TARGET_MOS_MOS_H
+#define LLVM_LIB_TARGET_MOS_MOS_H
 
-namespace llvm {} // end namespace llvm
+#include "llvm/Pass.h"
 
-#endif // LLVM_MOS_H
+namespace llvm {
+
+void initializeMOSNoRecursePass(PassRegistry &);
+
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_MOS_MOS_H

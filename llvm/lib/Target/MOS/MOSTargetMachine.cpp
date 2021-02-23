@@ -17,25 +17,34 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSIndexIV.h"
+#include "MOSNoRecurse.h"
 #include "MOSTargetObjectFile.h"
+#include "MOSTargetTransformInfo.h"
 
+using namespace llvm;
 
-namespace llvm {
+extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
+  // Register the target.
+  RegisterTargetMachine<MOSTargetMachine> X(getTheMOSTarget());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
+  initializeMOSNoRecursePass(PR);
+}
 
 static const char *MOSDataLayout =
     "e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
 
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
-  if (CPU.empty() || CPU == "generic") {
-    return "mos";
-  }
-
-  return CPU;
+  return (CPU.empty() || CPU == "generic") ? "mos" : CPU;
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
@@ -51,9 +60,47 @@ MOSTargetMachine::MOSTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, MOSDataLayout, TT, getCPU(CPU), FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-     SubTarget(TT, getCPU(CPU).str(), FS.str(), *this)                    {
+      SubTarget(TT, getCPU(CPU).str(), FS.str(), *this) {
   this->TLOF = std::make_unique<MOSTargetObjectFile>();
+
   initAsmInfo();
+
+  setGlobalISel(true);
+  // Prevents fallback to SelectionDAG by allowing direct aborts.
+  setGlobalISelAbort(GlobalISelAbortMode::Enable);
+}
+
+const MOSSubtarget *MOSTargetMachine::getSubtargetImpl() const {
+  return &SubTarget;
+}
+
+const MOSSubtarget *MOSTargetMachine::getSubtargetImpl(const Function &) const {
+  return &SubTarget;
+}
+
+TargetTransformInfo
+MOSTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(MOSTTIImpl(this, F));
+}
+
+void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
+                                                    bool DebugPassManager) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, LoopPassManager &PM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name == "mos-indexiv") {
+          // Rewrite pointer artithmetic in loops to use 8-bit IV offsets.
+          PM.addPass(MOSIndexIV());
+          return true;
+        }
+        return false;
+      });
+
+  PB.registerLateLoopOptimizationsEPCallback(
+      [](LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
+        if (Level != PassBuilder::OptimizationLevel::O0)
+          PM.addPass(MOSIndexIV());
+      });
 }
 
 namespace {
@@ -66,6 +113,8 @@ public:
   MOSTargetMachine &getMOSTargetMachine() const {
     return getTM<MOSTargetMachine>();
   }
+
+  void addIRPasses() override;
 };
 } // namespace
 
@@ -73,21 +122,12 @@ TargetPassConfig *MOSTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new MOSPassConfig(*this, PM);
 }
 
-extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
-  // Register the target.
-  RegisterTargetMachine<MOSTargetMachine> X(getTheMOSTarget());
-}
-
-const MOSSubtarget *MOSTargetMachine::getSubtargetImpl() const {
-  return &SubTarget;
-}
-
-const MOSSubtarget *MOSTargetMachine::getSubtargetImpl(const Function &) const {
-  return &SubTarget;
+void MOSPassConfig::addIRPasses() {
+  // Aggressively find provably non-recursive functions.
+  addPass(createMOSNoRecursePass());
+  TargetPassConfig::addIRPasses();
 }
 
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration
 //===----------------------------------------------------------------------===//
-
-} // end of namespace llvm
