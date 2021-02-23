@@ -35,5 +35,5 @@ jobs:
     - name: Test llvm
       uses: llvm/actions/build-test-llvm-project@main
       with:
-        cmake_args: -G Ninja -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="mos" -DCMAKE_BUILD_TYPE=Release
+        cmake_args: -G Ninja -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="MOS" -DCMAKE_BUILD_TYPE=Release
 
