@@ -1,9 +1,8 @@
 //===-- MOSISelLowering.cpp - MOS DAG Lowering Implementation -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,14 +24,19 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include "MOS.h"
+#include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "MOSTargetMachine.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 
-namespace llvm {
+using namespace llvm;
 
 MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
                                      const MOSSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
+  // This is only used for CallLowering to determine how to split large
+  // primitive types for the calling convention. All need to be split to 8 bits,
+  // so that's all that we report here. The register class is irrelevant.
+  addRegisterClass(MVT::i8, &MOS::MOSImagReg8ClassRegClass);
+  computeRegisterProperties(STI.getRegisterInfo());
 }
-} // namespace llvm

@@ -1,9 +1,8 @@
 //===-- MOSSubtarget.cpp - MOS Subtarget Information ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,6 +13,7 @@
 #include "MOSSubtarget.h"
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
@@ -26,12 +26,14 @@
 #define GET_SUBTARGETINFO_CTOR
 #include "MOSGenSubtargetInfo.inc"
 
-namespace llvm {
+using namespace llvm;
 
 MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const MOSTargetMachine &TM)
-    : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), InstrInfo(), RegInfo(),
-      FrameLowering(), TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)),
+    : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), InstrInfo(),
+      RegInfo(), FrameLowering(),
+      TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)),
+      CallLoweringInfo(&TLInfo),
 
       // Subtarget features
       m_hasTinyEncoding(false),
@@ -40,7 +42,7 @@ MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
       m_Has65C02Insns(false), m_HasR65C02Insns(false), m_HasW65C02Insns(false),
       m_HasW65816Insns(false), m_Has65EL02Insns(false), m_Has65CE02Insns(false),
       m_HasSWEET16Insns(false),
-      
+
       m_LongRegisterNames(false),
 
       ELFArch(0), m_FeatureSetDummy(false) {
@@ -64,6 +66,10 @@ const llvm::MOSTargetLowering *MOSSubtarget::getTargetLowering() const {
   return &TLInfo;
 }
 
+const CallLowering *MOSSubtarget::getCallLowering() const {
+  return &CallLoweringInfo;
+}
+
 MOSSubtarget &
 MOSSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                               const TargetMachine &TM) {
@@ -71,5 +77,3 @@ MOSSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   ParseSubtargetFeatures(CPU, /* TuneCPU */ CPU, FS);
   return *this;
 }
-
-} // namespace llvm

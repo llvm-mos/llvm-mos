@@ -1,9 +1,8 @@
 //===-- MOSSubtarget.h - Define Subtarget for the MOS -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,6 +17,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
 
+#include "MOSCallLowering.h"
 #include "MOSFrameLowering.h"
 #include "MOSISelLowering.h"
 #include "MOSInstrInfo.h"
@@ -45,8 +45,9 @@ public:
   const TargetFrameLowering *getFrameLowering() const override;
   const MOSInstrInfo *getInstrInfo() const override;
   const MOSRegisterInfo *getRegisterInfo() const override;
-
   const MOSTargetLowering *getTargetLowering() const override;
+  const CallLowering *getCallLowering() const override;
+
   // Subtarget feature getters.
   // See MOS.td for details.
   bool hasTinyEncoding() const { return m_hasTinyEncoding; }
@@ -63,6 +64,7 @@ private:
   MOSRegisterInfo RegInfo;
   MOSFrameLowering FrameLowering;
   MOSTargetLowering TLInfo;
+  MOSCallLowering CallLoweringInfo;
 
   // Subtarget feature settings
   // See MOS.td for details.

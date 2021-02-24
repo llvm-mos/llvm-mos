@@ -1,9 +1,8 @@
 //===-- MOSInstrInfo.td - MOS Instruction defs -------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,6 +19,7 @@
 /// indebted to him for the excellent analysis.
 
 include "MOSInstrFormats.td"
+include "MOSInstrPseudos.td"
 
 let Predicates = [Has6502] in 
 {
@@ -179,12 +179,15 @@ def BEQ_Relative : ConditionalBranch< "beq", (outs), (ins), [], 0b11, 0b1 >;
 /// TXA TXS TAX TSX DEX NOP
 /// 8A  9A  AA  BA  CA  EA
 
+let isCall = true in {
 def BRK_Implied: InstLow0<(outs), (ins), "brk", [], 0b0000>;
 /// JSR is the only instruction that does not follow the current pattern.
-def JSR_Absolute: Inst24< (outs), (ins), "jsr", [], 
-						Opcode< 0x20 >, Absolute >;
+def JSR_Absolute: Inst24<(outs), (ins), "jsr", [], Opcode< 0x20>, Absolute>;
+}
+let isReturn = true, isBarrier = true, isTerminator = true in {
 def RTI_Implied: InstLow0<(outs), (ins), "rti", [], 0b0100>;
 def RTS_Implied: InstLow0<(outs), (ins), "rts", [], 0b0110>;
+}
 
 def PHP_Implied: InstLow8<(outs), (ins), "php", [], 0b0000>;
 def PLP_Implied: InstLow8<(outs), (ins), "plp", [], 0b0010>;
