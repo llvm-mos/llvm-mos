@@ -1,10 +1,11 @@
 //===-- MOSFrameLowering.h - Define frame lowering for MOS ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
+// Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
-//
+//===----------------------------------------------------------------------===//
+// This file contains the MOS declaration of TargetFrameLowering class.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_MOS_FRAME_LOWERING_H
