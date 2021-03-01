@@ -1,0 +1,19 @@
+# RUN: llc -mtriple=mos -run-pass=legalizer -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+  @.str = constant [2 x i8] c"XY"
+  define void @ptradd_global_offset() {
+    entry:
+      ret void
+  }
+---
+name: ptradd_global_offset
+# CHECK-LABEL: name: ptradd_global_offset
+body: |
+  bb.0.entry:
+    %0:_(p0) = G_GLOBAL_VALUE @.str + 1200
+    %1:_(s16) = G_CONSTANT i16 34
+    %2:_(p0) = G_PTR_ADD %0, %1
+    RTS_Implied implicit %2
+# CHECK: %2:_(p0) = G_GLOBAL_VALUE @.str + 1234
+# CHECK-NEXT: RTS_Implied implicit %2
+...

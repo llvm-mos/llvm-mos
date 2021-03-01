@@ -18,6 +18,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSLegalizerInfo.h"
 #include "MOSTargetMachine.h"
 
 #define DEBUG_TYPE "mos-subtarget"
@@ -68,6 +69,10 @@ const llvm::MOSTargetLowering *MOSSubtarget::getTargetLowering() const {
 
 const CallLowering *MOSSubtarget::getCallLowering() const {
   return &CallLoweringInfo;
+}
+
+const LegalizerInfo *MOSSubtarget::getLegalizerInfo() const {
+  return &Legalizer;
 }
 
 MOSSubtarget &

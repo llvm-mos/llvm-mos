@@ -19,6 +19,7 @@
 /// indebted to him for the excellent analysis.
 
 include "MOSInstrFormats.td"
+include "MOSInstrGISel.td"
 include "MOSInstrPseudos.td"
 
 let Predicates = [Has6502] in 

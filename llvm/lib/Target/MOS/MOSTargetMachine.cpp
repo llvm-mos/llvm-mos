@@ -12,6 +12,7 @@
 
 #include "MOSTargetMachine.h"
 
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -102,6 +103,10 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
       });
 }
 
+//===----------------------------------------------------------------------===//
+// Pass Pipeline Configuration
+//===----------------------------------------------------------------------===//
+
 namespace {
 /// MOS Code Generator Pass Configuration Options.
 class MOSPassConfig : public TargetPassConfig {
@@ -114,6 +119,8 @@ public:
   }
 
   void addIRPasses() override;
+
+  std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
 } // namespace
 
@@ -127,6 +134,6 @@ void MOSPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 }
 
-//===----------------------------------------------------------------------===//
-// Pass Pipeline Configuration
-//===----------------------------------------------------------------------===//
+std::unique_ptr<CSEConfigBase> MOSPassConfig::getCSEConfig() const {
+  return getStandardCSEConfigForOpt(TM->getOptLevel());
+}

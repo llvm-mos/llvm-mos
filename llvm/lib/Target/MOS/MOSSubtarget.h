@@ -21,6 +21,7 @@
 #include "MOSFrameLowering.h"
 #include "MOSISelLowering.h"
 #include "MOSInstrInfo.h"
+#include "MOSLegalizerInfo.h"
 #include "MOSRegisterInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -47,6 +48,7 @@ public:
   const MOSRegisterInfo *getRegisterInfo() const override;
   const MOSTargetLowering *getTargetLowering() const override;
   const CallLowering *getCallLowering() const override;
+  const LegalizerInfo *getLegalizerInfo() const override;
 
   // Subtarget feature getters.
   // See MOS.td for details.
@@ -65,6 +67,7 @@ private:
   MOSFrameLowering FrameLowering;
   MOSTargetLowering TLInfo;
   MOSCallLowering CallLoweringInfo;
+  MOSLegalizerInfo Legalizer;
 
   // Subtarget feature settings
   // See MOS.td for details.
