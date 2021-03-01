@@ -75,6 +75,6 @@ private:
       : Kind(Kind), SubExpr(Expr), Negated(Negated) {}
 };
 
-}; // end namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_MOS_MCEXPR_H

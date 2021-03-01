@@ -121,7 +121,7 @@ unsigned MOSMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   assert(MO.isExpr());
 
   const MCExpr *Expr = MO.getExpr();
-  if (const auto *SExpr = dyn_cast<MCSymbolRefExpr>(Expr)) {
+  if (isa<MCSymbolRefExpr>(Expr)) {
     Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind::FK_Data_1));
     return 0;
   }
