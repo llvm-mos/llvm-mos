@@ -14,6 +14,7 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
@@ -73,6 +74,10 @@ const CallLowering *MOSSubtarget::getCallLowering() const {
 
 const LegalizerInfo *MOSSubtarget::getLegalizerInfo() const {
   return &Legalizer;
+}
+
+const RegisterBankInfo *MOSSubtarget::getRegBankInfo() const {
+  return &RegBankInfo;
 }
 
 MOSSubtarget &

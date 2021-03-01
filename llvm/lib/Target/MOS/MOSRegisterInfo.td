@@ -39,8 +39,6 @@ class MOSReg<bits<16> num,
   let AltNames = [name];
 }
 
-// Register classes for real registers.  All registers on non-65816 MOS are
-// 8 bit registers, with the sole exception of the program counter.
 class MOSReg8Class< dag RegList >: RegisterClass< "MOS", [i8], 8, RegList >;
 class MOSReg16Class< dag RegList >: RegisterClass< "MOS", [i16], 16, RegList >;
 
@@ -52,8 +50,7 @@ def S : MOSReg< 4, "s">;
 def PC : MOSReg< 5, "pc">;
 
 // Enumerate the instanced classes of 8 and 16 bit real registers.
-def RealReg8Class : MOSReg8Class<(add A, X, Y, P, S)>;
-def RealReg16Class : MOSReg16Class<(add PC)>;
+def RealReg8 : MOSReg8Class<(add A, X, Y, P, S)>;
 
 //===----------------------------------------------------------------------===//
 //  Imaginary registers
@@ -121,8 +118,8 @@ foreach I = 0...!add(MaxImag8Regs, -1) in
   def RC#I:
     MOSImagReg8< !add(I, Imag8RegsOffset), "rc"#!cast<string>(I) >;
  }
-// And they are all part of the MOSImagReg8Class.
-def MOSImagReg8Class :
+// And they are all part of the ImagReg8.
+def ImagReg8 :
   RegisterClass<"MOS", [i8], 8, (sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
 
 // Imaginary 16-bit registers, starting with the prefix rs
@@ -134,7 +131,10 @@ foreach I = 0...!add(MaxImag16Regs, -1) in
     [!cast<Register>("RC"#!shl(I, 1)),
       !cast<Register>("RC"#!add(!shl(I,1),1))]>;
 }
-// And they are all part of the MOSImagReg16Class.
-def MOSImagReg16Class :
+// And they are all part of the ImagReg16.
+def ImagReg16 :
   RegisterClass<"MOS", [i16], 16,
     (sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
+
+// Register banks are more-or-less unused, so place all registers in one.
+def AnyRegBank : RegisterBank<"Any", [RealReg8, ImagReg8, ImagReg16]>;

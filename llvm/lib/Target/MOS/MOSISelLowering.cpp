@@ -37,6 +37,6 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   // This is only used for CallLowering to determine how to split large
   // primitive types for the calling convention. All need to be split to 8 bits,
   // so that's all that we report here. The register class is irrelevant.
-  addRegisterClass(MVT::i8, &MOS::MOSImagReg8ClassRegClass);
+  addRegisterClass(MVT::i8, &MOS::ImagReg8RegClass);
   computeRegisterProperties(STI.getRegisterInfo());
 }

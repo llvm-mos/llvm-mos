@@ -13,6 +13,8 @@
 #ifndef LLVM_MOS_SUBTARGET_H
 #define LLVM_MOS_SUBTARGET_H
 
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
@@ -22,6 +24,7 @@
 #include "MOSISelLowering.h"
 #include "MOSInstrInfo.h"
 #include "MOSLegalizerInfo.h"
+#include "MOSRegisterBankInfo.h"
 #include "MOSRegisterInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -49,6 +52,7 @@ public:
   const MOSTargetLowering *getTargetLowering() const override;
   const CallLowering *getCallLowering() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
+  const RegisterBankInfo *getRegBankInfo() const override;
 
   // Subtarget feature getters.
   // See MOS.td for details.
@@ -68,6 +72,7 @@ private:
   MOSTargetLowering TLInfo;
   MOSCallLowering CallLoweringInfo;
   MOSLegalizerInfo Legalizer;
+  MOSRegisterBankInfo RegBankInfo;
 
   // Subtarget feature settings
   // See MOS.td for details.
