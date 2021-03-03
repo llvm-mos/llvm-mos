@@ -16,7 +16,7 @@ Target &getTheMOSTarget() {
 }
 } // namespace llvm
 
-extern "C" void LLVMInitializeMOSTargetInfo() { // NOLINT
+extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTargetInfo() { // NOLINT
   llvm::RegisterTarget<llvm::Triple::mos> X(llvm::getTheMOSTarget(), "mos",
                                             "MOS Technologies 65xx and variants", "MOS");
 }

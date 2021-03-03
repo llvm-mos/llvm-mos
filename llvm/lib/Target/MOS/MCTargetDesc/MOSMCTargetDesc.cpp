@@ -92,7 +92,7 @@ static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
   return new MOSTargetAsmStreamer(S);
 }
 
-extern "C" void LLVMInitializeMOSTargetMC() {
+extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<MOSMCAsmInfo> X(getTheMOSTarget());
 

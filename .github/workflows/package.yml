@@ -1,41 +1,47 @@
-name: package
+name: Packaging
 on: [push]
 jobs:
   package:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-self-hosted, macos-self-hosted]
+        os: [windows-latest, macos-latest, ubuntu-latest]
     env:
-      GH_REPO: llvm-mos/llvm-mos
+      LLVM_REPO: ${{ github.repository }}
     steps:
-      - name: Remove workspace
-        uses: JesseTG/rm@v1.0.2
-        with:
-          path: ${{ github.workspace }}/*
+      - name: Install Ubuntu tools
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo apt-get -y install ninja-build zip
+      - name: Install Windows tools
+        if: startsWith(matrix.os, 'windows')
+        run: choco install ninja zip
+      - name: Add Windows development tools to path
+        if: startsWith(matrix.os, 'windows')
+        uses: ilammy/msvc-dev-cmd@v1.5.0
+      - name: Install MacOS tools
+        if: startsWith(matrix.os, 'macos')
+        run: brew install ninja zip
       - name: Check out source code
         uses: actions/checkout@v2
         with:
           repository: llvm-mos/continuous-release
       - name: Inject slug/short variables
         uses: rlespinasse/github-slug-action@v3.x
-      - name: Add Microsoft development tools to path
-        if: matrix.os == 'windows-self-hosted'
-        uses: ilammy/msvc-dev-cmd@v1.5.0
       - name: Configure with cmake
         run: >-
           cmake 
-          -DLLVM_MOS_GIT_URL=https://www.github.com/${{ env.GH_REPO }}.git 
+          -DLLVM_MOS_GIT_URL=https://www.github.com/${{ env.LLVM_REPO }}.git 
           -DLLVM_MOS_GIT_TAG=${{ github.sha }} 
           -DLLVM_MOS_RELEASE_SLUG=${{ env.GITHUB_REF_SLUG }} 
-          -DCMAKE_BUILD_TYPE=Release
+          -DLLVM_MOS_TEST_SUITE_ENABLED=No
+          -DCMAKE_BUILD_TYPE=MinSizeRel
           -G Ninja
           -S . 
           -B build
       - name: Build with cmake
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           cd build
-          cmake --build . --target ship
-
+          cmake --build . --target ship --verbose

@@ -47,6 +47,6 @@ private:
 };
 } // end of namespace llvm
 
-extern "C" void LLVMInitializeMOSAsmPrinter() {
+extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSAsmPrinter() {
   llvm::RegisterAsmPrinter<llvm::MOSAsmPrinter> X(llvm::getTheMOSTarget());
 }

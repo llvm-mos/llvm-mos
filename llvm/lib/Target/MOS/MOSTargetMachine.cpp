@@ -78,7 +78,7 @@ TargetPassConfig *MOSTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new MOSPassConfig(*this, PM);
 }
 
-extern "C" void LLVMInitializeMOSTarget() {
+extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   // Register the target.
   RegisterTargetMachine<MOSTargetMachine> X(getTheMOSTarget());
 
