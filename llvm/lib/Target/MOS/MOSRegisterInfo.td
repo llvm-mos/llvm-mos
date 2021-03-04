@@ -39,18 +39,45 @@ class MOSReg<bits<16> num,
   let AltNames = [name];
 }
 
+class MOSReg1Class< dag RegList >: RegisterClass< "MOS", [i8], 8, RegList >;
 class MOSReg8Class< dag RegList >: RegisterClass< "MOS", [i8], 8, RegList >;
-class MOSReg16Class< dag RegList >: RegisterClass< "MOS", [i16], 16, RegList >;
+class MOSReg16Class< dag RegList >: RegisterClass< "MOS", [i16], 8, RegList >;
 
 def A : MOSReg< 0, "a" >;
 def X : MOSReg< 1, "x" >;
 def Y : MOSReg< 2, "y" >;
-def P : MOSReg< 3, "p" >;
 def S : MOSReg< 4, "s">;
 def PC : MOSReg< 5, "pc">;
 
-// Enumerate the instanced classes of 8 and 16 bit real registers.
-def RealReg8 : MOSReg8Class<(add A, X, Y, P, S)>;
+// Define subregister indexes, for imaginary registers.  The only 65xx series
+// processor with overlapping registers is the 65816 and variants.  The 8-bit
+// variants do not overlap.
+class MOSSubRegIndex<int size, int offset = 0>: SubRegIndex<size, offset>
+{
+  let Namespace = "MOS";
+}
+
+def sublo : MOSSubRegIndex<8>;
+def subhi : MOSSubRegIndex<8, 8>;
+def subcarry : MOSSubRegIndex<1>;
+def subnz : MOSSubRegIndex<2>;
+def subn : MOSSubRegIndex<1>;
+def subz : MOSSubRegIndex<1>;
+
+def C : MOSReg<6, "C">;
+def N : MOSReg<7, "N">;
+def Z : MOSReg<8, "Z">;
+def NZ : MOSReg<9, "NZ"> {
+  let SubRegs = [N, Z];
+  let SubRegIndices = [subn, subz];
+  let CoveredBySubRegs = true;
+}
+def P : MOSReg<3, "P"> {
+  let SubRegs = [C, NZ];
+  let SubRegIndices = [subcarry, subnz];
+}
+
+def Static : MOSReg<10, "Static">;
 
 //===----------------------------------------------------------------------===//
 //  Imaginary registers
@@ -80,18 +107,6 @@ defvar Imag8RegsOffset = 0x10;
 defvar MaxImag16Regs = !sra(MaxImag8Regs, 1);
 defvar Imag16RegsOffset = !add(Imag8RegsOffset, MaxImag8Regs);
 
-// Define subregister indexes, for imaginary registers.  The only 65xx series
-// processor with overlapping registers is the 65816 and variants.  The 8-bit
-// variants do not overlap.
-class MOSSubRegIndex<int size, int offset = 0>: SubRegIndex<size, offset>
-{
-  let Namespace = "MOS";
-}
-
-// Define the ability to extract subregisters from imaginary registers.
-def sub_8lo       : MOSSubRegIndex<8>;
-def sub_8hi       : MOSSubRegIndex<8, 8>;
-
 // Definition for 8-bit imaginary registers.
 class MOSImagReg8<bits<16> num,
             string name,
@@ -106,7 +121,7 @@ class MOSImagReg16<bits<16> num,
             list<string> altNames = []>
             : MOSReg< num, name, subregs, altNames>
 {
-  let SubRegIndices = [sub_8lo, sub_8hi];
+  let SubRegIndices = [sublo, subhi];
   let CoveredBySubRegs = 1;
 }
 
@@ -118,9 +133,6 @@ foreach I = 0...!add(MaxImag8Regs, -1) in
   def RC#I:
     MOSImagReg8< !add(I, Imag8RegsOffset), "rc"#!cast<string>(I) >;
  }
-// And they are all part of the ImagReg8.
-def ImagReg8 :
-  RegisterClass<"MOS", [i8], 8, (sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
 
 // Imaginary 16-bit registers, starting with the prefix rs
 foreach I = 0...!add(MaxImag16Regs, -1) in
@@ -131,10 +143,40 @@ foreach I = 0...!add(MaxImag16Regs, -1) in
     [!cast<Register>("RC"#!shl(I, 1)),
       !cast<Register>("RC"#!add(!shl(I,1),1))]>;
 }
-// And they are all part of the ImagReg16.
-def ImagReg16 :
-  RegisterClass<"MOS", [i16], 16,
+
+class MOSRegClass<list<ValueType> regTypes, int alignment, dag regList>
+     : RegisterClass<"MOS", regTypes, alignment, regList>;
+
+def GPR : MOSRegClass<[i8], 8, (add A, X, Y)>;
+
+def Flag : MOSRegClass<[i1], 8, (add C, N, Z)> {
+  let isAllocatable = false;
+}
+
+def Ac : MOSReg8Class<(add A)>;
+def Yc : MOSReg8Class<(add Y)>;
+def XY : MOSReg8Class<(add X, Y)>;
+
+def Cc : MOSReg1Class<(add C)>;
+
+def ZP :
+  RegisterClass<"MOS", [i8], 8, (sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
+def ZP_PTR :
+  RegisterClass<"MOS", [i16], 8,
     (sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 
+def Stack : MOSRegClass<[i8, i16], 8, (add Static, S, X, ZP_PTR)> {
+  let isAllocatable = false;
+}
+
+def AZP : MOSRegClass<[i8], 8, (add A, ZP)>;
+
+def Anyi8 : MOSRegClass<[i8], 8, (add GPR, ZP)>;
+def Anyi1 : MOSRegClass<[i1], 8, (add GPR, ZP, Cc)>;
+
+def Anyc : MOSRegClass<[i8, i16], 8, (add Anyi8, ZP_PTR)> {
+  let isAllocatable = false;
+}
+
 // Register banks are more-or-less unused, so place all registers in one.
-def AnyRegBank : RegisterBank<"Any", [RealReg8, ImagReg8, ImagReg16]>;
+def AnyRegBank : RegisterBank<"Any", [Anyi1, Anyi8, ZP_PTR]>;

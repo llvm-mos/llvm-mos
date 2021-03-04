@@ -14,11 +14,13 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSInstructionSelector.h"
 #include "MOSLegalizerInfo.h"
 #include "MOSTargetMachine.h"
 
@@ -36,6 +38,7 @@ MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
       RegInfo(), FrameLowering(),
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)),
       CallLoweringInfo(&TLInfo),
+      InstSelector(createMOSInstructionSelector(TM, *this, RegBankInfo)),
 
       // Subtarget features
       m_hasTinyEncoding(false),
@@ -78,6 +81,10 @@ const LegalizerInfo *MOSSubtarget::getLegalizerInfo() const {
 
 const RegisterBankInfo *MOSSubtarget::getRegBankInfo() const {
   return &RegBankInfo;
+}
+
+InstructionSelector *MOSSubtarget::getInstructionSelector() const {
+  return InstSelector.get();
 }
 
 MOSSubtarget &

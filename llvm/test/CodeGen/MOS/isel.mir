@@ -1,0 +1,222 @@
+# RUN: llc -mtriple=mos -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: asl
+# CHECK-LABEL: name: asl
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s1) = G_CONSTANT i1 0
+    %2:any(s8), %3:any(s1) = G_SHLE %0, %1
+    RTS implicit %2, implicit %3
+# CHECK:      %0:azp = IMPLICIT_DEF
+# CHECK-NEXT: %2:azp, %3:cc = ASL %0
+# CHECK-NEXT: RTS
+...
+---
+name: cmpimm_breq
+# CHECK-LABEL: name: cmpimm_breq
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1) = G_ICMP intpred(eq), %0, %1
+    G_BRCOND %2, %bb.0
+    RTS
+# CHECK:      CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, $z, 1
+...
+---
+name: cmpimm_brne
+# CHECK-LABEL: name: cmpimm_brne
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1) = G_ICMP intpred(ne), %0, %1
+    G_BRCOND %2, %bb.0
+    RTS
+# CHECK:      CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, $z, 0
+...
+---
+name: cmpimm_bruge
+# CHECK-LABEL: name: cmpimm_bruge
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1) = G_ICMP intpred(uge), %0, %1
+    G_BRCOND %2, %bb.0
+    RTS
+# CHECK:      CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, $n, 0
+...
+---
+name: cmpimm_brult
+# CHECK-LABEL: name: cmpimm_brult
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1) = G_ICMP intpred(ult), %0, %1
+    G_BRCOND %2, %bb.0
+    RTS
+# CHECK:      CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, $n, 1
+...
+---
+name: copy
+# CHECK-LABEL: name: copy
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    liveins: $a
+    %0:any(s8) = COPY $a
+    RTS implicit %0
+# CHECK: %0:anyi8 = COPY $a
+...
+---
+name: ldcimm
+# CHECK-LABEL: name: ldcimm
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = G_CONSTANT i1 true
+    RTS implicit %0
+# CHECK:      %0:cc = LDCimm 1
+# CHECK-NEXT: RTS
+...
+---
+name: ldimm
+# CHECK-LABEL: name: ldimm
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_CONSTANT i8 42
+    RTS implicit %0
+# CHECK:      %0:gpr = LDimm 42
+...
+---
+name: load
+# CHECK-LABEL: name: load
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:zp_ptr(p0) = G_IMPLICIT_DEF
+    %1:any(s8) = G_LOAD %0:zp_ptr(p0) :: (load 1)
+    RTS implicit %1
+# CHECK:      %2:yc = LDimm 0
+# CHECK-NEXT: %1:ac = LDyindirr %0, %2
+# CHECK-NEXT: RTS
+...
+---
+name: load_indexed_indir
+# CHECK-LABEL: name: load
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(p0) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 -1
+    %2:any(p0) = G_PTR_ADD %0, %1
+    %3:any(s8) = G_LOAD %2 :: (load 1)
+    RTS implicit %3
+# CHECK:      %0:zp_ptr = IMPLICIT_DEF
+# CHECK-NEXT: %4:yc = LDimm 255
+# CHECK-NEXT: %3:ac = LDyindirr %0, %4
+# CHECK-NEXT: RTS
+...
+---
+name: rol
+# CHECK-LABEL: name: rol
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s1) = G_IMPLICIT_DEF
+    %2:any(s8), %3:any(s1) = G_SHLE %0, %1
+    RTS implicit %2, implicit %3
+# CHECK:      %0:azp = IMPLICIT_DEF
+# CHECK-NEXT: %1:cc = IMPLICIT_DEF
+# CHECK-NEXT: %2:azp, %3:cc = ROL %0, %1
+# CHECK-NEXT: RTS
+...
+---
+name: store
+# CHECK-LABEL: name: store
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(p0) = G_IMPLICIT_DEF
+    G_STORE %0, %1 :: (store 1)
+    RTS
+# CHECK:      %0:ac = IMPLICIT_DEF
+# CHECK-NEXT: %1:zp_ptr = IMPLICIT_DEF
+# CHECK-NEXT: %2:yc = LDimm 0
+# CHECK-NEXT: STyindirr %0, %1, %2
+# CHECK-NEXT: RTS
+...
+---
+name: uadde_imm
+# CHECK-LABEL: name: uadde_imm
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1) = G_IMPLICIT_DEF
+    %3:any(s8), %4:any(s1) = G_UADDE %0:any(s8), %1:any(s8), %2:any(s1)
+    RTS implicit %3, implicit %4
+# CHECK:      %0:ac = IMPLICIT_DEF
+# CHECK-NEXT: %2:cc = IMPLICIT_DEF
+# CHECK-NEXT: %3:ac, %4:cc = ADCimm %0, 42, %2
+# CHECK-NEXT: RTS
+...
+---
+name: uadde
+# CHECK-LABEL: name: uadde
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_IMPLICIT_DEF
+    %2:any(s1) = G_IMPLICIT_DEF
+    %3:any(s8), %4:any(s1) = G_UADDE %0:any(s8), %1:any(s8), %2:any(s1)
+    RTS implicit %3, implicit %4
+# CHECK:      %0:ac = IMPLICIT_DEF
+# CHECK-NEXT: %1:zp = IMPLICIT_DEF
+# CHECK-NEXT: %2:cc = IMPLICIT_DEF
+# CHECK-NEXT: %3:ac, %4:cc = ADCzpr %0, %1, %2
+# CHECK-NEXT: RTS
+...
+---
+name: unmerge
+# CHECK-LABEL: name: unmerge
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0:zp_ptr(s16)
+    RTS implicit %1, implicit %2
+# CHECK:      %0:anyi8 = COPY %2.sublo
+# CHECK-NEXT: %1:anyi8 = COPY %2.subhi
+...

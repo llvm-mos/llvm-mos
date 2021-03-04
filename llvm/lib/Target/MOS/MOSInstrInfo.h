@@ -28,6 +28,8 @@ namespace MOS {
 /// Specifies a target operand flag.
 enum TOF {
   MO_NO_FLAG,
+  MO_LO,
+  MO_HI,
 };
 
 } // namespace MOS
@@ -36,6 +38,12 @@ enum TOF {
 class MOSInstrInfo : public MOSGenInstrInfo {
 public:
   explicit MOSInstrInfo();
+
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
 };
 
 } // end namespace llvm

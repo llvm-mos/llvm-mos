@@ -24,17 +24,26 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSRegisterInfo.h"
 #include "MOSTargetMachine.h"
-#include "MCTargetDesc/MOSMCTargetDesc.h"
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "MOSGenInstrInfo.inc"
 
-namespace llvm {
+using namespace llvm;
 
 MOSInstrInfo::MOSInstrInfo() : MOSGenInstrInfo(0, 0) {}
 
-} // end of namespace llvm
+std::pair<unsigned, unsigned>
+MOSInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  return std::make_pair(TF, 0u);
+}
 
+ArrayRef<std::pair<unsigned, const char *>>
+MOSInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  static const std::pair<unsigned, const char *> Flags[] = {{MOS::MO_LO, "lo"},
+                                                            {MOS::MO_HI, "hi"}};
+  return Flags;
+}

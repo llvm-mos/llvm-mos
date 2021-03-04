@@ -13,6 +13,7 @@
 #ifndef LLVM_MOS_SUBTARGET_H
 #define LLVM_MOS_SUBTARGET_H
 
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -53,6 +54,7 @@ public:
   const CallLowering *getCallLowering() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+  InstructionSelector *getInstructionSelector() const override;
 
   // Subtarget feature getters.
   // See MOS.td for details.
@@ -73,6 +75,7 @@ private:
   MOSCallLowering CallLoweringInfo;
   MOSLegalizerInfo Legalizer;
   MOSRegisterBankInfo RegBankInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
 
   // Subtarget feature settings
   // See MOS.td for details.
