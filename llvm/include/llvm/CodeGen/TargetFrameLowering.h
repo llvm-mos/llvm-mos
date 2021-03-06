@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #ifndef LLVM_CODEGEN_TARGETFRAMELOWERING_H
 #define LLVM_CODEGEN_TARGETFRAMELOWERING_H
 
@@ -28,6 +30,7 @@ namespace TargetStackID {
     Default = 0,
     SGPRSpill = 1,
     ScalableVector = 2,
+    Hard = 3,
     NoAlloc = 255
   };
 }
