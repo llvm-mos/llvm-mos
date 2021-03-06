@@ -11,41 +11,43 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MOSInstPrinter.h"
-#include "MOS.h"
 #include "MOSMCInstLower.h"
+#include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
-
+#include "TargetInfo/MOSTargetInfo.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/MC/MCInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/raw_ostream.h"
 
-#define DEBUG_TYPE "mos-asm-printer"
+using namespace llvm;
 
-namespace llvm {
+#define DEBUG_TYPE "asm-printer"
 
-/// An MOS assembly code printer.
+namespace {
+
 class MOSAsmPrinter : public AsmPrinter {
+  MOSMCInstLower InstLowering;
+
 public:
-  MOSAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MRI(*TM.getMCRegisterInfo()) {}
+  explicit MOSAsmPrinter(TargetMachine &TM,
+                             std::unique_ptr<MCStreamer> Streamer)
+      : AsmPrinter(TM, std::move(Streamer)), InstLowering(OutContext, *this) {}
 
-  StringRef getPassName() const override { return "MOS Assembly Printer"; }
-
-private:
-  const MCRegisterInfo &MRI;
+  void emitInstruction(const MachineInstr *MI) override;
 };
-} // end of namespace llvm
 
-extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSAsmPrinter() {
-  llvm::RegisterAsmPrinter<llvm::MOSAsmPrinter> X(llvm::getTheMOSTarget());
+void MOSAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  MCInst Inst;
+  InstLowering.lower(MI, Inst);
+  EmitToStreamer(*OutStreamer, Inst);
+}
+
+} // namespace
+
+// Force static initialization.
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSAsmPrinter() {
+  RegisterAsmPrinter<MOSAsmPrinter> X(getTheMOSTarget());
 }

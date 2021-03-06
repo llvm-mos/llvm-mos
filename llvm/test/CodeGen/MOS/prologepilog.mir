@@ -1,0 +1,103 @@
+# RUN: llc -mtriple=mos -run-pass=prologepilog -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: stack
+# CHECK-LABEL: name: stack
+stack:
+  - { id: 0, size: 1}
+  - { id: 1, size: 1}
+  - { id: 2, size: 1}
+  - { id: 3, size: 1}
+  - { id: 4, size: 1}
+body:             |
+  bb.0.entry:
+    STstk $a, %stack.4, 0 :: (store 1 into %stack.4)
+    $a = LDstk %stack.4, 0 :: (load 1 from %stack.4)
+    STstk $a, %stack.0, 0 :: (store 1 into %stack.0)
+    $a, $c = AddrLostk %stack.4, 0, implicit-def $nz, implicit $sp, implicit $c
+    $a = AddrHistk %stack.4, 0, $c, implicit-def $nz, implicit-def $c, implicit $sp
+    $zp_ptr_0 = Addrstk %stack.4, 0, implicit-def $nz, implicit $sp
+    STstk $a, %stack.2, 0 :: (store 1 into %stack.2)
+    STstk $a, %stack.1, 0 :: (store 1 into %stack.1)
+    $a, $c = AddrLostk %stack.1, 0, implicit-def $nz, implicit $sp, implicit $c
+    $a = AddrHistk %stack.1, 0, $c, implicit-def $nz, implicit-def $c, implicit $sp
+    $zp_ptr_0 = Addrstk %stack.1, 0, implicit-def $nz, implicit $sp
+    $a = LDstk %stack.1, 0 :: (load 1 from %stack.1)
+    $a = LDstk %stack.2, 0 :: (load 1 from %stack.2)
+    $a = LDstk %stack.0, 0 :: (load 1 from %stack.0)
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK-NEXT:  IncSP -1
+# CHECK-NEXT:  STstk $a, $sp, 0 :: (store 1 into %stack.4)
+# CHECK-NEXT:  $a = LDstk $sp, 0 :: (load 1 from %stack.4)
+# CHECK-NEXT:  Push $a
+# CHECK-NEXT:  $a, $c = AddrLostk $sp, 0
+# CHECK-NEXT:  $a = AddrHistk $sp, 0, $c
+# CHECK-NEXT:  $zp_ptr_0 = Addrstk $sp, 0
+# CHECK-NEXT:  Push undef $a
+# CHECK-NEXT:  Push $a
+# CHECK-NEXT:  Push undef $a
+# CHECK-NEXT:  STstk $a, $s, 3
+# CHECK-NEXT:  $a, $c = AddrLostk $s, 3
+# CHECK-NEXT:  $a = AddrHistk $s, 3, $c
+# CHECK-NEXT:  $zp_ptr_0 = Addrstk $s, 3
+# CHECK-NEXT:  $a = LDstk $s, 3 :: (load 1 from %stack.1)
+# CHECK-NEXT:  PullPreserve
+# CHECK-NEXT:  $a = Pull
+# CHECK-NEXT:  PullPreserve
+# CHECK-NEXT:  $a = Pull
+# CHECK-NEXT:  IncSP 1
+# CHECK-NEXT:  RTS
+...
+---
+name: ptr
+# CHECK-LABEL: name: ptr
+stack:
+  - { id: 0, size: 2}
+  - { id: 1, size: 2}
+  - { id: 2, size: 2}
+body: |
+  bb.0.entry:
+    STstk $zp_ptr_0, %stack.2, 0 :: (store 2 into %stack.2)
+    $zp_ptr_0 = LDstk %stack.2, 0 :: (load 2 from %stack.2)
+    STstk $zp_ptr_0, %stack.0, 0 :: (store 2 into %stack.0)
+    $zp_ptr_0 = LDstk %stack.1, 0 :: (load 2 from %stack.1)
+    STstk $zp_ptr_0, %stack.1, 0 :: (store 2 into %stack.1)
+    $zp_ptr_0 = LDstk %stack.0, 0 :: (load 2 from %stack.0)
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK-NEXT:  IncSP -2
+# CHECK-NEXT:  STstk $zp_ptr_0, $sp, 0
+# CHECK-NEXT:  $zp_ptr_0 = LDstk $sp, 0
+# CHECK-NEXT:  Push $zp_1
+# CHECK-NEXT:  Push $zp_0
+# CHECK-NEXT:  Push undef $a
+# CHECK-NEXT:  Push undef $a
+# CHECK-NEXT:  $zp_ptr_0 = LDstk $s, 1
+# CHECK-NEXT:  STstk $zp_ptr_0, $s, 1
+# CHECK-NEXT:  PullPreserve
+# CHECK-NEXT:  PullPreserve
+# CHECK-NEXT:  $zp_0 = Pull
+# CHECK-NEXT:  $zp_1 = Pull
+# CHECK-NEXT:  IncSP 2
+# CHECK-NEXT:  RTS
+...
+---
+name: epilogue_no_terminator
+# CHECK-LABEL: name: epilogue_no_terminator
+frameInfo:
+  savePoint: '%bb.0.entry'
+  restorePoint: '%bb.0.entry'
+stack:
+  - { id: 0, size: 1}
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    $a = IMPLICIT_DEF
+
+  bb.1:
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK:       $a = IMPLICIT_DEF
+# CHECK-NEXT:  Push undef $a
+# CHECK-NEXT:  PullPreserve
+...

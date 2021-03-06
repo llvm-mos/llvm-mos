@@ -18,8 +18,12 @@
 
 namespace llvm {
 
+void initializeMOSCombinerPass(PassRegistry &);
+void initializeMOSIndexIVPass(PassRegistry &);
 void initializeMOSNoRecursePass(PassRegistry &);
+void initializeMOSPreRegAllocPass(PassRegistry &);
+void initializeMOSStaticStackAllocPass(PassRegistry &);
 
-} // end namespace llvm
+} // namespace llvm
 
-#endif // LLVM_LIB_TARGET_MOS_MOS_H
+#endif // not LLVM_LIB_TARGET_MOS_MOS_H

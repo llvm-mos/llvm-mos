@@ -28,6 +28,11 @@ class Inst< dag outs, dag ins, string asmstr, list<dag> pattern> : Instruction
   let AsmString = asmstr;
   let Pattern = pattern;
 
+  // TODO: The instructions need these annotations to be accurate.
+  let mayLoad = false;
+  let mayStore = false;
+  let hasSideEffects = false;
+
   field bits<32> SoftFail = 0;
   let DecoderNamespace = "MOS";
 }

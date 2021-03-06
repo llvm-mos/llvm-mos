@@ -7,8 +7,9 @@ tablegen(LLVM MOSGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM MOSGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM MOSGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM MOSGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM MOSGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM MOSGenGICombiner.inc -gen-global-isel-combiner -combiners="MOSCombinerHelper")
 tablegen(LLVM MOSGenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM MOSGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM MOSGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MOSGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM MOSGenRegisterBank.inc -gen-register-bank)
@@ -22,17 +23,23 @@ add_llvm_target(MOSCodeGen
   MOSAsmPrinter.cpp
   MOSCallLowering.cpp
   MOSCallingConv.cpp
+  MOSCombiner.cpp
   MOSFrameLowering.cpp
+  MOSISelLowering.cpp
   MOSIndexIV.cpp
+  MOSIndexIVPass.cpp
+  MOSInstrInfo.cpp
   MOSInstrInfo.cpp
   MOSInstructionSelector.cpp
-  MOSISelLowering.cpp
   MOSLegalizerInfo.cpp
-  MOSMachineFunctionInfo.cpp
   MOSMCInstLower.cpp
+  MOSMachineFunctionInfo.cpp
+  MOSMachineScheduler.cpp
   MOSNoRecurse.cpp
+  MOSPreRegAlloc.cpp
   MOSRegisterBankInfo.cpp
   MOSRegisterInfo.cpp
+  MOSStaticStackAlloc.cpp
   MOSSubtarget.cpp
   MOSTargetMachine.cpp
   MOSTargetObjectFile.cpp
@@ -45,6 +52,7 @@ add_llvm_target(MOSCodeGen
   CodeGen
   Core
   MC
+  IPO
   Passes
   SelectionDAG
   Support

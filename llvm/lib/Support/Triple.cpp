@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by Daniel Thornburgh (mysterymath@gmail.com)
+
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -156,6 +158,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
 
   case ve:          return "ve";
   case csky:        return "csky";
+
+  case mos:         return "mos";
   }
 }
 
@@ -329,6 +333,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("renderscript64", renderscript64)
     .Case("ve", ve)
     .Case("csky", csky)
+    .Case("mos", mos)
     .Default(UnknownArch);
 }
 
@@ -462,6 +467,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("wasm32", Triple::wasm32)
     .Case("wasm64", Triple::wasm64)
     .Case("csky", Triple::csky)
+    .Case("mos", Triple::mos)
     .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the

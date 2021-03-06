@@ -8,6 +8,7 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
+
 namespace llvm {
 Target &getTheMOSTarget() {
   static Target TheMOSTarget;

@@ -13,17 +13,22 @@
 //===---------------------------------------------------------------------===//
 
 include "llvm/Target/Target.td"
+include "llvm/Target/GlobalISel/Combine.td"
 
 //===---------------------------------------------------------------------===//
 // MOS Device Definitions
 //===---------------------------------------------------------------------===//
 
+include "MOSCombine.td"
 include "MOSDevices.td"
 include "MOSFeatures.td"
 include "MOSRegisterInfo.td"
+include "MOSRegisterBanks.td"
 include "MOSInstrInfo.td"
 
-def MOSInstrInfo : InstrInfo;
+def MOSInstrInfo : InstrInfo {
+  let guessInstructionProperties = 0;
+}
 
 include "MOSCallingConv.td"
 
@@ -54,6 +59,17 @@ def MOSAsmParserVariantXA65 : AsmParserVariant {
   let Name = "xa65";
 }
 
+def MOSSchedModel : SchedMachineModel {
+  // Prevent instructions from being added to the pending queue, since latency
+  // doesn't matter. The remaining latency concerns are disabled in the C++
+  // scheduling strategy.
+  let MicroOpBufferSize = 1;
+
+  let CompleteModel = false;
+}
+
+def : ProcessorModel<"generic", MOSSchedModel, []>;
+
 //===---------------------------------------------------------------------===//
 // Target Declaration
 //===---------------------------------------------------------------------===//
@@ -61,10 +77,10 @@ def MOSAsmParserVariantXA65 : AsmParserVariant {
 def MOS : Target {
   let InstructionSet         = MOSInstrInfo;
   let AssemblyWriters        = [MOSAsmWriter];
+  let AllowRegisterRenaming = 1;
 
   let AssemblyParsers        = [MOSAsmParser];
-  let AssemblyParserVariants = [MOSAsmParserVariantDefault, 
-                                MOSAsmParserVariantCA65, 
+  let AssemblyParserVariants = [MOSAsmParserVariantDefault,
+                                MOSAsmParserVariantCA65,
                                 MOSAsmParserVariantXA65];
 }
-

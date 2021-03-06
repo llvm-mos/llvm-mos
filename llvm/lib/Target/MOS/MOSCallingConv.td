@@ -117,4 +117,4 @@ def CC_MOS_VarArgs : CallingConv<[
 // All registers are caller saved except RS2 and RS4. These are represented
 // implicitly by their subregisters, since the subregisters are what must be
 // saved and restored.
-def MOS_CSR : CalleeSavedRegs<(add RC2, RC3, RC6, RC7)>;
+def MOS_CSR : CalleeSavedRegs<(add RC4, RC5, RC8, RC9)>;

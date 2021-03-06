@@ -13,6 +13,7 @@
 #ifndef LLVM_MOS_SUBTARGET_H
 #define LLVM_MOS_SUBTARGET_H
 
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/Register.h"
@@ -33,6 +34,8 @@
 
 namespace llvm {
 
+class MOSTargetMachine;
+
 /// A specific MOS target MCU.
 class MOSSubtarget : public MOSGenSubtargetInfo {
 public:
@@ -47,7 +50,7 @@ public:
     return ELFArch;
   }
 
-  const TargetFrameLowering *getFrameLowering() const override;
+  const MOSFrameLowering *getFrameLowering() const override;
   const MOSInstrInfo *getInstrInfo() const override;
   const MOSRegisterInfo *getRegisterInfo() const override;
   const MOSTargetLowering *getTargetLowering() const override;
@@ -55,6 +58,13 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
   InstructionSelector *getInstructionSelector() const override;
+  const InlineAsmLowering *getInlineAsmLowering() const override;
+
+  bool enableMachineScheduler() const override { return true; }
+  bool enableSubRegLiveness() const override { return true; }
+
+  void overrideSchedPolicy(MachineSchedPolicy &Policy,
+                           unsigned NumRegionInstrs) const override;
 
   // Subtarget feature getters.
   // See MOS.td for details.
@@ -76,6 +86,7 @@ private:
   MOSLegalizerInfo Legalizer;
   MOSRegisterBankInfo RegBankInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
+  InlineAsmLowering InlineAsmLoweringInfo;
 
   // Subtarget feature settings
   // See MOS.td for details.
@@ -104,4 +115,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_MOS_SUBTARGET_H
+#endif // LLVM_MOS_SUBTARGET_

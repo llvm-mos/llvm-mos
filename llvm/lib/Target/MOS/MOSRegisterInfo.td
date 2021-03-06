@@ -177,6 +177,3 @@ def Anyi1 : MOSRegClass<[i1], 8, (add GPR, ZP, Cc)>;
 def Anyc : MOSRegClass<[i8, i16], 8, (add Anyi8, ZP_PTR)> {
   let isAllocatable = false;
 }
-
-// Register banks are more-or-less unused, so place all registers in one.
-def AnyRegBank : RegisterBank<"Any", [Anyi1, Anyi8, ZP_PTR]>;

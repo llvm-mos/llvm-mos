@@ -54,22 +54,19 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
-  // const MCOperandInfo &MOI = this->MII.get(MI->getOpcode()).OpInfo[OpNo];
 
-  /*
-    if (Op.isReg()) {
-        O << getRegisterName(Op.getReg(), MOS::ptr);
-      } else {
-        O << getPrettyRegisterName(Op.getReg(), MRI);
-      }
-    } else
-    */
-  if (Op.isImm()) {
+  if (Op.isReg()) {
+    printRegName(O, Op.getReg());
+  } else if (Op.isImm()) {
     O << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
     O << *Op.getExpr();
   }
+}
+
+void MOSInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
+  O << getRegisterName(RegNo);
 }
 
 format_object<int64_t> MOSInstPrinter::formatHex(int64_t Value) const {

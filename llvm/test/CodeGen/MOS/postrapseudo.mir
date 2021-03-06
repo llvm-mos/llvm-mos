@@ -1,0 +1,345 @@
+# RUN: llc -mtriple=mos -run-pass=postrapseudos -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: addrloss
+# CHECK-LABEL: name: addrloss
+body: |
+  bb.0.entry:
+    $zp_0, $c = AddrLostk $sp, 1234, implicit-def $nz
+# CHECK:      $a = LDzpr $splo
+# CHECK-NEXT: $c = LDCimm 0
+# CHECK-NEXT: $a, $c = ADCimm $a, 210, $c
+# CHECK-NEXT: $zp_0 = STzpr $a
+...
+---
+name: addrloss0
+# CHECK-LABEL: name: addrloss0
+body: |
+  bb.0.entry:
+    $zp_0, $c = AddrLostk $sp, 512, implicit-def $nz
+# CHECK:      $a = LDzpr $splo
+# CHECK-NEXT: $zp_0 = STzpr $a
+...
+---
+name: addrlohs
+# CHECK-LABEL: name: addrlohs
+body: |
+  bb.0.entry:
+    $x, $c = AddrLostk $s, 123, implicit-def $nz
+# CHECK:      TSX
+# CHECK-NEXT: T_A $x
+# CHECK-NEXT: $c = LDCimm 0
+# CHECK-NEXT: $a, $c = ADCimm $a, 123, $c
+# CHECK-NEXT: $x = TA_
+...
+---
+name: addrlohs0
+# CHECK-LABEL: name: addrlohs0
+body: |
+  bb.0.entry:
+    $a, $c = AddrLostk $s, 0, implicit-def $nz
+# CHECK:      TSX
+# CHECK-NEXT: T_A $x
+...
+---
+name: addrlostatic
+# CHECK-LABEL: name: addrlostatic
+body: |
+  bb.0.entry:
+    $zp_0, $c = AddrLostk $static, 1234, implicit-def $nz
+# CHECK:      $a = LDimm target-flags(lo) target-index(mos-static-stack) + 1234
+# CHECK-NEXT: $zp_0 = STzpr $a
+...
+---
+name: addrhiss
+# CHECK-LABEL: name: addrhiss
+body: |
+  bb.0.entry:
+    $a = AddrHistk $sp, 1234, $c, implicit-def $c, implicit-def $nz
+# CHECK:      $a = LDzpr $sphi
+# CHECK-NEXT: $a, dead $c = ADCimm $a, 4, $c
+...
+---
+name: addrhiss_lo0
+# CHECK-LABEL: name: addrhiss_lo0
+body: |
+  bb.0.entry:
+    $a = AddrHistk $sp, 512, $c, implicit-def $c, implicit-def $nz
+# CHECK:      $a = LDzpr $sphi
+# CHECK-NEXT: LDCimm 0
+# CHECK-NEXT: $a, dead $c = ADCimm $a, 2, $c
+...
+---
+name: addrhihs
+# CHECK-LABEL: name: addrhihs
+body: |
+  bb.0.entry:
+    $x = AddrHistk $s, 123, $c, implicit-def $c, implicit-def $nz
+# CHECK:      $a = LDimm 1
+# CHECK-NEXT: $a, dead $c = ADCimm $a, 0, $c
+# CHECK-NEXT: $x = TA_
+...
+---
+name: addrhihs0
+# CHECK-LABEL: name: addrhihs0
+body: |
+  bb.0.entry:
+    $x = AddrHistk $s, 0, $c, implicit-def $c, implicit-def $nz
+    RTS
+# CHECK:      $x = LDimm 1
+# CHECK-NEXT: RTS
+...
+---
+name: addrhihs0_copy
+# CHECK-LABEL: name: addrhihs0
+body: |
+  bb.0.entry:
+    $zp_0 = AddrHistk $s, 0, $c, implicit-def $c, implicit-def $nz
+    RTS
+# CHECK:      $a = LDimm 1
+# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: RTS
+...
+---
+name: addrhistatic
+# CHECK-LABEL: name: addrhistatic
+body: |
+  bb.0.entry:
+    $zp_0 = AddrHistk $static, 1234, $c, implicit-def $c, implicit-def $nz
+# CHECK:      $a = LDimm target-flags(hi) target-index(mos-static-stack) + 1234
+# CHECK-NEXT: $zp_0 = STzpr $a
+...
+---
+name: addr
+# CHECK-LABEL: name: addr
+body: |
+  bb.0.entry:
+    $zp_ptr_0 = Addrstk $sp, 1234, implicit-def $c, implicit-def $nz
+    RTS
+# CHECK:      $a = LDzpr $splo
+# CHECK-NEXT: $c = LDCimm 0
+# CHECK-NEXT: $a, $c = ADCimm $a, 210, $c
+# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $a = LDzpr $sphi
+# CHECK-NEXT: $a, dead $c = ADCimm $a, 4, $c
+# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: RTS
+...
+---
+name: ldhs
+# CHECK-LABEL: name: ldhs
+body: |
+  bb.0.entry:
+    $x = LDstk $s, 2
+# CHECK:      TSX
+# CHECK-NEXT: LDAidx 258, $x
+# CHECK-NEXT: $x = TA_
+...
+---
+name: ldhs_copy
+# CHECK-LABEL: name: ldhs_copy
+body: |
+  bb.0.entry:
+    $zp_0 = LDstk $s, 2
+# CHECK:      TSX
+# CHECK-NEXT: LDAidx 258, $x
+# CHECK-NEXT: $zp_0 = STzpr $a
+...
+---
+name: ldss
+# CHECK-LABEL: name: ldss
+body: |
+  bb.0.entry:
+    $x = LDstk $sp, 2
+# CHECK:      $y = LDimm 2
+# CHECK-NEXT: $a = LDyindirr $sp, $y
+# CHECK-NEXT: $x = TA_
+...
+---
+name: ldptr
+# CHECK-LABEL: name: ldptr
+body: |
+  bb.0.entry:
+    $zp_ptr_0 = LDstk $s, 2
+# CHECK:      TSX
+# CHECK-NEXT: LDAidx 258, $x
+# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: LDAidx 259, $x
+# CHECK-NEXT: $zp_1 = STzpr $a
+...
+---
+name: ldptr_far
+# CHECK-LABEL: name: ldptr_far
+body: |
+  bb.0.entry:
+    $zp_ptr_1 = LDstk $sp, 258
+    RTS
+# CHECK:      $a = LDzpr $splo
+# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $a = LDzpr $sphi
+# CHECK-NEXT: $c = LDCimm 0
+# CHECK-NEXT: $a, dead $c = ADCimm $a, 1, $c
+# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: $y = LDimm 2
+# CHECK-NEXT: $a = LDyindirr $zp_ptr_0, $y
+# CHECK-NEXT: $zp_2 = STzpr $a
+# CHECK-NEXT: $y = LDimm 3
+# CHECK-NEXT: $a = LDyindirr $zp_ptr_0, $y
+# CHECK-NEXT: $zp_3 = STzpr $a
+# CHECK-NEXT: RTS
+...
+---
+name: ldptr_far_1
+# CHECK-LABEL: name: ldptr_far_1
+body: |
+  bb.0.entry:
+    $zp_ptr_0 = LDstk $sp, 258
+    RTS
+# CHECK:      $a = LDzpr $splo
+# CHECK-NEXT: $zp_2 = STzpr $a
+# CHECK-NEXT: $a = LDzpr $sphi
+# CHECK-NEXT: $c = LDCimm 0
+# CHECK-NEXT: $a, dead $c = ADCimm $a, 1, $c
+# CHECK-NEXT: $zp_3 = STzpr $a
+# CHECK-NEXT: $y = LDimm 2
+# CHECK-NEXT: $a = LDyindirr $zp_ptr_1, $y
+# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $y = LDimm 3
+# CHECK-NEXT: $a = LDyindirr $zp_ptr_1, $y
+# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: RTS
+---
+name: ldstatic
+# CHECK-LABEL: name: ldstatic
+body: |
+  bb.0.entry:
+    $zp_ptr_0 = LDstk $static, 1234
+    RTS
+# CHECK:      $a = LDabs target-index(mos-static-stack) + 1234
+# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $a = LDabs target-index(mos-static-stack) + 1235
+# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: RTS
+...
+...
+---
+name: incsp
+# CHECK-LABEL: name: incsp
+body: |
+  bb.0.entry:
+    IncSP -1234, implicit $sp, implicit-def $sp
+    RTS
+# CHECK:      $c = LDCimm 0
+# CHECK-NEXT: $a = LDimm 46
+# CHECK-NEXT: $a, $c = ADCzpr $a, $splo, $c
+# CHECK-NEXT: $splo = STzpr $a
+# CHECK-NEXT: $a = LDimm 251
+# CHECK-NEXT: $a, dead $c = ADCzpr $a, $sphi, $c
+# CHECK-NEXT: $sphi = STzpr $a
+...
+---
+name: incsp_hi_only
+# CHECK-LABEL: name: incsp
+body: |
+  bb.0.entry:
+    IncSP -512, implicit $sp, implicit-def $sp
+    RTS
+# CHECK:      $c = LDCimm 0 
+# CHECK-NEXT: $a = LDimm 254
+# CHECK-NEXT: $a, dead $c = ADCzpr $a, $sphi, $c
+# CHECK-NEXT: $sphi = STzpr $a
+...
+---
+name: ldaidx
+# CHECK-LABEL: name: ldaidx
+body: |
+  bb.0.entry:
+    liveins: $x
+    $a = LDidx 1234, $x, implicit-def $nz
+# CHECK: LDAidx 1234, $x
+...
+---
+name: ldxidx_y
+# CHECK-LABEL: name: ldxidx_y
+body: |
+  bb.0.entry:
+    liveins: $y
+    $x = LDidx 1234, $y, implicit-def $nz
+# CHECK: LDXidx 1234
+...
+---
+name: ldxidx_x
+# CHECK-LABEL: name: ldxidx_x
+body: |
+  bb.0.entry:
+    liveins: $x
+    $x = LDidx 1234, $x, implicit-def $nz
+    CMPimm $a, 0, implicit-def $nz
+# CHECK:      STabs $a, &_SaveA
+# CHECK-NEXT: LDAidx 1234, $x
+# CHECK-NEXT: $x = TA_
+# CHECK-NEXT: PHP
+# CHECK-NEXT: $a = LDabs &_SaveA
+# CHECK-NEXT: PLP
+...
+---
+name: ldyidx_x
+# CHECK-LABEL: name: ldyidx_x
+body: |
+  bb.0.entry:
+    liveins: $x
+    $y = LDidx 1234, $x, implicit-def $nz
+# CHECK: LDYidx 1234
+...
+---
+name: sths
+# CHECK-LABEL: name: sths
+body: |
+  bb.0.entry:
+    STstk $a, $s, 2
+# CHECK:      TSX
+# CHECK-NEXT: STidx $a, 258, $x
+...
+---
+name: push_a
+# CHECK-LABEL: name: push_a
+body: |
+  bb.0.entry:
+    liveins: $a
+    Push $a
+    RTS
+# CHECK:      PHA
+# CHECK-NEXT: RTS
+...
+---
+name: push_x
+# CHECK-LABEL: name: push_x
+body: |
+  bb.0.entry:
+    liveins: $x
+    Push $x
+    RTS
+# CHECK:      T_A $x
+# CHECK-NEXT: PHA
+# CHECK-NEXT: RTS
+...
+---
+name: pull_a
+# CHECK-LABEL: name: pull_a
+body: |
+  bb.0.entry:
+    $a = Pull
+    RTS implicit $a
+# CHECK:      PLA
+# CHECK-NEXT: RTS
+...
+---
+name: pull_x
+# CHECK-LABEL: name: pull_x
+body: |
+  bb.0.entry:
+    $x = Pull
+    RTS implicit $x
+# CHECK:      PLA
+# CHECK-NEXT: $x = TA_
+# CHECK-NEXT: RTS
+...

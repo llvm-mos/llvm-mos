@@ -11,26 +11,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MOS_ISEL_LOWERING_H
-#define LLVM_MOS_ISEL_LOWERING_H
+#ifndef LLVM_LIB_TARGET_MOS_MOSISELLOWERING_H
+#define LLVM_LIB_TARGET_MOS_MOSISELLOWERING_H
 
-#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetLowering.h"
+
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
 class MOSSubtarget;
 class MOSTargetMachine;
 
-/// Performs target lowering for the MOS.
 class MOSTargetLowering : public TargetLowering {
 public:
-  explicit MOSTargetLowering(const MOSTargetMachine &TM,
-                             const MOSSubtarget &STI);
-protected:
-  const MOSSubtarget &Subtarget;
+  MOSTargetLowering(const MOSTargetMachine &TM, const MOSSubtarget &STI);
+
+  ConstraintType getConstraintType(StringRef Constraint) const override;
+
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
+
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AddrSpace,
+                             Instruction *I = nullptr) const override;
+
+  bool shouldLocalize(const MachineInstr &MI,
+                      const TargetTransformInfo *TTI) const override;
 };
 
-} // end namespace llvm
+} // namespace llvm
 
-#endif // LLVM_MOS_ISEL_LOWERING_H
+#endif // not LLVM_LIB_TARGET_MOS_MOSISELLOWERING_H

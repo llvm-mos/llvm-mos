@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MOS_REGISTER_INFO_H
-#define LLVM_MOS_REGISTER_INFO_H
+#ifndef LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H
+#define LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H
 
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -20,31 +20,42 @@
 
 namespace llvm {
 
-/// Utilities relating to MOS registers.
 class MOSRegisterInfo : public MOSGenRegisterInfo {
+  std::unique_ptr<std::string[]> ZPSymbolNames;
   BitVector Reserved;
 
 public:
   MOSRegisterInfo();
 
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
-                           unsigned FIOperandNum,
-                           RegScavenger *RS = NULL) const override;
-
-  const MCPhysReg *
-  getCalleeSavedRegs(const MachineFunction *MF = 0) const override;
+  const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
 
-  virtual Register getFrameRegister(const MachineFunction &MF) const override;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-private:
-  void markSubRegs(BitVector &RegisterSet, MCRegister Reg);
+  unsigned getCSRFirstUseCost() const override;
+
+  const TargetRegisterClass *
+  getLargestLegalSuperClass(const TargetRegisterClass *RC,
+                            const MachineFunction &) const override;
+
+  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+                           unsigned FIOperandNum,
+                           RegScavenger *RS = nullptr) const override;
+
+  Register getFrameRegister(const MachineFunction &MF) const override;
+
+  bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
+                      unsigned SubReg, const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg, const TargetRegisterClass *NewRC,
+                      LiveIntervals &LIS) const override;
+
+  const char *getZPSymbolName(Register Reg) const {
+    return ZPSymbolNames[Reg].c_str();
+  }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
-#endif // LLVM_MOS_REGISTER_INFO_H
+#endif // not LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H

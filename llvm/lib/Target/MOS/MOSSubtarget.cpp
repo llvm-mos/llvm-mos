@@ -16,10 +16,12 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSFrameLowering.h"
 #include "MOSInstructionSelector.h"
 #include "MOSLegalizerInfo.h"
 #include "MOSTargetMachine.h"
@@ -39,6 +41,7 @@ MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)),
       CallLoweringInfo(&TLInfo),
       InstSelector(createMOSInstructionSelector(TM, *this, RegBankInfo)),
+      InlineAsmLoweringInfo(&TLInfo),
 
       // Subtarget features
       m_hasTinyEncoding(false),
@@ -55,19 +58,19 @@ MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
   ParseSubtargetFeatures(CPU, /* TuneCPU */ CPU, FS);
 }
 
-const llvm::TargetFrameLowering *MOSSubtarget::getFrameLowering() const {
+const MOSFrameLowering *MOSSubtarget::getFrameLowering() const {
   return &FrameLowering;
 }
 
-const llvm::MOSInstrInfo *MOSSubtarget::getInstrInfo() const {
+const MOSInstrInfo *MOSSubtarget::getInstrInfo() const {
   return &InstrInfo;
 }
 
-const llvm::MOSRegisterInfo *MOSSubtarget::getRegisterInfo() const {
+const MOSRegisterInfo *MOSSubtarget::getRegisterInfo() const {
   return &RegInfo;
 }
 
-const llvm::MOSTargetLowering *MOSSubtarget::getTargetLowering() const {
+const MOSTargetLowering *MOSSubtarget::getTargetLowering() const {
   return &TLInfo;
 }
 
@@ -87,10 +90,20 @@ InstructionSelector *MOSSubtarget::getInstructionSelector() const {
   return InstSelector.get();
 }
 
+const InlineAsmLowering *MOSSubtarget::getInlineAsmLowering() const {
+  return &InlineAsmLoweringInfo;
+}
+
 MOSSubtarget &
 MOSSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
                                               const TargetMachine &TM) {
   // Parse features string.
   ParseSubtargetFeatures(CPU, /* TuneCPU */ CPU, FS);
   return *this;
+}
+
+void MOSSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
+                                           unsigned NumRegionInstrs) const {
+  Policy.OnlyBottomUp = false;
+  Policy.OnlyTopDown = false;
 }

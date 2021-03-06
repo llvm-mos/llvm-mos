@@ -374,7 +374,6 @@ bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
       MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
                               MachineMemOperand::MOStore, 2, Align());
   Builder.buildStore(NextAddr, VaListPtr, *AddrStoreMMO);
-
   MI.eraseFromParent();
   return true;
 }
