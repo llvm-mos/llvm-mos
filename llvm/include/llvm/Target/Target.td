@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 // Include all information about LLVM intrinsics.
 include "llvm/IR/Intrinsics.td"
 
@@ -286,6 +288,11 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // Generate register pressure set for this register class and any class
   // synthesized from it. Set to 0 to inhibit unneeded pressure sets.
   bit GeneratePressureSet = true;
+
+  // Prevents pressure set for this register class from being lumped together
+  // with slightly larger sets. Useful if the register class is tightly
+  // constrained and splits to wider classes are expensive.
+  bit isPressureFineGrained = false;
 
   // Weight override for register pressure calculation. This is the value
   // TargetRegisterClass::getRegClassWeight() will return. The weight is in
