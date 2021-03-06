@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by Daniel Thornburgh
+
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"
 #include "LiveDebugVariables.h"
@@ -2788,18 +2790,6 @@ MCRegister
 RAGreedy::tryAssignCSRFirstTime(LiveInterval &VirtReg, AllocationOrder &Order,
                                 MCRegister PhysReg, uint8_t &CostPerUseLimit,
                                 SmallVectorImpl<Register> &NewVRegs) {
-  if (getStage(VirtReg) == RS_Spill && VirtReg.isSpillable()) {
-    // We choose spill over using the CSR for the first time if the spill cost
-    // is lower than CSRCost.
-    SA->analyze(&VirtReg);
-    if (calcSpillCost() >= CSRCost)
-      return PhysReg;
-
-    // We are going to spill, set CostPerUseLimit to 1 to make sure that
-    // we will not use a callee-saved register in tryEvict.
-    CostPerUseLimit = 1;
-    return 0;
-  }
   if (getStage(VirtReg) < RS_Split) {
     // We choose pre-splitting over using the CSR for the first time if
     // the cost of splitting is lower than CSRCost.
@@ -2808,13 +2798,22 @@ RAGreedy::tryAssignCSRFirstTime(LiveInterval &VirtReg, AllocationOrder &Order,
     BlockFrequency BestCost = CSRCost; // Don't modify CSRCost.
     unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                  NumCands, true /*IgnoreCSR*/);
-    if (BestCand == NoCand)
-      // Use the CSR if we can't find a region split below CSRCost.
-      return PhysReg;
-
-    // Perform the actual pre-splitting.
-    doRegionSplit(VirtReg, BestCand, false/*HasCompact*/, NewVRegs);
-    return 0;
+    if (BestCand != NoCand) {
+      // Perform the actual pre-splitting.
+      doRegionSplit(VirtReg, BestCand, false/*HasCompact*/, NewVRegs);
+      return 0;
+    }
+  }
+  if (VirtReg.isSpillable()) {
+    // We choose spill over using the CSR for the first time if the spill cost
+    // is lower than CSRCost.
+    SA->analyze(&VirtReg);
+    if (calcSpillCost() < CSRCost) {
+      // Set CostPerUseLimit to 1 to make sure that
+      // we will not use a callee-saved register in tryEvict.
+      CostPerUseLimit = 1;
+      return 0;
+    }
   }
   return PhysReg;
 }

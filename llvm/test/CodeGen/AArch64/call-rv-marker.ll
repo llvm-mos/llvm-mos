@@ -56,7 +56,7 @@ entry:
 
 define dso_local void @rv_marker_3() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: rv_marker_3
-; CHECK:         .cfi_offset w30, -32
+; CHECK:         .cfi_offset w30, -16
 ; CHECK-NEXT:    bl  foo1
 ; SELDAG-NEXT:   mov x29, x29
 ;
