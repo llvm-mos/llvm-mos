@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "MOSMCInstLower.h"
 #include "MCTargetDesc/MOSMCExpr.h"
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
@@ -23,7 +24,30 @@ using namespace llvm;
 #define DEBUG_TYPE "mos-mcinstlower"
 
 void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
-  OutMI.setOpcode(MI->getOpcode());
+  switch (MI->getOpcode()) {
+  default:
+    OutMI.setOpcode(MI->getOpcode());
+    break;
+  case MOS::LDimm:
+    switch (MI->getOperand(0).getReg()) {
+    default:
+      llvm_unreachable("Unexpected LDimm destination.");
+    case MOS::A:
+      OutMI.setOpcode(MOS::LDA_Immediate);
+      break;
+    case MOS::X:
+      OutMI.setOpcode(MOS::LDX_Immediate);
+      break;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::LDX_Immediate);
+      break;
+    }
+    MCOperand Val;
+    if (!lowerOperand(MI->getOperand(1), Val))
+      report_fatal_error("Could not lower LDimm operand.");
+    OutMI.addOperand(Val);
+    return;
+  }
 
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
