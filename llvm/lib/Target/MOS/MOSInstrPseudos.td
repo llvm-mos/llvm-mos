@@ -187,8 +187,6 @@ def ADCimm : Pseudo {
 
   let Defs = [NZ];
 
-  let AsmString = "ADC\t#$r";
-
   let isAdd = true;
   let isReMaterializable = true;
 }
@@ -202,8 +200,6 @@ def ADCzpr : Pseudo {
 
   let Defs = [NZ];
 
-  let AsmString = "ADC\tz:$r";
-
   let isAdd = true;
   let isCommutable = true;
   let isReMaterializable = true;
@@ -215,8 +211,6 @@ def ASL : Pseudo {
   let Constraints = "$dst = $src";
 
   let Defs = [NZ];
-
-  let AsmString = "ASL\t$dst";
 
   let isReMaterializable = true;
 }
@@ -238,7 +232,6 @@ def IN_ : Pseudo {
   dag OutOperandList = (outs XY:$dst);
   let Constraints = "$src = $dst";
 
-  let AsmString = "IN$src";
   let Pattern = [(set XY:$dst, (add XY:$src, 1))];
 
   let isAdd = true;
@@ -259,7 +252,6 @@ def LDimm : Pseudo {
   dag InOperandList = (ins i8imm:$val);
   dag OutOperandList = (outs GPR:$dst);
 
-  let AsmString = "LD$dst\t#$val";
   let Pattern = [(set GPR:$dst, imm:$val)];
 
   let isAsCheapAsAMove = true;
@@ -271,16 +263,12 @@ def LDzpr : Pseudo {
   dag InOperandList = (ins ZP:$src);
   dag OutOperandList = (outs GPR:$dst);
 
-  let AsmString = "LD$dst\tz:$src";
-
   let isReMaterializable = true;
 }
 
 def LDabs : Pseudo {
   dag InOperandList = (ins i16imm:$src);
   dag OutOperandList = (outs GPR:$dst);
-
-  let AsmString = "LD$dst\t$src";
 
   let isReMaterializable = true;
   let mayLoad = true;
@@ -291,8 +279,6 @@ def LDAidx : Pseudo {
   dag OutOperandList = (outs);
 
   let Defs = [A, NZ];
-
-  let AsmString = "LDA\t$addr,$idx";
 
   let isReMaterializable = true;
   let mayLoad = true;
@@ -305,8 +291,6 @@ def LDXidx : Pseudo {
   let Uses = [Y];
   let Defs = [X, NZ];
 
-  let AsmString = "LDX\t$addr,Y";
-
   let isReMaterializable = true;
   let mayLoad = true;
 }
@@ -318,8 +302,6 @@ def LDYidx : Pseudo {
   let Uses = [X];
   let Defs = [Y, NZ];
 
-  let AsmString = "LDY\t$addr,X";
-
   let isReMaterializable = true;
   let mayLoad = true;
 }
@@ -329,8 +311,6 @@ def LDyindirr : Pseudo {
   dag OutOperandList = (outs Ac:$dst);
 
   let Defs = [NZ];
-
-  let AsmString = "LDA\t($addr),Y";
 
   let mayLoad = true;
 }
@@ -342,8 +322,6 @@ def ROL : Pseudo {
 
   let Defs = [NZ];
 
-  let AsmString = "ROL\t$dst";
-
   let isReMaterializable = true;
 }
 
@@ -353,8 +331,6 @@ def SBCimm : Pseudo {
   let Constraints = "$dst = $l, $carryout = $carryin";
 
   let Defs = [NZ];
-
-  let AsmString = "SBC\t#$r";
 
   let isReMaterializable = true;
 }
@@ -368,8 +344,6 @@ def SBCzpr : Pseudo {
 
   let Defs = [NZ];
 
-  let AsmString = "SBC\tz:$r";
-
   let isReMaterializable = true;
 }
 
@@ -379,8 +353,6 @@ def TA_ : Pseudo {
 
   let Uses = [A];
 
-  let AsmString = "TA$dst";
-
   let isAsCheapAsAMove = true;
   let isReMaterializable = true;
 }
@@ -388,7 +360,6 @@ def TA_ : Pseudo {
 def T_A : Pseudo {
   dag InOperandList = (ins XY:$src);
   dag OutOperandList = (outs);
-  let AsmString = "T${src}A";
 
   let Defs = [A, NZ];
 
@@ -399,7 +370,6 @@ def T_A : Pseudo {
 def TSX : Pseudo {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
-  let AsmString = "TSX";
 
   let Defs = [X, NZ];
 
@@ -413,8 +383,6 @@ def PHA : Pseudo {
   let Uses = [A];
   let Defs = [];
 
-  let AsmString = "PHA";
-
   let mayStore = true;
 }
 
@@ -422,8 +390,6 @@ def PLA : Pseudo {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
   let Defs = [A, NZ];
-
-  let AsmString = "PLA";
 
   let mayLoad = true;
 }
@@ -434,8 +400,6 @@ def PHP : Pseudo {
   let Uses = [P];
   let Defs = [];
 
-  let AsmString = "PHP";
-
   let mayStore = true;
 }
 
@@ -444,16 +408,12 @@ def PLP : Pseudo {
   dag OutOperandList = (outs);
   let Defs = [P];
 
-  let AsmString = "PLP";
-
   let mayLoad = true;
 }
 
 def STzpr : Pseudo {
   dag InOperandList = (ins GPR:$src);
   dag OutOperandList = (outs ZP:$dst);
-
-  let AsmString = "ST$src\tz:$dst";
 
   let Defs = [];
 }
@@ -464,16 +424,12 @@ def STabs : Pseudo {
 
   let Defs = [];
 
-  let AsmString = "ST$src\t$dst";
-
   let mayStore = true;
 }
 
 def STidx : Pseudo {
   dag InOperandList = (ins Ac:$src, i16imm:$addr, XY:$idx);
   dag OutOperandList = (outs);
-
-  let AsmString = "STA\t$addr,$idx";
 
   let mayStore = true;
 }
@@ -483,8 +439,6 @@ def STyindirr : Pseudo {
   dag OutOperandList = (outs);
 
   let Defs = [];
-
-  let AsmString = "STA\t($addr),Y";
 
   let mayStore = true;
 }
@@ -505,34 +459,9 @@ def JMP : Pseudo {
 
   let Defs = [];
 
-  let AsmString = "JMP\t$tgt";
-
   let Pattern = [(br bb:$tgt)];
 
   let isBarrier = true;
   let isBranch = true;
-  let isTerminator = true;
-}
-
-def JSR : Pseudo {
-  dag InOperandList = (ins label:$tgt);
-  dag OutOperandList = (outs);
-
-  let Defs = [];
-
-  let AsmString = "JSR\t$tgt";
-
-  let isCall = true;
-}
-
-def RTS : Pseudo {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs);
-  let Defs = [];
-
-  let AsmString = "RTS";
-
-  let isBarrier = true;
-  let isReturn = true;
   let isTerminator = true;
 }
