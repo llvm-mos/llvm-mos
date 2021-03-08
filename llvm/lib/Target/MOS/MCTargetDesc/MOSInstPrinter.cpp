@@ -35,20 +35,27 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                raw_ostream &OS) {
   std::string AiryOperands;
   raw_string_ostream AiryOperandStream(AiryOperands);
-  printInstruction(MI, Address, AiryOperandStream);
-  AiryOperands = AiryOperandStream.str();
-  size_t SpacesSeen = 0;
-  std::string CorrectOperands;
-  for (const auto &Letter : AiryOperands) {
-    if (isspace(Letter) != 0) {
-      if (++SpacesSeen <= 2) {
-        CorrectOperands += '\t';
+  auto MnemonicInfo = getMnemonic(MI);
+  uint32_t Bits = MnemonicInfo.second;
+  if (Bits != 0) {
+    printInstruction(MI, Address, AiryOperandStream);
+    AiryOperands = AiryOperandStream.str();
+    size_t SpacesSeen = 0;
+    std::string CorrectOperands;
+    for (const auto &Letter : AiryOperands) {
+      if (isspace(Letter) != 0) {
+        if (++SpacesSeen <= 2) {
+          CorrectOperands += '\t';
+        }
+        continue;
       }
-      continue;
+      CorrectOperands += Letter;
     }
-    CorrectOperands += Letter;
+    OS << CorrectOperands;
+  } else {
+    OS << "/* TODO: implement MOS instruction with opcode " << MI->getOpcode()
+       << " */";
   }
-  OS << CorrectOperands;
 }
 
 void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,

@@ -57,7 +57,7 @@ static const char *MOSDataLayout =
 
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
-  return (CPU.empty() || CPU == "generic") ? "mos" : CPU;
+  return (CPU.empty() || CPU == "generic") ? "mos6502" : CPU;
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {

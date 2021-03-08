@@ -59,17 +59,6 @@ def MOSAsmParserVariantXA65 : AsmParserVariant {
   let Name = "xa65";
 }
 
-def MOSSchedModel : SchedMachineModel {
-  // Prevent instructions from being added to the pending queue, since latency
-  // doesn't matter. The remaining latency concerns are disabled in the C++
-  // scheduling strategy.
-  let MicroOpBufferSize = 1;
-
-  let CompleteModel = false;
-}
-
-def : ProcessorModel<"generic", MOSSchedModel, []>;
-
 //===---------------------------------------------------------------------===//
 // Target Declaration
 //===---------------------------------------------------------------------===//

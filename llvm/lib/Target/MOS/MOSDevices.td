@@ -136,9 +136,17 @@ def ELFArchMOSSWEET16 : ELFArch<"EM_MOS_ARCH_SWEET16">;
 // MOS Families
 //===---------------------------------------------------------------------===//
 
+def MOSSchedModel : SchedMachineModel {
+  // Prevent instructions from being added to the pending queue, since latency
+  // doesn't matter. The remaining latency concerns are disabled in the C++
+  // scheduling strategy.
+  let MicroOpBufferSize = 1;
+  let CompleteModel = false;
+}
+
 class Device<string Name, Family Fam, ELFArch Arch,
              list<SubtargetFeature> ExtraFeatures = []>
-  : Processor<Name, NoItineraries, !listconcat([Fam,Arch],ExtraFeatures)>;
+  : ProcessorModel<Name, MOSSchedModel, !listconcat([Fam,Arch],ExtraFeatures)>;
 
 def : Device<"mos6502",  Family6502, ELFArchMOS6502>;
 def : Device<"mos6502x", Family6502X, ELFArchMOS6502X>;
