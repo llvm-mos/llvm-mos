@@ -39,7 +39,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::LDX_Immediate);
       break;
     case MOS::Y:
-      OutMI.setOpcode(MOS::LDX_Immediate);
+      OutMI.setOpcode(MOS::LDY_Immediate);
       break;
     }
     MCOperand Val;

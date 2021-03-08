@@ -1,0 +1,31 @@
+# RUN: llc -mtriple=mos -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: lda_immediate
+# CHECK-LABEL: lda_immediate
+body: |
+  bb.0.entry:
+    $a = LDimm 42, implicit-def $nz
+    RTS_Implied
+# CHECK:      lda #42
+# CHECK-NEXT: rts
+...
+---
+name: ldx_immediate
+# CHECK-LABEL: ldx_immediate
+body: |
+  bb.0.entry:
+    $x = LDimm 42, implicit-def $nz
+    RTS_Implied
+# CHECK:      ldx #42
+# CHECK-NEXT: rts
+...
+---
+name: ldy_immediate
+# CHECK-LABEL: ldy_immediate
+body: |
+  bb.0.entry:
+    $y = LDimm 42, implicit-def $nz
+    RTS_Implied
+# CHECK:      ldy #42
+# CHECK-NEXT: rts
+...
