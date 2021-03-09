@@ -24,7 +24,7 @@ body:             |
     $a = LDstk %stack.1, 0 :: (load 1 from %stack.1)
     $a = LDstk %stack.2, 0 :: (load 1 from %stack.2)
     $a = LDstk %stack.0, 0 :: (load 1 from %stack.0)
-    RTS
+    RTS_Implied
 # CHECK-LABEL: bb.0.entry:
 # CHECK-NEXT:  IncSP -1
 # CHECK-NEXT:  STstk $a, $sp, 0 :: (store 1 into %stack.4)
@@ -46,7 +46,7 @@ body:             |
 # CHECK-NEXT:  PullPreserve
 # CHECK-NEXT:  $a = Pull
 # CHECK-NEXT:  IncSP 1
-# CHECK-NEXT:  RTS
+# CHECK-NEXT:  RTS_Implied
 ...
 ---
 name: ptr
@@ -63,7 +63,7 @@ body: |
     $zp_ptr_0 = LDstk %stack.1, 0 :: (load 2 from %stack.1)
     STstk $zp_ptr_0, %stack.1, 0 :: (store 2 into %stack.1)
     $zp_ptr_0 = LDstk %stack.0, 0 :: (load 2 from %stack.0)
-    RTS
+    RTS_Implied
 # CHECK-LABEL: bb.0.entry:
 # CHECK-NEXT:  IncSP -2
 # CHECK-NEXT:  STstk $zp_ptr_0, $sp, 0
@@ -79,7 +79,7 @@ body: |
 # CHECK-NEXT:  $zp_0 = Pull
 # CHECK-NEXT:  $zp_1 = Pull
 # CHECK-NEXT:  IncSP 2
-# CHECK-NEXT:  RTS
+# CHECK-NEXT:  RTS_Implied
 ...
 ---
 name: epilogue_no_terminator
@@ -95,7 +95,7 @@ body:             |
     $a = IMPLICIT_DEF
 
   bb.1:
-    RTS
+    RTS_Implied
 # CHECK-LABEL: bb.0.entry:
 # CHECK:       $a = IMPLICIT_DEF
 # CHECK-NEXT:  Push undef $a

@@ -9,10 +9,10 @@ body: |
     %0:any(s8) = G_IMPLICIT_DEF
     %1:any(s1) = G_CONSTANT i1 0
     %2:any(s8), %3:any(s1) = G_SHLE %0, %1
-    RTS implicit %2, implicit %3
+    RTS_Implied implicit %2, implicit %3
 # CHECK:      %0:azp = IMPLICIT_DEF
 # CHECK-NEXT: %2:azp, %3:cc = ASL %0
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: cmpimm_breq
@@ -25,7 +25,7 @@ body: |
     %1:any(s8) = G_CONSTANT i8 42
     %2:any(s1) = G_ICMP intpred(eq), %0, %1
     G_BRCOND %2, %bb.0
-    RTS
+    RTS_Implied
 # CHECK:      CMPimm %0, 42
 # CHECK-NEXT: BR %bb.0, $z, 1
 ...
@@ -40,7 +40,7 @@ body: |
     %1:any(s8) = G_CONSTANT i8 42
     %2:any(s1) = G_ICMP intpred(ne), %0, %1
     G_BRCOND %2, %bb.0
-    RTS
+    RTS_Implied
 # CHECK:      CMPimm %0, 42
 # CHECK-NEXT: BR %bb.0, $z, 0
 ...
@@ -55,7 +55,7 @@ body: |
     %1:any(s8) = G_CONSTANT i8 42
     %2:any(s1) = G_ICMP intpred(uge), %0, %1
     G_BRCOND %2, %bb.0
-    RTS
+    RTS_Implied
 # CHECK:      CMPimm %0, 42
 # CHECK-NEXT: BR %bb.0, $n, 0
 ...
@@ -70,7 +70,7 @@ body: |
     %1:any(s8) = G_CONSTANT i8 42
     %2:any(s1) = G_ICMP intpred(ult), %0, %1
     G_BRCOND %2, %bb.0
-    RTS
+    RTS_Implied
 # CHECK:      CMPimm %0, 42
 # CHECK-NEXT: BR %bb.0, $n, 1
 ...
@@ -83,7 +83,7 @@ body: |
   bb.0.entry:
     liveins: $a
     %0:any(s8) = COPY $a
-    RTS implicit %0
+    RTS_Implied implicit %0
 # CHECK: %0:anyi8 = COPY $a
 ...
 ---
@@ -94,9 +94,9 @@ regBankSelected: true
 body: |
   bb.0.entry:
     %0:any(s1) = G_CONSTANT i1 true
-    RTS implicit %0
+    RTS_Implied implicit %0
 # CHECK:      %0:cc = LDCimm 1
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: ldimm
@@ -106,7 +106,7 @@ regBankSelected: true
 body: |
   bb.0.entry:
     %0:any(s8) = G_CONSTANT i8 42
-    RTS implicit %0
+    RTS_Implied implicit %0
 # CHECK:      %0:gpr = LDimm 42
 ...
 ---
@@ -118,10 +118,10 @@ body: |
   bb.0.entry:
     %0:zp_ptr(p0) = G_IMPLICIT_DEF
     %1:any(s8) = G_LOAD %0:zp_ptr(p0) :: (load 1)
-    RTS implicit %1
+    RTS_Implied implicit %1
 # CHECK:      %2:yc = LDimm 0
 # CHECK-NEXT: %1:ac = LDyindirr %0, %2
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: load_indexed_indir
@@ -134,11 +134,11 @@ body: |
     %1:any(s8) = G_CONSTANT i8 -1
     %2:any(p0) = G_PTR_ADD %0, %1
     %3:any(s8) = G_LOAD %2 :: (load 1)
-    RTS implicit %3
+    RTS_Implied implicit %3
 # CHECK:      %0:zp_ptr = IMPLICIT_DEF
 # CHECK-NEXT: %4:yc = LDimm 255
 # CHECK-NEXT: %3:ac = LDyindirr %0, %4
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: rol
@@ -150,11 +150,11 @@ body: |
     %0:any(s8) = G_IMPLICIT_DEF
     %1:any(s1) = G_IMPLICIT_DEF
     %2:any(s8), %3:any(s1) = G_SHLE %0, %1
-    RTS implicit %2, implicit %3
+    RTS_Implied implicit %2, implicit %3
 # CHECK:      %0:azp = IMPLICIT_DEF
 # CHECK-NEXT: %1:cc = IMPLICIT_DEF
 # CHECK-NEXT: %2:azp, %3:cc = ROL %0, %1
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: store
@@ -166,12 +166,12 @@ body: |
     %0:any(s8) = G_IMPLICIT_DEF
     %1:any(p0) = G_IMPLICIT_DEF
     G_STORE %0, %1 :: (store 1)
-    RTS
+    RTS_Implied
 # CHECK:      %0:ac = IMPLICIT_DEF
 # CHECK-NEXT: %1:zp_ptr = IMPLICIT_DEF
 # CHECK-NEXT: %2:yc = LDimm 0
 # CHECK-NEXT: STyindirr %0, %1, %2
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: uadde_imm
@@ -184,11 +184,11 @@ body: |
     %1:any(s8) = G_CONSTANT i8 42
     %2:any(s1) = G_IMPLICIT_DEF
     %3:any(s8), %4:any(s1) = G_UADDE %0:any(s8), %1:any(s8), %2:any(s1)
-    RTS implicit %3, implicit %4
+    RTS_Implied implicit %3, implicit %4
 # CHECK:      %0:ac = IMPLICIT_DEF
 # CHECK-NEXT: %2:cc = IMPLICIT_DEF
 # CHECK-NEXT: %3:ac, %4:cc = ADCimm %0, 42, %2
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: uadde
@@ -201,12 +201,12 @@ body: |
     %1:any(s8) = G_IMPLICIT_DEF
     %2:any(s1) = G_IMPLICIT_DEF
     %3:any(s8), %4:any(s1) = G_UADDE %0:any(s8), %1:any(s8), %2:any(s1)
-    RTS implicit %3, implicit %4
+    RTS_Implied implicit %3, implicit %4
 # CHECK:      %0:ac = IMPLICIT_DEF
 # CHECK-NEXT: %1:zp = IMPLICIT_DEF
 # CHECK-NEXT: %2:cc = IMPLICIT_DEF
 # CHECK-NEXT: %3:ac, %4:cc = ADCzpr %0, %1, %2
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: unmerge
@@ -216,7 +216,7 @@ regBankSelected: true
 body: |
   bb.0.entry:
     %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0:zp_ptr(s16)
-    RTS implicit %1, implicit %2
+    RTS_Implied implicit %1, implicit %2
 # CHECK:      %0:anyi8 = COPY %2.sublo
 # CHECK-NEXT: %1:anyi8 = COPY %2.subhi
 ...

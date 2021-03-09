@@ -19,7 +19,7 @@
     ; CHECK-NEXT: %10:_(p0) = G_FRAME_INDEX %fixed-stack.0
     ; CHECK-NEXT: %8:_(s8) = G_LOAD %10(p0) :: (invariant load 1 from %fixed-stack.0)
     ; CHECK-NEXT: %4:_(s16) = G_MERGE_VALUES %7(s8), %8(s8)
-    ; CHECK-NEXT: RTS
+    ; CHECK-NEXT: RTS_Implied
   }
 
   define void @call_stack() {

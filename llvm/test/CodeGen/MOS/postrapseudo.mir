@@ -84,9 +84,9 @@ name: addrhihs0
 body: |
   bb.0.entry:
     $x = AddrHistk $s, 0, $c, implicit-def $c, implicit-def $nz
-    RTS
+    RTS_Implied
 # CHECK:      $x = LDimm 1
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: addrhihs0_copy
@@ -94,10 +94,10 @@ name: addrhihs0_copy
 body: |
   bb.0.entry:
     $zp_0 = AddrHistk $s, 0, $c, implicit-def $c, implicit-def $nz
-    RTS
+    RTS_Implied
 # CHECK:      $a = LDimm 1
 # CHECK-NEXT: $zp_0 = STzpr $a
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: addrhistatic
@@ -114,7 +114,7 @@ name: addr
 body: |
   bb.0.entry:
     $zp_ptr_0 = Addrstk $sp, 1234, implicit-def $c, implicit-def $nz
-    RTS
+    RTS_Implied
 # CHECK:      $a = LDzpr $splo
 # CHECK-NEXT: $c = LDCimm 0
 # CHECK-NEXT: $a, $c = ADCimm $a, 210, $c
@@ -122,7 +122,7 @@ body: |
 # CHECK-NEXT: $a = LDzpr $sphi
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 4, $c
 # CHECK-NEXT: $zp_1 = STzpr $a
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: ldhs
@@ -172,7 +172,7 @@ name: ldptr_far
 body: |
   bb.0.entry:
     $zp_ptr_1 = LDstk $sp, 258
-    RTS
+    RTS_Implied
 # CHECK:      $a = LDzpr $splo
 # CHECK-NEXT: $zp_0 = STzpr $a
 # CHECK-NEXT: $a = LDzpr $sphi
@@ -185,7 +185,7 @@ body: |
 # CHECK-NEXT: $y = LDimm 3
 # CHECK-NEXT: $a = LDyindirr $zp_ptr_0, $y
 # CHECK-NEXT: $zp_3 = STzpr $a
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: ldptr_far_1
@@ -193,7 +193,7 @@ name: ldptr_far_1
 body: |
   bb.0.entry:
     $zp_ptr_0 = LDstk $sp, 258
-    RTS
+    RTS_Implied
 # CHECK:      $a = LDzpr $splo
 # CHECK-NEXT: $zp_2 = STzpr $a
 # CHECK-NEXT: $a = LDzpr $sphi
@@ -206,19 +206,19 @@ body: |
 # CHECK-NEXT: $y = LDimm 3
 # CHECK-NEXT: $a = LDyindirr $zp_ptr_1, $y
 # CHECK-NEXT: $zp_1 = STzpr $a
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ---
 name: ldstatic
 # CHECK-LABEL: name: ldstatic
 body: |
   bb.0.entry:
     $zp_ptr_0 = LDstk $static, 1234
-    RTS
+    RTS_Implied
 # CHECK:      $a = LDabs target-index(mos-static-stack) + 1234
 # CHECK-NEXT: $zp_0 = STzpr $a
 # CHECK-NEXT: $a = LDabs target-index(mos-static-stack) + 1235
 # CHECK-NEXT: $zp_1 = STzpr $a
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ...
 ---
@@ -227,7 +227,7 @@ name: incsp
 body: |
   bb.0.entry:
     IncSP -1234, implicit $sp, implicit-def $sp
-    RTS
+    RTS_Implied
 # CHECK:      $c = LDCimm 0
 # CHECK-NEXT: $a = LDimm 46
 # CHECK-NEXT: $a, $c = ADCzpr $a, $splo, $c
@@ -242,7 +242,7 @@ name: incsp_hi_only
 body: |
   bb.0.entry:
     IncSP -512, implicit $sp, implicit-def $sp
-    RTS
+    RTS_Implied
 # CHECK:      $c = LDCimm 0 
 # CHECK-NEXT: $a = LDimm 254
 # CHECK-NEXT: $a, dead $c = ADCzpr $a, $sphi, $c
@@ -306,9 +306,9 @@ body: |
   bb.0.entry:
     liveins: $a
     Push $a
-    RTS
+    RTS_Implied
 # CHECK:      PHA
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: push_x
@@ -317,10 +317,10 @@ body: |
   bb.0.entry:
     liveins: $x
     Push $x
-    RTS
+    RTS_Implied
 # CHECK:      T_A $x
 # CHECK-NEXT: PHA
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: pull_a
@@ -328,9 +328,9 @@ name: pull_a
 body: |
   bb.0.entry:
     $a = Pull
-    RTS implicit $a
+    RTS_Implied implicit $a
 # CHECK:      PLA
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name: pull_x
@@ -338,8 +338,8 @@ name: pull_x
 body: |
   bb.0.entry:
     $x = Pull
-    RTS implicit $x
+    RTS_Implied implicit $x
 # CHECK:      PLA
 # CHECK-NEXT: $x = TA_
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...

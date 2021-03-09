@@ -55,7 +55,7 @@ body: |
     BR %bb.1, $c, 0
 
   bb.2:
-    RTS
+    RTS_Implied
 ...
 # CHECK-LABEL: bb.1:
 # CHECK: $a = LDimm 0
@@ -64,4 +64,4 @@ body: |
 # CHECK: BR %bb.2, $c, 1
 # CHECK: JMP %bb.1
 # CHECK-LABEL: bb.2:
-# CHECK: RTS
+# CHECK: RTS_Implied

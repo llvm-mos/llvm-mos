@@ -116,10 +116,10 @@ body:             |
   bb.0.entry:
     liveins: $zp_0, $a
     $zp_1 = COPY $zp_0
-    RTS implicit $a
+    RTS_Implied implicit $a
 # CHECK:      $x = LDzpr $zp_0
 # CHECK-NEXT: $zp_1 = STzpr $x
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name:            zptozp_y
@@ -129,10 +129,10 @@ body:             |
   bb.0.entry:
     liveins: $zp_0, $a, $x
     $zp_1 = COPY $zp_0
-    RTS implicit $a, implicit $x
+    RTS_Implied implicit $a, implicit $x
 # CHECK:      $y = LDzpr $zp_0
 # CHECK-NEXT: $zp_1 = STzpr $y
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name:            zptozp_save
@@ -142,14 +142,14 @@ body:             |
   bb.0.entry:
     liveins: $zp_0, $a, $x, $y
     $zp_1 = COPY $zp_0
-    RTS implicit $a, implicit $x, implicit $y
+    RTS_Implied implicit $a, implicit $x, implicit $y
 # CHECK:      STabs $a, &_SaveA
 # CHECK-NEXT: $a = LDzpr $zp_0
 # CHECK-NEXT: $zp_1 = STzpr $a
 # CHECK-NEXT: PHP
 # CHECK-NEXT: $a = LDabs &_SaveA
 # CHECK-NEXT: PLP
-# CHECK-NEXT: RTS
+# CHECK-NEXT: RTS_Implied
 ...
 ---
 name:            zpptr_to_zpptr
