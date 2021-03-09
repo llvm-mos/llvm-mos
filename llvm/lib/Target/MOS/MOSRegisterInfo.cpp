@@ -27,10 +27,10 @@
 
 using namespace llvm;
 
-cl::opt<int> NumZPPtrs(
-    "num-zp-ptrs", cl::init(127),
-    cl::desc("Number of zero-page pointers available for compiler use."),
-    cl::value_desc("zero-page pointers"));
+cl::opt<int> NumImagPtrs("num-imag-ptrs", cl::init(127),
+                         cl::desc("Number of imaginary (ZP) pointer registers "
+                                  "available for compiler use."),
+                         cl::value_desc("imaginary pointer registers"));
 
 MOSRegisterInfo::MOSRegisterInfo()
     : MOSGenRegisterInfo(/*RA=*/0, /*DwarfFlavor=*/0, /*EHFlavor=*/0,
@@ -50,13 +50,15 @@ MOSRegisterInfo::MOSRegisterInfo()
 
   // One for the stack pointer, one for the frame pointer, and one to ensure
   // that zero-page indirect addressing modes can be used.
-  if (NumZPPtrs < 3)
-    report_fatal_error("At least three zero-page pointers must be available.");
-  if (NumZPPtrs > 128)
-    report_fatal_error("More than 128 zero-page pointers cannot be available.");
+  if (NumImagPtrs < 3)
+    report_fatal_error("At least three imaginary pointers must be available.");
+  if (NumImagPtrs > 128)
+    report_fatal_error("More than 128 imaginary pointers cannot be available: "
+                       "only 128 exist.");
 
   // Reserve all imaginary registers beyond the number allowed to the compiler.
-  for (Register Ptr = MOS::RS0 + NumZPPtrs; Ptr <= MOS::RS127; Ptr = Ptr + 1) {
+  for (Register Ptr = MOS::RS0 + NumImagPtrs; Ptr <= MOS::RS127;
+       Ptr = Ptr + 1) {
     Reserved.set(Ptr);
     Reserved.set(getSubReg(Ptr, MOS::sublo));
     Reserved.set(getSubReg(Ptr, MOS::subhi));
