@@ -22,9 +22,9 @@ public:
   MOSMCInstLower(MCContext &Ctx, const AsmPrinter &AP) : Ctx(Ctx), AP(AP) {}
 
   void lower(const MachineInstr *MI, MCInst &OutMI);
+  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
 private:
-  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
   const MCExpr *applyTargetFlags(unsigned Flags, const MCExpr *Expr);
 };
 

@@ -20,7 +20,6 @@
 
 include "MOSInstrFormats.td"
 include "MOSInstrGISel.td"
-include "MOSInstrPseudos.td"
 
 let Predicates = [Has6502] in 
 {
@@ -218,3 +217,4 @@ def NOP_Implied: InstLowA<(outs), (ins), "nop", [], 0b1110>;
 } // Predicates = [Has6502]
 
 include "MOSInstrInfoTables.td"
+include "MOSInstrPseudos.td"

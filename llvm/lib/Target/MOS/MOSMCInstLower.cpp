@@ -43,8 +43,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       break;
     }
     MCOperand Val;
-    if (!lowerOperand(MI->getOperand(1), Val))
-      report_fatal_error("Could not lower LDimm operand.");
+    assert(lowerOperand(MI->getOperand(1), Val));
     OutMI.addOperand(Val);
     return;
   }

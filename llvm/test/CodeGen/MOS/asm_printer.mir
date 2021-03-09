@@ -1,5 +1,14 @@
 # RUN: llc -mtriple=mos -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
 ---
+name: jmp_absolute
+# CHECK-LABEL: jmp_absolute
+body: |
+  bb.0.entry:
+    JMP %bb.0.entry
+# CHECK:      LBB0_0: ; %entry
+# CHECK:      jmp LBB0_0
+...
+---
 name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |

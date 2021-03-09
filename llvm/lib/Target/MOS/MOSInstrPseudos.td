@@ -453,7 +453,7 @@ def BR : Pseudo {
   let isTerminator = true;
 }
 
-def JMP : Pseudo {
+def JMP : Pseudo, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
   dag InOperandList = (ins label:$tgt);
   dag OutOperandList = (outs);
 
