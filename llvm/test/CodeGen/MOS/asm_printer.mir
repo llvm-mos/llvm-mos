@@ -38,3 +38,13 @@ body: |
 # CHECK:      ldy #42
 # CHECK-NEXT: rts
 ...
+---
+name: sta_indirect_indexed
+# CHECK-LABEL: sta_indirect_indexed
+body: |
+  bb.0.entry:
+    STyindirr $a, $rs0, $y
+    RTS_Implied
+# CHECK:      sta (_RC0),llvm_mos_y
+# CHECK-NEXT: rts
+...

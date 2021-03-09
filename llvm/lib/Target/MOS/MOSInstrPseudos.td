@@ -434,7 +434,7 @@ def STidx : Pseudo {
   let mayStore = true;
 }
 
-def STyindirr : Pseudo {
+def STyindirr : Pseudo, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
   dag InOperandList = (ins Ac:$src, ZP_PTR:$addr, Yc:$offset);
   dag OutOperandList = (outs);
 
