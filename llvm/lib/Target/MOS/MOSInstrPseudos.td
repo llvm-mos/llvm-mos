@@ -178,7 +178,18 @@ def LDimm_preserve : Pseudo {
   let isReMaterializable = true;
 }
 
-// Regular Instructions
+// Logical Instructions
+
+// These pseudoinstruction correspond to logical instruction set of the 6502.
+// Instructions with identical effects except the placement of their operands
+// are joined together into instructions with register classes directly
+// representing those constraints.
+//
+// This may take more than one instruction. For example, the register transfer
+// instructions TAX, TXA, TAY, and TYA are split into TA_ and T_A, since
+// register classes are too crude of an instrument to specify that either the
+// source or target must be A. An XY register class fills in the remaining
+// freedom that the _ may be fulfilled with either X or Y.
 
 def ADCimm : Pseudo, PseudoInstExpansion<(ADC_Immediate imm8:$r)> {
   dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
