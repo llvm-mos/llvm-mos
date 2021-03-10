@@ -148,15 +148,39 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     }
   }
   case MOS::IN_:
+  case MOS::TA_:
+  case MOS::T_A:
     switch (MI->getOperand(0).getReg()) {
     default:
-      llvm_unreachable("Unexpected IN_ destination.");
+      llvm_unreachable("Unexpected register.");
     case MOS::X:
-      OutMI.setOpcode(MOS::INX_Implied);
-      return;
+      switch (MI->getOpcode()) {
+      default:
+        llvm_unreachable("Inconsistent opcode.");
+      case MOS::IN_:
+        OutMI.setOpcode(MOS::INX_Implied);
+        return;
+      case MOS::TA_:
+        OutMI.setOpcode(MOS::TAX_Implied);
+        return;
+      case MOS::T_A:
+        OutMI.setOpcode(MOS::TXA_Implied);
+        return;
+      }
     case MOS::Y:
-      OutMI.setOpcode(MOS::INY_Implied);
-      return;
+      switch (MI->getOpcode()) {
+      default:
+        llvm_unreachable("Inconsistent opcode.");
+      case MOS::IN_:
+        OutMI.setOpcode(MOS::INY_Implied);
+        return;
+      case MOS::TA_:
+        OutMI.setOpcode(MOS::TAY_Implied);
+        return;
+      case MOS::T_A:
+        OutMI.setOpcode(MOS::TYA_Implied);
+        return;
+      }
     }
   }
 

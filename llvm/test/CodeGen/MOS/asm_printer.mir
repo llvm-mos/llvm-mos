@@ -350,6 +350,26 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: tax_implied
+# CHECK-LABEL: tax_implied
+body: |
+  bb.0.entry:
+    $x = TA_ implicit-def $nz, implicit $a
+    RTS_Implied
+# CHECK:      tax{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: tay_implied
+# CHECK-LABEL: tay_implied
+body: |
+  bb.0.entry:
+    $y = TA_ implicit-def $nz, implicit $a
+    RTS_Implied
+# CHECK:      tay{{$}}
+# CHECK-NEXT: rts
+...
+---
 name: tsx_implied
 # CHECK-LABEL: tsx_implied
 body: |
@@ -357,5 +377,25 @@ body: |
     TSX implicit-def $x, implicit-def $nz
     RTS_Implied
 # CHECK:      tsx{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: txa_implied
+# CHECK-LABEL: txa_implied
+body: |
+  bb.0.entry:
+    T_A $x, implicit-def $a, implicit-def $nz
+    RTS_Implied
+# CHECK:      txa{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: tya_implied
+# CHECK-LABEL: tya_implied
+body: |
+  bb.0.entry:
+    T_A $y, implicit-def $a, implicit-def $nz
+    RTS_Implied
+# CHECK:      tya{{$}}
 # CHECK-NEXT: rts
 ...
