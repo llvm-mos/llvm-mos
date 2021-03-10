@@ -42,75 +42,60 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::ASL_Accumulator);
       return;
     }
-  case MOS::CMPimm: {
-    switch (MI->getOperand(0).getReg()) {
-    default:
-      llvm_unreachable("Unexpected CMPimm destination.");
-    case MOS::A:
-      OutMI.setOpcode(MOS::CMP_Immediate);
-      break;
-    case MOS::X:
-      OutMI.setOpcode(MOS::CPX_Immediate);
-      break;
-    case MOS::Y:
-      OutMI.setOpcode(MOS::CPY_Immediate);
-      break;
-    }
-    MCOperand Val;
-    assert(lowerOperand(MI->getOperand(1), Val));
-    OutMI.addOperand(Val);
-    return;
-  }
-  case MOS::LDimm: {
-    switch (MI->getOperand(0).getReg()) {
-    default:
-      llvm_unreachable("Unexpected LDimm destination.");
-    case MOS::A:
-      OutMI.setOpcode(MOS::LDA_Immediate);
-      break;
-    case MOS::X:
-      OutMI.setOpcode(MOS::LDX_Immediate);
-      break;
-    case MOS::Y:
-      OutMI.setOpcode(MOS::LDY_Immediate);
-      break;
-    }
-    MCOperand Val;
-    assert(lowerOperand(MI->getOperand(1), Val));
-    OutMI.addOperand(Val);
-    return;
-  }
-  case MOS::LDabs: {
-    switch (MI->getOperand(0).getReg()) {
-    default:
-      llvm_unreachable("Unexpected LDabs destination.");
-    case MOS::A:
-      OutMI.setOpcode(MOS::LDA_Absolute);
-      break;
-    case MOS::X:
-      OutMI.setOpcode(MOS::LDX_Absolute);
-      break;
-    case MOS::Y:
-      OutMI.setOpcode(MOS::LDY_Absolute);
-      break;
-    }
-    MCOperand Val;
-    assert(lowerOperand(MI->getOperand(1), Val));
-    OutMI.addOperand(Val);
-    return;
-  }
+  case MOS::CMPimm:
+  case MOS::LDimm:
+  case MOS::LDabs:
   case MOS::LDzpr: {
     switch (MI->getOperand(0).getReg()) {
     default:
-      llvm_unreachable("Unexpected LDzpr destination.");
+      llvm_unreachable("Unexpected register.");
     case MOS::A:
-      OutMI.setOpcode(MOS::LDA_ZeroPage);
+      switch (MI->getOpcode()) {
+      case MOS::CMPimm:
+        OutMI.setOpcode(MOS::CMP_Immediate);
+        break;
+      case MOS::LDimm:
+        OutMI.setOpcode(MOS::LDA_Immediate);
+        break;
+      case MOS::LDabs:
+        OutMI.setOpcode(MOS::LDA_Absolute);
+        break;
+      case MOS::LDzpr:
+        OutMI.setOpcode(MOS::LDA_ZeroPage);
+        break;
+      }
       break;
     case MOS::X:
-      OutMI.setOpcode(MOS::LDX_ZeroPage);
+      switch (MI->getOpcode()) {
+      case MOS::CMPimm:
+        OutMI.setOpcode(MOS::CPX_Immediate);
+        break;
+      case MOS::LDimm:
+        OutMI.setOpcode(MOS::LDX_Immediate);
+        break;
+      case MOS::LDabs:
+        OutMI.setOpcode(MOS::LDX_Absolute);
+        break;
+      case MOS::LDzpr:
+        OutMI.setOpcode(MOS::LDX_ZeroPage);
+        break;
+      }
       break;
     case MOS::Y:
-      OutMI.setOpcode(MOS::LDY_ZeroPage);
+      switch (MI->getOpcode()) {
+      case MOS::CMPimm:
+        OutMI.setOpcode(MOS::CPY_Immediate);
+        break;
+      case MOS::LDimm:
+        OutMI.setOpcode(MOS::LDY_Immediate);
+        break;
+      case MOS::LDabs:
+        OutMI.setOpcode(MOS::LDY_Absolute);
+        break;
+      case MOS::LDzpr:
+        OutMI.setOpcode(MOS::LDY_ZeroPage);
+        break;
+      }
       break;
     }
     MCOperand Val;
