@@ -41,6 +41,72 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: bcc_relative
+# CHECK-LABEL: bcc_relative
+body: |
+  bb.0.entry:
+    BR %bb.0.entry, $c, 0
+    RTS_Implied
+# CHECK:      [[BLOCK:L.*]]: ; %entry
+# CHECK:      bcc [[BLOCK]]
+# CHECK-NEXT: rts
+...
+---
+name: bcs_relative
+# CHECK-LABEL: bcs_relative
+body: |
+  bb.0.entry:
+    BR %bb.0.entry, $c, 1
+    RTS_Implied
+# CHECK:      [[BLOCK:L.*]]: ; %entry
+# CHECK:      bcs [[BLOCK]]
+# CHECK-NEXT: rts
+...
+---
+name: beq_relative
+# CHECK-LABEL: beq_relative
+body: |
+  bb.0.entry:
+    BR %bb.0.entry, $z, 1
+    RTS_Implied
+# CHECK:      [[BLOCK:L.*]]: ; %entry
+# CHECK:      beq [[BLOCK]]
+# CHECK-NEXT: rts
+...
+---
+name: bmi_relative
+# CHECK-LABEL: bmi_relative
+body: |
+  bb.0.entry:
+    BR %bb.0.entry, $n, 1
+    RTS_Implied
+# CHECK:      [[BLOCK:L.*]]: ; %entry
+# CHECK:      bmi [[BLOCK]]
+# CHECK-NEXT: rts
+...
+---
+name: bne_relative
+# CHECK-LABEL: bne_relative
+body: |
+  bb.0.entry:
+    BR %bb.0.entry, $z, 0
+    RTS_Implied
+# CHECK:      [[BLOCK:L.*]]: ; %entry
+# CHECK:      bne [[BLOCK]]
+# CHECK-NEXT: rts
+...
+---
+name: bpl_relative
+# CHECK-LABEL: bpl_relative
+body: |
+  bb.0.entry:
+    BR %bb.0.entry, $n, 0
+    RTS_Implied
+# CHECK:      [[BLOCK:L.*]]: ; %entry
+# CHECK:      bpl [[BLOCK]]
+# CHECK-NEXT: rts
+...
+---
 name: clc_implied
 # CHECK-LABEL: clc_implied
 body: |

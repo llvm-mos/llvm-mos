@@ -53,8 +53,7 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     }
     OS << CorrectOperands;
   } else {
-    OS << "/* TODO: unlowered pseudo; search MOSGenInstrInfo.inc for \"Inst #"
-       << MI->getOpcode() << "\" */";
+    llvm_unreachable("Unlowered pseudoinstruction.");
   }
 }
 

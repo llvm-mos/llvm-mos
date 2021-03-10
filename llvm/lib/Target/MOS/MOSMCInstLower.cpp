@@ -58,6 +58,52 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         return;
       }
     }
+  case MOS::BR: {
+    switch (MI->getOperand(1).getReg()) {
+    default:
+      llvm_unreachable("Unexpected register.");
+    case MOS::C:
+      switch (MI->getOperand(2).getImm()) {
+      default:
+        llvm_unreachable("Unexpected value.");
+      case 0:
+        OutMI.setOpcode(MOS::BCC_Relative);
+        break;
+      case 1:
+        OutMI.setOpcode(MOS::BCS_Relative);
+        break;
+      }
+      break;
+    case MOS::N:
+      switch (MI->getOperand(2).getImm()) {
+      default:
+        llvm_unreachable("Unexpected value.");
+      case 0:
+        OutMI.setOpcode(MOS::BPL_Relative);
+        break;
+      case 1:
+        OutMI.setOpcode(MOS::BMI_Relative);
+        break;
+      }
+      break;
+    case MOS::Z:
+      switch (MI->getOperand(2).getImm()) {
+      default:
+        llvm_unreachable("Unexpected value.");
+      case 0:
+        OutMI.setOpcode(MOS::BNE_Relative);
+        break;
+      case 1:
+        OutMI.setOpcode(MOS::BEQ_Relative);
+        break;
+      }
+      break;
+    }
+    MCOperand Val;
+    assert(lowerOperand(MI->getOperand(0), Val));
+    OutMI.addOperand(Val);
+    return;
+  }
   case MOS::CMPimm:
   case MOS::LDimm:
   case MOS::LDabs:
@@ -229,6 +275,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
   }
 
+  // Handle any real instructions that weren't generated from a pseudo.
+  assert(!MI->isPseudo());
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
     if (lowerOperand(MO, MCOp))
