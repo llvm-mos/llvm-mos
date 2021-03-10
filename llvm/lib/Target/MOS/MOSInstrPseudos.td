@@ -431,6 +431,8 @@ def STidx : Pseudo {
   dag InOperandList = (ins Ac:$src, i16imm:$addr, XY:$idx);
   dag OutOperandList = (outs);
 
+  let Defs = [];
+
   let mayStore = true;
 }
 
