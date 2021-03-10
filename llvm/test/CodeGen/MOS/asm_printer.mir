@@ -1,12 +1,32 @@
 # RUN: llc -mtriple=mos -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
 ---
+name: adc_immediate
+# CHECK-LABEL: adc_immediate
+body: |
+  bb.0.entry:
+    $a, $c = ADCimm $a, 42, $c, implicit-def $nz
+    RTS_Implied
+# CHECK:      adc #42
+# CHECK-NEXT: rts
+...
+---
+name: adc_zeropage
+# CHECK-LABEL: adc_zeropage
+body: |
+  bb.0.entry:
+    $a, $c = ADCzpr $a, $rc0, $c, implicit-def $nz
+    RTS_Implied
+# CHECK:      adc _RC0
+# CHECK-NEXT: rts
+...
+---
 name: jmp_absolute
 # CHECK-LABEL: jmp_absolute
 body: |
   bb.0.entry:
     JMP %bb.0.entry
-# CHECK:      LBB0_0: ; %entry
-# CHECK:      jmp LBB0_0
+# CHECK: [[BLOCK:L.*]]: ; %entry
+# CHECK: jmp [[BLOCK]]
 ...
 ---
 name: lda_immediate

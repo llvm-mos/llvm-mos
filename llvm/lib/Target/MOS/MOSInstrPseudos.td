@@ -180,7 +180,7 @@ def LDimm_preserve : Pseudo {
 
 // Regular Instructions
 
-def ADCimm : Pseudo {
+def ADCimm : Pseudo, PseudoInstExpansion<(ADC_Immediate imm8:$r)> {
   dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
   let Constraints = "$dst = $l, $carryout = $carryin";
@@ -191,7 +191,7 @@ def ADCimm : Pseudo {
   let isReMaterializable = true;
 }
 
-def ADCzpr : Pseudo {
+def ADCzpr : Pseudo, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
   dag InOperandList = (ins Ac:$l, ZP:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
   // Don't give the carries a tied constraint, since having two tied operands
