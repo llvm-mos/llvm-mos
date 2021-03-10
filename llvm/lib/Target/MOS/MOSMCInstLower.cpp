@@ -182,6 +182,25 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         return;
       }
     }
+  case MOS::STzpr: {
+    switch (MI->getOperand(1).getReg()) {
+    default:
+      llvm_unreachable("Unexpected register.");
+    case MOS::A:
+      OutMI.setOpcode(MOS::STA_ZeroPage);
+      break;
+    case MOS::X:
+      OutMI.setOpcode(MOS::STX_ZeroPage);
+      break;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::STY_ZeroPage);
+      break;
+    }
+    MCOperand Val;
+    assert(lowerOperand(MI->getOperand(0), Val));
+    OutMI.addOperand(Val);
+    return;
+  }
   }
 
   for (const MachineOperand &MO : MI->operands()) {

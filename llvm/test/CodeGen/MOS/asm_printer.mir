@@ -340,6 +340,16 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: sta_zeropage
+# CHECK-LABEL: sta_zeropage
+body: |
+  bb.0.entry:
+    $rc0 = STzpr $a
+    RTS_Implied
+# CHECK:      sta _RC0
+# CHECK-NEXT: rts
+...
+---
 name: sta_indirect_indexed
 # CHECK-LABEL: sta_indirect_indexed
 body: |
@@ -347,6 +357,26 @@ body: |
     STyindirr $a, $rs0, $y
     RTS_Implied
 # CHECK:      sta (_RC0),llvm_mos_y
+# CHECK-NEXT: rts
+...
+---
+name: stx_zeropage
+# CHECK-LABEL: stx_zeropage
+body: |
+  bb.0.entry:
+    $rc0 = STzpr $x
+    RTS_Implied
+# CHECK:      stx _RC0
+# CHECK-NEXT: rts
+...
+---
+name: sty_zeropage
+# CHECK-LABEL: sty_zeropage
+body: |
+  bb.0.entry:
+    $rc0 = STzpr $y
+    RTS_Implied
+# CHECK:      sty _RC0
 # CHECK-NEXT: rts
 ...
 ---
