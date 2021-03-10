@@ -140,6 +140,36 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: lda_zeropage
+# CHECK-LABEL: lda_zeropage
+body: |
+  bb.0.entry:
+    $a = LDzpr $rc0, implicit-def $nz
+    RTS_Implied
+# CHECK:      lda _RC0
+# CHECK-NEXT: rts
+...
+---
+name: ldx_zeropage
+# CHECK-LABEL: ldx_zeropage
+body: |
+  bb.0.entry:
+    $x = LDzpr $rc0, implicit-def $nz
+    RTS_Implied
+# CHECK:      ldx _RC0
+# CHECK-NEXT: rts
+...
+---
+name: ldy_zeropage
+# CHECK-LABEL: ldy_zeropage
+body: |
+  bb.0.entry:
+    $y = LDzpr $rc0, implicit-def $nz
+    RTS_Implied
+# CHECK:      ldy _RC0
+# CHECK-NEXT: rts
+...
+---
 name: sec_implied
 # CHECK-LABEL: sec_implied
 body: |
