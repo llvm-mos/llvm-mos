@@ -284,7 +284,7 @@ def LDAidx : Pseudo {
   let mayLoad = true;
 }
 
-def LDXidx : Pseudo {
+def LDXidx : Pseudo, PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
   dag OutOperandList = (outs);
 
@@ -295,7 +295,7 @@ def LDXidx : Pseudo {
   let mayLoad = true;
 }
 
-def LDYidx : Pseudo {
+def LDYidx : Pseudo, PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
   dag OutOperandList = (outs);
 

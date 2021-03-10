@@ -118,6 +118,22 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
+  case MOS::LDAidx: {
+    switch (MI->getOperand(1).getReg()) {
+    default:
+      llvm_unreachable("Unexpected LDAidx register.");
+    case MOS::X:
+      OutMI.setOpcode(MOS::LDA_AbsoluteX);
+      break;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::LDA_AbsoluteY);
+      break;
+    }
+    MCOperand Val;
+    assert(lowerOperand(MI->getOperand(0), Val));
+    OutMI.addOperand(Val);
+    return;
+  }
   case MOS::LDCimm: {
     switch (MI->getOperand(1).getImm()) {
     default:

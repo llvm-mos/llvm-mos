@@ -170,6 +170,46 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: lda_absolutex
+# CHECK-LABEL: lda_absolutex
+body: |
+  bb.0.entry:
+    LDAidx 1234, $x, implicit-def $a, implicit-def $nz
+    RTS_Implied
+# CHECK:      lda 1234,llvm_mos_x
+# CHECK-NEXT: rts
+...
+---
+name: lda_absolutey
+# CHECK-LABEL: lda_absolutey
+body: |
+  bb.0.entry:
+    LDAidx 1234, $y, implicit-def $a, implicit-def $nz
+    RTS_Implied
+# CHECK:      lda 1234,llvm_mos_y
+# CHECK-NEXT: rts
+...
+---
+name: ldx_absolutey
+# CHECK-LABEL: ldx_absolutey
+body: |
+  bb.0.entry:
+    LDXidx 1234, implicit-def $x, implicit-def $nz, implicit $y
+    RTS_Implied
+# CHECK:      ldx 1234,llvm_mos_y
+# CHECK-NEXT: rts
+...
+---
+name: ldy_absolutex
+# CHECK-LABEL: ldy_absolutex
+body: |
+  bb.0.entry:
+    LDYidx 1234, implicit-def $y, implicit-def $nz, implicit $x
+    RTS_Implied
+# CHECK:      ldy 1234,llvm_mos_x
+# CHECK-NEXT: rts
+...
+---
 name: lda_zeropage
 # CHECK-LABEL: lda_zeropage
 body: |
