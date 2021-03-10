@@ -53,8 +53,8 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     }
     OS << CorrectOperands;
   } else {
-    OS << "/* TODO: implement MOS instruction with opcode " << MI->getOpcode()
-       << " */";
+    OS << "/* TODO: unlowered pseudo; search MOSGenInstrInfo.inc for \"Inst #"
+       << MI->getOpcode() << "\" */";
   }
 }
 
