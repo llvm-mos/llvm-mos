@@ -41,6 +41,36 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: cmp_immediate
+# CHECK-LABEL: cmp_immediate
+body: |
+  bb.0.entry:
+    CMPimm $a, 42, implicit-def $nz
+    RTS_Implied
+# CHECK:      cmp #42
+# CHECK-NEXT: rts
+...
+---
+name: cpx_immediate
+# CHECK-LABEL: cpx_immediate
+body: |
+  bb.0.entry:
+    CMPimm $x, 42, implicit-def $nz
+    RTS_Implied
+# CHECK:      cpx #42
+# CHECK-NEXT: rts
+...
+---
+name: cpy_immediate
+# CHECK-LABEL: cpy_immediate
+body: |
+  bb.0.entry:
+    CMPimm $y, 42, implicit-def $nz
+    RTS_Implied
+# CHECK:      cpy #42
+# CHECK-NEXT: rts
+...
+---
 name: jmp_absolute
 # CHECK-LABEL: jmp_absolute
 body: |

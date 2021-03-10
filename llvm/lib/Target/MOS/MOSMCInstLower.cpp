@@ -42,7 +42,26 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::ASL_Accumulator);
       return;
     }
-  case MOS::LDimm:
+  case MOS::CMPimm: {
+    switch (MI->getOperand(0).getReg()) {
+    default:
+      llvm_unreachable("Unexpected LDimm destination.");
+    case MOS::A:
+      OutMI.setOpcode(MOS::CMP_Immediate);
+      break;
+    case MOS::X:
+      OutMI.setOpcode(MOS::CPX_Immediate);
+      break;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::CPY_Immediate);
+      break;
+    }
+    MCOperand Val;
+    assert(lowerOperand(MI->getOperand(1), Val));
+    OutMI.addOperand(Val);
+    return;
+  }
+  case MOS::LDimm: {
     switch (MI->getOperand(0).getReg()) {
     default:
       llvm_unreachable("Unexpected LDimm destination.");
@@ -60,6 +79,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     assert(lowerOperand(MI->getOperand(1), Val));
     OutMI.addOperand(Val);
     return;
+  }
   }
 
   for (const MachineOperand &MO : MI->operands()) {
