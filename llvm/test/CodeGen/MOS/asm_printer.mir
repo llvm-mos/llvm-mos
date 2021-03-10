@@ -20,6 +20,27 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: asl_accumulator
+# CHECK-LABEL: asl_accumulator
+body: |
+  bb.0.entry:
+    $a, $c = ASL $a, implicit-def $nz
+    RTS_Implied
+# $ prevents asl from matching the name of the function.
+# CHECK:      asl{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: asl_zeropage
+# CHECK-LABEL: asl_zeropage
+body: |
+  bb.0.entry:
+    $rc0, $c = ASL $rc0, implicit-def $nz
+    RTS_Implied
+# CHECK:      asl _RC0
+# CHECK-NEXT: rts
+...
+---
 name: jmp_absolute
 # CHECK-LABEL: jmp_absolute
 body: |

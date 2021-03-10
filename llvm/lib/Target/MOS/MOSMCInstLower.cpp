@@ -28,6 +28,20 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   default:
     OutMI.setOpcode(MI->getOpcode());
     break;
+  case MOS::ASL:
+    switch (MI->getOperand(0).getReg()) {
+    default: {
+      assert(MOS::ZPRegClass.contains(MI->getOperand(0).getReg()));
+      OutMI.setOpcode(MOS::ASL_ZeroPage);
+      MCOperand Addr;
+      assert(lowerOperand(MI->getOperand(0), Addr));
+      OutMI.addOperand(Addr);
+      return;
+    }
+    case MOS::A:
+      OutMI.setOpcode(MOS::ASL_Accumulator);
+      return;
+    }
   case MOS::LDimm:
     switch (MI->getOperand(0).getReg()) {
     default:
