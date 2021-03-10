@@ -290,6 +290,26 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: rol_accumulator
+# CHECK-LABEL: rol_accumulator
+body: |
+  bb.0.entry:
+    $a, $c = ROL $a, $c, implicit-def $nz
+    RTS_Implied
+# CHECK:      rol{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: rol_zeropage
+# CHECK-LABEL: rol_zeropage
+body: |
+  bb.0.entry:
+    $rc0, $c = ROL $rc0, $c, implicit-def $nz
+    RTS_Implied
+# CHECK:      rol _RC0
+# CHECK-NEXT: rts
+...
+---
 name: sbc_immediate
 # CHECK-LABEL: sbc_immediate
 body: |

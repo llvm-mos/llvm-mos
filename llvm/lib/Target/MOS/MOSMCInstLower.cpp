@@ -29,18 +29,34 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.setOpcode(MI->getOpcode());
     break;
   case MOS::ASL:
+  case MOS::ROL:
     switch (MI->getOperand(0).getReg()) {
     default: {
       assert(MOS::ZPRegClass.contains(MI->getOperand(0).getReg()));
-      OutMI.setOpcode(MOS::ASL_ZeroPage);
+      switch (MI->getOpcode()) {
+      case MOS::ASL:
+        OutMI.setOpcode(MOS::ASL_ZeroPage);
+        break;
+      case MOS::ROL:
+        OutMI.setOpcode(MOS::ROL_ZeroPage);
+        break;
+      }
       MCOperand Addr;
       assert(lowerOperand(MI->getOperand(0), Addr));
       OutMI.addOperand(Addr);
       return;
     }
     case MOS::A:
-      OutMI.setOpcode(MOS::ASL_Accumulator);
-      return;
+      switch (MI->getOpcode()) {
+      default:
+        llvm_unreachable("Inconsistent opcode.");
+      case MOS::ASL:
+        OutMI.setOpcode(MOS::ASL_Accumulator);
+        return;
+      case MOS::ROL:
+        OutMI.setOpcode(MOS::ROL_Accumulator);
+        return;
+      }
     }
   case MOS::CMPimm:
   case MOS::LDimm:
