@@ -340,6 +340,16 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: sta_absolute
+# CHECK-LABEL: sta_absolute
+body: |
+  bb.0.entry:
+    STabs $a, 1234
+    RTS_Implied
+# CHECK:      sta 1234
+# CHECK-NEXT: rts
+...
+---
 name: sta_zeropage
 # CHECK-LABEL: sta_zeropage
 body: |
@@ -360,6 +370,16 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: stx_absolute
+# CHECK-LABEL: stx_absolute
+body: |
+  bb.0.entry:
+    STabs $x, 1234
+    RTS_Implied
+# CHECK:      stx 1234
+# CHECK-NEXT: rts
+...
+---
 name: stx_zeropage
 # CHECK-LABEL: stx_zeropage
 body: |
@@ -367,6 +387,16 @@ body: |
     $rc0 = STzpr $x
     RTS_Implied
 # CHECK:      stx _RC0
+# CHECK-NEXT: rts
+...
+---
+name: sty_absolute
+# CHECK-LABEL: sty_absolute
+body: |
+  bb.0.entry:
+    STabs $y, 1234
+    RTS_Implied
+# CHECK:      sty 1234
 # CHECK-NEXT: rts
 ...
 ---

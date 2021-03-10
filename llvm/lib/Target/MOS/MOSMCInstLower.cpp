@@ -61,7 +61,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::CMPimm:
   case MOS::LDimm:
   case MOS::LDabs:
-  case MOS::LDzpr: {
+  case MOS::LDzpr:
+  case MOS::STabs: {
     switch (MI->getOperand(0).getReg()) {
     default:
       llvm_unreachable("Unexpected register.");
@@ -79,6 +80,9 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       case MOS::LDzpr:
         OutMI.setOpcode(MOS::LDA_ZeroPage);
         break;
+      case MOS::STabs:
+        OutMI.setOpcode(MOS::STA_Absolute);
+        break;
       }
       break;
     case MOS::X:
@@ -95,6 +99,9 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       case MOS::LDzpr:
         OutMI.setOpcode(MOS::LDX_ZeroPage);
         break;
+      case MOS::STabs:
+        OutMI.setOpcode(MOS::STX_Absolute);
+        break;
       }
       break;
     case MOS::Y:
@@ -110,6 +117,9 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       case MOS::LDzpr:
         OutMI.setOpcode(MOS::LDY_ZeroPage);
+        break;
+      case MOS::STabs:
+        OutMI.setOpcode(MOS::STY_Absolute);
         break;
       }
       break;
