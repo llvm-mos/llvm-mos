@@ -71,6 +71,26 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: inx_implied
+# CHECK-LABEL: inx_implied
+body: |
+  bb.0.entry:
+    $x = IN_ $x, implicit-def $nz
+    RTS_Implied
+# CHECK:      inx{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: iny_implied
+# CHECK-LABEL: iny_implied
+body: |
+  bb.0.entry:
+    $y = IN_ $y, implicit-def $nz
+    RTS_Implied
+# CHECK:      iny{{$}}
+# CHECK-NEXT: rts
+...
+---
 name: jmp_absolute
 # CHECK-LABEL: jmp_absolute
 body: |

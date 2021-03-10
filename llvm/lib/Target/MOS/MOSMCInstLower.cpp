@@ -45,7 +45,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::CMPimm: {
     switch (MI->getOperand(0).getReg()) {
     default:
-      llvm_unreachable("Unexpected LDimm destination.");
+      llvm_unreachable("Unexpected CMPimm destination.");
     case MOS::A:
       OutMI.setOpcode(MOS::CMP_Immediate);
       break;
@@ -80,6 +80,17 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
+  case MOS::IN_:
+    switch (MI->getOperand(0).getReg()) {
+    default:
+      llvm_unreachable("Unexpected IN_ destination.");
+    case MOS::X:
+      OutMI.setOpcode(MOS::INX_Implied);
+      return;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::INY_Implied);
+      return;
+    }
   }
 
   for (const MachineOperand &MO : MI->operands()) {
