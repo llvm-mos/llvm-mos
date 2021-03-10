@@ -41,6 +41,16 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: clc_implied
+# CHECK-LABEL: clc_implied
+body: |
+  bb.0.entry:
+    $c = LDCimm 0
+    RTS_Implied
+# CHECK:      clc{{$}}
+# CHECK-NEXT: rts
+...
+---
 name: cmp_immediate
 # CHECK-LABEL: cmp_immediate
 body: |
@@ -127,6 +137,16 @@ body: |
     $y = LDimm 42, implicit-def $nz
     RTS_Implied
 # CHECK:      ldy #42
+# CHECK-NEXT: rts
+...
+---
+name: sec_implied
+# CHECK-LABEL: sec_implied
+body: |
+  bb.0.entry:
+    $c = LDCimm 1
+    RTS_Implied
+# CHECK:      sec{{$}}
 # CHECK-NEXT: rts
 ...
 ---

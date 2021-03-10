@@ -80,6 +80,18 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
+  case MOS::LDCimm: {
+    switch (MI->getOperand(1).getImm()) {
+    default:
+      llvm_unreachable("Unexpected LDCimm immediate.");
+    case 0:
+      OutMI.setOpcode(MOS::CLC_Implied);
+      return;
+    case 1:
+      OutMI.setOpcode(MOS::SEC_Implied);
+      return;
+    }
+  }
   case MOS::IN_:
     switch (MI->getOperand(0).getReg()) {
     default:
