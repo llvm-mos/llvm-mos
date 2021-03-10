@@ -140,6 +140,36 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: lda_absolute
+# CHECK-LABEL: lda_absolute
+body: |
+  bb.0.entry:
+    $a = LDabs 1234, implicit-def $nz
+    RTS_Implied
+# CHECK:      lda 1234
+# CHECK-NEXT: rts
+...
+---
+name: ldx_absolute
+# CHECK-LABEL: ldx_absolute
+body: |
+  bb.0.entry:
+    $x = LDabs 1234, implicit-def $nz
+    RTS_Implied
+# CHECK:      ldx 1234
+# CHECK-NEXT: rts
+...
+---
+name: ldy_absolute
+# CHECK-LABEL: ldy_absolute
+body: |
+  bb.0.entry:
+    $y = LDabs 1234, implicit-def $nz
+    RTS_Implied
+# CHECK:      ldy 1234
+# CHECK-NEXT: rts
+...
+---
 name: lda_zeropage
 # CHECK-LABEL: lda_zeropage
 body: |

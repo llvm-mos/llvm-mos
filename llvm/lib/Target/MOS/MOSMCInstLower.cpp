@@ -80,6 +80,25 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
+  case MOS::LDabs: {
+    switch (MI->getOperand(0).getReg()) {
+    default:
+      llvm_unreachable("Unexpected LDabs destination.");
+    case MOS::A:
+      OutMI.setOpcode(MOS::LDA_Absolute);
+      break;
+    case MOS::X:
+      OutMI.setOpcode(MOS::LDX_Absolute);
+      break;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::LDY_Absolute);
+      break;
+    }
+    MCOperand Val;
+    assert(lowerOperand(MI->getOperand(1), Val));
+    OutMI.addOperand(Val);
+    return;
+  }
   case MOS::LDzpr: {
     switch (MI->getOperand(0).getReg()) {
     default:
