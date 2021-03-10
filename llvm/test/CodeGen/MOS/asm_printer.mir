@@ -210,6 +210,16 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: lda_indirectindexed
+# CHECK-LABEL: lda_indirectindexed
+body: |
+  bb.0.entry:
+    $a = LDyindirr $rs0, $y, implicit-def $nz
+    RTS_Implied
+# CHECK:      lda (_RC0),llvm_mos_y
+# CHECK-NEXT: rts
+...
+---
 name: lda_zeropage
 # CHECK-LABEL: lda_zeropage
 body: |
@@ -240,6 +250,66 @@ body: |
 # CHECK-NEXT: rts
 ...
 ---
+name: pha_implied
+# CHECK-LABEL: pha_implied
+body: |
+  bb.0.entry:
+    PHA implicit $a
+    RTS_Implied
+# CHECK:      pha{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: php_implied
+# CHECK-LABEL: php_implied
+body: |
+  bb.0.entry:
+    PHP implicit $p
+    RTS_Implied
+# CHECK:      php{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: pla_implied
+# CHECK-LABEL: pla_implied
+body: |
+  bb.0.entry:
+    PLA implicit-def $a, implicit-def $nz
+    RTS_Implied
+# CHECK:      pla{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: plp_implied
+# CHECK-LABEL: plp_implied
+body: |
+  bb.0.entry:
+    PLP implicit-def $p
+    RTS_Implied
+# CHECK:      plp{{$}}
+# CHECK-NEXT: rts
+...
+---
+name: sbc_immediate
+# CHECK-LABEL: sbc_immediate
+body: |
+  bb.0.entry:
+    $a, $c = SBCimm $a, 42, $c, implicit-def $nz
+    RTS_Implied
+# CHECK:      sbc #42
+# CHECK-NEXT: rts
+...
+---
+name: sbc_zeropage
+# CHECK-LABEL: sbc_zeropage
+body: |
+  bb.0.entry:
+    $a, $c = SBCzpr $a, $rc0, $c, implicit-def $nz
+    RTS_Implied
+# CHECK:      sbc _RC0
+# CHECK-NEXT: rts
+...
+---
 name: sec_implied
 # CHECK-LABEL: sec_implied
 body: |
@@ -257,5 +327,15 @@ body: |
     STyindirr $a, $rs0, $y
     RTS_Implied
 # CHECK:      sta (_RC0),llvm_mos_y
+# CHECK-NEXT: rts
+...
+---
+name: tsx_implied
+# CHECK-LABEL: tsx_implied
+body: |
+  bb.0.entry:
+    TSX implicit-def $x, implicit-def $nz
+    RTS_Implied
+# CHECK:      tsx{{$}}
 # CHECK-NEXT: rts
 ...

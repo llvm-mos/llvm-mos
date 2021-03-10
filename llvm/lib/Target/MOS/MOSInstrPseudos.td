@@ -306,7 +306,7 @@ def LDYidx : Pseudo, PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)> {
   let mayLoad = true;
 }
 
-def LDyindirr : Pseudo {
+def LDyindirr : Pseudo, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
   dag InOperandList = (ins ZP_PTR:$addr, Yc:$offset);
   dag OutOperandList = (outs Ac:$dst);
 
@@ -325,7 +325,7 @@ def ROL : Pseudo {
   let isReMaterializable = true;
 }
 
-def SBCimm : Pseudo {
+def SBCimm : Pseudo, PseudoInstExpansion<(SBC_Immediate imm8:$r)> {
   dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
   let Constraints = "$dst = $l, $carryout = $carryin";
@@ -335,7 +335,7 @@ def SBCimm : Pseudo {
   let isReMaterializable = true;
 }
 
-def SBCzpr : Pseudo {
+def SBCzpr : Pseudo, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
   dag InOperandList = (ins Ac:$l, ZP:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
   // Don't give the carries a tied constraint, since having two tied operands
@@ -367,7 +367,7 @@ def T_A : Pseudo {
   let isReMaterializable = true;
 }
 
-def TSX : Pseudo {
+def TSX : Pseudo, PseudoInstExpansion<(TSX_Implied)> {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
 
@@ -377,7 +377,7 @@ def TSX : Pseudo {
   let isReMaterializable = true;
 }
 
-def PHA : Pseudo {
+def PHA : Pseudo, PseudoInstExpansion<(PHA_Implied)> {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
   let Uses = [A];
@@ -386,7 +386,7 @@ def PHA : Pseudo {
   let mayStore = true;
 }
 
-def PLA : Pseudo {
+def PLA : Pseudo, PseudoInstExpansion<(PLA_Implied)> {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
   let Defs = [A, NZ];
@@ -394,7 +394,7 @@ def PLA : Pseudo {
   let mayLoad = true;
 }
 
-def PHP : Pseudo {
+def PHP : Pseudo, PseudoInstExpansion<(PHP_Implied)> {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
   let Uses = [P];
@@ -403,7 +403,7 @@ def PHP : Pseudo {
   let mayStore = true;
 }
 
-def PLP : Pseudo {
+def PLP : Pseudo, PseudoInstExpansion<(PLP_Implied)> {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
   let Defs = [P];
