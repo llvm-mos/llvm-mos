@@ -4,20 +4,20 @@ name: addrloss
 # CHECK-LABEL: name: addrloss
 body: |
   bb.0.entry:
-    $zp_0, $c = AddrLostk $sp, 1234, implicit-def $nz
-# CHECK:      $a = LDzpr $splo
+    $rc0, $c = AddrLostk $rs0, 1234, implicit-def $nz
+# CHECK:      $a = LDzpr $rc0
 # CHECK-NEXT: $c = LDCimm 0
 # CHECK-NEXT: $a, $c = ADCimm $a, 210, $c
-# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $rc0 = STzpr $a
 ...
 ---
 name: addrloss0
 # CHECK-LABEL: name: addrloss0
 body: |
   bb.0.entry:
-    $zp_0, $c = AddrLostk $sp, 512, implicit-def $nz
-# CHECK:      $a = LDzpr $splo
-# CHECK-NEXT: $zp_0 = STzpr $a
+    $rc0, $c = AddrLostk $rs0, 512, implicit-def $nz
+# CHECK:      $a = LDzpr $rc0
+# CHECK-NEXT: $rc0 = STzpr $a
 ...
 ---
 name: addrlohs
@@ -45,17 +45,17 @@ name: addrlostatic
 # CHECK-LABEL: name: addrlostatic
 body: |
   bb.0.entry:
-    $zp_0, $c = AddrLostk $static, 1234, implicit-def $nz
+    $rc0, $c = AddrLostk $static, 1234, implicit-def $nz
 # CHECK:      $a = LDimm target-flags(lo) target-index(mos-static-stack) + 1234
-# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $rc0 = STzpr $a
 ...
 ---
 name: addrhiss
 # CHECK-LABEL: name: addrhiss
 body: |
   bb.0.entry:
-    $a = AddrHistk $sp, 1234, $c, implicit-def $c, implicit-def $nz
-# CHECK:      $a = LDzpr $sphi
+    $a = AddrHistk $rs0, 1234, $c, implicit-def $c, implicit-def $nz
+# CHECK:      $a = LDzpr $rc1
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 4, $c
 ...
 ---
@@ -63,8 +63,8 @@ name: addrhiss_lo0
 # CHECK-LABEL: name: addrhiss_lo0
 body: |
   bb.0.entry:
-    $a = AddrHistk $sp, 512, $c, implicit-def $c, implicit-def $nz
-# CHECK:      $a = LDzpr $sphi
+    $a = AddrHistk $rs0, 512, $c, implicit-def $c, implicit-def $nz
+# CHECK:      $a = LDzpr $rc1
 # CHECK-NEXT: LDCimm 0
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 2, $c
 ...
@@ -93,10 +93,10 @@ name: addrhihs0_copy
 # CHECK-LABEL: name: addrhihs0
 body: |
   bb.0.entry:
-    $zp_0 = AddrHistk $s, 0, $c, implicit-def $c, implicit-def $nz
+    $rc0 = AddrHistk $s, 0, $c, implicit-def $c, implicit-def $nz
     RTS_Implied
 # CHECK:      $a = LDimm 1
-# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $rc0 = STzpr $a
 # CHECK-NEXT: RTS_Implied
 ...
 ---
@@ -104,24 +104,24 @@ name: addrhistatic
 # CHECK-LABEL: name: addrhistatic
 body: |
   bb.0.entry:
-    $zp_0 = AddrHistk $static, 1234, $c, implicit-def $c, implicit-def $nz
+    $rc0 = AddrHistk $static, 1234, $c, implicit-def $c, implicit-def $nz
 # CHECK:      $a = LDimm target-flags(hi) target-index(mos-static-stack) + 1234
-# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $rc0 = STzpr $a
 ...
 ---
 name: addr
 # CHECK-LABEL: name: addr
 body: |
   bb.0.entry:
-    $zp_ptr_0 = Addrstk $sp, 1234, implicit-def $c, implicit-def $nz
+    $rs0 = Addrstk $rs0, 1234, implicit-def $c, implicit-def $nz
     RTS_Implied
-# CHECK:      $a = LDzpr $splo
+# CHECK:      $a = LDzpr $rc0
 # CHECK-NEXT: $c = LDCimm 0
 # CHECK-NEXT: $a, $c = ADCimm $a, 210, $c
-# CHECK-NEXT: $zp_0 = STzpr $a
-# CHECK-NEXT: $a = LDzpr $sphi
+# CHECK-NEXT: $rc0 = STzpr $a
+# CHECK-NEXT: $a = LDzpr $rc1
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 4, $c
-# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: $rc1 = STzpr $a
 # CHECK-NEXT: RTS_Implied
 ...
 ---
@@ -139,19 +139,19 @@ name: ldhs_copy
 # CHECK-LABEL: name: ldhs_copy
 body: |
   bb.0.entry:
-    $zp_0 = LDstk $s, 2
+    $rc0 = LDstk $s, 2
 # CHECK:      TSX
 # CHECK-NEXT: LDAidx 258, $x
-# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $rc0 = STzpr $a
 ...
 ---
 name: ldss
 # CHECK-LABEL: name: ldss
 body: |
   bb.0.entry:
-    $x = LDstk $sp, 2
+    $x = LDstk $rs0, 2
 # CHECK:      $y = LDimm 2
-# CHECK-NEXT: $a = LDyindirr $sp, $y
+# CHECK-NEXT: $a = LDyindirr $rs0, $y
 # CHECK-NEXT: $x = TA_
 ...
 ---
@@ -159,32 +159,32 @@ name: ldptr
 # CHECK-LABEL: name: ldptr
 body: |
   bb.0.entry:
-    $zp_ptr_0 = LDstk $s, 2
+    $rs0 = LDstk $s, 2
 # CHECK:      TSX
 # CHECK-NEXT: LDAidx 258, $x
-# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $rc0 = STzpr $a
 # CHECK-NEXT: LDAidx 259, $x
-# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: $rc1 = STzpr $a
 ...
 ---
 name: ldptr_far
 # CHECK-LABEL: name: ldptr_far
 body: |
   bb.0.entry:
-    $zp_ptr_1 = LDstk $sp, 258
+    $rs1 = LDstk $rs0, 258
     RTS_Implied
-# CHECK:      $a = LDzpr $splo
-# CHECK-NEXT: $zp_0 = STzpr $a
-# CHECK-NEXT: $a = LDzpr $sphi
+# CHECK:      $a = LDzpr $rc0
+# CHECK-NEXT: $rc0 = STzpr $a
+# CHECK-NEXT: $a = LDzpr $rc1
 # CHECK-NEXT: $c = LDCimm 0
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 1, $c
-# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: $rc1 = STzpr $a
 # CHECK-NEXT: $y = LDimm 2
-# CHECK-NEXT: $a = LDyindirr $zp_ptr_0, $y
-# CHECK-NEXT: $zp_2 = STzpr $a
+# CHECK-NEXT: $a = LDyindirr $rs0, $y
+# CHECK-NEXT: $rc2 = STzpr $a
 # CHECK-NEXT: $y = LDimm 3
-# CHECK-NEXT: $a = LDyindirr $zp_ptr_0, $y
-# CHECK-NEXT: $zp_3 = STzpr $a
+# CHECK-NEXT: $a = LDyindirr $rs0, $y
+# CHECK-NEXT: $rc3 = STzpr $a
 # CHECK-NEXT: RTS_Implied
 ...
 ---
@@ -192,32 +192,32 @@ name: ldptr_far_1
 # CHECK-LABEL: name: ldptr_far_1
 body: |
   bb.0.entry:
-    $zp_ptr_0 = LDstk $sp, 258
+    $rs0 = LDstk $rs0, 258
     RTS_Implied
-# CHECK:      $a = LDzpr $splo
-# CHECK-NEXT: $zp_2 = STzpr $a
-# CHECK-NEXT: $a = LDzpr $sphi
+# CHECK:      $a = LDzpr $rc0
+# CHECK-NEXT: $rc2 = STzpr $a
+# CHECK-NEXT: $a = LDzpr $rc1
 # CHECK-NEXT: $c = LDCimm 0
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 1, $c
-# CHECK-NEXT: $zp_3 = STzpr $a
+# CHECK-NEXT: $rc3 = STzpr $a
 # CHECK-NEXT: $y = LDimm 2
-# CHECK-NEXT: $a = LDyindirr $zp_ptr_1, $y
-# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $a = LDyindirr $rs1, $y
+# CHECK-NEXT: $rc0 = STzpr $a
 # CHECK-NEXT: $y = LDimm 3
-# CHECK-NEXT: $a = LDyindirr $zp_ptr_1, $y
-# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: $a = LDyindirr $rs1, $y
+# CHECK-NEXT: $rc1 = STzpr $a
 # CHECK-NEXT: RTS_Implied
 ---
 name: ldstatic
 # CHECK-LABEL: name: ldstatic
 body: |
   bb.0.entry:
-    $zp_ptr_0 = LDstk $static, 1234
+    $rs0 = LDstk $static, 1234
     RTS_Implied
 # CHECK:      $a = LDabs target-index(mos-static-stack) + 1234
-# CHECK-NEXT: $zp_0 = STzpr $a
+# CHECK-NEXT: $rc0 = STzpr $a
 # CHECK-NEXT: $a = LDabs target-index(mos-static-stack) + 1235
-# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: $rc1 = STzpr $a
 # CHECK-NEXT: RTS_Implied
 ...
 ...
@@ -226,27 +226,27 @@ name: incsp
 # CHECK-LABEL: name: incsp
 body: |
   bb.0.entry:
-    IncSP -1234, implicit $sp, implicit-def $sp
+    IncSP -1234, implicit $rs0, implicit-def $rs0
     RTS_Implied
 # CHECK:      $c = LDCimm 0
 # CHECK-NEXT: $a = LDimm 46
-# CHECK-NEXT: $a, $c = ADCzpr $a, $splo, $c
-# CHECK-NEXT: $splo = STzpr $a
+# CHECK-NEXT: $a, $c = ADCzpr $a, $rc0, $c
+# CHECK-NEXT: $rc0 = STzpr $a
 # CHECK-NEXT: $a = LDimm 251
-# CHECK-NEXT: $a, dead $c = ADCzpr $a, $sphi, $c
-# CHECK-NEXT: $sphi = STzpr $a
+# CHECK-NEXT: $a, dead $c = ADCzpr $a, $rc1, $c
+# CHECK-NEXT: $rc1 = STzpr $a
 ...
 ---
 name: incsp_hi_only
 # CHECK-LABEL: name: incsp
 body: |
   bb.0.entry:
-    IncSP -512, implicit $sp, implicit-def $sp
+    IncSP -512, implicit $rs0, implicit-def $rs0
     RTS_Implied
 # CHECK:      $c = LDCimm 0 
 # CHECK-NEXT: $a = LDimm 254
-# CHECK-NEXT: $a, dead $c = ADCzpr $a, $sphi, $c
-# CHECK-NEXT: $sphi = STzpr $a
+# CHECK-NEXT: $a, dead $c = ADCzpr $a, $rc1, $c
+# CHECK-NEXT: $rc1 = STzpr $a
 ...
 ---
 name: ldaidx

@@ -13,33 +13,33 @@ body:             |
     STstk $a, %stack.4, 0 :: (store 1 into %stack.4)
     $a = LDstk %stack.4, 0 :: (load 1 from %stack.4)
     STstk $a, %stack.0, 0 :: (store 1 into %stack.0)
-    $a, $c = AddrLostk %stack.4, 0, implicit-def $nz, implicit $sp, implicit $c
-    $a = AddrHistk %stack.4, 0, $c, implicit-def $nz, implicit-def $c, implicit $sp
-    $zp_ptr_0 = Addrstk %stack.4, 0, implicit-def $nz, implicit $sp
+    $a, $c = AddrLostk %stack.4, 0, implicit-def $nz, implicit $rs0, implicit $c
+    $a = AddrHistk %stack.4, 0, $c, implicit-def $nz, implicit-def $c, implicit $rs0
+    $rs0 = Addrstk %stack.4, 0, implicit-def $nz, implicit $rs0
     STstk $a, %stack.2, 0 :: (store 1 into %stack.2)
     STstk $a, %stack.1, 0 :: (store 1 into %stack.1)
-    $a, $c = AddrLostk %stack.1, 0, implicit-def $nz, implicit $sp, implicit $c
-    $a = AddrHistk %stack.1, 0, $c, implicit-def $nz, implicit-def $c, implicit $sp
-    $zp_ptr_0 = Addrstk %stack.1, 0, implicit-def $nz, implicit $sp
+    $a, $c = AddrLostk %stack.1, 0, implicit-def $nz, implicit $rs0, implicit $c
+    $a = AddrHistk %stack.1, 0, $c, implicit-def $nz, implicit-def $c, implicit $rs0
+    $rs0 = Addrstk %stack.1, 0, implicit-def $nz, implicit $rs0
     $a = LDstk %stack.1, 0 :: (load 1 from %stack.1)
     $a = LDstk %stack.2, 0 :: (load 1 from %stack.2)
     $a = LDstk %stack.0, 0 :: (load 1 from %stack.0)
     RTS_Implied
 # CHECK-LABEL: bb.0.entry:
 # CHECK-NEXT:  IncSP -1
-# CHECK-NEXT:  STstk $a, $sp, 0 :: (store 1 into %stack.4)
-# CHECK-NEXT:  $a = LDstk $sp, 0 :: (load 1 from %stack.4)
+# CHECK-NEXT:  STstk $a, $rs0, 0 :: (store 1 into %stack.4)
+# CHECK-NEXT:  $a = LDstk $rs0, 0 :: (load 1 from %stack.4)
 # CHECK-NEXT:  Push $a
-# CHECK-NEXT:  $a, $c = AddrLostk $sp, 0
-# CHECK-NEXT:  $a = AddrHistk $sp, 0, $c
-# CHECK-NEXT:  $zp_ptr_0 = Addrstk $sp, 0
+# CHECK-NEXT:  $a, $c = AddrLostk $rs0, 0
+# CHECK-NEXT:  $a = AddrHistk $rs0, 0, $c
+# CHECK-NEXT:  $rs0 = Addrstk $rs0, 0
 # CHECK-NEXT:  Push undef $a
 # CHECK-NEXT:  Push $a
 # CHECK-NEXT:  Push undef $a
 # CHECK-NEXT:  STstk $a, $s, 3
 # CHECK-NEXT:  $a, $c = AddrLostk $s, 3
 # CHECK-NEXT:  $a = AddrHistk $s, 3, $c
-# CHECK-NEXT:  $zp_ptr_0 = Addrstk $s, 3
+# CHECK-NEXT:  $rs0 = Addrstk $s, 3
 # CHECK-NEXT:  $a = LDstk $s, 3 :: (load 1 from %stack.1)
 # CHECK-NEXT:  PullPreserve
 # CHECK-NEXT:  $a = Pull
@@ -57,27 +57,27 @@ stack:
   - { id: 2, size: 2}
 body: |
   bb.0.entry:
-    STstk $zp_ptr_0, %stack.2, 0 :: (store 2 into %stack.2)
-    $zp_ptr_0 = LDstk %stack.2, 0 :: (load 2 from %stack.2)
-    STstk $zp_ptr_0, %stack.0, 0 :: (store 2 into %stack.0)
-    $zp_ptr_0 = LDstk %stack.1, 0 :: (load 2 from %stack.1)
-    STstk $zp_ptr_0, %stack.1, 0 :: (store 2 into %stack.1)
-    $zp_ptr_0 = LDstk %stack.0, 0 :: (load 2 from %stack.0)
+    STstk $rs0, %stack.2, 0 :: (store 2 into %stack.2)
+    $rs0 = LDstk %stack.2, 0 :: (load 2 from %stack.2)
+    STstk $rs0, %stack.0, 0 :: (store 2 into %stack.0)
+    $rs0 = LDstk %stack.1, 0 :: (load 2 from %stack.1)
+    STstk $rs0, %stack.1, 0 :: (store 2 into %stack.1)
+    $rs0 = LDstk %stack.0, 0 :: (load 2 from %stack.0)
     RTS_Implied
 # CHECK-LABEL: bb.0.entry:
 # CHECK-NEXT:  IncSP -2
-# CHECK-NEXT:  STstk $zp_ptr_0, $sp, 0
-# CHECK-NEXT:  $zp_ptr_0 = LDstk $sp, 0
-# CHECK-NEXT:  Push $zp_1
-# CHECK-NEXT:  Push $zp_0
+# CHECK-NEXT:  STstk $rs0, $rs0, 0
+# CHECK-NEXT:  $rs0 = LDstk $rs0, 0
+# CHECK-NEXT:  Push $rc1
+# CHECK-NEXT:  Push $rc0
 # CHECK-NEXT:  Push undef $a
 # CHECK-NEXT:  Push undef $a
-# CHECK-NEXT:  $zp_ptr_0 = LDstk $s, 1
-# CHECK-NEXT:  STstk $zp_ptr_0, $s, 1
+# CHECK-NEXT:  $rs0 = LDstk $s, 1
+# CHECK-NEXT:  STstk $rs0, $s, 1
 # CHECK-NEXT:  PullPreserve
 # CHECK-NEXT:  PullPreserve
-# CHECK-NEXT:  $zp_0 = Pull
-# CHECK-NEXT:  $zp_1 = Pull
+# CHECK-NEXT:  $rc0 = Pull
+# CHECK-NEXT:  $rc1 = Pull
 # CHECK-NEXT:  IncSP 2
 # CHECK-NEXT:  RTS_Implied
 ...

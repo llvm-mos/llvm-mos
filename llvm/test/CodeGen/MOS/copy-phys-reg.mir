@@ -84,8 +84,8 @@ tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $a
-    $zp_0 = COPY $a
-# CHECK: $zp_0 = STzpr $a
+    $rc0 = COPY $a
+# CHECK: $rc0 = STzpr $a
 ...
 ---
 name:            ldzp
@@ -93,9 +93,9 @@ tracksRegLiveness: true
 # CHECK-LABEL: name: ldzp
 body:             |
   bb.0.entry:
-    liveins: $zp_0
-    $a = COPY $zp_0
-# CHECK: $a = LDzpr $zp_0
+    liveins: $rc0
+    $a = COPY $rc0
+# CHECK: $a = LDzpr $rc0
 ...
 ---
 name:            zptozp_a
@@ -103,10 +103,10 @@ tracksRegLiveness: true
 # CHECK-LABEL: name: zptozp_a
 body:             |
   bb.0.entry:
-    liveins: $zp_0
-    $zp_1 = COPY $zp_0
-# CHECK:      $a = LDzpr $zp_0
-# CHECK-NEXT: $zp_1 = STzpr $a
+    liveins: $rc0
+    $rc1 = COPY $rc0
+# CHECK:      $a = LDzpr $rc0
+# CHECK-NEXT: $rc1 = STzpr $a
 ...
 ---
 name:            zptozp_x
@@ -114,11 +114,11 @@ tracksRegLiveness: true
 # CHECK-LABEL: name: zptozp_x
 body:             |
   bb.0.entry:
-    liveins: $zp_0, $a
-    $zp_1 = COPY $zp_0
+    liveins: $rc0, $a
+    $rc1 = COPY $rc0
     RTS_Implied implicit $a
-# CHECK:      $x = LDzpr $zp_0
-# CHECK-NEXT: $zp_1 = STzpr $x
+# CHECK:      $x = LDzpr $rc0
+# CHECK-NEXT: $rc1 = STzpr $x
 # CHECK-NEXT: RTS_Implied
 ...
 ---
@@ -127,11 +127,11 @@ tracksRegLiveness: true
 # CHECK-LABEL: name: zptozp_y
 body:             |
   bb.0.entry:
-    liveins: $zp_0, $a, $x
-    $zp_1 = COPY $zp_0
+    liveins: $rc0, $a, $x
+    $rc1 = COPY $rc0
     RTS_Implied implicit $a, implicit $x
-# CHECK:      $y = LDzpr $zp_0
-# CHECK-NEXT: $zp_1 = STzpr $y
+# CHECK:      $y = LDzpr $rc0
+# CHECK-NEXT: $rc1 = STzpr $y
 # CHECK-NEXT: RTS_Implied
 ...
 ---
@@ -140,12 +140,12 @@ tracksRegLiveness: true
 # CHECK-LABEL: name: zptozp_save
 body:             |
   bb.0.entry:
-    liveins: $zp_0, $a, $x, $y
-    $zp_1 = COPY $zp_0
+    liveins: $rc0, $a, $x, $y
+    $rc1 = COPY $rc0
     RTS_Implied implicit $a, implicit $x, implicit $y
 # CHECK:      STabs $a, &_SaveA
-# CHECK-NEXT: $a = LDzpr $zp_0
-# CHECK-NEXT: $zp_1 = STzpr $a
+# CHECK-NEXT: $a = LDzpr $rc0
+# CHECK-NEXT: $rc1 = STzpr $a
 # CHECK-NEXT: PHP
 # CHECK-NEXT: $a = LDabs &_SaveA
 # CHECK-NEXT: PLP
@@ -157,10 +157,10 @@ tracksRegLiveness: true
 # CHECK-LABEL: name: zpptr_to_zpptr
 body:             |
   bb.0.entry:
-    liveins: $zp_ptr_0
-    $zp_ptr_1 = COPY $zp_ptr_0
-# CHECK:      $a = LDzpr $zp_0
-# CHECK-NEXT: $zp_2 = STzpr $a
-# CHECK:      $a = LDzpr $zp_1
-# CHECK-NEXT: $zp_3 = STzpr $a
+    liveins: $rs0
+    $rs1 = COPY $rs0
+# CHECK:      $a = LDzpr $rc0
+# CHECK-NEXT: $rc2 = STzpr $a
+# CHECK:      $a = LDzpr $rc1
+# CHECK-NEXT: $rc3 = STzpr $a
 ...
