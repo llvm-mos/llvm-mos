@@ -95,12 +95,6 @@ BitVector MOSRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-unsigned MOSRegisterInfo::getCSRFirstUseCost() const {
-  // A CSR save/restore is about 2.53 times more expensive than a hard stack
-  // load. This with a denominator of 2^14 gives approximately 41506.
-  return 41506;
-}
-
 const TargetRegisterClass *
 MOSRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                            const MachineFunction &) const {
@@ -116,7 +110,6 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                           RegScavenger *RS) const {
   MachineFunction &MF = *MI->getMF();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const MOSFrameLowering &TFL = *getFrameLowering(MF);
 
   assert(!SPAdj);
 
@@ -130,10 +123,6 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   case TargetStackID::Default:
     StackSize = MFI.getStackSize();
     Base = getFrameRegister(MF);
-    break;
-  case TargetStackID::Hard:
-    StackSize = TFL.hsSize(MFI);
-    Base = MOS::S;
     break;
   case TargetStackID::NoAlloc:
     Base = MOS::Static;

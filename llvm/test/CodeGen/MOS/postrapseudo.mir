@@ -20,27 +20,6 @@ body: |
 # CHECK-NEXT: $rc2 = STzpr $a
 ...
 ---
-name: addrlohs
-# CHECK-LABEL: name: addrlohs
-body: |
-  bb.0.entry:
-    $x, $c = AddrLostk $s, 123, implicit-def $nz
-# CHECK:      TSX
-# CHECK-NEXT: T_A $x
-# CHECK-NEXT: $c = LDCimm 0
-# CHECK-NEXT: $a, $c = ADCimm $a, 123, $c
-# CHECK-NEXT: $x = TA_
-...
----
-name: addrlohs0
-# CHECK-LABEL: name: addrlohs0
-body: |
-  bb.0.entry:
-    $a, $c = AddrLostk $s, 0, implicit-def $nz
-# CHECK:      TSX
-# CHECK-NEXT: T_A $x
-...
----
 name: addrlostatic
 # CHECK-LABEL: name: addrlostatic
 body: |
@@ -69,37 +48,6 @@ body: |
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 2, $c
 ...
 ---
-name: addrhihs
-# CHECK-LABEL: name: addrhihs
-body: |
-  bb.0.entry:
-    $x = AddrHistk $s, 123, $c, implicit-def $c, implicit-def $nz
-# CHECK:      $a = LDimm 1
-# CHECK-NEXT: $a, dead $c = ADCimm $a, 0, $c
-# CHECK-NEXT: $x = TA_
-...
----
-name: addrhihs0
-# CHECK-LABEL: name: addrhihs0
-body: |
-  bb.0.entry:
-    $x = AddrHistk $s, 0, $c, implicit-def $c, implicit-def $nz
-    RTS_Implied
-# CHECK:      $x = LDimm 1
-# CHECK-NEXT: RTS_Implied
-...
----
-name: addrhihs0_copy
-# CHECK-LABEL: name: addrhihs0
-body: |
-  bb.0.entry:
-    $rc2 = AddrHistk $s, 0, $c, implicit-def $c, implicit-def $nz
-    RTS_Implied
-# CHECK:      $a = LDimm 1
-# CHECK-NEXT: $rc2 = STzpr $a
-# CHECK-NEXT: RTS_Implied
-...
----
 name: addrhistatic
 # CHECK-LABEL: name: addrhistatic
 body: |
@@ -125,26 +73,6 @@ body: |
 # CHECK-NEXT: RTS_Implied
 ...
 ---
-name: ldhs
-# CHECK-LABEL: name: ldhs
-body: |
-  bb.0.entry:
-    $x = LDstk $s, 2
-# CHECK:      TSX
-# CHECK-NEXT: LDAidx 258, $x
-# CHECK-NEXT: $x = TA_
-...
----
-name: ldhs_copy
-# CHECK-LABEL: name: ldhs_copy
-body: |
-  bb.0.entry:
-    $rc2 = LDstk $s, 2
-# CHECK:      TSX
-# CHECK-NEXT: LDAidx 258, $x
-# CHECK-NEXT: $rc2 = STzpr $a
-...
----
 name: ldss
 # CHECK-LABEL: name: ldss
 body: |
@@ -153,18 +81,6 @@ body: |
 # CHECK:      $y = LDimm 2
 # CHECK-NEXT: $a = LDyindirr $rs0, $y
 # CHECK-NEXT: $x = TA_
-...
----
-name: ldptr
-# CHECK-LABEL: name: ldptr
-body: |
-  bb.0.entry:
-    $rs1 = LDstk $s, 2
-# CHECK:      TSX
-# CHECK-NEXT: LDAidx 258, $x
-# CHECK-NEXT: $rc2 = STzpr $a
-# CHECK-NEXT: LDAidx 259, $x
-# CHECK-NEXT: $rc3 = STzpr $a
 ...
 ---
 name: ldptr_far
@@ -291,57 +207,4 @@ body: |
     liveins: $x
     $y = LDidx 1234, $x, implicit-def $nz
 # CHECK: LDYidx 1234
-...
----
-name: sths
-# CHECK-LABEL: name: sths
-body: |
-  bb.0.entry:
-    STstk $a, $s, 2
-# CHECK:      TSX
-# CHECK-NEXT: STidx $a, 258, $x
-...
----
-name: push_a
-# CHECK-LABEL: name: push_a
-body: |
-  bb.0.entry:
-    liveins: $a
-    Push $a
-    RTS_Implied
-# CHECK:      PHA
-# CHECK-NEXT: RTS_Implied
-...
----
-name: push_x
-# CHECK-LABEL: name: push_x
-body: |
-  bb.0.entry:
-    liveins: $x
-    Push $x
-    RTS_Implied
-# CHECK:      T_A $x
-# CHECK-NEXT: PHA
-# CHECK-NEXT: RTS_Implied
-...
----
-name: pull_a
-# CHECK-LABEL: name: pull_a
-body: |
-  bb.0.entry:
-    $a = Pull
-    RTS_Implied implicit $a
-# CHECK:      PLA
-# CHECK-NEXT: RTS_Implied
-...
----
-name: pull_x
-# CHECK-LABEL: name: pull_x
-body: |
-  bb.0.entry:
-    $x = Pull
-    RTS_Implied implicit $x
-# CHECK:      PLA
-# CHECK-NEXT: $x = TA_
-# CHECK-NEXT: RTS_Implied
 ...

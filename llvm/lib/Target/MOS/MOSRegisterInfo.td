@@ -165,7 +165,7 @@ def ZP_PTR :
   RegisterClass<"MOS", [i16], 8,
     (sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 
-def Stack : MOSRegClass<[i8, i16], 8, (add Static, S, X, ZP_PTR)> {
+def Stack : MOSRegClass<[i8, i16], 8, (add Static, ZP_PTR)> {
   let isAllocatable = false;
 }
 

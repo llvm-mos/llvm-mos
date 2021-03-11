@@ -30,7 +30,6 @@ namespace TargetStackID {
     Default = 0,
     SGPRSpill = 1,
     ScalableVector = 2,
-    Hard = 3,
     NoAlloc = 255
   };
 }

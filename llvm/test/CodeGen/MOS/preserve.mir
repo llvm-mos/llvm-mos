@@ -44,37 +44,3 @@ body:             |
 # CHECK-NEXT: PLP
 # CHECK-NEXT: RTS_Implied
 ...
----
-name:            preserve_x
-tracksRegLiveness: true
-# CHECK-LABEL: name: preserve_x
-body:             |
-  bb.0.entry:
-    liveins: $x, $a
-    STstk $a, $s, 2
-    RTS_Implied implicit $x
-# CHECK:      STabs $x, &_SaveX
-# CHECK-NEXT: TSX
-# CHECK-NEXT: STidx $a, 258, $x
-# CHECK-NEXT: PHP
-# CHECK-NEXT: $x = LDabs &_SaveX
-# CHECK-NEXT: PLP
-# CHECK-NEXT: RTS_Implied
-...
----
-name:            preserve_y
-tracksRegLiveness: true
-# CHECK-LABEL: name: preserve_y
-body:             |
-  bb.0.entry:
-    liveins: $y, $a
-    STstk $a, $rs0, 123
-    RTS_Implied implicit $y
-# CHECK:      STabs $y, &_SaveY
-# CHECK-NEXT: $y = LDimm 123
-# CHECK-NEXT: STyindirr $a, $rs0, $y
-# CHECK-NEXT: PHP
-# CHECK-NEXT: $y = LDabs &_SaveY
-# CHECK-NEXT: PLP
-# CHECK-NEXT: RTS_Implied
-...

@@ -45,19 +45,21 @@ print_int:                              ; @print_int
 	cmp	#10
 	bmi	LBB0_2
 LBB0_1:                                 ; %if.end.preheader
+	sta	_SaveA
+	lda	__rc4
 	pha
+	lda	_SaveA
+	sta	__rc4
 	ldx	#10
 	jsr	__udivqi3
 	jsr	print_int
-	tsx
-	lda	257,llvm_mos_x
+	lda	__rc4
 	ldx	#10
 	jsr	__umodqi3
 	sta	_SaveA
 	pla
-	php
+	sta	__rc4
 	lda	_SaveA
-	plp
 LBB0_2:                                 ; %if.then
 	clc
 	adc	#48

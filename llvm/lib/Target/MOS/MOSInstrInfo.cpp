@@ -65,10 +65,10 @@ Register trivialScavenge(MachineIRBuilder &Builder,
 
 MOSInstrInfo::MOSInstrInfo()
     : MOSGenInstrInfo(/*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
-                          /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP) {}
+                      /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP) {}
 
 bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                         AAResults *AA) const {
+                                                     AAResults *AA) const {
   switch (MI.getOpcode()) {
   default:
     return TargetInstrInfo::isReallyTriviallyReMaterializable(MI, AA);
@@ -78,10 +78,9 @@ bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   }
 }
 
-MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI,
-                                                       bool NewMI,
-                                                       unsigned Idx1,
-                                                       unsigned Idx2) const {
+MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
+                                                   unsigned Idx1,
+                                                   unsigned Idx2) const {
   // TODO: A version of this that doesn't modify register classes if NewMI.
   if (NewMI)
     report_fatal_error("Not yet implemented.");
@@ -151,10 +150,10 @@ MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI,
 }
 
 void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator I,
-                                     Register DestReg, unsigned SubIdx,
-                                     const MachineInstr &Orig,
-                                     const TargetRegisterInfo &TRI) const {
+                                 MachineBasicBlock::iterator I,
+                                 Register DestReg, unsigned SubIdx,
+                                 const MachineInstr &Orig,
+                                 const TargetRegisterInfo &TRI) const {
   // A trivially rematerialized LDimm must preserve NZ.
   if (Orig.getOpcode() == MOS::LDimm) {
     MachineIRBuilder Builder(MBB, I);
@@ -175,8 +174,8 @@ unsigned MOSInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 }
 
 bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
-                                             unsigned &SrcOpIdx1,
-                                             unsigned &SrcOpIdx2) const {
+                                         unsigned &SrcOpIdx1,
+                                         unsigned &SrcOpIdx2) const {
   assert(!MI.isBundle() &&
          "MOSInstrInfo::findCommutedOpIndices() can't handle bundles");
 
@@ -196,7 +195,7 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
 }
 
 bool MOSInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
-                                             int64_t BrOffset) const {
+                                         int64_t BrOffset) const {
   switch (BranchOpc) {
   default:
     llvm_unreachable("Bad branch opcode");
@@ -221,10 +220,10 @@ MOSInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
 }
 
 bool MOSInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
-                                     MachineBasicBlock *&TBB,
-                                     MachineBasicBlock *&FBB,
-                                     SmallVectorImpl<MachineOperand> &Cond,
-                                     bool AllowModify) const {
+                                 MachineBasicBlock *&TBB,
+                                 MachineBasicBlock *&FBB,
+                                 SmallVectorImpl<MachineOperand> &Cond,
+                                 bool AllowModify) const {
   auto I = MBB.getFirstTerminator();
 
   // Advance past any comparison terminators.
@@ -278,7 +277,7 @@ bool MOSInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned MOSInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved) const {
+                                    int *BytesRemoved) const {
   // Since analyzeBranch succeeded, we know that the only terminators are
   // comparisons and branches.
 
@@ -297,9 +296,11 @@ unsigned MOSInstrInfo::removeBranch(MachineBasicBlock &MBB,
   return NumRemoved;
 }
 
-unsigned MOSInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                    MachineBasicBlock *TBB,
+                                    MachineBasicBlock *FBB,
+                                    ArrayRef<MachineOperand> Cond,
+                                    const DebugLoc &DL, int *BytesAdded) const {
   // Since analyzeBranch succeeded and any existing branches were removed, the
   // only remaining terminators are comparisons.
 
@@ -339,17 +340,17 @@ unsigned MOSInstrInfo::insertBranch(
 }
 
 void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MI,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                               MachineBasicBlock::iterator MI,
+                               const DebugLoc &DL, MCRegister DestReg,
+                               MCRegister SrcReg, bool KillSrc) const {
   MachineIRBuilder Builder(MBB, MI);
   preserveAroundPseudoExpansion(
       Builder, [&]() { copyPhysRegNoPreserve(Builder, DestReg, SrcReg); });
 }
 
 void MOSInstrInfo::copyPhysRegNoPreserve(MachineIRBuilder &Builder,
-                                             MCRegister DestReg,
-                                             MCRegister SrcReg) const {
+                                         MCRegister DestReg,
+                                         MCRegister SrcReg) const {
   if (DestReg == SrcReg)
     return;
 
@@ -392,10 +393,12 @@ void MOSInstrInfo::copyPhysRegNoPreserve(MachineIRBuilder &Builder,
   }
 }
 
-void MOSInstrInfo::storeRegToStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void MOSInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MI,
+                                       Register SrcReg, bool isKill,
+                                       int FrameIndex,
+                                       const TargetRegisterClass *RC,
+                                       const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -420,10 +423,11 @@ void MOSInstrInfo::storeRegToStackSlot(
       .addMemOperand(MMO);
 }
 
-void MOSInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-    int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MI,
+                                        Register DestReg, int FrameIndex,
+                                        const TargetRegisterClass *RC,
+                                        const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -487,27 +491,8 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
     break;
 
   case MOS::LDimm_preserve:
-    Builder.buildInstr(MOS::LDimm)
-        .add(MI.getOperand(0))
-        .add(MI.getOperand(1));
+    Builder.buildInstr(MOS::LDimm).add(MI.getOperand(0)).add(MI.getOperand(1));
     break;
-
-  case MOS::Push: {
-    Register Src = MI.getOperand(0).getReg();
-    copyPhysRegNoPreserve(Builder, MOS::A, Src);
-    Builder.buildInstr(MOS::PHA);
-    break;
-  }
-  case MOS::Pull: {
-    Register Dest = MI.getOperand(0).getReg();
-    Builder.buildInstr(MOS::PLA);
-    copyPhysRegNoPreserve(Builder, Dest, MOS::A);
-    break;
-  }
-  case MOS::PullPreserve: {
-    Builder.buildInstr(MOS::PLA);
-    break;
-  }
   }
 
   if (Changed) {
@@ -547,12 +532,6 @@ void MOSInstrInfo::expandAddrLostk(MachineIRBuilder &Builder) const {
     Offset = 0;
     break;
   }
-  case MOS::S:
-    Builder.buildInstr(MOS::TSX);
-    LLVM_FALLTHROUGH;
-  case MOS::X:
-    Src = MOS::X;
-    break;
   default:
     assert(MOS::ZP_PTRRegClass.contains(Base));
     Src = TRI.getSubReg(Base, MOS::sublo);
@@ -699,11 +678,6 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
   }
 
   if (MOS::ZP_PTRRegClass.contains(Loc)) {
-    if (Base == MOS::S) {
-      Builder.buildInstr(MOS::TSX);
-      Base = MOS::X;
-    }
-
     Builder.buildInstr(MI.getOpcode())
         .addReg(TRI.getSubReg(Loc, MOS::sublo), getDefRegState(IsLoad))
         .addUse(Base)
@@ -724,7 +698,8 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
           .addTargetIndex(MOS::TI_STATIC_STACK, Offset);
       if (IsLoad)
         copyPhysRegNoPreserve(Builder, Loc, MOS::A);
-    } else if (MOS::ZP_PTRRegClass.contains(Base)) {
+    } else {
+      assert(MOS::ZP_PTRRegClass.contains(Base));
       Builder.buildInstr(MOS::LDimm).addDef(MOS::Y).addImm(Offset);
       if (!IsLoad)
         copyPhysRegNoPreserve(Builder, MOS::A, Loc);
@@ -734,29 +709,6 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
           .addUse(MOS::Y);
       if (IsLoad)
         copyPhysRegNoPreserve(Builder, Loc, MOS::A);
-    } else {
-      Register Tmp;
-      if (IsLoad) {
-        Tmp = Loc;
-        if (!MOS::GPRRegClass.contains(Tmp))
-          Tmp = trivialScavenge(Builder, MOS::GPRRegClass);
-      } else
-        Tmp = MOS::A;
-
-      if (Base == MOS::S) {
-        Builder.buildInstr(MOS::TSX);
-        Base = MOS::X;
-      }
-      assert(Base == MOS::X);
-      if (!IsLoad)
-        copyPhysRegNoPreserve(Builder, Tmp, Loc);
-
-      Builder.buildInstr(IsLoad ? MOS::LDidx : MOS::STidx)
-          .addReg(Tmp, getDefRegState(IsLoad))
-          .addImm(0x100 + Offset)
-          .addReg(Base);
-      if (IsLoad)
-        copyPhysRegNoPreserve(Builder, Loc, Tmp);
     }
   }
 }
@@ -802,9 +754,7 @@ void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
   // Since the 6502 has no instruction for this, use A as the destination
   // instead, then transfer to the real destination.
   if (MI.getOperand(0).getReg() == MI.getOperand(2).getReg()) {
-    Builder.buildInstr(MOS::LDAidx)
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2));
+    Builder.buildInstr(MOS::LDAidx).add(MI.getOperand(1)).add(MI.getOperand(2));
     Builder.buildInstr(MOS::TA_).add(MI.getOperand(0));
     return;
   }
@@ -813,9 +763,7 @@ void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
   default:
     llvm_unreachable("Bad destination for LDidx.");
   case MOS::A:
-    Builder.buildInstr(MOS::LDAidx)
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2));
+    Builder.buildInstr(MOS::LDAidx).add(MI.getOperand(1)).add(MI.getOperand(2));
     break;
   case MOS::X:
     Builder.buildInstr(MOS::LDXidx).add(MI.getOperand(1));
@@ -849,8 +797,8 @@ MOSInstrInfo::getSerializableTargetIndices() const {
 
 ArrayRef<std::pair<unsigned, const char *>>
 MOSInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
-  static const std::pair<unsigned, const char *> Flags[] = {
-      {MOS::MO_LO, "lo"}, {MOS::MO_HI, "hi"}};
+  static const std::pair<unsigned, const char *> Flags[] = {{MOS::MO_LO, "lo"},
+                                                            {MOS::MO_HI, "hi"}};
   return Flags;
 }
 
@@ -948,23 +896,15 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::PHP);
     Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::STabs)
-        .addUse(MOS::A)
-        .addExternalSymbol("_SaveP");
+    Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveP");
     Builder.buildInstr(MOS::PLA);
   }
   if (Save.test(MOS::A))
-    Builder.buildInstr(MOS::STabs)
-        .addUse(MOS::A)
-        .addExternalSymbol("_SaveA");
+    Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
   if (Save.test(MOS::X))
-    Builder.buildInstr(MOS::STabs)
-        .addUse(MOS::X)
-        .addExternalSymbol("_SaveX");
+    Builder.buildInstr(MOS::STabs).addUse(MOS::X).addExternalSymbol("_SaveX");
   if (Save.test(MOS::Y))
-    Builder.buildInstr(MOS::STabs)
-        .addUse(MOS::Y)
-        .addExternalSymbol("_SaveY");
+    Builder.buildInstr(MOS::STabs).addUse(MOS::Y).addExternalSymbol("_SaveY");
   if (Save.test(MOS::RC2)) {
     assert(!Save.test(MOS::RC6));
     Builder.buildInstr(MOS::PHP);
@@ -1022,9 +962,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::T_A).addUse(MOS::X);
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::TSX);
-    Builder.buildInstr(MOS::LDabs)
-        .addDef(MOS::A)
-        .addExternalSymbol("_SaveP");
+    Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveP");
     Builder.buildInstr(MOS::STidx)
         .addUse(MOS::A)
         .addImm(0x103) // Byte pushed by first PHA.
@@ -1037,25 +975,19 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
   }
   if (Save.test(MOS::A)) {
     Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::LDabs)
-        .addDef(MOS::A)
-        .addExternalSymbol("_SaveA");
+    Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");
     Builder.buildInstr(MOS::PLP);
     RecordSaved(MOS::A);
   }
   if (Save.test(MOS::X)) {
     Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::LDabs)
-        .addDef(MOS::X)
-        .addExternalSymbol("_SaveX");
+    Builder.buildInstr(MOS::LDabs).addDef(MOS::X).addExternalSymbol("_SaveX");
     Builder.buildInstr(MOS::PLP);
     RecordSaved(MOS::X);
   }
   if (Save.test(MOS::Y)) {
     Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::LDabs)
-        .addDef(MOS::Y)
-        .addExternalSymbol("_SaveY");
+    Builder.buildInstr(MOS::LDabs).addDef(MOS::Y).addExternalSymbol("_SaveY");
     Builder.buildInstr(MOS::PLP);
     RecordSaved(MOS::Y);
   }

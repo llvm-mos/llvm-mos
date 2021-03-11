@@ -19,9 +19,25 @@ class MOSFrameLowering : public TargetFrameLowering {
 public:
   MOSFrameLowering();
 
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
+
   bool enableShrinkWrapping(const MachineFunction &MF) const override {
     return true;
   }
+
+  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const TargetRegisterInfo *TRI) const override;
+
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
 
   void processFunctionBeforeFrameFinalized(
       MachineFunction &MF, RegScavenger *RS = nullptr) const override;
@@ -35,9 +51,6 @@ public:
   bool hasFP(const MachineFunction &MF) const override;
 
   bool isSupportedStackID(TargetStackID::Value ID) const override;
-
-  // Computes the size of the hard stack.
-  uint64_t hsSize(const MachineFrameInfo &MFI) const;
 
   // Computes the size of the static stack.
   uint64_t staticSize(const MachineFrameInfo &MFI) const;

@@ -34,8 +34,6 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-  unsigned getCSRFirstUseCost() const override;
-
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &) const override;
