@@ -38,6 +38,16 @@
 //   but many platforms do not; their variable argument and regular calling
 //   conventions are identical. A notable exception is Apple ARM64.
 //
+// For insight into the design of performant calling conventions, see the
+// following work by Davidson and Whalley. By their convention, this plaftorm
+// uses the "smarter hybrid" method, since LLVM performs both shrink wrapping
+// and caller save-restore placement optimizations, while using both
+// callee-saved and caller-saved registers when appropriate.
+//
+// Methods for Saving and Restoring Register Values across Function Calls
+// Software--Practice and Experience Vol 21(2), 149-165 (February 1991)
+// http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.14.4669&rep=rep1&type=pdf
+//
 //===----------------------------------------------------------------------===//
 
 let Entry = 1 in {
