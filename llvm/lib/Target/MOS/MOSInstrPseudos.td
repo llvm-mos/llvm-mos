@@ -190,6 +190,17 @@ def LDimm_preserve : Pseudo {
 // register classes are too crude of an instrument to specify that either the
 // source or target must be A. An XY register class fills in the remaining
 // freedom that the _ may be fulfilled with either X or Y.
+//
+// Doing things this way allows the code generator to pretend that the 6502 is
+// much more regular than it really is, right up until AsmPrinter brings the
+// instructions down to their real, bitwise representation. This shields most of
+// LLVM from the rigors of the real, highly irregular 6502 instruction set. For
+// example, it brings the number of implicit physical registers down to the
+// level typical of a LLVM backend. Codegen passes can handle implicit physical
+// registers every once in a while, but they have a hard time dealing with every
+// single instruction using them for nearly every operand. Most of the issues are
+// probably just oversights, but there's a lot to be gained by tightly limiting
+// "weirdness" as much as possible.
 
 def ADCimm : Pseudo, PseudoInstExpansion<(ADC_Immediate imm8:$r)> {
   dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
