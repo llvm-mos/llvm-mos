@@ -75,13 +75,13 @@ char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
 	clc
 	lda	#254
-	adc	_RC1
-	sta	_RC1
+	adc	__rc1
+	sta	__rc1
 	ldx	#0
-	lda	_RC0
-	sta	_RC2
-	lda	_RC1
-	sta	_RC3
+	lda	__rc0
+	sta	__rc2
+	lda	__rc1
+	sta	__rc3
 	lda	#0
 	ldy	#2
 	jsr	memset
@@ -93,27 +93,27 @@ LBB0_1:                                 ; %while.body
 LBB0_2:                                 ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
 	asl
-	sta	_RC2
+	sta	__rc2
 	lda	#0
 	rol
-	sta	_RC3
-	lda	_RC0
-	ldx	_RC1
+	sta	__rc3
+	lda	__rc0
+	ldx	__rc1
 	clc
-	adc	_RC2
+	adc	__rc2
 	tay
 	txa
-	adc	_RC3
-	sty	_RC2
-	sta	_RC3
+	adc	__rc3
+	sty	__rc2
+	sta	__rc3
 	ldy	#0
-	lda	(_RC2),llvm_mos_y
-	sta	_RC6
+	lda	(__rc2),llvm_mos_y
+	sta	__rc6
 	ldy	#1
-	lda	(_RC2),llvm_mos_y
+	lda	(__rc2),llvm_mos_y
 	tax
 	clc
-	lda	_RC6
+	lda	__rc6
 	adc	#1
 	tay
 	txa
@@ -121,21 +121,21 @@ LBB0_2:                                 ; %while.body
 	tax
 	tya
 	ldy	#0
-	sta	(_RC2),llvm_mos_y
+	sta	(__rc2),llvm_mos_y
 	txa
 	ldy	#1
-	sta	(_RC2),llvm_mos_y
+	sta	(__rc2),llvm_mos_y
 	jmp	LBB0_1
 LBB0_3:                                 ; %while.end
-	lda	_RC0
-	sta	_RC2
-	lda	_RC1
-	sta	_RC3
+	lda	__rc0
+	sta	__rc2
+	lda	__rc1
+	sta	__rc3
 	jsr	report_counts
 	clc
 	lda	#2
-	adc	_RC1
-	sta	_RC1
+	adc	__rc1
+	sta	__rc1
 	rts
 .Lfunc_end0:
 	.size	char_stats, .Lfunc_end0-char_stats

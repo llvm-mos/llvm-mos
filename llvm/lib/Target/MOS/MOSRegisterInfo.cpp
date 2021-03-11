@@ -44,8 +44,10 @@ MOSRegisterInfo::MOSRegisterInfo()
       R = getSubReg(R, MOS::sublo);
     if (!MOS::ZPRegClass.contains(R))
       continue;
-    ZPSymbolNames[Reg] = "_";
-    ZPSymbolNames[Reg] += getName(R);
+    std::string& Str = ZPSymbolNames[Reg];
+    Str = "__";
+    Str += getName(R);
+    std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
   }
 
   // One for the stack pointer, one for the frame pointer, and one to ensure
