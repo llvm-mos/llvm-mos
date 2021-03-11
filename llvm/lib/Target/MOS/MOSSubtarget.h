@@ -78,6 +78,9 @@ public:
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
 private:
+  /// The ELF e_flags architecture.
+  unsigned ELFArch;
+
   MOSInstrInfo InstrInfo;
   MOSRegisterInfo RegInfo;
   MOSFrameLowering FrameLowering;
@@ -104,9 +107,6 @@ private:
   bool m_HasSWEET16Insns;
 
   bool m_LongRegisterNames;
-
-  /// The ELF e_flags architecture.
-  unsigned ELFArch;
 
   // Dummy member, used by FeatureSet's. We cannot have a SubtargetFeature with
   // no variable, so we instead bind pseudo features to this variable.
