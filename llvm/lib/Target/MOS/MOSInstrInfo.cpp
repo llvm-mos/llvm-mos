@@ -682,9 +682,10 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
     Register Tmp = trivialScavenge(Builder, MOS::ZP_PTRRegClass);
 
     // Guarantee that Tmp is different than Loc, even if it requires
-    // save/restore.
+    // save/restore. RS3 is used in lieu of RS1, since RS2 is callee-saved, and
+    // this is called after PEI (when those registers are handled).
     if (TRI.isSubRegisterEq(Loc, Tmp)) {
-      Tmp = Tmp == MOS::RS0 ? MOS::RS1 : MOS::RS0;
+      Tmp = Tmp == MOS::RS1 ? MOS::RS3 : MOS::RS0;
     }
 
     // Move the high byte of the offset into the base address.
@@ -931,6 +932,16 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
   // and flags are in the same state as before the sequence, except those that
   // were saved, which have their value at time of save. The only memory
   // locations affected by either are _Save<Reg>.
+
+  // Only RS1 (RC2 and RC3) and RS3 (RC6 and RC7) are allowed to be used, being
+  // the first two non-SP caller-saved registers.
+
+  // FIXME: This won't work if there's only only 3 zero-page pointers, which is
+  // currently allowed. A pseudo expansion may not be able to use RS1 and try to
+  // use RS3, which the compiler cannot safely save/restore (it may be used by
+  // an OS interrupt handler). All of this code smells awful though, so consider
+  // finding a way to remove this whole system instead of fixing this specific
+  // issue.
 
   Builder.setInsertPt(MBB, Begin);
   if (Save.test(MOS::N) || Save.test(MOS::Z) || Save.test(MOS::C)) {
