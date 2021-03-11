@@ -5,9 +5,9 @@ define i16 @main() {
   ret i16 0
 }
 
-; CHECK:      .code
-; CHECK:      .global main
+; CHECK:      .text
+; CHECK:      .globl main
 ; CHECK:      main:
-; CHECK:        LDA #0
-; CHECK-NEXT:   LDX #0
-; CHECK-NEXT:   RTS
+; CHECK:        lda #0
+; CHECK-NEXT:   ldx #0
+; CHECK-NEXT:   rts
