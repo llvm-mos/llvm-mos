@@ -36,34 +36,35 @@ attributes #1 = { nounwind }
 !2 = !{i32 70}
 
 //--- want.s
-.code
-.global	print__int                      ; -- Begin function print_int
-print__int:                             ; @print_int
+	.text
+	.file	"print_int.ll"
+	.globl	print_int                       ; -- Begin function print_int
+	.type	print_int,@function
+print_int:                              ; @print_int
 ; %bb.0:                                ; %entry
-	CMP	#10
-	BMI	LBB0__2
-LBB0__1:                                ; %if.end.preheader
-	PHA
-	LDX	#10
-	JSR	____udivqi3
-	JSR	print__int
-	TSX
-	LDA	257,X
-	LDX	#10
-	JSR	____umodqi3
-	STA	__SaveA
-	PLA
-	PHP
-	LDA	__SaveA
-	PLP
-LBB0__2:                                ; %if.then
-	CLC
-	ADC	#48
+	cmp	#10
+	bmi	LBB0_2
+LBB0_1:                                 ; %if.end.preheader
+	pha
+	ldx	#10
+	jsr	__udivqi3
+	jsr	print_int
+	tsx
+	lda	257,llvm_mos_x
+	ldx	#10
+	jsr	__umodqi3
+	sta	_SaveA
+	pla
+	php
+	lda	_SaveA
+	plp
+LBB0_2:                                 ; %if.then
+	clc
+	adc	#48
 	;APP
-	JSR	$FFD2
+	jsr	65490
 	;NO_APP
-	RTS
+	rts
+.Lfunc_end0:
+	.size	print_int, .Lfunc_end0-print_int
                                         ; -- End function
-.global	____udivqi3
-.global	____umodqi3
-.global	__SaveA
