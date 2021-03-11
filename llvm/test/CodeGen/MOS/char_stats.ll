@@ -67,68 +67,76 @@ attributes #4 = { nounwind }
 !7 = !{!"llvm.loop.mustprogress"}
 
 //--- want.s
-.code
-.global	char__stats                     ; -- Begin function char_stats
-char__stats:                            ; @char_stats
+	.text
+	.file	"char_stats.ll"
+	.globl	char_stats                      ; -- Begin function char_stats
+	.type	char_stats,@function
+char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
-	CLC
-	LDA	#254
-	ADC	z:__SPhi
-	STA	z:__SPhi
-	LDX	#0
-	LDA	z:__SPlo
-	STA	z:__ZP__0
-	LDA	z:__SPhi
-	STA	z:__ZP__1
-	LDA	#0
-	LDY	#2
-	JSR	memset
-LBB0__1:                                ; %while.body
+	clc
+	lda	#254
+	adc	_RC1
+	sta	_RC1
+	ldx	#0
+	lda	_RC0
+	sta	_RC2
+	lda	_RC1
+	sta	_RC3
+	lda	#0
+	ldy	#2
+	jsr	memset
+LBB0_1:                                 ; %while.body
                                         ; =>This Inner Loop Header: Depth=1
-	JSR	next__char
-	CMP	#0
-	BEQ	LBB0__3
-LBB0__2:                                ; %while.body
+	jsr	next_char
+	cmp	#0
+	beq	LBB0_3
+LBB0_2:                                 ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
-	ASL	A
-	STA	z:__ZP__0
-	LDA	#0
-	ROL	A
-	STA	z:__ZP__1
-	LDA	z:__SPlo
-	LDX	z:__SPhi
-	CLC
-	ADC	z:__ZP__0
-	STA	z:__ZP__0
-	TXA
-	ADC	z:__ZP__1
-	STA	z:__ZP__1
-	LDY	#0
-	LDA	(__ZP__0),Y
-	CLC
-	ADC	#1
-	STA	(__ZP__0),Y
-	LDY	#1
-	LDA	(__ZP__0),Y
-	ADC	#0
-	STA	(__ZP__0),Y
-	JMP	LBB0__1
-LBB0__3:                                ; %while.end
-	LDA	z:__SPlo
-	STA	z:__ZP__0
-	LDA	z:__SPhi
-	STA	z:__ZP__1
-	JSR	report__counts
-	CLC
-	LDA	#2
-	ADC	z:__SPhi
-	STA	z:__SPhi
-	RTS
+	asl
+	sta	_RC2
+	lda	#0
+	rol
+	sta	_RC3
+	lda	_RC0
+	ldx	_RC1
+	clc
+	adc	_RC2
+	tay
+	txa
+	adc	_RC3
+	sty	_RC2
+	sta	_RC3
+	ldy	#0
+	lda	(_RC2),llvm_mos_y
+	sta	_RC6
+	ldy	#1
+	lda	(_RC2),llvm_mos_y
+	tax
+	clc
+	lda	_RC6
+	adc	#1
+	tay
+	txa
+	adc	#0
+	tax
+	tya
+	ldy	#0
+	sta	(_RC2),llvm_mos_y
+	txa
+	ldy	#1
+	sta	(_RC2),llvm_mos_y
+	jmp	LBB0_1
+LBB0_3:                                 ; %while.end
+	lda	_RC0
+	sta	_RC2
+	lda	_RC1
+	sta	_RC3
+	jsr	report_counts
+	clc
+	lda	#2
+	adc	_RC1
+	sta	_RC1
+	rts
+.Lfunc_end0:
+	.size	char_stats, .Lfunc_end0-char_stats
                                         ; -- End function
-.global	__SPhi
-.global	__SPlo
-.global	__ZP__0
-.global	__ZP__1
-.global	memset
-.global	next__char
-.global	report__counts

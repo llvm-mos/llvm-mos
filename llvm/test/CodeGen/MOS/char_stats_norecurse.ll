@@ -70,62 +70,71 @@ attributes #5 = { nocallback nounwind optsize }
 !7 = !{!"llvm.loop.mustprogress"}
 
 //--- want.s
-.code
-.global	char__stats                     ; -- Begin function char_stats
-char__stats:                            ; @char_stats
+	.text
+	.file	"char_stats_norecurse.ll"
+	.globl	char_stats                      ; -- Begin function char_stats
+	.type	char_stats,@function
+char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
-	LDX	#0
-	LDA	#<char__stats__sstk
-	STA	z:__ZP__0
-	LDA	#>char__stats__sstk
-	STA	z:__ZP__1
-	LDA	#0
-	LDY	#2
-	JSR	memset
-LBB0__1:                                ; %while.body
+	ldx	#0
+	lda	#mos16lo(char_stats_sstk)
+	sta	_RC2
+	lda	#mos16hi(char_stats_sstk)
+	sta	_RC3
+	lda	#0
+	ldy	#2
+	jsr	memset
+LBB0_1:                                 ; %while.body
                                         ; =>This Inner Loop Header: Depth=1
-	JSR	next__char
-	CMP	#0
-	BEQ	LBB0__3
-LBB0__2:                                ; %while.body
+	jsr	next_char
+	cmp	#0
+	beq	LBB0_3
+LBB0_2:                                 ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
-	ASL	A
-	STA	z:__ZP__0
-	LDA	#0
-	ROL	A
-	STA	z:__ZP__1
-	LDA	#<char__stats__sstk
-	LDX	#>char__stats__sstk
-	CLC
-	ADC	z:__ZP__0
-	STA	z:__ZP__0
-	TXA
-	ADC	z:__ZP__1
-	STA	z:__ZP__1
-	LDY	#0
-	LDA	(__ZP__0),Y
-	CLC
-	ADC	#1
-	STA	(__ZP__0),Y
-	LDY	#1
-	LDA	(__ZP__0),Y
-	ADC	#0
-	STA	(__ZP__0),Y
-	JMP	LBB0__1
-LBB0__3:                                ; %while.end
-	LDA	#<char__stats__sstk
-	STA	z:__ZP__0
-	LDA	#>char__stats__sstk
-	STA	z:__ZP__1
-	JSR	report__counts
-	RTS
+	asl
+	sta	_RC2
+	lda	#0
+	rol
+	sta	_RC3
+	lda	#mos16lo(char_stats_sstk)
+	ldx	#mos16hi(char_stats_sstk)
+	clc
+	adc	_RC2
+	tay
+	txa
+	adc	_RC3
+	sty	_RC2
+	sta	_RC3
+	ldy	#0
+	lda	(_RC2),llvm_mos_y
+	sta	_RC6
+	ldy	#1
+	lda	(_RC2),llvm_mos_y
+	tax
+	clc
+	lda	_RC6
+	adc	#1
+	tay
+	txa
+	adc	#0
+	tax
+	tya
+	ldy	#0
+	sta	(_RC2),llvm_mos_y
+	txa
+	ldy	#1
+	sta	(_RC2),llvm_mos_y
+	jmp	LBB0_1
+LBB0_3:                                 ; %while.end
+	lda	#mos16lo(char_stats_sstk)
+	sta	_RC2
+	lda	#mos16hi(char_stats_sstk)
+	sta	_RC3
+	jsr	report_counts
+	rts
+.Lfunc_end0:
+	.size	char_stats, .Lfunc_end0-char_stats
                                         ; -- End function
-.bss
-char__stats__sstk:                      ; @char_stats_sstk
-	.res	512
-
-.global	__ZP__0
-.global	__ZP__1
-.global	memset
-.global	next__char
-.global	report__counts
+	.type	char_stats_sstk,@object         ; @char_stats_sstk
+	.local	char_stats_sstk
+	.comm	char_stats_sstk,512,1
