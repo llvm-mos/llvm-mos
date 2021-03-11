@@ -63,40 +63,16 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     default:
       llvm_unreachable("Unexpected register.");
     case MOS::C:
-      switch (MI->getOperand(2).getImm()) {
-      default:
-        llvm_unreachable("Unexpected value.");
-      case 0:
-        OutMI.setOpcode(MOS::BCC_Relative);
-        break;
-      case 1:
-        OutMI.setOpcode(MOS::BCS_Relative);
-        break;
-      }
+      OutMI.setOpcode(MI->getOperand(2).getImm() ? MOS::BCS_Relative
+                                                 : MOS::BCC_Relative);
       break;
     case MOS::N:
-      switch (MI->getOperand(2).getImm()) {
-      default:
-        llvm_unreachable("Unexpected value.");
-      case 0:
-        OutMI.setOpcode(MOS::BPL_Relative);
-        break;
-      case 1:
-        OutMI.setOpcode(MOS::BMI_Relative);
-        break;
-      }
+      OutMI.setOpcode(MI->getOperand(2).getImm() ? MOS::BMI_Relative
+                                                 : MOS::BPL_Relative);
       break;
     case MOS::Z:
-      switch (MI->getOperand(2).getImm()) {
-      default:
-        llvm_unreachable("Unexpected value.");
-      case 0:
-        OutMI.setOpcode(MOS::BNE_Relative);
-        break;
-      case 1:
-        OutMI.setOpcode(MOS::BEQ_Relative);
-        break;
-      }
+      OutMI.setOpcode(MI->getOperand(2).getImm() ? MOS::BEQ_Relative
+                                                 : MOS::BNE_Relative);
       break;
     }
     MCOperand Val;
