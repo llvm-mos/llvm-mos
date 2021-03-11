@@ -42,27 +42,33 @@ attributes #1 = { nounwind }
 !6 = !{!"llvm.loop.mustprogress"}
 
 //--- want.s
-.code
-.global	main                            ; -- Begin function main
+	.text
+	.file	"hello_world.ll"
+	.globl	main                            ; -- Begin function main
+	.type	main,@function
 main:                                   ; @main
 ; %bb.0:                                ; %entry
-	LDX	#0
-	LDA	#72
-LBB0__1:                                ; %while.body
+	ldx	#0
+	lda	#72
+LBB0_1:                                 ; %while.body
                                         ; =>This Inner Loop Header: Depth=1
 	;APP
-	JSR	$FFD2
+	jsr	65490
 	;NO_APP
-	LDA	_2Estr+1,X
-	INX
-	CPX	#14
-	BNE	LBB0__1
-LBB0__2:                                ; %while.end
-	LDA	#0
-	LDX	#0
-	RTS
+	lda	.str+1,llvm_mos_x
+	inx
+	cpx	#14
+	bne	LBB0_1
+LBB0_2:                                 ; %while.end
+	lda	#0
+	ldx	#0
+	rts
+.Lfunc_end0:
+	.size	main, .Lfunc_end0-main
                                         ; -- End function
-.rodata
-_2Estr:                                 ; @.str
-	.byt	72,69,76,76,79,44,32,87,79,82,76,68,33,10,0
+	.type	.str,@object                    ; @.str
+	.section	.rodata.str1.1,"aMS",@progbits,1
+.str:
+	.asciz	"HELLO, WORLD!\n"
+	.size	.str, 15
 
