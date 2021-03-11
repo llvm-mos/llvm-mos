@@ -42,7 +42,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       }
       MCOperand Addr;
-      assert(lowerOperand(MI->getOperand(0), Addr));
+      if (!lowerOperand(MI->getOperand(0), Addr))
+        llvm_unreachable("Failed to lower operand");
       OutMI.addOperand(Addr);
       return;
     }
@@ -76,7 +77,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       break;
     }
     MCOperand Val;
-    assert(lowerOperand(MI->getOperand(0), Val));
+    if (!lowerOperand(MI->getOperand(0), Val))
+      llvm_unreachable("Failed to lower operand");
     OutMI.addOperand(Val);
     return;
   }
@@ -147,7 +149,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       break;
     }
     MCOperand Val;
-    assert(lowerOperand(MI->getOperand(1), Val));
+    if (!lowerOperand(MI->getOperand(1), Val))
+      llvm_unreachable("Failed to lower operand");
     OutMI.addOperand(Val);
     return;
   }
@@ -163,7 +166,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       break;
     }
     MCOperand Val;
-    assert(lowerOperand(MI->getOperand(0), Val));
+    if (!lowerOperand(MI->getOperand(0), Val))
+      llvm_unreachable("Failed to lower operand");
     OutMI.addOperand(Val);
     return;
   }
@@ -226,7 +230,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       break;
     }
     MCOperand Val;
-    assert(lowerOperand(MI->getOperand(1), Val));
+    if (!lowerOperand(MI->getOperand(1), Val))
+      llvm_unreachable("Failed to lower operand");
     OutMI.addOperand(Val);
     return;
   }
@@ -245,7 +250,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       break;
     }
     MCOperand Val;
-    assert(lowerOperand(MI->getOperand(0), Val));
+    if (!lowerOperand(MI->getOperand(0), Val))
+      llvm_unreachable("Failed to lower operand");
     OutMI.addOperand(Val);
     return;
   }
