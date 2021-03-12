@@ -77,10 +77,18 @@ char_stats:                             ; @char_stats
 	lda	#254
 	adc	__rc1
 	sta	__rc1
+	lda	__rc4
+	pha
+	lda	__rc5
+	pha
 	ldx	#0
 	lda	__rc0
-	sta	__rc2
+	sta	__rc4
 	lda	__rc1
+	sta	__rc5
+	lda	__rc4
+	sta	__rc2
+	lda	__rc5
 	sta	__rc3
 	lda	#0
 	ldy	#2
@@ -127,11 +135,15 @@ LBB0_2:                                 ; %while.body
 	sta	(__rc2),llvm_mos_y
 	jmp	LBB0_1
 LBB0_3:                                 ; %while.end
-	lda	__rc0
+	lda	__rc4
 	sta	__rc2
-	lda	__rc1
+	lda	__rc5
 	sta	__rc3
 	jsr	report_counts
+	pla
+	sta	__rc5
+	pla
+	sta	__rc4
 	clc
 	lda	#2
 	adc	__rc1

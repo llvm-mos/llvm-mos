@@ -262,59 +262,30 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
 
   Register Dst = MI.getOperand(0).getReg();
 
-  const auto AllUsesAreSubregs = [&]() {
-    std::set<Register> WorkList = {Dst};
-    std::vector<MachineOperand *> Uses;
-    while (!WorkList.empty()) {
-      Register Reg = *WorkList.begin();
-      WorkList.erase(Reg);
-      for (MachineOperand &MO : Builder.getMRI()->use_nodbg_operands(Reg)) {
-        if (MO.getSubReg())
-          continue;
-        if (MO.getParent()->isCopy())
-          WorkList.insert(MO.getParent()->getOperand(0).getReg());
-        else
-          return false;
-      }
-    }
-    return true;
-  };
-
   // Split the address into high and low halves to allow them to potentially be
   // allocated to GPR, maybe even to the same GPR at different times.
-  if (AllUsesAreSubregs()) {
-    LLT s8 = LLT::scalar(8);
-    Register Lo = MRI.createGenericVirtualRegister(s8);
-    Register Hi = MRI.createGenericVirtualRegister(s8);
-    Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
+  LLT s8 = LLT::scalar(8);
+  Register Lo = MRI.createGenericVirtualRegister(s8);
+  Register Hi = MRI.createGenericVirtualRegister(s8);
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
 
-    auto LoAddr = Builder.buildInstr(MOS::AddrLostk)
-                      .addDef(Lo)
-                      .addDef(Carry)
-                      .add(MI.getOperand(1))
-                      .addImm(0);
-    if (!constrainSelectedInstRegOperands(*LoAddr, TII, TRI, RBI))
-      return false;
-
-    auto HiAddr = Builder.buildInstr(MOS::AddrHistk)
-                      .addDef(Hi)
-                      .add(MI.getOperand(1))
-                      .addImm(0)
-                      .addUse(Carry);
-    if (!constrainSelectedInstRegOperands(*HiAddr, TII, TRI, RBI))
-      return false;
-
-    composePtr(Builder, Dst, Lo, Hi);
-  } else {
-    // At least one use is in a ZP_PTR, so don't break up the address. This
-    // makes the operation easier to analyze and rematerialize.
-    auto Addr = Builder.buildInstr(MOS::Addrstk)
-                    .addDef(Dst)
+  auto LoAddr = Builder.buildInstr(MOS::AddrLostk)
+                    .addDef(Lo)
+                    .addDef(Carry)
                     .add(MI.getOperand(1))
                     .addImm(0);
-    if (!constrainSelectedInstRegOperands(*Addr, TII, TRI, RBI))
-      return false;
-  }
+  if (!constrainSelectedInstRegOperands(*LoAddr, TII, TRI, RBI))
+    return false;
+
+  auto HiAddr = Builder.buildInstr(MOS::AddrHistk)
+                    .addDef(Hi)
+                    .add(MI.getOperand(1))
+                    .addImm(0)
+                    .addUse(Carry);
+  if (!constrainSelectedInstRegOperands(*HiAddr, TII, TRI, RBI))
+    return false;
+
+  composePtr(Builder, Dst, Lo, Hi);
   MI.eraseFromParent();
   return true;
 }

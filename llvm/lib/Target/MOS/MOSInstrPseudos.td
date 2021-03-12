@@ -82,18 +82,6 @@ def AddrHistk : Pseudo {
   let isReMaterializable = true;
 }
 
-// Produces the address of the given frame index. Doesn't allow instructions
-// to be inserted between calculation of the low and high byte, but in exchange,
-// the instruction can be moved around and rematerialized as a whole.
-def Addrstk : Pseudo {
-  dag InOperandList = (ins Stack:$base, i16imm:$offset);
-  dag OutOperandList = (outs ZP_PTR:$dst);
-
-  let Defs = [NZ];
-
-  let isReMaterializable = true;
-}
-
 // Soft stack
 
 // Add $bytes bytes to SP, saving the result back in SP. A negative argument

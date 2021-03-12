@@ -76,10 +76,18 @@ attributes #5 = { nocallback nounwind optsize }
 	.type	char_stats,@function
 char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
+	lda	__rc4
+	sta	char_stats_sstk+512
+	lda	__rc5
+	sta	char_stats_sstk+513
 	ldx	#0
 	lda	#mos16lo(char_stats_sstk)
-	sta	__rc2
+	sta	__rc4
 	lda	#mos16hi(char_stats_sstk)
+	sta	__rc5
+	lda	__rc4
+	sta	__rc2
+	lda	__rc5
 	sta	__rc3
 	lda	#0
 	ldy	#2
@@ -126,15 +134,19 @@ LBB0_2:                                 ; %while.body
 	sta	(__rc2),llvm_mos_y
 	jmp	LBB0_1
 LBB0_3:                                 ; %while.end
-	lda	#mos16lo(char_stats_sstk)
+	lda	__rc4
 	sta	__rc2
-	lda	#mos16hi(char_stats_sstk)
+	lda	__rc5
 	sta	__rc3
 	jsr	report_counts
+	lda	char_stats_sstk+513
+	sta	__rc5
+	lda	char_stats_sstk+512
+	sta	__rc4
 	rts
 .Lfunc_end0:
 	.size	char_stats, .Lfunc_end0-char_stats
                                         ; -- End function
 	.type	char_stats_sstk,@object         ; @char_stats_sstk
 	.local	char_stats_sstk
-	.comm	char_stats_sstk,512,1
+	.comm	char_stats_sstk,514,1

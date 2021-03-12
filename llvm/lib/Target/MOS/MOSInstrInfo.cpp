@@ -476,9 +476,6 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
   case MOS::AddrHistk:
     expandAddrHistk(Builder);
     break;
-  case MOS::Addrstk:
-    expandAddrstk(Builder);
-    break;
   case MOS::IncSP:
     expandIncSP(Builder);
     break;
@@ -613,26 +610,6 @@ void MOSInstrInfo::expandAddrHistk(MachineIRBuilder &Builder) const {
   copyPhysRegNoPreserve(Builder, Dst, MOS::A);
 }
 
-void MOSInstrInfo::expandAddrstk(MachineIRBuilder &Builder) const {
-  auto &MI = *Builder.getInsertPt();
-  assert(MI.getOpcode() == MOS::Addrstk);
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
-  Register Dst = MI.getOperand(0).getReg();
-  Register Base = MI.getOperand(1).getReg();
-  const MachineOperand &Offset = MI.getOperand(2);
-  Builder.buildInstr(MOS::AddrLostk)
-      .addDef(TRI.getSubReg(Dst, MOS::sublo))
-      .addDef(MOS::C)
-      .addUse(Base)
-      .add(Offset);
-  Builder.buildInstr(MOS::AddrHistk)
-      .addDef(TRI.getSubReg(Dst, MOS::subhi))
-      .addUse(Base)
-      .add(Offset)
-      .addUse(MOS::C);
-}
-
 void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
   const TargetRegisterInfo &TRI =
@@ -668,10 +645,12 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
     }
 
     // Move the high byte of the offset into the base address.
-    Builder.buildInstr(MOS::Addrstk)
-        .addDef(Tmp)
-        .addUse(Base)
-        .addImm(Offset & 0xFF00);
+    Builder.buildInstr(MOS::AddrLostk,
+                       {Register(TRI.getSubReg(Tmp, MOS::sublo)), MOS::C},
+                       {Base, Offset & 0xFF00});
+    Builder.buildInstr(MOS::AddrHistk,
+                       {Register(TRI.getSubReg(Tmp, MOS::subhi))},
+                       {Base, Offset & 0xFF00, Register(MOS::C)});
 
     Base = Tmp;
     Offset &= 0xFF;

@@ -57,22 +57,6 @@ body: |
 # CHECK-NEXT: $rc2 = STzpr $a
 ...
 ---
-name: addr
-# CHECK-LABEL: name: addr
-body: |
-  bb.0.entry:
-    $rs1 = Addrstk $rs0, 1234, implicit-def $c, implicit-def $nz
-    RTS_Implied
-# CHECK:      $a = LDzpr $rc0
-# CHECK-NEXT: $c = LDCimm 0
-# CHECK-NEXT: $a, $c = ADCimm $a, 210, $c
-# CHECK-NEXT: $rc2 = STzpr $a
-# CHECK-NEXT: $a = LDzpr $rc1
-# CHECK-NEXT: $a, dead $c = ADCimm $a, 4, $c
-# CHECK-NEXT: $rc3 = STzpr $a
-# CHECK-NEXT: RTS_Implied
-...
----
 name: ldss
 # CHECK-LABEL: name: ldss
 body: |
