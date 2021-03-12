@@ -51,6 +51,7 @@ add_llvm_target(MOSCodeGen
   AsmPrinter
   CodeGen
   Core
+  GlobalISel
   MC
   IPO
   Passes
