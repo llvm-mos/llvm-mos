@@ -90,16 +90,18 @@ def Static : MOSReg<10, "Static">;
 // register allocation.  This puts llvm in the position of managing a large
 // chunk of zero page memory.
 
-// Define the size and DWARF numbering for these imaginary registers.  These
-// constants were chosen so that the number of imaginary registers could be
-// changed at one central location, and the changes will propagate through
+// These constants were chosen so that the number of imaginary registers could 
+// be changed at one central location, and the changes will propagate through
 // the backend.
 
-// The number of imaginary character registers. The whole zero page is filled
-// with imaginary registers, but the code generator can be configured to only
-// use a fraction of them. The first 16-bit imaginary register is reserved as
-// the soft stack pointer. The second 16-bit imaginary register is reserved as a
-// frame pointer whenever necessary, on a function-by-function basis.
+// There are enough imaginary registers to cover all of zero page, but the code
+// generator can be configured to only use a fraction of them, with the 
+// --num-imag-regs flag.
+
+// The first 16-bit imaginary register is reserved as the soft stack pointer.
+// The second 16-bit imaginary register is reserved as a frame pointer whenever
+// necessary, on a function-by-function basis.
+
 defvar MaxImag8Regs = 256;
 // The starting DWARF number for the imaginary registers.
 defvar Imag8RegsOffset = 0x10;
