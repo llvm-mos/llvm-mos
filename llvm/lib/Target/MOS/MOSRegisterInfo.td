@@ -157,6 +157,10 @@ def Ac : MOSReg8Class<(add A)>;
 def Yc : MOSReg8Class<(add Y)>;
 def XY : MOSReg8Class<(add X, Y)>;
 
+// MOS assembly mnemonics may only have the following registers as parameters
+// following the comma in a mnemonic, e.g. lda hello, x
+def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
+
 def Cc : MOSReg1Class<(add C)>;
 
 def ZP :

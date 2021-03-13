@@ -172,13 +172,13 @@ def ZeroPage : AddressingMode
 
 def ZeroPageX : AddressingMode
 {
-  let OperandsStr = "$param , llvm_mos_x";
+  let OperandsStr = "$param , x";
   let InOperandList = (ins addr8:$param);
 }
 
 def ZeroPageY : AddressingMode
 {
-  let OperandsStr = "$param , llvm_mos_y";
+  let OperandsStr = "$param , y";
   let InOperandList = (ins addr8:$param);
 }
 
@@ -196,13 +196,13 @@ def Absolute : AddressingMode
 
 def AbsoluteX : AddressingMode
 {
-  let OperandsStr = "$param , llvm_mos_x";
+  let OperandsStr = "$param , x";
   let InOperandList = (ins addr16:$param);
 }
 
 def AbsoluteY : AddressingMode
 {
-  let OperandsStr = "$param , llvm_mos_y";
+  let OperandsStr = "$param , y";
   let InOperandList = (ins addr16:$param);
 }
 
@@ -214,13 +214,13 @@ def Indirect : AddressingMode
 
 def IndexedIndirect : AddressingMode
 {
-  let OperandsStr = "( $param , llvm_mos_x )";
+  let OperandsStr = "( $param , x )";
   let InOperandList = (ins addr8:$param);
 }
 
 def IndirectIndexed : AddressingMode
 {
-  let OperandsStr = "( $param ) , llvm_mos_y";
+  let OperandsStr = "( $param ) , y";
   let InOperandList = (ins addr8:$param);
 }
 

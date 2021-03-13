@@ -488,23 +488,28 @@ public:
     if (RegNo == 0) {
       // If the user has requested to ignore short register names, then ignore
       // them
-      if (getSTI().getFeatureBits()[MOS::FeatureAltRegisterNamesOnly] == false) {
+      if (getSTI().getFeatureBits()[MOS::FeatureAltRegisterNamesOnly] ==
+          false) {
         RegNo = MatchRegisterAltName(RegisterName);
       }
     }
     return (RegNo != 0) ? MatchOperand_Success : MatchOperand_NoMatch;
   }
 
-  bool tryParseRegister(OperandVector &Operands) {
+  OperandMatchResultTy tryParseRegister(OperandVector &Operands) {
     unsigned RegNo = 0;
     SMLoc S = getLexer().getLoc();
     SMLoc E = getLexer().getTok().getEndLoc();
     if (tryParseRegister(RegNo, S, E) == MatchOperand_Success) {
       Operands.push_back(MOSOperand::createReg(RegNo, S, E));
-      return false;
+      return MatchOperand_Success;
     }
-    return true;
+    return MatchOperand_NoMatch;
   }
+
+  // This depends on some stuff in MOSGenAsmMatcher.inc, so we can't define it
+  // inline like everything else in this file.  See below.
+  OperandMatchResultTy tryParseAsmParamRegClass(OperandVector &Operands);
 
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Mnemonic,
                         SMLoc NameLoc, OperandVector &Operands) override {
@@ -562,7 +567,7 @@ public:
       TokName = getLexer().getTok().getString();
       TokLoc = getLexer().getTok().getLoc();
 
-      // We'll only ever see this on rol a or asl a commands, so handle it 
+      // We'll only ever see this on rol a or asl a commands, so handle it
       // as a special case
       if (FirstTime && (TokName == "a" || TokName == "A")) {
         eatThatToken(Operands);
@@ -571,7 +576,7 @@ public:
       }
 
       // We'll only ever see a register name on the third or later parameter.
-      if (!FirstTime && !tryParseRegister(Operands)) {
+      if (tryParseAsmParamRegClass(Operands) == MatchOperand_Success) {
         Parser.Lex();
         continue;
       }
@@ -600,7 +605,29 @@ public:
 #define GET_MATCHER_IMPLEMENTATION
 #include "MOSGenAsmMatcher.inc"
 
-extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSAsmParser() { // NOLINT
+// Parse only registers that can be considered parameters to real MOS
+// instructions.  The instruction parser considers x, y, and s to be 
+// strings, not registers, so make a point of filtering those cases out
+// of what's acceptable.
+OperandMatchResultTy
+MOSAsmParser::tryParseAsmParamRegClass(OperandVector &Operands) {
+  unsigned RegNo = 0;
+  SMLoc S = getLexer().getLoc();
+  SMLoc E = getLexer().getTok().getEndLoc();
+  if (tryParseRegister(RegNo, S, E) == MatchOperand_Success) {
+    auto AsmParamReg = MOSOperand::createReg(RegNo, S, E);
+    // If it's x, y, or s, then drop it
+    if (validateOperandClass(*AsmParamReg, MCK_MOSAsmParamRegClass) ==
+        MCTargetAsmParser::Match_Success)
+      return MatchOperand_NoMatch;
+    Operands.push_back(MOSOperand::createReg(RegNo, S, E));
+    return MatchOperand_Success;
+  }
+  return MatchOperand_NoMatch;
+}
+
+extern "C" void LLVM_EXTERNAL_VISIBILITY
+LLVMInitializeMOSAsmParser() { // NOLINT
   RegisterMCAsmParser<MOSAsmParser> X(getTheMOSTarget());
 }
 

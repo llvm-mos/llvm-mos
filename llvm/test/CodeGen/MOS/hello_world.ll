@@ -55,7 +55,7 @@ LBB0_1:                                 ; %while.body
 	;APP
 	jsr	65490
 	;NO_APP
-	lda	.str+1,llvm_mos_x
+	lda	.str+1,x
 	inx
 	cpx	#14
 	bne	LBB0_1

@@ -115,10 +115,10 @@ LBB0_2:                                 ; %while.body
 	sty	__rc2
 	sta	__rc3
 	ldy	#0
-	lda	(__rc2),llvm_mos_y
+	lda	(__rc2),y
 	sta	__rc6
 	ldy	#1
-	lda	(__rc2),llvm_mos_y
+	lda	(__rc2),y
 	tax
 	clc
 	lda	__rc6
@@ -129,10 +129,10 @@ LBB0_2:                                 ; %while.body
 	tax
 	tya
 	ldy	#0
-	sta	(__rc2),llvm_mos_y
+	sta	(__rc2),y
 	txa
 	ldy	#1
-	sta	(__rc2),llvm_mos_y
+	sta	(__rc2),y
 	jmp	LBB0_1
 LBB0_3:                                 ; %while.end
 	lda	__rc4

@@ -242,7 +242,7 @@ body: |
   bb.0.entry:
     LDAidx 1234, $x, implicit-def $a, implicit-def $nz
     RTS_Implied
-# CHECK:      lda 1234,llvm_mos_x
+# CHECK:      lda 1234,x
 # CHECK-NEXT: rts
 ...
 ---
@@ -252,7 +252,7 @@ body: |
   bb.0.entry:
     LDAidx 1234, $y, implicit-def $a, implicit-def $nz
     RTS_Implied
-# CHECK:      lda 1234,llvm_mos_y
+# CHECK:      lda 1234,y
 # CHECK-NEXT: rts
 ...
 ---
@@ -262,7 +262,7 @@ body: |
   bb.0.entry:
     LDXidx 1234, implicit-def $x, implicit-def $nz, implicit $y
     RTS_Implied
-# CHECK:      ldx 1234,llvm_mos_y
+# CHECK:      ldx 1234,y
 # CHECK-NEXT: rts
 ...
 ---
@@ -272,7 +272,7 @@ body: |
   bb.0.entry:
     LDYidx 1234, implicit-def $y, implicit-def $nz, implicit $x
     RTS_Implied
-# CHECK:      ldy 1234,llvm_mos_x
+# CHECK:      ldy 1234,x
 # CHECK-NEXT: rts
 ...
 ---
@@ -282,7 +282,7 @@ body: |
   bb.0.entry:
     $a = LDyindirr $rs0, $y, implicit-def $nz
     RTS_Implied
-# CHECK:      lda (__rc0),llvm_mos_y
+# CHECK:      lda (__rc0),y
 # CHECK-NEXT: rts
 ...
 ---
@@ -422,7 +422,7 @@ body: |
   bb.0.entry:
     STidx $a, 1234, $x
     RTS_Implied
-# CHECK:      sta 1234,llvm_mos_x
+# CHECK:      sta 1234,x
 # CHECK-NEXT: rts
 ...
 ---
@@ -432,7 +432,7 @@ body: |
   bb.0.entry:
     STidx $a, 1234, $y
     RTS_Implied
-# CHECK:      sta 1234,llvm_mos_y
+# CHECK:      sta 1234,y
 # CHECK-NEXT: rts
 ...
 ---
@@ -452,7 +452,7 @@ body: |
   bb.0.entry:
     STyindirr $a, $rs0, $y
     RTS_Implied
-# CHECK:      sta (__rc0),llvm_mos_y
+# CHECK:      sta (__rc0),y
 # CHECK-NEXT: rts
 ...
 ---
