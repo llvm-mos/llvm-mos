@@ -125,6 +125,10 @@ static bool isARMBareMetal(const llvm::Triple &Triple) {
   return true;
 }
 
+static bool isMOSBareMetal(const llvm::Triple &Triple) {
+  return Triple.getArch() == llvm::Triple::mos;
+}
+
 static bool isRISCVBareMetal(const llvm::Triple &Triple) {
   if (Triple.getArch() != llvm::Triple::riscv32 &&
       Triple.getArch() != llvm::Triple::riscv64)
@@ -151,7 +155,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return isARMBareMetal(Triple) || isRISCVBareMetal(Triple);
+  return isARMBareMetal(Triple) || isMOSBareMetal(Triple) || isRISCVBareMetal(Triple);
 }
 
 Tool *BareMetal::buildLinker() const {
