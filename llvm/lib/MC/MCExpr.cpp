@@ -375,6 +375,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_VE_TLS_GD_LO32: return "tls_gd_lo";
   case VK_VE_TPOFF_HI32: return "tpoff_hi";
   case VK_VE_TPOFF_LO32: return "tpoff_lo";
+  case VK_MOS_ADDR8: return "mos8";
   case VK_MOS_ADDR16_LO: return "mos16lo";
   case VK_MOS_ADDR16_HI: return "mos16hi";
   case VK_MOS_ADDR24_BANK: return "mos24bank";
@@ -522,6 +523,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("tls_gd_lo", VK_VE_TLS_GD_LO32)
     .Case("tpoff_hi", VK_VE_TPOFF_HI32)
     .Case("tpoff_lo", VK_VE_TPOFF_LO32)
+    .Case("mos8", VK_MOS_ADDR8)
     .Case("mos16lo", VK_MOS_ADDR16_LO)
     .Case("mos16hi", VK_MOS_ADDR16_HI)
     .Case("mos24bank", VK_MOS_ADDR24_BANK)

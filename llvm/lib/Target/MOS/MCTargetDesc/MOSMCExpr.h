@@ -20,7 +20,8 @@ public:
   /// Specifies the type of an expression.
   enum VariantKind {
     VK_MOS_NONE,
-    VK_MOS_ADDR16_HI, 
+    VK_MOS_ADDR8,
+    VK_MOS_ADDR16_HI,
     VK_MOS_ADDR16_LO,
     VK_MOS_ADDR24_BANK,
     VK_MOS_ADDR24_SEGMENT,

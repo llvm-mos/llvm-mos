@@ -353,6 +353,7 @@ public:
     VK_TPREL,
     VK_DTPREL,
 
+    VK_MOS_ADDR8,               // mos8()
     VK_MOS_ADDR16_LO,           // mos16lo()
     VK_MOS_ADDR16_HI,           // mos16hi()
     VK_MOS_ADDR24_BANK,         // mos24bank()
