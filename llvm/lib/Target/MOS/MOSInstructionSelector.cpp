@@ -365,23 +365,36 @@ static bool MatchIndexed(Register Addr, MachineOperand &BaseOut,
 static void MatchIndirectIndexed(Register Addr, MachineOperand &BaseOut,
                                  MachineOperand &OffsetOut,
                                  const MachineRegisterInfo &MRI) {
-  MachineInstr *SumAddr = getOpcodeDef(MOS::G_PTR_ADD, Addr, MRI);
-  if (!SumAddr) {
-    BaseOut.ChangeToRegister(Addr, /*isDef=*/false);
-    OffsetOut.ChangeToImmediate(0);
-    return;
+  if (MachineInstr *DefMI = getDefIgnoringCopies(Addr, MRI)) {
+    switch (DefMI->getOpcode()) {
+    case MOS::G_PTR_ADD: {
+      Register Base = DefMI->getOperand(1).getReg();
+      Register Offset = DefMI->getOperand(2).getReg();
+
+      BaseOut.ChangeToRegister(Base, /*isDef=*/false);
+      auto ConstOffset = getConstantVRegValWithLookThrough(Offset, MRI);
+      if (ConstOffset) {
+        assert(ConstOffset->Value.getBitWidth() == 8);
+        OffsetOut.ChangeToImmediate(ConstOffset->Value.getZExtValue());
+      } else
+        OffsetOut.ChangeToRegister(Offset, /*isDef=*/false);
+      return;
+    }
+    case MOS::G_GLOBAL_VALUE: {
+      Register Base = DefMI->getOperand(0).getReg();
+      int64_t Offset = DefMI->getOperand(1).getOffset();
+
+      BaseOut.ChangeToRegister(Base, /*isDef=*/false);
+      OffsetOut.ChangeToImmediate(Offset);
+      return;
+    }
+    default:
+      break;
+    }
   }
 
-  Register Base = SumAddr->getOperand(1).getReg();
-  Register Offset = SumAddr->getOperand(2).getReg();
-
-  BaseOut.ChangeToRegister(Base, /*isDef=*/false);
-  auto ConstOffset = getConstantVRegValWithLookThrough(Offset, MRI);
-  if (ConstOffset) {
-    assert(ConstOffset->Value.getBitWidth() == 8);
-    OffsetOut.ChangeToImmediate(ConstOffset->Value.getZExtValue());
-  } else
-    OffsetOut.ChangeToRegister(Offset, /*isDef=*/false);
+  BaseOut.ChangeToRegister(Addr, /*isDef=*/false);
+  OffsetOut.ChangeToImmediate(0);
 }
 
 bool MOSInstructionSelector::selectLoad(MachineInstr &MI) {
