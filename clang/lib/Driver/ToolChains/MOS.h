@@ -9,6 +9,7 @@
 #ifndef CLANG_LIB_DRIVER_TOOLCHAINS_MOS_H_
 #define CLANG_LIB_DRIVER_TOOLCHAINS_MOS_H_
 
+#include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
 #include "llvm/Support/Compiler.h"
@@ -23,6 +24,10 @@ public:
   MOS(const Driver &D, const llvm::Triple &Triple,
       const llvm::opt::ArgList &Args);
 
+protected:
+  Tool *buildLinker() const override;
+
+public:
   bool isPICDefault() const override { return false; }
   bool isPIEDefault() const override { return false; }
   bool isPICDefaultForced() const override { return true; }
@@ -39,6 +44,23 @@ public:
 };
 
 } // namespace toolchains
+
+namespace tools {
+namespace mos {
+
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+public:
+  Linker(const ToolChain &TC) : Tool("mos::Linker", "ld.lld", TC) {}
+  bool isLinkJob() const override { return true; }
+  bool hasIntegratedCPP() const override { return false; }
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
+} // namespace mos
+} // namespace tools
 
 } // namespace driver
 } // namespace clang
