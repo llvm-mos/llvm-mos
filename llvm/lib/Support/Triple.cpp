@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com)
+// Modified by LLVM-MOS.
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/STLExtras.h"

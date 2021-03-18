@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh
+// Modified by LLVM-MOS.
 
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"
