@@ -20,6 +20,10 @@ namespace driver {
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY MOS : public ToolChain {
+  // Relative root directory for target includes, libs, and linker scripts,
+  // computed from Triple.
+  SmallString<128> TargetRoot;
+
 public:
   MOS(const Driver &D, const llvm::Triple &Triple,
       const llvm::opt::ArgList &Args);
@@ -28,6 +32,8 @@ protected:
   Tool *buildLinker() const override;
 
 public:
+  StringRef GetTargetRoot() const { return TargetRoot; }
+
   bool isPICDefault() const override { return false; }
   bool isPIEDefault() const override { return false; }
   bool isPICDefaultForced() const override { return true; }
@@ -41,6 +47,14 @@ public:
   }
 
   bool SupportsProfiling() const override { return false; }
+
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 } // namespace toolchains
