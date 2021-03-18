@@ -42,10 +42,11 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
-  CmdArgs.push_back("-Bstatic");
-
-  if (!D.SysRoot.empty())
+  if (!D.SysRoot.empty()) {
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+    // Search for libraries in the sysroot.
+    CmdArgs.push_back("-L=");
+  }
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
@@ -75,8 +76,7 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                               TC.getTriple().getEnvironmentName());
     }
     llvm::sys::path::append(LinkerScript, "include", "link.ld");
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-T") + D.GetFilePath(LinkerScript, TC)));
+    CmdArgs.push_back(Args.MakeArgString(Twine("-T") + LinkerScript));
   }
 
   if (TC.ShouldLinkCXXStdlib(Args))
