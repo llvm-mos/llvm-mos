@@ -12,6 +12,7 @@
 #include "InputInfo.h"
 
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Options.h"
 
 using namespace llvm::opt;
 using namespace clang::driver;
@@ -45,6 +46,10 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_e, options::OPT_s, options::OPT_t,
                             options::OPT_Z_Flag, options::OPT_r});
+  // Set default linker script.
+  if (!Args.hasArg(options::OPT_T)) {
+    CmdArgs.push_back("-Tinclude/c64.ld");
+  }
 
   if (TC.ShouldLinkCXXStdlib(Args))
     TC.AddCXXStdlibLibArgs(Args, CmdArgs);
