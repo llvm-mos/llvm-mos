@@ -13,6 +13,7 @@
 
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm::opt;
 using namespace clang::driver;
@@ -37,10 +38,14 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   auto &TC = static_cast<const toolchains::MOS &>(getToolChain());
+  auto &D = TC.getDriver();
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-Bstatic");
+
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
@@ -48,7 +53,30 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_Z_Flag, options::OPT_r});
   // Set default linker script.
   if (!Args.hasArg(options::OPT_T)) {
-    CmdArgs.push_back("-Tinclude/c64.ld");
+    SmallString<128> LinkerScript;
+    // Vendor
+    if (!TC.getPlatform().empty()) {
+      llvm::sys::path::append(LinkerScript, TC.getPlatform());
+    }
+
+    // Note: The clang cross-compilation docs refer to this as "sys", which is
+    // closer to how we're using it. Instead of the modern
+    // one-platform-many-OSes of today, here we have many plaftorms, each with
+    // basically one in-ROM OS. There's different ways of loading code into a
+    // given OS, but those are closer to different ABIs than different OSes
+    // themselves. Very high-level OS-es (Lunix, FreeRTOS, SpartaDOS, etc.)
+    // enough to get their own OS definition here if an when they're officially
+    // supported.
+    if (!TC.getOS().empty()) {
+      llvm::sys::path::append(LinkerScript, TC.getOS());
+    }
+    if (!TC.getTriple().getEnvironmentName().empty()) {
+      llvm::sys::path::append(LinkerScript,
+                              TC.getTriple().getEnvironmentName());
+    }
+    llvm::sys::path::append(LinkerScript, "include", "link.ld");
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-T") + D.GetFilePath(LinkerScript, TC)));
   }
 
   if (TC.ShouldLinkCXXStdlib(Args))
