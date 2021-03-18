@@ -1,0 +1,56 @@
+# RUN: llc -stop-after=instruction-select -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+  target triple = "mos"
+
+  define void @swap_inttoptr_abs_addr() {
+  ; CHECK-LABEL: name: swap_inttoptr_abs_addr
+  entry:
+  ; CHECK-LABEL: entry:
+    %0 = load i8, i8* inttoptr (i16 256 to i8*), align 1
+    %1 = load i8, i8* inttoptr (i16 258 to i8*), align 1
+    store i8 %1, i8* inttoptr (i16 256 to i8*), align 1
+    store i8 %0, i8* inttoptr (i16 258 to i8*), align 1
+    ret void
+    ; CHECK-NEXT: %0:gpr = LDabs 256, implicit-def $nz :: (load 1 from `i8* inttoptr (i16 256 to i8*)`)
+    ; CHECK-NEXT: %3:gpr = LDabs 258, implicit-def $nz :: (load 1 from `i8* inttoptr (i16 258 to i8*)`)
+    ; CHECK-NEXT: STabs %3, 256 :: (store 1 into `i8* inttoptr (i16 256 to i8*)`)
+    ; CHECK-NEXT: STabs %0, 258 :: (store 1 into `i8* inttoptr (i16 258 to i8*)`)
+    ; CHECK-NEXT: RTS_Implied
+  }
+
+  @one = external global i8, align 1
+  @two = external global i8, align 1
+  define void @swap_global_abs_addr() {
+  ; CHECK-LABEL: name: swap_global_abs_addr
+  entry:
+  ; CHECK-LABEL: entry:
+      %0 = load i8, i8* @one, align 1
+      %1 = load i8, i8* @two, align 1
+      store i8 %1, i8* @one, align 1
+      store i8 %0, i8* @two, align 1
+      ret void
+    ; CHECK-NEXT: %0:gpr = LDabs @one, implicit-def $nz :: (dereferenceable load 1 from @one)
+    ; CHECK-NEXT: %2:gpr = LDabs @two, implicit-def $nz :: (dereferenceable load 1 from @two)
+    ; CHECK-NEXT: STabs %2, @one :: (store 1 into @one)
+    ; CHECK-NEXT: STabs %0, @two :: (store 1 into @two)
+    ; CHECK-NEXT: RTS_Implied
+  }
+
+  %struct.S = type { i8, i8 }
+  @agg_var = external global %struct.S, align 1
+  define void @swap_global_abs_addr_agg() {
+  ; CHECK-LABEL: name: swap_global_abs_addr_agg
+  entry:
+  ; CHECK-LABEL: entry:
+    %0 = load i8, i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 0), align 1
+    %1 = load i8, i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 1), align 1
+    store i8 %1, i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 0), align 1
+    store i8 %0, i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 1), align 1
+    ret void
+    ; CHECK-NEXT: %0:gpr = LDabs @agg_var, implicit-def $nz :: (dereferenceable load 1 from `i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 0)`)
+    ; CHECK-NEXT: %3:gpr = LDabs @agg_var + 1, implicit-def $nz :: (dereferenceable load 1 from `i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 1)`)
+    ; CHECK-NEXT: STabs %3, @agg_var :: (store 1 into `i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 0)`)
+    ; CHECK-NEXT: STabs %0, @agg_var + 1 :: (store 1 into `i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 1)`)
+    ; CHECK-NEXT: RTS_Implied
+  }
+...
