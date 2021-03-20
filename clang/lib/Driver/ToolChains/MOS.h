@@ -71,6 +71,11 @@ public:
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
+
+private:
+  void AddLTOOptions(const toolchains::MOS &TC, const llvm::opt::ArgList &Args,
+                     const InputInfo &Output, const InputInfoList &Inputs,
+                     llvm::opt::ArgStringList &CmdArgs) const;
 };
 
 } // namespace mos

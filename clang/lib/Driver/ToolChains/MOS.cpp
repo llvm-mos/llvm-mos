@@ -12,6 +12,7 @@
 #include "InputInfo.h"
 
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Support/Path.h"
 
@@ -82,6 +83,8 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
+  AddLTOOptions(TC, Args, Output, Inputs, CmdArgs);
+
   if (!D.SysRoot.empty()) {
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
@@ -92,13 +95,15 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     SmallString<128> LibDir = TC.GetTargetRoot();
     llvm::sys::path::append(LibDir, "lib");
     CmdArgs.push_back(Args.MakeArgString(Twine("-L=") + LibDir));
+
+    // Allow linker scripts to INCLUDE paths relative to the sysroot.
+    CmdArgs.push_back(Args.MakeArgString("-L="));
   }
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group, options::OPT_e,
-                   options::OPT_s, options::OPT_t, options::OPT_Z_Flag,
-                   options::OPT_r, options::OPT_mllvm});
+  Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
+                            options::OPT_e, options::OPT_s, options::OPT_t,
+                            options::OPT_Z_Flag, options::OPT_r});
   // Set default linker script.
   if (!Args.hasArg(options::OPT_T))
     CmdArgs.push_back("-Tlink.ld");
@@ -115,4 +120,14 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Args.MakeArgString(TC.GetLinkerPath()),
                                          CmdArgs, Inputs, Output));
+}
+
+void mos::Linker::AddLTOOptions(const toolchains::MOS &TC, const ArgList &Args,
+                                const InputInfo &Output,
+                                const InputInfoList &Inputs,
+                                ArgStringList &CmdArgs) const {
+  assert(!Inputs.empty() && "Must have at least one input.");
+  addLTOOptions(TC, Args, CmdArgs, Output, Inputs[0],
+                TC.getDriver().getLTOMode() == LTOK_Thin);
+  addMOSCodeGenArgs(CmdArgs);
 }
