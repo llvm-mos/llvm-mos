@@ -57,6 +57,12 @@ void MOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> Dir(getDriver().ResourceDir);
+    llvm::sys::path::append(Dir, "include");
+    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+  }
+
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
     SmallString<128> Dir(computeSysRoot());
     if (!Dir.empty()) {
@@ -110,9 +116,6 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     CmdArgs.push_back("-los");
-
-  if (TC.ShouldLinkCXXStdlib(Args))
-    TC.AddCXXStdlibLibArgs(Args, CmdArgs);
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
