@@ -28,26 +28,6 @@ MOS::MOS(const Driver &D, const llvm::Triple &Triple,
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
     getProgramPaths().push_back(getDriver().Dir);
-
-  // Vendor
-  if (!getPlatform().empty()) {
-    llvm::sys::path::append(TargetRoot, getPlatform());
-  }
-
-  // Note: The clang cross-compilation docs refer to this as "sys", which is
-  // closer to how we're using it. Instead of the modern
-  // one-platform-many-OSes of today, here we have many plaftorms, each with
-  // basically one in-ROM OS. There's different ways of loading code into a
-  // given OS, but those are closer to different ABIs than different OSes
-  // themselves. Very high-level OS-es (Lunix, FreeRTOS, SpartaDOS, etc.)
-  // enough to get their own OS definition here if an when they're officially
-  // supported.
-  if (!getOS().empty()) {
-    llvm::sys::path::append(TargetRoot, getOS());
-  }
-  if (!getTriple().getEnvironmentName().empty()) {
-    llvm::sys::path::append(TargetRoot, getTriple().getEnvironmentName());
-  }
 }
 
 Tool *MOS::buildLinker() const { return new tools::mos::Linker(*this); }
@@ -61,14 +41,6 @@ void MOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     SmallString<128> Dir(getDriver().ResourceDir);
     llvm::sys::path::append(Dir, "include");
     addSystemInclude(DriverArgs, CC1Args, Dir.str());
-  }
-
-  if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
-    SmallString<128> Dir(computeSysRoot());
-    if (!Dir.empty()) {
-      llvm::sys::path::append(Dir, GetTargetRoot(), "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    }
   }
 }
 
@@ -91,28 +63,13 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLTOOptions(TC, Args, Output, Inputs, CmdArgs);
 
-  if (!D.SysRoot.empty()) {
+  if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
-
-    SmallString<128> LinkerScriptDir = TC.GetTargetRoot();
-    llvm::sys::path::append(LinkerScriptDir, "ldscripts");
-    CmdArgs.push_back(Args.MakeArgString(Twine("-L=") + LinkerScriptDir));
-
-    SmallString<128> LibDir = TC.GetTargetRoot();
-    llvm::sys::path::append(LibDir, "lib");
-    CmdArgs.push_back(Args.MakeArgString(Twine("-L=") + LibDir));
-
-    // Allow linker scripts to INCLUDE paths relative to the sysroot.
-    CmdArgs.push_back(Args.MakeArgString("-L="));
-  }
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
                             options::OPT_e, options::OPT_s, options::OPT_t,
                             options::OPT_Z_Flag, options::OPT_r});
-  // Set default linker script.
-  if (!Args.hasArg(options::OPT_T))
-    CmdArgs.push_back("-Tlink.ld");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     CmdArgs.push_back("-los");
