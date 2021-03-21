@@ -1,8 +1,6 @@
-// RUN: split-file --no-leading-lines %s %t
-// RUN: llc -O2 -verify-machineinstrs -o %t/got.s %t/hello_world.ll
-// RUN: diff --strip-trailing-cr -u %t/want.s %t/got.s
+; RUN: llc -O2 -verify-machineinstrs -o %t %s
+; RUN: diff --strip-trailing-cr -u %S/Inputs/hello_world_expected.s %t
 
-//--- hello_world.ll
 target datalayout = "e-p:16:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-a:8:8-Fi8-n8"
 target triple = "mos"
 
@@ -40,35 +38,3 @@ attributes #1 = { nounwind }
 !4 = !{!"Simple C/C++ TBAA"}
 !5 = distinct !{!5, !6}
 !6 = !{!"llvm.loop.mustprogress"}
-
-//--- want.s
-	.text
-	.file	"hello_world.ll"
-	.globl	main                            ; -- Begin function main
-	.type	main,@function
-main:                                   ; @main
-; %bb.0:                                ; %entry
-	ldx	#0
-	lda	#72
-LBB0_1:                                 ; %while.body
-                                        ; =>This Inner Loop Header: Depth=1
-	;APP
-	jsr	65490
-	;NO_APP
-	lda	.str+1,x
-	inx
-	cpx	#14
-	bne	LBB0_1
-LBB0_2:                                 ; %while.end
-	lda	#0
-	ldx	#0
-	rts
-.Lfunc_end0:
-	.size	main, .Lfunc_end0-main
-                                        ; -- End function
-	.type	.str,@object                    ; @.str
-	.section	.rodata.str1.1,"aMS",@progbits,1
-.str:
-	.asciz	"HELLO, WORLD!\n"
-	.size	.str, 15
-
