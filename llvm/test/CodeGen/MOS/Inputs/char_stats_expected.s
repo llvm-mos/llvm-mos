@@ -6,21 +6,21 @@ char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
 	clc
 	lda	#254
-	adc	__rc1
-	sta	__rc1
-	lda	__rc4
+	adc	mos8(__rc1)
+	sta	mos8(__rc1)
+	lda	mos8(__rc4)
 	pha
-	lda	__rc5
+	lda	mos8(__rc5)
 	pha
 	ldx	#0
-	lda	__rc0
-	sta	__rc4
-	lda	__rc1
-	sta	__rc5
-	lda	__rc4
-	sta	__rc2
-	lda	__rc5
-	sta	__rc3
+	lda	mos8(__rc0)
+	sta	mos8(__rc4)
+	lda	mos8(__rc1)
+	sta	mos8(__rc5)
+	lda	mos8(__rc4)
+	sta	mos8(__rc2)
+	lda	mos8(__rc5)
+	sta	mos8(__rc3)
 	lda	#0
 	ldy	#2
 	jsr	memset
@@ -32,27 +32,27 @@ LBB0_1:                                 ; %while.body
 LBB0_2:                                 ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
 	asl
-	sta	__rc2
+	sta	mos8(__rc2)
 	lda	#0
 	rol
-	sta	__rc3
-	lda	__rc0
-	ldx	__rc1
+	sta	mos8(__rc3)
+	lda	mos8(__rc0)
+	ldx	mos8(__rc1)
 	clc
-	adc	__rc2
+	adc	mos8(__rc2)
 	tay
 	txa
-	adc	__rc3
-	sty	__rc2
-	sta	__rc3
+	adc	mos8(__rc3)
+	sty	mos8(__rc2)
+	sta	mos8(__rc3)
 	ldy	#0
-	lda	(__rc2),y
-	sta	__rc6
+	lda	(mos8(__rc2)),y
+	sta	mos8(__rc6)
 	ldy	#1
-	lda	(__rc2),y
+	lda	(mos8(__rc2)),y
 	tax
 	clc
-	lda	__rc6
+	lda	mos8(__rc6)
 	adc	#1
 	tay
 	txa
@@ -60,25 +60,25 @@ LBB0_2:                                 ; %while.body
 	tax
 	tya
 	ldy	#0
-	sta	(__rc2),y
+	sta	(mos8(__rc2)),y
 	txa
 	ldy	#1
-	sta	(__rc2),y
+	sta	(mos8(__rc2)),y
 	jmp	LBB0_1
 LBB0_3:                                 ; %while.end
-	lda	__rc4
-	sta	__rc2
-	lda	__rc5
-	sta	__rc3
+	lda	mos8(__rc4)
+	sta	mos8(__rc2)
+	lda	mos8(__rc5)
+	sta	mos8(__rc3)
 	jsr	report_counts
 	pla
-	sta	__rc5
+	sta	mos8(__rc5)
 	pla
-	sta	__rc4
+	sta	mos8(__rc4)
 	clc
 	lda	#2
-	adc	__rc1
-	sta	__rc1
+	adc	mos8(__rc1)
+	sta	mos8(__rc1)
 	rts
 .Lfunc_end0:
 	.size	char_stats, .Lfunc_end0-char_stats
