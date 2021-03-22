@@ -1,8 +1,6 @@
-// RUN: split-file --no-leading-lines %s %t
-// RUN: llc -O2 -verify-machineinstrs -o %t/got.s %t/print_int.ll
-// RUN: diff --strip-trailing-cr -u %t/want.s %t/got.s
+; RUN: llc -O2 -verify-machineinstrs -o %t %s
+; RUN: diff --strip-trailing-cr -u %S/Inputs/print_int_expected.s %t
 
-//--- print_int.ll
 target datalayout = "e-p:16:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-a:8:8-Fi8-n8"
 target triple = "mos"
 
@@ -34,39 +32,3 @@ attributes #1 = { nounwind }
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!"clang version 12.0.0 (git@github.com:mysterymath/clang6502.git 51e3618d42bc67892d46290a51ea57ea7e127aa6)"}
 !2 = !{i32 70}
-
-//--- want.s
-	.text
-	.file	"print_int.ll"
-	.globl	print_int                       ; -- Begin function print_int
-	.type	print_int,@function
-print_int:                              ; @print_int
-; %bb.0:                                ; %entry
-	cmp	#10
-	bmi	LBB0_2
-LBB0_1:                                 ; %if.end.preheader
-	sta	_SaveA
-	lda	__rc4
-	pha
-	lda	_SaveA
-	sta	__rc4
-	ldx	#10
-	jsr	__udivqi3
-	jsr	print_int
-	lda	__rc4
-	ldx	#10
-	jsr	__umodqi3
-	sta	_SaveA
-	pla
-	sta	__rc4
-	lda	_SaveA
-LBB0_2:                                 ; %if.then
-	clc
-	adc	#48
-	;APP
-	jsr	65490
-	;NO_APP
-	rts
-.Lfunc_end0:
-	.size	print_int, .Lfunc_end0-print_int
-                                        ; -- End function

@@ -13,13 +13,13 @@ entry:
 ; CHECK-NEXT: ldx #mos16hi(agg)
   store i8 10, i8* %0, align 1
 ; CHECK:      ldy	#0
-; CHECK:      sta	(__rc2),y
+; CHECK:      sta	(mos8(__rc2)),y
   store i8 20, i8* %1, align 1
 ; CHECK:      ldy	#1
-; CHECK:      sta	(__rc2),y
+; CHECK:      sta	(mos8(__rc2)),y
   %2 = load i8, i8* %0, align 1
 ; CHECK:      ldy	#0
-; CHECK:      lda	(__rc2),y
+; CHECK:      lda	(mos8(__rc2)),y
   ret i8 %2
 ; CHECK: rts
 }

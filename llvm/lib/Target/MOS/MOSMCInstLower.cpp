@@ -302,10 +302,13 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     if (MO.isImplicit())
       return false;
     Register Reg = MO.getReg();
-    if (MOS::ZP_PTRRegClass.contains(Reg) || MOS::ZPRegClass.contains(Reg))
-      MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(
-          Ctx.getOrCreateSymbol(TRI.getZPSymbolName(Reg)), Ctx));
-    else
+    if (MOS::ZP_PTRRegClass.contains(Reg) || MOS::ZPRegClass.contains(Reg)) {
+      const MCExpr *Expr = MCSymbolRefExpr::create(
+          Ctx.getOrCreateSymbol(TRI.getZPSymbolName(Reg)), Ctx);
+      Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, Expr,
+                               /*isNegated=*/false, Ctx);
+      MCOp = MCOperand::createExpr(Expr);
+    } else
       MCOp = MCOperand::createReg(MO.getReg());
     break;
   }

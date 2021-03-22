@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS project.
+
 #include "CommonArgs.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
@@ -1558,6 +1560,28 @@ void tools::addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
       addArg("-x86-pad-max-prefix-size=" + Twine(PrefixSize));
     }
   }
+}
+
+void tools::addMOSCodeGenArgs(llvm::opt::ArgStringList &CmdArgs) {
+  // Give machine block placement an accurate cost assessment of branches and
+  // fallthroughs. (By default, it considers unconditional branches cheaper than
+  // taken conditional branches.)
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-force-precise-rotation-cost");
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-jump-inst-cost=6");
+
+  // Never fold control flow into selects; control flow is already the most
+  // efficient way to implement select.
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-phi-node-folding-threshold=0");
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-two-entry-phi-node-folding-threshold=0");
+
+  // The 6502 has no alignment requirements, so this simplifies the ASM backend
+  // and saves space.
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-align-large-globals=false");
 }
 
 unsigned tools::getOrCheckAMDGPUCodeObjectVersion(

@@ -16,7 +16,7 @@ body: |
   bb.0.entry:
     $a, $c = ADCzpr $a, $rc0, $c, implicit-def $nz
     RTS_Implied
-# CHECK:      adc __rc0
+# CHECK:      adc mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -37,7 +37,7 @@ body: |
   bb.0.entry:
     $rc0, $c = ASL $rc0, implicit-def $nz
     RTS_Implied
-# CHECK:      asl __rc0
+# CHECK:      asl mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -282,7 +282,7 @@ body: |
   bb.0.entry:
     $a = LDyindirr $rs0, $y, implicit-def $nz
     RTS_Implied
-# CHECK:      lda (__rc0),y
+# CHECK:      lda (mos8(__rc0)),y
 # CHECK-NEXT: rts
 ...
 ---
@@ -292,7 +292,7 @@ body: |
   bb.0.entry:
     $a = LDzpr $rc0, implicit-def $nz
     RTS_Implied
-# CHECK:      lda __rc0
+# CHECK:      lda mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -302,7 +302,7 @@ body: |
   bb.0.entry:
     $x = LDzpr $rc0, implicit-def $nz
     RTS_Implied
-# CHECK:      ldx __rc0
+# CHECK:      ldx mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -312,7 +312,7 @@ body: |
   bb.0.entry:
     $y = LDzpr $rc0, implicit-def $nz
     RTS_Implied
-# CHECK:      ldy __rc0
+# CHECK:      ldy mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -372,7 +372,7 @@ body: |
   bb.0.entry:
     $rc0, $c = ROL $rc0, $c, implicit-def $nz
     RTS_Implied
-# CHECK:      rol __rc0
+# CHECK:      rol mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -392,7 +392,7 @@ body: |
   bb.0.entry:
     $a, $c = SBCzpr $a, $rc0, $c, implicit-def $nz
     RTS_Implied
-# CHECK:      sbc __rc0
+# CHECK:      sbc mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -442,7 +442,7 @@ body: |
   bb.0.entry:
     $rc0 = STzpr $a
     RTS_Implied
-# CHECK:      sta __rc0
+# CHECK:      sta mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -452,7 +452,7 @@ body: |
   bb.0.entry:
     STyindirr $a, $rs0, $y
     RTS_Implied
-# CHECK:      sta (__rc0),y
+# CHECK:      sta (mos8(__rc0)),y
 # CHECK-NEXT: rts
 ...
 ---
@@ -472,7 +472,7 @@ body: |
   bb.0.entry:
     $rc0 = STzpr $x
     RTS_Implied
-# CHECK:      stx __rc0
+# CHECK:      stx mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---
@@ -492,7 +492,7 @@ body: |
   bb.0.entry:
     $rc0 = STzpr $y
     RTS_Implied
-# CHECK:      sty __rc0
+# CHECK:      sty mos8(__rc0)
 # CHECK-NEXT: rts
 ...
 ---

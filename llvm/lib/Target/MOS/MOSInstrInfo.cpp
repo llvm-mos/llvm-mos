@@ -891,7 +891,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(MOS::RC2);
     Builder.buildInstr(MOS::STabs)
         .addUse(MOS::A)
-        .addExternalSymbol("_SaveZPlo");
+        .addExternalSymbol("_SaveImagLo");
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
   }
@@ -902,7 +902,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(MOS::RC3);
     Builder.buildInstr(MOS::STabs)
         .addUse(MOS::A)
-        .addExternalSymbol("_SaveZPhi");
+        .addExternalSymbol("_SaveImagHi");
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
   }
@@ -913,7 +913,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(MOS::RC6);
     Builder.buildInstr(MOS::STabs)
         .addUse(MOS::A)
-        .addExternalSymbol("_SaveZPlo");
+        .addExternalSymbol("_SaveImagLo");
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
   }
@@ -924,7 +924,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(MOS::RC7);
     Builder.buildInstr(MOS::STabs)
         .addUse(MOS::A)
-        .addExternalSymbol("_SaveZPhi");
+        .addExternalSymbol("_SaveImagHi");
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
   }
@@ -975,7 +975,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::LDabs)
         .addDef(MOS::A)
-        .addExternalSymbol("_SaveZPlo");
+        .addExternalSymbol("_SaveImagLo");
     Builder.buildInstr(MOS::STzpr).addDef(MOS::RC2).addUse(MOS::A);
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
@@ -985,7 +985,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::LDabs)
         .addDef(MOS::A)
-        .addExternalSymbol("_SaveZPhi");
+        .addExternalSymbol("_SaveImagHi");
     Builder.buildInstr(MOS::STzpr).addDef(MOS::RC3).addUse(MOS::A);
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
@@ -995,7 +995,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::LDabs)
         .addDef(MOS::A)
-        .addExternalSymbol("_SaveZPlo");
+        .addExternalSymbol("_SaveImagLo");
     Builder.buildInstr(MOS::STzpr).addDef(MOS::RC6).addUse(MOS::A);
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
@@ -1005,7 +1005,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::LDabs)
         .addDef(MOS::A)
-        .addExternalSymbol("_SaveZPhi");
+        .addExternalSymbol("_SaveImagHi");
     Builder.buildInstr(MOS::STzpr).addDef(MOS::RC7).addUse(MOS::A);
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
