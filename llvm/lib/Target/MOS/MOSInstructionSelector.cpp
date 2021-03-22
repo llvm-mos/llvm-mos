@@ -335,6 +335,26 @@ bool MOSInstructionSelector::selectIntToPtr(MachineInstr &MI) {
   return true;
 }
 
+// Determines if the memory address referenced by a load/store instruction
+// is based on a constant value. Absolute or zero page addressing modes can
+// be used under this condition.
+static bool MatchConstantAddr(Register Addr, MachineOperand &BaseOut,
+                              const MachineRegisterInfo &MRI) {
+  // Handle GlobalValues (including those with offsets for element access).
+  if (MachineInstr *GV = getOpcodeDef(MOS::G_GLOBAL_VALUE, Addr, MRI)) {
+    BaseOut = GV->getOperand(1);
+    return true;
+  }
+
+  // Handle registers that can be resolved to constant values (e.g. IntToPtr).
+  if (auto ConstAddr = getConstantVRegValWithLookThrough(Addr, MRI)) {
+    BaseOut.ChangeToImmediate(ConstAddr->Value.getZExtValue());
+    return true;
+  }
+
+  return false;
+}
+
 // Determines whether Addr can be referenced using the X/Y indexed addressing
 // mode. If so, sets BaseOut to the base operand and Offset to the value that
 // should be in X/Y.
@@ -407,6 +427,18 @@ bool MOSInstructionSelector::selectLoad(MachineInstr &MI) {
 
   MachineOperand Base = MachineOperand::CreateImm(0);
   MachineOperand Offset = MachineOperand::CreateImm(0);
+
+  if (MatchConstantAddr(Addr, Base, MRI)) {
+    auto Load = Builder.buildInstr(MOS::LDabs)
+        .addDef(Dst)
+        .add(Base)
+        .cloneMemRefs(MI);
+    if (!constrainSelectedInstRegOperands(*Load, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
+  }
+
   if (MatchIndexed(Addr, Base, Offset, MRI)) {
     auto Load = Builder.buildInstr(MOS::LDidx)
                     .addDef(Dst)
@@ -566,6 +598,18 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
 
   MachineOperand Base = MachineOperand::CreateImm(0);
   MachineOperand Offset = MachineOperand::CreateImm(0);
+
+  if (MatchConstantAddr(Addr, Base, MRI)) {
+    auto Store = Builder.buildInstr(MOS::STabs)
+        .addUse(Src)
+        .add(Base)
+        .cloneMemRefs(MI);
+    if (!constrainSelectedInstRegOperands(*Store, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
+  }
+
   if (MatchIndexed(Addr, Base, Offset, MRI)) {
     auto Store = Builder.buildInstr(MOS::STidx)
                      .addUse(Src)
