@@ -52,7 +52,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .clampScalar(0, s8, s8);
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({s1, s8})
+      .legalFor({s1, s8, s16})
       .clampScalar(0, s8, s8);
 
   getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({p});

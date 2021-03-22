@@ -46,7 +46,6 @@ private:
   const MOSInstrInfo &TII;
   const MOSRegisterInfo &TRI;
   const MOSRegisterBankInfo &RBI;
-  const DataLayout DL;
 
   bool selectAddSub(MachineInstr &MI);
   bool selectCompareBranch(MachineInstr &MI);
@@ -98,7 +97,6 @@ MOSInstructionSelector::MOSInstructionSelector(const MOSTargetMachine &TM,
                                                MOSSubtarget &STI,
                                                MOSRegisterBankInfo &RBI)
     : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
-      DL(TM.createDataLayout()),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "MOSGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -340,49 +338,17 @@ bool MOSInstructionSelector::selectIntToPtr(MachineInstr &MI) {
 // Determines if the memory address referenced by a load/store instruction
 // is based on a constant value. Absolute or zero page addressing modes can
 // be used under this condition.
-static bool MatchConstantAddr(const MachineInstr &MI, MachineOperand &BaseOut,
-                              const DataLayout &DL) {
-  assert(MI.getOpcode() == MOS::G_LOAD || MI.getOpcode() == MOS::G_STORE);
-  assert(!MI.memoperands_empty());
+static bool MatchConstantAddr(Register Addr, MachineOperand &BaseOut,
+                              const MachineRegisterInfo &MRI) {
+  // Handle GlobalValues (including those with offsets for element access).
+  if (MachineInstr *GV = getOpcodeDef(MOS::G_GLOBAL_VALUE, Addr, MRI)) {
+    BaseOut = GV->getOperand(1);
+    return true;
+  }
 
-  // Recover pointer information from IR. The legalizer splits 16-bit values
-  // into two merged 8-bit values. This breaks getConstantVRegValWithLookThrough
-  // so detecting a constant value from the MIR is inconvenient.
-  const auto &MMO = **MI.memoperands_begin();
-  auto *V = MMO.getValue();
-  if (!V)
-    return false;
-
-  if (auto *CE = dyn_cast<ConstantExpr>(V)) {
-    switch (CE->getOpcode()) {
-    case Instruction::IntToPtr: {
-      // Covers pointers created by casting a constant integer.
-      if (auto *ConstAddr = dyn_cast<ConstantInt>(CE->getOperand(0))) {
-        BaseOut.ChangeToImmediate(MMO.getOffset() + ConstAddr->getSExtValue());
-        return ConstAddr->getBitWidth() == 16;
-      }
-      break;
-    }
-    case Instruction::GetElementPtr: {
-      // Covers accessing a member from the hierarchy of a global aggregate.
-      // Becomes constant after linking.
-      APInt OffsetAI(DL.getPointerTypeSizeInBits(CE->getType()), 0);
-      cast<GEPOperator>(CE)->accumulateConstantOffset(DL, OffsetAI);
-
-      if (auto *GV = dyn_cast<GlobalValue>(CE->getOperand(0))) {
-        BaseOut.ChangeToGA(GV, MMO.getOffset() + OffsetAI.getSExtValue(),
-                           BaseOut.getTargetFlags());
-        return true;
-      }
-      break;
-    }
-    default:
-      break;
-    }
-  } else if (auto *GV = dyn_cast<GlobalValue>(V)) {
-    // Covers global values resolved by fixup which become constant after
-    // linking.
-    BaseOut.ChangeToGA(GV, MMO.getOffset(), BaseOut.getTargetFlags());
+  // Handle registers that can be resolved to constant values (e.g. IntToPtr).
+  if (auto ConstAddr = getConstantVRegValWithLookThrough(Addr, MRI)) {
+    BaseOut.ChangeToImmediate(ConstAddr->Value.getZExtValue());
     return true;
   }
 
@@ -462,7 +428,7 @@ bool MOSInstructionSelector::selectLoad(MachineInstr &MI) {
   MachineOperand Base = MachineOperand::CreateImm(0);
   MachineOperand Offset = MachineOperand::CreateImm(0);
 
-  if (MatchConstantAddr(MI, Base, DL)) {
+  if (MatchConstantAddr(Addr, Base, MRI)) {
     auto Load = Builder.buildInstr(MOS::LDabs)
         .addDef(Dst)
         .add(Base)
@@ -633,7 +599,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineOperand Base = MachineOperand::CreateImm(0);
   MachineOperand Offset = MachineOperand::CreateImm(0);
 
-  if (MatchConstantAddr(MI, Base, DL)) {
+  if (MatchConstantAddr(Addr, Base, MRI)) {
     auto Store = Builder.buildInstr(MOS::STabs)
         .addUse(Src)
         .add(Base)
