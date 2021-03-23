@@ -7,6 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+//  Subregister indices
+//===----------------------------------------------------------------------===//
+
+class MOSSubRegIndex<int size, int offset = 0>: SubRegIndex<size, offset> {
+  let Namespace = "MOS";
+}
+
+def sublo : MOSSubRegIndex<8>;
+def subhi : MOSSubRegIndex<8, 8>;
+def subcarry : MOSSubRegIndex<1>;
+def subnz : MOSSubRegIndex<2>;
+def subn : MOSSubRegIndex<1>;
+def subz : MOSSubRegIndex<1>;
+
+//===----------------------------------------------------------------------===//
 //  Real registers
 //===----------------------------------------------------------------------===//
 
@@ -32,30 +47,11 @@ class MOSReg<bits<16> num, string name>
   let AltNames = [name];
 }
 
-class MOSReg1Class< dag RegList >: RegisterClass< "MOS", [i8], 8, RegList >;
-class MOSReg8Class< dag RegList >: RegisterClass< "MOS", [i8], 8, RegList >;
-class MOSReg16Class< dag RegList >: RegisterClass< "MOS", [i16], 8, RegList >;
-
 def A : MOSReg< 0, "a" >;
 def X : MOSReg< 1, "x" >;
 def Y : MOSReg< 2, "y" >;
 def S : MOSReg< 4, "s">;
 def PC : MOSReg< 5, "pc">;
-
-// Define subregister indexes, for imaginary registers.  The only 65xx series
-// processor with overlapping registers is the 65816 and variants.  The 8-bit
-// variants do not overlap.
-class MOSSubRegIndex<int size, int offset = 0>: SubRegIndex<size, offset>
-{
-  let Namespace = "MOS";
-}
-
-def sublo : MOSSubRegIndex<8>;
-def subhi : MOSSubRegIndex<8, 8>;
-def subcarry : MOSSubRegIndex<1>;
-def subnz : MOSSubRegIndex<2>;
-def subn : MOSSubRegIndex<1>;
-def subz : MOSSubRegIndex<1>;
 
 def C : MOSReg<6, "C">;
 def N : MOSReg<7, "N">;
@@ -83,13 +79,13 @@ def Static : MOSReg<10, "Static">;
 // register allocation.  This puts llvm in the position of managing a large
 // chunk of zero page memory.
 
-// These constants were chosen so that the number of imaginary registers could 
+// These constants were chosen so that the number of imaginary registers could
 // be changed at one central location, and the changes will propagate through
 // the backend.
 
 // There are enough imaginary registers to cover all of zero page, but the code
-// generator can be configured to only use a fraction of them, with the 
-// --num-imag-regs flag.
+// generator can be configured to only use a fraction of them, with the
+// --num-imag-ptrs flag. See MOSRegisterInfo.cpp for details.
 
 // The first 16-bit imaginary register is reserved as the soft stack pointer.
 // The second 16-bit imaginary register is reserved as a frame pointer whenever
@@ -132,40 +128,46 @@ foreach I = 0...!add(MaxImag16Regs, -1) in
       !cast<Register>("RC"#!add(!shl(I,1),1))]>;
 }
 
+//===----------------------------------------------------------------------===//
+//  Register classes
+//===----------------------------------------------------------------------===//
+
 class MOSRegClass<list<ValueType> regTypes, int alignment, dag regList>
      : RegisterClass<"MOS", regTypes, alignment, regList>;
 
-def GPR : MOSRegClass<[i8], 8, (add A, X, Y)>;
+class MOSReg1Class<dag RegList >: MOSRegClass<[i8], 1, RegList>;
+class MOSReg8Class<dag RegList >: MOSRegClass<[i8], 8, RegList>;
+class MOSReg16Class<dag RegList >: MOSRegClass<[i16], 8, RegList>;
 
-def Flag : MOSRegClass<[i1], 8, (add C, N, Z)> {
-  let isAllocatable = false;
-}
-
+// Single register classes.
 def Ac : MOSReg8Class<(add A)>;
 def Yc : MOSReg8Class<(add Y)>;
+def Cc : MOSReg1Class<(add C)>;
+
+// "General purpose" register classes.
+def GPR : MOSReg8Class<(add A, X, Y)>;
+def ZP : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
+def ZP_PTR : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
+
+// Instruction-specific register classes.
+def AZP : MOSReg8Class<(add A, ZP)>;
 def XY : MOSReg8Class<(add X, Y)>;
+def Flag : MOSReg1Class<(add C, N, Z)> {
+  let isAllocatable = false;
+}
+def Stack : MOSRegClass<[i8, i16], 8, (add Static, ZP_PTR)> {
+  let isAllocatable = false;
+}
 
 // MOS assembly mnemonics may only have the following registers as parameters
 // following the comma in a mnemonic, e.g. lda hello, x
 def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 
-def Cc : MOSReg1Class<(add C)>;
+// Sum types of all available storage locations for a size.
+def Anyi1 : MOSReg1Class<(add GPR, ZP, Cc)>;
+def Anyi8 : MOSReg8Class<(add GPR, ZP)>;
 
-def ZP :
-  RegisterClass<"MOS", [i8], 8, (sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
-def ZP_PTR :
-  RegisterClass<"MOS", [i16], 8,
-    (sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
-
-def Stack : MOSRegClass<[i8, i16], 8, (add Static, ZP_PTR)> {
-  let isAllocatable = false;
-}
-
-def AZP : MOSRegClass<[i8], 8, (add A, ZP)>;
-
-def Anyi8 : MOSRegClass<[i8], 8, (add GPR, ZP)>;
-def Anyi1 : MOSRegClass<[i1], 8, (add GPR, ZP, Cc)>;
-
-def Anyc : MOSRegClass<[i8, i16], 8, (add Anyi8, ZP_PTR)> {
+// Any location where any supported size could be placed.
+def Anyc : MOSRegClass<[i1, i8, i16], 8, (add Anyi8, ZP_PTR)> {
   let isAllocatable = false;
 }
