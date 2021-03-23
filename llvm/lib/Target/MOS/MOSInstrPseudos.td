@@ -30,12 +30,12 @@ def label : Operand<OtherVT>;
 class Pseudo : Instruction {
   let Namespace = "MOS";
 
-  let Uses = [];
-  let Defs = [NZ];
+  dag InOperandList = (ins);
+  dag OutOperandList = (outs);
 
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
+  let hasSideEffects = false;
+  let mayLoad = false;
+  let mayStore = false;
   let isPseudo = true;
   let isCodeGenOnly = true;
 }
@@ -46,16 +46,11 @@ def LDstk : Pseudo {
   dag InOperandList = (ins Stack:$base, i16imm:$offset);
   dag OutOperandList = (outs Anyc:$dst);
 
-  let Defs = [];
-
   let mayLoad = true;
 }
 
 def STstk : Pseudo {
   dag InOperandList = (ins Anyc:$src, Stack:$base, i16imm:$fi);
-  dag OutOperandList = (outs);
-
-  let Defs = [];
 
   let mayStore = true;
 }
@@ -88,7 +83,6 @@ def AddrHistk : Pseudo {
 // decreases SP.
 def IncSP : Pseudo {
   dag InOperandList = (ins i16imm:$bytes);
-  dag OutOperandList = (outs);
 
   let Uses = [RS0];
   let Defs = [RS0];
@@ -96,7 +90,6 @@ def IncSP : Pseudo {
 
 def ADJCALLSTACKDOWN : Pseudo {
   dag InOperandList = (ins i16imm:$bytes, i16imm:$prior);
-  dag OutOperandList = (outs);
 
   let Uses = [RS0];
   let Defs = [RS0];
@@ -104,7 +97,6 @@ def ADJCALLSTACKDOWN : Pseudo {
 
 def ADJCALLSTACKUP : Pseudo {
   dag InOperandList = (ins i16imm:$bytes, i16imm:$prior);
-  dag OutOperandList = (outs);
 
   let Uses = [RS0];
   let Defs = [RS0];
@@ -118,6 +110,8 @@ def LDidx : Pseudo {
   dag InOperandList = (ins i16imm:$addr, XY:$idx);
   dag OutOperandList = (outs GPR:$dst);
 
+  let Defs = [NZ];
+
   let isReMaterializable = true;
   let mayLoad = true;
 }
@@ -129,8 +123,6 @@ def LDidx : Pseudo {
 def LDimm_preserve : Pseudo {
   dag InOperandList = (ins i8imm:$val);
   dag OutOperandList = (outs GPR:$dst);
-
-  let Defs = [];
 
   let isMoveImm = true;
   let isReMaterializable = true;
@@ -198,8 +190,6 @@ def ASL : Pseudo {
 // Branches to $tgt if $flag = $val.
 def BR : Pseudo {
   dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
-  dag OutOperandList = (outs);
-  let Defs = [];
 
   let isBranch = true;
   let isTerminator = true;
@@ -207,7 +197,8 @@ def BR : Pseudo {
 
 def CMPimm : Pseudo {
   dag InOperandList = (ins GPR:$l, i8imm:$r);
-  dag OutOperandList = (outs);
+
+  let Defs = [C, NZ];
 
   let isCompare = true;
   let isReMaterializable = true;
@@ -222,7 +213,10 @@ def IN_ : Pseudo {
   dag OutOperandList = (outs XY:$dst);
   let Constraints = "$src = $dst";
 
+  let Defs = [NZ];
+
   let Pattern = [(set XY:$dst, (add XY:$src, 1))];
+
 
   let isAdd = true;
   let isReMaterializable = true;
@@ -230,9 +224,6 @@ def IN_ : Pseudo {
 
 def JMP : Pseudo, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
   dag InOperandList = (ins label:$tgt);
-  dag OutOperandList = (outs);
-
-  let Defs = [];
 
   let Pattern = [(br bb:$tgt)];
 
@@ -243,9 +234,6 @@ def JMP : Pseudo, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
 
 def JSR : Pseudo, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
   dag InOperandList = (ins label:$tgt);
-  dag OutOperandList = (outs);
-
-  let Defs = [];
 
   let isCall = true;
 }
@@ -254,8 +242,6 @@ def LDCimm : Pseudo {
   dag InOperandList = (ins i1imm:$val);
   dag OutOperandList = (outs Cc:$dst);
 
-  let Defs = [];
-
   let isReMaterializable = true;
   let isAsCheapAsAMove = true;
 }
@@ -263,6 +249,8 @@ def LDCimm : Pseudo {
 def LDimm : Pseudo {
   dag InOperandList = (ins i8imm:$val);
   dag OutOperandList = (outs GPR:$dst);
+
+  let Defs = [NZ];
 
   let Pattern = [(set GPR:$dst, imm:$val)];
 
@@ -275,6 +263,8 @@ def LDzpr : Pseudo {
   dag InOperandList = (ins ZP:$src);
   dag OutOperandList = (outs GPR:$dst);
 
+  let Defs = [NZ];
+
   let isReMaterializable = true;
 }
 
@@ -282,13 +272,14 @@ def LDabs : Pseudo {
   dag InOperandList = (ins i16imm:$src);
   dag OutOperandList = (outs GPR:$dst);
 
+  let Defs = [NZ];
+
   let isReMaterializable = true;
   let mayLoad = true;
 }
 
 def LDAidx : Pseudo {
   dag InOperandList = (ins i16imm:$addr, XY:$idx);
-  dag OutOperandList = (outs);
 
   let Defs = [A, NZ];
 
@@ -298,7 +289,6 @@ def LDAidx : Pseudo {
 
 def LDXidx : Pseudo, PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
-  dag OutOperandList = (outs);
 
   let Uses = [Y];
   let Defs = [X, NZ];
@@ -309,7 +299,6 @@ def LDXidx : Pseudo, PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)> {
 
 def LDYidx : Pseudo, PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
-  dag OutOperandList = (outs);
 
   let Uses = [X];
   let Defs = [Y, NZ];
@@ -328,34 +317,24 @@ def LDyindirr : Pseudo, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
 }
 
 def PHA : Pseudo, PseudoInstExpansion<(PHA_Implied)> {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs);
   let Uses = [A];
-  let Defs = [];
 
   let mayStore = true;
 }
 
 def PLA : Pseudo, PseudoInstExpansion<(PLA_Implied)> {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs);
   let Defs = [A, NZ];
 
   let mayLoad = true;
 }
 
 def PHP : Pseudo, PseudoInstExpansion<(PHP_Implied)> {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs);
   let Uses = [P];
-  let Defs = [];
 
   let mayStore = true;
 }
 
 def PLP : Pseudo, PseudoInstExpansion<(PLP_Implied)> {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs);
   let Defs = [P];
 
   let mayLoad = true;
@@ -372,11 +351,6 @@ def ROL : Pseudo {
 }
 
 def RTS : Pseudo, PseudoInstExpansion<(RTS_Implied)> {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs);
-
-  let Defs = [];
-
   let isBarrier = true;
   let isReturn = true;
   let isTerminator = true;
@@ -406,27 +380,18 @@ def SBCzpr : Pseudo, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
 
 def STabs : Pseudo {
   dag InOperandList = (ins GPR:$src, i16imm:$dst);
-  dag OutOperandList = (outs);
-
-  let Defs = [];
 
   let mayStore = true;
 }
 
 def STidx : Pseudo {
   dag InOperandList = (ins Ac:$src, i16imm:$addr, XY:$idx);
-  dag OutOperandList = (outs);
-
-  let Defs = [];
 
   let mayStore = true;
 }
 
 def STyindirr : Pseudo, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
   dag InOperandList = (ins Ac:$src, ZP_PTR:$addr, Yc:$offset);
-  dag OutOperandList = (outs);
-
-  let Defs = [];
 
   let mayStore = true;
 }
@@ -434,15 +399,13 @@ def STyindirr : Pseudo, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
 def STzpr : Pseudo {
   dag InOperandList = (ins GPR:$src);
   dag OutOperandList = (outs ZP:$dst);
-
-  let Defs = [];
 }
 
 def TA_ : Pseudo {
-  dag InOperandList = (ins);
   dag OutOperandList = (outs XY:$dst);
 
   let Uses = [A];
+  let Defs = [NZ];
 
   let isAsCheapAsAMove = true;
   let isReMaterializable = true;
@@ -450,7 +413,6 @@ def TA_ : Pseudo {
 
 def T_A : Pseudo {
   dag InOperandList = (ins XY:$src);
-  dag OutOperandList = (outs);
 
   let Defs = [A, NZ];
 
@@ -459,9 +421,6 @@ def T_A : Pseudo {
 }
 
 def TSX : Pseudo, PseudoInstExpansion<(TSX_Implied)> {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs);
-
   let Defs = [X, NZ];
 
   let isAsCheapAsAMove = true;
