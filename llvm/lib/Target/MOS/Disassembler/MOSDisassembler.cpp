@@ -39,7 +39,7 @@ public:
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
 };
-}; // namespace
+} // namespace
 
 MCDisassembler *createMOSDisassembler(const Target &T,
                                       const MCSubtargetInfo &STI,
@@ -91,7 +91,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     }
   }
   return MCDisassembler::Fail;
-};
+}
 
 using DecodeFunc = DecodeStatus (*)(MCInst &, unsigned int, uint64_t,
                                     const void *);
