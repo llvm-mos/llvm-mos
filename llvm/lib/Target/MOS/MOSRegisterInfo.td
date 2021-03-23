@@ -24,18 +24,11 @@
 // conflicts with legacy assembly code that depends on the register names
 // as variables.  (The MOS instructions generally don't name the target
 // register as a parameter.  The target registers are implied by the opcode.)
-class MOSReg<bits<16> num,
-             string name,
-             list<Register> subregs = [],
-             list<string> altNames = []
- >
-  : RegisterWithSubRegs<!strconcat("llvm_mos_", name), subregs>,
-    DwarfRegNum<[num]>
-{
+class MOSReg<bits<16> num, string name>
+  : Register<!strconcat("llvm_mos_", name)>, DwarfRegNum<[num]> {
   field bits<16> Num = num;
   let HWEncoding = num;
   let Namespace = "MOS";
-  let SubRegs = subregs;
   let AltNames = [name];
 }
 
@@ -102,30 +95,23 @@ def Static : MOSReg<10, "Static">;
 // The second 16-bit imaginary register is reserved as a frame pointer whenever
 // necessary, on a function-by-function basis.
 
+// 8-bit imaginary registers.
+class MOSImagReg8<bits<16> num, string name> : MOSReg<num, name>;
+
+// 16-bit imaginary registers (consecutive pairs of 8-bit registers).
+class MOSImagReg16<bits<16> num, string name, list<Register> subregs>
+    : MOSReg<num, name> {
+  let SubRegs = subregs;
+  let SubRegIndices = [sublo, subhi];
+  let CoveredBySubRegs = 1;
+}
+
 defvar MaxImag8Regs = 256;
 // The starting DWARF number for the imaginary registers.
 defvar Imag8RegsOffset = 0x10;
 
 defvar MaxImag16Regs = !sra(MaxImag8Regs, 1);
 defvar Imag16RegsOffset = !add(Imag8RegsOffset, MaxImag8Regs);
-
-// Definition for 8-bit imaginary registers.
-class MOSImagReg8<bits<16> num,
-            string name,
-            list<Register> subregs = [],
-            list<string> altNames = []>
-        : MOSReg< num, name, subregs, altNames >;
-
-// Definition for 16-bit imaginary registers.
-class MOSImagReg16<bits<16> num,
-            string name,
-            list<Register> subregs = [],
-            list<string> altNames = []>
-            : MOSReg< num, name, subregs, altNames>
-{
-  let SubRegIndices = [sublo, subhi];
-  let CoveredBySubRegs = 1;
-}
 
 // Now we enumerate the imaginary registers.
 // Imaginary 8-bit registers, starting with the prefix rc
@@ -134,7 +120,7 @@ foreach I = 0...!add(MaxImag8Regs, -1) in
   // There exist MaxImag8Regs rcXX registers...
   def RC#I:
     MOSImagReg8< !add(I, Imag8RegsOffset), "rc"#!cast<string>(I) >;
- }
+}
 
 // Imaginary 16-bit registers, starting with the prefix rs
 foreach I = 0...!add(MaxImag16Regs, -1) in
