@@ -195,6 +195,16 @@ def ASL : Pseudo {
   let isReMaterializable = true;
 }
 
+// Branches to $tgt if $flag = $val.
+def BR : Pseudo {
+  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
+  dag OutOperandList = (outs);
+  let Defs = [];
+
+  let isBranch = true;
+  let isTerminator = true;
+}
+
 def CMPimm : Pseudo {
   dag InOperandList = (ins GPR:$l, i8imm:$r);
   dag OutOperandList = (outs);
@@ -216,6 +226,28 @@ def IN_ : Pseudo {
 
   let isAdd = true;
   let isReMaterializable = true;
+}
+
+def JMP : Pseudo, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
+  dag InOperandList = (ins label:$tgt);
+  dag OutOperandList = (outs);
+
+  let Defs = [];
+
+  let Pattern = [(br bb:$tgt)];
+
+  let isBarrier = true;
+  let isBranch = true;
+  let isTerminator = true;
+}
+
+def JSR : Pseudo, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
+  dag InOperandList = (ins label:$tgt);
+  dag OutOperandList = (outs);
+
+  let Defs = [];
+
+  let isCall = true;
 }
 
 def LDCimm : Pseudo {
@@ -295,68 +327,6 @@ def LDyindirr : Pseudo, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
   let mayLoad = true;
 }
 
-def ROL : Pseudo {
-  dag InOperandList = (ins AZP:$src, Cc:$carryin);
-  dag OutOperandList = (outs AZP:$dst, Cc:$carryout);
-  let Constraints = "$dst = $src, $carryout = $carryin";
-
-  let Defs = [NZ];
-
-  let isReMaterializable = true;
-}
-
-def SBCimm : Pseudo, PseudoInstExpansion<(SBC_Immediate imm8:$r)> {
-  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
-  let Constraints = "$dst = $l, $carryout = $carryin";
-
-  let Defs = [NZ];
-
-  let isReMaterializable = true;
-}
-
-def SBCzpr : Pseudo, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
-  dag InOperandList = (ins Ac:$l, ZP:$r, Cc:$carryin);
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
-  // Don't give the carries a tied constraint, since having two tied operands
-  // inhibits commutation of $l and $r.
-  let Constraints = "$dst = $l";
-
-  let Defs = [NZ];
-
-  let isReMaterializable = true;
-}
-
-def TA_ : Pseudo {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs XY:$dst);
-
-  let Uses = [A];
-
-  let isAsCheapAsAMove = true;
-  let isReMaterializable = true;
-}
-
-def T_A : Pseudo {
-  dag InOperandList = (ins XY:$src);
-  dag OutOperandList = (outs);
-
-  let Defs = [A, NZ];
-
-  let isAsCheapAsAMove = true;
-  let isReMaterializable = true;
-}
-
-def TSX : Pseudo, PseudoInstExpansion<(TSX_Implied)> {
-  dag InOperandList = (ins);
-  dag OutOperandList = (outs);
-
-  let Defs = [X, NZ];
-
-  let isAsCheapAsAMove = true;
-  let isReMaterializable = true;
-}
-
 def PHA : Pseudo, PseudoInstExpansion<(PHA_Implied)> {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
@@ -391,11 +361,47 @@ def PLP : Pseudo, PseudoInstExpansion<(PLP_Implied)> {
   let mayLoad = true;
 }
 
-def STzpr : Pseudo {
-  dag InOperandList = (ins GPR:$src);
-  dag OutOperandList = (outs ZP:$dst);
+def ROL : Pseudo {
+  dag InOperandList = (ins AZP:$src, Cc:$carryin);
+  dag OutOperandList = (outs AZP:$dst, Cc:$carryout);
+  let Constraints = "$dst = $src, $carryout = $carryin";
+
+  let Defs = [NZ];
+
+  let isReMaterializable = true;
+}
+
+def RTS : Pseudo, PseudoInstExpansion<(RTS_Implied)> {
+  dag InOperandList = (ins);
+  dag OutOperandList = (outs);
 
   let Defs = [];
+
+  let isBarrier = true;
+  let isReturn = true;
+  let isTerminator = true;
+}
+
+def SBCimm : Pseudo, PseudoInstExpansion<(SBC_Immediate imm8:$r)> {
+  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
+  dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
+  let Constraints = "$dst = $l, $carryout = $carryin";
+
+  let Defs = [NZ];
+
+  let isReMaterializable = true;
+}
+
+def SBCzpr : Pseudo, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
+  dag InOperandList = (ins Ac:$l, ZP:$r, Cc:$carryin);
+  dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
+  // Don't give the carries a tied constraint, since having two tied operands
+  // inhibits commutation of $l and $r.
+  let Constraints = "$dst = $l";
+
+  let Defs = [NZ];
+
+  let isReMaterializable = true;
 }
 
 def STabs : Pseudo {
@@ -425,45 +431,39 @@ def STyindirr : Pseudo, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
   let mayStore = true;
 }
 
-// Branches to $tgt if $flag = $val.
-def BR : Pseudo {
-  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
-  dag OutOperandList = (outs);
-  let Defs = [];
-
-  let isBranch = true;
-  let isTerminator = true;
-}
-
-def JMP : Pseudo, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
-  dag InOperandList = (ins label:$tgt);
-  dag OutOperandList = (outs);
+def STzpr : Pseudo {
+  dag InOperandList = (ins GPR:$src);
+  dag OutOperandList = (outs ZP:$dst);
 
   let Defs = [];
-
-  let Pattern = [(br bb:$tgt)];
-
-  let isBarrier = true;
-  let isBranch = true;
-  let isTerminator = true;
 }
 
-def JSR : Pseudo, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
-  dag InOperandList = (ins label:$tgt);
+def TA_ : Pseudo {
+  dag InOperandList = (ins);
+  dag OutOperandList = (outs XY:$dst);
+
+  let Uses = [A];
+
+  let isAsCheapAsAMove = true;
+  let isReMaterializable = true;
+}
+
+def T_A : Pseudo {
+  dag InOperandList = (ins XY:$src);
   dag OutOperandList = (outs);
 
-  let Defs = [];
+  let Defs = [A, NZ];
 
-  let isCall = true;
+  let isAsCheapAsAMove = true;
+  let isReMaterializable = true;
 }
 
-def RTS : Pseudo, PseudoInstExpansion<(RTS_Implied)> {
+def TSX : Pseudo, PseudoInstExpansion<(TSX_Implied)> {
   dag InOperandList = (ins);
   dag OutOperandList = (outs);
 
-  let Defs = [];
+  let Defs = [X, NZ];
 
-  let isBarrier = true;
-  let isReturn = true;
-  let isTerminator = true;
+  let isAsCheapAsAMove = true;
+  let isReMaterializable = true;
 }
