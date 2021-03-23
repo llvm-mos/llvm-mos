@@ -187,11 +187,9 @@ def BEQ_Relative : ConditionalBranch<"beq", 0b11, 0b1>;
 /// TXA TXS TAX TSX DEX NOP
 /// 8A  9A  AA  BA  CA  EA
 
-let isCall = true in {
 def BRK_Implied: InstLow0<"brk", 0b0000>;
 /// JSR is the only instruction that does not follow the current pattern.
 def JSR_Absolute: Inst24<"jsr", Opcode<0x20>, Absolute>;
-}
 let isReturn = true, isBarrier = true, isTerminator = true in {
 def RTI_Implied: InstLow0<"rti", 0b0100>;
 def RTS_Implied: InstLow0<"rts", 0b0110>;

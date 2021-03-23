@@ -7,7 +7,7 @@ body:             |
   bb.0.entry:
     liveins: $a, $n
     $x = COPY $a
-    RTS_Implied implicit $n
+    RTS implicit $n
 # CHECK:      PHA
 # CHECK-NEXT: PHP
 # CHECK-NEXT: PLA
@@ -25,7 +25,7 @@ body:             |
 # CHECK-NEXT: $x = TA_
 # CHECK-NEXT: PLA
 # CHECK-NEXT: PLP
-# CHECK-NEXT: RTS_Implied
+# CHECK-NEXT: RTS
 ...
 ---
 name:            preserve_a
@@ -35,12 +35,12 @@ body:             |
   bb.0.entry:
     liveins: $a, $y
     $x = COPY $y
-    RTS_Implied implicit $a
+    RTS implicit $a
 # CHECK:      STabs $a, &_SaveA
 # CHECK-NEXT: T_A $y
 # CHECK-NEXT: $x = TA_
 # CHECK-NEXT: PHP
 # CHECK-NEXT: $a = LDabs &_SaveA
 # CHECK-NEXT: PLP
-# CHECK-NEXT: RTS_Implied
+# CHECK-NEXT: RTS
 ...

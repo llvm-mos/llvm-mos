@@ -5,7 +5,7 @@ name: adc_immediate
 body: |
   bb.0.entry:
     $a, $c = ADCimm $a, 42, $c, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      adc #42
 # CHECK-NEXT: rts
 ...
@@ -15,7 +15,7 @@ name: adc_zeropage
 body: |
   bb.0.entry:
     $a, $c = ADCzpr $a, $rc0, $c, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      adc mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -25,7 +25,7 @@ name: asl_accumulator
 body: |
   bb.0.entry:
     $a, $c = ASL $a, implicit-def $nz
-    RTS_Implied
+    RTS
 # $ prevents asl from matching the name of the function.
 # CHECK:      asl{{$}}
 # CHECK-NEXT: rts
@@ -36,7 +36,7 @@ name: asl_zeropage
 body: |
   bb.0.entry:
     $rc0, $c = ASL $rc0, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      asl mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -46,7 +46,7 @@ name: bcc_relative
 body: |
   bb.0.entry:
     BR %bb.0.entry, $c, 0
-    RTS_Implied
+    RTS
 # CHECK:      [[BLOCK:L.*]]: ; %entry
 # CHECK:      bcc [[BLOCK]]
 # CHECK-NEXT: rts
@@ -57,7 +57,7 @@ name: bcs_relative
 body: |
   bb.0.entry:
     BR %bb.0.entry, $c, 1
-    RTS_Implied
+    RTS
 # CHECK:      [[BLOCK:L.*]]: ; %entry
 # CHECK:      bcs [[BLOCK]]
 # CHECK-NEXT: rts
@@ -68,7 +68,7 @@ name: beq_relative
 body: |
   bb.0.entry:
     BR %bb.0.entry, $z, 1
-    RTS_Implied
+    RTS
 # CHECK:      [[BLOCK:L.*]]: ; %entry
 # CHECK:      beq [[BLOCK]]
 # CHECK-NEXT: rts
@@ -79,7 +79,7 @@ name: bmi_relative
 body: |
   bb.0.entry:
     BR %bb.0.entry, $n, 1
-    RTS_Implied
+    RTS
 # CHECK:      [[BLOCK:L.*]]: ; %entry
 # CHECK:      bmi [[BLOCK]]
 # CHECK-NEXT: rts
@@ -90,7 +90,7 @@ name: bne_relative
 body: |
   bb.0.entry:
     BR %bb.0.entry, $z, 0
-    RTS_Implied
+    RTS
 # CHECK:      [[BLOCK:L.*]]: ; %entry
 # CHECK:      bne [[BLOCK]]
 # CHECK-NEXT: rts
@@ -101,7 +101,7 @@ name: bpl_relative
 body: |
   bb.0.entry:
     BR %bb.0.entry, $n, 0
-    RTS_Implied
+    RTS
 # CHECK:      [[BLOCK:L.*]]: ; %entry
 # CHECK:      bpl [[BLOCK]]
 # CHECK-NEXT: rts
@@ -112,7 +112,7 @@ name: clc_implied
 body: |
   bb.0.entry:
     $c = LDCimm 0
-    RTS_Implied
+    RTS
 # CHECK:      clc{{$}}
 # CHECK-NEXT: rts
 ...
@@ -122,7 +122,7 @@ name: cmp_immediate
 body: |
   bb.0.entry:
     CMPimm $a, 42, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      cmp #42
 # CHECK-NEXT: rts
 ...
@@ -132,7 +132,7 @@ name: cpx_immediate
 body: |
   bb.0.entry:
     CMPimm $x, 42, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      cpx #42
 # CHECK-NEXT: rts
 ...
@@ -142,7 +142,7 @@ name: cpy_immediate
 body: |
   bb.0.entry:
     CMPimm $y, 42, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      cpy #42
 # CHECK-NEXT: rts
 ...
@@ -152,7 +152,7 @@ name: inx_implied
 body: |
   bb.0.entry:
     $x = IN_ $x, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      inx{{$}}
 # CHECK-NEXT: rts
 ...
@@ -162,7 +162,7 @@ name: iny_implied
 body: |
   bb.0.entry:
     $y = IN_ $y, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      iny{{$}}
 # CHECK-NEXT: rts
 ...
@@ -176,12 +176,20 @@ body: |
 # CHECK: jmp [[BLOCK]]
 ...
 ---
+name: jsr_absolute
+# CHECK-LABEL: jsr_absolute
+body: |
+  bb.0.entry:
+    JSR &fn
+# CHECK: jsr fn
+...
+---
 name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |
   bb.0.entry:
     $a = LDimm 42, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      lda #42
 # CHECK-NEXT: rts
 ...
@@ -191,7 +199,7 @@ name: ldx_immediate
 body: |
   bb.0.entry:
     $x = LDimm 42, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      ldx #42
 # CHECK-NEXT: rts
 ...
@@ -201,7 +209,7 @@ name: ldy_immediate
 body: |
   bb.0.entry:
     $y = LDimm 42, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      ldy #42
 # CHECK-NEXT: rts
 ...
@@ -211,7 +219,7 @@ name: lda_absolute
 body: |
   bb.0.entry:
     $a = LDabs 1234, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      lda 1234
 # CHECK-NEXT: rts
 ...
@@ -221,7 +229,7 @@ name: ldx_absolute
 body: |
   bb.0.entry:
     $x = LDabs 1234, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      ldx 1234
 # CHECK-NEXT: rts
 ...
@@ -231,7 +239,7 @@ name: ldy_absolute
 body: |
   bb.0.entry:
     $y = LDabs 1234, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      ldy 1234
 # CHECK-NEXT: rts
 ...
@@ -241,7 +249,7 @@ name: lda_absolutex
 body: |
   bb.0.entry:
     LDAidx 1234, $x, implicit-def $a, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      lda 1234,x
 # CHECK-NEXT: rts
 ...
@@ -251,7 +259,7 @@ name: lda_absolutey
 body: |
   bb.0.entry:
     LDAidx 1234, $y, implicit-def $a, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      lda 1234,y
 # CHECK-NEXT: rts
 ...
@@ -261,7 +269,7 @@ name: ldx_absolutey
 body: |
   bb.0.entry:
     LDXidx 1234, implicit-def $x, implicit-def $nz, implicit $y
-    RTS_Implied
+    RTS
 # CHECK:      ldx 1234,y
 # CHECK-NEXT: rts
 ...
@@ -271,7 +279,7 @@ name: ldy_absolutex
 body: |
   bb.0.entry:
     LDYidx 1234, implicit-def $y, implicit-def $nz, implicit $x
-    RTS_Implied
+    RTS
 # CHECK:      ldy 1234,x
 # CHECK-NEXT: rts
 ...
@@ -281,7 +289,7 @@ name: lda_indirectindexed
 body: |
   bb.0.entry:
     $a = LDyindirr $rs0, $y, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      lda (mos8(__rc0)),y
 # CHECK-NEXT: rts
 ...
@@ -291,7 +299,7 @@ name: lda_zeropage
 body: |
   bb.0.entry:
     $a = LDzpr $rc0, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      lda mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -301,7 +309,7 @@ name: ldx_zeropage
 body: |
   bb.0.entry:
     $x = LDzpr $rc0, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      ldx mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -311,7 +319,7 @@ name: ldy_zeropage
 body: |
   bb.0.entry:
     $y = LDzpr $rc0, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      ldy mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -321,7 +329,7 @@ name: pha_implied
 body: |
   bb.0.entry:
     PHA implicit $a
-    RTS_Implied
+    RTS
 # CHECK:      pha{{$}}
 # CHECK-NEXT: rts
 ...
@@ -331,7 +339,7 @@ name: php_implied
 body: |
   bb.0.entry:
     PHP implicit $p
-    RTS_Implied
+    RTS
 # CHECK:      php{{$}}
 # CHECK-NEXT: rts
 ...
@@ -341,7 +349,7 @@ name: pla_implied
 body: |
   bb.0.entry:
     PLA implicit-def $a, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      pla{{$}}
 # CHECK-NEXT: rts
 ...
@@ -351,7 +359,7 @@ name: plp_implied
 body: |
   bb.0.entry:
     PLP implicit-def $p
-    RTS_Implied
+    RTS
 # CHECK:      plp{{$}}
 # CHECK-NEXT: rts
 ...
@@ -361,7 +369,7 @@ name: rol_accumulator
 body: |
   bb.0.entry:
     $a, $c = ROL $a, $c, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      rol{{$}}
 # CHECK-NEXT: rts
 ...
@@ -371,9 +379,17 @@ name: rol_zeropage
 body: |
   bb.0.entry:
     $rc0, $c = ROL $rc0, $c, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      rol mos8(__rc0)
 # CHECK-NEXT: rts
+...
+---
+name: rts_implied
+# CHECK-LABEL: rts_implied
+body: |
+  bb.0.entry:
+    RTS
+# CHECK: rts
 ...
 ---
 name: sbc_immediate
@@ -381,7 +397,7 @@ name: sbc_immediate
 body: |
   bb.0.entry:
     $a, $c = SBCimm $a, 42, $c, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      sbc #42
 # CHECK-NEXT: rts
 ...
@@ -391,7 +407,7 @@ name: sbc_zeropage
 body: |
   bb.0.entry:
     $a, $c = SBCzpr $a, $rc0, $c, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      sbc mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -401,7 +417,7 @@ name: sec_implied
 body: |
   bb.0.entry:
     $c = LDCimm 1
-    RTS_Implied
+    RTS
 # CHECK:      sec{{$}}
 # CHECK-NEXT: rts
 ...
@@ -411,7 +427,7 @@ name: sta_absolute
 body: |
   bb.0.entry:
     STabs $a, 1234
-    RTS_Implied
+    RTS
 # CHECK:      sta 1234
 # CHECK-NEXT: rts
 ...
@@ -421,7 +437,7 @@ name: sta_absolutex
 body: |
   bb.0.entry:
     STidx $a, 1234, $x
-    RTS_Implied
+    RTS
 # CHECK:      sta 1234,x
 # CHECK-NEXT: rts
 ...
@@ -431,7 +447,7 @@ name: sta_absolutey
 body: |
   bb.0.entry:
     STidx $a, 1234, $y
-    RTS_Implied
+    RTS
 # CHECK:      sta 1234,y
 # CHECK-NEXT: rts
 ...
@@ -441,7 +457,7 @@ name: sta_zeropage
 body: |
   bb.0.entry:
     $rc0 = STzpr $a
-    RTS_Implied
+    RTS
 # CHECK:      sta mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -451,7 +467,7 @@ name: sta_indirect_indexed
 body: |
   bb.0.entry:
     STyindirr $a, $rs0, $y
-    RTS_Implied
+    RTS
 # CHECK:      sta (mos8(__rc0)),y
 # CHECK-NEXT: rts
 ...
@@ -461,7 +477,7 @@ name: stx_absolute
 body: |
   bb.0.entry:
     STabs $x, 1234
-    RTS_Implied
+    RTS
 # CHECK:      stx 1234
 # CHECK-NEXT: rts
 ...
@@ -471,7 +487,7 @@ name: stx_zeropage
 body: |
   bb.0.entry:
     $rc0 = STzpr $x
-    RTS_Implied
+    RTS
 # CHECK:      stx mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -481,7 +497,7 @@ name: sty_absolute
 body: |
   bb.0.entry:
     STabs $y, 1234
-    RTS_Implied
+    RTS
 # CHECK:      sty 1234
 # CHECK-NEXT: rts
 ...
@@ -491,7 +507,7 @@ name: sty_zeropage
 body: |
   bb.0.entry:
     $rc0 = STzpr $y
-    RTS_Implied
+    RTS
 # CHECK:      sty mos8(__rc0)
 # CHECK-NEXT: rts
 ...
@@ -501,7 +517,7 @@ name: tax_implied
 body: |
   bb.0.entry:
     $x = TA_ implicit-def $nz, implicit $a
-    RTS_Implied
+    RTS
 # CHECK:      tax{{$}}
 # CHECK-NEXT: rts
 ...
@@ -511,7 +527,7 @@ name: tay_implied
 body: |
   bb.0.entry:
     $y = TA_ implicit-def $nz, implicit $a
-    RTS_Implied
+    RTS
 # CHECK:      tay{{$}}
 # CHECK-NEXT: rts
 ...
@@ -521,7 +537,7 @@ name: tsx_implied
 body: |
   bb.0.entry:
     TSX implicit-def $x, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      tsx{{$}}
 # CHECK-NEXT: rts
 ...
@@ -531,7 +547,7 @@ name: txa_implied
 body: |
   bb.0.entry:
     T_A $x, implicit-def $a, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      txa{{$}}
 # CHECK-NEXT: rts
 ...
@@ -541,7 +557,7 @@ name: tya_implied
 body: |
   bb.0.entry:
     T_A $y, implicit-def $a, implicit-def $nz
-    RTS_Implied
+    RTS
 # CHECK:      tya{{$}}
 # CHECK-NEXT: rts
 ...

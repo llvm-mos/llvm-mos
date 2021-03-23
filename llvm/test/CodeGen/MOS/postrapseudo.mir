@@ -72,7 +72,7 @@ name: ldptr_far
 body: |
   bb.0.entry:
     $rs3 = LDstk $rs0, 258
-    RTS_Implied
+    RTS
 # CHECK:      $a = LDzpr $rc0
 # CHECK-NEXT: $rc2 = STzpr $a
 # CHECK-NEXT: $a = LDzpr $rc1
@@ -85,7 +85,7 @@ body: |
 # CHECK-NEXT: $y = LDimm 3
 # CHECK-NEXT: $a = LDyindirr $rs1, $y
 # CHECK-NEXT: $rc7 = STzpr $a
-# CHECK-NEXT: RTS_Implied
+# CHECK-NEXT: RTS
 ...
 ---
 # If $rs1 is the destination, then $rs3 needs to be used as a temporary, not
@@ -95,7 +95,7 @@ name: ldptr_far_1
 body: |
   bb.0.entry:
     $rs1 = LDstk $rs0, 258
-    RTS_Implied
+    RTS
 # CHECK:      $a = LDzpr $rc0
 # CHECK-NEXT: $rc6 = STzpr $a
 # CHECK-NEXT: $a = LDzpr $rc1
@@ -108,19 +108,19 @@ body: |
 # CHECK-NEXT: $y = LDimm 3
 # CHECK-NEXT: $a = LDyindirr $rs3, $y
 # CHECK-NEXT: $rc3 = STzpr $a
-# CHECK-NEXT: RTS_Implied
+# CHECK-NEXT: RTS
 ---
 name: ldstatic
 # CHECK-LABEL: name: ldstatic
 body: |
   bb.0.entry:
     $rs1 = LDstk $static, 1234
-    RTS_Implied
+    RTS
 # CHECK:      $a = LDabs target-index(mos-static-stack) + 1234
 # CHECK-NEXT: $rc2 = STzpr $a
 # CHECK-NEXT: $a = LDabs target-index(mos-static-stack) + 1235
 # CHECK-NEXT: $rc3 = STzpr $a
-# CHECK-NEXT: RTS_Implied
+# CHECK-NEXT: RTS
 ...
 ...
 ---
@@ -129,7 +129,7 @@ name: incsp
 body: |
   bb.0.entry:
     IncSP -1234, implicit $rs0, implicit-def $rs0
-    RTS_Implied
+    RTS
 # CHECK:      $c = LDCimm 0
 # CHECK-NEXT: $a = LDimm 46
 # CHECK-NEXT: $a, $c = ADCzpr $a, $rc0, $c
@@ -144,7 +144,7 @@ name: incsp_hi_only
 body: |
   bb.0.entry:
     IncSP -512, implicit $rs0, implicit-def $rs0
-    RTS_Implied
+    RTS
 # CHECK:      $c = LDCimm 0 
 # CHECK-NEXT: $a = LDimm 254
 # CHECK-NEXT: $a, dead $c = ADCzpr $a, $rc1, $c

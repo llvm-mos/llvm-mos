@@ -15,7 +15,7 @@
     ; CHECK-NEXT: %3:gpr = LDabs 258, implicit-def $nz :: (load 1 from `i8* inttoptr (i16 258 to i8*)`)
     ; CHECK-NEXT: STabs %3, 256 :: (store 1 into `i8* inttoptr (i16 256 to i8*)`)
     ; CHECK-NEXT: STabs %0, 258 :: (store 1 into `i8* inttoptr (i16 258 to i8*)`)
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 
   @one = external global i8, align 1
@@ -33,7 +33,7 @@
     ; CHECK-NEXT: %2:gpr = LDabs @two, implicit-def $nz :: (dereferenceable load 1 from @two)
     ; CHECK-NEXT: STabs %2, @one :: (store 1 into @one)
     ; CHECK-NEXT: STabs %0, @two :: (store 1 into @two)
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 
   %struct.S = type { i8, i8 }
@@ -51,6 +51,6 @@
     ; CHECK-NEXT: %3:gpr = LDabs @agg_var + 1, implicit-def $nz :: (dereferenceable load 1 from `i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 1)`)
     ; CHECK-NEXT: STabs %3, @agg_var :: (store 1 into `i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 0)`)
     ; CHECK-NEXT: STabs %0, @agg_var + 1 :: (store 1 into `i8* getelementptr inbounds (%struct.S, %struct.S* @agg_var, i16 0, i32 1)`)
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 ...

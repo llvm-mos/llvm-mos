@@ -447,3 +447,23 @@ def JMP : Pseudo, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
   let isBranch = true;
   let isTerminator = true;
 }
+
+def JSR : Pseudo, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
+  dag InOperandList = (ins label:$tgt);
+  dag OutOperandList = (outs);
+
+  let Defs = [];
+
+  let isCall = true;
+}
+
+def RTS : Pseudo, PseudoInstExpansion<(RTS_Implied)> {
+  dag InOperandList = (ins);
+  dag OutOperandList = (outs);
+
+  let Defs = [];
+
+  let isBarrier = true;
+  let isReturn = true;
+  let isTerminator = true;
+}

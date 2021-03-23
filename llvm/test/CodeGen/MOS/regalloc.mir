@@ -9,11 +9,11 @@ body: |
   bb.0.entry:
     liveins: $a
     %0:gpr = COPY $a
-    JSR_Absolute &fn, mos_csr
+    JSR &fn, mos_csr
     $a = COPY %0
-    RTS_Implied implicit $a
+    RTS implicit $a
 # CHECK:      STstk $a, %stack.0, 0 :: (store 1 into %stack.0)
-# CHECK-NEXT: JSR_Absolute
+# CHECK-NEXT: JSR
 # CHECK-NEXT: $a = LDstk %stack.0, 0 :: (load 1 from %stack.0)
 ...
 ---
@@ -26,11 +26,11 @@ body: |
   bb.0.entry:
     liveins: $a
     %0:gpr = LDimm 42, implicit-def $nz
-    JSR_Absolute &fn, mos_csr
+    JSR &fn, mos_csr
     $a = COPY %0
-    RTS_Implied implicit $a
-# CHECK: JSR_Absolute
+    RTS implicit $a
+# CHECK: JSR
 # CHECK-NEXT: [[REG:%[0-9]+]]:gpr = LDimm_preserve 42
 # CHECK-NEXT: $a = COPY [[REG]]
-# CHECK-NEXT: RTS_Implied
+# CHECK-NEXT: RTS
 ...

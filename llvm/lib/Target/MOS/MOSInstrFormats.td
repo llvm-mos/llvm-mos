@@ -32,9 +32,9 @@ class Inst<string asmstr> : Instruction
   // Note: These properties are not tracked for the real instruction set, which
   // is used only in the MC layer. See the instruction-like pseudos for the
   // definitions of these properties.
-  let mayLoad = false;
-  let mayStore = false;
-  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = true;
+  let hasSideEffects = true;
 
   field bits<32> SoftFail = 0;
   let DecoderNamespace = "MOS";

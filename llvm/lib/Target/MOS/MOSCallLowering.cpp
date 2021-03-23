@@ -207,7 +207,7 @@ void adjustArgFlags(CallLowering::ArgInfo &Arg, LLT Ty) {
 bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                   const Value *Val, ArrayRef<Register> VRegs,
                                   FunctionLoweringInfo &FLI) const {
-  auto Return = MIRBuilder.buildInstrNoInsert(MOS::RTS_Implied);
+  auto Return = MIRBuilder.buildInstrNoInsert(MOS::RTS);
 
   if (Val) {
     MachineFunction &MF = MIRBuilder.getMF();
@@ -306,7 +306,7 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   auto CallSeqStart = MIRBuilder.buildInstr(MOS::ADJCALLSTACKDOWN);
 
-  auto Call = MIRBuilder.buildInstrNoInsert(MOS::JSR_Absolute)
+  auto Call = MIRBuilder.buildInstrNoInsert(MOS::JSR)
                   .add(Info.Callee)
                   .addRegMask(TRI.getCallPreservedMask(
                       MF, MF.getFunction().getCallingConv()));

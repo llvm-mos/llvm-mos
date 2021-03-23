@@ -9,7 +9,7 @@
   entry:
   ; CHECK-LABEL: entry:
     ret void
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 
   define i8 @ret_i8() {
@@ -19,7 +19,7 @@
     ret i8 42
     ; CHECK-NEXT: %0:_(s8) = G_CONSTANT i8 42
     ; CHECK-NEXT: $a = COPY %0
-    ; CHECK-NEXT: RTS_Implied implicit $a
+    ; CHECK-NEXT: RTS implicit $a
   }
 
   define i16 @ret_i16() {
@@ -31,7 +31,7 @@
     ; CHECK-NEXT: %1:_(s8), %2:_(s8) = G_UNMERGE_VALUES %0
     ; CHECK-NEXT: $a = COPY %1
     ; CHECK-NEXT: $x = COPY %2
-    ; CHECK-NEXT: RTS_Implied implicit $a, implicit $x
+    ; CHECK-NEXT: RTS implicit $a, implicit $x
   }
 
   define void @formal_args_i8(i8 %first, i8 %second, i8 %third, i8 %fourth) {
@@ -44,7 +44,7 @@
     ; CHECK-NEXT: %1:_(s8) = COPY $x
     ; CHECK-NEXT: %2:_(s8) = COPY $y
     ; CHECK-NEXT: %3:_(s8) = COPY $rc2
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 
   define void @formal_args_i16(i8 %first, i16 %second) {
@@ -57,7 +57,7 @@
     ; CHECK-NEXT: %2:_(s8) = COPY $x
     ; CHECK-NEXT: %3:_(s8) = COPY $y
     ; CHECK-NEXT: %1:_(s16) = G_MERGE_VALUES %2(s8), %3(s8)
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 
   define void @call_ret() {
@@ -67,10 +67,10 @@
     %0 = call i8 @ret_i8()
     ret void
     ; CHECK:      ADJCALLSTACKDOWN 0
-    ; CHECK-NEXT: JSR_Absolute @ret_i8, mos_csr, implicit-def $a
+    ; CHECK-NEXT: JSR @ret_i8, mos_csr, implicit-def $a
     ; CHECK-NEXT: %0:_(s8) = COPY $a
     ; CHECK-NEXT: ADJCALLSTACKUP 0
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 
   define void @call_args() {
@@ -88,9 +88,9 @@
     ; CHECK-NEXT: $x = COPY %1
     ; CHECK-NEXT: $y = COPY %2
     ; CHECK-NEXT: $rc2 = COPY %3
-    ; CHECK-NEXT: JSR_Absolute @formal_args_i8, mos_csr, implicit $a, implicit $x, implicit $y, implicit $rc2
+    ; CHECK-NEXT: JSR @formal_args_i8, mos_csr, implicit $a, implicit $x, implicit $y, implicit $rc2
     ; CHECK-NEXT: ADJCALLSTACKUP 0
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
 
   }
   define void @ptr(i8* %first, i16* %second) {
@@ -114,7 +114,7 @@
     ; CHECK-NEXT: %1:_(s8) = COPY $x
     ; CHECK-NEXT: %2:_(s8) = COPY $y
     ; CHECK-NEXT: $a = COPY %2
-    ; CHECK-NEXT: RTS_Implied implicit $a
+    ; CHECK-NEXT: RTS implicit $a
   }
 
   declare void @varargs(i8 %a, ...)
@@ -144,8 +144,8 @@
     ; CHECK-NEXT: %14:_(s16) = G_CONSTANT i16 3
     ; CHECK-NEXT: %15:_(p0) = G_PTR_ADD %7, %14(s16)
     ; CHECK-NEXT: G_STORE %6(s8), %15(p0) :: (store 1 into stack + 3)
-    ; CHECK-NEXT: JSR_Absolute @varargs, mos_csr, implicit $a
+    ; CHECK-NEXT: JSR @varargs, mos_csr, implicit $a
     ; CHECK-NEXT: ADJCALLSTACKUP 4, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 ...

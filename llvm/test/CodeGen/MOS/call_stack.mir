@@ -19,7 +19,7 @@
     ; CHECK-NEXT: %10:_(p0) = G_FRAME_INDEX %fixed-stack.0
     ; CHECK-NEXT: %8:_(s8) = G_LOAD %10(p0) :: (invariant load 1 from %fixed-stack.0)
     ; CHECK-NEXT: %4:_(s16) = G_MERGE_VALUES %7(s8), %8(s8)
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
   }
 
   define void @call_stack() {
@@ -45,9 +45,9 @@
     ; CHECK-NEXT: %12:_(s16) = G_CONSTANT i16 1
     ; CHECK-NEXT: %13:_(p0) = G_PTR_ADD %9, %12(s16)
     ; CHECK-NEXT: G_STORE %8(s8), %13(p0) :: (store 1 into stack + 1)
-    ; CHECK-NEXT: JSR_Absolute @formal_args_stack
+    ; CHECK-NEXT: JSR @formal_args_stack
     ; CHECK-NEXT: ADJCALLSTACKUP 2, 0
-    ; CHECK-NEXT: RTS_Implied
+    ; CHECK-NEXT: RTS
     ret void
   }
 ...

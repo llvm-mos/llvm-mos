@@ -21,7 +21,7 @@ regBankSelected: true
 body: |
   bb.0.entry:
     %0:any(p0) = G_GLOBAL_VALUE @.str
-    RTS_Implied implicit %0
+    RTS implicit %0
 # CHECK:      %1:gpr = LDimm target-flags(lo) @.str
 # CHECK-NEXT: %2:gpr = LDimm target-flags(hi) @.str
 # CHECK-NEXT: %0:zp_ptr = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
@@ -37,10 +37,10 @@ body: |
     %1:any(s8) = G_IMPLICIT_DEF
     %2:any(p0) = G_PTR_ADD %0, %1
     %3:any(s8) = G_LOAD %2 :: (load 1)
-    RTS_Implied implicit %3
+    RTS implicit %3
 # CHECK:      %1:xy = IMPLICIT_DEF
 # CHECK-NEXT: %3:gpr = LDidx @.str, %1
-# CHECK-NEXT: RTS_Implied implicit %3
+# CHECK-NEXT: RTS implicit %3
 ...
 ---
 name: store_indexed
@@ -54,9 +54,9 @@ body: |
     %2:any(s8) = G_IMPLICIT_DEF
     %3:any(p0) = G_PTR_ADD %1, %2
     G_STORE %0, %3 :: (store 1)
-    RTS_Implied
+    RTS
 # CHECK:      %0:ac = IMPLICIT_DEF
 # CHECK-NEXT: %2:xy = IMPLICIT_DEF
 # CHECK-NEXT: STidx %0, @.str, %2
-# CHECK-NEXT: RTS_Implied
+# CHECK-NEXT: RTS
 ...
