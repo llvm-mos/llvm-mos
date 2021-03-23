@@ -69,7 +69,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // impunity. This is slightly more expensive than saving/resting values
   // directly on the hard stack, but it's significantly simpler.
   for (const CalleeSavedInfo &CI : CSI) {
-    Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(CI.getReg());
+    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(CI.getReg());
     Builder.buildInstr(MOS::PHA);
   }
   if (AMaybeLive)
@@ -92,7 +92,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::STzpr).addDef(CI.getReg()).addUse(MOS::A);
+    Builder.buildInstr(MOS::STimag8).addDef(CI.getReg()).addUse(MOS::A);
   }
   if (AMaybeLive)
     Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");

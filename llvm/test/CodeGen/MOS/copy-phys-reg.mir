@@ -85,7 +85,7 @@ body:             |
   bb.0.entry:
     liveins: $a
     $rc0 = COPY $a
-# CHECK: $rc0 = STzpr $a
+# CHECK: $rc0 = STimag8 $a
 ...
 ---
 name:            ldzp
@@ -95,7 +95,7 @@ body:             |
   bb.0.entry:
     liveins: $rc0
     $a = COPY $rc0
-# CHECK: $a = LDzpr $rc0
+# CHECK: $a = LDimag8 $rc0
 ...
 ---
 name:            zptozp_a
@@ -105,8 +105,8 @@ body:             |
   bb.0.entry:
     liveins: $rc0
     $rc1 = COPY $rc0
-# CHECK:      $a = LDzpr $rc0
-# CHECK-NEXT: $rc1 = STzpr $a
+# CHECK:      $a = LDimag8 $rc0
+# CHECK-NEXT: $rc1 = STimag8 $a
 ...
 ---
 name:            zptozp_x
@@ -117,8 +117,8 @@ body:             |
     liveins: $rc0, $a
     $rc1 = COPY $rc0
     RTS implicit $a
-# CHECK:      $x = LDzpr $rc0
-# CHECK-NEXT: $rc1 = STzpr $x
+# CHECK:      $x = LDimag8 $rc0
+# CHECK-NEXT: $rc1 = STimag8 $x
 # CHECK-NEXT: RTS
 ...
 ---
@@ -130,8 +130,8 @@ body:             |
     liveins: $rc0, $a, $x
     $rc1 = COPY $rc0
     RTS implicit $a, implicit $x
-# CHECK:      $y = LDzpr $rc0
-# CHECK-NEXT: $rc1 = STzpr $y
+# CHECK:      $y = LDimag8 $rc0
+# CHECK-NEXT: $rc1 = STimag8 $y
 # CHECK-NEXT: RTS
 ...
 ---
@@ -144,8 +144,8 @@ body:             |
     $rc1 = COPY $rc0
     RTS implicit $a, implicit $x, implicit $y
 # CHECK:      STabs $a, &_SaveA
-# CHECK-NEXT: $a = LDzpr $rc0
-# CHECK-NEXT: $rc1 = STzpr $a
+# CHECK-NEXT: $a = LDimag8 $rc0
+# CHECK-NEXT: $rc1 = STimag8 $a
 # CHECK-NEXT: PHP
 # CHECK-NEXT: $a = LDabs &_SaveA
 # CHECK-NEXT: PLP
@@ -159,8 +159,8 @@ body:             |
   bb.0.entry:
     liveins: $rs0
     $rs1 = COPY $rs0
-# CHECK:      $a = LDzpr $rc0
-# CHECK-NEXT: $rc2 = STzpr $a
-# CHECK:      $a = LDzpr $rc1
-# CHECK-NEXT: $rc3 = STzpr $a
+# CHECK:      $a = LDimag8 $rc0
+# CHECK-NEXT: $rc2 = STimag8 $a
+# CHECK:      $a = LDimag8 $rc1
+# CHECK-NEXT: $rc3 = STimag8 $a
 ...

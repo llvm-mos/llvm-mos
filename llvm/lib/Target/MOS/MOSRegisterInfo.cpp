@@ -28,23 +28,23 @@
 using namespace llvm;
 
 cl::opt<int> NumImagPtrs("num-imag-ptrs", cl::init(127),
-                         cl::desc("Number of imaginary (ZP) pointer registers "
+                         cl::desc("Number of imaginary (Imag8) pointer registers "
                                   "available for compiler use."),
                          cl::value_desc("imaginary pointer registers"));
 
 MOSRegisterInfo::MOSRegisterInfo()
     : MOSGenRegisterInfo(/*RA=*/0, /*DwarfFlavor=*/0, /*EHFlavor=*/0,
                          /*PC=*/0, /*HwMode=*/0),
-      ZPSymbolNames(new std::string[getNumRegs()]), Reserved(getNumRegs()) {
+      Imag8SymbolNames(new std::string[getNumRegs()]), Reserved(getNumRegs()) {
   for (unsigned Reg = 0; Reg < getNumRegs(); ++Reg) {
     // Pointers are referred to by their low byte in the addressing modes that
     // use them.
     unsigned R = Reg;
-    if (MOS::ZP_PTRRegClass.contains(R))
+    if (MOS::Imag16RegClass.contains(R))
       R = getSubReg(R, MOS::sublo);
-    if (!MOS::ZPRegClass.contains(R))
+    if (!MOS::Imag8RegClass.contains(R))
       continue;
-    std::string& Str = ZPSymbolNames[Reg];
+    std::string& Str = Imag8SymbolNames[Reg];
     Str = "__";
     Str += getName(R);
     std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
@@ -100,7 +100,7 @@ MOSRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                            const MachineFunction &) const {
   if (RC->contains(MOS::C))
     return &MOS::Anyi1RegClass;
-  if (RC == &MOS::ZP_PTRRegClass)
+  if (RC == &MOS::Imag16RegClass)
     return RC;
   return &MOS::Anyi8RegClass;
 }
@@ -146,8 +146,8 @@ bool MOSRegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
-  if (NewRC == &MOS::ZPRegClass &&
-      (SrcRC == &MOS::AZPRegClass || DstRC == &MOS::AZPRegClass))
+  if (NewRC == &MOS::Imag8RegClass &&
+      (SrcRC == &MOS::AImag8RegClass || DstRC == &MOS::AImag8RegClass))
     return false;
   return true;
 }

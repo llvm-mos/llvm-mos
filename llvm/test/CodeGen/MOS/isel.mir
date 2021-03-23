@@ -10,8 +10,8 @@ body: |
     %1:any(s1) = G_CONSTANT i1 0
     %2:any(s8), %3:any(s1) = G_SHLE %0, %1
     RTS implicit %2, implicit %3
-# CHECK:      %0:azp = IMPLICIT_DEF
-# CHECK-NEXT: %2:azp, %3:cc = ASL %0
+# CHECK:      %0:aimag8 = IMPLICIT_DEF
+# CHECK-NEXT: %2:aimag8, %3:cc = ASL %0
 # CHECK-NEXT: RTS
 ...
 ---
@@ -116,11 +116,11 @@ legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    %0:zp_ptr(p0) = G_IMPLICIT_DEF
-    %1:any(s8) = G_LOAD %0:zp_ptr(p0) :: (load 1)
+    %0:imag16(p0) = G_IMPLICIT_DEF
+    %1:any(s8) = G_LOAD %0:imag16(p0) :: (load 1)
     RTS implicit %1
 # CHECK:      %2:yc = LDimm 0
-# CHECK-NEXT: %1:ac = LDyindirr %0, %2
+# CHECK-NEXT: %1:ac = LDyindir %0, %2
 # CHECK-NEXT: RTS
 ...
 ---
@@ -135,9 +135,9 @@ body: |
     %2:any(p0) = G_PTR_ADD %0, %1
     %3:any(s8) = G_LOAD %2 :: (load 1)
     RTS implicit %3
-# CHECK:      %0:zp_ptr = IMPLICIT_DEF
+# CHECK:      %0:imag16 = IMPLICIT_DEF
 # CHECK-NEXT: %4:yc = LDimm 255
-# CHECK-NEXT: %3:ac = LDyindirr %0, %4
+# CHECK-NEXT: %3:ac = LDyindir %0, %4
 # CHECK-NEXT: RTS
 ...
 ---
@@ -151,9 +151,9 @@ body: |
     %1:any(s1) = G_IMPLICIT_DEF
     %2:any(s8), %3:any(s1) = G_SHLE %0, %1
     RTS implicit %2, implicit %3
-# CHECK:      %0:azp = IMPLICIT_DEF
+# CHECK:      %0:aimag8 = IMPLICIT_DEF
 # CHECK-NEXT: %1:cc = IMPLICIT_DEF
-# CHECK-NEXT: %2:azp, %3:cc = ROL %0, %1
+# CHECK-NEXT: %2:aimag8, %3:cc = ROL %0, %1
 # CHECK-NEXT: RTS
 ...
 ---
@@ -168,9 +168,9 @@ body: |
     G_STORE %0, %1 :: (store 1)
     RTS
 # CHECK:      %0:ac = IMPLICIT_DEF
-# CHECK-NEXT: %1:zp_ptr = IMPLICIT_DEF
+# CHECK-NEXT: %1:imag16 = IMPLICIT_DEF
 # CHECK-NEXT: %2:yc = LDimm 0
-# CHECK-NEXT: STyindirr %0, %1, %2
+# CHECK-NEXT: STyindir %0, %1, %2
 # CHECK-NEXT: RTS
 ...
 ---
@@ -203,9 +203,9 @@ body: |
     %3:any(s8), %4:any(s1) = G_UADDE %0:any(s8), %1:any(s8), %2:any(s1)
     RTS implicit %3, implicit %4
 # CHECK:      %0:ac = IMPLICIT_DEF
-# CHECK-NEXT: %1:zp = IMPLICIT_DEF
+# CHECK-NEXT: %1:imag8 = IMPLICIT_DEF
 # CHECK-NEXT: %2:cc = IMPLICIT_DEF
-# CHECK-NEXT: %3:ac, %4:cc = ADCzpr %0, %1, %2
+# CHECK-NEXT: %3:ac, %4:cc = ADCimag8 %0, %1, %2
 # CHECK-NEXT: RTS
 ...
 ---
@@ -215,7 +215,7 @@ legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0:zp_ptr(s16)
+    %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0:imag16(s16)
     RTS implicit %1, implicit %2
 # CHECK:      %0:anyi8 = COPY %2.sublo
 # CHECK-NEXT: %1:anyi8 = COPY %2.subhi

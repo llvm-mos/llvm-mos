@@ -32,7 +32,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::ROL:
     switch (MI->getOperand(0).getReg()) {
     default: {
-      assert(MOS::ZPRegClass.contains(MI->getOperand(0).getReg()));
+      assert(MOS::Imag8RegClass.contains(MI->getOperand(0).getReg()));
       switch (MI->getOpcode()) {
       case MOS::ASL:
         OutMI.setOpcode(MOS::ASL_ZeroPage);
@@ -85,7 +85,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::CMPimm:
   case MOS::LDimm:
   case MOS::LDabs:
-  case MOS::LDzpr:
+  case MOS::LDimag8:
   case MOS::STabs: {
     switch (MI->getOperand(0).getReg()) {
     default:
@@ -101,7 +101,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       case MOS::LDabs:
         OutMI.setOpcode(MOS::LDA_Absolute);
         break;
-      case MOS::LDzpr:
+      case MOS::LDimag8:
         OutMI.setOpcode(MOS::LDA_ZeroPage);
         break;
       case MOS::STabs:
@@ -120,7 +120,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       case MOS::LDabs:
         OutMI.setOpcode(MOS::LDX_Absolute);
         break;
-      case MOS::LDzpr:
+      case MOS::LDimag8:
         OutMI.setOpcode(MOS::LDX_ZeroPage);
         break;
       case MOS::STabs:
@@ -139,7 +139,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       case MOS::LDabs:
         OutMI.setOpcode(MOS::LDY_Absolute);
         break;
-      case MOS::LDzpr:
+      case MOS::LDimag8:
         OutMI.setOpcode(MOS::LDY_ZeroPage);
         break;
       case MOS::STabs:
@@ -235,7 +235,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
-  case MOS::STzpr: {
+  case MOS::STimag8: {
     switch (MI->getOperand(1).getReg()) {
     default:
       llvm_unreachable("Unexpected register.");
@@ -302,9 +302,9 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     if (MO.isImplicit())
       return false;
     Register Reg = MO.getReg();
-    if (MOS::ZP_PTRRegClass.contains(Reg) || MOS::ZPRegClass.contains(Reg)) {
+    if (MOS::Imag16RegClass.contains(Reg) || MOS::Imag8RegClass.contains(Reg)) {
       const MCExpr *Expr = MCSymbolRefExpr::create(
-          Ctx.getOrCreateSymbol(TRI.getZPSymbolName(Reg)), Ctx);
+          Ctx.getOrCreateSymbol(TRI.getImag8SymbolName(Reg)), Ctx);
       Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, Expr,
                                /*isNegated=*/false, Ctx);
       MCOp = MCOperand::createExpr(Expr);

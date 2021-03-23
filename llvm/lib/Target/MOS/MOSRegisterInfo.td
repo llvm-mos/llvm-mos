@@ -135,9 +135,9 @@ foreach I = 0...!add(MaxImag16Regs, -1) in
 class MOSRegClass<list<ValueType> regTypes, int alignment, dag regList>
      : RegisterClass<"MOS", regTypes, alignment, regList>;
 
-class MOSReg1Class<dag RegList >: MOSRegClass<[i8], 1, RegList>;
-class MOSReg8Class<dag RegList >: MOSRegClass<[i8], 8, RegList>;
-class MOSReg16Class<dag RegList >: MOSRegClass<[i16], 8, RegList>;
+class MOSReg1Class<dag RegList>: MOSRegClass<[i8], 1, RegList>;
+class MOSReg8Class<dag RegList>: MOSRegClass<[i8], 8, RegList>;
+class MOSReg16Class<dag RegList>: MOSRegClass<[i16], 8, RegList>;
 
 // Single register classes.
 def Ac : MOSReg8Class<(add A)>;
@@ -146,16 +146,16 @@ def Cc : MOSReg1Class<(add C)>;
 
 // "General purpose" register classes.
 def GPR : MOSReg8Class<(add A, X, Y)>;
-def ZP : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
-def ZP_PTR : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
+def Imag8 : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
+def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 
 // Instruction-specific register classes.
-def AZP : MOSReg8Class<(add A, ZP)>;
+def AImag8 : MOSReg8Class<(add A, Imag8)>;
 def XY : MOSReg8Class<(add X, Y)>;
 def Flag : MOSReg1Class<(add C, N, Z)> {
   let isAllocatable = false;
 }
-def Stack : MOSRegClass<[i8, i16], 8, (add Static, ZP_PTR)> {
+def Stack : MOSRegClass<[i8, i16], 8, (add Static, Imag16)> {
   let isAllocatable = false;
 }
 
@@ -164,10 +164,10 @@ def Stack : MOSRegClass<[i8, i16], 8, (add Static, ZP_PTR)> {
 def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 
 // Sum types of all available storage locations for a size.
-def Anyi1 : MOSReg1Class<(add GPR, ZP, Cc)>;
-def Anyi8 : MOSReg8Class<(add GPR, ZP)>;
+def Anyi1 : MOSReg1Class<(add GPR, Imag8, Cc)>;
+def Anyi8 : MOSReg8Class<(add GPR, Imag8)>;
 
 // Any location where any supported size could be placed.
-def Anyc : MOSRegClass<[i1, i8, i16], 8, (add Anyi8, ZP_PTR)> {
+def Anyc : MOSRegClass<[i1, i8, i16], 8, (add Anyi8, Imag16)> {
   let isAllocatable = false;
 }

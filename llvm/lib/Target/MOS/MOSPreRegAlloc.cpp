@@ -44,7 +44,7 @@ bool MOSPreRegAlloc::runOnMachineFunction(MachineFunction &MF) {
         if (couldContainA(Dst, MRI) || !couldContainA(Src, MRI))
           continue;
 
-        Register DstCopy = MRI.createVirtualRegister(&MOS::AZPRegClass);
+        Register DstCopy = MRI.createVirtualRegister(&MOS::AImag8RegClass);
         MI.getOperand(0).setReg(DstCopy);
         MachineIRBuilder Builder(MBB, std::next(MI.getIterator()));
         Builder.buildCopy(Dst, DstCopy);

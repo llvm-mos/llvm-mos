@@ -5,10 +5,10 @@ name: addrloss
 body: |
   bb.0.entry:
     $rc2, $c = AddrLostk $rs0, 1234, implicit-def $nz
-# CHECK:      $a = LDzpr $rc0
+# CHECK:      $a = LDimag8 $rc0
 # CHECK-NEXT: $c = LDCimm 0
 # CHECK-NEXT: $a, $c = ADCimm $a, 210, $c
-# CHECK-NEXT: $rc2 = STzpr $a
+# CHECK-NEXT: $rc2 = STimag8 $a
 ...
 ---
 name: addrloss0
@@ -16,8 +16,8 @@ name: addrloss0
 body: |
   bb.0.entry:
     $rc2, $c = AddrLostk $rs0, 512, implicit-def $nz
-# CHECK:      $a = LDzpr $rc0
-# CHECK-NEXT: $rc2 = STzpr $a
+# CHECK:      $a = LDimag8 $rc0
+# CHECK-NEXT: $rc2 = STimag8 $a
 ...
 ---
 name: addrlostatic
@@ -26,7 +26,7 @@ body: |
   bb.0.entry:
     $rc2, $c = AddrLostk $static, 1234, implicit-def $nz
 # CHECK:      $a = LDimm target-flags(lo) target-index(mos-static-stack) + 1234
-# CHECK-NEXT: $rc2 = STzpr $a
+# CHECK-NEXT: $rc2 = STimag8 $a
 ...
 ---
 name: addrhiss
@@ -34,7 +34,7 @@ name: addrhiss
 body: |
   bb.0.entry:
     $a = AddrHistk $rs0, 1234, $c, implicit-def $c, implicit-def $nz
-# CHECK:      $a = LDzpr $rc1
+# CHECK:      $a = LDimag8 $rc1
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 4, $c
 ...
 ---
@@ -43,7 +43,7 @@ name: addrhiss_lo0
 body: |
   bb.0.entry:
     $a = AddrHistk $rs0, 512, $c, implicit-def $c, implicit-def $nz
-# CHECK:      $a = LDzpr $rc1
+# CHECK:      $a = LDimag8 $rc1
 # CHECK-NEXT: LDCimm 0
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 2, $c
 ...
@@ -54,7 +54,7 @@ body: |
   bb.0.entry:
     $rc2 = AddrHistk $static, 1234, $c, implicit-def $c, implicit-def $nz
 # CHECK:      $a = LDimm target-flags(hi) target-index(mos-static-stack) + 1234
-# CHECK-NEXT: $rc2 = STzpr $a
+# CHECK-NEXT: $rc2 = STimag8 $a
 ...
 ---
 name: ldss
@@ -63,7 +63,7 @@ body: |
   bb.0.entry:
     $x = LDstk $rs0, 2
 # CHECK:      $y = LDimm 2
-# CHECK-NEXT: $a = LDyindirr $rs0, $y
+# CHECK-NEXT: $a = LDyindir $rs0, $y
 # CHECK-NEXT: $x = TA_
 ...
 ---
@@ -73,18 +73,18 @@ body: |
   bb.0.entry:
     $rs3 = LDstk $rs0, 258
     RTS
-# CHECK:      $a = LDzpr $rc0
-# CHECK-NEXT: $rc2 = STzpr $a
-# CHECK-NEXT: $a = LDzpr $rc1
+# CHECK:      $a = LDimag8 $rc0
+# CHECK-NEXT: $rc2 = STimag8 $a
+# CHECK-NEXT: $a = LDimag8 $rc1
 # CHECK-NEXT: $c = LDCimm 0
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 1, $c
-# CHECK-NEXT: $rc3 = STzpr $a
+# CHECK-NEXT: $rc3 = STimag8 $a
 # CHECK-NEXT: $y = LDimm 2
-# CHECK-NEXT: $a = LDyindirr $rs1, $y
-# CHECK-NEXT: $rc6 = STzpr $a
+# CHECK-NEXT: $a = LDyindir $rs1, $y
+# CHECK-NEXT: $rc6 = STimag8 $a
 # CHECK-NEXT: $y = LDimm 3
-# CHECK-NEXT: $a = LDyindirr $rs1, $y
-# CHECK-NEXT: $rc7 = STzpr $a
+# CHECK-NEXT: $a = LDyindir $rs1, $y
+# CHECK-NEXT: $rc7 = STimag8 $a
 # CHECK-NEXT: RTS
 ...
 ---
@@ -96,18 +96,18 @@ body: |
   bb.0.entry:
     $rs1 = LDstk $rs0, 258
     RTS
-# CHECK:      $a = LDzpr $rc0
-# CHECK-NEXT: $rc6 = STzpr $a
-# CHECK-NEXT: $a = LDzpr $rc1
+# CHECK:      $a = LDimag8 $rc0
+# CHECK-NEXT: $rc6 = STimag8 $a
+# CHECK-NEXT: $a = LDimag8 $rc1
 # CHECK-NEXT: $c = LDCimm 0
 # CHECK-NEXT: $a, dead $c = ADCimm $a, 1, $c
-# CHECK-NEXT: $rc7 = STzpr $a
+# CHECK-NEXT: $rc7 = STimag8 $a
 # CHECK-NEXT: $y = LDimm 2
-# CHECK-NEXT: $a = LDyindirr $rs3, $y
-# CHECK-NEXT: $rc2 = STzpr $a
+# CHECK-NEXT: $a = LDyindir $rs3, $y
+# CHECK-NEXT: $rc2 = STimag8 $a
 # CHECK-NEXT: $y = LDimm 3
-# CHECK-NEXT: $a = LDyindirr $rs3, $y
-# CHECK-NEXT: $rc3 = STzpr $a
+# CHECK-NEXT: $a = LDyindir $rs3, $y
+# CHECK-NEXT: $rc3 = STimag8 $a
 # CHECK-NEXT: RTS
 ---
 name: ldstatic
@@ -117,9 +117,9 @@ body: |
     $rs1 = LDstk $static, 1234
     RTS
 # CHECK:      $a = LDabs target-index(mos-static-stack) + 1234
-# CHECK-NEXT: $rc2 = STzpr $a
+# CHECK-NEXT: $rc2 = STimag8 $a
 # CHECK-NEXT: $a = LDabs target-index(mos-static-stack) + 1235
-# CHECK-NEXT: $rc3 = STzpr $a
+# CHECK-NEXT: $rc3 = STimag8 $a
 # CHECK-NEXT: RTS
 ...
 ...
@@ -132,11 +132,11 @@ body: |
     RTS
 # CHECK:      $c = LDCimm 0
 # CHECK-NEXT: $a = LDimm 46
-# CHECK-NEXT: $a, $c = ADCzpr $a, $rc0, $c
-# CHECK-NEXT: $rc0 = STzpr $a
+# CHECK-NEXT: $a, $c = ADCimag8 $a, $rc0, $c
+# CHECK-NEXT: $rc0 = STimag8 $a
 # CHECK-NEXT: $a = LDimm 251
-# CHECK-NEXT: $a, dead $c = ADCzpr $a, $rc1, $c
-# CHECK-NEXT: $rc1 = STzpr $a
+# CHECK-NEXT: $a, dead $c = ADCimag8 $a, $rc1, $c
+# CHECK-NEXT: $rc1 = STimag8 $a
 ...
 ---
 name: incsp_hi_only
@@ -147,8 +147,8 @@ body: |
     RTS
 # CHECK:      $c = LDCimm 0 
 # CHECK-NEXT: $a = LDimm 254
-# CHECK-NEXT: $a, dead $c = ADCzpr $a, $rc1, $c
-# CHECK-NEXT: $rc1 = STzpr $a
+# CHECK-NEXT: $a, dead $c = ADCimag8 $a, $rc1, $c
+# CHECK-NEXT: $rc1 = STimag8 $a
 ...
 ---
 name: ldaidx

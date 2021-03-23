@@ -23,7 +23,7 @@
 //   argument. The resulting function returns void.This is handled directly by
 //   Clang; LLVM itself should never see aggregates.
 //
-// - RS2 and RS4 (and subregisters) are callee-saved. All other ZP locations,
+// - RS2 and RS4 (and subregisters) are callee-saved. All other Imag8 locations,
 //   registers, and flags are caller-saved. The gap between the callee-saved
 //   registers balances beteen caller- and callee-saved registers if very little
 //   of the zero page is available. It's not use having more than two, since at

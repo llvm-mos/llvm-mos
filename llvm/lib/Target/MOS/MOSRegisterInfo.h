@@ -21,7 +21,7 @@
 namespace llvm {
 
 class MOSRegisterInfo : public MOSGenRegisterInfo {
-  std::unique_ptr<std::string[]> ZPSymbolNames;
+  std::unique_ptr<std::string[]> Imag8SymbolNames;
   BitVector Reserved;
 
 public:
@@ -49,8 +49,8 @@ public:
                       unsigned DstSubReg, const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 
-  const char *getZPSymbolName(Register Reg) const {
-    return ZPSymbolNames[Reg].c_str();
+  const char *getImag8SymbolName(Register Reg) const {
+    return Imag8SymbolNames[Reg].c_str();
   }
 };
 

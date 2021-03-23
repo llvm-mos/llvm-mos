@@ -24,7 +24,7 @@ body: |
     RTS implicit %0
 # CHECK:      %1:gpr = LDimm target-flags(lo) @.str
 # CHECK-NEXT: %2:gpr = LDimm target-flags(hi) @.str
-# CHECK-NEXT: %0:zp_ptr = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
+# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
 ...
 ---
 name: load_indexed

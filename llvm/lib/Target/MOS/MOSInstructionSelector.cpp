@@ -115,7 +115,7 @@ static const TargetRegisterClass &getRegClassForType(LLT Ty) {
   case 8:
     return MOS::Anyi8RegClass;
   case 16:
-    return MOS::ZP_PTRRegClass;
+    return MOS::Imag16RegClass;
   }
 }
 
@@ -459,7 +459,7 @@ bool MOSInstructionSelector::selectLoad(MachineInstr &MI) {
   else
     buildCopy(Builder, OffsetReg, Offset.getReg());
 
-  auto Load = Builder.buildInstr(MOS::LDyindirr)
+  auto Load = Builder.buildInstr(MOS::LDyindir)
                   .addDef(Dst)
                   .addUse(Base.getReg())
                   .addUse(OffsetReg)
@@ -630,7 +630,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   else
     buildCopy(Builder, OffsetReg, Offset.getReg());
 
-  auto Store = Builder.buildInstr(MOS::STyindirr)
+  auto Store = Builder.buildInstr(MOS::STyindir)
                    .addUse(Src)
                    .addUse(Base.getReg())
                    .addUse(OffsetReg)
@@ -644,17 +644,17 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectUAddSubE(MachineInstr &MI) {
   unsigned ImmOpcode;
-  unsigned ZPOpcode;
+  unsigned Imag8Opcode;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode.");
   case MOS::G_UADDE:
     ImmOpcode = MOS::ADCimm;
-    ZPOpcode = MOS::ADCzpr;
+    Imag8Opcode = MOS::ADCimag8;
     break;
   case MOS::G_USUBE:
     ImmOpcode = MOS::SBCimm;
-    ZPOpcode = MOS::SBCzpr;
+    Imag8Opcode = MOS::SBCimag8;
     break;
   }
 
@@ -677,7 +677,7 @@ bool MOSInstructionSelector::selectUAddSubE(MachineInstr &MI) {
                 .addImm(RConst->Value.getZExtValue())
                 .addUse(CarryIn);
   } else {
-    Instr = Builder.buildInstr(ZPOpcode)
+    Instr = Builder.buildInstr(Imag8Opcode)
                 .addDef(Result)
                 .addDef(CarryOut)
                 .addUse(L)

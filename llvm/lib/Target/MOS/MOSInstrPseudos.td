@@ -163,8 +163,8 @@ def ADCimm : Pseudo, PseudoInstExpansion<(ADC_Immediate imm8:$r)> {
   let isReMaterializable = true;
 }
 
-def ADCzpr : Pseudo, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
-  dag InOperandList = (ins Ac:$l, ZP:$r, Cc:$carryin);
+def ADCimag8 : Pseudo, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
+  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
   // Don't give the carries a tied constraint, since having two tied operands
   // inhibits commutation of $l and $r.
@@ -178,8 +178,8 @@ def ADCzpr : Pseudo, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
 }
 
 def ASL : Pseudo {
-  dag InOperandList = (ins AZP:$src);
-  dag OutOperandList = (outs AZP:$dst, Cc:$carry);
+  dag InOperandList = (ins AImag8:$src);
+  dag OutOperandList = (outs AImag8:$dst, Cc:$carry);
   let Constraints = "$dst = $src";
 
   let Defs = [NZ];
@@ -259,8 +259,8 @@ def LDimm : Pseudo {
   let isReMaterializable = true;
 }
 
-def LDzpr : Pseudo {
-  dag InOperandList = (ins ZP:$src);
+def LDimag8 : Pseudo {
+  dag InOperandList = (ins Imag8:$src);
   dag OutOperandList = (outs GPR:$dst);
 
   let Defs = [NZ];
@@ -307,8 +307,8 @@ def LDYidx : Pseudo, PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)> {
   let mayLoad = true;
 }
 
-def LDyindirr : Pseudo, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
-  dag InOperandList = (ins ZP_PTR:$addr, Yc:$offset);
+def LDyindir : Pseudo, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
+  dag InOperandList = (ins Imag16:$addr, Yc:$offset);
   dag OutOperandList = (outs Ac:$dst);
 
   let Defs = [NZ];
@@ -341,8 +341,8 @@ def PLP : Pseudo, PseudoInstExpansion<(PLP_Implied)> {
 }
 
 def ROL : Pseudo {
-  dag InOperandList = (ins AZP:$src, Cc:$carryin);
-  dag OutOperandList = (outs AZP:$dst, Cc:$carryout);
+  dag InOperandList = (ins AImag8:$src, Cc:$carryin);
+  dag OutOperandList = (outs AImag8:$dst, Cc:$carryout);
   let Constraints = "$dst = $src, $carryout = $carryin";
 
   let Defs = [NZ];
@@ -366,8 +366,8 @@ def SBCimm : Pseudo, PseudoInstExpansion<(SBC_Immediate imm8:$r)> {
   let isReMaterializable = true;
 }
 
-def SBCzpr : Pseudo, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
-  dag InOperandList = (ins Ac:$l, ZP:$r, Cc:$carryin);
+def SBCimag8 : Pseudo, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
+  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
   // Don't give the carries a tied constraint, since having two tied operands
   // inhibits commutation of $l and $r.
@@ -390,15 +390,15 @@ def STidx : Pseudo {
   let mayStore = true;
 }
 
-def STyindirr : Pseudo, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
-  dag InOperandList = (ins Ac:$src, ZP_PTR:$addr, Yc:$offset);
+def STyindir : Pseudo, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
+  dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
 
   let mayStore = true;
 }
 
-def STzpr : Pseudo {
+def STimag8 : Pseudo {
   dag InOperandList = (ins GPR:$src);
-  dag OutOperandList = (outs ZP:$dst);
+  dag OutOperandList = (outs Imag8:$dst);
 }
 
 def TA_ : Pseudo {

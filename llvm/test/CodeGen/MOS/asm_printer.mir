@@ -14,7 +14,7 @@ name: adc_zeropage
 # CHECK-LABEL: adc_zeropage
 body: |
   bb.0.entry:
-    $a, $c = ADCzpr $a, $rc0, $c, implicit-def $nz
+    $a, $c = ADCimag8 $a, $rc0, $c, implicit-def $nz
     RTS
 # CHECK:      adc mos8(__rc0)
 # CHECK-NEXT: rts
@@ -288,7 +288,7 @@ name: lda_indirectindexed
 # CHECK-LABEL: lda_indirectindexed
 body: |
   bb.0.entry:
-    $a = LDyindirr $rs0, $y, implicit-def $nz
+    $a = LDyindir $rs0, $y, implicit-def $nz
     RTS
 # CHECK:      lda (mos8(__rc0)),y
 # CHECK-NEXT: rts
@@ -298,7 +298,7 @@ name: lda_zeropage
 # CHECK-LABEL: lda_zeropage
 body: |
   bb.0.entry:
-    $a = LDzpr $rc0, implicit-def $nz
+    $a = LDimag8 $rc0, implicit-def $nz
     RTS
 # CHECK:      lda mos8(__rc0)
 # CHECK-NEXT: rts
@@ -308,7 +308,7 @@ name: ldx_zeropage
 # CHECK-LABEL: ldx_zeropage
 body: |
   bb.0.entry:
-    $x = LDzpr $rc0, implicit-def $nz
+    $x = LDimag8 $rc0, implicit-def $nz
     RTS
 # CHECK:      ldx mos8(__rc0)
 # CHECK-NEXT: rts
@@ -318,7 +318,7 @@ name: ldy_zeropage
 # CHECK-LABEL: ldy_zeropage
 body: |
   bb.0.entry:
-    $y = LDzpr $rc0, implicit-def $nz
+    $y = LDimag8 $rc0, implicit-def $nz
     RTS
 # CHECK:      ldy mos8(__rc0)
 # CHECK-NEXT: rts
@@ -406,7 +406,7 @@ name: sbc_zeropage
 # CHECK-LABEL: sbc_zeropage
 body: |
   bb.0.entry:
-    $a, $c = SBCzpr $a, $rc0, $c, implicit-def $nz
+    $a, $c = SBCimag8 $a, $rc0, $c, implicit-def $nz
     RTS
 # CHECK:      sbc mos8(__rc0)
 # CHECK-NEXT: rts
@@ -456,7 +456,7 @@ name: sta_zeropage
 # CHECK-LABEL: sta_zeropage
 body: |
   bb.0.entry:
-    $rc0 = STzpr $a
+    $rc0 = STimag8 $a
     RTS
 # CHECK:      sta mos8(__rc0)
 # CHECK-NEXT: rts
@@ -466,7 +466,7 @@ name: sta_indirect_indexed
 # CHECK-LABEL: sta_indirect_indexed
 body: |
   bb.0.entry:
-    STyindirr $a, $rs0, $y
+    STyindir $a, $rs0, $y
     RTS
 # CHECK:      sta (mos8(__rc0)),y
 # CHECK-NEXT: rts
@@ -486,7 +486,7 @@ name: stx_zeropage
 # CHECK-LABEL: stx_zeropage
 body: |
   bb.0.entry:
-    $rc0 = STzpr $x
+    $rc0 = STimag8 $x
     RTS
 # CHECK:      stx mos8(__rc0)
 # CHECK-NEXT: rts
@@ -506,7 +506,7 @@ name: sty_zeropage
 # CHECK-LABEL: sty_zeropage
 body: |
   bb.0.entry:
-    $rc0 = STzpr $y
+    $rc0 = STimag8 $y
     RTS
 # CHECK:      sty mos8(__rc0)
 # CHECK-NEXT: rts

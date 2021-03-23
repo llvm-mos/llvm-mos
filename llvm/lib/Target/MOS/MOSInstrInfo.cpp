@@ -93,7 +93,7 @@ MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   default:
     LLVM_DEBUG(dbgs() << "Commute: " << MI);
     llvm_unreachable("Unexpected instruction commute.");
-  case MOS::ADCzpr:
+  case MOS::ADCimag8:
     break;
   }
 
@@ -183,7 +183,7 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   if (!MCID.isCommutable())
     return false;
 
-  assert(MI.getOpcode() == MOS::ADCzpr);
+  assert(MI.getOpcode() == MOS::ADCimag8);
 
   if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3))
     return false;
@@ -373,16 +373,16 @@ void MOSInstrInfo::copyPhysRegNoPreserve(MachineIRBuilder &Builder,
       copyPhysRegNoPreserve(Builder, MOS::A, SrcReg);
       copyPhysRegNoPreserve(Builder, DestReg, MOS::A);
     }
-  } else if (areClasses(MOS::ZPRegClass, MOS::GPRRegClass)) {
-    Builder.buildInstr(MOS::STzpr).addDef(DestReg).addUse(SrcReg);
-  } else if (areClasses(MOS::GPRRegClass, MOS::ZPRegClass)) {
-    Builder.buildInstr(MOS::LDzpr).addDef(DestReg).addUse(SrcReg);
-  } else if (areClasses(MOS::ZP_PTRRegClass, MOS::ZP_PTRRegClass)) {
+  } else if (areClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
+    Builder.buildInstr(MOS::STimag8).addDef(DestReg).addUse(SrcReg);
+  } else if (areClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
+    Builder.buildInstr(MOS::LDimag8).addDef(DestReg).addUse(SrcReg);
+  } else if (areClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
     copyPhysRegNoPreserve(Builder, TRI.getSubReg(DestReg, MOS::sublo),
                           TRI.getSubReg(SrcReg, MOS::sublo));
     copyPhysRegNoPreserve(Builder, TRI.getSubReg(DestReg, MOS::subhi),
                           TRI.getSubReg(SrcReg, MOS::subhi));
-  } else if (areClasses(MOS::ZPRegClass, MOS::ZPRegClass)) {
+  } else if (areClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
     Register Tmp = trivialScavenge(Builder, MOS::GPRRegClass);
     copyPhysRegNoPreserve(Builder, Tmp, SrcReg);
     copyPhysRegNoPreserve(Builder, DestReg, Tmp);
@@ -530,7 +530,7 @@ void MOSInstrInfo::expandAddrLostk(MachineIRBuilder &Builder) const {
     break;
   }
   default:
-    assert(MOS::ZP_PTRRegClass.contains(Base));
+    assert(MOS::Imag16RegClass.contains(Base));
     Src = TRI.getSubReg(Base, MOS::sublo);
     break;
   }
@@ -577,7 +577,7 @@ void MOSInstrInfo::expandAddrHistk(MachineIRBuilder &Builder) const {
   }
 
   if (!Offset) {
-    if (MOS::ZP_PTRRegClass.contains(Base)) {
+    if (MOS::Imag16RegClass.contains(Base)) {
       copyPhysRegNoPreserve(Builder, Dst, TRI.getSubReg(Base, MOS::subhi));
     } else {
       Register Tmp = Dst;
@@ -589,8 +589,8 @@ void MOSInstrInfo::expandAddrHistk(MachineIRBuilder &Builder) const {
     return;
   }
 
-  if (MOS::ZP_PTRRegClass.contains(Base)) {
-    Builder.buildInstr(MOS::LDzpr)
+  if (MOS::Imag16RegClass.contains(Base)) {
+    Builder.buildInstr(MOS::LDimag8)
         .addDef(MOS::A)
         .addUse(TRI.getSubReg(Base, MOS::subhi));
   } else {
@@ -632,10 +632,10 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
     break;
   }
 
-  if (MOS::ZP_PTRRegClass.contains(Base) && Offset >= 256) {
+  if (MOS::Imag16RegClass.contains(Base) && Offset >= 256) {
     // FIXME: Have this find a register other than Loc, if it's available.
     // Really feeling the pains of not using VRegs for this.
-    Register Tmp = trivialScavenge(Builder, MOS::ZP_PTRRegClass);
+    Register Tmp = trivialScavenge(Builder, MOS::Imag16RegClass);
 
     // Guarantee that Tmp is different than Loc, even if it requires
     // save/restore. RS3 is used in lieu of RS1, since RS2 is callee-saved, and
@@ -656,7 +656,7 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
     Offset &= 0xFF;
   }
 
-  if (MOS::ZP_PTRRegClass.contains(Loc)) {
+  if (MOS::Imag16RegClass.contains(Loc)) {
     Builder.buildInstr(MI.getOpcode())
         .addReg(TRI.getSubReg(Loc, MOS::sublo), getDefRegState(IsLoad))
         .addUse(Base)
@@ -678,11 +678,11 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
       if (IsLoad)
         copyPhysRegNoPreserve(Builder, Loc, MOS::A);
     } else {
-      assert(MOS::ZP_PTRRegClass.contains(Base));
+      assert(MOS::Imag16RegClass.contains(Base));
       Builder.buildInstr(MOS::LDimm).addDef(MOS::Y).addImm(Offset);
       if (!IsLoad)
         copyPhysRegNoPreserve(Builder, MOS::A, Loc);
-      Builder.buildInstr(IsLoad ? MOS::LDyindirr : MOS::STyindirr)
+      Builder.buildInstr(IsLoad ? MOS::LDyindir : MOS::STyindir)
           .addReg(MOS::A, getDefRegState(IsLoad))
           .addUse(Base)
           .addUse(MOS::Y);
@@ -707,22 +707,22 @@ void MOSInstrInfo::expandIncSP(MachineIRBuilder &Builder) const {
   Builder.buildInstr(MOS::LDCimm).addDef(MOS::C).addImm(0);
   if (LoBytes) {
     Builder.buildInstr(MOS::LDimm).addDef(MOS::A).addImm(LoBytes);
-    Builder.buildInstr(MOS::ADCzpr)
+    Builder.buildInstr(MOS::ADCimag8)
         .addDef(MOS::A)
         .addDef(MOS::C)
         .addUse(MOS::A)
         .addUse(MOS::RC0)
         .addUse(MOS::C);
-    Builder.buildInstr(MOS::STzpr).addDef(MOS::RC0).addUse(MOS::A);
+    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC0).addUse(MOS::A);
   }
   Builder.buildInstr(MOS::LDimm).addDef(MOS::A).addImm(HiBytes);
-  Builder.buildInstr(MOS::ADCzpr)
+  Builder.buildInstr(MOS::ADCimag8)
       .addDef(MOS::A)
       .addDef(MOS::C, RegState::Dead)
       .addUse(MOS::A)
       .addUse(MOS::RC1)
       .addUse(MOS::C);
-  Builder.buildInstr(MOS::STzpr).addDef(MOS::RC1).addUse(MOS::A);
+  Builder.buildInstr(MOS::STimag8).addDef(MOS::RC1).addUse(MOS::A);
 }
 
 void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
@@ -888,7 +888,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     assert(!Save.test(MOS::RC6));
     Builder.buildInstr(MOS::PHP);
     Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(MOS::RC2);
+    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(MOS::RC2);
     Builder.buildInstr(MOS::STabs)
         .addUse(MOS::A)
         .addExternalSymbol("_SaveImagLo");
@@ -899,7 +899,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     assert(!Save.test(MOS::RC7));
     Builder.buildInstr(MOS::PHP);
     Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(MOS::RC3);
+    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(MOS::RC3);
     Builder.buildInstr(MOS::STabs)
         .addUse(MOS::A)
         .addExternalSymbol("_SaveImagHi");
@@ -910,7 +910,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     assert(!Save.test(MOS::RC2));
     Builder.buildInstr(MOS::PHP);
     Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(MOS::RC6);
+    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(MOS::RC6);
     Builder.buildInstr(MOS::STabs)
         .addUse(MOS::A)
         .addExternalSymbol("_SaveImagLo");
@@ -921,7 +921,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     assert(!Save.test(MOS::RC3));
     Builder.buildInstr(MOS::PHP);
     Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDzpr).addDef(MOS::A).addUse(MOS::RC7);
+    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(MOS::RC7);
     Builder.buildInstr(MOS::STabs)
         .addUse(MOS::A)
         .addExternalSymbol("_SaveImagHi");
@@ -976,7 +976,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::LDabs)
         .addDef(MOS::A)
         .addExternalSymbol("_SaveImagLo");
-    Builder.buildInstr(MOS::STzpr).addDef(MOS::RC2).addUse(MOS::A);
+    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC2).addUse(MOS::A);
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
   }
@@ -986,7 +986,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::LDabs)
         .addDef(MOS::A)
         .addExternalSymbol("_SaveImagHi");
-    Builder.buildInstr(MOS::STzpr).addDef(MOS::RC3).addUse(MOS::A);
+    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC3).addUse(MOS::A);
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
   }
@@ -996,7 +996,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::LDabs)
         .addDef(MOS::A)
         .addExternalSymbol("_SaveImagLo");
-    Builder.buildInstr(MOS::STzpr).addDef(MOS::RC6).addUse(MOS::A);
+    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC6).addUse(MOS::A);
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
   }
@@ -1006,7 +1006,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     Builder.buildInstr(MOS::LDabs)
         .addDef(MOS::A)
         .addExternalSymbol("_SaveImagHi");
-    Builder.buildInstr(MOS::STzpr).addDef(MOS::RC7).addUse(MOS::A);
+    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC7).addUse(MOS::A);
     Builder.buildInstr(MOS::PLA);
     Builder.buildInstr(MOS::PLP);
   }

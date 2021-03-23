@@ -87,7 +87,7 @@ bool MOSTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.Scale) return false;
 
   if (AM.HasBaseReg) {
-    // A 16-bit base reg can be placed into a ZP_PTR register, then the base
+    // A 16-bit base reg can be placed into a Imag16 register, then the base
     // offset added using the Y indexed addressing mode. This requires the Y
     // index reg as well as the base reg, but that's what it's there for.
     return !AM.BaseGV && 0 <= AM.BaseOffs && AM.BaseOffs < 256;
