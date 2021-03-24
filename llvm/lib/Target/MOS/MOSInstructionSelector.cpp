@@ -52,7 +52,7 @@ private:
   bool selectConstant(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
-  bool selectLoad(MachineInstr &MI);
+  bool selectLoadStore(MachineInstr &MI);
   bool selectShlE(MachineInstr &MI);
   bool selectImplicitDef(MachineInstr &MI);
   bool selectIntToPtr(MachineInstr &MI);
@@ -60,7 +60,6 @@ private:
   bool selectPhi(MachineInstr &MI);
   bool selectPtrAdd(MachineInstr &MI);
   bool selectPtrToInt(MachineInstr &MI);
-  bool selectStore(MachineInstr &MI);
   bool selectUAddSubE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
 
@@ -149,7 +148,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_INTTOPTR:
     return selectIntToPtr(MI);
   case MOS::G_LOAD:
-    return selectLoad(MI);
+  case MOS::G_STORE:
+    return selectLoadStore(MI);
   case MOS::G_SHLE:
     return selectShlE(MI);
   case MOS::G_MERGE_VALUES:
@@ -160,8 +160,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectPtrAdd(MI);
   case MOS::G_PTRTOINT:
     return selectPtrToInt(MI);
-  case MOS::G_STORE:
-    return selectStore(MI);
   case MOS::G_UADDE:
   case MOS::G_USUBE:
     return selectUAddSubE(MI);
@@ -417,35 +415,52 @@ static void MatchIndirectIndexed(Register Addr, MachineOperand &BaseOut,
   OffsetOut.ChangeToImmediate(0);
 }
 
-bool MOSInstructionSelector::selectLoad(MachineInstr &MI) {
-  assert(MI.getOpcode() == MOS::G_LOAD);
+bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
 
-  Register Dst = MI.getOperand(0).getReg();
+  Register Val = MI.getOperand(0).getReg();
   Register Addr = MI.getOperand(1).getReg();
   MachineIRBuilder Builder(MI);
   MachineRegisterInfo &MRI = *Builder.getMRI();
+
+  MachineOperand ValOp = MachineOperand::CreateReg(Val, /*isDef=*/false);
+  unsigned AbsOpcode;
+  unsigned IdxOpcode;
+  unsigned YIndirOpcode;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode.");
+  case MOS::G_LOAD:
+    ValOp.setIsDef();
+    AbsOpcode = MOS::LDabs;
+    IdxOpcode = MOS::LDidx;
+    YIndirOpcode = MOS::LDyindir;
+    break;
+  case MOS::G_STORE:
+    AbsOpcode = MOS::STabs;
+    IdxOpcode = MOS::STidx;
+    YIndirOpcode = MOS::STyindir;
+    break;
+  }
 
   MachineOperand Base = MachineOperand::CreateImm(0);
   MachineOperand Offset = MachineOperand::CreateImm(0);
 
   if (MatchConstantAddr(Addr, Base, MRI)) {
-    auto Load = Builder.buildInstr(MOS::LDabs)
-        .addDef(Dst)
-        .add(Base)
-        .cloneMemRefs(MI);
-    if (!constrainSelectedInstRegOperands(*Load, TII, TRI, RBI))
+    auto Instr =
+        Builder.buildInstr(AbsOpcode).add(ValOp).add(Base).cloneMemRefs(MI);
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
       return false;
     MI.eraseFromParent();
     return true;
   }
 
   if (MatchIndexed(Addr, Base, Offset, MRI)) {
-    auto Load = Builder.buildInstr(MOS::LDidx)
-                    .addDef(Dst)
-                    .add(Base)
-                    .add(Offset)
-                    .cloneMemRefs(MI);
-    if (!constrainSelectedInstRegOperands(*Load, TII, TRI, RBI))
+    auto Instr = Builder.buildInstr(IdxOpcode)
+                     .add(ValOp)
+                     .add(Base)
+                     .add(Offset)
+                     .cloneMemRefs(MI);
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
       return false;
     MI.eraseFromParent();
     return true;
@@ -459,12 +474,12 @@ bool MOSInstructionSelector::selectLoad(MachineInstr &MI) {
   else
     buildCopy(Builder, OffsetReg, Offset.getReg());
 
-  auto Load = Builder.buildInstr(MOS::LDyindir)
-                  .addDef(Dst)
-                  .addUse(Base.getReg())
-                  .addUse(OffsetReg)
-                  .cloneMemRefs(MI);
-  if (!constrainSelectedInstRegOperands(*Load, TII, TRI, RBI))
+  auto Instr = Builder.buildInstr(YIndirOpcode)
+                   .add(ValOp)
+                   .addUse(Base.getReg())
+                   .addUse(OffsetReg)
+                   .cloneMemRefs(MI);
+  if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
 
   MI.eraseFromParent();
@@ -535,11 +550,11 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
 
-  // All legal G_PTR_ADDs have a constant 8-bit offset, but the address still
-  // may need to be materialized if used outside of a G_LOAD or G_STORE context.
-  // Reaching this function indicates that this is the case, since otherwise the
-  // G_PTR_ADD would have been removed already, since all uses have already been
-  // selected.
+  // All legal G_PTR_ADDs have a constant 8-bit offset, but the address
+  // still may need to be materialized if used outside of a G_LOAD or
+  // G_STORE context. Reaching this function indicates that this is the
+  // case, since otherwise the G_PTR_ADD would have been removed already,
+  // since all uses have already been selected.
   auto ConstOffset =
       getConstantVRegValWithLookThrough(Offset, *Builder.getMRI());
   if (!ConstOffset)
@@ -584,60 +599,6 @@ bool MOSInstructionSelector::selectPtrToInt(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
   buildCopy(Builder, MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
-  MI.eraseFromParent();
-  return true;
-}
-
-bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
-  assert(MI.getOpcode() == MOS::G_STORE);
-
-  Register Src = MI.getOperand(0).getReg();
-  Register Addr = MI.getOperand(1).getReg();
-  MachineIRBuilder Builder(MI);
-  MachineRegisterInfo &MRI = *Builder.getMRI();
-
-  MachineOperand Base = MachineOperand::CreateImm(0);
-  MachineOperand Offset = MachineOperand::CreateImm(0);
-
-  if (MatchConstantAddr(Addr, Base, MRI)) {
-    auto Store = Builder.buildInstr(MOS::STabs)
-        .addUse(Src)
-        .add(Base)
-        .cloneMemRefs(MI);
-    if (!constrainSelectedInstRegOperands(*Store, TII, TRI, RBI))
-      return false;
-    MI.eraseFromParent();
-    return true;
-  }
-
-  if (MatchIndexed(Addr, Base, Offset, MRI)) {
-    auto Store = Builder.buildInstr(MOS::STidx)
-                     .addUse(Src)
-                     .add(Base)
-                     .add(Offset)
-                     .cloneMemRefs(MI);
-    if (!constrainSelectedInstRegOperands(*Store, TII, TRI, RBI))
-      return false;
-    MI.eraseFromParent();
-    return true;
-  }
-
-  MatchIndirectIndexed(Addr, Base, Offset, MRI);
-
-  Register OffsetReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
-  if (Offset.isImm())
-    Builder.buildInstr(MOS::LDimm).addDef(OffsetReg).add(Offset);
-  else
-    buildCopy(Builder, OffsetReg, Offset.getReg());
-
-  auto Store = Builder.buildInstr(MOS::STyindir)
-                   .addUse(Src)
-                   .addUse(Base.getReg())
-                   .addUse(OffsetReg)
-                   .cloneMemRefs(MI);
-  if (!constrainSelectedInstRegOperands(*Store, TII, TRI, RBI))
-    return false;
-
   MI.eraseFromParent();
   return true;
 }
