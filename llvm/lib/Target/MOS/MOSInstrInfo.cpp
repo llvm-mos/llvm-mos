@@ -72,7 +72,9 @@ bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return TargetInstrInfo::isReallyTriviallyReMaterializable(MI, AA);
-  // Rematerializable as LDimm_preserve pseudo.
+  // Note: Rematerializations cannot occur in terminators, so NZ cannot be live.
+  // Thus, instructions that only clobber NZ are always trivially
+  // rematerializable.
   case MOS::LDimm:
     return true;
   }
@@ -147,24 +149,6 @@ MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (Reg2Class)
     MRI.setRegClass(Reg2, Reg2Class);
   return CommutedMI;
-}
-
-void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator I,
-                                 Register DestReg, unsigned SubIdx,
-                                 const MachineInstr &Orig,
-                                 const TargetRegisterInfo &TRI) const {
-  // A trivially rematerialized LDimm must preserve NZ.
-  if (Orig.getOpcode() == MOS::LDimm) {
-    MachineIRBuilder Builder(MBB, I);
-    // Note: Explicitly don't copy over implicit nz def.
-    Builder.buildInstr(MOS::LDimm_preserve)
-        .addDef(DestReg)
-        .add(Orig.getOperand(1));
-    return;
-  }
-
-  TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, TRI);
 }
 
 unsigned MOSInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
@@ -485,10 +469,6 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
     break;
   case MOS::LDidx:
     expandLDidx(Builder);
-    break;
-
-  case MOS::LDimm_preserve:
-    Builder.buildInstr(MOS::LDimm).add(MI.getOperand(0)).add(MI.getOperand(1));
     break;
   }
 

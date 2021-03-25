@@ -30,7 +30,7 @@ body: |
     $a = COPY %0
     RTS implicit $a
 # CHECK: JSR
-# CHECK-NEXT: [[REG:%[0-9]+]]:gpr = LDimm_preserve 42
+# CHECK-NEXT: [[REG:%[0-9]+]]:gpr = LDimm 42
 # CHECK-NEXT: $a = COPY [[REG]]
 # CHECK-NEXT: RTS
 ...

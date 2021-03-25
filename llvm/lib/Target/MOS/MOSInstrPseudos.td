@@ -116,18 +116,6 @@ def LDidx : Pseudo {
   let mayLoad = true;
 }
 
-// Version of LDimm that promises not to overwrite NZ. This allows
-// rematerializing LDimm with a possible PHP/PLP instead of spilling/loading the
-// constant on the stack. The spill is very expensive, and would need to
-// PHP/PLP anyways, so rematerialization is strictly better in this case.
-def LDimm_preserve : Pseudo {
-  dag InOperandList = (ins i8imm:$val);
-  dag OutOperandList = (outs GPR:$dst);
-
-  let isMoveImm = true;
-  let isReMaterializable = true;
-}
-
 // Logical Instructions
 
 // These pseudoinstruction correspond to logical instruction set of the 6502.
