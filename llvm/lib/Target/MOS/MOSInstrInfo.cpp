@@ -871,7 +871,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
   // issue.
 
   Builder.setInsertPt(MBB, Begin);
-  if (Save.test(MOS::N) || Save.test(MOS::Z) || Save.test(MOS::C)) {
+  if (Save.test(MOS::C)) {
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::PHP);
     Builder.buildInstr(MOS::PLA);
@@ -930,7 +930,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
   }
 
   Builder.setInsertPt(MBB, End);
-  if (Save.test(MOS::N) || Save.test(MOS::Z) || Save.test(MOS::C)) {
+  if (Save.test(MOS::C)) {
     // Note: This is particularly awful due to the requirement that the last
     // operation be a PLP. This means we have to get P onto the stack behind
     // the values of any registers that need to be saved to do so; hence the
@@ -938,7 +938,7 @@ void MOSInstrInfo::preserveAroundPseudoExpansion(
     // and A *before* P, preventing those restores from clobbering NZ.
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::T_A).addUse(MOS::X);
+    Builder.buildInstr(MOS::T_A).addUse(MOS::X, RegState::Undef);
     Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::TSX);
     Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveP");

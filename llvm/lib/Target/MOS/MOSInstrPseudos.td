@@ -204,7 +204,7 @@ def CMPimm : Pseudo {
   let isReMaterializable = true;
 
   // Keep CMPimm adjacent to the branch that uses it.
-  // This prevents NZ from ever being live across an instruction.
+  // This prevents NZ from ever being live outside of the terminators.
   let isTerminator = true;
 }
 
