@@ -16,6 +16,7 @@
 #include "MOSInstrInfo.h"
 #include "MOSSubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -150,6 +151,8 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   MachineFunction &MF = *MI->getMF();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  MachineIRBuilder Builder(*MI->getParent(), MI);
+  MachineRegisterInfo &MRI = *Builder.getMRI();
 
   assert(!SPAdj);
 
@@ -175,9 +178,19 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   switch (MI->getOpcode()) {
   default:
-    MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*isDef=*/false);
-    MI->getOperand(FIOperandNum + 1).setImm(Offset);
     break;
+  case MOS::LDstk: {
+    if (Offset >= 256 || MI->getOperand(0).getReg() != MOS::A)
+      break;
+    Register Y = MRI.createVirtualRegister(&MOS::YcRegClass);
+    Builder.buildInstr(MOS::LDimm).addDef(Y).addImm(Offset);
+    Builder.buildInstr(MOS::LDyindir)
+        .add(MI->getOperand(0))
+        .addUse(getFrameRegister(MF))
+        .addUse(Y);
+    MI->eraseFromParent();
+    return;
+  }
   case MOS::LDabs_offset:
   case MOS::STabs_offset:
     MI->getOperand(FIOperandNum)
@@ -185,8 +198,11 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     MI->RemoveOperand(FIOperandNum + 1);
     MI->setDesc(TII.get(MI->getOpcode() == MOS::LDabs_offset ? MOS::LDabs
                                                              : MOS::STabs));
-    break;
+    return;
   }
+
+  MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*isDef=*/false);
+  MI->getOperand(FIOperandNum + 1).setImm(Offset);
 }
 
 Register MOSRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
