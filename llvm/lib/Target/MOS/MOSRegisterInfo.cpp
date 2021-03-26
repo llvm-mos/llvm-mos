@@ -154,41 +154,38 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   assert(!SPAdj);
 
   int Idx = MI->getOperand(FIOperandNum).getIndex();
+  assert(MI->getOperand(FIOperandNum + 1).isImm());
+  int64_t Offset =
+      MI->getOperand(FIOperandNum + 1).getImm() + MFI.getObjectOffset(Idx);
 
-  int64_t StackSize;
   Register Base;
   switch (MFI.getStackID(Idx)) {
   default:
     llvm_unreachable("Unexpected Stack ID");
   case TargetStackID::Default:
-    StackSize = MFI.getStackSize();
+    // Static stack grows down, so its offsets are negative. Adding the stack
+    // size gives the offset relative to the frame pointer.
+    Offset += MFI.getStackSize();
     Base = getFrameRegister(MF);
     break;
   case TargetStackID::NoAlloc:
     Base = MOS::Static;
-    // Static stack grows up, so its offsets are positive.
-    // Zeroing this allows the offsets through unchanged.
-    StackSize = 0;
     break;
   }
 
-  // FIXME: Remove this hack once we've ported away from the old stack pseudos.
-  if (MI->getOpcode() == MOS::LDabs_offset ||
-      MI->getOpcode() == MOS::STabs_offset) {
-    assert(Base == MOS::Static);
-    assert(MI->getOperand(FIOperandNum + 1).isImm());
+  switch (MI->getOpcode()) {
+  default:
+    MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*isDef=*/false);
+    MI->getOperand(FIOperandNum + 1).setImm(Offset);
+    break;
+  case MOS::LDabs_offset:
+  case MOS::STabs_offset:
     MI->getOperand(FIOperandNum)
-        .ChangeToTargetIndex(MOS::TI_STATIC_STACK,
-                             MFI.getObjectOffset(Idx) +
-                                 MI->getOperand(FIOperandNum + 1).getImm());
+        .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset);
     MI->RemoveOperand(FIOperandNum + 1);
     MI->setDesc(TII.get(MI->getOpcode() == MOS::LDabs_offset ? MOS::LDabs
                                                              : MOS::STabs));
-  } else {
-    MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*isDef=*/false);
-    assert(MI->getOperand(FIOperandNum + 1).isImm());
-    MI->getOperand(FIOperandNum + 1)
-        .setImm(StackSize + MFI.getObjectOffset(Idx));
+    break;
   }
 }
 
