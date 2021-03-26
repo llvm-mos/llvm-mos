@@ -67,9 +67,9 @@ LBB0_3:                                 ; %while.end
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
 	jsr	report_counts
-	lda	char_stats_sstk+513
+	lda	char_stats_sstk+513             ; 1-byte Folded Reload
 	sta	mos8(__rc5)
-	lda	char_stats_sstk+512
+	lda	char_stats_sstk+512             ; 1-byte Folded Reload
 	sta	mos8(__rc4)
 	rts
 .Lfunc_end0:

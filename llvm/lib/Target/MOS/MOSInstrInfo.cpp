@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -407,6 +408,30 @@ void MOSInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       .addMemOperand(MMO);
 }
 
+static void loadByteFromStaticStackSlot(MachineIRBuilder &Builder,
+                                        Register DestReg, int FrameIndex,
+                                        int64_t Offset,
+                                        MachineMemOperand *MMO) {
+  Register Tmp = DestReg;
+  if (!MOS::GPRRegClass.contains(Tmp))
+    Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
+
+  Builder.buildInstr(MOS::LDabs_offset, {Tmp}, {})
+      .addFrameIndex(FrameIndex)
+      .addImm(Offset)
+      .addMemOperand(MMO);
+
+  if (DestReg == Tmp)
+    return;
+
+  if (MOS::Imag8RegClass.contains(DestReg)) {
+    Builder.buildInstr(MOS::STimag8, {DestReg}, {Tmp});
+    return;
+  }
+
+  report_fatal_error("Not yet implemented.");
+}
+
 void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIndex,
@@ -414,7 +439,6 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(MF, FrameIndex);
@@ -423,17 +447,43 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MFI.getObjectAlign(FrameIndex));
 
   MachineIRBuilder Builder(MBB, MI);
-  if ((DestReg.isVirtual() &&
-       !MRI.getRegClass(DestReg)->hasSuperClassEq(&MOS::AnycRegClass)) &&
-      (DestReg.isPhysical() && !MOS::AnycRegClass.contains(DestReg))) {
-    report_fatal_error("Not yet implemented.");
+
+  // At this point, NZ cannot be live, since this will never occur inside a
+  // terminator.
+
+  MachineInstrSpan MIS(MI, &MBB);
+  if (MI->getMF()->getFunction().doesNotRecurse()) {
+    if (MOS::Imag16RegClass.contains(DestReg)) {
+      Register Lo = TRI->getSubReg(DestReg, MOS::sublo);
+      Register Hi = TRI->getSubReg(DestReg, MOS::subhi);
+      loadByteFromStaticStackSlot(Builder, Lo, FrameIndex, 0,
+                                  MF.getMachineMemOperand(MMO, 0, 1));
+      loadByteFromStaticStackSlot(Builder, Hi, FrameIndex, 1,
+                                  MF.getMachineMemOperand(MMO, 1, 1));
+      // Record that DestReg as a whole was set; foldMemoryOperand needs this.
+      Builder.buildInstr(MOS::KILL).addDef(DestReg).addUse(Lo).addUse(Hi);
+    } else
+      loadByteFromStaticStackSlot(Builder, DestReg, FrameIndex, 0, MMO);
   }
 
-  Builder.buildInstr(MOS::LDstk)
-      .addDef(DestReg)
-      .addFrameIndex(FrameIndex)
-      .addImm(0)
-      .addMemOperand(MMO);
+  // No instructions were added.
+  if (MIS.begin() == MI) {
+    // Fall back to old mechanism.
+    Builder.buildInstr(MOS::LDstk)
+        .addDef(DestReg)
+        .addFrameIndex(FrameIndex)
+        .addImm(0)
+        .addMemOperand(MMO);
+    return;
+  }
+
+  // Users of this function expect exactly one instruction to be added.
+  // However, if we're in a NoVRegs region, the only way to satisfy vregs is
+  // through the register scavenger, which doesn't handle bundles.
+  if (std::next(MIS.begin()) != MI &&
+      !MI->getMF()->getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoVRegs))
+    finalizeBundle(MBB, MIS.begin().getInstrIterator(), MI.getInstrIterator());
 }
 
 bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
@@ -647,6 +697,7 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
         .addImm(Offset + 1);
   } else {
     if (Base == MOS::Static) {
+      assert(!IsLoad);
       Register Tmp = Loc;
       if (!MOS::GPRRegClass.contains(Tmp))
         Tmp = trivialScavenge(Builder, MOS::GPRRegClass);

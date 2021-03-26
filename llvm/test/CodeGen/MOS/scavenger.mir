@@ -1,0 +1,51 @@
+# RUN: llc -mtriple=mos -run-pass=scavenger-test -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: scavenge_gpr
+# CHECK-LABEL: name: scavenge_gpr
+body: |
+  bb.0.entry:
+    liveins: $a
+    %0:gpr = LDimm 42, implicit-def $nz
+    RTS implicit $a
+# CHECK:      dead $x = LDimm 42
+# CHECK-NEXT: RTS
+...
+---
+name: spill_a
+# CHECK-LABEL: name: spill_a
+body: |
+  bb.0.entry:
+    liveins: $a, $x, $y
+    %0:gpr = LDimm 42, implicit-def $nz
+    RTS implicit $a, implicit $x, implicit $y
+# CHECK:      PHA
+# CHECK-NEXT: dead $a = LDimm 42
+# CHECK-NEXT: PLA
+# CHECK-NEXT: RTS
+...
+---
+name: spill_x
+# CHECK-LABEL: name: spill_x
+body: |
+  bb.0.entry:
+    liveins: $a, $x, $y
+    %0:xy = LDimm 42, implicit-def $nz
+    RTS implicit $a, implicit $x, implicit $y
+# CHECK:      STabs $x, &_SaveX
+# CHECK-NEXT: dead $x = LDimm 42
+# CHECK-NEXT: $x = LDabs &_SaveX
+# CHECK-NEXT: RTS
+...
+---
+name: spill_y
+# CHECK-LABEL: name: spill_y
+body: |
+  bb.0.entry:
+    liveins: $a, $x, $y
+    %0:yc = LDimm 42, implicit-def $nz
+    RTS implicit $a, implicit $x, implicit $y
+# CHECK:      STabs $y, &_SaveY
+# CHECK-NEXT: dead $y = LDimm 42
+# CHECK-NEXT: $y = LDabs &_SaveY
+# CHECK-NEXT: RTS
+...

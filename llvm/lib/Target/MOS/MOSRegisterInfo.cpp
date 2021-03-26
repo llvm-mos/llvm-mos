@@ -27,10 +27,11 @@
 
 using namespace llvm;
 
-cl::opt<int> NumImagPtrs("num-imag-ptrs", cl::init(127),
-                         cl::desc("Number of imaginary (Imag8) pointer registers "
-                                  "available for compiler use."),
-                         cl::value_desc("imaginary pointer registers"));
+cl::opt<int>
+    NumImagPtrs("num-imag-ptrs", cl::init(127),
+                cl::desc("Number of imaginary (Imag8) pointer registers "
+                         "available for compiler use."),
+                cl::value_desc("imaginary pointer registers"));
 
 MOSRegisterInfo::MOSRegisterInfo()
     : MOSGenRegisterInfo(/*RA=*/0, /*DwarfFlavor=*/0, /*EHFlavor=*/0,
@@ -44,7 +45,7 @@ MOSRegisterInfo::MOSRegisterInfo()
       R = getSubReg(R, MOS::sublo);
     if (!MOS::Imag8RegClass.contains(R))
       continue;
-    std::string& Str = Imag8SymbolNames[Reg];
+    std::string &Str = Imag8SymbolNames[Reg];
     Str = "__";
     Str += getName(R);
     std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
@@ -105,11 +106,50 @@ MOSRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   return &MOS::Anyi8RegClass;
 }
 
+bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I,
+                                            MachineBasicBlock::iterator &UseMI,
+                                            const TargetRegisterClass *RC,
+                                            Register Reg) const {
+  // Note: NZ cannot be live at this point, since it's only live in terminators,
+  // and virtual registers are never inserted into terminators.
+
+  // Consider the regions in a basic block where a physical register is live.
+  // The register scavenger will select one of these regions to spill and mark
+  // the physical register as available within that region. Such a region cannot
+  // contain any calls, since the physical registers are clobbered by calls.
+  // This means that a save/restore pair for that physical register cannot
+  // overlap with any other save/restore pair for the same physical register.
+
+  MachineIRBuilder Builder(MBB, I);
+  switch (Reg) {
+  default:
+    llvm_unreachable("Unexpected scavenger register.");
+  case MOS::A:
+    Builder.buildInstr(MOS::PHA);
+
+    Builder.setInsertPt(MBB, UseMI);
+    Builder.buildInstr(MOS::PLA);
+    break;
+  case MOS::X:
+  case MOS::Y:
+    const char *Save = Reg == MOS::X ? "_SaveX" : "_SaveY";
+    Builder.buildInstr(MOS::STabs).addUse(Reg).addExternalSymbol(Save);
+
+    Builder.setInsertPt(MBB, UseMI);
+    Builder.buildInstr(MOS::LDabs).addDef(Reg).addExternalSymbol(Save);
+    break;
+  }
+
+  return true;
+}
+
 void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                           int SPAdj, unsigned FIOperandNum,
                                           RegScavenger *RS) const {
   MachineFunction &MF = *MI->getMF();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   assert(!SPAdj);
 
@@ -132,9 +172,22 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     break;
   }
 
-  MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*isDef=*/false);
-  assert(MI->getOperand(FIOperandNum + 1).isImm());
-  MI->getOperand(FIOperandNum + 1).setImm(StackSize + MFI.getObjectOffset(Idx));
+  // FIXME: Remove this hack once we've ported away from the old stack pseudos.
+  if (MI->getOpcode() == MOS::LDabs_offset) {
+    assert(Base == MOS::Static);
+    assert(MI->getOperand(FIOperandNum + 1).isImm());
+    MI->getOperand(FIOperandNum)
+        .ChangeToTargetIndex(MOS::TI_STATIC_STACK,
+                             MFI.getObjectOffset(Idx) +
+                                 MI->getOperand(FIOperandNum + 1).getImm());
+    MI->RemoveOperand(FIOperandNum + 1);
+    MI->setDesc(TII.get(MOS::LDabs));
+  } else {
+    MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*isDef=*/false);
+    assert(MI->getOperand(FIOperandNum + 1).isImm());
+    MI->getOperand(FIOperandNum + 1)
+        .setImm(StackSize + MFI.getObjectOffset(Idx));
+  }
 }
 
 Register MOSRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

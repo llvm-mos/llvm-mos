@@ -43,7 +43,7 @@ class Pseudo : Instruction {
 // Frame Pseudoinstructions
 
 def LDstk : Pseudo {
-  dag InOperandList = (ins Stack:$base, i16imm:$offset);
+  dag InOperandList = (ins Imag16:$base, i16imm:$offset);
   dag OutOperandList = (outs Anyc:$dst);
 
   let mayLoad = true;
@@ -103,6 +103,16 @@ def ADJCALLSTACKUP : Pseudo {
 }
 
 // Miscellaneous pseudoinstructions
+
+def LDabs_offset : Pseudo {
+  dag InOperandList = (ins i16imm:$addr, i16imm:$offset);
+  dag OutOperandList = (outs GPR:$dst);
+
+  let Defs = [NZ];
+
+  let isReMaterializable = true;
+  let mayLoad = true;
+}
 
 // $dst = *(addr + (unsigned char)idx);
 // Sets NZ to undefined value, since expansion may clobber.

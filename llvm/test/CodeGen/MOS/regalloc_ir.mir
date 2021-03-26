@@ -1,0 +1,77 @@
+# RUN: llc -mtriple=mos -run-pass=greedy -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+  define void @spill_static_gpr() norecurse {
+    entry:
+      ret void
+  }
+  define void @spill_static_imag8() norecurse {
+    entry:
+      ret void
+  }
+  define void @spill_static_imag16() norecurse {
+    entry:
+      ret void
+  }
+---
+---
+name: spill_static_gpr
+# CHECK-LABEL: name: spill_static_gpr
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $a
+    %0:gpr = COPY $a
+    JSR &fn, mos_csr
+    $a = COPY %0
+    RTS implicit $a
+# CHECK:      STstk $a, %stack.0, 0 :: (store 1 into %stack.0)
+# CHECK-NEXT: JSR
+# CHECK-NEXT: $a = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+...
+---
+name: spill_static_imag8
+# CHECK-LABEL: name: spill_static_imag8
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $rc2, $rs2, $rs4
+    %0:imag8 = COPY $rc2
+    JSR &fn, mos_csr
+    $rc2 = COPY %0
+    RTS implicit $rc2, implicit $rs2, implicit $rs4
+# CHECK:      STstk $rc2, %stack.0, 0 :: (store 1 into %stack.0)
+# CHECK-NEXT: JSR
+# CHECK-NEXT: BUNDLE implicit-def dead %1, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2 {
+# CHECK-NEXT:   %1:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+# CHECK-NEXT:   $rc2 = STimag8 internal %1
+# CHECK-NEXT: }
+# CHECK-NEXT: RTS
+...
+---
+name: spill_static_imag16
+# CHECK-LABEL: name: spill_static_imag16
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $rs1, $rs2, $rs4
+    %0:imag16 = COPY $rs1
+    JSR &fn, mos_csr
+    $rs1 = COPY %0
+    RTS implicit $rs1, implicit $rs2, implicit $rs4
+# CHECK:      STstk $rs1, %stack.0, 0 :: (store 2 into %stack.0, align 1)
+# CHECK-NEXT: JSR
+# CHECK-NEXT: BUNDLE implicit-def dead %1, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2, implicit-def dead %2, implicit-def $rc3, implicit-def $rs1 {
+# CHECK-NEXT:   %1:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+# CHECK-NEXT:   $rc2 = STimag8 internal %1
+# CHECK-NEXT:   %2:gpr = LDabs_offset %stack.0, 1, implicit-def $nz :: (load 1 from %stack.0 + 1)
+# CHECK-NEXT:   $rc3 = STimag8 internal %2
+# CHECK-NEXT:   $rs1 = KILL internal $rc2, internal $rc3
+# CHECK-NEXT: }
+# CHECK-NEXT: RTS
+...

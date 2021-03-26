@@ -109,19 +109,6 @@ body: |
 # CHECK-NEXT: $a = LDyindir $rs3, $y
 # CHECK-NEXT: $rc3 = STimag8 $a
 # CHECK-NEXT: RTS
----
-name: ldstatic
-# CHECK-LABEL: name: ldstatic
-body: |
-  bb.0.entry:
-    $rs1 = LDstk $static, 1234
-    RTS
-# CHECK:      $a = LDabs target-index(mos-static-stack) + 1234
-# CHECK-NEXT: $rc2 = STimag8 $a
-# CHECK-NEXT: $a = LDabs target-index(mos-static-stack) + 1235
-# CHECK-NEXT: $rc3 = STimag8 $a
-# CHECK-NEXT: RTS
-...
 ...
 ---
 name: incsp
