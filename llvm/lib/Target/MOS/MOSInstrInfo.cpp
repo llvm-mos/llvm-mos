@@ -449,25 +449,11 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   // At this point, NZ cannot be live, since this will never occur inside a
   // terminator.
 
-  MachineInstrSpan MIS(MI, &MBB);
-  if (MI->getMF()->getFunction().doesNotRecurse()) {
-    if (MOS::Imag16RegClass.contains(Reg)) {
-      Register Lo = TRI->getSubReg(Reg, MOS::sublo);
-      Register Hi = TRI->getSubReg(Reg, MOS::subhi);
-      loadStoreByteStaticStackSlot(Builder, Lo, FrameIndex, 0,
-                                   MF.getMachineMemOperand(MMO, 0, 1), IsLoad);
-      loadStoreByteStaticStackSlot(Builder, Hi, FrameIndex, 1,
-                                   MF.getMachineMemOperand(MMO, 1, 1), IsLoad);
-      if (IsLoad) {
-        // Record that DestReg as a whole was set; foldMemoryOperand needs this.
-        Builder.buildInstr(MOS::KILL).addDef(Reg).addUse(Lo).addUse(Hi);
-      }
-    } else
-      loadStoreByteStaticStackSlot(Builder, Reg, FrameIndex, 0, MMO, IsLoad);
-  }
-
-  // Fall back to old mechanism if no instructions were added.
-  if (MIS.begin() == MI) {
+  // Since the offset is not yet known, it may be either 8 or 16 bits. Emit a
+  // 16-bit pseudo to be lowered during frame index elimination.
+  if (!MI->getMF()->getFunction().doesNotRecurse()) {
+    // Note: This can never occur in PEI, since PEI only loads/stores CSRs, and
+    // those are custom-spilled to the hard stack in non-recursive functions.
     if (IsLoad) {
       Builder.buildInstr(MOS::LDstk)
           .addDef(Reg)
@@ -483,6 +469,21 @@ void MOSInstrInfo::loadStoreRegStackSlot(
     }
     return;
   }
+
+  MachineInstrSpan MIS(MI, &MBB);
+  if (MOS::Imag16RegClass.contains(Reg)) {
+    Register Lo = TRI->getSubReg(Reg, MOS::sublo);
+    Register Hi = TRI->getSubReg(Reg, MOS::subhi);
+    loadStoreByteStaticStackSlot(Builder, Lo, FrameIndex, 0,
+                                 MF.getMachineMemOperand(MMO, 0, 1), IsLoad);
+    loadStoreByteStaticStackSlot(Builder, Hi, FrameIndex, 1,
+                                 MF.getMachineMemOperand(MMO, 1, 1), IsLoad);
+    if (IsLoad) {
+      // Record that DestReg as a whole was set; foldMemoryOperand needs this.
+      Builder.buildInstr(MOS::KILL).addDef(Reg).addUse(Lo).addUse(Hi);
+    }
+  } else
+    loadStoreByteStaticStackSlot(Builder, Reg, FrameIndex, 0, MMO, IsLoad);
 
   // Users of this function expect exactly one instruction to be added.
   // However, if we're in a NoVRegs region, the only way to satisfy vregs is

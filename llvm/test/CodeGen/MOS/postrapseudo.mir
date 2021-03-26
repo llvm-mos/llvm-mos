@@ -61,17 +61,27 @@ name: ldss
 # CHECK-LABEL: name: ldss
 body: |
   bb.0.entry:
-    $x = LDstk $rs0, 2
+    $x = LDstk $rs0, 2, implicit-def $y, implicit-def $nz
 # CHECK:      $y = LDimm 2
 # CHECK-NEXT: $a = LDyindir $rs0, $y
 # CHECK-NEXT: $x = TA_
+...
+---
+name: ldss_y
+# CHECK-LABEL: name: ldss_y
+body: |
+  bb.0.entry:
+    $y = LDstk $rs0, 2, implicit-def $y, implicit-def $nz
+# CHECK:      $y = LDimm 2
+# CHECK-NEXT: $a = LDyindir $rs0, $y
+# CHECK-NEXT: $y = TA_
 ...
 ---
 name: ldptr_far
 # CHECK-LABEL: name: ldptr_far
 body: |
   bb.0.entry:
-    $rs3 = LDstk $rs0, 258
+    $rs3 = LDstk $rs0, 258, implicit-def $y, implicit-def $nz
     RTS
 # CHECK:      $a = LDimag8 $rc0
 # CHECK-NEXT: $rc2 = STimag8 $a
@@ -94,7 +104,7 @@ name: ldptr_far_1
 # CHECK-LABEL: name: ldptr_far_1
 body: |
   bb.0.entry:
-    $rs1 = LDstk $rs0, 258
+    $rs1 = LDstk $rs0, 258, implicit-def $y, implicit-def $nz
     RTS
 # CHECK:      $a = LDimag8 $rc0
 # CHECK-NEXT: $rc6 = STimag8 $a

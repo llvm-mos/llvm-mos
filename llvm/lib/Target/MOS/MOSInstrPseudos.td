@@ -46,11 +46,15 @@ def LDstk : Pseudo {
   dag OutOperandList = (outs Anyc:$dst);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
+  let Defs = [Y, NZ];
+
   let mayLoad = true;
 }
 
 def STstk : Pseudo {
   dag InOperandList = (ins Anyc:$src, Imag16:$base, i16imm:$fi);
+
+  let Defs = [Y, NZ];
 
   let mayStore = true;
 }
