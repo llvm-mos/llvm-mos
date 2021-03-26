@@ -50,7 +50,7 @@ def LDstk : Pseudo {
 }
 
 def STstk : Pseudo {
-  dag InOperandList = (ins Anyc:$src, Stack:$base, i16imm:$fi);
+  dag InOperandList = (ins Anyc:$src, Imag16:$base, i16imm:$fi);
 
   let mayStore = true;
 }
@@ -112,6 +112,13 @@ def LDabs_offset : Pseudo {
 
   let isReMaterializable = true;
   let mayLoad = true;
+}
+
+def STabs_offset : Pseudo {
+  dag InOperandList = (ins GPR:$src, i16imm:$addr, i16imm:$offset);
+  dag OutOperandList = (outs);
+
+  let mayStore = true;
 }
 
 // $dst = *(addr + (unsigned char)idx);

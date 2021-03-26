@@ -173,7 +173,8 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   }
 
   // FIXME: Remove this hack once we've ported away from the old stack pseudos.
-  if (MI->getOpcode() == MOS::LDabs_offset) {
+  if (MI->getOpcode() == MOS::LDabs_offset ||
+      MI->getOpcode() == MOS::STabs_offset) {
     assert(Base == MOS::Static);
     assert(MI->getOperand(FIOperandNum + 1).isImm());
     MI->getOperand(FIOperandNum)
@@ -181,7 +182,8 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                              MFI.getObjectOffset(Idx) +
                                  MI->getOperand(FIOperandNum + 1).getImm());
     MI->RemoveOperand(FIOperandNum + 1);
-    MI->setDesc(TII.get(MOS::LDabs));
+    MI->setDesc(TII.get(MI->getOpcode() == MOS::LDabs_offset ? MOS::LDabs
+                                                             : MOS::STabs));
   } else {
     MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*isDef=*/false);
     assert(MI->getOperand(FIOperandNum + 1).isImm());

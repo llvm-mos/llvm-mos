@@ -398,30 +398,37 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 }
 
 static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
-                                         Register DestReg, int FrameIndex,
+                                         Register Reg, int FrameIndex,
                                          int64_t Offset, MachineMemOperand *MMO,
                                          bool IsLoad) {
-  if (!IsLoad)
-    return;
-
-  Register Tmp = DestReg;
+  Register Tmp = Reg;
   if (!MOS::GPRRegClass.contains(Tmp))
     Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
 
-  Builder.buildInstr(MOS::LDabs_offset, {Tmp}, {})
-      .addFrameIndex(FrameIndex)
-      .addImm(Offset)
-      .addMemOperand(MMO);
+  // Get the value from wherever it's coming from to Tmp.
+  if (IsLoad) {
+    Builder.buildInstr(MOS::LDabs_offset, {Tmp}, {})
+        .addFrameIndex(FrameIndex)
+        .addImm(Offset)
+        .addMemOperand(MMO);
 
-  if (DestReg == Tmp)
-    return;
+    if (Reg == Tmp) {
+    } else if (MOS::Imag8RegClass.contains(Reg))
+      Builder.buildInstr(MOS::STimag8, {Reg}, {Tmp});
+    else
+      report_fatal_error("Not yet implemented.");
+  } else {
+    if (Reg == Tmp) {
+    } else if (MOS::Imag8RegClass.contains(Reg))
+      Builder.buildInstr(MOS::LDimag8, {Tmp}, {Reg});
+    else
+      report_fatal_error("Not yet implemented.");
 
-  if (MOS::Imag8RegClass.contains(DestReg)) {
-    Builder.buildInstr(MOS::STimag8, {DestReg}, {Tmp});
-    return;
+    Builder.buildInstr(MOS::STabs_offset, {}, {Tmp})
+        .addFrameIndex(FrameIndex)
+        .addImm(Offset)
+        .addMemOperand(MMO);
   }
-
-  report_fatal_error("Not yet implemented.");
 }
 
 void MOSInstrInfo::loadStoreRegStackSlot(
@@ -662,7 +669,7 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
     break;
   }
 
-  if (MOS::Imag16RegClass.contains(Base) && Offset >= 256) {
+  if (Offset >= 256) {
     // FIXME: Have this find a register other than Loc, if it's available.
     // Really feeling the pains of not using VRegs for this.
     Register Tmp = trivialScavenge(Builder, MOS::Imag16RegClass);
@@ -696,30 +703,16 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
         .addUse(Base)
         .addImm(Offset + 1);
   } else {
-    if (Base == MOS::Static) {
-      assert(!IsLoad);
-      Register Tmp = Loc;
-      if (!MOS::GPRRegClass.contains(Tmp))
-        Tmp = trivialScavenge(Builder, MOS::GPRRegClass);
-      if (!IsLoad)
-        copyPhysRegNoPreserve(Builder, Tmp, Loc);
-      Builder.buildInstr(IsLoad ? MOS::LDabs : MOS::STabs)
-          .addReg(MOS::A, getDefRegState(IsLoad))
-          .addTargetIndex(MOS::TI_STATIC_STACK, Offset);
-      if (IsLoad)
-        copyPhysRegNoPreserve(Builder, Loc, MOS::A);
-    } else {
-      assert(MOS::Imag16RegClass.contains(Base));
-      Builder.buildInstr(MOS::LDimm).addDef(MOS::Y).addImm(Offset);
-      if (!IsLoad)
-        copyPhysRegNoPreserve(Builder, MOS::A, Loc);
-      Builder.buildInstr(IsLoad ? MOS::LDyindir : MOS::STyindir)
-          .addReg(MOS::A, getDefRegState(IsLoad))
-          .addUse(Base)
-          .addUse(MOS::Y);
-      if (IsLoad)
-        copyPhysRegNoPreserve(Builder, Loc, MOS::A);
-    }
+    assert(MOS::Imag16RegClass.contains(Base));
+    Builder.buildInstr(MOS::LDimm).addDef(MOS::Y).addImm(Offset);
+    if (!IsLoad)
+      copyPhysRegNoPreserve(Builder, MOS::A, Loc);
+    Builder.buildInstr(IsLoad ? MOS::LDyindir : MOS::STyindir)
+        .addReg(MOS::A, getDefRegState(IsLoad))
+        .addUse(Base)
+        .addUse(MOS::Y);
+    if (IsLoad)
+      copyPhysRegNoPreserve(Builder, Loc, MOS::A);
   }
 }
 
