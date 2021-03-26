@@ -30,8 +30,8 @@ def label : Operand<OtherVT>;
 class Pseudo : Instruction {
   let Namespace = "MOS";
 
-  dag InOperandList = (ins);
   dag OutOperandList = (outs);
+  dag InOperandList = (ins);
 
   let hasSideEffects = false;
   let mayLoad = false;
@@ -43,8 +43,8 @@ class Pseudo : Instruction {
 // Frame Pseudoinstructions
 
 def LDstk : Pseudo {
-  dag InOperandList = (ins Imag16:$base, i16imm:$offset);
   dag OutOperandList = (outs Anyc:$dst);
+  dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
   let mayLoad = true;
 }
@@ -58,8 +58,8 @@ def STstk : Pseudo {
 // Produces the low byte of the address of the given frame index. Produces a
 // carry required by the high byte calculation.
 def AddrLostk : Pseudo {
-  dag InOperandList = (ins Stack:$base, i16imm:$offset);
   dag OutOperandList = (outs Anyi8:$dst, Cc:$carry);
+  dag InOperandList = (ins Stack:$base, i16imm:$offset);
 
   let Defs = [NZ];
 
@@ -69,8 +69,8 @@ def AddrLostk : Pseudo {
 // Produces the high byte of the address of the given frame index. Accepts the
 // carry produced by the low byte calculation.
 def AddrHistk : Pseudo {
-  dag InOperandList = (ins Stack:$base, i16imm:$offset, Cc:$carry);
   dag OutOperandList = (outs Anyi8:$dst);
+  dag InOperandList = (ins Stack:$base, i16imm:$offset, Cc:$carry);
 
   let Defs = [C, NZ];
 
@@ -84,29 +84,29 @@ def AddrHistk : Pseudo {
 def IncSP : Pseudo {
   dag InOperandList = (ins i16imm:$bytes);
 
-  let Uses = [RS0];
   let Defs = [RS0];
+  let Uses = [RS0];
 }
 
 def ADJCALLSTACKDOWN : Pseudo {
   dag InOperandList = (ins i16imm:$bytes, i16imm:$prior);
 
-  let Uses = [RS0];
   let Defs = [RS0];
+  let Uses = [RS0];
 }
 
 def ADJCALLSTACKUP : Pseudo {
   dag InOperandList = (ins i16imm:$bytes, i16imm:$prior);
 
-  let Uses = [RS0];
   let Defs = [RS0];
+  let Uses = [RS0];
 }
 
 // Miscellaneous pseudoinstructions
 
 def LDabs_offset : Pseudo {
-  dag InOperandList = (ins i16imm:$addr, i16imm:$offset);
   dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins i16imm:$addr, i16imm:$offset);
 
   let Defs = [NZ];
 
@@ -115,8 +115,8 @@ def LDabs_offset : Pseudo {
 }
 
 def STabs_offset : Pseudo {
-  dag InOperandList = (ins GPR:$src, i16imm:$addr, i16imm:$offset);
   dag OutOperandList = (outs);
+  dag InOperandList = (ins GPR:$src, i16imm:$addr, i16imm:$offset);
 
   let mayStore = true;
 }
@@ -124,8 +124,8 @@ def STabs_offset : Pseudo {
 // $dst = *(addr + (unsigned char)idx);
 // Sets NZ to undefined value, since expansion may clobber.
 def LDidx : Pseudo {
-  dag InOperandList = (ins i16imm:$addr, XY:$idx);
   dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins i16imm:$addr, XY:$idx);
 
   let Defs = [NZ];
 
@@ -158,8 +158,8 @@ def LDidx : Pseudo {
 // "weirdness" as much as possible.
 
 def ADCimm : Pseudo, PseudoInstExpansion<(ADC_Immediate imm8:$r)> {
-  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
+  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   let Constraints = "$dst = $l, $carryout = $carryin";
 
   let Defs = [NZ];
@@ -169,8 +169,8 @@ def ADCimm : Pseudo, PseudoInstExpansion<(ADC_Immediate imm8:$r)> {
 }
 
 def ADCimag8 : Pseudo, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
-  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
+  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   // Don't give the carries a tied constraint, since having two tied operands
   // inhibits commutation of $l and $r.
   let Constraints = "$dst = $l";
@@ -183,8 +183,8 @@ def ADCimag8 : Pseudo, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
 }
 
 def ASL : Pseudo {
-  dag InOperandList = (ins AImag8:$src);
   dag OutOperandList = (outs AImag8:$dst, Cc:$carry);
+  dag InOperandList = (ins AImag8:$src);
   let Constraints = "$dst = $src";
 
   let Defs = [NZ];
@@ -214,8 +214,8 @@ def CMPimm : Pseudo {
 }
 
 def IN_ : Pseudo {
-  dag InOperandList = (ins XY:$src);
   dag OutOperandList = (outs XY:$dst);
+  dag InOperandList = (ins XY:$src);
   let Constraints = "$src = $dst";
 
   let Defs = [NZ];
@@ -244,16 +244,16 @@ def JSR : Pseudo, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
 }
 
 def LDCimm : Pseudo {
-  dag InOperandList = (ins i1imm:$val);
   dag OutOperandList = (outs Cc:$dst);
+  dag InOperandList = (ins i1imm:$val);
 
   let isReMaterializable = true;
   let isAsCheapAsAMove = true;
 }
 
 def LDimm : Pseudo {
-  dag InOperandList = (ins i8imm:$val);
   dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins i8imm:$val);
 
   let Defs = [NZ];
 
@@ -265,8 +265,8 @@ def LDimm : Pseudo {
 }
 
 def LDimag8 : Pseudo {
-  dag InOperandList = (ins Imag8:$src);
   dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins Imag8:$src);
 
   let Defs = [NZ];
 
@@ -274,8 +274,8 @@ def LDimag8 : Pseudo {
 }
 
 def LDabs : Pseudo {
-  dag InOperandList = (ins i16imm:$src);
   dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins i16imm:$src);
 
   let Defs = [NZ];
 
@@ -295,8 +295,8 @@ def LDAidx : Pseudo {
 def LDXidx : Pseudo, PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
 
-  let Uses = [Y];
   let Defs = [X, NZ];
+  let Uses = [Y];
 
   let isReMaterializable = true;
   let mayLoad = true;
@@ -305,16 +305,16 @@ def LDXidx : Pseudo, PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)> {
 def LDYidx : Pseudo, PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
 
-  let Uses = [X];
   let Defs = [Y, NZ];
+  let Uses = [X];
 
   let isReMaterializable = true;
   let mayLoad = true;
 }
 
 def LDyindir : Pseudo, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
-  dag InOperandList = (ins Imag16:$addr, Yc:$offset);
   dag OutOperandList = (outs Ac:$dst);
+  dag InOperandList = (ins Imag16:$addr, Yc:$offset);
 
   let Defs = [NZ];
 
@@ -346,8 +346,8 @@ def PLP : Pseudo, PseudoInstExpansion<(PLP_Implied)> {
 }
 
 def ROL : Pseudo {
-  dag InOperandList = (ins AImag8:$src, Cc:$carryin);
   dag OutOperandList = (outs AImag8:$dst, Cc:$carryout);
+  dag InOperandList = (ins AImag8:$src, Cc:$carryin);
   let Constraints = "$dst = $src, $carryout = $carryin";
 
   let Defs = [NZ];
@@ -362,8 +362,8 @@ def RTS : Pseudo, PseudoInstExpansion<(RTS_Implied)> {
 }
 
 def SBCimm : Pseudo, PseudoInstExpansion<(SBC_Immediate imm8:$r)> {
-  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
+  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   let Constraints = "$dst = $l, $carryout = $carryin";
 
   let Defs = [NZ];
@@ -372,8 +372,8 @@ def SBCimm : Pseudo, PseudoInstExpansion<(SBC_Immediate imm8:$r)> {
 }
 
 def SBCimag8 : Pseudo, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
-  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
+  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   // Don't give the carries a tied constraint, since having two tied operands
   // inhibits commutation of $l and $r.
   let Constraints = "$dst = $l";
@@ -402,15 +402,15 @@ def STyindir : Pseudo, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
 }
 
 def STimag8 : Pseudo {
-  dag InOperandList = (ins GPR:$src);
   dag OutOperandList = (outs Imag8:$dst);
+  dag InOperandList = (ins GPR:$src);
 }
 
 def TA_ : Pseudo {
   dag OutOperandList = (outs XY:$dst);
 
-  let Uses = [A];
   let Defs = [NZ];
+  let Uses = [A];
 
   let isAsCheapAsAMove = true;
   let isReMaterializable = true;
