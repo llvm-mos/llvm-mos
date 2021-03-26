@@ -384,34 +384,26 @@ void MOSInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        int FrameIndex,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
-  MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  MachinePointerInfo PtrInfo =
-      MachinePointerInfo::getFixedStack(MF, FrameIndex);
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOStore, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlign(FrameIndex));
-
-  MachineIRBuilder Builder(MBB, MI);
-  if ((SrcReg.isVirtual() &&
-       !MRI.getRegClass(SrcReg)->hasSuperClassEq(&MOS::AnycRegClass)) &&
-      (SrcReg.isPhysical() && !MOS::AnycRegClass.contains(SrcReg))) {
-    report_fatal_error("Not yet implemented.");
-  }
-
-  Builder.buildInstr(MOS::STstk)
-      .addReg(SrcReg, getKillRegState(isKill))
-      .addFrameIndex(FrameIndex)
-      .addImm(0)
-      .addMemOperand(MMO);
+  loadStoreRegStackSlot(MBB, MI, SrcReg, isKill, FrameIndex, RC, TRI,
+                        /*IsLoad=*/false);
 }
 
-static void loadByteFromStaticStackSlot(MachineIRBuilder &Builder,
+void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIndex,
-                                        int64_t Offset,
-                                        MachineMemOperand *MMO) {
+                                        const TargetRegisterClass *RC,
+                                        const TargetRegisterInfo *TRI) const {
+  loadStoreRegStackSlot(MBB, MI, DestReg, false, FrameIndex, RC, TRI,
+                        /*IsLoad=*/true);
+}
+
+static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
+                                         Register DestReg, int FrameIndex,
+                                         int64_t Offset, MachineMemOperand *MMO,
+                                         bool IsLoad) {
+  if (!IsLoad)
+    return;
+
   Register Tmp = DestReg;
   if (!MOS::GPRRegClass.contains(Tmp))
     Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
@@ -432,19 +424,18 @@ static void loadByteFromStaticStackSlot(MachineIRBuilder &Builder,
   report_fatal_error("Not yet implemented.");
 }
 
-void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIndex,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI) const {
+void MOSInstrInfo::loadStoreRegStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register Reg,
+    bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
+    const TargetRegisterInfo *TRI, bool IsLoad) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(MF, FrameIndex);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlign(FrameIndex));
+      PtrInfo, IsLoad ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore,
+      MFI.getObjectSize(FrameIndex), MFI.getObjectAlign(FrameIndex));
 
   MachineIRBuilder Builder(MBB, MI);
 
@@ -453,27 +444,36 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   MachineInstrSpan MIS(MI, &MBB);
   if (MI->getMF()->getFunction().doesNotRecurse()) {
-    if (MOS::Imag16RegClass.contains(DestReg)) {
-      Register Lo = TRI->getSubReg(DestReg, MOS::sublo);
-      Register Hi = TRI->getSubReg(DestReg, MOS::subhi);
-      loadByteFromStaticStackSlot(Builder, Lo, FrameIndex, 0,
-                                  MF.getMachineMemOperand(MMO, 0, 1));
-      loadByteFromStaticStackSlot(Builder, Hi, FrameIndex, 1,
-                                  MF.getMachineMemOperand(MMO, 1, 1));
-      // Record that DestReg as a whole was set; foldMemoryOperand needs this.
-      Builder.buildInstr(MOS::KILL).addDef(DestReg).addUse(Lo).addUse(Hi);
+    if (MOS::Imag16RegClass.contains(Reg)) {
+      Register Lo = TRI->getSubReg(Reg, MOS::sublo);
+      Register Hi = TRI->getSubReg(Reg, MOS::subhi);
+      loadStoreByteStaticStackSlot(Builder, Lo, FrameIndex, 0,
+                                   MF.getMachineMemOperand(MMO, 0, 1), IsLoad);
+      loadStoreByteStaticStackSlot(Builder, Hi, FrameIndex, 1,
+                                   MF.getMachineMemOperand(MMO, 1, 1), IsLoad);
+      if (IsLoad) {
+        // Record that DestReg as a whole was set; foldMemoryOperand needs this.
+        Builder.buildInstr(MOS::KILL).addDef(Reg).addUse(Lo).addUse(Hi);
+      }
     } else
-      loadByteFromStaticStackSlot(Builder, DestReg, FrameIndex, 0, MMO);
+      loadStoreByteStaticStackSlot(Builder, Reg, FrameIndex, 0, MMO, IsLoad);
   }
 
-  // No instructions were added.
+  // Fall back to old mechanism if no instructions were added.
   if (MIS.begin() == MI) {
-    // Fall back to old mechanism.
-    Builder.buildInstr(MOS::LDstk)
-        .addDef(DestReg)
-        .addFrameIndex(FrameIndex)
-        .addImm(0)
-        .addMemOperand(MMO);
+    if (IsLoad) {
+      Builder.buildInstr(MOS::LDstk)
+          .addDef(Reg)
+          .addFrameIndex(FrameIndex)
+          .addImm(0)
+          .addMemOperand(MMO);
+    } else {
+      Builder.buildInstr(MOS::STstk)
+          .addReg(Reg, getKillRegState(IsKill))
+          .addFrameIndex(FrameIndex)
+          .addImm(0)
+          .addMemOperand(MMO);
+    }
     return;
   }
 

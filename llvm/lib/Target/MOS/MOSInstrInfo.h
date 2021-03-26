@@ -70,6 +70,12 @@ public:
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
+  void loadStoreRegStackSlot(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MI, Register Reg,
+                             bool IsKill, int FrameIndex,
+                             const TargetRegisterClass *RC,
+                             const TargetRegisterInfo *TRI, bool IsLoad) const;
+
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   bool
