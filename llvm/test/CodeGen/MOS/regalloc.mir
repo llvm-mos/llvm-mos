@@ -30,7 +30,7 @@ body: |
     JSR &fn, mos_csr
     $y = COPY %0
     RTS implicit $y
-# CHECK:      STstk $y, %stack.0, 0, implicit-def $y, implicit-def $nz :: (store 1 into %stack.0)
+# CHECK:      STstk $y, %stack.0, 0, implicit-def $nz :: (store 1 into %stack.0)
 # CHECK-NEXT: JSR
-# CHECK-NEXT: $y = LDstk %stack.0, 0, implicit-def $y, implicit-def $nz :: (load 1 from %stack.0)
+# CHECK-NEXT: $y = LDstk %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
 ...
