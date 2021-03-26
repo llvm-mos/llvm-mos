@@ -401,9 +401,7 @@ static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
                                          Register Reg, int FrameIndex,
                                          int64_t Offset, MachineMemOperand *MMO,
                                          bool IsLoad) {
-  Register Tmp = Reg;
-  if (!MOS::GPRRegClass.contains(Tmp))
-    Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
+  Register Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
 
   // Get the value from wherever it's coming from to Tmp.
   if (IsLoad) {
@@ -411,19 +409,9 @@ static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
         .addFrameIndex(FrameIndex)
         .addImm(Offset)
         .addMemOperand(MMO);
-
-    if (Reg == Tmp) {
-    } else if (MOS::Imag8RegClass.contains(Reg))
-      Builder.buildInstr(MOS::STimag8, {Reg}, {Tmp});
-    else
-      report_fatal_error("Not yet implemented.");
+    Builder.buildCopy(Reg, Tmp);
   } else {
-    if (Reg == Tmp) {
-    } else if (MOS::Imag8RegClass.contains(Reg))
-      Builder.buildInstr(MOS::LDimag8, {Tmp}, {Reg});
-    else
-      report_fatal_error("Not yet implemented.");
-
+    Builder.buildCopy(Tmp, Reg);
     Builder.buildInstr(MOS::STabs_offset, {}, {Tmp})
         .addFrameIndex(FrameIndex)
         .addImm(Offset)

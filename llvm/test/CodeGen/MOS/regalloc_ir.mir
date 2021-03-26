@@ -26,9 +26,16 @@ body: |
     JSR &fn, mos_csr
     $a = COPY %0
     RTS implicit $a
-# CHECK:      STabs_offset $a, %stack.0, 0 :: (store 1 into %stack.0)
+# CHECK:      BUNDLE implicit-def dead %1, implicit $a {
+# CHECK-NEXT:   %1:gpr = COPY $a
+# CHECK-NEXT:   STabs_offset internal %1, %stack.0, 0 :: (store 1 into %stack.0)
+# CHECK-NEXT: }
 # CHECK-NEXT: JSR
-# CHECK-NEXT: $a = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+# CHECK-NEXT: BUNDLE implicit-def dead %2, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $a {
+# CHECK-NEXT:   %2:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+# CHECK-NEXT:   $a = COPY internal %2
+# CHECK-NEXT: }
+# CHECK-NEXT: RTS
 ...
 ---
 name: spill_static_imag8
@@ -43,14 +50,14 @@ body: |
     JSR &fn, mos_csr
     $rc2 = COPY %0
     RTS implicit $rc2, implicit $rs2, implicit $rs4
-# CHECK:      BUNDLE implicit-def dead %1, implicit-def $nz, implicit-def $n, implicit-def $z, implicit $rc2 {
-# CHECK-NEXT:   %1:gpr = LDimag8 $rc2
+# CHECK:      BUNDLE implicit-def dead %1, implicit $rc2 {
+# CHECK-NEXT:   %1:gpr = COPY $rc2
 # CHECK-NEXT:   STabs_offset internal %1, %stack.0, 0 :: (store 1 into %stack.0)
 # CHECK-NEXT: }
 # CHECK-NEXT: JSR
 # CHECK-NEXT: BUNDLE implicit-def dead %2, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2 {
 # CHECK-NEXT:   %2:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
-# CHECK-NEXT:   $rc2 = STimag8 internal %2
+# CHECK-NEXT:   $rc2 = COPY internal %2
 # CHECK-NEXT: }
 # CHECK-NEXT: RTS
 ...
@@ -67,18 +74,18 @@ body: |
     JSR &fn, mos_csr
     $rs1 = COPY %0
     RTS implicit $rs1, implicit $rs2, implicit $rs4
-# CHECK:      BUNDLE implicit-def dead %1, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def dead %2, implicit $rc2, implicit $rc3 {
-# CHECK-NEXT:   %1:gpr = LDimag8 $rc2, implicit-def $nz
+# CHECK:      BUNDLE implicit-def dead %1, implicit-def dead %2, implicit $rc2, implicit $rc3 {
+# CHECK-NEXT:   %1:gpr = COPY $rc2
 # CHECK-NEXT:   STabs_offset internal %1, %stack.0, 0 :: (store 1 into %stack.0)
-# CHECK-NEXT:   %2:gpr = LDimag8 $rc3, implicit-def $nz
+# CHECK-NEXT:   %2:gpr = COPY $rc3
 # CHECK-NEXT:   STabs_offset internal %2, %stack.0, 1 :: (store 1 into %stack.0 + 1)
 # CHECK-NEXT: }
 # CHECK-NEXT: JSR
 # CHECK-NEXT: BUNDLE implicit-def dead %3, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2, implicit-def dead %4, implicit-def $rc3, implicit-def $rs1 {
 # CHECK-NEXT:   %3:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
-# CHECK-NEXT:   $rc2 = STimag8 internal %3
+# CHECK-NEXT:   $rc2 = COPY internal %3
 # CHECK-NEXT:   %4:gpr = LDabs_offset %stack.0, 1, implicit-def $nz :: (load 1 from %stack.0 + 1)
-# CHECK-NEXT:   $rc3 = STimag8 internal %4
+# CHECK-NEXT:   $rc3 = COPY internal %4
 # CHECK-NEXT:   $rs1 = KILL internal $rc2, internal $rc3
 # CHECK-NEXT: }
 # CHECK-NEXT: RTS
