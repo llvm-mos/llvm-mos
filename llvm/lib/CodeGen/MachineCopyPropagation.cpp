@@ -727,20 +727,13 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
   // since we don't want to trust live-in lists.
   if (MBB.succ_empty()) {
     for (MachineInstr *MaybeDead : MaybeDeadCopies) {
-      assert(MaybeDead->isCopy());
-      Register DestReg = MaybeDead->getOperand(0).getReg();
-      Register SrcReg = MaybeDead->getOperand(1).getReg();
-
-      // CSR's may have been copied into their final resting place, so it's
-      // not safe to elide them.
-      if (TRI->isCalleeSavedPhysReg(DestReg, *MBB.getParent()))
-        continue;
-
       LLVM_DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
                  MaybeDead->dump());
       assert(!MRI->isReserved(MaybeDead->getOperand(0).getReg()));
 
       // Update matching debug values, if any.
+      assert(MaybeDead->isCopy());
+      Register SrcReg = MaybeDead->getOperand(1).getReg();
       MRI->updateDbgUsersToReg(SrcReg, CopyDbgUsers[MaybeDead]);
 
       MaybeDead->eraseFromParent();
