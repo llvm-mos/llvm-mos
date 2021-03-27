@@ -69,7 +69,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // impunity. This is slightly more expensive than saving/resting values
   // directly on the hard stack, but it's significantly simpler.
   for (const CalleeSavedInfo &CI : CSI) {
-    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(CI.getReg());
+    Builder.buildCopy(MOS::A, CI.getReg());
     Builder.buildInstr(MOS::PHA);
   }
   if (AMaybeLive)
@@ -80,23 +80,33 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
 bool MOSFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
-  // The static stack is cheap, so just use that.
-  if (MBB.getParent()->getFunction().doesNotRecurse())
-    return false;
-
-  // Reverse the process of spillCalleeSavedRegisters.
-  bool AMaybeLive = MBB.computeRegisterLiveness(TRI, MOS::A, MI) !=
-                    MachineBasicBlock::LQR_Dead;
-  MachineIRBuilder Builder(MBB, MI);
-  if (AMaybeLive)
-    Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
-  for (const CalleeSavedInfo &CI : reverse(CSI)) {
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::STimag8).addDef(CI.getReg()).addUse(MOS::A);
+  // The static stack is cheap, so just use that if possible.
+  bool UsesHardStack = !MBB.getParent()->getFunction().doesNotRecurse();
+  if (UsesHardStack) {
+    // Reverse the process of spillCalleeSavedRegisters.
+    bool AMaybeLive = MBB.computeRegisterLiveness(TRI, MOS::A, MI) !=
+                      MachineBasicBlock::LQR_Dead;
+    MachineIRBuilder Builder(MBB, MI);
+    if (AMaybeLive)
+      Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
+    for (const CalleeSavedInfo &CI : reverse(CSI)) {
+      Builder.buildInstr(MOS::PLA);
+      Builder.buildCopy(CI.getReg(), Register(MOS::A));
+    }
+    if (AMaybeLive)
+      Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");
   }
-  if (AMaybeLive)
-    Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");
-  return true;
+  // Mark the CSRs as used by the return to ensure Machine Copy Propagation
+  // doesn't remove the copies that set them.
+  if (MBB.succ_empty()) {
+    assert(MBB.rbegin()->isReturn());
+    for (const CalleeSavedInfo &CI : CSI) {
+      MBB.rbegin()->addOperand(
+          *MBB.getParent(), MachineOperand::CreateReg(
+                                CI.getReg(), /*isDef=*/false, /*isImp=*/true));
+    }
+  }
+  return UsesHardStack;
 }
 
 void MOSFrameLowering::processFunctionBeforeFrameFinalized(
