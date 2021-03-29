@@ -58,6 +58,8 @@ public:
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
+  void expandLDstk(MachineBasicBlock::iterator MI) const;
+
   Register getFrameRegister(const MachineFunction &MF) const override;
 
   bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,

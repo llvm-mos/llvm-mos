@@ -646,17 +646,7 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
   int64_t Offset = MI.getOperand(2).getImm();
   assert(0 <= Offset && Offset < 65536);
 
-  bool IsLoad;
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode.");
-  case MOS::LDstk:
-    IsLoad = true;
-    break;
-  case MOS::STstk:
-    IsLoad = false;
-    break;
-  }
+  assert(MI.getOpcode() == MOS::STstk);
 
   if (Offset >= 256) {
     // FIXME: Have this find a register other than Loc, if it's available.
@@ -684,24 +674,21 @@ void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
 
   if (MOS::Imag16RegClass.contains(Loc)) {
     Builder.buildInstr(MI.getOpcode())
-        .addReg(TRI.getSubReg(Loc, MOS::sublo), getDefRegState(IsLoad))
+        .addUse(TRI.getSubReg(Loc, MOS::sublo))
         .addUse(Base)
         .addImm(Offset);
     Builder.buildInstr(MI.getOpcode())
-        .addReg(TRI.getSubReg(Loc, MOS::subhi), getDefRegState(IsLoad))
+        .addUse(TRI.getSubReg(Loc, MOS::subhi))
         .addUse(Base)
         .addImm(Offset + 1);
   } else {
     assert(MOS::Imag16RegClass.contains(Base));
     Builder.buildInstr(MOS::LDimm).addDef(MOS::Y).addImm(Offset);
-    if (!IsLoad)
-      copyPhysRegNoPreserve(Builder, MOS::A, Loc);
-    Builder.buildInstr(IsLoad ? MOS::LDyindir : MOS::STyindir)
-        .addReg(MOS::A, getDefRegState(IsLoad))
+    copyPhysRegNoPreserve(Builder, MOS::A, Loc);
+    Builder.buildInstr(MOS::STyindir)
+        .addUse(MOS::A)
         .addUse(Base)
         .addUse(MOS::Y);
-    if (IsLoad)
-      copyPhysRegNoPreserve(Builder, Loc, MOS::A);
   }
 }
 
