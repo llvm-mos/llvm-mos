@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "mos-reginfo"
@@ -153,6 +154,7 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineIRBuilder Builder(*MI->getParent(), MI);
   MachineRegisterInfo &MRI = *Builder.getMRI();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 
   assert(!SPAdj);
 
@@ -180,19 +182,40 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   default:
     break;
   case MOS::LDstk: {
-    if (Offset >= 256 || MOS::Imag16RegClass.contains(MI->getOperand(0).getReg()))
+    Register Dst = MI->getOperand(0).getReg();
+    if (MOS::Imag16RegClass.contains(Dst)) {
+      // Note: These instructions will themselves immediately undergo FEI.
+      Register Lo = TRI.getSubReg(Dst, MOS::sublo);
+      Register Hi = TRI.getSubReg(Dst, MOS::subhi);
+      Builder.buildInstr(MOS::LDstk)
+          .addDef(Lo)
+          .add(MI->getOperand(1))
+          .add(MI->getOperand(2))
+          .addMemOperand(
+              MF.getMachineMemOperand(*MI->memoperands_begin(), 0, 1));
+      Builder.buildInstr(MOS::LDstk)
+          .addDef(Hi)
+          .add(MI->getOperand(1))
+          .addImm(MI->getOperand(2).getImm() + 1)
+          .addMemOperand(
+              MF.getMachineMemOperand(*MI->memoperands_begin(), 1, 1));
+      MI->eraseFromParent();
+      return;
+    }
+    if (Offset >= 256)
       break;
     Register Y = MRI.createVirtualRegister(&MOS::YcRegClass);
     Builder.buildInstr(MOS::LDimm).addDef(Y).addImm(Offset);
-    Register A = MI->getOperand(0).getReg();
+    Register A = Dst;
     if (A != MOS::A)
       A = MRI.createVirtualRegister(&MOS::AcRegClass);
     Builder.buildInstr(MOS::LDyindir)
         .addDef(A)
         .addUse(getFrameRegister(MF))
-        .addUse(Y);
-    if (A.isVirtual())
-      Builder.buildCopy(MI->getOperand(0), A);
+        .addUse(Y)
+        .addMemOperand(*MI->memoperands_begin());
+    if (Dst != A)
+      Builder.buildCopy(Dst, A);
     MI->eraseFromParent();
     return;
   }
