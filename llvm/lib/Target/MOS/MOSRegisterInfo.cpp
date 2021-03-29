@@ -180,14 +180,19 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   default:
     break;
   case MOS::LDstk: {
-    if (Offset >= 256 || MI->getOperand(0).getReg() != MOS::A)
+    if (Offset >= 256 || MOS::Imag16RegClass.contains(MI->getOperand(0).getReg()))
       break;
     Register Y = MRI.createVirtualRegister(&MOS::YcRegClass);
     Builder.buildInstr(MOS::LDimm).addDef(Y).addImm(Offset);
+    Register A = MI->getOperand(0).getReg();
+    if (A != MOS::A)
+      A = MRI.createVirtualRegister(&MOS::AcRegClass);
     Builder.buildInstr(MOS::LDyindir)
-        .add(MI->getOperand(0))
+        .addDef(A)
         .addUse(getFrameRegister(MF))
         .addUse(Y);
+    if (A.isVirtual())
+      Builder.buildCopy(MI->getOperand(0), A);
     MI->eraseFromParent();
     return;
   }
