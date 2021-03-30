@@ -1,6 +1,14 @@
 # RUN: llc -mtriple=mos -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s
 --- |
   @.str = constant [1 x i8] c"X"
+  define void @addrstk_frame() {
+    entry:
+      ret void
+  }
+  define void @ldimm_frame() norecurse {
+    entry:
+      ret void
+  }
   define void @ldimm_global() {
     entry:
       ret void
@@ -13,6 +21,38 @@
     entry:
       ret void
   }
+---
+name: addrstk_frame
+# CHECK-LABEL: name: addrstk_frame
+legalized: true
+regBankSelected: true
+stack:
+  - { id: 0, size: 1 }
+body: |
+  bb.0.entry:
+    %0:any(p0) = G_FRAME_INDEX %stack.0
+    RTS implicit %0
+# Note: The HI and LO target operands are present on the frame index, but LLVM doesn't print them.
+# CHECK:      %1:anyi8, %3:cc = AddrLostk %stack.0, 0, implicit-def $nz
+# CHECK-NEXT: %2:anyi8 = AddrHistk %stack.0, 0, %3, implicit-def $c, implicit-def $nz
+# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
+...
+---
+name: ldimm_frame
+# CHECK-LABEL: name: ldimm_frame
+legalized: true
+regBankSelected: true
+stack:
+  - { id: 0, size: 1 }
+body: |
+  bb.0.entry:
+    %0:any(p0) = G_FRAME_INDEX %stack.0
+    RTS implicit %0
+# Note: The HI and LO target operands are present on the frame index, but LLVM doesn't print them.
+# CHECK:      %1:gpr = LDimm %stack.0
+# CHECK-NEXT: %2:gpr = LDimm %stack.0
+# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
+...
 ---
 name: ldimm_global
 # CHECK-LABEL: name: ldimm_global

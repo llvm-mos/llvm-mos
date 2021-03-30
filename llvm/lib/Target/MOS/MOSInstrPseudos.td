@@ -63,7 +63,7 @@ def STstk : Pseudo {
 // carry required by the high byte calculation.
 def AddrLostk : Pseudo {
   dag OutOperandList = (outs Anyi8:$dst, Cc:$carry);
-  dag InOperandList = (ins Stack:$base, i16imm:$offset);
+  dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
   let Defs = [NZ];
 
@@ -74,7 +74,7 @@ def AddrLostk : Pseudo {
 // carry produced by the low byte calculation.
 def AddrHistk : Pseudo {
   dag OutOperandList = (outs Anyi8:$dst);
-  dag InOperandList = (ins Stack:$base, i16imm:$offset, Cc:$carry);
+  dag InOperandList = (ins Imag16:$base, i16imm:$offset, Cc:$carry);
 
   let Defs = [C, NZ];
 

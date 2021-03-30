@@ -66,8 +66,6 @@ def P : MOSReg<3, "P"> {
   let SubRegIndices = [subcarry, subnz];
 }
 
-def Static : MOSReg<10, "Static">;
-
 //===----------------------------------------------------------------------===//
 //  Imaginary registers
 //===----------------------------------------------------------------------===//
@@ -153,9 +151,6 @@ def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 def AImag8 : MOSReg8Class<(add A, Imag8)>;
 def XY : MOSReg8Class<(add X, Y)>;
 def Flag : MOSReg1Class<(add C, N, Z)> {
-  let isAllocatable = false;
-}
-def Stack : MOSRegClass<[i8, i16], 8, (add Static, Imag16)> {
   let isAllocatable = false;
 }
 

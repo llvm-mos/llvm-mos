@@ -260,29 +260,37 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
 
   Register Dst = MI.getOperand(0).getReg();
 
-  // Split the address into high and low halves to allow them to potentially be
-  // allocated to GPR, maybe even to the same GPR at different times.
-  LLT s8 = LLT::scalar(8);
-  Register Lo = MRI.createGenericVirtualRegister(s8);
-  Register Hi = MRI.createGenericVirtualRegister(s8);
-  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
+  LLT S8 = LLT::scalar(8);
+  Register Lo = MRI.createGenericVirtualRegister(S8);
+  Register Hi = MRI.createGenericVirtualRegister(S8);
 
-  auto LoAddr = Builder.buildInstr(MOS::AddrLostk)
-                    .addDef(Lo)
-                    .addDef(Carry)
-                    .add(MI.getOperand(1))
-                    .addImm(0);
+  MachineInstrBuilder LoAddr;
+  MachineInstrBuilder HiAddr;
+  if (MI.getMF()->getFunction().doesNotRecurse()) {
+    LoAddr = Builder.buildInstr(MOS::LDimm).addDef(Lo).add(MI.getOperand(1));
+    LoAddr->getOperand(1).setTargetFlags(MOS::MO_LO);
+    HiAddr = Builder.buildInstr(MOS::LDimm).addDef(Hi).add(MI.getOperand(1));
+    HiAddr->getOperand(1).setTargetFlags(MOS::MO_HI);
+  } else {
+    Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+    LoAddr = Builder.buildInstr(MOS::AddrLostk)
+                 .addDef(Lo)
+                 .addDef(Carry)
+                 .add(MI.getOperand(1))
+                 .addImm(0);
+
+    HiAddr = Builder.buildInstr(MOS::AddrHistk)
+                 .addDef(Hi)
+                 .add(MI.getOperand(1))
+                 .addImm(0)
+                 .addUse(Carry);
+  }
+
   if (!constrainSelectedInstRegOperands(*LoAddr, TII, TRI, RBI))
     return false;
-
-  auto HiAddr = Builder.buildInstr(MOS::AddrHistk)
-                    .addDef(Hi)
-                    .add(MI.getOperand(1))
-                    .addImm(0)
-                    .addUse(Carry);
   if (!constrainSelectedInstRegOperands(*HiAddr, TII, TRI, RBI))
     return false;
-
   composePtr(Builder, Dst, Lo, Hi);
   MI.eraseFromParent();
   return true;

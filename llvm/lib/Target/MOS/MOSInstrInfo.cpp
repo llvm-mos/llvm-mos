@@ -539,23 +539,7 @@ void MOSInstrInfo::expandAddrLostk(MachineIRBuilder &Builder) const {
   assert(0 <= OffsetImm && OffsetImm < 65536);
   auto Offset = static_cast<uint16_t>(OffsetImm);
 
-  Register Src;
-  switch (Base) {
-  case MOS::Static: {
-    Src = Dst;
-    if (!MOS::GPRRegClass.contains(Src))
-      Src = trivialScavenge(Builder, MOS::GPRRegClass);
-    Builder.buildInstr(MOS::LDimm)
-        .addDef(Src)
-        .addTargetIndex(MOS::TI_STATIC_STACK, Offset, MOS::MO_LO);
-    Offset = 0;
-    break;
-  }
-  default:
-    assert(MOS::Imag16RegClass.contains(Base));
-    Src = TRI.getSubReg(Base, MOS::sublo);
-    break;
-  }
+  Register Src = TRI.getSubReg(Base, MOS::sublo);
 
   Offset &= 0xFF;
 
@@ -587,38 +571,14 @@ void MOSInstrInfo::expandAddrHistk(MachineIRBuilder &Builder) const {
   assert(0 <= OffsetImm && OffsetImm < 65536);
   auto Offset = static_cast<uint16_t>(OffsetImm);
 
-  if (Base == MOS::Static) {
-    Register Tmp = Dst;
-    if (!MOS::GPRRegClass.contains(Tmp))
-      Tmp = trivialScavenge(Builder, MOS::GPRRegClass);
-    Builder.buildInstr(MOS::LDimm)
-        .addDef(Tmp)
-        .addTargetIndex(MOS::TI_STATIC_STACK, Offset, MOS::MO_HI);
-    copyPhysRegNoPreserve(Builder, Dst, Tmp);
-    return;
-  }
-
   if (!Offset) {
-    if (MOS::Imag16RegClass.contains(Base)) {
-      copyPhysRegNoPreserve(Builder, Dst, TRI.getSubReg(Base, MOS::subhi));
-    } else {
-      Register Tmp = Dst;
-      if (!MOS::GPRRegClass.contains(Tmp))
-        Tmp = trivialScavenge(Builder, MOS::GPRRegClass);
-      Builder.buildInstr(MOS::LDimm).addDef(Tmp).addImm(1);
-      copyPhysRegNoPreserve(Builder, Dst, Tmp);
-    }
+    copyPhysRegNoPreserve(Builder, Dst, TRI.getSubReg(Base, MOS::subhi));
     return;
   }
 
-  if (MOS::Imag16RegClass.contains(Base)) {
-    Builder.buildInstr(MOS::LDimag8)
-        .addDef(MOS::A)
-        .addUse(TRI.getSubReg(Base, MOS::subhi));
-  } else {
-    // The stack page begins at 0x0100
-    Builder.buildInstr(MOS::LDimm).addDef(MOS::A).addImm(1);
-  }
+  Builder.buildInstr(MOS::LDimag8)
+      .addDef(MOS::A)
+      .addUse(TRI.getSubReg(Base, MOS::subhi));
 
   // AddrLostk won't reset the carry if it has a zero offset.
   if (!(Offset & 0xFF))

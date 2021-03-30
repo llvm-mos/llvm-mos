@@ -10,9 +10,9 @@ char_stats:                             ; @char_stats
 	sta	char_stats_sstk+513             ; 1-byte Folded Spill
 	ldx	#0
 	lda	#mos16lo(char_stats_sstk)
+	ldy	#mos16hi(char_stats_sstk)
 	sta	mos8(__rc4)
-	lda	#mos16hi(char_stats_sstk)
-	sta	mos8(__rc5)
+	sty	mos8(__rc5)
 	lda	mos8(__rc4)
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)
@@ -33,13 +33,12 @@ LBB0_2:                                 ; %while.body
 	rol
 	sta	mos8(__rc3)
 	lda	#mos16lo(char_stats_sstk)
-	ldx	#mos16hi(char_stats_sstk)
 	clc
 	adc	mos8(__rc2)
-	tay
-	txa
+	tax
+	lda	#mos16hi(char_stats_sstk)
 	adc	mos8(__rc3)
-	sty	mos8(__rc2)
+	stx	mos8(__rc2)
 	sta	mos8(__rc3)
 	ldy	#0
 	lda	(mos8(__rc2)),y

@@ -75,7 +75,6 @@ MOSRegisterInfo::MOSRegisterInfo()
   Reserved.set(MOS::RC0);
   Reserved.set(MOS::RC1);
   Reserved.set(MOS::S);
-  Reserved.set(MOS::Static);
 }
 
 const MCPhysReg *
@@ -157,33 +156,28 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   assert(!SPAdj);
 
   int Idx = MI->getOperand(FIOperandNum).getIndex();
-  assert(MI->getOperand(FIOperandNum + 1).isImm());
-  int64_t Offset =
-      MI->getOperand(FIOperandNum + 1).getImm() + MFI.getObjectOffset(Idx);
+  int64_t Offset = MFI.getObjectOffset(Idx);
+  if (MI->getOperand(FIOperandNum + 1).isImm())
+    Offset += MI->getOperand(FIOperandNum + 1).getImm();
 
-  Register Base;
-  switch (MFI.getStackID(Idx)) {
-  default:
-    llvm_unreachable("Unexpected Stack ID");
-  case TargetStackID::Default:
-    // Static stack grows down, so its offsets are negative. Adding the stack
-    // size gives the offset relative to the frame pointer.
+  if (MFI.getStackID(Idx) == TargetStackID::Default) {
+    // Real Address = Offset Relative to Incoming SP + Incoming SP
+    // Frame Pointer = Incoming SP - Stack Size
+    // Real Address = Frame Pointer + Offset
+    // Substituting gives:
+    // Offset Relative to Incoming SP + Incoming SP = Incoming SP - Stack Size + Offset
+    // Rearranging gives:
+    // Offset = Offset Relative to Incoming SP + Stack Size
+
+    // Thus, effective offset relative to the frame pointer, we need to add in
+    // the stack size.
     Offset += MFI.getStackSize();
-    Base = getFrameRegister(MF);
-    break;
-  case TargetStackID::NoAlloc:
-    Base = MOS::Static;
-    break;
   }
 
   switch (MI->getOpcode()) {
   default:
-    break;
-  case MOS::LDstk:
-  case MOS::STstk:
-    MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*IsDef=*/false);
+    MI->getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), /*isDef=*/false);
     MI->getOperand(FIOperandNum + 1).setImm(Offset);
-    expandLDSTstk(MI);
     return;
   case MOS::LDabs_offset:
   case MOS::STabs_offset:
@@ -193,10 +187,18 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     MI->setDesc(TII.get(MI->getOpcode() == MOS::LDabs_offset ? MOS::LDabs
                                                              : MOS::STabs));
     return;
+  case MOS::LDimm:
+    MI->getOperand(FIOperandNum)
+        .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset,
+                             MI->getOperand(FIOperandNum).getTargetFlags());
+    return;
+  case MOS::LDstk:
+  case MOS::STstk:
+    MI->getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), /*IsDef=*/false);
+    MI->getOperand(FIOperandNum + 1).setImm(Offset);
+    expandLDSTstk(MI);
+    return;
   }
-
-  MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*isDef=*/false);
-  MI->getOperand(FIOperandNum + 1).setImm(Offset);
 }
 
 void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
@@ -236,15 +238,17 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
     Register Lo = TRI.getSubReg(Loc, MOS::sublo);
     Register Hi = TRI.getSubReg(Loc, MOS::subhi);
     auto LoInstr = Builder.buildInstr(MI->getOpcode())
-        .addReg(Lo, getDefRegState(IsLoad))
-        .add(MI->getOperand(1))
-        .add(MI->getOperand(2))
-        .addMemOperand(MF.getMachineMemOperand(*MI->memoperands_begin(), 0, 1));
+                       .addReg(Lo, getDefRegState(IsLoad))
+                       .add(MI->getOperand(1))
+                       .add(MI->getOperand(2))
+                       .addMemOperand(MF.getMachineMemOperand(
+                           *MI->memoperands_begin(), 0, 1));
     auto HiInstr = Builder.buildInstr(MI->getOpcode())
-        .addReg(Hi, getDefRegState(IsLoad))
-        .add(MI->getOperand(1))
-        .addImm(MI->getOperand(2).getImm() + 1)
-        .addMemOperand(MF.getMachineMemOperand(*MI->memoperands_begin(), 1, 1));
+                       .addReg(Hi, getDefRegState(IsLoad))
+                       .add(MI->getOperand(1))
+                       .addImm(MI->getOperand(2).getImm() + 1)
+                       .addMemOperand(MF.getMachineMemOperand(
+                           *MI->memoperands_begin(), 1, 1));
     MI->eraseFromParent();
     expandLDSTstk(LoInstr);
     expandLDSTstk(HiInstr);
