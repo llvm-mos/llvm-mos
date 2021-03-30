@@ -180,9 +180,10 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   default:
     break;
   case MOS::LDstk:
+  case MOS::STstk:
     MI->getOperand(FIOperandNum).ChangeToRegister(Base, /*IsDef=*/false);
     MI->getOperand(FIOperandNum + 1).setImm(Offset);
-    expandLDstk(MI);
+    expandLDSTstk(MI);
     return;
   case MOS::LDabs_offset:
   case MOS::STabs_offset:
@@ -198,13 +199,15 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   MI->getOperand(FIOperandNum + 1).setImm(Offset);
 }
 
-void MOSRegisterInfo::expandLDstk(MachineBasicBlock::iterator MI) const {
+void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getMF();
   MachineIRBuilder Builder(*MI->getParent(), MI);
   MachineRegisterInfo &MRI = *Builder.getMRI();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 
-  Register Dst = MI->getOperand(0).getReg();
+  const bool IsLoad = MI->getOpcode() == MOS::LDstk;
+
+  Register Loc = MI->getOperand(0).getReg();
   int64_t Offset = MI->getOperand(2).getImm();
 
   if (Offset >= 256) {
@@ -225,44 +228,47 @@ void MOSRegisterInfo::expandLDstk(MachineBasicBlock::iterator MI) const {
         .addUse(NewBase, RegState::Implicit);
     MI->getOperand(1).setReg(NewBase);
     MI->getOperand(2).setImm(0);
-    expandLDstk(MI);
+    expandLDSTstk(MI);
     return;
   }
 
-  if (MOS::Imag16RegClass.contains(Dst)) {
-    Register Lo = TRI.getSubReg(Dst, MOS::sublo);
-    Register Hi = TRI.getSubReg(Dst, MOS::subhi);
-    auto LoInstr = Builder.buildInstr(MOS::LDstk)
-        .addDef(Lo)
+  if (MOS::Imag16RegClass.contains(Loc)) {
+    Register Lo = TRI.getSubReg(Loc, MOS::sublo);
+    Register Hi = TRI.getSubReg(Loc, MOS::subhi);
+    auto LoInstr = Builder.buildInstr(MI->getOpcode())
+        .addReg(Lo, getDefRegState(IsLoad))
         .add(MI->getOperand(1))
         .add(MI->getOperand(2))
         .addMemOperand(MF.getMachineMemOperand(*MI->memoperands_begin(), 0, 1));
-    auto HiInstr = Builder.buildInstr(MOS::LDstk)
-        .addDef(Hi)
+    auto HiInstr = Builder.buildInstr(MI->getOpcode())
+        .addReg(Hi, getDefRegState(IsLoad))
         .add(MI->getOperand(1))
         .addImm(MI->getOperand(2).getImm() + 1)
         .addMemOperand(MF.getMachineMemOperand(*MI->memoperands_begin(), 1, 1));
     MI->eraseFromParent();
-    expandLDstk(LoInstr);
-    expandLDstk(HiInstr);
+    expandLDSTstk(LoInstr);
+    expandLDSTstk(HiInstr);
     return;
   }
 
   Register Y = MRI.createVirtualRegister(&MOS::YcRegClass);
   Builder.buildInstr(MOS::LDimm).addDef(Y).addImm(Offset);
 
-  Register A = Dst;
+  Register A = Loc;
   if (A != MOS::A)
     A = MRI.createVirtualRegister(&MOS::AcRegClass);
 
-  Builder.buildInstr(MOS::LDyindir)
-      .addDef(A)
+  if (!IsLoad && Loc != A)
+    Builder.buildCopy(A, Loc);
+
+  Builder.buildInstr(IsLoad ? MOS::LDyindir : MOS::STyindir)
+      .addReg(A, getDefRegState(IsLoad))
       .add(MI->getOperand(1))
       .addUse(Y)
       .addMemOperand(*MI->memoperands_begin());
 
-  if (Dst != A)
-    Builder.buildCopy(Dst, A);
+  if (IsLoad && Loc != A)
+    Builder.buildCopy(Loc, A);
 
   MI->eraseFromParent();
   return;

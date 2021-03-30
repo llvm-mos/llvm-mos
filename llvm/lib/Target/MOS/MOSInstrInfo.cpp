@@ -509,10 +509,6 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
   case MOS::IncSP:
     expandIncSP(Builder);
     break;
-  case MOS::LDstk:
-  case MOS::STstk:
-    expandLDSTstk(Builder);
-    break;
   case MOS::LDidx:
     expandLDidx(Builder);
     break;
@@ -634,62 +630,6 @@ void MOSInstrInfo::expandAddrHistk(MachineIRBuilder &Builder) const {
       .addImm(Offset >> 8)
       .addUse(MOS::C);
   copyPhysRegNoPreserve(Builder, Dst, MOS::A);
-}
-
-void MOSInstrInfo::expandLDSTstk(MachineIRBuilder &Builder) const {
-  auto &MI = *Builder.getInsertPt();
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
-
-  Register Loc = MI.getOperand(0).getReg();
-  Register Base = MI.getOperand(1).getReg();
-  int64_t Offset = MI.getOperand(2).getImm();
-  assert(0 <= Offset && Offset < 65536);
-
-  assert(MI.getOpcode() == MOS::STstk);
-
-  if (Offset >= 256) {
-    // FIXME: Have this find a register other than Loc, if it's available.
-    // Really feeling the pains of not using VRegs for this.
-    Register Tmp = trivialScavenge(Builder, MOS::Imag16RegClass);
-
-    // Guarantee that Tmp is different than Loc, even if it requires
-    // save/restore. RS3 is used in lieu of RS1, since RS2 is callee-saved, and
-    // this is called after PEI (when those registers are handled).
-    if (TRI.isSubRegisterEq(Loc, Tmp)) {
-      Tmp = Tmp == MOS::RS1 ? MOS::RS3 : MOS::RS0;
-    }
-
-    // Move the high byte of the offset into the base address.
-    Builder.buildInstr(MOS::AddrLostk,
-                       {Register(TRI.getSubReg(Tmp, MOS::sublo)), MOS::C},
-                       {Base, Offset & 0xFF00});
-    Builder.buildInstr(MOS::AddrHistk,
-                       {Register(TRI.getSubReg(Tmp, MOS::subhi))},
-                       {Base, Offset & 0xFF00, Register(MOS::C)});
-
-    Base = Tmp;
-    Offset &= 0xFF;
-  }
-
-  if (MOS::Imag16RegClass.contains(Loc)) {
-    Builder.buildInstr(MI.getOpcode())
-        .addUse(TRI.getSubReg(Loc, MOS::sublo))
-        .addUse(Base)
-        .addImm(Offset);
-    Builder.buildInstr(MI.getOpcode())
-        .addUse(TRI.getSubReg(Loc, MOS::subhi))
-        .addUse(Base)
-        .addImm(Offset + 1);
-  } else {
-    assert(MOS::Imag16RegClass.contains(Base));
-    Builder.buildInstr(MOS::LDimm).addDef(MOS::Y).addImm(Offset);
-    copyPhysRegNoPreserve(Builder, MOS::A, Loc);
-    Builder.buildInstr(MOS::STyindir)
-        .addUse(MOS::A)
-        .addUse(Base)
-        .addUse(MOS::Y);
-  }
 }
 
 void MOSInstrInfo::expandIncSP(MachineIRBuilder &Builder) const {
