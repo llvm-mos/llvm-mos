@@ -25,12 +25,10 @@ body: |
     liveins: $x
     $x = LDidx 1234, $x, implicit-def $nz
     CMPimm $a, 0, implicit-def $c, implicit-def $nz
-# CHECK:      STabs $a, &_SaveA
+# CHECK:      PHA
 # CHECK-NEXT: LDAidx 1234, $x
 # CHECK-NEXT: $x = TA_
-# CHECK-NEXT: PHP
-# CHECK-NEXT: $a = LDabs &_SaveA
-# CHECK-NEXT: PLP
+# CHECK-NEXT: PLA
 ...
 ---
 name: ldyidx_x

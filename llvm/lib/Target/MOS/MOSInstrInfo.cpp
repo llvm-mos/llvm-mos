@@ -483,17 +483,7 @@ void MOSInstrInfo::loadStoreRegStackSlot(
 }
 
 bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  bool Changed;
   MachineIRBuilder Builder(MI);
-  preserveAroundPseudoExpansion(
-      Builder, [&]() { Changed = expandPostRAPseudoNoPreserve(Builder); });
-  return Changed;
-}
-
-bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
-    MachineIRBuilder &Builder) const {
-  MachineInstrSpan Span(Builder.getInsertPt(), &Builder.getMBB());
-  auto &MI = *Builder.getInsertPt();
 
   bool Changed = true;
   switch (MI.getOpcode()) {
@@ -505,15 +495,8 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
     break;
   }
 
-  if (Changed) {
-    Builder.setInsertPt(Builder.getMBB(), Span.begin());
-    while (Builder.getInsertPt() != Span.getInitial()) {
-      expandPostRAPseudoNoPreserve(Builder);
-    }
-    Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
+  if (Changed)
     MI.eraseFromParent();
-  } else
-    Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
   return Changed;
 }
 
@@ -525,8 +508,10 @@ void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
   // Since the 6502 has no instruction for this, use A as the destination
   // instead, then transfer to the real destination.
   if (MI.getOperand(0).getReg() == MI.getOperand(2).getReg()) {
+    Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::LDAidx).add(MI.getOperand(1)).add(MI.getOperand(2));
     Builder.buildInstr(MOS::TA_).add(MI.getOperand(0));
+    Builder.buildInstr(MOS::PLA);
     return;
   }
 

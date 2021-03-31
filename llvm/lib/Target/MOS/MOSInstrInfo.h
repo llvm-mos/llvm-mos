@@ -112,8 +112,6 @@ private:
   void copyPhysRegNoPreserve(MachineIRBuilder &Builder, MCRegister DestReg,
                              MCRegister SrcReg) const;
 
-  bool expandPostRAPseudoNoPreserve(MachineIRBuilder &Builder) const;
-
   void expandLDidx(MachineIRBuilder &Builder) const;
 };
 
