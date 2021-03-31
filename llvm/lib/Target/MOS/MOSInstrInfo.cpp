@@ -500,12 +500,6 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
   default:
     Changed = false;
     break;
-  case MOS::AddrLostk:
-    expandAddrLostk(Builder);
-    break;
-  case MOS::AddrHistk:
-    expandAddrHistk(Builder);
-    break;
   case MOS::IncSP:
     expandIncSP(Builder);
     break;
@@ -524,72 +518,6 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
   } else
     Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
   return Changed;
-}
-
-void MOSInstrInfo::expandAddrLostk(MachineIRBuilder &Builder) const {
-  auto &MI = *Builder.getInsertPt();
-  assert(MI.getOpcode() == MOS::AddrLostk);
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register Base = MI.getOperand(2).getReg();
-
-  int64_t OffsetImm = MI.getOperand(3).getImm();
-  assert(0 <= OffsetImm && OffsetImm < 65536);
-  auto Offset = static_cast<uint16_t>(OffsetImm);
-
-  Register Src = TRI.getSubReg(Base, MOS::sublo);
-
-  Offset &= 0xFF;
-
-  if (!Offset) {
-    copyPhysRegNoPreserve(Builder, Dst, Src);
-    return;
-  }
-
-  copyPhysRegNoPreserve(Builder, MOS::A, Src);
-  Builder.buildInstr(MOS::LDCimm).addDef(MOS::C).addImm(0);
-  Builder.buildInstr(MOS::ADCimm)
-      .addDef(MOS::A)
-      .addDef(MOS::C)
-      .addUse(MOS::A)
-      .addImm(Offset)
-      .addUse(MOS::C);
-  copyPhysRegNoPreserve(Builder, Dst, MOS::A);
-}
-
-void MOSInstrInfo::expandAddrHistk(MachineIRBuilder &Builder) const {
-  auto &MI = *Builder.getInsertPt();
-  assert(MI.getOpcode() == MOS::AddrHistk);
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
-  Register Dst = MI.getOperand(0).getReg();
-  Register Base = MI.getOperand(1).getReg();
-
-  int64_t OffsetImm = MI.getOperand(2).getImm();
-  assert(0 <= OffsetImm && OffsetImm < 65536);
-  auto Offset = static_cast<uint16_t>(OffsetImm);
-
-  if (!Offset) {
-    copyPhysRegNoPreserve(Builder, Dst, TRI.getSubReg(Base, MOS::subhi));
-    return;
-  }
-
-  Builder.buildInstr(MOS::LDimag8)
-      .addDef(MOS::A)
-      .addUse(TRI.getSubReg(Base, MOS::subhi));
-
-  // AddrLostk won't reset the carry if it has a zero offset.
-  if (!(Offset & 0xFF))
-    Builder.buildInstr(MOS::LDCimm).addDef(MOS::C).addImm(0);
-  Builder.buildInstr(MOS::ADCimm)
-      .addDef(MOS::A)
-      .addDef(MOS::C, RegState::Dead)
-      .addUse(MOS::A)
-      .addImm(Offset >> 8)
-      .addUse(MOS::C);
-  copyPhysRegNoPreserve(Builder, Dst, MOS::A);
 }
 
 void MOSInstrInfo::expandIncSP(MachineIRBuilder &Builder) const {

@@ -58,6 +58,8 @@ public:
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
+  void expandAddrLostk(MachineBasicBlock::iterator MI) const;
+  void expandAddrHistk(MachineBasicBlock::iterator MI) const;
   void expandLDSTstk(MachineBasicBlock::iterator MI) const;
 
   Register getFrameRegister(const MachineFunction &MF) const override;

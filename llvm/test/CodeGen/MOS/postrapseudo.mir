@@ -1,44 +1,5 @@
 # RUN: llc -mtriple=mos -run-pass=postrapseudos -verify-machineinstrs -o - %s | FileCheck %s
 ---
-name: addrloss
-# CHECK-LABEL: name: addrloss
-body: |
-  bb.0.entry:
-    $rc2, $c = AddrLostk $rs0, 1234, implicit-def $nz
-# CHECK:      $a = LDimag8 $rc0
-# CHECK-NEXT: $c = LDCimm 0
-# CHECK-NEXT: $a, $c = ADCimm $a, 210, $c
-# CHECK-NEXT: $rc2 = STimag8 $a
-...
----
-name: addrloss0
-# CHECK-LABEL: name: addrloss0
-body: |
-  bb.0.entry:
-    $rc2, $c = AddrLostk $rs0, 512, implicit-def $nz
-# CHECK:      $a = LDimag8 $rc0
-# CHECK-NEXT: $rc2 = STimag8 $a
-...
----
-name: addrhiss
-# CHECK-LABEL: name: addrhiss
-body: |
-  bb.0.entry:
-    $a = AddrHistk $rs0, 1234, $c, implicit-def $c, implicit-def $nz
-# CHECK:      $a = LDimag8 $rc1
-# CHECK-NEXT: $a, dead $c = ADCimm $a, 4, $c
-...
----
-name: addrhiss_lo0
-# CHECK-LABEL: name: addrhiss_lo0
-body: |
-  bb.0.entry:
-    $a = AddrHistk $rs0, 512, $c, implicit-def $c, implicit-def $nz
-# CHECK:      $a = LDimag8 $rc1
-# CHECK-NEXT: LDCimm 0
-# CHECK-NEXT: $a, dead $c = ADCimm $a, 2, $c
-...
----
 name: incsp
 # CHECK-LABEL: name: incsp
 body: |

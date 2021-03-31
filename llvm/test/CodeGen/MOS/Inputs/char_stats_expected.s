@@ -13,6 +13,7 @@ char_stats:                             ; @char_stats
 	lda	mos8(__rc5)
 	pha
 	ldx	#0
+	clc
 	lda	mos8(__rc0)
 	sta	mos8(__rc4)
 	lda	mos8(__rc1)
@@ -36,6 +37,7 @@ LBB0_2:                                 ; %while.body
 	lda	#0
 	rol
 	sta	mos8(__rc3)
+	clc
 	lda	mos8(__rc0)
 	ldx	mos8(__rc1)
 	clc

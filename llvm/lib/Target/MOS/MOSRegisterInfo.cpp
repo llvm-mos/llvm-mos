@@ -17,6 +17,7 @@
 #include "MOSSubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -165,9 +166,9 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     // Frame Pointer = Incoming SP - Stack Size
     // Real Address = Frame Pointer + Offset
     // Substituting gives:
-    // Offset Relative to Incoming SP + Incoming SP = Incoming SP - Stack Size + Offset
-    // Rearranging gives:
-    // Offset = Offset Relative to Incoming SP + Stack Size
+    // Offset Relative to Incoming SP + Incoming SP = Incoming SP - Stack Size +
+    // Offset Rearranging gives: Offset = Offset Relative to Incoming SP + Stack
+    // Size
 
     // Thus, effective offset relative to the frame pointer, we need to add in
     // the stack size.
@@ -176,29 +177,112 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   switch (MI->getOpcode()) {
   default:
-    MI->getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), /*isDef=*/false);
+    MI->getOperand(FIOperandNum)
+        .ChangeToRegister(getFrameRegister(MF), /*isDef=*/false);
     MI->getOperand(FIOperandNum + 1).setImm(Offset);
-    return;
+    break;
   case MOS::LDabs_offset:
   case MOS::STabs_offset:
     MI->getOperand(FIOperandNum)
         .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset);
     MI->RemoveOperand(FIOperandNum + 1);
-    MI->setDesc(TII.get(MI->getOpcode() == MOS::LDabs_offset ? MOS::LDabs
-                                                             : MOS::STabs));
-    return;
+    break;
   case MOS::LDimm:
     MI->getOperand(FIOperandNum)
         .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset,
                              MI->getOperand(FIOperandNum).getTargetFlags());
-    return;
+    break;
+  }
+
+  switch (MI->getOpcode()) {
+  default:
+    break;
+  case MOS::AddrLostk:
+    expandAddrLostk(MI);
+    break;
+  case MOS::AddrHistk:
+    expandAddrHistk(MI);
+    break;
+  case MOS::LDabs_offset:
+    MI->setDesc(TII.get(MOS::LDabs));
+    break;
+  case MOS::STabs_offset:
+    MI->setDesc(TII.get(MOS::STabs));
+    break;
   case MOS::LDstk:
   case MOS::STstk:
-    MI->getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), /*IsDef=*/false);
-    MI->getOperand(FIOperandNum + 1).setImm(Offset);
     expandLDSTstk(MI);
-    return;
+    break;
   }
+}
+
+void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
+  MachineIRBuilder Builder(*MI->getParent(), MI);
+  const TargetRegisterInfo &TRI =
+      *Builder.getMF().getSubtarget().getRegisterInfo();
+  MachineRegisterInfo &MRI = *Builder.getMRI();
+
+  MachineOperand Dst = MI->getOperand(0);
+  Register Base = MI->getOperand(2).getReg();
+
+  int64_t OffsetImm = MI->getOperand(3).getImm();
+  assert(0 <= OffsetImm && OffsetImm < 65536);
+  auto Offset = static_cast<uint16_t>(OffsetImm);
+  Offset &= 0xFF;
+
+  Register Src = TRI.getSubReg(Base, MOS::sublo);
+
+  Builder.buildInstr(MOS::LDCimm).addDef(MOS::C).addImm(0);
+
+  if (!Offset)
+    Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
+  else {
+    Register A = MRI.createVirtualRegister(&MOS::AcRegClass);
+
+    Builder.buildCopy(A, Src);
+    Builder.buildInstr(MOS::ADCimm)
+        .addDef(A)
+        .addDef(MOS::C)
+        .addUse(A)
+        .addImm(Offset)
+        .addUse(MOS::C);
+    Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
+  }
+
+  MI->eraseFromParent();
+}
+
+void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
+  MachineIRBuilder Builder(*MI->getParent(), MI);
+  const TargetRegisterInfo &TRI =
+      *Builder.getMF().getSubtarget().getRegisterInfo();
+  MachineRegisterInfo &MRI = *Builder.getMRI();
+
+  MachineOperand Dst = MI->getOperand(0);
+  Register Base = MI->getOperand(1).getReg();
+
+  int64_t OffsetImm = MI->getOperand(2).getImm();
+  assert(0 <= OffsetImm && OffsetImm < 65536);
+  auto Offset = static_cast<uint16_t>(OffsetImm);
+
+  Register Src = TRI.getSubReg(Base, MOS::subhi);
+
+  if (!Offset)
+    Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
+  else {
+    Register A = MRI.createVirtualRegister(&MOS::AcRegClass);
+
+    Builder.buildCopy(A, Src);
+    Builder.buildInstr(MOS::ADCimm)
+        .addDef(A)
+        .addDef(MOS::C, RegState::Dead)
+        .addUse(A)
+        .addImm(Offset >> 8)
+        .addUse(MOS::C);
+    Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
+  }
+
+  MI->eraseFromParent();
 }
 
 void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
@@ -215,21 +299,34 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   if (Offset >= 256) {
     Register NewBase = MRI.createVirtualRegister(&MOS::Imag16RegClass);
     Register C = MRI.createVirtualRegister(&MOS::CcRegClass);
-    Builder.buildInstr(MOS::AddrLostk)
-        .addDef(NewBase, /*Flags=*/0, MOS::sublo)
-        .addDef(C)
-        .add(MI->getOperand(1))
-        .add(MI->getOperand(2));
-    Builder.buildInstr(MOS::AddrHistk)
-        .addDef(NewBase, /*Flags=*/0, MOS::subhi)
-        .add(MI->getOperand(1))
-        .add(MI->getOperand(2))
-        .addUse(C)
-        // Keep scavenger from complaining about multiple definitions. We
-        // instead consider this a redefinition via this implicit use.
-        .addUse(NewBase, RegState::Implicit);
+    auto Lo = Builder.buildInstr(MOS::AddrLostk)
+                  .addDef(NewBase, /*Flags=*/0, MOS::sublo)
+                  .addDef(C)
+                  .add(MI->getOperand(1))
+                  .add(MI->getOperand(2));
+    auto Hi = Builder.buildInstr(MOS::AddrHistk)
+                  .addDef(NewBase, /*Flags=*/0, MOS::subhi)
+                  .add(MI->getOperand(1))
+                  .add(MI->getOperand(2))
+                  .addUse(C)
+                  .addUse(NewBase, RegState::Implicit);
     MI->getOperand(1).setReg(NewBase);
     MI->getOperand(2).setImm(0);
+
+    expandAddrLostk(Lo);
+
+    MachineInstrSpan MIS(Hi, Hi->getParent());
+    expandAddrHistk(Hi);
+    for (auto &MI : MIS) {
+      if (MI.modifiesRegister(NewBase, &TRI)) {
+        // Keep scavenger from complaining about multiple definitions. We
+        // instead consider them all redefinitions of the original set by
+        // AddrLostk.
+        MI.addOperand(MachineOperand::CreateReg(NewBase, /*isDef=*/false,
+                                                /*isImp=*/true));
+      }
+    }
+
     expandLDSTstk(MI);
     return;
   }
