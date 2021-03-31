@@ -91,26 +91,8 @@ public:
   getSerializableDirectMachineOperandTargetFlags() const override;
 
 private:
-  // Various locations throughout codegen emit pseudo-instructions with very few
-  // implicit defs. This is required whenever LLVM codegen cannot handle
-  // emitting arbitrary physreg uses, for example, during COPY or
-  // saveRegToStack.
-  //
-  // Often, such pseudos cannot be expanded without producing significantly more
-  // side effects than the pseudo allows. This function takes a Builder pointing
-  // to a pseudo, then calls ExpandFn to expand the pseudo. Then, the physreg
-  // defs of the expanded instructions are measured, and save and restore code
-  // is emitted to ensure that the pseudo expansion region only modifies defs of
-  // the pseudo.
-  //
-  // ExpandFn must insert a contiguous range of instructions before the pseudo.
-  // Afterwards, the Builder must point to the location after the inserted
-  // range.
-  void preserveAroundPseudoExpansion(MachineIRBuilder &Builder,
-                                     std::function<void()> ExpandFn) const;
-
-  void copyPhysRegNoPreserve(MachineIRBuilder &Builder, MCRegister DestReg,
-                             MCRegister SrcReg) const;
+  void copyPhysRegImpl(MachineIRBuilder &Builder, MCRegister DestReg,
+                       MCRegister SrcReg) const;
 
   void expandLDidx(MachineIRBuilder &Builder) const;
 };

@@ -62,20 +62,18 @@ body:             |
 # CHECK-NEXT: $x = TA_
 ...
 ---
-name:            preserve
+name:            preserve_a_txy
 tracksRegLiveness: true
-# CHECK-LABEL: name: preserve
+# CHECK-LABEL: name: preserve_a_txy
 body:             |
   bb.0.entry:
     liveins: $a, $x
     $y = COPY $x
     CMPimm $a, 0, implicit-def $c, implicit-def $nz
-# CHECK:      STabs $a, &_SaveA
+# CHECK:      PHA
 # CHECK-NEXT: T_A $x
 # CHECK-NEXT: $y = TA_
-# CHECK-NEXT: PHP
-# CHECK-NEXT: $a = LDabs &_SaveA
-# CHECK-NEXT: PLP
+# CHECK-NEXT: PLA
 ...
 ---
 name:            stzp
@@ -109,32 +107,6 @@ body:             |
 # CHECK-NEXT: $rc1 = STimag8 $a
 ...
 ---
-name:            zptozp_x
-tracksRegLiveness: true
-# CHECK-LABEL: name: zptozp_x
-body:             |
-  bb.0.entry:
-    liveins: $rc0, $a
-    $rc1 = COPY $rc0
-    RTS implicit $a
-# CHECK:      $x = LDimag8 $rc0
-# CHECK-NEXT: $rc1 = STimag8 $x
-# CHECK-NEXT: RTS
-...
----
-name:            zptozp_y
-tracksRegLiveness: true
-# CHECK-LABEL: name: zptozp_y
-body:             |
-  bb.0.entry:
-    liveins: $rc0, $a, $x
-    $rc1 = COPY $rc0
-    RTS implicit $a, implicit $x
-# CHECK:      $y = LDimag8 $rc0
-# CHECK-NEXT: $rc1 = STimag8 $y
-# CHECK-NEXT: RTS
-...
----
 name:            zptozp_save
 tracksRegLiveness: true
 # CHECK-LABEL: name: zptozp_save
@@ -143,12 +115,10 @@ body:             |
     liveins: $rc0, $a, $x, $y
     $rc1 = COPY $rc0
     RTS implicit $a, implicit $x, implicit $y
-# CHECK:      STabs $a, &_SaveA
+# CHECK:      PHA
 # CHECK-NEXT: $a = LDimag8 $rc0
 # CHECK-NEXT: $rc1 = STimag8 $a
-# CHECK-NEXT: PHP
-# CHECK-NEXT: $a = LDabs &_SaveA
-# CHECK-NEXT: PLP
+# CHECK-NEXT: PLA
 # CHECK-NEXT: RTS
 ...
 ---

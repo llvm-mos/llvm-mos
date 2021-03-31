@@ -48,20 +48,6 @@ bool isMaybeLive(MachineIRBuilder &Builder, Register Reg) {
              Builder.getInsertPt()) != MachineBasicBlock::LQR_Dead;
 }
 
-// Retrieve the first free register of a given class. If none are free,
-// returns the first register in the class. Should not be used on classes
-// containing reserved registers or CSRs.
-Register trivialScavenge(MachineIRBuilder &Builder,
-                         const TargetRegisterClass &RegClass) {
-  for (Register Reg : RegClass) {
-    if (Builder.getMRI()->isReserved(Reg))
-      continue;
-    if (!isMaybeLive(Builder, Reg))
-      return Reg;
-  }
-  return *RegClass.begin();
-}
-
 } // namespace
 
 MOSInstrInfo::MOSInstrInfo()
@@ -329,13 +315,12 @@ void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                const DebugLoc &DL, MCRegister DestReg,
                                MCRegister SrcReg, bool KillSrc) const {
   MachineIRBuilder Builder(MBB, MI);
-  preserveAroundPseudoExpansion(
-      Builder, [&]() { copyPhysRegNoPreserve(Builder, DestReg, SrcReg); });
+  copyPhysRegImpl(Builder, DestReg, SrcReg);
 }
 
-void MOSInstrInfo::copyPhysRegNoPreserve(MachineIRBuilder &Builder,
-                                         MCRegister DestReg,
-                                         MCRegister SrcReg) const {
+void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
+                                   MCRegister DestReg,
+                                   MCRegister SrcReg) const {
   if (DestReg == SrcReg)
     return;
 
@@ -355,22 +340,31 @@ void MOSInstrInfo::copyPhysRegNoPreserve(MachineIRBuilder &Builder,
       assert(MOS::XYRegClass.contains(SrcReg));
       Builder.buildInstr(MOS::T_A).addUse(SrcReg);
     } else {
-      copyPhysRegNoPreserve(Builder, MOS::A, SrcReg);
-      copyPhysRegNoPreserve(Builder, DestReg, MOS::A);
+      bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
+      if (IsAMaybeLive)
+        Builder.buildInstr(MOS::PHA);
+      copyPhysRegImpl(Builder, MOS::A, SrcReg);
+      copyPhysRegImpl(Builder, DestReg, MOS::A);
+      if (IsAMaybeLive)
+        Builder.buildInstr(MOS::PLA);
     }
   } else if (areClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
     Builder.buildInstr(MOS::STimag8).addDef(DestReg).addUse(SrcReg);
   } else if (areClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
     Builder.buildInstr(MOS::LDimag8).addDef(DestReg).addUse(SrcReg);
   } else if (areClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
-    copyPhysRegNoPreserve(Builder, TRI.getSubReg(DestReg, MOS::sublo),
-                          TRI.getSubReg(SrcReg, MOS::sublo));
-    copyPhysRegNoPreserve(Builder, TRI.getSubReg(DestReg, MOS::subhi),
-                          TRI.getSubReg(SrcReg, MOS::subhi));
+    copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo),
+                    TRI.getSubReg(SrcReg, MOS::sublo));
+    copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi),
+                    TRI.getSubReg(SrcReg, MOS::subhi));
   } else if (areClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    Register Tmp = trivialScavenge(Builder, MOS::GPRRegClass);
-    copyPhysRegNoPreserve(Builder, Tmp, SrcReg);
-    copyPhysRegNoPreserve(Builder, DestReg, Tmp);
+    bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
+    if (IsAMaybeLive)
+      Builder.buildInstr(MOS::PHA);
+    copyPhysRegImpl(Builder, MOS::A, SrcReg);
+    copyPhysRegImpl(Builder, DestReg, MOS::A);
+    if (IsAMaybeLive)
+      Builder.buildInstr(MOS::PLA);
   } else {
     LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
                       << "\n");
@@ -508,10 +502,13 @@ void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
   // Since the 6502 has no instruction for this, use A as the destination
   // instead, then transfer to the real destination.
   if (MI.getOperand(0).getReg() == MI.getOperand(2).getReg()) {
-    Builder.buildInstr(MOS::PHA);
+    bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
+    if (IsAMaybeLive)
+      Builder.buildInstr(MOS::PHA);
     Builder.buildInstr(MOS::LDAidx).add(MI.getOperand(1)).add(MI.getOperand(2));
     Builder.buildInstr(MOS::TA_).add(MI.getOperand(0));
-    Builder.buildInstr(MOS::PLA);
+    if (IsAMaybeLive)
+      Builder.buildInstr(MOS::PLA);
     return;
   }
 
@@ -556,255 +553,4 @@ MOSInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char *> Flags[] = {{MOS::MO_LO, "lo"},
                                                             {MOS::MO_HI, "hi"}};
   return Flags;
-}
-
-void MOSInstrInfo::preserveAroundPseudoExpansion(
-    MachineIRBuilder &Builder, std::function<void()> ExpandFn) const {
-  MachineBasicBlock &MBB = Builder.getMBB();
-  const TargetRegisterInfo &TRI =
-      *MBB.getParent()->getSubtarget().getRegisterInfo();
-  const MachineRegisterInfo &MRI = *Builder.getMRI();
-
-  // Returns the locations modified by the given instruction.
-  const auto GetWrites = [&](MachineInstr &MI) {
-    SparseBitVector<> Writes;
-    for (unsigned Reg = MCRegister::FirstPhysicalReg; Reg < TRI.getNumRegs();
-         ++Reg) {
-      if (MRI.isReserved(Reg))
-        continue;
-      if (MI.definesRegister(Reg, &TRI))
-        Writes.set(Reg);
-    }
-    return Writes;
-  };
-
-  SparseBitVector<> MaybeLive;
-  for (unsigned Reg = MCRegister::FirstPhysicalReg; Reg < TRI.getNumRegs();
-       ++Reg) {
-    if (MRI.isReserved(Reg))
-      continue;
-    if (isMaybeLive(Builder, Reg))
-      MaybeLive.set(Reg);
-  }
-
-  SparseBitVector<> ExpectedWrites = GetWrites(*Builder.getInsertPt());
-
-  // If begin was the first instruction, it may no longer be the first once
-  // ExpandFn is called, so make a note of it.
-  auto Begin = Builder.getInsertPt();
-  bool WasBegin = Begin == MBB.begin();
-  // Have begin point at the instruction before the inserted range.
-  if (!WasBegin)
-    --Begin;
-
-  ExpandFn();
-
-  // If Begin was the first instruction, get the real first instruction now
-  // that ExpandFn has been called. Otherwise, advance Begin to the first
-  // instruction.
-  if (WasBegin)
-    Begin = MBB.begin();
-  else
-    ++Begin;
-  auto End = Builder.getInsertPt();
-
-  // Determine the writes of the expansion region.
-  SparseBitVector<> Writes;
-  for (auto I = Begin; I != End; ++I)
-    Writes |= GetWrites(*I);
-
-  SparseBitVector<> Save = MaybeLive;
-  Save &= Writes;
-  Save.intersectWithComplement(ExpectedWrites);
-
-  const auto RecordSaved = [&](Register Reg) {
-    for (MCSubRegIterator SubReg(Reg, &TRI, /*IncludeSelf=*/true);
-         SubReg.isValid(); ++SubReg) {
-      Save.reset(*SubReg);
-    }
-  };
-
-  // This code is intentionally very simplistic: that way it's easy to verify
-  // that it's complete. Eventually, more efficient PHA/PLA can be emitted in
-  // situations that can be proven safe. Ideally, saving/restoring here should
-  // be rare; especially if save/restores are elided as a post-processing
-  // step. Thus, having a simple working version of this forms a good baseline
-  // that the rest of the compiler can rely on.
-
-  // After the save sequence, issued, all registers and flags are in the same
-  // state as before the sequence. After the restore sequence, all registers
-  // and flags are in the same state as before the sequence, except those that
-  // were saved, which have their value at time of save. The only memory
-  // locations affected by either are _Save<Reg>.
-
-  // Only RS1 (RC2 and RC3) and RS3 (RC6 and RC7) are allowed to be used, being
-  // the first two non-SP caller-saved registers.
-
-  // FIXME: This won't work if there's only only 3 zero-page pointers, which is
-  // currently allowed. A pseudo expansion may not be able to use RS1 and try to
-  // use RS3, which the compiler cannot safely save/restore (it may be used by
-  // an OS interrupt handler). All of this code smells awful though, so consider
-  // finding a way to remove this whole system instead of fixing this specific
-  // issue.
-
-  Builder.setInsertPt(MBB, Begin);
-  if (Save.test(MOS::C)) {
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveP");
-    Builder.buildInstr(MOS::PLA);
-  }
-  if (Save.test(MOS::A))
-    Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
-  if (Save.test(MOS::X))
-    Builder.buildInstr(MOS::STabs).addUse(MOS::X).addExternalSymbol("_SaveX");
-  if (Save.test(MOS::Y))
-    Builder.buildInstr(MOS::STabs).addUse(MOS::Y).addExternalSymbol("_SaveY");
-  if (Save.test(MOS::RC2)) {
-    assert(!Save.test(MOS::RC6));
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(MOS::RC2);
-    Builder.buildInstr(MOS::STabs)
-        .addUse(MOS::A)
-        .addExternalSymbol("_SaveImagLo");
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-  }
-  if (Save.test(MOS::RC3)) {
-    assert(!Save.test(MOS::RC7));
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(MOS::RC3);
-    Builder.buildInstr(MOS::STabs)
-        .addUse(MOS::A)
-        .addExternalSymbol("_SaveImagHi");
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-  }
-  if (Save.test(MOS::RC6)) {
-    assert(!Save.test(MOS::RC2));
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(MOS::RC6);
-    Builder.buildInstr(MOS::STabs)
-        .addUse(MOS::A)
-        .addExternalSymbol("_SaveImagLo");
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-  }
-  if (Save.test(MOS::RC7)) {
-    assert(!Save.test(MOS::RC3));
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDimag8).addDef(MOS::A).addUse(MOS::RC7);
-    Builder.buildInstr(MOS::STabs)
-        .addUse(MOS::A)
-        .addExternalSymbol("_SaveImagHi");
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-  }
-
-  Builder.setInsertPt(MBB, End);
-  if (Save.test(MOS::C)) {
-    // Note: This is particularly awful due to the requirement that the last
-    // operation be a PLP. This means we have to get P onto the stack behind
-    // the values of any registers that need to be saved to do so; hence the
-    // indexed store behind the saves of X and A. That way, we can restore X
-    // and A *before* P, preventing those restores from clobbering NZ.
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::T_A).addUse(MOS::X, RegState::Undef);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::TSX);
-    Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveP");
-    Builder.buildInstr(MOS::STidx)
-        .addUse(MOS::A)
-        .addImm(0x103) // Byte pushed by first PHA.
-        .addUse(MOS::X);
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::TA_).addDef(MOS::X);
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-    RecordSaved(MOS::P);
-  }
-  if (Save.test(MOS::A)) {
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");
-    Builder.buildInstr(MOS::PLP);
-    RecordSaved(MOS::A);
-  }
-  if (Save.test(MOS::X)) {
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::LDabs).addDef(MOS::X).addExternalSymbol("_SaveX");
-    Builder.buildInstr(MOS::PLP);
-    RecordSaved(MOS::X);
-  }
-  if (Save.test(MOS::Y)) {
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::LDabs).addDef(MOS::Y).addExternalSymbol("_SaveY");
-    Builder.buildInstr(MOS::PLP);
-    RecordSaved(MOS::Y);
-  }
-  if (Save.test(MOS::RC2)) {
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDabs)
-        .addDef(MOS::A)
-        .addExternalSymbol("_SaveImagLo");
-    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC2).addUse(MOS::A);
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-  }
-  if (Save.test(MOS::RC3)) {
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDabs)
-        .addDef(MOS::A)
-        .addExternalSymbol("_SaveImagHi");
-    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC3).addUse(MOS::A);
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-  }
-  if (Save.test(MOS::RC6)) {
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDabs)
-        .addDef(MOS::A)
-        .addExternalSymbol("_SaveImagLo");
-    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC6).addUse(MOS::A);
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-  }
-  if (Save.test(MOS::RC7)) {
-    Builder.buildInstr(MOS::PHP);
-    Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDabs)
-        .addDef(MOS::A)
-        .addExternalSymbol("_SaveImagHi");
-    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC7).addUse(MOS::A);
-    Builder.buildInstr(MOS::PLA);
-    Builder.buildInstr(MOS::PLP);
-  }
-
-  if (Save.count()) {
-    for (Register Reg : Save)
-      LLVM_DEBUG(dbgs() << "Unhandled saved register: " << TRI.getName(Reg)
-                        << "\n");
-
-    LLVM_DEBUG(dbgs() << "MaybeLive:\n");
-    for (Register Reg : MaybeLive)
-      LLVM_DEBUG(dbgs() << TRI.getName(Reg) << "\n");
-
-    LLVM_DEBUG(dbgs() << "Writes:\n");
-    for (Register Reg : Writes)
-      LLVM_DEBUG(dbgs() << TRI.getName(Reg) << "\n");
-
-    LLVM_DEBUG(dbgs() << "Expected Writes:\n");
-    for (Register Reg : ExpectedWrites)
-      LLVM_DEBUG(dbgs() << TRI.getName(Reg) << "\n");
-
-    report_fatal_error("Cannot yet preserve register.");
-  }
 }
