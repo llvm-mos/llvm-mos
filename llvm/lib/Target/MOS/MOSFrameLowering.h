@@ -11,6 +11,7 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSFRAMELOWERING_H
 #define LLVM_LIB_TARGET_MOS_MOSFRAMELOWERING_H
 
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
@@ -54,6 +55,9 @@ public:
 
   // Computes the size of the static stack.
   uint64_t staticSize(const MachineFrameInfo &MFI) const;
+
+private:
+  void emitIncSP(MachineIRBuilder &Builder, int64_t Offset) const;
 };
 
 } // namespace llvm

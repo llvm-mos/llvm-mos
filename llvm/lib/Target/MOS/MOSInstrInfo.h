@@ -114,7 +114,6 @@ private:
 
   bool expandPostRAPseudoNoPreserve(MachineIRBuilder &Builder) const;
 
-  void expandIncSP(MachineIRBuilder &Builder) const;
   void expandLDidx(MachineIRBuilder &Builder) const;
 };
 

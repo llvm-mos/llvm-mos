@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -135,38 +136,38 @@ MachineBasicBlock::iterator MOSFrameLowering::eliminateCallFramePseudoInstr(
   if (hasReservedCallFrame(MF) || !Offset)
     return MBB.erase(MI);
 
-  const auto &TII = *MF.getSubtarget().getInstrInfo();
-  if (MI->getOpcode() == TII.getCallFrameSetupOpcode())
-    MI->getOperand(0).setImm(-Offset);
-  MI->setDesc(TII.get(MOS::IncSP));
-  MI->RemoveOperand(1);
-  return MI;
+  MachineIRBuilder Builder(MBB, MI);
+  if (MI->getOpcode() ==
+      MF.getSubtarget().getInstrInfo()->getCallFrameSetupOpcode())
+    Offset = -Offset;
+  emitIncSP(Builder, Offset);
+  return MBB.erase(MI);
 }
 
 void MOSFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
+  MachineIRBuilder Builder(MBB, MBB.begin());
+  if (hasFP(MF))
+    Builder.buildCopy(MOS::RS1, Register(MOS::RS0));
+
   // If soft stack is used, decrease the soft stack pointer SP.
-  if (MFI.getStackSize()) {
-    MachineIRBuilder Builder(MBB, MBB.begin());
-    Builder.buildInstr(MOS::IncSP).addImm(-MFI.getStackSize());
-    if (hasFP(MF))
-      Builder.buildCopy(MOS::RS1, Register(MOS::RS0));
-  }
+  if (MFI.getStackSize())
+    emitIncSP(Builder, -MFI.getStackSize());
 }
 
 void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
+  MachineIRBuilder Builder(MBB, MBB.getFirstTerminator());
+  if (hasFP(MF))
+    Builder.buildCopy(MOS::RS0, Register(MOS::RS1));
+
   // If soft stack is used, increase the soft stack pointer SP.
-  if (MFI.getStackSize()) {
-    MachineIRBuilder Builder(MBB, MBB.getFirstTerminator());
-    if (hasFP(MF))
-      Builder.buildCopy(MOS::RS0, Register(MOS::RS1));
-    Builder.buildInstr(MOS::IncSP).addImm(MFI.getStackSize());
-  }
+  if (MFI.getStackSize())
+    emitIncSP(Builder, MFI.getStackSize());
 }
 
 bool MOSFrameLowering::hasFP(const MachineFunction &MF) const {
@@ -190,4 +191,35 @@ uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
     if (MFI.getStackID(i) == TargetStackID::NoAlloc)
       Size += MFI.getObjectSize(i);
   return Size;
+}
+
+void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
+                                 int64_t Offset) const {
+  assert(Offset);
+  assert(-32768 <= Offset && Offset < 32768);
+
+  auto Bytes = static_cast<uint16_t>(Offset);
+  int64_t LoBytes = Bytes & 0xFF;
+  int64_t HiBytes = Bytes >> 8;
+  assert(LoBytes || HiBytes);
+
+  Register A = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
+  Register C = Builder.getMRI()->createVirtualRegister(&MOS::CcRegClass);
+
+  Builder.buildInstr(MOS::LDCimm, {C}, {int64_t(0)});
+  if (LoBytes) {
+    Builder.buildCopy(A, Register(MOS::RC0));
+    Builder.buildInstr(MOS::ADCimm, {A, C}, {A, LoBytes, C});
+    Builder.buildCopy(MOS::RC0, A);
+  }
+
+  auto LoCopy = Builder.buildCopy(A, Register(MOS::RC1));
+  // The implicit use appeases the register scavenger, which wants to see one
+  // clear sequence of definitions and redefinitions.
+  if (LoBytes)
+    LoCopy.addUse(A, RegState::Implicit);
+
+  auto Hi = Builder.buildInstr(MOS::ADCimm, {A, C}, {A, HiBytes, C});
+  Hi->getOperand(1).setIsDead();
+  Builder.buildCopy(MOS::RC1, A);
 }

@@ -500,9 +500,6 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
   default:
     Changed = false;
     break;
-  case MOS::IncSP:
-    expandIncSP(Builder);
-    break;
   case MOS::LDidx:
     expandLDidx(Builder);
     break;
@@ -518,39 +515,6 @@ bool MOSInstrInfo::expandPostRAPseudoNoPreserve(
   } else
     Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
   return Changed;
-}
-
-void MOSInstrInfo::expandIncSP(MachineIRBuilder &Builder) const {
-  auto &MI = *Builder.getInsertPt();
-  assert(MI.getOpcode() == MOS::IncSP);
-
-  int64_t BytesImm = MI.getOperand(0).getImm();
-  assert(BytesImm);
-  assert(-32768 <= BytesImm && BytesImm < 32768);
-  auto Bytes = static_cast<uint16_t>(BytesImm);
-  auto LoBytes = Bytes & 0xFF;
-  auto HiBytes = Bytes >> 8;
-  assert(LoBytes || HiBytes);
-
-  Builder.buildInstr(MOS::LDCimm).addDef(MOS::C).addImm(0);
-  if (LoBytes) {
-    Builder.buildInstr(MOS::LDimm).addDef(MOS::A).addImm(LoBytes);
-    Builder.buildInstr(MOS::ADCimag8)
-        .addDef(MOS::A)
-        .addDef(MOS::C)
-        .addUse(MOS::A)
-        .addUse(MOS::RC0)
-        .addUse(MOS::C);
-    Builder.buildInstr(MOS::STimag8).addDef(MOS::RC0).addUse(MOS::A);
-  }
-  Builder.buildInstr(MOS::LDimm).addDef(MOS::A).addImm(HiBytes);
-  Builder.buildInstr(MOS::ADCimag8)
-      .addDef(MOS::A)
-      .addDef(MOS::C, RegState::Dead)
-      .addUse(MOS::A)
-      .addUse(MOS::RC1)
-      .addUse(MOS::C);
-  Builder.buildInstr(MOS::STimag8).addDef(MOS::RC1).addUse(MOS::A);
 }
 
 void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {

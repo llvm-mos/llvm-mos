@@ -1,32 +1,5 @@
 # RUN: llc -mtriple=mos -run-pass=postrapseudos -verify-machineinstrs -o - %s | FileCheck %s
 ---
-name: incsp
-# CHECK-LABEL: name: incsp
-body: |
-  bb.0.entry:
-    IncSP -1234, implicit $rs0, implicit-def $rs0
-    RTS
-# CHECK:      $c = LDCimm 0
-# CHECK-NEXT: $a = LDimm 46
-# CHECK-NEXT: $a, $c = ADCimag8 $a, $rc0, $c
-# CHECK-NEXT: $rc0 = STimag8 $a
-# CHECK-NEXT: $a = LDimm 251
-# CHECK-NEXT: $a, dead $c = ADCimag8 $a, $rc1, $c
-# CHECK-NEXT: $rc1 = STimag8 $a
-...
----
-name: incsp_hi_only
-# CHECK-LABEL: name: incsp
-body: |
-  bb.0.entry:
-    IncSP -512, implicit $rs0, implicit-def $rs0
-    RTS
-# CHECK:      $c = LDCimm 0
-# CHECK-NEXT: $a = LDimm 254
-# CHECK-NEXT: $a, dead $c = ADCimag8 $a, $rc1, $c
-# CHECK-NEXT: $rc1 = STimag8 $a
-...
----
 name: ldaidx
 # CHECK-LABEL: name: ldaidx
 body: |

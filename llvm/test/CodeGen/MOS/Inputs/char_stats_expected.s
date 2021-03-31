@@ -5,8 +5,8 @@
 char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
 	clc
-	lda	#254
-	adc	mos8(__rc1)
+	lda	mos8(__rc1)
+	adc	#254
 	sta	mos8(__rc1)
 	lda	mos8(__rc4)
 	pha
@@ -78,8 +78,8 @@ LBB0_3:                                 ; %while.end
 	pla
 	sta	mos8(__rc4)
 	clc
-	lda	#2
-	adc	mos8(__rc1)
+	lda	mos8(__rc1)
+	adc	#2
 	sta	mos8(__rc1)
 	rts
 .Lfunc_end0:

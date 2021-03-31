@@ -133,7 +133,7 @@ foreach I = 0...!add(MaxImag16Regs, -1) in
 class MOSRegClass<list<ValueType> regTypes, int alignment, dag regList>
      : RegisterClass<"MOS", regTypes, alignment, regList>;
 
-class MOSReg1Class<dag RegList>: MOSRegClass<[i8], 1, RegList>;
+class MOSReg1Class<dag RegList>: MOSRegClass<[i8], 8, RegList>;
 class MOSReg8Class<dag RegList>: MOSRegClass<[i8], 8, RegList>;
 class MOSReg16Class<dag RegList>: MOSRegClass<[i16], 8, RegList>;
 

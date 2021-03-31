@@ -1,38 +1,5 @@
 # RUN: llc -mtriple=mos -run-pass=postrapseudos -verify-machineinstrs -o - %s | FileCheck %s
 ---
-name:            preserve_c
-tracksRegLiveness: true
-# CHECK-LABEL: name: preserve_c
-body:             |
-  bb.0.entry:
-    liveins: $a, $c
-    IncSP -512, implicit $rs0, implicit-def $rs0
-    RTS implicit $c
-# CHECK:      PHA
-# CHECK-NEXT: PHP
-# CHECK-NEXT: PLA
-# CHECK-NEXT: STabs $a, &_SaveP
-# CHECK-NEXT: PLA
-
-# CHECK-NEXT: $c = LDCimm 0
-# CHECK-NEXT: $a = LDimm 254
-# CHECK-NEXT: $a, dead $c = ADCimag8 $a, $rc1, $c
-# CHECK-NEXT: $rc1 = STimag8 $a
-
-# CHECK-NEXT: PHA
-# CHECK-NEXT: PHA
-# CHECK-NEXT: T_A undef $x
-# CHECK-NEXT: PHA
-# CHECK-NEXT: TSX
-# CHECK-NEXT: $a = LDabs &_SaveP
-# CHECK-NEXT: STidx $a, 259, $x
-# CHECK-NEXT: PLA
-# CHECK-NEXT: $x = TA_
-# CHECK-NEXT: PLA
-# CHECK-NEXT: PLP
-# CHECK-NEXT: RTS
-...
----
 name:            preserve_a
 tracksRegLiveness: true
 # CHECK-LABEL: name: preserve_a
