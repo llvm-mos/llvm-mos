@@ -1,56 +1,142 @@
 # RUN: llc -mtriple=mos -run-pass=prologepilog -verify-machineinstrs -o - %s | FileCheck %s
 ---
-name: byte
-# CHECK-LABEL: name: byte
+name: ld_byte
+# CHECK-LABEL: name: ld_byte
+stack:
+  - { id: 0, size: 1 }
+  - { id: 1, size: 2 }
+body:             |
+  bb.0.entry:
+    $a = LDstk %stack.1, 1, implicit-def $nz :: (load 1 from %stack.1 + 1)
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK-NEXT:  IncSP -3
+# CHECK-NEXT:  $y = LDimm 1, implicit-def $nz
+# CHECK-NEXT:  $a = LDyindir $rs0, killed $y, implicit-def $nz
+# CHECK-NEXT:  IncSP 3
+# CHECK-NEXT:  RTS
+...
+---
+name: ld_byte_high
+# CHECK-LABEL: name: ld_byte
 stack:
   - { id: 0, size: 256 }
   - { id: 1, size: 2 }
 body:             |
   bb.0.entry:
-    STstk $a, %stack.1, 1, implicit-def $nz :: (store 1 into %stack.1 + 1)
-    STstk $a, %stack.0, 254, implicit-def $nz :: (store 1 into %stack.0 + 254)
-    STstk $x, %stack.1, 1, implicit-def $nz :: (store 1 into %stack.1 + 1)
-
-    $a = LDstk %stack.1, 1, implicit-def $nz :: (load 1 from %stack.1 + 1)
-    $x = LDstk %stack.1, 1, implicit-def $nz :: (load 1 from %stack.1 + 1)
     $a = LDstk %stack.0, 254, implicit-def $nz :: (load 1 from %stack.0 + 254)
-
     RTS
 # CHECK-LABEL: bb.0.entry:
 # CHECK-NEXT:  IncSP -258
-
-# CHECK-NEXT:  $y = LDimm 1, implicit-def $nz
-# CHECK-NEXT:  STyindir $a, $rs0, killed $y
-# CHECK-NEXT:  $rc6, $c = AddrLostk $rs0, 256
-# CHECK-NEXT:  $rc7 = AddrHistk $rs0, 256, killed $c
-# CHECK-NEXT:  $y = LDimm 0
-# CHECK-NEXT:  STyindir $a, killed $rs3, killed $y :: (store 1 into %stack.0 + 254)
-# CHECK-NEXT:  $y = LDimm 1, implicit-def $nz
-# CHECK-NEXT:  $a = COPY $x
-# CHECK-NEXT:  STyindir killed $a, $rs0, killed $y
-
-# CHECK-NEXT:  $y = LDimm 1, implicit-def $nz
-# CHECK-NEXT:  $a = LDyindir $rs0, killed $y, implicit-def $nz
-# CHECK-NEXT:  $y = LDimm 1, implicit-def $nz
-# CHECK-NEXT:  $a = LDyindir $rs0, killed $y, implicit-def $nz
-# CHECK-NEXT:  $x = COPY killed $a
 # CHECK-NEXT:  $rc2, $c = AddrLostk $rs0, 256
 # CHECK-NEXT:  $rc3 = AddrHistk $rs0, 256, killed $c
 # CHECK-NEXT:  $y = LDimm 0
 # CHECK-NEXT:  $a = LDyindir killed $rs1, killed $y, implicit-def $nz :: (load 1 from %stack.0 + 254)
-
 # CHECK-NEXT:  IncSP 258
 # CHECK-NEXT:  RTS
 ...
 ---
-name: ptr
-# CHECK-LABEL: name: ptr
+name: ld_byte_x
+# CHECK-LABEL: name: ld_byte_x
+stack:
+  - { id: 0, size: 1 }
+  - { id: 1, size: 2 }
+body:             |
+  bb.0.entry:
+    $x = LDstk %stack.1, 1, implicit-def $nz :: (load 1 from %stack.1 + 1)
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK-NEXT:  IncSP -3
+# CHECK-NEXT:  $y = LDimm 1, implicit-def $nz
+# CHECK-NEXT:  $a = LDyindir $rs0, killed $y, implicit-def $nz
+# CHECK-NEXT:  $x = COPY killed $a
+# CHECK-NEXT:  IncSP 3
+# CHECK-NEXT:  RTS
+...
+---
+name: ld_ptr
+# CHECK-LABEL: name: ld_ptr
+stack:
+  - { id: 0, size: 4 }
+body: |
+  bb.0.entry:
+    $rs0 = LDstk %stack.0, 2, implicit-def $nz :: (load 2 from %stack.0 + 2)
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK-NEXT:  IncSP -4
+
+# CHECK-NEXT:  $y = LDimm 2
+# CHECK-NEXT:  $a = LDyindir $rs0, killed $y, implicit-def $nz :: (load 1 from %stack.0 + 2, align 2)
+# CHECK-NEXT:  $rc0 = COPY killed $a
+# CHECK-NEXT:  $y = LDimm 3
+# CHECK-NEXT:  $a = LDyindir $rs0, killed $y, implicit-def $nz :: (load 1 from %stack.0 + 3, basealign 2)
+# CHECK-NEXT:  $rc1 = COPY killed $a
+
+# CHECK-NEXT:  IncSP 4
+# CHECK-NEXT:  RTS
+...
+---
+name: st_byte
+# CHECK-LABEL: name: st_byte
+stack:
+  - { id: 0, size: 1 }
+  - { id: 1, size: 2 }
+body:             |
+  bb.0.entry:
+    STstk $a, %stack.1, 1, implicit-def $nz :: (store 1 into %stack.1 + 1)
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK-NEXT:  IncSP -3
+# CHECK-NEXT:  $y = LDimm 1, implicit-def $nz
+# CHECK-NEXT:  STyindir $a, $rs0, killed $y
+# CHECK-NEXT:  IncSP 3
+# CHECK-NEXT:  RTS
+...
+---
+name: st_byte_high
+# CHECK-LABEL: name: st_byte
+stack:
+  - { id: 0, size: 256 }
+  - { id: 1, size: 2 }
+body:             |
+  bb.0.entry:
+    STstk $a, %stack.0, 254, implicit-def $nz :: (store 1 into %stack.0 + 254)
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK-NEXT:  IncSP -258
+# CHECK-NEXT:  $rc2, $c = AddrLostk $rs0, 256
+# CHECK-NEXT:  $rc3 = AddrHistk $rs0, 256, killed $c
+# CHECK-NEXT:  $y = LDimm 0
+# CHECK-NEXT:  STyindir $a, killed $rs1, killed $y :: (store 1 into %stack.0 + 254)
+# CHECK-NEXT:  IncSP 258
+# CHECK-NEXT:  RTS
+...
+---
+name: st_byte_x
+# CHECK-LABEL: name: st_byte_x
+stack:
+  - { id: 0, size: 1 }
+  - { id: 1, size: 2 }
+body:             |
+  bb.0.entry:
+    STstk $x, %stack.1, 1, implicit-def $nz :: (store 1 into %stack.1 + 1)
+    RTS
+# CHECK-LABEL: bb.0.entry:
+# CHECK-NEXT:  IncSP -3
+# CHECK-NEXT:  $y = LDimm 1, implicit-def $nz
+# CHECK-NEXT:  $a = COPY $x
+# CHECK-NEXT:  STyindir killed $a, $rs0, killed $y
+# CHECK-NEXT:  IncSP 3
+# CHECK-NEXT:  RTS
+...
+---
+name: st_ptr
+# CHECK-LABEL: name: st_ptr
 stack:
   - { id: 0, size: 4 }
 body: |
   bb.0.entry:
     STstk $rs0, %stack.0, 2, implicit-def $nz :: (store 2 into %stack.0 + 2)
-    $rs0 = LDstk %stack.0, 2, implicit-def $nz :: (load 2 from %stack.0 + 2)
     RTS
 # CHECK-LABEL: bb.0.entry:
 # CHECK-NEXT:  IncSP -4
@@ -61,13 +147,6 @@ body: |
 # CHECK-NEXT:  $y = LDimm 3
 # CHECK-NEXT:  $a = COPY $rc1
 # CHECK-NEXT:  STyindir killed $a, $rs0, killed $y :: (store 1 into %stack.0 + 3, basealign 2)
-
-# CHECK-NEXT:  $y = LDimm 2
-# CHECK-NEXT:  $a = LDyindir $rs0, killed $y, implicit-def $nz :: (load 1 from %stack.0 + 2, align 2)
-# CHECK-NEXT:  $rc0 = COPY killed $a
-# CHECK-NEXT:  $y = LDimm 3
-# CHECK-NEXT:  $a = LDyindir $rs0, killed $y, implicit-def $nz :: (load 1 from %stack.0 + 3, basealign 2)
-# CHECK-NEXT:  $rc1 = COPY killed $a
 
 # CHECK-NEXT:  IncSP 4
 # CHECK-NEXT:  RTS
