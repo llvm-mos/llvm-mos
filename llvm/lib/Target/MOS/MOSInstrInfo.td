@@ -27,7 +27,6 @@
 /// AsmPrinter, which is the boundary between the CodeGen and MC layers.
 
 include "MOSInstrFormats.td"
-include "MOSInstrGISel.td"
 
 let Predicates = [Has6502] in
 {
@@ -222,3 +221,5 @@ def NOP_Implied: InstLowA<"nop", 0b1110>;
 
 include "MOSInstrInfoTables.td"
 include "MOSInstrPseudos.td"
+include "MOSInstrLogical.td"
+include "MOSInstrGISel.td"
