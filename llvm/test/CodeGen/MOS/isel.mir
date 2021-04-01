@@ -157,6 +157,22 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
+name: rol_1
+# CHECK-LABEL: name: rol_1
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s1) = G_CONSTANT i1 1
+    %2:any(s8), %3:any(s1) = G_SHLE %0, %1
+    RTS implicit %2, implicit %3
+# CHECK:      %0:aimag8 = IMPLICIT_DEF
+# CHECK-NEXT: %1:cc = LDCimm 1
+# CHECK-NEXT: %2:aimag8, %3:cc = ROL %0, %1
+# CHECK-NEXT: RTS
+...
+---
 name: store
 # CHECK-LABEL: name: store
 legalized: true

@@ -491,7 +491,7 @@ bool MOSInstructionSelector::selectShlE(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   auto ConstCarryIn =
       getConstantVRegValWithLookThrough(CarryIn, *Builder.getMRI());
-  if (ConstCarryIn) {
+  if (ConstCarryIn && ConstCarryIn->Value.isNullValue()) {
     auto Asl = Builder.buildInstr(MOS::ASL, {Dst, CarryOut}, {Src});
     if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
       return false;
