@@ -75,8 +75,6 @@ private:
   bool selectUAddSubE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
 
-  void buildCopy(MachineIRBuilder &Builder, Register Dst, Register Src);
-
   void composePtr(MachineIRBuilder &Builder, Register Dst, Register Lo,
                   Register Hi);
 
@@ -117,6 +115,9 @@ MOSInstructionSelector::MOSInstructionSelector(const MOSTargetMachine &TM,
 {
 }
 
+// Returns the widest register class that can contain values of a given type.
+// Used to ensure that every virtual register gets some register class by the
+// time register allocation completes.
 static const TargetRegisterClass &getRegClassForType(LLT Ty) {
   switch (Ty.getSizeInBits()) {
   default:
@@ -198,11 +199,12 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
     break;
   }
 
+  LLT S1 = LLT::scalar(1);
+
   Register CarryIn =
-      Builder.getMRI()->createGenericVirtualRegister(LLT::scalar(1));
-  Builder.buildInstr(MOS::LDCimm).addDef(CarryIn).addImm(CarryInVal);
+      Builder.buildInstr(MOS::LDCimm, {S1}, {CarryInVal}).getReg(0);
   auto Instr =
-      Builder.buildInstr(Opcode, {MI.getOperand(0), LLT::scalar(1)},
+      Builder.buildInstr(Opcode, {MI.getOperand(0), S1},
                          {MI.getOperand(1), MI.getOperand(2), CarryIn});
   MI.eraseFromParent();
   if (!selectUAddSubE(*Instr))
@@ -219,7 +221,7 @@ bool MOSInstructionSelector::selectCompareBranch(MachineInstr &MI) {
   Register LHS;
   int64_t RHS;
   if (!mi_match(CondReg, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(RHS))))
-    return false;
+    report_fatal_error("Not yet implemented.");
 
   MachineIRBuilder Builder(MI);
 
@@ -255,9 +257,8 @@ bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
   // s8 is handled by TableGen LDimm.
   assert(Builder.getMRI()->getType(MI.getOperand(0).getReg()) ==
          LLT::scalar(1));
-  auto Ld = Builder.buildInstr(MOS::LDCimm)
-                .addDef(MI.getOperand(0).getReg())
-                .addImm(MI.getOperand(1).getCImm()->getZExtValue());
+  auto Ld = Builder.buildInstr(MOS::LDCimm, {MI.getOperand(0)},
+                               {MI.getOperand(1).getCImm()->getZExtValue()});
   if (!constrainSelectedInstRegOperands(*Ld, TII, TRI, RBI))
     return false;
   MI.eraseFromParent();
@@ -268,32 +269,29 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_FRAME_INDEX);
 
   MachineIRBuilder Builder(MI);
-  MachineRegisterInfo &MRI = *Builder.getMRI();
 
   Register Dst = MI.getOperand(0).getReg();
 
   LLT S8 = LLT::scalar(8);
-  Register Lo = MRI.createGenericVirtualRegister(S8);
-  Register Hi = MRI.createGenericVirtualRegister(S8);
 
   MachineInstrBuilder LoAddr;
   MachineInstrBuilder HiAddr;
   if (MI.getMF()->getFunction().doesNotRecurse()) {
-    LoAddr = Builder.buildInstr(MOS::LDimm).addDef(Lo).add(MI.getOperand(1));
+    // Non-recursive functions use static stack, so their frame addresses are
+    // link-time constants that can be loaded as immediates.
+    LoAddr = Builder.buildInstr(MOS::LDimm, {S8}, {}).add(MI.getOperand(1));
     LoAddr->getOperand(1).setTargetFlags(MOS::MO_LO);
-    HiAddr = Builder.buildInstr(MOS::LDimm).addDef(Hi).add(MI.getOperand(1));
+    HiAddr = Builder.buildInstr(MOS::LDimm, {S8}, {}).add(MI.getOperand(1));
     HiAddr->getOperand(1).setTargetFlags(MOS::MO_HI);
   } else {
-    Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-    LoAddr = Builder.buildInstr(MOS::AddrLostk)
-                 .addDef(Lo)
-                 .addDef(Carry)
+    // Recursive functions use dynamic stack, so their frame addresses are
+    // offsets from the stack/frame pointer. Record this as a pseudo.
+    LoAddr = Builder.buildInstr(MOS::AddrLostk, {S8, LLT::scalar(1)}, {})
                  .add(MI.getOperand(1))
                  .addImm(0);
+    Register Carry = LoAddr.getReg(1);
 
-    HiAddr = Builder.buildInstr(MOS::AddrHistk)
-                 .addDef(Hi)
+    HiAddr = Builder.buildInstr(MOS::AddrHistk, {S8}, {})
                  .add(MI.getOperand(1))
                  .addImm(0)
                  .addUse(Carry);
@@ -303,7 +301,7 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
     return false;
   if (!constrainSelectedInstRegOperands(*HiAddr, TII, TRI, RBI))
     return false;
-  composePtr(Builder, Dst, Lo, Hi);
+  composePtr(Builder, Dst, LoAddr.getReg(0), HiAddr.getReg(0));
   MI.eraseFromParent();
   return true;
 }
@@ -315,21 +313,16 @@ bool MOSInstructionSelector::selectGlobalValue(MachineInstr &MI) {
   const GlobalValue *Global = MI.getOperand(1).getGlobal();
 
   MachineIRBuilder Builder(MI);
-  MachineRegisterInfo &MRI = *Builder.getMRI();
-  LLT s8 = LLT::scalar(8);
-  Register Lo = MRI.createGenericVirtualRegister(s8);
-  auto LoImm = Builder.buildInstr(MOS::LDimm)
-                   .addDef(Lo)
+  LLT S8 = LLT::scalar(8);
+  auto LoImm = Builder.buildInstr(MOS::LDimm, {S8}, {})
                    .addGlobalAddress(Global, 0, MOS::MO_LO);
   if (!constrainSelectedInstRegOperands(*LoImm, TII, TRI, RBI))
     return false;
-  Register Hi = MRI.createGenericVirtualRegister(s8);
-  auto HiImm = Builder.buildInstr(MOS::LDimm)
-                   .addDef(Hi)
+  auto HiImm = Builder.buildInstr(MOS::LDimm, {S8}, {})
                    .addGlobalAddress(Global, 0, MOS::MO_HI);
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     return false;
-  composePtr(Builder, Dst, Lo, Hi);
+  composePtr(Builder, Dst, LoImm.getReg(0), HiImm.getReg(0));
   MI.eraseFromParent();
   return true;
 }
@@ -338,7 +331,7 @@ bool MOSInstructionSelector::selectImplicitDef(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_IMPLICIT_DEF);
 
   MachineIRBuilder Builder(MI);
-  auto Def = Builder.buildInstr(MOS::IMPLICIT_DEF).add(MI.getOperand(0));
+  auto Def = Builder.buildInstr(MOS::IMPLICIT_DEF, {MI.getOperand(0)}, {});
   constrainGenericOp(*Def);
   MI.eraseFromParent();
   return true;
@@ -348,7 +341,8 @@ bool MOSInstructionSelector::selectIntToPtr(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_INTTOPTR);
 
   MachineIRBuilder Builder(MI);
-  buildCopy(Builder, MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+  auto Copy = Builder.buildCopy(MI.getOperand(0), MI.getOperand(1));
+  constrainGenericOp(*Copy);
   MI.eraseFromParent();
   return true;
 }
@@ -356,7 +350,7 @@ bool MOSInstructionSelector::selectIntToPtr(MachineInstr &MI) {
 // Determines if the memory address referenced by a load/store instruction
 // is based on a constant value. Absolute or zero page addressing modes can
 // be used under this condition.
-static bool MatchConstantAddr(Register Addr, MachineOperand &BaseOut,
+static bool matchConstantAddr(Register Addr, MachineOperand &BaseOut,
                               const MachineRegisterInfo &MRI) {
   // Handle GlobalValues (including those with offsets for element access).
   if (MachineInstr *GV = getOpcodeDef(MOS::G_GLOBAL_VALUE, Addr, MRI)) {
@@ -376,7 +370,7 @@ static bool MatchConstantAddr(Register Addr, MachineOperand &BaseOut,
 // Determines whether Addr can be referenced using the X/Y indexed addressing
 // mode. If so, sets BaseOut to the base operand and Offset to the value that
 // should be in X/Y.
-static bool MatchIndexed(Register Addr, MachineOperand &BaseOut,
+static bool matchIndexed(Register Addr, MachineOperand &BaseOut,
                          MachineOperand &OffsetOut,
                          const MachineRegisterInfo &MRI) {
   MachineInstr *SumAddr = getOpcodeDef(MOS::G_PTR_ADD, Addr, MRI);
@@ -400,7 +394,7 @@ static bool MatchIndexed(Register Addr, MachineOperand &BaseOut,
 // Determines whether Addr can be referenced using the indirect-indexed (addr),Y
 // addressing mode. If so, sets BaseOut to the base operand and Offset to the
 // value that should be in Y.
-static void MatchIndirectIndexed(Register Addr, MachineOperand &BaseOut,
+static void matchIndirectIndexed(Register Addr, MachineOperand &BaseOut,
                                  MachineOperand &OffsetOut,
                                  const MachineRegisterInfo &MRI) {
   if (MachineInstr *DefMI = getDefIgnoringCopies(Addr, MRI)) {
@@ -465,7 +459,7 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
   MachineOperand Base = MachineOperand::CreateImm(0);
   MachineOperand Offset = MachineOperand::CreateImm(0);
 
-  if (MatchConstantAddr(Addr, Base, MRI)) {
+  if (matchConstantAddr(Addr, Base, MRI)) {
     auto Instr =
         Builder.buildInstr(AbsOpcode).add(ValOp).add(Base).cloneMemRefs(MI);
     if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
@@ -474,7 +468,7 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
     return true;
   }
 
-  if (MatchIndexed(Addr, Base, Offset, MRI)) {
+  if (matchIndexed(Addr, Base, Offset, MRI)) {
     auto Instr = Builder.buildInstr(IdxOpcode)
                      .add(ValOp)
                      .add(Base)
@@ -486,13 +480,15 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
     return true;
   }
 
-  MatchIndirectIndexed(Addr, Base, Offset, MRI);
+  matchIndirectIndexed(Addr, Base, Offset, MRI);
 
   Register OffsetReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
   if (Offset.isImm())
     Builder.buildInstr(MOS::LDimm).addDef(OffsetReg).add(Offset);
-  else
-    buildCopy(Builder, OffsetReg, Offset.getReg());
+  else {
+    auto Copy = Builder.buildCopy(OffsetReg, Offset.getReg());
+    constrainGenericOp(*Copy);
+  }
 
   auto Instr = Builder.buildInstr(YIndirOpcode)
                    .add(ValOp)
@@ -618,7 +614,9 @@ bool MOSInstructionSelector::selectPtrToInt(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_PTRTOINT);
 
   MachineIRBuilder Builder(MI);
-  buildCopy(Builder, MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+  auto Copy =
+      Builder.buildCopy(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+  constrainGenericOp(*Copy);
   MI.eraseFromParent();
   return true;
 }
@@ -691,12 +689,11 @@ bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
   return true;
 }
 
-void MOSInstructionSelector::buildCopy(MachineIRBuilder &Builder, Register Dst,
-                                       Register Src) {
-  auto Copy = Builder.buildCopy(Dst, Src);
-  constrainGenericOp(*Copy);
-}
-
+// Produce a pointer vreg from a low and high vreg pair. If the pointer is in
+// turn broken back down into low and high components, this propagates the input
+// vregs directly to their uses. This may allow the pointer proper to become
+// unused, in which case, it never needs be allocated to one of the zero page
+// pointers.
 void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
                                         Register Lo, Register Hi) {
   auto RegSeq = Builder.buildInstr(MOS::REG_SEQUENCE)
@@ -733,16 +730,17 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
   }
 }
 
+// Ensures that any virtual registers defined by this operation are given a
+// register class. Otherwise, it's possible for chains of generic operations
+// (PHI, COPY, etc.) to circularly define virtual registers in such a way that
+// they never actually receive a register class. Since every virtual register is
+// defined exactly once, making sure definitions are constrained suffices.
 void MOSInstructionSelector::constrainGenericOp(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   for (MachineOperand &Op : MI.operands()) {
     if (!Op.isReg() || !Op.isDef() || Op.getReg().isPhysical())
       continue;
     LLT Ty = MRI.getType(Op.getReg());
-    if (Ty.isPointer()) {
-      Ty = LLT::scalar(16);
-      MRI.setType(Op.getReg(), Ty);
-    }
     constrainOperandRegClass(Op, getRegClassForType(Ty));
   }
 }
