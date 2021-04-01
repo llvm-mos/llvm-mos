@@ -19,10 +19,13 @@
 
 namespace llvm {
 
+/// Regular calling convention.
 bool CC_MOS(unsigned ValNo, MVT ValVT, MVT LocVT,
                 CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                 CCState &State);
 
+/// Calling convention used for the dynamic portion of varargs calls. Just puts
+/// everything on the stack.
 bool CC_MOS_VarArgs(unsigned ValNo, MVT ValVT, MVT LocVT,
                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                         CCState &State);
