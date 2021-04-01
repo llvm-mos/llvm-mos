@@ -238,10 +238,10 @@ bool MOSInstructionSelector::selectCompareBranch(MachineInstr &MI) {
     Br.addUse(MOS::Z).addImm(0);
     break;
   case CmpInst::ICMP_UGE:
-    Br.addUse(MOS::N).addImm(0);
+    Br.addUse(MOS::C).addImm(1);
     break;
   case CmpInst::ICMP_ULT:
-    Br.addUse(MOS::N).addImm(1);
+    Br.addUse(MOS::C).addImm(0);
     break;
   }
   MI.eraseFromParent();

@@ -5,7 +5,7 @@
 print_int:                              ; @print_int
 ; %bb.0:                                ; %entry
 	cmp	#10
-	bmi	LBB0_2
+	bcc	LBB0_2
 LBB0_1:                                 ; %if.end.preheader
 	sta	_SaveA
 	lda	mos8(__rc4)
