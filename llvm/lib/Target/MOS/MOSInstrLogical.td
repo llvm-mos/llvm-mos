@@ -8,26 +8,42 @@
 //
 // This file describes the MOS logical instruction set.
 //
-// Instructions with identical effects except the placement of their operands
-// are joined together into instructions with register classes directly
-// representing those constraints.
+// When viewed logically, the 6502 instruction set is more regular than it might
+// appear. For example, consider the three instructions: LDA #imm, LDX #imm, and
+// LDY #imm. Each of these instructions takes a single immediate operand, loads
+// one of A, X, or Y, and sets NZ based on the immediate value. Even though
+// there are three separate opcodes, the only difference in their behavior is
+// which register is loaded.
+
+// The logical instruction set merges these instructions together into a single
+// logical LDimm #imm instruction. The logical instruction takes a "GPR"
+// register class as an argument. When the logical instructions are lowered to
+// real instructions in AsmPrinter, the register operand is examined to
+// determine which real instruction is emitted. This scheme comes with some
+// considerable advantages.
+
+// First, selecting a LDimm instruction doesn't constrain where the destination
+// can be placed other than that it needs to be one of A, X, or Y. This allows
+// earlier passes that cannot effectively make such decisions to defer them to
+// the register allocator.
+
+// Second, the description of the side effects and characteristics of LDimm only
+// need to be specified once. Any switch() statements need to have only one
+// entry for LDimm, not three for LDAimm, LDXimm, and LDYimm. This considerably
+// reduces the amount of code needed to cover the 6502 instruction set.
+
+// Third, exposing these regularities to LLVM passes make the 6502 more like a
+// regular CISC target (X86-ish). LLVM already has very good code paths for
+// dealing with this sort of architecture, and maintaining a logical instruction
+// set allows us to stay within those "sane", well-tested code paths, for the
+// most part.
 //
-// This may take more than one instruction. For example, the register transfer
-// instructions TAX, TXA, TAY, and TYA are split into TA_ and T_A, since
-// register classes are too crude of an instrument to specify that either the
-// source or target must be A. An XY register class fills in the remaining
-// freedom that the _ may be fulfilled with either X or Y.
-//
-// Doing things this way allows the code generator to pretend that the 6502 is
-// much more regular than it really is, right up until AsmPrinter brings the
-// instructions down to their real, bitwise representation. This shields most of
-// LLVM from the rigors of the real, highly irregular 6502 instruction set. For
-// example, it brings the number of implicit physical registers down to the
-// level typical of a LLVM backend. Codegen passes can handle implicit physical
-// registers every once in a while, but they have a hard time dealing with every
-// single instruction using them for nearly every operand. Most of the issues are
-// probably just oversights, but there's a lot to be gained by tightly limiting
-// "weirdness" as much as possible.
+// By examining its register operands, every logical instruction can be mapped
+// to exactly one real target instruction. Pseudoinstructions where this
+// property does not hold are recorded in MOSInstrPseudos.td instead. These are
+// more traditional pseudo-instructions; they may expand out to short snippets
+// of code required to perform higher-level operations that cannot be expaneded
+// inline, for one reason or another.
 //
 //===---------------------------------------------------------------------===//
 

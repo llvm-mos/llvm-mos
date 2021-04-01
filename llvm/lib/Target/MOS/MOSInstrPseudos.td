@@ -8,6 +8,11 @@
 //
 // This file describes the MOS pseudo-instructions.
 //
+// Pseudo-instructions allow deferring generation of specific instruction
+// sequences from one pass until a later pass. This is useful whenever an early
+// pass is required to make a decision that it doesn't have the information
+// necessary to do well.
+//
 //===---------------------------------------------------------------------===//
 
 class Pseudo : Instruction {
