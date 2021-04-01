@@ -23,11 +23,11 @@
 #include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "MOSTargetMachine.h"
-#include "MCTargetDesc/MOSMCTargetDesc.h"
 
 using namespace llvm;
 
@@ -57,8 +57,9 @@ MOSTargetLowering::getConstraintType(StringRef Constraint) const {
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
-MOSTargetLowering::getRegForInlineAsmConstraint(
-    const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
+MOSTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                                StringRef Constraint,
+                                                MVT VT) const {
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     default:
@@ -78,13 +79,14 @@ MOSTargetLowering::getRegForInlineAsmConstraint(
 }
 
 bool MOSTargetLowering::isLegalAddressingMode(const DataLayout &DL,
-                                                  const AddrMode &AM, Type *Ty,
-                                                  unsigned AddrSpace,
-                                                  Instruction *I) const {
+                                              const AddrMode &AM, Type *Ty,
+                                              unsigned AddrSpace,
+                                              Instruction *I) const {
   // In general, the basereg and scalereg are the 16-bit GEP index type, which
   // cannot be natively supported.
 
-  if (AM.Scale) return false;
+  if (AM.Scale)
+    return false;
 
   if (AM.HasBaseReg) {
     // A 16-bit base reg can be placed into a Imag16 register, then the base

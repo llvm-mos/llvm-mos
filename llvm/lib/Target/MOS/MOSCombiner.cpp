@@ -1,3 +1,18 @@
+//===-- MOSCombiner.cpp - MOS GlobalIsel Combiner -------------------------===//
+//
+// Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file declares the MOS global machine instruction combiner.
+//
+// This runs between phases of the GlobalISel process to optimize away
+// inefficient patterns discovered in the global machine instructions.
+//
+//===----------------------------------------------------------------------===//
+
 #include "MOSCombiner.h"
 
 #include "MOS.h"
