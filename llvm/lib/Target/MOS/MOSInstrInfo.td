@@ -190,10 +190,8 @@ def BEQ_Relative : ConditionalBranch<"beq", 0b11, 0b1>;
 def BRK_Implied: InstLow0<"brk", 0b0000>;
 /// JSR is the only instruction that does not follow the current pattern.
 def JSR_Absolute: Inst24<"jsr", Opcode<0x20>, Absolute>;
-let isReturn = true, isBarrier = true, isTerminator = true in {
 def RTI_Implied: InstLow0<"rti", 0b0100>;
 def RTS_Implied: InstLow0<"rts", 0b0110>;
-}
 
 def PHP_Implied: InstLow8<"php", 0b0000>;
 def PLP_Implied: InstLow8<"plp", 0b0010>;

@@ -19,8 +19,7 @@
 /// indebted to him for the excellent analysis.
 
 /// The base MOS instruction class, from which all instructions descend.
-class Inst<string asmstr> : Instruction
-{
+class Inst<string asmstr> : Instruction {
   let Namespace = "MOS";
 
   // None of the MC instructions are considered to have any output operands.
@@ -30,7 +29,7 @@ class Inst<string asmstr> : Instruction
   let AsmString = asmstr;
 
   // Note: These properties are not tracked for the real instruction set, which
-  // is used only in the MC layer. See the instruction-like pseudos for the
+  // is used only in the MC layer. See the logical instruction set for the
   // definitions of these properties.
   let mayLoad = true;
   let mayStore = true;
@@ -42,31 +41,23 @@ class Inst<string asmstr> : Instruction
 
 /// Makes sure that immediate mode operands fit into the required bit field
 /// size.  See also *isImm8 functions in MOS code.
-class MOSAsmOperand<string name>
-  : AsmOperandClass {
+class MOSAsmOperand<string name> : AsmOperandClass {
   let Name = name;
   let DiagnosticType = !strconcat("Invalid", name);
 }
 
-class ImmediateAsmOperand<string name>
-  : MOSAsmOperand<name> {
+class ImmediateAsmOperand<string name> : MOSAsmOperand<name> {
     let RenderMethod = "addImmOperands";
     let DiagnosticType = "immediate";
   }
 
-class PCRelativeOperand<string name>
-  : MOSAsmOperand<name> {
-  }
+class PCRelativeOperand<string name> : MOSAsmOperand<name>;
 
 /// An 8-bit (i.e. zero page) address.
-class Addr8Operand<string name>
-  : MOSAsmOperand<name> {
-  }
+class Addr8Operand<string name> : MOSAsmOperand<name>;
 
 /// A 16-bit address.
-class Addr16Operand<string name>
-  : MOSAsmOperand<name> {
-  }
+class Addr16Operand<string name> : MOSAsmOperand<name>;
 
 /// This operand will only match a value from 0 to 255 inclusive.
 def imm8 : Operand<i32> {
@@ -87,8 +78,7 @@ def pcrel8 : Operand<i32> {
   let EncoderMethod = "encodeImm<MOS::PCRel8, 1>";
 }
 
-def addr8 : Operand<i32>
-{
+def addr8 : Operand<i32> {
   let ParserMatchClass = Addr8Operand<"Addr8">;
   let EncoderMethod = "encodeImm<MOS::Addr8, 1>";
 }
@@ -105,10 +95,8 @@ def imm8to16 : Operand<i32> {
 }
 
 /// All non-virtual MOS opcodes are 8 bits long.
-class Opcode<bits<8> opcode = 0>
-{
-  bits<8> op;
-  let op = opcode;
+class Opcode<bits<8> opcode = 0> {
+  bits<8> op = opcode;
 }
 def DefaultOpcode : Opcode<0>;
 
@@ -119,9 +107,7 @@ def DefaultOpcode : Opcode<0>;
 /// Parker: "Most instructions that explicitly reference memory locations have
 /// bit patterns of the form aaabbbcc. The aaa and cc bits determine the
 /// opcode, and the bbb bits determine the addressing mode."
-class OpcodeABC<bits<3> aaa = 0, bits<3> bbb = 0, bits<2> cc = 0> :
-        Opcode<0>
-{
+class OpcodeABC<bits<3> aaa = 0, bits<3> bbb = 0, bits<2> cc = 0> : Opcode<0> {
   let op{7-5} = aaa;
   let op{4-2} = bbb;
   let op{1-0} = cc;
@@ -143,107 +129,89 @@ class OpcodeC3<bits<3> aaa = 0, bits<3> bbb = 0> : OpcodeABC<aaa, bbb, 0b11>;
 /// to collapse multiple characters into one token if they are not separated
 /// by spaces.  We'll remove those spaces when we print out the operands for
 /// any instruction. See also MOSInstPrinter.cpp.
-class AddressingMode
-{
+class AddressingMode {
   string OperandsStr = ?;
   dag InOperandList = ?;
 }
 
-def Implicit : AddressingMode
-{
+def Implicit : AddressingMode {
   string OperandsStr = "";
   dag InOperandList = (ins);
 }
 
-def Accumulator : AddressingMode
-{
+def Accumulator : AddressingMode {
   string OperandsStr = "";
   dag InOperandList = (ins);
 }
 
-def Immediate : AddressingMode
-{
+def Immediate : AddressingMode {
   let OperandsStr = "#$param";
   let InOperandList = (ins imm8:$param);
 }
 
-def ZeroPage : AddressingMode
-{
+def ZeroPage : AddressingMode {
   let OperandsStr = "$param";
   let InOperandList = (ins addr8:$param);
 }
 
-def ZeroPageX : AddressingMode
-{
+def ZeroPageX : AddressingMode {
   let OperandsStr = "$param , x";
   let InOperandList = (ins addr8:$param);
 }
 
-def ZeroPageY : AddressingMode
-{
+def ZeroPageY : AddressingMode {
   let OperandsStr = "$param , y";
   let InOperandList = (ins addr8:$param);
 }
 
-def Relative : AddressingMode
-{
+def Relative : AddressingMode {
   let OperandsStr = "$param";
   let InOperandList = (ins pcrel8:$param);
 }
 
-def Absolute : AddressingMode
-{
+def Absolute : AddressingMode {
   let OperandsStr = "$param";
   let InOperandList = (ins addr16:$param);
 }
 
-def AbsoluteX : AddressingMode
-{
+def AbsoluteX : AddressingMode {
   let OperandsStr = "$param , x";
   let InOperandList = (ins addr16:$param);
 }
 
-def AbsoluteY : AddressingMode
-{
+def AbsoluteY : AddressingMode {
   let OperandsStr = "$param , y";
   let InOperandList = (ins addr16:$param);
 }
 
-def Indirect : AddressingMode
-{
+def Indirect : AddressingMode {
   let OperandsStr = "( $param )";
   let InOperandList = (ins addr16:$param);
 }
 
-def IndexedIndirect : AddressingMode
-{
+def IndexedIndirect : AddressingMode {
   let OperandsStr = "( $param , x )";
   let InOperandList = (ins addr8:$param);
 }
 
-def IndirectIndexed : AddressingMode
-{
+def IndirectIndexed : AddressingMode {
   let OperandsStr = "( $param ) , y";
   let InOperandList = (ins addr8:$param);
 }
 
 /// An unsized MOS instruction, to which an addressing mode may be applied.
 class InstAddressMode<string asmstr, Opcode op = DefaultOpcode,
-                      AddressingMode mode = Implicit> : Inst<asmstr>
-{
-  Opcode opcode;
-  let opcode = op;
+                      AddressingMode mode = Implicit> : Inst<asmstr> {
+  Opcode opcode = op;
   let InOperandList = mode.InOperandList;
   string OperandsStr;
   let OperandsStr = mode.OperandsStr;
 }
 
 /// An 8 bit real MOS instruction.
-class Inst8<string asmstr,
-            Opcode op = DefaultOpcode,
+class Inst8<string asmstr, Opcode op = DefaultOpcode,
             AddressingMode mode = Implicit> :
-  InstAddressMode<asmstr, op, mode>
-{
+    InstAddressMode<asmstr, op, mode> {
   let Size = 1;
   bits<8> Inst;
   let Inst{7-0} = opcode.op;
@@ -251,11 +219,9 @@ class Inst8<string asmstr,
 
 /// A 16 bit real MOS instruction.  Always an 8 bit opcode and an 8 bit
 /// operand.
-class Inst16<string opcodestr,
-             Opcode op = DefaultOpcode,
+class Inst16<string opcodestr, Opcode op = DefaultOpcode,
              AddressingMode mode = Implicit> :
-InstAddressMode<opcodestr, op, mode>
-{
+    InstAddressMode<opcodestr, op, mode> {
   let Size = 2;
   bits<8> param;
   bits<16> Inst;
@@ -268,8 +234,7 @@ InstAddressMode<opcodestr, op, mode>
 /// operand.
 class Inst24<string opcodestr, Opcode op = DefaultOpcode,
              AddressingMode mode = Implicit> :
-InstAddressMode<opcodestr, op, mode>
-{
+    InstAddressMode<opcodestr, op, mode> {
   let Size = 3;
   bits<16> param;
   bits<24> Inst;
@@ -281,8 +246,7 @@ InstAddressMode<opcodestr, op, mode>
 /// Some one-byte opcodes tend to have fixed lower 4 bits, and vary in the
 /// higher four bits.
 class InstNybble<string asmstr, bits<4> low = 0, bits<4> high = 0> :
-      Inst8<asmstr>
-{
+    Inst8<asmstr> {
   let Inst{7-4} = high;
   let Inst{3-0} = low;
 }
@@ -339,11 +303,10 @@ multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop">
 
 /// All cc=01 instruction types, for the majority of opcodes where cc == 01.
 multiclass CC1_All<bits<3> aaa, string OpcodeStr = "nop"> :
-  CC1_NoImmediate<aaa, OpcodeStr>
-{
-    // handle immediate CC1 instruction types here for opcodes that fit the
-    // CC1 pattern
-    def _Immediate : Inst16<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate>;
+    CC1_NoImmediate<aaa, OpcodeStr> {
+  // handle immediate CC1 instruction types here for opcodes that fit the
+  // CC1 pattern
+  def _Immediate : Inst16<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate>;
 }
 
 /// "Next we consider the cc = 10 instructions. These have a completely
@@ -385,36 +348,26 @@ multiclass CC1_All<bits<3> aaa, string OpcodeStr = "nop"> :
 
 /// This multiclass covers ASL, ROL, LSR and ROR instructions in the
 /// chart above.
-multiclass CC2_Shift<bits<3> aaa, string OpcodeStr = "nop">
-{
-  def _ZeroPage :
-    Inst16<OpcodeStr, OpcodeC2<aaa, 0b001>, ZeroPage>;
+multiclass CC2_Shift<bits<3> aaa, string OpcodeStr = "nop"> {
+  def _ZeroPage : Inst16<OpcodeStr, OpcodeC2<aaa, 0b001>, ZeroPage>;
 
-  def _Accumulator :
-    Inst8<OpcodeStr, OpcodeC2<aaa, 0b010>, Accumulator>;
+  def _Accumulator : Inst8<OpcodeStr, OpcodeC2<aaa, 0b010>, Accumulator>;
 
-  def _Absolute :
-    Inst24<OpcodeStr, OpcodeC2<aaa, 0b011>, Absolute>;
+  def _Absolute : Inst24<OpcodeStr, OpcodeC2<aaa, 0b011>, Absolute>;
 
-  def _ZeroPageX :
-    Inst16<OpcodeStr, OpcodeC2<aaa, 0b101>, ZeroPageX>;
+  def _ZeroPageX : Inst16<OpcodeStr, OpcodeC2<aaa, 0b101>, ZeroPageX>;
 
-  def _AbsoluteX :
-    Inst24<OpcodeStr, OpcodeC2<aaa, 0b111>, AbsoluteX>;
+  def _AbsoluteX : Inst24<OpcodeStr, OpcodeC2<aaa, 0b111>, AbsoluteX>;
 }
 
 /// This multiclass covers regular instructions for STX, LDX, INC and DEC
 /// in the chart above.
-multiclass CC2_NonShift<bits<3> aaa, string OpcodeStr = "nop">
-{
-  def _ZeroPage :
-    Inst16<OpcodeStr, OpcodeC2<aaa, 0b001>, ZeroPage>;
+multiclass CC2_NonShift<bits<3> aaa, string OpcodeStr = "nop"> {
+  def _ZeroPage : Inst16<OpcodeStr, OpcodeC2<aaa, 0b001>, ZeroPage>;
 
-  def _Absolute :
-    Inst24<OpcodeStr, OpcodeC2<aaa, 0b011>, Absolute>;
+  def _Absolute : Inst24<OpcodeStr, OpcodeC2<aaa, 0b011>, Absolute>;
 
-  def _ZeroPageX :
-    Inst16<OpcodeStr, OpcodeC2<aaa, 0b101>, ZeroPageX>;
+  def _ZeroPageX : Inst16<OpcodeStr, OpcodeC2<aaa, 0b101>, ZeroPageX>;
 }
 
 /// "Next, the cc = 00 instructions. Again, the opcodes are different:
@@ -444,16 +397,12 @@ multiclass CC2_NonShift<bits<3> aaa, string OpcodeStr = "nop">
 /// abs,X                   BC
 
 /// The 9 instructions in the top right corner
-multiclass CC0_Regular< bits<3> aaa, string OpcodeStr = "nop">
-{
-  def _Immediate :
-    Inst16<OpcodeStr, OpcodeC0<aaa, 0b000>, Immediate>;
+multiclass CC0_Regular< bits<3> aaa, string OpcodeStr = "nop"> {
+  def _Immediate : Inst16<OpcodeStr, OpcodeC0<aaa, 0b000>, Immediate>;
 
-  def _ZeroPage :
-    Inst16<OpcodeStr, OpcodeC0<aaa, 0b001>, ZeroPage>;
+  def _ZeroPage : Inst16<OpcodeStr, OpcodeC0<aaa, 0b001>, ZeroPage>;
 
-  def _Absolute :
-    Inst24<OpcodeStr, OpcodeC0<aaa, 0b011>, Absolute>;
+  def _Absolute : Inst24<OpcodeStr, OpcodeC0<aaa, 0b011>, Absolute>;
 }
 
 /// "The conditional branch instructions all have the form xxy10000. The flag
@@ -469,8 +418,7 @@ multiclass CC0_Regular< bits<3> aaa, string OpcodeStr = "nop">
 /// 10  30  50  70  90  B0  D0  F0
 
 class ConditionalBranch<string opcodestr, bits<2> flagType, bits<1> value> :
-  Inst16<opcodestr, DefaultOpcode, Relative>
-{
+    Inst16<opcodestr, DefaultOpcode, Relative> {
    bits<3> a;
    let a{2-1} = flagType;
    let a{0} = value;
@@ -480,8 +428,6 @@ class ConditionalBranch<string opcodestr, bits<2> flagType, bits<1> value> :
 /// Predicates. Useful for limiting instructions to particular hardware modes
 /// or particular hardware implementations.
 def Has6502 : Predicate<"Subtarget->has6502()">,
-                         AssemblerPredicate<(all_of Feature6502), "Feature6502">
-{
+              AssemblerPredicate<(all_of Feature6502), "Feature6502"> {
   let PredicateName = "Feature6502";
 }
-
