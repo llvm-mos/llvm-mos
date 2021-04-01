@@ -33,18 +33,16 @@ LBB0_1:                                 ; %while.body
 LBB0_2:                                 ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
 	asl
-	sta	mos8(__rc2)
+	tay
 	lda	#0
 	rol
-	sta	mos8(__rc3)
+	tax
 	clc
-	lda	mos8(__rc0)
-	ldx	mos8(__rc1)
-	clc
-	adc	mos8(__rc2)
+	tya
+	adc	mos8(__rc4)
 	tay
 	txa
-	adc	mos8(__rc3)
+	adc	mos8(__rc5)
 	sty	mos8(__rc2)
 	sta	mos8(__rc3)
 	ldy	#0

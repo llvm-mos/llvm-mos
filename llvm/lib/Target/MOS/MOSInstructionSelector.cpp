@@ -633,11 +633,7 @@ bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
   return true;
 }
 
-// Produce a pointer vreg from a low and high vreg pair. If the pointer is in
-// turn broken back down into low and high components, this propagates the input
-// vregs directly to their uses. This may allow the pointer proper to become
-// unused, in which case, it never needs be allocated to one of the zero page
-// pointers.
+// Produce a pointer vreg from a low and high vreg pair.
 void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
                                         Register Lo, Register Hi) {
   auto RegSeq = Builder.buildInstr(MOS::REG_SEQUENCE)
@@ -647,37 +643,6 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
                     .addUse(Hi)
                     .addImm(MOS::subhi);
   constrainGenericOp(*RegSeq);
-
-  // Propagate Lo and Hi to uses, hopefully killing the REG_SEQUENCE and
-  // unconstraining the register classes of Lo and Hi.
-
-
-  // Collect all uses of subregisters of Dst or subregisters of copies of Dst.
-  std::set<Register> WorkList = {Dst};
-  std::vector<MachineOperand *> Uses;
-  while (!WorkList.empty()) {
-    Register Reg = *WorkList.begin();
-    WorkList.erase(Reg);
-    for (MachineOperand &MO : Builder.getMRI()->use_nodbg_operands(Reg)) {
-      if (MO.getSubReg())
-        Uses.push_back(&MO);
-      else if (MO.getParent()->isCopy())
-        WorkList.insert(MO.getParent()->getOperand(0).getReg());
-    }
-  }
-
-  // Replace all of the collected subregister uses with either Lo or Hi. This
-  // needs to be done as a separate pass, since modifying these operands changes
-  // the uses of Reg, which cannot be done while iterating through the uses.
-  for (MachineOperand *MO : Uses) {
-    if (MO->getSubReg() == MOS::sublo) {
-      MO->setReg(Lo);
-    } else {
-      assert(MO->getSubReg() == MOS::subhi);
-      MO->setReg(Hi);
-    }
-    MO->setSubReg(0);
-  }
 }
 
 // Ensures that any virtual registers defined by this operation are given a
