@@ -136,8 +136,8 @@ body: |
     %3:any(s8) = G_LOAD %2 :: (load 1)
     RTS implicit %3
 # CHECK:      %0:imag16 = IMPLICIT_DEF
-# CHECK-NEXT: %4:yc = LDimm 255
-# CHECK-NEXT: %3:ac = LDyindir %0, %4
+# CHECK-NEXT: %1:yc = LDimm -1
+# CHECK-NEXT: %3:ac = LDyindir %0, %1
 # CHECK-NEXT: RTS
 ...
 ---

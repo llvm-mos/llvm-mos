@@ -368,7 +368,7 @@ static bool matchConstantAddr(Register Addr, MachineOperand &BaseOut,
 }
 
 // Determines whether Addr can be referenced using the X/Y indexed addressing
-// mode. If so, sets BaseOut to the base operand and Offset to the value that
+// mode. If so, sets BaseOut to the base operand and OffsetOut to the value that
 // should be in X/Y.
 static bool matchIndexed(Register Addr, MachineOperand &BaseOut,
                          MachineOperand &OffsetOut,
@@ -380,14 +380,11 @@ static bool matchIndexed(Register Addr, MachineOperand &BaseOut,
   Register Base = SumAddr->getOperand(1).getReg();
   Register Offset = SumAddr->getOperand(2).getReg();
 
-  MachineInstr *BaseGlobal = getOpcodeDef(MOS::G_GLOBAL_VALUE, Base, MRI);
-  if (!BaseGlobal)
+  if (!matchConstantAddr(Base, BaseOut, MRI))
     return false;
 
-  BaseOut = BaseGlobal->getOperand(1);
   // Constant offsets should already have been folded into the base.
   OffsetOut.ChangeToRegister(Offset, /*isDef=*/false);
-
   return true;
 }
 
@@ -397,34 +394,17 @@ static bool matchIndexed(Register Addr, MachineOperand &BaseOut,
 static void matchIndirectIndexed(Register Addr, MachineOperand &BaseOut,
                                  MachineOperand &OffsetOut,
                                  const MachineRegisterInfo &MRI) {
-  if (MachineInstr *DefMI = getDefIgnoringCopies(Addr, MRI)) {
-    switch (DefMI->getOpcode()) {
-    case MOS::G_PTR_ADD: {
-      Register Base = DefMI->getOperand(1).getReg();
-      Register Offset = DefMI->getOperand(2).getReg();
+  MachineInstr *DefMI = getDefIgnoringCopies(Addr, MRI);
+  if (DefMI->getOpcode() == MOS::G_PTR_ADD) {
+    Register Base = DefMI->getOperand(1).getReg();
+    Register Offset = DefMI->getOperand(2).getReg();
 
-      BaseOut.ChangeToRegister(Base, /*isDef=*/false);
-      auto ConstOffset = getConstantVRegValWithLookThrough(Offset, MRI);
-      if (ConstOffset) {
-        assert(ConstOffset->Value.getBitWidth() == 8);
-        OffsetOut.ChangeToImmediate(ConstOffset->Value.getZExtValue());
-      } else
-        OffsetOut.ChangeToRegister(Offset, /*isDef=*/false);
-      return;
-    }
-    case MOS::G_GLOBAL_VALUE: {
-      Register Base = DefMI->getOperand(0).getReg();
-      int64_t Offset = DefMI->getOperand(1).getOffset();
-
-      BaseOut.ChangeToRegister(Base, /*isDef=*/false);
-      OffsetOut.ChangeToImmediate(Offset);
-      return;
-    }
-    default:
-      break;
-    }
+    BaseOut.ChangeToRegister(Base, /*isDef=*/false);
+    OffsetOut.ChangeToRegister(Offset, /*isDef=*/false);
+    return;
   }
 
+  // Any address can be accessed via (Addr),0.
   BaseOut.ChangeToRegister(Addr, /*isDef=*/false);
   OffsetOut.ChangeToImmediate(0);
 }
@@ -482,13 +462,13 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
 
   matchIndirectIndexed(Addr, Base, Offset, MRI);
 
-  Register OffsetReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
-  if (Offset.isImm())
-    Builder.buildInstr(MOS::LDimm).addDef(OffsetReg).add(Offset);
-  else {
-    auto Copy = Builder.buildCopy(OffsetReg, Offset.getReg());
-    constrainGenericOp(*Copy);
-  }
+  Register OffsetReg;
+  if (Offset.isImm()) {
+    OffsetReg =
+        Builder.buildInstr(MOS::LDimm, {LLT::scalar(8)}, {Offset.getImm()})
+            .getReg(0);
+  } else
+    OffsetReg = Offset.getReg();
 
   auto Instr = Builder.buildInstr(YIndirOpcode)
                    .add(ValOp)
