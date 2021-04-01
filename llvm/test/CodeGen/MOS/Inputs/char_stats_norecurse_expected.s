@@ -8,11 +8,11 @@ char_stats:                             ; @char_stats
 	sta	char_stats_sstk+512             ; 1-byte Folded Spill
 	lda	mos8(__rc5)
 	sta	char_stats_sstk+513             ; 1-byte Folded Spill
-	ldx	#0
 	lda	#mos16lo(char_stats_sstk)
-	ldy	#mos16hi(char_stats_sstk)
+	ldx	#mos16hi(char_stats_sstk)
 	sta	mos8(__rc4)
-	sty	mos8(__rc5)
+	stx	mos8(__rc5)
+	ldx	#0
 	lda	mos8(__rc4)
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)

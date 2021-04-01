@@ -96,10 +96,3 @@ bool MOSTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   // Any other combination of GV and BaseOffset are just global offsets.
   return true;
 }
-
-bool MOSTargetLowering::shouldLocalize(
-    const MachineInstr &MI, const TargetTransformInfo *TTI) const {
-  // Only frame indices are tricky to rematerialize; all other constants are
-  // legalized, however indirectly, to separable 8-bit immediate operands.
-  return MI.getOpcode() == TargetOpcode::G_FRAME_INDEX;
-}

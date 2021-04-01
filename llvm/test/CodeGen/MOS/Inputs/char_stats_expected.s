@@ -12,12 +12,12 @@ char_stats:                             ; @char_stats
 	pha
 	lda	mos8(__rc5)
 	pha
-	ldx	#0
 	clc
 	lda	mos8(__rc0)
 	sta	mos8(__rc4)
 	lda	mos8(__rc1)
 	sta	mos8(__rc5)
+	ldx	#0
 	lda	mos8(__rc4)
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)

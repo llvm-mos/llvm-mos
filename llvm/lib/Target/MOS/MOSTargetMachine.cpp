@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
-#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -183,7 +182,6 @@ bool MOSPassConfig::addRegBankSelect() {
 
 void MOSPassConfig::addPreGlobalInstructionSelect() {
   addPass(createMOSCombiner());
-  addPass(new Localizer());
 }
 
 bool MOSPassConfig::addGlobalInstructionSelect() {
