@@ -223,7 +223,8 @@ bool MOSInstructionSelector::selectCompareBranch(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
 
-  auto Compare = Builder.buildInstr(MOS::CMPimm).addUse(LHS).addImm(RHS);
+  auto Compare = Builder.buildInstr(MOS::CMPimm, {LLT::scalar(1)}, {LHS, RHS});
+  Register Carry = Compare.getReg(0);
   if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
     return false;
 
@@ -238,10 +239,10 @@ bool MOSInstructionSelector::selectCompareBranch(MachineInstr &MI) {
     Br.addUse(MOS::Z).addImm(0);
     break;
   case CmpInst::ICMP_UGE:
-    Br.addUse(MOS::C).addImm(1);
+    Br.addUse(Carry).addImm(1);
     break;
   case CmpInst::ICMP_ULT:
-    Br.addUse(MOS::C).addImm(0);
+    Br.addUse(Carry).addImm(0);
     break;
   }
   MI.eraseFromParent();

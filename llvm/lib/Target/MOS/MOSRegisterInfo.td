@@ -140,6 +140,7 @@ class MOSReg16Class<dag RegList>: MOSRegClass<[i16], 8, RegList>;
 
 // Single register classes.
 def Ac : MOSReg8Class<(add A)>;
+def Xc : MOSReg8Class<(add X)>;
 def Yc : MOSReg8Class<(add Y)>;
 def Cc : MOSReg1Class<(add C)>;
 
@@ -151,8 +152,9 @@ def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 // Instruction-specific register classes.
 def AImag8 : MOSReg8Class<(add A, Imag8)>;
 def XY : MOSReg8Class<(add X, Y)>;
-def Flag : MOSReg1Class<(add C, N, Z)> {
-  let isAllocatable = false;
+let isAllocatable = false in {
+  def Flag : MOSReg1Class<(add C, N, Z)>;
+  def AP : MOSReg8Class<(add A, P)>;
 }
 
 // MOS assembly mnemonics may only have the following registers as parameters

@@ -335,18 +335,18 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
   if (areClasses(MOS::GPRRegClass, MOS::GPRRegClass)) {
     if (SrcReg == MOS::A) {
       assert(MOS::XYRegClass.contains(DestReg));
-      Builder.buildInstr(MOS::TA_).addDef(DestReg);
+      Builder.buildInstr(MOS::TA).addDef(DestReg).addUse(SrcReg);
     } else if (DestReg == MOS::A) {
       assert(MOS::XYRegClass.contains(SrcReg));
-      Builder.buildInstr(MOS::T_A).addUse(SrcReg);
+      Builder.buildInstr(MOS::T_A).addDef(DestReg).addUse(SrcReg);
     } else {
       bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
       if (IsAMaybeLive)
-        Builder.buildInstr(MOS::PHA);
+        Builder.buildInstr(MOS::PH).addUse(MOS::A);
       copyPhysRegImpl(Builder, MOS::A, SrcReg);
       copyPhysRegImpl(Builder, DestReg, MOS::A);
       if (IsAMaybeLive)
-        Builder.buildInstr(MOS::PLA);
+        Builder.buildInstr(MOS::PL).addDef(MOS::A);
     }
   } else if (areClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
     Builder.buildInstr(MOS::STimag8).addDef(DestReg).addUse(SrcReg);
@@ -360,11 +360,11 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
   } else if (areClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
     bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
     if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PHA);
+      Builder.buildInstr(MOS::PH).addUse(MOS::A);
     copyPhysRegImpl(Builder, MOS::A, SrcReg);
     copyPhysRegImpl(Builder, DestReg, MOS::A);
     if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PLA);
+      Builder.buildInstr(MOS::PL).addDef(MOS::A);
   } else {
     LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
                       << "\n");
@@ -504,27 +504,36 @@ void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
   if (MI.getOperand(0).getReg() == MI.getOperand(2).getReg()) {
     bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
     if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PHA);
-    Builder.buildInstr(MOS::LDAidx).add(MI.getOperand(1)).add(MI.getOperand(2));
-    Builder.buildInstr(MOS::TA_).add(MI.getOperand(0));
+      Builder.buildInstr(MOS::PH).addUse(MOS::A);
+    Builder.buildInstr(MOS::LDAidx)
+        .addDef(MOS::A)
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2));
+    Builder.buildInstr(MOS::TA).add(MI.getOperand(0)).addUse(MOS::A);
     if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PLA);
+      Builder.buildInstr(MOS::PL).addDef(MOS::A);
     return;
   }
 
+  unsigned Opcode;
   switch (MI.getOperand(0).getReg()) {
   default:
     llvm_unreachable("Bad destination for LDidx.");
   case MOS::A:
-    Builder.buildInstr(MOS::LDAidx).add(MI.getOperand(1)).add(MI.getOperand(2));
+    Opcode = MOS::LDAidx;
     break;
   case MOS::X:
-    Builder.buildInstr(MOS::LDXidx).add(MI.getOperand(1));
+    Opcode = MOS::LDXidx;
     break;
   case MOS::Y:
-    Builder.buildInstr(MOS::LDYidx).add(MI.getOperand(1));
+    Opcode = MOS::LDYidx;
     break;
   }
+
+  Builder.buildInstr(Opcode)
+      .add(MI.getOperand(0))
+      .add(MI.getOperand(1))
+      .add(MI.getOperand(2));
 }
 
 bool MOSInstrInfo::reverseBranchCondition(

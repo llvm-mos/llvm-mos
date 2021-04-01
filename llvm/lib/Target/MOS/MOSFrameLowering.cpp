@@ -71,7 +71,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // directly on the hard stack, but it's significantly simpler.
   for (const CalleeSavedInfo &CI : CSI) {
     Builder.buildCopy(MOS::A, CI.getReg());
-    Builder.buildInstr(MOS::PHA);
+    Builder.buildInstr(MOS::PH).addUse(MOS::A);
   }
   if (AMaybeLive)
     Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");
@@ -91,7 +91,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     if (AMaybeLive)
       Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      Builder.buildInstr(MOS::PLA);
+      Builder.buildInstr(MOS::PL).addDef(MOS::A);
       Builder.buildCopy(CI.getReg(), Register(MOS::A));
     }
     if (AMaybeLive)

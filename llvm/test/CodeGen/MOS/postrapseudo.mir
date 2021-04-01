@@ -6,7 +6,7 @@ body: |
   bb.0.entry:
     liveins: $x
     $a = LDidx 1234, $x, implicit-def $nz
-# CHECK: LDAidx 1234, $x
+# CHECK: $a = LDAidx 1234, $x
 ...
 ---
 name: ldxidx_y
@@ -15,7 +15,7 @@ body: |
   bb.0.entry:
     liveins: $y
     $x = LDidx 1234, $y, implicit-def $nz
-# CHECK: LDXidx 1234
+# CHECK: $x = LDXidx 1234, $y
 ...
 ---
 name: ldxidx_x
@@ -24,11 +24,11 @@ body: |
   bb.0.entry:
     liveins: $x
     $x = LDidx 1234, $x, implicit-def $nz
-    CMPimm $a, 0, implicit-def $c, implicit-def $nz
-# CHECK:      PHA
-# CHECK-NEXT: LDAidx 1234, $x
-# CHECK-NEXT: $x = TA_
-# CHECK-NEXT: PLA
+    $c = CMPimm $a, 0, implicit-def $nz
+# CHECK:      PH $a
+# CHECK-NEXT: $a = LDAidx 1234, $x
+# CHECK-NEXT: $x = TA
+# CHECK-NEXT: $a = PL
 ...
 ---
 name: ldyidx_x
@@ -37,5 +37,5 @@ body: |
   bb.0.entry:
     liveins: $x
     $y = LDidx 1234, $x, implicit-def $nz
-# CHECK: LDYidx 1234
+# CHECK: $y = LDYidx 1234, $x
 ...

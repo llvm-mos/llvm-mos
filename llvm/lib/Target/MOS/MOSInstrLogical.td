@@ -45,6 +45,13 @@
 // of code required to perform higher-level operations that cannot be expaneded
 // inline, for one reason or another.
 //
+// All instructions take 1-register register classes for fixed operands: e.g.
+// Ac, Xc, Yc, etc. This allows the each instruction to natively use virtual
+// registers that can be resolved by the register allocator or register
+// scavenger. NZ is not included, since it is handled via bundling and
+// terminators; too many instructions clobber it for it to have useful live
+// ranges.
+//
 //===---------------------------------------------------------------------===//
 
 class MOSLogicalInstr : Instruction {
@@ -58,6 +65,7 @@ class MOSLogicalInstr : Instruction {
   let mayStore = false;
   let isPseudo = true;
   let isCodeGenOnly = true;
+  let isReMaterializable = true;
 }
 
 def label : Operand<OtherVT>;
@@ -70,7 +78,6 @@ def ADCimm : MOSLogicalInstr, PseudoInstExpansion<(ADC_Immediate imm8:$r)> {
   let Defs = [NZ];
 
   let isAdd = true;
-  let isReMaterializable = true;
 }
 
 def ADCimag8 : MOSLogicalInstr, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
@@ -84,7 +91,6 @@ def ADCimag8 : MOSLogicalInstr, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
 
   let isAdd = true;
   let isCommutable = true;
-  let isReMaterializable = true;
 }
 
 def ASL : MOSLogicalInstr {
@@ -93,10 +99,7 @@ def ASL : MOSLogicalInstr {
   let Constraints = "$dst = $src";
 
   let Defs = [NZ];
-
-  let isReMaterializable = true;
 }
-
 // Branches to $tgt if $flag = $val.
 def BR : MOSLogicalInstr {
   dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
@@ -106,19 +109,19 @@ def BR : MOSLogicalInstr {
 }
 
 def CMPimm : MOSLogicalInstr {
+  dag OutOperandList = (outs Cc:$carry);
   dag InOperandList = (ins GPR:$l, i8imm:$r);
 
-  let Defs = [C, NZ];
+  let Defs = [NZ];
 
   let isCompare = true;
-  let isReMaterializable = true;
 
   // Keep CMPimm adjacent to the branch that uses it.
   // This prevents NZ from ever being live outside of the terminators.
   let isTerminator = true;
 }
 
-def IN_ : MOSLogicalInstr {
+def IN : MOSLogicalInstr {
   dag OutOperandList = (outs XY:$dst);
   dag InOperandList = (ins XY:$src);
   let Constraints = "$src = $dst";
@@ -127,9 +130,7 @@ def IN_ : MOSLogicalInstr {
 
   let Pattern = [(set XY:$dst, (add XY:$src, 1))];
 
-
   let isAdd = true;
-  let isReMaterializable = true;
 }
 
 def JMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
@@ -152,7 +153,6 @@ def LDCimm : MOSLogicalInstr {
   dag OutOperandList = (outs Cc:$dst);
   dag InOperandList = (ins i1imm:$val);
 
-  let isReMaterializable = true;
   let isAsCheapAsAMove = true;
 }
 
@@ -166,7 +166,6 @@ def LDimm : MOSLogicalInstr {
 
   let isAsCheapAsAMove = true;
   let isMoveImm = true;
-  let isReMaterializable = true;
 }
 
 def LDimag8 : MOSLogicalInstr {
@@ -174,8 +173,6 @@ def LDimag8 : MOSLogicalInstr {
   dag InOperandList = (ins Imag8:$src);
 
   let Defs = [NZ];
-
-  let isReMaterializable = true;
 }
 
 def LDabs : MOSLogicalInstr {
@@ -184,36 +181,33 @@ def LDabs : MOSLogicalInstr {
 
   let Defs = [NZ];
 
-  let isReMaterializable = true;
   let mayLoad = true;
 }
 
 def LDAidx : MOSLogicalInstr {
+  dag OutOperandList = (outs Ac:$dst);
   dag InOperandList = (ins i16imm:$addr, XY:$idx);
 
-  let Defs = [A, NZ];
+  let Defs = [NZ];
 
-  let isReMaterializable = true;
   let mayLoad = true;
 }
 
 def LDXidx : MOSLogicalInstr, PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)> {
-  dag InOperandList = (ins i16imm:$addr);
+  dag OutOperandList = (outs Xc:$dst);
+  dag InOperandList = (ins i16imm:$addr, Yc:$idx);
 
-  let Defs = [X, NZ];
-  let Uses = [Y];
+  let Defs = [NZ];
 
-  let isReMaterializable = true;
   let mayLoad = true;
 }
 
 def LDYidx : MOSLogicalInstr, PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)> {
-  dag InOperandList = (ins i16imm:$addr);
+  dag OutOperandList = (outs Yc:$dst);
+  dag InOperandList = (ins i16imm:$addr, Xc:$idx);
 
-  let Defs = [Y, NZ];
-  let Uses = [X];
+  let Defs = [NZ];
 
-  let isReMaterializable = true;
   let mayLoad = true;
 }
 
@@ -226,26 +220,16 @@ def LDyindir : MOSLogicalInstr, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$
   let mayLoad = true;
 }
 
-def PHA : MOSLogicalInstr, PseudoInstExpansion<(PHA_Implied)> {
-  let Uses = [A];
+def PH : MOSLogicalInstr {
+  dag InOperandList = (ins AP:$src);
 
   let mayStore = true;
 }
 
-def PLA : MOSLogicalInstr, PseudoInstExpansion<(PLA_Implied)> {
-  let Defs = [A, NZ];
+def PL : MOSLogicalInstr {
+  dag OutOperandList = (outs AP:$dst);
 
-  let mayLoad = true;
-}
-
-def PHP : MOSLogicalInstr, PseudoInstExpansion<(PHP_Implied)> {
-  let Uses = [P];
-
-  let mayStore = true;
-}
-
-def PLP : MOSLogicalInstr, PseudoInstExpansion<(PLP_Implied)> {
-  let Defs = [P];
+  let Defs = [NZ];
 
   let mayLoad = true;
 }
@@ -256,8 +240,6 @@ def ROL : MOSLogicalInstr {
   let Constraints = "$dst = $src, $carryout = $carryin";
 
   let Defs = [NZ];
-
-  let isReMaterializable = true;
 }
 
 def RTS : MOSLogicalInstr, PseudoInstExpansion<(RTS_Implied)> {
@@ -272,8 +254,6 @@ def SBCimm : MOSLogicalInstr, PseudoInstExpansion<(SBC_Immediate imm8:$r)> {
   let Constraints = "$dst = $l, $carryout = $carryin";
 
   let Defs = [NZ];
-
-  let isReMaterializable = true;
 }
 
 def SBCimag8 : MOSLogicalInstr, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
@@ -284,8 +264,6 @@ def SBCimag8 : MOSLogicalInstr, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
   let Constraints = "$dst = $l";
 
   let Defs = [NZ];
-
-  let isReMaterializable = true;
 }
 
 def STabs : MOSLogicalInstr {
@@ -311,28 +289,20 @@ def STimag8 : MOSLogicalInstr {
   dag InOperandList = (ins GPR:$src);
 }
 
-def TA_ : MOSLogicalInstr {
+def TA : MOSLogicalInstr {
   dag OutOperandList = (outs XY:$dst);
+  dag InOperandList = (ins Ac:$src);
 
   let Defs = [NZ];
-  let Uses = [A];
 
   let isAsCheapAsAMove = true;
-  let isReMaterializable = true;
 }
 
 def T_A : MOSLogicalInstr {
+  dag OutOperandList = (outs Ac:$dst);
   dag InOperandList = (ins XY:$src);
 
-  let Defs = [A, NZ];
+  let Defs = [NZ];
 
   let isAsCheapAsAMove = true;
-  let isReMaterializable = true;
-}
-
-def TSX : MOSLogicalInstr, PseudoInstExpansion<(TSX_Implied)> {
-  let Defs = [X, NZ];
-
-  let isAsCheapAsAMove = true;
-  let isReMaterializable = true;
 }

@@ -75,7 +75,6 @@ MOSRegisterInfo::MOSRegisterInfo()
   Reserved.set(MOS::RS0);
   Reserved.set(MOS::RC0);
   Reserved.set(MOS::RC1);
-  Reserved.set(MOS::S);
 }
 
 const MCPhysReg *
@@ -129,10 +128,10 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   default:
     llvm_unreachable("Unexpected scavenger register.");
   case MOS::A:
-    Builder.buildInstr(MOS::PHA);
+    Builder.buildInstr(MOS::PH).addUse(MOS::A);
 
     Builder.setInsertPt(MBB, UseMI);
-    Builder.buildInstr(MOS::PLA);
+    Builder.buildInstr(MOS::PL).addDef(MOS::A);
     break;
   case MOS::X:
   case MOS::Y:

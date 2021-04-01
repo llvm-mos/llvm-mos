@@ -26,7 +26,7 @@ body: |
     %2:any(s1) = G_ICMP intpred(eq), %0, %1
     G_BRCOND %2, %bb.0
     RTS
-# CHECK:      CMPimm %0, 42
+# CHECK:      %3:cc = CMPimm %0, 42
 # CHECK-NEXT: BR %bb.0, $z, 1
 ...
 ---
@@ -41,7 +41,7 @@ body: |
     %2:any(s1) = G_ICMP intpred(ne), %0, %1
     G_BRCOND %2, %bb.0
     RTS
-# CHECK:      CMPimm %0, 42
+# CHECK:      %3:cc = CMPimm %0, 42
 # CHECK-NEXT: BR %bb.0, $z, 0
 ...
 ---
@@ -56,8 +56,8 @@ body: |
     %2:any(s1) = G_ICMP intpred(uge), %0, %1
     G_BRCOND %2, %bb.0
     RTS
-# CHECK:      CMPimm %0, 42
-# CHECK-NEXT: BR %bb.0, $c, 1
+# CHECK:      %3:cc = CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, %3, 1
 ...
 ---
 name: cmpimm_brult
@@ -71,8 +71,8 @@ body: |
     %2:any(s1) = G_ICMP intpred(ult), %0, %1
     G_BRCOND %2, %bb.0
     RTS
-# CHECK:      CMPimm %0, 42
-# CHECK-NEXT: BR %bb.0, $c, 0
+# CHECK:      %3:cc = CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, %3, 0
 ...
 ---
 name: copy

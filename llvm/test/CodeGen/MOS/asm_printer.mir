@@ -121,7 +121,7 @@ name: cmp_immediate
 # CHECK-LABEL: cmp_immediate
 body: |
   bb.0.entry:
-    CMPimm $a, 42, implicit-def $c, implicit-def $nz
+    $c = CMPimm $a, 42, implicit-def $nz
     RTS
 # CHECK:      cmp #42
 # CHECK-NEXT: rts
@@ -131,7 +131,7 @@ name: cpx_immediate
 # CHECK-LABEL: cpx_immediate
 body: |
   bb.0.entry:
-    CMPimm $x, 42, implicit-def $c, implicit-def $nz
+    $c = CMPimm $x, 42, implicit-def $nz
     RTS
 # CHECK:      cpx #42
 # CHECK-NEXT: rts
@@ -141,7 +141,7 @@ name: cpy_immediate
 # CHECK-LABEL: cpy_immediate
 body: |
   bb.0.entry:
-    CMPimm $y, 42, implicit-def $c, implicit-def $nz
+    $c = CMPimm $y, 42, implicit-def $nz
     RTS
 # CHECK:      cpy #42
 # CHECK-NEXT: rts
@@ -151,7 +151,7 @@ name: inx_implied
 # CHECK-LABEL: inx_implied
 body: |
   bb.0.entry:
-    $x = IN_ $x, implicit-def $nz
+    $x = IN $x, implicit-def $nz
     RTS
 # CHECK:      inx{{$}}
 # CHECK-NEXT: rts
@@ -161,7 +161,7 @@ name: iny_implied
 # CHECK-LABEL: iny_implied
 body: |
   bb.0.entry:
-    $y = IN_ $y, implicit-def $nz
+    $y = IN $y, implicit-def $nz
     RTS
 # CHECK:      iny{{$}}
 # CHECK-NEXT: rts
@@ -248,7 +248,7 @@ name: lda_absolutex
 # CHECK-LABEL: lda_absolutex
 body: |
   bb.0.entry:
-    LDAidx 1234, $x, implicit-def $a, implicit-def $nz
+    $a = LDAidx 1234, $x, implicit-def $nz
     RTS
 # CHECK:      lda 1234,x
 # CHECK-NEXT: rts
@@ -258,7 +258,7 @@ name: lda_absolutey
 # CHECK-LABEL: lda_absolutey
 body: |
   bb.0.entry:
-    LDAidx 1234, $y, implicit-def $a, implicit-def $nz
+    $a = LDAidx 1234, $y, implicit-def $nz
     RTS
 # CHECK:      lda 1234,y
 # CHECK-NEXT: rts
@@ -268,7 +268,7 @@ name: ldx_absolutey
 # CHECK-LABEL: ldx_absolutey
 body: |
   bb.0.entry:
-    LDXidx 1234, implicit-def $x, implicit-def $nz, implicit $y
+    $x = LDXidx 1234, $y, implicit-def $nz
     RTS
 # CHECK:      ldx 1234,y
 # CHECK-NEXT: rts
@@ -278,7 +278,7 @@ name: ldy_absolutex
 # CHECK-LABEL: ldy_absolutex
 body: |
   bb.0.entry:
-    LDYidx 1234, implicit-def $y, implicit-def $nz, implicit $x
+    $y = LDYidx 1234, $x, implicit-def $nz
     RTS
 # CHECK:      ldy 1234,x
 # CHECK-NEXT: rts
@@ -328,7 +328,7 @@ name: pha_implied
 # CHECK-LABEL: pha_implied
 body: |
   bb.0.entry:
-    PHA implicit $a
+    PH $a
     RTS
 # CHECK:      pha{{$}}
 # CHECK-NEXT: rts
@@ -338,7 +338,7 @@ name: php_implied
 # CHECK-LABEL: php_implied
 body: |
   bb.0.entry:
-    PHP implicit $p
+    PH $p
     RTS
 # CHECK:      php{{$}}
 # CHECK-NEXT: rts
@@ -348,7 +348,7 @@ name: pla_implied
 # CHECK-LABEL: pla_implied
 body: |
   bb.0.entry:
-    PLA implicit-def $a, implicit-def $nz
+    $a = PL implicit-def $nz
     RTS
 # CHECK:      pla{{$}}
 # CHECK-NEXT: rts
@@ -358,7 +358,7 @@ name: plp_implied
 # CHECK-LABEL: plp_implied
 body: |
   bb.0.entry:
-    PLP implicit-def $p
+    $p = PL implicit-def $nz
     RTS
 # CHECK:      plp{{$}}
 # CHECK-NEXT: rts
@@ -516,7 +516,7 @@ name: tax_implied
 # CHECK-LABEL: tax_implied
 body: |
   bb.0.entry:
-    $x = TA_ implicit-def $nz, implicit $a
+    $x = TA $a, implicit-def $nz
     RTS
 # CHECK:      tax{{$}}
 # CHECK-NEXT: rts
@@ -526,19 +526,9 @@ name: tay_implied
 # CHECK-LABEL: tay_implied
 body: |
   bb.0.entry:
-    $y = TA_ implicit-def $nz, implicit $a
+    $y = TA $a, implicit-def $nz
     RTS
 # CHECK:      tay{{$}}
-# CHECK-NEXT: rts
-...
----
-name: tsx_implied
-# CHECK-LABEL: tsx_implied
-body: |
-  bb.0.entry:
-    TSX implicit-def $x, implicit-def $nz
-    RTS
-# CHECK:      tsx{{$}}
 # CHECK-NEXT: rts
 ...
 ---
@@ -546,7 +536,7 @@ name: txa_implied
 # CHECK-LABEL: txa_implied
 body: |
   bb.0.entry:
-    T_A $x, implicit-def $a, implicit-def $nz
+    $a = T_A $x, implicit-def $nz
     RTS
 # CHECK:      txa{{$}}
 # CHECK-NEXT: rts
@@ -556,7 +546,7 @@ name: tya_implied
 # CHECK-LABEL: tya_implied
 body: |
   bb.0.entry:
-    T_A $y, implicit-def $a, implicit-def $nz
+    $a = T_A $y, implicit-def $nz
     RTS
 # CHECK:      tya{{$}}
 # CHECK-NEXT: rts

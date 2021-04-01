@@ -18,9 +18,9 @@ body: |
     liveins: $a, $x, $y
     %0:gpr = LDimm 42, implicit-def $nz
     RTS implicit $a, implicit $x, implicit $y
-# CHECK:      PHA
+# CHECK:      PH $a
 # CHECK-NEXT: dead $a = LDimm 42
-# CHECK-NEXT: PLA
+# CHECK-NEXT: $a = PL
 # CHECK-NEXT: RTS
 ...
 ---
