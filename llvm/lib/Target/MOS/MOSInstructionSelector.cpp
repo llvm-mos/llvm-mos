@@ -264,7 +264,8 @@ bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectCopyLike(MachineInstr &MI) {
-  assert(MI.getOpcode() == MOS::G_INTTOPTR || MI.getOpcode() == MOS::G_PTRTOINT);
+  assert(MI.getOpcode() == MOS::G_INTTOPTR ||
+         MI.getOpcode() == MOS::G_PTRTOINT);
 
   MachineIRBuilder Builder(MI);
   auto Copy = Builder.buildCopy(MI.getOperand(0), MI.getOperand(1));
@@ -539,46 +540,35 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
 
+  auto ConstOffset =
+      getConstantVRegValWithLookThrough(Offset, *Builder.getMRI());
   // All legal G_PTR_ADDs have a constant 8-bit offset, but the address
   // still may need to be materialized if used outside of a G_LOAD or
   // G_STORE context. Reaching this function indicates that this is the
   // case, since otherwise the G_PTR_ADD would have been removed already,
   // since all uses have already been selected.
-  auto ConstOffset =
-      getConstantVRegValWithLookThrough(Offset, *Builder.getMRI());
-  if (!ConstOffset)
-    return false;
+  assert(ConstOffset);
 
-  LLT s1 = LLT::scalar(1);
-  LLT s8 = LLT::scalar(8);
-
-  auto BaseLoCopy = Builder.buildCopy(&MOS::AcRegClass, Base);
-  BaseLoCopy->getOperand(1).setSubReg(MOS::sublo);
-  Register BaseLo = BaseLoCopy.getReg(0);
-
-  auto BaseHiCopy = Builder.buildCopy(&MOS::AcRegClass, Base);
-  BaseHiCopy->getOperand(1).setSubReg(MOS::subhi);
-  Register BaseHi = BaseHiCopy.getReg(0);
+  LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
 
   Register Carry =
-      Builder.buildInstr(MOS::LDCimm, {s1}, {uint64_t(0)}).getReg(0);
+      Builder.buildInstr(MOS::LDCimm, {S1}, {uint64_t(0)}).getReg(0);
 
-  auto AddLo =
-      Builder.buildInstr(MOS::ADCimm, {s8, s1},
-                         {BaseLo, ConstOffset->Value.getSExtValue(), Carry});
+  auto AddLo = Builder.buildInstr(
+      MOS::ADCimm, {S8, S1}, {Base, ConstOffset->Value.getSExtValue(), Carry});
+  AddLo->getOperand(2).setSubReg(MOS::sublo);
+  Carry = AddLo.getReg(1);
   if (!constrainSelectedInstRegOperands(*AddLo, TII, TRI, RBI))
     return false;
-  Register AddrLo = AddLo.getReg(0);
-  Carry = AddLo.getReg(1);
 
   auto AddHi =
-      Builder.buildInstr(MOS::ADCimm, {s8, s1}, {BaseHi, int64_t(0), Carry});
+      Builder.buildInstr(MOS::ADCimm, {S8, S1}, {Base, int64_t(0), Carry});
+  AddHi->getOperand(2).setSubReg(MOS::subhi);
   if (!constrainSelectedInstRegOperands(*AddHi, TII, TRI, RBI))
     return false;
-  Register AddrHi = AddHi.getReg(0);
 
-  composePtr(Builder, Dst, AddrLo, AddrHi);
-
+  composePtr(Builder, Dst, AddLo.getReg(0), AddHi.getReg(0));
   MI.eraseFromParent();
   return true;
 }
@@ -611,19 +601,11 @@ bool MOSInstructionSelector::selectUAddSubE(MachineInstr &MI) {
   MachineInstrBuilder Instr;
   if (RConst) {
     assert(RConst->Value.getBitWidth() == 8);
-    Instr = Builder.buildInstr(ImmOpcode)
-                .addDef(Result)
-                .addDef(CarryOut)
-                .addUse(L)
-                .addImm(RConst->Value.getZExtValue())
-                .addUse(CarryIn);
+    Instr = Builder.buildInstr(ImmOpcode, {Result, CarryOut},
+                               {L, RConst->Value.getZExtValue(), CarryIn});
   } else {
-    Instr = Builder.buildInstr(Imag8Opcode)
-                .addDef(Result)
-                .addDef(CarryOut)
-                .addUse(L)
-                .addUse(R)
-                .addUse(CarryIn);
+    Instr =
+        Builder.buildInstr(Imag8Opcode, {Result, CarryOut}, {L, R, CarryIn});
   }
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
@@ -641,11 +623,11 @@ bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
 
-  auto LoCopy =
-      Builder.buildInstr(MOS::COPY).addDef(Lo).addUse(Src, 0, MOS::sublo);
+  auto LoCopy = Builder.buildCopy(Lo, Src);
+  LoCopy->getOperand(1).setSubReg(MOS::sublo);
   constrainGenericOp(*LoCopy);
-  auto HiCopy =
-      Builder.buildInstr(MOS::COPY).addDef(Hi).addUse(Src, 0, MOS::subhi);
+  auto HiCopy = Builder.buildCopy(Hi, Src);
+  HiCopy->getOperand(1).setSubReg(MOS::subhi);
   constrainGenericOp(*HiCopy);
   MI.eraseFromParent();
   return true;
@@ -668,6 +650,9 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
 
   // Propagate Lo and Hi to uses, hopefully killing the REG_SEQUENCE and
   // unconstraining the register classes of Lo and Hi.
+
+
+  // Collect all uses of subregisters of Dst or subregisters of copies of Dst.
   std::set<Register> WorkList = {Dst};
   std::vector<MachineOperand *> Uses;
   while (!WorkList.empty()) {
@@ -681,6 +666,9 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
     }
   }
 
+  // Replace all of the collected subregister uses with either Lo or Hi. This
+  // needs to be done as a separate pass, since modifying these operands changes
+  // the uses of Reg, which cannot be done while iterating through the uses.
   for (MachineOperand *MO : Uses) {
     if (MO->getSubReg() == MOS::sublo) {
       MO->setReg(Lo);
