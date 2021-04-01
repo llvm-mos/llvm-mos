@@ -14,31 +14,32 @@ class MOSSubRegIndex<int size, int offset = 0>: SubRegIndex<size, offset> {
   let Namespace = "MOS";
 }
 
+// Low byte of a 16-bit imaginary pointer register.
 def sublo : MOSSubRegIndex<8>;
+
+// High byte of a 16-bit imaginary pointer register.
 def subhi : MOSSubRegIndex<8, 8>;
+
+// Carry bit of the 8-bit processor status register.
 def subcarry : MOSSubRegIndex<1>;
+
+// Two NZ bits of the 8-bit processor status register.
 def subnz : MOSSubRegIndex<2>;
+
+// N bit of the 2-bit NZ register.
 def subn : MOSSubRegIndex<1>;
+
+// Z bit of the 2-bit NZ register.
 def subz : MOSSubRegIndex<1>;
 
 //===----------------------------------------------------------------------===//
 //  Real registers
 //===----------------------------------------------------------------------===//
 
-// The 65xx series of microprocessors uses an 8-bit accumulator register, A, for
-// nearly all math operations.  Index registers X and Y are 8-bits.  On the
-// 65816 series of microprocessors, these registers are extended to 16 bits.
-// There is an 8-bit stack pointer, S, that refers to memory starting from
-// 0x1ff and growing downward.
-// The 65xx also has a processor status register, P, that holds carry, zero,
-// negative, and overflow bits which are set as the result of the most
-// recent math operation.
-// The 6502's program counter register, PC, is 16 bits in length.
-
-// All MOS registers have the prefix llvm_mos_ added to them, to avoid
-// conflicts with legacy assembly code that depends on the register names
-// as variables.  (The MOS instructions generally don't name the target
-// register as a parameter.  The target registers are implied by the opcode.)
+// All MOS registers have the prefix llvm_mos_ added to them, to avoid conflicts
+// with legacy assembly code that depends on the register names as variables.
+// (The MOS instructions generally don't name the target register as a
+// parameter. The target registers are implied by the opcode.)
 class MOSReg<bits<16> num, string name>
   : Register<!strconcat("llvm_mos_", name)>, DwarfRegNum<[num]> {
   field bits<16> Num = num;
@@ -47,21 +48,24 @@ class MOSReg<bits<16> num, string name>
   let AltNames = [name];
 }
 
-def A : MOSReg< 0, "a" >;
-def X : MOSReg< 1, "x" >;
-def Y : MOSReg< 2, "y" >;
-def S : MOSReg< 4, "s">;
-def PC : MOSReg< 5, "pc">;
+def A : MOSReg<0, "a">;
+def X : MOSReg<1, "x">;
+def Y : MOSReg<2, "y">;
+def S : MOSReg<3, "s">;
 
-def C : MOSReg<6, "C">;
-def N : MOSReg<7, "N">;
-def Z : MOSReg<8, "Z">;
-def NZ : MOSReg<9, "NZ"> {
+def C : MOSReg<4, "C">;
+def N : MOSReg<5, "N">;
+def Z : MOSReg<6, "Z">;
+
+// N and Z are always set together, so model them as one register with two
+// one-bit subregisters.
+def NZ : MOSReg<7, "NZ"> {
   let SubRegs = [N, Z];
   let SubRegIndices = [subn, subz];
   let CoveredBySubRegs = true;
 }
-def P : MOSReg<3, "P"> {
+
+def P : MOSReg<8, "P"> {
   let SubRegs = [C, NZ];
   let SubRegIndices = [subcarry, subnz];
 }
@@ -71,19 +75,20 @@ def P : MOSReg<3, "P"> {
 //===----------------------------------------------------------------------===//
 
 // This section describes the dimension of the imaginary registers for the MOS
-// targets.  We call them imaginary, because LLVM has a different meaning for
-// virtual.  Imaginary registers are a bank of continuous memory in MOS
-// zero page, that llvm can treat as physical registers for the purpose of
-// register allocation.  This puts llvm in the position of managing a large
-// chunk of zero page memory.
+// targets. Imaginary registers are locations in the zero page that llvm can
+// treat as physical registers for the purpose of register allocation.
 
-// These constants were chosen so that the number of imaginary registers could
-// be changed at one central location, and the changes will propagate through
-// the backend.
-
-// There are enough imaginary registers to cover all of zero page, but the code
-// generator can be configured to only use a fraction of them, with the
+// Imaginary registers are reserved in pairs, which allows them to be used as
+// pointers with the 6502's indirect addressing modes. The number of imaginary
+// register pointer pairs is configurable at code generation time via the
 // --num-imag-ptrs flag. See MOSRegisterInfo.cpp for details.
+
+// The two bytes of any given pointer must be contiguous, but otherwise, there
+// are no constraints on the relative layout of the pointers. For example, RS0
+// could be allocated to 0x34 and 0x35, while RS1 is allocated to 0x12 and 0x34.
+// The code generator emits generic symbol references for imaginary registers,
+// and the linker script for a given memory layout later assigns these to their
+// real locations.
 
 // The first 16-bit imaginary register is reserved as the soft stack pointer.
 // The second 16-bit imaginary register is reserved as a frame pointer whenever
@@ -109,21 +114,17 @@ defvar Imag16RegsOffset = !add(Imag8RegsOffset, MaxImag8Regs);
 
 // Now we enumerate the imaginary registers.
 // Imaginary 8-bit registers, starting with the prefix rc
-foreach I = 0...!add(MaxImag8Regs, -1) in
-{
+foreach I = 0...!add(MaxImag8Regs, -1) in {
   // There exist MaxImag8Regs rcXX registers...
-  def RC#I:
-    MOSImagReg8< !add(I, Imag8RegsOffset), "rc"#!cast<string>(I) >;
+  def RC#I: MOSImagReg8<!add(I, Imag8RegsOffset), "rc"#!cast<string>(I)>;
 }
 
 // Imaginary 16-bit registers, starting with the prefix rs
-foreach I = 0...!add(MaxImag16Regs, -1) in
-{
+foreach I = 0...!add(MaxImag16Regs, -1) in {
   // There exist MaxImag16Regs rsXX registers...
-  def RS#I:
-  MOSImagReg16< !add(I, Imag16RegsOffset), "rs"#!cast<string>(I),
-    [!cast<Register>("RC"#!shl(I, 1)),
-      !cast<Register>("RC"#!add(!shl(I,1),1))]>;
+  def RS#I: MOSImagReg16<!add(I, Imag16RegsOffset), "rs"#!cast<string>(I),
+      [!cast<Register>("RC"#!shl(I, 1)),
+       !cast<Register>("RC"#!add(!shl(I,1),1))]>;
 }
 
 //===----------------------------------------------------------------------===//
