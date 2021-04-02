@@ -1,11 +1,15 @@
 # RUN: llc -mtriple=mos -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s
 --- |
   @.str = constant [1 x i8] c"X"
-  define void @addrstk_frame() {
+  define void @addrstk_fixed() norecurse {
     entry:
       ret void
   }
-  define void @ldimm_frame() norecurse {
+  define void @addrstk_local() {
+    entry:
+      ret void
+  }
+  define void @ldimm_local() norecurse {
     entry:
       ret void
   }
@@ -22,8 +26,24 @@
       ret void
   }
 ---
-name: addrstk_frame
-# CHECK-LABEL: name: addrstk_frame
+name: addrstk_fixed
+# CHECK-LABEL: name: addrstk_fixed
+legalized: true
+regBankSelected: true
+fixedStack:
+  - { id: 0, size: 1 }
+body: |
+  bb.0.entry:
+    %0:any(p0) = G_FRAME_INDEX %fixed-stack.0
+    RTS implicit %0
+# Note: The HI and LO target operands are present on the frame index, but LLVM doesn't print them.
+# CHECK:      %1:anyi8, %2:cc = AddrLostk %fixed-stack.0, 0, implicit-def $nz
+# CHECK-NEXT: %3:anyi8 = AddrHistk %fixed-stack.0, 0, %2, implicit-def $c, implicit-def $nz
+# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %3, %subreg.subhi
+...
+---
+name: addrstk_local
+# CHECK-LABEL: name: addrstk_local
 legalized: true
 regBankSelected: true
 stack:
@@ -38,8 +58,8 @@ body: |
 # CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %3, %subreg.subhi
 ...
 ---
-name: ldimm_frame
-# CHECK-LABEL: name: ldimm_frame
+name: ldimm_local
+# CHECK-LABEL: name: ldimm_local
 legalized: true
 regBankSelected: true
 stack:

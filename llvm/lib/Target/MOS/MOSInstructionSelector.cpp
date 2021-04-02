@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -286,16 +287,21 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
 
   MachineInstrBuilder LoAddr;
   MachineInstrBuilder HiAddr;
-  if (MI.getMF()->getFunction().doesNotRecurse()) {
-    // Non-recursive functions use static stack, so their frame addresses are
-    // link-time constants that can be loaded as immediates.
+
+  bool IsLocal = !MI.getMF()->getFrameInfo().isFixedObjectIndex(
+      MI.getOperand(1).getIndex());
+  if (MI.getMF()->getFunction().doesNotRecurse() && IsLocal) {
+    // Non-recursive functions use static stack for their locals, so their frame
+    // addresses are link-time constants that can be loaded as immediates.
     LoAddr = Builder.buildInstr(MOS::LDimm, {S8}, {}).add(MI.getOperand(1));
     LoAddr->getOperand(1).setTargetFlags(MOS::MO_LO);
     HiAddr = Builder.buildInstr(MOS::LDimm, {S8}, {}).add(MI.getOperand(1));
     HiAddr->getOperand(1).setTargetFlags(MOS::MO_HI);
   } else {
-    // Recursive functions use dynamic stack, so their frame addresses are
-    // offsets from the stack/frame pointer. Record this as a pseudo.
+    // Otherwise a soft stack needs to be used, so frame addresses are offsets
+    // from the stack/frame pointer. Record this as a pseudo, since the best
+    // code to emit depends heavily on the actual offset, which isn't known
+    // until FEI.
     LoAddr = Builder.buildInstr(MOS::AddrLostk, {S8, LLT::scalar(1)}, {})
                  .add(MI.getOperand(1))
                  .addImm(0);
