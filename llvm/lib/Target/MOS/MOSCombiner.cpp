@@ -30,7 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
-#define DEBUG_TYPE "mos-prelegalizer-combiner"
+#define DEBUG_TYPE "mos-combiner"
 
 using namespace llvm;
 
