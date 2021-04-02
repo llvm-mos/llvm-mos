@@ -139,19 +139,25 @@ class MOSReg8Class<dag RegList>: MOSRegClass<[i8], 8, RegList>;
 class MOSReg16Class<dag RegList>: MOSRegClass<[i16], 8, RegList>;
 
 // Single register classes.
-def Ac : MOSReg8Class<(add A)>;
-def Xc : MOSReg8Class<(add X)>;
-def Yc : MOSReg8Class<(add Y)>;
-def Cc : MOSReg1Class<(add C)>;
+let isPressureFineGrained = true in {
+  def Ac : MOSReg8Class<(add A)>;
+  def Xc : MOSReg8Class<(add X)>;
+  def Yc : MOSReg8Class<(add Y)>;
+  def Cc : MOSReg1Class<(add C)>;
+}
 
 // "General purpose" register classes.
-def GPR : MOSReg8Class<(add A, X, Y)>;
+let isPressureFineGrained = true in {
+  def GPR : MOSReg8Class<(add A, X, Y)>;
+}
 def Imag8 : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
 def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 
 // Instruction-specific register classes.
-def AImag8 : MOSReg8Class<(add A, Imag8)>;
-def XY : MOSReg8Class<(add X, Y)>;
+let isPressureFineGrained = true in {
+  def AImag8 : MOSReg8Class<(add A, Imag8)>;
+  def XY : MOSReg8Class<(add X, Y)>;
+}
 let isAllocatable = false in {
   def Flag : MOSReg1Class<(add C, N, Z)>;
   def AP : MOSReg8Class<(add A, P)>;
