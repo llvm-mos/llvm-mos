@@ -41,6 +41,8 @@ using namespace llvm;
 
 namespace {
 
+// Returns a conservative analysis for whether Reg could be live at the current
+// insertion point of Builder.
 bool isMaybeLive(MachineIRBuilder &Builder, Register Reg) {
   const auto &MBB = Builder.getMBB();
   return MBB.computeRegisterLiveness(
@@ -67,25 +69,27 @@ bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   }
 }
 
+// The main difficulty in commuting 6502 instructions is that their register
+// classes aren't symmetric. This routine determines whether or not the operands
+// of an instruction can be commuted anyway, potentially rewriting the register
+// classes of virtual registers to do so.
 MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                    unsigned Idx1,
                                                    unsigned Idx2) const {
-  // TODO: A version of this that doesn't modify register classes if NewMI.
+  // NOTE: This doesn't seem to actually be used anywhere.
   if (NewMI)
-    report_fatal_error("Not yet implemented.");
+    report_fatal_error("NewMI is not supported");
 
   MachineFunction &MF = *MI.getMF();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  switch (MI.getOpcode()) {
-  default:
-    LLVM_DEBUG(dbgs() << "Commute: " << MI);
-    llvm_unreachable("Unexpected instruction commute.");
-  case MOS::ADCimag8:
-    break;
-  }
+  LLVM_DEBUG(dbgs() << "Commute: " << MI);
 
+  // Determines the register class for a given virtual register constrained by a
+  // target register class and all uses outside this instruction. This
+  // effectively removes the constraints due to just this instruction, then
+  // tries to apply the constraint for the other operand.
   const auto NewRegClass =
       [&](Register Reg,
           const TargetRegisterClass *RC) -> const TargetRegisterClass * {
@@ -107,6 +111,8 @@ MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       getRegClass(MI.getDesc(), Idx2, &TRI, MF);
   Register Reg1 = MI.getOperand(Idx1).getReg();
   Register Reg2 = MI.getOperand(Idx2).getReg();
+
+  // See if swapping the two operands are possible given their register classes.
   const TargetRegisterClass *Reg1Class = nullptr;
   const TargetRegisterClass *Reg2Class = nullptr;
   if (Reg1.isVirtual()) {
@@ -131,6 +137,7 @@ MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (!CommutedMI)
     return nullptr;
 
+  // Use the new register classes computed above, if any.
   if (Reg1Class)
     MRI.setRegClass(Reg1, Reg1Class);
   if (Reg2Class)
@@ -144,6 +151,8 @@ unsigned MOSInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   return 3;
 }
 
+// 6502 instructions aren't as regular as most commutable instructions, so this
+// routine determines the commutable operands manually.
 bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
                                          unsigned &SrcOpIdx1,
                                          unsigned &SrcOpIdx2) const {
@@ -159,9 +168,10 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3))
     return false;
 
-  if (!MI.getOperand(SrcOpIdx1).isReg() || !MI.getOperand(SrcOpIdx2).isReg())
+  if (!MI.getOperand(SrcOpIdx1).isReg() || !MI.getOperand(SrcOpIdx2).isReg()) {
     // No idea.
     return false;
+  }
   return true;
 }
 
@@ -201,7 +211,7 @@ bool MOSInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   while (I != MBB.end() && I->isCompare())
     ++I;
 
-  // No terminators, so falls through.
+  // If no terminators, falls through.
   if (I == MBB.end())
     return false;
 
@@ -230,19 +240,17 @@ bool MOSInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   auto SecondBR = I++;
 
-  // If more than two branches present, cannot analyze.
+  // If any instructions follow the second branch, cannot analyze.
   if (I != MBB.end())
     return true;
 
   // Exactly two branches present.
 
   // Can only analyze conditional branch followed by unconditional branch.
-  if (!SecondBR->isUnconditionalBranch())
+  if (!SecondBR->isUnconditionalBranch() || SecondBR->isPreISelOpcode())
     return true;
 
   // Second unconditional branch forms false edge.
-  if (SecondBR->isPreISelOpcode())
-    return true;
   FBB = getBranchDestBlock(*SecondBR);
   return false;
 }
@@ -254,9 +262,12 @@ unsigned MOSInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
   auto Begin = MBB.getFirstTerminator();
   auto End = MBB.end();
+
+  // Advance to first branch.
   while (Begin != End && Begin->isCompare())
     ++Begin;
 
+  // Erase all remaining terminators.
   unsigned NumRemoved = std::distance(Begin, End);
   if (BytesRemoved) {
     *BytesRemoved = 0;
@@ -286,20 +297,22 @@ unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
   // Conditional branch.
   if (!Cond.empty()) {
     assert(TBB);
+    // The condition stores the arguments for the BR instruction.
     assert(Cond.size() == 2);
 
     // The unconditional branch will be to the false branch (if any).
     UBB = FBB;
 
+    // Add conditional branch.
     auto BR = Builder.buildInstr(MOS::BR).addMBB(TBB);
-    for (const MachineOperand &Op : Cond) {
+    for (const MachineOperand &Op : Cond)
       BR.add(Op);
-    }
     ++NumAdded;
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(*BR);
   }
 
+  // Add unconditional branch if necessary.
   if (UBB) {
     auto JMP = Builder.buildInstr(MOS::JMP).addMBB(UBB);
     ++NumAdded;
@@ -327,37 +340,12 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
-  const auto &areClasses = [&](const TargetRegisterClass &Dest,
+  const auto &AreClasses = [&](const TargetRegisterClass &Dest,
                                const TargetRegisterClass &Src) {
     return Dest.contains(DestReg) && Src.contains(SrcReg);
   };
 
-  if (areClasses(MOS::GPRRegClass, MOS::GPRRegClass)) {
-    if (SrcReg == MOS::A) {
-      assert(MOS::XYRegClass.contains(DestReg));
-      Builder.buildInstr(MOS::TA).addDef(DestReg).addUse(SrcReg);
-    } else if (DestReg == MOS::A) {
-      assert(MOS::XYRegClass.contains(SrcReg));
-      Builder.buildInstr(MOS::T_A).addDef(DestReg).addUse(SrcReg);
-    } else {
-      bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
-      if (IsAMaybeLive)
-        Builder.buildInstr(MOS::PH).addUse(MOS::A);
-      copyPhysRegImpl(Builder, MOS::A, SrcReg);
-      copyPhysRegImpl(Builder, DestReg, MOS::A);
-      if (IsAMaybeLive)
-        Builder.buildInstr(MOS::PL).addDef(MOS::A);
-    }
-  } else if (areClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
-    Builder.buildInstr(MOS::STimag8).addDef(DestReg).addUse(SrcReg);
-  } else if (areClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
-    Builder.buildInstr(MOS::LDimag8).addDef(DestReg).addUse(SrcReg);
-  } else if (areClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
-    copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo),
-                    TRI.getSubReg(SrcReg, MOS::sublo));
-    copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi),
-                    TRI.getSubReg(SrcReg, MOS::subhi));
-  } else if (areClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
+  const auto &CopyThroughA = [&]() {
     bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
     if (IsAMaybeLive)
       Builder.buildInstr(MOS::PH).addUse(MOS::A);
@@ -365,6 +353,28 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
     copyPhysRegImpl(Builder, DestReg, MOS::A);
     if (IsAMaybeLive)
       Builder.buildInstr(MOS::PL).addDef(MOS::A);
+  };
+
+  if (AreClasses(MOS::GPRRegClass, MOS::GPRRegClass)) {
+    if (SrcReg == MOS::A) {
+      assert(MOS::XYRegClass.contains(DestReg));
+      Builder.buildInstr(MOS::TA).addDef(DestReg).addUse(SrcReg);
+    } else if (DestReg == MOS::A) {
+      assert(MOS::XYRegClass.contains(SrcReg));
+      Builder.buildInstr(MOS::T_A).addDef(DestReg).addUse(SrcReg);
+    } else
+      CopyThroughA();
+  } else if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
+    Builder.buildInstr(MOS::STimag8).addDef(DestReg).addUse(SrcReg);
+  } else if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
+    Builder.buildInstr(MOS::LDimag8).addDef(DestReg).addUse(SrcReg);
+  } else if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
+    copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo),
+                    TRI.getSubReg(SrcReg, MOS::sublo));
+    copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi),
+                    TRI.getSubReg(SrcReg, MOS::subhi));
+  } else if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
+    CopyThroughA();
   } else {
     LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
                       << "\n");
@@ -391,13 +401,13 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                         /*IsLoad=*/true);
 }
 
+// Load or store one byte from/to a location on the static stack.
 static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
                                          Register Reg, int FrameIndex,
                                          int64_t Offset, MachineMemOperand *MMO,
                                          bool IsLoad) {
   Register Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
 
-  // Get the value from wherever it's coming from to Tmp.
   if (IsLoad) {
     Builder.buildInstr(MOS::LDabs_offset, {Tmp}, {})
         .addFrameIndex(FrameIndex)
@@ -431,11 +441,10 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   // At this point, NZ cannot be live, since this will never occur inside a
   // terminator.
 
-  // Since the offset is not yet known, it may be either 8 or 16 bits. Emit a
-  // 16-bit pseudo to be lowered during frame index elimination.
+  // If we're using the soft stack, since the offset is not yet known, it may be
+  // either 8 or 16 bits. Emit a 16-bit pseudo to be lowered during frame index
+  // elimination.
   if (!MI->getMF()->getFunction().doesNotRecurse()) {
-    // Note: This can never occur in PEI, since PEI only loads/stores CSRs, and
-    // those are custom-spilled to the hard stack in non-recursive functions.
     if (IsLoad) {
       Builder.buildInstr(MOS::LDstk)
           .addDef(Reg)
