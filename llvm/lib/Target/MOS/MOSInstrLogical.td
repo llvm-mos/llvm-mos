@@ -14,24 +14,24 @@
 // one of A, X, or Y, and sets NZ based on the immediate value. Even though
 // there are three separate opcodes, the only difference in their behavior is
 // which register is loaded.
-
+//
 // The logical instruction set merges these instructions together into a single
 // logical LDimm #imm instruction. The logical instruction takes a "GPR"
 // register class as an argument. When the logical instructions are lowered to
 // real instructions in AsmPrinter, the register operand is examined to
 // determine which real instruction is emitted. This scheme comes with some
 // considerable advantages.
-
+//
 // First, selecting a LDimm instruction doesn't constrain where the destination
 // can be placed other than that it needs to be one of A, X, or Y. This allows
 // earlier passes that cannot effectively make such decisions to defer them to
 // the register allocator.
-
+//
 // Second, the description of the side effects and characteristics of LDimm only
 // need to be specified once. Any switch() statements need to have only one
 // entry for LDimm, not three for LDAimm, LDXimm, and LDYimm. This considerably
 // reduces the amount of code needed to cover the 6502 instruction set.
-
+//
 // Third, exposing these regularities to LLVM passes make the 6502 more like a
 // regular CISC target (X86-ish). LLVM already has very good code paths for
 // dealing with this sort of architecture, and maintaining a logical instruction
@@ -93,6 +93,7 @@ def ADCimag8 : MOSLogicalInstr, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
   let isCommutable = true;
 }
 
+// ASL A, ASL zp
 def ASL : MOSLogicalInstr {
   dag OutOperandList = (outs AImag8:$dst, Cc:$carry);
   dag InOperandList = (ins AImag8:$src);
@@ -100,7 +101,8 @@ def ASL : MOSLogicalInstr {
 
   let Defs = [NZ];
 }
-// Branches to $tgt if $flag = $val.
+
+// Covers all branch instructions. Branches to $tgt if $flag = $val.
 def BR : MOSLogicalInstr {
   dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
 
@@ -108,6 +110,7 @@ def BR : MOSLogicalInstr {
   let isTerminator = true;
 }
 
+// CMP imm, CPX imm, CPY imm
 def CMPimm : MOSLogicalInstr {
   dag OutOperandList = (outs Cc:$carry);
   dag InOperandList = (ins GPR:$l, i8imm:$r);
@@ -121,6 +124,7 @@ def CMPimm : MOSLogicalInstr {
   let isTerminator = true;
 }
 
+// INX, INY
 def IN : MOSLogicalInstr {
   dag OutOperandList = (outs XY:$dst);
   dag InOperandList = (ins XY:$src);
@@ -149,6 +153,7 @@ def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
   let isCall = true;
 }
 
+// CLC, SEC
 def LDCimm : MOSLogicalInstr {
   dag OutOperandList = (outs Cc:$dst);
   dag InOperandList = (ins i1imm:$val);
@@ -156,6 +161,17 @@ def LDCimm : MOSLogicalInstr {
   let isAsCheapAsAMove = true;
 }
 
+// LDA abs, LDX abs, LDY abs
+def LDabs : MOSLogicalInstr {
+  dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins i16imm:$src);
+
+  let Defs = [NZ];
+
+  let mayLoad = true;
+}
+
+// LDA imm, LDX imm, LDY imm
 def LDimm : MOSLogicalInstr {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i8imm:$val);
@@ -168,6 +184,7 @@ def LDimm : MOSLogicalInstr {
   let isMoveImm = true;
 }
 
+// LDA zp, LDX zp, LDY zp
 def LDimag8 : MOSLogicalInstr {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins Imag8:$src);
@@ -175,15 +192,7 @@ def LDimag8 : MOSLogicalInstr {
   let Defs = [NZ];
 }
 
-def LDabs : MOSLogicalInstr {
-  dag OutOperandList = (outs GPR:$dst);
-  dag InOperandList = (ins i16imm:$src);
-
-  let Defs = [NZ];
-
-  let mayLoad = true;
-}
-
+// LDA abs,x; LDA abs,y
 def LDAidx : MOSLogicalInstr {
   dag OutOperandList = (outs Ac:$dst);
   dag InOperandList = (ins i16imm:$addr, XY:$idx);
@@ -211,6 +220,7 @@ def LDYidx : MOSLogicalInstr, PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)> 
   let mayLoad = true;
 }
 
+// LDA (zp),y
 def LDyindir : MOSLogicalInstr, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
   dag OutOperandList = (outs Ac:$dst);
   dag InOperandList = (ins Imag16:$addr, Yc:$offset);
@@ -220,12 +230,14 @@ def LDyindir : MOSLogicalInstr, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$
   let mayLoad = true;
 }
 
+// PHA, PHP
 def PH : MOSLogicalInstr {
   dag InOperandList = (ins AP:$src);
 
   let mayStore = true;
 }
 
+// PLA, PLP
 def PL : MOSLogicalInstr {
   dag OutOperandList = (outs AP:$dst);
 
@@ -234,6 +246,7 @@ def PL : MOSLogicalInstr {
   let mayLoad = true;
 }
 
+// ROL A, ROL zp
 def ROL : MOSLogicalInstr {
   dag OutOperandList = (outs AImag8:$dst, Cc:$carryout);
   dag InOperandList = (ins AImag8:$src, Cc:$carryin);
@@ -266,29 +279,34 @@ def SBCimag8 : MOSLogicalInstr, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
   let Defs = [NZ];
 }
 
+// STA abs, STX abs, STZ abs
 def STabs : MOSLogicalInstr {
   dag InOperandList = (ins GPR:$src, i16imm:$dst);
 
   let mayStore = true;
 }
 
+// STA abs,x; STA abs,y
 def STidx : MOSLogicalInstr {
   dag InOperandList = (ins Ac:$src, i16imm:$addr, XY:$idx);
 
   let mayStore = true;
 }
 
+// STA (zp),y
 def STyindir : MOSLogicalInstr, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
   dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
 
   let mayStore = true;
 }
 
+// STA zp, STX zp, STY zp
 def STimag8 : MOSLogicalInstr {
   dag OutOperandList = (outs Imag8:$dst);
   dag InOperandList = (ins GPR:$src);
 }
 
+// TAX, TAY
 def TA : MOSLogicalInstr {
   dag OutOperandList = (outs XY:$dst);
   dag InOperandList = (ins Ac:$src);
@@ -298,6 +316,7 @@ def TA : MOSLogicalInstr {
   let isAsCheapAsAMove = true;
 }
 
+// TXA, TYA
 def T_A : MOSLogicalInstr {
   dag OutOperandList = (outs Ac:$dst);
   dag InOperandList = (ins XY:$src);
