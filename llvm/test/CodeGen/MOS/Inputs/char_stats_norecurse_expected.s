@@ -5,11 +5,11 @@
 char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
 	lda	mos8(__rc4)
-	sta	char_stats_sstk+512             ; 1-byte Folded Spill
+	sta	__char_stats_sstk+512           ; 1-byte Folded Spill
 	lda	mos8(__rc5)
-	sta	char_stats_sstk+513             ; 1-byte Folded Spill
-	lda	#mos16lo(char_stats_sstk)
-	ldx	#mos16hi(char_stats_sstk)
+	sta	__char_stats_sstk+513           ; 1-byte Folded Spill
+	lda	#mos16lo(__char_stats_sstk)
+	ldx	#mos16hi(__char_stats_sstk)
 	sta	mos8(__rc4)
 	stx	mos8(__rc5)
 	ldx	#0
@@ -32,9 +32,9 @@ LBB0_2:                                 ; %while.body
 	lda	#0
 	rol
 	tay
-	ldx	#mos16lo(char_stats_sstk)
+	ldx	#mos16lo(__char_stats_sstk)
 	stx	mos8(__rc2)
-	ldx	#mos16hi(char_stats_sstk)
+	ldx	#mos16hi(__char_stats_sstk)
 	stx	mos8(__rc3)
 	clc
 	lda	mos8(__rc6)
@@ -69,14 +69,14 @@ LBB0_3:                                 ; %while.end
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
 	jsr	report_counts
-	lda	char_stats_sstk+513             ; 1-byte Folded Reload
+	lda	__char_stats_sstk+513           ; 1-byte Folded Reload
 	sta	mos8(__rc5)
-	lda	char_stats_sstk+512             ; 1-byte Folded Reload
+	lda	__char_stats_sstk+512           ; 1-byte Folded Reload
 	sta	mos8(__rc4)
 	rts
 .Lfunc_end0:
 	.size	char_stats, .Lfunc_end0-char_stats
                                         ; -- End function
-	.type	char_stats_sstk,@object         ; @char_stats_sstk
-	.local	char_stats_sstk
-	.comm	char_stats_sstk,514,1
+	.type	__char_stats_sstk,@object       ; @__char_stats_sstk
+	.local	__char_stats_sstk
+	.comm	__char_stats_sstk,514,1
