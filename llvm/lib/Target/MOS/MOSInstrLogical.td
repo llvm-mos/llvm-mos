@@ -68,47 +68,39 @@ class MOSLogicalInstr : Instruction {
   let isReMaterializable = true;
 }
 
-def label : Operand<OtherVT>;
+//===---------------------------------------------------------------------===//
+// Addition/Subtraction Instructions
+//===---------------------------------------------------------------------===//
 
-def ADCimm : MOSLogicalInstr, PseudoInstExpansion<(ADC_Immediate imm8:$r)> {
+class MOSAddSub : MOSLogicalInstr {
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
-  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   let Constraints = "$dst = $l, $carryout = $carryin";
 
   let Defs = [NZ];
-
-  let isAdd = true;
+}
+class MOSAddSubOp<Operand op> : MOSAddSub {
+  dag InOperandList = (ins Ac:$l, op:$r, Cc:$carryin);
+}
+class MOSAddSubRC<RegisterClass rc> : MOSAddSub {
+  dag InOperandList = (ins Ac:$l, rc:$r, Cc:$carryin);
 }
 
-def ADCimag8 : MOSLogicalInstr, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
-  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
-  // Don't give the carries a tied constraint, since having two tied operands
-  // inhibits commutation of $l and $r.
-  let Constraints = "$dst = $l";
-
-  let Defs = [NZ];
-
-  let isAdd = true;
-  let isCommutable = true;
+let isAdd = true in {
+  def ADCimm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(ADC_Immediate imm8:$r)>;
+  def ADCimag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
+    // Don't give the carries a tied constraint, since having two tied operands
+    // inhibits commutation of $l and $r.
+    let Constraints = "$dst = $l";
+    let isCommutable = true;
+  }
 }
 
-// ASL A, ASL zp
-def ASL : MOSLogicalInstr {
-  dag OutOperandList = (outs AImag8:$dst, Cc:$carry);
-  dag InOperandList = (ins AImag8:$src);
-  let Constraints = "$dst = $src";
+def SBCimm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(SBC_Immediate imm8:$r)>;
+def SBCimag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
 
-  let Defs = [NZ];
-}
-
-// Covers all branch instructions. Branches to $tgt if $flag = $val.
-def BR : MOSLogicalInstr {
-  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
-
-  let isBranch = true;
-  let isTerminator = true;
-}
+//===---------------------------------------------------------------------===//
+// Comparison Instructions
+//===---------------------------------------------------------------------===//
 
 // CMP imm, CPX imm, CPY imm
 def CMPimm : MOSLogicalInstr {
@@ -124,6 +116,30 @@ def CMPimm : MOSLogicalInstr {
   let isTerminator = true;
 }
 
+//===---------------------------------------------------------------------===//
+// Shift/Rotate Instructions
+//===---------------------------------------------------------------------===//
+
+class MOSShiftRotate : MOSLogicalInstr {
+  dag OutOperandList = (outs AImag8:$dst, Cc:$carryout);
+  let Defs = [NZ];
+}
+
+// ASL A, ASL zp
+def ASL : MOSShiftRotate {
+  dag InOperandList = (ins AImag8:$src);
+  let Constraints = "$dst = $src";
+}
+// ROL A, ROL zp
+def ROL : MOSShiftRotate {
+  dag InOperandList = (ins AImag8:$src, Cc:$carryin);
+  let Constraints = "$dst = $src, $carryout = $carryin";
+}
+
+//===---------------------------------------------------------------------===//
+// Increment/Decrement Instructions
+//===---------------------------------------------------------------------===//
+
 // INX, INY
 def IN : MOSLogicalInstr {
   dag OutOperandList = (outs XY:$dst);
@@ -135,6 +151,90 @@ def IN : MOSLogicalInstr {
   let Pattern = [(set XY:$dst, (add XY:$src, 1))];
 
   let isAdd = true;
+}
+
+//===---------------------------------------------------------------------===//
+// Immediate Load Instructions
+//===---------------------------------------------------------------------===//
+
+class MOSImmediateLoad<RegisterClass dst, Operand val> : MOSLogicalInstr {
+  dag OutOperandList = (outs dst:$dst);
+  dag InOperandList = (ins val:$val);
+
+  let isAsCheapAsAMove = true;
+  let isMoveImm = true;
+}
+
+// CLC, SEC
+def LDCimm : MOSImmediateLoad<Cc, i1imm>;
+// LDA imm, LDX imm, LDY imm
+def LDimm : MOSImmediateLoad<GPR, i8imm> {
+  let Defs = [NZ];
+
+  let Pattern = [(set GPR:$dst, imm:$val)];
+}
+
+//===---------------------------------------------------------------------===//
+// Register Transfer Instructions
+//===---------------------------------------------------------------------===//
+
+// Instructions that transfer from one register class to another.
+class MOSTransfer<RegisterClass dst, RegisterClass src> : MOSLogicalInstr {
+  dag OutOperandList = (outs dst:$dst);
+  dag InOperandList = (ins src:$src);
+
+  let Defs = [NZ];
+
+  let isAsCheapAsAMove = true;
+}
+
+// LDA zp, LDX zp, LDY zp
+def LDimag8 : MOSTransfer<GPR, Imag8>;
+// STA zp, STX zp, STY zp
+def STimag8 : MOSTransfer<Imag8, GPR> {
+  // Unlike all other "register transfer" instructions, this doesn't clobber NZ,
+  // since imaginary registers aren't real.
+  let Defs = [];
+}
+
+// TAX, TAY
+def TA : MOSTransfer<XY, Ac>;
+// TXA, TYA
+def T_A : MOSTransfer<Ac, XY>;
+
+//===---------------------------------------------------------------------===//
+// Stack Instructions
+//===---------------------------------------------------------------------===//
+
+// PHA, PHP
+def PH : MOSLogicalInstr {
+  dag InOperandList = (ins AP:$src);
+
+  let mayStore = true;
+}
+
+// PLA, PLP
+def PL : MOSLogicalInstr {
+  dag OutOperandList = (outs AP:$dst);
+
+  let Defs = [NZ];
+
+  let mayLoad = true;
+}
+
+//===---------------------------------------------------------------------===//
+// Control Flow Instructions
+//===---------------------------------------------------------------------===//
+
+// Operand type for basic block and function labels.
+def label : Operand<OtherVT>;
+
+// Covers all branch instructions. Branches to $tgt if $flag = $val.
+def BR : MOSLogicalInstr {
+  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
+
+  let isBranch = true;
+  let isTerminator = true;
 }
 
 def JMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
@@ -153,175 +253,58 @@ def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
   let isCall = true;
 }
 
-// CLC, SEC
-def LDCimm : MOSLogicalInstr {
-  dag OutOperandList = (outs Cc:$dst);
-  dag InOperandList = (ins i1imm:$val);
-
-  let isAsCheapAsAMove = true;
-}
-
-// LDA abs, LDX abs, LDY abs
-def LDabs : MOSLogicalInstr {
-  dag OutOperandList = (outs GPR:$dst);
-  dag InOperandList = (ins i16imm:$src);
-
-  let Defs = [NZ];
-
-  let mayLoad = true;
-}
-
-// LDA imm, LDX imm, LDY imm
-def LDimm : MOSLogicalInstr {
-  dag OutOperandList = (outs GPR:$dst);
-  dag InOperandList = (ins i8imm:$val);
-
-  let Defs = [NZ];
-
-  let Pattern = [(set GPR:$dst, imm:$val)];
-
-  let isAsCheapAsAMove = true;
-  let isMoveImm = true;
-}
-
-// LDA zp, LDX zp, LDY zp
-def LDimag8 : MOSLogicalInstr {
-  dag OutOperandList = (outs GPR:$dst);
-  dag InOperandList = (ins Imag8:$src);
-
-  let Defs = [NZ];
-}
-
-// LDA abs,x; LDA abs,y
-def LDAidx : MOSLogicalInstr {
-  dag OutOperandList = (outs Ac:$dst);
-  dag InOperandList = (ins i16imm:$addr, XY:$idx);
-
-  let Defs = [NZ];
-
-  let mayLoad = true;
-}
-
-def LDXidx : MOSLogicalInstr, PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)> {
-  dag OutOperandList = (outs Xc:$dst);
-  dag InOperandList = (ins i16imm:$addr, Yc:$idx);
-
-  let Defs = [NZ];
-
-  let mayLoad = true;
-}
-
-def LDYidx : MOSLogicalInstr, PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)> {
-  dag OutOperandList = (outs Yc:$dst);
-  dag InOperandList = (ins i16imm:$addr, Xc:$idx);
-
-  let Defs = [NZ];
-
-  let mayLoad = true;
-}
-
-// LDA (zp),y
-def LDyindir : MOSLogicalInstr, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
-  dag OutOperandList = (outs Ac:$dst);
-  dag InOperandList = (ins Imag16:$addr, Yc:$offset);
-
-  let Defs = [NZ];
-
-  let mayLoad = true;
-}
-
-// PHA, PHP
-def PH : MOSLogicalInstr {
-  dag InOperandList = (ins AP:$src);
-
-  let mayStore = true;
-}
-
-// PLA, PLP
-def PL : MOSLogicalInstr {
-  dag OutOperandList = (outs AP:$dst);
-
-  let Defs = [NZ];
-
-  let mayLoad = true;
-}
-
-// ROL A, ROL zp
-def ROL : MOSLogicalInstr {
-  dag OutOperandList = (outs AImag8:$dst, Cc:$carryout);
-  dag InOperandList = (ins AImag8:$src, Cc:$carryin);
-  let Constraints = "$dst = $src, $carryout = $carryin";
-
-  let Defs = [NZ];
-}
-
 def RTS : MOSLogicalInstr, PseudoInstExpansion<(RTS_Implied)> {
   let isBarrier = true;
   let isReturn = true;
   let isTerminator = true;
 }
 
-def SBCimm : MOSLogicalInstr, PseudoInstExpansion<(SBC_Immediate imm8:$r)> {
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
-  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
-  let Constraints = "$dst = $l, $carryout = $carryin";
+//===---------------------------------------------------------------------===//
+// Load/Store Instructions
+//===---------------------------------------------------------------------===//
 
+class MOSLoad : MOSLogicalInstr {
   let Defs = [NZ];
+  let mayLoad = true;
 }
 
-def SBCimag8 : MOSLogicalInstr, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)> {
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
-  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
-  // Don't give the carries a tied constraint, since having two tied operands
-  // inhibits commutation of $l and $r.
-  let Constraints = "$dst = $l";
-
-  let Defs = [NZ];
+// LDA abs, LDX abs, LDY abs
+def LDabs : MOSLoad {
+  dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins i16imm:$src);
 }
 
-// STA abs, STX abs, STZ abs
-def STabs : MOSLogicalInstr {
-  dag InOperandList = (ins GPR:$src, i16imm:$dst);
-
-  let mayStore = true;
+class MOSLoadIndexed<RegisterClass dst, RegisterClass idx> : MOSLoad {
+  dag OutOperandList = (outs dst:$dst);
+  dag InOperandList = (ins i16imm:$addr, idx:$idx);
 }
+// LDA abs,x; LDA abs,y
+def LDAidx : MOSLoadIndexed<Ac, XY>;
+// LDX abs,y
+def LDXidx : MOSLoadIndexed<Xc, Yc>,
+             PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)>;
+// LDY abs,x
+def LDYidx : MOSLoadIndexed<Yc, Xc>,
+             PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)>;
 
-// STA abs,x; STA abs,y
-def STidx : MOSLogicalInstr {
-  dag InOperandList = (ins Ac:$src, i16imm:$addr, XY:$idx);
-
-  let mayStore = true;
-}
-
-// STA (zp),y
-def STyindir : MOSLogicalInstr, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
-  dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
-
-  let mayStore = true;
-}
-
-// STA zp, STX zp, STY zp
-def STimag8 : MOSLogicalInstr {
-  dag OutOperandList = (outs Imag8:$dst);
-  dag InOperandList = (ins GPR:$src);
-}
-
-// TAX, TAY
-def TA : MOSLogicalInstr {
-  dag OutOperandList = (outs XY:$dst);
-  dag InOperandList = (ins Ac:$src);
-
-  let Defs = [NZ];
-
-  let isAsCheapAsAMove = true;
-}
-
-// TXA, TYA
-def T_A : MOSLogicalInstr {
+// LDA (zp),y
+def LDyindir : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
   dag OutOperandList = (outs Ac:$dst);
-  dag InOperandList = (ins XY:$src);
+  dag InOperandList = (ins Imag16:$addr, Yc:$offset);
+}
 
-  let Defs = [NZ];
-
-  let isAsCheapAsAMove = true;
+class MOSStore : MOSLogicalInstr {
+  let mayStore = true;
+}
+// STA abs, STX abs, STZ abs
+def STabs : MOSStore {
+  dag InOperandList = (ins GPR:$src, i16imm:$dst);
+}
+// STA abs,x; STA abs,y
+def STidx : MOSStore {
+  dag InOperandList = (ins Ac:$src, i16imm:$addr, XY:$idx);
+}
+// STA (zp),y
+def STyindir : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
+  dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
 }
