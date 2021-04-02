@@ -186,21 +186,11 @@ bool MOSFrameLowering::hasFP(const MachineFunction &MF) const {
   return MFI.isFrameAddressTaken() || MFI.hasVarSizedObjects();
 }
 
-bool MOSFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
-  switch (ID) {
-  default:
-    return false;
-  case TargetStackID::Default:
-  case TargetStackID::NoAlloc:
-    return true;
-  }
-}
-
 uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
   uint64_t Size = 0;
-  for (int i = 0, e = MFI.getObjectIndexEnd(); i < e; ++i)
-    if (MFI.getStackID(i) == TargetStackID::NoAlloc)
-      Size += MFI.getObjectSize(i);
+  for (int Idx = 0, End = MFI.getObjectIndexEnd(); Idx < End; ++Idx)
+    if (MFI.getStackID(Idx) == TargetStackID::NoAlloc)
+      Size += MFI.getObjectSize(Idx);
   return Size;
 }
 

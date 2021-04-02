@@ -58,8 +58,6 @@ public:
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   bool hasFP(const MachineFunction &MF) const override;
 
-  bool isSupportedStackID(TargetStackID::Value ID) const override;
-
   // Computes the size of the static stack.
   uint64_t staticSize(const MachineFrameInfo &MFI) const;
 
