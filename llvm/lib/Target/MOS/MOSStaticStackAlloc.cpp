@@ -26,8 +26,7 @@ public:
   static char ID;
 
   MOSStaticStackAlloc() : ModulePass(ID) {
-    llvm::initializeMOSStaticStackAllocPass(
-        *PassRegistry::getPassRegistry());
+    llvm::initializeMOSStaticStackAllocPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override;

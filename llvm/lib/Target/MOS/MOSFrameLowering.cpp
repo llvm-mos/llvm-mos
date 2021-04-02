@@ -39,33 +39,36 @@ MOSFrameLowering::MOSFrameLowering()
 bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
-  // The static stack is cheap, so just use that. CSR use may still occur, e.g.,
-  // if a long lived pointer is needed that will be indirected against many
-  // times.
+  // The static stack is cheap, so just use that if possible. Note that it's
+  // still sometimes worth using CSRs even if static stacks are available, since
+  // it allows pointers to live across calls directly in ZP.
   if (MF.getFunction().doesNotRecurse())
     return false;
 
-  // Place the CSI on the hard stack, which we don't explicitly model.
-  // Accordingly, this does nothing, but says everything is fine.
-  // spillCalleeSavedRegisters will emit the spills and reloads sequentially to
-  // and from the hard stack.
+  // If static stack is unavailalbe, place the CSI on the hard stack, which we
+  // don't explicitly model in PEI. Accordingly, this does nothing, but says
+  // everything is fine. (spill/restore)CalleeSavedRegisters will emit the
+  // spills and reloads sequentially to and from the hard stack.
   return true;
 }
 
 bool MOSFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
-  // The static stack is cheap, so just use that.
+  // The static stack is cheap, so just use that if possible.
   if (MBB.getParent()->getFunction().doesNotRecurse())
     return false;
 
   MachineIRBuilder Builder(MBB, MI);
   bool AMaybeLive = MBB.computeRegisterLiveness(TRI, MOS::A, MI) !=
                     MachineBasicBlock::LQR_Dead;
+
+  // We cannot save/restore using PHA/PLA here: it would interfere with the PHA
+  // of the CSRs.
   if (AMaybeLive)
     Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
   // There are intentionally very few CSRs, few enough to place on the hard
-  // stack without much risk of overflow. This is the only non-temporary way the
+  // stack without much risk of overflow. This is the only across-calls way the
   // compiler uses the hard stack, since the free CSRs can then be used with
   // impunity. This is slightly more expensive than saving/resting values
   // directly on the hard stack, but it's significantly simpler.
@@ -81,13 +84,16 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
 bool MOSFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
-  // The static stack is cheap, so just use that if possible.
+  // The static stack is cheap, so it was used if available.
   bool UsesHardStack = !MBB.getParent()->getFunction().doesNotRecurse();
+
+  // Reverse the process of spillCalleeSavedRegisters.
   if (UsesHardStack) {
-    // Reverse the process of spillCalleeSavedRegisters.
     bool AMaybeLive = MBB.computeRegisterLiveness(TRI, MOS::A, MI) !=
                       MachineBasicBlock::LQR_Dead;
     MachineIRBuilder Builder(MBB, MI);
+    // We cannot save/restore using PHA/PLA here: it would interfere with the
+    // PLA of the CSRs.
     if (AMaybeLive)
       Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
@@ -97,6 +103,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     if (AMaybeLive)
       Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");
   }
+
   // Mark the CSRs as used by the return to ensure Machine Copy Propagation
   // doesn't remove the copies that set them.
   if (MBB.succ_empty()) {
@@ -133,9 +140,13 @@ MachineBasicBlock::iterator MOSFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MI) const {
   int64_t Offset = MI->getOperand(0).getImm();
+
+  // If we've already reserved the outgoing call frame in the prolog/epilog, the
+  // pseudo can be summarily removed.
   if (hasReservedCallFrame(MF) || !Offset)
     return MBB.erase(MI);
 
+  // Increment/decrement the stack pointer to reserve space for the call frame.
   MachineIRBuilder Builder(MBB, MI);
   if (MI->getOpcode() ==
       MF.getSubtarget().getInstrInfo()->getCallFrameSetupOpcode())
@@ -204,9 +215,9 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
   assert(LoBytes || HiBytes);
 
   Register A = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
-  Register C = Builder.getMRI()->createVirtualRegister(&MOS::CcRegClass);
 
-  Builder.buildInstr(MOS::LDCimm, {C}, {int64_t(0)});
+  Register C = Builder.buildInstr(MOS::LDCimm, {&MOS::CcRegClass}, {int64_t(0)})
+                   .getReg(0);
   if (LoBytes) {
     Builder.buildCopy(A, Register(MOS::RC0));
     Builder.buildInstr(MOS::ADCimm, {A, C}, {A, LoBytes, C});
