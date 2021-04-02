@@ -176,6 +176,11 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   switch (MI->getOpcode()) {
   default:
+    llvm_unreachable("Unexpected opcode.");
+  case MOS::AddrLostk:
+  case MOS::AddrHistk:
+  case MOS::LDstk:
+  case MOS::STstk:
     MI->getOperand(FIOperandNum)
         .ChangeToRegister(getFrameRegister(MF), /*isDef=*/false);
     MI->getOperand(FIOperandNum + 1).setImm(Offset);
@@ -219,7 +224,6 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
   MachineIRBuilder Builder(*MI->getParent(), MI);
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
-  MachineRegisterInfo &MRI = *Builder.getMRI();
 
   MachineOperand Dst = MI->getOperand(0);
   Register Base = MI->getOperand(2).getReg();
@@ -236,15 +240,9 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
   if (!Offset)
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
   else {
-    Register A = MRI.createVirtualRegister(&MOS::AcRegClass);
-
-    Builder.buildCopy(A, Src);
-    Builder.buildInstr(MOS::ADCimm)
-        .addDef(A)
-        .addDef(MOS::C)
-        .addUse(A)
-        .addImm(Offset)
-        .addUse(MOS::C);
+    Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
+    Builder.buildInstr(MOS::ADCimm, {A, MOS::C},
+                       {A, int64_t(Offset), Register(MOS::C)});
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
   }
 
@@ -255,7 +253,6 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
   MachineIRBuilder Builder(*MI->getParent(), MI);
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
-  MachineRegisterInfo &MRI = *Builder.getMRI();
 
   MachineOperand Dst = MI->getOperand(0);
   Register Base = MI->getOperand(1).getReg();
@@ -266,18 +263,16 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
 
   Register Src = TRI.getSubReg(Base, MOS::subhi);
 
+  // Note: We can only elide the high byte of the address into a copy if the
+  // whole offset is zero. There may be a carry from the low byte sum if only
+  // the high byte is zero.
   if (!Offset)
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
   else {
-    Register A = MRI.createVirtualRegister(&MOS::AcRegClass);
-
-    Builder.buildCopy(A, Src);
-    Builder.buildInstr(MOS::ADCimm)
-        .addDef(A)
-        .addDef(MOS::C, RegState::Dead)
-        .addUse(A)
-        .addImm(Offset >> 8)
-        .addUse(MOS::C);
+    Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
+    auto Instr = Builder.buildInstr(
+        MOS::ADCimm, {A, MOS::C}, {A, int64_t(Offset >> 8), Register(MOS::C)});
+    Instr->getOperand(1).setIsDead();
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
   }
 
@@ -296,6 +291,7 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   int64_t Offset = MI->getOperand(2).getImm();
 
   if (Offset >= 256) {
+    // Far stack accesses need a virtual base register, so materialize one here.
     Register NewBase = MRI.createVirtualRegister(&MOS::Imag16RegClass);
     Register C = MRI.createVirtualRegister(&MOS::CcRegClass);
     auto Lo = Builder.buildInstr(MOS::AddrLostk)
@@ -351,13 +347,14 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
     return;
   }
 
-  Register Y = MRI.createVirtualRegister(&MOS::YcRegClass);
-  Builder.buildInstr(MOS::LDimm).addDef(Y).addImm(Offset);
+  Register Y =
+      Builder.buildInstr(MOS::LDimm, {&MOS::YcRegClass}, {Offset}).getReg(0);
 
   Register A = Loc;
   if (A != MOS::A)
     A = MRI.createVirtualRegister(&MOS::AcRegClass);
 
+  // Transfer the value to A to be stored (if applicable).
   if (!IsLoad && Loc != A)
     Builder.buildCopy(A, Loc);
 
@@ -367,6 +364,7 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
       .addUse(Y)
       .addMemOperand(*MI->memoperands_begin());
 
+  // Transfer the loaded value out of A (if applicable).
   if (IsLoad && Loc != A)
     Builder.buildCopy(Loc, A);
 
@@ -383,6 +381,9 @@ bool MOSRegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  // Don't coalesce Imag8 and AImag8 registers together, since this may cause
+  // expensive ASL zp's to be used when ASL A would have sufficed. It's better
+  // to do arithmetic in A and then copy it out.
   if (NewRC == &MOS::Imag8RegClass &&
       (SrcRC == &MOS::AImag8RegClass || DstRC == &MOS::AImag8RegClass))
     return false;
