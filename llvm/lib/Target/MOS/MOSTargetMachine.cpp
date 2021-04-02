@@ -32,7 +32,6 @@
 #include "MOSIndexIV.h"
 #include "MOSMachineScheduler.h"
 #include "MOSNoRecurse.h"
-#include "MOSPreRegAlloc.h"
 #include "MOSStaticStackAlloc.h"
 #include "MOSTargetObjectFile.h"
 #include "MOSTargetTransformInfo.h"
@@ -47,7 +46,6 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   initializeGlobalISel(PR);
   initializeMOSCombinerPass(PR);
   initializeMOSNoRecursePass(PR);
-  initializeMOSPreRegAllocPass(PR);
   initializeMOSStaticStackAllocPass(PR);
 }
 
@@ -142,7 +140,6 @@ public:
   void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
   void addMachineSSAOptimization() override;
-  void addPreRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 
@@ -198,8 +195,6 @@ void MOSPassConfig::addMachineSSAOptimization() {
   addPass(&LiveVariablesID);
   TargetPassConfig::addMachineSSAOptimization();
 }
-
-void MOSPassConfig::addPreRegAlloc() { addPass(createMOSPreRegAlloc()); }
 
 void MOSPassConfig::addPreSched2() { addPass(createMOSStaticStackAllocPass()); }
 
