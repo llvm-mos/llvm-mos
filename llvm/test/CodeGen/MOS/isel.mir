@@ -95,7 +95,7 @@ body: |
   bb.0.entry:
     %0:any(s1) = G_CONSTANT i1 true
     RTS implicit %0
-# CHECK:      %0:cc = LDCimm 1
+# CHECK:      %0:cc = LDCimm -1
 # CHECK-NEXT: RTS
 ...
 ---
@@ -168,7 +168,7 @@ body: |
     %2:any(s8), %3:any(s1) = G_SHLE %0, %1
     RTS implicit %2, implicit %3
 # CHECK:      %0:aimag8 = IMPLICIT_DEF
-# CHECK-NEXT: %1:cc = LDCimm 1
+# CHECK-NEXT: %1:cc = LDCimm -1
 # CHECK-NEXT: %2:aimag8, %3:cc = ROL %0, %1
 # CHECK-NEXT: RTS
 ...

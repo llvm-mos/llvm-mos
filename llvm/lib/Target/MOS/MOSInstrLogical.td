@@ -68,6 +68,9 @@ class MOSLogicalInstr : Instruction {
   let isReMaterializable = true;
 }
 
+// Operand type for basic block and function labels.
+def label : Operand<OtherVT>;
+
 //===---------------------------------------------------------------------===//
 // Addition/Subtraction Instructions
 //===---------------------------------------------------------------------===//
@@ -161,6 +164,8 @@ class MOSImmediateLoad<RegisterClass dst, Operand val> : MOSLogicalInstr {
   dag OutOperandList = (outs dst:$dst);
   dag InOperandList = (ins val:$val);
 
+  let Pattern = [(set dst:$dst, imm:$val)];
+
   let isAsCheapAsAMove = true;
   let isMoveImm = true;
 }
@@ -170,8 +175,6 @@ def LDCimm : MOSImmediateLoad<Cc, i1imm>;
 // LDA imm, LDX imm, LDY imm
 def LDimm : MOSImmediateLoad<GPR, i8imm> {
   let Defs = [NZ];
-
-  let Pattern = [(set GPR:$dst, imm:$val)];
 }
 
 //===---------------------------------------------------------------------===//
@@ -225,9 +228,6 @@ def PL : MOSLogicalInstr {
 //===---------------------------------------------------------------------===//
 // Control Flow Instructions
 //===---------------------------------------------------------------------===//
-
-// Operand type for basic block and function labels.
-def label : Operand<OtherVT>;
 
 // Covers all branch instructions. Branches to $tgt if $flag = $val.
 def BR : MOSLogicalInstr {

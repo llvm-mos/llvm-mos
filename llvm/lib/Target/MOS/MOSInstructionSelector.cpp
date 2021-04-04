@@ -62,7 +62,6 @@ private:
 
   bool selectAddSub(MachineInstr &MI);
   bool selectCompareBranch(MachineInstr &MI);
-  bool selectConstant(MachineInstr &MI);
   bool selectCopyLike(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
@@ -150,8 +149,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectAddSub(MI);
   case MOS::G_BRCOND:
     return selectCompareBranch(MI);
-  case MOS::G_CONSTANT:
-    return selectConstant(MI);
   case MOS::G_FRAME_INDEX:
     return selectFrameIndex(MI);
   case MOS::G_GLOBAL_VALUE:
@@ -246,21 +243,6 @@ bool MOSInstructionSelector::selectCompareBranch(MachineInstr &MI) {
     Br.addUse(Carry).addImm(0);
     break;
   }
-  MI.eraseFromParent();
-  return true;
-}
-
-bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
-  assert(MI.getOpcode() == MOS::G_CONSTANT);
-
-  MachineIRBuilder Builder(MI);
-  // s8 is handled by TableGen LDimm.
-  assert(Builder.getMRI()->getType(MI.getOperand(0).getReg()) ==
-         LLT::scalar(1));
-  auto Ld = Builder.buildInstr(MOS::LDCimm, {MI.getOperand(0)},
-                               {MI.getOperand(1).getCImm()->getZExtValue()});
-  if (!constrainSelectedInstRegOperands(*Ld, TII, TRI, RBI))
-    return false;
   MI.eraseFromParent();
   return true;
 }
