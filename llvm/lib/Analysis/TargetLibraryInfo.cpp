@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS project.
+
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
@@ -105,6 +107,15 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setShouldExtI32Param(ShouldExtI32Param);
   TLI.setShouldExtI32Return(ShouldExtI32Return);
   TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
+
+  if (T.getArch() == Triple::mos) {
+    // The MOS target doesn't come with a standard library yet.
+    TLI.disableAllFunctions();
+    // Freestanding functions are available.
+    TLI.setAvailable(LibFunc_memcpy);
+    TLI.setAvailable(LibFunc_memset);
+    return;
+  }
 
   if (T.isAMDGPU())
     TLI.disableAllFunctions();
