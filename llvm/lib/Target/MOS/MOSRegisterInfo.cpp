@@ -135,7 +135,7 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     break;
   case MOS::X:
   case MOS::Y:
-    const char *Save = Reg == MOS::X ? "_SaveX" : "_SaveY";
+    const char *Save = Reg == MOS::X ? "__save_x" : "__save_y";
     Builder.buildInstr(MOS::STabs).addUse(Reg).addExternalSymbol(Save);
 
     Builder.setInsertPt(MBB, UseMI);

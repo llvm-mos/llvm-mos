@@ -66,7 +66,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // We cannot save/restore using PHA/PLA here: it would interfere with the PHA
   // of the CSRs.
   if (AMaybeLive)
-    Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
+    Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("__save_a");
   // There are intentionally very few CSRs, few enough to place on the hard
   // stack without much risk of overflow. This is the only across-calls way the
   // compiler uses the hard stack, since the free CSRs can then be used with
@@ -77,7 +77,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
     Builder.buildInstr(MOS::PH).addUse(MOS::A);
   }
   if (AMaybeLive)
-    Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");
+    Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("__save_a");
   return true;
 }
 
@@ -95,13 +95,13 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     // We cannot save/restore using PHA/PLA here: it would interfere with the
     // PLA of the CSRs.
     if (AMaybeLive)
-      Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("_SaveA");
+      Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("__save_a");
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
       Builder.buildInstr(MOS::PL).addDef(MOS::A);
       Builder.buildCopy(CI.getReg(), Register(MOS::A));
     }
     if (AMaybeLive)
-      Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("_SaveA");
+      Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("__save_a");
   }
 
   // Mark the CSRs as used by the return to ensure Machine Copy Propagation

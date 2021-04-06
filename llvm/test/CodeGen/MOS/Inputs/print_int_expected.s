@@ -7,10 +7,10 @@ print_int:                              ; @print_int
 	cmp	#10
 	bcc	LBB0_2
 LBB0_1:                                 ; %if.end.preheader
-	sta	_SaveA
+	sta	__save_a
 	lda	mos8(__rc4)
 	pha
-	lda	_SaveA
+	lda	__save_a
 	sta	mos8(__rc4)
 	ldx	#10
 	jsr	__udivqi3
@@ -18,10 +18,10 @@ LBB0_1:                                 ; %if.end.preheader
 	lda	mos8(__rc4)
 	ldx	#10
 	jsr	__umodqi3
-	sta	_SaveA
+	sta	__save_a
 	pla
 	sta	mos8(__rc4)
-	lda	_SaveA
+	lda	__save_a
 LBB0_2:                                 ; %if.then
 	clc
 	adc	#48
