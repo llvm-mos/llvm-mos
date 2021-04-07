@@ -86,7 +86,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_SHL).customFor({S8, S16, S32, S64});
 
-  getActionDefinitionsBuilder(G_ICMP).legalFor({{S1, S8}});
+  getActionDefinitionsBuilder(G_ICMP)
+      .legalFor({{S1, S8}})
+      .clampScalar(1, S8, S8);
+
+  getActionDefinitionsBuilder(G_SELECT)
+      .legalFor({{S8, S1}})
+      .clampScalar(0, S8, S8);
 
   // It's legal to G_PTR_ADD an 8-bit integer to a pointer, since there is at
   // least one addressing mode that performs this directly. The legalizer
