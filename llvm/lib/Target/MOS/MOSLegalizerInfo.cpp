@@ -81,7 +81,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder(
-      {G_SDIV, G_SREM, G_UDIV, G_UREM, G_CTLZ_ZERO_UNDEF})
+      {G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM, G_CTLZ_ZERO_UNDEF})
       .libcall();
 
   getActionDefinitionsBuilder(G_SHL).customFor({S8, S16, S32, S64});
