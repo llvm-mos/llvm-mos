@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSCallingConv.h"
 #include "MOSMachineFunctionInfo.h"
+#include "MOSRegisterInfo.h"
 
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -24,6 +25,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
@@ -311,8 +313,6 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                 CallLoweringInfo &Info) const {
-  if (!Info.Callee.isGlobal() && !Info.Callee.isSymbol())
-    report_fatal_error("Callee type not yet implemented.");
   if (Info.IsMustTailCall)
     report_fatal_error("Musttail calls not supported.");
 
@@ -320,6 +320,31 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const DataLayout &DL = MF.getDataLayout();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
+  // Indirect call
+  if (Info.Callee.isReg()) {
+    // Store the callee in __call_indir_target.
+    // Doing this before argument lowering gives additional freedom to
+    // instruction scheduling. This just needs to happen some time before the
+    // call, and no specific registers or stack pointer state are required.
+    auto Unmerge =
+        MIRBuilder.buildUnmerge({LLT::scalar(8), LLT::scalar(8)}, Info.Callee);
+    Register Lo = Unmerge.getReg(0);
+    Register Hi = Unmerge.getReg(1);
+
+    // Do a bit of instruction selection here, since generic opcodes don't
+    // really have a mechanism for using external symbols as store destinations.
+    Register LoGPR = MIRBuilder.buildCopy(&MOS::GPRRegClass, Lo).getReg(0);
+    Register HiGPR = MIRBuilder.buildCopy(&MOS::GPRRegClass, Hi).getReg(0);
+    MIRBuilder.buildInstr(MOS::STabs, {}, {LoGPR})
+        .addExternalSymbol("__call_indir_target");
+    auto HiST = MIRBuilder.buildInstr(MOS::STabs, {}, {HiGPR})
+                    .addExternalSymbol("__call_indir_target");
+    HiST->getOperand(1).setOffset(1);
+
+    // Call __call_indir to execute the indirect call.
+    Info.Callee.ChangeToES("__call_indir");
+  }
 
   // Generate the setup call frame pseudo instruction. This will record the size
   // of the outgoing stack frame once it's known. Usually, all such pseudos can
