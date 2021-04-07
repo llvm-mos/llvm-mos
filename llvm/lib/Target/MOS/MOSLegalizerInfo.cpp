@@ -131,7 +131,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Control Flow
 
-  getActionDefinitionsBuilder(G_PHI).legalFor({S8}).clampScalar(0, S8, S8);
+  getActionDefinitionsBuilder(G_PHI).legalFor({P, S8}).clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({S1});
 
