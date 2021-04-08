@@ -25,6 +25,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "llvm/Transforms/Utils.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
@@ -133,6 +134,7 @@ public:
   }
 
   void addIRPasses() override;
+  bool addPreISel() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
@@ -158,6 +160,11 @@ void MOSPassConfig::addIRPasses() {
   // Aggressively find provably non-recursive functions.
   addPass(createMOSNoRecursePass());
   TargetPassConfig::addIRPasses();
+}
+
+bool MOSPassConfig::addPreISel() {
+  addPass(createLowerSwitchPass());
+  return false;
 }
 
 bool MOSPassConfig::addIRTranslator() {
