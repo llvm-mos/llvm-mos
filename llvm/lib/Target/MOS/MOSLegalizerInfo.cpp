@@ -84,8 +84,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       {G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM, G_CTLZ_ZERO_UNDEF})
       .libcall();
 
+  getActionDefinitionsBuilder(G_ASHR).legalFor({S8}).clampScalar(0, S8, S8);
   getActionDefinitionsBuilder(G_SHL).customFor({S8, S16, S32, S64});
 
+  // FIXME: The default narrowing of G_ICMP is terrible.
   getActionDefinitionsBuilder(G_ICMP)
       .legalFor({{S1, S8}})
       .clampScalar(1, S8, S8);
@@ -101,6 +103,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // general 8-bit G_PTR_ADDs.
   getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{P, S8}}).customFor(
       {{P, S16}});
+
+  // FIXME: The default narrowing of G_ABS is terrible.
+  getActionDefinitionsBuilder(G_ABS).lower();
 
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
   getActionDefinitionsBuilder({G_UADDO, G_USUBO}).customFor({S8});
