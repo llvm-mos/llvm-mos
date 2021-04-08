@@ -76,7 +76,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Operations
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_OR, G_XOR})
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({S8})
       .clampScalar(0, S8, S8);
 
