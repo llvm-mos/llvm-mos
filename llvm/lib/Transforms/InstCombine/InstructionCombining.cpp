@@ -1842,10 +1842,11 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   // Note: using IRBuilder to create the constants for efficiency.
   SmallVector<Value *, 4> IndexC(GEP.indices());
   bool IsInBounds = GEP.isInBounds();
-  Value *NewTrueC = IsInBounds ? Builder.CreateInBoundsGEP(TrueC, IndexC)
-                               : Builder.CreateGEP(TrueC, IndexC);
-  Value *NewFalseC = IsInBounds ? Builder.CreateInBoundsGEP(FalseC, IndexC)
-                                : Builder.CreateGEP(FalseC, IndexC);
+  Type *Ty = GEP.getSourceElementType();
+  Value *NewTrueC = IsInBounds ? Builder.CreateInBoundsGEP(Ty, TrueC, IndexC)
+                               : Builder.CreateGEP(Ty, TrueC, IndexC);
+  Value *NewFalseC = IsInBounds ? Builder.CreateInBoundsGEP(Ty, FalseC, IndexC)
+                                : Builder.CreateGEP(Ty, FalseC, IndexC);
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 
@@ -2172,24 +2173,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           Matched = true;
       }
 
-      if (Matched) {
-        // Canonicalize (gep i8* X, -(ptrtoint Y))
-        // to (inttoptr (sub (ptrtoint X), (ptrtoint Y)))
-        // The GEP pattern is emitted by the SCEV expander for certain kinds of
-        // pointer arithmetic.
-        if (match(V, m_Neg(m_PtrToInt(m_Value())))) {
-          Operator *Index = cast<Operator>(V);
-          Value *PtrToInt = Builder.CreatePtrToInt(PtrOp, Index->getType());
-          Value *NewSub = Builder.CreateSub(PtrToInt, Index->getOperand(1));
-          return CastInst::Create(Instruction::IntToPtr, NewSub, GEPType);
-        }
-        // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X))
-        // to (bitcast Y)
-        Value *Y;
-        if (match(V, m_Sub(m_PtrToInt(m_Value(Y)),
-                           m_PtrToInt(m_Specific(GEP.getOperand(0))))))
-          return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
-      }
+      // Canonicalize (gep i8* X, (ptrtoint Y)-(ptrtoint X)) to (bitcast Y), but
+      // only if both point to the same underlying object (otherwise provenance
+      // is not necessarily retained).
+      Value *Y;
+      Value *X = GEP.getOperand(0);
+      if (Matched &&
+          match(V, m_Sub(m_PtrToInt(m_Value(Y)), m_PtrToInt(m_Specific(X)))) &&
+          getUnderlyingObject(X) == getUnderlyingObject(Y))
+        return CastInst::CreatePointerBitCastOrAddrSpaceCast(Y, GEPType);
     }
   }
 
@@ -2433,13 +2425,21 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // analysis of unions. If "A" is also a bitcast, wait for A/X to be merged.
     unsigned OffsetBits = DL.getIndexTypeSizeInBits(GEPType);
     APInt Offset(OffsetBits, 0);
-    if (!isa<BitCastInst>(SrcOp) && GEP.accumulateConstantOffset(DL, Offset)) {
+
+    // If the bitcast argument is an allocation, The bitcast is for convertion
+    // to actual type of allocation. Removing such bitcasts, results in having
+    // GEPs with i8* base and pure byte offsets. That means GEP is not aware of
+    // struct or array hierarchy.
+    // By avoiding such GEPs, phi translation and MemoryDependencyAnalysis have
+    // a better chance to succeed.
+    if (!isa<BitCastInst>(SrcOp) && GEP.accumulateConstantOffset(DL, Offset) &&
+        !isAllocationFn(SrcOp, &TLI)) {
       // If this GEP instruction doesn't move the pointer, just replace the GEP
       // with a bitcast of the real input to the dest type.
       if (!Offset) {
         // If the bitcast is of an allocation, and the allocation will be
         // converted to match the type of the cast, don't touch this.
-        if (isa<AllocaInst>(SrcOp) || isAllocationFn(SrcOp, &TLI)) {
+        if (isa<AllocaInst>(SrcOp)) {
           // See if the bitcast simplifies, if so, don't nuke this GEP yet.
           if (Instruction *I = visitBitCast(*BCI)) {
             if (I != BCI) {
@@ -3586,19 +3586,6 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   llvm::sort(DbgUsersToSink,
              [](auto *A, auto *B) { return B->comesBefore(A); });
 
-  // Update the arguments of a dbg.declare instruction, so that it
-  // does not point into a sunk instruction.
-  auto updateDbgDeclare = [&I](DbgVariableIntrinsic *DII) {
-    if (!isa<DbgDeclareInst>(DII))
-      return false;
-
-    if (isa<CastInst>(I))
-      DII->setOperand(
-          0, MetadataAsValue::get(I->getContext(),
-                                  ValueAsMetadata::get(I->getOperand(0))));
-    return true;
-  };
-
   SmallVector<DbgVariableIntrinsic *, 2> DIIClones;
   SmallSet<DebugVariable, 4> SunkVariables;
   for (auto User : DbgUsersToSink) {
@@ -3606,7 +3593,7 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
     // one per variable fragment. It should be left in the original place
     // because the sunk instruction is not an alloca (otherwise we could not be
     // here).
-    if (updateDbgDeclare(User))
+    if (isa<DbgDeclareInst>(User))
       continue;
 
     DebugVariable DbgUserVariable =
@@ -3617,6 +3604,8 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
       continue;
 
     DIIClones.emplace_back(cast<DbgVariableIntrinsic>(User->clone()));
+    if (isa<DbgDeclareInst>(User) && isa<CastInst>(I))
+      DIIClones.back()->replaceVariableLocationOp(I, I->getOperand(0));
     LLVM_DEBUG(dbgs() << "CLONE: " << *DIIClones.back() << '\n');
   }
 

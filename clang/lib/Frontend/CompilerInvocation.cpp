@@ -211,6 +211,7 @@ static void denormalizeStringImpl(SmallVectorImpl<const char *> &Args,
   switch (OptClass) {
   case Option::SeparateClass:
   case Option::JoinedOrSeparateClass:
+  case Option::JoinedAndSeparateClass:
     Args.push_back(Spelling);
     Args.push_back(SA(Value));
     break;
@@ -466,6 +467,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.NewAlignOverride = 0;
   }
 
+  // Prevent the user from specifying both -fsycl-is-device and -fsycl-is-host.
+  if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
+    Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
+                                                          << "-fsycl-is-host";
+
   if (Args.hasArg(OPT_fgnu89_inline) && LangOpts.CPlusPlus)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fgnu89-inline" << GetInputKindName(IK);
@@ -515,7 +521,9 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
 static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
   unsigned DefaultOpt = llvm::CodeGenOpt::None;
-  if (IK.getLanguage() == Language::OpenCL && !Args.hasArg(OPT_cl_opt_disable))
+  if ((IK.getLanguage() == Language::OpenCL ||
+       IK.getLanguage() == Language::OpenCLCXX) &&
+      !Args.hasArg(OPT_cl_opt_disable))
     DefaultOpt = llvm::CodeGenOpt::Default;
 
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
@@ -663,7 +671,7 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // Generate arguments from the dummy invocation. If Generate is the
   // inverse of Parse, the newly generated arguments must have the same
   // semantics as the original.
-  SmallVector<const char *, 16> GeneratedArgs1;
+  SmallVector<const char *> GeneratedArgs1;
   Generate(DummyInvocation, GeneratedArgs1, SA);
 
   // Run the second parse, now on the generated arguments, and with the real
@@ -683,7 +691,7 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
 
   // Generate arguments again, this time from the options we will end up using
   // for the rest of the compilation.
-  SmallVector<const char *, 16> GeneratedArgs2;
+  SmallVector<const char *> GeneratedArgs2;
   Generate(RealInvocation, GeneratedArgs2, SA);
 
   // Compares two lists of generated arguments.
@@ -1466,19 +1474,12 @@ void CompilerInvocation::GenerateCodeGenArgs(
         Args, Opts.EmulatedTLS ? OPT_femulated_tls : OPT_fno_emulated_tls, SA);
   }
 
-  if (Opts.FPDenormalMode != llvm::DenormalMode::getIEEE()) {
-    std::string Buffer;
-    llvm::raw_string_ostream OS(Buffer);
-    Opts.FPDenormalMode.print(OS);
-    GenerateArg(Args, OPT_fdenormal_fp_math_EQ, OS.str(), SA);
-  }
+  if (Opts.FPDenormalMode != llvm::DenormalMode::getIEEE())
+    GenerateArg(Args, OPT_fdenormal_fp_math_EQ, Opts.FPDenormalMode.str(), SA);
 
-  if (Opts.FP32DenormalMode != llvm::DenormalMode::getIEEE()) {
-    std::string Buffer;
-    llvm::raw_string_ostream OS(Buffer);
-    Opts.FP32DenormalMode.print(OS);
-    GenerateArg(Args, OPT_fdenormal_fp_math_f32_EQ, OS.str(), SA);
-  }
+  if (Opts.FP32DenormalMode != llvm::DenormalMode::getIEEE())
+    GenerateArg(Args, OPT_fdenormal_fp_math_f32_EQ, Opts.FP32DenormalMode.str(),
+                SA);
 
   if (Opts.StructReturnConvention == CodeGenOptions::SRCK_OnStack) {
     OptSpecifier Opt =
@@ -1489,9 +1490,6 @@ void CompilerInvocation::GenerateCodeGenArgs(
         T.isPPC32() ? OPT_msvr4_struct_return : OPT_freg_struct_return;
     GenerateArg(Args, Opt, SA);
   }
-
-  if (Opts.IgnoreXCOFFVisibility)
-    GenerateArg(Args, OPT_mignore_xcoff_visibility, SA);
 
   if (Opts.EnableAIXExtendedAltivecABI)
     GenerateArg(Args, OPT_mabi_EQ_vec_extabi, SA);
@@ -1650,6 +1648,12 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))
     Opts.EmitCallSiteInfo = true;
+
+  if (!Opts.EnableDIPreservationVerify && Opts.DIBugsReportFilePath.size()) {
+    Diags.Report(diag::warn_ignoring_verify_debuginfo_preserve_export)
+        << Opts.DIBugsReportFilePath;
+    Opts.DIBugsReportFilePath = "";
+  }
 
   Opts.NewStructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa) &&
                            Args.hasArg(OPT_new_struct_path_tbaa);
@@ -1837,10 +1841,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Opts.setStructReturnConvention(CodeGenOptions::SRCK_InRegs);
     }
   }
-
-  if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility) ||
-                      !Args.hasArg(OPT_fvisibility)))
-    Opts.IgnoreXCOFFVisibility = 1;
 
   if (Arg *A =
           Args.getLastArg(OPT_mabi_EQ_vec_default, OPT_mabi_EQ_vec_extabi)) {
@@ -2478,18 +2478,17 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   GenerateProgramAction();
 
-  for (const auto &PluginArgs : Opts.PluginArgs)
+  for (const auto &PluginArgs : Opts.PluginArgs) {
+    Option Opt = getDriverOptTable().getOption(OPT_plugin_arg);
+    const char *Spelling =
+        SA(Opt.getPrefix() + Opt.getName() + PluginArgs.first);
     for (const auto &PluginArg : PluginArgs.second)
-      GenerateArg(Args, OPT_plugin_arg, PluginArgs.first + PluginArg, SA);
-
-  for (const auto &Ext : Opts.ModuleFileExtensions) {
-    if (auto *TestExt = dyn_cast_or_null<TestModuleFileExtension>(Ext.get())) {
-      std::string Buffer;
-      llvm::raw_string_ostream OS(Buffer);
-      OS << *TestExt;
-      GenerateArg(Args, OPT_ftest_module_file_extension_EQ, OS.str(), SA);
-    }
+      denormalizeString(Args, Spelling, SA, Opt.getKind(), 0, PluginArg);
   }
+
+  for (const auto &Ext : Opts.ModuleFileExtensions)
+    if (auto *TestExt = dyn_cast_or_null<TestModuleFileExtension>(Ext.get()))
+      GenerateArg(Args, OPT_ftest_module_file_extension_EQ, TestExt->str(), SA);
 
   if (!Opts.CodeCompletionAt.FileName.empty())
     GenerateArg(Args, OPT_code_completion_at, Opts.CodeCompletionAt.ToString(),
@@ -2523,6 +2522,9 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
       break;
     case Language::OpenCL:
       Lang = "cl";
+      break;
+    case Language::OpenCLCXX:
+      Lang = "clcpp";
       break;
     case Language::CUDA:
       Lang = "cuda";
@@ -2712,6 +2714,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     DashX = llvm::StringSwitch<InputKind>(XValue)
                 .Case("c", Language::C)
                 .Case("cl", Language::OpenCL)
+                .Case("clcpp", Language::OpenCLCXX)
                 .Case("cuda", Language::CUDA)
                 .Case("hip", Language::HIP)
                 .Case("c++", Language::CXX)
@@ -3077,6 +3080,9 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     case Language::OpenCL:
       LangStd = LangStandard::lang_opencl10;
       break;
+    case Language::OpenCLCXX:
+      LangStd = LangStandard::lang_openclcpp;
+      break;
     case Language::CUDA:
       LangStd = LangStandard::lang_cuda;
       break;
@@ -3212,7 +3218,11 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
     return S.getLanguage() == Language::C;
 
   case Language::OpenCL:
-    return S.getLanguage() == Language::OpenCL;
+    return S.getLanguage() == Language::OpenCL ||
+           S.getLanguage() == Language::OpenCLCXX;
+
+  case Language::OpenCLCXX:
+    return S.getLanguage() == Language::OpenCLCXX;
 
   case Language::CXX:
   case Language::ObjCXX:
@@ -3249,6 +3259,8 @@ static const StringRef GetInputKindName(InputKind IK) {
     return "Objective-C++";
   case Language::OpenCL:
     return "OpenCL";
+  case Language::OpenCLCXX:
+    return "C++ for OpenCL";
   case Language::CUDA:
     return "CUDA";
   case Language::RenderScript:
@@ -3310,10 +3322,7 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   // The '-fcf-protection=' option is generated by CodeGenOpts generator.
 
   if (Opts.ObjC) {
-    std::string Buffer;
-    llvm::raw_string_ostream Stream(Buffer);
-    Stream << Opts.ObjCRuntime;
-    GenerateArg(Args, OPT_fobjc_runtime_EQ, Stream.str(), SA);
+    GenerateArg(Args, OPT_fobjc_runtime_EQ, Opts.ObjCRuntime.getAsString(), SA);
 
     if (Opts.GC == LangOptions::GCOnly)
       GenerateArg(Args, OPT_fobjc_gc_only, SA);
@@ -3339,6 +3348,9 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fgnuc_version_EQ,
                 Twine(Major) + "." + Twine(Minor) + "." + Twine(Patch), SA);
   }
+
+  if (Opts.IgnoreXCOFFVisibility)
+    GenerateArg(Args, OPT_mignore_xcoff_visibility, SA);
 
   if (Opts.SignedOverflowBehavior == LangOptions::SOB_Trapping) {
     GenerateArg(Args, OPT_ftrapv, SA);
@@ -3646,6 +3658,30 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     }
     Opts.GNUCVersion = Major * 100 * 100 + Minor * 100 + Patch;
   }
+
+  // In AIX OS, the -mignore-xcoff-visibility is enable by default if there is
+  // no -fvisibility=* option.
+  // This is the reason why '-fvisibility' needs to be always generated:
+  // its absence implies '-mignore-xcoff-visibility'.
+  //
+  // Suppose the original cc1 command line does contain '-fvisibility default':
+  // '-mignore-xcoff-visibility' should not be implied.
+  // * If '-fvisibility' is not generated (as most options with default values
+  //   don't), its absence would imply '-mignore-xcoff-visibility'. This changes
+  //   the command line semantics.
+  // * If '-fvisibility' is generated regardless of its presence and value,
+  //   '-mignore-xcoff-visibility' won't be implied and the command line
+  //   semantics are kept intact.
+  //
+  // When the original cc1 command line does **not** contain '-fvisibility',
+  // '-mignore-xcoff-visibility' is implied. The generated command line will
+  // contain both '-fvisibility default' and '-mignore-xcoff-visibility' and
+  // subsequent calls to `CreateFromArgs`/`generateCC1CommandLine` will always
+  // produce the same arguments. 
+ 
+  if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility) ||
+                      !Args.hasArg(OPT_fvisibility)))
+    Opts.IgnoreXCOFFVisibility = 1;
 
   if (Args.hasArg(OPT_ftrapv)) {
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Trapping);

@@ -119,17 +119,18 @@ def WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 // turned into a copy by WQM pass, but does not seed WQM requirements.
 def SOFT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 
-// Pseudoinstruction for @llvm.amdgcn.wwm. It is turned into a copy post-RA, so
+// Pseudoinstruction for @llvm.amdgcn.strict.wwm. It is turned into a copy post-RA, so
 // that the @earlyclobber is respected. The @earlyclobber is to make sure that
-// the instruction that defines $src0 (which is run in WWM) doesn't
+// the instruction that defines $src0 (which is run in Whole Wave Mode) doesn't
 // accidentally clobber inactive channels of $vdst.
 let Constraints = "@earlyclobber $vdst" in {
-def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+def STRICT_WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+def STRICT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 }
 
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
-def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
+def ENTER_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let Uses = [EXEC];
   let Defs = [EXEC, SCC];
   let hasSideEffects = 0;
@@ -137,7 +138,21 @@ def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let mayStore = 0;
 }
 
-def EXIT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
+def EXIT_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+def ENTER_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
+  let Uses = [EXEC];
+  let Defs = [EXEC, SCC];
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -258,19 +273,6 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
 
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
-
-// Dummy terminator instruction to use after control flow instructions
-// replaced with exec mask operations.
-def SI_MASK_BRANCH : VPseudoInstSI <
-  (outs), (ins brtarget:$target)> {
-  let isBranch = 0;
-  let isTerminator = 1;
-  let isBarrier = 0;
-  let SchedRW = [];
-  let hasNoSchedulingInfo = 1;
-  let FixedSize = 1;
-  let Size = 0;
-}
 
 let isTerminator = 1 in {
 
@@ -477,7 +479,7 @@ def SI_CALL : SPseudoInstSI <
 
 // Tail call handling pseudo
 def SI_TCRETURN : SPseudoInstSI <(outs),
-  (ins SSrc_b64:$src0, unknown:$callee, i32imm:$fpdiff),
+  (ins SReg_64:$src0, unknown:$callee, i32imm:$fpdiff),
   [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
   let Size = 4;
   let isCall = 1;

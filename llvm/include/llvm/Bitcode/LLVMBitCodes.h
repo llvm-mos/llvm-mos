@@ -342,8 +342,9 @@ enum MetadataCodes {
   METADATA_STRING_TYPE = 41,            // [distinct, name, size, align,...]
   // Codes 42 and 43 are reserved for support for Fortran array specific debug
   // info.
-  METADATA_COMMON_BLOCK = 44,    // [distinct, scope, name, variable,...]
-  METADATA_GENERIC_SUBRANGE = 45 // [distinct, count, lo, up, stride]
+  METADATA_COMMON_BLOCK = 44,     // [distinct, scope, name, variable,...]
+  METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
+  METADATA_ARG_LIST = 46          // [n x [type num, value num]]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -658,6 +659,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NO_CALLBACK = 71,
   ATTR_KIND_HOT = 72,
   ATTR_KIND_NO_PROFILE = 73,
+  ATTR_KIND_VSCALE_RANGE = 74,
 };
 
 enum ComdatSelectionKindCodes {

@@ -121,7 +121,9 @@ void macho::prepareCompactUnwind(InputSection *isec) {
     if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {
         treatUndefinedSymbol(*undefined);
-        continue;
+        // treatUndefinedSymbol() can replace s with a DylibSymbol; re-check.
+        if (isa<Undefined>(s))
+          continue;
       }
       if (auto *defined = dyn_cast<Defined>(s)) {
         // Check if we have created a synthetic symbol at the same address.
@@ -172,12 +174,12 @@ static void checkTextSegment(InputSection *isec) {
 // is no source address to make a relative location meaningful.
 static void relocateCompactUnwind(MergedOutputSection *compactUnwindSection,
                                   std::vector<CompactUnwindEntry64> &cuVector) {
-  for (InputSection *isec : compactUnwindSection->inputs) {
+  for (const InputSection *isec : compactUnwindSection->inputs) {
     uint8_t *buf =
         reinterpret_cast<uint8_t *>(cuVector.data()) + isec->outSecFileOff;
     memcpy(buf, isec->data.data(), isec->data.size());
 
-    for (Reloc &r : isec->relocs) {
+    for (const Reloc &r : isec->relocs) {
       uint64_t referentVA = 0;
       if (auto *referentSym = r.referent.dyn_cast<macho::Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
@@ -278,7 +280,7 @@ void UnwindInfoSection::finalize() {
 
   // Count frequencies of the folded encodings
   EncodingMap encodingFrequencies;
-  for (auto cuPtrEntry : cuPtrVector)
+  for (const CompactUnwindEntry64 *cuPtrEntry : cuPtrVector)
     encodingFrequencies[cuPtrEntry->encoding]++;
 
   // Make a vector of encodings, sorted by descending frequency
@@ -314,7 +316,7 @@ void UnwindInfoSection::finalize() {
   // If more entries fit in the regular format, we use that.
   for (size_t i = 0; i < cuPtrVector.size();) {
     secondLevelPages.emplace_back();
-    auto &page = secondLevelPages.back();
+    UnwindInfoSection::SecondLevelPage &page = secondLevelPages.back();
     page.entryIndex = i;
     uintptr_t functionAddressMax =
         cuPtrVector[i]->functionAddress + COMPRESSED_ENTRY_FUNC_OFFSET_MASK;
@@ -324,7 +326,7 @@ void UnwindInfoSection::finalize() {
         sizeof(unwind_info_compressed_second_level_page_header) /
             sizeof(uint32_t);
     while (wordsRemaining >= 1 && i < cuPtrVector.size()) {
-      const auto *cuPtr = cuPtrVector[i];
+      const CompactUnwindEntry64 *cuPtr = cuPtrVector[i];
       if (cuPtr->functionAddress >= functionAddressMax) {
         break;
       } else if (commonEncodingIndexes.count(cuPtr->encoding) ||

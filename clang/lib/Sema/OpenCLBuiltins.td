@@ -651,11 +651,17 @@ foreach name = ["step"] in {
 }
 
 // --- 3 arguments ---
-foreach name = ["clamp", "mix"] in {
+foreach name = ["clamp"] in {
   def : Builtin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN], Attr.Const>;
   def : Builtin<name, [GenTypeFloatVecNoScalar, GenTypeFloatVecNoScalar, Float, Float], Attr.Const>;
   def : Builtin<name, [GenTypeDoubleVecNoScalar, GenTypeDoubleVecNoScalar, Double, Double], Attr.Const>;
   def : Builtin<name, [GenTypeHalfVecNoScalar, GenTypeHalfVecNoScalar, Half, Half], Attr.Const>;
+}
+foreach name = ["mix"] in {
+  def : Builtin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN], Attr.Const>;
+  def : Builtin<name, [GenTypeFloatVecNoScalar, GenTypeFloatVecNoScalar, GenTypeFloatVecNoScalar, Float], Attr.Const>;
+  def : Builtin<name, [GenTypeDoubleVecNoScalar, GenTypeDoubleVecNoScalar, GenTypeDoubleVecNoScalar, Double], Attr.Const>;
+  def : Builtin<name, [GenTypeHalfVecNoScalar, GenTypeHalfVecNoScalar, GenTypeHalfVecNoScalar, Half], Attr.Const>;
 }
 foreach name = ["smoothstep"] in {
   def : Builtin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN], Attr.Const>;
@@ -1037,6 +1043,7 @@ let Extension = FuncExtKhrInt64ExtendedAtomics in {
 }
 // OpenCL v1.1 s6.11.1, v1.2 s6.12.11 - Atomic Functions
 foreach AS = [GlobalAS, LocalAS] in {
+  def : Builtin<"atomic_xchg", [Float, PointerType<VolatileType<Float>, AS>, Float]>;
   foreach Type = [Int, UInt] in {
     foreach name = ["atomic_add", "atomic_sub", "atomic_xchg",
                     "atomic_min", "atomic_max", "atomic_and",
@@ -1093,7 +1100,6 @@ let MinVersion = CL20 in {
 
   foreach TypePair = [[AtomicInt, Int, Int], [AtomicUInt, UInt, UInt],
                       [AtomicLong, Long, Long], [AtomicULong, ULong, ULong],
-                      [AtomicIntPtr, IntPtr, PtrDiff],
                       [AtomicUIntPtr, UIntPtr, PtrDiff]] in {
     foreach ModOp = ["add", "sub"] in {
       def : Builtin<"atomic_fetch_" # ModOp,
@@ -1105,9 +1111,7 @@ let MinVersion = CL20 in {
     }
   }
   foreach TypePair = [[AtomicInt, Int, Int], [AtomicUInt, UInt, UInt],
-                      [AtomicLong, Long, Long], [AtomicULong, ULong, ULong],
-                      [AtomicIntPtr, IntPtr, IntPtr],
-                      [AtomicUIntPtr, UIntPtr, UIntPtr]] in {
+                      [AtomicLong, Long, Long], [AtomicULong, ULong, ULong]] in {
     foreach ModOp = ["or", "xor", "and", "min", "max"] in {
       def : Builtin<"atomic_fetch_" # ModOp,
           [TypePair[1], PointerType<VolatileType<TypePair[0]>, GenericAS>, TypePair[2]]>;

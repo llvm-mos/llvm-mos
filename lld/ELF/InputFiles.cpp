@@ -115,7 +115,8 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
   log(path);
   config->dependencyFiles.insert(llvm::CachedHashString(path));
 
-  auto mbOrErr = MemoryBuffer::getFile(path, -1, false);
+  auto mbOrErr = MemoryBuffer::getFile(path, /*IsText=*/false,
+                                       /*RequiresNullTerminator=*/false);
   if (auto ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
     return None;
@@ -1267,7 +1268,7 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
 //    GNU ld.
 //
 //  The second behavior is inherited from SysVR4, which based it on the FORTRAN
-//  COMMON BLOCK model. This behavior is needed for proper initalization in old
+//  COMMON BLOCK model. This behavior is needed for proper initialization in old
 //  (pre F90) FORTRAN code that is packaged into an archive.
 //
 //  The following functions search archive members for definitions to replace

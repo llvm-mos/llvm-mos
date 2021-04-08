@@ -21,16 +21,18 @@ using namespace llvm::opt;
 
 void Flang::AddFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_ffixed_form, options::OPT_ffree_form,
-                   options::OPT_ffixed_line_length_EQ, options::OPT_fopenmp,
-                   options::OPT_fopenacc, options::OPT_finput_charset_EQ,
-                   options::OPT_fimplicit_none, options::OPT_fno_implicit_none,
-                   options::OPT_fbackslash, options::OPT_fno_backslash,
-                   options::OPT_flogical_abbreviations,
-                   options::OPT_fno_logical_abbreviations,
-                   options::OPT_fxor_operator, options::OPT_fno_xor_operator,
-                   options::OPT_falternative_parameter_statement});
+  Args.AddAllArgs(
+      CmdArgs, {options::OPT_ffixed_form, options::OPT_ffree_form,
+                options::OPT_ffixed_line_length_EQ, options::OPT_fopenmp,
+                options::OPT_fopenacc, options::OPT_finput_charset_EQ,
+                options::OPT_fimplicit_none, options::OPT_fno_implicit_none,
+                options::OPT_fbackslash, options::OPT_fno_backslash,
+                options::OPT_flogical_abbreviations,
+                options::OPT_fno_logical_abbreviations,
+                options::OPT_fxor_operator, options::OPT_fno_xor_operator,
+                options::OPT_falternative_parameter_statement,
+                options::OPT_fdefault_real_8, options::OPT_fdefault_integer_8,
+                options::OPT_fdefault_double_8, options::OPT_flarge_sizes});
 }
 
 void Flang::AddPreprocessingOptions(const ArgList &Args,
@@ -39,7 +41,10 @@ void Flang::AddPreprocessingOptions(const ArgList &Args,
 }
 
 void Flang::AddOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs, options::OPT_module_dir);
+  Args.AddAllArgs(CmdArgs,
+                  {options::OPT_module_dir, options::OPT_fdebug_module_writer,
+                   options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
+                   options::OPT_std_EQ});
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

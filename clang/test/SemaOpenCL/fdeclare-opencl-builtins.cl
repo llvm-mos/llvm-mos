@@ -17,6 +17,10 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #endif
 
+#if __OPENCL_C_VERSION__ <= CL_VERSION_1_2
+#pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
+#endif
+
 // First, test that Clang gracefully handles missing types.
 #ifdef NO_HEADER
 void test_without_header() {
@@ -35,6 +39,9 @@ typedef unsigned int uint;
 typedef unsigned long ulong;
 typedef unsigned short ushort;
 typedef __SIZE_TYPE__ size_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+typedef __INTPTR_TYPE__ intptr_t;
+typedef __UINTPTR_TYPE__ uintptr_t;
 typedef char char2 __attribute__((ext_vector_type(2)));
 typedef char char4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar4 __attribute__((ext_vector_type(4)));
@@ -93,6 +100,24 @@ void test_typedef_args(clk_event_t evt, volatile atomic_flag *flg, global unsign
 
   size_t ws[2] = {2, 8};
   ndrange_t r = ndrange_2D(ws);
+}
+
+// Check that atomic_fetch_ functions can be called with (u)intptr_t arguments,
+// despite OpenCLBuiltins.td not providing explicit overloads for those types.
+void test_atomic_fetch(volatile __generic atomic_int *a_int,
+                       volatile __generic atomic_intptr_t *a_intptr,
+                       volatile __generic atomic_uintptr_t *a_uintptr) {
+  int i;
+  intptr_t ip;
+  uintptr_t uip;
+  ptrdiff_t ptrdiff;
+
+  i = atomic_fetch_add(a_int, i);
+  ip = atomic_fetch_add(a_intptr, ptrdiff);
+  uip = atomic_fetch_add(a_uintptr, ptrdiff);
+
+  ip = atomic_fetch_or(a_intptr, ip);
+  uip = atomic_fetch_or(a_uintptr, uip);
 }
 #endif
 
@@ -169,13 +194,20 @@ kernel void basic_image_readwrite(read_write image3d_t image_read_write_image3d)
 }
 #endif // __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
-kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_image1d_buffer) {
+kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_image1d_buffer, write_only image3d_t image3dwo) {
   half4 h4;
   float4 f4;
   int i;
 
   write_imagef(image_write_only_image1d_buffer, i, f4);
   write_imageh(image_write_only_image1d_buffer, i, h4);
+
+  int4 i4;
+  write_imagef(image3dwo, i4, i, f4);
+#if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
+  // expected-error@-2{{no matching function for call to 'write_imagef'}}
+  // expected-note@-3 + {{candidate function not viable}}
+#endif
 }
 
 kernel void basic_subgroup(global uint *out) {

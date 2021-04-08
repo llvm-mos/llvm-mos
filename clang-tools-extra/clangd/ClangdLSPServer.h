@@ -48,9 +48,6 @@ public:
     /// Look for compilation databases, rather than using compile commands
     /// set via LSP (extensions) only.
     bool UseDirBasedCDB = true;
-    /// A fixed directory to search for a compilation database in.
-    /// If not set, we search upward from the source file.
-    llvm::Optional<Path> CompileCommandsDir;
     /// The offset-encoding to use, or None to negotiate it over LSP.
     llvm::Optional<OffsetEncoding> Encoding;
     /// If set, periodically called to release memory.
@@ -87,6 +84,7 @@ private:
                           std::vector<Diag> Diagnostics) override;
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
   void onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) override;
+  void onSemanticsMaybeChanged(PathRef File) override;
 
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
@@ -181,11 +179,12 @@ private:
       ReportWorkDoneProgress;
   LSPBinder::OutgoingNotification<ProgressParams<WorkDoneProgressEnd>>
       EndWorkDoneProgress;
+  LSPBinder::OutgoingMethod<NoParams, std::nullptr_t> SemanticTokensRefresh;
 
   void applyEdit(WorkspaceEdit WE, llvm::json::Value Success,
                  Callback<llvm::json::Value> Reply);
 
-  void bindMethods(LSPBinder &);
+  void bindMethods(LSPBinder &, const ClientCapabilities &Caps);
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
   /// Checks if completion request should be ignored. We need this due to the
@@ -194,12 +193,6 @@ private:
   /// produce '->' and '::', respectively.
   bool shouldRunCompletion(const CompletionParams &Params) const;
 
-  /// Requests a reparse of currently opened files using their latest source.
-  /// This will typically only rebuild if something other than the source has
-  /// changed (e.g. the CDB yields different flags, or files included in the
-  /// preamble have been modified).
-  void reparseOpenFilesIfNeeded(
-      llvm::function_ref<bool(llvm::StringRef File)> Filter);
   void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Runs profiling and exports memory usage metrics if tracing is enabled and
@@ -282,8 +275,6 @@ private:
   BackgroundQueue::Stats PendingBackgroundIndexProgress;
   /// LSP extension: skip WorkDoneProgressCreate, just send progress streams.
   bool BackgroundIndexSkipCreate = false;
-  // Store of the current versions of the open documents.
-  DraftStore DraftMgr;
 
   Options Opts;
   // The CDB is created by the "initialize" LSP method.

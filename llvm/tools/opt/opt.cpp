@@ -229,6 +229,13 @@ static cl::opt<bool> VerifyEachDebugInfoPreserve(
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
+static cl::opt<std::string>
+    VerifyDIPreserveExport("verify-di-preserve-export",
+                   cl::desc("Export debug info preservation failures into "
+                            "specified (JSON) file (should be abs path as we use"
+                            " append mode to insert new JSON objects)"),
+                   cl::value_desc("filename"), cl::init(""));
+
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
                  cl::desc("Print select breakpoints location for testing"));
@@ -513,7 +520,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expand-reductions",    "indirectbr-expand",
       "generic-to-nvvm",      "expandmemcmp",
       "loop-reduce",          "lower-amx-type",
-      "polyhedral-info",      "replace-with-veclib"};
+      "lower-amx-intrinsics", "polyhedral-info",
+      "replace-with-veclib"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
@@ -775,6 +783,12 @@ int main(int argc, char **argv) {
                 "full list of passes, see the '--print-passes' flag.\n";
       return 1;
     }
+    if (legacy::debugPassSpecified()) {
+      errs()
+          << "-debug-pass does not work with the new PM, either use "
+             "-debug-pass-manager, or use the legacy PM (-enable-new-pm=0)\n";
+      return 1;
+    }
     if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
       errs()
           << "Cannot specify passes via both -foo-pass and --passes=foo-pass\n";
@@ -831,6 +845,8 @@ int main(int argc, char **argv) {
   } else if (VerifyEachDebugInfoPreserve) {
     Passes.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
     Passes.setDIPreservationMap(DIPreservationMap);
+    if (!VerifyDIPreserveExport.empty())
+      Passes.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
   }
 
   bool AddOneTimeDebugifyPasses =
@@ -1000,10 +1016,13 @@ int main(int argc, char **argv) {
   if (AddOneTimeDebugifyPasses) {
     if (EnableDebugify)
       Passes.add(createCheckDebugifyModulePass(false));
-    else if (VerifyDebugInfoPreserve)
+    else if (VerifyDebugInfoPreserve) {
+      if (!VerifyDIPreserveExport.empty())
+        Passes.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
       Passes.add(createCheckDebugifyModulePass(
           false, "", nullptr, DebugifyMode::OriginalDebugInfo,
-          &(Passes.getDebugInfoPerPassMap())));
+          &(Passes.getDebugInfoPerPassMap()), VerifyDIPreserveExport));
+    }
   }
 
   // In run twice mode, we want to make sure the output is bit-by-bit

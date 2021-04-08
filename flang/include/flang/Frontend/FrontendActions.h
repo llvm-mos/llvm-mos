@@ -54,6 +54,10 @@ class DebugDumpProvenanceAction : public PrescanAction {
   void ExecuteAction() override;
 };
 
+class DebugDumpParsingLogAction : public PrescanAction {
+  void ExecuteAction() override;
+};
+
 class DebugMeasureParseTreeAction : public PrescanAction {
   void ExecuteAction() override;
 };
@@ -93,6 +97,10 @@ class DebugDumpParseTreeAction : public PrescanAndSemaAction {
 };
 
 class DebugPreFIRTreeAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
+class GetSymbolsSourcesAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
 

@@ -138,19 +138,19 @@ name: vaarg
 # CHECK-LABEL: name: vaarg
 body: |
   bb.0.entry:
-    %0:_(p0) = COPY $rs0
+    %0:_(p0) = COPY $rs1
     %1:_(p0) = G_VAARG %0, 1
     RTS implicit %1
-# CHECK:      %0:_(p0) = COPY $rs0
+# CHECK:      %0:_(p0) = COPY $rs1
 # CHECK-NEXT: %18:_(s8) = G_LOAD %0(p0) :: (invariant load 1)
 # CHECK-NEXT: %10:_(s8) = G_CONSTANT i8 1
 # CHECK-NEXT: %19:_(p0) = G_PTR_ADD %0, %10(s8)
-# CHECK-NEXT: %21:_(s8) = G_LOAD %19(p0) :: (invariant load 1 + 1)
+# CHECK-NEXT: %21:_(s8) = G_LOAD %19(p0) :: (invariant load 1 from unknown-address + 1)
 # CHECK-NEXT: %17:_(s16) = G_MERGE_VALUES %18(s8), %21(s8)
 # CHECK-NEXT: %2:_(p0) = G_INTTOPTR %17(s16)
 # CHECK-NEXT: %13:_(s8) = G_LOAD %2(p0) :: (invariant load 1)
 # CHECK-NEXT: %14:_(p0) = G_PTR_ADD %2, %10(s8)
-# CHECK-NEXT: %16:_(s8) = G_LOAD %14(p0) :: (invariant load 1 + 1)
+# CHECK-NEXT: %16:_(s8) = G_LOAD %14(p0) :: (invariant load 1 from unknown-address + 1)
 # CHECK-NEXT: %12:_(s16) = G_MERGE_VALUES %13(s8), %16(s8)
 # CHECK-NEXT: %1:_(p0) = G_INTTOPTR %12(s16)
 # CHECK-NEXT: %11:_(s8) = G_CONSTANT i8 2
@@ -159,6 +159,6 @@ body: |
 # CHECK-NEXT: %6:_(s8), %7:_(s8) = G_UNMERGE_VALUES %5(s16)
 # CHECK-NEXT: G_STORE %6(s8), %0(p0) :: (store 1)
 # CHECK-NEXT: %8:_(p0) = G_PTR_ADD %0, %10(s8)
-# CHECK-NEXT: G_STORE %7(s8), %8(p0) :: (store 1 + 1)
+# CHECK-NEXT: G_STORE %7(s8), %8(p0) :: (store 1 into unknown-address + 1)
 # CHECK-NEXT: RTS implicit %1(p0)
 ...

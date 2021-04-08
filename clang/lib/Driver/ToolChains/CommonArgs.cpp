@@ -11,6 +11,7 @@
 #include "CommonArgs.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
+#include "Arch/M68k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/SystemZ.h"
@@ -374,6 +375,9 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
       return A->getValue();
     return "";
 
+  case llvm::Triple::m68k:
+    return m68k::getM68kTargetCPU(Args);
+
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
@@ -401,9 +405,14 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     if (!TargetCPUName.empty())
       return TargetCPUName;
 
-    if (T.isOSAIX())
-      TargetCPUName = "pwr4";
-    else if (T.getArch() == llvm::Triple::ppc64le)
+    if (T.isOSAIX()) {
+      unsigned major, minor, unused_micro;
+      T.getOSVersion(major, minor, unused_micro);
+      // The minimal arch level moved from pwr4 for AIX7.1 to
+      // pwr7 for AIX7.2.
+      TargetCPUName =
+          (major < 7 || (major == 7 && minor < 2)) ? "pwr4" : "pwr7";
+    } else if (T.getArch() == llvm::Triple::ppc64le)
       TargetCPUName = "ppc64le";
     else if (T.getArch() == llvm::Triple::ppc64)
       TargetCPUName = "ppc64";
@@ -1379,7 +1388,9 @@ static LibGccType getLibGccType(const ToolChain &TC, const Driver &D,
   // The Android NDK only provides libunwind.a, not libunwind.so.
   if (TC.getTriple().isAndroid())
     return LibGccType::StaticLibGcc;
-  if (D.CCCIsCXX())
+  // For MinGW, don't imply a shared libgcc here, we only want to return
+  // SharedLibGcc if that was explicitly requested.
+  if (D.CCCIsCXX() && !TC.getTriple().isOSCygMing())
     return LibGccType::SharedLibGcc;
   return LibGccType::UnspecifiedLibGcc;
 }

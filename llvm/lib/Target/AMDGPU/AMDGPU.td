@@ -480,7 +480,7 @@ def FeatureDot1Insts : SubtargetFeature<"dot1-insts",
 def FeatureDot2Insts : SubtargetFeature<"dot2-insts",
   "HasDot2Insts",
   "true",
-  "Has v_dot2_f32_f16, v_dot2_i32_i16, v_dot2_u32_u16, v_dot4_u32_u8, v_dot8_u32_u4 instructions"
+  "Has v_dot2_i32_i16, v_dot2_u32_u16 instructions"
 >;
 
 def FeatureDot3Insts : SubtargetFeature<"dot3-insts",
@@ -505,6 +505,12 @@ def FeatureDot6Insts : SubtargetFeature<"dot6-insts",
   "HasDot6Insts",
   "true",
   "Has v_dot4c_i32_i8 instruction"
+>;
+
+def FeatureDot7Insts : SubtargetFeature<"dot7-insts",
+  "HasDot7Insts",
+  "true",
+  "Has v_dot2_f32_f16, v_dot4_u32_u8, v_dot8_u32_u4 instructions"
 >;
 
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
@@ -561,6 +567,12 @@ def FeatureSMemTimeInst : SubtargetFeature<"s-memtime-inst",
   "HasSMemTimeInst",
   "true",
   "Has s_memtime instruction"
+>;
+
+def FeatureShaderCyclesRegister : SubtargetFeature<"shader-cycles-register",
+  "HasShaderCyclesRegister",
+  "true",
+  "Has SHADER_CYCLES hardware register"
 >;
 
 def FeatureMadMacF32Insts : SubtargetFeature<"mad-mac-f32-insts",
@@ -777,7 +789,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
-   FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
+   FeatureGFX10A16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
   ]
 >;
@@ -896,6 +908,7 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot2Insts,
+   FeatureDot7Insts,
    FeatureSupportsSRAMECC,
    FeatureImageGather4D16Bug]>;
 
@@ -914,6 +927,7 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeatureDot4Insts,
    FeatureDot5Insts,
    FeatureDot6Insts,
+   FeatureDot7Insts,
    FeatureMAIInsts,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddInsts,
@@ -942,6 +956,7 @@ def FeatureISAVersion9_0_A : FeatureSet<
    FeatureDot4Insts,
    FeatureDot5Insts,
    FeatureDot6Insts,
+   FeatureDot7Insts,
    Feature64BitDPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
@@ -988,7 +1003,6 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
      FeatureGetWaveIdInst,
-     FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
@@ -1003,13 +1017,13 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureDot2Insts,
      FeatureDot5Insts,
      FeatureDot6Insts,
+     FeatureDot7Insts,
      FeatureNSAEncoding,
      FeatureWavefrontSize32,
      FeatureScalarStores,
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
      FeatureGetWaveIdInst,
-     FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
@@ -1024,13 +1038,13 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureDot2Insts,
      FeatureDot5Insts,
      FeatureDot6Insts,
+     FeatureDot7Insts,
      FeatureNSAEncoding,
      FeatureWavefrontSize32,
      FeatureScalarStores,
      FeatureScalarAtomics,
      FeatureScalarFlatScratchInsts,
      FeatureGetWaveIdInst,
-     FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
@@ -1046,8 +1060,10 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureDot2Insts,
    FeatureDot5Insts,
    FeatureDot6Insts,
+   FeatureDot7Insts,
    FeatureNSAEncoding,
-   FeatureWavefrontSize32]>;
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesRegister]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1215,6 +1231,10 @@ def isGFX90AOnly :
   Predicate<"Subtarget->hasGFX90AInsts()">,
   AssemblerPredicate<(all_of FeatureGFX90AInsts)>;
 
+def isGFX908orGFX90A :
+  Predicate<"Subtarget->hasMAIInsts()">,
+  AssemblerPredicate<(all_of FeatureMAIInsts)>;
+
 def isGFX8GFX9 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
@@ -1365,6 +1385,9 @@ def HasDot5Insts : Predicate<"Subtarget->hasDot5Insts()">,
 def HasDot6Insts : Predicate<"Subtarget->hasDot6Insts()">,
   AssemblerPredicate<(all_of FeatureDot6Insts)>;
 
+def HasDot7Insts : Predicate<"Subtarget->hasDot7Insts()">,
+  AssemblerPredicate<(all_of FeatureDot7Insts)>;
+
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;
 
@@ -1377,7 +1400,8 @@ def HasSMemRealTime : Predicate<"Subtarget->hasSMemRealTime()">,
 def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
   AssemblerPredicate<(all_of FeatureSMemTimeInst)>;
 
-def HasNoSMemTimeInst : Predicate<"!Subtarget->hasSMemTimeInst()">;
+def HasShaderCyclesRegister : Predicate<"Subtarget->hasShaderCyclesRegister()">,
+  AssemblerPredicate<(all_of FeatureShaderCyclesRegister)>;
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;

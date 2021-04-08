@@ -176,7 +176,7 @@ bool SIRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // When we need stack realignment, we can't reference off of the
   // stack pointer, so we reserve a base pointer.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.getNumFixedObjects() && needsStackRealignment(MF);
+  return MFI.getNumFixedObjects() && shouldRealignStack(MF);
 }
 
 Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
@@ -358,7 +358,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-bool SIRegisterInfo::canRealignStack(const MachineFunction &MF) const {
+bool SIRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   // On entry, the base address is 0, so it can't possibly need any more
   // alignment.
@@ -368,7 +368,7 @@ bool SIRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   if (Info->isEntryFunction())
     return false;
 
-  return TargetRegisterInfo::canRealignStack(MF);
+  return TargetRegisterInfo::shouldRealignStack(MF);
 }
 
 bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const {
@@ -743,12 +743,9 @@ static bool buildMUBUFOffsetLoadStore(const GCNSubtarget &ST,
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
           .addImm(Offset)
-          .addImm(0) // glc
-          .addImm(0) // slc
+          .addImm(0) // cpol
           .addImm(0) // tfe
-          .addImm(0) // dlc
           .addImm(0) // swz
-          .addImm(0) // scc
           .cloneMemRefs(*MI);
 
   const MachineOperand *VDataIn = TII->getNamedOperand(*MI,
@@ -1010,13 +1007,10 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       MIB.addReg(SOffset, SOffsetRegState);
     }
     MIB.addImm(Offset + RemRegOffset)
-        .addImm(0) // glc
-        .addImm(0) // slc
-        .addImm(0); // tfe for MUBUF or dlc for FLAT
+       .addImm(0); // cpol
     if (!IsFlat)
-      MIB.addImm(0) // dlc
+      MIB.addImm(0)  // tfe
          .addImm(0); // swz
-    MIB.addImm(0); // scc
     MIB.addMemOperand(NewMMO);
 
     if (!IsAGPR && NeedSuperRegDef)
@@ -2342,6 +2336,18 @@ MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
   }
 
   return AMDGPU::NoRegister;
+}
+
+bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
+  if (!ST.needsAlignedVGPRs())
+    return true;
+
+  if (hasVGPRs(&RC))
+    return RC.hasSuperClassEq(getVGPRClassForBitWidth(getRegSizeInBits(RC)));
+  if (hasAGPRs(&RC))
+    return RC.hasSuperClassEq(getAGPRClassForBitWidth(getRegSizeInBits(RC)));
+
+  return true;
 }
 
 bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {

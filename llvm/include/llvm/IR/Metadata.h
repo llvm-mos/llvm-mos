@@ -52,6 +52,10 @@ enum LLVMConstants : uint32_t {
   DEBUG_METADATA_VERSION = 3 // Current debug info version number.
 };
 
+/// Magic number in the value profile metadata showing a target has been
+/// promoted for the instruction and shouldn't be promoted again.
+const uint64_t NOMORE_ICP_MAGICNUM = -1;
+
 /// Root of the metadata hierarchy.
 ///
 /// This is a root class for typeless data in the IR.
@@ -299,6 +303,9 @@ public:
   /// Replace all uses of this with \c MD, which is allowed to be null.
   void replaceAllUsesWith(Metadata *MD);
 
+  /// Returns the list of all DIArgList users of this.
+  SmallVector<Metadata *, 4> getAllArgListUsers();
+
   /// Resolve all uses of this.
   ///
   /// Resolve all uses of this, turning off RAUW permanently.  If \c
@@ -377,6 +384,10 @@ public:
   Value *getValue() const { return V; }
   Type *getType() const { return V->getType(); }
   LLVMContext &getContext() const { return V->getContext(); }
+
+  SmallVector<Metadata *, 4> getAllArgListUsers() {
+    return ReplaceableMetadataImpl::getAllArgListUsers();
+  }
 
   static void handleDeletion(Value *V);
   static void handleRAUW(Value *From, Value *To);

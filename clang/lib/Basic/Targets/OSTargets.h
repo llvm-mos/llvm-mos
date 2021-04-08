@@ -261,6 +261,9 @@ public:
     case llvm::Triple::arm:
       this->MCountName = "__mcount";
       break;
+    case llvm::Triple::riscv32:
+    case llvm::Triple::riscv64:
+      break;
     }
   }
 };
@@ -490,6 +493,9 @@ public:
     case llvm::Triple::ppc64le:
     case llvm::Triple::sparcv9:
       this->MCountName = "_mcount";
+      break;
+    case llvm::Triple::riscv32:
+    case llvm::Triple::riscv64:
       break;
     }
   }
@@ -788,8 +794,10 @@ public:
   ZOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedInt;
+    this->MaxAlignedAttribute = 128;
     this->UseBitFieldTypeAlignment = false;
     this->UseZeroLengthBitfieldAlignment = true;
+    this->UseLeadingZeroLengthBitfield = false;
     this->ZeroLengthBitfieldBoundary = 32;
     this->MinGlobalAlign = 0;
     this->DefaultAlignForAttributeAligned = 128;

@@ -72,6 +72,13 @@ Modified Compiler Flags
 -----------------------
 
 - -Wshadow now also checks for shadowed structured bindings
+- ``-B <prefix>`` (when ``<prefix>`` is a directory) was overloaded to additionally
+  detect GCC installations under ``<prefix>`` (``lib{,32,64}/gcc{,-cross}/$triple``).
+  This behavior was incompatible with GCC, caused interop issues with
+  ``--gcc-toolchain``, and was thus dropped. Specify ``--gcc-toolchain=<dir>``
+  instead. ``-B``'s other GCC-compatible semantics are preserved:
+  ``$prefix/$triple-$file`` and ``$prefix$file`` are searched for executables,
+  libraries, includes, and data files used by the compiler.
 
 Removed Compiler Flags
 -------------------------
@@ -151,6 +158,10 @@ Build System Changes
 These are major changes to the build system that have happened since the 12.0.0
 release of Clang. Users of the build system should adjust accordingly.
 
+- The option ``LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA`` no longer exists. There were
+  two releases with that flag forced off, and no uses were added that forced it
+  on. The recommended replacement is clangd.
+
 - ...
 
 AST Matchers
@@ -166,8 +177,8 @@ clang-format
 
 - Option ``SortIncludes`` has been updated from a ``bool`` to an
   ``enum`` with backwards compatibility. In addition to the previous
-  ``true``/``false`` states (now ``CaseInsensitive``/``Never``), a third
-  state has been added (``CaseSensitive``) which causes an alphabetical sort
+  ``true``/``false`` states (now ``CaseSensitive``/``Never``), a third
+  state has been added (``CaseInsensitive``) which causes an alphabetical sort
   with case used as a tie-breaker.
 
   .. code-block:: c++
@@ -179,14 +190,14 @@ clang-format
     #include "A/b.h"
     #include "B/a.h"
 
-    // CaseInsensitive (previously true)
+    // CaseSensitive (previously true)
     #include "A/B.h"
     #include "A/b.h"
     #include "B/A.h"
     #include "B/a.h"
     #include "a/b.h"
 
-    // CaseSensitive
+    // CaseInsensitive
     #include "A/B.h"
     #include "A/b.h"
     #include "a/b.h"
@@ -198,6 +209,12 @@ clang-format
 
 - Option ``IndentAccessModifiers`` has been added to be able to give access
   modifiers their own indentation level inside records.
+
+- Option ``ShortNamespaceLines`` has been added to give better control
+  over ``FixNamespaceComments`` when determining a namespace length.
+
+- Support for Whitesmiths has been improved, with fixes for ``namespace`` blocks
+  and ``case`` blocks and labels.
 
 libclang
 --------

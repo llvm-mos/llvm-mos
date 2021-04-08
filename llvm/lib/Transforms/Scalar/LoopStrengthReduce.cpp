@@ -77,6 +77,7 @@
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -3429,6 +3430,9 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         // Ignore non-instructions.
         if (!UserInst)
           continue;
+        // Don't bother if the instruction is an EHPad.
+        if (UserInst->isEHPad())
+          continue;
         // Ignore instructions in other functions (as can happen with
         // Constants).
         if (UserInst->getParent()->getParent() != L->getHeader()->getParent())
@@ -5561,6 +5565,50 @@ void LSRInstance::ImplementSolution(
 
   Changed |= RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts,
                                                                   &TLI, MSSAU);
+
+  // In our cost analysis above, we assume that each addrec consumes exactly
+  // one register, and arrange to have increments inserted just before the
+  // latch to maximimize the chance this is true.  However, if we reused
+  // existing IVs, we now need to move the increments to match our
+  // expectations.  Otherwise, our cost modeling results in us having a
+  // chosen a non-optimal result for the actual schedule.  (And yes, this
+  // scheduling decision does impact later codegen.)
+  for (PHINode &PN : L->getHeader()->phis()) {
+    BinaryOperator *BO = nullptr;
+    Value *Start = nullptr, *Step = nullptr;
+    if (!matchSimpleRecurrence(&PN, BO, Start, Step))
+      continue;
+
+    switch (BO->getOpcode()) {
+    case Instruction::Sub:
+      if (BO->getOperand(0) != &PN)
+        // sub is non-commutative - match handling elsewhere in LSR
+        continue;
+      break;
+    case Instruction::Add:
+      break;
+    default:
+      continue;
+    };
+
+    if (!isa<Constant>(Step))
+      // If not a constant step, might increase register pressure
+      // (We assume constants have been canonicalized to RHS)
+      continue;
+
+    if (BO->getParent() == IVIncInsertPos->getParent())
+      // Only bother moving across blocks.  Isel can handle block local case.
+      continue;
+
+    // Can we legally schedule inc at the desired point?
+    if (!llvm::all_of(BO->uses(),
+                      [&](Use &U) {return DT.dominates(IVIncInsertPos, U);}))
+      continue;
+    BO->moveBefore(IVIncInsertPos);
+    Changed = true;
+  }
+
+
 }
 
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
@@ -5781,58 +5829,71 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MemorySSAWrapperPass>();
 }
 
-using EqualValues = SmallVector<std::tuple<WeakVH, int64_t, DIExpression *>, 4>;
-using EqualValuesMap = DenseMap<DbgValueInst *, EqualValues>;
+using EqualValues = SmallVector<std::tuple<WeakVH, int64_t>, 4>;
+using EqualValuesMap =
+    DenseMap<std::pair<DbgValueInst *, unsigned>, EqualValues>;
+using ExpressionMap = DenseMap<DbgValueInst *, DIExpression *>;
 
 static void DbgGatherEqualValues(Loop *L, ScalarEvolution &SE,
-                                 EqualValuesMap &DbgValueToEqualSet) {
+                                 EqualValuesMap &DbgValueToEqualSet,
+                                 ExpressionMap &DbgValueToExpression) {
   for (auto &B : L->getBlocks()) {
     for (auto &I : *B) {
       auto DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
         continue;
-      auto V = DVI->getVariableLocation();
-      if (!V || !SE.isSCEVable(V->getType()))
-        continue;
-      auto DbgValueSCEV = SE.getSCEV(V);
-      EqualValues EqSet;
-      for (PHINode &Phi : L->getHeader()->phis()) {
-        if (V->getType() != Phi.getType())
+      for (unsigned Idx = 0; Idx < DVI->getNumVariableLocationOps(); ++Idx) {
+        // TODO: We can duplicate results if the same arg appears more than
+        // once.
+        Value *V = DVI->getVariableLocationOp(Idx);
+        if (!V || !SE.isSCEVable(V->getType()))
           continue;
-        if (!SE.isSCEVable(Phi.getType()))
-          continue;
-        auto PhiSCEV = SE.getSCEV(&Phi);
-        Optional<APInt> Offset =
-                SE.computeConstantDifference(DbgValueSCEV, PhiSCEV);
-        if (Offset && Offset->getMinSignedBits() <= 64)
-          EqSet.emplace_back(std::make_tuple(
-              &Phi, Offset.getValue().getSExtValue(), DVI->getExpression()));
+        auto DbgValueSCEV = SE.getSCEV(V);
+        EqualValues EqSet;
+        for (PHINode &Phi : L->getHeader()->phis()) {
+          if (V->getType() != Phi.getType())
+            continue;
+          if (!SE.isSCEVable(Phi.getType()))
+            continue;
+          auto PhiSCEV = SE.getSCEV(&Phi);
+          Optional<APInt> Offset =
+              SE.computeConstantDifference(DbgValueSCEV, PhiSCEV);
+          if (Offset && Offset->getMinSignedBits() <= 64)
+            EqSet.emplace_back(
+                std::make_tuple(&Phi, Offset.getValue().getSExtValue()));
+        }
+        DbgValueToEqualSet[{DVI, Idx}] = std::move(EqSet);
+        DbgValueToExpression[DVI] = DVI->getExpression();
       }
-      DbgValueToEqualSet[DVI] = std::move(EqSet);
     }
   }
 }
 
-static void DbgApplyEqualValues(EqualValuesMap &DbgValueToEqualSet) {
+static void DbgApplyEqualValues(EqualValuesMap &DbgValueToEqualSet,
+                                ExpressionMap &DbgValueToExpression) {
   for (auto A : DbgValueToEqualSet) {
-    auto DVI = A.first;
+    auto DVI = A.first.first;
+    auto Idx = A.first.second;
     // Only update those that are now undef.
-    if (!isa_and_nonnull<UndefValue>(DVI->getVariableLocation()))
+    if (!isa_and_nonnull<UndefValue>(DVI->getVariableLocationOp(Idx)))
       continue;
     for (auto EV : A.second) {
-      auto V = std::get<WeakVH>(EV);
-      if (!V)
+      auto EVHandle = std::get<WeakVH>(EV);
+      if (!EVHandle)
         continue;
-      auto DbgDIExpr = std::get<DIExpression *>(EV);
+      // The dbg.value may have had its value changed by LSR; refresh it from
+      // the map, but continue to update the mapped expression as it may be
+      // updated multiple times in this function.
+      auto DbgDIExpr = DbgValueToExpression[DVI];
       auto Offset = std::get<int64_t>(EV);
-      auto &Ctx = DVI->getContext();
-      DVI->setOperand(0, MetadataAsValue::get(Ctx, ValueAsMetadata::get(V)));
+      DVI->replaceVariableLocationOp(Idx, EVHandle);
       if (Offset) {
         SmallVector<uint64_t, 8> Ops;
         DIExpression::appendOffset(Ops, Offset);
-        DbgDIExpr = DIExpression::prependOpcodes(DbgDIExpr, Ops, true);
+        DbgDIExpr = DIExpression::appendOpsToArg(DbgDIExpr, Ops, Idx, true);
       }
-      DVI->setOperand(2, MetadataAsValue::get(Ctx, DbgDIExpr));
+      DVI->setExpression(DbgDIExpr);
+      DbgValueToExpression[DVI] = DbgDIExpr;
       break;
     }
   }
@@ -5856,7 +5917,8 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   // Debug preservation - before we start removing anything create equivalence
   // sets for the llvm.dbg.value intrinsics.
   EqualValuesMap DbgValueToEqualSet;
-  DbgGatherEqualValues(L, SE, DbgValueToEqualSet);
+  ExpressionMap DbgValueToExpression;
+  DbgGatherEqualValues(L, SE, DbgValueToEqualSet, DbgValueToExpression);
 
   // Remove any extra phis created by processing inner loops.
   Changed |= DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
@@ -5876,7 +5938,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     }
   }
 
-  DbgApplyEqualValues(DbgValueToEqualSet);
+  DbgApplyEqualValues(DbgValueToEqualSet, DbgValueToExpression);
 
   return Changed;
 }

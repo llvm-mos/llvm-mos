@@ -276,6 +276,18 @@ enum : unsigned {
 } // namespace AMDGPU
 
 namespace AMDGPU {
+namespace CPol {
+
+enum CPol {
+  GLC = 1,
+  SLC = 2,
+  DLC = 4,
+  SCC = 16,
+  ALL = GLC | SLC | DLC | SCC
+};
+
+} // namespace CPol
+
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 
 enum Id { // Message ID, width(4) [3:0].
@@ -659,6 +671,7 @@ enum SDWA9EncValues : unsigned {
 
 namespace DPP {
 
+// clang-format off
 enum DppCtrl : unsigned {
   QUAD_PERM_FIRST   = 0,
   QUAD_PERM_ID      = 0xE4, // identity permutation
@@ -695,12 +708,15 @@ enum DppCtrl : unsigned {
   DPP_UNUSED8_LAST  = 0x14F,
   ROW_NEWBCAST_FIRST= 0x150,
   ROW_NEWBCAST_LAST = 0x15F,
+  ROW_SHARE0        = 0x150,
   ROW_SHARE_FIRST   = 0x150,
   ROW_SHARE_LAST    = 0x15F,
+  ROW_XMASK0        = 0x160,
   ROW_XMASK_FIRST   = 0x160,
   ROW_XMASK_LAST    = 0x16F,
   DPP_LAST          = ROW_XMASK_LAST
 };
+// clang-format on
 
 enum DppFiMode {
   DPP_FI_0  = 0,
@@ -737,6 +753,17 @@ enum Target : unsigned {
 };
 
 } // namespace Exp
+
+namespace VOP3PEncoding {
+
+enum OpSel : uint64_t {
+  OP_SEL_HI_0 = UINT64_C(1) << 59,
+  OP_SEL_HI_1 = UINT64_C(1) << 60,
+  OP_SEL_HI_2 = UINT64_C(1) << 14,
+};
+
+} // namespace VOP3PEncoding
+
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

@@ -145,8 +145,9 @@ ChangeStatus operator|(ChangeStatus l, ChangeStatus r);
 ChangeStatus operator&(ChangeStatus l, ChangeStatus r);
 
 enum class DepClassTy {
-  REQUIRED,
-  OPTIONAL,
+  REQUIRED, ///< The target cannot be valid if the source is not.
+  OPTIONAL, ///< The target may be valid if the source is not.
+  NONE,     ///< Do not track a dependence between source and target.
 };
 ///}
 
@@ -228,6 +229,9 @@ struct AADepGraph {
 /// are floating values that do not have a corresponding attribute list
 /// position.
 struct IRPosition {
+  // NOTE: In the future this definition can be changed to support recursive
+  // functions.
+  using CallBaseContext = CallBase;
 
   /// The positions we distinguish in the IR.
   enum Kind : char {
@@ -248,27 +252,34 @@ struct IRPosition {
   IRPosition() : Enc(nullptr, ENC_VALUE) { verify(); }
 
   /// Create a position describing the value of \p V.
-  static const IRPosition value(const Value &V) {
+  static const IRPosition value(const Value &V,
+                                const CallBaseContext *CBContext = nullptr) {
     if (auto *Arg = dyn_cast<Argument>(&V))
-      return IRPosition::argument(*Arg);
+      return IRPosition::argument(*Arg, CBContext);
     if (auto *CB = dyn_cast<CallBase>(&V))
       return IRPosition::callsite_returned(*CB);
-    return IRPosition(const_cast<Value &>(V), IRP_FLOAT);
+    return IRPosition(const_cast<Value &>(V), IRP_FLOAT, CBContext);
   }
 
   /// Create a position describing the function scope of \p F.
-  static const IRPosition function(const Function &F) {
-    return IRPosition(const_cast<Function &>(F), IRP_FUNCTION);
+  /// \p CBContext is used for call base specific analysis.
+  static const IRPosition function(const Function &F,
+                                   const CallBaseContext *CBContext = nullptr) {
+    return IRPosition(const_cast<Function &>(F), IRP_FUNCTION, CBContext);
   }
 
   /// Create a position describing the returned value of \p F.
-  static const IRPosition returned(const Function &F) {
-    return IRPosition(const_cast<Function &>(F), IRP_RETURNED);
+  /// \p CBContext is used for call base specific analysis.
+  static const IRPosition returned(const Function &F,
+                                   const CallBaseContext *CBContext = nullptr) {
+    return IRPosition(const_cast<Function &>(F), IRP_RETURNED, CBContext);
   }
 
   /// Create a position describing the argument \p Arg.
-  static const IRPosition argument(const Argument &Arg) {
-    return IRPosition(const_cast<Argument &>(Arg), IRP_ARGUMENT);
+  /// \p CBContext is used for call base specific analysis.
+  static const IRPosition argument(const Argument &Arg,
+                                   const CallBaseContext *CBContext = nullptr) {
+    return IRPosition(const_cast<Argument &>(Arg), IRP_ARGUMENT, CBContext);
   }
 
   /// Create a position describing the function scope of \p CB.
@@ -304,16 +315,20 @@ struct IRPosition {
   /// If \p IRP is a call site (see isAnyCallSitePosition()) then the result
   /// will be a call site position, otherwise the function position of the
   /// associated function.
-  static const IRPosition function_scope(const IRPosition &IRP) {
+  static const IRPosition
+  function_scope(const IRPosition &IRP,
+                 const CallBaseContext *CBContext = nullptr) {
     if (IRP.isAnyCallSitePosition()) {
       return IRPosition::callsite_function(
           cast<CallBase>(IRP.getAnchorValue()));
     }
     assert(IRP.getAssociatedFunction());
-    return IRPosition::function(*IRP.getAssociatedFunction());
+    return IRPosition::function(*IRP.getAssociatedFunction(), CBContext);
   }
 
-  bool operator==(const IRPosition &RHS) const { return Enc == RHS.Enc; }
+  bool operator==(const IRPosition &RHS) const {
+    return Enc == RHS.Enc && RHS.CBContext == CBContext;
+  }
   bool operator!=(const IRPosition &RHS) const { return !(*this == RHS); }
 
   /// Return the value this abstract attribute is anchored with.
@@ -534,6 +549,19 @@ struct IRPosition {
     }
   }
 
+  /// Return the same position without the call base context.
+  IRPosition stripCallBaseContext() const {
+    IRPosition Result = *this;
+    Result.CBContext = nullptr;
+    return Result;
+  }
+
+  /// Get the call base context from the position.
+  const CallBaseContext *getCallBaseContext() const { return CBContext; }
+
+  /// Check if the position has any call base context.
+  bool hasCallBaseContext() const { return CBContext != nullptr; }
+
   /// Special DenseMap key values.
   ///
   ///{
@@ -546,10 +574,15 @@ struct IRPosition {
 
 private:
   /// Private constructor for special values only!
-  explicit IRPosition(void *Ptr) { Enc.setFromOpaqueValue(Ptr); }
+  explicit IRPosition(void *Ptr, const CallBaseContext *CBContext = nullptr)
+      : CBContext(CBContext) {
+    Enc.setFromOpaqueValue(Ptr);
+  }
 
   /// IRPosition anchored at \p AnchorVal with kind/argument numbet \p PK.
-  explicit IRPosition(Value &AnchorVal, Kind PK) {
+  explicit IRPosition(Value &AnchorVal, Kind PK,
+                      const CallBaseContext *CBContext = nullptr)
+      : CBContext(CBContext) {
     switch (PK) {
     case IRPosition::IRP_INVALID:
       llvm_unreachable("Cannot create invalid IRP with an anchor value!");
@@ -671,15 +704,26 @@ private:
   PointerIntPair<void *, NumEncodingBits, char> Enc;
   ///}
 
+  /// Call base context. Used for callsite specific analysis.
+  const CallBaseContext *CBContext = nullptr;
+
   /// Return the encoding bits.
   char getEncodingBits() const { return Enc.getInt(); }
 };
 
 /// Helper that allows IRPosition as a key in a DenseMap.
-template <> struct DenseMapInfo<IRPosition> : DenseMapInfo<void *> {
+template <> struct DenseMapInfo<IRPosition> {
   static inline IRPosition getEmptyKey() { return IRPosition::EmptyKey; }
   static inline IRPosition getTombstoneKey() {
     return IRPosition::TombstoneKey;
+  }
+  static unsigned getHashValue(const IRPosition &IRP) {
+    return (DenseMapInfo<void *>::getHashValue(IRP) << 4) ^
+           (DenseMapInfo<Value *>::getHashValue(IRP.getCallBaseContext()));
+  }
+
+  static bool isEqual(const IRPosition &a, const IRPosition &b) {
+    return a == b;
   }
 };
 
@@ -1047,7 +1091,7 @@ struct Attributor {
   /// the one reasoning about the "captured" state for the argument or the one
   /// reasoning on the memory access behavior of the function as a whole.
   ///
-  /// If the flag \p TrackDependence is set to false the dependence from
+  /// If the DepClass enum is set to `DepClassTy::None` the dependence from
   /// \p QueryingAA to the return abstract attribute is not automatically
   /// recorded. This should only be used if the caller will record the
   /// dependence explicitly if necessary, thus if it the returned abstract
@@ -1055,9 +1099,8 @@ struct Attributor {
   /// the `Attributor::recordDependence` method.
   template <typename AAType>
   const AAType &getAAFor(const AbstractAttribute &QueryingAA,
-                         const IRPosition &IRP, bool TrackDependence = true,
-                         DepClassTy DepClass = DepClassTy::REQUIRED) {
-    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence, DepClass,
+                         const IRPosition &IRP, DepClassTy DepClass) {
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
                                     /* ForceUpdate */ false);
   }
 
@@ -1068,10 +1111,8 @@ struct Attributor {
   /// was assumed dead.
   template <typename AAType>
   const AAType &getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
-                                  const IRPosition &IRP,
-                                  bool TrackDependence = true,
-                                  DepClassTy DepClass = DepClassTy::REQUIRED) {
-    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence, DepClass,
+                                  const IRPosition &IRP, DepClassTy DepClass) {
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
                                     /* ForceUpdate */ true);
   }
 
@@ -1081,12 +1122,13 @@ struct Attributor {
   /// function.
   /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
-  const AAType &getOrCreateAAFor(const IRPosition &IRP,
-                                 const AbstractAttribute *QueryingAA = nullptr,
-                                 bool TrackDependence = false,
-                                 DepClassTy DepClass = DepClassTy::OPTIONAL,
-                                 bool ForceUpdate = false) {
-    if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence)) {
+  const AAType &
+  getOrCreateAAFor(IRPosition IRP, const AbstractAttribute *QueryingAA,
+                   DepClassTy DepClass, bool ForceUpdate = false) {
+    if (!shouldPropagateCallBaseContext(IRP))
+      IRP = IRP.stripCallBaseContext();
+
+    if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, DepClass)) {
       if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
       return *AAPtr;
@@ -1156,10 +1198,15 @@ struct Attributor {
 
     Phase = OldPhase;
 
-    if (TrackDependence && AA.getState().isValidState())
+    if (QueryingAA && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
                        DepClass);
     return AA;
+  }
+  template <typename AAType>
+  const AAType &getOrCreateAAFor(const IRPosition &IRP) {
+    return getOrCreateAAFor<AAType>(IRP, /* QueryingAA */ nullptr,
+                                    DepClassTy::NONE);
   }
 
   /// Return the attribute of \p AAType for \p IRP if existing. This also allows
@@ -1167,14 +1214,10 @@ struct Attributor {
   template <typename AAType>
   AAType *lookupAAFor(const IRPosition &IRP,
                       const AbstractAttribute *QueryingAA = nullptr,
-                      bool TrackDependence = false,
                       DepClassTy DepClass = DepClassTy::OPTIONAL) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
-    assert((QueryingAA || !TrackDependence) &&
-           "Cannot track dependences without a QueryingAA!");
-
     // Lookup the abstract attribute of type AAType. If found, return it after
     // registering a dependence of QueryingAA on the one returned attribute.
     AbstractAttribute *AAPtr = AAMap.lookup({&AAType::ID, IRP});
@@ -1184,7 +1227,8 @@ struct Attributor {
     AAType *AA = static_cast<AAType *>(AAPtr);
 
     // Do not register a dependence on an attribute with an invalid state.
-    if (TrackDependence && AA->getState().isValidState())
+    if (DepClass != DepClassTy::NONE && QueryingAA &&
+        AA->getState().isValidState())
       recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA),
                        DepClass);
     return AA;
@@ -1194,7 +1238,7 @@ struct Attributor {
   /// \p FromAA changes \p ToAA should be updated as well.
   ///
   /// This method should be used in conjunction with the `getAAFor` method and
-  /// with the TrackDependence flag passed to the method set to false. This can
+  /// with the DepClass enum passed to the method set to None. This can
   /// be beneficial to avoid false dependences but it requires the users of
   /// `getAAFor` to explicitly record true dependences through this method.
   /// The \p DepClass flag indicates if the dependence is striclty necessary.
@@ -1601,6 +1645,9 @@ private:
                             const Function &Fn, bool RequireAllCallSites,
                             const AbstractAttribute *QueryingAA,
                             bool &AllCallSitesKnown);
+
+  /// Determine if CallBase context in \p IRP should be propagated.
+  bool shouldPropagateCallBaseContext(const IRPosition &IRP);
 
   /// Apply all requested function signature rewrites
   /// (\see registerFunctionSignatureRewrite) and return Changed if the module
@@ -3033,7 +3080,7 @@ struct AADereferenceable
 };
 
 using AAAlignmentStateType =
-    IncIntegerState<uint32_t, Value::MaximumAlignment, 0>;
+    IncIntegerState<uint32_t, Value::MaximumAlignment, 1>;
 /// An abstract interface for all align attributes.
 struct AAAlign : public IRAttribute<
                      Attribute::Alignment,

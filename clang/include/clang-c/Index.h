@@ -2572,7 +2572,15 @@ enum CXCursorKind {
    */
   CXCursor_OMPTileDirective = 288,
 
-  CXCursor_LastStmt = CXCursor_OMPTileDirective,
+  /** OpenMP canonical loop.
+   */
+  CXCursor_OMPCanonicalLoop = 289,
+
+  /** OpenMP interop directive.
+   */
+  CXCursor_OMPInteropDirective = 290,
+
+  CXCursor_LastStmt = CXCursor_OMPInteropDirective,
 
   /**
    * Cursor that represents the translation unit itself.

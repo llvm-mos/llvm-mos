@@ -739,11 +739,20 @@ static void finalizeIndirectFunctionTable() {
   if (!WasmSym::indirectFunctionTable)
     return;
 
+  if (shouldImport(WasmSym::indirectFunctionTable) &&
+      !WasmSym::indirectFunctionTable->hasTableNumber()) {
+    // Processing -Bsymbolic relocations resulted in a late requirement that the
+    // indirect function table be present, and we are running in --import-table
+    // mode.  Add the table now to the imports section.  Otherwise it will be
+    // added to the tables section later in assignIndexes.
+    out.importSec->addImport(WasmSym::indirectFunctionTable);
+  }
+
   uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
   WasmLimits limits = {0, tableSize, 0};
   if (WasmSym::indirectFunctionTable->isDefined() && !config->growableTable) {
     limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
-    limits.Maximum = limits.Initial;
+    limits.Maximum = limits.Minimum;
   }
   WasmSym::indirectFunctionTable->setLimits(limits);
 }
@@ -890,12 +899,13 @@ void Writer::combineOutputSegments() {
       }
       bool first = true;
       for (InputSegment *inSeg : s->inputSegments) {
-        uint32_t alignment = first ? s->alignment : 0;
+        if (first)
+          inSeg->alignment = std::max(inSeg->alignment, s->alignment);
         first = false;
 #ifndef NDEBUG
         uint64_t oldVA = inSeg->getVA();
 #endif
-        combined->addInputSegment(inSeg, alignment);
+        combined->addInputSegment(inSeg);
 #ifndef NDEBUG
         uint64_t newVA = inSeg->getVA();
         assert(oldVA == newVA);

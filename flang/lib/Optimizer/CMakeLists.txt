@@ -10,17 +10,22 @@ add_flang_library(FIROptimizer
   Support/InternalNames.cpp
   Support/KindMapping.cpp
 
+  CodeGen/CGOps.cpp
+  CodeGen/PreCGRewrite.cpp
+
   Transforms/Inliner.cpp
 
   DEPENDS
   FIROpsIncGen
+  FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
+  CGOpsIncGen
   ${dialect_libs}
 
   LINK_LIBS
   ${dialect_libs}
-  MLIRTargetLLVMIR
-  MLIRTargetLLVMIRModuleTranslation
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
 
   LINK_COMPONENTS
   AsmParser

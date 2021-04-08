@@ -403,12 +403,22 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
         }
       }
     }
+    if (auto *SemanticTokens = Workspace->getObject("semanticTokens")) {
+      if (auto RefreshSupport = SemanticTokens->getBoolean("refreshSupport"))
+        R.SemanticTokenRefreshSupport = *RefreshSupport;
+    }
   }
   if (auto *Window = O->getObject("window")) {
     if (auto WorkDoneProgress = Window->getBoolean("workDoneProgress"))
       R.WorkDoneProgress = *WorkDoneProgress;
     if (auto Implicit = Window->getBoolean("implicitWorkDoneProgressCreate"))
       R.ImplicitProgressCreation = *Implicit;
+  }
+  if (auto *General = O->getObject("general")) {
+    if (auto *StaleRequestSupport = General->getObject("staleRequestSupport")) {
+      if (auto Cancel = StaleRequestSupport->getBoolean("cancel"))
+        R.CancelsStaleRequests = *Cancel;
+    }
   }
   if (auto *OffsetEncoding = O->get("offsetEncoding")) {
     R.offsetEncoding.emplace();
@@ -740,7 +750,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const SymbolDetails &S) {
 bool fromJSON(const llvm::json::Value &Params, WorkspaceSymbolParams &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("query", R.query);
+  return O && O.map("query", R.query) &&
+         mapOptOrNull(Params, "limit", R.limit, P);
 }
 
 llvm::json::Value toJSON(const Command &C) {
@@ -841,7 +852,8 @@ bool fromJSON(const llvm::json::Value &Params, CompletionContext &R,
 
 bool fromJSON(const llvm::json::Value &Params, CompletionParams &R,
               llvm::json::Path P) {
-  if (!fromJSON(Params, static_cast<TextDocumentPositionParams &>(R), P))
+  if (!fromJSON(Params, static_cast<TextDocumentPositionParams &>(R), P) ||
+      !mapOptOrNull(Params, "limit", R.limit, P))
     return false;
   if (auto *Context = Params.getAsObject()->get("context"))
     return fromJSON(*Context, R.context, P.field("context"));

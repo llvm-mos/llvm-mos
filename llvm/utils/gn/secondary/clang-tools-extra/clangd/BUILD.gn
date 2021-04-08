@@ -14,6 +14,7 @@ write_cmake_config("features") {
   values = [
     "CLANGD_ENABLE_REMOTE=0",
     "CLANGD_MALLOC_TRIM=1",
+    "ENABLE_GRPC_REFLECTION=0",
   ]
   if (clangd_build_xpc) {
     values += [ "CLANGD_BUILD_XPC=1" ]
@@ -84,6 +85,7 @@ static_library("clangd") {
     "DumpAST.cpp",
     "ExpectedTypes.cpp",
     "FS.cpp",
+    "FeatureModule.cpp",
     "FileDistance.cpp",
     "FindSymbols.cpp",
     "FindTarget.cpp",
@@ -96,7 +98,6 @@ static_library("clangd") {
     "Hover.cpp",
     "IncludeFixer.cpp",
     "JSONTransport.cpp",
-    "Module.cpp",
     "ParsedAST.cpp",
     "PathMapping.cpp",
     "Preamble.cpp",

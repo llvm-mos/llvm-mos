@@ -460,6 +460,14 @@ class IRLinker {
     if (DGV->hasLocalLinkage())
       return nullptr;
 
+    // If we found an intrinsic declaration with mismatching prototypes, we
+    // probably had a nameclash. Don't use that version.
+    if (auto *FDGV = dyn_cast<Function>(DGV))
+      if (FDGV->isIntrinsic())
+        if (const auto *FSrcGV = dyn_cast<Function>(SrcGV))
+          if (FDGV->getFunctionType() != TypeMap.get(FSrcGV->getFunctionType()))
+            return nullptr;
+
     // Otherwise, we do in fact link to the destination global.
     return DGV;
   }
@@ -639,7 +647,8 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
 AttributeList IRLinker::mapAttributeTypes(LLVMContext &C, AttributeList Attrs) {
   for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
     for (Attribute::AttrKind TypedAttr :
-         {Attribute::ByVal, Attribute::StructRet, Attribute::ByRef}) {
+         {Attribute::ByVal, Attribute::StructRet, Attribute::ByRef,
+          Attribute::InAlloca}) {
       if (Attrs.hasAttribute(i, TypedAttr)) {
         if (Type *Ty = Attrs.getAttribute(i, TypedAttr).getValueAsType()) {
           Attrs = Attrs.replaceAttributeType(C, i, TypedAttr, TypeMap.get(Ty));
@@ -995,6 +1004,7 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
     return linkAppendingVarProto(cast_or_null<GlobalVariable>(DGV),
                                  cast<GlobalVariable>(SGV));
 
+  bool NeedsRenaming = false;
   GlobalValue *NewGV;
   if (DGV && !ShouldLink) {
     NewGV = DGV;
@@ -1007,15 +1017,21 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
 
     NewGV = copyGlobalValueProto(SGV, ShouldLink || ForIndirectSymbol);
     if (ShouldLink || !ForIndirectSymbol)
-      forceRenaming(NewGV, SGV->getName());
+      NeedsRenaming = true;
   }
 
   // Overloaded intrinsics have overloaded types names as part of their
   // names. If we renamed overloaded types we should rename the intrinsic
   // as well.
   if (Function *F = dyn_cast<Function>(NewGV))
-    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F))
+    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F)) {
+      NewGV->eraseFromParent();
       NewGV = Remangled.getValue();
+      NeedsRenaming = false;
+    }
+
+  if (NeedsRenaming)
+    forceRenaming(NewGV, SGV->getName());
 
   if (ShouldLink || ForIndirectSymbol) {
     if (const Comdat *SC = SGV->getComdat()) {

@@ -18,10 +18,10 @@ def SDT_PPCPairBuild : SDTypeProfile<1, 2, [
   SDTCisVT<0, v256i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>
 ]>;
 def SDT_PPCAccExtractVsx : SDTypeProfile<1, 2, [
-  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisInt<2>
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisPtrTy<2>
 ]>;
 def SDT_PPCPairExtractVsx : SDTypeProfile<1, 2, [
-  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisInt<2>
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisPtrTy<2>
 ]>;
 def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
   SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
@@ -1608,13 +1608,13 @@ let Predicates = [MMA] in {
                                               v16i8:$vs3, v16i8:$vs2)),
             (XXMTACC Concats.VecsToVecQuad)>;
   def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 0)),
             Extracts.Vec0>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 1))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 1)),
             Extracts.Vec1>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 2))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 2)),
             Extracts.Vec2>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 3))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 3)),
             Extracts.Vec3>;
 }
 
@@ -1623,9 +1623,9 @@ let Predicates = [PairedVectorMemops] in {
             Concats.VecsToVecPair0>;
   def : Pat<(v256i1 (int_ppc_vsx_assemble_pair v16i8:$vs1, v16i8:$vs0)),
             Concats.VecsToVecPair0>;
-  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 0))),
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, 0)),
             (v4i32 (EXTRACT_SUBREG $v, sub_vsx0))>;
-  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 1))),
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, 1)),
             (v4i32 (EXTRACT_SUBREG $v, sub_vsx1))>;
 }
 
@@ -1691,6 +1691,10 @@ let Predicates = [PairedVectorMemops] in {
 // be removed.
 let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // Load i32
+  def : Pat<(i32 (zextloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZpc $ga, 0)>;
+  def : Pat<(i32 (extloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZpc $ga, 0)>;
   def : Pat<(i32 (zextloadi8  (PPCmatpcreladdr pcreladdr:$ga))),
             (PLBZpc $ga, 0)>;
   def : Pat<(i32 (extloadi8   (PPCmatpcreladdr pcreladdr:$ga))),
@@ -1712,6 +1716,10 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
             (PSTWpc $RS, $ga, 0)>;
 
   // Load i64
+  def : Pat<(i64 (zextloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZ8pc $ga, 0)>;
+  def : Pat<(i64 (extloadi1  (PPCmatpcreladdr pcreladdr:$ga))),
+            (PLBZ8pc $ga, 0)>;
   def : Pat<(i64 (zextloadi8  (PPCmatpcreladdr pcreladdr:$ga))),
             (PLBZ8pc $ga, 0)>;
   def : Pat<(i64 (extloadi8   (PPCmatpcreladdr pcreladdr:$ga))),
@@ -1859,14 +1867,6 @@ let Predicates = [PrefixInstrs] in {
                                       "xxspltidp $XT, $IMM32", IIC_VecGeneral,
                                       [(set v2f64:$XT,
                                             (PPCxxspltidp i32:$IMM32))]>;
-  def XXSPLTI32DX :
-      8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
-                             (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),
-                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral,
-                             [(set v2i64:$XT,
-                                   (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
-                                                   i32:$IMM32))]>,
-                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
   def XXPERMX :
     8RR_XX4Form_IMM3_XTABC6<34, 0, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
                             vsrc:$XC, u3imm:$UIM),
@@ -1888,6 +1888,19 @@ let Predicates = [PrefixInstrs] in {
     8RR_XX4Form_XTABC6<33, 3, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
                        vsrc:$XC), "xxblendvd $XT, $XA, $XB, $XC",
                        IIC_VecGeneral, []>;
+}
+
+// XXSPLI32DX needs extra flags to make sure the compiler does not attempt
+// to spill part of the instruction when the values are similar.
+let isReMaterializable = 1, isMoveImm = 1, Predicates = [PrefixInstrs] in {
+  def XXSPLTI32DX :
+      8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
+                             (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),
+                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral,
+                             [(set v2i64:$XT,
+                                   (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
+                                                   i32:$IMM32))]>,
+                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
 }
 
 let Predicates = [IsISA3_1] in {
@@ -2563,6 +2576,11 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
             (STXVRDX $src, xoaddr:$dst)>;
   def : Pat<(store (f64 (extractelt v2f64:$src, 0)), xoaddr:$dst),
             (STXVRDX $src, xoaddr:$dst)>;
+  // Load element 0 of a VSX register to memory
+  def : Pat<(v8i16 (scalar_to_vector (i32 (extloadi16 xoaddr:$src)))),
+            (v8i16 (COPY_TO_REGCLASS (LXVRHX xoaddr:$src), VSRC))>;
+  def : Pat<(v16i8 (scalar_to_vector (i32 (extloadi8 xoaddr:$src)))),
+            (v16i8 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VSRC))>;
  }
 
 // FIXME: The swap is overkill when the shift amount is a constant.
@@ -2609,6 +2627,19 @@ let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
  def : Pat<(f64 nzFPImmAsi32:$A),
            (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
                              VSFRC)>;
+
+// To replace constant pool with XXSPLTI32DX for scalars.
+def : Pat<(f32 nzFPImmAsi64:$A),
+          (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX(IMPLICIT_DEF), 0,
+                                        (getFPAs64BitIntHi $A)),
+                                        1, (getFPAs64BitIntLo $A)),
+                            VSRC)>;
+
+def : Pat<(f64 nzFPImmAsi64:$A),
+          (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX (IMPLICIT_DEF), 0,
+                                        (getFPAs64BitIntHi $A)),
+                                        1, (getFPAs64BitIntLo $A)),
+                            VSRC)>;
 
   // Anonymous patterns for XXEVAL
   // AND

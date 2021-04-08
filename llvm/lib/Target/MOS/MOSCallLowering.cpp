@@ -63,7 +63,8 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
   }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     assert(1 <= Size && Size < 65536);
     assert(0 <= Offset && Offset < 65536);
 
@@ -153,7 +154,8 @@ struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
   }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO) override {
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
     int FI = MFI.CreateFixedObject(Size, Offset, true);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);

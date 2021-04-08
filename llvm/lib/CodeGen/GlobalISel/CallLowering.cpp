@@ -112,7 +112,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (auto &Arg : CB.args()) {
-    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), getAttributesForArgIdx(CB, i),
+    ArgInfo OrigArg{ArgRegs[i], *Arg.get(), getAttributesForArgIdx(CB, i),
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
 
@@ -163,7 +163,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     // For ByVal, alignment should be passed from FE.  BE will guess if
     // this info is not there but there are cases it cannot get right.
     Align FrameAlign;
-    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 2))
+    if (auto ParamAlign = FuncInfo.getParamAlign(OpIdx - 1))
       FrameAlign = *ParamAlign;
     else
       FrameAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
@@ -187,29 +187,42 @@ CallLowering::setArgFlags<CallBase>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const DataLayout &DL,
                                     const CallBase &FuncInfo) const;
 
-Register CallLowering::packRegs(ArrayRef<Register> SrcRegs, Type *PackedTy,
-                                MachineIRBuilder &MIRBuilder) const {
-  assert(SrcRegs.size() > 1 && "Nothing to pack");
+void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
+                                     SmallVectorImpl<ArgInfo> &SplitArgs,
+                                     const DataLayout &DL,
+                                     CallingConv::ID CallConv) const {
+  LLVMContext &Ctx = OrigArg.Ty->getContext();
 
-  const DataLayout &DL = MIRBuilder.getMF().getDataLayout();
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  SmallVector<EVT, 4> SplitVTs;
+  SmallVector<uint64_t, 4> Offsets;
+  ComputeValueVTs(*TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);
 
-  LLT PackedLLT = getLLTForType(*PackedTy, DL);
+  if (SplitVTs.size() == 0)
+    return;
 
-  SmallVector<LLT, 8> LLTs;
-  SmallVector<uint64_t, 8> Offsets;
-  computeValueLLTs(DL, *PackedTy, LLTs, &Offsets);
-  assert(LLTs.size() == SrcRegs.size() && "Regs / types mismatch");
-
-  Register Dst = MRI->createGenericVirtualRegister(PackedLLT);
-  MIRBuilder.buildUndef(Dst);
-  for (unsigned i = 0; i < SrcRegs.size(); ++i) {
-    Register NewDst = MRI->createGenericVirtualRegister(PackedLLT);
-    MIRBuilder.buildInsert(NewDst, Dst, SrcRegs[i], Offsets[i]);
-    Dst = NewDst;
+  if (SplitVTs.size() == 1) {
+    // No splitting to do, but we want to replace the original type (e.g. [1 x
+    // double] -> double).
+    SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
+                           OrigArg.Flags[0], OrigArg.IsFixed,
+                           OrigArg.OrigValue);
+    return;
   }
 
-  return Dst;
+  // Create one ArgInfo for each virtual register in the original ArgInfo.
+  assert(OrigArg.Regs.size() == SplitVTs.size() && "Regs / types mismatch");
+
+  bool NeedsRegBlock = TLI->functionArgumentNeedsConsecutiveRegisters(
+      OrigArg.Ty, CallConv, false);
+  for (unsigned i = 0, e = SplitVTs.size(); i < e; ++i) {
+    Type *SplitTy = SplitVTs[i].getTypeForEVT(Ctx);
+    SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.Flags[0],
+                           OrigArg.IsFixed);
+    if (NeedsRegBlock)
+      SplitArgs.back().Flags[0].setInConsecutiveRegs();
+  }
+
+  SplitArgs.back().Flags[0].setInConsecutiveRegsLast();
 }
 
 void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
@@ -244,16 +257,32 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
     return B.buildConcatVectors(DstRegs[0], SrcRegs);
   }
 
-  const int NumWide = LCMTy.getSizeInBits() / PartLLT.getSizeInBits();
-  Register Undef = B.buildUndef(PartLLT).getReg(0);
+  // We need to create an unmerge to the result registers, which may require
+  // widening the original value.
+  Register UnmergeSrcReg;
+  if (LCMTy != PartLLT) {
+    // e.g. A <3 x s16> value was split to <2 x s16>
+    // %register_value0:_(<2 x s16>)
+    // %register_value1:_(<2 x s16>)
+    // %undef:_(<2 x s16>) = G_IMPLICIT_DEF
+    // %concat:_<6 x s16>) = G_CONCAT_VECTORS %reg_value0, %reg_value1, %undef
+    // %dst_reg:_(<3 x s16>), %dead:_(<3 x s16>) = G_UNMERGE_VALUES %concat
+    const int NumWide = LCMTy.getSizeInBits() / PartLLT.getSizeInBits();
+    Register Undef = B.buildUndef(PartLLT).getReg(0);
 
-  // Build vector of undefs.
-  SmallVector<Register, 8> WidenedSrcs(NumWide, Undef);
+    // Build vector of undefs.
+    SmallVector<Register, 8> WidenedSrcs(NumWide, Undef);
 
-  // Replace the first sources with the real registers.
-  std::copy(SrcRegs.begin(), SrcRegs.end(), WidenedSrcs.begin());
+    // Replace the first sources with the real registers.
+    std::copy(SrcRegs.begin(), SrcRegs.end(), WidenedSrcs.begin());
+    UnmergeSrcReg = B.buildConcatVectors(LCMTy, WidenedSrcs).getReg(0);
+  } else {
+    // We don't need to widen anything if we're extracting a scalar which was
+    // promoted to a vector e.g. s8 -> v4s8 -> s8
+    assert(SrcRegs.size() == 1);
+    UnmergeSrcReg = SrcRegs[0];
+  }
 
-  auto Widened = B.buildConcatVectors(LCMTy, WidenedSrcs);
   int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
 
   SmallVector<Register, 8> PadDstRegs(NumDst);
@@ -263,16 +292,26 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   for (int I = DstRegs.size(); I != NumDst; ++I)
     PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
 
-  return B.buildUnmerge(PadDstRegs, Widened);
+  return B.buildUnmerge(PadDstRegs, UnmergeSrcReg);
 }
 
 /// Create a sequence of instructions to combine pieces split into register
 /// typed values to the original IR value. \p OrigRegs contains the destination
 /// value registers of type \p LLTy, and \p Regs contains the legalized pieces
-/// with type \p PartLLT.
-static void buildCopyToParts(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
-                             ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT) {
+/// with type \p PartLLT. This is used for incoming values (physregs to vregs).
+static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
+                              ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT) {
   MachineRegisterInfo &MRI = *B.getMRI();
+
+  // We could just insert a regular copy, but this is unreachable at the moment.
+  assert(LLTy != PartLLT && "identical part types shouldn't reach here");
+
+  if (PartLLT.isVector() == LLTy.isVector() &&
+      PartLLT.getScalarSizeInBits() > LLTy.getScalarSizeInBits()) {
+    assert(OrigRegs.size() == 1 && Regs.size() == 1);
+    B.buildTrunc(OrigRegs[0], Regs[0]);
+    return;
+  }
 
   if (!LLTy.isVector() && !PartLLT.isVector()) {
     assert(OrigRegs.size() == 1);
@@ -289,9 +328,9 @@ static void buildCopyToParts(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     return;
   }
 
-  if (LLTy.isVector() && PartLLT.isVector()) {
-    assert(OrigRegs.size() == 1);
-    assert(LLTy.getElementType() == PartLLT.getElementType());
+  if (PartLLT.isVector()) {
+    assert(OrigRegs.size() == 1 &&
+           LLTy.getScalarType() == PartLLT.getElementType());
     mergeVectorRegsToResultRegs(B, OrigRegs, Regs);
     return;
   }
@@ -341,6 +380,71 @@ static void buildCopyToParts(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
   }
 }
 
+/// Create a sequence of instructions to expand the value in \p SrcReg (of type
+/// \p SrcTy) to the types in \p DstRegs (of type \p PartTy). \p ExtendOp should
+/// contain the type of scalar value extension if necessary.
+///
+/// This is used for outgoing values (vregs to physregs)
+static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
+                            Register SrcReg, LLT SrcTy, LLT PartTy,
+                            unsigned ExtendOp = TargetOpcode::G_ANYEXT) {
+  // We could just insert a regular copy, but this is unreachable at the moment.
+  assert(SrcTy != PartTy && "identical part types shouldn't reach here");
+
+  const unsigned PartSize = PartTy.getSizeInBits();
+
+  if (PartTy.isVector() == SrcTy.isVector() &&
+      PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
+    assert(DstRegs.size() == 1);
+    B.buildInstr(ExtendOp, {DstRegs[0]}, {SrcReg});
+    return;
+  }
+
+  if (SrcTy.isVector() && !PartTy.isVector() &&
+      PartSize > SrcTy.getElementType().getSizeInBits()) {
+    // Vector was scalarized, and the elements extended.
+    auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
+    for (int i = 0, e = DstRegs.size(); i != e; ++i)
+      B.buildAnyExt(DstRegs[i], UnmergeToEltTy.getReg(i));
+    return;
+  }
+
+  LLT GCDTy = getGCDType(SrcTy, PartTy);
+  if (GCDTy == PartTy) {
+    // If this already evenly divisible, we can create a simple unmerge.
+    B.buildUnmerge(DstRegs, SrcReg);
+    return;
+  }
+
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT DstTy = MRI.getType(DstRegs[0]);
+  LLT LCMTy = getLCMType(SrcTy, PartTy);
+
+  const unsigned LCMSize = LCMTy.getSizeInBits();
+  const unsigned DstSize = DstTy.getSizeInBits();
+  const unsigned SrcSize = SrcTy.getSizeInBits();
+
+  Register UnmergeSrc = SrcReg;
+  if (LCMSize != SrcSize) {
+    // Widen to the common type.
+    Register Undef = B.buildUndef(SrcTy).getReg(0);
+    SmallVector<Register, 8> MergeParts(1, SrcReg);
+    for (unsigned Size = SrcSize; Size != LCMSize; Size += SrcSize)
+      MergeParts.push_back(Undef);
+
+    UnmergeSrc = B.buildMerge(LCMTy, MergeParts).getReg(0);
+  }
+
+  // Unmerge to the original registers and pad with dead defs.
+  SmallVector<Register, 8> UnmergeResults(DstRegs.begin(), DstRegs.end());
+  for (unsigned Size = DstSize * DstRegs.size(); Size != LCMSize;
+       Size += DstSize) {
+    UnmergeResults.push_back(MRI.createGenericVirtualRegister(DstTy));
+  }
+
+  B.buildUnmerge(UnmergeResults, UnmergeSrc);
+}
+
 bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                      SmallVectorImpl<ArgInfo> &Args,
                                      ValueHandler &Handler,
@@ -355,6 +459,14 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                            ThisReturnReg);
 }
 
+static unsigned extendOpFromFlags(llvm::ISD::ArgFlagsTy Flags) {
+  if (Flags.isSExt())
+    return TargetOpcode::G_SEXT;
+  if (Flags.isZExt())
+    return TargetOpcode::G_ZEXT;
+  return TargetOpcode::G_ANYEXT;
+}
+
 bool CallLowering::handleAssignments(CCState &CCInfo,
                                      SmallVectorImpl<CCValAssign> &ArgLocs,
                                      MachineIRBuilder &MIRBuilder,
@@ -362,6 +474,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
                                      ValueHandler &Handler,
                                      Register ThisReturnReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
   const DataLayout &DL = F.getParent()->getDataLayout();
 
@@ -387,10 +500,20 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full, Args[i],
                             Args[i].Flags[0], CCInfo))
         return false;
+
+      // If we couldn't directly assign this part, some casting may be
+      // necessary. Create the new register, but defer inserting the conversion
+      // instructions.
+      assert(Args[i].OrigRegs.empty());
+      Args[i].OrigRegs.push_back(Args[i].Regs[0]);
+      assert(Args[i].Regs.size() == 1);
+
+      const LLT VATy(NewVT);
+      Args[i].Regs[0] = MRI.createGenericVirtualRegister(VATy);
       continue;
     }
 
-    assert(NumParts > 1);
+    const LLT NewLLT(NewVT);
 
     // For incoming arguments (physregs to vregs), we could have values in
     // physregs (or memlocs) which we want to extract and copy to vregs.
@@ -407,13 +530,11 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       Args[i].OrigRegs.push_back(Args[i].Regs[0]);
       Args[i].Regs.clear();
       Args[i].Flags.clear();
-      LLT NewLLT = getLLTForMVT(NewVT);
       // For each split register, create and assign a vreg that will store
       // the incoming component of the larger value. These will later be
       // merged to form the final vreg.
       for (unsigned Part = 0; Part < NumParts; ++Part) {
-        Register Reg =
-            MIRBuilder.getMRI()->createGenericVirtualRegister(NewLLT);
+        Register Reg = MRI.createGenericVirtualRegister(NewLLT);
         ISD::ArgFlagsTy Flags = OrigFlags;
         if (Part == 0) {
           Flags.setSplit();
@@ -431,12 +552,13 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
         }
       }
     } else {
+      assert(Args[i].Regs.size() == 1);
+
       // This type is passed via multiple registers in the calling convention.
       // We need to extract the individual parts.
-      Register LargeReg = Args[i].Regs[0];
-      LLT SmallTy = LLT::scalar(NewVT.getSizeInBits());
-      auto Unmerge = MIRBuilder.buildUnmerge(SmallTy, LargeReg);
-      assert(Unmerge->getNumOperands() == NumParts + 1);
+      assert(Args[i].OrigRegs.empty());
+      Args[i].OrigRegs.push_back(Args[i].Regs[0]);
+
       ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
       // We're going to replace the regs and flags with the split ones.
       Args[i].Regs.clear();
@@ -459,7 +581,9 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           Flags.setReturned(false);
         }
 
-        Args[i].Regs.push_back(Unmerge.getReg(PartIdx));
+        Register NewReg = MRI.createGenericVirtualRegister(NewLLT);
+
+        Args[i].Regs.push_back(NewReg);
         Args[i].Flags.push_back(Flags);
         if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full,
                               Args[i], Args[i].Flags[PartIdx], CCInfo))
@@ -483,7 +607,6 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       continue;
     }
 
-    EVT OrigVT = EVT::getEVT(Args[i].Ty);
     EVT VAVT = VA.getValVT();
     const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
     const LLT VATy(VAVT.getSimpleVT());
@@ -491,15 +614,23 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
     // Expected to be multiple regs for a single incoming arg.
     // There should be Regs.size() ArgLocs per argument.
     unsigned NumArgRegs = Args[i].Regs.size();
-    MachineRegisterInfo &MRI = MF.getRegInfo();
     assert((j + (NumArgRegs - 1)) < ArgLocs.size() &&
            "Too many regs for number of args");
+
+    // Coerce into outgoing value types before register assignment.
+    if (!Handler.isIncomingArgumentHandler() && OrigTy != VATy) {
+      assert(Args[i].OrigRegs.size() == 1);
+      buildCopyToRegs(MIRBuilder, Args[i].Regs, Args[i].OrigRegs[0], OrigTy,
+                      VATy, extendOpFromFlags(Args[i].Flags[0]));
+    }
+
     for (unsigned Part = 0; Part < NumArgRegs; ++Part) {
       Register ArgReg = Args[i].Regs[Part];
-      LLT ArgRegTy = MRI.getType(ArgReg);
       // There should be Regs.size() ArgLocs per argument.
       VA = ArgLocs[j + Part];
-      if (VA.isMemLoc()) {
+      const ISD::ArgFlagsTy Flags = Args[i].Flags[Part];
+
+      if (VA.isMemLoc() && !Flags.isByVal()) {
         // Individual pieces may have been spilled to the stack and others
         // passed in registers.
 
@@ -509,13 +640,56 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
                                               : LocVT.getStoreSize();
         unsigned Offset = VA.getLocMemOffset();
         MachinePointerInfo MPO;
-        Register StackAddr = Handler.getStackAddress(MemSize, Offset, MPO);
+        Register StackAddr =
+            Handler.getStackAddress(MemSize, Offset, MPO, Flags);
         Handler.assignValueToAddress(Args[i], Part, StackAddr, MemSize, MPO,
                                      VA);
         continue;
       }
 
-      assert(VA.isRegLoc() && "custom loc should have been handled already");
+      if (VA.isMemLoc() && Flags.isByVal()) {
+        assert(Args[i].Regs.size() == 1 &&
+               "didn't expect split byval pointer");
+
+        if (Handler.isIncomingArgumentHandler()) {
+          // We just need to copy the frame index value to the pointer.
+          MachinePointerInfo MPO;
+          Register StackAddr = Handler.getStackAddress(
+              Flags.getByValSize(), VA.getLocMemOffset(), MPO, Flags);
+          MIRBuilder.buildCopy(Args[i].Regs[0], StackAddr);
+        } else {
+          // For outgoing byval arguments, insert the implicit copy byval
+          // implies, such that writes in the callee do not modify the caller's
+          // value.
+          uint64_t MemSize = Flags.getByValSize();
+          int64_t Offset = VA.getLocMemOffset();
+
+          MachinePointerInfo DstMPO;
+          Register StackAddr =
+              Handler.getStackAddress(MemSize, Offset, DstMPO, Flags);
+
+          MachinePointerInfo SrcMPO(Args[i].OrigValue);
+          if (!Args[i].OrigValue) {
+            // We still need to accurately track the stack address space if we
+            // don't know the underlying value.
+            const LLT PtrTy = MRI.getType(StackAddr);
+            SrcMPO = MachinePointerInfo(PtrTy.getAddressSpace());
+          }
+
+          Align DstAlign = std::max(Flags.getNonZeroByValAlign(),
+                                    inferAlignFromPtrInfo(MF, DstMPO));
+
+          Align SrcAlign = std::max(Flags.getNonZeroByValAlign(),
+                                    inferAlignFromPtrInfo(MF, SrcMPO));
+
+          Handler.copyArgumentMemory(Args[i], StackAddr, Args[i].Regs[0],
+                                     DstMPO, DstAlign, SrcMPO, SrcAlign,
+                                     MemSize, VA);
+        }
+        continue;
+      }
+
+      assert(!VA.needsCustom() && "custom loc should have been handled already");
 
       if (i == 0 && ThisReturnReg.isValid() &&
           Handler.isIncomingArgumentHandler() &&
@@ -524,57 +698,16 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
         continue;
       }
 
-      // GlobalISel does not currently work for scalable vectors.
-      if (OrigVT.getFixedSizeInBits() >= VAVT.getFixedSizeInBits() ||
-          !Handler.isIncomingArgumentHandler()) {
-        // This is an argument that might have been split. There should be
-        // Regs.size() ArgLocs per argument.
-
-        // Insert the argument copies. If VAVT < OrigVT, we'll insert the merge
-        // to the original register after handling all of the parts.
-        Handler.assignValueToReg(Args[i].Regs[Part], VA.getLocReg(), VA);
-        continue;
-      }
-
-      // This ArgLoc covers multiple pieces, so we need to split it.
-      Register NewReg = MRI.createGenericVirtualRegister(VATy);
-      Handler.assignValueToReg(NewReg, VA.getLocReg(), VA);
-      // If it's a vector type, we either need to truncate the elements
-      // or do an unmerge to get the lower block of elements.
-      if (VATy.isVector() &&
-          VATy.getNumElements() > OrigVT.getVectorNumElements()) {
-        // Just handle the case where the VA type is a multiple of original
-        // type.
-        if (VATy.getNumElements() % OrigVT.getVectorNumElements() != 0) {
-          LLVM_DEBUG(dbgs() << "Incoming promoted vector arg elts is not a "
-                               "multiple of orig type elt: "
-                            << VATy << " vs " << OrigTy);
-          return false;
-        }
-        SmallVector<Register, 4> DstRegs = {ArgReg};
-        unsigned NumParts =
-            VATy.getNumElements() / OrigVT.getVectorNumElements() - 1;
-        for (unsigned Idx = 0; Idx < NumParts; ++Idx)
-          DstRegs.push_back(
-              MIRBuilder.getMRI()->createGenericVirtualRegister(OrigTy));
-        MIRBuilder.buildUnmerge(DstRegs, {NewReg});
-      } else if (VATy.getScalarSizeInBits() > ArgRegTy.getScalarSizeInBits()) {
-        MIRBuilder.buildTrunc(ArgReg, {NewReg}).getReg(0);
-      } else {
-        MIRBuilder.buildCopy(ArgReg, NewReg);
-      }
+      Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA);
     }
 
-    // Now that all pieces have been handled, re-pack any arguments into any
-    // wider, original registers.
-    if (Handler.isIncomingArgumentHandler()) {
+    // Now that all pieces have been assigned, re-pack the register typed values
+    // into the original value typed registers.
+    if (Handler.isIncomingArgumentHandler() && OrigTy != VATy) {
       // Merge the split registers into the expected larger result vregs of
       // the original call.
-
-      if (OrigTy != VATy && !Args[i].OrigRegs.empty()) {
-        buildCopyToParts(MIRBuilder, Args[i].OrigRegs, Args[i].Regs, OrigTy,
-                         VATy);
-      }
+      buildCopyFromRegs(MIRBuilder, Args[i].OrigRegs, Args[i].Regs, OrigTy,
+                        VATy);
     }
 
     j += NumArgRegs - 1;
@@ -858,6 +991,29 @@ bool CallLowering::resultsCompatible(CallLoweringInfo &Info,
   return true;
 }
 
+void CallLowering::ValueHandler::copyArgumentMemory(
+    const ArgInfo &Arg, Register DstPtr, Register SrcPtr,
+    const MachinePointerInfo &DstPtrInfo, Align DstAlign,
+    const MachinePointerInfo &SrcPtrInfo, Align SrcAlign, uint64_t MemSize,
+    CCValAssign &VA) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  MachineMemOperand *SrcMMO = MF.getMachineMemOperand(
+      SrcPtrInfo,
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable, MemSize,
+      SrcAlign);
+
+  MachineMemOperand *DstMMO = MF.getMachineMemOperand(
+      DstPtrInfo,
+      MachineMemOperand::MOStore | MachineMemOperand::MODereferenceable,
+      MemSize, DstAlign);
+
+  const LLT PtrTy = MRI.getType(DstPtr);
+  const LLT SizeTy = LLT::scalar(PtrTy.getSizeInBits());
+
+  auto SizeConst = MIRBuilder.buildConstant(SizeTy, MemSize);
+  MIRBuilder.buildMemCpy(DstPtr, SrcPtr, SizeConst, *DstMMO, *SrcMMO);
+}
+
 Register CallLowering::ValueHandler::extendRegister(Register ValReg,
                                                     CCValAssign &VA,
                                                     unsigned MaxSizeBits) {
@@ -898,3 +1054,41 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
 }
 
 void CallLowering::ValueHandler::anchor() {}
+
+Register CallLowering::IncomingValueHandler::buildExtensionHint(CCValAssign &VA,
+                                                                Register SrcReg,
+                                                                LLT NarrowTy) {
+  switch (VA.getLocInfo()) {
+  case CCValAssign::LocInfo::ZExt: {
+    return MIRBuilder
+        .buildAssertZExt(MRI.cloneVirtualRegister(SrcReg), SrcReg,
+                         NarrowTy.getScalarSizeInBits())
+        .getReg(0);
+  }
+  case CCValAssign::LocInfo::SExt: {
+    return MIRBuilder
+        .buildAssertSExt(MRI.cloneVirtualRegister(SrcReg), SrcReg,
+                         NarrowTy.getScalarSizeInBits())
+        .getReg(0);
+    break;
+  }
+  default:
+    return SrcReg;
+  }
+}
+
+void CallLowering::IncomingValueHandler::assignValueToReg(Register ValVReg,
+                                                          Register PhysReg,
+                                                          CCValAssign &VA) {
+  const LLT LocTy(VA.getLocVT());
+  const LLT ValTy = MRI.getType(ValVReg);
+
+  if (ValTy.getSizeInBits() == LocTy.getSizeInBits()) {
+    MIRBuilder.buildCopy(ValVReg, PhysReg);
+    return;
+  }
+
+  auto Copy = MIRBuilder.buildCopy(LocTy, PhysReg);
+  auto Hint = buildExtensionHint(VA, Copy.getReg(0), ValTy);
+  MIRBuilder.buildTrunc(ValVReg, Hint);
+}

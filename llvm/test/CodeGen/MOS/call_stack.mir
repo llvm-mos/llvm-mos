@@ -31,13 +31,13 @@
     ; CHECK-NEXT: %3:_(s16) = G_CONSTANT i16 4
     ; CHECK-NEXT: %4:_(s16) = G_CONSTANT i16 5
     ; CHECK-NEXT: ADJCALLSTACKDOWN 2, 0
-    ; CHECK-NEXT: %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %3(s16)
-    ; CHECK-NEXT: %7:_(s8), %8:_(s8) = G_UNMERGE_VALUES %4(s16)
     ; CHECK-NEXT: $a = COPY %0(s8)
     ; CHECK-NEXT: $x = COPY %1(s8)
     ; CHECK-NEXT: $y = COPY %2(s8)
+    ; CHECK-NEXT: %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %3(s16)
     ; CHECK-NEXT: $rc2 = COPY %5(s8)
     ; CHECK-NEXT: $rc3 = COPY %6(s8)
+    ; CHECK-NEXT: %7:_(s8), %8:_(s8) = G_UNMERGE_VALUES %4(s16)
     ; CHECK-NEXT: %9:_(p0) = COPY $rs0
     ; CHECK-NEXT: %10:_(s16) = G_CONSTANT i16 0
     ; CHECK-NEXT: %11:_(p0) = G_PTR_ADD %9, %10(s16)

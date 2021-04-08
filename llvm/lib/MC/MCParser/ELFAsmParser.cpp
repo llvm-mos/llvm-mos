@@ -182,6 +182,12 @@ bool ELFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
       if (getParser().parseIdentifier(Name))
         return TokError("expected identifier in directive");
 
+      if (getParser().discardLTOSymbol(Name)) {
+        if (getLexer().is(AsmToken::EndOfStatement))
+          break;
+        continue;
+      }
+
       MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
       getStreamer().emitSymbolAttribute(Sym, Attr);
@@ -793,8 +799,8 @@ bool ELFAsmParser::ParseDirectiveIdent(StringRef, SMLoc) {
 /// ParseDirectiveSymver
 ///  ::= .symver foo, bar2@zed
 bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
-  StringRef Name;
-  if (getParser().parseIdentifier(Name))
+  StringRef OriginalName, Name, Action;
+  if (getParser().parseIdentifier(OriginalName))
     return TokError("expected identifier in directive");
 
   if (getLexer().isNot(AsmToken::Comma))
@@ -809,15 +815,21 @@ bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
   Lex();
   getLexer().setAllowAtInIdentifier(AllowAtInIdentifier);
 
-  StringRef AliasName;
-  if (getParser().parseIdentifier(AliasName))
+  if (getParser().parseIdentifier(Name))
     return TokError("expected identifier in directive");
 
-  if (AliasName.find('@') == StringRef::npos)
+  if (Name.find('@') == StringRef::npos)
     return TokError("expected a '@' in the name");
+  bool KeepOriginalSym = !Name.contains("@@@");
+  if (parseOptionalToken(AsmToken::Comma)) {
+    if (getParser().parseIdentifier(Action) || Action != "remove")
+      return TokError("expected 'remove'");
+    KeepOriginalSym = false;
+  }
+  (void)parseOptionalToken(AsmToken::EndOfStatement);
 
-  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-  getStreamer().emitELFSymverDirective(AliasName, Sym);
+  getStreamer().emitELFSymverDirective(
+      getContext().getOrCreateSymbol(OriginalName), Name, KeepOriginalSym);
   return false;
 }
 

@@ -761,6 +761,20 @@ static OrphanHandlingPolicy getOrphanHandling(opt::InputArgList &args) {
   return OrphanHandlingPolicy::Place;
 }
 
+// Parses --power10-stubs= flags, to disable or enable Power 10
+// instructions in stubs.
+static bool getP10StubOpt(opt::InputArgList &args) {
+
+  if (args.getLastArgValue(OPT_power10_stubs_eq)== "no")
+    return false;
+
+  if (!args.hasArg(OPT_power10_stubs_eq) &&
+      args.hasArg(OPT_no_power10_stubs))
+    return false;
+
+  return true;
+}
+
 // Parse --build-id or --build-id=<style>. We handle "tree" as a
 // synonym for "sha1" because all our hash functions including
 // -build-id=sha1 are actually tree hashes for performance reasons.
@@ -1054,8 +1068,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->rpath = getRpath(args);
   config->relocatable = args.hasArg(OPT_relocatable);
   config->saveTemps = args.hasArg(OPT_save_temps);
-  if (args.hasArg(OPT_shuffle_sections))
-    config->shuffleSectionSeed = args::getInteger(args, OPT_shuffle_sections, 0);
   config->searchPaths = args::getStrings(args, OPT_library_path);
   config->sectionStartMap = getSectionStartMap(args);
   config->shared = args.hasArg(OPT_shared);
@@ -1126,12 +1138,31 @@ static void readConfigs(opt::InputArgList &args) {
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(args);
+  config->Power10Stub = getP10StubOpt(args);
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))
       config->optEB = true;
     else
       config->optEL = true;
+  }
+
+  for (opt::Arg *arg : args.filtered(OPT_shuffle_sections)) {
+    constexpr StringRef errPrefix = "--shuffle-sections=: ";
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first.empty() || kv.second.empty()) {
+      error(errPrefix + "expected <section_glob>=<seed>, but got '" +
+            arg->getValue() + "'");
+      continue;
+    }
+    // Signed so that <section_glob>=-1 is allowed.
+    int64_t v;
+    if (!to_integer(kv.second, v))
+      error(errPrefix + "expected an integer, but got '" + kv.second + "'");
+    else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
+      config->shuffleSections.emplace_back(std::move(*pat), uint32_t(v));
+    else
+      error(errPrefix + toString(pat.takeError()));
   }
 
   for (opt::Arg *arg : args.filtered(OPT_z)) {

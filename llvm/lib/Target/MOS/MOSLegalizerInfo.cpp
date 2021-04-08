@@ -84,6 +84,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       {G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM, G_CTLZ_ZERO_UNDEF})
       .libcall();
 
+  // FIXME: Make this a libcall.
+  getActionDefinitionsBuilder(G_UDIVREM).lower();
+
   getActionDefinitionsBuilder(G_ASHR).legalFor({S8}).clampScalar(0, S8, S8);
   getActionDefinitionsBuilder(G_SHL).customFor({S8, S16, S32, S64});
 

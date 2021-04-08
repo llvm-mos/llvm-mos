@@ -128,9 +128,8 @@
     ; CHECK-NEXT: %1:_(s16) = G_CONSTANT i16 2
     ; CHECK-NEXT: %2:_(s16) = G_CONSTANT i16 3
     ; CHECK-NEXT: ADJCALLSTACKDOWN 4, 0
-    ; CHECK-NEXT: %3:_(s8), %4:_(s8) = G_UNMERGE_VALUES %1
-    ; CHECK-NEXT: %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %2
     ; CHECK-NEXT: $a = COPY %0
+    ; CHECK-NEXT: %3:_(s8), %4:_(s8) = G_UNMERGE_VALUES %1
     ; CHECK-NEXT: %7:_(p0) = COPY $rs0
     ; CHECK-NEXT: %8:_(s16) = G_CONSTANT i16 0
     ; CHECK-NEXT: %9:_(p0) = G_PTR_ADD %7, %8(s16)
@@ -138,6 +137,7 @@
     ; CHECK-NEXT: %10:_(s16) = G_CONSTANT i16 1
     ; CHECK-NEXT: %11:_(p0) = G_PTR_ADD %7, %10(s16)
     ; CHECK-NEXT: G_STORE %4(s8), %11(p0) :: (store 1 into stack + 1)
+    ; CHECK-NEXT: %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %2
     ; CHECK-NEXT: %12:_(s16) = G_CONSTANT i16 2
     ; CHECK-NEXT: %13:_(p0) = G_PTR_ADD %7, %12(s16)
     ; CHECK-NEXT: G_STORE %5(s8), %13(p0) :: (store 1 into stack + 2)

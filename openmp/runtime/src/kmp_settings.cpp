@@ -504,9 +504,10 @@ int __kmp_initial_threads_capacity(int req_nproc) {
     nth = (4 * __kmp_xproc);
 
   // If hidden helper task is enabled, we initialize the thread capacity with
-  // extra
-  // __kmp_hidden_helper_threads_num.
-  nth += __kmp_hidden_helper_threads_num;
+  // extra __kmp_hidden_helper_threads_num.
+  if (__kmp_enable_hidden_helper) {
+    nth += __kmp_hidden_helper_threads_num;
+  }
 
   if (nth > __kmp_max_nth)
     nth = __kmp_max_nth;
@@ -1713,6 +1714,7 @@ static void __kmp_stg_print_barrier_pattern(kmp_str_buf_t *buffer,
         __kmp_str_buf_print(buffer, "   %s='",
                             __kmp_barrier_pattern_env_name[i]);
       }
+      KMP_DEBUG_ASSERT(j < bs_last_barrier && k < bs_last_barrier);
       __kmp_str_buf_print(buffer, "%s,%s'\n", __kmp_barrier_pattern_name[j],
                           __kmp_barrier_pattern_name[k]);
     }
@@ -3239,11 +3241,12 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
     for (;;) {
       enum kmp_proc_bind_t bind;
 
-      if ((num == (int)proc_bind_master) ||
-          __kmp_match_str("master", buf, &next)) {
+      if ((num == (int)proc_bind_primary) ||
+          __kmp_match_str("master", buf, &next) ||
+          __kmp_match_str("primary", buf, &next)) {
         buf = next;
         SKIP_WS(buf);
-        bind = proc_bind_master;
+        bind = proc_bind_primary;
       } else if ((num == (int)proc_bind_close) ||
                  __kmp_match_str("close", buf, &next)) {
         buf = next;
@@ -3311,8 +3314,8 @@ static void __kmp_stg_print_proc_bind(kmp_str_buf_t *buffer, char const *name,
         __kmp_str_buf_print(buffer, "true");
         break;
 
-      case proc_bind_master:
-        __kmp_str_buf_print(buffer, "master");
+      case proc_bind_primary:
+        __kmp_str_buf_print(buffer, "primary");
         break;
 
       case proc_bind_close:

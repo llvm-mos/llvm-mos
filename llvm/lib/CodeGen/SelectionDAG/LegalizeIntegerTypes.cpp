@@ -100,6 +100,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_VECTOR_REVERSE(N); break;
   case ISD::VECTOR_SHUFFLE:
                          Res = PromoteIntRes_VECTOR_SHUFFLE(N); break;
+  case ISD::VECTOR_SPLICE:
+                         Res = PromoteIntRes_VECTOR_SPLICE(N); break;
   case ISD::INSERT_VECTOR_ELT:
                          Res = PromoteIntRes_INSERT_VECTOR_ELT(N); break;
   case ISD::BUILD_VECTOR:
@@ -108,6 +110,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_SCALAR_TO_VECTOR(N); break;
   case ISD::SPLAT_VECTOR:
                          Res = PromoteIntRes_SPLAT_VECTOR(N); break;
+  case ISD::STEP_VECTOR: Res = PromoteIntRes_STEP_VECTOR(N); break;
   case ISD::CONCAT_VECTORS:
                          Res = PromoteIntRes_CONCAT_VECTORS(N); break;
 
@@ -3939,33 +3942,32 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
     // %1 = { iNh, i1 } @umul.with.overflow.iNh(iNh %LHS.HI, iNh %RHS.LO)
     // %2 = { iNh, i1 } @umul.with.overflow.iNh(iNh %RHS.HI, iNh %LHS.LO)
     // %3 = mul nuw iN (%LHS.LOW as iN), (%RHS.LOW as iN)
-    // %4 = add iN (%1.0 as iN) << Nh, (%2.0 as iN) << Nh
-    // %5 = { iN, i1 } @uadd.with.overflow.iN( %4, %3 )
+    // %4 = add iNh %1.0, %2.0 as iN
+    // %5 = { iNh, i1 } @uadd.with.overflow.iNh(iNh %4, iNh %3.HIGH)
     //
-    // %res = { %5.0, %0 || %1.1 || %2.1 || %5.1 }
+    // %lo = %3.LO
+    // %hi = %5.0
+    // %ovf = %0 || %1.1 || %2.1 || %5.1
     SDValue LHS = N->getOperand(0), RHS = N->getOperand(1);
     SDValue LHSHigh, LHSLow, RHSHigh, RHSLow;
     GetExpandedInteger(LHS, LHSLow, LHSHigh);
     GetExpandedInteger(RHS, RHSLow, RHSHigh);
     EVT HalfVT = LHSLow.getValueType();
     EVT BitVT = N->getValueType(1);
-    SDVTList VTHalfMulO = DAG.getVTList(HalfVT, BitVT);
-    SDVTList VTFullAddO = DAG.getVTList(VT, BitVT);
+    SDVTList VTHalfWithO = DAG.getVTList(HalfVT, BitVT);
 
     SDValue HalfZero = DAG.getConstant(0, dl, HalfVT);
     SDValue Overflow = DAG.getNode(ISD::AND, dl, BitVT,
       DAG.getSetCC(dl, BitVT, LHSHigh, HalfZero, ISD::SETNE),
       DAG.getSetCC(dl, BitVT, RHSHigh, HalfZero, ISD::SETNE));
 
-    SDValue One = DAG.getNode(ISD::UMULO, dl, VTHalfMulO, LHSHigh, RHSLow);
+    SDValue One = DAG.getNode(ISD::UMULO, dl, VTHalfWithO, LHSHigh, RHSLow);
     Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, One.getValue(1));
-    SDValue OneInHigh = DAG.getNode(ISD::BUILD_PAIR, dl, VT, HalfZero,
-                                    One.getValue(0));
 
-    SDValue Two = DAG.getNode(ISD::UMULO, dl, VTHalfMulO, RHSHigh, LHSLow);
+    SDValue Two = DAG.getNode(ISD::UMULO, dl, VTHalfWithO, RHSHigh, LHSLow);
     Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, Two.getValue(1));
-    SDValue TwoInHigh = DAG.getNode(ISD::BUILD_PAIR, dl, VT, HalfZero,
-                                    Two.getValue(0));
+
+    SDValue HighSum = DAG.getNode(ISD::ADD, dl, HalfVT, One, Two);
 
     // Cannot use `UMUL_LOHI` directly, because some 32-bit targets (ARM) do not
     // know how to expand `i64,i64 = umul_lohi a, b` and abort (why isn’t this
@@ -3976,10 +3978,10 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
     SDValue Three = DAG.getNode(ISD::MUL, dl, VT,
       DAG.getNode(ISD::ZERO_EXTEND, dl, VT, LHSLow),
       DAG.getNode(ISD::ZERO_EXTEND, dl, VT, RHSLow));
-    SDValue Four = DAG.getNode(ISD::ADD, dl, VT, OneInHigh, TwoInHigh);
-    SDValue Five = DAG.getNode(ISD::UADDO, dl, VTFullAddO, Three, Four);
-    Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, Five.getValue(1));
-    SplitInteger(Five, Lo, Hi);
+    SplitInteger(Three, Lo, Hi);
+
+    Hi = DAG.getNode(ISD::UADDO, dl, VTHalfWithO, Hi, HighSum);
+    Overflow = DAG.getNode(ISD::OR, dl, BitVT, Overflow, Hi.getValue(1));
     ReplaceValueWith(SDValue(N, 1), Overflow);
     return;
   }
@@ -4193,6 +4195,7 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXTRACT_ELEMENT:   Res = ExpandOp_EXTRACT_ELEMENT(N); break;
   case ISD::INSERT_VECTOR_ELT: Res = ExpandOp_INSERT_VECTOR_ELT(N); break;
   case ISD::SCALAR_TO_VECTOR:  Res = ExpandOp_SCALAR_TO_VECTOR(N); break;
+  case ISD::SPLAT_VECTOR:      Res = ExpandIntOp_SPLAT_VECTOR(N); break;
   case ISD::SELECT_CC:         Res = ExpandIntOp_SELECT_CC(N); break;
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
   case ISD::SETCCCARRY:        Res = ExpandIntOp_SETCCCARRY(N); break;
@@ -4448,6 +4451,14 @@ SDValue DAGTypeLegalizer::ExpandIntOp_SETCCCARRY(SDNode *N) {
                      LowCmp.getValue(1), Cond);
 }
 
+SDValue DAGTypeLegalizer::ExpandIntOp_SPLAT_VECTOR(SDNode *N) {
+  // Split the operand and replace with SPLAT_VECTOR_PARTS.
+  SDValue Lo, Hi;
+  GetExpandedInteger(N->getOperand(0), Lo, Hi);
+  return DAG.getNode(ISD::SPLAT_VECTOR_PARTS, SDLoc(N), N->getValueType(0), Lo,
+                     Hi);
+}
+
 SDValue DAGTypeLegalizer::ExpandIntOp_Shift(SDNode *N) {
   // The value being shifted is legal, but the shift amount is too big.
   // It follows that either the result of the shift is undefined, or the
@@ -4617,6 +4628,15 @@ SDValue DAGTypeLegalizer::ExpandIntOp_ATOMIC_STORE(SDNode *N) {
   return Swap.getValue(1);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
+  SDLoc dl(N);
+
+  SDValue V0 = GetPromotedInteger(N->getOperand(0));
+  SDValue V1 = GetPromotedInteger(N->getOperand(1));
+  EVT OutVT = V0.getValueType();
+
+  return DAG.getNode(ISD::VECTOR_SPLICE, dl, OutVT, V0, V1, N->getOperand(2));
+}
 
 SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
 
@@ -4761,6 +4781,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SPLAT_VECTOR(SDNode *N) {
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutElemVT, SplatVal);
 
   return DAG.getNode(ISD::SPLAT_VECTOR, dl, NOutVT, Op);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_STEP_VECTOR(SDNode *N) {
+  SDLoc dl(N);
+  EVT OutVT = N->getValueType(0);
+  EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
+  assert(NOutVT.isVector() && "Type must be promoted to a vector type");
+  EVT NOutElemVT = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                            NOutVT.getVectorElementType());
+  APInt StepVal = cast<ConstantSDNode>(N->getOperand(0))->getAPIntValue();
+  SDValue Step = DAG.getConstant(StepVal.getZExtValue(), dl, NOutElemVT);
+  return DAG.getStepVector(dl, NOutVT, Step);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {

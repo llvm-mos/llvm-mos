@@ -261,7 +261,7 @@ bool getValueProfDataFromInst(const Instruction &Inst,
                               uint32_t MaxNumValueData,
                               InstrProfValueData ValueData[],
                               uint32_t &ActualNumValueData, uint64_t &TotalC,
-                              bool GetZeroCntValue = false);
+                              bool GetNoICPValue = false);
 
 inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
 

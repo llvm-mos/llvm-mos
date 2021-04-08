@@ -3628,6 +3628,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         auto &OptInfo = OpenCLExtensions.OptMap[Name];
         OptInfo.Supported = Record[I++] != 0;
         OptInfo.Enabled = Record[I++] != 0;
+        OptInfo.WithPragma = Record[I++] != 0;
         OptInfo.Avail = Record[I++];
         OptInfo.Core = Record[I++];
         OptInfo.Opt = Record[I++];
@@ -7648,9 +7649,10 @@ ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
 
   // Load the list of declarations.
   SmallVector<NamedDecl *, 64> Decls;
+  llvm::SmallPtrSet<NamedDecl *, 8> Found;
   for (DeclID ID : It->second.Table.find(Name)) {
     NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-    if (ND->getDeclName() == Name)
+    if (ND->getDeclName() == Name && Found.insert(ND).second)
       Decls.push_back(ND);
   }
 
@@ -11966,6 +11968,12 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_order:
     C = new (Context) OMPOrderClause();
     break;
+  case llvm::omp::OMPC_init:
+    C = OMPInitClause::CreateEmpty(Context, Record.readInt());
+    break;
+  case llvm::omp::OMPC_use:
+    C = new (Context) OMPUseClause();
+    break;
   case llvm::omp::OMPC_destroy:
     C = new (Context) OMPDestroyClause();
     break;
@@ -12129,7 +12137,30 @@ void OMPClauseReader::VisitOMPSIMDClause(OMPSIMDClause *) {}
 
 void OMPClauseReader::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
-void OMPClauseReader::VisitOMPDestroyClause(OMPDestroyClause *) {}
+void OMPClauseReader::VisitOMPInitClause(OMPInitClause *C) {
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
+  C->setIsTarget(Record.readBool());
+  C->setIsTargetSync(Record.readBool());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setVarLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPUseClause(OMPUseClause *C) {
+  C->setInteropVar(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setVarLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDestroyClause(OMPDestroyClause *C) {
+  C->setInteropVar(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setVarLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPUnifiedAddressClause(OMPUnifiedAddressClause *) {}
 

@@ -1487,10 +1487,13 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
 }
 
 LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
-  return getLVForDecl(D,
-                      LVComputationKind(usesTypeVisibility(D)
-                                            ? NamedDecl::VisibilityForType
-                                            : NamedDecl::VisibilityForValue));
+  NamedDecl::ExplicitVisibilityKind EK = usesTypeVisibility(D)
+                                             ? NamedDecl::VisibilityForType
+                                             : NamedDecl::VisibilityForValue;
+  LVComputationKind CK(EK);
+  return getLVForDecl(D, D->getASTContext().getLangOpts().IgnoreXCOFFVisibility
+                             ? CK.forLinkageOnly()
+                             : CK);
 }
 
 Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
@@ -1609,8 +1612,7 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
 
     // Suppress inline namespace if it doesn't make the result ambiguous.
     if (P.SuppressInlineNamespace && Ctx->isInlineNamespace() && NameInScope &&
-        Ctx->lookup(NameInScope).size() ==
-            Ctx->getParent()->lookup(NameInScope).size())
+        cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope))
       continue;
 
     // Skip non-named contexts such as linkage specifications and ExportDecls.

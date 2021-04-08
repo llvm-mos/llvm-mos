@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -186,12 +187,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 // matrix by exchanging the two columns.
 static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
                                     unsigned ToIndx) {
-  unsigned numRows = DepMatrix.size();
-  for (unsigned i = 0; i < numRows; ++i) {
-    char TmpVal = DepMatrix[i][ToIndx];
-    DepMatrix[i][ToIndx] = DepMatrix[i][FromIndx];
-    DepMatrix[i][FromIndx] = TmpVal;
-  }
+  for (unsigned I = 0, E = DepMatrix.size(); I < E; ++I)
+    std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
 }
 
 // Checks if outermost non '=','S'or'I' dependence in the dependence matrix is
@@ -619,6 +616,22 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   // the outer loop header when interchanging.
   if (InnerLoopPreHeader != OuterLoopHeader &&
       containsUnsafeInstructions(InnerLoopPreHeader))
+    return false;
+
+  BasicBlock *InnerLoopExit = InnerLoop->getExitBlock();
+  // Ensure the inner loop exit block flows to the outer loop latch possibly
+  // through empty blocks.
+  const BasicBlock &SuccInner =
+      LoopNest::skipEmptyBlockUntil(InnerLoopExit, OuterLoopLatch);
+  if (&SuccInner != OuterLoopLatch) {
+    LLVM_DEBUG(dbgs() << "Inner loop exit block " << *InnerLoopExit
+                      << " does not lead to the outer loop latch.\n";);
+    return false;
+  }
+  // The inner loop exit block does flow to the outer loop latch and not some
+  // other BBs, now make sure it contains safe instructions, since it will be
+  // moved into the (new) inner loop after interchange.
+  if (containsUnsafeInstructions(InnerLoopExit))
     return false;
 
   LLVM_DEBUG(dbgs() << "Loops are perfectly nested\n");

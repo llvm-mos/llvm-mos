@@ -216,6 +216,7 @@ def MSDependentExistsStmt : StmtNode<Stmt>;
 def AsTypeExpr : StmtNode<Expr>;
 
 // OpenMP Directives.
+def OMPCanonicalLoop : StmtNode<Stmt>;
 def OMPExecutableDirective : StmtNode<Stmt, 1>;
 def OMPLoopBasedDirective : StmtNode<OMPExecutableDirective, 1>;
 def OMPLoopDirective : StmtNode<OMPLoopBasedDirective, 1>;
@@ -274,3 +275,4 @@ def OMPTargetTeamsDistributeDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsDistributeParallelForDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsDistributeParallelForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsDistributeSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPInteropDirective : StmtNode<OMPExecutableDirective>;

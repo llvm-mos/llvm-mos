@@ -200,7 +200,7 @@ let Command = "breakpoint set" in {
   def breakpoint_set_move_to_nearest_code : Option<"move-to-nearest-code", "m">,
     Groups<[1,9,12]>, Arg<"Boolean">,
     Desc<"Move breakpoints to nearest code. If not set the "
-    "target.move-to-nearest-codesetting is used.">;
+    "target.move-to-nearest-code setting is used.">;
   def breakpoint_set_file_colon_line : Option<"joint-specifier", "y">, Group<12>, Arg<"FileLineColumn">,
     Required, Completion<"SourceFile">,
     Desc<"A specifier in the form filename:line[:column] for setting file & line breakpoints.">;
@@ -655,7 +655,7 @@ let Command = "process launch" in {
     Desc<"Set the current working directory to <path> when running the inferior.">;
   def process_launch_arch : Option<"arch", "a">, Arg<"Architecture">,
     Desc<"Set the architecture for the process to launch when ambiguous.">;
-  def process_launch_environment : Option<"environment", "v">,
+  def process_launch_environment : Option<"environment", "E">,
     Arg<"None">, Desc<"Specify an environment variable name/value string "
     "(--environment NAME=VALUE). Can be specified multiple times for subsequent "
     "environment entries.">;

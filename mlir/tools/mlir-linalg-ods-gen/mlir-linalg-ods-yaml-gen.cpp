@@ -129,12 +129,12 @@ struct LinalgOpConfig {
 // Mapping traits.
 //===----------------------------------------------------------------------===//
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgTensorDef);
-LLVM_YAML_IS_SEQUENCE_VECTOR(SerializedAffineMap);
-LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgIteratorTypeDef);
-LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarAssign);
-LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarExpression);
-LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(LinalgOpConfig);
+LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgTensorDef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(SerializedAffineMap)
+LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgIteratorTypeDef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarAssign)
+LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarExpression)
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(LinalgOpConfig)
 
 namespace llvm {
 namespace yaml {
@@ -435,7 +435,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
 
     let skipDefaultBuilders = 1;
     let builders = [
-      OpBuilderDAG<
+      OpBuilder<
       (ins "ValueRange":$inputs, "ValueRange":$outputs),
       [{{
         $_state.addOperands(inputs);
@@ -451,7 +451,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
           TypeRange(inputs),
           TypeRange(outputs)/*, TODO: support captures*/);
       }]>,
-      OpBuilderDAG<
+      OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
             "ValueRange":$outputs),
       [{{
@@ -469,7 +469,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
           TypeRange(inputs),
           TypeRange(outputs)/*, TODO: support captures*/);
       }]>,
-      OpBuilderDAG<
+      OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
@@ -519,10 +519,10 @@ ArrayAttr {0}::iterator_types() {
 // {0}: Class name
 const char structuredOpCanonicalizersAndFoldersFormat[] = R"FMT(
 void {0}::getCanonicalizationPatterns(
-    OwningRewritePatternList &results,
+    RewritePatternSet &results,
     MLIRContext *context) {{
-  results.insert<EraseDeadLinalgOp>();
-  results.insert<FoldTensorCastOp>();
+  results.add<EraseDeadLinalgOp>(context);
+  results.add<FoldTensorCastOp>(context);
 }
 LogicalResult {0}::fold(ArrayRef<Attribute>,
                         SmallVectorImpl<OpFoldResult> &) {{
@@ -651,11 +651,18 @@ static SmallVector<AffineExpr> getSymbolBindings({0} self) {
       // {2}: Statements
       static const char structuredOpIndexingMapsFormat[] = R"FMT(
 ArrayAttr {0}::indexing_maps() {
+  static const char memoizeAttr[] = "linalg.memoized_indexing_maps";
+  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(memoizeAttr);
+  if (cached)
+    return cached;
+
   MLIRContext *context = getContext();
   auto symbolBindings = getSymbolBindings(*this);
   SmallVector<AffineMap> maps;
   {2}
-  return Builder(context).getAffineMapArrayAttr(maps);
+  cached = Builder(context).getAffineMapArrayAttr(maps);
+  getOperation()->setAttr(memoizeAttr, cached);
+  return cached;
 }
 )FMT";
 

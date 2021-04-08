@@ -3022,7 +3022,7 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
   if (MCRegister PhysReg =
           tryAssign(VirtReg, Order, NewVRegs, FixedRegisters)) {
-    // If VirtReg got an assignment, the eviction info is no longre relevant.
+    // If VirtReg got an assignment, the eviction info is no longer relevant.
     LastEvicted.clearEvicteeInfo(VirtReg.reg());
     // When NewVRegs is not empty, we may have made decisions such as evicting
     // a virtual register, go with the earlier decisions and use the physical
@@ -3059,7 +3059,7 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
       if (Hint && Hint != PhysReg)
         SetOfBrokenHints.insert(&VirtReg);
       // If VirtReg eviction someone, the eviction info for it as an evictee is
-      // no longre relevant.
+      // no longer relevant.
       LastEvicted.clearEvicteeInfo(VirtReg.reg());
       return PhysReg;
     }

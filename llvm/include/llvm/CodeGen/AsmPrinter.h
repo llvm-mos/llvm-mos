@@ -144,14 +144,14 @@ public:
   /// AsmPrinter to add their own handlers.
   struct HandlerInfo {
     std::unique_ptr<AsmPrinterHandler> Handler;
-    const char *TimerName;
-    const char *TimerDescription;
-    const char *TimerGroupName;
-    const char *TimerGroupDescription;
+    StringRef TimerName;
+    StringRef TimerDescription;
+    StringRef TimerGroupName;
+    StringRef TimerGroupDescription;
 
-    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler,
-                const char *TimerName, const char *TimerDescription,
-                const char *TimerGroupName, const char *TimerGroupDescription)
+    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler, StringRef TimerName,
+                StringRef TimerDescription, StringRef TimerGroupName,
+                StringRef TimerGroupDescription)
         : Handler(std::move(Handler)), TimerName(TimerName),
           TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
           TimerGroupDescription(TimerGroupDescription) {}
@@ -185,24 +185,12 @@ protected:
   std::vector<HandlerInfo> Handlers;
   size_t NumUserHandlers = 0;
 
-public:
-  struct SrcMgrDiagInfo {
-    SourceMgr SrcMgr;
-    std::vector<const MDNode *> LocInfos;
-    LLVMContext::InlineAsmDiagHandlerTy DiagHandler;
-    void *DiagContext;
-  };
-
 private:
   /// If generated on the fly this own the instance.
   std::unique_ptr<MachineDominatorTree> OwnedMDT;
 
   /// If generated on the fly this own the instance.
   std::unique_ptr<MachineLoopInfo> OwnedMLI;
-
-  /// Structure for generating diagnostics for inline assembly. Only initialised
-  /// when necessary.
-  mutable std::unique_ptr<SrcMgrDiagInfo> DiagInfo;
 
   /// If the target supports dwarf debug info, this pointer is non-null.
   DwarfDebug *DD = nullptr;

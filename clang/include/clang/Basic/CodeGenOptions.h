@@ -190,6 +190,10 @@ public:
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
 
+  /// The file to use for dumping bug report by `Debugify` for original
+  /// debug info.
+  std::string DIBugsReportFilePath;
+
   /// The floating-point denormal mode to use.
   llvm::DenormalMode FPDenormalMode = llvm::DenormalMode::getIEEE();
 
@@ -414,10 +418,6 @@ public:
 #include "clang/Basic/CodeGenOptions.def"
 
   CodeGenOptions();
-
-  /// Is this a libc/libm function that is no longer recognized as a
-  /// builtin because a -fno-builtin-* option has been specified?
-  bool isNoBuiltinFunc(const char *Name) const;
 
   const std::vector<std::string> &getNoBuiltinFuncs() const {
     return NoBuiltinFuncs;

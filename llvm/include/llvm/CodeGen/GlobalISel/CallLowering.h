@@ -17,11 +17,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include <cstdint>
@@ -37,7 +39,6 @@ class MachineIRBuilder;
 struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
-class Value;
 
 class CallLowering {
   const TargetLowering *TLI;
@@ -64,10 +65,17 @@ public:
     // if the argument was an incoming arg.
     SmallVector<Register, 2> OrigRegs;
 
+    /// Optionally track the original IR value for the argument. This may not be
+    /// meaningful in all contexts. This should only be used on for forwarding
+    /// through to use for aliasing information in MachinePointerInfo for memory
+    /// arguments.
+    const Value *OrigValue = nullptr;
+
     ArgInfo(ArrayRef<Register> Regs, Type *Ty,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-            bool IsFixed = true)
-        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()) {
+            bool IsFixed = true, const Value *OrigValue = nullptr)
+        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()),
+          OrigValue(OrigValue) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
@@ -75,6 +83,11 @@ public:
               (Regs.empty() || Regs[0] == 0)) &&
              "only void types should have no register");
     }
+
+    ArgInfo(ArrayRef<Register> Regs, const Value &OrigValue,
+            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
+            bool IsFixed = true)
+        : ArgInfo(Regs, OrigValue.getType(), Flags, IsFixed, &OrigValue) {}
 
     ArgInfo() : BaseArgInfo() {}
   };
@@ -149,7 +162,8 @@ public:
     /// should be initialized to an appropriate description of the
     /// address created.
     virtual Register getStackAddress(uint64_t Size, int64_t Offset,
-                                     MachinePointerInfo &MPO) = 0;
+                                     MachinePointerInfo &MPO,
+                                     ISD::ArgFlagsTy Flags) = 0;
 
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
@@ -185,6 +199,14 @@ public:
       llvm_unreachable("Custom values not supported");
     }
 
+    /// Do a memory copy of \p MemSize bytes from \p SrcPtr to \p DstPtr. This
+    /// is necessary for outgoing stack-passed byval arguments.
+    void
+    copyArgumentMemory(const ArgInfo &Arg, Register DstPtr, Register SrcPtr,
+                       const MachinePointerInfo &DstPtrInfo, Align DstAlign,
+                       const MachinePointerInfo &SrcPtrInfo, Align SrcAlign,
+                       uint64_t MemSize, CCValAssign &VA) const;
+
     /// Extend a register to the location type given in VA, capped at extending
     /// to at most MaxSize bits. If MaxSizeBits is 0 then no maximum is set.
     Register extendRegister(Register ValReg, CCValAssign &VA,
@@ -209,6 +231,14 @@ public:
     IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                          CCAssignFn *AssignFn)
         : ValueHandler(true, MIRBuilder, MRI, AssignFn) {}
+
+    /// Insert G_ASSERT_ZEXT/G_ASSERT_SEXT or other hint instruction based on \p
+    /// VA, returning the new register if a hint was inserted.
+    Register buildExtensionHint(CCValAssign &VA, Register SrcReg, LLT NarrowTy);
+
+    /// Provides a default implementation for argument handling.
+    void assignValueToReg(Register ValVReg, Register PhysReg,
+                          CCValAssign &VA) override;
   };
 
   struct OutgoingValueHandler : public ValueHandler {
@@ -244,15 +274,12 @@ protected:
   void setArgFlags(ArgInfo &Arg, unsigned OpIdx, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;
 
-  /// Generate instructions for packing \p SrcRegs into one big register
-  /// corresponding to the aggregate type \p PackedTy.
-  ///
-  /// \param SrcRegs should contain one virtual register for each base type in
-  ///                \p PackedTy, as returned by computeValueLLTs.
-  ///
-  /// \return The packed register.
-  Register packRegs(ArrayRef<Register> SrcRegs, Type *PackedTy,
-                    MachineIRBuilder &MIRBuilder) const;
+  /// Break \p OrigArgInfo into one or more pieces the calling convention can
+  /// process, returned in \p SplitArgs. For example, this should break structs
+  /// down into individual fields.
+  void splitToValueTypes(const ArgInfo &OrigArgInfo,
+                         SmallVectorImpl<ArgInfo> &SplitArgs,
+                         const DataLayout &DL, CallingConv::ID CallConv) const;
 
   /// Generate instructions for unpacking \p SrcReg into the \p DstRegs
   /// corresponding to the aggregate type \p PackedTy.
@@ -401,7 +428,9 @@ public:
     return false;
   }
 
-  virtual bool fallBackToDAGISel(const Function &F) const { return false; }
+  virtual bool fallBackToDAGISel(const MachineFunction &MF) const {
+    return false;
+  }
 
   /// This hook must be implemented to lower the incoming (formal)
   /// arguments, described by \p VRegs, for GlobalISel. Each argument

@@ -63,8 +63,8 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
   ObjCDeclContextSwitch ObjCDC(*this);
 
   if (Tok.is(tok::code_completion)) {
-    Actions.CodeCompleteNamespaceDecl(getCurScope());
     cutOffParsing();
+    Actions.CodeCompleteNamespaceDecl(getCurScope());
     return nullptr;
   }
 
@@ -283,8 +283,8 @@ Decl *Parser::ParseNamespaceAlias(SourceLocation NamespaceLoc,
   ConsumeToken(); // eat the '='.
 
   if (Tok.is(tok::code_completion)) {
-    Actions.CodeCompleteNamespaceAliasDecl(getCurScope());
     cutOffParsing();
+    Actions.CodeCompleteNamespaceAliasDecl(getCurScope());
     return nullptr;
   }
 
@@ -471,8 +471,8 @@ Parser::ParseUsingDirectiveOrDeclaration(DeclaratorContext Context,
   SourceLocation UsingLoc = ConsumeToken();
 
   if (Tok.is(tok::code_completion)) {
-    Actions.CodeCompleteUsing(getCurScope());
     cutOffParsing();
+    Actions.CodeCompleteUsing(getCurScope());
     return nullptr;
   }
 
@@ -525,8 +525,8 @@ Decl *Parser::ParseUsingDirective(DeclaratorContext Context,
   SourceLocation NamespcLoc = ConsumeToken();
 
   if (Tok.is(tok::code_completion)) {
-    Actions.CodeCompleteUsingDirective(getCurScope());
     cutOffParsing();
+    Actions.CodeCompleteUsingDirective(getCurScope());
     return nullptr;
   }
 
@@ -880,8 +880,13 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
 
   if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
     Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-  if (Tok.is(tok::kw_static_assert))
-    Diag(Tok, diag::warn_cxx98_compat_static_assert);
+  if (Tok.is(tok::kw_static_assert)) {
+    if (!getLangOpts().CPlusPlus)
+      Diag(Tok, diag::ext_ms_static_assert)
+          << FixItHint::CreateReplacement(Tok.getLocation(), "_Static_assert");
+    else
+      Diag(Tok, diag::warn_cxx98_compat_static_assert);
+  }
 
   SourceLocation StaticAssertLoc = ConsumeToken();
 
@@ -902,11 +907,17 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
 
   ExprResult AssertMessage;
   if (Tok.is(tok::r_paren)) {
+    unsigned DiagVal;
     if (getLangOpts().CPlusPlus17)
-      Diag(Tok, diag::warn_cxx14_compat_static_assert_no_message);
+      DiagVal = diag::warn_cxx14_compat_static_assert_no_message;
+    else if (getLangOpts().CPlusPlus)
+      DiagVal = diag::ext_cxx_static_assert_no_message;
+    else if (getLangOpts().C2x)
+      DiagVal = diag::warn_c17_compat_static_assert_no_message;
     else
-      Diag(Tok, diag::ext_static_assert_no_message)
-          << getStaticAssertNoMessageFixIt(AssertExpr.get(), Tok.getLocation());
+      DiagVal = diag::ext_c_static_assert_no_message;
+    Diag(Tok, DiagVal) << getStaticAssertNoMessageFixIt(AssertExpr.get(),
+                                                        Tok.getLocation());
   } else {
     if (ExpectAndConsume(tok::comma)) {
       SkipUntil(tok::semi);
@@ -1422,8 +1433,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   if (Tok.is(tok::code_completion)) {
     // Code completion for a struct, class, or union name.
+    cutOffParsing();
     Actions.CodeCompleteTag(getCurScope(), TagType);
-    return cutOffParsing();
+    return;
   }
 
   // C++03 [temp.explicit] 14.7.2/8:
@@ -2738,8 +2750,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         else if (KW.is(tok::kw_delete))
           DefinitionKind = FunctionDefinitionKind::Deleted;
         else if (KW.is(tok::code_completion)) {
-          Actions.CodeCompleteAfterFunctionEquals(DeclaratorInfo);
           cutOffParsing();
+          Actions.CodeCompleteAfterFunctionEquals(DeclaratorInfo);
           return nullptr;
         }
       }
@@ -3406,15 +3418,6 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     // declarations and the lexed inline method definitions, along with any
     // delayed attributes.
 
-    // Save the state of Sema.FPFeatures, and change the setting
-    // to the levels specified on the command line.  Previous level
-    // will be restored when the RAII object is destroyed.
-    Sema::FPFeaturesStateRAII SaveFPFeaturesState(Actions);
-    FPOptionsOverride NewOverrides;
-    Actions.CurFPFeatures = NewOverrides.applyOverrides(getLangOpts());
-    Actions.FpPragmaStack.Act(Tok.getLocation(), Sema::PSK_Reset, StringRef(),
-                              {} /*unused*/);
-
     SourceLocation SavedPrevTokLocation = PrevTokLocation;
     ParseLexedPragmas(getCurrentClass());
     ParseLexedAttributes(getCurrentClass());
@@ -3496,9 +3499,10 @@ void Parser::ParseConstructorInitializer(Decl *ConstructorDecl) {
 
   do {
     if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
       Actions.CodeCompleteConstructorInitializer(ConstructorDecl,
                                                  MemInitializers);
-      return cutOffParsing();
+      return;
     }
 
     MemInitResult MemInit = ParseMemInitializer(ConstructorDecl);

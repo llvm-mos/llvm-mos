@@ -353,16 +353,29 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       return E;
     MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
     // In ThinLTO, local function may have been promoted to global and have
-    // suffix added to the function name. We need to add the stripped function
-    // name to the symbol table so that we can find a match from profile.
-    if (InLTO) {
-      auto pos = PGOFuncName.find('.');
-      if (pos != std::string::npos) {
-        const std::string &OtherFuncName = PGOFuncName.substr(0, pos);
-        if (Error E = addFuncName(OtherFuncName))
-          return E;
-        MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
-      }
+    // suffix ".llvm." added to the function name. We need to add the
+    // stripped function name to the symbol table so that we can find a match
+    // from profile.
+    //
+    // We may have other suffixes similar as ".llvm." which are needed to
+    // be stripped before the matching, but ".__uniq." suffix which is used
+    // to differentiate internal linkage functions in different modules
+    // should be kept. Now this is the only suffix with the pattern ".xxx"
+    // which is kept before matching.
+    const std::string UniqSuffix = ".__uniq.";
+    auto pos = PGOFuncName.find(UniqSuffix);
+    // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
+    // search '.' from the beginning.
+    if (pos != std::string::npos)
+      pos += UniqSuffix.length();
+    else
+      pos = 0;
+    pos = PGOFuncName.find('.', pos);
+    if (pos != std::string::npos && pos != 0) {
+      const std::string &OtherFuncName = PGOFuncName.substr(0, pos);
+      if (Error E = addFuncName(OtherFuncName))
+        return E;
+      MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
     }
   }
   Sorted = false;
@@ -988,7 +1001,7 @@ bool getValueProfDataFromInst(const Instruction &Inst,
                               uint32_t MaxNumValueData,
                               InstrProfValueData ValueData[],
                               uint32_t &ActualNumValueData, uint64_t &TotalC,
-                              bool GetZeroCntValue) {
+                              bool GetNoICPValue) {
   MDNode *MD = Inst.getMetadata(LLVMContext::MD_prof);
   if (!MD)
     return false;
@@ -1015,7 +1028,7 @@ bool getValueProfDataFromInst(const Instruction &Inst,
 
   // Get total count
   ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
-  if (!TotalCInt && !GetZeroCntValue)
+  if (!TotalCInt)
     return false;
   TotalC = TotalCInt->getZExtValue();
 
@@ -1027,10 +1040,13 @@ bool getValueProfDataFromInst(const Instruction &Inst,
     ConstantInt *Value = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
     ConstantInt *Count =
         mdconst::dyn_extract<ConstantInt>(MD->getOperand(I + 1));
-    if (!Value || (!Count && !GetZeroCntValue))
+    if (!Value || !Count)
       return false;
+    uint64_t CntValue = Count->getZExtValue();
+    if (!GetNoICPValue && (CntValue == NOMORE_ICP_MAGICNUM))
+      continue;
     ValueData[ActualNumValueData].Value = Value->getZExtValue();
-    ValueData[ActualNumValueData].Count = Count->getZExtValue();
+    ValueData[ActualNumValueData].Count = CntValue;
     ActualNumValueData++;
   }
   return true;

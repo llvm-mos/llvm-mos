@@ -69,15 +69,6 @@ static bool verifyRecordLenParams(mlir::Type inType, unsigned numLenParams) {
 }
 
 //===----------------------------------------------------------------------===//
-// AddfOp
-//===----------------------------------------------------------------------===//
-
-mlir::OpFoldResult fir::AddfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
-  return mlir::constFoldBinaryOp<FloatAttr>(
-      opnds, [](APFloat a, APFloat b) { return a + b; });
-}
-
-//===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
@@ -531,8 +522,6 @@ void fir::DispatchTableOp::appendTableEntry(mlir::Operation *op) {
 
 static mlir::LogicalResult verify(fir::EmboxOp op) {
   auto eleTy = fir::dyn_cast_ptrEleTy(op.memref().getType());
-  if (!eleTy)
-    return op.emitOpError("must embox a memory reference type");
   bool isArray = false;
   if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
     eleTy = seqTy.getEleTy();
@@ -554,20 +543,10 @@ static mlir::LogicalResult verify(fir::EmboxOp op) {
       if (!fir::isa_integer(lp.getType()))
         return op.emitOpError("LEN parameters must be integral type");
   }
-  if (op.getShape()) {
-    auto shapeTy = op.getShape().getType();
-    if (!(shapeTy.isa<fir::ShapeType>() || shapeTy.isa<ShapeShiftType>()))
-      return op.emitOpError("must be shape or shapeshift type");
-    if (!isArray)
-      return op.emitOpError("shape must not be provided for a scalar");
-  }
-  if (op.getSlice()) {
-    auto sliceTy = op.getSlice().getType();
-    if (!sliceTy.isa<fir::SliceType>())
-      return op.emitOpError("must be a slice type");
-    if (!isArray)
-      return op.emitOpError("slice must not be provided for a scalar");
-  }
+  if (op.getShape() && !isArray)
+    return op.emitOpError("shape must not be provided for a scalar");
+  if (op.getSlice() && !isArray)
+    return op.emitOpError("slice must not be provided for a scalar");
   return mlir::success();
 }
 
@@ -718,7 +697,7 @@ static bool isOne(mlir::Value v) { return checkIsIntegerConstant(v, 1); }
 template <typename FltOp, typename CpxOp>
 struct UndoComplexPattern : public mlir::RewritePattern {
   UndoComplexPattern(mlir::MLIRContext *ctx)
-      : mlir::RewritePattern("fir.insert_value", {}, 2, ctx) {}
+      : mlir::RewritePattern("fir.insert_value", 2, ctx) {}
 
   mlir::LogicalResult
   matchAndRewrite(mlir::Operation *op,
@@ -758,8 +737,8 @@ struct UndoComplexPattern : public mlir::RewritePattern {
 
 void fir::InsertValueOp::getCanonicalizationPatterns(
     mlir::OwningRewritePatternList &results, mlir::MLIRContext *context) {
-  results.insert<UndoComplexPattern<fir::AddfOp, fir::AddcOp>,
-                 UndoComplexPattern<fir::SubfOp, fir::SubcOp>>(context);
+  results.insert<UndoComplexPattern<mlir::AddFOp, fir::AddcOp>,
+                 UndoComplexPattern<mlir::SubFOp, fir::SubcOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -841,9 +820,6 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
                                 std::get<1>(operand_type), result.operands))
         return failure();
     if (prependCount) {
-      // This is an assert here, because these types are verified.
-      assert(regionTypes[0].isa<mlir::IndexType>() &&
-             regionTypes[1].isSignlessInteger(1));
       result.addTypes(regionTypes);
     } else {
       result.addTypes(i1Type);
@@ -957,9 +933,10 @@ static void print(mlir::OpAsmPrinter &p, fir::IterWhileOp op) {
     llvm::interleaveComma(
         llvm::zip(regionArgs.drop_front(), operands.drop_front()), p,
         [&](auto it) { p << std::get<0>(it) << " = " << std::get<1>(it); });
-    auto resTypes = op.finalValue() ? op.getResultTypes()
-                                    : op.getResultTypes().drop_front();
-    p << ") -> (" << resTypes << ')';
+    p << ") -> (";
+    llvm::interleaveComma(
+        llvm::drop_begin(op.getResultTypes(), op.finalValue() ? 0 : 1), p);
+    p << ")";
   } else if (op.finalValue()) {
     p << " -> (" << op.getResultTypes() << ')';
   }
@@ -1239,15 +1216,6 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   if (blockArgNum > 0 && blockArgNum <= initArgs().size())
     return initArgs()[blockArgNum - 1];
   return {};
-}
-
-//===----------------------------------------------------------------------===//
-// MulfOp
-//===----------------------------------------------------------------------===//
-
-mlir::OpFoldResult fir::MulfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
-  return mlir::constFoldBinaryOp<FloatAttr>(
-      opnds, [](APFloat a, APFloat b) { return a * b; });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1773,15 +1741,6 @@ mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
 bool fir::StringLitOp::isWideValue() {
   auto eleTy = getType().cast<fir::SequenceType>().getEleTy();
   return eleTy.cast<fir::CharacterType>().getFKind() != 1;
-}
-
-//===----------------------------------------------------------------------===//
-// SubfOp
-//===----------------------------------------------------------------------===//
-
-mlir::OpFoldResult fir::SubfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
-  return mlir::constFoldBinaryOp<FloatAttr>(
-      opnds, [](APFloat a, APFloat b) { return a - b; });
 }
 
 //===----------------------------------------------------------------------===//

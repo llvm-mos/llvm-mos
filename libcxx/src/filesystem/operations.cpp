@@ -412,6 +412,7 @@ errc __win_err_to_errc(int err) {
       {ERROR_ACCESS_DENIED, errc::permission_denied},
       {ERROR_ALREADY_EXISTS, errc::file_exists},
       {ERROR_BAD_NETPATH, errc::no_such_file_or_directory},
+      {ERROR_BAD_PATHNAME, errc::no_such_file_or_directory},
       {ERROR_BAD_UNIT, errc::no_such_device},
       {ERROR_BROKEN_PIPE, errc::broken_pipe},
       {ERROR_BUFFER_OVERFLOW, errc::filename_too_long},
@@ -666,27 +667,20 @@ _FilesystemClock::time_point _FilesystemClock::now() noexcept {
 
 filesystem_error::~filesystem_error() {}
 
-#if defined(_LIBCPP_WIN32API)
-#define PS_FMT "%ls"
-#else
-#define PS_FMT "%s"
-#endif
-
 void filesystem_error::__create_what(int __num_paths) {
   const char* derived_what = system_error::what();
   __storage_->__what_ = [&]() -> string {
-    const path::value_type* p1 = path1().native().empty() ? PS("\"\"") : path1().c_str();
-    const path::value_type* p2 = path2().native().empty() ? PS("\"\"") : path2().c_str();
     switch (__num_paths) {
-    default:
+    case 0:
       return detail::format_string("filesystem error: %s", derived_what);
     case 1:
-      return detail::format_string("filesystem error: %s [" PS_FMT "]", derived_what,
-                                   p1);
+      return detail::format_string("filesystem error: %s [" PATH_CSTR_FMT "]",
+                                   derived_what, path1().c_str());
     case 2:
-      return detail::format_string("filesystem error: %s [" PS_FMT "] [" PS_FMT "]",
-                                   derived_what, p1, p2);
+      return detail::format_string("filesystem error: %s [" PATH_CSTR_FMT "] [" PATH_CSTR_FMT "]",
+                                   derived_what, path1().c_str(), path2().c_str());
     }
+    _LIBCPP_UNREACHABLE();
   }();
 }
 
@@ -1019,11 +1013,14 @@ bool __create_directories(const path& p, error_code* ec) {
     if (not status_known(parent_st))
       return err.report(m_ec);
     if (not exists(parent_st)) {
+      if (parent == p)
+        return err.report(errc::invalid_argument);
       __create_directories(parent, ec);
       if (ec && *ec) {
         return false;
       }
-    }
+    } else if (not is_directory(parent_st))
+      return err.report(errc::not_a_directory);
   }
   return __create_directory(p, ec);
 }
@@ -1451,11 +1448,11 @@ path __temp_directory_path(error_code* ec) {
   error_code m_ec;
   file_status st = detail::posix_stat(p, &m_ec);
   if (!status_known(st))
-    return err.report(m_ec, "cannot access path \"" PS_FMT "\"", p);
+    return err.report(m_ec, "cannot access path " PATH_CSTR_FMT, p.c_str());
 
   if (!exists(st) || !is_directory(st))
-    return err.report(errc::not_a_directory, "path \"" PS_FMT "\" is not a directory",
-                      p);
+    return err.report(errc::not_a_directory,
+                      "path " PATH_CSTR_FMT " is not a directory", p.c_str());
 
   return p;
 }

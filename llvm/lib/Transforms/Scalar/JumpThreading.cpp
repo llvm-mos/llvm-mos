@@ -31,6 +31,7 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -433,8 +434,9 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
 
       // Jump threading may have introduced redundant debug values into BB
       // which should be removed.
+      // Remove redundant pseudo probes as well.
       if (Changed)
-        RemoveRedundantDbgInstrs(&BB);
+        RemoveRedundantDbgInstrs(&BB, true);
 
       // Stop processing BB if it's the entry or is now deleted. The following
       // routines attempt to eliminate BB and locating a suitable replacement
@@ -462,12 +464,12 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
         BasicBlock *Succ = BI->getSuccessor(0);
         if (
             // The terminator must be the only non-phi instruction in BB.
-            BB.getFirstNonPHIOrDbg()->isTerminator() &&
+            BB.getFirstNonPHIOrDbg(true)->isTerminator() &&
             // Don't alter Loop headers and latches to ensure another pass can
             // detect and transform nested loops later.
             !LoopHeaders.count(&BB) && !LoopHeaders.count(Succ) &&
             TryToSimplifyUncondBranchFromEmptyBlock(&BB, DTU)) {
-          RemoveRedundantDbgInstrs(Succ);
+          RemoveRedundantDbgInstrs(Succ, true);
           // BB is valid for cleanup here because we passed in DTU. F remains
           // BB's parent until a DTU->getDomTree() event.
           LVI->eraseBlock(&BB);
@@ -1387,10 +1389,14 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
            "Attempting to CSE volatile or atomic loads");
     // If this is a load on a phi pointer, phi-translate it and search
     // for available load/store to the pointer in predecessors.
-    Value *Ptr = LoadedPtr->DoPHITranslation(LoadBB, PredBB);
-    PredAvailable = FindAvailablePtrLoadStore(
-        Ptr, LoadI->getType(), LoadI->isAtomic(), PredBB, BBIt,
-        DefMaxInstsToScan, AA, &IsLoadCSE, &NumScanedInst);
+    Type *AccessTy = LoadI->getType();
+    const auto &DL = LoadI->getModule()->getDataLayout();
+    MemoryLocation Loc(LoadedPtr->DoPHITranslation(LoadBB, PredBB),
+                       LocationSize::precise(DL.getTypeStoreSize(AccessTy)),
+                       AATags);
+    PredAvailable = findAvailablePtrLoadStore(Loc, AccessTy, LoadI->isAtomic(),
+                                              PredBB, BBIt, DefMaxInstsToScan,
+                                              AA, &IsLoadCSE, &NumScanedInst);
 
     // If PredBB has a single predecessor, continue scanning through the
     // single predecessor.
@@ -1400,8 +1406,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       SinglePredBB = SinglePredBB->getSinglePredecessor();
       if (SinglePredBB) {
         BBIt = SinglePredBB->end();
-        PredAvailable = FindAvailablePtrLoadStore(
-            Ptr, LoadI->getType(), LoadI->isAtomic(), SinglePredBB, BBIt,
+        PredAvailable = findAvailablePtrLoadStore(
+            Loc, AccessTy, LoadI->isAtomic(), SinglePredBB, BBIt,
             (DefMaxInstsToScan - NumScanedInst), AA, &IsLoadCSE,
             &NumScanedInst);
       }
@@ -2874,11 +2880,14 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
       continue;
 
     auto isUnfoldCandidate = [BB](SelectInst *SI, Value *V) {
+      using namespace PatternMatch;
+
       // Check if SI is in BB and use V as condition.
       if (SI->getParent() != BB)
         return false;
       Value *Cond = SI->getCondition();
-      return (Cond && Cond == V && Cond->getType()->isIntegerTy(1));
+      bool IsAndOr = match(SI, m_CombineOr(m_LogicalAnd(), m_LogicalOr()));
+      return Cond && Cond == V && Cond->getType()->isIntegerTy(1) && !IsAndOr;
     };
 
     SelectInst *SI = nullptr;
