@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
 
@@ -399,42 +400,16 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-/// Split an aggregate type into its individual components, allowing each to be
-/// passed separately. This only handles aggregate types; large primitives (e.g.
-/// i32) are handled via a splitting mechanism in CallLowering itself. C
-/// aggregates are passed by pointer, so this code may not actually be needed,
-/// but eventually small aggregates (struct { char a, b;}) should be passed by
-/// value, so it's nice to have around.
 void MOSCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
                                         SmallVectorImpl<ArgInfo> &SplitArgs,
                                         const DataLayout &DL) const {
-  LLVMContext &Ctx = OrigArg.Ty->getContext();
+  size_t OldSize = SplitArgs.size();
+  CallLowering::splitToValueTypes(OrigArg, SplitArgs, DL, CallingConv::C);
 
-  SmallVector<EVT> SplitVTs;
-  ComputeValueVTs(*getTLI(), DL, OrigArg.Ty, SplitVTs);
+  // Transfer is-pointer information from LLTs to argument flags.
   SmallVector<LLT> SplitLLTs;
   computeValueLLTs(DL, *OrigArg.Ty, SplitLLTs);
-  assert(SplitVTs.size() == SplitLLTs.size());
-
-  if (SplitVTs.size() == 0)
-    return;
-
-  if (SplitVTs.size() == 1) {
-    // No splitting to do, but we want to replace the original type (e.g. [1 x
-    // double] -> double).
-    SplitArgs.emplace_back(OrigArg.Regs[0], SplitVTs[0].getTypeForEVT(Ctx),
-                           OrigArg.Flags[0], OrigArg.IsFixed);
-    adjustArgFlags(SplitArgs.back(), SplitLLTs[0]);
-    return;
-  }
-
-  // Create one ArgInfo for each virtual register in the original ArgInfo.
-  assert(OrigArg.Regs.size() == SplitVTs.size() && "Regs / types mismatch");
-
-  for (unsigned Idx = 0, End = SplitVTs.size(); Idx < End; ++Idx) {
-    Type *SplitTy = SplitVTs[Idx].getTypeForEVT(Ctx);
-    SplitArgs.emplace_back(OrigArg.Regs[Idx], SplitTy, OrigArg.Flags[0],
-                           OrigArg.IsFixed);
-    adjustArgFlags(SplitArgs.back(), SplitLLTs[Idx]);
-  }
+  assert(SplitArgs.size() - OldSize == SplitLLTs.size());
+  for (unsigned Idx = 0, End = SplitLLTs.size(); Idx < End; ++Idx)
+    adjustArgFlags(SplitArgs[OldSize + Idx], SplitLLTs[Idx]);
 }
