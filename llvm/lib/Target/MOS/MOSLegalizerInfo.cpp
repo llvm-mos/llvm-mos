@@ -90,7 +90,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // FIXME: The default narrowing of G_ICMP is terrible.
   getActionDefinitionsBuilder(G_ICMP)
       .legalFor({{S1, S8}})
-      .clampScalar(1, S8, S8);
+      .minScalar(1, S8)
+      .narrowScalarFor({{S1, S16}}, changeTo(1, S8))
+      .narrowScalarFor({{S1, S32}}, changeTo(1, S16))
+      .narrowScalarFor({{S1, S64}}, changeTo(1, S32));
 
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({{S8, S1}})
