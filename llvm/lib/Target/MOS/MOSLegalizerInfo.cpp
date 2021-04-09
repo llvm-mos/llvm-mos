@@ -104,7 +104,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .narrowScalarFor({{S1, S64}}, changeTo(1, S32));
 
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{S8, S1}})
+      .legalFor({S1, S8})
       .clampScalar(0, S8, S8);
 
   // It's legal to G_PTR_ADD an 8-bit integer to a pointer, since there is at
