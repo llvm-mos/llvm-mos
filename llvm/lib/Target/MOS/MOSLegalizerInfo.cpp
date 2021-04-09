@@ -402,7 +402,7 @@ bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
 
   // Increment the current VAArg address.
   Register SizeReg = Builder.buildConstant(LLT::scalar(16), Size).getReg(0);
-  Register NextAddr = Builder.buildPtrAdd(p, Addr, SizeReg).getReg(0);
+  Register NextAddr = Builder.buildPtrAdd(P, Addr, SizeReg).getReg(0);
   MachineMemOperand *AddrStoreMMO =
       MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
                               MachineMemOperand::MOStore, 2, Align());
