@@ -384,13 +384,13 @@ bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
   Register Dst = MI.getOperand(0).getReg();
   Register VaListPtr = MI.getOperand(1).getReg();
 
-  LLT p = LLT::pointer(0, 16);
+  LLT P = LLT::pointer(0, 16);
 
   // Load the current VAArg address out of the VAList.
   MachineMemOperand *AddrLoadMMO = MF.getMachineMemOperand(
       MachinePointerInfo::getUnknownStack(MF),
       MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, 2, Align());
-  Register Addr = Builder.buildLoad(p, VaListPtr, *AddrLoadMMO).getReg(0);
+  Register Addr = Builder.buildLoad(P, VaListPtr, *AddrLoadMMO).getReg(0);
 
   // Load the argument value out of the current VAArg address;
   unsigned Size = MRI.getType(Dst).getSizeInBytes();
