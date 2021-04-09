@@ -95,6 +95,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // FIXME: The default narrowing of G_ICMP is terrible.
   getActionDefinitionsBuilder(G_ICMP)
       .legalFor({{S1, S8}})
+      .customFor({{S1, P}})
       .minScalar(1, S8)
       .narrowScalarFor({{S1, S16}}, changeTo(1, S8))
       .narrowScalarFor({{S1, S32}}, changeTo(1, S16))
@@ -175,6 +176,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
+  case G_ICMP:
+    return legalizeICmp(Helper, MRI, MI);
   case G_LOAD:
     return legalizeLoad(Helper, MRI, MI);
   case G_PTR_ADD:
@@ -191,6 +194,27 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_VASTART:
     return legalizeVAStart(Helper, MRI, MI);
   }
+}
+
+// Compare pointers by first converting to integer. This allows the comparison
+// to be reduced to 8-bit comparisons.
+bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  using namespace TargetOpcode;
+
+  assert(MI.getOpcode() == G_ICMP);
+
+  LLT S16 = LLT::scalar(16);
+
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(
+      Builder.buildPtrToInt(S16, MI.getOperand(2)).getReg(0));
+  MI.getOperand(3).setReg(
+      Builder.buildPtrToInt(S16, MI.getOperand(3)).getReg(0));
+  Helper.Observer.changedInstr(MI);
+  return true;
 }
 
 // Load pointers by loading a 16-bit integer, then converting to pointer. This

@@ -1,5 +1,27 @@
 # RUN: llc -mtriple=mos -run-pass=legalizer -verify-machineinstrs -o - %s | FileCheck %s
 ---
+name: icmp_ptr
+# CHECK-LABEL: name: icmp_ptr
+body: |
+  bb.0.entry:
+    %0:_(p0) = COPY $rs1
+    %1:_(p0) = COPY $rs3
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    RTS implicit %2
+# CHECK:      %0:_(p0) = COPY $rs1
+# CHECK-NEXT: %1:_(p0) = COPY $rs3
+# CHECK-NEXT: %3:_(s16) = G_PTRTOINT %0
+# CHECK-NEXT: %4:_(s16) = G_PTRTOINT %1
+# CHECK-NEXT: %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %3
+# CHECK-NEXT: %7:_(s8), %8:_(s8) = G_UNMERGE_VALUES %4
+# CHECK-NEXT: %9:_(s8) = G_XOR %5, %7
+# CHECK-NEXT: %10:_(s8) = G_XOR %6, %8
+# CHECK-NEXT: %11:_(s8) = G_OR %9, %10
+# CHECK-NEXT: %12:_(s8) = G_CONSTANT i8 0
+# CHECK-NEXT: %2:_(s1) = G_ICMP intpred(eq), %11(s8), %12
+# CHECK-NEXT: RTS implicit %2
+...
+---
 name: load_ptr
 # CHECK-LABEL: name: load_ptr
 body: |
