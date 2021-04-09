@@ -32,9 +32,9 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+using namespace TargetOpcode;
 
 MOSLegalizerInfo::MOSLegalizerInfo() {
-  using namespace TargetOpcode;
   using namespace LegalityPredicates;
   using namespace LegalizeMutations;
 
@@ -170,7 +170,6 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
 bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
                                       MachineInstr &MI) const {
-  using namespace TargetOpcode;
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
   switch (MI.getOpcode()) {
@@ -201,8 +200,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
-  using namespace TargetOpcode;
-
   assert(MI.getOpcode() == G_ICMP);
 
   LLT S16 = LLT::scalar(16);
@@ -222,8 +219,6 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
-  using namespace TargetOpcode;
-
   assert(MI.getOpcode() == G_LOAD);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
@@ -239,8 +234,6 @@ bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
                                       MachineInstr &MI) const {
-  using namespace TargetOpcode;
-
   assert(MI.getOpcode() == G_PTR_ADD);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
@@ -296,8 +289,6 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeShl(LegalizerHelper &Helper,
                                    MachineRegisterInfo &MRI,
                                    MachineInstr &MI) const {
-  using namespace TargetOpcode;
-
   assert(MI.getOpcode() == G_SHL);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
@@ -342,8 +333,6 @@ bool MOSLegalizerInfo::legalizeShl(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
                                      MachineRegisterInfo &MRI,
                                      MachineInstr &MI) const {
-  using namespace TargetOpcode;
-
   assert(MI.getOpcode() == G_STORE);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
@@ -360,8 +349,6 @@ bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
                                         MachineRegisterInfo &MRI,
                                         MachineInstr &MI) const {
-  using namespace TargetOpcode;
-
   unsigned Opcode;
   int64_t CarryInVal;
   switch (MI.getOpcode()) {
@@ -389,8 +376,6 @@ bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
                                      MachineRegisterInfo &MRI,
                                      MachineInstr &MI) const {
-  using namespace TargetOpcode;
-
   assert(MI.getOpcode() == G_VAARG);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
@@ -430,8 +415,6 @@ bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
                                        MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const {
-  using namespace TargetOpcode;
-
   assert(MI.getOpcode() == G_VASTART);
 
   // Store the address of the fake varargs frame index into the valist.
