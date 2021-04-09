@@ -89,7 +89,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // FIXME: Make this a libcall.
   getActionDefinitionsBuilder(G_UDIVREM).lower();
 
-  getActionDefinitionsBuilder(G_ASHR).legalFor({S8}).clampScalar(0, S8, S8);
+  getActionDefinitionsBuilder(G_ASHR)
+      .legalFor({{S8, S8}})
+      .clampScalar(0, S8, S8)
+      // Truncate the shift amount to s8 once the resulting 8-bit shift
+      // operations have been produced.
+      .clampScalar(1, S8, S8);
   getActionDefinitionsBuilder(G_SHL).customFor({S8, S16, S32, S64});
 
   getActionDefinitionsBuilder(G_ROTL).legalFor({S8});
@@ -103,9 +108,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .narrowScalarFor({{S1, S32}}, changeTo(1, S16))
       .narrowScalarFor({{S1, S64}}, changeTo(1, S32));
 
-  getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({S1, S8})
-      .clampScalar(0, S8, S8);
+  getActionDefinitionsBuilder(G_SELECT).legalFor({S1, S8}).clampScalar(0, S8,
+                                                                       S8);
 
   // It's legal to G_PTR_ADD an 8-bit integer to a pointer, since there is at
   // least one addressing mode that performs this directly. The legalizer
@@ -207,7 +211,8 @@ bool MOSLegalizerInfo::legalizeConstant(LegalizerHelper &Helper,
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  Register Int = Builder.getMRI()->createGenericVirtualRegister(LLT::scalar(16));
+  Register Int =
+      Builder.getMRI()->createGenericVirtualRegister(LLT::scalar(16));
 
   Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
   Builder.buildIntToPtr(MI.getOperand(0), Int);
