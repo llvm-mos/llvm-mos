@@ -25,6 +25,8 @@ public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
 private:
+  bool legalizeConstant(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                        MachineInstr &MI) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeLoad(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
