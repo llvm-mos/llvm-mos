@@ -146,6 +146,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .customFor({{P, P}})
       .clampScalar(0, S8, S8);
 
+  getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).lower();
+
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
   // Control Flow
