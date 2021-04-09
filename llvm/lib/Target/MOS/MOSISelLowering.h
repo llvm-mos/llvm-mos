@@ -27,6 +27,10 @@ class MOSTargetLowering : public TargetLowering {
 public:
   MOSTargetLowering(const MOSTargetMachine &TM, const MOSSubtarget &STI);
 
+  bool isSelectSupported(SelectSupportKind /*kind*/) const override {
+    return false;
+  }
+
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
