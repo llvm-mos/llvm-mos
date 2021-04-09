@@ -47,8 +47,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Constants
 
-  // Any type that can be operated on directly can be undef.
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+  // Any type that can be operated on directly can be undef or freeze.
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
       .legalFor({S1, S8, P})
       .clampScalar(0, S8, S8);
 
