@@ -45,7 +45,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   LLT S64 = LLT::scalar(64);
   LLT P = LLT::pointer(0, 16);
 
-  // Handle generation and copying of any type in the producer/consume type sets.
+  // Handle generation and copying of any type in the producer/consume type
+  // sets.
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT, G_PHI})
       .legalFor({S1, S8, S16, P})
       .clampScalar(0, S8, S8);
@@ -56,8 +57,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Extension and Truncation
 
-  // Narrowing ZEXT to 8 bits should remove it entirely.
-  getActionDefinitionsBuilder(G_ZEXT).clampScalar(0, S8, S8).unsupported();
+  getActionDefinitionsBuilder(G_ZEXT)
+      .legalFor({{S8, S1}})
+      .clampScalar(0, S8, S8);
 
   // Type Conversions
 
