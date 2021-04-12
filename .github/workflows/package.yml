@@ -20,7 +20,9 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1.5.0
       - name: Install MacOS tools
         if: startsWith(matrix.os, 'macos')
-        run: brew install ninja zip
+        run: |
+          brew update
+          brew install ninja zip
       - name: Check out source code
         uses: actions/checkout@v2
         with:
