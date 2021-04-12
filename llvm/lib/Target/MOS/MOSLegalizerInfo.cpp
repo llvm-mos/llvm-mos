@@ -73,8 +73,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Scalar Operations
 
-  getActionDefinitionsBuilder(G_MERGE_VALUES).legalFor({{S16, S8}});
-  getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{S8, S16}});
+  getActionDefinitionsBuilder(G_MERGE_VALUES)
+      .legalForCartesianProduct({S16, P}, {S8});
+  getActionDefinitionsBuilder(G_UNMERGE_VALUES)
+      .legalForCartesianProduct({S8}, {S16, P});
 
   // Integer Operations
 
