@@ -136,8 +136,8 @@ public:
   void addIRPasses() override;
   bool addPreISel() override;
   bool addIRTranslator() override;
-  void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
   void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
@@ -172,7 +172,7 @@ bool MOSPassConfig::addIRTranslator() {
   return false;
 }
 
-void MOSPassConfig::addPreLegalizeMachineIR() { addPass(createMOSCombiner()); }
+void MOSPassConfig::addPreRegBankSelect() { addPass(createMOSCombiner()); }
 
 bool MOSPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
