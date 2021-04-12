@@ -52,11 +52,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .legalFor({S1, S8, P})
       .clampScalar(0, S8, S8);
 
-  // S16 is legal because of the absolute addressing mode.
+  // S16 is legal because of the absolute addressing mode/
+  // P is legal for NULL: (%0(p) = G_CONSTANT i16 0)
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({S1, S8, S16})
-      // P can occur for NULL (%0(p) = G_CONSTANT i16 0)
-      .customFor({P})
+      .legalFor({S1, S8, S16, P})
       .clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({P});
@@ -183,8 +182,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
-  case G_CONSTANT:
-    return legalizeConstant(Helper, MRI, MI);
   case G_ICMP:
     return legalizeICmp(Helper, MRI, MI);
   case G_LOAD:
@@ -203,27 +200,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_VASTART:
     return legalizeVAStart(Helper, MRI, MI);
   }
-}
-
-// Produce constant pointers via G_INTTOPTR.
-bool MOSLegalizerInfo::legalizeConstant(LegalizerHelper &Helper,
-                                        MachineRegisterInfo &MRI,
-                                        MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_CONSTANT);
-
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-
-  Register Int =
-      Builder.getMRI()->createGenericVirtualRegister(LLT::scalar(16));
-
-  Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-  Builder.buildIntToPtr(MI.getOperand(0), Int);
-
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(0).setReg(Int);
-  Helper.Observer.changedInstr(MI);
-
-  return true;
 }
 
 // Compare pointers by first converting to integer. This allows the comparison
