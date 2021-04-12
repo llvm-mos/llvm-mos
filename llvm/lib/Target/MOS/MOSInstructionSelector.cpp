@@ -642,7 +642,8 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
 void MOSInstructionSelector::constrainGenericOp(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   for (MachineOperand &Op : MI.operands()) {
-    if (!Op.isReg() || !Op.isDef() || Op.getReg().isPhysical())
+    if (!Op.isReg() || !Op.isDef() || Op.getReg().isPhysical() ||
+        MRI.getRegClassOrNull(Op.getReg()))
       continue;
     LLT Ty = MRI.getType(Op.getReg());
     constrainOperandRegClass(Op, getRegClassForType(Ty));
