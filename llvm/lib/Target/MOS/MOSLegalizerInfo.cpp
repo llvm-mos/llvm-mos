@@ -116,6 +116,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{P, S8}}).customFor(
       {{P, S16}});
 
+  getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX}).lower();
+
   // FIXME: The default narrowing of G_ABS is terrible.
   getActionDefinitionsBuilder(G_ABS).lower();
 
