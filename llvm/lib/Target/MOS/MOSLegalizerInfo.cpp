@@ -45,18 +45,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   LLT S64 = LLT::scalar(64);
   LLT P = LLT::pointer(0, 16);
 
-  // Constants
-
-  // Any type that can be operated on directly can be undef or freeze.
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
-      .legalFor({S1, S8, P})
-      .clampScalar(0, S8, S8);
-
-  // S16 is legal because of the absolute addressing mode/
-  // P is legal for NULL: (%0(p) = G_CONSTANT i16 0)
-  getActionDefinitionsBuilder(G_CONSTANT)
+  // Handle generation and copying of any type in the producer/consume type sets.
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT, G_PHI})
       .legalFor({S1, S8, S16, P})
       .clampScalar(0, S8, S8);
+
+  // Constants
 
   getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({P});
 
@@ -159,8 +153,6 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
   // Control Flow
-
-  getActionDefinitionsBuilder(G_PHI).legalFor({P, S8}).clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({S1});
 
