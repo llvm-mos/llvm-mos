@@ -136,10 +136,10 @@ public:
   void addIRPasses() override;
   bool addPreISel() override;
   bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
   void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
-  void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
   void addMachineSSAOptimization() override;
   void addPreSched2() override;
@@ -172,20 +172,20 @@ bool MOSPassConfig::addIRTranslator() {
   return false;
 }
 
-void MOSPassConfig::addPreRegBankSelect() { addPass(createMOSCombiner()); }
+void MOSPassConfig::addPreLegalizeMachineIR() { addPass(createMOSCombiner()); }
 
 bool MOSPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   return false;
 }
 
+void MOSPassConfig::addPreRegBankSelect() {
+  addPass(createMOSCombiner());
+}
+
 bool MOSPassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
-}
-
-void MOSPassConfig::addPreGlobalInstructionSelect() {
-  addPass(createMOSCombiner());
 }
 
 bool MOSPassConfig::addGlobalInstructionSelect() {
