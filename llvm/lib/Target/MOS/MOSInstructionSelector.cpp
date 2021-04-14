@@ -155,6 +155,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectGlobalValue(MI);
   case MOS::G_IMPLICIT_DEF:
     return selectImplicitDef(MI);
+  case MOS::G_FREEZE:
   case MOS::G_INTTOPTR:
   case MOS::G_PTRTOINT:
     return selectCopyLike(MI);
@@ -272,9 +273,7 @@ bool MOSInstructionSelector::selectBrCond(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectCopyLike(MachineInstr &MI) {
-  assert(MI.getOpcode() == MOS::G_INTTOPTR ||
-         MI.getOpcode() == MOS::G_PTRTOINT);
-
+  assert(MI.getNumOperands() == 2);
   MachineIRBuilder Builder(MI);
   auto Copy = Builder.buildCopy(MI.getOperand(0), MI.getOperand(1));
   constrainGenericOp(*Copy);
