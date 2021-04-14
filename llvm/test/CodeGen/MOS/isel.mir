@@ -15,6 +15,19 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
+name: brcond
+# CHECK-LABEL: name: brcond
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = G_IMPLICIT_DEF
+    G_BRCOND %0, %bb.0
+    RTS
+# CHECK:      %1:cc = CMPimm %0, 0
+# CHECK-NEXT: BR %bb.0, $z, 0
+...
+---
 name: cmpimm_breq
 # CHECK-LABEL: name: cmpimm_breq
 legalized: true

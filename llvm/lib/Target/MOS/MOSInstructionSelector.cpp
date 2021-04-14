@@ -61,7 +61,7 @@ private:
   const MOSRegisterBankInfo &RBI;
 
   bool selectAddSub(MachineInstr &MI);
-  bool selectCompareBranch(MachineInstr &MI);
+  bool selectBrCond(MachineInstr &MI);
   bool selectCopyLike(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
@@ -148,7 +148,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_SUB:
     return selectAddSub(MI);
   case MOS::G_BRCOND:
-    return selectCompareBranch(MI);
+    return selectBrCond(MI);
   case MOS::G_FRAME_INDEX:
     return selectFrameIndex(MI);
   case MOS::G_GLOBAL_VALUE:
@@ -208,18 +208,42 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectCompareBranch(MachineInstr &MI) {
+// Returns whether or not a conditional branch for the given predicate can be
+// directly emitted using the flag outputs of a comparison.
+static bool canBranchOnCondition(CmpInst::Predicate Pred) {
+  switch (Pred) {
+  default:
+    return false;
+  case CmpInst::ICMP_EQ:
+  case CmpInst::ICMP_NE:
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_ULT:
+    return true;
+  }
+}
+
+bool MOSInstructionSelector::selectBrCond(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   Register CondReg = MI.getOperand(0).getReg();
   MachineBasicBlock *Tgt = MI.getOperand(1).getMBB();
 
+  MachineIRBuilder Builder(MI);
+
   CmpInst::Predicate Pred;
   Register LHS;
   int64_t RHS;
-  if (!mi_match(CondReg, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(RHS))))
-    report_fatal_error("Not yet implemented.");
-
-  MachineIRBuilder Builder(MI);
+  if (!mi_match(CondReg, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(RHS))) ||
+      !canBranchOnCondition(Pred)) {
+    // Convert to a case that we can directly branch on by issuing a comparison
+    // with zero.
+    auto Compare = Builder.buildInstr(MOS::CMPimm, {LLT::scalar(1)},
+                                      {CondReg, int64_t(0)});
+    if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
+      return false;
+    Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(MOS::Z).addImm(0);
+    MI.eraseFromParent();
+    return true;
+  }
 
   auto Compare = Builder.buildInstr(MOS::CMPimm, {LLT::scalar(1)}, {LHS, RHS});
   Register Carry = Compare.getReg(0);
@@ -229,7 +253,7 @@ bool MOSInstructionSelector::selectCompareBranch(MachineInstr &MI) {
   auto Br = Builder.buildInstr(MOS::BR).addMBB(Tgt);
   switch (Pred) {
   default:
-    return false;
+    llvm_unreachable("Inconsistent comparison predicate handling.");
   case CmpInst::ICMP_EQ:
     Br.addUse(MOS::Z).addImm(1);
     break;
