@@ -186,6 +186,36 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
+name: select_i1
+# CHECK-LABEL: name: select_i1
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = G_IMPLICIT_DEF
+    %1:any(s1) = G_IMPLICIT_DEF
+    %2:any(s1) = G_IMPLICIT_DEF
+    %3:any(s1) = G_SELECT %0, %1, %2
+    RTS implicit %3
+# CHECK:      %3:anyi1 = SelectI1 %0, %1, %2
+# CHECK-NEXT: RTS
+...
+---
+name: select_i8
+# CHECK-LABEL: name: select_i8
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = G_IMPLICIT_DEF
+    %1:any(s8) = G_IMPLICIT_DEF
+    %2:any(s8) = G_IMPLICIT_DEF
+    %3:any(s8) = G_SELECT %0, %1, %2
+    RTS implicit %3
+# CHECK:      %3:anyi8 = SelectI8 %0, %1, %2
+# CHECK-NEXT: RTS
+...
+---
 name: store
 # CHECK-LABEL: name: store
 legalized: true

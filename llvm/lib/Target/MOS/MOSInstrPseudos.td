@@ -15,7 +15,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-class Pseudo : Instruction {
+class MOSPseudo : Instruction {
   let Namespace = "MOS";
 
   dag OutOperandList = (outs);
@@ -37,7 +37,7 @@ class Pseudo : Instruction {
 // most cases, since we can instead guarantee that a reserved region at the
 // bottom of the stack will always have enough free space to set up the
 // arguments of any outgoing call.
-class CallFramePseudo : Pseudo {
+class MOSCallFramePseudo : MOSPseudo {
   dag InOperandList = (ins i16imm:$bytes, i16imm:$prior);
 
   let Defs = [RS0];
@@ -45,14 +45,14 @@ class CallFramePseudo : Pseudo {
 }
 
 // Call frame setup pseudo.
-def ADJCALLSTACKDOWN : CallFramePseudo;
+def ADJCALLSTACKDOWN : MOSCallFramePseudo;
 
 // Call frame destroy pseudo.
-def ADJCALLSTACKUP : CallFramePseudo;
+def ADJCALLSTACKUP : MOSCallFramePseudo;
 
 // Produces the low byte of the address of the given frame index. Produces a
 // carry required by the high byte calculation.
-def AddrLostk : Pseudo {
+def AddrLostk : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst, Cc:$carry);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
@@ -63,7 +63,7 @@ def AddrLostk : Pseudo {
 
 // Produces the high byte of the address of the given frame index. Accepts the
 // carry produced by the low byte calculation.
-def AddrHistk : Pseudo {
+def AddrHistk : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset, Cc:$carry);
 
@@ -74,7 +74,7 @@ def AddrHistk : Pseudo {
 
 // Loads a value (1, 8, or 16 bits) from the soft stack. Eliminated once the
 // offset from the frame register is known.
-def LDstk : Pseudo {
+def LDstk : MOSPseudo {
   dag OutOperandList = (outs Anyc:$dst);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
@@ -85,7 +85,7 @@ def LDstk : Pseudo {
 
 // Stores a value (1, 8, or 16 bits) to the soft stack. Eliminated once the
 // offset from the frame register is known.
-def STstk : Pseudo {
+def STstk : MOSPseudo {
   dag InOperandList = (ins Anyc:$src, Imag16:$base, i16imm:$fi);
 
   // All possible instruction sequences clobber NZ.
@@ -97,7 +97,7 @@ def STstk : Pseudo {
 // Loads from an absolute location plus an absolute offset. The first operand
 // will always be a frame index referring to to a statically allocated stack
 // frame. This will be lowered to a regular LDabs upon FEI.
-def LDabs_offset : Pseudo {
+def LDabs_offset : MOSPseudo {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$addr, i16imm:$offset);
 
@@ -110,7 +110,7 @@ def LDabs_offset : Pseudo {
 // Stores to an absolute location plus an absolute offset. The first operand
 // will always be a frame index referring to a statically allocated stack frame.
 // This will be lowered to a regular STabs upon FEI.
-def STabs_offset : Pseudo {
+def STabs_offset : MOSPseudo {
   dag OutOperandList = (outs);
   dag InOperandList = (ins GPR:$src, i16imm:$addr, i16imm:$offset);
 
@@ -120,7 +120,7 @@ def STabs_offset : Pseudo {
 // Abstracts LDAidx, LDXidx, and LDYidx. This is almost a logical instruction,
 // but the "LDX 1234,X" and "LDY 1234,Y" cases aren't natively supported, and
 // more than one instruction is required to emit them.
-def LDidx : Pseudo {
+def LDidx : MOSPseudo {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$addr, XY:$idx);
 
@@ -128,4 +128,32 @@ def LDidx : Pseudo {
 
   let isReMaterializable = true;
   let mayLoad = true;
+}
+
+//===---------------------------------------------------------------------===//
+// Control flow pseudoinstructions
+//===---------------------------------------------------------------------===//
+
+// Control flow cannot be generally added during instruction selection without
+// encoding it in pseudoinstructions, since the passes involved generally aren't
+// safe to add basic blocks while iterating through them. Instead, these
+// pseudoinstructions are emitted, which are later lowered to new basic blocks
+// and control flow in FinalizeISel via custom inserters.
+class MOSControlFlowPseudo : MOSPseudo {
+  let usesCustomInserter = true;
+}
+
+// Pseudo-instruction to select a value from two alternatives. Lowered to a
+// conditional branch between a pair of copies.
+class MOSSelect : MOSControlFlowPseudo {
+  let isSelect = true;
+}
+
+def SelectI1 : MOSSelect {
+  dag OutOperandList = (outs Anyi1:$out);
+  dag InOperandList = (ins Anyi1:$cond, Anyi1:$t, Anyi1:$f);
+}
+def SelectI8 : MOSSelect {
+  dag OutOperandList = (outs Anyi8:$out);
+  dag InOperandList = (ins Anyi1:$cond, Anyi8:$t, Anyi8:$f);
 }

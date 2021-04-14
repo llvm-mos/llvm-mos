@@ -67,6 +67,7 @@ private:
   bool selectGlobalValue(MachineInstr &MI);
   bool selectLoadStore(MachineInstr &MI);
   bool selectShlE(MachineInstr &MI);
+  bool selectSelect(MachineInstr &MI);
   bool selectImplicitDef(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectPhi(MachineInstr &MI);
@@ -164,6 +165,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectLoadStore(MI);
   case MOS::G_SHLE:
     return selectShlE(MI);
+  case MOS::G_SELECT:
+    return selectSelect(MI);
   case MOS::G_MERGE_VALUES:
     return selectMergeValues(MI);
   case MOS::G_PHI:
@@ -493,30 +496,6 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectShlE(MachineInstr &MI) {
-  assert(MI.getOpcode() == MOS::G_SHLE);
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register CarryOut = MI.getOperand(1).getReg();
-  Register Src = MI.getOperand(2).getReg();
-  Register CarryIn = MI.getOperand(3).getReg();
-
-  MachineIRBuilder Builder(MI);
-  auto ConstCarryIn =
-      getConstantVRegValWithLookThrough(CarryIn, *Builder.getMRI());
-  if (ConstCarryIn && ConstCarryIn->Value.isNullValue()) {
-    auto Asl = Builder.buildInstr(MOS::ASL, {Dst, CarryOut}, {Src});
-    if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
-      return false;
-  } else {
-    auto Rol = Builder.buildInstr(MOS::ROL, {Dst, CarryOut}, {Src, CarryIn});
-    if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
-      return false;
-  }
-  MI.eraseFromParent();
-  return true;
-}
-
 bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_MERGE_VALUES);
 
@@ -582,6 +561,45 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
 
   composePtr(Builder, Dst, AddLo.getReg(0), AddHi.getReg(0));
   MI.eraseFromParent();
+  return true;
+}
+
+bool MOSInstructionSelector::selectShlE(MachineInstr &MI) {
+  assert(MI.getOpcode() == MOS::G_SHLE);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register CarryOut = MI.getOperand(1).getReg();
+  Register Src = MI.getOperand(2).getReg();
+  Register CarryIn = MI.getOperand(3).getReg();
+
+  MachineIRBuilder Builder(MI);
+  auto ConstCarryIn =
+      getConstantVRegValWithLookThrough(CarryIn, *Builder.getMRI());
+  if (ConstCarryIn && ConstCarryIn->Value.isNullValue()) {
+    auto Asl = Builder.buildInstr(MOS::ASL, {Dst, CarryOut}, {Src});
+    if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
+      return false;
+  } else {
+    auto Rol = Builder.buildInstr(MOS::ROL, {Dst, CarryOut}, {Src, CarryIn});
+    if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
+      return false;
+  }
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSInstructionSelector::selectSelect(MachineInstr &MI) {
+  assert(MI.getOpcode() == MOS::G_SELECT);
+
+  Register Dst = MI.getOperand(0).getReg();
+
+  MachineIRBuilder Builder(MI);
+  unsigned Size = Builder.getMRI()->getType(Dst).getSizeInBits();
+  assert(Size == 1 || Size == 8);
+  unsigned Opcode = Size == 1 ? MOS::SelectI1 : MOS::SelectI8;
+  MI.setDesc(TII.get(Opcode));
+  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
+    return false;
   return true;
 }
 
