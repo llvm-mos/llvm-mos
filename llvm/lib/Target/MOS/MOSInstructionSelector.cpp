@@ -212,18 +212,49 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   return true;
 }
 
-// Returns whether or not a conditional branch for the given predicate can be
-// directly emitted using the flag outputs of a comparison.
-static bool canBranchOnCondition(CmpInst::Predicate Pred) {
-  switch (Pred) {
-  default:
-    return false;
-  case CmpInst::ICMP_EQ:
-  case CmpInst::ICMP_NE:
-  case CmpInst::ICMP_UGE:
-  case CmpInst::ICMP_ULT:
-    return true;
+// Given a G_CMP instruction Cmp and one of its output virtual registers,
+// returns the flag that corresponds to the register.
+static Register getCmpFlagForRegister(const MachineInstr &Cmp, Register Reg) {
+  static Register Flags[] = {MOS::C, MOS::N, MOS::V, MOS::Z};
+  for (int Idx = 0; Idx < 4; ++Idx)
+    if (Cmp.getOperand(Idx).getReg() == Reg)
+      return Flags[Idx];
+  llvm_unreachable("Could not find register in G_CMP outputs.");
+}
+
+struct CmpImm_match {
+  Register &LHS;
+  int64_t &RHS;
+  Register &Flag;
+
+  CmpImm_match(Register &LHS, int64_t &RHS, Register &Flag)
+      : LHS(LHS), RHS(RHS), Flag(Flag) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register CondReg) {
+    auto DefSrcReg = getDefSrcRegIgnoringCopies(CondReg, MRI);
+    MachineInstr &CondMI = *DefSrcReg->MI;
+    if (CondMI.getOpcode() != MOS::G_CMP)
+      return false;
+    auto RHSConst =
+        getConstantVRegValWithLookThrough(CondMI.getOperand(5).getReg(), MRI);
+    if (!RHSConst)
+      return false;
+
+    LHS = CondMI.getOperand(4).getReg();
+    RHS = RHSConst->Value.getZExtValue();
+    Flag = getCmpFlagForRegister(CondMI, DefSrcReg->Reg);
+
+    // CMPimm cannot set the V register.
+    return Flag != MOS::V;
   }
+};
+
+// Match one of the outputs of a G_CMP to a CMPimm operation. LHS and RHS are
+// the left and right hand side of the comparison, while Flag is the virtual
+// (for C) or physical (for N and Z) register corresponding to the output by
+// which the G_CMP was reached.
+inline CmpImm_match m_CmpImm(Register &LHS, int64_t &RHS, Register &Flag) {
+  return {LHS, RHS, Flag};
 }
 
 bool MOSInstructionSelector::selectBrCond(MachineInstr &MI) {
@@ -231,17 +262,24 @@ bool MOSInstructionSelector::selectBrCond(MachineInstr &MI) {
   Register CondReg = MI.getOperand(0).getReg();
   MachineBasicBlock *Tgt = MI.getOperand(1).getMBB();
 
+  LLT S1 = LLT::scalar(1);
+
   MachineIRBuilder Builder(MI);
 
-  CmpInst::Predicate Pred;
+  Register Neg;
+  int64_t FlagVal = 1;
+  if (mi_match(CondReg, MRI, m_Not(m_Reg(Neg)))) {
+    CondReg = Neg;
+    FlagVal = 0;
+  }
+
   Register LHS;
   int64_t RHS;
-  if (!mi_match(CondReg, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(RHS))) ||
-      !canBranchOnCondition(Pred)) {
+  Register Flag;
+  if (!mi_match(CondReg, MRI, m_CmpImm(LHS, RHS, Flag))) {
     // Convert to a case that we can directly branch on by issuing a comparison
     // with zero.
-    auto Compare = Builder.buildInstr(MOS::CMPimm, {LLT::scalar(1)},
-                                      {CondReg, int64_t(0)});
+    auto Compare = Builder.buildInstr(MOS::CMPimm, {S1}, {CondReg, int64_t(0)});
     if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
       return false;
     Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(MOS::Z).addImm(0);
@@ -249,28 +287,14 @@ bool MOSInstructionSelector::selectBrCond(MachineInstr &MI) {
     return true;
   }
 
-  auto Compare = Builder.buildInstr(MOS::CMPimm, {LLT::scalar(1)}, {LHS, RHS});
-  Register Carry = Compare.getReg(0);
+  auto Compare = Builder.buildInstr(MOS::CMPimm, {S1}, {LHS, RHS});
   if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
     return false;
 
-  auto Br = Builder.buildInstr(MOS::BR).addMBB(Tgt);
-  switch (Pred) {
-  default:
-    llvm_unreachable("Inconsistent comparison predicate handling.");
-  case CmpInst::ICMP_EQ:
-    Br.addUse(MOS::Z).addImm(1);
-    break;
-  case CmpInst::ICMP_NE:
-    Br.addUse(MOS::Z).addImm(0);
-    break;
-  case CmpInst::ICMP_UGE:
-    Br.addUse(Carry).addImm(1);
-    break;
-  case CmpInst::ICMP_ULT:
-    Br.addUse(Carry).addImm(0);
-    break;
-  }
+  if (Flag == MOS::C)
+    Flag = Compare.getReg(0);
+
+  Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(Flag).addImm(FlagVal);
   MI.eraseFromParent();
   return true;
 }

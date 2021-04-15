@@ -75,9 +75,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Operations
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR})
       .legalFor({S8})
       .clampScalar(0, S8, S8);
+
+  // 1-bit G_XOR may be legal as a "not" operation that can be directly selected
+  // into certain branches.
+  getActionDefinitionsBuilder(G_XOR).legalFor({S1, S8}).clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder(
       {G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM, G_CTLZ_ZERO_UNDEF})
@@ -98,8 +102,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // FIXME: The default narrowing of G_ICMP is terrible.
   getActionDefinitionsBuilder(G_ICMP)
-      .legalFor({{S1, S8}})
-      .customFor({{S1, P}})
+      .customFor({{S1, P}, {S1, S8}})
       .minScalar(1, S8)
       .narrowScalarFor({{S1, S16}}, changeTo(1, S8))
       .narrowScalarFor({{S1, S32}}, changeTo(1, S16))
@@ -198,22 +201,100 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   }
 }
 
-// Compare pointers by first converting to integer. This allows the comparison
-// to be reduced to 8-bit comparisons.
+// Lowers a comparison to the negation of the inverse comparison. For example,
+// G_ICMP intpred(eq), A, B would become "not G_ICMP intpred(ne) A, B".
+static void negateInverseComparison(LegalizerHelper &Helper, MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Register Not = Builder.getMRI()->createGenericVirtualRegister(LLT::scalar(1));
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(0).setReg(Not);
+  MI.getOperand(1).setPredicate(CmpInst::getInversePredicate(Pred));
+  Helper.Observer.changedInstr(MI);
+
+  Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
+  Builder.buildNot(Dst, Not);
+}
+
+// Lowers a comparison to the swapped comparison on swapped operands. For
+// example, G_ICMP intpred(ult), A, B would become "G_ICMP intpred(ugt) B, A".
+static void swapComparison(LegalizerHelper &Helper, MachineInstr &MI) {
+  Register LHS = MI.getOperand(2).getReg();
+  Register RHS = MI.getOperand(3).getReg();
+  auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(1).setPredicate(CmpInst::getSwappedPredicate(Pred));
+  MI.getOperand(2).setReg(RHS);
+  MI.getOperand(3).setReg(LHS);
+  Helper.Observer.changedInstr(MI);
+}
+
 bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
   assert(MI.getOpcode() == G_ICMP);
-
-  LLT S16 = LLT::scalar(16);
-
   MachineIRBuilder &Builder = Helper.MIRBuilder;
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(2).setReg(
-      Builder.buildPtrToInt(S16, MI.getOperand(2)).getReg(0));
-  MI.getOperand(3).setReg(
-      Builder.buildPtrToInt(S16, MI.getOperand(3)).getReg(0));
-  Helper.Observer.changedInstr(MI);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(2).getReg();
+  Register RHS = MI.getOperand(3).getReg();
+
+  LLT Type = MRI.getType(LHS);
+
+  // Compare pointers by first converting to integer. This allows the comparison
+  // to be reduced to 8-bit comparisons.
+  if (Type.isPointer()) {
+    LLT S16 = LLT::scalar(16);
+
+    Helper.Observer.changingInstr(MI);
+    MI.getOperand(2).setReg(Builder.buildPtrToInt(S16, LHS).getReg(0));
+    MI.getOperand(3).setReg(Builder.buildPtrToInt(S16, RHS).getReg(0));
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
+
+  assert(Type == LLT::scalar(8));
+
+  LLT S1 = LLT::scalar(1);
+
+  // Lower 8-bit comparisons to a generic G_CMP instruction with similar
+  // capabilities to the 6502's SBC and CMP instructions.
+  // See www.6502.org/tutorials/compare_beyond.html.
+  switch (MI.getOperand(1).getPredicate()) {
+  case CmpInst::ICMP_EQ:
+    Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, Dst /*=Z*/}, {LHS, RHS});
+    MI.eraseFromParent();
+    break;
+  case CmpInst::ICMP_UGE:
+    Builder.buildInstr(MOS::G_CMP, {Dst /*=C*/, S1, S1, S1}, {LHS, RHS});
+    MI.eraseFromParent();
+    break;
+  case CmpInst::ICMP_SLT: {
+    auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
+    Register N = Cmp.getReg(1);
+    Register V = Cmp.getReg(2);
+    Builder.buildXor(Dst, N, V);
+    MI.eraseFromParent();
+    break;
+  }
+  case CmpInst::ICMP_NE:
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_SGE:
+    negateInverseComparison(Helper, MI);
+    break;
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_SLE:
+  case CmpInst::ICMP_SGT:
+    swapComparison(Helper, MI);
+    break;
+  default:
+    report_fatal_error("Not yet implemented.");
+  }
+
   return true;
 }
 

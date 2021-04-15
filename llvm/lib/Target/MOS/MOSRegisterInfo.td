@@ -32,6 +32,10 @@ def subn : MOSSubRegIndex<1>;
 // Z bit of the 2-bit NZ register.
 def subz : MOSSubRegIndex<1>;
 
+// V bit of the 8-bit processor status register.
+def subv : MOSSubRegIndex<1>;
+
+
 //===----------------------------------------------------------------------===//
 //  Real registers
 //===----------------------------------------------------------------------===//
@@ -55,19 +59,20 @@ def S : MOSReg<3, "s">;
 
 def C : MOSReg<4, "C">;
 def N : MOSReg<5, "N">;
-def Z : MOSReg<6, "Z">;
+def V : MOSReg<6, "V">;
+def Z : MOSReg<7, "Z">;
 
 // N and Z are always set together, so model them as one register with two
 // one-bit subregisters.
-def NZ : MOSReg<7, "NZ"> {
+def NZ : MOSReg<8, "NZ"> {
   let SubRegs = [N, Z];
   let SubRegIndices = [subn, subz];
   let CoveredBySubRegs = true;
 }
 
-def P : MOSReg<8, "P"> {
-  let SubRegs = [C, NZ];
-  let SubRegIndices = [subcarry, subnz];
+def P : MOSReg<9, "P"> {
+  let SubRegs = [C, NZ, V];
+  let SubRegIndices = [subcarry, subnz, subv];
 }
 
 //===----------------------------------------------------------------------===//
@@ -159,7 +164,7 @@ let isPressureFineGrained = true in {
   def XY : MOSReg8Class<(add X, Y)>;
 }
 let isAllocatable = false in {
-  def Flag : MOSReg1Class<(add C, N, Z)>;
+  def Flag : MOSReg1Class<(add C, N, V, Z)>;
   def AP : MOSReg8Class<(add A, P)>;
 }
 

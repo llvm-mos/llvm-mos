@@ -28,64 +28,66 @@ body: |
 # CHECK-NEXT: BR %bb.0, $z, 0
 ...
 ---
-name: cmpimm_breq
-# CHECK-LABEL: name: cmpimm_breq
+name: cmpimm_brcs
+# CHECK-LABEL: name: cmpimm_brcs
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
     %0:any(s8) = G_IMPLICIT_DEF
     %1:any(s8) = G_CONSTANT i8 42
-    %2:any(s1) = G_ICMP intpred(eq), %0, %1
+    %2:any(s1), %3:any(s1), %4:any(s1), %5:any(s1) = G_CMP %0, %1
     G_BRCOND %2, %bb.0
     RTS
-# CHECK:      %3:cc = CMPimm %0, 42
+# CHECK:      %6:cc = CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, %6, 1
+...
+---
+name: cmpimm_brcc
+# CHECK-LABEL: name: cmpimm_brcc
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1), %3:any(s1), %4:any(s1), %5:any(s1) = G_CMP %0, %1
+    %7:any(s1) = G_CONSTANT i1 true
+    %8:any(s1) = G_XOR %2, %7
+    G_BRCOND %8, %bb.0
+    RTS
+# CHECK:      %8:cc = CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, %8, 0
+...
+---
+name: cmpimm_brns
+# CHECK-LABEL: name: cmpimm_brns
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1), %3:any(s1), %4:any(s1), %5:any(s1) = G_CMP %0, %1
+    G_BRCOND %3, %bb.0
+    RTS
+# CHECK:      %6:cc = CMPimm %0, 42
+# CHECK-NEXT: BR %bb.0, $n, 1
+...
+---
+name: cmpimm_brzs
+# CHECK-LABEL: name: cmpimm_brzs
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1), %3:any(s1), %4:any(s1), %5:any(s1) = G_CMP %0, %1
+    G_BRCOND %5, %bb.0
+    RTS
+# CHECK:      %6:cc = CMPimm %0, 42
 # CHECK-NEXT: BR %bb.0, $z, 1
-...
----
-name: cmpimm_brne
-# CHECK-LABEL: name: cmpimm_brne
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    %0:any(s8) = G_IMPLICIT_DEF
-    %1:any(s8) = G_CONSTANT i8 42
-    %2:any(s1) = G_ICMP intpred(ne), %0, %1
-    G_BRCOND %2, %bb.0
-    RTS
-# CHECK:      %3:cc = CMPimm %0, 42
-# CHECK-NEXT: BR %bb.0, $z, 0
-...
----
-name: cmpimm_bruge
-# CHECK-LABEL: name: cmpimm_bruge
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    %0:any(s8) = G_IMPLICIT_DEF
-    %1:any(s8) = G_CONSTANT i8 42
-    %2:any(s1) = G_ICMP intpred(uge), %0, %1
-    G_BRCOND %2, %bb.0
-    RTS
-# CHECK:      %3:cc = CMPimm %0, 42
-# CHECK-NEXT: BR %bb.0, %3, 1
-...
----
-name: cmpimm_brult
-# CHECK-LABEL: name: cmpimm_brult
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    %0:any(s8) = G_IMPLICIT_DEF
-    %1:any(s8) = G_CONSTANT i8 42
-    %2:any(s1) = G_ICMP intpred(ult), %0, %1
-    G_BRCOND %2, %bb.0
-    RTS
-# CHECK:      %3:cc = CMPimm %0, 42
-# CHECK-NEXT: BR %bb.0, %3, 0
 ...
 ---
 name: copy

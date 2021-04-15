@@ -18,7 +18,141 @@ body: |
 # CHECK-NEXT: %10:_(s8) = G_XOR %6, %8
 # CHECK-NEXT: %11:_(s8) = G_OR %9, %10
 # CHECK-NEXT: %12:_(s8) = G_CONSTANT i8 0
-# CHECK-NEXT: %2:_(s1) = G_ICMP intpred(eq), %11(s8), %12
+# CHECK-NEXT: %13:_(s1), %14:_, %15:_, %2:_ = G_CMP %11(s8), %12
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_eq
+# CHECK-LABEL: name: icmp_eq
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    RTS implicit %2
+# CHECK:      %3:_(s1), %4:_, %5:_, %2:_ = G_CMP %0(s8), %1
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_ne
+# CHECK-LABEL: name: icmp_ne
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(ne), %0, %1
+    RTS implicit %2
+# CHECK:      %5:_(s1), %6:_, %7:_, %3:_ = G_CMP %0(s8), %1
+# CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
+# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_ugt
+# CHECK-LABEL: name: icmp_ugt
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(ugt), %0, %1
+    RTS implicit %2
+# CHECK:      %3:_(s1), %5:_, %6:_, %7:_ = G_CMP %1(s8), %0
+# CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
+# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_uge
+# CHECK-LABEL: name: icmp_uge
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(uge), %0, %1
+    RTS implicit %2
+# CHECK:      %2:_(s1), %3:_, %4:_, %5:_ = G_CMP %0(s8), %1
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_ult
+# CHECK-LABEL: name: icmp_ult
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(ult), %0, %1
+    RTS implicit %2
+# CHECK:      %3:_(s1), %5:_, %6:_, %7:_ = G_CMP %0(s8), %1
+# CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
+# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_ule
+# CHECK-LABEL: name: icmp_ule
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(ule), %0, %1
+    RTS implicit %2
+# CHECK:      %2:_(s1), %3:_, %4:_, %5:_ = G_CMP %1(s8), %0
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_sgt
+# CHECK-LABEL: name: icmp_sgt
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(sgt), %0, %1
+    RTS implicit %2
+# CHECK:      %3:_(s1), %4:_, %5:_, %6:_ = G_CMP %1(s8), %0
+# CHECK-NEXT: %2:_(s1) = G_XOR %4, %5
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_sge
+# CHECK-LABEL: name: icmp_sge
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(sge), %0, %1
+    RTS implicit %2
+# CHECK:      %5:_(s1), %6:_, %7:_, %8:_ = G_CMP %0(s8), %1
+# CHECK-NEXT: %3:_(s1) = G_XOR %6, %7
+# CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
+# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_slt
+# CHECK-LABEL: name: icmp_slt
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(slt), %0, %1
+    RTS implicit %2
+# CHECK:      %3:_(s1), %4:_, %5:_, %6:_ = G_CMP %0(s8), %1
+# CHECK-NEXT: %2:_(s1) = G_XOR %4, %5
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: icmp_sle
+# CHECK-LABEL: name: icmp_sle
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(sle), %0, %1
+    RTS implicit %2
+# CHECK:      %5:_(s1), %6:_, %7:_, %8:_ = G_CMP %1(s8), %0
+# CHECK-NEXT: %3:_(s1) = G_XOR %6, %7
+# CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
+# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
