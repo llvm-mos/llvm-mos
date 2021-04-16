@@ -28,6 +28,21 @@ body: |
 # CHECK-NEXT: BR %bb.0, $z, 0
 ...
 ---
+name: brcond_not
+# CHECK-LABEL: name: brcond_not
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = G_IMPLICIT_DEF
+    %1:any(s1) = G_CONSTANT i1 true
+    %2:any(s1) = G_XOR %0, %1
+    G_BRCOND %2, %bb.0
+    RTS
+# CHECK:      %1:cc = CMPimm %0, 0
+# CHECK-NEXT: BR %bb.0, $z, 1
+...
+---
 name: cmpimm_brcs
 # CHECK-LABEL: name: cmpimm_brcs
 legalized: true

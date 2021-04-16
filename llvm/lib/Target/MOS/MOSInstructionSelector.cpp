@@ -282,7 +282,8 @@ bool MOSInstructionSelector::selectBrCond(MachineInstr &MI) {
     auto Compare = Builder.buildInstr(MOS::CMPimm, {S1}, {CondReg, int64_t(0)});
     if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
       return false;
-    Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(MOS::Z).addImm(0);
+    // CondReg == 0 -> Z == 1; CondReg == 1 -> Z == 0
+    Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(MOS::Z).addImm(!FlagVal);
     MI.eraseFromParent();
     return true;
   }
