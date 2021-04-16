@@ -39,7 +39,7 @@ body: |
     %2:any(s1) = G_XOR %0, %1
     G_BRCOND %2, %bb.0
     RTS
-# CHECK:      %1:cc = CMPimm %0, 0
+# CHECK:      %3:cc = CMPimm %0, 0
 # CHECK-NEXT: BR %bb.0, $z, 1
 ...
 ---
