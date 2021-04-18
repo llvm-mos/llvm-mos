@@ -76,7 +76,7 @@ def label : Operand<OtherVT>;
 //===---------------------------------------------------------------------===//
 
 class MOSAddSub : MOSLogicalInstr {
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout);
+  dag OutOperandList = (outs Ac:$dst, Cc:$carryout, Vc:$vout);
   let Constraints = "$dst = $l, $carryout = $carryin";
 
   let Defs = [NZ];

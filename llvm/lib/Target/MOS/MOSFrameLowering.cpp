@@ -95,13 +95,17 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     // We cannot save/restore using PHA/PLA here: it would interfere with the
     // PLA of the CSRs.
     if (AMaybeLive)
-      Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("__save_a");
+      Builder.buildInstr(MOS::STabs)
+          .addUse(MOS::A)
+          .addExternalSymbol("__save_a");
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
       Builder.buildInstr(MOS::PL).addDef(MOS::A);
       Builder.buildCopy(CI.getReg(), Register(MOS::A));
     }
     if (AMaybeLive)
-      Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("__save_a");
+      Builder.buildInstr(MOS::LDabs)
+          .addDef(MOS::A)
+          .addExternalSymbol("__save_a");
   }
 
   // Mark the CSRs as used by the return to ensure Machine Copy Propagation
@@ -210,7 +214,7 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
                    .getReg(0);
   if (LoBytes) {
     Builder.buildCopy(A, Register(MOS::RC0));
-    Builder.buildInstr(MOS::ADCimm, {A, C}, {A, LoBytes, C});
+    Builder.buildInstr(MOS::ADCimm, {A, C, &MOS::VcRegClass}, {A, LoBytes, C});
     Builder.buildCopy(MOS::RC0, A);
   }
 
@@ -220,7 +224,6 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
   if (LoBytes)
     LoCopy.addUse(A, RegState::Implicit);
 
-  auto Hi = Builder.buildInstr(MOS::ADCimm, {A, C}, {A, HiBytes, C});
-  Hi->getOperand(1).setIsDead();
+  Builder.buildInstr(MOS::ADCimm, {A, C, &MOS::VcRegClass}, {A, HiBytes, C});
   Builder.buildCopy(MOS::RC1, A);
 }

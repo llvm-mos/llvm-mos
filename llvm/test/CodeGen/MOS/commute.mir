@@ -10,12 +10,12 @@ body: |
     %0:ac = IMPLICIT_DEF
     %1:imag8 = IMPLICIT_DEF
     %2:cc = IMPLICIT_DEF
-    %3:ac, dead %4:cc = ADCimag8 %0, killed %1, %2, implicit-def $nz
+    %3:ac, dead %4:cc, dead %5:vc = ADCimag8 %0, killed %1, %2, implicit-def $nz
     RTS implicit %0, implicit %3
 # CHECK:      %0:imag8 = IMPLICIT_DEF
 # CHECK-NEXT: %1:ac = IMPLICIT_DEF
 # CHECK-NEXT: %2:cc = IMPLICIT_DEF
 # CHECK-NEXT: %3:ac = COPY %1
-# CHECK-NEXT: %3:ac, dead %4:cc = ADCimag8 %3, %0, %2
+# CHECK-NEXT: %3:ac, dead %4:cc, dead %5:vc = ADCimag8 %3, %0, %2
 # CHECK-NEXT: RTS implicit %0, implicit %3
 ...

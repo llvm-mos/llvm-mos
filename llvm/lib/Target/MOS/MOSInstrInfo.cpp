@@ -165,7 +165,7 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
 
   assert(MI.getOpcode() == MOS::ADCimag8);
 
-  if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3))
+  if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 3, 4))
     return false;
 
   if (!MI.getOperand(SrcOpIdx1).isReg() || !MI.getOperand(SrcOpIdx2).isReg()) {

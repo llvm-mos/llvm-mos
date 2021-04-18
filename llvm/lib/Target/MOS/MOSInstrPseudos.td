@@ -53,7 +53,7 @@ def ADJCALLSTACKUP : MOSCallFramePseudo;
 // Produces the low byte of the address of the given frame index. Produces a
 // carry required by the high byte calculation.
 def AddrLostk : MOSPseudo {
-  dag OutOperandList = (outs Anyi8:$dst, Cc:$carry);
+  dag OutOperandList = (outs Anyi8:$dst, Cc:$carry, Vc:$deadv);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
   let Defs = [NZ];
@@ -64,10 +64,10 @@ def AddrLostk : MOSPseudo {
 // Produces the high byte of the address of the given frame index. Accepts the
 // carry produced by the low byte calculation.
 def AddrHistk : MOSPseudo {
-  dag OutOperandList = (outs Anyi8:$dst);
+  dag OutOperandList = (outs Anyi8:$dst, Cc:$deadc, Vc:$deadv);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset, Cc:$carry);
 
-  let Defs = [C, NZ];
+  let Defs = [NZ];
 
   let isReMaterializable = true;
 }

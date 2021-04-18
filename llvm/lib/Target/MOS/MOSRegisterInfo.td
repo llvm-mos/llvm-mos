@@ -149,6 +149,7 @@ let isPressureFineGrained = true in {
   def Xc : MOSReg8Class<(add X)>;
   def Yc : MOSReg8Class<(add Y)>;
   def Cc : MOSReg1Class<(add C)>;
+  def Vc : MOSReg1Class<(add V)>;
 }
 
 // "General purpose" register classes.
@@ -173,7 +174,7 @@ let isAllocatable = false in {
 def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 
 // Sum types of all available storage locations for a size.
-def Anyi1 : MOSReg1Class<(add GPR, Imag8, Cc)>;
+def Anyi1 : MOSReg1Class<(add GPR, Imag8, Cc, Vc)>;
 def Anyi8 : MOSReg8Class<(add GPR, Imag8)>;
 
 // Any location where any supported size could be placed.

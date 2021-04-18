@@ -4,7 +4,7 @@ name: adc_immediate
 # CHECK-LABEL: adc_immediate
 body: |
   bb.0.entry:
-    $a, $c = ADCimm $a, 42, $c, implicit-def $nz
+    $a, $c, $v = ADCimm $a, 42, $c, implicit-def $nz
     RTS
 # CHECK:      adc #42
 # CHECK-NEXT: rts
@@ -14,7 +14,7 @@ name: adc_zeropage
 # CHECK-LABEL: adc_zeropage
 body: |
   bb.0.entry:
-    $a, $c = ADCimag8 $a, $rc0, $c, implicit-def $nz
+    $a, $c, $v = ADCimag8 $a, $rc0, $c, implicit-def $nz
     RTS
 # CHECK:      adc mos8(__rc0)
 # CHECK-NEXT: rts
@@ -396,7 +396,7 @@ name: sbc_immediate
 # CHECK-LABEL: sbc_immediate
 body: |
   bb.0.entry:
-    $a, $c = SBCimm $a, 42, $c, implicit-def $nz
+    $a, $c, $v = SBCimm $a, 42, $c, implicit-def $nz
     RTS
 # CHECK:      sbc #42
 # CHECK-NEXT: rts
@@ -406,7 +406,7 @@ name: sbc_zeropage
 # CHECK-LABEL: sbc_zeropage
 body: |
   bb.0.entry:
-    $a, $c = SBCimag8 $a, $rc0, $c, implicit-def $nz
+    $a, $c, $v = SBCimag8 $a, $rc0, $c, implicit-def $nz
     RTS
 # CHECK:      sbc mos8(__rc0)
 # CHECK-NEXT: rts

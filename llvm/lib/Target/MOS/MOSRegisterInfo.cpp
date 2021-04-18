@@ -226,9 +226,9 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
   MachineOperand Dst = MI->getOperand(0);
-  Register Base = MI->getOperand(2).getReg();
+  Register Base = MI->getOperand(3).getReg();
 
-  int64_t OffsetImm = MI->getOperand(3).getImm();
+  int64_t OffsetImm = MI->getOperand(4).getImm();
   assert(0 <= OffsetImm && OffsetImm < 65536);
   auto Offset = static_cast<uint16_t>(OffsetImm);
   Offset &= 0xFF;
@@ -241,8 +241,9 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
   else {
     Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
-    Builder.buildInstr(MOS::ADCimm, {A, MOS::C},
-                       {A, int64_t(Offset), Register(MOS::C)});
+    auto Instr = Builder.buildInstr(MOS::ADCimm, {A, MOS::C, MOS::V},
+                                    {A, int64_t(Offset), Register(MOS::C)});
+    Instr->getOperand(2).setIsDead();
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
   }
 
@@ -255,9 +256,9 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
   MachineOperand Dst = MI->getOperand(0);
-  Register Base = MI->getOperand(1).getReg();
+  Register Base = MI->getOperand(3).getReg();
 
-  int64_t OffsetImm = MI->getOperand(2).getImm();
+  int64_t OffsetImm = MI->getOperand(4).getImm();
   assert(0 <= OffsetImm && OffsetImm < 65536);
   auto Offset = static_cast<uint16_t>(OffsetImm);
 
@@ -270,9 +271,11 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
   else {
     Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
-    auto Instr = Builder.buildInstr(
-        MOS::ADCimm, {A, MOS::C}, {A, int64_t(Offset >> 8), Register(MOS::C)});
+    auto Instr =
+        Builder.buildInstr(MOS::ADCimm, {A, MOS::C, MOS::V},
+                           {A, int64_t(Offset >> 8), Register(MOS::C)});
     Instr->getOperand(1).setIsDead();
+    Instr->getOperand(2).setIsDead();
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
   }
 
@@ -293,17 +296,23 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   if (Offset >= 256) {
     // Far stack accesses need a virtual base register, so materialize one here.
     Register NewBase = MRI.createVirtualRegister(&MOS::Imag16RegClass);
-    Register C = MRI.createVirtualRegister(&MOS::CcRegClass);
+    Register CLo = MRI.createVirtualRegister(&MOS::CcRegClass);
+    Register CHi = MRI.createVirtualRegister(&MOS::CcRegClass);
+    Register VLo = MRI.createVirtualRegister(&MOS::VcRegClass);
+    Register VHi = MRI.createVirtualRegister(&MOS::VcRegClass);
     auto Lo = Builder.buildInstr(MOS::AddrLostk)
                   .addDef(NewBase, /*Flags=*/0, MOS::sublo)
-                  .addDef(C)
+                  .addDef(CLo)
+                  .addDef(VLo, RegState::Dead)
                   .add(MI->getOperand(1))
                   .add(MI->getOperand(2));
     auto Hi = Builder.buildInstr(MOS::AddrHistk)
                   .addDef(NewBase, /*Flags=*/0, MOS::subhi)
+                  .addDef(CHi, RegState::Dead)
+                  .addDef(VHi, RegState::Dead)
                   .add(MI->getOperand(1))
                   .add(MI->getOperand(2))
-                  .addUse(C)
+                  .addUse(CLo)
                   .addUse(NewBase, RegState::Implicit);
     MI->getOperand(1).setReg(NewBase);
     MI->getOperand(2).setImm(0);

@@ -311,6 +311,7 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
 
   Register Dst = MI.getOperand(0).getReg();
 
+  LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
 
   MachineInstrBuilder LoAddr;
@@ -330,12 +331,12 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
     // from the stack/frame pointer. Record this as a pseudo, since the best
     // code to emit depends heavily on the actual offset, which isn't known
     // until FEI.
-    LoAddr = Builder.buildInstr(MOS::AddrLostk, {S8, LLT::scalar(1)}, {})
+    LoAddr = Builder.buildInstr(MOS::AddrLostk, {S8, S1, S1}, {})
                  .add(MI.getOperand(1))
                  .addImm(0);
     Register Carry = LoAddr.getReg(1);
 
-    HiAddr = Builder.buildInstr(MOS::AddrHistk, {S8}, {})
+    HiAddr = Builder.buildInstr(MOS::AddrHistk, {S8, S1, S1}, {})
                  .add(MI.getOperand(1))
                  .addImm(0)
                  .addUse(Carry);
@@ -566,16 +567,17 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
   Register Carry =
       Builder.buildInstr(MOS::LDCimm, {S1}, {uint64_t(0)}).getReg(0);
 
-  auto AddLo = Builder.buildInstr(
-      MOS::ADCimm, {S8, S1}, {Base, ConstOffset->Value.getSExtValue(), Carry});
-  AddLo->getOperand(2).setSubReg(MOS::sublo);
+  auto AddLo =
+      Builder.buildInstr(MOS::ADCimm, {S8, S1, S1},
+                         {Base, ConstOffset->Value.getSExtValue(), Carry});
+  AddLo->getOperand(3).setSubReg(MOS::sublo);
   Carry = AddLo.getReg(1);
   if (!constrainSelectedInstRegOperands(*AddLo, TII, TRI, RBI))
     return false;
 
   auto AddHi =
-      Builder.buildInstr(MOS::ADCimm, {S8, S1}, {Base, int64_t(0), Carry});
-  AddHi->getOperand(2).setSubReg(MOS::subhi);
+      Builder.buildInstr(MOS::ADCimm, {S8, S1, S1}, {Base, int64_t(0), Carry});
+  AddHi->getOperand(3).setSubReg(MOS::subhi);
   if (!constrainSelectedInstRegOperands(*AddHi, TII, TRI, RBI))
     return false;
 
@@ -645,15 +647,17 @@ bool MOSInstructionSelector::selectUAddSubE(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
 
+  LLT S1 = LLT::scalar(1);
+
   auto RConst = getConstantVRegValWithLookThrough(R, *Builder.getMRI());
   MachineInstrBuilder Instr;
   if (RConst) {
     assert(RConst->Value.getBitWidth() == 8);
-    Instr = Builder.buildInstr(ImmOpcode, {Result, CarryOut},
+    Instr = Builder.buildInstr(ImmOpcode, {Result, CarryOut, S1},
                                {L, RConst->Value.getZExtValue(), CarryIn});
   } else {
-    Instr =
-        Builder.buildInstr(Imag8Opcode, {Result, CarryOut}, {L, R, CarryIn});
+    Instr = Builder.buildInstr(Imag8Opcode, {Result, CarryOut, S1},
+                               {L, R, CarryIn});
   }
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;

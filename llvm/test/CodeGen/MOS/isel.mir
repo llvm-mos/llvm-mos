@@ -231,7 +231,7 @@ body: |
     RTS implicit %3, implicit %4
 # CHECK:      %0:ac = IMPLICIT_DEF
 # CHECK-NEXT: %2:cc = IMPLICIT_DEF
-# CHECK-NEXT: %3:ac, %4:cc = ADCimm %0, 42, %2
+# CHECK-NEXT: %3:ac, %4:cc, %5:vc = ADCimm %0, 42, %2
 # CHECK-NEXT: RTS
 ...
 ---
@@ -249,7 +249,7 @@ body: |
 # CHECK:      %0:ac = IMPLICIT_DEF
 # CHECK-NEXT: %1:imag8 = IMPLICIT_DEF
 # CHECK-NEXT: %2:cc = IMPLICIT_DEF
-# CHECK-NEXT: %3:ac, %4:cc = ADCimag8 %0, %1, %2
+# CHECK-NEXT: %3:ac, %4:cc, %5:vc = ADCimag8 %0, %1, %2
 # CHECK-NEXT: RTS
 ...
 ---

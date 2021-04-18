@@ -37,9 +37,9 @@ body: |
     %0:any(p0) = G_FRAME_INDEX %fixed-stack.0
     RTS implicit %0
 # Note: The HI and LO target operands are present on the frame index, but LLVM doesn't print them.
-# CHECK:      %1:anyi8, %2:cc = AddrLostk %fixed-stack.0, 0, implicit-def $nz
-# CHECK-NEXT: %3:anyi8 = AddrHistk %fixed-stack.0, 0, %2, implicit-def $c, implicit-def $nz
-# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %3, %subreg.subhi
+# CHECK:      %1:anyi8, %2:cc, %3:vc = AddrLostk %fixed-stack.0, 0, implicit-def $nz
+# CHECK-NEXT: %4:anyi8, %5:cc, %6:vc = AddrHistk %fixed-stack.0, 0, %2, implicit-def $nz
+# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %4, %subreg.subhi
 ...
 ---
 name: addrstk_local
@@ -53,9 +53,9 @@ body: |
     %0:any(p0) = G_FRAME_INDEX %stack.0
     RTS implicit %0
 # Note: The HI and LO target operands are present on the frame index, but LLVM doesn't print them.
-# CHECK:      %1:anyi8, %2:cc = AddrLostk %stack.0, 0, implicit-def $nz
-# CHECK-NEXT: %3:anyi8 = AddrHistk %stack.0, 0, %2, implicit-def $c, implicit-def $nz
-# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %3, %subreg.subhi
+# CHECK:      %1:anyi8, %2:cc, %3:vc = AddrLostk %stack.0, 0, implicit-def $nz
+# CHECK-NEXT: %4:anyi8, %5:cc, %6:vc = AddrHistk %stack.0, 0, %2, implicit-def $nz
+# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %4, %subreg.subhi
 ...
 ---
 name: ldimm_local
