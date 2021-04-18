@@ -144,16 +144,11 @@ class MOSControlFlowPseudo : MOSPseudo {
 }
 
 // Pseudo-instruction to select a value from two alternatives. Lowered to a
-// conditional branch between a pair of copies.
-class MOSSelect : MOSControlFlowPseudo {
+// conditional branch between a pair of copies. The input and output values must
+// all be of the same type. Each input can be either a register or an immediate
+// value.
+def Select : MOSControlFlowPseudo {
+  dag OutOperandList = (outs unknown:$out);
+  dag InOperandList = (ins Anyi1:$cond, unknown:$t, unknown:$f);
   let isSelect = true;
-}
-
-def SelectI1 : MOSSelect {
-  dag OutOperandList = (outs Anyi1:$out);
-  dag InOperandList = (ins Anyi1:$cond, Anyi1:$t, Anyi1:$f);
-}
-def SelectI8 : MOSSelect {
-  dag OutOperandList = (outs Anyi8:$out);
-  dag InOperandList = (ins Anyi1:$cond, Anyi8:$t, Anyi8:$f);
 }

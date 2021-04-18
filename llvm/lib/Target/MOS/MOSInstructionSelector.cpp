@@ -616,10 +616,8 @@ bool MOSInstructionSelector::selectSelect(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   unsigned Size = Builder.getMRI()->getType(Dst).getSizeInBits();
   assert(Size == 1 || Size == 8);
-  unsigned Opcode = Size == 1 ? MOS::SelectI1 : MOS::SelectI8;
-  MI.setDesc(TII.get(Opcode));
-  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
-    return false;
+  MI.setDesc(TII.get(MOS::Select));
+  constrainGenericOp(MI);
   return true;
 }
 

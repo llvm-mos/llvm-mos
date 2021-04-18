@@ -182,7 +182,7 @@ body: |
     %2:any(s1) = G_IMPLICIT_DEF
     %3:any(s1) = G_SELECT %0, %1, %2
     RTS implicit %3
-# CHECK:      %3:anyi1 = SelectI1 %0, %1, %2
+# CHECK:      %3:anyi1 = Select %0, %1, %2
 # CHECK-NEXT: RTS
 ...
 ---
@@ -197,7 +197,7 @@ body: |
     %2:any(s8) = G_IMPLICIT_DEF
     %3:any(s8) = G_SELECT %0, %1, %2
     RTS implicit %3
-# CHECK:      %3:anyi8 = SelectI8 %0, %1, %2
+# CHECK:      %3:anyi8 = Select %0, %1, %2
 # CHECK-NEXT: RTS
 ...
 ---
