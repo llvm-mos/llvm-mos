@@ -1,5 +1,37 @@
 # RUN: llc -mtriple=mos -run-pass=legalizer -verify-machineinstrs -o - %s | FileCheck %s
 ---
+name: brcond
+# CHECK-LABEL: name: brcond
+body: |
+  bb.0.entry:
+    %0:_(s1) = COPY $c
+    G_BRCOND %0, %bb.0
+# CHECK:      G_BRCOND_IMM %0(s1), %bb.0, 1
+...
+---
+name: brcond_not
+# CHECK-LABEL: name: brcond_not
+body: |
+  bb.0.entry:
+    %0:_(s1) = COPY $c
+    %1:_(s1) = G_CONSTANT i1 true
+    %2:_(s1) = G_XOR %0, %1
+    G_BRCOND %2, %bb.0
+# CHECK:      G_BRCOND_IMM %0(s1), %bb.0, 0
+...
+---
+name: brcond_icmp_ne
+# CHECK-LABEL: name: brcond_icmp_ne
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s1) = G_ICMP intpred(ne), %0, %1
+    G_BRCOND %2, %bb.0
+# CHECK:      %5:_(s1), %6:_, %7:_, %3:_ = G_CMP %0(s8), %1
+# CHECK-NEXT: G_BRCOND_IMM %3(s1), %bb.0, 0
+...
+---
 name: icmp_ptr
 # CHECK-LABEL: name: icmp_ptr
 body: |
@@ -42,9 +74,10 @@ body: |
     %1:_(s8) = COPY $x
     %2:_(s1) = G_ICMP intpred(ne), %0, %1
     RTS implicit %2
-# CHECK:      %5:_(s1), %6:_, %7:_, %3:_ = G_CMP %0(s8), %1
+# CHECK:      %6:_(s1), %7:_, %8:_, %3:_ = G_CMP %0(s8), %1
 # CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
-# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: %5:_(s1) = G_CONSTANT i1 false
+# CHECK-NEXT: %2:_(s1) = G_SELECT %3(s1), %5, %4
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
@@ -56,9 +89,10 @@ body: |
     %1:_(s8) = COPY $x
     %2:_(s1) = G_ICMP intpred(ugt), %0, %1
     RTS implicit %2
-# CHECK:      %3:_(s1), %5:_, %6:_, %7:_ = G_CMP %1(s8), %0
+# CHECK:      %3:_(s1), %6:_, %7:_, %8:_ = G_CMP %1(s8), %0
 # CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
-# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: %5:_(s1) = G_CONSTANT i1 false
+# CHECK-NEXT: %2:_(s1) = G_SELECT %3(s1), %5, %4
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
@@ -82,9 +116,10 @@ body: |
     %1:_(s8) = COPY $x
     %2:_(s1) = G_ICMP intpred(ult), %0, %1
     RTS implicit %2
-# CHECK:      %3:_(s1), %5:_, %6:_, %7:_ = G_CMP %0(s8), %1
+# CHECK:      %3:_(s1), %6:_, %7:_, %8:_ = G_CMP %0(s8), %1
 # CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
-# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: %5:_(s1) = G_CONSTANT i1 false
+# CHECK-NEXT: %2:_(s1) = G_SELECT %3(s1), %5, %4
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
@@ -109,7 +144,10 @@ body: |
     %2:_(s1) = G_ICMP intpred(sgt), %0, %1
     RTS implicit %2
 # CHECK:      %3:_(s1), %4:_, %5:_, %6:_ = G_CMP %1(s8), %0
-# CHECK-NEXT: %2:_(s1) = G_XOR %4, %5
+# CHECK-NEXT: %7:_(s8) = G_ANYEXT %4
+# CHECK-NEXT: %8:_(s8) = G_ANYEXT %5
+# CHECK-NEXT: %9:_(s8) = G_XOR %7, %8
+# CHECK-NEXT: %2:_(s1) = G_TRUNC %9
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
@@ -121,10 +159,14 @@ body: |
     %1:_(s8) = COPY $x
     %2:_(s1) = G_ICMP intpred(sge), %0, %1
     RTS implicit %2
-# CHECK:      %5:_(s1), %6:_, %7:_, %8:_ = G_CMP %0(s8), %1
-# CHECK-NEXT: %3:_(s1) = G_XOR %6, %7
+# CHECK:      %6:_(s1), %7:_, %8:_, %9:_ = G_CMP %0(s8), %1
+# CHECK-NEXT: %10:_(s8) = G_ANYEXT %7
+# CHECK-NEXT: %11:_(s8) = G_ANYEXT %8
+# CHECK-NEXT: %12:_(s8) = G_XOR %10, %11
+# CHECK-NEXT: %3:_(s1) = G_TRUNC %12
 # CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
-# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: %5:_(s1) = G_CONSTANT i1 false
+# CHECK-NEXT: %2:_(s1) = G_SELECT %3(s1), %5, %4
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
@@ -137,7 +179,10 @@ body: |
     %2:_(s1) = G_ICMP intpred(slt), %0, %1
     RTS implicit %2
 # CHECK:      %3:_(s1), %4:_, %5:_, %6:_ = G_CMP %0(s8), %1
-# CHECK-NEXT: %2:_(s1) = G_XOR %4, %5
+# CHECK-NEXT: %7:_(s8) = G_ANYEXT %4
+# CHECK-NEXT: %8:_(s8) = G_ANYEXT %5
+# CHECK-NEXT: %9:_(s8) = G_XOR %7, %8
+# CHECK-NEXT: %2:_(s1) = G_TRUNC %9
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
@@ -149,10 +194,14 @@ body: |
     %1:_(s8) = COPY $x
     %2:_(s1) = G_ICMP intpred(sle), %0, %1
     RTS implicit %2
-# CHECK:      %5:_(s1), %6:_, %7:_, %8:_ = G_CMP %1(s8), %0
-# CHECK-NEXT: %3:_(s1) = G_XOR %6, %7
+# CHECK:      %6:_(s1), %7:_, %8:_, %9:_ = G_CMP %1(s8), %0
+# CHECK-NEXT: %10:_(s8) = G_ANYEXT %7
+# CHECK-NEXT: %11:_(s8) = G_ANYEXT %8
+# CHECK-NEXT: %12:_(s8) = G_XOR %10, %11
+# CHECK-NEXT: %3:_(s1) = G_TRUNC %12
 # CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
-# CHECK-NEXT: %2:_(s1) = G_XOR %3, %4
+# CHECK-NEXT: %5:_(s1) = G_CONSTANT i1 false
+# CHECK-NEXT: %2:_(s1) = G_SELECT %3(s1), %5, %4
 # CHECK-NEXT: RTS implicit %2
 ...
 ---

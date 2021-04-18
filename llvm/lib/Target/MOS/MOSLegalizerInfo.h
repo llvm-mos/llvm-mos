@@ -25,6 +25,8 @@ public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
 private:
+  bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeLoad(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
@@ -41,6 +43,8 @@ private:
                      MachineInstr &MI) const;
   bool legalizeVAStart(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
+  bool legalizeXOR(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                   MachineInstr &MI) const;
 };
 
 } // namespace llvm

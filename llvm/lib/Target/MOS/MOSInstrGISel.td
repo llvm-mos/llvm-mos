@@ -28,6 +28,19 @@ class MOSGenericInstruction : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Version of G_BRCOND that takes an immediate argument for which boolean value
+// triggers the branch. This could be done in the instruction selector, but that
+// would require making 1-bit G_XORs legal. However, they are only legal when
+// used in this way, so the legalizer handles this instead, that way the
+// remaining unhandled G_XORs can be widened to 8 bits.
+def G_BRCOND_IMM : MOSGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$tst, unknown:$truebb, i1imm:$tstval);
+
+  let isBranch = true;
+  let isTerminator = true;
+}
+
 // Produce the flag values equaivalent to "SEC; LDA #$l; SBC #$r". Only supports
 // 8-bit comparisons.
 def G_CMP : MOSGenericInstruction {

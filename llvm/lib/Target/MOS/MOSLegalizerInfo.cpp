@@ -22,17 +22,22 @@
 
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace TargetOpcode;
+using namespace MIPatternMatch;
 
 MOSLegalizerInfo::MOSLegalizerInfo() {
   using namespace LegalityPredicates;
@@ -57,9 +62,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Extension and Truncation
 
+  getActionDefinitionsBuilder(G_ANYEXT).legalFor({{S8, S1}});
+
   getActionDefinitionsBuilder(G_ZEXT)
       .legalFor({{S8, S1}})
       .clampScalar(0, S8, S8);
+
+  getActionDefinitionsBuilder(G_TRUNC).legalFor({{S1, S8}});
 
   // Type Conversions
 
@@ -79,9 +88,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .legalFor({S8})
       .clampScalar(0, S8, S8);
 
-  // 1-bit G_XOR may be legal as a "not" operation that can be directly selected
-  // into certain branches.
-  getActionDefinitionsBuilder(G_XOR).legalFor({S1, S8}).clampScalar(0, S8, S8);
+  getActionDefinitionsBuilder(G_XOR).legalFor({S8}).customFor({S1}).clampScalar(
+      0, S8, S8);
 
   getActionDefinitionsBuilder(
       {G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM, G_CTLZ_ZERO_UNDEF})
@@ -161,7 +169,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Control Flow
 
-  getActionDefinitionsBuilder(G_BRCOND).legalFor({S1});
+  getActionDefinitionsBuilder(G_BRCOND).customFor({S1});
 
   // Variadic Arguments
 
@@ -181,6 +189,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
+  case G_BRCOND:
+    return legalizeBrCond(Helper, MRI, MI);
   case G_ICMP:
     return legalizeICmp(Helper, MRI, MI);
   case G_LOAD:
@@ -198,7 +208,31 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeVAArg(Helper, MRI, MI);
   case G_VASTART:
     return legalizeVAStart(Helper, MRI, MI);
+  case G_XOR:
+    return legalizeXOR(Helper, MRI, MI);
   }
+}
+
+bool MOSLegalizerInfo::legalizeBrCond(LegalizerHelper &Helper,
+                                      MachineRegisterInfo &MRI,
+                                      MachineInstr &MI) const {
+  assert(MI.getOpcode() == G_BRCOND);
+
+  Register Tst = MI.getOperand(0).getReg();
+  int64_t Val = 1;
+  Register Not;
+  if (mi_match(Tst, MRI, m_Not(m_Reg(Not)))) {
+    Val = 0;
+    Tst = Not;
+  }
+
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Helper.Observer.changingInstr(MI);
+  MI.setDesc(Builder.getTII().get(MOS::G_BRCOND_IMM));
+  MI.getOperand(0).setReg(Tst);
+  MI.addOperand(MachineOperand::CreateImm(Val));
+  Helper.Observer.changedInstr(MI);
+  return true;
 }
 
 // Lowers a comparison to the negation of the inverse comparison. For example,
@@ -510,5 +544,53 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
                       .getReg(0);
   Builder.buildStore(Addr, MI.getOperand(0), **MI.memoperands_begin());
   MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeXOR(LegalizerHelper &Helper,
+                                   MachineRegisterInfo &MRI,
+                                   MachineInstr &MI) const {
+  assert(MI.getOpcode() == G_XOR);
+
+  LLT S1 = LLT::scalar(1);
+
+  Register Dst = MI.getOperand(0).getReg();
+  assert(MRI.getType(Dst) == S1);
+
+  Register Not;
+  if (mi_match(Dst, MRI, m_Not(m_Reg(Not)))) {
+    // The G_XOR may have been created by legalizing the definition of Dst.
+    // If so, since uses are legalized before defs, the legalization of the use
+    // of Dst has already occurred. Since the G_XOR didn't exist when the use
+    // was being legalized, there hasn't yet been any opportunity to fold the
+    // G_XOR in to the use. We do such folding here; hopefully that will make
+    // the G_XOR dead.
+
+    for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Dst)) {
+      if (UseMI.getOpcode() != MOS::G_BRCOND_IMM)
+        continue;
+      assert(UseMI.getOperand(0).getReg() == Dst);
+      Helper.Observer.changingInstr(UseMI);
+      UseMI.getOperand(0).setReg(Not);
+      UseMI.getOperand(2).setImm(!UseMI.getOperand(2).getImm());
+      Helper.Observer.changedInstr(UseMI);
+    }
+
+    if (!isTriviallyDead(MI, MRI)) {
+      MachineIRBuilder &Builder = Helper.MIRBuilder;
+      // If Not is true, select 0, otherwise select 1. This will eventually
+      // lower to control flow.
+      Helper.MIRBuilder.buildSelect(Dst, Not, Builder.buildConstant(S1, 0),
+                                    Builder.buildConstant(S1, 1));
+    }
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (isTriviallyDead(MI, MRI))
+    MI.eraseFromParent();
+  else
+    Helper.widenScalar(MI, 0, LLT::scalar(8));
+
   return true;
 }

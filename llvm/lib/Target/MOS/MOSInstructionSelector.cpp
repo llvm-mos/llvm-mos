@@ -61,7 +61,7 @@ private:
   const MOSRegisterBankInfo &RBI;
 
   bool selectAddSub(MachineInstr &MI);
-  bool selectBrCond(MachineInstr &MI);
+  bool selectBrCondImm(MachineInstr &MI);
   bool selectCopyLike(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
@@ -148,8 +148,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_ADD:
   case MOS::G_SUB:
     return selectAddSub(MI);
-  case MOS::G_BRCOND:
-    return selectBrCond(MI);
+  case MOS::G_BRCOND_IMM:
+    return selectBrCondImm(MI);
   case MOS::G_FRAME_INDEX:
     return selectFrameIndex(MI);
   case MOS::G_GLOBAL_VALUE:
@@ -257,21 +257,16 @@ inline CmpImm_match m_CmpImm(Register &LHS, int64_t &RHS, Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
-bool MOSInstructionSelector::selectBrCond(MachineInstr &MI) {
+bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
   Register CondReg = MI.getOperand(0).getReg();
   MachineBasicBlock *Tgt = MI.getOperand(1).getMBB();
+  int64_t FlagVal = MI.getOperand(2).getImm();
 
   LLT S1 = LLT::scalar(1);
 
   MachineIRBuilder Builder(MI);
-
-  Register Neg;
-  int64_t FlagVal = 1;
-  if (mi_match(CondReg, MRI, m_Not(m_Reg(Neg)))) {
-    CondReg = Neg;
-    FlagVal = 0;
-  }
 
   Register LHS;
   int64_t RHS;
