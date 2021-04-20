@@ -94,11 +94,11 @@ regBankSelected: true
 body: |
   bb.0.entry:
     %0:any(p0) = G_GLOBAL_VALUE @.str
-    %1:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = COPY $a
     %2:any(p0) = G_PTR_ADD %0, %1
     %3:any(s8) = G_LOAD %2 :: (load 1)
     RTS implicit %3
-# CHECK:      %1:xy = IMPLICIT_DEF
+# CHECK:      %1:xy = COPY $a
 # CHECK-NEXT: %3:gpr = LDIdx @.str, %1
 # CHECK-NEXT: RTS implicit %3
 ...
@@ -109,14 +109,14 @@ legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    %0:any(s8) = G_IMPLICIT_DEF
+    %0:any(s8) = COPY $x
     %1:any(p0) = G_GLOBAL_VALUE @.str
-    %2:any(s8) = G_IMPLICIT_DEF
+    %2:any(s8) = COPY $a
     %3:any(p0) = G_PTR_ADD %1, %2
     G_STORE %0, %3 :: (store 1)
     RTS
-# CHECK:      %0:ac = IMPLICIT_DEF
-# CHECK-NEXT: %2:xy = IMPLICIT_DEF
+# CHECK:      %0:ac = COPY $x
+# CHECK-NEXT: %2:xy = COPY $a
 # CHECK-NEXT: STIdx %0, @.str, %2
 # CHECK-NEXT: RTS
 ...
