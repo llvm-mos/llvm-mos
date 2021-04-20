@@ -152,3 +152,17 @@ def Select : MOSControlFlowPseudo {
   dag InOperandList = (ins Anyi1:$cond, unknown:$t, unknown:$f);
   let isSelect = true;
 }
+
+//===---------------------------------------------------------------------===//
+// NZ pseudoinstructions
+//===---------------------------------------------------------------------===//
+
+// Version of SBCimag8 that copies the N and Z flags out to virtual registers.
+// This bundles the definition and use of N and Z together to maintain the invariant
+// that neither can be live across pseudoinstructions.
+def SBCNZimag8 : MOSPseudo {
+  dag OutOperandList = (outs Ac:$dst,
+                        Cc:$carryout, Anyi1:$nout, Vc:$vout, Anyi1:$zout);
+  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
+  let Constraints = "$dst = $l, $carryout = $carryin";
+}
