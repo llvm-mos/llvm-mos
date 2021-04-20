@@ -163,9 +163,22 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   if (!MCID.isCommutable())
     return false;
 
-  assert(MI.getOpcode() == MOS::ADCimag8);
+  unsigned CommutableOpIdx1, CommutableOpIdx2;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode; don't know how to commute.");
+  case MOS::ADCimag8:
+    CommutableOpIdx1 = 3;
+    CommutableOpIdx2 = 4;
+    break;
+  case MOS::ORAimag8:
+    CommutableOpIdx1 = 1;
+    CommutableOpIdx2 = 2;
+    break;
+  }
 
-  if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 3, 4))
+  if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, CommutableOpIdx1,
+                            CommutableOpIdx2))
     return false;
 
   if (!MI.getOperand(SrcOpIdx1).isReg() || !MI.getOperand(SrcOpIdx2).isReg()) {

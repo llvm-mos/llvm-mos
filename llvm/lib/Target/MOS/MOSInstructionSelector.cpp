@@ -71,6 +71,7 @@ private:
   bool selectSelect(MachineInstr &MI);
   bool selectImplicitDef(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
+  bool selectOr(MachineInstr &MI);
   bool selectPhi(MachineInstr &MI);
   bool selectPtrAdd(MachineInstr &MI);
   bool selectUAddSubE(MachineInstr &MI);
@@ -166,6 +167,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_LOAD:
   case MOS::G_STORE:
     return selectLoadStore(MI);
+  case MOS::G_OR:
+    return selectOr(MI);
   case MOS::G_SHLE:
     return selectShlE(MI);
   case MOS::G_SELECT:
@@ -535,6 +538,16 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
   composePtr(Builder, Dst, Lo, Hi);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSInstructionSelector::selectOr(MachineInstr &MI) {
+  MachineIRBuilder Builder(MI);
+  auto Or = Builder.buildInstr(MOS::ORAimag8, {MI.getOperand(0)},
+                               {MI.getOperand(1), MI.getOperand(2)});
+  if (!constrainSelectedInstRegOperands(*Or, TII, TRI, RBI))
+    return false;
   MI.eraseFromParent();
   return true;
 }

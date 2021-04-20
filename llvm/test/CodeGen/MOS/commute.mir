@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=mos -run-pass=twoaddressinstruction -verify-machineinstrs -o - %s | FileCheck %s
 ---
-name: commute
-# CHECK-LABEL: name: commute
+name: ADCimag8
+# CHECK-LABEL: name: ADCimag8
 legalized: true
 regBankSelected: true
 body: |
@@ -18,4 +18,22 @@ body: |
 # CHECK-NEXT: %3:ac = COPY %1
 # CHECK-NEXT: %3:ac, dead %4:cc, dead %5:vc = ADCimag8 %3, %0, %2
 # CHECK-NEXT: RTS implicit %0, implicit %3
+...
+---
+name: ORAimag8
+# CHECK-LABEL: name: ORAimag8
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    liveins: $c
+    %0:ac = IMPLICIT_DEF
+    %1:imag8 = IMPLICIT_DEF
+    %2:ac = ORAimag8 %0, killed %1, implicit-def $nz
+    RTS implicit %2
+# CHECK:      %0:imag8 = IMPLICIT_DEF
+# CHECK-NEXT: %1:ac = IMPLICIT_DEF
+# CHECK-NEXT: %2:ac = COPY %1
+# CHECK-NEXT: %2:ac = ORAimag8 %2, %0
+# CHECK-NEXT: RTS implicit %2
 ...

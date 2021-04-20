@@ -156,6 +156,22 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
+name: ora
+# CHECK-LABEL: name: ora
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = G_IMPLICIT_DEF
+    %1:any(s8) = G_IMPLICIT_DEF
+    %2:any(s8) = G_OR %0, %1
+    RTS implicit %2
+# CHECK:      %0:ac = IMPLICIT_DEF
+# CHECK-NEXT: %1:imag8 = IMPLICIT_DEF
+# CHECK-NEXT: %2:ac = ORAimag8 %0, %1
+# CHECK-NEXT: RTS
+...
+---
 name: rol
 # CHECK-LABEL: name: rol
 legalized: true

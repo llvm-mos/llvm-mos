@@ -120,6 +120,20 @@ def CMPimm : MOSLogicalInstr {
 }
 
 //===---------------------------------------------------------------------===//
+// Logical Instructions
+//===---------------------------------------------------------------------===//
+
+def ORAimag8 : MOSLogicalInstr {
+  let OutOperandList = (outs Ac:$dst);
+  let InOperandList = (ins Ac:$l, Imag8:$r);
+  let Constraints = "$dst = $l";
+
+  let Defs = [NZ];
+
+  let isCommutable = true;
+}
+
+//===---------------------------------------------------------------------===//
 // Shift/Rotate Instructions
 //===---------------------------------------------------------------------===//
 
