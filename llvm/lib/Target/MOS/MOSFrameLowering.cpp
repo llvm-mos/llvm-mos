@@ -66,7 +66,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // We cannot save/restore using PHA/PLA here: it would interfere with the PHA
   // of the CSRs.
   if (AMaybeLive)
-    Builder.buildInstr(MOS::STabs).addUse(MOS::A).addExternalSymbol("__save_a");
+    Builder.buildInstr(MOS::STAbs).addUse(MOS::A).addExternalSymbol("__save_a");
   // There are intentionally very few CSRs, few enough to place on the hard
   // stack without much risk of overflow. This is the only across-calls way the
   // compiler uses the hard stack, since the free CSRs can then be used with
@@ -77,7 +77,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
     Builder.buildInstr(MOS::PH).addUse(MOS::A);
   }
   if (AMaybeLive)
-    Builder.buildInstr(MOS::LDabs).addDef(MOS::A).addExternalSymbol("__save_a");
+    Builder.buildInstr(MOS::LDAbs).addDef(MOS::A).addExternalSymbol("__save_a");
   return true;
 }
 
@@ -95,7 +95,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     // We cannot save/restore using PHA/PLA here: it would interfere with the
     // PLA of the CSRs.
     if (AMaybeLive)
-      Builder.buildInstr(MOS::STabs)
+      Builder.buildInstr(MOS::STAbs)
           .addUse(MOS::A)
           .addExternalSymbol("__save_a");
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
@@ -103,7 +103,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       Builder.buildCopy(CI.getReg(), Register(MOS::A));
     }
     if (AMaybeLive)
-      Builder.buildInstr(MOS::LDabs)
+      Builder.buildInstr(MOS::LDAbs)
           .addDef(MOS::A)
           .addExternalSymbol("__save_a");
   }
@@ -210,11 +210,11 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
 
   Register A = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
 
-  Register C = Builder.buildInstr(MOS::LDCimm, {&MOS::CcRegClass}, {INT64_C(0)})
+  Register C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(0)})
                    .getReg(0);
   if (LoBytes) {
     Builder.buildCopy(A, Register(MOS::RC0));
-    Builder.buildInstr(MOS::ADCimm, {A, C, &MOS::VcRegClass}, {A, LoBytes, C});
+    Builder.buildInstr(MOS::ADCImm, {A, C, &MOS::VcRegClass}, {A, LoBytes, C});
     Builder.buildCopy(MOS::RC0, A);
   }
 
@@ -224,6 +224,6 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
   if (LoBytes)
     LoCopy.addUse(A, RegState::Implicit);
 
-  Builder.buildInstr(MOS::ADCimm, {A, C, &MOS::VcRegClass}, {A, HiBytes, C});
+  Builder.buildInstr(MOS::ADCImm, {A, C, &MOS::VcRegClass}, {A, HiBytes, C});
   Builder.buildCopy(MOS::RC1, A);
 }

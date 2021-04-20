@@ -16,20 +16,20 @@
 // which register is loaded.
 //
 // The logical instruction set merges these instructions together into a single
-// logical LDimm #imm instruction. The logical instruction takes a "GPR"
+// logical LDImm #imm instruction. The logical instruction takes a "GPR"
 // register class as an argument. When the logical instructions are lowered to
 // real instructions in AsmPrinter, the register operand is examined to
 // determine which real instruction is emitted. This scheme comes with some
 // considerable advantages.
 //
-// First, selecting a LDimm instruction doesn't constrain where the destination
+// First, selecting a LDImm instruction doesn't constrain where the destination
 // can be placed other than that it needs to be one of A, X, or Y. This allows
 // earlier passes that cannot effectively make such decisions to defer them to
 // the register allocator.
 //
-// Second, the description of the side effects and characteristics of LDimm only
+// Second, the description of the side effects and characteristics of LDImm only
 // need to be specified once. Any switch() statements need to have only one
-// entry for LDimm, not three for LDAimm, LDXimm, and LDYimm. This considerably
+// entry for LDImm, not three for LDAImm, LDXImm, and LDYImm. This considerably
 // reduces the amount of code needed to cover the 6502 instruction set.
 //
 // Third, exposing these regularities to LLVM passes make the 6502 more like a
@@ -89,8 +89,8 @@ class MOSAddSubRC<RegisterClass rc> : MOSAddSub {
 }
 
 let isAdd = true in {
-  def ADCimm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(ADC_Immediate imm8:$r)>;
-  def ADCimag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
+  def ADCImm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(ADC_Immediate imm8:$r)>;
+  def ADCImag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)> {
     // Don't give the carries a tied constraint, since having two tied operands
     // inhibits commutation of $l and $r.
     let Constraints = "$dst = $l";
@@ -98,15 +98,15 @@ let isAdd = true in {
   }
 }
 
-def SBCimm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(SBC_Immediate imm8:$r)>;
-def SBCimag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
+def SBCImm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(SBC_Immediate imm8:$r)>;
+def SBCImag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
 
 //===---------------------------------------------------------------------===//
 // Comparison Instructions
 //===---------------------------------------------------------------------===//
 
 // CMP imm, CPX imm, CPY imm
-def CMPimm : MOSLogicalInstr {
+def CMPImm : MOSLogicalInstr {
   dag OutOperandList = (outs Cc:$carry);
   dag InOperandList = (ins GPR:$l, i8imm:$r);
 
@@ -114,7 +114,7 @@ def CMPimm : MOSLogicalInstr {
 
   let isCompare = true;
 
-  // Keep CMPimm adjacent to the branch that uses it.
+  // Keep CMPImm adjacent to the branch that uses it.
   // This prevents NZ from ever being live outside of the terminators.
   let isTerminator = true;
 }
@@ -123,7 +123,7 @@ def CMPimm : MOSLogicalInstr {
 // Logical Instructions
 //===---------------------------------------------------------------------===//
 
-def ORAimag8 : MOSLogicalInstr {
+def ORAImag8 : MOSLogicalInstr {
   let OutOperandList = (outs Ac:$dst);
   let InOperandList = (ins Ac:$l, Imag8:$r);
   let Constraints = "$dst = $l";
@@ -185,9 +185,9 @@ class MOSImmediateLoad<RegisterClass dst, Operand val> : MOSLogicalInstr {
 }
 
 // CLC, SEC
-def LDCimm : MOSImmediateLoad<Cc, i1imm>;
+def LDCImm : MOSImmediateLoad<Cc, i1imm>;
 // LDA imm, LDX imm, LDY imm
-def LDimm : MOSImmediateLoad<GPR, i8imm> {
+def LDImm : MOSImmediateLoad<GPR, i8imm> {
   let Defs = [NZ];
 }
 
@@ -206,9 +206,9 @@ class MOSTransfer<RegisterClass dst, RegisterClass src> : MOSLogicalInstr {
 }
 
 // LDA zp, LDX zp, LDY zp
-def LDimag8 : MOSTransfer<GPR, Imag8>;
+def LDImag8 : MOSTransfer<GPR, Imag8>;
 // STA zp, STX zp, STY zp
-def STimag8 : MOSTransfer<Imag8, GPR> {
+def STImag8 : MOSTransfer<Imag8, GPR> {
   // Unlike all other "register transfer" instructions, this doesn't clobber NZ,
   // since imaginary registers aren't real.
   let Defs = [];
@@ -283,7 +283,7 @@ class MOSLoad : MOSLogicalInstr {
 }
 
 // LDA abs, LDX abs, LDY abs
-def LDabs : MOSLoad {
+def LDAbs : MOSLoad {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$src);
 }
@@ -293,16 +293,16 @@ class MOSLoadIndexed<RegisterClass dst, RegisterClass idx> : MOSLoad {
   dag InOperandList = (ins i16imm:$addr, idx:$idx);
 }
 // LDA abs,x; LDA abs,y
-def LDAidx : MOSLoadIndexed<Ac, XY>;
+def LDAIdx : MOSLoadIndexed<Ac, XY>;
 // LDX abs,y
-def LDXidx : MOSLoadIndexed<Xc, Yc>,
+def LDXIdx : MOSLoadIndexed<Xc, Yc>,
              PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)>;
 // LDY abs,x
-def LDYidx : MOSLoadIndexed<Yc, Xc>,
+def LDYIdx : MOSLoadIndexed<Yc, Xc>,
              PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)>;
 
 // LDA (zp),y
-def LDyindir : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
+def LDYIndir : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
   dag OutOperandList = (outs Ac:$dst);
   dag InOperandList = (ins Imag16:$addr, Yc:$offset);
 }
@@ -311,14 +311,14 @@ class MOSStore : MOSLogicalInstr {
   let mayStore = true;
 }
 // STA abs, STX abs, STZ abs
-def STabs : MOSStore {
+def STAbs : MOSStore {
   dag InOperandList = (ins GPR:$src, i16imm:$dst);
 }
 // STA abs,x; STA abs,y
-def STidx : MOSStore {
+def STIdx : MOSStore {
   dag InOperandList = (ins Ac:$src, i16imm:$addr, XY:$idx);
 }
 // STA (zp),y
-def STyindir : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
+def STYIndir : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
   dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
 }

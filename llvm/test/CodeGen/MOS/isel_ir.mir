@@ -69,8 +69,8 @@ body: |
     %0:any(p0) = G_FRAME_INDEX %stack.0
     RTS implicit %0
 # Note: The HI and LO target operands are present on the frame index, but LLVM doesn't print them.
-# CHECK:      %1:gpr = LDimm %stack.0
-# CHECK-NEXT: %2:gpr = LDimm %stack.0
+# CHECK:      %1:gpr = LDImm %stack.0
+# CHECK-NEXT: %2:gpr = LDImm %stack.0
 # CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
 ...
 ---
@@ -82,8 +82,8 @@ body: |
   bb.0.entry:
     %0:any(p0) = G_GLOBAL_VALUE @.str
     RTS implicit %0
-# CHECK:      %1:gpr = LDimm target-flags(lo) @.str
-# CHECK-NEXT: %2:gpr = LDimm target-flags(hi) @.str
+# CHECK:      %1:gpr = LDImm target-flags(lo) @.str
+# CHECK-NEXT: %2:gpr = LDImm target-flags(hi) @.str
 # CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
 ...
 ---
@@ -99,7 +99,7 @@ body: |
     %3:any(s8) = G_LOAD %2 :: (load 1)
     RTS implicit %3
 # CHECK:      %1:xy = IMPLICIT_DEF
-# CHECK-NEXT: %3:gpr = LDidx @.str, %1
+# CHECK-NEXT: %3:gpr = LDIdx @.str, %1
 # CHECK-NEXT: RTS implicit %3
 ...
 ---
@@ -117,6 +117,6 @@ body: |
     RTS
 # CHECK:      %0:ac = IMPLICIT_DEF
 # CHECK-NEXT: %2:xy = IMPLICIT_DEF
-# CHECK-NEXT: STidx %0, @.str, %2
+# CHECK-NEXT: STIdx %0, @.str, %2
 # CHECK-NEXT: RTS
 ...

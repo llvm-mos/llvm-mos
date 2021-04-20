@@ -4,7 +4,7 @@ name: adc_immediate
 # CHECK-LABEL: adc_immediate
 body: |
   bb.0.entry:
-    $a, $c, $v = ADCimm $a, 42, $c, implicit-def $nz
+    $a, $c, $v = ADCImm $a, 42, $c, implicit-def $nz
     RTS
 # CHECK:      adc #42
 # CHECK-NEXT: rts
@@ -14,7 +14,7 @@ name: adc_zeropage
 # CHECK-LABEL: adc_zeropage
 body: |
   bb.0.entry:
-    $a, $c, $v = ADCimag8 $a, $rc0, $c, implicit-def $nz
+    $a, $c, $v = ADCImag8 $a, $rc0, $c, implicit-def $nz
     RTS
 # CHECK:      adc mos8(__rc0)
 # CHECK-NEXT: rts
@@ -111,7 +111,7 @@ name: clc_implied
 # CHECK-LABEL: clc_implied
 body: |
   bb.0.entry:
-    $c = LDCimm 0
+    $c = LDCImm 0
     RTS
 # CHECK:      clc{{$}}
 # CHECK-NEXT: rts
@@ -121,7 +121,7 @@ name: cmp_immediate
 # CHECK-LABEL: cmp_immediate
 body: |
   bb.0.entry:
-    $c = CMPimm $a, 42, implicit-def $nz
+    $c = CMPImm $a, 42, implicit-def $nz
     RTS
 # CHECK:      cmp #42
 # CHECK-NEXT: rts
@@ -131,7 +131,7 @@ name: cpx_immediate
 # CHECK-LABEL: cpx_immediate
 body: |
   bb.0.entry:
-    $c = CMPimm $x, 42, implicit-def $nz
+    $c = CMPImm $x, 42, implicit-def $nz
     RTS
 # CHECK:      cpx #42
 # CHECK-NEXT: rts
@@ -141,7 +141,7 @@ name: cpy_immediate
 # CHECK-LABEL: cpy_immediate
 body: |
   bb.0.entry:
-    $c = CMPimm $y, 42, implicit-def $nz
+    $c = CMPImm $y, 42, implicit-def $nz
     RTS
 # CHECK:      cpy #42
 # CHECK-NEXT: rts
@@ -188,7 +188,7 @@ name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |
   bb.0.entry:
-    $a = LDimm 42, implicit-def $nz
+    $a = LDImm 42, implicit-def $nz
     RTS
 # CHECK:      lda #42
 # CHECK-NEXT: rts
@@ -198,7 +198,7 @@ name: ldx_immediate
 # CHECK-LABEL: ldx_immediate
 body: |
   bb.0.entry:
-    $x = LDimm 42, implicit-def $nz
+    $x = LDImm 42, implicit-def $nz
     RTS
 # CHECK:      ldx #42
 # CHECK-NEXT: rts
@@ -208,7 +208,7 @@ name: ldy_immediate
 # CHECK-LABEL: ldy_immediate
 body: |
   bb.0.entry:
-    $y = LDimm 42, implicit-def $nz
+    $y = LDImm 42, implicit-def $nz
     RTS
 # CHECK:      ldy #42
 # CHECK-NEXT: rts
@@ -218,7 +218,7 @@ name: lda_absolute
 # CHECK-LABEL: lda_absolute
 body: |
   bb.0.entry:
-    $a = LDabs 1234, implicit-def $nz
+    $a = LDAbs 1234, implicit-def $nz
     RTS
 # CHECK:      lda 1234
 # CHECK-NEXT: rts
@@ -228,7 +228,7 @@ name: ldx_absolute
 # CHECK-LABEL: ldx_absolute
 body: |
   bb.0.entry:
-    $x = LDabs 1234, implicit-def $nz
+    $x = LDAbs 1234, implicit-def $nz
     RTS
 # CHECK:      ldx 1234
 # CHECK-NEXT: rts
@@ -238,7 +238,7 @@ name: ldy_absolute
 # CHECK-LABEL: ldy_absolute
 body: |
   bb.0.entry:
-    $y = LDabs 1234, implicit-def $nz
+    $y = LDAbs 1234, implicit-def $nz
     RTS
 # CHECK:      ldy 1234
 # CHECK-NEXT: rts
@@ -248,7 +248,7 @@ name: lda_absolutex
 # CHECK-LABEL: lda_absolutex
 body: |
   bb.0.entry:
-    $a = LDAidx 1234, $x, implicit-def $nz
+    $a = LDAIdx 1234, $x, implicit-def $nz
     RTS
 # CHECK:      lda 1234,x
 # CHECK-NEXT: rts
@@ -258,7 +258,7 @@ name: lda_absolutey
 # CHECK-LABEL: lda_absolutey
 body: |
   bb.0.entry:
-    $a = LDAidx 1234, $y, implicit-def $nz
+    $a = LDAIdx 1234, $y, implicit-def $nz
     RTS
 # CHECK:      lda 1234,y
 # CHECK-NEXT: rts
@@ -268,7 +268,7 @@ name: ldx_absolutey
 # CHECK-LABEL: ldx_absolutey
 body: |
   bb.0.entry:
-    $x = LDXidx 1234, $y, implicit-def $nz
+    $x = LDXIdx 1234, $y, implicit-def $nz
     RTS
 # CHECK:      ldx 1234,y
 # CHECK-NEXT: rts
@@ -278,7 +278,7 @@ name: ldy_absolutex
 # CHECK-LABEL: ldy_absolutex
 body: |
   bb.0.entry:
-    $y = LDYidx 1234, $x, implicit-def $nz
+    $y = LDYIdx 1234, $x, implicit-def $nz
     RTS
 # CHECK:      ldy 1234,x
 # CHECK-NEXT: rts
@@ -288,7 +288,7 @@ name: lda_indirectindexed
 # CHECK-LABEL: lda_indirectindexed
 body: |
   bb.0.entry:
-    $a = LDyindir $rs0, $y, implicit-def $nz
+    $a = LDYIndir $rs0, $y, implicit-def $nz
     RTS
 # CHECK:      lda (mos8(__rc0)),y
 # CHECK-NEXT: rts
@@ -298,7 +298,7 @@ name: lda_zeropage
 # CHECK-LABEL: lda_zeropage
 body: |
   bb.0.entry:
-    $a = LDimag8 $rc0, implicit-def $nz
+    $a = LDImag8 $rc0, implicit-def $nz
     RTS
 # CHECK:      lda mos8(__rc0)
 # CHECK-NEXT: rts
@@ -308,7 +308,7 @@ name: ldx_zeropage
 # CHECK-LABEL: ldx_zeropage
 body: |
   bb.0.entry:
-    $x = LDimag8 $rc0, implicit-def $nz
+    $x = LDImag8 $rc0, implicit-def $nz
     RTS
 # CHECK:      ldx mos8(__rc0)
 # CHECK-NEXT: rts
@@ -318,7 +318,7 @@ name: ldy_zeropage
 # CHECK-LABEL: ldy_zeropage
 body: |
   bb.0.entry:
-    $y = LDimag8 $rc0, implicit-def $nz
+    $y = LDImag8 $rc0, implicit-def $nz
     RTS
 # CHECK:      ldy mos8(__rc0)
 # CHECK-NEXT: rts
@@ -396,7 +396,7 @@ name: sbc_immediate
 # CHECK-LABEL: sbc_immediate
 body: |
   bb.0.entry:
-    $a, $c, $v = SBCimm $a, 42, $c, implicit-def $nz
+    $a, $c, $v = SBCImm $a, 42, $c, implicit-def $nz
     RTS
 # CHECK:      sbc #42
 # CHECK-NEXT: rts
@@ -406,7 +406,7 @@ name: sbc_zeropage
 # CHECK-LABEL: sbc_zeropage
 body: |
   bb.0.entry:
-    $a, $c, $v = SBCimag8 $a, $rc0, $c, implicit-def $nz
+    $a, $c, $v = SBCImag8 $a, $rc0, $c, implicit-def $nz
     RTS
 # CHECK:      sbc mos8(__rc0)
 # CHECK-NEXT: rts
@@ -416,7 +416,7 @@ name: sec_implied
 # CHECK-LABEL: sec_implied
 body: |
   bb.0.entry:
-    $c = LDCimm 1
+    $c = LDCImm 1
     RTS
 # CHECK:      sec{{$}}
 # CHECK-NEXT: rts
@@ -426,7 +426,7 @@ name: sta_absolute
 # CHECK-LABEL: sta_absolute
 body: |
   bb.0.entry:
-    STabs $a, 1234
+    STAbs $a, 1234
     RTS
 # CHECK:      sta 1234
 # CHECK-NEXT: rts
@@ -436,7 +436,7 @@ name: sta_absolutex
 # CHECK-LABEL: sta_absolutex
 body: |
   bb.0.entry:
-    STidx $a, 1234, $x
+    STIdx $a, 1234, $x
     RTS
 # CHECK:      sta 1234,x
 # CHECK-NEXT: rts
@@ -446,7 +446,7 @@ name: sta_absolutey
 # CHECK-LABEL: sta_absolutey
 body: |
   bb.0.entry:
-    STidx $a, 1234, $y
+    STIdx $a, 1234, $y
     RTS
 # CHECK:      sta 1234,y
 # CHECK-NEXT: rts
@@ -456,7 +456,7 @@ name: sta_zeropage
 # CHECK-LABEL: sta_zeropage
 body: |
   bb.0.entry:
-    $rc0 = STimag8 $a
+    $rc0 = STImag8 $a
     RTS
 # CHECK:      sta mos8(__rc0)
 # CHECK-NEXT: rts
@@ -466,7 +466,7 @@ name: sta_indirect_indexed
 # CHECK-LABEL: sta_indirect_indexed
 body: |
   bb.0.entry:
-    STyindir $a, $rs0, $y
+    STYIndir $a, $rs0, $y
     RTS
 # CHECK:      sta (mos8(__rc0)),y
 # CHECK-NEXT: rts
@@ -476,7 +476,7 @@ name: stx_absolute
 # CHECK-LABEL: stx_absolute
 body: |
   bb.0.entry:
-    STabs $x, 1234
+    STAbs $x, 1234
     RTS
 # CHECK:      stx 1234
 # CHECK-NEXT: rts
@@ -486,7 +486,7 @@ name: stx_zeropage
 # CHECK-LABEL: stx_zeropage
 body: |
   bb.0.entry:
-    $rc0 = STimag8 $x
+    $rc0 = STImag8 $x
     RTS
 # CHECK:      stx mos8(__rc0)
 # CHECK-NEXT: rts
@@ -496,7 +496,7 @@ name: sty_absolute
 # CHECK-LABEL: sty_absolute
 body: |
   bb.0.entry:
-    STabs $y, 1234
+    STAbs $y, 1234
     RTS
 # CHECK:      sty 1234
 # CHECK-NEXT: rts
@@ -506,7 +506,7 @@ name: sty_zeropage
 # CHECK-LABEL: sty_zeropage
 body: |
   bb.0.entry:
-    $rc0 = STimag8 $y
+    $rc0 = STImag8 $y
     RTS
 # CHECK:      sty mos8(__rc0)
 # CHECK-NEXT: rts

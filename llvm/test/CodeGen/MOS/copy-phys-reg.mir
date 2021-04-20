@@ -69,7 +69,7 @@ body:             |
   bb.0.entry:
     liveins: $a, $x
     $y = COPY $x
-    $c = CMPimm $a, 0, implicit-def $nz
+    $c = CMPImm $a, 0, implicit-def $nz
 # CHECK:      PH $a
 # CHECK-NEXT: $a = T_A $x
 # CHECK-NEXT: $y = TA $a
@@ -83,7 +83,7 @@ body:             |
   bb.0.entry:
     liveins: $a
     $rc0 = COPY $a
-# CHECK: $rc0 = STimag8 $a
+# CHECK: $rc0 = STImag8 $a
 ...
 ---
 name:            ldzp
@@ -93,7 +93,7 @@ body:             |
   bb.0.entry:
     liveins: $rc0
     $a = COPY $rc0
-# CHECK: $a = LDimag8 $rc0
+# CHECK: $a = LDImag8 $rc0
 ...
 ---
 name:            zptozp_a
@@ -103,8 +103,8 @@ body:             |
   bb.0.entry:
     liveins: $rc0
     $rc1 = COPY $rc0
-# CHECK:      $a = LDimag8 $rc0
-# CHECK-NEXT: $rc1 = STimag8 $a
+# CHECK:      $a = LDImag8 $rc0
+# CHECK-NEXT: $rc1 = STImag8 $a
 ...
 ---
 name:            zptozp_save
@@ -116,8 +116,8 @@ body:             |
     $rc1 = COPY $rc0
     RTS implicit $a, implicit $x, implicit $y
 # CHECK:      PH $a
-# CHECK-NEXT: $a = LDimag8 $rc0
-# CHECK-NEXT: $rc1 = STimag8 $a
+# CHECK-NEXT: $a = LDImag8 $rc0
+# CHECK-NEXT: $rc1 = STImag8 $a
 # CHECK-NEXT: $a = PL
 # CHECK-NEXT: RTS
 ...
@@ -129,8 +129,8 @@ body:             |
   bb.0.entry:
     liveins: $rs0
     $rs1 = COPY $rs0
-# CHECK:      $a = LDimag8 $rc0
-# CHECK-NEXT: $rc2 = STimag8 $a
-# CHECK:      $a = LDimag8 $rc1
-# CHECK-NEXT: $rc3 = STimag8 $a
+# CHECK:      $a = LDImag8 $rc0
+# CHECK-NEXT: $rc2 = STImag8 $a
+# CHECK:      $a = LDImag8 $rc1
+# CHECK-NEXT: $rc3 = STImag8 $a
 ...

@@ -64,7 +64,7 @@ bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   // Note: Rematerializations cannot occur in terminators, so NZ cannot be live.
   // Thus, instructions that only clobber NZ are always trivially
   // rematerializable.
-  case MOS::LDimm:
+  case MOS::LDImm:
     return true;
   }
 }
@@ -167,11 +167,11 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode; don't know how to commute.");
-  case MOS::ADCimag8:
+  case MOS::ADCImag8:
     CommutableOpIdx1 = 3;
     CommutableOpIdx2 = 4;
     break;
-  case MOS::ORAimag8:
+  case MOS::ORAImag8:
     CommutableOpIdx1 = 1;
     CommutableOpIdx2 = 2;
     break;
@@ -378,9 +378,9 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
     } else
       CopyThroughA();
   } else if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
-    Builder.buildInstr(MOS::STimag8).addDef(DestReg).addUse(SrcReg);
+    Builder.buildInstr(MOS::STImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
-    Builder.buildInstr(MOS::LDimag8).addDef(DestReg).addUse(SrcReg);
+    Builder.buildInstr(MOS::LDImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo),
                     TRI.getSubReg(SrcReg, MOS::sublo));
@@ -506,8 +506,8 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   default:
     Changed = false;
     break;
-  case MOS::LDidx:
-    expandLDidx(Builder);
+  case MOS::LDIdx:
+    expandLDIdx(Builder);
     break;
   }
 
@@ -516,9 +516,9 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return Changed;
 }
 
-void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
+void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
-  assert(MI.getOpcode() == MOS::LDidx);
+  assert(MI.getOpcode() == MOS::LDIdx);
 
   // This occur when X or Y is both the destination and index register.
   // Since the 6502 has no instruction for this, use A as the destination
@@ -527,7 +527,7 @@ void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
     bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
     if (IsAMaybeLive)
       Builder.buildInstr(MOS::PH).addUse(MOS::A);
-    Builder.buildInstr(MOS::LDAidx)
+    Builder.buildInstr(MOS::LDAIdx)
         .addDef(MOS::A)
         .add(MI.getOperand(1))
         .add(MI.getOperand(2));
@@ -540,15 +540,15 @@ void MOSInstrInfo::expandLDidx(MachineIRBuilder &Builder) const {
   unsigned Opcode;
   switch (MI.getOperand(0).getReg()) {
   default:
-    llvm_unreachable("Bad destination for LDidx.");
+    llvm_unreachable("Bad destination for LDIdx.");
   case MOS::A:
-    Opcode = MOS::LDAidx;
+    Opcode = MOS::LDAIdx;
     break;
   case MOS::X:
-    Opcode = MOS::LDXidx;
+    Opcode = MOS::LDXIdx;
     break;
   case MOS::Y:
-    Opcode = MOS::LDYidx;
+    Opcode = MOS::LDYIdx;
     break;
   }
 

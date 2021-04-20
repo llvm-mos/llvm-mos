@@ -5,8 +5,8 @@ name: ldaidx
 body: |
   bb.0.entry:
     liveins: $x
-    $a = LDidx 1234, $x, implicit-def $nz
-# CHECK: $a = LDAidx 1234, $x
+    $a = LDIdx 1234, $x, implicit-def $nz
+# CHECK: $a = LDAIdx 1234, $x
 ...
 ---
 name: ldxidx_y
@@ -14,8 +14,8 @@ name: ldxidx_y
 body: |
   bb.0.entry:
     liveins: $y
-    $x = LDidx 1234, $y, implicit-def $nz
-# CHECK: $x = LDXidx 1234, $y
+    $x = LDIdx 1234, $y, implicit-def $nz
+# CHECK: $x = LDXIdx 1234, $y
 ...
 ---
 name: ldxidx_x
@@ -23,10 +23,10 @@ name: ldxidx_x
 body: |
   bb.0.entry:
     liveins: $x
-    $x = LDidx 1234, $x, implicit-def $nz
-    $c = CMPimm $a, 0, implicit-def $nz
+    $x = LDIdx 1234, $x, implicit-def $nz
+    $c = CMPImm $a, 0, implicit-def $nz
 # CHECK:      PH $a
-# CHECK-NEXT: $a = LDAidx 1234, $x
+# CHECK-NEXT: $a = LDAIdx 1234, $x
 # CHECK-NEXT: $x = TA
 # CHECK-NEXT: $a = PL
 ...
@@ -36,6 +36,6 @@ name: ldyidx_x
 body: |
   bb.0.entry:
     liveins: $x
-    $y = LDidx 1234, $x, implicit-def $nz
-# CHECK: $y = LDYidx 1234, $x
+    $y = LDIdx 1234, $x, implicit-def $nz
+# CHECK: $y = LDYIdx 1234, $x
 ...

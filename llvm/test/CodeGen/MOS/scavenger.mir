@@ -5,9 +5,9 @@ name: scavenge_gpr
 body: |
   bb.0.entry:
     liveins: $a
-    %0:gpr = LDimm 42, implicit-def $nz
+    %0:gpr = LDImm 42, implicit-def $nz
     RTS implicit $a
-# CHECK:      dead $x = LDimm 42
+# CHECK:      dead $x = LDImm 42
 # CHECK-NEXT: RTS
 ...
 ---
@@ -16,10 +16,10 @@ name: spill_a
 body: |
   bb.0.entry:
     liveins: $a, $x, $y
-    %0:gpr = LDimm 42, implicit-def $nz
+    %0:gpr = LDImm 42, implicit-def $nz
     RTS implicit $a, implicit $x, implicit $y
 # CHECK:      PH $a
-# CHECK-NEXT: dead $a = LDimm 42
+# CHECK-NEXT: dead $a = LDImm 42
 # CHECK-NEXT: $a = PL
 # CHECK-NEXT: RTS
 ...
@@ -29,11 +29,11 @@ name: spill_x
 body: |
   bb.0.entry:
     liveins: $a, $x, $y
-    %0:xy = LDimm 42, implicit-def $nz
+    %0:xy = LDImm 42, implicit-def $nz
     RTS implicit $a, implicit $x, implicit $y
-# CHECK:      STabs $x, &__save_x
-# CHECK-NEXT: dead $x = LDimm 42
-# CHECK-NEXT: $x = LDabs &__save_x
+# CHECK:      STAbs $x, &__save_x
+# CHECK-NEXT: dead $x = LDImm 42
+# CHECK-NEXT: $x = LDAbs &__save_x
 # CHECK-NEXT: RTS
 ...
 ---
@@ -42,10 +42,10 @@ name: spill_y
 body: |
   bb.0.entry:
     liveins: $a, $x, $y
-    %0:yc = LDimm 42, implicit-def $nz
+    %0:yc = LDImm 42, implicit-def $nz
     RTS implicit $a, implicit $x, implicit $y
-# CHECK:      STabs $y, &__save_y
-# CHECK-NEXT: dead $y = LDimm 42
-# CHECK-NEXT: $y = LDabs &__save_y
+# CHECK:      STAbs $y, &__save_y
+# CHECK-NEXT: dead $y = LDImm 42
+# CHECK-NEXT: $y = LDAbs &__save_y
 # CHECK-NEXT: RTS
 ...

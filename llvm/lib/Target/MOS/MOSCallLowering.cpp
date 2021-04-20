@@ -339,9 +339,9 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // really have a mechanism for using external symbols as store destinations.
     Register LoGPR = MIRBuilder.buildCopy(&MOS::GPRRegClass, Lo).getReg(0);
     Register HiGPR = MIRBuilder.buildCopy(&MOS::GPRRegClass, Hi).getReg(0);
-    MIRBuilder.buildInstr(MOS::STabs, {}, {LoGPR})
+    MIRBuilder.buildInstr(MOS::STAbs, {}, {LoGPR})
         .addExternalSymbol("__call_indir_target");
-    auto HiST = MIRBuilder.buildInstr(MOS::STabs, {}, {HiGPR})
+    auto HiST = MIRBuilder.buildInstr(MOS::STAbs, {}, {HiGPR})
                     .addExternalSymbol("__call_indir_target");
     HiST->getOperand(1).setOffset(1);
 

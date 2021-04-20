@@ -28,9 +28,9 @@ body:             |
     ADJCALLSTACKUP 2, 0, implicit-def $rs0, implicit $rs0
     RTS
 # CHECK-LABEL: bb.0.entry:
-# CHECK:       $a, $c, dead $v = ADCimm $a, 254, $c, implicit-def $nz
-# CHECK:       STabs $a, target-index(mos-static-stack) :: (store 1 into %stack.0)
-# CHECK-NEXT:  $a = LDabs target-index(mos-static-stack) + 1, implicit-def $nz :: (load 1 from %stack.1)
-# CHECK:       $a, $c, dead $v = ADCimm $a, 2, $c, implicit-def $nz
+# CHECK:       $a, $c, dead $v = ADCImm $a, 254, $c, implicit-def $nz
+# CHECK:       STAbs $a, target-index(mos-static-stack) :: (store 1 into %stack.0)
+# CHECK-NEXT:  $a = LDAbs target-index(mos-static-stack) + 1, implicit-def $nz :: (load 1 from %stack.1)
+# CHECK:       $a, $c, dead $v = ADCImm $a, 2, $c, implicit-def $nz
 # CHECK:       RTS
 ...

@@ -96,7 +96,7 @@ def STstk : MOSPseudo {
 
 // Loads from an absolute location plus an absolute offset. The first operand
 // will always be a frame index referring to to a statically allocated stack
-// frame. This will be lowered to a regular LDabs upon FEI.
+// frame. This will be lowered to a regular LDAbs upon FEI.
 def LDabs_offset : MOSPseudo {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$addr, i16imm:$offset);
@@ -109,7 +109,7 @@ def LDabs_offset : MOSPseudo {
 
 // Stores to an absolute location plus an absolute offset. The first operand
 // will always be a frame index referring to a statically allocated stack frame.
-// This will be lowered to a regular STabs upon FEI.
+// This will be lowered to a regular STAbs upon FEI.
 def STabs_offset : MOSPseudo {
   dag OutOperandList = (outs);
   dag InOperandList = (ins GPR:$src, i16imm:$addr, i16imm:$offset);
@@ -117,10 +117,10 @@ def STabs_offset : MOSPseudo {
   let mayStore = true;
 }
 
-// Abstracts LDAidx, LDXidx, and LDYidx. This is almost a logical instruction,
+// Abstracts LDAIdx, LDXIdx, and LDYIdx. This is almost a logical instruction,
 // but the "LDX 1234,X" and "LDY 1234,Y" cases aren't natively supported, and
 // more than one instruction is required to emit them.
-def LDidx : MOSPseudo {
+def LDIdx : MOSPseudo {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$addr, XY:$idx);
 
@@ -157,10 +157,10 @@ def Select : MOSControlFlowPseudo {
 // NZ pseudoinstructions
 //===---------------------------------------------------------------------===//
 
-// Version of SBCimag8 that copies the N and Z flags out to virtual registers.
+// Version of SBCImag8 that copies the N and Z flags out to virtual registers.
 // This bundles the definition and use of N and Z together to maintain the invariant
 // that neither can be live across pseudoinstructions.
-def SBCNZimag8 : MOSPseudo {
+def SBCNZImag8 : MOSPseudo {
   dag OutOperandList = (outs Ac:$dst,
                         Cc:$carryout, Anyi1:$nout, Vc:$vout, Anyi1:$zout);
   dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);

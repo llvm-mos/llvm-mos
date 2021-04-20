@@ -9,58 +9,58 @@ body: |
 
   bb.1:
     liveins: $c
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
-    $a = LDimm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
+    $a = LDImm 0, implicit-def $nz
     BR %bb.1, $c, 0
 
   bb.2:
     RTS
 ...
 # CHECK-LABEL: bb.1:
-# CHECK: $a = LDimm 0
+# CHECK: $a = LDImm 0
 # ...
-# CHECK: $a = LDimm 0
+# CHECK: $a = LDImm 0
 # CHECK: BR %bb.2, $c, 1
 # CHECK: JMP %bb.1
 # CHECK-LABEL: bb.2:

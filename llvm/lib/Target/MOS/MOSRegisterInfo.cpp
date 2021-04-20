@@ -136,10 +136,10 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   case MOS::X:
   case MOS::Y:
     const char *Save = Reg == MOS::X ? "__save_x" : "__save_y";
-    Builder.buildInstr(MOS::STabs).addUse(Reg).addExternalSymbol(Save);
+    Builder.buildInstr(MOS::STAbs).addUse(Reg).addExternalSymbol(Save);
 
     Builder.setInsertPt(MBB, UseMI);
-    Builder.buildInstr(MOS::LDabs).addDef(Reg).addExternalSymbol(Save);
+    Builder.buildInstr(MOS::LDAbs).addDef(Reg).addExternalSymbol(Save);
     break;
   }
 
@@ -191,7 +191,7 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset);
     MI->RemoveOperand(FIOperandNum + 1);
     break;
-  case MOS::LDimm:
+  case MOS::LDImm:
     MI->getOperand(FIOperandNum)
         .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset,
                              MI->getOperand(FIOperandNum).getTargetFlags());
@@ -208,10 +208,10 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     expandAddrHistk(MI);
     break;
   case MOS::LDabs_offset:
-    MI->setDesc(TII.get(MOS::LDabs));
+    MI->setDesc(TII.get(MOS::LDAbs));
     break;
   case MOS::STabs_offset:
-    MI->setDesc(TII.get(MOS::STabs));
+    MI->setDesc(TII.get(MOS::STAbs));
     break;
   case MOS::LDstk:
   case MOS::STstk:
@@ -235,13 +235,13 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
 
   Register Src = TRI.getSubReg(Base, MOS::sublo);
 
-  Builder.buildInstr(MOS::LDCimm).addDef(MOS::C).addImm(0);
+  Builder.buildInstr(MOS::LDCImm).addDef(MOS::C).addImm(0);
 
   if (!Offset)
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
   else {
     Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
-    auto Instr = Builder.buildInstr(MOS::ADCimm, {A, MOS::C, MOS::V},
+    auto Instr = Builder.buildInstr(MOS::ADCImm, {A, MOS::C, MOS::V},
                                     {A, int64_t(Offset), Register(MOS::C)});
     Instr->getOperand(2).setIsDead();
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
@@ -272,7 +272,7 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
   else {
     Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
     auto Instr =
-        Builder.buildInstr(MOS::ADCimm, {A, MOS::C, MOS::V},
+        Builder.buildInstr(MOS::ADCImm, {A, MOS::C, MOS::V},
                            {A, int64_t(Offset >> 8), Register(MOS::C)});
     Instr->getOperand(1).setIsDead();
     Instr->getOperand(2).setIsDead();
@@ -357,7 +357,7 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   }
 
   Register Y =
-      Builder.buildInstr(MOS::LDimm, {&MOS::YcRegClass}, {Offset}).getReg(0);
+      Builder.buildInstr(MOS::LDImm, {&MOS::YcRegClass}, {Offset}).getReg(0);
 
   Register A = Loc;
   if (A != MOS::A)
@@ -367,7 +367,7 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   if (!IsLoad && Loc != A)
     Builder.buildCopy(A, Loc);
 
-  Builder.buildInstr(IsLoad ? MOS::LDyindir : MOS::STyindir)
+  Builder.buildInstr(IsLoad ? MOS::LDYIndir : MOS::STYIndir)
       .addReg(A, getDefRegState(IsLoad))
       .add(MI->getOperand(1))
       .addUse(Y)

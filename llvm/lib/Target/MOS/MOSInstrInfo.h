@@ -94,7 +94,7 @@ private:
   void copyPhysRegImpl(MachineIRBuilder &Builder, MCRegister DestReg,
                        MCRegister SrcReg) const;
 
-  void expandLDidx(MachineIRBuilder &Builder) const;
+  void expandLDIdx(MachineIRBuilder &Builder) const;
 };
 
 namespace MOS {

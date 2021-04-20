@@ -208,7 +208,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   LLT S1 = LLT::scalar(1);
 
   Register CarryIn =
-      Builder.buildInstr(MOS::LDCimm, {S1}, {CarryInVal}).getReg(0);
+      Builder.buildInstr(MOS::LDCImm, {S1}, {CarryInVal}).getReg(0);
   auto Instr =
       Builder.buildInstr(Opcode, {MI.getOperand(0), S1},
                          {MI.getOperand(1), MI.getOperand(2), CarryIn});
@@ -250,12 +250,12 @@ struct CmpImm_match {
     RHS = RHSConst->Value.getZExtValue();
     Flag = getCmpFlagForRegister(CondMI, DefSrcReg->Reg);
 
-    // CMPimm cannot set the V register.
+    // CMPImm cannot set the V register.
     return Flag != MOS::V;
   }
 };
 
-// Match one of the outputs of a G_CMP to a CMPimm operation. LHS and RHS are
+// Match one of the outputs of a G_CMP to a CMPImm operation. LHS and RHS are
 // the left and right hand side of the comparison, while Flag is the virtual
 // (for C) or physical (for N and Z) register corresponding to the output by
 // which the G_CMP was reached.
@@ -280,7 +280,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   if (!mi_match(CondReg, MRI, m_CmpImm(LHS, RHS, Flag))) {
     // Convert to a case that we can directly branch on by issuing a comparison
     // with zero.
-    auto Compare = Builder.buildInstr(MOS::CMPimm, {S1}, {CondReg, INT64_C(0)});
+    auto Compare = Builder.buildInstr(MOS::CMPImm, {S1}, {CondReg, INT64_C(0)});
     if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
       return false;
     // CondReg == 0 -> Z == 1; CondReg == 1 -> Z == 0
@@ -289,7 +289,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
     return true;
   }
 
-  auto Compare = Builder.buildInstr(MOS::CMPimm, {S1}, {LHS, RHS});
+  auto Compare = Builder.buildInstr(MOS::CMPImm, {S1}, {LHS, RHS});
   if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
     return false;
 
@@ -311,10 +311,10 @@ bool MOSInstructionSelector::selectCopyLike(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
-  Register C = Builder.buildInstr(MOS::LDCimm, {&MOS::CcRegClass}, {INT64_C(1)})
+  Register C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(1)})
                    .getReg(0);
   auto SBC =
-      Builder.buildInstr(MOS::SBCNZimag8,
+      Builder.buildInstr(MOS::SBCNZImag8,
                          {LLT::scalar(8), MI.getOperand(0), MI.getOperand(1),
                           MI.getOperand(2), MI.getOperand(3)},
                          {MI.getOperand(4), MI.getOperand(5), C});
@@ -340,9 +340,9 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
   if (MI.getMF()->getFunction().doesNotRecurse() && IsLocal) {
     // Non-recursive functions use static stack for their locals, so their frame
     // addresses are link-time constants that can be loaded as immediates.
-    LoAddr = Builder.buildInstr(MOS::LDimm, {S8}, {}).add(MI.getOperand(1));
+    LoAddr = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
     LoAddr->getOperand(1).setTargetFlags(MOS::MO_LO);
-    HiAddr = Builder.buildInstr(MOS::LDimm, {S8}, {}).add(MI.getOperand(1));
+    HiAddr = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
     HiAddr->getOperand(1).setTargetFlags(MOS::MO_HI);
   } else {
     // Otherwise a soft stack needs to be used, so frame addresses are offsets
@@ -375,11 +375,11 @@ bool MOSInstructionSelector::selectGlobalValue(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
   LLT S8 = LLT::scalar(8);
-  auto LoImm = Builder.buildInstr(MOS::LDimm, {S8}, {})
+  auto LoImm = Builder.buildInstr(MOS::LDImm, {S8}, {})
                    .addGlobalAddress(Global, 0, MOS::MO_LO);
   if (!constrainSelectedInstRegOperands(*LoImm, TII, TRI, RBI))
     return false;
-  auto HiImm = Builder.buildInstr(MOS::LDimm, {S8}, {})
+  auto HiImm = Builder.buildInstr(MOS::LDImm, {S8}, {})
                    .addGlobalAddress(Global, 0, MOS::MO_HI);
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     return false;
@@ -475,14 +475,14 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
     llvm_unreachable("Unexpected opcode.");
   case MOS::G_LOAD:
     SrcDstOp.setIsDef();
-    AbsOpcode = MOS::LDabs;
-    IdxOpcode = MOS::LDidx;
-    YIndirOpcode = MOS::LDyindir;
+    AbsOpcode = MOS::LDAbs;
+    IdxOpcode = MOS::LDIdx;
+    YIndirOpcode = MOS::LDYIndir;
     break;
   case MOS::G_STORE:
-    AbsOpcode = MOS::STabs;
-    IdxOpcode = MOS::STidx;
-    YIndirOpcode = MOS::STyindir;
+    AbsOpcode = MOS::STAbs;
+    IdxOpcode = MOS::STIdx;
+    YIndirOpcode = MOS::STYIndir;
     break;
   }
 
@@ -515,7 +515,7 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
   Register OffsetReg;
   if (Offset.isImm()) {
     OffsetReg =
-        Builder.buildInstr(MOS::LDimm, {LLT::scalar(8)}, {Offset.getImm()})
+        Builder.buildInstr(MOS::LDImm, {LLT::scalar(8)}, {Offset.getImm()})
             .getReg(0);
   } else
     OffsetReg = Offset.getReg();
@@ -544,7 +544,7 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectOr(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
-  auto Or = Builder.buildInstr(MOS::ORAimag8, {MI.getOperand(0)},
+  auto Or = Builder.buildInstr(MOS::ORAImag8, {MI.getOperand(0)},
                                {MI.getOperand(1), MI.getOperand(2)});
   if (!constrainSelectedInstRegOperands(*Or, TII, TRI, RBI))
     return false;
@@ -583,10 +583,10 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
   LLT S8 = LLT::scalar(8);
 
   Register Carry =
-      Builder.buildInstr(MOS::LDCimm, {S1}, {UINT64_C(0)}).getReg(0);
+      Builder.buildInstr(MOS::LDCImm, {S1}, {UINT64_C(0)}).getReg(0);
 
   auto AddLo =
-      Builder.buildInstr(MOS::ADCimm, {S8, S1, S1},
+      Builder.buildInstr(MOS::ADCImm, {S8, S1, S1},
                          {Base, ConstOffset->Value.getSExtValue(), Carry});
   AddLo->getOperand(3).setSubReg(MOS::sublo);
   Carry = AddLo.getReg(1);
@@ -594,7 +594,7 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
     return false;
 
   auto AddHi =
-      Builder.buildInstr(MOS::ADCimm, {S8, S1, S1}, {Base, INT64_C(0), Carry});
+      Builder.buildInstr(MOS::ADCImm, {S8, S1, S1}, {Base, INT64_C(0), Carry});
   AddHi->getOperand(3).setSubReg(MOS::subhi);
   if (!constrainSelectedInstRegOperands(*AddHi, TII, TRI, RBI))
     return false;
@@ -644,12 +644,12 @@ bool MOSInstructionSelector::selectUAddSubE(MachineInstr &MI) {
   default:
     llvm_unreachable("Unexpected opcode.");
   case MOS::G_UADDE:
-    ImmOpcode = MOS::ADCimm;
-    Imag8Opcode = MOS::ADCimag8;
+    ImmOpcode = MOS::ADCImm;
+    Imag8Opcode = MOS::ADCImag8;
     break;
   case MOS::G_USUBE:
-    ImmOpcode = MOS::SBCimm;
-    Imag8Opcode = MOS::SBCimag8;
+    ImmOpcode = MOS::SBCImm;
+    Imag8Opcode = MOS::SBCImag8;
     break;
   }
 

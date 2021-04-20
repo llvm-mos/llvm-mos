@@ -4,7 +4,7 @@
     entry:
       ret void
   }
-  define void @spill_static_imag8() norecurse {
+  define void @spill_static_Imag8() norecurse {
     entry:
       ret void
   }
@@ -38,8 +38,8 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
-name: spill_static_imag8
-# CHECK-LABEL: name: spill_static_imag8
+name: spill_static_Imag8
+# CHECK-LABEL: name: spill_static_Imag8
 legalized: true
 regBankSelected: true
 tracksRegLiveness: true

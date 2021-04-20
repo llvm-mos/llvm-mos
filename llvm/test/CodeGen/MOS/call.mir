@@ -163,8 +163,8 @@
     ; CHECK-NEXT: %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %0
     ; CHECK-NEXT: %7:gpr = COPY %5
     ; CHECK-NEXT: %8:gpr = COPY %6
-    ; CHECK-NEXT: STabs %7, &__call_indir_target
-    ; CHECK-NEXT: STabs %8, &__call_indir_target + 1
+    ; CHECK-NEXT: STAbs %7, &__call_indir_target
+    ; CHECK-NEXT: STAbs %8, &__call_indir_target + 1
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0
     ; CHECK-NEXT: $a = COPY %1
     ; CHECK-NEXT: $x = COPY %2
