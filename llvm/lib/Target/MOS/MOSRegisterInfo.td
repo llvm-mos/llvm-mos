@@ -35,6 +35,9 @@ def subz : MOSSubRegIndex<1>;
 // V bit of the 8-bit processor status register.
 def subv : MOSSubRegIndex<1>;
 
+// Least-significant bit of an 8-bit register.
+def sublsb : MOSSubRegIndex<1>;
+
 
 //===----------------------------------------------------------------------===//
 //  Real registers
@@ -52,25 +55,36 @@ class MOSReg<bits<16> num, string name>
   let AltNames = [name];
 }
 
-def A : MOSReg<0, "a">;
-def X : MOSReg<1, "x">;
-def Y : MOSReg<2, "y">;
-def S : MOSReg<3, "s">;
+// An 8-bit value register (GPR or imaginary). Contains a 1-bit LSB subregister
+// to allow them to store boolean values.
+multiclass MOSReg8<bits<16> num, string name> {
+  def LSB : MOSReg<!add(num, 1), name#"LSB">;
 
-def C : MOSReg<4, "C">;
-def N : MOSReg<5, "N">;
-def V : MOSReg<6, "V">;
-def Z : MOSReg<7, "Z">;
+  def NAME : MOSReg<num, name> {
+    let SubRegs = [!cast<Register>(NAME#LSB)];
+    let SubRegIndices = [sublsb];
+  }
+}
+
+defm A : MOSReg8<0, "a">;
+defm X : MOSReg8<2, "x">;
+defm Y : MOSReg8<4, "y">;
+def S : MOSReg<6, "s">;
+
+def C : MOSReg<7, "C">;
+def N : MOSReg<8, "N">;
+def V : MOSReg<9, "V">;
+def Z : MOSReg<10, "Z">;
 
 // N and Z are always set together, so model them as one register with two
 // one-bit subregisters.
-def NZ : MOSReg<8, "NZ"> {
+def NZ : MOSReg<11, "NZ"> {
   let SubRegs = [N, Z];
   let SubRegIndices = [subn, subz];
   let CoveredBySubRegs = true;
 }
 
-def P : MOSReg<9, "P"> {
+def P : MOSReg<12, "P"> {
   let SubRegs = [C, NZ, V];
   let SubRegIndices = [subcarry, subnz, subv];
 }
@@ -100,7 +114,7 @@ def P : MOSReg<9, "P"> {
 // necessary, on a function-by-function basis.
 
 // 8-bit imaginary registers.
-class MOSImagReg8<bits<16> num, string name> : MOSReg<num, name>;
+multiclass MOSImagReg8<bits<16> num, string name> : MOSReg8<num, name>;
 
 // 16-bit imaginary registers (consecutive pairs of 8-bit registers).
 class MOSImagReg16<bits<16> num, string name, list<Register> subregs>
@@ -115,13 +129,13 @@ defvar MaxImag8Regs = 256;
 defvar Imag8RegsOffset = 0x10;
 
 defvar MaxImag16Regs = !sra(MaxImag8Regs, 1);
-defvar Imag16RegsOffset = !add(Imag8RegsOffset, MaxImag8Regs);
+defvar Imag16RegsOffset = !add(Imag8RegsOffset, !shl(MaxImag8Regs,1));
 
 // Now we enumerate the imaginary registers.
 // Imaginary 8-bit registers, starting with the prefix rc
 foreach I = 0...!add(MaxImag8Regs, -1) in {
   // There exist MaxImag8Regs rcXX registers...
-  def RC#I: MOSImagReg8<!add(I, Imag8RegsOffset), "rc"#!cast<string>(I)>;
+  defm RC#I: MOSImagReg8<!add(!shl(I,1), Imag8RegsOffset), "rc"#!cast<string>(I)>;
 }
 
 // Imaginary 16-bit registers, starting with the prefix rs
@@ -174,7 +188,8 @@ let isAllocatable = false in {
 def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 
 // Sum types of all available storage locations for a size.
-def Anyi1 : MOSReg1Class<(add GPR, Imag8, Cc, Vc)>;
+def Anyi1 : MOSReg1Class<(add Cc, Vc, ALSB, XLSB, YLSB,
+                         (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)))>;
 def Anyi8 : MOSReg8Class<(add GPR, Imag8)>;
 
 // Any location where any supported size could be placed.
