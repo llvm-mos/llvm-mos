@@ -210,7 +210,7 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
 
   Register A = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
 
-  Register C = Builder.buildInstr(MOS::LDCimm, {&MOS::CcRegClass}, {int64_t(0)})
+  Register C = Builder.buildInstr(MOS::LDCimm, {&MOS::CcRegClass}, {INT64_C(0)})
                    .getReg(0);
   if (LoBytes) {
     Builder.buildCopy(A, Register(MOS::RC0));

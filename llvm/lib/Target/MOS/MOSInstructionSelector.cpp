@@ -277,7 +277,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   if (!mi_match(CondReg, MRI, m_CmpImm(LHS, RHS, Flag))) {
     // Convert to a case that we can directly branch on by issuing a comparison
     // with zero.
-    auto Compare = Builder.buildInstr(MOS::CMPimm, {S1}, {CondReg, int64_t(0)});
+    auto Compare = Builder.buildInstr(MOS::CMPimm, {S1}, {CondReg, INT64_C(0)});
     if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
       return false;
     // CondReg == 0 -> Z == 1; CondReg == 1 -> Z == 0
@@ -570,7 +570,7 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
   LLT S8 = LLT::scalar(8);
 
   Register Carry =
-      Builder.buildInstr(MOS::LDCimm, {S1}, {uint64_t(0)}).getReg(0);
+      Builder.buildInstr(MOS::LDCimm, {S1}, {UINT64_C(0)}).getReg(0);
 
   auto AddLo =
       Builder.buildInstr(MOS::ADCimm, {S8, S1, S1},
@@ -581,7 +581,7 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
     return false;
 
   auto AddHi =
-      Builder.buildInstr(MOS::ADCimm, {S8, S1, S1}, {Base, int64_t(0), Carry});
+      Builder.buildInstr(MOS::ADCimm, {S8, S1, S1}, {Base, INT64_C(0), Carry});
   AddHi->getOperand(3).setSubReg(MOS::subhi);
   if (!constrainSelectedInstRegOperands(*AddHi, TII, TRI, RBI))
     return false;
