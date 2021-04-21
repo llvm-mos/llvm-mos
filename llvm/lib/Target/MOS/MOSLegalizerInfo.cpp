@@ -66,7 +66,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       {{S8, S1}, {S16, S8}, {S16, S1}});
 
   getActionDefinitionsBuilder(G_ZEXT)
-      .legalFor({{S8, S1}})
+      .customFor({{S8, S1}})
       .clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder(G_TRUNC).legalFor(
@@ -79,8 +79,11 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Scalar Operations
 
+  getActionDefinitionsBuilder(G_INSERT).legalFor({S8, S1});
+
   getActionDefinitionsBuilder(G_MERGE_VALUES)
       .legalForCartesianProduct({S16, P}, {S8});
+
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
       .legalForCartesianProduct({S8}, {S16, P});
 
@@ -212,14 +215,14 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeVAStart(Helper, MRI, MI);
   case G_XOR:
     return legalizeXOR(Helper, MRI, MI);
+  case G_ZEXT:
+    return legalizeZExt(Helper, MRI, MI);
   }
 }
 
 bool MOSLegalizerInfo::legalizeBrCond(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
                                       MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_BRCOND);
-
   Register Tst = MI.getOperand(0).getReg();
   int64_t Val = 1;
   Register Not;
@@ -271,7 +274,6 @@ static void swapComparison(LegalizerHelper &Helper, MachineInstr &MI) {
 bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_ICMP);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   Register Dst = MI.getOperand(0).getReg();
@@ -339,8 +341,6 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_LOAD);
-
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   Register Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
   Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
@@ -354,8 +354,6 @@ bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
                                       MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_PTR_ADD);
-
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   MachineOperand &Result = MI.getOperand(0);
@@ -409,8 +407,6 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeShl(LegalizerHelper &Helper,
                                    MachineRegisterInfo &MRI,
                                    MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_SHL);
-
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   Register Dst = MI.getOperand(0).getReg();
@@ -453,8 +449,6 @@ bool MOSLegalizerInfo::legalizeShl(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
                                      MachineRegisterInfo &MRI,
                                      MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_STORE);
-
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   Register Tmp =
       Builder.buildPtrToInt(LLT::scalar(16), MI.getOperand(0)).getReg(0);
@@ -496,8 +490,6 @@ bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
                                      MachineRegisterInfo &MRI,
                                      MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_VAARG);
-
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   MachineFunction &MF = Builder.getMF();
 
@@ -535,8 +527,6 @@ bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
                                        MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_VASTART);
-
   // Store the address of the fake varargs frame index into the valist.
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   auto *FuncInfo = Builder.getMF().getInfo<MOSFunctionInfo>();
@@ -552,8 +542,6 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeXOR(LegalizerHelper &Helper,
                                    MachineRegisterInfo &MRI,
                                    MachineInstr &MI) const {
-  assert(MI.getOpcode() == G_XOR);
-
   LLT S1 = LLT::scalar(1);
 
   Register Dst = MI.getOperand(0).getReg();
@@ -594,5 +582,15 @@ bool MOSLegalizerInfo::legalizeXOR(LegalizerHelper &Helper,
   else
     Helper.widenScalar(MI, 0, LLT::scalar(8));
 
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Register Zero = Builder.buildConstant(LLT::scalar(8), 0).getReg(0);
+  Builder.buildInsert(MI.getOperand(0), Zero, MI.getOperand(1), MOS::sublsb);
+  MI.eraseFromParent();
   return true;
 }
