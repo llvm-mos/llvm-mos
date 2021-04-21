@@ -70,6 +70,7 @@ private:
   bool selectShlE(MachineInstr &MI);
   bool selectSelect(MachineInstr &MI);
   bool selectImplicitDef(MachineInstr &MI);
+  bool selectInsert(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectOr(MachineInstr &MI);
   bool selectPhi(MachineInstr &MI);
@@ -160,6 +161,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectGlobalValue(MI);
   case MOS::G_IMPLICIT_DEF:
     return selectImplicitDef(MI);
+  case MOS::G_INSERT:
+    return selectInsert(MI);
   case MOS::G_FREEZE:
   case MOS::G_INTTOPTR:
   case MOS::G_PTRTOINT:
@@ -384,6 +387,16 @@ bool MOSInstructionSelector::selectGlobalValue(MachineInstr &MI) {
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     return false;
   composePtr(Builder, Dst, LoImm.getReg(0), HiImm.getReg(0));
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSInstructionSelector::selectInsert(MachineInstr &MI) {
+  MachineIRBuilder Builder(MI);
+  auto Def = Builder.buildInstr(
+      MOS::INSERT_SUBREG, {MI.getOperand(0)},
+      {MI.getOperand(1), MI.getOperand(2), MI.getOperand(3).getImm()});
+  constrainGenericOp(*Def);
   MI.eraseFromParent();
   return true;
 }
