@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -58,7 +59,7 @@ class MOSCombinerInfo : public CombinerInfo {
 
 public:
   MOSCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                      GISelKnownBits *KB, MachineDominatorTree *MDT)
+                  GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
@@ -70,9 +71,13 @@ public:
                        MachineIRBuilder &B) const override;
 };
 
-bool MOSCombinerInfo::combine(GISelChangeObserver &Observer,
-                                  MachineInstr &MI, MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB, MDT);
+bool MOSCombinerInfo::combine(GISelChangeObserver &Observer, MachineInstr &MI,
+                              MachineIRBuilder &B) const {
+  const LegalizerInfo *LI = MI.getMF()->getSubtarget().getLegalizerInfo();
+  if (!MI.getMF()->getProperties().hasProperty(
+          MachineFunctionProperties::Property::Legalized))
+    LI = nullptr;
+  CombinerHelper Helper(Observer, B, KB, MDT, LI);
   MOSGenCombinerHelper Generated(GeneratedRuleCfg, Helper);
   return Generated.tryCombineAll(Observer, MI, B);
 }
@@ -123,19 +128,18 @@ bool MOSCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
-  MOSCombinerInfo PCInfo(EnableOpt, F.hasOptSize(), F.hasMinSize(), KB,
-                             MDT);
+  MOSCombinerInfo PCInfo(EnableOpt, F.hasOptSize(), F.hasMinSize(), KB, MDT);
   Combiner C(PCInfo, TPC);
   return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
 }
 
 char MOSCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(MOSCombiner, DEBUG_TYPE,
-                      "Combine MOS machine instrs", false, false)
+INITIALIZE_PASS_BEGIN(MOSCombiner, DEBUG_TYPE, "Combine MOS machine instrs",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
-INITIALIZE_PASS_END(MOSCombiner, DEBUG_TYPE,
-                    "Combine MOS machine instrs", false, false)
+INITIALIZE_PASS_END(MOSCombiner, DEBUG_TYPE, "Combine MOS machine instrs",
+                    false, false)
 
 namespace llvm {
 FunctionPass *createMOSCombiner() { return new MOSCombiner; }
