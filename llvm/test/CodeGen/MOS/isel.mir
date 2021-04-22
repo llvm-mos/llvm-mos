@@ -15,6 +15,20 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
+name: anyext
+# CHECK-LABEL: name: anyext
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = COPY $c
+    %1:any(s8) = G_ANYEXT %0
+    RTS implicit %1
+# CHECK:      %2:anyi8 = IMPLICIT_DEF
+# CHECK:      %1:anyi8 = INSERT_SUBREG %2, %0, %subreg.sublsb
+# CHECK-NEXT: RTS
+...
+---
 name: br_imm
 # CHECK-LABEL: name: br_imm
 legalized: true
