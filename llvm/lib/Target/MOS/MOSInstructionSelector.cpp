@@ -75,6 +75,7 @@ private:
   bool selectOr(MachineInstr &MI);
   bool selectPhi(MachineInstr &MI);
   bool selectPtrAdd(MachineInstr &MI);
+  bool selectTrunc(MachineInstr &MI);
   bool selectUAddSubE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
 
@@ -182,6 +183,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectPhi(MI);
   case MOS::G_PTR_ADD:
     return selectPtrAdd(MI);
+  case MOS::G_TRUNC:
+    return selectTrunc(MI);
   case MOS::G_UADDE:
   case MOS::G_USUBE:
     return selectUAddSubE(MI);
@@ -614,6 +617,13 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
 
   composePtr(Builder, Dst, AddLo.getReg(0), AddHi.getReg(0));
   MI.eraseFromParent();
+  return true;
+}
+
+bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
+  MI.setDesc(MI.getMF()->getSubtarget().getInstrInfo()->get(MOS::COPY));
+  MI.getOperand(1).setSubReg(MOS::sublsb);
+  constrainGenericOp(MI);
   return true;
 }
 
