@@ -62,15 +62,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Extension and Truncation
 
-  getActionDefinitionsBuilder(G_ANYEXT).legalFor(
-      {{S8, S1}, {S16, S8}, {S16, S1}});
+  getActionDefinitionsBuilder(G_ANYEXT).legalFor({S8, S1}).maxScalar(1, S8);
 
   getActionDefinitionsBuilder(G_ZEXT)
       .customFor({{S8, S1}})
       .clampScalar(0, S8, S8);
 
-  getActionDefinitionsBuilder(G_TRUNC).legalFor(
-      {{S1, S8}, {S1, S16}, {S8, S16}});
+  getActionDefinitionsBuilder(G_TRUNC).legalFor({S1, S8}).maxScalar(1, S8);
 
   // Type Conversions
 
