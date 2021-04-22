@@ -78,6 +78,7 @@ private:
   bool selectTrunc(MachineInstr &MI);
   bool selectUAddSubE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
+  bool selectXOR(MachineInstr &MI);
 
   void composePtr(MachineIRBuilder &Builder, Register Dst, Register Lo,
                   Register Hi);
@@ -190,6 +191,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectUAddSubE(MI);
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
+  case MOS::G_XOR:
+    return selectXOR(MI);
   }
 }
 
@@ -559,12 +562,10 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectOr(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-  auto Or = Builder.buildInstr(MOS::ORAImag8, {MI.getOperand(0)},
-                               {MI.getOperand(1), MI.getOperand(2)});
-  if (!constrainSelectedInstRegOperands(*Or, TII, TRI, RBI))
+  MI.setDesc(TII.get(MOS::ORAImag8));
+  MI.addImplicitDefUseOperands(*MI.getMF());
+  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
     return false;
-  MI.eraseFromParent();
   return true;
 }
 
@@ -621,7 +622,7 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
-  MI.setDesc(MI.getMF()->getSubtarget().getInstrInfo()->get(MOS::COPY));
+  MI.setDesc(TII.get(MOS::COPY));
   MI.getOperand(1).setSubReg(MOS::sublsb);
   constrainGenericOp(MI);
   return true;
@@ -718,6 +719,12 @@ bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
   constrainGenericOp(*HiCopy);
   MI.eraseFromParent();
   return true;
+}
+
+bool MOSInstructionSelector::selectXOR(MachineInstr &MI) {
+  MI.setDesc(TII.get(MOS::EORImag8));
+  MI.addImplicitDefUseOperands(*MI.getMF());
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 // Produce a pointer vreg from a low and high vreg pair.

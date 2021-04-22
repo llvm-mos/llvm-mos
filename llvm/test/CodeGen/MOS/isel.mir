@@ -102,6 +102,22 @@ body: |
 # CHECK: %0:anyi8 = COPY $a
 ...
 ---
+name: eor
+# CHECK-LABEL: name: eor
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = COPY $x
+    %1:any(s8) = COPY $a
+    %2:any(s8) = G_XOR %0, %1
+    RTS implicit %2
+# CHECK:      %0:ac = COPY $x
+# CHECK-NEXT: %1:imag8 = COPY $a
+# CHECK-NEXT: %2:ac = EORImag8 %0, %1
+# CHECK-NEXT: RTS
+...
+---
 name: insert
 # CHECK-LABEL: name: insert
 legalized: true

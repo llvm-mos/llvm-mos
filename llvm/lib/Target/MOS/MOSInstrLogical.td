@@ -120,10 +120,10 @@ def CMPImm : MOSLogicalInstr {
 }
 
 //===---------------------------------------------------------------------===//
-// Logical Instructions
+// Bitwise instructions
 //===---------------------------------------------------------------------===//
 
-def ORAImag8 : MOSLogicalInstr {
+class MOSBitwiseInstr : MOSLogicalInstr {
   let OutOperandList = (outs Ac:$dst);
   let InOperandList = (ins Ac:$l, Imag8:$r);
   let Constraints = "$dst = $l";
@@ -132,6 +132,9 @@ def ORAImag8 : MOSLogicalInstr {
 
   let isCommutable = true;
 }
+
+def EORImag8 : MOSBitwiseInstr;
+def ORAImag8 : MOSBitwiseInstr;
 
 //===---------------------------------------------------------------------===//
 // Shift/Rotate Instructions
