@@ -63,22 +63,19 @@ private:
   bool selectAddSub(MachineInstr &MI);
   bool selectBrCondImm(MachineInstr &MI);
   bool selectCmp(MachineInstr &MI);
-  bool selectCopyLike(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
   bool selectLoadStore(MachineInstr &MI);
   bool selectShlE(MachineInstr &MI);
   bool selectSelect(MachineInstr &MI);
-  bool selectImplicitDef(MachineInstr &MI);
-  bool selectInsert(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
-  bool selectOr(MachineInstr &MI);
-  bool selectPhi(MachineInstr &MI);
   bool selectPtrAdd(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
   bool selectUAddSubE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
-  bool selectXOR(MachineInstr &MI);
+
+  // Select instructions that correspond 1:1 to a target instruction.
+  bool selectGeneric(MachineInstr &MI);
 
   void composePtr(MachineIRBuilder &Builder, Register Dst, Register Lo,
                   Register Hi);
@@ -161,27 +158,15 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectFrameIndex(MI);
   case MOS::G_GLOBAL_VALUE:
     return selectGlobalValue(MI);
-  case MOS::G_IMPLICIT_DEF:
-    return selectImplicitDef(MI);
-  case MOS::G_INSERT:
-    return selectInsert(MI);
-  case MOS::G_FREEZE:
-  case MOS::G_INTTOPTR:
-  case MOS::G_PTRTOINT:
-    return selectCopyLike(MI);
   case MOS::G_LOAD:
   case MOS::G_STORE:
     return selectLoadStore(MI);
-  case MOS::G_OR:
-    return selectOr(MI);
   case MOS::G_SHLE:
     return selectShlE(MI);
   case MOS::G_SELECT:
     return selectSelect(MI);
   case MOS::G_MERGE_VALUES:
     return selectMergeValues(MI);
-  case MOS::G_PHI:
-    return selectPhi(MI);
   case MOS::G_PTR_ADD:
     return selectPtrAdd(MI);
   case MOS::G_TRUNC:
@@ -191,8 +176,16 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectUAddSubE(MI);
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
+
+  case MOS::G_IMPLICIT_DEF:
+  case MOS::G_INSERT:
+  case MOS::G_INTTOPTR:
+  case MOS::G_FREEZE:
+  case MOS::G_OR:
+  case MOS::G_PHI:
+  case MOS::G_PTRTOINT:
   case MOS::G_XOR:
-    return selectXOR(MI);
+    return selectGeneric(MI);
   }
 }
 
@@ -310,14 +303,6 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectCopyLike(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-  auto Copy = Builder.buildCopy(MI.getOperand(0), MI.getOperand(1));
-  constrainGenericOp(*Copy);
-  MI.eraseFromParent();
-  return true;
-}
-
 bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   Register C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(1)})
@@ -393,24 +378,6 @@ bool MOSInstructionSelector::selectGlobalValue(MachineInstr &MI) {
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     return false;
   composePtr(Builder, Dst, LoImm.getReg(0), HiImm.getReg(0));
-  MI.eraseFromParent();
-  return true;
-}
-
-bool MOSInstructionSelector::selectInsert(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-  auto Def = Builder.buildInstr(
-      MOS::INSERT_SUBREG, {MI.getOperand(0)},
-      {MI.getOperand(1), MI.getOperand(2), MI.getOperand(3).getImm()});
-  constrainGenericOp(*Def);
-  MI.eraseFromParent();
-  return true;
-}
-
-bool MOSInstructionSelector::selectImplicitDef(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-  auto Def = Builder.buildInstr(MOS::IMPLICIT_DEF, {MI.getOperand(0)}, {});
-  constrainGenericOp(*Def);
   MI.eraseFromParent();
   return true;
 }
@@ -561,25 +528,6 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectOr(MachineInstr &MI) {
-  MI.setDesc(TII.get(MOS::ORAImag8));
-  MI.addImplicitDefUseOperands(*MI.getMF());
-  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
-    return false;
-  return true;
-}
-
-bool MOSInstructionSelector::selectPhi(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-
-  auto Phi = Builder.buildInstr(MOS::PHI);
-  for (MachineOperand &Op : MI.operands())
-    Phi.add(Op);
-  constrainGenericOp(*Phi);
-  MI.eraseFromParent();
-  return true;
-}
-
 bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Base = MI.getOperand(1).getReg();
@@ -651,11 +599,6 @@ bool MOSInstructionSelector::selectShlE(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectSelect(MachineInstr &MI) {
-  Register Dst = MI.getOperand(0).getReg();
-
-  MachineIRBuilder Builder(MI);
-  unsigned Size = Builder.getMRI()->getType(Dst).getSizeInBits();
-  assert(Size == 1 || Size == 8);
   MI.setDesc(TII.get(MOS::Select));
   constrainGenericOp(MI);
   return true;
@@ -721,10 +664,40 @@ bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectXOR(MachineInstr &MI) {
-  MI.setDesc(TII.get(MOS::EORImag8));
+bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
+  unsigned Opcode;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode.");
+  case MOS::G_FREEZE:
+  case MOS::G_INTTOPTR:
+  case MOS::G_PTRTOINT:
+    Opcode = MOS::COPY;
+    break;
+  case MOS::G_IMPLICIT_DEF:
+    Opcode = MOS::IMPLICIT_DEF;
+    break;
+  case MOS::G_INSERT:
+    Opcode = MOS::INSERT_SUBREG;
+    break;
+  case MOS::G_OR:
+    Opcode = MOS::ORAImag8;
+    break;
+  case MOS::G_PHI:
+    Opcode = MOS::PHI;
+    break;
+  case MOS::G_XOR:
+    Opcode = MOS::EORImag8;
+    break;
+  }
+  MI.setDesc(TII.get(Opcode));
   MI.addImplicitDefUseOperands(*MI.getMF());
-  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+  // Establish any tied operands and known register classes.
+  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
+    return false;
+  // Make sure that the outputs have register classes.
+  constrainGenericOp(MI);
+  return true;
 }
 
 // Produce a pointer vreg from a low and high vreg pair.
