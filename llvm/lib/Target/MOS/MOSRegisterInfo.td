@@ -38,9 +38,6 @@ def subv : MOSSubRegIndex<1>;
 // Least-significant bit of an 8-bit register.
 def sublsb : MOSSubRegIndex<1>;
 
-// Most-significant bit of an 8-bit register.
-def submsb : MOSSubRegIndex<1, 7>;
-
 
 //===----------------------------------------------------------------------===//
 //  Real registers
@@ -58,37 +55,36 @@ class MOSReg<bits<16> num, string name>
   let AltNames = [name];
 }
 
-// An 8-bit value register (GPR or imaginary). Contains 1-bit LSB/MSB
-// subregisters to allow referring to those bits as boolean values.
+// An 8-bit value register (GPR or imaginary). Contains a 1-bit LSB subregister
+// to allow them to store boolean values.
 multiclass MOSReg8<bits<16> num, string name> {
   def LSB : MOSReg<!add(num, 1), name#"LSB">;
-  def MSB : MOSReg<!add(num, 2), name#"MSB">;
 
   def NAME : MOSReg<num, name> {
-    let SubRegs = [!cast<Register>(NAME#LSB), !cast<Register>(NAME#MSB)];
-    let SubRegIndices = [sublsb, submsb];
+    let SubRegs = [!cast<Register>(NAME#LSB)];
+    let SubRegIndices = [sublsb];
   }
 }
 
 defm A : MOSReg8<0, "a">;
-defm X : MOSReg8<3, "x">;
-defm Y : MOSReg8<6, "y">;
-def S : MOSReg<9, "s">;
+defm X : MOSReg8<2, "x">;
+defm Y : MOSReg8<4, "y">;
+def S : MOSReg<6, "s">;
 
-def C : MOSReg<10, "C">;
-def N : MOSReg<11, "N">;
-def V : MOSReg<12, "V">;
-def Z : MOSReg<13, "Z">;
+def C : MOSReg<7, "C">;
+def N : MOSReg<8, "N">;
+def V : MOSReg<9, "V">;
+def Z : MOSReg<10, "Z">;
 
 // N and Z are always set together, so model them as one register with two
 // one-bit subregisters.
-def NZ : MOSReg<14, "NZ"> {
+def NZ : MOSReg<11, "NZ"> {
   let SubRegs = [N, Z];
   let SubRegIndices = [subn, subz];
   let CoveredBySubRegs = true;
 }
 
-def P : MOSReg<15, "P"> {
+def P : MOSReg<12, "P"> {
   let SubRegs = [C, NZ, V];
   let SubRegIndices = [subcarry, subnz, subv];
 }
