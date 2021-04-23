@@ -102,6 +102,19 @@ body: |
 # CHECK: %0:anyi8 = COPY $a
 ...
 ---
+name: extract_subreg
+# CHECK-LABEL: name: extract_subreg
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = COPY $a
+    %1:any(s1) = G_EXTRACT %0, %subreg.sublsb
+    RTS implicit %1
+# CHECK:      %1:anyi1 = EXTRACT_SUBREG %0, %subreg.sublsb
+# CHECK-NEXT: RTS
+...
+---
 name: eor
 # CHECK-LABEL: name: eor
 legalized: true
