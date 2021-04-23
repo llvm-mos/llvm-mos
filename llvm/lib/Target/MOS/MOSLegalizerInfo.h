@@ -27,6 +27,8 @@ public:
 private:
   bool legalizeAnyExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
+  bool legalizeAShr(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
   bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

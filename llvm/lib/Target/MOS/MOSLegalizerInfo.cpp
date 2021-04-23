@@ -101,7 +101,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_UDIVREM).lower();
 
   getActionDefinitionsBuilder(G_ASHR)
-      .legalFor({{S8, S8}})
+      .customFor({{S8, S8}})
       .clampScalar(0, S8, S8)
       // Truncate the shift amount to s8 once the resulting 8-bit shift
       // operations have been produced.
@@ -193,6 +193,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     llvm_unreachable("Invalid opcode for custom legalization.");
   case G_ANYEXT:
     return legalizeAnyExt(Helper, MRI, MI);
+  case G_ASHR:
+    return legalizeAShr(Helper, MRI, MI);
   case G_BRCOND:
     return legalizeBrCond(Helper, MRI, MI);
   case G_ICMP:
@@ -227,6 +229,31 @@ bool MOSLegalizerInfo::legalizeAnyExt(LegalizerHelper &Helper,
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   Register Undef = Builder.buildUndef(LLT::scalar(8)).getReg(0);
   Builder.buildInsert(MI.getOperand(0), Undef, MI.getOperand(1), MOS::sublsb);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeAShr(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLT S8 = LLT::scalar(8);
+
+  auto ConstShiftAmt =
+      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!ConstShiftAmt)
+    report_fatal_error("Not yet implemented.");
+  if (ConstShiftAmt->Value.getZExtValue() != 7)
+    report_fatal_error("Not yet implemented.");
+
+
+  Register Sign =
+      Builder
+          .buildExtract(LLT::scalar(1), MI.getOperand(1).getReg(), MOS::submsb)
+          .getReg(0);
+  Register NegativeOne = Builder.buildConstant(S8, -1).getReg(0);
+  Register Zero = Builder.buildConstant(S8, 0).getReg(0);
+  Builder.buildSelect(MI.getOperand(0), Sign, NegativeOne, Zero);
   MI.eraseFromParent();
   return true;
 }
