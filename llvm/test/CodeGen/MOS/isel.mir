@@ -31,8 +31,8 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
-name: anyext
-# CHECK-LABEL: name: anyext
+name: anyext_8_1
+# CHECK-LABEL: name: anyext_8_1
 legalized: true
 regBankSelected: true
 body: |
@@ -41,8 +41,38 @@ body: |
     %1:any(s8) = G_ANYEXT %0
     RTS implicit %1
 # CHECK:      %2:anyi8 = IMPLICIT_DEF
-# CHECK:      %1:anyi8 = INSERT_SUBREG %2, %0, %subreg.sublsb
-# CHECK-NEXT: RTS
+# CHECK:      %3:anyi8 = INSERT_SUBREG %2, %0, %subreg.sublsb
+# CHECK-NEXT: RTS implicit %3
+...
+---
+name: anyext_16_8
+# CHECK-LABEL: name: anyext_16_8
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = COPY $a
+    %1:any(s16) = G_ANYEXT %0
+    RTS implicit %1
+# CHECK:      %2:imag16 = IMPLICIT_DEF
+# CHECK:      %3:imag16 = INSERT_SUBREG %2, %0, %subreg.sublo
+# CHECK-NEXT: RTS implicit %3
+...
+---
+name: anyext_16_1
+# CHECK-LABEL: name: anyext_16_1
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = COPY $c
+    %1:any(s16) = G_ANYEXT %0
+    RTS implicit %1
+# CHECK:      %2:anyi8 = IMPLICIT_DEF
+# CHECK:      %3:anyi8 = INSERT_SUBREG %2, %0, %subreg.sublsb
+# CHECK:      %4:imag16 = IMPLICIT_DEF
+# CHECK:      %5:imag16 = INSERT_SUBREG %4, %3, %subreg.sublo
+# CHECK-NEXT: RTS implicit %5
 ...
 ---
 name: br_imm
@@ -297,8 +327,8 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
-name: trunc
-# CHECK-LABEL: name: trunc
+name: trunc_8_1
+# CHECK-LABEL: name: trunc_8_1
 legalized: true
 regBankSelected: true
 body: |
@@ -306,9 +336,35 @@ body: |
     %0:any(s8) = COPY $a
     %1:any(s1) = G_TRUNC %0
     RTS implicit %1
-# CHECK:      %0:anyi8 = COPY $a
-# CHECK-NEXT: %1:anyi1 = COPY %0.sublsb
-# CHECK-NEXT: RTS
+# CHECK:      %2:anyi1 = COPY %0.sublsb
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: trunc_16_8
+# CHECK-LABEL: name: trunc_16_8
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s16) = COPY $rs1
+    %1:any(s8) = G_TRUNC %0
+    RTS implicit %1
+# CHECK:      %2:anyi8 = COPY %0.sublo
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: trunc_16_1
+# CHECK-LABEL: name: trunc_16_1
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s16) = COPY $rs1
+    %1:any(s1) = G_TRUNC %0
+    RTS implicit %1
+# CHECK:      %2:anyi8 = COPY %0.sublo
+# CHECK-NEXT: %3:anyi1 = COPY %2.sublsb
+# CHECK-NEXT: RTS implicit %3
 ...
 ---
 name: uadde_imm
