@@ -31,6 +31,20 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
+name: anyext
+# CHECK-LABEL: name: anyext
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = COPY $c
+    %1:any(s8) = G_ANYEXT %0
+    RTS implicit %1
+# CHECK:      %2:anyi8 = IMPLICIT_DEF
+# CHECK:      %1:anyi8 = INSERT_SUBREG %2, %0, %subreg.sublsb
+# CHECK-NEXT: RTS
+...
+---
 name: br_imm
 # CHECK-LABEL: name: br_imm
 legalized: true
@@ -307,6 +321,20 @@ body: |
 # CHECK-NEXT: %1:imag16 = COPY $rs1
 # CHECK-NEXT: %2:yc = LDImm 0
 # CHECK-NEXT: STYIndir %0, %1, %2
+# CHECK-NEXT: RTS
+...
+---
+name: trunc
+# CHECK-LABEL: name: trunc
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = COPY $a
+    %1:any(s1) = G_TRUNC %0
+    RTS implicit %1
+# CHECK:      %0:anyi8 = COPY $a
+# CHECK-NEXT: %1:anyi1 = COPY %0.sublsb
 # CHECK-NEXT: RTS
 ...
 ---
