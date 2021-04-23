@@ -191,8 +191,3 @@ def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 def Anyi1 : MOSReg1Class<(add Cc, Vc, ALSB, XLSB, YLSB,
                          (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)))>;
 def Anyi8 : MOSReg8Class<(add GPR, Imag8)>;
-
-// Any location where any supported size could be placed.
-def Anyc : MOSRegClass<[i1, i8, i16], 8, (add Anyi8, Imag16)> {
-  let isAllocatable = false;
-}

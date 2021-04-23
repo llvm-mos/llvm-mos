@@ -75,7 +75,7 @@ def AddrHistk : MOSPseudo {
 // Loads a value (1, 8, or 16 bits) from the soft stack. Eliminated once the
 // offset from the frame register is known.
 def LDstk : MOSPseudo {
-  dag OutOperandList = (outs Anyc:$dst);
+  dag OutOperandList = (outs unknown:$dst);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
   let Defs = [NZ];
@@ -86,7 +86,7 @@ def LDstk : MOSPseudo {
 // Stores a value (1, 8, or 16 bits) to the soft stack. Eliminated once the
 // offset from the frame register is known.
 def STstk : MOSPseudo {
-  dag InOperandList = (ins Anyc:$src, Imag16:$base, i16imm:$fi);
+  dag InOperandList = (ins unknown:$src, Imag16:$base, i16imm:$fi);
 
   // All possible instruction sequences clobber NZ.
   let Defs = [NZ];
