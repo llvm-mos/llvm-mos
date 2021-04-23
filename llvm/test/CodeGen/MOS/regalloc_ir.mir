@@ -31,7 +31,7 @@ body: |
 # CHECK-NEXT:   STabs_offset internal %1, %stack.0, 0 :: (store 1 into %stack.0)
 # CHECK-NEXT: }
 # CHECK-NEXT: JSR
-# CHECK-NEXT: BUNDLE implicit-def dead %2, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $a, implicit-def $alsb {
+# CHECK-NEXT: BUNDLE implicit-def dead %2, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $a, implicit-def $alsb, implicit-def $amsb {
 # CHECK-NEXT:   %2:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
 # CHECK-NEXT:   $a = COPY internal %2
 # CHECK-NEXT: }
@@ -55,7 +55,7 @@ body: |
 # CHECK-NEXT:   STabs_offset internal %1, %stack.0, 0 :: (store 1 into %stack.0)
 # CHECK-NEXT: }
 # CHECK-NEXT: JSR
-# CHECK-NEXT: BUNDLE implicit-def dead %2, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2, implicit-def $rc2lsb {
+# CHECK-NEXT: BUNDLE implicit-def dead %2, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2, implicit-def $rc2lsb, implicit-def $rc2msb {
 # CHECK-NEXT:   %2:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
 # CHECK-NEXT:   $rc2 = COPY internal %2
 # CHECK-NEXT: }
@@ -81,7 +81,7 @@ body: |
 # CHECK-NEXT:   STabs_offset internal %2, %stack.0, 1 :: (store 1 into %stack.0 + 1)
 # CHECK-NEXT: }
 # CHECK-NEXT: JSR
-# CHECK-NEXT: BUNDLE implicit-def dead %3, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2, implicit-def $rc2lsb, implicit-def dead %4, implicit-def $rc3, implicit-def $rc3lsb, implicit-def $rs1 {
+# CHECK-NEXT: BUNDLE implicit-def dead %3, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2, implicit-def $rc2lsb, implicit-def $rc2msb, implicit-def dead %4, implicit-def $rc3, implicit-def $rc3lsb, implicit-def $rc3msb, implicit-def $rs1 {
 # CHECK-NEXT:   %3:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
 # CHECK-NEXT:   $rc2 = COPY internal %3
 # CHECK-NEXT:   %4:gpr = LDabs_offset %stack.0, 1, implicit-def $nz :: (load 1 from %stack.0 + 1)
