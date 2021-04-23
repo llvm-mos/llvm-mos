@@ -1,5 +1,21 @@
 # RUN: llc -mtriple=mos -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s
 ---
+name: and
+# CHECK-LABEL: name: and
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = COPY $x
+    %1:any(s8) = COPY $a
+    %2:any(s8) = G_AND %0, %1
+    RTS implicit %2
+# CHECK:      %0:ac = COPY $x
+# CHECK-NEXT: %1:imag8 = COPY $a
+# CHECK-NEXT: %2:ac = ANDImag8 %0, %1
+# CHECK-NEXT: RTS
+...
+---
 name: asl
 # CHECK-LABEL: name: asl
 legalized: true

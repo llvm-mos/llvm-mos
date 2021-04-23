@@ -133,6 +133,7 @@ class MOSBitwiseInstr : MOSLogicalInstr {
   let isCommutable = true;
 }
 
+def ANDImag8 : MOSBitwiseInstr;
 def EORImag8 : MOSBitwiseInstr;
 def ORAImag8 : MOSBitwiseInstr;
 

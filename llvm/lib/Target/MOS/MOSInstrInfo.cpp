@@ -171,6 +171,7 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     CommutableOpIdx1 = 3;
     CommutableOpIdx2 = 4;
     break;
+  case MOS::ANDImag8:
   case MOS::EORImag8:
   case MOS::ORAImag8:
     CommutableOpIdx1 = 1;

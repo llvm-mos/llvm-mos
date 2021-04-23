@@ -174,6 +174,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
 
+  case MOS::G_AND:
   case MOS::G_EXTRACT:
   case MOS::G_IMPLICIT_DEF:
   case MOS::G_INSERT:
@@ -660,6 +661,9 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode.");
+  case MOS::G_AND:
+    Opcode = MOS::ANDImag8;
+    break;
   case MOS::G_EXTRACT:
     Opcode = MOS::EXTRACT_SUBREG;
     break;

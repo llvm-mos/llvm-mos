@@ -20,6 +20,24 @@ body: |
 # CHECK-NEXT: RTS implicit %0, implicit %3
 ...
 ---
+name: ANDImag8
+# CHECK-LABEL: name: ANDImag8
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    liveins: $c
+    %0:ac = IMPLICIT_DEF
+    %1:imag8 = IMPLICIT_DEF
+    %2:ac = ANDImag8 %0, killed %1, implicit-def $nz
+    RTS implicit %2
+# CHECK:      %0:imag8 = IMPLICIT_DEF
+# CHECK-NEXT: %1:ac = IMPLICIT_DEF
+# CHECK-NEXT: %2:ac = COPY %1
+# CHECK-NEXT: %2:ac = ANDImag8 %2, %0
+# CHECK-NEXT: RTS implicit %2
+...
+---
 name: EORImag8
 # CHECK-LABEL: name: EORImag8
 legalized: true
