@@ -132,19 +132,6 @@ body: |
 # CHECK: %0:anyi8 = COPY $a
 ...
 ---
-name: extract_subreg
-# CHECK-LABEL: name: extract_subreg
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    %0:any(s8) = COPY $a
-    %1:any(s1) = G_EXTRACT %0, %subreg.sublsb
-    RTS implicit %1
-# CHECK:      %1:anyi1 = EXTRACT_SUBREG %0, %subreg.sublsb
-# CHECK-NEXT: RTS
-...
----
 name: eor
 # CHECK-LABEL: name: eor
 legalized: true
@@ -159,20 +146,6 @@ body: |
 # CHECK-NEXT: %1:imag8 = COPY $a
 # CHECK-NEXT: %2:ac = EORImag8 %0, %1
 # CHECK-NEXT: RTS
-...
----
-name: insert
-# CHECK-LABEL: name: insert
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    liveins: $a
-    %0:any(s8) = COPY $a
-    %1:any(s1) = COPY $c
-    %2:any(s8) = G_INSERT %0, %1, %subreg.sublsb
-    RTS implicit %2
-# CHECK: %2:anyi8 = INSERT_SUBREG %0, %1, %subreg.sublsb
 ...
 ---
 name: ldcimm

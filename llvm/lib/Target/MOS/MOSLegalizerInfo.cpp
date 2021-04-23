@@ -77,9 +77,6 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Scalar Operations
 
-  getActionDefinitionsBuilder(G_INSERT).legalFor({S8, S1});
-  getActionDefinitionsBuilder(G_EXTRACT).legalFor({S1, S8});
-
   getActionDefinitionsBuilder(G_MERGE_VALUES)
       .legalForCartesianProduct({S16, P}, {S8});
 
@@ -234,13 +231,12 @@ bool MOSLegalizerInfo::legalizeAShr(LegalizerHelper &Helper,
   if (ConstShiftAmt->Value.getZExtValue() != 7)
     report_fatal_error("Not yet implemented.");
 
-
+  Register Zero = Builder.buildConstant(S8, 0).getReg(0);
   Register Sign =
       Builder
-          .buildExtract(LLT::scalar(1), MI.getOperand(1).getReg(), MOS::submsb)
+          .buildICmp(CmpInst::ICMP_SLT, LLT::scalar(1), MI.getOperand(1), Zero)
           .getReg(0);
   Register NegativeOne = Builder.buildConstant(S8, -1).getReg(0);
-  Register Zero = Builder.buildConstant(S8, 0).getReg(0);
   Builder.buildSelect(MI.getOperand(0), Sign, NegativeOne, Zero);
   MI.eraseFromParent();
   return true;
@@ -337,10 +333,16 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     MI.eraseFromParent();
     break;
   case CmpInst::ICMP_SLT: {
-    auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
-    Register N = Cmp.getReg(1);
-    Register V = Cmp.getReg(2);
-    Builder.buildXor(Dst, N, V);
+    // Subtractions of zero cannot overflow, so N is always correct.
+    if (mi_match(RHS, MRI, m_SpecificICst(0))) {
+      Builder.buildInstr(MOS::G_CMP, {S1, Dst /*=N*/, S1, S1}, {LHS, RHS});
+    } else {
+      // General subtractions can overflow; if so, N is flipped.
+      auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
+      Register N = Cmp.getReg(1);
+      Register V = Cmp.getReg(2);
+      Builder.buildXor(Dst, N, V);
+    }
     MI.eraseFromParent();
     break;
   }
@@ -616,7 +618,10 @@ bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
                                     MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   Register Zero = Builder.buildConstant(LLT::scalar(8), 0).getReg(0);
-  Builder.buildInsert(MI.getOperand(0), Zero, MI.getOperand(1), MOS::sublsb);
+  Builder
+      .buildInstr(MOS::INSERT_SUBREG, {MI.getOperand(0)},
+                  {Zero, MI.getOperand(1)})
+      .addImm(MOS::sublsb);
   MI.eraseFromParent();
   return true;
 }

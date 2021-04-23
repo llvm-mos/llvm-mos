@@ -136,10 +136,8 @@ static const TargetRegisterClass &getRegClassForType(LLT Ty) {
 
 bool MOSInstructionSelector::select(MachineInstr &MI) {
   if (!MI.isPreISelOpcode()) {
-    // Copies can have generic VReg dests, so they must be constrained to a
-    // register class.
-    if (MI.isCopy())
-      constrainGenericOp(MI);
+    // Ensure that target-independent pseudos like COPY have register classes.
+    constrainGenericOp(MI);
     return true;
   }
   if (selectImpl(MI, *CoverageInfo))
@@ -181,9 +179,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectUnMergeValues(MI);
 
   case MOS::G_AND:
-  case MOS::G_EXTRACT:
   case MOS::G_IMPLICIT_DEF:
-  case MOS::G_INSERT:
   case MOS::G_INTTOPTR:
   case MOS::G_FREEZE:
   case MOS::G_OR:
@@ -697,9 +693,6 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   case MOS::G_AND:
     Opcode = MOS::ANDImag8;
     break;
-  case MOS::G_EXTRACT:
-    Opcode = MOS::EXTRACT_SUBREG;
-    break;
   case MOS::G_FREEZE:
   case MOS::G_INTTOPTR:
   case MOS::G_PTRTOINT:
@@ -707,9 +700,6 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
     break;
   case MOS::G_IMPLICIT_DEF:
     Opcode = MOS::IMPLICIT_DEF;
-    break;
-  case MOS::G_INSERT:
-    Opcode = MOS::INSERT_SUBREG;
     break;
   case MOS::G_OR:
     Opcode = MOS::ORAImag8;
