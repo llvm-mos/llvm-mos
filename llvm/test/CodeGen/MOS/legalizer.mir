@@ -1,5 +1,17 @@
 # RUN: llc -mtriple=mos -run-pass=legalizer -verify-machineinstrs -o - %s | FileCheck %s
 ---
+name: anyext
+# CHECK-LABEL: name: anyext
+body: |
+  bb.0.entry:
+    %0:_(s1) = COPY $c
+    %1:_(s8) = G_ANYEXT %0
+    RTS implicit %1
+# CHECK:      %2:_(s8) = G_IMPLICIT_DEF
+# Note: sublsb == 4
+# CHECK-NEXT: %1:_(s8) = G_INSERT %2, %0(s1), 4
+...
+---
 name: brcond
 # CHECK-LABEL: name: brcond
 body: |
@@ -144,10 +156,10 @@ body: |
     %2:_(s1) = G_ICMP intpred(sgt), %0, %1
     RTS implicit %2
 # CHECK:      %3:_(s1), %4:_, %5:_, %6:_ = G_CMP %1(s8), %0
-# CHECK-NEXT: %7:_(s8) = G_ANYEXT %4
-# CHECK-NEXT: %8:_(s8) = G_ANYEXT %5
+# CHECK:      %7:_(s8) = {{.*}} %4
+# CHECK-NEXT: %8:_(s8) = {{.*}} %5
 # CHECK-NEXT: %9:_(s8) = G_XOR %7, %8
-# CHECK-NEXT: %2:_(s1) = G_TRUNC %9
+# CHECK-NEXT: %2:_(s1) = {{.*}} %9
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
@@ -160,10 +172,10 @@ body: |
     %2:_(s1) = G_ICMP intpred(sge), %0, %1
     RTS implicit %2
 # CHECK:      %6:_(s1), %7:_, %8:_, %9:_ = G_CMP %0(s8), %1
-# CHECK-NEXT: %10:_(s8) = G_ANYEXT %7
-# CHECK-NEXT: %11:_(s8) = G_ANYEXT %8
+# CHECK:      %10:_(s8) = {{.*}} %7
+# CHECK-NEXT: %11:_(s8) = {{.*}} %8
 # CHECK-NEXT: %12:_(s8) = G_XOR %10, %11
-# CHECK-NEXT: %3:_(s1) = G_TRUNC %12
+# CHECK-NEXT: %3:_(s1) = {{.*}} %12
 # CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
 # CHECK-NEXT: %5:_(s1) = G_CONSTANT i1 false
 # CHECK-NEXT: %2:_(s1) = G_SELECT %3(s1), %5, %4
@@ -179,10 +191,10 @@ body: |
     %2:_(s1) = G_ICMP intpred(slt), %0, %1
     RTS implicit %2
 # CHECK:      %3:_(s1), %4:_, %5:_, %6:_ = G_CMP %0(s8), %1
-# CHECK-NEXT: %7:_(s8) = G_ANYEXT %4
-# CHECK-NEXT: %8:_(s8) = G_ANYEXT %5
+# CHECK:      %7:_(s8) = {{.*}} %4
+# CHECK-NEXT: %8:_(s8) = {{.*}} %5
 # CHECK-NEXT: %9:_(s8) = G_XOR %7, %8
-# CHECK-NEXT: %2:_(s1) = G_TRUNC %9
+# CHECK-NEXT: %2:_(s1) = {{.*}} %9
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
@@ -195,10 +207,10 @@ body: |
     %2:_(s1) = G_ICMP intpred(sle), %0, %1
     RTS implicit %2
 # CHECK:      %6:_(s1), %7:_, %8:_, %9:_ = G_CMP %1(s8), %0
-# CHECK-NEXT: %10:_(s8) = G_ANYEXT %7
-# CHECK-NEXT: %11:_(s8) = G_ANYEXT %8
+# CHECK:      %10:_(s8) = {{.*}} %7
+# CHECK-NEXT: %11:_(s8) = {{.*}} %8
 # CHECK-NEXT: %12:_(s8) = G_XOR %10, %11
-# CHECK-NEXT: %3:_(s1) = G_TRUNC %12
+# CHECK-NEXT: %3:_(s1) = {{.*}} %12
 # CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
 # CHECK-NEXT: %5:_(s1) = G_CONSTANT i1 false
 # CHECK-NEXT: %2:_(s1) = G_SELECT %3(s1), %5, %4
@@ -311,6 +323,17 @@ body: |
 # CHECK-NEXT: %5:_(p0) = G_PTR_ADD %0, %7(s8)
 # CHECK-NEXT: G_STORE %4(s8), %5(p0)
 # CHECK-NEXT: RTS
+...
+---
+name: trunc
+# CHECK-LABEL: name: trunc
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s1) = G_TRUNC %0
+    RTS implicit %1
+# Note: sublsb == 4
+# CHECK: %1:_(s1) = G_EXTRACT %0(s8), 4
 ...
 ---
 name: uaddo

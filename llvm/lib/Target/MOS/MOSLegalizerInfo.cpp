@@ -62,13 +62,11 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Extension and Truncation
 
-  getActionDefinitionsBuilder(G_ANYEXT).legalFor({S8, S1}).maxScalar(1, S8);
+  getActionDefinitionsBuilder({G_ANYEXT, G_ZEXT})
+      .customFor({S8, S1})
+      .maxScalar(0, S8);
 
-  getActionDefinitionsBuilder(G_ZEXT)
-      .customFor({{S8, S1}})
-      .clampScalar(0, S8, S8);
-
-  getActionDefinitionsBuilder(G_TRUNC).legalFor({S1, S8}).maxScalar(1, S8);
+  getActionDefinitionsBuilder(G_TRUNC).customFor({S1, S8}).maxScalar(1, S8);
 
   // Type Conversions
 
@@ -78,6 +76,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // Scalar Operations
 
   getActionDefinitionsBuilder(G_INSERT).legalFor({S8, S1});
+  getActionDefinitionsBuilder(G_EXTRACT).legalFor({S1, S8});
 
   getActionDefinitionsBuilder(G_MERGE_VALUES)
       .legalForCartesianProduct({S16, P}, {S8});
@@ -192,6 +191,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
+  case G_ANYEXT:
+    return legalizeAnyExt(Helper, MRI, MI);
   case G_BRCOND:
     return legalizeBrCond(Helper, MRI, MI);
   case G_ICMP:
@@ -204,6 +205,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeShl(Helper, MRI, MI);
   case G_STORE:
     return legalizeStore(Helper, MRI, MI);
+  case G_TRUNC:
+    return legalizeTrunc(Helper, MRI, MI);
   case G_UADDO:
   case G_USUBO:
     return legalizeUAddSubO(Helper, MRI, MI);
@@ -216,6 +219,16 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_ZEXT:
     return legalizeZExt(Helper, MRI, MI);
   }
+}
+
+bool MOSLegalizerInfo::legalizeAnyExt(LegalizerHelper &Helper,
+                                      MachineRegisterInfo &MRI,
+                                      MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Register Undef = Builder.buildUndef(LLT::scalar(8)).getReg(0);
+  Builder.buildInsert(MI.getOperand(0), Undef, MI.getOperand(1), MOS::sublsb);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool MOSLegalizerInfo::legalizeBrCond(LegalizerHelper &Helper,
@@ -453,6 +466,15 @@ bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
   Helper.Observer.changingInstr(MI);
   MI.getOperand(0).setReg(Tmp);
   Helper.Observer.changedInstr(MI);
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeTrunc(LegalizerHelper &Helper,
+                                     MachineRegisterInfo &MRI,
+                                     MachineInstr &MI) const {
+  Helper.Observer.changingInstr(MI);
+  MI.setDesc(Helper.MIRBuilder.getTII().get(G_EXTRACT));
+  MI.addOperand(MachineOperand::CreateImm(MOS::sublsb));
   return true;
 }
 

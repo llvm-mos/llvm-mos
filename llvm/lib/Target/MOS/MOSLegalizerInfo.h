@@ -25,6 +25,8 @@ public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
 private:
+  bool legalizeAnyExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
   bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
@@ -36,6 +38,8 @@ private:
   bool legalizeShl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
   bool legalizeStore(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                     MachineInstr &MI) const;
+  bool legalizeTrunc(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;
   bool legalizeUAddSubO(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                         MachineInstr &MI) const;

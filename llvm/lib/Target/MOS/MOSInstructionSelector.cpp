@@ -61,7 +61,6 @@ private:
   const MOSRegisterBankInfo &RBI;
 
   bool selectAddSub(MachineInstr &MI);
-  bool selectAnyExt(MachineInstr &MI);
   bool selectBrCondImm(MachineInstr &MI);
   bool selectCmp(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
@@ -71,7 +70,6 @@ private:
   bool selectSelect(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectPtrAdd(MachineInstr &MI);
-  bool selectTrunc(MachineInstr &MI);
   bool selectUAddSubE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
 
@@ -151,8 +149,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_ADD:
   case MOS::G_SUB:
     return selectAddSub(MI);
-  case MOS::G_ANYEXT:
-    return selectAnyExt(MI);
   case MOS::G_BRCOND_IMM:
     return selectBrCondImm(MI);
   case MOS::G_CMP:
@@ -172,8 +168,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectMergeValues(MI);
   case MOS::G_PTR_ADD:
     return selectPtrAdd(MI);
-  case MOS::G_TRUNC:
-    return selectTrunc(MI);
   case MOS::G_UADDE:
   case MOS::G_USUBE:
     return selectUAddSubE(MI);
@@ -220,26 +214,6 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   MI.eraseFromParent();
   if (!selectUAddSubE(*Instr))
     return false;
-  return true;
-}
-
-// Select i8 = G_ANYEXT i1.
-bool MOSInstructionSelector::selectAnyExt(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-  LLT S8 = LLT::scalar(8);
-  LLT S1 = LLT::scalar(1);
-  assert(Builder.getMRI()->getType(MI.getOperand(0).getReg()) == S8);
-  assert(Builder.getMRI()->getType(MI.getOperand(1).getReg()) == S1);
-
-  Register Undef =
-      Builder.buildInstr(MOS::IMPLICIT_DEF, {&MOS::Anyi8RegClass}, {})
-          .getReg(0);
-  auto Insert = Builder
-      .buildInstr(MOS::INSERT_SUBREG, {MI.getOperand(0)},
-                  {Undef, MI.getOperand(1)})
-      .addImm(MOS::sublsb);
-  constrainGenericOp(*Insert);
-  MI.eraseFromParent();
   return true;
 }
 
@@ -589,13 +563,6 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
 
   composePtr(Builder, Dst, AddLo.getReg(0), AddHi.getReg(0));
   MI.eraseFromParent();
-  return true;
-}
-
-bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
-  MI.setDesc(TII.get(MOS::COPY));
-  MI.getOperand(1).setSubReg(MOS::sublsb);
-  constrainGenericOp(MI);
   return true;
 }
 
