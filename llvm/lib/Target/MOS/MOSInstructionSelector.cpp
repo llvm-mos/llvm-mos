@@ -584,27 +584,20 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
 
-  auto ConstOffset =
-      getConstantVRegValWithLookThrough(Offset, *Builder.getMRI());
-  // All legal G_PTR_ADDs have a constant 8-bit offset, but the address
-  // still may need to be materialized if used outside of a G_LOAD or
-  // G_STORE context. Reaching this function indicates that this is the
-  // case, since otherwise the G_PTR_ADD would have been removed already,
-  // since all uses have already been selected.
-  assert(ConstOffset);
-
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
 
   MachineInstrSpan MIS(MI, MI.getParent());
 
+  auto Unmerge = Builder.buildUnmerge(S8, Base);
+  Register BaseLo = Unmerge.getReg(0), BaseHi = Unmerge.getReg(1);
+
   auto AddLo =
-      Builder.buildUAdde(S8, S1, Base, ConstOffset->Value.getSExtValue(),
-                         Builder.buildConstant(S1, 0));
+      Builder.buildUAdde(S8, S1, BaseLo, Offset, Builder.buildConstant(S1, 0));
   Register SumLo = AddLo.getReg(0);
   Register CarryLo = AddLo.getReg(1);
   auto AddHi =
-      Builder.buildUAdde(S8, S1, Base, Builder.buildConstant(S8, 0), CarryLo);
+      Builder.buildUAdde(S8, S1, BaseHi, Builder.buildConstant(S8, 0), CarryLo);
   Register SumHi = AddHi.getReg(0);
   composePtr(Builder, Dst, SumLo, SumHi);
   MI.eraseFromParent();
