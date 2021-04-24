@@ -215,15 +215,12 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
 
   LLT S1 = LLT::scalar(1);
 
-  Register CarryIn =
-      Builder.buildInstr(MOS::LDCImm, {S1}, {CarryInVal}).getReg(0);
-  auto Instr =
-      Builder.buildInstr(Opcode, {MI.getOperand(0), S1},
-                         {MI.getOperand(1), MI.getOperand(2), CarryIn});
+  MachineInstrSpan MIS(MI, MI.getParent());
+  auto CarryIn = Builder.buildConstant(S1, CarryInVal);
+  Builder.buildInstr(Opcode, {MI.getOperand(0), S1},
+                     {MI.getOperand(1), MI.getOperand(2), CarryIn});
   MI.eraseFromParent();
-  if (!selectUAddSubE(*Instr))
-    return false;
-  return true;
+  return selectAll(MIS);
 }
 
 bool MOSInstructionSelector::selectAnyExt(MachineInstr &MI) {
@@ -600,26 +597,19 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
 
-  Register Carry =
-      Builder.buildInstr(MOS::LDCImm, {S1}, {UINT64_C(0)}).getReg(0);
+  MachineInstrSpan MIS(MI, MI.getParent());
 
   auto AddLo =
-      Builder.buildInstr(MOS::ADCImm, {S8, S1, S1},
-                         {Base, ConstOffset->Value.getSExtValue(), Carry});
-  AddLo->getOperand(3).setSubReg(MOS::sublo);
-  Carry = AddLo.getReg(1);
-  if (!constrainSelectedInstRegOperands(*AddLo, TII, TRI, RBI))
-    return false;
-
+      Builder.buildUAdde(S8, S1, Base, ConstOffset->Value.getSExtValue(),
+                         Builder.buildConstant(S1, 0));
+  Register SumLo = AddLo.getReg(0);
+  Register CarryLo = AddLo.getReg(1);
   auto AddHi =
-      Builder.buildInstr(MOS::ADCImm, {S8, S1, S1}, {Base, INT64_C(0), Carry});
-  AddHi->getOperand(3).setSubReg(MOS::subhi);
-  if (!constrainSelectedInstRegOperands(*AddHi, TII, TRI, RBI))
-    return false;
-
-  composePtr(Builder, Dst, AddLo.getReg(0), AddHi.getReg(0));
+      Builder.buildUAdde(S8, S1, Base, Builder.buildConstant(S8, 0), CarryLo);
+  Register SumHi = AddHi.getReg(0);
+  composePtr(Builder, Dst, SumLo, SumHi);
   MI.eraseFromParent();
-  return true;
+  return selectAll(MIS);
 }
 
 bool MOSInstructionSelector::selectShlE(MachineInstr &MI) {
@@ -823,7 +813,7 @@ void MOSInstructionSelector::constrainOperandRegClass(
 }
 
 bool MOSInstructionSelector::selectAll(MachineInstrSpan MIS) {
-  MachineRegisterInfo &MRI = MIS.getInitial()->getMF()->getRegInfo();
+  MachineRegisterInfo &MRI = MIS.begin()->getMF()->getRegInfo();
 
   // Select instructions in reverse block order. We permit erasing so have
   // to resort to manually iterating and recognizing the begin (rend) case.
