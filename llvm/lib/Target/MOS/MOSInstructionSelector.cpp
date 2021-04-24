@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -85,6 +86,10 @@ private:
 
   void constrainOperandRegClass(MachineOperand &RegMO,
                                 const TargetRegisterClass &RegClass);
+
+  // Select all instructions in a given span, recursively. Allows selecting an
+  // instruction sequence by reducing it to a more easily selectable sequence.
+  bool selectAll(MachineInstrSpan MIS);
 
   /// tblgen-erated 'select' implementation, used as the initial selector for
   /// the patterns that don't require complex C++.
@@ -320,6 +325,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   int64_t FlagVal = MI.getOperand(2).getImm();
 
   LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
 
   MachineIRBuilder Builder(MI);
 
@@ -327,15 +333,15 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   int64_t RHS;
   Register Flag;
   if (!mi_match(CondReg, MRI, m_CmpImm(LHS, RHS, Flag))) {
-    // Convert to a case that we can directly branch on by issuing a comparison
-    // with zero.
-    auto Compare = Builder.buildInstr(MOS::CMPImm, {S1}, {CondReg, INT64_C(0)});
-    if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
-      return false;
-    // CondReg == 0 -> Z == 1; CondReg == 1 -> Z == 0
-    Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(MOS::Z).addImm(!FlagVal);
-    MI.eraseFromParent();
-    return true;
+    MachineInstrSpan MIS(MI, MI.getParent());
+    auto CondExt = Builder.buildAnyExt(S8, CondReg);
+    auto Zero = Builder.buildConstant(S8, 0);
+    Register Z =
+        Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1 /*=Z*/}, {CondExt, Zero})
+            .getReg(3);
+    MI.getOperand(0).setReg(Z);
+    MI.getOperand(2).setImm(!FlagVal);
+    return selectAll(MIS);
   }
 
   auto Compare = Builder.buildInstr(MOS::CMPImm, {S1}, {LHS, RHS});
@@ -616,7 +622,6 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
   return true;
 }
 
-
 bool MOSInstructionSelector::selectShlE(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register CarryOut = MI.getOperand(1).getReg();
@@ -815,6 +820,35 @@ void MOSInstructionSelector::constrainOperandRegClass(
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   RegMO.setReg(llvm::constrainOperandRegClass(*MF, TRI, MRI, TII, RBI, MI,
                                               RegClass, RegMO));
+}
+
+bool MOSInstructionSelector::selectAll(MachineInstrSpan MIS) {
+  MachineRegisterInfo &MRI = MIS.getInitial()->getMF()->getRegInfo();
+
+  // Select instructions in reverse block order. We permit erasing so have
+  // to resort to manually iterating and recognizing the begin (rend) case.
+  bool ReachedBegin = false;
+  for (auto MII = std::prev(MIS.end()), Begin = MIS.begin(); !ReachedBegin;) {
+    // Select this instruction.
+    MachineInstr &MI = *MII;
+
+    // And have our iterator point to the next instruction, if there is one.
+    if (MII == Begin)
+      ReachedBegin = true;
+    else
+      --MII;
+
+    // We could have folded this instruction away already, making it dead.
+    // If so, erase it.
+    if (isTriviallyDead(MI, MRI)) {
+      MI.eraseFromParentAndMarkDBGValuesForRemoval();
+      continue;
+    }
+
+    if (!select(MI))
+      return false;
+  }
+  return true;
 }
 
 InstructionSelector *llvm::createMOSInstructionSelector(

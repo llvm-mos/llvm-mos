@@ -84,7 +84,10 @@ body: |
     %0:any(s1) = COPY $c
     G_BRCOND_IMM %0, %bb.0, 0
     RTS
-# CHECK:      %1:cc = CMPImm %0, 0
+# CHECK:      %8:anyi8 = IMPLICIT_DEF
+# CHECK-NEXT: %9:anyi8 = INSERT_SUBREG %8, %0, %subreg.sublsb
+# CHECK-NEXT: %1:gpr = COPY %9
+# CHECK-NEXT: %7:cc = CMPImm %1, 0
 # CHECK-NEXT: BR %bb.0, $z, 1
 ...
 ---
