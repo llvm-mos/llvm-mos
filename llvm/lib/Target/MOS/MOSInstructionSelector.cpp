@@ -355,8 +355,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
-  Register C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(1)})
-                   .getReg(0);
+  auto C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(1)});
   auto SBC =
       Builder.buildInstr(MOS::SBCNZImag8,
                          {LLT::scalar(8), MI.getOperand(0), MI.getOperand(1),

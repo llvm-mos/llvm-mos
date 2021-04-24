@@ -233,13 +233,11 @@ bool MOSLegalizerInfo::legalizeAShr(LegalizerHelper &Helper,
   if (ConstShiftAmt->Value.getZExtValue() != 7)
     report_fatal_error("Not yet implemented.");
 
-  Register Zero = Builder.buildConstant(S8, 0).getReg(0);
-  Register Sign =
-      Builder
-          .buildICmp(CmpInst::ICMP_SLT, LLT::scalar(1), MI.getOperand(1), Zero)
-          .getReg(0);
-  Register NegativeOne = Builder.buildConstant(S8, -1).getReg(0);
-  Builder.buildSelect(MI.getOperand(0), Sign, NegativeOne, Zero);
+  auto Zero = Builder.buildConstant(S8, 0);
+  auto Sign = Builder.buildICmp(CmpInst::ICMP_SLT, LLT::scalar(1),
+                                MI.getOperand(1), Zero);
+  Builder.buildSelect(MI.getOperand(0), Sign, Builder.buildConstant(S8, -1),
+                      Zero);
   MI.eraseFromParent();
   return true;
 }
@@ -427,8 +425,8 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
 
   // Generalized pointer additions must be lowered to 16-bit integer arithmetic.
   LLT S16 = LLT::scalar(16);
-  Register PtrVal = Builder.buildPtrToInt(S16, MI.getOperand(1)).getReg(0);
-  Register Sum = Builder.buildAdd(S16, PtrVal, MI.getOperand(2)).getReg(0);
+  auto PtrVal = Builder.buildPtrToInt(S16, MI.getOperand(1));
+  auto Sum = Builder.buildAdd(S16, PtrVal, MI.getOperand(2));
   Builder.buildIntToPtr(MI.getOperand(0), Sum);
   MI.eraseFromParent();
   return true;
@@ -508,10 +506,12 @@ bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
     break;
   }
 
+  LLT S1 = LLT::scalar(1);
+
   MachineIRBuilder &Builder = Helper.MIRBuilder;
-  auto CarryIn = Builder.buildConstant(LLT::scalar(1), CarryInVal).getReg(0);
   Builder.buildInstr(Opcode, {MI.getOperand(0), MI.getOperand(1)},
-                     {MI.getOperand(2), MI.getOperand(3), CarryIn});
+                     {MI.getOperand(2), MI.getOperand(3),
+                      Builder.buildConstant(S1, CarryInVal)});
   MI.eraseFromParent();
   return true;
 }
@@ -527,6 +527,7 @@ bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
   Register VaListPtr = MI.getOperand(1).getReg();
 
   LLT P = LLT::pointer(0, 16);
+  LLT S16 = LLT::scalar(16);
 
   // Load the current VAArg address out of the VAList.
   MachineMemOperand *AddrLoadMMO = MF.getMachineMemOperand(
@@ -543,8 +544,8 @@ bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
   Builder.buildLoad(Dst, Addr, *ValueMMO);
 
   // Increment the current VAArg address.
-  Register SizeReg = Builder.buildConstant(LLT::scalar(16), Size).getReg(0);
-  Register NextAddr = Builder.buildPtrAdd(P, Addr, SizeReg).getReg(0);
+  auto NextAddr =
+      Builder.buildPtrAdd(P, Addr, Builder.buildConstant(S16, Size));
   MachineMemOperand *AddrStoreMMO =
       MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
                               MachineMemOperand::MOStore, 2, Align());
@@ -557,14 +558,14 @@ bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
                                        MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const {
+  LLT P = LLT::pointer(0, 16);
+
   // Store the address of the fake varargs frame index into the valist.
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   auto *FuncInfo = Builder.getMF().getInfo<MOSFunctionInfo>();
-  Register Addr = Builder
-                      .buildFrameIndex(LLT::pointer(0, 16),
-                                       FuncInfo->getVarArgsStackIndex())
-                      .getReg(0);
-  Builder.buildStore(Addr, MI.getOperand(0), **MI.memoperands_begin());
+  Builder.buildStore(
+      Builder.buildFrameIndex(P, FuncInfo->getVarArgsStackIndex()),
+      MI.getOperand(0), **MI.memoperands_begin());
   MI.eraseFromParent();
   return true;
 }
@@ -618,11 +619,11 @@ bool MOSLegalizerInfo::legalizeXOR(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
-  Register Zero = Builder.buildConstant(LLT::scalar(8), 0).getReg(0);
   Builder
       .buildInstr(MOS::INSERT_SUBREG, {MI.getOperand(0)},
-                  {Zero, MI.getOperand(1)})
+                  {Builder.buildConstant(S8, 0), MI.getOperand(1)})
       .addImm(MOS::sublsb);
   MI.eraseFromParent();
   return true;
