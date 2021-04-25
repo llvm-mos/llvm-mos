@@ -109,7 +109,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .clampScalar(1, S8, S8);
   getActionDefinitionsBuilder(G_SHL).customFor({S8, S16, S32, S64});
 
-  getActionDefinitionsBuilder(G_ROTL).legalFor({S8});
+  getActionDefinitionsBuilder(G_ROTL).customFor({S8});
   getActionDefinitionsBuilder(G_ROTR).customFor({S8});
 
   // FIXME: The default narrowing of G_ICMP is terrible.
@@ -205,6 +205,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizePtrAdd(Helper, MRI, MI);
   case G_SHL:
     return legalizeShl(Helper, MRI, MI);
+  case G_ROTL:
+    return legalizeRotl(Helper, MRI, MI);
   case G_ROTR:
     return legalizeRotr(Helper, MRI, MI);
   case G_STORE:
@@ -432,6 +434,24 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   auto Sum = Builder.buildAdd(S16, PtrVal, MI.getOperand(2));
   Builder.buildIntToPtr(MI.getOperand(0), Sum);
   MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeRotl(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLT S8 = LLT::scalar(8);
+
+  Register RotateAmt = MI.getOperand(2).getReg();
+  if (!mi_match(RotateAmt, MRI, m_SpecificICst(7)))
+    report_fatal_error("Not yet implemented.");
+
+  Register One = Builder.buildConstant(S8, 1).getReg(0);
+  Helper.Observer.changingInstr(MI);
+  MI.setDesc(Builder.getTII().get(G_ROTR));
+  MI.getOperand(2).setReg(One);
+  Helper.Observer.changedInstr(MI);
   return true;
 }
 
