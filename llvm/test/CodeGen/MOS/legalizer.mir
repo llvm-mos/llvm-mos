@@ -297,8 +297,22 @@ body: |
 # CHECK-NEXT: RTS implicit %2
 ...
 ---
-name: shl1
-# CHECK-LABEL: name: shl1
+name: rotr_1
+# CHECK-LABEL: name: rotr_1
+body: |
+  bb.0.entry:
+    %0:_(s8) = COPY $a
+    %1:_(s8) = G_CONSTANT i8 1
+    %2:_(s8) = G_ROTR %0, %1
+    RTS implicit %2
+# CHECK:      %3:_(s1) = G_IMPLICIT_DEF
+# CHECK-NEXT: %4:_(s8), %5:_(s1) = G_LSHRE %0, %3
+# CHECK-NEXT: %2:_(s8), %6:_(s1) = G_LSHRE %0, %5
+# CHECK-NEXT: RTS
+...
+---
+name: shl_1
+# CHECK-LABEL: name: shl_1
 body: |
   bb.0.entry:
     %0:_(s8) = COPY $a

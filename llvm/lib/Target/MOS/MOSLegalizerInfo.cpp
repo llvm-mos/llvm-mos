@@ -110,6 +110,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_SHL).customFor({S8, S16, S32, S64});
 
   getActionDefinitionsBuilder(G_ROTL).legalFor({S8});
+  getActionDefinitionsBuilder(G_ROTR).customFor({S8});
 
   // FIXME: The default narrowing of G_ICMP is terrible.
   getActionDefinitionsBuilder(G_ICMP)
@@ -204,6 +205,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizePtrAdd(Helper, MRI, MI);
   case G_SHL:
     return legalizeShl(Helper, MRI, MI);
+  case G_ROTR:
+    return legalizeRotr(Helper, MRI, MI);
   case G_STORE:
     return legalizeStore(Helper, MRI, MI);
   case G_UADDO:
@@ -428,6 +431,28 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   auto PtrVal = Builder.buildPtrToInt(S16, MI.getOperand(1));
   auto Sum = Builder.buildAdd(S16, PtrVal, MI.getOperand(2));
   Builder.buildIntToPtr(MI.getOperand(0), Sum);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeRotr(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register RotateAmt = MI.getOperand(2).getReg();
+
+  if (!mi_match(RotateAmt, MRI, m_SpecificICst(1)))
+    report_fatal_error("Not yet implemented.");
+
+  Register LSB =
+      Builder.buildInstr(MOS::G_LSHRE, {S8, S1}, {Src, Builder.buildUndef(S1)})
+          .getReg(1);
+  Builder.buildInstr(MOS::G_LSHRE, {Dst, S1}, {Src, LSB});
   MI.eraseFromParent();
   return true;
 }
