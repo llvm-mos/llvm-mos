@@ -146,16 +146,23 @@ class MOSShiftRotate : MOSLogicalInstr {
   let Defs = [NZ];
 }
 
-// ASL A, ASL zp
-def ASL : MOSShiftRotate {
+class MOSShift : MOSShiftRotate {
   dag InOperandList = (ins AImag8:$src);
   let Constraints = "$dst = $src";
 }
-// ROL A, ROL zp
-def ROL : MOSShiftRotate {
+
+class MOSRotate : MOSShiftRotate {
   dag InOperandList = (ins AImag8:$src, Cc:$carryin);
   let Constraints = "$dst = $src, $carryout = $carryin";
 }
+
+// ASL A, ASL zp
+def ASL : MOSShift;
+def LSR : MOSShift;
+
+// ROL A, ROL zp
+def ROL : MOSRotate;
+def ROR : MOSRotate;
 
 //===---------------------------------------------------------------------===//
 // Increment/Decrement Instructions

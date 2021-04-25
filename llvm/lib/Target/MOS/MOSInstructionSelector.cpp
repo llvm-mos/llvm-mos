@@ -68,7 +68,7 @@ private:
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
   bool selectLoadStore(MachineInstr &MI);
-  bool selectShlE(MachineInstr &MI);
+  bool selectLshrShlE(MachineInstr &MI);
   bool selectSelect(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectPtrAdd(MachineInstr &MI);
@@ -167,8 +167,9 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_LOAD:
   case MOS::G_STORE:
     return selectLoadStore(MI);
+  case MOS::G_LSHRE:
   case MOS::G_SHLE:
-    return selectShlE(MI);
+    return selectLshrShlE(MI);
   case MOS::G_SELECT:
     return selectSelect(MI);
   case MOS::G_MERGE_VALUES:
@@ -604,21 +605,34 @@ bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
   return selectAll(MIS);
 }
 
-bool MOSInstructionSelector::selectShlE(MachineInstr &MI) {
+bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register CarryOut = MI.getOperand(1).getReg();
   Register Src = MI.getOperand(2).getReg();
   Register CarryIn = MI.getOperand(3).getReg();
 
+  unsigned ShiftOpcode, RotateOpcode;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode.");
+  case MOS::G_SHLE:
+    ShiftOpcode = MOS::ASL;
+    RotateOpcode = MOS::ROL;
+    break;
+  case MOS::G_LSHRE:
+    ShiftOpcode = MOS::LSR;
+    RotateOpcode = MOS::ROR;
+    break;
+  }
+
   MachineIRBuilder Builder(MI);
-  auto ConstCarryIn =
-      getConstantVRegValWithLookThrough(CarryIn, *Builder.getMRI());
-  if (ConstCarryIn && ConstCarryIn->Value.isNullValue()) {
-    auto Asl = Builder.buildInstr(MOS::ASL, {Dst, CarryOut}, {Src});
+  if (mi_match(CarryIn, *Builder.getMRI(), m_SpecificICst(0))) {
+    auto Asl = Builder.buildInstr(ShiftOpcode, {Dst, CarryOut}, {Src});
     if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
       return false;
   } else {
-    auto Rol = Builder.buildInstr(MOS::ROL, {Dst, CarryOut}, {Src, CarryIn});
+    auto Rol =
+        Builder.buildInstr(RotateOpcode, {Dst, CarryOut}, {Src, CarryIn});
     if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
       return false;
   }

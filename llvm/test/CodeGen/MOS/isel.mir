@@ -235,6 +235,21 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
+name: lsr
+# CHECK-LABEL: name: lsr
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s8) = COPY $a
+    %1:any(s1) = G_CONSTANT i1 0
+    %2:any(s8), %3:any(s1) = G_LSHRE %0, %1
+    RTS implicit %2, implicit %3
+# CHECK:      %0:aimag8 = COPY $a
+# CHECK-NEXT: %2:aimag8, %3:cc = LSR %0
+# CHECK-NEXT: RTS
+...
+---
 name: ora
 # CHECK-LABEL: name: ora
 legalized: true
@@ -288,19 +303,19 @@ body: |
 # CHECK-NEXT: RTS
 ...
 ---
-name: rol_1
-# CHECK-LABEL: name: rol_1
+name: ror
+# CHECK-LABEL: name: ror
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
     %0:any(s8) = COPY $a
-    %1:any(s1) = G_CONSTANT i1 1
-    %2:any(s8), %3:any(s1) = G_SHLE %0, %1
+    %1:any(s1) = COPY $v
+    %2:any(s8), %3:any(s1) = G_LSHRE %0, %1
     RTS implicit %2, implicit %3
 # CHECK:      %0:aimag8 = COPY $a
-# CHECK-NEXT: %1:cc = LDCImm -1
-# CHECK-NEXT: %2:aimag8, %3:cc = ROL %0, %1
+# CHECK-NEXT: %1:cc = COPY $v
+# CHECK-NEXT: %2:aimag8, %3:cc = ROR %0, %1
 # CHECK-NEXT: RTS
 ...
 ---
