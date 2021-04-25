@@ -189,8 +189,6 @@ class MOSImmediateLoad<RegisterClass dst, Operand val> : MOSLogicalInstr {
   dag OutOperandList = (outs dst:$dst);
   dag InOperandList = (ins val:$val);
 
-  let Pattern = [(set dst:$dst, imm:$val)];
-
   let isAsCheapAsAMove = true;
   let isMoveImm = true;
 }

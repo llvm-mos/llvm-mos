@@ -65,6 +65,7 @@ private:
   bool selectAnyExt(MachineInstr &MI);
   bool selectBrCondImm(MachineInstr &MI);
   bool selectCmp(MachineInstr &MI);
+  bool selectConstant(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
   bool selectLoadStore(MachineInstr &MI);
@@ -158,6 +159,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectAnyExt(MI);
   case MOS::G_BRCOND_IMM:
     return selectBrCondImm(MI);
+  case MOS::G_CONSTANT:
+    return selectConstant(MI);
   case MOS::G_CMP:
     return selectCmp(MI);
   case MOS::G_FRAME_INDEX:
@@ -366,6 +369,38 @@ bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
     return false;
   MI.eraseFromParent();
   return true;
+}
+
+bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
+  MachineIRBuilder Builder(MI);
+  LLT S8 = LLT::scalar(8);
+
+  Register Dst = MI.getOperand(0).getReg();
+  uint64_t Imm = MI.getOperand(1).getCImm()->getZExtValue();
+
+  LLT DstTy = Builder.getMRI()->getType(Dst);
+  switch (DstTy.getSizeInBits()) {
+  default:
+    llvm_unreachable("Unexpected constant size.");
+  case 1: {
+    auto Ld = Builder.buildInstr(MOS::LDCImm, {Dst}, {Imm});
+    MI.eraseFromParent();
+    return constrainSelectedInstRegOperands(*Ld, TII, TRI, RBI);
+  }
+  case 8: {
+    auto Ld = Builder.buildInstr(MOS::LDImm, {Dst}, {Imm});
+    MI.eraseFromParent();
+    return constrainSelectedInstRegOperands(*Ld, TII, TRI, RBI);
+  }
+  case 16: {
+    MachineInstrSpan MIS(MI, MI.getParent());
+    Builder.buildMerge(MI.getOperand(0), {Builder.buildConstant(S8, Imm & 0xFF),
+                                          Builder.buildConstant(S8, Imm >> 8)});
+    MI.eraseFromParent();
+    selectAll(MIS);
+    return true;
+  }
+  }
 }
 
 bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {

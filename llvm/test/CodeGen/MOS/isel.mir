@@ -189,7 +189,7 @@ body: |
   bb.0.entry:
     %0:any(s1) = G_CONSTANT i1 true
     RTS implicit %0
-# CHECK:      %0:cc = LDCImm -1
+# CHECK:      %0:cc = LDCImm 1
 # CHECK-NEXT: RTS
 ...
 ---
@@ -202,6 +202,19 @@ body: |
     %0:any(s8) = G_CONSTANT i8 42
     RTS implicit %0
 # CHECK:      %0:gpr = LDImm 42
+...
+---
+name: ldimm_16
+# CHECK-LABEL: name: ldimm_16
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s16) = G_CONSTANT i16 1234
+    RTS implicit %0
+# CHECK:      %1:gpr = LDImm 210, implicit-def $nz
+# CHECK-NEXT: %2:gpr = LDImm 4, implicit-def $nz
+# CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
 ...
 ---
 name: load
@@ -230,7 +243,7 @@ body: |
     %3:any(s8) = G_LOAD %2 :: (load 1)
     RTS implicit %3
 # CHECK:      %0:imag16 = COPY $rs1
-# CHECK-NEXT: %1:yc = LDImm -1
+# CHECK-NEXT: %1:yc = LDImm 255
 # CHECK-NEXT: %3:ac = LDYIndir %0, %1
 # CHECK-NEXT: RTS
 ...
