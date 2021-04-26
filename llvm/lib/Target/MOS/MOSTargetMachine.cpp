@@ -31,6 +31,7 @@
 #include "MOS.h"
 #include "MOSCombiner.h"
 #include "MOSIndexIV.h"
+#include "MOSLowerSelect.h"
 #include "MOSMachineScheduler.h"
 #include "MOSNoRecurse.h"
 #include "MOSStaticStackAlloc.h"
@@ -46,6 +47,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeMOSCombinerPass(PR);
+  initializeMOSLowerSelectPass(PR);
   initializeMOSNoRecursePass(PR);
   initializeMOSStaticStackAllocPass(PR);
 }
@@ -181,6 +183,7 @@ bool MOSPassConfig::addLegalizeMachineIR() {
 
 void MOSPassConfig::addPreRegBankSelect() {
   addPass(createMOSCombiner());
+  addPass(createMOSLowerSelectPass());
 }
 
 bool MOSPassConfig::addRegBankSelect() {

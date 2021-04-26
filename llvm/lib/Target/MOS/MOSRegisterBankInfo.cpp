@@ -44,6 +44,11 @@ MOSRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const auto &Operand = MI.getOperand(Idx);
     if (!Operand.isReg())
       continue;
+    // Only the destination is expected for PHIs.
+    if (MI.isPHI() && Idx == 1) {
+      NumOperands = 1;
+      break;
+    }
     LLT Ty = MRI.getType(Operand.getReg());
     ValMappings[Idx] = &getValueMapping(0, Ty.getSizeInBits(), MOS::AnyRegBank);
   }

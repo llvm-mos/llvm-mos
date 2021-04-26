@@ -70,7 +70,6 @@ private:
   bool selectGlobalValue(MachineInstr &MI);
   bool selectLoadStore(MachineInstr &MI);
   bool selectLshrShlE(MachineInstr &MI);
-  bool selectSelect(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectPtrAdd(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
@@ -173,8 +172,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_LSHRE:
   case MOS::G_SHLE:
     return selectLshrShlE(MI);
-  case MOS::G_SELECT:
-    return selectSelect(MI);
   case MOS::G_MERGE_VALUES:
     return selectMergeValues(MI);
   case MOS::G_PTR_ADD:
@@ -672,12 +669,6 @@ bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
       return false;
   }
   MI.eraseFromParent();
-  return true;
-}
-
-bool MOSInstructionSelector::selectSelect(MachineInstr &MI) {
-  MI.setDesc(TII.get(MOS::Select));
-  constrainGenericOp(MI);
   return true;
 }
 

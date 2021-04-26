@@ -143,16 +143,6 @@ class MOSControlFlowPseudo : MOSPseudo {
   let usesCustomInserter = true;
 }
 
-// Pseudo-instruction to select a value from two alternatives. Lowered to a
-// conditional branch between a pair of copies. The input and output values must
-// all be of the same type. Each input can be either a register or an immediate
-// value.
-def Select : MOSControlFlowPseudo {
-  dag OutOperandList = (outs unknown:$out);
-  dag InOperandList = (ins Anyi1:$cond, unknown:$t, unknown:$f);
-  let isSelect = true;
-}
-
 //===---------------------------------------------------------------------===//
 // NZ pseudoinstructions
 //===---------------------------------------------------------------------===//

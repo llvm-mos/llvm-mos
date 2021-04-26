@@ -30,6 +30,7 @@ add_llvm_target(MOSCodeGen
   MOSInstrInfo.cpp
   MOSInstructionSelector.cpp
   MOSLegalizerInfo.cpp
+  MOSLowerSelect.cpp
   MOSMCInstLower.cpp
   MOSMachineFunctionInfo.cpp
   MOSMachineScheduler.cpp
