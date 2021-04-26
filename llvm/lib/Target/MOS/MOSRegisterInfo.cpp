@@ -69,12 +69,15 @@ MOSRegisterInfo::MOSRegisterInfo()
     Reserved.set(Ptr);
     Reserved.set(getSubReg(Ptr, MOS::sublo));
     Reserved.set(getSubReg(Ptr, MOS::subhi));
+    Reserved.set(getSubReg(Ptr, MOS::sublsb));
   }
 
   // Reserve stack pointers.
   Reserved.set(MOS::RS0);
   Reserved.set(MOS::RC0);
+  Reserved.set(MOS::RC0LSB);
   Reserved.set(MOS::RC1);
+  Reserved.set(MOS::RC1LSB);
 }
 
 const MCPhysReg *
