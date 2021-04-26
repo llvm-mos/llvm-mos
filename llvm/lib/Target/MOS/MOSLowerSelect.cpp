@@ -118,9 +118,8 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
 
       // New MBBs were added, but they cannot have any G_SELECTs in them.
       // Continue processing the first instruction in sinkMBB.
-      I = sinkMBB->getIterator();
-      MBBI = I->begin();
-      MBBE = I->end();
+      I = copy0MBB->getIterator();
+      break;
     }
   }
 

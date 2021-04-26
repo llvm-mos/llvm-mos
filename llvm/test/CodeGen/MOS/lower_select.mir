@@ -11,7 +11,9 @@ body: |
     %1:any(s8) = G_CONSTANT i8 2
     %2:any(s1) = G_CONSTANT i1 false
     %3:any(s8) = G_SELECT %2, %0, %1
-    RTS implicit %3
+    %4:any(s8) = G_CONSTANT i8 3
+    %5:any(s8) = G_SELECT %2, %1, %0
+    RTS implicit %3, implicit %4, implicit %5
 # CHECK-LABEL: bb.0.entry:
 # CHECK:         %0:any(s8) = G_CONSTANT i8 1
 # CHECK-NEXT:    %1:any(s8) = G_CONSTANT i8 2
@@ -22,4 +24,11 @@ body: |
 
 # CHECK-LABEL: bb.2.entry:
 # CHECK:         %3:any(s8) = G_PHI %0(s8), %bb.0, %1(s8), %bb.1
-# CHECK-NEXT:    RTS
+# CHECK:         %4:any(s8) = G_CONSTANT i8 3
+# CHECK:         G_BRCOND_IMM %2(s1), %bb.4, 1
+
+# CHECK-LABEL: bb.3.entry:
+
+# CHECK-LABEL: bb.4.entry:
+# CHECK:         %5:any(s8) = G_PHI %1(s8), %bb.2, %0(s8), %bb.3
+# CHECK:         RTS
