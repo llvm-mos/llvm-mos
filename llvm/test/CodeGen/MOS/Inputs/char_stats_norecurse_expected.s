@@ -16,8 +16,8 @@ char_stats:                             ; @char_stats
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
-	lda	#0
 	ldx	#0
+	lda	#0
 	ldy	#2
 	jsr	memset
 LBB0_1:                                 ; %while.body
@@ -28,39 +28,29 @@ LBB0_1:                                 ; %while.body
 LBB0_2:                                 ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
 	asl
-	sta	mos8(__rc6)
+	sta	mos8(__rc3)
 	lda	#0
 	rol
 	tay
 	ldx	#mos16lo(__char_stats_sstk)
 	stx	mos8(__rc2)
-	ldx	#mos16hi(__char_stats_sstk)
-	stx	mos8(__rc3)
 	clc
-	lda	mos8(__rc6)
+	lda	mos8(__rc3)
 	adc	mos8(__rc2)
 	sta	mos8(__rc2)
+	lda	#mos16hi(__char_stats_sstk)
+	sta	mos8(__rc3)
 	tya
 	adc	mos8(__rc3)
 	sta	mos8(__rc3)
 	ldy	#0
 	lda	(mos8(__rc2)),y
-	sta	mos8(__rc6)
+	clc
+	adc	#1
+	sta	(mos8(__rc2)),y
 	ldy	#1
 	lda	(mos8(__rc2)),y
-	tax
-	clc
-	lda	mos8(__rc6)
-	adc	#1
-	tay
-	txa
 	adc	#0
-	tax
-	tya
-	ldy	#0
-	sta	(mos8(__rc2)),y
-	txa
-	ldy	#1
 	sta	(mos8(__rc2)),y
 	jmp	LBB0_1
 LBB0_3:                                 ; %while.end
