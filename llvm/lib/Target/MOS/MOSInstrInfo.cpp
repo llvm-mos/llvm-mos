@@ -69,6 +69,31 @@ bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   }
 }
 
+unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                           int &FrameIndex) const {
+  switch (MI.getOpcode()) {
+  default:
+    return 0;
+  case MOS::LDabs_offset:
+  case MOS::LDstk:
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+}
+
+unsigned MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                          int &FrameIndex) const {
+  switch (MI.getOpcode()) {
+  default:
+    return 0;
+  case MOS::STabs_offset:
+  case MOS::STstk:
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+
+}
+
 // The main difficulty in commuting 6502 instructions is that their register
 // classes aren't symmetric. This routine determines whether or not the operands
 // of an instruction can be commuted anyway, potentially rewriting the register
