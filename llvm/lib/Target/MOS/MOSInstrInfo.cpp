@@ -91,7 +91,6 @@ unsigned MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     FrameIndex = MI.getOperand(1).getIndex();
     return MI.getOperand(0).getReg();
   }
-
 }
 
 // The main difficulty in commuting 6502 instructions is that their register
@@ -484,7 +483,7 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   // If we're using the soft stack, since the offset is not yet known, it may be
   // either 8 or 16 bits. Emit a 16-bit pseudo to be lowered during frame index
   // elimination.
-  if (!MI->getMF()->getFunction().doesNotRecurse()) {
+  if (!MF.getFunction().doesNotRecurse()) {
     if (IsLoad) {
       Builder.buildInstr(MOS::LDstk)
           .addDef(Reg)
@@ -520,7 +519,7 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   // However, if we're in a NoVRegs region, the only way to satisfy vregs is
   // through the register scavenger, which doesn't handle bundles.
   if (std::next(MIS.begin()) != MI &&
-      !MI->getMF()->getProperties().hasProperty(
+      !MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::NoVRegs))
     finalizeBundle(MBB, MIS.begin().getInstrIterator(), MI.getInstrIterator());
 }
