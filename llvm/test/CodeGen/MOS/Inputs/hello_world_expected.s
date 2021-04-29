@@ -16,8 +16,8 @@ LBB0_1:                                 ; %while.body
 	cpx	#14
 	bne	LBB0_1
 LBB0_2:                                 ; %while.end
-	lda	#0
 	ldx	#0
+	lda	#0
 	rts
 .Lfunc_end0:
 	.size	main, .Lfunc_end0-main

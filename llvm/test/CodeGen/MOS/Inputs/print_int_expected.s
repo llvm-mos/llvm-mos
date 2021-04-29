@@ -13,12 +13,12 @@ LBB0_1:                                 ; %if.end.preheader
 	lda	mos8(__rc5)
 	pha
 	lda	__save_a
-	sta	mos8(__rc5)
 	ldx	#10
+	sta	mos8(__rc5)
 	jsr	__udivqi3
 	sta	mos8(__rc4)
-	lda	mos8(__rc5)
 	ldx	#10
+	lda	mos8(__rc5)
 	jsr	__umodqi3
 	sta	mos8(__rc5)
 	lda	mos8(__rc4)

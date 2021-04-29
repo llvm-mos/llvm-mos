@@ -17,13 +17,13 @@ char_stats:                             ; @char_stats
 	sta	mos8(__rc4)
 	lda	mos8(__rc1)
 	sta	mos8(__rc5)
+	ldx	#0
 	lda	mos8(__rc4)
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
-	ldx	#0
-	lda	#0
 	ldy	#2
+	lda	#0
 	jsr	memset
 LBB0_1:                                 ; %while.body
                                         ; =>This Inner Loop Header: Depth=1

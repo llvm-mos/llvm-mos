@@ -28,6 +28,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSMachineScheduler.h"
+#include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOSRegisterInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 using namespace llvm;
@@ -36,8 +40,8 @@ MOSSchedStrategy::MOSSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C) {}
 
 void MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
-                                        SchedCandidate &TryCand,
-                                        SchedBoundary *Zone) const {
+                                    SchedCandidate &TryCand,
+                                    SchedBoundary *Zone) const {
 
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
@@ -45,25 +49,39 @@ void MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
     return;
   }
 
+  // Bias PhysReg Defs and copies to their uses and defined respectively.
+  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
+                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
+    return;
+
+  if (tryLess(
+          registerClassPressureDiff(MOS::AcRegClass, TryCand.SU, TryCand.AtTop),
+          registerClassPressureDiff(MOS::AcRegClass, Cand.SU, Cand.AtTop),
+          TryCand, Cand, PhysReg))
+    return;
+
+  if (tryLess(
+          registerClassPressureDiff(MOS::XYRegClass, TryCand.SU, TryCand.AtTop),
+          registerClassPressureDiff(MOS::XYRegClass, Cand.SU, Cand.AtTop),
+          TryCand, Cand, PhysReg))
+    return;
+
   // Avoid exceeding the target's limit.
-  if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.Excess,
-                                               Cand.RPDelta.Excess,
-                                               TryCand, Cand, RegExcess, TRI,
-                                               DAG->MF))
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
+                  RegExcess, TRI, DAG->MF))
     return;
 
   // Avoid increasing the max critical pressure in the scheduled region.
-  if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.CriticalMax,
-                                               Cand.RPDelta.CriticalMax,
-                                               TryCand, Cand, RegCritical, TRI,
-                                               DAG->MF))
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
+                  TryCand, Cand, RegCritical, TRI, DAG->MF))
     return;
 
   // Avoid increasing the max pressure of the entire region.
-  if (DAG->isTrackingPressure() && tryPressure(TryCand.RPDelta.CurrentMax,
-                                               Cand.RPDelta.CurrentMax,
-                                               TryCand, Cand, RegMax, TRI,
-                                               DAG->MF))
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CurrentMax, Cand.RPDelta.CurrentMax, TryCand,
+                  Cand, RegMax, TRI, DAG->MF))
     return;
 
   // We only compare a subset of features when comparing nodes between
@@ -74,13 +92,28 @@ void MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
   bool SameBoundary = Zone != nullptr;
   if (SameBoundary) {
     // Fall through to original instruction order.
-    if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum)
-        || (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
+    if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
+        (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
       TryCand.Reason = NodeOrder;
     }
   }
+}
 
-  // NOTE: Unlike in the regular instruction scheduler, nothing special is done
-  // for physical registers. They're not exactly a rarity in our case like they
-  // are in general, so they're not worth special-casing.
+// Returns the change in pressure in a SU for a physical register.
+int MOSSchedStrategy::registerClassPressureDiff(const TargetRegisterClass &RC,
+                                                const SUnit *SU,
+                                                bool IsTop) const {
+  const MachineInstr *MI = SU->getInstr();
+
+  int PressureDiff = 0;
+  for (const MachineOperand &MO : MI->operands()) {
+    if (!MO.isReg() || !RC.contains(MO.getReg()))
+      continue;
+    if (MO.isDef()) {
+      PressureDiff += IsTop ? 1 : -1;
+    } else {
+      PressureDiff += IsTop ? -1 : 1;
+    }
+  }
+  return PressureDiff;
 }

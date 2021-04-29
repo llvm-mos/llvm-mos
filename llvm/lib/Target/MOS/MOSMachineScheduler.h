@@ -23,6 +23,9 @@ public:
 
   void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                     SchedBoundary *Zone) const override;
+
+  int registerClassPressureDiff(const TargetRegisterClass &RC, const SUnit *SU,
+                                bool IsTop) const;
 };
 
 } // namespace llvm
