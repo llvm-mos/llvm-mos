@@ -2,19 +2,17 @@
 ---
 name: ADCImag8
 # CHECK-LABEL: name: ADCImag8
-legalized: true
-regBankSelected: true
 body: |
   bb.0.entry:
     liveins: $c
-    %0:ac = IMPLICIT_DEF
-    %1:imag8 = IMPLICIT_DEF
-    %2:cc = IMPLICIT_DEF
+    %0:ac = COPY $x
+    %1:imag8 = COPY $y
+    %2:cc = COPY $v
     %3:ac, dead %4:cc, dead %5:vc = ADCImag8 %0, killed %1, %2, implicit-def $nz
     RTS implicit %0, implicit %3
-# CHECK:      %0:imag8 = IMPLICIT_DEF
-# CHECK-NEXT: %1:ac = IMPLICIT_DEF
-# CHECK-NEXT: %2:cc = IMPLICIT_DEF
+# CHECK:      %0:imag8 = COPY $x
+# CHECK-NEXT: %1:ac = COPY $y
+# CHECK-NEXT: %2:cc = COPY $v
 # CHECK-NEXT: %3:ac = COPY %1
 # CHECK-NEXT: %3:ac, dead %4:cc, dead %5:vc = ADCImag8 %3, %0, %2
 # CHECK-NEXT: RTS implicit %0, implicit %3
@@ -22,17 +20,15 @@ body: |
 ---
 name: ANDImag8
 # CHECK-LABEL: name: ANDImag8
-legalized: true
-regBankSelected: true
 body: |
   bb.0.entry:
     liveins: $c
-    %0:ac = IMPLICIT_DEF
-    %1:imag8 = IMPLICIT_DEF
+    %0:ac = COPY $x
+    %1:imag8 = COPY $y
     %2:ac = ANDImag8 %0, killed %1, implicit-def $nz
     RTS implicit %2
-# CHECK:      %0:imag8 = IMPLICIT_DEF
-# CHECK-NEXT: %1:ac = IMPLICIT_DEF
+# CHECK:      %0:imag8 = COPY $x
+# CHECK-NEXT: %1:ac = COPY $y
 # CHECK-NEXT: %2:ac = COPY %1
 # CHECK-NEXT: %2:ac = ANDImag8 %2, %0
 # CHECK-NEXT: RTS implicit %2
@@ -40,17 +36,15 @@ body: |
 ---
 name: EORImag8
 # CHECK-LABEL: name: EORImag8
-legalized: true
-regBankSelected: true
 body: |
   bb.0.entry:
     liveins: $c
-    %0:ac = IMPLICIT_DEF
-    %1:imag8 = IMPLICIT_DEF
+    %0:ac = COPY $x
+    %1:imag8 = COPY $y
     %2:ac = EORImag8 %0, killed %1, implicit-def $nz
     RTS implicit %2
-# CHECK:      %0:imag8 = IMPLICIT_DEF
-# CHECK-NEXT: %1:ac = IMPLICIT_DEF
+# CHECK:      %0:imag8 = COPY $x
+# CHECK-NEXT: %1:ac = COPY $y
 # CHECK-NEXT: %2:ac = COPY %1
 # CHECK-NEXT: %2:ac = EORImag8 %2, %0
 # CHECK-NEXT: RTS implicit %2
@@ -58,17 +52,15 @@ body: |
 ---
 name: ORAImag8
 # CHECK-LABEL: name: ORAImag8
-legalized: true
-regBankSelected: true
 body: |
   bb.0.entry:
     liveins: $c
-    %0:ac = IMPLICIT_DEF
-    %1:imag8 = IMPLICIT_DEF
+    %0:ac = COPY $x
+    %1:imag8 = COPY $y
     %2:ac = ORAImag8 %0, killed %1, implicit-def $nz
     RTS implicit %2
-# CHECK:      %0:imag8 = IMPLICIT_DEF
-# CHECK-NEXT: %1:ac = IMPLICIT_DEF
+# CHECK:      %0:imag8 = COPY $x
+# CHECK-NEXT: %1:ac = COPY $y
 # CHECK-NEXT: %2:ac = COPY %1
 # CHECK-NEXT: %2:ac = ORAImag8 %2, %0
 # CHECK-NEXT: RTS implicit %2
