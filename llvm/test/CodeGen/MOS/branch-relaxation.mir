@@ -1,6 +1,7 @@
 # RUN: llc -mtriple=mos -run-pass=branch-relaxation -verify-machineinstrs -o - %s | FileCheck %s
 ---
 name: test
+# CHECK-LABEL: test
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -56,12 +57,10 @@ body: |
 
   bb.2:
     RTS
-...
 # CHECK-LABEL: bb.1:
-# CHECK: $a = LDImm 0
-# ...
-# CHECK: $a = LDImm 0
-# CHECK: BR %bb.2, $c, 1
-# CHECK: JMP %bb.1
+# CHECK:         $a = LDImm 0
+# CHECK:         BR %bb.2, $c, 1
+# CHECK-NEXT:    JMP %bb.1
 # CHECK-LABEL: bb.2:
-# CHECK: RTS
+# CHECK-NEXT:    RTS
+...
