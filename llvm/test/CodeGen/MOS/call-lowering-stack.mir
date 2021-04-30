@@ -1,53 +1,68 @@
 # RUN: llc -run-pass=irtranslator -verify-machineinstrs -num-imag-ptrs=3 -o - %s | FileCheck %s
 --- |
+  ; Note that -num-imag-ptrs=3, forcing use of the stack for long argument lists.
   target triple = "mos"
 
-  define void @formal_args_stack(i8 %first, i8 %second, i8 %third, i16 %fourth, i16 %stack) {
-  ; CHECK-LABEL: name: formal_args_stack
+  define void @args_stack(i8 %first, i8 %second, i8 %third, i16 %fourth, i16 %stack) {
+  ; CHECK-LABEL: name: args_stack
   entry:
   ; CHECK-LABEL: entry:
     ; CHECK-NEXT: liveins: $a, $x, $y, $rc2, $rc3
-    ret void
     ; CHECK:      %0:_(s8) = COPY $a
     ; CHECK-NEXT: %1:_(s8) = COPY $x
     ; CHECK-NEXT: %2:_(s8) = COPY $y
     ; CHECK-NEXT: %5:_(s8) = COPY $rc2
     ; CHECK-NEXT: %6:_(s8) = COPY $rc3
     ; CHECK-NEXT: %3:_(s16) = G_MERGE_VALUES %5(s8), %6(s8)
+
     ; CHECK-NEXT: %9:_(p0) = G_FRAME_INDEX %fixed-stack.1
     ; CHECK-NEXT: %7:_(s8) = G_LOAD %9(p0) :: (invariant load 1 from %fixed-stack.1)
+
     ; CHECK-NEXT: %10:_(p0) = G_FRAME_INDEX %fixed-stack.0
     ; CHECK-NEXT: %8:_(s8) = G_LOAD %10(p0) :: (invariant load 1 from %fixed-stack.0)
+
     ; CHECK-NEXT: %4:_(s16) = G_MERGE_VALUES %7(s8), %8(s8)
+
+    ret void
     ; CHECK-NEXT: RTS
   }
 
-  define void @call_stack() {
-    ; CHECK-LABEL: name: call_stack
-    call void @formal_args_stack(i8 1, i8 2, i8 3, i16 4, i16 5)
+  define void @call_args_stack() {
+    ; CHECK-LABEL: name: call_args_stack
+
+    call void @args_stack(i8 1, i8 2, i8 3, i16 4, i16 5)
     ; CHECK:      %0:_(s8) = G_CONSTANT i8 1
     ; CHECK-NEXT: %1:_(s8) = G_CONSTANT i8 2
     ; CHECK-NEXT: %2:_(s8) = G_CONSTANT i8 3
     ; CHECK-NEXT: %3:_(s16) = G_CONSTANT i16 4
     ; CHECK-NEXT: %4:_(s16) = G_CONSTANT i16 5
+
     ; CHECK-NEXT: ADJCALLSTACKDOWN 2, 0
+
     ; CHECK-NEXT: $a = COPY %0(s8)
     ; CHECK-NEXT: $x = COPY %1(s8)
     ; CHECK-NEXT: $y = COPY %2(s8)
+
     ; CHECK-NEXT: %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %3(s16)
     ; CHECK-NEXT: $rc2 = COPY %5(s8)
     ; CHECK-NEXT: $rc3 = COPY %6(s8)
+
     ; CHECK-NEXT: %7:_(s8), %8:_(s8) = G_UNMERGE_VALUES %4(s16)
+
     ; CHECK-NEXT: %9:_(p0) = COPY $rs0
     ; CHECK-NEXT: %10:_(s16) = G_CONSTANT i16 0
     ; CHECK-NEXT: %11:_(p0) = G_PTR_ADD %9, %10(s16)
     ; CHECK-NEXT: G_STORE %7(s8), %11(p0) :: (store 1 into stack)
+
     ; CHECK-NEXT: %12:_(s16) = G_CONSTANT i16 1
     ; CHECK-NEXT: %13:_(p0) = G_PTR_ADD %9, %12(s16)
     ; CHECK-NEXT: G_STORE %8(s8), %13(p0) :: (store 1 into stack + 1)
-    ; CHECK-NEXT: JSR @formal_args_stack
+
+    ; CHECK-NEXT: JSR @args_stack
+
     ; CHECK-NEXT: ADJCALLSTACKUP 2, 0
-    ; CHECK-NEXT: RTS
+
     ret void
+    ; CHECK-NEXT: RTS
   }
 ...
