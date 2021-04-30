@@ -384,12 +384,13 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
     return Dest.contains(DestReg) && Src.contains(SrcReg);
   };
 
-  const auto &CopyThroughA = [&]() {
+  // Reg is either A or ALSB.
+  const auto &CopyThroughA = [&](Register Reg) {
     bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
     if (IsAMaybeLive)
       Builder.buildInstr(MOS::PH).addUse(MOS::A);
-    copyPhysRegImpl(Builder, MOS::A, SrcReg);
-    copyPhysRegImpl(Builder, DestReg, MOS::A);
+    copyPhysRegImpl(Builder, Reg, SrcReg);
+    copyPhysRegImpl(Builder, DestReg, Reg);
     if (IsAMaybeLive)
       Builder.buildInstr(MOS::PL).addDef(MOS::A);
   };
@@ -402,7 +403,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
       assert(MOS::XYRegClass.contains(SrcReg));
       Builder.buildInstr(MOS::T_A).addDef(DestReg).addUse(SrcReg);
     } else
-      CopyThroughA();
+      CopyThroughA(MOS::A);
   } else if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
     Builder.buildInstr(MOS::STImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
@@ -413,7 +414,21 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi),
                     TRI.getSubReg(SrcReg, MOS::subhi));
   } else if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    CopyThroughA();
+    CopyThroughA(MOS::A);
+  } else if (SrcReg == MOS::V) {
+    if (MOS::CGPRRegClass.contains(DestReg))
+      Builder.buildInstr(MOS::CopyFromV).addDef(DestReg);
+    else
+      CopyThroughA(MOS::ALSB);
+  } else if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
+    Register DestReg8 = TRI.getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    Register SrcReg8 = TRI.getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    if (!DestReg8 || !SrcReg8) {
+      LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
+                        << "\n");
+      report_fatal_error("Unsupported physical register copy.");
+    }
+    copyPhysRegImpl(Builder, DestReg8, SrcReg8);
   } else {
     LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
                       << "\n");

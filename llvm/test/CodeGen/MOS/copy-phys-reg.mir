@@ -134,3 +134,34 @@ body:             |
 # CHECK:      $a = LDImag8 $rc1
 # CHECK-NEXT: $rc3 = STImag8 $a
 ...
+---
+name:            xlsb_to_alsb
+tracksRegLiveness: true
+# CHECK-LABEL: name: xlsb_to_alsb
+body:             |
+  bb.0.entry:
+    liveins: $alsb
+    $xlsb = COPY $alsb
+# CHECK:      $x = TA $a
+...
+---
+name:            v_to_xlsb
+tracksRegLiveness: true
+# CHECK-LABEL: name: v_to_xlsb
+body:             |
+  bb.0.entry:
+    liveins: $v
+    $xlsb = COPY $v
+# CHECK:      $xlsb = CopyFromV implicit $v
+...
+---
+name:            v_to_imag8lsb
+tracksRegLiveness: true
+# CHECK-LABEL: name: v_to_imag8lsb
+body:             |
+  bb.0.entry:
+    liveins: $v
+    $rc2lsb = COPY $v
+# CHECK:      $alsb = CopyFromV implicit $v
+# CHECK-NEXT: $rc2 = STImag8 $a
+...

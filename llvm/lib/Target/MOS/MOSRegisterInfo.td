@@ -184,6 +184,7 @@ let isPressureFineGrained = true in {
 let isAllocatable = false in {
   def Flag : MOSReg1Class<(add C, N, V, Z)>;
   def AP : MOSReg8Class<(add A, P)>;
+  def CGPR : MOSReg1Class<(add C, ALSB, XLSB, YLSB)>;
 }
 
 // MOS assembly mnemonics may only have the following registers as parameters

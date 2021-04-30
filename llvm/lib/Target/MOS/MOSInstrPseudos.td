@@ -28,6 +28,10 @@ class MOSPseudo : Instruction {
   let isCodeGenOnly = true;
 }
 
+//===---------------------------------------------------------------------===//
+// Soft stack
+//===---------------------------------------------------------------------===//
+
 // The call-frame pseudoinstructions form a signalling mechanism to pass the
 // size of outgoing call frames from calling-convention lowering (in
 // IRTranslator) through to the stack frame prolog-epilog insertion. The latter
@@ -131,7 +135,7 @@ def LDIdx : MOSPseudo {
 }
 
 //===---------------------------------------------------------------------===//
-// Control flow pseudoinstructions
+// Control flow
 //===---------------------------------------------------------------------===//
 
 // Control flow cannot be generally added during instruction selection without
@@ -143,8 +147,16 @@ class MOSControlFlowPseudo : MOSPseudo {
   let usesCustomInserter = true;
 }
 
+// V can only be copied to other locations via branches and immediate loads.
+def CopyFromV : MOSControlFlowPseudo {
+  dag OutOperandList = (outs CGPR:$dst);
+  dag InOperandList = (ins);
+
+  let Uses = [V];
+}
+
 //===---------------------------------------------------------------------===//
-// NZ pseudoinstructions
+// NZ
 //===---------------------------------------------------------------------===//
 
 // Version of SBCImag8 that copies the N and Z flags out to virtual registers.
