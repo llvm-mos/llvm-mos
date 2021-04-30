@@ -1,17 +1,22 @@
 	.text
-	.file	"char_stats_norecurse.ll"
+	.file	"char-stats.ll"
 	.globl	char_stats                      ; -- Begin function char_stats
 	.type	char_stats,@function
 char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
+	clc
+	lda	mos8(__rc1)
+	adc	#254
+	sta	mos8(__rc1)
 	lda	mos8(__rc4)
-	sta	__char_stats_sstk+512           ; 1-byte Folded Spill
+	pha
 	lda	mos8(__rc5)
-	sta	__char_stats_sstk+513           ; 1-byte Folded Spill
-	lda	#mos16lo(__char_stats_sstk)
-	ldx	#mos16hi(__char_stats_sstk)
+	pha
+	clc
+	lda	mos8(__rc0)
 	sta	mos8(__rc4)
-	stx	mos8(__rc5)
+	lda	mos8(__rc1)
+	sta	mos8(__rc5)
 	ldx	#0
 	lda	mos8(__rc4)
 	sta	mos8(__rc2)
@@ -28,20 +33,16 @@ LBB0_1:                                 ; %while.body
 LBB0_2:                                 ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
 	asl
-	sta	mos8(__rc3)
+	tay
 	lda	#0
 	rol
-	tay
-	ldx	#mos16lo(__char_stats_sstk)
-	stx	mos8(__rc2)
+	tax
 	clc
-	lda	mos8(__rc3)
-	adc	mos8(__rc2)
-	sta	mos8(__rc2)
-	lda	#mos16hi(__char_stats_sstk)
-	sta	mos8(__rc3)
 	tya
-	adc	mos8(__rc3)
+	adc	mos8(__rc4)
+	sta	mos8(__rc2)
+	txa
+	adc	mos8(__rc5)
 	sta	mos8(__rc3)
 	ldy	#0
 	lda	(mos8(__rc2)),y
@@ -59,14 +60,15 @@ LBB0_3:                                 ; %while.end
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
 	jsr	report_counts
-	lda	__char_stats_sstk+513           ; 1-byte Folded Reload
+	pla
 	sta	mos8(__rc5)
-	lda	__char_stats_sstk+512           ; 1-byte Folded Reload
+	pla
 	sta	mos8(__rc4)
+	clc
+	lda	mos8(__rc1)
+	adc	#2
+	sta	mos8(__rc1)
 	rts
 .Lfunc_end0:
 	.size	char_stats, .Lfunc_end0-char_stats
                                         ; -- End function
-	.type	__char_stats_sstk,@object       ; @__char_stats_sstk
-	.local	__char_stats_sstk
-	.comm	__char_stats_sstk,514,1

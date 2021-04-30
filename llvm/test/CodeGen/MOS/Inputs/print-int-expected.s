@@ -1,5 +1,5 @@
 	.text
-	.file	"print_int.ll"
+	.file	"print-int.ll"
 	.globl	print_int                       ; -- Begin function print_int
 	.type	print_int,@function
 print_int:                              ; @print_int
