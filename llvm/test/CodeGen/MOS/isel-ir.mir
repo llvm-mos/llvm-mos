@@ -17,6 +17,14 @@
     entry:
       ret void
   }
+  define void @load_absolute_const() {
+    entry:
+      ret void
+  }
+  define void @load_absolute_gv() {
+    entry:
+      ret void
+  }
   define void @load_indexed() {
     entry:
       ret void
@@ -85,6 +93,33 @@ body: |
 # CHECK:      %1:gpr = LDImm target-flags(lo) @.str
 # CHECK-NEXT: %2:gpr = LDImm target-flags(hi) @.str
 # CHECK-NEXT: %0:imag16 = REG_SEQUENCE %1, %subreg.sublo, %2, %subreg.subhi
+...
+---
+name: load_absolute_const
+# CHECK-LABEL: name: load_absolute_const
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s16) = G_CONSTANT i16 1234
+    %1:any(p0) = G_INTTOPTR %0
+    %2:any(s8) = G_LOAD %1 :: (load 1)
+    RTS implicit %2
+# CHECK:      %2:gpr = LDAbs 1234, implicit-def $nz :: (load 1)
+# CHECK-NEXT: RTS implicit %2
+...
+---
+name: load_absolute_gv
+# CHECK-LABEL: name: load_absolute_gv
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(p0) = G_GLOBAL_VALUE @.str
+    %1:any(s8) = G_LOAD %0 :: (load 1)
+    RTS implicit %1
+# CHECK:      %1:gpr = LDAbs @.str, implicit-def $nz :: (load 1)
+# CHECK-NEXT: RTS implicit %1
 ...
 ---
 name: load_indexed
