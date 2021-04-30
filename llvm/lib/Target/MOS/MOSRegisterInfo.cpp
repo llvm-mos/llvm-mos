@@ -359,9 +359,6 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
     return;
   }
 
-  Register Y =
-      Builder.buildInstr(MOS::LDImm, {&MOS::YcRegClass}, {Offset}).getReg(0);
-
   Register A = Loc;
   if (A != MOS::A)
     A = MRI.createVirtualRegister(&MOS::AcRegClass);
@@ -369,6 +366,10 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   // Transfer the value to A to be stored (if applicable).
   if (!IsLoad && Loc != A)
     Builder.buildCopy(A, Loc);
+
+  // This needs to occur after the above copy since the source may be Y.
+  Register Y =
+      Builder.buildInstr(MOS::LDImm, {&MOS::YcRegClass}, {Offset}).getReg(0);
 
   Builder.buildInstr(IsLoad ? MOS::LDYIndir : MOS::STYIndir)
       .addReg(A, getDefRegState(IsLoad))

@@ -170,8 +170,8 @@ body:             |
 # CHECK-NEXT:  $a = COPY $rc1
 # CHECK-NEXT:  $a, dead $c, dead $v = ADCImm $a, 1, $c
 # CHECK-NEXT:  $rc3 = COPY killed $a
-# CHECK-NEXT:  $y = LDImm 0
 # CHECK-NEXT:  $a = COPY $x
+# CHECK-NEXT:  $y = LDImm 0
 # CHECK-NEXT:  STYIndir killed $a, killed $rs1, killed $y :: (store 1 into %stack.0 + 254)
 ...
 ---
@@ -182,11 +182,12 @@ stack:
 body: |
   bb.0.entry:
     STstk $rs0, %stack.0, 2, implicit-def $nz :: (store 2 into %stack.0 + 2)
-# CHECK:       $y = LDImm 2
-# CHECK-NEXT:  $a = COPY $rc0
+# CHECK:       $a = COPY $rc0
+# CHECK:       $a = COPY $rc0
+# CHECK-NEXT:  $y = LDImm 2
 # CHECK-NEXT:  STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.0 + 2, align 2)
-# CHECK-NEXT:  $y = LDImm 3
 # CHECK-NEXT:  $a = COPY $rc1
+# CHECK-NEXT:  $y = LDImm 3
 # CHECK-NEXT:  STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.0 + 3, basealign 2)
 
 ...
