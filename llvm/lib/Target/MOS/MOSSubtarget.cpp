@@ -106,7 +106,6 @@ void MOSSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // Force register pressure tracking; by default it's disabled for small
   // regions, but it's the only 6502 scheduling concern.
   Policy.ShouldTrackPressure = true;
-  Policy.ShouldTrackLaneMasks = true;
 
   Policy.OnlyBottomUp = false;
   Policy.OnlyTopDown = false;
