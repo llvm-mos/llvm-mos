@@ -607,15 +607,27 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
 
 void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
+  Register DestReg = MI.getOperand(0).getReg();
 
   unsigned Opcode;
-  switch (MI.getOperand(0).getReg()) {
-  default:
-    LLVM_DEBUG(dbgs() << MI);
-    report_fatal_error("Not yet implemented.");
+  switch (DestReg) {
+  default: {
+    Register DestReg8 =
+        Builder.getMF().getSubtarget().getRegisterInfo()->getMatchingSuperReg(
+            DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    assert(DestReg8 && "Unexpected destination for LDImm1");
+    Opcode = MOS::LDImm;
+    MI.getOperand(0).setReg(DestReg8);
+    break;
+  }
   case MOS::C:
     Opcode = MOS::LDCImm;
+    // Remove NZ implicit def.
+    MI.RemoveOperand(2);
     break;
+  case MOS::V:
+    LLVM_DEBUG(dbgs() << MI);
+    report_fatal_error("Not yet implemented.");
   }
 
   MI.setDesc(Builder.getTII().get(Opcode));
