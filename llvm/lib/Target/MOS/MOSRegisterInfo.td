@@ -35,9 +35,10 @@ def subz : MOSSubRegIndex<1>;
 // V bit of the 8-bit processor status register.
 def subv : MOSSubRegIndex<1>;
 
-// Least-significant bit of an 8-bit register.
+// Least-significant bit of an 8-bit register. Writes to this are considered to
+// clobber the other bits, since the MOS instructions that can write to LSB
+// usually do.
 def sublsb : MOSSubRegIndex<1>;
-
 
 //===----------------------------------------------------------------------===//
 //  Real registers
@@ -58,6 +59,8 @@ class MOSReg<bits<16> num, string name>
 // An 8-bit value register (GPR or imaginary). Contains a 1-bit LSB subregister
 // to allow them to store boolean values.
 multiclass MOSReg8<bits<16> num, string name> {
+  // Least significant bit. Writes to this are considered to clobber the other
+  // bits, since the MOS instructions that can write to LSB usually do.
   def LSB : MOSReg<!add(num, 1), name#"LSB">;
 
   def NAME : MOSReg<num, name> {
@@ -184,7 +187,6 @@ let isPressureFineGrained = true in {
 let isAllocatable = false in {
   def Flag : MOSReg1Class<(add C, N, V, Z)>;
   def AP : MOSReg8Class<(add A, P)>;
-  def CGPR : MOSReg1Class<(add C, ALSB, XLSB, YLSB)>;
 }
 
 // MOS assembly mnemonics may only have the following registers as parameters

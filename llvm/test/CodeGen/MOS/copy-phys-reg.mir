@@ -12,6 +12,17 @@ body: |
     $x = COPY $a
 ...
 ---
+name: flag_to_lsb
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $v
+    ; CHECK-LABEL: name: flag_to_lsb
+    ; CHECK: liveins: $v
+    ; CHECK: $x = ZExt1 $v, implicit-def $nz
+    $xlsb = COPY $v
+...
+---
 name: gpr_to_imag8
 tracksRegLiveness: true
 body: |
@@ -76,6 +87,17 @@ body: |
     $rs1 = COPY $rs0
 ...
 ---
+name: lsb_to_lsb
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $alsb
+    ; CHECK-LABEL: name: lsb_to_lsb
+    ; CHECK: liveins: $alsb
+    ; CHECK: $x = TA $a, implicit-def $nz
+    $xlsb = COPY $alsb
+...
+---
 name: xy_to_a
 tracksRegLiveness: true
 body: |
@@ -113,37 +135,4 @@ body: |
     ; CHECK: $c = CMPImm $a, 0, implicit-def $nz
     $y = COPY $x
     $c = CMPImm $a, 0, implicit-def $nz
-...
----
-name: lsb_to_lsb
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $alsb
-    ; CHECK-LABEL: name: lsb_to_lsb
-    ; CHECK: liveins: $alsb
-    ; CHECK: $x = TA $a, implicit-def $nz
-    $xlsb = COPY $alsb
-...
----
-name: v_to_c
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $v
-    ; CHECK-LABEL: name: v_to_c
-    ; CHECK: liveins: $v
-    ; CHECK: $c = CopyFromV implicit $v
-    $c = COPY $v
-...
----
-name: v_to_lsb
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $v
-    ; CHECK-LABEL: name: v_to_lsb
-    ; CHECK: liveins: $v
-    ; CHECK: $xlsb = CopyFromV implicit $v
-    $xlsb = COPY $v
 ...

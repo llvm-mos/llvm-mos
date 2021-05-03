@@ -29,6 +29,38 @@ class MOSPseudo : Instruction {
 }
 
 //===---------------------------------------------------------------------===//
+// Post RA Pseudos
+//===---------------------------------------------------------------------===//
+// These pseudoinstructions defer decisionmaking until after register
+// allocation. They're used whenever the best instruction sequence to emit
+// depends only on the placement of their arguments and the set of live
+// registers before and after the pseudo.
+//===---------------------------------------------------------------------===//
+
+// Abstracts LDAIdx, LDXIdx, and LDYIdx. This is almost a logical instruction,
+// but the "LDX 1234,X" and "LDY 1234,Y" cases aren't natively supported, and
+// more than one instruction is required to emit them.
+def LDIdx : MOSPseudo {
+  dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins i16imm:$addr, XY:$idx);
+
+  let Defs = [NZ];
+
+  let isReMaterializable = true;
+  let mayLoad = true;
+}
+
+// May be emitted using the diamond pattern over a pair of immediate loads. Some
+// argument combinations can be more directly emitted though.
+def ZExt1 : MOSPseudo {
+  dag OutOperandList = (outs Anyi8:$dst);
+  dag InOperandList = (ins Anyi1:$src);
+
+  let Defs = [NZ];
+}
+
+
+//===---------------------------------------------------------------------===//
 // Soft stack
 //===---------------------------------------------------------------------===//
 
@@ -119,40 +151,6 @@ def STabs_offset : MOSPseudo {
   dag InOperandList = (ins GPR:$src, i16imm:$addr, i16imm:$offset);
 
   let mayStore = true;
-}
-
-// Abstracts LDAIdx, LDXIdx, and LDYIdx. This is almost a logical instruction,
-// but the "LDX 1234,X" and "LDY 1234,Y" cases aren't natively supported, and
-// more than one instruction is required to emit them.
-def LDIdx : MOSPseudo {
-  dag OutOperandList = (outs GPR:$dst);
-  dag InOperandList = (ins i16imm:$addr, XY:$idx);
-
-  let Defs = [NZ];
-
-  let isReMaterializable = true;
-  let mayLoad = true;
-}
-
-//===---------------------------------------------------------------------===//
-// Control flow
-//===---------------------------------------------------------------------===//
-
-// Control flow cannot be generally added during instruction selection without
-// encoding it in pseudoinstructions, since the passes involved generally aren't
-// safe to add basic blocks while iterating through them. Instead, these
-// pseudoinstructions are emitted, which are later lowered to new basic blocks
-// and control flow in FinalizeISel via custom inserters.
-class MOSControlFlowPseudo : MOSPseudo {
-  let usesCustomInserter = true;
-}
-
-// V can only be copied to other locations via branches and immediate loads.
-def CopyFromV : MOSControlFlowPseudo {
-  dag OutOperandList = (outs CGPR:$dst);
-  dag InOperandList = (ins);
-
-  let Uses = [V];
 }
 
 //===---------------------------------------------------------------------===//

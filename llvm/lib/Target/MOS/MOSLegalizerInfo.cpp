@@ -66,7 +66,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       {{S8, S1}, {S16, S1}, {S16, S8}});
 
   getActionDefinitionsBuilder(G_ZEXT)
-      .customFor({{S8, S1}})
+      .legalFor({{S8, S1}})
       .clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder(G_TRUNC).legalFor(
@@ -220,8 +220,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeVAStart(Helper, MRI, MI);
   case G_XOR:
     return legalizeXOR(Helper, MRI, MI);
-  case G_ZEXT:
-    return legalizeZExt(Helper, MRI, MI);
   }
 }
 
@@ -658,18 +656,5 @@ bool MOSLegalizerInfo::legalizeXOR(LegalizerHelper &Helper,
   else
     Helper.widenScalar(MI, 0, LLT::scalar(8));
 
-  return true;
-}
-
-bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  LLT S8 = LLT::scalar(8);
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  Builder
-      .buildInstr(MOS::INSERT_SUBREG, {MI.getOperand(0)},
-                  {Builder.buildConstant(S8, 0), MI.getOperand(1)})
-      .addImm(MOS::sublsb);
-  MI.eraseFromParent();
   return true;
 }

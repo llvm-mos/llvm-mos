@@ -51,8 +51,6 @@ private:
                        MachineInstr &MI) const;
   bool legalizeXOR(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
-  bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
 };
 
 } // namespace llvm

@@ -415,20 +415,29 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
                     TRI.getSubReg(SrcReg, MOS::subhi));
   } else if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
     CopyThroughA(MOS::A);
-  } else if (SrcReg == MOS::V) {
-    if (MOS::CGPRRegClass.contains(DestReg))
-      Builder.buildInstr(MOS::CopyFromV).addDef(DestReg);
-    else
-      CopyThroughA(MOS::ALSB);
   } else if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
-    Register DestReg8 = TRI.getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
-    Register SrcReg8 = TRI.getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
-    if (!DestReg8 || !SrcReg8) {
+
+    Register DestReg8 =
+        TRI.getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    if (!DestReg8) {
       LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
                         << "\n");
       report_fatal_error("Unsupported physical register copy.");
     }
-    copyPhysRegImpl(Builder, DestReg8, SrcReg8);
+
+    const MachineInstr &MI = *Builder.getInsertPt();
+    // MOS defines LSB writes to clobber the rest of the register. This fact is
+    // represented on the incoming COPY instruction by lack of an implicit use
+    // of the full 8-bit destination register. Accordingly, we check for this to
+    // make sure the code generator up until now accounted for the clobber.
+    assert(!MI.readsRegister(DestReg8));
+
+    Register SrcReg8 =
+        TRI.getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    if (SrcReg8)
+      copyPhysRegImpl(Builder, DestReg8, SrcReg8);
+    else
+      Builder.buildInstr(MOS::ZExt1, {DestReg8}, {Register(SrcReg)});
   } else {
     LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
                       << "\n");

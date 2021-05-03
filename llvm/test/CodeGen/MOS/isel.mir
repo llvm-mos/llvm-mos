@@ -475,3 +475,17 @@ body: |
     %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0:imag16(s16)
     RTS implicit %1, implicit %2
 ...
+---
+name: zext
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: zext
+    ; CHECK: [[COPY:%[0-9]+]]:anyi1 = COPY $c
+    ; CHECK: [[ZExt1_:%[0-9]+]]:anyi8 = ZExt1 [[COPY]], implicit-def $nz
+    ; CHECK: RTS implicit [[ZExt1_]]
+    %0:any(s1) = COPY $c
+    %1:any(s8) = G_ZEXT %0
+    RTS implicit %1
+...
