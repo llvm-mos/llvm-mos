@@ -62,9 +62,8 @@ bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   default:
     return TargetInstrInfo::isReallyTriviallyReMaterializable(MI, AA);
   // Note: Rematerializations cannot occur in terminators, so NZ cannot be live.
-  // Thus, instructions that only clobber NZ are always trivially
-  // rematerializable.
   case MOS::LDImm:
+  case MOS::LDImm1:
     return true;
   }
 }
@@ -559,16 +558,16 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::LDIdx:
     expandLDIdx(Builder);
     break;
+  case MOS::LDImm1:
+    expandLDImm1(Builder);
+    break;
   }
 
-  if (Changed)
-    MI.eraseFromParent();
   return Changed;
 }
 
 void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
-  assert(MI.getOpcode() == MOS::LDIdx);
 
   // This occur when X or Y is both the destination and index register.
   // Since the 6502 has no instruction for this, use A as the destination
@@ -584,6 +583,7 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
     Builder.buildInstr(MOS::TA).add(MI.getOperand(0)).addUse(MOS::A);
     if (IsAMaybeLive)
       Builder.buildInstr(MOS::PL).addDef(MOS::A);
+    MI.eraseFromParent();
     return;
   }
 
@@ -602,10 +602,23 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
     break;
   }
 
-  Builder.buildInstr(Opcode)
-      .add(MI.getOperand(0))
-      .add(MI.getOperand(1))
-      .add(MI.getOperand(2));
+  MI.setDesc(Builder.getTII().get(Opcode));
+}
+
+void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
+  auto &MI = *Builder.getInsertPt();
+
+  unsigned Opcode;
+  switch (MI.getOperand(0).getReg()) {
+  default:
+    LLVM_DEBUG(dbgs() << MI);
+    report_fatal_error("Not yet implemented.");
+  case MOS::C:
+    Opcode = MOS::LDCImm;
+    break;
+  }
+
+  MI.setDesc(Builder.getTII().get(Opcode));
 }
 
 bool MOSInstrInfo::reverseBranchCondition(

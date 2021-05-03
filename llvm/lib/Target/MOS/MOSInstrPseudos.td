@@ -50,8 +50,20 @@ def LDIdx : MOSPseudo {
   let mayLoad = true;
 }
 
-// May be emitted using the diamond pattern over a pair of immediate loads. Some
-// argument combinations can be more directly emitted though.
+def LDImm1 : MOSPseudo {
+  dag OutOperandList = (outs Anyi1:$dst);
+  dag InOperandList = (ins i1imm:$val);
+
+  let Defs = [NZ];
+
+  let isAsCheapAsAMove = true;
+  let isMoveImm = true;
+  let isReMaterializable = true;
+}
+
+// Zero-extend a 1-bit value to 8 bits. May be emitted using the diamond pattern
+// over a pair of immediate loads. Some argument combinations can be more
+// directly emitted though.
 def ZExt1 : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi1:$src);

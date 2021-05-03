@@ -381,7 +381,7 @@ bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
   default:
     llvm_unreachable("Unexpected constant size.");
   case 1: {
-    auto Ld = Builder.buildInstr(MOS::LDCImm, {Dst}, {Imm});
+    auto Ld = Builder.buildInstr(MOS::LDImm1, {Dst}, {Imm});
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Ld, TII, TRI, RBI);
   }

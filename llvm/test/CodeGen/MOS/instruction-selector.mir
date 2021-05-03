@@ -199,14 +199,14 @@ body: |
     RTS implicit %2
 ...
 ---
-name: ldcimm
+name: ldimm1
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: ldcimm
-    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
-    ; CHECK: RTS implicit [[LDCImm]]
+    ; CHECK-LABEL: name: ldimm1
+    ; CHECK: [[LDImm1_:%[0-9]+]]:anyi1 = LDImm1 1, implicit-def $nz
+    ; CHECK: RTS implicit [[LDImm1_]]
     %0:any(s1) = G_CONSTANT i1 true
     RTS implicit %0
 ...
@@ -325,8 +325,8 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY $x
     ; CHECK: [[COPY2:%[0-9]+]]:ac = COPY [[COPY]].sublo
     ; CHECK: [[COPY3:%[0-9]+]]:ac = COPY [[COPY]].subhi
-    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
-    ; CHECK: [[ADCImag8_:%[0-9]+]]:ac, [[ADCImag8_1:%[0-9]+]]:cc, [[ADCImag8_2:%[0-9]+]]:vc = ADCImag8 [[COPY2]], [[COPY1]], [[LDCImm]], implicit-def $nz
+    ; CHECK: [[LDImm1_:%[0-9]+]]:cc = LDImm1 0, implicit-def $nz
+    ; CHECK: [[ADCImag8_:%[0-9]+]]:ac, [[ADCImag8_1:%[0-9]+]]:cc, [[ADCImag8_2:%[0-9]+]]:vc = ADCImag8 [[COPY2]], [[COPY1]], [[LDImm1_]], implicit-def $nz
     ; CHECK: [[ADCImm:%[0-9]+]]:ac, [[ADCImm1:%[0-9]+]]:cc, [[ADCImm2:%[0-9]+]]:vc = ADCImm [[COPY3]], 0, [[ADCImag8_1]], implicit-def $nz
     ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[ADCImag8_]], %subreg.sublo, [[ADCImm]], %subreg.subhi
     ; CHECK: RTS implicit [[REG_SEQUENCE]]

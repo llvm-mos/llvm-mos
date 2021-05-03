@@ -41,3 +41,11 @@ body: |
     ; CHECK: $y = LDYIdx 1234, $x, implicit-def $nz
     $y = LDIdx 1234, $x, implicit-def $nz
 ...
+---
+name: ldcimm
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldcimm
+    ; CHECK: $c = LDCImm 1, implicit-def $nz
+    $c = LDImm1 1, implicit-def $nz
+...

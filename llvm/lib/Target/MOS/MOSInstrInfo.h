@@ -101,6 +101,7 @@ private:
                        MCRegister SrcReg) const;
 
   void expandLDIdx(MachineIRBuilder &Builder) const;
+  void expandLDImm1(MachineIRBuilder &Builder) const;
 };
 
 namespace MOS {
