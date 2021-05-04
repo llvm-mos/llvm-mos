@@ -12,15 +12,43 @@ body: |
     $x = COPY $a
 ...
 ---
-name: flag_to_lsb
+name: xy_to_a
 tracksRegLiveness: true
 body: |
   bb.0.entry:
-    liveins: $v
-    ; CHECK-LABEL: name: flag_to_lsb
-    ; CHECK: liveins: $v
-    ; CHECK: $x = ZExt1 $v, implicit-def $nz
-    $xlsb = COPY $v
+    liveins: $x
+    ; CHECK-LABEL: name: xy_to_a
+    ; CHECK: liveins: $x
+    ; CHECK: $a = T_A $x, implicit-def $nz
+    $a = COPY $x
+...
+---
+name: xy_to_xy
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x
+    ; CHECK-LABEL: name: xy_to_xy
+    ; CHECK: liveins: $x
+    ; CHECK: $a = T_A $x, implicit-def $nz
+    ; CHECK: $y = TA $a, implicit-def $nz
+    $y = COPY $x
+...
+---
+name: xy_to_xy_preserve_a
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $a, $x
+    ; CHECK-LABEL: name: xy_to_xy_preserve_a
+    ; CHECK: liveins: $a, $x
+    ; CHECK: PH $a
+    ; CHECK: $a = T_A $x, implicit-def $nz
+    ; CHECK: $y = TA $a, implicit-def $nz
+    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: $c = CMPImm $a, 0, implicit-def $nz
+    $y = COPY $x
+    $c = CMPImm $a, 0, implicit-def $nz
 ...
 ---
 name: gpr_to_imag8
@@ -98,41 +126,13 @@ body: |
     $xlsb = COPY $alsb
 ...
 ---
-name: xy_to_a
+name: flag_to_lsb
 tracksRegLiveness: true
 body: |
   bb.0.entry:
-    liveins: $x
-    ; CHECK-LABEL: name: xy_to_a
-    ; CHECK: liveins: $x
-    ; CHECK: $a = T_A $x, implicit-def $nz
-    $a = COPY $x
-...
----
-name: xy_to_xy
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $x
-    ; CHECK-LABEL: name: xy_to_xy
-    ; CHECK: liveins: $x
-    ; CHECK: $a = T_A $x, implicit-def $nz
-    ; CHECK: $y = TA $a, implicit-def $nz
-    $y = COPY $x
-...
----
-name: xy_to_xy_preserve_a
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $a, $x
-    ; CHECK-LABEL: name: xy_to_xy_preserve_a
-    ; CHECK: liveins: $a, $x
-    ; CHECK: PH $a
-    ; CHECK: $a = T_A $x, implicit-def $nz
-    ; CHECK: $y = TA $a, implicit-def $nz
-    ; CHECK: $a = PL implicit-def $nz
-    ; CHECK: $c = CMPImm $a, 0, implicit-def $nz
-    $y = COPY $x
-    $c = CMPImm $a, 0, implicit-def $nz
+    liveins: $v
+    ; CHECK-LABEL: name: flag_to_lsb
+    ; CHECK: liveins: $v
+    ; CHECK: $x = ZExt1 $v, implicit-def $nz
+    $xlsb = COPY $v
 ...

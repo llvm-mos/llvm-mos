@@ -407,13 +407,13 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
     Builder.buildInstr(MOS::STImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
     Builder.buildInstr(MOS::LDImag8).addDef(DestReg).addUse(SrcReg);
+  } else if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
+    CopyThroughA(MOS::A);
   } else if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo),
                     TRI.getSubReg(SrcReg, MOS::sublo));
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi),
                     TRI.getSubReg(SrcReg, MOS::subhi));
-  } else if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    CopyThroughA(MOS::A);
   } else if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
 
     Register DestReg8 =
