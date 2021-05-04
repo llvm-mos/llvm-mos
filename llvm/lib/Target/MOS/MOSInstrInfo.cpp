@@ -555,6 +555,9 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   default:
     Changed = false;
     break;
+  case MOS::CMPImmTerm:
+    expandCMPImmTerm(Builder);
+    break;
   case MOS::LDIdx:
     expandLDIdx(Builder);
     break;
@@ -564,6 +567,10 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
 
   return Changed;
+}
+
+void MOSInstrInfo::expandCMPImmTerm(MachineIRBuilder &Builder) const {
+  Builder.getInsertPt()->setDesc(Builder.getTII().get(MOS::CMPImm));
 }
 
 void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {

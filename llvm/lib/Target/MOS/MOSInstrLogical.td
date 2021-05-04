@@ -113,10 +113,6 @@ def CMPImm : MOSLogicalInstr {
   let Defs = [NZ];
 
   let isCompare = true;
-
-  // Keep CMPImm adjacent to the branch that uses it.
-  // This prevents NZ from ever being live outside of the terminators.
-  let isTerminator = true;
 }
 
 //===---------------------------------------------------------------------===//

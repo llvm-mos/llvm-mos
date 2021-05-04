@@ -343,7 +343,10 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
     return selectAll(MIS);
   }
 
-  auto Compare = Builder.buildInstr(MOS::CMPImm, {S1}, {LHS, RHS});
+  // Use the terminator version of CMPImm to ensure that the live range of N and
+  // Z is tightly curtailed.
+  unsigned Opcode = Flag == MOS::C ? MOS::CMPImm : MOS::CMPImmTerm;
+  auto Compare = Builder.buildInstr(Opcode, {S1}, {LHS, RHS});
   if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
     return false;
 

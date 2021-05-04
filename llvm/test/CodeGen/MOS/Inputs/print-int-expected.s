@@ -6,7 +6,7 @@ print_int:                              ; @print_int
 ; %bb.0:                                ; %entry
 	cmp	#10
 	bcc	LBB0_2
-LBB0_1:                                 ; %if.end.preheader
+; %bb.1:                                ; %if.end.preheader
 	sta	__save_a
 	lda	mos8(__rc4)
 	pha

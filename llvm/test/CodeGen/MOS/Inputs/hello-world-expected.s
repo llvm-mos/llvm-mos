@@ -15,7 +15,7 @@ LBB0_1:                                 ; %while.body
 	inx
 	cpx	#14
 	bne	LBB0_1
-LBB0_2:                                 ; %while.end
+; %bb.2:                                ; %while.end
 	ldx	#0
 	lda	#0
 	rts

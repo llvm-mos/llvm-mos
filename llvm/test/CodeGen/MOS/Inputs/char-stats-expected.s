@@ -30,7 +30,7 @@ LBB0_1:                                 ; %while.body
 	jsr	next_char
 	cmp	#0
 	beq	LBB0_3
-LBB0_2:                                 ; %while.body
+; %bb.2:                                ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
 	asl
 	tay
