@@ -369,9 +369,8 @@ void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   copyPhysRegImpl(Builder, DestReg, SrcReg);
 }
 
-void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
-                                   MCRegister DestReg,
-                                   MCRegister SrcReg) const {
+void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
+                                   Register SrcReg) const {
   if (DestReg == SrcReg)
     return;
 
@@ -415,33 +414,63 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder,
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi),
                     TRI.getSubReg(SrcReg, MOS::subhi));
   } else if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
-
-    Register DestReg8 =
-        TRI.getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
-    if (!DestReg8) {
-      LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
-                        << "\n");
-      report_fatal_error("Unsupported physical register copy.");
-    }
-
-    const MachineInstr &MI = *Builder.getInsertPt();
-    // MOS defines LSB writes to clobber the rest of the register. This fact is
-    // represented on the incoming COPY instruction by lack of an implicit use
-    // of the full 8-bit destination register. Accordingly, we check for this to
-    // make sure the code generator up until now accounted for the clobber.
-    assert(!MI.readsRegister(DestReg8));
-
     Register SrcReg8 =
         TRI.getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
-    if (SrcReg8)
-      copyPhysRegImpl(Builder, DestReg8, SrcReg8);
-    else
-      Builder.buildInstr(MOS::ZExt1, {DestReg8}, {Register(SrcReg)});
-  } else {
-    LLVM_DEBUG(dbgs() << TRI.getName(DestReg) << " <- " << TRI.getName(SrcReg)
-                      << "\n");
-    report_fatal_error("Unsupported physical register copy.");
-  }
+    Register DestReg8 =
+        TRI.getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
+
+    if (SrcReg8) {
+      SrcReg = SrcReg8;
+      if (DestReg8) {
+        DestReg = DestReg8;
+        const MachineInstr &MI = *Builder.getInsertPt();
+        // MOS defines LSB writes to write the whole 8-bit register, not just
+        // part of it.
+        assert(!MI.readsRegister(DestReg));
+
+        copyPhysRegImpl(Builder, DestReg, SrcReg);
+      } else {
+        if (DestReg == MOS::C) {
+          bool PullA = false;
+          if (!MOS::GPRRegClass.contains(SrcReg)) {
+            if (isMaybeLive(Builder, MOS::A)) {
+              Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+              PullA = true;
+            }
+            copyPhysRegImpl(Builder, MOS::A, SrcReg);
+            SrcReg = MOS::A;
+          }
+          // C = SrcReg >= 1
+          Builder.buildInstr(MOS::CMPImm, {MOS::C}, {SrcReg, INT64_C(1)});
+          if (PullA)
+            Builder.buildInstr(MOS::PL).addDef(MOS::A);
+        } else {
+          assert(DestReg == MOS::V);
+          if (SrcReg == MOS::A) {
+            Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+            Builder.buildInstr(MOS::PL, {MOS::A}, {});
+            Builder.buildInstr(MOS::SelectImm, {MOS::V},
+                               {Register(MOS::Z), INT64_C(0), INT64_C(1)});
+          } else {
+            bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
+            if (IsAMaybeLive)
+              Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+            copyPhysRegImpl(Builder, MOS::A, SrcReg);
+            Builder.buildInstr(MOS::SelectImm, {MOS::V},
+                               {Register(MOS::Z), INT64_C(0), INT64_C(1)});
+            if (IsAMaybeLive)
+              Builder.buildInstr(MOS::PL).addDef(MOS::A);
+          }
+        }
+      }
+    } else {
+      if (DestReg8)
+        DestReg = DestReg8;
+      Builder.buildInstr(MOS::SelectImm, {DestReg},
+                         {SrcReg, INT64_C(1), INT64_C(0)});
+    }
+  } else
+    llvm_unreachable("Unexpected physical register copy.");
 }
 
 void MOSInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,

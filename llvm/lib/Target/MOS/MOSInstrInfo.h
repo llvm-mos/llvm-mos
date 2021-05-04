@@ -97,8 +97,8 @@ public:
   getSerializableDirectMachineOperandTargetFlags() const override;
 
 private:
-  void copyPhysRegImpl(MachineIRBuilder &Builder, MCRegister DestReg,
-                       MCRegister SrcReg) const;
+  void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
+                       Register SrcReg) const;
 
   void expandCMPImmTerm(MachineIRBuilder &Builder) const;
   void expandLDIdx(MachineIRBuilder &Builder) const;

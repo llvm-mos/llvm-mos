@@ -36,8 +36,8 @@ def subz : MOSSubRegIndex<1>;
 def subv : MOSSubRegIndex<1>;
 
 // Least-significant bit of an 8-bit register. Writes to this are considered to
-// clobber the other bits, since the MOS instructions that can write to LSB
-// usually do.
+// write zeroes to the other bits (for now), so we can reduce LSB writes to
+// zero-extension.
 def sublsb : MOSSubRegIndex<1>;
 
 //===----------------------------------------------------------------------===//
@@ -59,8 +59,6 @@ class MOSReg<bits<16> num, string name>
 // An 8-bit value register (GPR or imaginary). Contains a 1-bit LSB subregister
 // to allow them to store boolean values.
 multiclass MOSReg8<bits<16> num, string name> {
-  // Least significant bit. Writes to this are considered to clobber the other
-  // bits, since the MOS instructions that can write to LSB usually do.
   def LSB : MOSReg<!add(num, 1), name#"LSB">;
 
   def NAME : MOSReg<num, name> {

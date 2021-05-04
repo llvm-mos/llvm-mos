@@ -191,3 +191,16 @@ def CMPImmTerm : MOSPseudo {
 
   let isTerminator = true;
 }
+
+//===---------------------------------------------------------------------===//
+// Control flow
+//===---------------------------------------------------------------------===//
+
+// Use the diamond control flow pattern to load one of two immediates based on
+// the value of a flag. The output can be either Anyi1 or Anyi8.
+def SelectImm : MOSPseudo {
+  dag OutOperandList = (outs unknown:$dst);
+  dag InOperandList = (ins Flag:$tst, i8imm:$true, i8imm:$false);
+
+  let usesCustomInserter = true;
+}

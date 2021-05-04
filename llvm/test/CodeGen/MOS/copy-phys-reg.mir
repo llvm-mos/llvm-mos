@@ -126,13 +126,93 @@ body: |
     $xlsb = COPY $alsb
 ...
 ---
-name: flag_to_lsb
+name: gprlsb_to_c
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $xlsb
+    ; CHECK-LABEL: name: gprlsb_to_c
+    ; CHECK: liveins: $xlsb
+    ; CHECK: $c = CMPImm $x, 1, implicit-def $nz
+    $c = COPY $xlsb
+...
+---
+name: imag8lsb_to_c
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $rc2lsb
+    ; CHECK-LABEL: name: imag8lsb_to_c
+    ; CHECK: liveins: $rc2lsb
+    ; CHECK: $a = LDImag8 $rc2, implicit-def $nz
+    ; CHECK: $c = CMPImm $a, 1, implicit-def $nz
+    $c = COPY $rc2lsb
+...
+---
+name: imag8lsb_to_c_preserve_a
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $rc2lsb, $a
+    ; CHECK-LABEL: name: imag8lsb_to_c_preserve_a
+    ; CHECK: liveins: $rc2lsb, $a
+    ; CHECK: PH $a
+    ; CHECK: $a = LDImag8 $rc2, implicit-def $nz
+    ; CHECK: $c = CMPImm $a, 1, implicit-def $nz
+    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: RTS implicit $a
+    $c = COPY $rc2lsb
+    RTS implicit $a
+...
+---
+name: alsb_to_v
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $alsb
+    ; CHECK-LABEL: name: alsb_to_v
+    ; CHECK: liveins: $alsb
+    ; CHECK: PH $a
+    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: $v = SelectImm $z, 0, 1
+    $v = COPY $alsb
+...
+---
+name: non_alsb_to_v
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $xlsb
+    ; CHECK-LABEL: name: non_alsb_to_v
+    ; CHECK: liveins: $xlsb
+    ; CHECK: $a = T_A $x, implicit-def $nz
+    ; CHECK: $v = SelectImm $z, 0, 1
+    $v = COPY $xlsb
+...
+---
+name: non_alsb_to_v_preserve_a
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $xlsb, $a
+    ; CHECK-LABEL: name: non_alsb_to_v_preserve_a
+    ; CHECK: liveins: $xlsb, $a
+    ; CHECK: PH $a
+    ; CHECK: $a = T_A $x, implicit-def $nz
+    ; CHECK: $v = SelectImm $z, 0, 1
+    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: RTS implicit $a
+    $v = COPY $xlsb
+    RTS implicit $a
+...
+---
+name: flag_to_anyi1
 tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $v
-    ; CHECK-LABEL: name: flag_to_lsb
+    ; CHECK-LABEL: name: flag_to_anyi1
     ; CHECK: liveins: $v
-    ; CHECK: $x = ZExt1 $v, implicit-def $nz
+    ; CHECK: $x = SelectImm $v, 1, 0
     $xlsb = COPY $v
 ...
