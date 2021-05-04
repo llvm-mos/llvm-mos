@@ -104,11 +104,11 @@ BitVector MOSRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 const TargetRegisterClass *
 MOSRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                            const MachineFunction &) const {
-  if (RC->contains(MOS::C))
+  if (RC->hasSuperClass(&MOS::Anyi1RegClass))
     return &MOS::Anyi1RegClass;
-  if (RC == &MOS::Imag16RegClass)
-    return RC;
-  return &MOS::Anyi8RegClass;
+  if (RC->hasSuperClass(&MOS::Anyi8RegClass))
+    return &MOS::Anyi8RegClass;
+  return RC;
 }
 
 bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
