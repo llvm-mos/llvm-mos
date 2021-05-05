@@ -102,37 +102,11 @@ def SBCImm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(SBC_Immediate imm8:$r)>;
 def SBCImag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
 
 //===---------------------------------------------------------------------===//
-// Comparison Instructions
-//===---------------------------------------------------------------------===//
-
-// CMP imm, CPX imm, CPY imm
-def CMPImm : MOSLogicalInstr {
-  dag OutOperandList = (outs Cc:$carry);
-  dag InOperandList = (ins GPR:$l, i8imm:$r);
-
-  let Defs = [NZ];
-
-  let isCompare = true;
-}
-
-//===---------------------------------------------------------------------===//
-// BIT Instructions
-//===---------------------------------------------------------------------===//
-// Ever the odd duck.
-//===---------------------------------------------------------------------===//
-
-def BITAbs : MOSLogicalInstr {
-  dag OutOperandList = (outs Vc:$v);
-  dag InOperandList = (ins Ac:$l, i16imm:$r);
-
-  let Defs = [NZ];
-}
-
-//===---------------------------------------------------------------------===//
 // Bitwise instructions
 //===---------------------------------------------------------------------===//
 
-class MOSBitwiseInstr : MOSLogicalInstr {
+class MOSBitwiseInstr<Instruction opcode> :
+    MOSLogicalInstr, PseudoInstExpansion<(opcode addr8:$r)> {
   let OutOperandList = (outs Ac:$dst);
   let InOperandList = (ins Ac:$l, Imag8:$r);
   let Constraints = "$dst = $l";
@@ -142,9 +116,9 @@ class MOSBitwiseInstr : MOSLogicalInstr {
   let isCommutable = true;
 }
 
-def ANDImag8 : MOSBitwiseInstr;
-def EORImag8 : MOSBitwiseInstr;
-def ORAImag8 : MOSBitwiseInstr;
+def ANDImag8 : MOSBitwiseInstr<AND_ZeroPage>;
+def EORImag8 : MOSBitwiseInstr<EOR_ZeroPage>;
+def ORAImag8 : MOSBitwiseInstr<ORA_ZeroPage>;
 
 //===---------------------------------------------------------------------===//
 // Shift/Rotate Instructions
@@ -165,13 +139,96 @@ class MOSRotate : MOSShiftRotate {
   let Constraints = "$dst = $src, $carryout = $carryin";
 }
 
-// ASL A, ASL zp
 def ASL : MOSShift;
 def LSR : MOSShift;
 
-// ROL A, ROL zp
 def ROL : MOSRotate;
 def ROR : MOSRotate;
+
+//===---------------------------------------------------------------------===//
+// BIT Instructions
+//===---------------------------------------------------------------------===//
+// Ever the odd duck.
+//===---------------------------------------------------------------------===//
+
+def BITAbs : MOSLogicalInstr, PseudoInstExpansion<(BIT_Absolute addr16:$r)> {
+  dag OutOperandList = (outs Vc:$v);
+  dag InOperandList = (ins Ac:$l, i16imm:$r);
+
+  let Defs = [NZ];
+}
+
+//===---------------------------------------------------------------------===//
+// Control Flow Instructions
+//===---------------------------------------------------------------------===//
+
+// Covers all branch instructions. Branches to $tgt if $flag = $val.
+def BR : MOSLogicalInstr {
+  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
+
+  let isBranch = true;
+  let isTerminator = true;
+}
+
+def JMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
+  dag InOperandList = (ins label:$tgt);
+
+  let Pattern = [(br bb:$tgt)];
+
+  let isBarrier = true;
+  let isBranch = true;
+  let isTerminator = true;
+}
+
+def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
+  dag InOperandList = (ins label:$tgt);
+
+  let isCall = true;
+}
+
+def RTS : MOSLogicalInstr, PseudoInstExpansion<(RTS_Implied)> {
+  let isBarrier = true;
+  let isReturn = true;
+  let isTerminator = true;
+}
+
+//===---------------------------------------------------------------------===//
+// Immediate Load Instructions
+//===---------------------------------------------------------------------===//
+
+class MOSImmediateLoad<RegisterClass dst, Operand val> : MOSLogicalInstr {
+  dag OutOperandList = (outs dst:$dst);
+  dag InOperandList = (ins val:$val);
+
+  let isAsCheapAsAMove = true;
+  let isMoveImm = true;
+}
+
+def CLV : MOSImmediateLoad<Vc, i1imm>, PseudoInstExpansion<(CLV_Implied)> {
+  dag InOperandList = (ins);
+}
+
+// CLC, SEC
+def LDCImm : MOSImmediateLoad<Cc, i1imm>;
+
+// LDA imm, LDX imm, LDY imm
+def LDImm : MOSImmediateLoad<GPR, i8imm> {
+  let Defs = [NZ];
+}
+
+//===---------------------------------------------------------------------===//
+// Comparison Instructions
+//===---------------------------------------------------------------------===//
+
+// CMP imm, CPX imm, CPY imm
+def CMPImm : MOSLogicalInstr {
+  dag OutOperandList = (outs Cc:$carry);
+  dag InOperandList = (ins GPR:$l, i8imm:$r);
+
+  let Defs = [NZ];
+
+  let isCompare = true;
+}
 
 //===---------------------------------------------------------------------===//
 // Increment/Decrement Instructions
@@ -188,30 +245,6 @@ def IN : MOSLogicalInstr {
   let Pattern = [(set XY:$dst, (add XY:$src, 1))];
 
   let isAdd = true;
-}
-
-//===---------------------------------------------------------------------===//
-// Immediate Load Instructions
-//===---------------------------------------------------------------------===//
-
-class MOSImmediateLoad<RegisterClass dst, Operand val> : MOSLogicalInstr {
-  dag OutOperandList = (outs dst:$dst);
-  dag InOperandList = (ins val:$val);
-
-  let isAsCheapAsAMove = true;
-  let isMoveImm = true;
-}
-
-// CLC, SEC
-def LDCImm : MOSImmediateLoad<Cc, i1imm>;
-
-def CLV : MOSImmediateLoad<Vc, i1imm> {
-  dag InOperandList = (ins);
-}
-
-// LDA imm, LDX imm, LDY imm
-def LDImm : MOSImmediateLoad<GPR, i8imm> {
-  let Defs = [NZ];
 }
 
 //===---------------------------------------------------------------------===//
@@ -260,40 +293,6 @@ def PL : MOSLogicalInstr {
   let Defs = [NZ];
 
   let mayLoad = true;
-}
-
-//===---------------------------------------------------------------------===//
-// Control Flow Instructions
-//===---------------------------------------------------------------------===//
-
-// Covers all branch instructions. Branches to $tgt if $flag = $val.
-def BR : MOSLogicalInstr {
-  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
-
-  let isBranch = true;
-  let isTerminator = true;
-}
-
-def JMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
-  dag InOperandList = (ins label:$tgt);
-
-  let Pattern = [(br bb:$tgt)];
-
-  let isBarrier = true;
-  let isBranch = true;
-  let isTerminator = true;
-}
-
-def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
-  dag InOperandList = (ins label:$tgt);
-
-  let isCall = true;
-}
-
-def RTS : MOSLogicalInstr, PseudoInstExpansion<(RTS_Implied)> {
-  let isBarrier = true;
-  let isReturn = true;
-  let isTerminator = true;
 }
 
 //===---------------------------------------------------------------------===//
