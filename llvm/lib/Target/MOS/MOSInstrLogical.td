@@ -116,6 +116,19 @@ def CMPImm : MOSLogicalInstr {
 }
 
 //===---------------------------------------------------------------------===//
+// BIT Instructions
+//===---------------------------------------------------------------------===//
+// Ever the odd duck.
+//===---------------------------------------------------------------------===//
+
+def BITAbs : MOSLogicalInstr {
+  dag OutOperandList = (outs Vc:$v);
+  dag InOperandList = (ins Ac:$l, i16imm:$r);
+
+  let Defs = [NZ];
+}
+
+//===---------------------------------------------------------------------===//
 // Bitwise instructions
 //===---------------------------------------------------------------------===//
 
@@ -191,6 +204,11 @@ class MOSImmediateLoad<RegisterClass dst, Operand val> : MOSLogicalInstr {
 
 // CLC, SEC
 def LDCImm : MOSImmediateLoad<Cc, i1imm>;
+
+def CLV : MOSImmediateLoad<Vc, i1imm> {
+  dag InOperandList = (ins);
+}
+
 // LDA imm, LDX imm, LDY imm
 def LDImm : MOSImmediateLoad<GPR, i8imm> {
   let Defs = [NZ];

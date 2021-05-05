@@ -57,3 +57,19 @@ body: |
     ; CHECK: $c = LDCImm 1
     $c = LDImm1 1, implicit-def $nz
 ...
+---
+name: set_v
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: set_v
+    ; CHECK: $v = BITAbs $a, &__set_v, implicit-def $nz
+    $v = LDImm1 1, implicit-def $nz
+...
+---
+name: clv
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: clv
+    ; CHECK: $v = CLV
+    $v = LDImm1 0, implicit-def $nz
+...

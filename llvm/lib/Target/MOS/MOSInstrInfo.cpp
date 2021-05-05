@@ -644,6 +644,7 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
 void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
   Register DestReg = MI.getOperand(0).getReg();
+  int64_t Val = MI.getOperand(1).getImm();
 
   unsigned Opcode;
   switch (DestReg) {
@@ -658,12 +659,22 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   }
   case MOS::C:
     Opcode = MOS::LDCImm;
-    // Remove NZ implicit def.
+    // Remove implicit-def $nz.
     MI.RemoveOperand(2);
     break;
   case MOS::V:
-    LLVM_DEBUG(dbgs() << MI);
-    report_fatal_error("Not yet implemented.");
+    if (Val == 1) {
+      Builder.buildInstr(MOS::BITAbs, {MOS::V}, {Register(MOS::A)})
+          .addExternalSymbol("__set_v");
+      MI.eraseFromParent();
+      return;
+    }
+    Opcode = MOS::CLV;
+    // Remove implicit-def $nz.
+    MI.RemoveOperand(2);
+    // Remove imm 1
+    MI.RemoveOperand(1);
+    break;
   }
 
   MI.setDesc(Builder.getTII().get(Opcode));
