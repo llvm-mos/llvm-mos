@@ -1,25 +1,5 @@
 # RUN: llc -mtriple=mos -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
 ---
-name: adc_immediate
-# CHECK-LABEL: adc_immediate
-body: |
-  bb.0.entry:
-    $a, $c, $v = ADCImm $a, 42, $c, implicit-def $nz
-    ; CHECK:      adc #42
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: adc_zeropage
-# CHECK-LABEL: adc_zeropage
-body: |
-  bb.0.entry:
-    $a, $c, $v = ADCImag8 $a, $rc0, $c, implicit-def $nz
-    ; CHECK:      adc mos8(__rc0)
-    RTS
-    ; CHECK-NEXT: rts
-...
----
 name: asl_accumulator
 # CHECK-LABEL: asl_accumulator
 body: |
@@ -167,23 +147,6 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: jmp_absolute
-# CHECK-LABEL: jmp_absolute
-body: |
-  bb.0.entry:
-    ; CHECK: [[BLOCK:L.*]]: ; %entry
-    JMP %bb.0.entry
-    ; CHECK: jmp [[BLOCK]]
-...
----
-name: jsr_absolute
-# CHECK-LABEL: jsr_absolute
-body: |
-  bb.0.entry:
-    JSR &fn
-    ; CHECK: jsr fn
-...
----
 name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |
@@ -260,36 +223,6 @@ body: |
   bb.0.entry:
     $a = LDAIdx 1234, $y, implicit-def $nz
     ; CHECK:      lda 1234,y
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: ldx_absolutey
-# CHECK-LABEL: ldx_absolutey
-body: |
-  bb.0.entry:
-    $x = LDXIdx 1234, $y, implicit-def $nz
-    ; CHECK:      ldx 1234,y
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: ldy_absolutex
-# CHECK-LABEL: ldy_absolutex
-body: |
-  bb.0.entry:
-    $y = LDYIdx 1234, $x, implicit-def $nz
-    ; CHECK:      ldy 1234,x
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: lda_indirectindexed
-# CHECK-LABEL: lda_indirectindexed
-body: |
-  bb.0.entry:
-    $a = LDYIndir $rs0, $y, implicit-def $nz
-    ; CHECK:      lda (mos8(__rc0)),y
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -384,34 +317,6 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: rts_implied
-# CHECK-LABEL: rts_implied
-body: |
-  bb.0.entry:
-    RTS
-    ; CHECK: rts
-...
----
-name: sbc_immediate
-# CHECK-LABEL: sbc_immediate
-body: |
-  bb.0.entry:
-    $a, $c, $v = SBCImm $a, 42, $c, implicit-def $nz
-    ; CHECK:      sbc #42
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: sbc_zeropage
-# CHECK-LABEL: sbc_zeropage
-body: |
-  bb.0.entry:
-    $a, $c, $v = SBCImag8 $a, $rc0, $c, implicit-def $nz
-    ; CHECK:      sbc mos8(__rc0)
-    RTS
-    ; CHECK-NEXT: rts
-...
----
 name: sec_implied
 # CHECK-LABEL: sec_implied
 body: |
@@ -458,16 +363,6 @@ body: |
   bb.0.entry:
     $rc0 = STImag8 $a
     ; CHECK:      sta mos8(__rc0)
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: sta_indirect_indexed
-# CHECK-LABEL: sta_indirect_indexed
-body: |
-  bb.0.entry:
-    STYIndir $a, $rs0, $y
-    ; CHECK:      sta (mos8(__rc0)),y
     RTS
     ; CHECK-NEXT: rts
 ...
