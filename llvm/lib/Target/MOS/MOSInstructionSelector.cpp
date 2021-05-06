@@ -360,12 +360,26 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
+
+  Register CMPN = MI.getOperand(1).getReg();
+  Register CMPZ = MI.getOperand(3).getReg();
+
+  Register N = MOS::NoRegister;
+  Register Z = MOS::NoRegister;
+  if (!Builder.getMRI()->use_nodbg_empty(CMPN))
+    N = CMPN;
+  if (!Builder.getMRI()->use_nodbg_empty(CMPZ))
+    Z = CMPZ;
+
+  assert((N == MOS::NoRegister || Z == MOS::NoRegister) &&
+         "G_CMP can output at most one of N or Z.");
+
   auto C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(1)});
-  auto SBC =
-      Builder.buildInstr(MOS::SBCNZImag8,
-                         {LLT::scalar(8), MI.getOperand(0), MI.getOperand(1),
-                          MI.getOperand(2), MI.getOperand(3)},
-                         {MI.getOperand(4), MI.getOperand(5), C});
+
+  auto SBC = Builder.buildInstr(
+      MOS::SBCNZImag8,
+      {LLT::scalar(8), MI.getOperand(0), N, MI.getOperand(2), Z},
+      {MI.getOperand(4), MI.getOperand(5), C});
   if (!constrainSelectedInstRegOperands(*SBC, TII, TRI, RBI))
     return false;
   MI.eraseFromParent();

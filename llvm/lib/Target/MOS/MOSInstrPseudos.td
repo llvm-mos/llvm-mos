@@ -170,8 +170,10 @@ def STabs_offset : MOSPseudo {
 //===---------------------------------------------------------------------===//
 
 // Version of SBCImag8 that copies the N and Z flags out to virtual registers.
-// This bundles the definition and use of N and Z together to maintain the invariant
-// that neither can be live across pseudoinstructions.
+// This bundles the definition and use of N and Z together to maintain the
+// invariant that neither can be live across pseudoinstructions. At most one of
+// N or Z can be set (the other must be $noreg), since copying N out usually
+// clobbers Z, and vice versa.
 def SBCNZImag8 : MOSPseudo {
   dag OutOperandList = (outs Ac:$dst,
                         Cc:$carryout, Anyi1:$nout, Vc:$vout, Anyi1:$zout);
