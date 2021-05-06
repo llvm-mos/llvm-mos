@@ -1,16 +1,5 @@
 # RUN: llc -mtriple=mos -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
 ---
-name: asl_accumulator
-# CHECK-LABEL: asl_accumulator
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: bb.0
-    $a, $c = ASL $a, implicit-def $nz
-    ; CHECK:      asl
-    RTS
-    ; CHECK-NEXT: rts
-...
----
 name: asl_zeropage
 # CHECK-LABEL: asl_zeropage
 body: |
@@ -21,13 +10,13 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: bcc_relative
-# CHECK-LABEL: bcc_relative
+name: asl_accumulator
+# CHECK-LABEL: asl_accumulator
 body: |
   bb.0.entry:
-    BR %bb.0.entry, $c, 0
-    ; CHECK:      [[BLOCK:L.*]]: ; %entry
-    ; CHECK:      bcc [[BLOCK]]
+    ; CHECK-LABEL: bb.0
+    $a, $c = ASL $a, implicit-def $nz
+    ; CHECK:      asl
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -43,56 +32,13 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: beq_relative
-# CHECK-LABEL: beq_relative
+name: bcc_relative
+# CHECK-LABEL: bcc_relative
 body: |
   bb.0.entry:
-    BR %bb.0.entry, $z, 1
+    BR %bb.0.entry, $c, 0
     ; CHECK:      [[BLOCK:L.*]]: ; %entry
-    ; CHECK:      beq [[BLOCK]]
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: bmi_relative
-# CHECK-LABEL: bmi_relative
-body: |
-  bb.0.entry:
-    BR %bb.0.entry, $n, 1
-    ; CHECK:      [[BLOCK:L.*]]: ; %entry
-    ; CHECK:      bmi [[BLOCK]]
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: bne_relative
-# CHECK-LABEL: bne_relative
-body: |
-  bb.0.entry:
-    BR %bb.0.entry, $z, 0
-    ; CHECK:      [[BLOCK:L.*]]: ; %entry
-    ; CHECK:      bne [[BLOCK]]
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: bpl_relative
-# CHECK-LABEL: bpl_relative
-body: |
-  bb.0.entry:
-    BR %bb.0.entry, $n, 0
-    ; CHECK:      [[BLOCK:L.*]]: ; %entry
-    ; CHECK:      bpl [[BLOCK]]
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: clc_implied
-# CHECK-LABEL: clc_implied
-body: |
-  bb.0.entry:
-    $c = LDCImm 0
-    ; CHECK:      clc{{$}}
+    ; CHECK:      bcc [[BLOCK]]
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -107,102 +53,12 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: cpx_immediate
-# CHECK-LABEL: cpx_immediate
-body: |
-  bb.0.entry:
-    $c = CMPImm $x, 42, implicit-def $nz
-    ; CHECK:      cpx #42
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: cpy_immediate
-# CHECK-LABEL: cpy_immediate
-body: |
-  bb.0.entry:
-    $c = CMPImm $y, 42, implicit-def $nz
-    ; CHECK:      cpy #42
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: inx_implied
-# CHECK-LABEL: inx_implied
-body: |
-  bb.0.entry:
-    $x = IN $x, implicit-def $nz
-    ; CHECK:      inx{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: iny_implied
-# CHECK-LABEL: iny_implied
-body: |
-  bb.0.entry:
-    $y = IN $y, implicit-def $nz
-    ; CHECK:      iny{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
 name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |
   bb.0.entry:
     $a = LDImm 42, implicit-def $nz
     ; CHECK:      lda #42
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: ldx_immediate
-# CHECK-LABEL: ldx_immediate
-body: |
-  bb.0.entry:
-    $x = LDImm 42, implicit-def $nz
-    ; CHECK:      ldx #42
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: ldy_immediate
-# CHECK-LABEL: ldy_immediate
-body: |
-  bb.0.entry:
-    $y = LDImm 42, implicit-def $nz
-    ; CHECK:      ldy #42
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: lda_absolute
-# CHECK-LABEL: lda_absolute
-body: |
-  bb.0.entry:
-    $a = LDAbs 1234, implicit-def $nz
-    ; CHECK:      lda 1234
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: ldx_absolute
-# CHECK-LABEL: ldx_absolute
-body: |
-  bb.0.entry:
-    $x = LDAbs 1234, implicit-def $nz
-    ; CHECK:      ldx 1234
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: ldy_absolute
-# CHECK-LABEL: ldy_absolute
-body: |
-  bb.0.entry:
-    $y = LDAbs 1234, implicit-def $nz
-    ; CHECK:      ldy 1234
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -217,102 +73,12 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: lda_absolutey
-# CHECK-LABEL: lda_absolutey
+name: clc_implied
+# CHECK-LABEL: clc_implied
 body: |
   bb.0.entry:
-    $a = LDAIdx 1234, $y, implicit-def $nz
-    ; CHECK:      lda 1234,y
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: lda_zeropage
-# CHECK-LABEL: lda_zeropage
-body: |
-  bb.0.entry:
-    $a = LDImag8 $rc0, implicit-def $nz
-    ; CHECK:      lda mos8(__rc0)
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: ldx_zeropage
-# CHECK-LABEL: ldx_zeropage
-body: |
-  bb.0.entry:
-    $x = LDImag8 $rc0, implicit-def $nz
-    ; CHECK:      ldx mos8(__rc0)
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: ldy_zeropage
-# CHECK-LABEL: ldy_zeropage
-body: |
-  bb.0.entry:
-    $y = LDImag8 $rc0, implicit-def $nz
-    ; CHECK:      ldy mos8(__rc0)
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: pha_implied
-# CHECK-LABEL: pha_implied
-body: |
-  bb.0.entry:
-    PH $a
-    ; CHECK:      pha{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: php_implied
-# CHECK-LABEL: php_implied
-body: |
-  bb.0.entry:
-    PH $p
-    ; CHECK:      php{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: pla_implied
-# CHECK-LABEL: pla_implied
-body: |
-  bb.0.entry:
-    $a = PL implicit-def $nz
-    ; CHECK:      pla{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: plp_implied
-# CHECK-LABEL: plp_implied
-body: |
-  bb.0.entry:
-    $p = PL implicit-def $nz
-    ; CHECK:      plp{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: rol_accumulator
-# CHECK-LABEL: rol_accumulator
-body: |
-  bb.0.entry:
-    $a, $c = ROL $a, $c, implicit-def $nz
-    ; CHECK:      rol{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: rol_zeropage
-# CHECK-LABEL: rol_zeropage
-body: |
-  bb.0.entry:
-    $rc0, $c = ROL $rc0, $c, implicit-def $nz
-    ; CHECK:      rol mos8(__rc0)
+    $c = LDCImm 0
+    ; CHECK:      clc{{$}}
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -327,12 +93,32 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: sta_absolute
-# CHECK-LABEL: sta_absolute
+name: inx_implied
+# CHECK-LABEL: inx_implied
 body: |
   bb.0.entry:
-    STAbs $a, 1234
-    ; CHECK:      sta 1234
+    $x = IN $x, implicit-def $nz
+    ; CHECK:      inx{{$}}
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: pha_implied
+# CHECK-LABEL: pha_implied
+body: |
+  bb.0.entry:
+    PH $a
+    ; CHECK:      pha{{$}}
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: pla_implied
+# CHECK-LABEL: pla_implied
+body: |
+  bb.0.entry:
+    $a = PL implicit-def $nz
+    ; CHECK:      pla{{$}}
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -347,52 +133,12 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: sta_absolutey
-# CHECK-LABEL: sta_absolutey
-body: |
-  bb.0.entry:
-    STIdx $a, 1234, $y
-    ; CHECK:      sta 1234,y
-    RTS
-    ; CHECK-NEXT: rts
-...
----
 name: sta_zeropage
 # CHECK-LABEL: sta_zeropage
 body: |
   bb.0.entry:
     $rc0 = STImag8 $a
     ; CHECK:      sta mos8(__rc0)
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: stx_absolute
-# CHECK-LABEL: stx_absolute
-body: |
-  bb.0.entry:
-    STAbs $x, 1234
-    ; CHECK:      stx 1234
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: stx_zeropage
-# CHECK-LABEL: stx_zeropage
-body: |
-  bb.0.entry:
-    $rc0 = STImag8 $x
-    ; CHECK:      stx mos8(__rc0)
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: sty_absolute
-# CHECK-LABEL: sty_absolute
-body: |
-  bb.0.entry:
-    STAbs $y, 1234
-    ; CHECK:      sty 1234
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -407,42 +153,12 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
-name: tax_implied
-# CHECK-LABEL: tax_implied
-body: |
-  bb.0.entry:
-    $x = TA $a, implicit-def $nz
-    ; CHECK:      tax{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: tay_implied
-# CHECK-LABEL: tay_implied
-body: |
-  bb.0.entry:
-    $y = TA $a, implicit-def $nz
-    ; CHECK:      tay{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
 name: txa_implied
 # CHECK-LABEL: txa_implied
 body: |
   bb.0.entry:
     $a = T_A $x, implicit-def $nz
     ; CHECK:      txa{{$}}
-    RTS
-    ; CHECK-NEXT: rts
-...
----
-name: tya_implied
-# CHECK-LABEL: tya_implied
-body: |
-  bb.0.entry:
-    $a = T_A $y, implicit-def $nz
-    ; CHECK:      tya{{$}}
     RTS
     ; CHECK-NEXT: rts
 ...
