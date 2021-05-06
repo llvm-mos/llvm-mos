@@ -29,7 +29,9 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.setOpcode(MI->getOpcode());
     break;
   case MOS::ASL:
+  case MOS::LSR:
   case MOS::ROL:
+  case MOS::ROR:
     switch (MI->getOperand(0).getReg()) {
     default: {
       assert(MOS::Imag8RegClass.contains(MI->getOperand(0).getReg()));
@@ -37,8 +39,14 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       case MOS::ASL:
         OutMI.setOpcode(MOS::ASL_ZeroPage);
         break;
+      case MOS::LSR:
+        OutMI.setOpcode(MOS::LSR_ZeroPage);
+        break;
       case MOS::ROL:
         OutMI.setOpcode(MOS::ROL_ZeroPage);
+        break;
+      case MOS::ROR:
+        OutMI.setOpcode(MOS::ROR_ZeroPage);
         break;
       }
       MCOperand Addr;
@@ -54,8 +62,14 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       case MOS::ASL:
         OutMI.setOpcode(MOS::ASL_Accumulator);
         return;
+      case MOS::LSR:
+        OutMI.setOpcode(MOS::LSR_Accumulator);
+        return;
       case MOS::ROL:
         OutMI.setOpcode(MOS::ROL_Accumulator);
+        return;
+      case MOS::ROR:
+        OutMI.setOpcode(MOS::ROR_Accumulator);
         return;
       }
     }
