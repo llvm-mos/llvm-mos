@@ -208,6 +208,28 @@ body:             |
     $xlsb = LDstk %stack.1, 1, implicit-def $nz :: (load 1 from %stack.1 + 1)
 ...
 ---
+name: ld_byte_c
+stack:
+  - { id: 0, size: 1 }
+  - { id: 1, size: 2 }
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ld_byte_c
+    ; CHECK: $c = LDCImm 0
+    ; CHECK: $a = COPY $rc0
+    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c, implicit-def $nz
+    ; CHECK: $rc0 = COPY $a
+    ; CHECK: $a = COPY $rc1, implicit $a
+    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c, implicit-def $nz
+    ; CHECK: $rc1 = COPY killed $a
+    ; CHECK: $y = LDImm 1, implicit-def $nz
+    ; CHECK: $a = LDYIndir $rs0, killed $y, implicit-def $nz :: (load 1 from %stack.1 + 1)
+    ; CHECK: $c = COPY $alsb
+    ; CHECK: $xlsb = COPY killed $c
+    $c = LDstk %stack.1, 1, implicit-def $nz :: (load 1 from %stack.1 + 1)
+    $xlsb = COPY killed $c
+...
+---
 name: ld_ptr
 stack:
   - { id: 0, size: 4 }
@@ -250,6 +272,28 @@ body:             |
     ; CHECK: $y = LDImm 1, implicit-def $nz
     ; CHECK: STYIndir $a, $rs0, killed $y :: (store 1 into %stack.1 + 1)
     STstk $a, %stack.1, 1, implicit-def $nz :: (store 1 into %stack.1 + 1)
+...
+---
+name: st_byte_c
+stack:
+  - { id: 0, size: 1 }
+  - { id: 1, size: 2 }
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: st_byte_c
+    ; CHECK: $c = LDCImm 0
+    ; CHECK: $a = COPY $rc0
+    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c, implicit-def $nz
+    ; CHECK: $rc0 = COPY $a
+    ; CHECK: $a = COPY $rc1, implicit $a
+    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c, implicit-def $nz
+    ; CHECK: $rc1 = COPY killed $a
+    ; CHECK: $c = COPY $xlsb
+    ; CHECK: $a = ZExt1 $c, implicit-def $nz
+    ; CHECK: $y = LDImm 1, implicit-def $nz
+    ; CHECK: STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.1 + 1)
+    $c = COPY $xlsb
+    STstk killed $c, %stack.1, 1, implicit-def $nz :: (store 1 into %stack.1 + 1)
 ...
 ---
 name: st_byte_high

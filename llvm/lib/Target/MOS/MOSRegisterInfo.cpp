@@ -129,15 +129,19 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   MachineIRBuilder Builder(MBB, I);
   switch (Reg) {
   default:
-    llvm_unreachable("Unexpected scavenger register.");
+    errs() << "Register: " << getName(Reg) << "\n";
+    report_fatal_error("Scavenger spill for register not yet implemented.");
   case MOS::A:
+  case MOS::ALSB:
     Builder.buildInstr(MOS::PH).addUse(MOS::A);
 
     Builder.setInsertPt(MBB, UseMI);
     Builder.buildInstr(MOS::PL).addDef(MOS::A);
     break;
   case MOS::X:
+  case MOS::XLSB:
   case MOS::Y:
+  case MOS::YLSB:
     const char *Save = Reg == MOS::X ? "__save_x" : "__save_y";
     Builder.buildInstr(MOS::STAbs).addUse(Reg).addExternalSymbol(Save);
 
@@ -364,18 +368,21 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   if (Loc8)
     Loc = Loc8;
 
-  if (!MOS::Anyi8RegClass.contains(Loc)) {
-    errs() << *MI;
-    report_fatal_error("LDSTstk not yet implemented.");
-  }
+  assert(Loc == MOS::C || Loc == MOS::V || MOS::Anyi8RegClass.contains(Loc));
 
   Register A = Loc;
   if (A != MOS::A)
     A = MRI.createVirtualRegister(&MOS::AcRegClass);
 
   // Transfer the value to A to be stored (if applicable).
-  if (!IsLoad && Loc != A)
-    Builder.buildCopy(A, Loc);
+  if (!IsLoad && Loc != A) {
+    if (Loc == MOS::C || Loc == MOS::V)
+      Builder.buildInstr(MOS::ZExt1, {A}, {Loc});
+    else {
+      assert(MOS::Anyi8RegClass.contains(Loc));
+      Builder.buildCopy(A, Loc);
+    }
+  }
 
   // This needs to occur after the above copy since the source may be Y.
   Register Y =
@@ -388,8 +395,14 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
       .addMemOperand(*MI->memoperands_begin());
 
   // Transfer the loaded value out of A (if applicable).
-  if (IsLoad && Loc != A)
-    Builder.buildCopy(Loc, A);
+  if (IsLoad && Loc != A) {
+    if (Loc == MOS::C || Loc == MOS::V)
+      Builder.buildInstr(MOS::COPY, {Loc}, {}).addUse(A, 0, MOS::sublsb);
+    else {
+      assert(MOS::Anyi8RegClass.contains(Loc));
+      Builder.buildCopy(Loc, A);
+    }
+  }
 
   MI->eraseFromParent();
   return;
