@@ -36,25 +36,21 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   std::string AiryOperands;
   raw_string_ostream AiryOperandStream(AiryOperands);
   auto MnemonicInfo = getMnemonic(MI);
-  uint32_t Bits = MnemonicInfo.second;
-  if (Bits != 0) {
-    printInstruction(MI, Address, AiryOperandStream);
-    AiryOperands = AiryOperandStream.str();
-    size_t SpacesSeen = 0;
-    std::string CorrectOperands;
-    for (const auto &Letter : AiryOperands) {
-      if (isspace(Letter) != 0) {
-        if (++SpacesSeen <= 2) {
-          CorrectOperands += '\t';
-        }
-        continue;
+  assert(MnemonicInfo.second && "Missing opcode for instruction.");
+  printInstruction(MI, Address, AiryOperandStream);
+  AiryOperands = AiryOperandStream.str();
+  size_t SpacesSeen = 0;
+  std::string CorrectOperands;
+  for (const auto &Letter : AiryOperands) {
+    if (isspace(Letter) != 0) {
+      if (++SpacesSeen <= 2) {
+        CorrectOperands += '\t';
       }
-      CorrectOperands += Letter;
+      continue;
     }
-    OS << CorrectOperands;
-  } else {
-    llvm_unreachable("Unlowered pseudoinstruction.");
+    CorrectOperands += Letter;
   }
+  OS << CorrectOperands;
 }
 
 void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
