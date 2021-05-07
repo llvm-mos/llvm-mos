@@ -175,7 +175,7 @@ def STabs_offset : MOSPseudo {
 // N or Z can be set (the other must be $noreg), since copying N out usually
 // clobbers Z, and vice versa.
 def SBCNZImag8 : MOSPseudo {
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPRLSB:$nout, Vc:$vout, GPRLSB:$zout);
+  dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
   dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   let Constraints = "$dst = $l, $carryout = $carryin";
 

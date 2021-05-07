@@ -162,7 +162,7 @@ body: |
     ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42, implicit-def $nz
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY [[LDImm]]
     ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
-    ; CHECK: %7:ac, %2:cc, %3:gprlsb, %4:vc, $noreg = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]], implicit-def $nz
+    ; CHECK: %7:ac, %2:cc, %3:gpr_lsb, %4:vc, $noreg = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]], implicit-def $nz
     ; CHECK: RTS implicit %2, implicit %3, implicit %4
     %0:any(s8) = COPY $a
     %1:any(s8) = G_CONSTANT i8 42
@@ -180,7 +180,7 @@ body: |
     ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42, implicit-def $nz
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY [[LDImm]]
     ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
-    ; CHECK: %7:ac, %2:cc, $noreg, %4:vc, %5:gprlsb = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]], implicit-def $nz
+    ; CHECK: %7:ac, %2:cc, $noreg, %4:vc, %5:gpr_lsb = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]], implicit-def $nz
     ; CHECK: RTS implicit %2, implicit %4, implicit %5
     %0:any(s8) = COPY $a
     %1:any(s8) = G_CONSTANT i8 42
