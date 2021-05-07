@@ -50,8 +50,9 @@ def LDIdx : MOSPseudo {
   let mayLoad = true;
 }
 
+// Loads a boolean value into C, V, ALSB, XLSB, or YLSB.
 def LDImm1 : MOSPseudo {
-  dag OutOperandList = (outs Anyi1:$dst);
+  dag OutOperandList = (outs CV_GPR_LSB:$dst);
   dag InOperandList = (ins i1imm:$val);
 
   let Defs = [NZ];
@@ -200,7 +201,7 @@ def CMPImmTerm : MOSPseudo {
 //===---------------------------------------------------------------------===//
 
 // Use the diamond control flow pattern to load one of two immediates based on
-// the value of a flag. The output must either be in Anyi1 or GPR.
+// the value of a flag. The output must either be to CV_GPR_LSB or GPR.
 def SelectImm : MOSPseudo {
   dag OutOperandList = (outs unknown:$dst);
   dag InOperandList = (ins Flag:$tst, i8imm:$true, i8imm:$false);

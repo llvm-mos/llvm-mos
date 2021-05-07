@@ -174,6 +174,7 @@ let isPressureFineGrained = true in {
 let isPressureFineGrained = true in {
   def GPR : MOSReg8Class<(add A, X, Y)>;
   def GPR_LSB : MOSReg1Class<(add ALSB, XLSB, YLSB)>;
+  def CV_GPR_LSB : MOSReg1Class<(add C, V, GPR_LSB)>;
 }
 def Imag8 : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
 def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;

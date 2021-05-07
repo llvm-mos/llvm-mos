@@ -686,12 +686,13 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   unsigned Opcode;
   switch (DestReg) {
   default: {
-    Register DestReg8 =
+    DestReg =
         Builder.getMF().getSubtarget().getRegisterInfo()->getMatchingSuperReg(
             DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
-    assert(DestReg8 && "Unexpected destination for LDImm1");
+    assert(DestReg && "Unexpected destination for LDImm1");
+    assert(MOS::GPRRegClass.contains(DestReg));
     Opcode = MOS::LDImm;
-    MI.getOperand(0).setReg(DestReg8);
+    MI.getOperand(0).setReg(DestReg);
     break;
   }
   case MOS::C:

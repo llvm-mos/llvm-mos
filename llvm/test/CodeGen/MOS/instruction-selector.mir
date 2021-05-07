@@ -223,7 +223,7 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm1
-    ; CHECK: [[LDImm1_:%[0-9]+]]:anyi1 = LDImm1 1, implicit-def $nz
+    ; CHECK: [[LDImm1_:%[0-9]+]]:cv_gpr_lsb = LDImm1 1, implicit-def $nz
     ; CHECK: RTS implicit [[LDImm1_]]
     %0:any(s1) = G_CONSTANT i1 true
     RTS implicit %0

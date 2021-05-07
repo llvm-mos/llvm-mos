@@ -169,7 +169,7 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
 
   const auto LDImm = [&Builder, &Dst](int64_t Val) {
-    if (MOS::Anyi1RegClass.contains(Dst)) {
+    if (MOS::CV_GPR_LSBRegClass.contains(Dst)) {
       Builder.buildInstr(MOS::LDImm1, {Dst}, {Val});
       return;
     }
