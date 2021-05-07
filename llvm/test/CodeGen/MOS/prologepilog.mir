@@ -188,6 +188,26 @@ body:             |
     $x = LDstk %stack.1, 1, implicit-def $nz :: (load 1 from %stack.1 + 1)
 ...
 ---
+name: ld_byte_xlsb
+stack:
+  - { id: 0, size: 1 }
+  - { id: 1, size: 2 }
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ld_byte_xlsb
+    ; CHECK: $c = LDCImm 0
+    ; CHECK: $a = COPY $rc0
+    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c, implicit-def $nz
+    ; CHECK: $rc0 = COPY $a
+    ; CHECK: $a = COPY $rc1, implicit $a
+    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c, implicit-def $nz
+    ; CHECK: $rc1 = COPY killed $a
+    ; CHECK: $y = LDImm 1, implicit-def $nz
+    ; CHECK: $a = LDYIndir $rs0, killed $y, implicit-def $nz :: (load 1 from %stack.1 + 1)
+    ; CHECK: $x = COPY killed $a
+    $xlsb = LDstk %stack.1, 1, implicit-def $nz :: (load 1 from %stack.1 + 1)
+...
+---
 name: ld_ptr
 stack:
   - { id: 0, size: 4 }

@@ -359,7 +359,12 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
     return;
   }
 
-  if(!MOS::Anyi8RegClass.contains(Loc)) {
+  Register Loc8 =
+      TRI.getMatchingSuperReg(Loc, MOS::sublsb, &MOS::Anyi8RegClass);
+  if (Loc8)
+    Loc = Loc8;
+
+  if (!MOS::Anyi8RegClass.contains(Loc)) {
     errs() << *MI;
     report_fatal_error("LDSTstk not yet implemented.");
   }
