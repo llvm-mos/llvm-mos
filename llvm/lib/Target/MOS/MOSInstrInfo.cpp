@@ -587,6 +587,9 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::CMPImmTerm:
     expandCMPImmTerm(Builder);
     break;
+  case MOS::SBCNZImag8:
+    expandSBCNZImag8(Builder);
+    break;
   case MOS::LDIdx:
     expandLDIdx(Builder);
     break;
@@ -600,6 +603,23 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void MOSInstrInfo::expandCMPImmTerm(MachineIRBuilder &Builder) const {
   Builder.getInsertPt()->setDesc(Builder.getTII().get(MOS::CMPImm));
+}
+
+void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
+  MachineInstr &MI = *Builder.getInsertPt();
+  Builder.buildInstr(MOS::SBCImag8,
+                     {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+                     {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
+  Register NZOut = MI.getOperand(2).getReg();
+  Register NZIn = MOS::N;
+  if (NZOut == MOS::NoRegister) {
+    NZOut = MI.getOperand(4).getReg();
+    NZIn = MOS::Z;
+  } else
+    assert(MI.getOperand(4).getReg() == MOS::NoRegister &&
+           "At most one of N and Z can be set in SBCNZImag8");
+  Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(1), INT64_C(0)});
+  MI.eraseFromParent();
 }
 
 void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
