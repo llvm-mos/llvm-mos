@@ -302,7 +302,10 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
 
   // Handle any real instructions that weren't generated from a pseudo.
-  assert(!MI->isPseudo());
+  if (MI->isPseudo()) {
+    LLVM_DEBUG(dbgs() << *MI);
+    report_fatal_error("Pseudoinstruction was never lowered.");
+  }
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
     if (lowerOperand(MO, MCOp))

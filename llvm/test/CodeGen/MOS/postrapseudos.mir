@@ -8,7 +8,7 @@ body: |
     ; CHECK-LABEL: name: sbcnzimag8_n
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
     ; CHECK: $xlsb = SelectImm $n, 1, 0
-    $a, $c, $xlsb, $v, $noreg = SBCNZImag8 $a, $rc2, $c
+    $a, $c, $xlsb, $v, $noreg = SBCNZImag8 $a, $rc2, $c, implicit-def $nz
 ...
 ---
 name: sbcnzimag8_z
@@ -18,7 +18,7 @@ body: |
     ; CHECK-LABEL: name: sbcnzimag8_z
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
     ; CHECK: $ylsb = SelectImm $z, 1, 0
-    $a, $c, $noreg, $v, $ylsb = SBCNZImag8 $a, $rc2, $c
+    $a, $c, $noreg, $v, $ylsb = SBCNZImag8 $a, $rc2, $c, implicit-def $nz
 ...
 ---
 name: ldaidx
