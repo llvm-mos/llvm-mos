@@ -74,26 +74,28 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       }
     }
   case MOS::BR: {
-    switch (MI->getOperand(1).getReg()) {
+    Register Flag = MI->getOperand(1).getReg();
+    int64_t Val = MI->getOperand(2).getImm();
+    switch (Flag) {
     default:
       llvm_unreachable("Unexpected register.");
     case MOS::C:
-      OutMI.setOpcode(MI->getOperand(2).getImm() ? MOS::BCS_Relative
-                                                 : MOS::BCC_Relative);
+      OutMI.setOpcode(Val ? MOS::BCS_Relative : MOS::BCC_Relative);
       break;
     case MOS::N:
-      OutMI.setOpcode(MI->getOperand(2).getImm() ? MOS::BMI_Relative
-                                                 : MOS::BPL_Relative);
+      OutMI.setOpcode(Val ? MOS::BMI_Relative : MOS::BPL_Relative);
+      break;
+    case MOS::V:
+      OutMI.setOpcode(Val ? MOS::BVS_Relative : MOS::BVC_Relative);
       break;
     case MOS::Z:
-      OutMI.setOpcode(MI->getOperand(2).getImm() ? MOS::BEQ_Relative
-                                                 : MOS::BNE_Relative);
+      OutMI.setOpcode(Val ? MOS::BEQ_Relative : MOS::BNE_Relative);
       break;
     }
-    MCOperand Val;
-    if (!lowerOperand(MI->getOperand(0), Val))
+    MCOperand Tgt;
+    if (!lowerOperand(MI->getOperand(0), Tgt))
       llvm_unreachable("Failed to lower operand");
-    OutMI.addOperand(Val);
+    OutMI.addOperand(Tgt);
     return;
   }
   case MOS::CMPImm: {
