@@ -206,7 +206,14 @@ void MOSPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 }
 
-void MOSPassConfig::addPreSched2() { addPass(createMOSStaticStackAllocPass()); }
+void MOSPassConfig::addPreSched2() {
+  // Lower control flow pseudos.
+  addPass(&FinalizeISelID);
+  // Lower pseudos produced by control flow pseudos.
+  addPass(&ExpandPostRAPseudosID);
+
+  addPass(createMOSStaticStackAllocPass());
+}
 
 void MOSPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
 

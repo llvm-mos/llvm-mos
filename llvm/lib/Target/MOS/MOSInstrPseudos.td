@@ -175,8 +175,7 @@ def STabs_offset : MOSPseudo {
 // N or Z can be set (the other must be $noreg), since copying N out usually
 // clobbers Z, and vice versa.
 def SBCNZImag8 : MOSPseudo {
-  dag OutOperandList = (outs Ac:$dst,
-                        Cc:$carryout, Anyi1:$nout, Vc:$vout, Anyi1:$zout);
+  dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPRLSB:$nout, Vc:$vout, GPRLSB:$zout);
   dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   let Constraints = "$dst = $l, $carryout = $carryin";
 
@@ -201,7 +200,7 @@ def CMPImmTerm : MOSPseudo {
 //===---------------------------------------------------------------------===//
 
 // Use the diamond control flow pattern to load one of two immediates based on
-// the value of a flag. The output can be either Anyi1 or Anyi8.
+// the value of a flag. The output must either be in Anyi1 or GPR.
 def SelectImm : MOSPseudo {
   dag OutOperandList = (outs unknown:$dst);
   dag InOperandList = (ins Flag:$tst, i8imm:$true, i8imm:$false);

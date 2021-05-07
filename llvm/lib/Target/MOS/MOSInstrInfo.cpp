@@ -464,10 +464,26 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         }
       }
     } else {
-      if (DestReg8)
+      if (DestReg8) {
         DestReg = DestReg8;
-      Builder.buildInstr(MOS::SelectImm, {DestReg},
-                         {SrcReg, INT64_C(1), INT64_C(0)});
+
+        Register Tmp = DestReg;
+        if (!MOS::GPRRegClass.contains(Tmp))
+          Tmp = MOS::A;
+
+        bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
+        if (Tmp != DestReg && IsAMaybeLive)
+          Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+        Builder.buildInstr(MOS::SelectImm, {Tmp},
+                           {SrcReg, INT64_C(1), INT64_C(0)});
+        if (Tmp != DestReg)
+          copyPhysRegImpl(Builder, DestReg, Tmp);
+        if (Tmp != DestReg && IsAMaybeLive)
+          Builder.buildInstr(MOS::PL).addDef(MOS::A);
+      } else {
+        Builder.buildInstr(MOS::SelectImm, {DestReg},
+                           {SrcReg, INT64_C(1), INT64_C(0)});
+      }
     }
   } else
     llvm_unreachable("Unexpected physical register copy.");
@@ -618,7 +634,8 @@ void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
   } else
     assert(MI.getOperand(4).getReg() == MOS::NoRegister &&
            "At most one of N and Z can be set in SBCNZImag8");
-  Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(1), INT64_C(0)});
+  if (NZOut != MOS::NoRegister)
+    Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(1), INT64_C(0)});
   MI.eraseFromParent();
 }
 

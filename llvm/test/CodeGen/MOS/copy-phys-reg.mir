@@ -206,13 +206,49 @@ body: |
     RTS implicit $a
 ...
 ---
-name: flag_to_anyi1
+name: flag_to_flag
 tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $v
-    ; CHECK-LABEL: name: flag_to_anyi1
+    $c = COPY $v
+...
+---
+name: flag_to_gprlsb
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $v
+    ; CHECK-LABEL: name: flag_to_gprlsb
     ; CHECK: liveins: $v
     ; CHECK: $x = SelectImm $v, 1, 0
     $xlsb = COPY $v
+...
+---
+name: flag_to_nongprlsb
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $v
+    ; CHECK-LABEL: name: flag_to_nongprlsb
+    ; CHECK: liveins: $v
+    ; CHECK: $a = SelectImm $v, 1, 0
+    ; CHECK: $rc2 = STImag8 $a
+    $rc2lsb = COPY $v
+...
+---
+name: flag_to_nongprlsb_preserve_a
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $v, $a
+    ; CHECK-LABEL: name: flag_to_nongprlsb_preserve_a
+    ; CHECK: liveins: $v, $a
+    ; CHECK: PH $a
+    ; CHECK: $a = SelectImm $v, 1, 0
+    ; CHECK: $rc2 = STImag8 $a
+    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: RTS implicit $a
+    $rc2lsb = COPY $v
+    RTS implicit $a
 ...

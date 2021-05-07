@@ -173,6 +173,7 @@ let isPressureFineGrained = true in {
 // "General purpose" register classes.
 let isPressureFineGrained = true in {
   def GPR : MOSReg8Class<(add A, X, Y)>;
+  def GPRLSB : MOSReg1Class<(add ALSB, XLSB, YLSB)>;
 }
 def Imag8 : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
 def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;

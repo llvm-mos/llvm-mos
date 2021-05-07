@@ -98,3 +98,108 @@ bool MOSTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   // Any other combination of GV and BaseOffset are just global offsets.
   return true;
 }
+
+MachineBasicBlock *
+MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                               MachineBasicBlock *MBB) const {
+  // To "insert" Select* instructions, we actually have to insert the triangle
+  // control-flow pattern.  The incoming instructions know the destination reg
+  // to set, the flag to branch on, and the true/false values to select between.
+  //
+  // We produce the following control flow if the flag is neither N nor Z:
+  //     HeadMBB
+  //     |  \
+  //     |  IfFalseMBB
+  //     | /
+  //    TailMBB
+  //
+  // If the flag is N or Z, then loading the true value in HeadMBB would clobber
+  // the flag before the branch. We instead emit the following:
+  //     HeadMBB
+  //     |  \
+  //     |  IfTrueMBB
+  //     |      |
+  //    IfFalse |
+  //     |     /
+  //     |    /
+  //     TailMBB
+  Register Dst = MI.getOperand(0).getReg();
+  Register Flag = MI.getOperand(1).getReg();
+  int64_t TrueValue = MI.getOperand(2).getImm();
+  int64_t FalseValue = MI.getOperand(3).getImm();
+
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineFunction::iterator I = ++MBB->getIterator();
+  MachineIRBuilder Builder(*MBB, MI);
+
+  MachineBasicBlock *HeadMBB = MBB;
+  MachineFunction *F = MBB->getParent();
+
+  // Split out all instructions after MI into a new basic block, updating
+  // liveins.
+  MachineBasicBlock *TailMBB = HeadMBB->splitAt(MI);
+
+  // If MI is the last instruction, splitAt won't insert a new block. In that
+  // case, the block must fall through, since there's no branch. Thus the tail
+  // MBB is just the next MBB.
+  if (TailMBB == HeadMBB)
+    TailMBB = &*I;
+
+  HeadMBB->removeSuccessor(TailMBB);
+
+  // Add the false block between HeadMBB and TailMBB
+  // FIXME: Maintain branch probabilities through here.
+  MachineBasicBlock *IfFalseMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  F->insert(TailMBB->getIterator(), IfFalseMBB);
+  HeadMBB->addSuccessor(IfFalseMBB);
+  IfFalseMBB->addSuccessor(TailMBB);
+
+  // Add a true block if necessary to avoid clobbering NZ.
+  MachineBasicBlock *IfTrueMBB = nullptr;
+  if (Flag == MOS::N || Flag == MOS::Z) {
+    IfTrueMBB = F->CreateMachineBasicBlock(LLVM_BB);
+    F->insert(TailMBB->getIterator(), IfTrueMBB);
+    IfTrueMBB->addSuccessor(TailMBB);
+
+    // Add the unconditional branch from IfFalseMBB to TailMBB.
+    Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
+    Builder.buildInstr(MOS::JMP).addMBB(TailMBB);
+
+    Builder.setInsertPt(*HeadMBB, MI.getIterator());
+  }
+
+  const auto LDImm = [&Builder, &Dst](int64_t Val) {
+    if (MOS::Anyi1RegClass.contains(Dst)) {
+      Builder.buildInstr(MOS::LDImm1, {Dst}, {Val});
+      return;
+    }
+
+    assert(MOS::GPRRegClass.contains(Dst));
+    Builder.buildInstr(MOS::LDImm, {Dst}, {Val});
+  };
+
+  if (IfTrueMBB) {
+    // Insert branch.
+    Builder.buildInstr(MOS::BR).addMBB(IfTrueMBB).addUse(Flag).addImm(1);
+    HeadMBB->addSuccessor(IfTrueMBB);
+
+    Builder.setInsertPt(*IfTrueMBB, IfTrueMBB->begin());
+    // Load true value.
+    LDImm(TrueValue);
+  } else {
+    // Load true value.
+    LDImm(TrueValue);
+
+    // Insert branch.
+    Builder.buildInstr(MOS::BR).addMBB(TailMBB).addUse(Flag).addImm(1);
+    HeadMBB->addSuccessor(TailMBB);
+  }
+
+  // Insert false load.
+  Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
+  LDImm(FalseValue);
+
+  MI.eraseFromParent();
+
+  return TailMBB;
+}
