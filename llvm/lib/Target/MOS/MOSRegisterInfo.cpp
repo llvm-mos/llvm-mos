@@ -359,6 +359,11 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
     return;
   }
 
+  if(!MOS::Anyi8RegClass.contains(Loc)) {
+    errs() << *MI;
+    report_fatal_error("LDSTstk not yet implemented.");
+  }
+
   Register A = Loc;
   if (A != MOS::A)
     A = MRI.createVirtualRegister(&MOS::AcRegClass);
