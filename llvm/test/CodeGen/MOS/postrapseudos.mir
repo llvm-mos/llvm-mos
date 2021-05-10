@@ -102,3 +102,42 @@ body: |
     ; CHECK: $v = CLV
     $v = LDImm1 0, implicit-def $nz
 ...
+---
+name: zext1_from_lsb
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: zext1_from_lsb
+    ; CHECK: $a = T_A $x, implicit-def $nz
+    $a = ZExt1 $xlsb, implicit-def $nz
+...
+---
+name: zext1_from_flag_to_gpr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: zext1_from_flag_to_gpr
+    ; CHECK: $a = SelectImm $c, 1, 0, implicit-def $nz
+    $a = ZExt1 $c, implicit-def $nz
+...
+---
+name: zext1_from_flag_to_nongpr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: zext1_from_flag_to_nongpr
+    ; CHECK: $a = SelectImm $c, 1, 0, implicit-def $nz
+    ; CHECK: $rc2 = COPY $a
+    $rc2 = ZExt1 $c, implicit-def $nz
+...
+---
+name: zext1_from_flag_to_nongpr_preserve_a
+body: |
+  bb.0.entry:
+    liveins: $a
+    ; CHECK-LABEL: name: zext1_from_flag_to_nongpr_preserve_a
+    ; CHECK: PH $a
+    ; CHECK: $a = SelectImm $c, 1, 0, implicit-def $nz
+    ; CHECK: $rc2 = COPY $a
+    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: RTS implicit $a
+    $rc2 = ZExt1 $c, implicit-def $nz
+    RTS implicit $a
+...
