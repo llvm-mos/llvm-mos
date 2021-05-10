@@ -377,7 +377,7 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   // Transfer the value to A to be stored (if applicable).
   if (!IsLoad && Loc != A) {
     if (Loc == MOS::C || Loc == MOS::V)
-      Builder.buildInstr(MOS::ZExt1, {A}, {Loc});
+      Builder.buildInstr(MOS::COPY).addDef(A, 0, MOS::sublsb).addUse(Loc);
     else {
       assert(MOS::Anyi8RegClass.contains(Loc));
       Builder.buildCopy(A, Loc);

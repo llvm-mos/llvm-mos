@@ -289,7 +289,7 @@ body:             |
     ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c, implicit-def $nz
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = COPY $xlsb
-    ; CHECK: $a = ZExt1 $c, implicit-def $nz
+    ; CHECK: $alsb = COPY $c
     ; CHECK: $y = LDImm 1, implicit-def $nz
     ; CHECK: STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.1 + 1)
     $c = COPY $xlsb
