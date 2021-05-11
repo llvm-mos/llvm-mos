@@ -71,8 +71,18 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_e, options::OPT_s, options::OPT_t,
                             options::OPT_Z_Flag, options::OPT_r});
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
-    CmdArgs.push_back("-los");
+  if (!Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib)) {
+    // Prefixing a colon causes GNU LD-like linkers to search for this filename
+    // as-is.
+    CmdArgs.push_back("-l:crt0.o");
+  }
+
+  if (!Args.hasArg(options::OPT_nodefaultlibs, options::OPT_nostdlib))
+    CmdArgs.push_back("-lcrt");
+
+  if (!Args.hasArg(options::OPT_nodefaultlibs, options::OPT_nolibc,
+                   options::OPT_nostdlib))
+    CmdArgs.push_back("-lc");
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
