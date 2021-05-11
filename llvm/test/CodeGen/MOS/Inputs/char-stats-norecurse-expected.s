@@ -12,11 +12,11 @@ char_stats:                             ; @char_stats
 	ldx	#mos16hi(__char_stats_sstk)
 	sta	mos8(__rc4)
 	stx	mos8(__rc5)
-	ldx	#0
 	lda	mos8(__rc4)
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
+	ldx	#0
 	ldy	#2
 	lda	#0
 	jsr	memset

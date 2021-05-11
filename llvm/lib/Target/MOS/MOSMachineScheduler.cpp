@@ -49,11 +49,6 @@ void MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
     return;
   }
 
-  // Bias PhysReg Defs and copies to their uses and defined respectively.
-  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
-                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
-    return;
-
   if (tryLess(
           registerClassPressureDiff(MOS::AcRegClass, TryCand.SU, TryCand.AtTop),
           registerClassPressureDiff(MOS::AcRegClass, Cand.SU, Cand.AtTop),
@@ -63,6 +58,13 @@ void MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
   if (tryLess(
           registerClassPressureDiff(MOS::XYRegClass, TryCand.SU, TryCand.AtTop),
           registerClassPressureDiff(MOS::XYRegClass, Cand.SU, Cand.AtTop),
+          TryCand, Cand, PhysReg))
+    return;
+
+  if (tryLess(
+          registerClassPressureDiff(MOS::Imag8RegClass, TryCand.SU,
+                                    TryCand.AtTop),
+          registerClassPressureDiff(MOS::Imag8RegClass, Cand.SU, Cand.AtTop),
           TryCand, Cand, PhysReg))
     return;
 
@@ -107,7 +109,7 @@ int MOSSchedStrategy::registerClassPressureDiff(const TargetRegisterClass &RC,
 
   int PressureDiff = 0;
   for (const MachineOperand &MO : MI->operands()) {
-    if (!MO.isReg() || !RC.contains(MO.getReg()))
+    if (!MO.isReg() || !MO.getReg().isPhysical() || !RC.contains(MO.getReg()))
       continue;
     if (MO.isDef()) {
       PressureDiff += IsTop ? 1 : -1;
