@@ -387,6 +387,25 @@ body: |
     RTS implicit %7, implicit %8, implicit %9, implicit %10
 ...
 ---
+name: lshr_1
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: lshr_1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK: [[LSHRE:%[0-9]+]]:_(s8), [[LSHRE1:%[0-9]+]]:_(s1) = G_LSHRE [[COPY]], [[C]]
+    ; CHECK: [[LSHRE2:%[0-9]+]]:_(s8), [[LSHRE3:%[0-9]+]]:_(s1) = G_LSHRE [[COPY1]], [[LSHRE1]]
+    ; CHECK: RTS implicit [[LSHRE]](s8), implicit [[LSHRE2]](s8)
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s16) = G_MERGE_VALUES %0, %1
+    %3:_(s32) = G_CONSTANT i32 1
+    %4:_(s16) = G_LSHR %2, %3
+    %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %4
+    RTS implicit %5, implicit %6
+...
+---
 name: store_ptr
 body: |
   bb.0.entry:

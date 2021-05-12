@@ -39,7 +39,7 @@ private:
                     MachineInstr &MI) const;
   bool legalizeRotr(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
-  bool legalizeShl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+  bool legalizeLshrShl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
   bool legalizeStore(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;

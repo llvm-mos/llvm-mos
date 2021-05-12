@@ -107,7 +107,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       // Truncate the shift amount to s8 once the resulting 8-bit shift
       // operations have been produced.
       .clampScalar(1, S8, S8);
-  getActionDefinitionsBuilder(G_SHL).customFor({S8, S16, S32, S64});
+
+  getActionDefinitionsBuilder({G_LSHR, G_SHL}).customFor({S8, S16, S32, S64});
 
   getActionDefinitionsBuilder(G_ROTL).customFor({S8});
   getActionDefinitionsBuilder(G_ROTR).customFor({S8});
@@ -203,8 +204,9 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeLoad(Helper, MRI, MI);
   case G_PTR_ADD:
     return legalizePtrAdd(Helper, MRI, MI);
+  case G_LSHR:
   case G_SHL:
-    return legalizeShl(Helper, MRI, MI);
+    return legalizeLshrShl(Helper, MRI, MI);
   case G_ROTL:
     return legalizeRotl(Helper, MRI, MI);
   case G_ROTR:
@@ -475,7 +477,7 @@ bool MOSLegalizerInfo::legalizeRotr(LegalizerHelper &Helper,
   return true;
 }
 
-bool MOSLegalizerInfo::legalizeShl(LegalizerHelper &Helper,
+bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
                                    MachineRegisterInfo &MRI,
                                    MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
@@ -487,7 +489,7 @@ bool MOSLegalizerInfo::legalizeShl(LegalizerHelper &Helper,
   // Presently, only left shifts by one bit are supported.
   auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
   if (!ConstantAmt || ConstantAmt->Value != 1)
-    report_fatal_error("Only 1-bit left shifts are implemented.");
+    report_fatal_error("Only 1-bit logical shifts are implemented.");
 
   LLT Ty = MRI.getType(Dst);
   assert(Ty == MRI.getType(Src));
@@ -499,10 +501,11 @@ bool MOSLegalizerInfo::legalizeShl(LegalizerHelper &Helper,
   auto Unmerge = Builder.buildUnmerge(S8, Src);
   SmallVector<Register> Parts;
   Register Carry = Builder.buildConstant(S1, 0).getReg(0);
+  unsigned Opcode = MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE;
   for (MachineOperand &SrcPart : Unmerge->defs()) {
     Parts.push_back(MRI.createGenericVirtualRegister(S8));
     Register NewCarry = MRI.createGenericVirtualRegister(S1);
-    Builder.buildInstr(MOS::G_SHLE)
+    Builder.buildInstr(Opcode)
         .addDef(Parts.back())
         .addDef(NewCarry)
         .addUse(SrcPart.getReg())
