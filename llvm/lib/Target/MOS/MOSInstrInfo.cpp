@@ -510,19 +510,25 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
 // Load or store one byte from/to a location on the static stack.
 static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
-                                         Register Reg, int FrameIndex,
-                                         int64_t Offset, MachineMemOperand *MMO,
-                                         bool IsLoad) {
-  Register Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
+                                         Register Reg,
+                                         const TargetRegisterClass *RC,
+                                         int FrameIndex, int64_t Offset,
+                                         MachineMemOperand *MMO, bool IsLoad) {
+  Register Tmp = Reg;
+  if ((Reg.isPhysical() && !MOS::GPRRegClass.contains(Reg)) ||
+      (Reg.isVirtual() && RC->hasSuperClassEq(&MOS::GPRRegClass)))
+    Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
 
   if (IsLoad) {
     Builder.buildInstr(MOS::LDabs_offset, {Tmp}, {})
         .addFrameIndex(FrameIndex)
         .addImm(Offset)
         .addMemOperand(MMO);
-    Builder.buildCopy(Reg, Tmp);
+    if (Tmp != Reg)
+      Builder.buildCopy(Reg, Tmp);
   } else {
-    Builder.buildCopy(Tmp, Reg);
+    if (Tmp != Reg)
+      Builder.buildCopy(Tmp, Reg);
     Builder.buildInstr(MOS::STabs_offset, {}, {Tmp})
         .addFrameIndex(FrameIndex)
         .addImm(Offset)
@@ -572,24 +578,35 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   if (MOS::Imag16RegClass.contains(Reg)) {
     Register Lo = TRI->getSubReg(Reg, MOS::sublo);
     Register Hi = TRI->getSubReg(Reg, MOS::subhi);
-    loadStoreByteStaticStackSlot(Builder, Lo, FrameIndex, 0,
-                                 MF.getMachineMemOperand(MMO, 0, 1), IsLoad);
-    loadStoreByteStaticStackSlot(Builder, Hi, FrameIndex, 1,
-                                 MF.getMachineMemOperand(MMO, 1, 1), IsLoad);
+    loadStoreByteStaticStackSlot(Builder, Lo, &MOS::Imag8RegClass, FrameIndex,
+                                 0, MF.getMachineMemOperand(MMO, 0, 1), IsLoad);
+    loadStoreByteStaticStackSlot(Builder, Hi, &MOS::Imag8RegClass, FrameIndex,
+                                 1, MF.getMachineMemOperand(MMO, 1, 1), IsLoad);
     if (IsLoad) {
       // Record that DestReg as a whole was set; foldMemoryOperand needs this.
       Builder.buildInstr(MOS::KILL).addDef(Reg).addUse(Lo).addUse(Hi);
     }
   } else
-    loadStoreByteStaticStackSlot(Builder, Reg, FrameIndex, 0, MMO, IsLoad);
+    loadStoreByteStaticStackSlot(Builder, Reg, RC, FrameIndex, 0, MMO, IsLoad);
 
   // Users of this function expect exactly one instruction to be added.
   // However, if we're in a NoVRegs region, the only way to satisfy vregs is
   // through the register scavenger, which doesn't handle bundles.
   if (std::next(MIS.begin()) != MI &&
       !MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::NoVRegs))
+          MachineFunctionProperties::Property::NoVRegs)) {
     finalizeBundle(MBB, MIS.begin().getInstrIterator(), MI.getInstrIterator());
+    // If callers of the function expect only one instruction, they'll only
+    // print the bundle header. Log here to make it clear all that's being
+    // added.
+    LLVM_DEBUG({
+      dbgs() << "Emitted spill/reload using:\n";
+      for (auto MI = MIS.begin().getInstrIterator(),
+                End = MIS.getInitial().getInstrIterator();
+           MI != End; ++MI)
+        dbgs() << "  " << *MI;
+    });
+  }
 }
 
 bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {

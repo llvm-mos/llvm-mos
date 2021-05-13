@@ -24,15 +24,9 @@ body: |
     liveins: $a
     ; CHECK-LABEL: name: spill_static_gpr
     ; CHECK: liveins: $a
-    ; CHECK: BUNDLE implicit-def dead %1, implicit $a {
-    ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; CHECK:   STabs_offset internal [[COPY]], %stack.0, 0 :: (store 1 into %stack.0)
-    ; CHECK: }
+    ; CHECK: STabs_offset $a, %stack.0, 0 :: (store 1 into %stack.0)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: BUNDLE implicit-def dead %2, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $a, implicit-def $alsb {
-    ; CHECK:   [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
-    ; CHECK:   $a = COPY internal [[LDabs_offset]]
-    ; CHECK: }
+    ; CHECK: $a = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
     ; CHECK: RTS implicit $a
     %0:gpr = COPY $a
     JSR &fn, mos_csr
