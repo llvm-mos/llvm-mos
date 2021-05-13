@@ -144,6 +144,7 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addMachineSSAOptimization() override;
+  bool addRegAssignAndRewriteOptimized() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 
@@ -204,6 +205,16 @@ void MOSPassConfig::addMachineSSAOptimization() {
   // uniform fashion.
   addPass(&LiveVariablesID);
   TargetPassConfig::addMachineSSAOptimization();
+}
+
+bool MOSPassConfig::addRegAssignAndRewriteOptimized() {
+  bool Result = TargetPassConfig::addRegAssignAndRewriteOptimized();
+
+  // Clean up BUNDLE instructions emitted by spilling in the register allocator.
+  addPass(createUnpackMachineBundles(
+      [](const MachineFunction &MF) { return true; }));
+
+  return Result;
 }
 
 void MOSPassConfig::addPreSched2() {
