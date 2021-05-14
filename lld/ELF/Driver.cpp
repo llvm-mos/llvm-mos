@@ -657,13 +657,17 @@ static Target2Policy getTarget2(opt::InputArgList &args) {
   return Target2Policy::GotRel;
 }
 
-static bool isOutputFormatBinary(opt::InputArgList &args) {
+// Returns whether the output format is binary and whether this was explicitly
+// set.
+static std::pair<bool, bool> isOutputFormatBinary(opt::InputArgList &args) {
+  if (!args.hasArg(OPT_oformat))
+    return {false, false};
   StringRef s = args.getLastArgValue(OPT_oformat, "elf");
   if (s == "binary")
-    return true;
+    return {true, true};
   if (!s.startswith("elf"))
     error("unknown --oformat value: " + s);
-  return false;
+  return {false, true};
 }
 
 static DiscardPolicy getDiscard(opt::InputArgList &args) {
@@ -1037,7 +1041,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   config->noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   config->nostdlib = args.hasArg(OPT_nostdlib);
-  config->oFormatBinary = isOutputFormatBinary(args);
+  std::tie(config->oFormatBinary, config->oFormatBinaryFromCLI) =
+      isOutputFormatBinary(args);
   config->omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
 
