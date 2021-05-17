@@ -40,7 +40,7 @@ public:
 
   const char *getClobbers() const override { return ""; }
 
-  ArrayRef<const char *> getGCCRegNames() const override { return None; }
+  ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     return None;
   }

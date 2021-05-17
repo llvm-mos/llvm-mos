@@ -14,8 +14,7 @@
 
 using namespace clang::targets;
 
-MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple,
-                                     const TargetOptions &)
+MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
     : TargetInfo(Triple) {
   static const char Layout[] =
       "e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
@@ -58,4 +57,60 @@ bool MOSTargetInfo::validateAsmConstraint(
     return true;
   }
   return false;
+}
+
+static const char *const GCCRegNames[] = {
+    "a",     "x",     "y",     "p",     "rc0",   "rc1",   "rc2",   "rc3",
+    "rc4",   "rc5",   "rc6",   "rc7",   "rc8",   "rc9",   "rc10",  "rc11",
+    "rc12",  "rc13",  "rc14",  "rc15",  "rc16",  "rc17",  "rc18",  "rc19",
+    "rc20",  "rc21",  "rc22",  "rc23",  "rc24",  "rc25",  "rc26",  "rc27",
+    "rc28",  "rc29",  "rc30",  "rc31",  "rc32",  "rc33",  "rc34",  "rc35",
+    "rc36",  "rc37",  "rc38",  "rc39",  "rc40",  "rc41",  "rc42",  "rc43",
+    "rc44",  "rc45",  "rc46",  "rc47",  "rc48",  "rc49",  "rc50",  "rc51",
+    "rc52",  "rc53",  "rc54",  "rc55",  "rc56",  "rc57",  "rc58",  "rc59",
+    "rc60",  "rc61",  "rc62",  "rc63",  "rc64",  "rc65",  "rc66",  "rc67",
+    "rc68",  "rc69",  "rc70",  "rc71",  "rc72",  "rc73",  "rc74",  "rc75",
+    "rc76",  "rc77",  "rc78",  "rc79",  "rc80",  "rc81",  "rc82",  "rc83",
+    "rc84",  "rc85",  "rc86",  "rc87",  "rc88",  "rc89",  "rc90",  "rc91",
+    "rc92",  "rc93",  "rc94",  "rc95",  "rc96",  "rc97",  "rc98",  "rc99",
+    "rc100", "rc101", "rc102", "rc103", "rc104", "rc105", "rc106", "rc107",
+    "rc108", "rc109", "rc110", "rc111", "rc112", "rc113", "rc114", "rc115",
+    "rc116", "rc117", "rc118", "rc119", "rc120", "rc121", "rc122", "rc123",
+    "rc124", "rc125", "rc126", "rc127", "rc128", "rc129", "rc130", "rc131",
+    "rc132", "rc133", "rc134", "rc135", "rc136", "rc137", "rc138", "rc139",
+    "rc140", "rc141", "rc142", "rc143", "rc144", "rc145", "rc146", "rc147",
+    "rc148", "rc149", "rc150", "rc151", "rc152", "rc153", "rc154", "rc155",
+    "rc156", "rc157", "rc158", "rc159", "rc160", "rc161", "rc162", "rc163",
+    "rc164", "rc165", "rc166", "rc167", "rc168", "rc169", "rc170", "rc171",
+    "rc172", "rc173", "rc174", "rc175", "rc176", "rc177", "rc178", "rc179",
+    "rc180", "rc181", "rc182", "rc183", "rc184", "rc185", "rc186", "rc187",
+    "rc188", "rc189", "rc190", "rc191", "rc192", "rc193", "rc194", "rc195",
+    "rc196", "rc197", "rc198", "rc199", "rc200", "rc201", "rc202", "rc203",
+    "rc204", "rc205", "rc206", "rc207", "rc208", "rc209", "rc210", "rc211",
+    "rc212", "rc213", "rc214", "rc215", "rc216", "rc217", "rc218", "rc219",
+    "rc220", "rc221", "rc222", "rc223", "rc224", "rc225", "rc226", "rc227",
+    "rc228", "rc229", "rc230", "rc231", "rc232", "rc233", "rc234", "rc235",
+    "rc236", "rc237", "rc238", "rc239", "rc240", "rc241", "rc242", "rc243",
+    "rc244", "rc245", "rc246", "rc247", "rc248", "rc249", "rc250", "rc251",
+    "rc252", "rc253", "rc254", "rc255", "rs0",   "rs1",   "rs2",   "rs3",
+    "rs4",   "rs5",   "rs6",   "rs7",   "rs8",   "rs9",   "rs10",  "rs11",
+    "rs12",  "rs13",  "rs14",  "rs15",  "rs16",  "rs17",  "rs18",  "rs19",
+    "rs20",  "rs21",  "rs22",  "rs23",  "rs24",  "rs25",  "rs26",  "rs27",
+    "rs28",  "rs29",  "rs30",  "rs31",  "rs32",  "rs33",  "rs34",  "rs35",
+    "rs36",  "rs37",  "rs38",  "rs39",  "rs40",  "rs41",  "rs42",  "rs43",
+    "rs44",  "rs45",  "rs46",  "rs47",  "rs48",  "rs49",  "rs50",  "rs51",
+    "rs52",  "rs53",  "rs54",  "rs55",  "rs56",  "rs57",  "rs58",  "rs59",
+    "rs60",  "rs61",  "rs62",  "rs63",  "rs64",  "rs65",  "rs66",  "rs67",
+    "rs68",  "rs69",  "rs70",  "rs71",  "rs72",  "rs73",  "rs74",  "rs75",
+    "rs76",  "rs77",  "rs78",  "rs79",  "rs80",  "rs81",  "rs82",  "rs83",
+    "rs84",  "rs85",  "rs86",  "rs87",  "rs88",  "rs89",  "rs90",  "rs91",
+    "rs92",  "rs93",  "rs94",  "rs95",  "rs96",  "rs97",  "rs98",  "rs99",
+    "rs100", "rs101", "rs102", "rs103", "rs104", "rs105", "rs106", "rs107",
+    "rs108", "rs109", "rs110", "rs111", "rs112", "rs113", "rs114", "rs115",
+    "rs116", "rs117", "rs118", "rs119", "rs120", "rs121", "rs122", "rs123",
+    "rs124", "rs125", "rs126", "rs127",
+};
+
+llvm::ArrayRef<const char *> MOSTargetInfo::getGCCRegNames() const {
+  return llvm::makeArrayRef(GCCRegNames);
 }
