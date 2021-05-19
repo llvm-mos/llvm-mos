@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -514,25 +515,32 @@ static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
                                          const TargetRegisterClass *RC,
                                          int FrameIndex, int64_t Offset,
                                          MachineMemOperand *MMO, bool IsLoad) {
+  const TargetInstrInfo &TII = Builder.getTII();
+  const TargetRegisterInfo &TRI =
+      *Builder.getMF().getSubtarget().getRegisterInfo();
+  const RegisterBankInfo &RBI =
+      *Builder.getMF().getSubtarget().getRegBankInfo();
+
   Register Tmp = Reg;
-  if ((Reg.isPhysical() && !MOS::GPRRegClass.contains(Reg)) ||
-      (Reg.isVirtual() && RC->hasSuperClassEq(&MOS::GPRRegClass)))
+  if (Reg.isPhysical() && !MOS::GPRRegClass.contains(Reg))
     Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
 
   if (IsLoad) {
-    Builder.buildInstr(MOS::LDabs_offset, {Tmp}, {})
-        .addFrameIndex(FrameIndex)
-        .addImm(Offset)
-        .addMemOperand(MMO);
+    auto Instr = Builder.buildInstr(MOS::LDabs_offset, {Tmp}, {})
+                     .addFrameIndex(FrameIndex)
+                     .addImm(Offset)
+                     .addMemOperand(MMO);
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
     if (Tmp != Reg)
       Builder.buildCopy(Reg, Tmp);
   } else {
     if (Tmp != Reg)
       Builder.buildCopy(Tmp, Reg);
-    Builder.buildInstr(MOS::STabs_offset, {}, {Tmp})
-        .addFrameIndex(FrameIndex)
-        .addImm(Offset)
-        .addMemOperand(MMO);
+    auto Instr = Builder.buildInstr(MOS::STabs_offset, {}, {Tmp})
+                     .addFrameIndex(FrameIndex)
+                     .addImm(Offset)
+                     .addMemOperand(MMO);
+    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
   }
 }
 
