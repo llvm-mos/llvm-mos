@@ -511,36 +511,34 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
 // Load or store one byte from/to a location on the static stack.
 static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
-                                         Register Reg,
-                                         const TargetRegisterClass *RC,
-                                         int FrameIndex, int64_t Offset,
-                                         MachineMemOperand *MMO, bool IsLoad) {
-  const TargetInstrInfo &TII = Builder.getTII();
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
-  const RegisterBankInfo &RBI =
-      *Builder.getMF().getSubtarget().getRegBankInfo();
+                                         MachineOperand MO, int FrameIndex,
+                                         int64_t Offset,
+                                         MachineMemOperand *MMO) {
+  const MachineRegisterInfo &MRI = *Builder.getMRI();
 
-  Register Tmp = Reg;
-  if (Reg.isPhysical() && !MOS::GPRRegClass.contains(Reg))
-    Tmp = Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass);
+  MachineOperand Tmp = MO;
+  assert(!Tmp.getParent());
+  if ((Tmp.getReg().isPhysical() && !MOS::GPRRegClass.contains(Tmp.getReg())) ||
+      (Tmp.getReg().isVirtual() &&
+       !MRI.getRegClass(Tmp.getReg())->hasSuperClassEq(&MOS::GPRRegClass))) {
+    Tmp = MachineOperand::CreateReg(
+        Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass), MO.isDef());
+  }
 
-  if (IsLoad) {
-    auto Instr = Builder.buildInstr(MOS::LDabs_offset, {Tmp}, {})
-                     .addFrameIndex(FrameIndex)
-                     .addImm(Offset)
-                     .addMemOperand(MMO);
-    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
-    if (Tmp != Reg)
-      Builder.buildCopy(Reg, Tmp);
-  } else {
-    if (Tmp != Reg)
-      Builder.buildCopy(Tmp, Reg);
-    auto Instr = Builder.buildInstr(MOS::STabs_offset, {}, {Tmp})
-                     .addFrameIndex(FrameIndex)
-                     .addImm(Offset)
-                     .addMemOperand(MMO);
-    constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
+  if (Tmp.isUse() && !Tmp.isIdenticalTo(MO)) {
+    Tmp.setIsDef();
+    Builder.buildInstr(MOS::COPY).add(Tmp).add(MO);
+    Tmp.setIsUse();
+    Tmp.clearParent();
+  }
+  Builder.buildInstr(Tmp.isDef() ? MOS::LDabs_offset : MOS::STabs_offset)
+      .add(Tmp)
+      .addFrameIndex(FrameIndex)
+      .addImm(Offset)
+      .addMemOperand(MMO);
+  if (Tmp.isDef() && !Tmp.isIdenticalTo(MO)) {
+    Tmp.setIsUse();
+    Builder.buildInstr(MOS::COPY).add(MO).add(Tmp);
   }
 }
 
@@ -550,6 +548,7 @@ void MOSInstrInfo::loadStoreRegStackSlot(
     const TargetRegisterInfo *TRI, bool IsLoad) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(MF, FrameIndex);
@@ -558,44 +557,48 @@ void MOSInstrInfo::loadStoreRegStackSlot(
       MFI.getObjectSize(FrameIndex), MFI.getObjectAlign(FrameIndex));
 
   MachineIRBuilder Builder(MBB, MI);
-
-  // At this point, NZ cannot be live, since this will never occur inside a
-  // terminator.
+  MachineInstrSpan MIS(MI, &MBB);
 
   // If we're using the soft stack, since the offset is not yet known, it may be
   // either 8 or 16 bits. Emit a 16-bit pseudo to be lowered during frame index
   // elimination.
   if (!MF.getFunction().doesNotRecurse()) {
-    if (IsLoad) {
-      Builder.buildInstr(MOS::LDstk)
-          .addDef(Reg)
-          .addFrameIndex(FrameIndex)
-          .addImm(0)
-          .addMemOperand(MMO);
+    Builder.buildInstr(IsLoad ? MOS::LDstk : MOS::STstk)
+        .addReg(Reg, getDefRegState(IsLoad) | getKillRegState(IsKill))
+        .addFrameIndex(FrameIndex)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else {
+    if ((Reg.isPhysical() && MOS::Imag16RegClass.contains(Reg)) ||
+        (Reg.isVirtual() &&
+         MRI.getRegClass(Reg)->hasSuperClassEq(&MOS::Imag16RegClass))) {
+      MachineOperand Lo = MachineOperand::CreateReg(Reg, IsLoad);
+      MachineOperand Hi = Lo;
+      if (Reg.isPhysical()) {
+        Lo.setReg(TRI->getSubReg(Reg, MOS::sublo));
+        Hi.setReg(TRI->getSubReg(Reg, MOS::subhi));
+      } else {
+        assert(Reg.isVirtual());
+        Lo.setSubReg(MOS::sublo);
+        if (Lo.isDef())
+          Lo.setIsUndef();
+        Hi.setSubReg(MOS::subhi);
+      }
+      loadStoreByteStaticStackSlot(Builder, Lo, FrameIndex, 0,
+                                   MF.getMachineMemOperand(MMO, 0, 1));
+      loadStoreByteStaticStackSlot(Builder, Hi, FrameIndex, 1,
+                                   MF.getMachineMemOperand(MMO, 1, 1));
     } else {
-      Builder.buildInstr(MOS::STstk)
-          .addReg(Reg, getKillRegState(IsKill))
-          .addFrameIndex(FrameIndex)
-          .addImm(0)
-          .addMemOperand(MMO);
+      loadStoreByteStaticStackSlot(
+          Builder, MachineOperand::CreateReg(Reg, IsLoad), FrameIndex, 0, MMO);
     }
-    return;
   }
 
-  MachineInstrSpan MIS(MI, &MBB);
-  if (MOS::Imag16RegClass.contains(Reg)) {
-    Register Lo = TRI->getSubReg(Reg, MOS::sublo);
-    Register Hi = TRI->getSubReg(Reg, MOS::subhi);
-    loadStoreByteStaticStackSlot(Builder, Lo, &MOS::Imag8RegClass, FrameIndex,
-                                 0, MF.getMachineMemOperand(MMO, 0, 1), IsLoad);
-    loadStoreByteStaticStackSlot(Builder, Hi, &MOS::Imag8RegClass, FrameIndex,
-                                 1, MF.getMachineMemOperand(MMO, 1, 1), IsLoad);
-    if (IsLoad) {
-      // Record that DestReg as a whole was set; foldMemoryOperand needs this.
-      Builder.buildInstr(MOS::KILL).addDef(Reg).addUse(Lo).addUse(Hi);
-    }
-  } else
-    loadStoreByteStaticStackSlot(Builder, Reg, RC, FrameIndex, 0, MMO, IsLoad);
+  LLVM_DEBUG({
+    dbgs() << "Inserted stack slot load/store:\n";
+    for (auto MI = MIS.begin(), End = MIS.getInitial(); MI != End; ++MI)
+      dbgs() << *MI;
+  });
 }
 
 bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
