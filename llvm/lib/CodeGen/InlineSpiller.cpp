@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1208,7 +1210,10 @@ void InlineSpiller::spill(LiveRangeEdit &edit) {
 }
 
 /// Optimizations after all the reg selections and spills are done.
-void InlineSpiller::postOptimization() { HSpiller.hoistAllSpills(); }
+void InlineSpiller::postOptimization() {
+  if (!DisableHoisting)
+    HSpiller.hoistAllSpills();
+}
 
 /// When a spill is inserted, add the spill to MergeableSpills map.
 void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,

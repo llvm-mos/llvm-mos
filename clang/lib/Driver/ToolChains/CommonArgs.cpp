@@ -1593,6 +1593,16 @@ void tools::addMOSCodeGenArgs(llvm::opt::ArgStringList &CmdArgs) {
   // and saves space.
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-align-large-globals=false");
+
+  // Spill hoisting can turn a spill that requires no additional virtual
+  // register (say of a GPR), into a spill that does (say of an Imag8). This
+  // would be fine if spill hoisting didn't occur at the absolute very end of
+  // register allocation, leaving no chance to assign the register. Global spill
+  // hoisting doesn't seem like an absolutely essential optimization for now.
+  // When we revisit, we can notify MOSInstrInfo that it's not allowed to
+  // generate vregs here, then use the register scavenger.
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-disable-spill-hoist");
 }
 
 unsigned tools::getOrCheckAMDGPUCodeObjectVersion(
