@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS project.
+
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -439,10 +441,8 @@ MachineInstr &TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
   return MF.CloneMachineInstrBundle(MBB, InsertBefore, Orig);
 }
 
-// If the COPY instruction in MI can be folded to a stack operation, return
-// the register class to use.
-static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
-                                              unsigned FoldIdx) {
+const TargetRegisterClass *
+TargetInstrInfo::canFoldCopy(const MachineInstr &MI, unsigned FoldIdx) const {
   assert(MI.isCopy() && "MI must be a COPY instruction");
   if (MI.getNumOperands() != 2)
     return nullptr;

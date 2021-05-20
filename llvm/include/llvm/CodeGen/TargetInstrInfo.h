@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS project.
+
 #ifndef LLVM_CODEGEN_TARGETINSTRINFO_H
 #define LLVM_CODEGEN_TARGETINSTRINFO_H
 
@@ -1082,6 +1084,11 @@ public:
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
                                   MachineInstr &LoadMI,
                                   LiveIntervals *LIS = nullptr) const;
+
+  // If the COPY instruction in MI can be folded to a stack operation, return
+  // the register class to use.
+  virtual const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
+                                                 unsigned FoldIdx) const;
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in \p Root. All potential patterns are

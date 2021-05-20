@@ -24,9 +24,11 @@ body: |
     liveins: $a
     ; CHECK-LABEL: name: spill_static_gpr
     ; CHECK: liveins: $a
-    ; CHECK: STabs_offset $a, %stack.0, 0 :: (store 1 into %stack.0)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; CHECK: STabs_offset [[COPY]], %stack.0, 0 :: (store 1 into %stack.0)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: $a = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+    ; CHECK: $a = COPY [[LDabs_offset]]
     ; CHECK: RTS implicit $a
     %0:gpr = COPY $a
     JSR &fn, mos_csr
@@ -43,15 +45,13 @@ body: |
     liveins: $rc2, $rs2, $rs4
     ; CHECK-LABEL: name: spill_static_Imag8
     ; CHECK: liveins: $rc2, $rs2, $rs4
-    ; CHECK: BUNDLE implicit-def dead %1, implicit $rc2 {
-    ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $rc2
-    ; CHECK:   STabs_offset internal [[COPY]], %stack.0, 0 :: (store 1 into %stack.0)
-    ; CHECK: }
+    ; CHECK: [[COPY:%[0-9]+]]:anyi8 = COPY $rc2
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY [[COPY]]
+    ; CHECK: STabs_offset [[COPY1]], %stack.0, 0 :: (store 1 into %stack.0)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: BUNDLE implicit-def dead %2, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2, implicit-def $rc2lsb {
-    ; CHECK:   [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
-    ; CHECK:   $rc2 = COPY internal [[LDabs_offset]]
-    ; CHECK: }
+    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+    ; CHECK: [[COPY2:%[0-9]+]]:anyi8 = COPY [[LDabs_offset]]
+    ; CHECK: $rc2 = COPY [[COPY2]]
     ; CHECK: RTS implicit $rc2, implicit $rs2, implicit $rs4
     %0:imag8 = COPY $rc2
     JSR &fn, mos_csr
@@ -68,20 +68,13 @@ body: |
     liveins: $rs1, $rs2, $rs4
     ; CHECK-LABEL: name: spill_static_imag16
     ; CHECK: liveins: $rs1, $rs2, $rs4
-    ; CHECK: BUNDLE implicit-def dead %1, implicit-def dead %2, implicit $rc2, implicit $rc3 {
-    ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $rc2
-    ; CHECK:   STabs_offset internal [[COPY]], %stack.0, 0 :: (store 1 into %stack.0)
-    ; CHECK:   [[COPY1:%[0-9]+]]:gpr = COPY $rc3
-    ; CHECK:   STabs_offset internal [[COPY1]], %stack.0, 1 :: (store 1 into %stack.0 + 1)
-    ; CHECK: }
+    ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY [[COPY]]
+    ; CHECK: STabs_offset [[COPY1]], %stack.0, 0 :: (store 2 into %stack.0, align 1)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: BUNDLE implicit-def dead %3, implicit-def $nz, implicit-def $n, implicit-def $z, implicit-def $rc2, implicit-def $rc2lsb, implicit-def dead %4, implicit-def $rc3, implicit-def $rc3lsb, implicit-def $rs1 {
-    ; CHECK:   [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
-    ; CHECK:   $rc2 = COPY internal [[LDabs_offset]]
-    ; CHECK:   [[LDabs_offset1:%[0-9]+]]:gpr = LDabs_offset %stack.0, 1, implicit-def $nz :: (load 1 from %stack.0 + 1)
-    ; CHECK:   $rc3 = COPY internal [[LDabs_offset1]]
-    ; CHECK:   $rs1 = KILL internal $rc2, internal $rc3
-    ; CHECK: }
+    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 2 from %stack.0, align 1)
+    ; CHECK: [[COPY2:%[0-9]+]]:imag16 = COPY [[LDabs_offset]]
+    ; CHECK: $rs1 = COPY [[COPY2]]
     ; CHECK: RTS implicit $rs1, implicit $rs2, implicit $rs4
     %0:imag16 = COPY $rs1
     JSR &fn, mos_csr

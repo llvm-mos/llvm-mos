@@ -596,25 +596,6 @@ void MOSInstrInfo::loadStoreRegStackSlot(
     }
   } else
     loadStoreByteStaticStackSlot(Builder, Reg, RC, FrameIndex, 0, MMO, IsLoad);
-
-  // Users of this function expect exactly one instruction to be added.
-  // However, if we're in a NoVRegs region, the only way to satisfy vregs is
-  // through the register scavenger, which doesn't handle bundles.
-  if (std::next(MIS.begin()) != MI &&
-      !MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::NoVRegs)) {
-    finalizeBundle(MBB, MIS.begin().getInstrIterator(), MI.getInstrIterator());
-    // If callers of the function expect only one instruction, they'll only
-    // print the bundle header. Log here to make it clear all that's being
-    // added.
-    LLVM_DEBUG({
-      dbgs() << "Emitted spill/reload using:\n";
-      for (auto MI = MIS.begin().getInstrIterator(),
-                End = MIS.getInitial().getInstrIterator();
-           MI != End; ++MI)
-        dbgs() << "  " << *MI;
-    });
-  }
 }
 
 bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
