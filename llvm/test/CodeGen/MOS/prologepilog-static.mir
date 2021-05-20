@@ -19,24 +19,24 @@ body:             |
     ; CHECK: PH $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c, implicit-def $nz
+    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c, implicit-def $nz
+    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
-    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: $a = PL
     ; CHECK: STAbs $a, target-index(mos-static-stack) :: (store 1 into %stack.0)
-    ; CHECK: $a = LDAbs target-index(mos-static-stack) + 1, implicit-def $nz :: (load 1 from %stack.1)
+    ; CHECK: $a = LDAbs target-index(mos-static-stack) + 1 :: (load 1 from %stack.1)
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 2, $c, implicit-def $nz
+    ; CHECK: $a, $c, dead $v = ADCImm $a, 2, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 0, $c, implicit-def $nz
+    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: RTS
     STabs_offset $a, %stack.0, 0 :: (store 1 into %stack.0)
-    $a = LDabs_offset %stack.1, 0, implicit-def $nz :: (load 1 from %stack.1)
+    $a = LDabs_offset %stack.1, 0 :: (load 1 from %stack.1)
     ADJCALLSTACKDOWN 1, 0, implicit-def $rs0, implicit $rs0
     ADJCALLSTACKUP 1, 0, implicit-def $rs0, implicit $rs0
     ADJCALLSTACKDOWN 2, 0, implicit-def $rs0, implicit $rs0

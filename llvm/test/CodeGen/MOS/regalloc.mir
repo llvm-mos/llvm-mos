@@ -10,13 +10,11 @@ body: |
     liveins: $a
     ; CHECK-LABEL: name: remat_ldimm
     ; CHECK: liveins: $a
-    ; CHECK: dead %2:gpr = LDImm 42, implicit-def $nz
-    ; CHECK: dead %4:gpr = LDImm 42, implicit-def $nz
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42, implicit-def $nz
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42
     ; CHECK: $a = COPY [[LDImm]]
     ; CHECK: RTS implicit $a
-    %0:gpr = LDImm 42, implicit-def $nz
+    %0:gpr = LDImm 42
     JSR &fn, mos_csr
     $a = COPY %0
     RTS implicit $a
@@ -32,9 +30,9 @@ body: |
     ; CHECK-LABEL: name: spill_y
     ; CHECK: liveins: $y
     ; CHECK: [[COPY:%[0-9]+]]:anyi8 = COPY $y
-    ; CHECK: STstk [[COPY]], %stack.0, 0, implicit-def $nz :: (store 1 into %stack.0)
+    ; CHECK: STstk [[COPY]], %stack.0, 0 :: (store 1 into %stack.0)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: [[LDstk:%[0-9]+]]:anyi8 = LDstk %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+    ; CHECK: [[LDstk:%[0-9]+]]:anyi8 = LDstk %stack.0, 0 :: (load 1 from %stack.0)
     ; CHECK: $y = COPY [[LDstk]]
     ; CHECK: RTS implicit $y
     %0:yc = COPY $y

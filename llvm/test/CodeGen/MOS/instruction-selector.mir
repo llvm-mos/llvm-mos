@@ -9,7 +9,7 @@ body: |
     ; CHECK-LABEL: name: and
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY $a
-    ; CHECK: [[ANDImag8_:%[0-9]+]]:ac = ANDImag8 [[COPY]], [[COPY1]], implicit-def $nz
+    ; CHECK: [[ANDImag8_:%[0-9]+]]:ac = ANDImag8 [[COPY]], [[COPY1]]
     ; CHECK: RTS implicit [[ANDImag8_]]
     %0:any(s8) = COPY $x
     %1:any(s8) = COPY $a
@@ -24,7 +24,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: asl
     ; CHECK: [[COPY:%[0-9]+]]:aimag8 = COPY $a
-    ; CHECK: [[ASL:%[0-9]+]]:aimag8, [[ASL1:%[0-9]+]]:cc = ASL [[COPY]], implicit-def $nz
+    ; CHECK: [[ASL:%[0-9]+]]:aimag8, [[ASL1:%[0-9]+]]:cc = ASL [[COPY]]
     ; CHECK: RTS implicit [[ASL]], implicit [[ASL1]]
     %0:any(s8) = COPY $a
     %1:any(s1) = G_CONSTANT i1 0
@@ -106,7 +106,7 @@ body: |
     ; CHECK-LABEL: name: cmpimm_brc
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; CHECK: [[CMPImm:%[0-9]+]]:cc = CMPImm [[COPY]], 42, implicit-def $nz
+    ; CHECK: [[CMPImm:%[0-9]+]]:cc = CMPImm [[COPY]], 42
     ; CHECK: BR %bb.0, [[CMPImm]], 1
     ; CHECK: RTS
     %0:any(s8) = COPY $a
@@ -159,7 +159,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_n
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $a
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42, implicit-def $nz
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY [[LDImm]]
     ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
     ; CHECK: %7:ac, %2:cc, %3:gpr_lsb, %4:vc, $noreg = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]], implicit-def $nz
@@ -177,7 +177,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_z
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $a
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42, implicit-def $nz
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY [[LDImm]]
     ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
     ; CHECK: %7:ac, %2:cc, $noreg, %4:vc, %5:gpr_lsb = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]], implicit-def $nz
@@ -209,7 +209,7 @@ body: |
     ; CHECK-LABEL: name: eor
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY $a
-    ; CHECK: [[EORImag8_:%[0-9]+]]:ac = EORImag8 [[COPY]], [[COPY1]], implicit-def $nz
+    ; CHECK: [[EORImag8_:%[0-9]+]]:ac = EORImag8 [[COPY]], [[COPY1]]
     ; CHECK: RTS implicit [[EORImag8_]]
     %0:any(s8) = COPY $x
     %1:any(s8) = COPY $a
@@ -223,7 +223,7 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm1
-    ; CHECK: [[LDImm1_:%[0-9]+]]:cv_gpr_lsb = LDImm1 1, implicit-def $nz
+    ; CHECK: [[LDImm1_:%[0-9]+]]:cv_gpr_lsb = LDImm1 1
     ; CHECK: RTS implicit [[LDImm1_]]
     %0:any(s1) = G_CONSTANT i1 true
     RTS implicit %0
@@ -235,7 +235,7 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42, implicit-def $nz
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42
     ; CHECK: RTS implicit [[LDImm]]
     %0:any(s8) = G_CONSTANT i8 42
     RTS implicit %0
@@ -247,8 +247,8 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_16
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 210, implicit-def $nz
-    ; CHECK: [[LDImm1:%[0-9]+]]:gpr = LDImm 4, implicit-def $nz
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 210
+    ; CHECK: [[LDImm1:%[0-9]+]]:gpr = LDImm 4
     ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDImm]], %subreg.sublo, [[LDImm1]], %subreg.subhi
     ; CHECK: RTS implicit [[REG_SEQUENCE]]
     %0:any(s16) = G_CONSTANT i16 1234
@@ -262,8 +262,8 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: load
     ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 0, implicit-def $nz
-    ; CHECK: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]], implicit-def $nz :: (load 1)
+    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 0
+    ; CHECK: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load 1)
     ; CHECK: RTS implicit [[LDYIndir]]
     %0:imag16(p0) = COPY $rs1
     %1:any(s8) = G_LOAD %0:imag16(p0) :: (load 1)
@@ -277,8 +277,8 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: load_indexed_indir
     ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 0, implicit-def $nz
-    ; CHECK: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]], implicit-def $nz :: (load 1)
+    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 0
+    ; CHECK: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load 1)
     ; CHECK: RTS implicit [[LDYIndir]]
     %0:any(p0) = COPY $rs1
     %1:any(s8) = G_LOAD %0 :: (load 1)
@@ -292,8 +292,8 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: load_indexed_indir_ptr_add
     ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 255, implicit-def $nz
-    ; CHECK: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]], implicit-def $nz :: (load 1)
+    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 255
+    ; CHECK: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load 1)
     ; CHECK: RTS implicit [[LDYIndir]]
     %0:any(p0) = COPY $rs1
     %1:any(s8) = G_CONSTANT i8 -1
@@ -309,7 +309,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: lsr
     ; CHECK: [[COPY:%[0-9]+]]:aimag8 = COPY $a
-    ; CHECK: [[LSR:%[0-9]+]]:aimag8, [[LSR1:%[0-9]+]]:cc = LSR [[COPY]], implicit-def $nz
+    ; CHECK: [[LSR:%[0-9]+]]:aimag8, [[LSR1:%[0-9]+]]:cc = LSR [[COPY]]
     ; CHECK: RTS implicit [[LSR]], implicit [[LSR1]]
     %0:any(s8) = COPY $a
     %1:any(s1) = G_CONSTANT i1 0
@@ -325,7 +325,7 @@ body: |
     ; CHECK-LABEL: name: ora
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY $a
-    ; CHECK: [[ORAImag8_:%[0-9]+]]:ac = ORAImag8 [[COPY]], [[COPY1]], implicit-def $nz
+    ; CHECK: [[ORAImag8_:%[0-9]+]]:ac = ORAImag8 [[COPY]], [[COPY1]]
     ; CHECK: RTS implicit [[ORAImag8_]]
     %0:any(s8) = COPY $x
     %1:any(s8) = COPY $a
@@ -343,9 +343,9 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY $x
     ; CHECK: [[COPY2:%[0-9]+]]:ac = COPY [[COPY]].sublo
     ; CHECK: [[COPY3:%[0-9]+]]:ac = COPY [[COPY]].subhi
-    ; CHECK: [[LDImm1_:%[0-9]+]]:cc = LDImm1 0, implicit-def $nz
-    ; CHECK: [[ADCImag8_:%[0-9]+]]:ac, [[ADCImag8_1:%[0-9]+]]:cc, [[ADCImag8_2:%[0-9]+]]:vc = ADCImag8 [[COPY2]], [[COPY1]], [[LDImm1_]], implicit-def $nz
-    ; CHECK: [[ADCImm:%[0-9]+]]:ac, [[ADCImm1:%[0-9]+]]:cc, [[ADCImm2:%[0-9]+]]:vc = ADCImm [[COPY3]], 0, [[ADCImag8_1]], implicit-def $nz
+    ; CHECK: [[LDImm1_:%[0-9]+]]:cc = LDImm1 0
+    ; CHECK: [[ADCImag8_:%[0-9]+]]:ac, [[ADCImag8_1:%[0-9]+]]:cc, [[ADCImag8_2:%[0-9]+]]:vc = ADCImag8 [[COPY2]], [[COPY1]], [[LDImm1_]]
+    ; CHECK: [[ADCImm:%[0-9]+]]:ac, [[ADCImm1:%[0-9]+]]:cc, [[ADCImm2:%[0-9]+]]:vc = ADCImm [[COPY3]], 0, [[ADCImag8_1]]
     ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[ADCImag8_]], %subreg.sublo, [[ADCImm]], %subreg.subhi
     ; CHECK: RTS implicit [[REG_SEQUENCE]]
     %0:any(p0) = COPY $rs1
@@ -362,7 +362,7 @@ body: |
     ; CHECK-LABEL: name: rol
     ; CHECK: [[COPY:%[0-9]+]]:aimag8 = COPY $a
     ; CHECK: [[COPY1:%[0-9]+]]:cc = COPY $v
-    ; CHECK: [[ROL:%[0-9]+]]:aimag8, [[ROL1:%[0-9]+]]:cc = ROL [[COPY]], [[COPY1]], implicit-def $nz
+    ; CHECK: [[ROL:%[0-9]+]]:aimag8, [[ROL1:%[0-9]+]]:cc = ROL [[COPY]], [[COPY1]]
     ; CHECK: RTS implicit [[ROL]], implicit [[ROL1]]
     %0:any(s8) = COPY $a
     %1:any(s1) = COPY $v
@@ -378,7 +378,7 @@ body: |
     ; CHECK-LABEL: name: ror
     ; CHECK: [[COPY:%[0-9]+]]:aimag8 = COPY $a
     ; CHECK: [[COPY1:%[0-9]+]]:cc = COPY $v
-    ; CHECK: [[ROR:%[0-9]+]]:aimag8, [[ROR1:%[0-9]+]]:cc = ROR [[COPY]], [[COPY1]], implicit-def $nz
+    ; CHECK: [[ROR:%[0-9]+]]:aimag8, [[ROR1:%[0-9]+]]:cc = ROR [[COPY]], [[COPY1]]
     ; CHECK: RTS implicit [[ROR]], implicit [[ROR1]]
     %0:any(s8) = COPY $a
     %1:any(s1) = COPY $v
@@ -394,7 +394,7 @@ body: |
     ; CHECK-LABEL: name: store
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
     ; CHECK: [[COPY1:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 0, implicit-def $nz
+    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 0
     ; CHECK: STYIndir [[COPY]], [[COPY1]], [[LDImm]] :: (store 1)
     ; CHECK: RTS
     %0:any(s8) = COPY $x
@@ -454,7 +454,7 @@ body: |
     ; CHECK-LABEL: name: uadde_imm
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
     ; CHECK: [[COPY1:%[0-9]+]]:cc = COPY $v
-    ; CHECK: [[ADCImm:%[0-9]+]]:ac, [[ADCImm1:%[0-9]+]]:cc, [[ADCImm2:%[0-9]+]]:vc = ADCImm [[COPY]], 42, [[COPY1]], implicit-def $nz
+    ; CHECK: [[ADCImm:%[0-9]+]]:ac, [[ADCImm1:%[0-9]+]]:cc, [[ADCImm2:%[0-9]+]]:vc = ADCImm [[COPY]], 42, [[COPY1]]
     ; CHECK: RTS implicit [[ADCImm]], implicit [[ADCImm1]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_CONSTANT i8 42
@@ -472,7 +472,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY $a
     ; CHECK: [[COPY2:%[0-9]+]]:cc = COPY $v
-    ; CHECK: [[ADCImag8_:%[0-9]+]]:ac, [[ADCImag8_1:%[0-9]+]]:cc, [[ADCImag8_2:%[0-9]+]]:vc = ADCImag8 [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
+    ; CHECK: [[ADCImag8_:%[0-9]+]]:ac, [[ADCImag8_1:%[0-9]+]]:cc, [[ADCImag8_2:%[0-9]+]]:vc = ADCImag8 [[COPY]], [[COPY1]], [[COPY2]]
     ; CHECK: RTS implicit [[ADCImag8_]], implicit [[ADCImag8_1]]
     %0:any(s8) = COPY $x
     %1:any(s8) = COPY $a
@@ -501,7 +501,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: zext
     ; CHECK: [[COPY:%[0-9]+]]:anyi1 = COPY $c
-    ; CHECK: [[ZExt1_:%[0-9]+]]:anyi8 = ZExt1 [[COPY]], implicit-def $nz
+    ; CHECK: [[ZExt1_:%[0-9]+]]:anyi8 = ZExt1 [[COPY]]
     ; CHECK: RTS implicit [[ZExt1_]]
     %0:any(s1) = COPY $c
     %1:any(s8) = G_ZEXT %0

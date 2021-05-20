@@ -48,9 +48,8 @@
 // All instructions take 1-register register classes for fixed operands: e.g.
 // Ac, Xc, Yc, etc. This allows the each instruction to natively use virtual
 // registers that can be resolved by the register allocator or register
-// scavenger. NZ is not included, since it is handled via bundling and
-// terminators; too many instructions clobber it for it to have useful live
-// ranges.
+// scavenger. NZ is modeled implicitly for the most part; too many instructions
+// clobber it for it to be useful outside very specific scenarios.
 //
 //===---------------------------------------------------------------------===//
 
@@ -78,8 +77,6 @@ def label : Operand<OtherVT>;
 class MOSAddSub : MOSLogicalInstr {
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout, Vc:$vout);
   let Constraints = "$dst = $l, $carryout = $carryin";
-
-  let Defs = [NZ];
 }
 class MOSAddSubOp<Operand op> : MOSAddSub {
   dag InOperandList = (ins Ac:$l, op:$r, Cc:$carryin);
@@ -111,8 +108,6 @@ class MOSBitwiseInstr<Instruction opcode> :
   let InOperandList = (ins Ac:$l, Imag8:$r);
   let Constraints = "$dst = $l";
 
-  let Defs = [NZ];
-
   let isCommutable = true;
 }
 
@@ -126,7 +121,6 @@ def ORAImag8 : MOSBitwiseInstr<ORA_ZeroPage>;
 
 class MOSShiftRotate : MOSLogicalInstr {
   dag OutOperandList = (outs AImag8:$dst, Cc:$carryout);
-  let Defs = [NZ];
 }
 
 class MOSShift : MOSShiftRotate {
@@ -154,8 +148,6 @@ def ROR : MOSRotate;
 def BITAbs : MOSLogicalInstr, PseudoInstExpansion<(BIT_Absolute addr16:$r)> {
   dag OutOperandList = (outs Vc:$v);
   dag InOperandList = (ins Ac:$l, i16imm:$r);
-
-  let Defs = [NZ];
 }
 
 //===---------------------------------------------------------------------===//
@@ -212,9 +204,7 @@ def CLV : MOSImmediateLoad<Vc, i1imm>, PseudoInstExpansion<(CLV_Implied)> {
 def LDCImm : MOSImmediateLoad<Cc, i1imm>;
 
 // LDA imm, LDX imm, LDY imm
-def LDImm : MOSImmediateLoad<GPR, i8imm> {
-  let Defs = [NZ];
-}
+def LDImm : MOSImmediateLoad<GPR, i8imm>;
 
 //===---------------------------------------------------------------------===//
 // Comparison Instructions
@@ -224,8 +214,6 @@ def LDImm : MOSImmediateLoad<GPR, i8imm> {
 def CMPImm : MOSLogicalInstr {
   dag OutOperandList = (outs Cc:$carry);
   dag InOperandList = (ins GPR:$l, i8imm:$r);
-
-  let Defs = [NZ];
 
   let isCompare = true;
 }
@@ -239,8 +227,6 @@ def IN : MOSLogicalInstr {
   dag OutOperandList = (outs XY:$dst);
   dag InOperandList = (ins XY:$src);
   let Constraints = "$src = $dst";
-
-  let Defs = [NZ];
 
   let Pattern = [(set XY:$dst, (add XY:$src, 1))];
 
@@ -256,19 +242,13 @@ class MOSTransfer<RegisterClass dst, RegisterClass src> : MOSLogicalInstr {
   dag OutOperandList = (outs dst:$dst);
   dag InOperandList = (ins src:$src);
 
-  let Defs = [NZ];
-
   let isAsCheapAsAMove = true;
 }
 
 // LDA zp, LDX zp, LDY zp
 def LDImag8 : MOSTransfer<GPR, Imag8>;
 // STA zp, STX zp, STY zp
-def STImag8 : MOSTransfer<Imag8, GPR> {
-  // Unlike all other "register transfer" instructions, this doesn't clobber NZ,
-  // since imaginary registers aren't real.
-  let Defs = [];
-}
+def STImag8 : MOSTransfer<Imag8, GPR>;
 
 // TAX, TAY
 def TA : MOSTransfer<XY, Ac>;
@@ -290,8 +270,6 @@ def PH : MOSLogicalInstr {
 def PL : MOSLogicalInstr {
   dag OutOperandList = (outs AP:$dst);
 
-  let Defs = [NZ];
-
   let mayLoad = true;
 }
 
@@ -300,7 +278,6 @@ def PL : MOSLogicalInstr {
 //===---------------------------------------------------------------------===//
 
 class MOSLoad : MOSLogicalInstr {
-  let Defs = [NZ];
   let mayLoad = true;
 }
 

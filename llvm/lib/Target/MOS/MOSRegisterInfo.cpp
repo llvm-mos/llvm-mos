@@ -164,7 +164,8 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   int Idx = MI->getOperand(FIOperandNum).getIndex();
   int64_t Offset = MFI.getObjectOffset(Idx);
-  if (MI->getOperand(FIOperandNum + 1).isImm())
+  if (FIOperandNum + 1 < MI->getNumOperands() &&
+      MI->getOperand(FIOperandNum + 1).isImm())
     Offset += MI->getOperand(FIOperandNum + 1).getImm();
 
   if (MFI.getStackID(Idx) == TargetStackID::Default) {

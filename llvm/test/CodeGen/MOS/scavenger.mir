@@ -6,9 +6,9 @@ body: |
   bb.0.entry:
     liveins: $a
     ; CHECK-LABEL: name: scavenge_gpr
-    ; CHECK: dead $x = LDImm 42, implicit-def $nz
+    ; CHECK: dead $x = LDImm 42
     ; CHECK: RTS implicit $a
-    %0:gpr = LDImm 42, implicit-def $nz
+    %0:gpr = LDImm 42
     RTS implicit $a
 ...
 ---
@@ -18,10 +18,10 @@ body: |
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_a
     ; CHECK: PH $a
-    ; CHECK: dead $a = LDImm 42, implicit-def $nz
-    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: dead $a = LDImm 42
+    ; CHECK: $a = PL
     ; CHECK: RTS implicit $a, implicit $x, implicit $y
-    %0:gpr = LDImm 42, implicit-def $nz
+    %0:gpr = LDImm 42
     RTS implicit $a, implicit $x, implicit $y
 ...
 ---
@@ -31,10 +31,10 @@ body: |
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_x
     ; CHECK: STAbs $x, &__save_x
-    ; CHECK: dead $x = LDImm 42, implicit-def $nz
-    ; CHECK: $x = LDAbs &__save_x, implicit-def $nz
+    ; CHECK: dead $x = LDImm 42
+    ; CHECK: $x = LDAbs &__save_x
     ; CHECK: RTS implicit $a, implicit $x, implicit $y
-    %0:xy = LDImm 42, implicit-def $nz
+    %0:xy = LDImm 42
     RTS implicit $a, implicit $x, implicit $y
 ...
 ---
@@ -44,9 +44,9 @@ body: |
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_y
     ; CHECK: STAbs $y, &__save_y
-    ; CHECK: dead $y = LDImm 42, implicit-def $nz
-    ; CHECK: $y = LDAbs &__save_y, implicit-def $nz
+    ; CHECK: dead $y = LDImm 42
+    ; CHECK: $y = LDAbs &__save_y
     ; CHECK: RTS implicit $a, implicit $x, implicit $y
-    %0:yc = LDImm 42, implicit-def $nz
+    %0:yc = LDImm 42
     RTS implicit $a, implicit $x, implicit $y
 ...

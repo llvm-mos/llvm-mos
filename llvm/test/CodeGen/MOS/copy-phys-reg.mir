@@ -8,7 +8,7 @@ body: |
     liveins: $a
     ; CHECK-LABEL: name: a_to_xy
     ; CHECK: liveins: $a
-    ; CHECK: $x = TA $a, implicit-def $nz
+    ; CHECK: $x = TA $a
     $x = COPY $a
 ...
 ---
@@ -19,7 +19,7 @@ body: |
     liveins: $x
     ; CHECK-LABEL: name: xy_to_a
     ; CHECK: liveins: $x
-    ; CHECK: $a = T_A $x, implicit-def $nz
+    ; CHECK: $a = T_A $x
     $a = COPY $x
 ...
 ---
@@ -30,8 +30,8 @@ body: |
     liveins: $x
     ; CHECK-LABEL: name: xy_to_xy
     ; CHECK: liveins: $x
-    ; CHECK: $a = T_A $x, implicit-def $nz
-    ; CHECK: $y = TA $a, implicit-def $nz
+    ; CHECK: $a = T_A $x
+    ; CHECK: $y = TA $a
     $y = COPY $x
 ...
 ---
@@ -43,12 +43,12 @@ body: |
     ; CHECK-LABEL: name: xy_to_xy_preserve_a
     ; CHECK: liveins: $a, $x
     ; CHECK: PH $a
-    ; CHECK: $a = T_A $x, implicit-def $nz
-    ; CHECK: $y = TA $a, implicit-def $nz
-    ; CHECK: $a = PL implicit-def $nz
-    ; CHECK: $c = CMPImm $a, 0, implicit-def $nz
+    ; CHECK: $a = T_A $x
+    ; CHECK: $y = TA $a
+    ; CHECK: $a = PL
+    ; CHECK: $c = CMPImm $a, 0
     $y = COPY $x
-    $c = CMPImm $a, 0, implicit-def $nz
+    $c = CMPImm $a, 0
 ...
 ---
 name: gpr_to_imag8
@@ -69,7 +69,7 @@ body: |
     liveins: $rc0
     ; CHECK-LABEL: name: imag8_to_gpr
     ; CHECK: liveins: $rc0
-    ; CHECK: $a = LDImag8 $rc0, implicit-def $nz
+    ; CHECK: $a = LDImag8 $rc0
     $a = COPY $rc0
 ...
 ---
@@ -80,7 +80,7 @@ body: |
     liveins: $rc0
     ; CHECK-LABEL: name: imag8_to_imag8
     ; CHECK: liveins: $rc0
-    ; CHECK: $a = LDImag8 $rc0, implicit-def $nz
+    ; CHECK: $a = LDImag8 $rc0
     ; CHECK: $rc1 = STImag8 $a
     $rc1 = COPY $rc0
 ...
@@ -93,9 +93,9 @@ body: |
     ; CHECK-LABEL: name: imag8_to_imag8_preserve_a
     ; CHECK: liveins: $rc0, $a, $x, $y
     ; CHECK: PH $a
-    ; CHECK: $a = LDImag8 $rc0, implicit-def $nz
+    ; CHECK: $a = LDImag8 $rc0
     ; CHECK: $rc1 = STImag8 $a
-    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: $a = PL
     ; CHECK: RTS implicit $a, implicit $x, implicit $y
     $rc1 = COPY $rc0
     RTS implicit $a, implicit $x, implicit $y
@@ -108,9 +108,9 @@ body: |
     liveins: $rs0
     ; CHECK-LABEL: name: imag16_to_imag16
     ; CHECK: liveins: $rs0
-    ; CHECK: $a = LDImag8 $rc0, implicit-def $nz
+    ; CHECK: $a = LDImag8 $rc0
     ; CHECK: $rc2 = STImag8 $a
-    ; CHECK: $a = LDImag8 $rc1, implicit-def $nz
+    ; CHECK: $a = LDImag8 $rc1
     ; CHECK: $rc3 = STImag8 $a
     $rs1 = COPY $rs0
 ...
@@ -122,7 +122,7 @@ body: |
     liveins: $alsb
     ; CHECK-LABEL: name: lsb_to_lsb
     ; CHECK: liveins: $alsb
-    ; CHECK: $x = TA $a, implicit-def $nz
+    ; CHECK: $x = TA $a
     $xlsb = COPY $alsb
 ...
 ---
@@ -133,7 +133,7 @@ body: |
     liveins: $xlsb
     ; CHECK-LABEL: name: gpr_lsb_to_c
     ; CHECK: liveins: $xlsb
-    ; CHECK: $c = CMPImm $x, 1, implicit-def $nz
+    ; CHECK: $c = CMPImm $x, 1
     $c = COPY $xlsb
 ...
 ---
@@ -144,8 +144,8 @@ body: |
     liveins: $rc2lsb
     ; CHECK-LABEL: name: imag8lsb_to_c
     ; CHECK: liveins: $rc2lsb
-    ; CHECK: $a = LDImag8 $rc2, implicit-def $nz
-    ; CHECK: $c = CMPImm $a, 1, implicit-def $nz
+    ; CHECK: $a = LDImag8 $rc2
+    ; CHECK: $c = CMPImm $a, 1
     $c = COPY $rc2lsb
 ...
 ---
@@ -157,9 +157,9 @@ body: |
     ; CHECK-LABEL: name: imag8lsb_to_c_preserve_a
     ; CHECK: liveins: $rc2lsb, $a
     ; CHECK: PH $a
-    ; CHECK: $a = LDImag8 $rc2, implicit-def $nz
-    ; CHECK: $c = CMPImm $a, 1, implicit-def $nz
-    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: $a = LDImag8 $rc2
+    ; CHECK: $c = CMPImm $a, 1
+    ; CHECK: $a = PL
     ; CHECK: RTS implicit $a
     $c = COPY $rc2lsb
     RTS implicit $a
@@ -200,7 +200,7 @@ body: |
     ; CHECK: PH $a
     ; CHECK: $a = T_A $x, implicit-def $nz
     ; CHECK: $v = SelectImm $z, 0, 1
-    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: $a = PL
     ; CHECK: RTS implicit $a
     $v = COPY $xlsb
     RTS implicit $a
@@ -211,6 +211,9 @@ tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $v
+    ; CHECK-LABEL: name: flag_to_flag
+    ; CHECK: liveins: $v
+    ; CHECK: $c = SelectImm $v, 1, 0
     $c = COPY $v
 ...
 ---
@@ -247,7 +250,7 @@ body: |
     ; CHECK: PH $a
     ; CHECK: $a = SelectImm $v, 1, 0
     ; CHECK: $rc2 = STImag8 $a
-    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: $a = PL
     ; CHECK: RTS implicit $a
     $rc2lsb = COPY $v
     RTS implicit $a

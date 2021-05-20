@@ -35,8 +35,8 @@ body: |
   bb.0.entry:
     liveins: $x
     ; CHECK-LABEL: name: ldaidx
-    ; CHECK: $a = LDAIdx 1234, $x, implicit-def $nz
-    $a = LDIdx 1234, $x, implicit-def $nz
+    ; CHECK: $a = LDAIdx 1234, $x
+    $a = LDIdx 1234, $x
 ...
 ---
 name: ldxidx_y
@@ -44,8 +44,8 @@ body: |
   bb.0.entry:
     liveins: $y
     ; CHECK-LABEL: name: ldxidx_y
-    ; CHECK: $x = LDXIdx 1234, $y, implicit-def $nz
-    $x = LDIdx 1234, $y, implicit-def $nz
+    ; CHECK: $x = LDXIdx 1234, $y
+    $x = LDIdx 1234, $y
 ...
 ---
 name: ldxidx_x
@@ -54,12 +54,12 @@ body: |
     liveins: $x
     ; CHECK-LABEL: name: ldxidx_x
     ; CHECK: PH $a
-    ; CHECK: $a = LDAIdx 1234, $x, implicit-def $nz
-    ; CHECK: $x = TA $a, implicit-def $nz
-    ; CHECK: $a = PL implicit-def $nz
-    ; CHECK: $c = CMPImm $a, 0, implicit-def $nz
-    $x = LDIdx 1234, $x, implicit-def $nz
-    $c = CMPImm $a, 0, implicit-def $nz
+    ; CHECK: $a = LDAIdx 1234, $x
+    ; CHECK: $x = TA $a
+    ; CHECK: $a = PL
+    ; CHECK: $c = CMPImm $a, 0
+    $x = LDIdx 1234, $x
+    $c = CMPImm $a, 0
 ...
 ---
 name: ldyidx_x
@@ -67,16 +67,16 @@ body: |
   bb.0.entry:
     liveins: $x
     ; CHECK-LABEL: name: ldyidx_x
-    ; CHECK: $y = LDYIdx 1234, $x, implicit-def $nz
-    $y = LDIdx 1234, $x, implicit-def $nz
+    ; CHECK: $y = LDYIdx 1234, $x
+    $y = LDIdx 1234, $x
 ...
 ---
 name: ldimm1_lsb
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm1_lsb
-    ; CHECK: $a = LDImm 1, implicit-def $nz
-    $alsb = LDImm1 1, implicit-def $nz
+    ; CHECK: $a = LDImm 1
+    $alsb = LDImm1 1
 ...
 ---
 name: ldcimm
@@ -84,15 +84,15 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldcimm
     ; CHECK: $c = LDCImm 1
-    $c = LDImm1 1, implicit-def $nz
+    $c = LDImm1 1
 ...
 ---
 name: set_v
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: set_v
-    ; CHECK: $v = BITAbs $a, &__set_v, implicit-def $nz
-    $v = LDImm1 1, implicit-def $nz
+    ; CHECK: $v = BITAbs $a, &__set_v
+    $v = LDImm1 1
 ...
 ---
 name: clv
@@ -100,32 +100,32 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: clv
     ; CHECK: $v = CLV
-    $v = LDImm1 0, implicit-def $nz
+    $v = LDImm1 0
 ...
 ---
 name: zext1_from_lsb
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: zext1_from_lsb
-    ; CHECK: $a = T_A $x, implicit-def $nz
-    $a = ZExt1 $xlsb, implicit-def $nz
+    ; CHECK: $a = T_A $x
+    $a = ZExt1 $xlsb
 ...
 ---
 name: zext1_from_flag_to_gpr
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: zext1_from_flag_to_gpr
-    ; CHECK: $a = SelectImm $c, 1, 0, implicit-def $nz
-    $a = ZExt1 $c, implicit-def $nz
+    ; CHECK: $a = SelectImm $c, 1, 0
+    $a = ZExt1 $c
 ...
 ---
 name: zext1_from_flag_to_nongpr
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: zext1_from_flag_to_nongpr
-    ; CHECK: $a = SelectImm $c, 1, 0, implicit-def $nz
+    ; CHECK: $a = SelectImm $c, 1, 0
     ; CHECK: $rc2 = COPY $a
-    $rc2 = ZExt1 $c, implicit-def $nz
+    $rc2 = ZExt1 $c
 ...
 ---
 name: zext1_from_flag_to_nongpr_preserve_a
@@ -134,10 +134,10 @@ body: |
     liveins: $a
     ; CHECK-LABEL: name: zext1_from_flag_to_nongpr_preserve_a
     ; CHECK: PH $a
-    ; CHECK: $a = SelectImm $c, 1, 0, implicit-def $nz
+    ; CHECK: $a = SelectImm $c, 1, 0
     ; CHECK: $rc2 = COPY $a
-    ; CHECK: $a = PL implicit-def $nz
+    ; CHECK: $a = PL
     ; CHECK: RTS implicit $a
-    $rc2 = ZExt1 $c, implicit-def $nz
+    $rc2 = ZExt1 $c
     RTS implicit $a
 ...

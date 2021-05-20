@@ -57,18 +57,6 @@ MOSInstrInfo::MOSInstrInfo()
     : MOSGenInstrInfo(/*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
                       /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP) {}
 
-bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                     AAResults *AA) const {
-  switch (MI.getOpcode()) {
-  default:
-    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI, AA);
-  // Note: Rematerializations cannot occur in terminators, so NZ cannot be live.
-  case MOS::LDImm:
-  case MOS::LDImm1:
-    return true;
-  }
-}
-
 unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
@@ -449,7 +437,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
           assert(DestReg == MOS::V);
           if (SrcReg == MOS::A) {
             Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
-            Builder.buildInstr(MOS::PL, {MOS::A}, {});
+            Builder.buildInstr(MOS::PL, {MOS::A}, {})
+                .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(1)});
           } else {
@@ -457,6 +446,9 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
             if (IsAMaybeLive)
               Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
             copyPhysRegImpl(Builder, MOS::A, SrcReg);
+            std::prev(Builder.getInsertPt())
+                ->addOperand(MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true,
+                                                       /*isImp=*/true));
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(1)});
             if (IsAMaybeLive)
@@ -630,14 +622,19 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 }
 
 void MOSInstrInfo::expandCMPImmTerm(MachineIRBuilder &Builder) const {
-  Builder.getInsertPt()->setDesc(Builder.getTII().get(MOS::CMPImm));
+  MachineInstr &MI = *Builder.getInsertPt();
+  MI.setDesc(Builder.getTII().get(MOS::CMPImm));
+  MI.addOperand(
+      MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true, /*isImp=*/true));
 }
 
 void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
   MachineInstr &MI = *Builder.getInsertPt();
-  Builder.buildInstr(MOS::SBCImag8,
-                     {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
-                     {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
+  Builder
+      .buildInstr(MOS::SBCImag8,
+                  {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+                  {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)})
+      .addDef(MOS::NZ, RegState::Implicit);
   Register NZOut = MI.getOperand(2).getReg();
   Register NZIn = MOS::N;
   if (NZOut == MOS::NoRegister) {
@@ -709,8 +706,6 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   }
   case MOS::C:
     Opcode = MOS::LDCImm;
-    // Remove implicit-def $nz.
-    MI.RemoveOperand(2);
     break;
   case MOS::V:
     if (Val == 1) {
@@ -720,8 +715,6 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
       return;
     }
     Opcode = MOS::CLV;
-    // Remove implicit-def $nz.
-    MI.RemoveOperand(2);
     // Remove imm 1
     MI.RemoveOperand(1);
     break;

@@ -27,7 +27,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; CHECK: STabs_offset [[COPY]], %stack.0, 0 :: (store 1 into %stack.0)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0 :: (load 1 from %stack.0)
     ; CHECK: $a = COPY [[LDabs_offset]]
     ; CHECK: RTS implicit $a
     %0:gpr = COPY $a
@@ -49,7 +49,7 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY [[COPY]]
     ; CHECK: STabs_offset [[COPY1]], %stack.0, 0 :: (store 1 into %stack.0)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0 :: (load 1 from %stack.0)
     ; CHECK: [[COPY2:%[0-9]+]]:anyi8 = COPY [[LDabs_offset]]
     ; CHECK: $rc2 = COPY [[COPY2]]
     ; CHECK: RTS implicit $rc2, implicit $rs2, implicit $rs4
@@ -78,9 +78,9 @@ body: |
     ; CHECK: [[COPY3:%[0-9]+]]:gpr = COPY [[COPY1]].subhi
     ; CHECK: STabs_offset [[COPY3]], %stack.0, 1 :: (store 1 into %stack.0 + 1)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0, implicit-def $nz :: (load 1 from %stack.0)
+    ; CHECK: [[LDabs_offset:%[0-9]+]]:gpr = LDabs_offset %stack.0, 0 :: (load 1 from %stack.0)
     ; CHECK: undef %5.sublo:imag16 = COPY [[LDabs_offset]]
-    ; CHECK: [[LDabs_offset1:%[0-9]+]]:gpr = LDabs_offset %stack.0, 1, implicit-def $nz :: (load 1 from %stack.0 + 1)
+    ; CHECK: [[LDabs_offset1:%[0-9]+]]:gpr = LDabs_offset %stack.0, 1 :: (load 1 from %stack.0 + 1)
     ; CHECK: %5.subhi:imag16 = COPY [[LDabs_offset1]]
     ; CHECK: $rs1 = COPY %5
     ; CHECK: RTS implicit $rs1, implicit $rs2, implicit $rs4

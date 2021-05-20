@@ -44,8 +44,6 @@ def LDIdx : MOSPseudo {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$addr, XY:$idx);
 
-  let Defs = [NZ];
-
   let isReMaterializable = true;
   let mayLoad = true;
 }
@@ -54,8 +52,6 @@ def LDIdx : MOSPseudo {
 def LDImm1 : MOSPseudo {
   dag OutOperandList = (outs CV_GPR_LSB:$dst);
   dag InOperandList = (ins i1imm:$val);
-
-  let Defs = [NZ];
 
   let isAsCheapAsAMove = true;
   let isMoveImm = true;
@@ -68,8 +64,6 @@ def LDImm1 : MOSPseudo {
 def ZExt1 : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi1:$src);
-
-  let Defs = [NZ];
 }
 
 
@@ -105,8 +99,6 @@ def AddrLostk : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst, Cc:$carry, Vc:$deadv);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
-  let Defs = [NZ];
-
   let isReMaterializable = true;
 }
 
@@ -115,8 +107,6 @@ def AddrLostk : MOSPseudo {
 def AddrHistk : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst, Cc:$deadc, Vc:$deadv);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset, Cc:$carry);
-
-  let Defs = [NZ];
 
   let isReMaterializable = true;
 }
@@ -127,8 +117,6 @@ def LDstk : MOSPseudo {
   dag OutOperandList = (outs unknown:$dst);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
-  let Defs = [NZ];
-
   let mayLoad = true;
 }
 
@@ -136,9 +124,6 @@ def LDstk : MOSPseudo {
 // offset from the frame register is known.
 def STstk : MOSPseudo {
   dag InOperandList = (ins unknown:$src, Imag16:$base, i16imm:$fi);
-
-  // All possible instruction sequences clobber NZ.
-  let Defs = [NZ];
 
   let mayStore = true;
 }
@@ -149,8 +134,6 @@ def STstk : MOSPseudo {
 def LDabs_offset : MOSPseudo {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$addr, i16imm:$offset);
-
-  let Defs = [NZ];
 
   let isReMaterializable = true;
   let mayLoad = true;
