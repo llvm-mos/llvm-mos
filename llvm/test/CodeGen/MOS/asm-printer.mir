@@ -162,3 +162,13 @@ body: |
     RTS
     ; CHECK-NEXT: rts
 ...
+---
+name: external_symbol_offset
+# CHECK-LABEL: external_symbol_offset
+body: |
+  bb.0.entry:
+    $a = LDAbs &external + 1
+    ; CHECK: lda external+1
+    RTS
+    ; CHECK-NEXT: rts
+...

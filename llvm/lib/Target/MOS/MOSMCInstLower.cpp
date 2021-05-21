@@ -16,6 +16,7 @@
 #include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -328,12 +329,11 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
   case MachineOperand::MO_RegisterMask:
     return false;
   case MachineOperand::MO_ExternalSymbol:
-    MCOp = MCOperand::createExpr(MCSymbolRefExpr::create(
-        Ctx.getOrCreateSymbol(MO.getSymbolName()), Ctx));
-    break;
   case MachineOperand::MO_GlobalAddress: {
-    const MCExpr *Expr =
-        MCSymbolRefExpr::create(AP.getSymbol(MO.getGlobal()), Ctx);
+    const MCSymbol *Symbol = MO.getType() == MachineOperand::MO_ExternalSymbol
+                                 ? Ctx.getOrCreateSymbol(MO.getSymbolName())
+                                 : AP.getSymbol(MO.getGlobal());
+    const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Ctx);
     if (MO.getOffset() != 0)
       Expr = MCBinaryExpr::createAdd(
           Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
