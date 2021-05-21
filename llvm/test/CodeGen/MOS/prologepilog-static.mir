@@ -35,8 +35,8 @@ body:             |
     ; CHECK: $a, dead $c, dead $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: RTS
-    STabs_offset $a, %stack.0, 0 :: (store 1 into %stack.0)
-    $a = LDabs_offset %stack.1, 0 :: (load 1 from %stack.1)
+    STAbsOffset $a, %stack.0, 0 :: (store 1 into %stack.0)
+    $a = LDAbsOffset %stack.1, 0 :: (load 1 from %stack.1)
     ADJCALLSTACKDOWN 1, 0, implicit-def $rs0, implicit $rs0
     ADJCALLSTACKUP 1, 0, implicit-def $rs0, implicit $rs0
     ADJCALLSTACKDOWN 2, 0, implicit-def $rs0, implicit $rs0

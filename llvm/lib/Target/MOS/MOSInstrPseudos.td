@@ -113,7 +113,7 @@ def AddrHistk : MOSPseudo {
 
 // Loads a value (1, 8, or 16 bits) from the soft stack. Eliminated once the
 // offset from the frame register is known.
-def LDstk : MOSPseudo {
+def LDStk : MOSPseudo {
   dag OutOperandList = (outs unknown:$dst);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
 
@@ -122,7 +122,7 @@ def LDstk : MOSPseudo {
 
 // Stores a value (1, 8, or 16 bits) to the soft stack. Eliminated once the
 // offset from the frame register is known.
-def STstk : MOSPseudo {
+def STStk : MOSPseudo {
   dag InOperandList = (ins unknown:$src, Imag16:$base, i16imm:$fi);
 
   let mayStore = true;
@@ -131,7 +131,7 @@ def STstk : MOSPseudo {
 // Loads from an absolute location plus an absolute offset. The first operand
 // will always be a frame index referring to to a statically allocated stack
 // frame. This will be lowered to a regular LDAbs upon FEI.
-def LDabs_offset : MOSPseudo {
+def LDAbsOffset : MOSPseudo {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$addr, i16imm:$offset);
 
@@ -142,7 +142,7 @@ def LDabs_offset : MOSPseudo {
 // Stores to an absolute location plus an absolute offset. The first operand
 // will always be a frame index referring to a statically allocated stack frame.
 // This will be lowered to a regular STAbs upon FEI.
-def STabs_offset : MOSPseudo {
+def STAbsOffset : MOSPseudo {
   dag OutOperandList = (outs);
   dag InOperandList = (ins GPR:$src, i16imm:$addr, i16imm:$offset);
 

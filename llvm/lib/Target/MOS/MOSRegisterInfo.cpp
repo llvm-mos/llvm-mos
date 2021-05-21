@@ -187,14 +187,14 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     llvm_unreachable("Unexpected opcode.");
   case MOS::AddrLostk:
   case MOS::AddrHistk:
-  case MOS::LDstk:
-  case MOS::STstk:
+  case MOS::LDStk:
+  case MOS::STStk:
     MI->getOperand(FIOperandNum)
         .ChangeToRegister(getFrameRegister(MF), /*isDef=*/false);
     MI->getOperand(FIOperandNum + 1).setImm(Offset);
     break;
-  case MOS::LDabs_offset:
-  case MOS::STabs_offset:
+  case MOS::LDAbsOffset:
+  case MOS::STAbsOffset:
     MI->getOperand(FIOperandNum)
         .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset);
     MI->RemoveOperand(FIOperandNum + 1);
@@ -215,14 +215,14 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   case MOS::AddrHistk:
     expandAddrHistk(MI);
     break;
-  case MOS::LDabs_offset:
+  case MOS::LDAbsOffset:
     MI->setDesc(TII.get(MOS::LDAbs));
     break;
-  case MOS::STabs_offset:
+  case MOS::STAbsOffset:
     MI->setDesc(TII.get(MOS::STAbs));
     break;
-  case MOS::LDstk:
-  case MOS::STstk:
+  case MOS::LDStk:
+  case MOS::STStk:
     expandLDSTstk(MI);
     break;
   }
@@ -296,7 +296,7 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   MachineRegisterInfo &MRI = *Builder.getMRI();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 
-  const bool IsLoad = MI->getOpcode() == MOS::LDstk;
+  const bool IsLoad = MI->getOpcode() == MOS::LDStk;
 
   Register Loc = MI->getOperand(0).getReg();
   int64_t Offset = MI->getOperand(2).getImm();

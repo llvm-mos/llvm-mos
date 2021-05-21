@@ -141,7 +141,7 @@ body:             |
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
-    $a = LDstk %stack.1, 1 :: (load 1 from %stack.1 + 1)
+    $a = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
 ...
 ---
 name: ld_byte_high
@@ -165,7 +165,7 @@ body:             |
     ; CHECK: $rc3 = COPY killed $a, implicit $rs1
     ; CHECK: $y = LDImm 0
     ; CHECK: $a = LDYIndir killed $rs1, killed $y :: (load 1 from %stack.0 + 254)
-    $a = LDstk %stack.0, 254 :: (load 1 from %stack.0 + 254)
+    $a = LDStk %stack.0, 254 :: (load 1 from %stack.0 + 254)
 ...
 ---
 name: ld_byte_x
@@ -185,7 +185,7 @@ body:             |
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
     ; CHECK: $x = COPY killed $a
-    $x = LDstk %stack.1, 1 :: (load 1 from %stack.1 + 1)
+    $x = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
 ...
 ---
 name: ld_byte_xlsb
@@ -205,7 +205,7 @@ body:             |
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
     ; CHECK: $x = COPY killed $a
-    $xlsb = LDstk %stack.1, 1 :: (load 1 from %stack.1 + 1)
+    $xlsb = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
 ...
 ---
 name: ld_byte_c
@@ -226,7 +226,7 @@ body:             |
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
     ; CHECK: $c = COPY $alsb
     ; CHECK: $xlsb = COPY killed $c
-    $c = LDstk %stack.1, 1 :: (load 1 from %stack.1 + 1)
+    $c = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
     $xlsb = COPY killed $c
 ...
 ---
@@ -249,7 +249,7 @@ body: |
     ; CHECK: $y = LDImm 3
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0 + 3, basealign 2)
     ; CHECK: $rc1 = COPY killed $a
-    $rs0 = LDstk %stack.0, 2 :: (load 2 from %stack.0 + 2)
+    $rs0 = LDStk %stack.0, 2 :: (load 2 from %stack.0 + 2)
 
 ...
 ---
@@ -271,7 +271,7 @@ body:             |
     ; CHECK: $a = PL
     ; CHECK: $y = LDImm 1
     ; CHECK: STYIndir $a, $rs0, killed $y :: (store 1 into %stack.1 + 1)
-    STstk $a, %stack.1, 1 :: (store 1 into %stack.1 + 1)
+    STStk $a, %stack.1, 1 :: (store 1 into %stack.1 + 1)
 ...
 ---
 name: st_byte_c
@@ -293,7 +293,7 @@ body:             |
     ; CHECK: $y = LDImm 1
     ; CHECK: STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.1 + 1)
     $c = COPY $xlsb
-    STstk killed $c, %stack.1, 1 :: (store 1 into %stack.1 + 1)
+    STStk killed $c, %stack.1, 1 :: (store 1 into %stack.1 + 1)
 ...
 ---
 name: st_byte_high
@@ -318,7 +318,7 @@ body:             |
     ; CHECK: $a = COPY $x
     ; CHECK: $y = LDImm 0
     ; CHECK: STYIndir killed $a, killed $rs1, killed $y :: (store 1 into %stack.0 + 254)
-    STstk $x, %stack.0, 254 :: (store 1 into %stack.0 + 254)
+    STStk $x, %stack.0, 254 :: (store 1 into %stack.0 + 254)
 ...
 ---
 name: st_ptr
@@ -340,6 +340,6 @@ body: |
     ; CHECK: $a = COPY $rc1
     ; CHECK: $y = LDImm 3
     ; CHECK: STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.0 + 3, basealign 2)
-    STstk $rs0, %stack.0, 2 :: (store 2 into %stack.0 + 2)
+    STStk $rs0, %stack.0, 2 :: (store 2 into %stack.0 + 2)
 
 ...
