@@ -507,30 +507,63 @@ static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
                                          int64_t Offset,
                                          MachineMemOperand *MMO) {
   const MachineRegisterInfo &MRI = *Builder.getMRI();
+  const TargetRegisterInfo &TRI =
+      *Builder.getMF().getSubtarget().getRegisterInfo();
 
-  MachineOperand Tmp = MO;
-  assert(!Tmp.getParent());
-  if ((Tmp.getReg().isPhysical() && !MOS::GPRRegClass.contains(Tmp.getReg())) ||
-      (Tmp.getReg().isVirtual() &&
-       !MRI.getRegClass(Tmp.getReg())->hasSuperClassEq(&MOS::GPRRegClass))) {
-    Tmp = MachineOperand::CreateReg(
-        Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass), MO.isDef());
+  Register Reg = MO.getReg();
+
+  // Convert bit to byte if directly possible.
+  if (Reg.isPhysical() && MOS::GPR_LSBRegClass.contains(Reg)) {
+    Reg = TRI.getMatchingSuperReg(Reg, MOS::sublsb, &MOS::GPRRegClass);
+    MO.setReg(Reg);
+  } else if (Reg.isVirtual() &&
+             MRI.getRegClass(Reg)->hasSuperClassEq(&MOS::GPRRegClass) &&
+             MO.getSubReg() == MOS::sublsb) {
+    MO.setSubReg(0);
   }
 
-  if (Tmp.isUse() && !Tmp.isIdenticalTo(MO)) {
-    Tmp.setIsDef();
-    Builder.buildInstr(MOS::COPY).add(Tmp).add(MO);
-    Tmp.setIsUse();
-    Tmp.clearParent();
+  // Emit directly through GPR if possible.
+  if ((Reg.isPhysical() && MOS::GPRRegClass.contains(Reg)) ||
+      (Reg.isVirtual() &&
+       MRI.getRegClass(Reg)->hasSuperClassEq(&MOS::GPRRegClass) &&
+       !MO.getSubReg())) {
+    Builder.buildInstr(MO.isDef() ? MOS::LDabs_offset : MOS::STabs_offset)
+        .add(MO)
+        .addFrameIndex(FrameIndex)
+        .addImm(Offset)
+        .addMemOperand(MMO);
+    return;
   }
-  Builder.buildInstr(Tmp.isDef() ? MOS::LDabs_offset : MOS::STabs_offset)
-      .add(Tmp)
-      .addFrameIndex(FrameIndex)
-      .addImm(Offset)
-      .addMemOperand(MMO);
-  if (Tmp.isDef() && !Tmp.isIdenticalTo(MO)) {
-    Tmp.setIsUse();
-    Builder.buildInstr(MOS::COPY).add(MO).add(Tmp);
+
+  // Emit via copy through GPR.
+  bool IsBit = (Reg.isPhysical() && MOS::Anyi1RegClass.contains(Reg)) ||
+               (Reg.isVirtual() &&
+                (MRI.getRegClass(Reg)->hasSuperClassEq(&MOS::Anyi1RegClass) ||
+                 MO.getSubReg() == MOS::sublsb));
+  MachineOperand Tmp = MachineOperand::CreateReg(
+      Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass), MO.isDef());
+  if (Tmp.isUse()) {
+    // Define the temporary register via copy from the MO.
+    MachineOperand TmpDef = Tmp;
+    TmpDef.setIsDef();
+    if (IsBit) {
+      TmpDef.setSubReg(MOS::sublsb);
+      TmpDef.setIsUndef();
+    }
+    Builder.buildInstr(MOS::COPY).add(TmpDef).add(MO);
+
+    loadStoreByteStaticStackSlot(Builder, Tmp, FrameIndex, Offset, MMO);
+  } else {
+    assert(Tmp.isDef());
+
+    loadStoreByteStaticStackSlot(Builder, Tmp, FrameIndex, Offset, MMO);
+
+    // Define the MO via copy from the temporary register.
+    MachineOperand TmpUse = Tmp;
+    TmpUse.setIsUse();
+    if (IsBit)
+      TmpUse.setSubReg(MOS::sublsb);
+    Builder.buildInstr(MOS::COPY).add(MO).add(TmpUse);
   }
 }
 
