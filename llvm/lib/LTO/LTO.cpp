@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #include "llvm/LTO/LTO.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -1142,6 +1144,8 @@ static const char *libcallRoutineNames[] = {
 #define HANDLE_LIBCALL(code, name) name,
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
+  // Needed by MOS target.
+  "__memset",
 };
 
 ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
