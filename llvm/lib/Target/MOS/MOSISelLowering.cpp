@@ -39,6 +39,12 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   // so that's all that we report here. The register class is irrelevant.
   addRegisterClass(MVT::i8, &MOS::Anyi8RegClass);
   computeRegisterProperties(STI.getRegisterInfo());
+
+  // The memset intrinsic takes an char, while the C memset takes an int. These
+  // are different in the MOS calling convention, since arguments are not
+  // automatically promoted to int. "memset" is the C version, and "__memset" is
+  // the intrinsic version.
+  setLibcallName(RTLIB::MEMSET, "__memset");
 }
 
 TargetLowering::ConstraintType

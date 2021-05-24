@@ -24,7 +24,7 @@ char_stats:                             ; @char_stats
 	ldx	#0
 	ldy	#2
 	lda	#0
-	jsr	memset
+	jsr	__memset
 LBB0_1:                                 ; %while.body
                                         ; =>This Inner Loop Header: Depth=1
 	jsr	next_char
