@@ -91,7 +91,7 @@ name: set_v
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: set_v
-    ; CHECK: $v = BITAbs $a, &__set_v
+    ; CHECK: $v = BITAbs undef $a, &__set_v
     $v = LDImm1 1
 ...
 ---

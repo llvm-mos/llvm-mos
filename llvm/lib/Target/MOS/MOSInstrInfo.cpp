@@ -742,8 +742,10 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
     break;
   case MOS::V:
     if (Val == 1) {
-      Builder.buildInstr(MOS::BITAbs, {MOS::V}, {Register(MOS::A)})
-          .addExternalSymbol("__set_v");
+      auto Instr = Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
+                       .addUse(MOS::A, RegState::Undef)
+                       .addExternalSymbol("__set_v");
+      Instr->getOperand(1).setIsUndef();
       MI.eraseFromParent();
       return;
     }
