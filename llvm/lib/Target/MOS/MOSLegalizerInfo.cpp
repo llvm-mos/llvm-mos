@@ -78,8 +78,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Type Conversions
 
-  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{P, S16}});
-  getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{S16, P}});
+  getActionDefinitionsBuilder(G_INTTOPTR)
+      .legalFor({{P, S16}})
+      .clampScalar(1, S16, S16);
+  getActionDefinitionsBuilder(G_PTRTOINT)
+      .legalFor({{S16, P}})
+      .clampScalar(0, S16, S16);
 
   // Scalar Operations
 
