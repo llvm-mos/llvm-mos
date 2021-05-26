@@ -508,23 +508,24 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
 
-  auto Unmerge = Builder.buildUnmerge(S8, Src);
-  SmallVector<Register> Parts;
   Register Carry = Builder.buildConstant(S1, 0).getReg(0);
   unsigned Opcode = MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE;
-  for (MachineOperand &SrcPart : Unmerge->defs()) {
-    Parts.push_back(MRI.createGenericVirtualRegister(S8));
-    Register NewCarry = MRI.createGenericVirtualRegister(S1);
-    Builder.buildInstr(Opcode)
-        .addDef(Parts.back())
-        .addDef(NewCarry)
-        .addUse(SrcPart.getReg())
-        .addUse(Carry);
-    Carry = NewCarry;
-  }
-  Builder.buildMerge(Dst, Parts);
-  MI.eraseFromParent();
 
+  if (Ty == S8) {
+    Builder.buildInstr(Opcode, {Dst, S1}, {Src, Carry});
+  } else {
+    auto Unmerge = Builder.buildUnmerge(S8, Src);
+    SmallVector<Register> Parts;
+    for (MachineOperand &SrcPart : Unmerge->defs()) {
+      Parts.push_back(MRI.createGenericVirtualRegister(S8));
+      Register NewCarry = MRI.createGenericVirtualRegister(S1);
+      Builder.buildInstr(Opcode, {Parts.back(), NewCarry}, {SrcPart, Carry});
+      Carry = NewCarry;
+    }
+    Builder.buildMerge(Dst, Parts);
+  }
+
+  MI.eraseFromParent();
   return true;
 }
 
