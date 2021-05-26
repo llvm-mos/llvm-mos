@@ -45,6 +45,9 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   // automatically promoted to int. "memset" is the C version, and "__memset" is
   // the intrinsic version.
   setLibcallName(RTLIB::MEMSET, "__memset");
+
+  // Used in legalizer (etc.) to refer to the stack pointer.
+  setStackPointerRegisterToSaveRestore(MOS::RS0);
 }
 
 TargetLowering::ConstraintType

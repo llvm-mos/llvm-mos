@@ -483,3 +483,24 @@ body: |
     %1:_(p0) = G_VAARG %0, 1
     RTS implicit %1
 ...
+---
+name: alloca
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: alloca
+    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
+    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s16) = G_PTRTOINT [[COPY]](p0)
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[PTRTOINT]](s16)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[C]](s16)
+    ; CHECK: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+    ; CHECK: [[USUBE:%[0-9]+]]:_(s8), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV]], [[UV2]], [[C1]]
+    ; CHECK: [[USUBE2:%[0-9]+]]:_(s8), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV3]], [[USUBE1]]
+    ; CHECK: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[USUBE]](s8), [[USUBE2]](s8)
+    ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
+    ; CHECK: $rs0 = COPY [[INTTOPTR]](p0)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
+    ; CHECK: RTS
+    %0:_(s16) = G_CONSTANT i16 2
+    %1:_(p0) = G_DYN_STACKALLOC %0:_(s16), 1
+    RTS
