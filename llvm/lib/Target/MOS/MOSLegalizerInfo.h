@@ -40,7 +40,7 @@ private:
   bool legalizeRotr(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeLshrShl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                   MachineInstr &MI) const;
+                       MachineInstr &MI) const;
   bool legalizeStore(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;
   bool legalizeUAddSubO(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
@@ -51,6 +51,8 @@ private:
                        MachineInstr &MI) const;
   bool legalizeXOR(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
+  bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
 };
 
 } // namespace llvm

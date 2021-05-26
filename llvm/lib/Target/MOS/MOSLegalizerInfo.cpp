@@ -20,6 +20,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSMachineFunctionInfo.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -67,6 +68,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_ZEXT)
       .legalFor({{S8, S1}})
+      // S1 must be first be extended to S8 before being extended further, since
+      // this may involve branching.
+      .customIf(typeIs(1, S1))
       .clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder(G_TRUNC).legalFor(
@@ -222,6 +226,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeVAStart(Helper, MRI, MI);
   case G_XOR:
     return legalizeXOR(Helper, MRI, MI);
+  case G_ZEXT:
+    return legalizeZExt(Helper, MRI, MI);
   }
 }
 
@@ -478,8 +484,8 @@ bool MOSLegalizerInfo::legalizeRotr(LegalizerHelper &Helper,
 }
 
 bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
-                                   MachineRegisterInfo &MRI,
-                                   MachineInstr &MI) const {
+                                       MachineRegisterInfo &MRI,
+                                       MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   Register Dst = MI.getOperand(0).getReg();
@@ -659,5 +665,27 @@ bool MOSLegalizerInfo::legalizeXOR(LegalizerHelper &Helper,
   else
     Helper.widenScalar(MI, 0, LLT::scalar(8));
 
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  Register Tmp = Helper.MIRBuilder.buildZExt(S8, Src).getReg(0);
+
+  SmallVector<Register> Regs = {Tmp};
+  Register Zero = Helper.MIRBuilder.buildConstant(S8, 0).getReg(0);
+  for (int ByteSize = 1, DstSize = MRI.getType(Dst).getSizeInBytes();
+       ByteSize < DstSize; ++ByteSize)
+    Regs.push_back(Zero);
+
+  Helper.MIRBuilder.buildMerge(Dst, Regs);
+
+  MI.eraseFromParent();
   return true;
 }
