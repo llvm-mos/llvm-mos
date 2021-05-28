@@ -401,6 +401,28 @@ body: |
     RTS implicit %7, implicit %8, implicit %9, implicit %10
 ...
 ---
+name: shl_16
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: shl_16
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s8) = COPY $y
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s8) = COPY $rc0
+    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[C]](s16)
+    ; CHECK: RTS implicit [[UV]](s8), implicit [[UV1]](s8), implicit [[COPY]](s8), implicit [[COPY1]](s8)
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s8) = COPY $y
+    %3:_(s8) = COPY $rc0
+    %4:_(s32) = G_MERGE_VALUES %0, %1, %2, %3
+    %5:_(s32) = G_CONSTANT i32 16
+    %6:_(s32) = G_SHL %4, %5
+    %7:_(s8), %8:_(s8), %9:_(s8), %10:_(s8) = G_UNMERGE_VALUES %6
+    RTS implicit %7, implicit %8, implicit %9, implicit %10
+...
+---
 name: lshr_1
 body: |
   bb.0.entry:

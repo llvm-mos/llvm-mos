@@ -498,8 +498,18 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
 
   // Presently, only left shifts by one bit are supported.
   auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
-  if (!ConstantAmt || ConstantAmt->Value != 1)
-    report_fatal_error("Only 1-bit logical shifts are implemented.");
+  if (!ConstantAmt)
+    report_fatal_error(
+        "Logical shifts by variable amounts not yet implemented.");
+
+  if (ConstantAmt->Value.getZExtValue() % 8 == 0)
+    return Helper.narrowScalarShiftByConstant(
+               MI, ConstantAmt->Value,
+               LLT::scalar(MRI.getType(Src).getSizeInBits() / 2),
+               MRI.getType(Amt)) == LegalizerHelper::Legalized;
+  if (ConstantAmt->Value.getZExtValue() != 1)
+    report_fatal_error("Logical shifts that are neither by 1 nor by a multiple "
+                       "of 8 are not yet implemented.");
 
   LLT Ty = MRI.getType(Dst);
   assert(Ty == MRI.getType(Src));
