@@ -528,12 +528,24 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
   } else {
     auto Unmerge = Builder.buildUnmerge(S8, Src);
     SmallVector<Register> Parts;
-    for (MachineOperand &SrcPart : Unmerge->defs()) {
+
+    SmallVector<Register> Defs;
+    for (MachineOperand &SrcPart : Unmerge->defs())
+      Defs.push_back(SrcPart.getReg());
+
+    if (MI.getOpcode() == MOS::G_LSHR)
+      std::reverse(Defs.begin(), Defs.end());
+
+    for (Register &SrcPart : Defs) {
       Parts.push_back(MRI.createGenericVirtualRegister(S8));
       Register NewCarry = MRI.createGenericVirtualRegister(S1);
       Builder.buildInstr(Opcode, {Parts.back(), NewCarry}, {SrcPart, Carry});
       Carry = NewCarry;
     }
+
+    if (MI.getOpcode() == MOS::G_LSHR)
+      std::reverse(Parts.begin(), Parts.end());
+
     Builder.buildMerge(Dst, Parts);
   }
 

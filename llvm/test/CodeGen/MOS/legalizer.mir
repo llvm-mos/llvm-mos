@@ -430,9 +430,9 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
     ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY $x
     ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK: [[LSHRE:%[0-9]+]]:_(s8), [[LSHRE1:%[0-9]+]]:_(s1) = G_LSHRE [[COPY]], [[C]]
-    ; CHECK: [[LSHRE2:%[0-9]+]]:_(s8), [[LSHRE3:%[0-9]+]]:_(s1) = G_LSHRE [[COPY1]], [[LSHRE1]]
-    ; CHECK: RTS implicit [[LSHRE]](s8), implicit [[LSHRE2]](s8)
+    ; CHECK: [[LSHRE:%[0-9]+]]:_(s8), [[LSHRE1:%[0-9]+]]:_(s1) = G_LSHRE [[COPY1]], [[C]]
+    ; CHECK: [[LSHRE2:%[0-9]+]]:_(s8), [[LSHRE3:%[0-9]+]]:_(s1) = G_LSHRE [[COPY]], [[LSHRE1]]
+    ; CHECK: RTS implicit [[LSHRE2]](s8), implicit [[LSHRE]](s8)
     %0:_(s8) = COPY $a
     %1:_(s8) = COPY $x
     %2:_(s16) = G_MERGE_VALUES %0, %1
