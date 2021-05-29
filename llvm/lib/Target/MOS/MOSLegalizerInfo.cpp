@@ -73,8 +73,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .customIf(typeIs(1, S1))
       .clampScalar(0, S8, S8);
 
-  getActionDefinitionsBuilder(G_TRUNC).legalFor(
-      {{S1, S8}, {S1, S16}, {S8, S16}});
+  getActionDefinitionsBuilder(G_TRUNC)
+      .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
+      .maxScalar(1, S32)
+      .maxScalar(1, S16);
 
   // Type Conversions
 
