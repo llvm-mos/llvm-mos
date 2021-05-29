@@ -11,6 +11,8 @@
 // at the end of the legalization.
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZATIONARTIFACTCOMBINER_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZATIONARTIFACTCOMBINER_H
 
@@ -540,9 +542,11 @@ public:
 
     unsigned NumDefs = MI.getNumOperands() - 1;
     Register SrcReg = MI.getOperand(NumDefs).getReg();
-    MachineInstr *SrcDef = getDefIgnoringCopies(SrcReg, MRI);
-    if (!SrcDef)
+    auto DefSrcReg = getDefSrcRegIgnoringCopies(SrcReg, MRI);
+    if (!DefSrcReg)
       return false;
+    MachineInstr *SrcDef = DefSrcReg->MI;
+    SrcReg = DefSrcReg->Reg;
 
     LLT OpTy = MRI.getType(MI.getOperand(NumDefs).getReg());
     LLT DestTy = MRI.getType(MI.getOperand(0).getReg());
