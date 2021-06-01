@@ -118,7 +118,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       // operations have been produced.
       .clampScalar(1, S8, S8);
 
-  getActionDefinitionsBuilder({G_LSHR, G_SHL}).customFor({S8, S16, S32, S64});
+  getActionDefinitionsBuilder({G_LSHR, G_SHL})
+      .maxScalar(1, S8)
+      .customFor({S8, S16, S32, S64});
 
   getActionDefinitionsBuilder(G_ROTL).customFor({S8});
   getActionDefinitionsBuilder(G_ROTR).customFor({S8});
