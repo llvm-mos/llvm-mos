@@ -32,10 +32,12 @@
 #endif
 
 // Integer
+HANDLE_LIBCALL(SHL_I8, "__ashlqi3")
 HANDLE_LIBCALL(SHL_I16, "__ashlhi3")
 HANDLE_LIBCALL(SHL_I32, "__ashlsi3")
 HANDLE_LIBCALL(SHL_I64, "__ashldi3")
 HANDLE_LIBCALL(SHL_I128, "__ashlti3")
+HANDLE_LIBCALL(SRL_I8, "__lshrqi3")
 HANDLE_LIBCALL(SRL_I16, "__lshrhi3")
 HANDLE_LIBCALL(SRL_I32, "__lshrsi3")
 HANDLE_LIBCALL(SRL_I64, "__lshrdi3")

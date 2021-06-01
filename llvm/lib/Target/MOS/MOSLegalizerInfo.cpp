@@ -151,6 +151,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder({G_UADDO, G_USUBO}).customFor({S8});
   getActionDefinitionsBuilder({G_UADDE, G_USUBE}).legalFor({S8});
 
+  // FIXME: The default lowering of funnel shifts is terrible.
+  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+
   // Floating Point Operations
 
   getActionDefinitionsBuilder({G_FADD,       G_FSUB,
@@ -501,8 +504,7 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
   // Presently, only left shifts by one bit are supported.
   auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
   if (!ConstantAmt)
-    report_fatal_error(
-        "Logical shifts by variable amounts not yet implemented.");
+    return Helper.libcall(MI) == LegalizerHelper::Legalized;
 
   if (ConstantAmt->Value.getZExtValue() % 8 == 0)
     return Helper.narrowScalarShiftByConstant(
@@ -510,8 +512,7 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
                LLT::scalar(MRI.getType(Src).getSizeInBits() / 2),
                MRI.getType(Amt)) == LegalizerHelper::Legalized;
   if (ConstantAmt->Value.getZExtValue() != 1)
-    report_fatal_error("Logical shifts that are neither by 1 nor by a multiple "
-                       "of 8 are not yet implemented.");
+    return Helper.libcall(MI) == LegalizerHelper::Legalized;
 
   LLT Ty = MRI.getType(Dst);
   assert(Ty == MRI.getType(Src));

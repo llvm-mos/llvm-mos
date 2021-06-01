@@ -423,6 +423,25 @@ body: |
     RTS implicit %7, implicit %8, implicit %9, implicit %10
 ...
 ---
+name: shl_var
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: shl_var
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK: $a = COPY [[COPY]](s8)
+    ; CHECK: $x = COPY [[COPY1]](s8)
+    ; CHECK: JSR &__ashlqi3, mos_csr, implicit $a, implicit $x, implicit-def $a
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK: RTS implicit [[COPY2]](s8)
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s8) = G_SHL %0, %1
+    RTS implicit %2
+...
+---
 name: lshr_1
 body: |
   bb.0.entry:
@@ -440,6 +459,25 @@ body: |
     %4:_(s16) = G_LSHR %2, %3
     %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %4
     RTS implicit %5, implicit %6
+...
+---
+name: lshr_var
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: lshr_var
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK: $a = COPY [[COPY]](s8)
+    ; CHECK: $x = COPY [[COPY1]](s8)
+    ; CHECK: JSR &__lshrqi3, mos_csr, implicit $a, implicit $x, implicit-def $a
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK: RTS implicit [[COPY2]](s8)
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s8) = G_LSHR %0, %1
+    RTS implicit %2
 ...
 ---
 name: store_ptr
