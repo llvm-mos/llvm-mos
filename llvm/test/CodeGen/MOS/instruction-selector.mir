@@ -47,38 +47,6 @@ body: |
     RTS implicit %1
 ...
 ---
-name: anyext_16_8
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: anyext_16_8
-    ; CHECK: [[COPY:%[0-9]+]]:anyi8 = COPY $a
-    ; CHECK: [[DEF:%[0-9]+]]:imag16 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:imag16 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublo
-    ; CHECK: RTS implicit [[INSERT_SUBREG]]
-    %0:any(s8) = COPY $a
-    %1:any(s16) = G_ANYEXT %0
-    RTS implicit %1
-...
----
-name: anyext_16_1
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: anyext_16_1
-    ; CHECK: [[COPY:%[0-9]+]]:anyi1 = COPY $c
-    ; CHECK: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:anyi8 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
-    ; CHECK: [[DEF1:%[0-9]+]]:imag16 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:imag16 = INSERT_SUBREG [[DEF1]], [[INSERT_SUBREG]], %subreg.sublo
-    ; CHECK: RTS implicit [[INSERT_SUBREG1]]
-    %0:any(s1) = COPY $c
-    %1:any(s16) = G_ANYEXT %0
-    RTS implicit %1
-...
----
 name: br_imm
 legalized: true
 regBankSelected: true
@@ -88,9 +56,8 @@ body: |
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK: [[COPY:%[0-9]+]]:anyi1 = COPY $c
     ; CHECK: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:anyi8 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY [[INSERT_SUBREG]]
-    ; CHECK: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[COPY1]], 0, implicit-def $nz
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
+    ; CHECK: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[INSERT_SUBREG]], 0, implicit-def $nz
     ; CHECK: BR %bb.0, $z, 1
     ; CHECK: RTS
     %0:any(s1) = COPY $c
@@ -413,35 +380,6 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:anyi1 = COPY [[COPY]].sublsb
     ; CHECK: RTS implicit [[COPY1]]
     %0:any(s8) = COPY $a
-    %1:any(s1) = G_TRUNC %0
-    RTS implicit %1
-...
----
-name: trunc_16_8
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: trunc_16_8
-    ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]].sublo
-    ; CHECK: RTS implicit [[COPY1]]
-    %0:any(s16) = COPY $rs1
-    %1:any(s8) = G_TRUNC %0
-    RTS implicit %1
-...
----
-name: trunc_16_1
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: trunc_16_1
-    ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]].sublo
-    ; CHECK: [[COPY2:%[0-9]+]]:anyi1 = COPY [[COPY1]].sublsb
-    ; CHECK: RTS implicit [[COPY2]]
-    %0:any(s16) = COPY $rs1
     %1:any(s1) = G_TRUNC %0
     RTS implicit %1
 ...

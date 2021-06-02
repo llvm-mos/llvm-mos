@@ -8,10 +8,9 @@
 //
 // This file defines the interface that MOS uses to legalize generic MIR.
 //
-// Broadly only 8-bit integers and pointers are legal. It's legal to extract a
-// 16-bit integer out of a pointer or to convert a 16-bit integer into one. The
-// 16-bit integers must be lowered to a pair of 8-bit values for further
-// manipulation, but they can be copied around and G_PHIed and so forth as-is.
+// Broadly only 8-bit integers and pointers are legal. A few operations can take
+// 16-bit integers, and there's a couple of ways to construct and destruct
+// 16-bit integers for those instructions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -51,11 +50,15 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   LLT S64 = LLT::scalar(64);
   LLT P = LLT::pointer(0, 16);
 
-  // Handle generation and copying of any type in the producer/consume type
-  // sets.
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT, G_PHI})
-      .legalFor({S1, S8, S16, P})
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE, G_PHI})
+      .legalFor({S1, S8, P})
       .clampScalar(0, S8, S8);
+
+  // 16-bit constants are legal; they can sometimes be folded into absolute and
+  // indirect addressing modes.
+  getActionDefinitionsBuilder(G_CONSTANT)
+      .legalFor({S1, S8, S16, P})
+      .clampScalar(0, S8, S16);
 
   // Constants
 
@@ -63,10 +66,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Extension and Truncation
 
-  getActionDefinitionsBuilder(G_ANYEXT).legalFor(
-      {{S8, S1}, {S16, S1}, {S16, S8}});
-
-  getActionDefinitionsBuilder(G_ZEXT)
+  getActionDefinitionsBuilder({G_ANYEXT, G_ZEXT})
       .legalFor({{S8, S1}})
       // S1 must be first be extended to S8 before being extended further, since
       // this may involve branching.
@@ -74,9 +74,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .clampScalar(0, S8, S8);
 
   getActionDefinitionsBuilder(G_TRUNC)
-      .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
+      .legalFor({{S1, S8}})
+      .customIf(typeIs(0, S1))
       .maxScalar(1, S32)
-      .maxScalar(1, S16);
+      .maxScalar(1, S16)
+      // Due to the odd way narrowScalar is coded for G_TRUNC, this will lower
+      // the truncation to G_UNMERGE_VALUES and COPY.
+      .maxScalar(1, S8);
 
   // Type Conversions
 
@@ -228,6 +232,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeRotr(Helper, MRI, MI);
   case G_STORE:
     return legalizeStore(Helper, MRI, MI);
+  case G_TRUNC:
+    return legalizeTrunc(Helper, MRI, MI);
   case G_UADDO:
   case G_USUBO:
     return legalizeUAddSubO(Helper, MRI, MI);
@@ -237,8 +243,9 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeVAStart(Helper, MRI, MI);
   case G_XOR:
     return legalizeXOR(Helper, MRI, MI);
+  case G_ANYEXT:
   case G_ZEXT:
-    return legalizeZExt(Helper, MRI, MI);
+    return legalizeExt(Helper, MRI, MI);
   }
 }
 
@@ -570,6 +577,27 @@ bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
   return true;
 }
 
+bool MOSLegalizerInfo::legalizeTrunc(LegalizerHelper &Helper,
+                                     MachineRegisterInfo &MRI,
+                                     MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLT S8 = LLT::scalar(8);
+
+  Register Src = MI.getOperand(1).getReg();
+
+  auto Trunc = Builder.buildTrunc(S8, Src);
+  Register Tmp = Trunc.getReg(0);
+  // We need to explicitly legalize the truncation here, otherwise the artifact
+  // combiner will fold it right back into an illegal wide truncation.
+  if (Helper.legalizeInstrStep(*Trunc) != LegalizerHelper::Legalized)
+    return false;
+
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(1).setReg(Tmp);
+  Helper.Observer.changedInstr(MI);
+  return true;
+}
+
 // Convert odd versions of generic add/sub to even versions, which can subsume
 // the odd versions via a zero carry-in.
 bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
@@ -700,21 +728,26 @@ bool MOSLegalizerInfo::legalizeXOR(LegalizerHelper &Helper,
   return true;
 }
 
-bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
+bool MOSLegalizerInfo::legalizeExt(LegalizerHelper &Helper,
+                                   MachineRegisterInfo &MRI,
+                                   MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
   LLT S8 = LLT::scalar(8);
 
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
 
-  Register Tmp = Helper.MIRBuilder.buildZExt(S8, Src).getReg(0);
+  Register Tmp = MI.getOpcode() == G_ZEXT
+                     ? Builder.buildZExt(S8, Src).getReg(0)
+                     : Builder.buildAnyExt(S8, Src).getReg(0);
 
   SmallVector<Register> Regs = {Tmp};
-  Register Zero = Helper.MIRBuilder.buildConstant(S8, 0).getReg(0);
+  Register Fill = MI.getOpcode() == G_ZEXT
+                      ? Builder.buildConstant(S8, 0).getReg(0)
+                      : Builder.buildUndef(S8).getReg(0);
   for (int ByteSize = 1, DstSize = MRI.getType(Dst).getSizeInBytes();
        ByteSize < DstSize; ++ByteSize)
-    Regs.push_back(Zero);
+    Regs.push_back(Fill);
 
   Helper.MIRBuilder.buildMerge(Dst, Regs);
 

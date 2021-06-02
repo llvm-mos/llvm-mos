@@ -189,6 +189,10 @@ let isAllocatable = false in {
   def AP : MOSReg8Class<(add A, P)>;
 }
 
+// While not directly used, unless this is present, the TableGen-erated intersection
+// register class between Anyi1 and Flags will not be allocatable.
+def AllocatableFlags : MOSReg1Class<(add Cc, Vc)>;
+
 // MOS assembly mnemonics may only have the following registers as parameters
 // following the comma in a mnemonic, e.g. lda hello, x
 def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
