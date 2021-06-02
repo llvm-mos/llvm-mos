@@ -227,6 +227,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectAnyExt(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
+  LLT S16 = LLT::scalar(16);
   LLT S8 = LLT::scalar(8);
   LLT S1 = LLT::scalar(1);
 
@@ -237,13 +238,34 @@ bool MOSInstructionSelector::selectAnyExt(MachineInstr &MI) {
   LLT ToType = Builder.getMRI()->getType(To);
 
   // Bring FromType to S8.
-  assert(FromType == S1 && ToType == S8);
-  Register Undef =
-      Builder.buildInstr(MOS::IMPLICIT_DEF, {&MOS::Anyi8RegClass}, {})
-          .getReg(0);
-  auto Insert = Builder.buildInstr(MOS::INSERT_SUBREG, {To}, {Undef, From})
-                    .addImm(MOS::sublsb);
-  constrainGenericOp(*Insert);
+  if (FromType == S1) {
+    Register Undef =
+        Builder.buildInstr(MOS::IMPLICIT_DEF, {&MOS::Anyi8RegClass}, {})
+            .getReg(0);
+    auto Insert = Builder.buildInstr(MOS::INSERT_SUBREG, {S8}, {Undef, From})
+                      .addImm(MOS::sublsb);
+    From = Insert.getReg(0);
+    FromType = S8;
+    constrainGenericOp(*Insert);
+  }
+
+  // Bring FromType to S16.
+  if (FromType != ToType) {
+    assert(FromType == S8);
+    assert(ToType == S16);
+    Register Undef =
+        Builder.buildInstr(MOS::IMPLICIT_DEF, {&MOS::Imag16RegClass}, {})
+            .getReg(0);
+    auto Insert = Builder.buildInstr(MOS::INSERT_SUBREG, {S16}, {Undef, From})
+                      .addImm(MOS::sublo);
+    From = Insert.getReg(0);
+    FromType = S16;
+    constrainGenericOp(*Insert);
+  }
+
+  assert(FromType == ToType);
+  auto Copy = Builder.buildCopy(To, From);
+  constrainGenericOp(*Copy);
 
   MI.eraseFromParent();
   return true;
@@ -670,12 +692,38 @@ bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
+  LLT S16 = LLT::scalar(16);
+  LLT S8 = LLT::scalar(8);
+  LLT S1 = LLT::scalar(1);
 
   Register From = MI.getOperand(1).getReg();
   Register To = MI.getOperand(0).getReg();
 
+  LLT FromType = Builder.getMRI()->getType(From);
+  LLT ToType = Builder.getMRI()->getType(To);
+
+  // Bring FromType to S8.
+  if (FromType == S16) {
+    auto Copy = Builder.buildCopy(S8, From);
+    Copy->getOperand(1).setSubReg(MOS::sublo);
+    From = Copy.getReg(0);
+    FromType = S8;
+    constrainGenericOp(*Copy);
+  }
+
+  // Bring FromType to S1.
+  if (FromType != ToType) {
+    assert(FromType == S8);
+    assert(ToType == S1);
+    auto Copy = Builder.buildCopy(S1, From);
+    Copy->getOperand(1).setSubReg(MOS::sublsb);
+    From = Copy.getReg(0);
+    FromType = S1;
+    constrainGenericOp(*Copy);
+  }
+
+  assert(FromType == ToType);
   auto Copy = Builder.buildCopy(To, From);
-  Copy->getOperand(1).setSubReg(MOS::sublsb);
   constrainGenericOp(*Copy);
 
   MI.eraseFromParent();
