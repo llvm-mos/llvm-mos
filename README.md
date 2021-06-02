@@ -1,104 +1,157 @@
-# The LLVM-MOS Project
+# LLVM-MOS
 
 This directory and its sub-directories contain source code for LLVM-MOS,
-a project to port the LLVM toolkit to the MOS 6502.
+an experiment to support the MOS 65xx series of microprocessors as first-class
+targets within the LLVM architecture.
 
-The README briefly describes how to get started with LLVM-MOS.
+**WARNING!** As of this writing, this compiler and toolchain *has signficant 
+bugs*.  You should not expect to drop it into your project and generate running
+programs immediately.  Because this experiment is still early, this compiler
+should *not* be publicly reviewed, compared, or benchmarked against other
+compilers at this time.  Until we change this warning, we disclaim any
+performance metric regarding LLVM-MOS.
 
-## Getting Started
-
-Modified from https://llvm.org/docs/GettingStarted.html.
-
-## Overview
-
-Of the myriad LLVM projects, only Clang, LLD, and LLVM proper have received
-attention. The MOS target is still considered experimental (and unfinished!),
-so you need to pass `-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="MOS"` to cmake in
-order to actually build the new target. If you like, you can speed up the
-build by disabling the other targets: `-DLLVM_TARGETS_TO_BUILD="".`
-
-It's early days for Clang and the LLVM code generator, but the assembler and
-linker (LLD) are both MVP complete. Both use ELF as their object format; the
-target-specific ELF definitions were extended to accomodate the 6502.
-
-No libraries or platform support are included with this repository to keep it
-a clean fork of LLVM. These are contained in the related
+To keep this project a clean fork of LLVM, no target-specific source code or
+libraries are part of this project. These are contained in the related
 [llvm-mos-sdk](http://github.com/llvm-mos/llvm-mos-sdk). The default mos
 target will only use compiler built-in include and library paths (e.g.,
-stdint.h), so the compiler can be used without the SDK. However, the various
-platform subtargets (e.g. apple2e, c64, etc) used by the compiler driver will
-require the SDK to be present. See the SDK for more information as it develops.
+stdint.h), so the compiler can technically be used without the SDK; however, 
+this means that you will have to provide your own libc and your own
+run-time initialization.  If you don't understand what this means, then you
+should use llvm-mos in conjunction with the llvm-mos-sdk.
 
-### Getting the Source Code and Building
+For more information about this project, please see
+[llvm-mos.org](https://www.llvm-mos.org). 
 
-The LLVM Getting Started documentation may be out of date.  The [Clang
-Getting Started](http://clang.llvm.org/get_started.html) page might have more
-accurate information.
+For information about the current status of this project, please see 
+[Current status](https://llvm-mos.org/wiki/Current_status).
 
-This is an example work-flow and configuration to get and build the LLVM source:
+To learn why this project exists, please see
+[Rationale](https://llvm-mos.org/wiki/Rationale).
 
-1. Checkout LLVM (including related sub-projects like Clang):
+# Getting started
 
-     * ``git clone https://github.com/llvm-mos/llvm-mos.git``
+## Download the LLVM-MOS tools
 
-     * Or, on windows, ``git clone --config core.autocrlf=false
-    https://github.com/llvm-mos/llvm-mos.git``
+If you want to play with the current state of the LLVM-MOS toolchain, you
+may not have to build LLVM-MOS from source code yourself.  Instead, just download
+the most recent binaries for your platform:
 
-2. Configure and build LLVM and Clang:
+- [MacOS](https://github.com/llvm-mos/llvm-mos/releases/tag/llvm-mos-darwin-main)
+- [Linux](https://github.com/llvm-mos/llvm-mos/releases/tag/llvm-mos-linux-main)
+- [Windows](https://github.com/llvm-mos/llvm-mos/releases/tag/llvm-mos-windows-main)
 
-     * ``cd llvm-project``
+These binaries are built from the main branch of the LLVM-MOS project,
+using [Github's actions functionality](https://github.com/features/actions).
 
-     * ``cmake -S llvm -B build -G <generator> -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="MOS" [options]``
+## Or, build the LLVM-MOS tools 
 
-        Some common build system generators are:
+However, if you're allergic to precompiled binaries, or your platform is not
+listed above, then you'll need to compile LLVM-MOS for your own platform.
 
-        * ``Ninja`` --- for generating [Ninja](https://ninja-build.org)
-          build files. Most llvm developers use Ninja.
-        * ``Unix Makefiles`` --- for generating make-compatible parallel makefiles.
-        * ``Visual Studio`` --- for generating Visual Studio projects and
-          solutions.
-        * ``Xcode`` --- for generating Xcode projects.
+Generally, compiling LLVM-MOS follows the same convention as compiling LLVM.
+First, please review the [hardware and software requirements](https://llvm.org/docs/GettingStarted.html#requirements)
+for building LLVM.
 
-        Some Common options:
+Once you meet those requirements, you may use the following formula within your 
+build environment:
 
-        * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
-          sub-projects you'd like to additionally build. Can include any of: clang,
-          clang-tools-extra, libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld,
-          polly, or debuginfo-tests.
+### Clone the LLVM-MOS repository
 
-          For example, to build LLVM, Clang, libcxx, and libcxxabi, use
-          ``-DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"``.
+On Linux and MacOS:
 
-        * ``-DCMAKE_INSTALL_PREFIX=directory`` --- Specify for *directory* the full
-          path name of where you want the LLVM tools and libraries to be installed
-          (default ``/usr/local``).
+```
+git clone https://github.com/llvm-mos/llvm-mos.git
+```
 
-        * ``-DCMAKE_BUILD_TYPE=type`` --- Valid options for *type* are Debug,
-          Release, RelWithDebInfo, and MinSizeRel. Default is Debug.
+On Windows:
 
-        * ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
-          (default is Yes for Debug builds, No for all other build types).
+```
+git clone --config core.autocrlf=false https://github.com/llvm-mos/llvm-mos.git
+```
 
-      * ``cmake --build build [-- [options] <target>]`` or your build system specified above
-        directly.
+If you fail to use the --config flag as above, then verification tests will fail
+on Windows.
 
-        * The default target (i.e. ``ninja`` or ``make``) will build all of LLVM.
+### Configure the LLVM-MOS project
 
-        * The ``check-all`` target (i.e. ``ninja check-all``) will run the
-          regression tests to ensure everything is in working order.
+```
+cd llvm-mos
+cmake -C clang/cmake/caches/MOS.cmake [-G <generator>] -S llvm -B build [...]
+```
 
-        * CMake will generate targets for each tool and library, and most
-          LLVM sub-projects generate their own ``check-<project>`` target.
+This configuration command seeds the CMake cache with values from MOS.cmake.
+Feel free to review and adjust these values for your environment.
 
-        * Running a serial build will be **slow**.  To improve speed, try running a
-          parallel build.  That's done by default in Ninja; for ``make``, use the option
-          ``-j NNN``, where ``NNN`` is the number of parallel jobs, e.g. the number of
-          CPUs you have.
+Additional options can be added to the cmake command, which override the
+values provided in MOS.cmake.  A handful are listed below.  For a complete list
+of options, see [Building LLVM with CMake](https://llvm.org/docs/CMake.html).
 
-      * For more information see [CMake](https://llvm.org/docs/CMake.html)
+- `-G <generator>` --- Lets you choose the CMake generator for your build 
+environment.  CMake will try to automatically detect your build tools and
+use them; however, it's recommended to install [Ninja](https://ninja-build.org/) 
+and pass Ninja as the parameter to the -G command.
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-started-with-llvm)
-page for detailed information on configuring and compiling LLVM. You can visit
-[Directory Layout](https://llvm.org/docs/GettingStarted.html#directory-layout)
-to learn about the layout of the source code tree.
+- ``-DLLVM_ENABLE_PROJECTS=...`` --- semicolon-separated list of the LLVM
+sub-projects you'd like to additionally build. Can include any of: clang,
+clang-tools-extra, libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld,
+polly, or debuginfo-tests.
+
+- ``-DCMAKE_INSTALL_PREFIX=directory`` --- Specify for *directory* the full
+path name of where you want the LLVM tools and libraries to be installed
+(default ``/usr/local``).
+
+- ``-DCMAKE_BUILD_TYPE=type`` --- Valid options for *type* are Debug,
+Release, RelWithDebInfo, and MinSizeRel. Default is MinSizeRel, if you
+are using the MOS.cmake cache file.
+
+- ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
+(default is Yes for Debug builds, No for all other build types).
+
+### Build the LLVM-MOS project
+
+```
+cmake --build build [-- [options] <target>]
+```
+
+The default target will build all of LLVM.  The `check-all` target will run the
+regression tests.  The `distribution` target will build a collection of 
+all the LLVM-MOS tools, suitable for redistribution.
+
+CMake will generate targets for each tool and library, and most
+LLVM sub-projects generate their own ``check-<project>`` target.
+
+Running a serial build will be **slow**.  To improve speed, try running a
+parallel build.  That's done by default in Ninja; for ``make``, use the option
+``-j NNN``, where ``NNN`` is the number of parallel jobs, e.g. the number of
+CPUs you have.
+
+# Help us out
+
+**We need your help!**  Please review the issue tracker, please review the 
+current state of the code, and jump in and help us with pull requests for
+bug fixes.
+
+All LLVM-MOS code is expected to *strictly* observe the
+[LLVM coding standards](https://llvm.org/docs/CodingStandards.html).  That means
+your code must have been run through clang-format with the --style set to LLVM,
+and clang-tidy with the LLVM coding conventions with the llvm-\*, modernize-\*,
+and cppcore-\* checks enabled.  If your code does not observe these standards,
+there's a good chance we'll reject it, unless you have a *good reason* for not
+observing these rules.
+
+If you add new functionality or an optimization pass to LLVM-MOS, we're 
+not going to accept it unless you have modified the associated test suite to
+exercise your new functionality.  Drive-by feature pulls will probably not be
+accepted, unless their new functionality is too trivial to be tested.
+GlobalISel gives you no excuses *not* to write a full test suite for your 
+codegen pass or your new functionality.
+
+You can submit well-written, carefully researched issue requests via the
+[issue tracker](https://github.com/llvm-mos/llvm-mos/issues).  Please note, we
+don't have the bandwidth yet to handle "why dosent my pogrem compil" type
+requests.
+
+Additionally, the current state of our documentation at
+https://llvm-mos.org can always use improvements and clarifications.
+
