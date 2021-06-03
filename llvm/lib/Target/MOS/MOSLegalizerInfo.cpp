@@ -136,13 +136,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_SELECT).legalFor({S1, S8}).clampScalar(0, S8,
                                                                        S8);
 
-  // It's legal to G_PTR_ADD an 8-bit integer to a pointer, since there is at
-  // least one addressing mode that performs this directly. The legalizer
-  // endeavors to avoid producing G_PTR_ADDs where this addressing mode does not
-  // apply, but it cannot always, so the instruction handler needs to handle
-  // general 8-bit G_PTR_ADDs.
-  getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{P, S8}}).customFor(
-      {{P, S16}});
+  getActionDefinitionsBuilder(G_PTR_ADD).customFor({{P, S16}});
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX}).lower();
 
@@ -402,11 +396,12 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
     return true;
   }
 
-  // Adds of zero-extended offsets can instead use the legal 8-bit version of
-  // G_PTR_ADD, with the goal of selecting indexed addressing modes.
+  // Adds of zero-extended offsets can instead use G_INDEX, with the goal of
+  // selecting indexed addressing modes.
   MachineInstr *ZExtOffset = getOpcodeDef(G_ZEXT, Offset.getReg(), MRI);
   if (ZExtOffset) {
     Helper.Observer.changingInstr(MI);
+    MI.setDesc(Builder.getTII().get(MOS::G_INDEX));
     Offset.setReg(ZExtOffset->getOperand(1).getReg());
     Helper.Observer.changedInstr(MI);
     return true;
@@ -418,6 +413,7 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
     auto Const =
         Builder.buildConstant(LLT::scalar(8), ConstOffset->Value.trunc(8));
     Helper.Observer.changingInstr(MI);
+    MI.setDesc(Builder.getTII().get(MOS::G_INDEX));
     Offset.setReg(Const.getReg(0));
     Helper.Observer.changedInstr(MI);
     return true;

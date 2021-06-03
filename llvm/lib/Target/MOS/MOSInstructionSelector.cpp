@@ -66,12 +66,12 @@ private:
   bool selectBrCondImm(MachineInstr &MI);
   bool selectCmp(MachineInstr &MI);
   bool selectConstant(MachineInstr &MI);
+  bool selectIndex(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
   bool selectLoadStore(MachineInstr &MI);
   bool selectLshrShlE(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
-  bool selectPtrAdd(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
   bool selectUAddSubE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
@@ -166,6 +166,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectFrameIndex(MI);
   case MOS::G_GLOBAL_VALUE:
     return selectGlobalValue(MI);
+  case MOS::G_INDEX:
+    return selectIndex(MI);
   case MOS::G_LOAD:
   case MOS::G_STORE:
     return selectLoadStore(MI);
@@ -174,8 +176,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectLshrShlE(MI);
   case MOS::G_MERGE_VALUES:
     return selectMergeValues(MI);
-  case MOS::G_PTR_ADD:
-    return selectPtrAdd(MI);
   case MOS::G_TRUNC:
     return selectTrunc(MI);
   case MOS::G_UADDE:
@@ -418,6 +418,33 @@ bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
   }
 }
 
+bool MOSInstructionSelector::selectIndex(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Base = MI.getOperand(1).getReg();
+  Register Offset = MI.getOperand(2).getReg();
+
+  MachineIRBuilder Builder(MI);
+
+  LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
+
+  MachineInstrSpan MIS(MI, MI.getParent());
+
+  auto Unmerge = Builder.buildUnmerge(S8, Base);
+  Register BaseLo = Unmerge.getReg(0), BaseHi = Unmerge.getReg(1);
+
+  auto AddLo =
+      Builder.buildUAdde(S8, S1, BaseLo, Offset, Builder.buildConstant(S1, 0));
+  Register SumLo = AddLo.getReg(0);
+  Register CarryLo = AddLo.getReg(1);
+  auto AddHi =
+      Builder.buildUAdde(S8, S1, BaseHi, Builder.buildConstant(S8, 0), CarryLo);
+  Register SumHi = AddHi.getReg(0);
+  composePtr(Builder, Dst, SumLo, SumHi);
+  MI.eraseFromParent();
+  return selectAll(MIS);
+}
+
 bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
 
@@ -508,7 +535,7 @@ static bool matchConstantAddr(Register Addr, MachineOperand &BaseOut,
 static bool matchIndexed(Register Addr, MachineOperand &BaseOut,
                          MachineOperand &OffsetOut,
                          const MachineRegisterInfo &MRI) {
-  MachineInstr *SumAddr = getOpcodeDef(MOS::G_PTR_ADD, Addr, MRI);
+  MachineInstr *SumAddr = getOpcodeDef(MOS::G_INDEX, Addr, MRI);
   if (!SumAddr)
     return false;
 
@@ -530,7 +557,7 @@ static void matchIndirectIndexed(Register Addr, MachineOperand &BaseOut,
                                  MachineOperand &OffsetOut,
                                  const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = getDefIgnoringCopies(Addr, MRI);
-  if (DefMI->getOpcode() == MOS::G_PTR_ADD) {
+  if (DefMI->getOpcode() == MOS::G_INDEX) {
     Register Base = DefMI->getOperand(1).getReg();
     Register Offset = DefMI->getOperand(2).getReg();
 
@@ -628,32 +655,6 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectPtrAdd(MachineInstr &MI) {
-  Register Dst = MI.getOperand(0).getReg();
-  Register Base = MI.getOperand(1).getReg();
-  Register Offset = MI.getOperand(2).getReg();
-
-  MachineIRBuilder Builder(MI);
-
-  LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
-
-  MachineInstrSpan MIS(MI, MI.getParent());
-
-  auto Unmerge = Builder.buildUnmerge(S8, Base);
-  Register BaseLo = Unmerge.getReg(0), BaseHi = Unmerge.getReg(1);
-
-  auto AddLo =
-      Builder.buildUAdde(S8, S1, BaseLo, Offset, Builder.buildConstant(S1, 0));
-  Register SumLo = AddLo.getReg(0);
-  Register CarryLo = AddLo.getReg(1);
-  auto AddHi =
-      Builder.buildUAdde(S8, S1, BaseHi, Builder.buildConstant(S8, 0), CarryLo);
-  Register SumHi = AddHi.getReg(0);
-  composePtr(Builder, Dst, SumLo, SumHi);
-  MI.eraseFromParent();
-  return selectAll(MIS);
-}
 
 bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();

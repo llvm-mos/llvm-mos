@@ -49,6 +49,14 @@ def G_CMP : MOSGenericInstruction {
   let InOperandList = (ins type1:$l, type1:$r);
 }
 
+// Return the result of adding a pointer value and an unsigned 8-bit offset.
+// Fragement with other opcodes to construct the indexed addressing modes on the
+// 6502.
+def G_INDEX : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$ptr);
+  let InOperandList = (ins type0:$base, type1:$offset);
+}
+
 // Shift an 8-bit value left one bit, placing $carry_in in the LSB and placing
 // the previous MSB bit into $carry_out. This "even" version can be chained to
 // perform multi-byte shifts.

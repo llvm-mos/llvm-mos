@@ -274,8 +274,8 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
     ; CHECK: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (load 1, align 2)
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s8)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD]](p0) :: (load 1 from unknown-address + 1)
+    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[C]](s8)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[INDEX]](p0) :: (load 1 from unknown-address + 1)
     ; CHECK: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[LOAD]](s8), [[LOAD1]](s8)
     ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
     ; CHECK: RTS implicit [[INTTOPTR]](p0)
@@ -311,8 +311,8 @@ body: |
     ; CHECK-LABEL: name: ptradd_zext
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY $a
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[COPY1]](s8)
-    ; CHECK: RTS implicit [[PTR_ADD]](p0)
+    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[COPY1]](s8)
+    ; CHECK: RTS implicit [[INDEX]](p0)
     %0:_(p0) = COPY $rs0
     %1:_(s8) = COPY $a
     %2:_(s16) = G_ZEXT %1
@@ -326,8 +326,8 @@ body: |
     ; CHECK-LABEL: name: ptradd_const8
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s8)
-    ; CHECK: RTS implicit [[PTR_ADD]](p0)
+    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[C]](s8)
+    ; CHECK: RTS implicit [[INDEX]](p0)
     %0:_(p0) = COPY $rs0
     %2:_(s16) = G_CONSTANT i16 255
     %3:_(p0) = G_PTR_ADD %0, %2
@@ -498,8 +498,8 @@ body: |
     ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[PTRTOINT]](s16)
     ; CHECK: G_STORE [[UV]](s8), [[COPY]](p0) :: (store 1, align 2)
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s8)
-    ; CHECK: G_STORE [[UV1]](s8), [[PTR_ADD]](p0) :: (store 1 into unknown-address + 1)
+    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[C]](s8)
+    ; CHECK: G_STORE [[UV1]](s8), [[INDEX]](p0) :: (store 1 into unknown-address + 1)
     ; CHECK: RTS
     %0:_(p0) = COPY $rs0
     %1:_(p0) = COPY $rs1
@@ -544,22 +544,22 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs1
     ; CHECK: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (invariant load 1)
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s8)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD]](p0) :: (invariant load 1 from unknown-address + 1)
+    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[C]](s8)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[INDEX]](p0) :: (invariant load 1 from unknown-address + 1)
     ; CHECK: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[LOAD]](s8), [[LOAD1]](s8)
     ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
     ; CHECK: [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[INTTOPTR]](p0) :: (invariant load 1)
-    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[INTTOPTR]], [[C]](s8)
-    ; CHECK: [[LOAD3:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD1]](p0) :: (invariant load 1 from unknown-address + 1)
+    ; CHECK: [[INDEX1:%[0-9]+]]:_(p0) = G_INDEX [[INTTOPTR]], [[C]](s8)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(s8) = G_LOAD [[INDEX1]](p0) :: (invariant load 1 from unknown-address + 1)
     ; CHECK: [[MV1:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[LOAD2]](s8), [[LOAD3]](s8)
     ; CHECK: [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV1]](s16)
     ; CHECK: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 2
-    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[INTTOPTR]], [[C1]](s8)
-    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s16) = G_PTRTOINT [[PTR_ADD2]](p0)
+    ; CHECK: [[INDEX2:%[0-9]+]]:_(p0) = G_INDEX [[INTTOPTR]], [[C1]](s8)
+    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s16) = G_PTRTOINT [[INDEX2]](p0)
     ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[PTRTOINT]](s16)
     ; CHECK: G_STORE [[UV]](s8), [[COPY]](p0) :: (store 1)
-    ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s8)
-    ; CHECK: G_STORE [[UV1]](s8), [[PTR_ADD3]](p0) :: (store 1 into unknown-address + 1)
+    ; CHECK: [[INDEX3:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[C]](s8)
+    ; CHECK: G_STORE [[UV1]](s8), [[INDEX3]](p0) :: (store 1 into unknown-address + 1)
     ; CHECK: RTS implicit [[INTTOPTR1]](p0)
     %0:_(p0) = COPY $rs1
     %1:_(p0) = G_VAARG %0, 1
