@@ -115,12 +115,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // FIXME: Make this a libcall.
   getActionDefinitionsBuilder(G_UDIVREM).lower();
 
-  getActionDefinitionsBuilder(G_ASHR)
-      .customFor({{S8, S8}})
-      .clampScalar(0, S8, S8)
-      // Truncate the shift amount to s8 once the resulting 8-bit shift
-      // operations have been produced.
-      .clampScalar(1, S8, S8);
+  getActionDefinitionsBuilder(G_ASHR).maxScalar(1, S8).customFor(
+      {S8, S16, S32, S64});
 
   getActionDefinitionsBuilder({G_LSHR, G_SHL})
       .maxScalar(1, S8)
@@ -213,8 +209,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
-  case G_ASHR:
-    return legalizeAShr(Helper, MRI, MI);
   case G_BRCOND:
     return legalizeBrCond(Helper, MRI, MI);
   case G_ICMP:
@@ -226,6 +220,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_LSHR:
   case G_SHL:
     return legalizeLshrShl(Helper, MRI, MI);
+  case G_ASHR:
+    return shiftLibcall(Helper, MRI, MI);
   case G_ROTL:
     return legalizeRotl(Helper, MRI, MI);
   case G_ROTR:
@@ -244,28 +240,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_ZEXT:
     return legalizeZExt(Helper, MRI, MI);
   }
-}
-
-bool MOSLegalizerInfo::legalizeAShr(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  LLT S8 = LLT::scalar(8);
-
-  auto ConstShiftAmt =
-      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
-  if (!ConstShiftAmt)
-    report_fatal_error("Not yet implemented.");
-  if (ConstShiftAmt->Value.getZExtValue() != 7)
-    report_fatal_error("Not yet implemented.");
-
-  auto Zero = Builder.buildConstant(S8, 0);
-  auto Sign = Builder.buildICmp(CmpInst::ICMP_SLT, LLT::scalar(1),
-                                MI.getOperand(1), Zero);
-  Builder.buildSelect(MI.getOperand(0), Sign, Builder.buildConstant(S8, -1),
-                      Zero);
-  MI.eraseFromParent();
-  return true;
 }
 
 bool MOSLegalizerInfo::legalizeBrCond(LegalizerHelper &Helper,
@@ -510,7 +484,7 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
   // Presently, only left shifts by one bit are supported.
   auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
   if (!ConstantAmt)
-    return Helper.libcall(MI) == LegalizerHelper::Legalized;
+    return shiftLibcall(Helper, MRI, MI);
 
   if (ConstantAmt->Value.getZExtValue() % 8 == 0)
     return Helper.narrowScalarShiftByConstant(
@@ -518,7 +492,7 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
                LLT::scalar(MRI.getType(Src).getSizeInBits() / 2),
                MRI.getType(Amt)) == LegalizerHelper::Legalized;
   if (ConstantAmt->Value.getZExtValue() != 1)
-    return Helper.libcall(MI) == LegalizerHelper::Legalized;
+    return shiftLibcall(Helper, MRI, MI);
 
   LLT Ty = MRI.getType(Dst);
   assert(Ty == MRI.getType(Src));
@@ -721,6 +695,28 @@ bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
     Regs.push_back(Zero);
 
   Helper.MIRBuilder.buildMerge(Dst, Regs);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::shiftLibcall(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+  auto &Ctx = MI.getMF()->getFunction().getContext();
+
+  auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
+
+  Type *HLTy = IntegerType::get(Ctx, Size);
+  Type *HLAmtTy = IntegerType::get(Ctx, 8);
+
+  SmallVector<CallLowering::ArgInfo, 3> Args;
+  Args.push_back({MI.getOperand(1).getReg(), HLTy});
+  Args.push_back({MI.getOperand(2).getReg(), HLAmtTy});
+  if (!createLibcall(Helper.MIRBuilder, Libcall,
+                     {MI.getOperand(0).getReg(), HLTy}, Args))
+    return false;
 
   MI.eraseFromParent();
   return true;

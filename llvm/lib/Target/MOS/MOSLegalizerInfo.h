@@ -25,8 +25,6 @@ public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
 private:
-  bool legalizeAShr(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
   bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
@@ -52,6 +50,9 @@ private:
   bool legalizeXOR(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
   bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
+
+  bool shiftLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
 };
 

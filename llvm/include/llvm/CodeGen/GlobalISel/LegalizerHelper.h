@@ -404,6 +404,9 @@ LegalizerHelper::LegalizeResult createMemLibcall(MachineIRBuilder &MIRBuilder,
                                                  MachineRegisterInfo &MRI,
                                                  MachineInstr &MI);
 
+/// Return the libcall corresponding to a given opcode and size.
+RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size);
+
 } // End namespace llvm.
 
 #endif
