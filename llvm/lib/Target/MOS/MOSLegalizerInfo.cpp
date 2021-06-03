@@ -172,7 +172,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
                                G_FPEXT,      G_FPTRUNC,
                                G_FPTOSI,     G_FPTOUI,
                                G_SITOFP,     G_UITOFP})
-      .libcall();
+      .unsupported();
 
   // Memory Operations
 
