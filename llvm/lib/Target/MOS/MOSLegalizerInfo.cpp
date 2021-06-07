@@ -144,8 +144,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_ABS).lower();
 
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
-  getActionDefinitionsBuilder({G_UADDO, G_USUBO}).customFor({S8});
-  getActionDefinitionsBuilder({G_UADDE, G_USUBE}).legalFor({S8});
+  getActionDefinitionsBuilder({G_UADDO, G_USUBO})
+      .customFor({S8})
+      .clampScalar(0, S8, S8);
+  getActionDefinitionsBuilder({G_UADDE, G_USUBE})
+      .legalFor({S8})
+      .clampScalar(0, S8, S8);
 
   // FIXME: The default lowering of funnel shifts is terrible.
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
