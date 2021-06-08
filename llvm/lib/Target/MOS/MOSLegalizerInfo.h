@@ -25,35 +25,44 @@ public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
 private:
-  bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                      MachineInstr &MI) const;
-  bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+  // Integer Extension and Truncation
+  bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
-  bool legalizeLoad(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+
+  // Integer Operations
+  bool legalizeXor(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                   MachineInstr &MI) const;
+  bool legalizeLshrShl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                       MachineInstr &MI) const;
+  bool shiftLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
-  bool legalizePtrAdd(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                      MachineInstr &MI) const;
   bool legalizeRotl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeRotr(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
-  bool legalizeLshrShl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                       MachineInstr &MI) const;
-  bool legalizeStore(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                     MachineInstr &MI) const;
+  bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
+  bool legalizePtrAdd(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
   bool legalizeUAddSubO(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                         MachineInstr &MI) const;
+
+  // Memory Operations
+  bool legalizeLoad(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
+  bool legalizeStore(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                     MachineInstr &MI) const;
+
+  // Control Flow
+  bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
+
+  // Variadic Arguments
   bool legalizeVAArg(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;
   bool legalizeVAStart(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
-  bool legalizeXOR(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                   MachineInstr &MI) const;
-  bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
 
-  bool shiftLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
 };
 
 } // namespace llvm

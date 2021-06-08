@@ -53,60 +53,75 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE, G_PHI})
       .legalFor({S1, S8, P})
-      .clampScalar(0, S8, S8);
+      .clampScalar(0, S8, S8)
+      .unsupported();
 
   // 16-bit constants are legal; they can sometimes be folded into absolute and
   // indirect addressing modes.
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({S1, S8, S16, P})
-      .clampScalar(0, S8, S16);
+      .clampScalar(0, S8, S16)
+      .unsupported();
 
   // Constants
 
-  getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({P});
+  getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE})
+      .legalFor({P})
+      .unsupported();
 
   // Integer Extension and Truncation
 
-  getActionDefinitionsBuilder(G_ANYEXT).legalFor(
-      {{S8, S1}, {S16, S1}, {S16, S8}});
+  getActionDefinitionsBuilder(G_ANYEXT)
+      .legalFor({{S8, S1}, {S16, S1}, {S16, S8}})
+      .unsupported();
 
   getActionDefinitionsBuilder(G_ZEXT)
       .legalFor({{S8, S1}})
       // S1 must be first be extended to S8 before being extended further, since
       // this may involve branching.
       .customIf(typeIs(1, S1))
-      .clampScalar(0, S8, S8);
+      .clampScalar(0, S8, S8)
+      .unsupported();
 
   getActionDefinitionsBuilder(G_TRUNC)
       .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
       .maxScalar(1, S32)
-      .maxScalar(1, S16);
+      .maxScalar(1, S16)
+      .unsupported();
 
   // Type Conversions
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({{P, S16}})
-      .clampScalar(1, S16, S16);
+      .clampScalar(1, S16, S16)
+      .unsupported();
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{S16, P}})
-      .clampScalar(0, S16, S16);
+      .clampScalar(0, S16, S16)
+      .unsupported();
 
   // Scalar Operations
 
   getActionDefinitionsBuilder(G_MERGE_VALUES)
-      .legalForCartesianProduct({S16, P}, {S8});
+      .legalForCartesianProduct({S16, P}, {S8})
+      .unsupported();
 
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
-      .legalForCartesianProduct({S8}, {S16, P});
+      .legalForCartesianProduct({S8}, {S16, P})
+      .unsupported();
 
   // Integer Operations
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR})
       .legalFor({S8})
-      .clampScalar(0, S8, S8);
+      .clampScalar(0, S8, S8)
+      .unsupported();
 
-  getActionDefinitionsBuilder(G_XOR).legalFor({S8}).customFor({S1}).clampScalar(
-      0, S8, S8);
+  getActionDefinitionsBuilder(G_XOR)
+      .legalFor({S8})
+      .customFor({S1})
+      .clampScalar(0, S8, S8)
+      .unsupported();
 
   getActionDefinitionsBuilder(
       {G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM, G_CTLZ_ZERO_UNDEF})
@@ -115,15 +130,18 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // FIXME: Make this a libcall.
   getActionDefinitionsBuilder(G_UDIVREM).lower();
 
-  getActionDefinitionsBuilder(G_ASHR).maxScalar(1, S8).customFor(
-      {S8, S16, S32, S64});
-
   getActionDefinitionsBuilder({G_LSHR, G_SHL})
       .maxScalar(1, S8)
-      .customFor({S8, S16, S32, S64});
+      .customFor({S8, S16, S32, S64})
+      .unsupported();
 
-  getActionDefinitionsBuilder(G_ROTL).customFor({S8});
-  getActionDefinitionsBuilder(G_ROTR).customFor({S8});
+  getActionDefinitionsBuilder(G_ASHR)
+      .maxScalar(1, S8)
+      .customFor({S8, S16, S32, S64})
+      .unsupported();
+
+  getActionDefinitionsBuilder(G_ROTL).customFor({S8}).unsupported();
+  getActionDefinitionsBuilder(G_ROTR).customFor({S8}).unsupported();
 
   // FIXME: The default narrowing of G_ICMP is terrible.
   getActionDefinitionsBuilder(G_ICMP)
@@ -131,12 +149,15 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .minScalar(1, S8)
       .narrowScalarFor({{S1, S16}}, changeTo(1, S8))
       .narrowScalarFor({{S1, S32}}, changeTo(1, S16))
-      .narrowScalarFor({{S1, S64}}, changeTo(1, S32));
+      .narrowScalarFor({{S1, S64}}, changeTo(1, S32))
+      .unsupported();
 
-  getActionDefinitionsBuilder(G_SELECT).legalFor({S1, S8}).clampScalar(0, S8,
-                                                                       S8);
+  getActionDefinitionsBuilder(G_SELECT)
+      .legalFor({S1, S8})
+      .clampScalar(0, S8, S8)
+      .unsupported();
 
-  getActionDefinitionsBuilder(G_PTR_ADD).customFor({{P, S16}});
+  getActionDefinitionsBuilder(G_PTR_ADD).customFor({{P, S16}}).unsupported();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX}).lower();
 
@@ -146,10 +167,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
   getActionDefinitionsBuilder({G_UADDO, G_USUBO})
       .customFor({S8})
-      .clampScalar(0, S8, S8);
+      .clampScalar(0, S8, S8)
+      .unsupported();
   getActionDefinitionsBuilder({G_UADDE, G_USUBE})
       .legalFor({S8})
-      .clampScalar(0, S8, S8);
+      .clampScalar(0, S8, S8)
+      .unsupported();
 
   // FIXME: The default lowering of funnel shifts is terrible.
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
@@ -179,7 +202,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       // Convert to int to load/store; that way the operation can be narrowed to
       // 8 bits.
       .customFor({{P, P}})
-      .clampScalar(0, S8, S8);
+      .clampScalar(0, S8, S8)
+      .unsupported();
 
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).lower();
 
@@ -187,7 +211,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Control Flow
 
-  getActionDefinitionsBuilder(G_BRCOND).customFor({S1});
+  getActionDefinitionsBuilder(G_BRCOND).customFor({S1}).unsupported();
 
   // Variadic Arguments
 
@@ -207,14 +231,13 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
-  case G_BRCOND:
-    return legalizeBrCond(Helper, MRI, MI);
-  case G_ICMP:
-    return legalizeICmp(Helper, MRI, MI);
-  case G_LOAD:
-    return legalizeLoad(Helper, MRI, MI);
-  case G_PTR_ADD:
-    return legalizePtrAdd(Helper, MRI, MI);
+  // Integer Extension and Truncation
+  case G_ZEXT:
+    return legalizeZExt(Helper, MRI, MI);
+
+  // Integer Operations
+  case G_XOR:
+    return legalizeXor(Helper, MRI, MI);
   case G_LSHR:
   case G_SHL:
     return legalizeLshrShl(Helper, MRI, MI);
@@ -224,39 +247,229 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeRotl(Helper, MRI, MI);
   case G_ROTR:
     return legalizeRotr(Helper, MRI, MI);
-  case G_STORE:
-    return legalizeStore(Helper, MRI, MI);
+  case G_ICMP:
+    return legalizeICmp(Helper, MRI, MI);
+  case G_PTR_ADD:
+    return legalizePtrAdd(Helper, MRI, MI);
   case G_UADDO:
   case G_USUBO:
     return legalizeUAddSubO(Helper, MRI, MI);
+
+  // Memory Operations
+  case G_LOAD:
+    return legalizeLoad(Helper, MRI, MI);
+  case G_STORE:
+    return legalizeStore(Helper, MRI, MI);
+
+  // Control Flow
+  case G_BRCOND:
+    return legalizeBrCond(Helper, MRI, MI);
+
+  // Variadic Arguments
   case G_VAARG:
     return legalizeVAArg(Helper, MRI, MI);
   case G_VASTART:
     return legalizeVAStart(Helper, MRI, MI);
-  case G_XOR:
-    return legalizeXOR(Helper, MRI, MI);
-  case G_ZEXT:
-    return legalizeZExt(Helper, MRI, MI);
   }
 }
 
-bool MOSLegalizerInfo::legalizeBrCond(LegalizerHelper &Helper,
-                                      MachineRegisterInfo &MRI,
-                                      MachineInstr &MI) const {
-  Register Tst = MI.getOperand(0).getReg();
-  int64_t Val = 1;
+//===----------------------------------------------------------------------===//
+// Integer Extension and Truncation
+//===----------------------------------------------------------------------===//
+
+bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  Register Tmp = Helper.MIRBuilder.buildZExt(S8, Src).getReg(0);
+
+  SmallVector<Register> Regs = {Tmp};
+  Register Zero = Helper.MIRBuilder.buildConstant(S8, 0).getReg(0);
+  for (int ByteSize = 1, DstSize = MRI.getType(Dst).getSizeInBytes();
+       ByteSize < DstSize; ++ByteSize)
+    Regs.push_back(Zero);
+
+  Helper.MIRBuilder.buildMerge(Dst, Regs);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// Integer Operations
+//===----------------------------------------------------------------------===//
+
+bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
+                                   MachineRegisterInfo &MRI,
+                                   MachineInstr &MI) const {
+  LLT S1 = LLT::scalar(1);
+
+  Register Dst = MI.getOperand(0).getReg();
+  assert(MRI.getType(Dst) == S1);
+
   Register Not;
-  if (mi_match(Tst, MRI, m_Not(m_Reg(Not)))) {
-    Val = 0;
-    Tst = Not;
+  if (mi_match(Dst, MRI, m_Not(m_Reg(Not)))) {
+    // The G_XOR may have been created by legalizing the definition of Dst.
+    // If so, since uses are legalized before defs, the legalization of the use
+    // of Dst has already occurred. Since the G_XOR didn't exist when the use
+    // was being legalized, there hasn't yet been any opportunity to fold the
+    // G_XOR in to the use. We do such folding here; hopefully that will make
+    // the G_XOR dead.
+
+    for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Dst)) {
+      if (UseMI.getOpcode() != MOS::G_BRCOND_IMM)
+        continue;
+      assert(UseMI.getOperand(0).getReg() == Dst);
+      Helper.Observer.changingInstr(UseMI);
+      UseMI.getOperand(0).setReg(Not);
+      UseMI.getOperand(2).setImm(!UseMI.getOperand(2).getImm());
+      Helper.Observer.changedInstr(UseMI);
+    }
+
+    if (!isTriviallyDead(MI, MRI)) {
+      MachineIRBuilder &Builder = Helper.MIRBuilder;
+      // If Not is true, select 0, otherwise select 1. This will eventually
+      // lower to control flow.
+      Helper.MIRBuilder.buildSelect(Dst, Not, Builder.buildConstant(S1, 0),
+                                    Builder.buildConstant(S1, 1));
+    }
+    MI.eraseFromParent();
+    return true;
   }
 
+  if (isTriviallyDead(MI, MRI))
+    MI.eraseFromParent();
+  else
+    Helper.widenScalar(MI, 0, LLT::scalar(8));
+
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
+                                       MachineRegisterInfo &MRI,
+                                       MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Amt = MI.getOperand(2).getReg();
+
+  // Presently, only left shifts by one bit are supported.
+  auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
+  if (!ConstantAmt)
+    return shiftLibcall(Helper, MRI, MI);
+
+  if (ConstantAmt->Value.getZExtValue() % 8 == 0)
+    return Helper.narrowScalarShiftByConstant(
+               MI, ConstantAmt->Value,
+               LLT::scalar(MRI.getType(Src).getSizeInBits() / 2),
+               MRI.getType(Amt)) == LegalizerHelper::Legalized;
+  if (ConstantAmt->Value.getZExtValue() != 1)
+    return shiftLibcall(Helper, MRI, MI);
+
+  LLT Ty = MRI.getType(Dst);
+  assert(Ty == MRI.getType(Src));
+  assert(Ty.isByteSized());
+
+  LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
+
+  Register Carry = Builder.buildConstant(S1, 0).getReg(0);
+  unsigned Opcode = MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE;
+
+  if (Ty == S8) {
+    Builder.buildInstr(Opcode, {Dst, S1}, {Src, Carry});
+  } else {
+    auto Unmerge = Builder.buildUnmerge(S8, Src);
+    SmallVector<Register> Parts;
+
+    SmallVector<Register> Defs;
+    for (MachineOperand &SrcPart : Unmerge->defs())
+      Defs.push_back(SrcPart.getReg());
+
+    if (MI.getOpcode() == MOS::G_LSHR)
+      std::reverse(Defs.begin(), Defs.end());
+
+    for (Register &SrcPart : Defs) {
+      Parts.push_back(MRI.createGenericVirtualRegister(S8));
+      Register NewCarry = MRI.createGenericVirtualRegister(S1);
+      Builder.buildInstr(Opcode, {Parts.back(), NewCarry}, {SrcPart, Carry});
+      Carry = NewCarry;
+    }
+
+    if (MI.getOpcode() == MOS::G_LSHR)
+      std::reverse(Parts.begin(), Parts.end());
+
+    Builder.buildMerge(Dst, Parts);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::shiftLibcall(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+  auto &Ctx = MI.getMF()->getFunction().getContext();
+
+  auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
+
+  Type *HLTy = IntegerType::get(Ctx, Size);
+  Type *HLAmtTy = IntegerType::get(Ctx, 8);
+
+  SmallVector<CallLowering::ArgInfo, 3> Args;
+  Args.push_back({MI.getOperand(1).getReg(), HLTy});
+  Args.push_back({MI.getOperand(2).getReg(), HLAmtTy});
+  if (!createLibcall(Helper.MIRBuilder, Libcall,
+                     {MI.getOperand(0).getReg(), HLTy}, Args))
+    return false;
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeRotl(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLT S8 = LLT::scalar(8);
+
+  Register RotateAmt = MI.getOperand(2).getReg();
+  if (!mi_match(RotateAmt, MRI, m_SpecificICst(7)))
+    report_fatal_error("Not yet implemented.");
+
+  Register One = Builder.buildConstant(S8, 1).getReg(0);
   Helper.Observer.changingInstr(MI);
-  MI.setDesc(Builder.getTII().get(MOS::G_BRCOND_IMM));
-  MI.getOperand(0).setReg(Tst);
-  MI.addOperand(MachineOperand::CreateImm(Val));
+  MI.setDesc(Builder.getTII().get(G_ROTR));
+  MI.getOperand(2).setReg(One);
   Helper.Observer.changedInstr(MI);
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeRotr(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register RotateAmt = MI.getOperand(2).getReg();
+
+  if (!mi_match(RotateAmt, MRI, m_SpecificICst(1)))
+    report_fatal_error("Not yet implemented.");
+
+  Register LSB =
+      Builder.buildInstr(MOS::G_LSHRE, {S8, S1}, {Src, Builder.buildUndef(S1)})
+          .getReg(1);
+  Builder.buildInstr(MOS::G_LSHRE, {Dst, S1}, {Src, LSB});
+  MI.eraseFromParent();
   return true;
 }
 
@@ -362,21 +575,6 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   return true;
 }
 
-// Load pointers by loading a 16-bit integer, then converting to pointer. This
-// allows the 16-bit loads to be reduced to a pair of 8-bit loads.
-bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  Register Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
-  Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-  Builder.buildIntToPtr(MI.getOperand(0), Tmp);
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(0).setReg(Tmp);
-  Helper.Observer.changedInstr(MI);
-  return true;
-}
-
 bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
                                       MachineInstr &MI) const {
@@ -432,122 +630,6 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   return true;
 }
 
-bool MOSLegalizerInfo::legalizeRotl(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  LLT S8 = LLT::scalar(8);
-
-  Register RotateAmt = MI.getOperand(2).getReg();
-  if (!mi_match(RotateAmt, MRI, m_SpecificICst(7)))
-    report_fatal_error("Not yet implemented.");
-
-  Register One = Builder.buildConstant(S8, 1).getReg(0);
-  Helper.Observer.changingInstr(MI);
-  MI.setDesc(Builder.getTII().get(G_ROTR));
-  MI.getOperand(2).setReg(One);
-  Helper.Observer.changedInstr(MI);
-  return true;
-}
-
-bool MOSLegalizerInfo::legalizeRotr(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  Register RotateAmt = MI.getOperand(2).getReg();
-
-  if (!mi_match(RotateAmt, MRI, m_SpecificICst(1)))
-    report_fatal_error("Not yet implemented.");
-
-  Register LSB =
-      Builder.buildInstr(MOS::G_LSHRE, {S8, S1}, {Src, Builder.buildUndef(S1)})
-          .getReg(1);
-  Builder.buildInstr(MOS::G_LSHRE, {Dst, S1}, {Src, LSB});
-  MI.eraseFromParent();
-  return true;
-}
-
-bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
-                                       MachineRegisterInfo &MRI,
-                                       MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  Register Amt = MI.getOperand(2).getReg();
-
-  // Presently, only left shifts by one bit are supported.
-  auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
-  if (!ConstantAmt)
-    return shiftLibcall(Helper, MRI, MI);
-
-  if (ConstantAmt->Value.getZExtValue() % 8 == 0)
-    return Helper.narrowScalarShiftByConstant(
-               MI, ConstantAmt->Value,
-               LLT::scalar(MRI.getType(Src).getSizeInBits() / 2),
-               MRI.getType(Amt)) == LegalizerHelper::Legalized;
-  if (ConstantAmt->Value.getZExtValue() != 1)
-    return shiftLibcall(Helper, MRI, MI);
-
-  LLT Ty = MRI.getType(Dst);
-  assert(Ty == MRI.getType(Src));
-  assert(Ty.isByteSized());
-
-  LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
-
-  Register Carry = Builder.buildConstant(S1, 0).getReg(0);
-  unsigned Opcode = MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE;
-
-  if (Ty == S8) {
-    Builder.buildInstr(Opcode, {Dst, S1}, {Src, Carry});
-  } else {
-    auto Unmerge = Builder.buildUnmerge(S8, Src);
-    SmallVector<Register> Parts;
-
-    SmallVector<Register> Defs;
-    for (MachineOperand &SrcPart : Unmerge->defs())
-      Defs.push_back(SrcPart.getReg());
-
-    if (MI.getOpcode() == MOS::G_LSHR)
-      std::reverse(Defs.begin(), Defs.end());
-
-    for (Register &SrcPart : Defs) {
-      Parts.push_back(MRI.createGenericVirtualRegister(S8));
-      Register NewCarry = MRI.createGenericVirtualRegister(S1);
-      Builder.buildInstr(Opcode, {Parts.back(), NewCarry}, {SrcPart, Carry});
-      Carry = NewCarry;
-    }
-
-    if (MI.getOpcode() == MOS::G_LSHR)
-      std::reverse(Parts.begin(), Parts.end());
-
-    Builder.buildMerge(Dst, Parts);
-  }
-
-  MI.eraseFromParent();
-  return true;
-}
-
-// Converts pointer to integer before store, allowing the store to later be
-// narrowed to 8 bits.
-bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
-                                     MachineRegisterInfo &MRI,
-                                     MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  Register Tmp =
-      Builder.buildPtrToInt(LLT::scalar(16), MI.getOperand(0)).getReg(0);
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(0).setReg(Tmp);
-  Helper.Observer.changedInstr(MI);
-  return true;
-}
-
 // Convert odd versions of generic add/sub to even versions, which can subsume
 // the odd versions via a zero carry-in.
 bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
@@ -577,6 +659,67 @@ bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
   MI.eraseFromParent();
   return true;
 }
+
+//===----------------------------------------------------------------------===//
+// Memory Operations
+//===----------------------------------------------------------------------===//
+
+// Load pointers by loading a 16-bit integer, then converting to pointer. This
+// allows the 16-bit loads to be reduced to a pair of 8-bit loads.
+bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Register Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
+  Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
+  Builder.buildIntToPtr(MI.getOperand(0), Tmp);
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(0).setReg(Tmp);
+  Helper.Observer.changedInstr(MI);
+  return true;
+}
+
+// Converts pointer to integer before store, allowing the store to later be
+// narrowed to 8 bits.
+bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
+                                     MachineRegisterInfo &MRI,
+                                     MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Register Tmp =
+      Builder.buildPtrToInt(LLT::scalar(16), MI.getOperand(0)).getReg(0);
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(0).setReg(Tmp);
+  Helper.Observer.changedInstr(MI);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// Control Flow
+//===----------------------------------------------------------------------===//
+
+bool MOSLegalizerInfo::legalizeBrCond(LegalizerHelper &Helper,
+                                      MachineRegisterInfo &MRI,
+                                      MachineInstr &MI) const {
+  Register Tst = MI.getOperand(0).getReg();
+  int64_t Val = 1;
+  Register Not;
+  if (mi_match(Tst, MRI, m_Not(m_Reg(Not)))) {
+    Val = 0;
+    Tst = Not;
+  }
+
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Helper.Observer.changingInstr(MI);
+  MI.setDesc(Builder.getTII().get(MOS::G_BRCOND_IMM));
+  MI.getOperand(0).setReg(Tst);
+  MI.addOperand(MachineOperand::CreateImm(Val));
+  Helper.Observer.changedInstr(MI);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// Variadic Arguments
+//===----------------------------------------------------------------------===//
 
 // Lower variable argument access intrinsic.
 bool MOSLegalizerInfo::legalizeVAArg(LegalizerHelper &Helper,
@@ -628,96 +771,6 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
   Builder.buildStore(
       Builder.buildFrameIndex(P, FuncInfo->getVarArgsStackIndex()),
       MI.getOperand(0), **MI.memoperands_begin());
-  MI.eraseFromParent();
-  return true;
-}
-
-bool MOSLegalizerInfo::legalizeXOR(LegalizerHelper &Helper,
-                                   MachineRegisterInfo &MRI,
-                                   MachineInstr &MI) const {
-  LLT S1 = LLT::scalar(1);
-
-  Register Dst = MI.getOperand(0).getReg();
-  assert(MRI.getType(Dst) == S1);
-
-  Register Not;
-  if (mi_match(Dst, MRI, m_Not(m_Reg(Not)))) {
-    // The G_XOR may have been created by legalizing the definition of Dst.
-    // If so, since uses are legalized before defs, the legalization of the use
-    // of Dst has already occurred. Since the G_XOR didn't exist when the use
-    // was being legalized, there hasn't yet been any opportunity to fold the
-    // G_XOR in to the use. We do such folding here; hopefully that will make
-    // the G_XOR dead.
-
-    for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Dst)) {
-      if (UseMI.getOpcode() != MOS::G_BRCOND_IMM)
-        continue;
-      assert(UseMI.getOperand(0).getReg() == Dst);
-      Helper.Observer.changingInstr(UseMI);
-      UseMI.getOperand(0).setReg(Not);
-      UseMI.getOperand(2).setImm(!UseMI.getOperand(2).getImm());
-      Helper.Observer.changedInstr(UseMI);
-    }
-
-    if (!isTriviallyDead(MI, MRI)) {
-      MachineIRBuilder &Builder = Helper.MIRBuilder;
-      // If Not is true, select 0, otherwise select 1. This will eventually
-      // lower to control flow.
-      Helper.MIRBuilder.buildSelect(Dst, Not, Builder.buildConstant(S1, 0),
-                                    Builder.buildConstant(S1, 1));
-    }
-    MI.eraseFromParent();
-    return true;
-  }
-
-  if (isTriviallyDead(MI, MRI))
-    MI.eraseFromParent();
-  else
-    Helper.widenScalar(MI, 0, LLT::scalar(8));
-
-  return true;
-}
-
-bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  LLT S8 = LLT::scalar(8);
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-
-  Register Tmp = Helper.MIRBuilder.buildZExt(S8, Src).getReg(0);
-
-  SmallVector<Register> Regs = {Tmp};
-  Register Zero = Helper.MIRBuilder.buildConstant(S8, 0).getReg(0);
-  for (int ByteSize = 1, DstSize = MRI.getType(Dst).getSizeInBytes();
-       ByteSize < DstSize; ++ByteSize)
-    Regs.push_back(Zero);
-
-  Helper.MIRBuilder.buildMerge(Dst, Regs);
-
-  MI.eraseFromParent();
-  return true;
-}
-
-bool MOSLegalizerInfo::shiftLibcall(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-  auto &Ctx = MI.getMF()->getFunction().getContext();
-
-  auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
-
-  Type *HLTy = IntegerType::get(Ctx, Size);
-  Type *HLAmtTy = IntegerType::get(Ctx, 8);
-
-  SmallVector<CallLowering::ArgInfo, 3> Args;
-  Args.push_back({MI.getOperand(1).getReg(), HLTy});
-  Args.push_back({MI.getOperand(2).getReg(), HLAmtTy});
-  if (!createLibcall(Helper.MIRBuilder, Libcall,
-                     {MI.getOperand(0).getReg(), HLTy}, Args))
-    return false;
-
   MI.eraseFromParent();
   return true;
 }
