@@ -60,7 +60,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // indirect addressing modes.
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({S1, S8, S16, P})
-      .clampScalar(0, S8, S16)
+      .clampScalar(0, S8, S8)
       .unsupported();
 
   // Constants
@@ -107,6 +107,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .unsupported();
 
   // Scalar Operations
+
+  getActionDefinitionsBuilder(G_INSERT).lower();
 
   getActionDefinitionsBuilder(G_MERGE_VALUES)
       .legalForCartesianProduct({S16, P}, {S8})
