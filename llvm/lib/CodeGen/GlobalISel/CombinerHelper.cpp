@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+// Modified by LLVM-MOS.
+
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -2891,6 +2894,9 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   Register Y = RightHandInst->getOperand(1).getReg();
   LLT XTy = MRI.getType(X);
   LLT YTy = MRI.getType(Y);
+  // Hand may be a copy of a physical register.
+  if (!X.isVirtual() || !Y.isVirtual())
+    return false;
   if (XTy != YTy)
     return false;
   if (!isLegalOrBeforeLegalizer({LogicOpcode, {XTy, YTy}}))
