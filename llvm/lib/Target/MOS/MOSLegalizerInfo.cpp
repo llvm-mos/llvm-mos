@@ -116,6 +116,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .legalForCartesianProduct({S8}, {S16, P})
       .unsupported();
 
+  getActionDefinitionsBuilder(G_BSWAP).lower();
+
   // Integer Operations
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR})
@@ -319,7 +321,8 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
     } else {
       auto Unmerge = Builder.buildUnmerge(S8, Src);
       Bits = 0;
-      for (unsigned Idx = 0, End = Unmerge->getNumOperands()-1; Idx < End; Idx++) {
+      for (unsigned Idx = 0, End = Unmerge->getNumOperands() - 1; Idx < End;
+           Idx++) {
         Parts.push_back(Unmerge->getOperand(Idx).getReg());
         Bits += 8;
       }
