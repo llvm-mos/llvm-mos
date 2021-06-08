@@ -75,6 +75,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .legalFor({{S8, S1}, {S16, S1}, {S16, S8}})
       .unsupported();
 
+  getActionDefinitionsBuilder(G_SEXT)
+      .customForCartesianProduct({S8, S16, S32, S64}, {S1, S8, S16, S32})
+      .unsupported();
+
+  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+
   getActionDefinitionsBuilder(G_ZEXT)
       .legalFor({{S8, S1}})
       // S1 must be first be extended to S8 before being extended further, since
@@ -232,6 +238,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
   // Integer Extension and Truncation
+  case G_SEXT:
+    return legalizeSExt(Helper, MRI, MI);
   case G_ZEXT:
     return legalizeZExt(Helper, MRI, MI);
 
@@ -276,6 +284,56 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
 //===----------------------------------------------------------------------===//
 // Integer Extension and Truncation
 //===----------------------------------------------------------------------===//
+
+bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (SrcTy == S1) {
+    Builder.buildSelect(Dst, Src, Builder.buildConstant(DstTy, -1),
+                        Builder.buildConstant(DstTy, 0));
+  } else {
+    Register Fill =
+        Builder
+            .buildSelect(S8,
+                         Builder.buildICmp(CmpInst::ICMP_SLT, S1, Src,
+                                           Builder.buildConstant(SrcTy, 0)),
+                         Builder.buildConstant(S8, -1),
+                         Builder.buildConstant(S8, 0))
+            .getReg(0);
+
+    SmallVector<Register> Parts;
+    unsigned Bits;
+    if (SrcTy == S8) {
+      Parts.push_back(Src);
+      Bits = 8;
+    } else {
+      auto Unmerge = Builder.buildUnmerge(S8, Src);
+      Bits = 0;
+      for (unsigned Idx = 0, End = Unmerge->getNumOperands()-1; Idx < End; Idx++) {
+        Parts.push_back(Unmerge->getOperand(Idx).getReg());
+        Bits += 8;
+      }
+    }
+    while (Bits < DstTy.getSizeInBits()) {
+      Parts.push_back(Fill);
+      Bits += 8;
+    }
+    Builder.buildMerge(Dst, Parts);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
 
 bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,

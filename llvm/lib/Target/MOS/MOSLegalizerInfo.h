@@ -26,6 +26,8 @@ public:
 
 private:
   // Integer Extension and Truncation
+  bool legalizeSExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
   bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
 
@@ -62,7 +64,6 @@ private:
                      MachineInstr &MI) const;
   bool legalizeVAStart(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
-
 };
 
 } // namespace llvm
