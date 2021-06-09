@@ -73,13 +73,15 @@ def CC_MOS : CallingConv<[
     RS120, RS121, RS122, RS123, RS124, RS125, RS126, RS127
   ]>>,
 
-  // 8-bit values are assigned to A, then X, then Y, then the available 8-bit
-  // imaginary registers.
+  // 8-bit values are assigned to A, then X, then the available 8-bit imaginary
+  // registers. Y is not used for arguments (but is still caller-save); it's
+  // reserved to help the compiler shuffle values into and out of the
+  // appropriate registers.
   //
   // RC0 and RC1 are skipped since they're the stack pointer. RC4, RC5, RC8, and
   // RC9 are skipped because they're callee-saved.
   CCIfType<[i8], CCAssignToReg<[
-    A, X, Y, RC2, RC3, RC6, RC7, RC10, RC11, RC12, RC13, RC14, RC15, RC16,
+    A, X, RC2, RC3, RC6, RC7, RC10, RC11, RC12, RC13, RC14, RC15, RC16,
     RC17, RC18, RC19, RC20, RC21, RC22, RC23, RC24, RC25, RC26, RC27, RC28,
     RC29, RC30, RC31, RC32, RC33, RC34, RC35, RC36, RC37, RC38, RC39, RC40,
     RC41, RC42, RC43, RC44, RC45, RC46, RC47, RC48, RC49, RC50, RC51, RC52,

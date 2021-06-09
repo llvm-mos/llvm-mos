@@ -16,8 +16,10 @@ char_stats:                             ; @char_stats
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
-	ldx	#0
-	ldy	#2
+	lda	#0
+	ldx	#2
+	stx	mos8(__rc6)
+	tax
 	lda	#0
 	jsr	__memset
 LBB0_1:                                 ; %while.body

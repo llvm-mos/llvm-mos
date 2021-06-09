@@ -17,11 +17,11 @@
   ; CHECK-LABEL: name: args_i8
   entry:
   ; CHECK-LABEL: entry:
-    ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
+    ; CHECK-NEXT: liveins: $a, $x, $rc2, $rc3
     ; CHECK:      %0:_(s8) = COPY $a
     ; CHECK-NEXT: %1:_(s8) = COPY $x
-    ; CHECK-NEXT: %2:_(s8) = COPY $y
-    ; CHECK-NEXT: %3:_(s8) = COPY $rc2
+    ; CHECK-NEXT: %2:_(s8) = COPY $rc2
+    ; CHECK-NEXT: %3:_(s8) = COPY $rc3
 
     ret void
     ; CHECK-NEXT: RTS
@@ -31,10 +31,10 @@
   ; CHECK-LABEL: name: args_i16
   entry:
   ; CHECK-LABEL: entry:
-    ; CHECK-NEXT: liveins: $a, $x, $y
+    ; CHECK-NEXT: liveins: $a, $x, $rc2
     ; CHECK:      %0:_(s8) = COPY $a
     ; CHECK-NEXT: %2:_(s8) = COPY $x
-    ; CHECK-NEXT: %3:_(s8) = COPY $y
+    ; CHECK-NEXT: %3:_(s8) = COPY $rc2
     ; CHECK-NEXT: %1:_(s16) = G_MERGE_VALUES %2(s8), %3(s8)
 
     ret void
@@ -57,10 +57,10 @@
   ; CHECK-LABEL: name: args_struct
   entry:
   ; CHECK-LABEL: entry:
-    ; CHECK-NEXT: liveins: $a, $x, $y
+    ; CHECK-NEXT: liveins: $a, $x, $rc2
     ; CHECK:      %0:_(s8) = COPY $a
     ; CHECK-NEXT: %1:_(s8) = COPY $x
-    ; CHECK-NEXT: %2:_(s8) = COPY $y
+    ; CHECK-NEXT: %2:_(s8) = COPY $rc2
 
     %0 = extractvalue %twobyte %second, 1
     ; CHECK-NEXT: $a = COPY %2
@@ -131,9 +131,9 @@
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0
     ; CHECK-NEXT: $a = COPY %0
     ; CHECK-NEXT: $x = COPY %1
-    ; CHECK-NEXT: $y = COPY %2
-    ; CHECK-NEXT: $rc2 = COPY %3
-    ; CHECK-NEXT: JSR @args_i8, mos_csr, implicit $a, implicit $x, implicit $y, implicit $rc2
+    ; CHECK-NEXT: $rc2 = COPY %2
+    ; CHECK-NEXT: $rc3 = COPY %3
+    ; CHECK-NEXT: JSR @args_i8, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0
 
     ret void
@@ -199,9 +199,9 @@
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0
     ; CHECK-NEXT: $a = COPY %1
     ; CHECK-NEXT: $x = COPY %2
-    ; CHECK-NEXT: $y = COPY %3
-    ; CHECK-NEXT: $rc2 = COPY %4
-    ; CHECK-NEXT: JSR &__call_indir, mos_csr, implicit $a, implicit $x, implicit $y, implicit $rc2
+    ; CHECK-NEXT: $rc2 = COPY %3
+    ; CHECK-NEXT: $rc3 = COPY %4
+    ; CHECK-NEXT: JSR &__call_indir, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0
 
     ret void
