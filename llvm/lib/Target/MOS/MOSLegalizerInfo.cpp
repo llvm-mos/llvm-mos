@@ -179,10 +179,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .customFor({S8})
       .clampScalar(0, S8, S8)
       .unsupported();
+  getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lower();
   getActionDefinitionsBuilder({G_UADDE, G_USUBE})
       .legalFor({S8})
       .clampScalar(0, S8, S8)
       .unsupported();
+  getActionDefinitionsBuilder({G_UMULH, G_SMULH}).lower();
 
   // FIXME: The default lowering of funnel shifts is terrible.
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
