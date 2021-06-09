@@ -305,17 +305,16 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
   LLT SrcTy = MRI.getType(Src);
 
   if (SrcTy == S1) {
-    Builder.buildSelect(Dst, Src, Builder.buildConstant(DstTy, -1),
-                        Builder.buildConstant(DstTy, 0));
+    auto NegOne = Builder.buildConstant(DstTy, -1);
+    auto Zero = Builder.buildConstant(DstTy, 0);
+    Builder.buildSelect(Dst, Src, NegOne, Zero);
   } else {
-    Register Fill =
-        Builder
-            .buildSelect(S8,
-                         Builder.buildICmp(CmpInst::ICMP_SLT, S1, Src,
-                                           Builder.buildConstant(SrcTy, 0)),
-                         Builder.buildConstant(S8, -1),
-                         Builder.buildConstant(S8, 0))
-            .getReg(0);
+    auto ICmp = Builder.buildICmp(CmpInst::ICMP_SLT, S1, Src,
+                                  Builder.buildConstant(SrcTy, 0));
+    auto NegOne = Builder.buildConstant(S8, -1);
+    auto Zero = Builder.buildConstant(S8, 0);
+
+    Register Fill = Builder.buildSelect(S8, ICmp, NegOne, Zero).getReg(0);
 
     SmallVector<Register> Parts;
     unsigned Bits;
@@ -399,8 +398,9 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
       MachineIRBuilder &Builder = Helper.MIRBuilder;
       // If Not is true, select 0, otherwise select 1. This will eventually
       // lower to control flow.
-      Helper.MIRBuilder.buildSelect(Dst, Not, Builder.buildConstant(S1, 0),
-                                    Builder.buildConstant(S1, 1));
+      auto Zero = Builder.buildConstant(S1, 0);
+      auto One = Builder.buildConstant(S1, 1);
+      Helper.MIRBuilder.buildSelect(Dst, Not, Zero, One);
     }
     MI.eraseFromParent();
     return true;

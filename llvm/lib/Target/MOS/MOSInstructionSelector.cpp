@@ -409,8 +409,9 @@ bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
   }
   case 16: {
     MachineInstrSpan MIS(MI, MI.getParent());
-    Builder.buildMerge(MI.getOperand(0), {Builder.buildConstant(S8, Imm & 0xFF),
-                                          Builder.buildConstant(S8, Imm >> 8)});
+    auto Lo = Builder.buildConstant(S8, Imm & 0xFF);
+    auto Hi = Builder.buildConstant(S8, Imm >> 8);
+    Builder.buildMerge(MI.getOperand(0), {Lo, Hi});
     MI.eraseFromParent();
     selectAll(MIS);
     return true;
@@ -654,7 +655,6 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
   MI.eraseFromParent();
   return true;
 }
-
 
 bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
