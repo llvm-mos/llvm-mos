@@ -22,6 +22,9 @@ class MOSLegalizerInfo : public LegalizerInfo {
 public:
   MOSLegalizerInfo();
 
+  bool legalizeIntrinsic(LegalizerHelper &Helper,
+                         MachineInstr &MI) const override;
+
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
 private:

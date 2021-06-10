@@ -236,6 +236,27 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   computeTables();
 }
 
+bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                         MachineInstr &MI) const {
+  LLT P = LLT::pointer(0, 16);
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  switch (MI.getIntrinsicID()) {
+  case Intrinsic::vacopy: {
+    MachinePointerInfo MPO;
+    auto Tmp =
+        Builder.buildLoad(P, MI.getOperand(2),
+                          *MI.getMF()->getMachineMemOperand(
+                              MPO, MachineMemOperand::MOLoad, 2, Align()));
+    Builder.buildStore(Tmp, MI.getOperand(1),
+                       *MI.getMF()->getMachineMemOperand(
+                           MPO, MachineMemOperand::MOStore, 2, Align()));
+    MI.eraseFromParent();
+    return true;
+  }
+  }
+  return false;
+}
+
 bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
                                       MachineInstr &MI) const {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -683,8 +704,7 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   // Similarly for offsets that fit in 8-bit unsigned constants.
   if (ConstOffset && ConstOffset->Value.isNonNegative() &&
       ConstOffset->Value.getActiveBits() <= 8) {
-    auto Const =
-        Builder.buildConstant(S8, ConstOffset->Value.trunc(8));
+    auto Const = Builder.buildConstant(S8, ConstOffset->Value.trunc(8));
     Helper.Observer.changingInstr(MI);
     MI.setDesc(Builder.getTII().get(MOS::G_INDEX));
     Offset.setReg(Const.getReg(0));

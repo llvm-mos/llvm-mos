@@ -684,3 +684,27 @@ body: |
     %1:_(p0) = G_DYN_STACKALLOC %0:_(s16), 1
     RTS implicit %1
 ...
+---
+name: va_copy
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: va_copy
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $rs1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[COPY]](p0) :: (load 1)
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[C]](s8)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[INDEX]](p0) :: (load 1 from unknown-address + 1)
+    ; CHECK: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[LOAD]](s8), [[LOAD1]](s8)
+    ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
+    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s16) = G_PTRTOINT [[INTTOPTR]](p0)
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[PTRTOINT]](s16)
+    ; CHECK: G_STORE [[UV]](s8), [[COPY1]](p0) :: (store 1)
+    ; CHECK: [[INDEX1:%[0-9]+]]:_(p0) = G_INDEX [[COPY1]], [[C]](s8)
+    ; CHECK: G_STORE [[UV1]](s8), [[INDEX1]](p0) :: (store 1 into unknown-address + 1)
+    ; CHECK: RTS implicit [[COPY1]](p0)
+    %0:_(p0) = COPY $rs0
+    %1:_(p0) = COPY $rs1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), %1, %0
+    RTS implicit %1
+...
