@@ -94,9 +94,6 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_TRUNC)
       .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
-      .widenScalarToNextPow2(1)
-      .maxScalar(1, S32)
-      .maxScalar(1, S16)
       .unsupported();
 
   // Type Conversions
