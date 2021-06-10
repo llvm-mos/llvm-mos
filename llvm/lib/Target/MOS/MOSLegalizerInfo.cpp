@@ -643,6 +643,7 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
                                       MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   MachineOperand &Result = MI.getOperand(0);
@@ -667,9 +668,14 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   // selecting indexed addressing modes.
   MachineInstr *ZExtOffset = getOpcodeDef(G_ZEXT, Offset.getReg(), MRI);
   if (ZExtOffset) {
+    Register Src = ZExtOffset->getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(Src);
+    if (SrcTy.getSizeInBits() < 8)
+      Src = Builder.buildZExt(S8, Src).getReg(0);
+
     Helper.Observer.changingInstr(MI);
     MI.setDesc(Builder.getTII().get(MOS::G_INDEX));
-    Offset.setReg(ZExtOffset->getOperand(1).getReg());
+    Offset.setReg(Src);
     Helper.Observer.changedInstr(MI);
     return true;
   }
@@ -678,7 +684,7 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   if (ConstOffset && ConstOffset->Value.isNonNegative() &&
       ConstOffset->Value.getActiveBits() <= 8) {
     auto Const =
-        Builder.buildConstant(LLT::scalar(8), ConstOffset->Value.trunc(8));
+        Builder.buildConstant(S8, ConstOffset->Value.trunc(8));
     Helper.Observer.changingInstr(MI);
     MI.setDesc(Builder.getTII().get(MOS::G_INDEX));
     Offset.setReg(Const.getReg(0));

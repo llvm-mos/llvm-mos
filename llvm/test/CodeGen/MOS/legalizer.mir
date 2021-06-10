@@ -483,16 +483,32 @@ body: |
     RTS implicit %2
 ...
 ---
-name: ptradd_zext
+name: ptradd_zext_8
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: ptradd_zext
+    ; CHECK-LABEL: name: ptradd_zext_8
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY $a
     ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[COPY1]](s8)
     ; CHECK: RTS implicit [[INDEX]](p0)
     %0:_(p0) = COPY $rs0
     %1:_(s8) = COPY $a
+    %2:_(s16) = G_ZEXT %1
+    %3:_(p0) = G_PTR_ADD %0, %2
+    RTS implicit %3
+...
+---
+name: ptradd_zext_1
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ptradd_zext_1
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s1) = COPY $c
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[COPY1]](s1)
+    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[ZEXT]](s8)
+    ; CHECK: RTS implicit [[INDEX]](p0)
+    %0:_(p0) = COPY $rs0
+    %1:_(s1) = COPY $c
     %2:_(s16) = G_ZEXT %1
     %3:_(p0) = G_PTR_ADD %0, %2
     RTS implicit %3
