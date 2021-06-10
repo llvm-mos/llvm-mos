@@ -6,7 +6,7 @@ main:                                   ; @main
 ; %bb.0:                                ; %entry
 	ldx	#0
 	lda	#72
-LBB0_1:                                 ; %while.body
+.LBB0_1:                                ; %while.body
                                         ; =>This Inner Loop Header: Depth=1
 	;APP
 	jsr	65490
@@ -14,7 +14,7 @@ LBB0_1:                                 ; %while.body
 	lda	.str+1,x
 	inx
 	cpx	#14
-	bne	LBB0_1
+	bne	.LBB0_1
 ; %bb.2:                                ; %while.end
 	ldx	#0
 	lda	#0
@@ -28,3 +28,4 @@ LBB0_1:                                 ; %while.body
 	.asciz	"HELLO, WORLD!\n"
 	.size	.str, 15
 
+	.section	".note.GNU-stack","",@progbits

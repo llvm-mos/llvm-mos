@@ -13,14 +13,14 @@
 #ifndef LLVM_MOS_ASM_INFO_H
 #define LLVM_MOS_ASM_INFO_H
 
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAsmInfoELF.h"
 
 namespace llvm {
 
 class Triple;
 
 /// Specifies the format of MOS assembly files.
-class MOSMCAsmInfo : public MCAsmInfo {
+class MOSMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
 };

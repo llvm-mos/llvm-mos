@@ -22,11 +22,11 @@ char_stats:                             ; @char_stats
 	tax
 	lda	#0
 	jsr	__memset
-LBB0_1:                                 ; %while.body
+.LBB0_1:                                ; %while.body
                                         ; =>This Inner Loop Header: Depth=1
 	jsr	next_char
 	cmp	#0
-	beq	LBB0_3
+	beq	.LBB0_3
 ; %bb.2:                                ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
 	asl
@@ -54,8 +54,8 @@ LBB0_1:                                 ; %while.body
 	lda	(mos8(__rc2)),y
 	adc	#0
 	sta	(mos8(__rc2)),y
-	jmp	LBB0_1
-LBB0_3:                                 ; %while.end
+	jmp	.LBB0_1
+.LBB0_3:                                ; %while.end
 	lda	mos8(__rc4)
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)
@@ -72,3 +72,5 @@ LBB0_3:                                 ; %while.end
 	.type	__char_stats_sstk,@object       ; @__char_stats_sstk
 	.local	__char_stats_sstk
 	.comm	__char_stats_sstk,514,1
+	.ident	"clang version 12.0.0 (git@github.com:mysterymath/clang6502.git 948c84f839c7884dc9f820cf333312348759050e)"
+	.section	".note.GNU-stack","",@progbits

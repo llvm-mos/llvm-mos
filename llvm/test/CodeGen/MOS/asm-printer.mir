@@ -26,7 +26,7 @@ name: bcs_relative
 body: |
   bb.0.entry:
     BR %bb.0.entry, $c, 1
-    ; CHECK: [[BLOCK:L.*]]: ; %entry
+    ; CHECK: [[BLOCK:\.L.*]]: ; %entry
     ; CHECK: bcs [[BLOCK]]
     RTS
     ; CHECK-NEXT: rts
@@ -37,7 +37,7 @@ name: bcc_relative
 body: |
   bb.0.entry:
     BR %bb.0.entry, $c, 0
-    ; CHECK: [[BLOCK:L.*]]: ; %entry
+    ; CHECK: [[BLOCK:\.L.*]]: ; %entry
     ; CHECK: bcc [[BLOCK]]
     RTS
     ; CHECK-NEXT: rts

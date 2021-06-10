@@ -5,7 +5,7 @@
 print_int:                              ; @print_int
 ; %bb.0:                                ; %entry
 	cmp	#10
-	bcc	LBB0_2
+	bcc	.LBB0_2
 ; %bb.1:                                ; %if.end.preheader
 	sta	__save_a
 	lda	mos8(__rc4)
@@ -30,7 +30,7 @@ print_int:                              ; @print_int
 	pla
 	sta	mos8(__rc4)
 	lda	__save_a
-LBB0_2:                                 ; %if.then
+.LBB0_2:                                ; %if.then
 	clc
 	adc	#48
 	;APP
@@ -40,3 +40,5 @@ LBB0_2:                                 ; %if.then
 .Lfunc_end0:
 	.size	print_int, .Lfunc_end0-print_int
                                         ; -- End function
+	.ident	"clang version 12.0.0 (git@github.com:mysterymath/clang6502.git 51e3618d42bc67892d46290a51ea57ea7e127aa6)"
+	.section	".note.GNU-stack","",@progbits
