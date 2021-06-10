@@ -53,6 +53,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE, G_PHI})
       .legalFor({S1, S8, P})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
 
@@ -60,6 +61,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // indirect addressing modes.
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({S1, S8, S16, P})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
 
@@ -86,11 +88,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       // S1 must be first be extended to S8 before being extended further, since
       // this may involve branching.
       .customIf(typeIs(1, S1))
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
 
   getActionDefinitionsBuilder(G_TRUNC)
       .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
+      .widenScalarToNextPow2(1)
       .maxScalar(1, S32)
       .maxScalar(1, S16)
       .unsupported();
@@ -99,10 +103,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({{P, S16}})
+      .widenScalarToNextPow2(1)
       .clampScalar(1, S16, S16)
       .unsupported();
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{S16, P}})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S16, S16)
       .unsupported();
 
@@ -124,12 +130,14 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR})
       .legalFor({S8})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
 
   getActionDefinitionsBuilder(G_XOR)
       .legalFor({S8})
       .customFor({S1})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
 
@@ -143,11 +151,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder({G_LSHR, G_SHL})
       .maxScalar(1, S8)
       .customFor({S8, S16, S32, S64})
+      .widenScalarToNextPow2(0)
       .unsupported();
 
   getActionDefinitionsBuilder(G_ASHR)
       .maxScalar(1, S8)
       .customFor({S8, S16, S32, S64})
+      .widenScalarToNextPow2(0)
       .unsupported();
 
   getActionDefinitionsBuilder(G_ROTL).customFor({S8}).unsupported();
@@ -157,13 +167,15 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_ICMP)
       .customFor({{S1, P}, {S1, S8}})
       .minScalar(1, S8)
-      .narrowScalarFor({{S1, S16}}, changeTo(1, S8))
-      .narrowScalarFor({{S1, S32}}, changeTo(1, S16))
-      .narrowScalarFor({{S1, S64}}, changeTo(1, S32))
+      .widenScalarToNextPow2(1)
+      .maxScalar(1, S32)
+      .maxScalar(1, S16)
+      .maxScalar(1, S8)
       .unsupported();
 
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({S1, S8})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
 
@@ -177,11 +189,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
   getActionDefinitionsBuilder({G_UADDO, G_USUBO})
       .customFor({S8})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
   getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lower();
   getActionDefinitionsBuilder({G_UADDE, G_USUBE})
       .legalFor({S8})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
   getActionDefinitionsBuilder({G_UMULH, G_SMULH}).lower();
@@ -214,6 +228,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       // Convert to int to load/store; that way the operation can be narrowed to
       // 8 bits.
       .customFor({{P, P}})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
 
