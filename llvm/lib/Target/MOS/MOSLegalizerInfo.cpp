@@ -73,9 +73,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Extension and Truncation
 
-  getActionDefinitionsBuilder(G_ANYEXT)
-      .legalFor({{S8, S1}, {S16, S1}, {S16, S8}})
-      .unsupported();
+  // Only those for legal types can actually be selected, but the artifact
+  // combiner may need these to be legal so it can pass through them
+  // temporarily.
+  getActionDefinitionsBuilder({G_ANYEXT, G_TRUNC}).alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT)
       .customForCartesianProduct({S8, S16, S32, S64}, {S1, S8, S16, S32})
@@ -90,10 +91,6 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .customIf(typeIs(1, S1))
       .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
-      .unsupported();
-
-  getActionDefinitionsBuilder(G_TRUNC)
-      .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
       .unsupported();
 
   // Type Conversions
@@ -113,13 +110,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_INSERT).lower();
 
-  getActionDefinitionsBuilder(G_MERGE_VALUES)
-      .legalForCartesianProduct({S16, P}, {S8})
-      .unsupported();
-
-  getActionDefinitionsBuilder(G_UNMERGE_VALUES)
-      .legalForCartesianProduct({S8}, {S16, P})
-      .unsupported();
+  // Only those for legal types can actually be selected, but the artifact
+  // combiner may need these to be legal so it can pass through them
+  // temporarily.
+  getActionDefinitionsBuilder({G_MERGE_VALUES, G_UNMERGE_VALUES}).alwaysLegal();
 
   getActionDefinitionsBuilder(G_BSWAP).lower();
 

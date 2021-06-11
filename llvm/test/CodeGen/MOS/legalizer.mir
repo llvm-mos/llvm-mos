@@ -708,3 +708,32 @@ body: |
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), %1, %0
     RTS implicit %1
 ...
+---
+name: unmerge_anyext_to_copy
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: unmerge_anyext_to_copy
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK: RTS implicit [[COPY1]](s8), implicit [[DEF]](s8)
+    %1:_(s8) = COPY $a
+    %2:_(s16) = G_ANYEXT %1
+    %3:_(s8), %4:_(s8) = G_UNMERGE_VALUES %2
+    RTS implicit %3, implicit %4
+...
+---
+name: unmerge_anyext_to_unmerge
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: unmerge_anyext_to_unmerge
+    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $rs1
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](s16)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
+    ; CHECK: RTS implicit [[UV]](s8), implicit [[UV1]](s8), implicit [[DEF]](s8), implicit [[COPY1]](s8)
+    %1:_(s16) = COPY $rs1
+    %2:_(s32) = G_ANYEXT %1
+    %3:_(s8), %4:_(s8), %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %2
+    RTS implicit %3, implicit %4, implicit %5, implicit %6
+...
