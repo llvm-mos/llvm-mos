@@ -312,6 +312,16 @@ public:
       return true;
     }
 
+    Register AnyExtSrc;
+    if (mi_match(SrcReg, MRI, m_GAnyExt(m_Reg(AnyExtSrc)))) {
+      // The same logic as above applies for G_ANYEXT.
+      LLVM_DEBUG(dbgs() << ".. Combine G_TRUNC(G_ANYEXT): " << MI);
+      Builder.buildAnyExtOrTrunc(DstReg, AnyExtSrc);
+      UpdatedDefs.push_back(DstReg);
+      markInstAndDefDead(MI, *MRI.getVRegDef(AnyExtSrc), DeadInsts);
+      return true;
+    }
+
     return false;
   }
 
