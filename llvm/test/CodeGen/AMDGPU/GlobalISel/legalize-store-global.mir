@@ -802,7 +802,7 @@ body: |
     ; CI: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY2]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+    ; CI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CI: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store 4, align 1, addrspace 1)
     ; CI: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; CI: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p1) :: (store 2 into unknown-address + 4, align 1, addrspace 1)
@@ -850,7 +850,7 @@ body: |
     ; GFX9: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY2]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; GFX9: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store 4, align 1, addrspace 1)
     ; GFX9: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; GFX9: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p1) :: (store 2 into unknown-address + 4, align 1, addrspace 1)
@@ -893,7 +893,7 @@ body: |
     ; CI: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY2]], [[C]](s32)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; CI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+    ; CI: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CI: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store 4, align 2, addrspace 1)
     ; CI: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; CI: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p1) :: (store 2 into unknown-address + 4, addrspace 1)
@@ -924,7 +924,7 @@ body: |
     ; GFX9: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY2]], [[C]](s32)
     ; GFX9: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+    ; GFX9: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; GFX9: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store 4, align 2, addrspace 1)
     ; GFX9: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; GFX9: G_STORE [[TRUNC1]](s32), [[PTR_ADD]](p1) :: (store 2 into unknown-address + 4, addrspace 1)
