@@ -5,9 +5,9 @@
 char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
 	lda	mos8(__rc4)
-	sta	__char_stats_sstk+512           ; 1-byte Folded Spill
+	pha
 	lda	mos8(__rc5)
-	sta	__char_stats_sstk+513           ; 1-byte Folded Spill
+	pha
 	lda	#mos16lo(__char_stats_sstk)
 	ldx	#mos16hi(__char_stats_sstk)
 	sta	mos8(__rc4)
@@ -61,9 +61,9 @@ char_stats:                             ; @char_stats
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
 	jsr	report_counts
-	lda	__char_stats_sstk+513           ; 1-byte Folded Reload
+	pla
 	sta	mos8(__rc5)
-	lda	__char_stats_sstk+512           ; 1-byte Folded Reload
+	pla
 	sta	mos8(__rc4)
 	rts
 .Lfunc_end0:
@@ -71,6 +71,6 @@ char_stats:                             ; @char_stats
                                         ; -- End function
 	.type	__char_stats_sstk,@object       ; @__char_stats_sstk
 	.local	__char_stats_sstk
-	.comm	__char_stats_sstk,514,1
+	.comm	__char_stats_sstk,512,1
 	.ident	"clang version 12.0.0 (git@github.com:mysterymath/clang6502.git 948c84f839c7884dc9f820cf333312348759050e)"
 	.section	".note.GNU-stack","",@progbits

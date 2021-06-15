@@ -343,3 +343,42 @@ body: |
     STStk $rs0, %stack.0, 2 :: (store 2 into %stack.0 + 2)
 
 ...
+---
+name: variable_sized
+stack:
+  - { id: 0, type: variable-sized }
+  - { id: 1, size: 1 }
+  - { id: 2, size: 2 }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: variable_sized
+    ; CHECK: $c = LDCImm 0
+    ; CHECK: $a = COPY $rc0
+    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c
+    ; CHECK: $rc0 = COPY $a
+    ; CHECK: $a = COPY $rc1, implicit $a
+    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $rc1 = COPY killed $a
+    ; CHECK: $a = frame-setup COPY $rc4
+    ; CHECK: frame-setup PH $a
+    ; CHECK: $a = frame-setup COPY $rc5
+    ; CHECK: frame-setup PH $a
+    ; CHECK: $rs2 = COPY $rs0
+    ; CHECK: $y = LDImm 1
+    ; CHECK: $a = LDYIndir $rs2, killed $y :: (load 1 from %stack.2 + 1)
+    ; CHECK: $rs0 = COPY $rs2
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $rc5 = frame-destroy COPY $a
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $rc4 = frame-destroy COPY $a
+    ; CHECK: $c = LDCImm 0
+    ; CHECK: $a = COPY $rc0
+    ; CHECK: $a, $c, dead $v = ADCImm $a, 3, $c
+    ; CHECK: $rc0 = COPY $a
+    ; CHECK: $a = COPY $rc1, implicit $a
+    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 0, $c
+    ; CHECK: $rc1 = COPY killed $a
+    ; CHECK: RTS implicit $rc4, implicit $rc5
+    $a = LDStk %stack.2, 1 :: (load 1 from %stack.2 + 1)
+    RTS
+...

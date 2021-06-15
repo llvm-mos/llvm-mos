@@ -47,6 +47,9 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
+  void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+                            RegScavenger *RS) const override;
+
   void processFunctionBeforeFrameFinalized(
       MachineFunction &MF, RegScavenger *RS = nullptr) const override;
 

@@ -8,6 +8,11 @@
   entry:
     ret void
   }
+
+  define void @norecurse_variable_sized() norecurse {
+  entry:
+    ret void
+  }
 ---
 name: norecurse
 stack:
@@ -41,5 +46,29 @@ body:             |
     ADJCALLSTACKUP 1, 0, implicit-def $rs0, implicit $rs0
     ADJCALLSTACKDOWN 2, 0, implicit-def $rs0, implicit $rs0
     ADJCALLSTACKUP 2, 0, implicit-def $rs0, implicit $rs0
+    RTS
+...
+---
+name: norecurse_variable_sized
+stack:
+  - { id: 0, type: variable-sized }
+  - { id: 1, size: 1 }
+  - { id: 2, size: 2 }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: norecurse_variable_sized
+    ; CHECK: $a = frame-setup COPY $rc4
+    ; CHECK: frame-setup PH $a
+    ; CHECK: $a = frame-setup COPY $rc5
+    ; CHECK: frame-setup PH $a
+    ; CHECK: $rs2 = COPY $rs0
+    ; CHECK: $a = LDAbs target-index(mos-static-stack) + 2 :: (load 1 from %stack.2 + 1)
+    ; CHECK: $rs0 = COPY $rs2
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $rc5 = frame-destroy COPY $a
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $rc4 = frame-destroy COPY $a
+    ; CHECK: RTS implicit $rc4, implicit $rc5
+    $a = LDAbsOffset %stack.2, 1 :: (load 1 from %stack.2 + 1)
     RTS
 ...
