@@ -132,8 +132,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .clampScalar(0, S8, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder(
-      {G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM, G_CTLZ_ZERO_UNDEF})
+  getActionDefinitionsBuilder({G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM})
       .libcall();
 
   // FIXME: Make this a libcall.
@@ -193,6 +192,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // FIXME: The default lowering of funnel shifts is terrible.
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+
+  getActionDefinitionsBuilder(
+      {G_CTLZ, G_CTTZ, G_CTPOP, G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
+      .lower();
 
   // Floating Point Operations
 
