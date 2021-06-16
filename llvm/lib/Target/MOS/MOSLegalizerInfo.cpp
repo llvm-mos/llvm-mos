@@ -137,7 +137,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .libcall();
 
   // FIXME: Make this a libcall.
-  getActionDefinitionsBuilder(G_UDIVREM).lower();
+  getActionDefinitionsBuilder({G_SDIVREM, G_UDIVREM}).lower();
 
   getActionDefinitionsBuilder({G_LSHR, G_SHL})
       .widenScalarToNextPow2(0)
