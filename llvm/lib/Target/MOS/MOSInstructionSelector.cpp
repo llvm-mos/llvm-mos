@@ -493,16 +493,15 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectGlobalValue(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
-  const GlobalValue *Global = MI.getOperand(1).getGlobal();
 
   MachineIRBuilder Builder(MI);
   LLT S8 = LLT::scalar(8);
-  auto LoImm = Builder.buildInstr(MOS::LDImm, {S8}, {})
-                   .addGlobalAddress(Global, 0, MOS::MO_LO);
+  auto LoImm = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
+  LoImm->getOperand(1).setTargetFlags(MOS::MO_LO);
   if (!constrainSelectedInstRegOperands(*LoImm, TII, TRI, RBI))
     return false;
-  auto HiImm = Builder.buildInstr(MOS::LDImm, {S8}, {})
-                   .addGlobalAddress(Global, 0, MOS::MO_HI);
+  auto HiImm = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
+  HiImm->getOperand(1).setTargetFlags(MOS::MO_HI);
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     return false;
   composePtr(Builder, Dst, LoImm.getReg(0), HiImm.getReg(0));
