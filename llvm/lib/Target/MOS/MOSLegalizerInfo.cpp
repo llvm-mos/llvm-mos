@@ -47,7 +47,6 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
   LLT S16 = LLT::scalar(16);
-  LLT S32 = LLT::scalar(32);
   LLT S64 = LLT::scalar(64);
   LLT P = LLT::pointer(0, 16);
 
@@ -78,9 +77,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // temporarily.
   getActionDefinitionsBuilder({G_ANYEXT, G_TRUNC}).alwaysLegal();
 
-  getActionDefinitionsBuilder(G_SEXT)
-      .customForCartesianProduct({S8, S16, S32, S64}, {S1, S8, S16, S32})
-      .unsupported();
+  getActionDefinitionsBuilder(G_SEXT).custom().unsupported();
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -140,15 +137,15 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder({G_LSHR, G_SHL})
       .maxScalar(1, S8)
-      .customFor({S8, S16, S32, S64})
+      .clampScalar(0, S8, S64)
       .widenScalarToNextPow2(0)
-      .unsupported();
+      .custom();
 
   getActionDefinitionsBuilder(G_ASHR)
       .maxScalar(1, S8)
-      .customFor({S8, S16, S32, S64})
+      .clampScalar(0, S8, S64)
       .widenScalarToNextPow2(0)
-      .unsupported();
+      .custom();
 
   getActionDefinitionsBuilder(G_ROTL).customFor({S8}).unsupported();
   getActionDefinitionsBuilder(G_ROTR).customFor({S8}).unsupported();
@@ -158,9 +155,11 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .customFor({{S1, P}, {S1, S8}})
       .minScalar(1, S8)
       .widenScalarToNextPow2(1)
-      .maxScalar(1, S32)
-      .maxScalar(1, S16)
-      .maxScalar(1, S8)
+      .narrowScalar(1,
+                    [](const LegalityQuery &Query) {
+                      assert(Query.Types[1].getSizeInBits() % 2 == 0);
+                      return std::make_pair(1, Query.Types[1].divide(2));
+                    })
       .unsupported();
 
   getActionDefinitionsBuilder(G_SELECT)
