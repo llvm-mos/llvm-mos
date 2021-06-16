@@ -107,7 +107,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Scalar Operations
 
-  getActionDefinitionsBuilder(G_INSERT).lower();
+  getActionDefinitionsBuilder({G_EXTRACT, G_INSERT}).lower();
 
   getActionDefinitionsBuilder(G_MERGE_VALUES)
       .legalForCartesianProduct({S16, P}, {S8})
@@ -225,7 +225,6 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       // Convert to int to load/store; that way the operation can be narrowed to
       // 8 bits.
       .customFor({{P, P}})
-      .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
 
