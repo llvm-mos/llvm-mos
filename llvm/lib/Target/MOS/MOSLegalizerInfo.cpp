@@ -72,10 +72,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Integer Extension and Truncation
 
-  // Only those for legal types can actually be selected, but the artifact
-  // combiner may need these to be legal so it can pass through them
-  // temporarily.
-  getActionDefinitionsBuilder({G_ANYEXT, G_TRUNC}).alwaysLegal();
+  getActionDefinitionsBuilder(G_ANYEXT)
+      .legalFor({{S8, S1}, {S16, S1}, {S16, S8}})
+      .unsupported();
+  getActionDefinitionsBuilder(G_TRUNC)
+      .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
+      .unsupported();
 
   getActionDefinitionsBuilder(G_SEXT).custom().unsupported();
 
@@ -107,10 +109,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_INSERT).lower();
 
-  // Only those for legal types can actually be selected, but the artifact
-  // combiner may need these to be legal so it can pass through them
-  // temporarily.
-  getActionDefinitionsBuilder({G_MERGE_VALUES, G_UNMERGE_VALUES}).alwaysLegal();
+  getActionDefinitionsBuilder(G_MERGE_VALUES)
+      .legalForCartesianProduct({S16, P}, {S8})
+      .unsupported();
+  getActionDefinitionsBuilder(G_UNMERGE_VALUES)
+      .legalForCartesianProduct({S8}, {S16, P})
+      .unsupported();
 
   getActionDefinitionsBuilder(G_BSWAP).lower();
 
@@ -136,15 +140,15 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_UDIVREM).lower();
 
   getActionDefinitionsBuilder({G_LSHR, G_SHL})
-      .maxScalar(1, S8)
-      .clampScalar(0, S8, S64)
       .widenScalarToNextPow2(0)
+      .clampScalar(0, S8, S64)
+      .maxScalar(1, S8)
       .custom();
 
   getActionDefinitionsBuilder(G_ASHR)
-      .maxScalar(1, S8)
-      .clampScalar(0, S8, S64)
       .widenScalarToNextPow2(0)
+      .clampScalar(0, S8, S64)
+      .maxScalar(1, S8)
       .custom();
 
   getActionDefinitionsBuilder(G_ROTL).customFor({S8}).unsupported();
