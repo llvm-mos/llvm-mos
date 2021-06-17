@@ -117,9 +117,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .unsupported();
 
   getActionDefinitionsBuilder(G_BSWAP)
+      .customFor({S8})
+      .unsupportedIf(scalarNarrowerThan(0, 8))
       .widenScalarToNextPow2(0)
-      .clampScalar(0, S16, S64)
-      .libcall();
+      .maxScalar(0, S8);
 
   // Integer Operations
 
@@ -284,6 +285,10 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_ZEXT:
     return legalizeZExt(Helper, MRI, MI);
 
+  // Scalar Operations
+  case G_BSWAP:
+    return legalizeBSwap(Helper, MRI, MI);
+
   // Integer Operations
   case G_XOR:
     return legalizeXor(Helper, MRI, MI);
@@ -395,6 +400,22 @@ bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
   Helper.MIRBuilder.buildMerge(Dst, Regs);
 
   MI.eraseFromParent();
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// Scalar Operations
+//===----------------------------------------------------------------------===//
+
+bool MOSLegalizerInfo::legalizeBSwap(LegalizerHelper &Helper,
+                                     MachineRegisterInfo &MRI,
+                                     MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
+  assert(MRI.getType(MI.getOperand(0).getReg()) == S8);
+  assert(MRI.getType(MI.getOperand(1).getReg()) == S8);
+  Helper.Observer.changingInstr(MI);
+  MI.setDesc(Helper.MIRBuilder.getTII().get(COPY));
+  Helper.Observer.changedInstr(MI);
   return true;
 }
 

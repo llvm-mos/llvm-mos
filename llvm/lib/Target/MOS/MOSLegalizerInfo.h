@@ -34,6 +34,10 @@ private:
   bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
 
+  // Scalar Operations
+  bool legalizeBSwap(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                     MachineInstr &MI) const;
+
   // Integer Operations
   bool legalizeXor(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
