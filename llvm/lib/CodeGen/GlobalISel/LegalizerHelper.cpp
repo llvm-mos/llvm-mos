@@ -454,6 +454,8 @@ RTLIB::Libcall llvm::getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE_INT(SRA_I);
   case TargetOpcode::G_SHL:
     RTLIBCASE_INT(SHL_I);
+   case TargetOpcode::G_BSWAP:
+    RTLIBCASE_INT(BSWAP_I);
   case TargetOpcode::G_FADD:
     RTLIBCASE(ADD_F);
   case TargetOpcode::G_FSUB:
@@ -695,6 +697,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM:
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_BSWAP:
    {
     Type *HLTy = IntegerType::get(Ctx, Size);
     auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy);

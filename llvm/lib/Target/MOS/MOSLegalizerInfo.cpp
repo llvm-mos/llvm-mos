@@ -116,7 +116,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .legalForCartesianProduct({S8}, {S16, P})
       .unsupported();
 
-  getActionDefinitionsBuilder(G_BSWAP).unsupported();
+  getActionDefinitionsBuilder(G_BSWAP)
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, S16, S64)
+      .libcall();
 
   // Integer Operations
 
