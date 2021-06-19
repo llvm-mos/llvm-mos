@@ -79,7 +79,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
       .unsupported();
 
-  getActionDefinitionsBuilder(G_SEXT).custom().unsupported();
+  getActionDefinitionsBuilder(G_SEXT).custom();
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -349,12 +349,16 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
     auto Zero = Builder.buildConstant(DstTy, 0);
     Builder.buildSelect(Dst, Src, NegOne, Zero);
   } else {
-    auto ICmp = Builder.buildICmp(CmpInst::ICMP_SLT, S1, Src,
+    // Note: We can't use ICMP_SLT 0 here, since that may in turn require SEXT.
+    // FIXME: Once the ICMP_SLT lowering is better, use that instead.
+    auto SignMask = APInt::getSignMask(SrcTy.getSizeInBits());
+    auto Sign = Builder.buildAnd(SrcTy, Src, Builder.buildConstant(SrcTy, SignMask));
+    auto Pos = Builder.buildICmp(CmpInst::ICMP_EQ, S1, Sign,
                                   Builder.buildConstant(SrcTy, 0));
     auto NegOne = Builder.buildConstant(S8, -1);
     auto Zero = Builder.buildConstant(S8, 0);
 
-    Register Fill = Builder.buildSelect(S8, ICmp, NegOne, Zero).getReg(0);
+    Register Fill = Builder.buildSelect(S8, Pos, Zero, NegOne).getReg(0);
 
     SmallVector<Register> Parts;
     unsigned Bits;
