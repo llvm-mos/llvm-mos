@@ -874,6 +874,26 @@ bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
   return false;
 }
 
+// Determine if any of the definitions or uses of a VirtReg have constraints
+// that could hypothetically be widened if the register were fully split around
+// instructions. It makes sense to evict unspillable regs where this is true,
+// since splitting them may widen the register classes enough to avoid the
+// conflict with another unspillable reg.
+bool canWiden(const MachineRegisterInfo *MRI, const TargetInstrInfo *TII, const TargetRegisterInfo *TRI, Register Reg) {
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+  for (MachineInstr& MI : MRI->use_instructions(Reg)) {
+    for (unsigned OpIdx = 0, OpEnd = MI.getNumOperands(); OpIdx != OpEnd; ++OpIdx) {
+      const MachineOperand &MO = MI.getOperand(OpIdx);
+      if (!MO.isReg() || MO.getReg() != Reg)
+        continue;
+      const TargetRegisterClass *MORC = MI.getRegClassConstraint(OpIdx, TII, TRI);
+      if (!MORC || MORC->hasSubClass(RC))
+        return true;
+    }
+  }
+  return false;
+}
+
 /// canEvictInterference - Return true if all interferences between VirtReg and
 /// PhysReg can be evicted.
 ///
@@ -935,7 +955,10 @@ bool RAGreedy::canEvictInterference(
           (Intf->isSpillable() ||
            RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
                RegClassInfo.getNumAllocatableRegs(
-                   MRI->getRegClass(Intf->reg())));
+                   MRI->getRegClass(Intf->reg())) ||
+           (!canWiden(MRI, TII, TRI, VirtReg.reg()) &&
+            canWiden(MRI, TII, TRI, Intf->reg())));
+
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = ExtraRegInfo[Intf->reg()].Cascade;
       if (Cascade <= IntfCascade) {
