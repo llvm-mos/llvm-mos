@@ -25,6 +25,34 @@ body: |
     RTS implicit $a, implicit $x, implicit $y
 ...
 ---
+name: spill_a_around_pha
+body: |
+  bb.0.entry:
+    liveins: $a, $x, $y
+    ; CHECK-LABEL: name: spill_a_around_pha
+    ; CHECK: STAbs $a, &__save_a
+    ; CHECK: $a = LDImm 42
+    ; CHECK: PH killed $a
+    ; CHECK: $a = LDAbs &__save_a
+    ; CHECK: RTS implicit $a, implicit $x, implicit $y
+    %0:ac = LDImm 42
+    PH %0
+    RTS implicit $a, implicit $x, implicit $y
+...
+---
+name: spill_a_around_pla
+body: |
+  bb.0.entry:
+    liveins: $a, $x, $y
+    ; CHECK-LABEL: name: spill_a_around_pla
+    ; CHECK: STAbs $a, &__save_a
+    ; CHECK: dead $a = PL
+    ; CHECK: $a = LDAbs &__save_a
+    ; CHECK: RTS implicit $a, implicit $x, implicit $y
+    %0:ac = PL
+    RTS implicit $a, implicit $x, implicit $y
+...
+---
 name: spill_x
 body: |
   bb.0.entry:

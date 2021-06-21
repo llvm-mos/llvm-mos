@@ -132,12 +132,32 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     errs() << "Register: " << getName(Reg) << "\n";
     report_fatal_error("Scavenger spill for register not yet implemented.");
   case MOS::A:
-  case MOS::ALSB:
-    Builder.buildInstr(MOS::PH).addUse(MOS::A);
+  case MOS::ALSB: {
+    bool CanUseHardStack = true;
+    for (auto MI = I; MI != UseMI; ++MI) {
+      if (MI->getOpcode() == MOS::PH || MI->getOpcode() == MOS::PL) {
+        CanUseHardStack = false;
+        break;
+      }
+    }
+
+    if (CanUseHardStack)
+      Builder.buildInstr(MOS::PH).addUse(MOS::A);
+    else
+      Builder.buildInstr(MOS::STAbs)
+          .addUse(MOS::A)
+          .addExternalSymbol("__save_a");
 
     Builder.setInsertPt(MBB, UseMI);
-    Builder.buildInstr(MOS::PL).addDef(MOS::A);
+
+    if (CanUseHardStack)
+      Builder.buildInstr(MOS::PL).addDef(MOS::A);
+    else
+      Builder.buildInstr(MOS::LDAbs)
+          .addDef(MOS::A)
+          .addExternalSymbol("__save_a");
     break;
+  }
   case MOS::X:
   case MOS::XLSB:
   case MOS::Y:

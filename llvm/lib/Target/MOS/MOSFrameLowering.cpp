@@ -55,28 +55,15 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   MachineIRBuilder Builder(MBB, MI);
   MachineInstrSpan MIS(MI, &MBB);
 
-  bool AMaybeLive = MBB.computeRegisterLiveness(TRI, MOS::A, MI) !=
-                    MachineBasicBlock::LQR_Dead;
-
-  // We cannot save/restore using PHA/PLA here: it would interfere with the
-  // PHA of the CSRs.
-  if (AMaybeLive)
-    Builder.buildInstr(MOS::STAbs)
-        .addUse(MOS::A)
-        .addExternalSymbol("__save_a");
   // There are intentionally very few CSRs, few enough to place on the hard
   // stack without much risk of overflow. This is the only across-calls way
   // the compiler uses the hard stack, since the free CSRs can then be used
   // with impunity. This is slightly more expensive than saving/resting values
   // directly on the hard stack, but it's significantly simpler.
   for (const CalleeSavedInfo &CI : CSI) {
-    Builder.buildCopy(MOS::A, CI.getReg());
-    Builder.buildInstr(MOS::PH).addUse(MOS::A);
+    Register A = Builder.buildCopy(&MOS::AcRegClass, CI.getReg()).getReg(0);
+    Builder.buildInstr(MOS::PH, {}, {A});
   }
-  if (AMaybeLive)
-    Builder.buildInstr(MOS::LDAbs)
-        .addDef(MOS::A)
-        .addExternalSymbol("__save_a");
 
   // Record that the frame pointer is killed by these instructions.
   for (auto MI = MIS.begin(), MIE = MIS.getInitial(); MI != MIE; ++MI)
@@ -91,22 +78,10 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   MachineIRBuilder Builder(MBB, MI);
   MachineInstrSpan MIS(MI, &MBB);
 
-  bool AMaybeLive = MBB.computeRegisterLiveness(TRI, MOS::A, MI) !=
-                    MachineBasicBlock::LQR_Dead;
-  // We cannot save/restore using PHA/PLA here: it would interfere with the
-  // PLA of the CSRs.
-  if (AMaybeLive)
-    Builder.buildInstr(MOS::STAbs)
-        .addUse(MOS::A)
-        .addExternalSymbol("__save_a");
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
-    Builder.buildInstr(MOS::PL).addDef(MOS::A);
-    Builder.buildCopy(CI.getReg(), Register(MOS::A));
+    Register A = Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
+    Builder.buildCopy(CI.getReg(), A);
   }
-  if (AMaybeLive)
-    Builder.buildInstr(MOS::LDAbs)
-        .addDef(MOS::A)
-        .addExternalSymbol("__save_a");
 
   // Mark the CSRs as used by the return to ensure Machine Copy Propagation
   // doesn't remove the copies that set them.

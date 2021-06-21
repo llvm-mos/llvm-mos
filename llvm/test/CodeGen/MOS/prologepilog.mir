@@ -360,17 +360,17 @@ body: |
     ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $a = frame-setup COPY $rc4
-    ; CHECK: frame-setup PH $a
+    ; CHECK: frame-setup PH killed $a
     ; CHECK: $a = frame-setup COPY $rc5
-    ; CHECK: frame-setup PH $a
+    ; CHECK: frame-setup PH killed $a
     ; CHECK: $rs2 = COPY $rs0
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs2, killed $y :: (load 1 from %stack.2 + 1)
     ; CHECK: $rs0 = COPY $rs2
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc5 = frame-destroy COPY $a
+    ; CHECK: $rc5 = frame-destroy COPY killed $a
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc4 = frame-destroy COPY $a
+    ; CHECK: $rc4 = frame-destroy COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, dead $v = ADCImm $a, 3, $c
