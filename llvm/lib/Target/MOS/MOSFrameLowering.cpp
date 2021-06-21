@@ -42,9 +42,10 @@ bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
   // We place the CSRs on the hard stack, which we don't explicitly model in
-  // PEI. Accordingly, this does nothing, but says everything is fine.
-  // (spill/restore)CalleeSavedRegisters will emit the spills and reloads
+  // PEI. (spill/restore)CalleeSavedRegisters will emit the spills and reloads
   // sequentially to and from the hard stack.
+  for (CalleeSavedInfo &I : CSI)
+    I.setTargetSpilled();
   return true;
 }
 

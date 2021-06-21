@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #ifndef LLVM_CODEGEN_MACHINEFRAMEINFO_H
 #define LLVM_CODEGEN_MACHINEFRAMEINFO_H
 
@@ -54,9 +56,15 @@ class CalleeSavedInfo {
   /// register.
   bool SpilledToReg;
 
+  /// Flag indicating that the register is spilled using some mechanism unknown
+  /// to PEI. In this case, neither getFrameIdx() nor getDestReg() will return
+  /// meaningful results.
+  bool TargetSpilled;
+
 public:
   explicit CalleeSavedInfo(unsigned R, int FI = 0)
-  : Reg(R), FrameIdx(FI), Restored(true), SpilledToReg(false) {}
+      : Reg(R), FrameIdx(FI), Restored(true), SpilledToReg(false),
+        TargetSpilled(false) {}
 
   // Accessors.
   Register getReg()                        const { return Reg; }
@@ -70,9 +78,14 @@ public:
     DstReg = SpillReg;
     SpilledToReg = true;
   }
+  void setTargetSpilled() {
+    SpilledToReg = false;
+    TargetSpilled = true;
+  }
   bool isRestored()                        const { return Restored; }
   void setRestored(bool R)                       { Restored = R; }
   bool isSpilledToReg()                    const { return SpilledToReg; }
+  bool isTargetSpilled()                   const { return TargetSpilled; }
 };
 
 /// The MachineFrameInfo class represents an abstract stack frame until
