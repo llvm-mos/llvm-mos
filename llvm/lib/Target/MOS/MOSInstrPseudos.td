@@ -162,8 +162,6 @@ def SBCNZImag8 : MOSPseudo {
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
   dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
   let Constraints = "$dst = $l, $carryout = $carryin";
-
-  let Defs = [NZ];
 }
 
 // Terminator version of CMPimm. This ensures that this instruction stays

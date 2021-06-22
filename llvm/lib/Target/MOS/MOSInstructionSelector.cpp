@@ -371,8 +371,7 @@ bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
   if (!Builder.getMRI()->use_nodbg_empty(CMPZ))
     Z = CMPZ;
 
-  assert((N == MOS::NoRegister || Z == MOS::NoRegister) &&
-         "G_CMP can output at most one of N or Z.");
+  assert((!N || !Z) && "G_CMP can output at most one of N or Z.");
 
   auto C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(1)});
 

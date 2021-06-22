@@ -40,19 +40,6 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "MOSGenInstrInfo.inc"
 
-namespace {
-
-// Returns a conservative analysis for whether Reg could be live at the current
-// insertion point of Builder.
-bool isMaybeLive(MachineIRBuilder &Builder, Register Reg) {
-  const auto &MBB = Builder.getMBB();
-  return MBB.computeRegisterLiveness(
-             MBB.getParent()->getSubtarget().getRegisterInfo(), Reg,
-             Builder.getInsertPt()) != MachineBasicBlock::LQR_Dead;
-}
-
-} // namespace
-
 MOSInstrInfo::MOSInstrInfo()
     : MOSGenInstrInfo(/*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
                       /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP) {}
@@ -358,6 +345,13 @@ void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   copyPhysRegImpl(Builder, DestReg, SrcReg);
 }
 
+static Register createVReg(MachineIRBuilder &Builder,
+                           const TargetRegisterClass &RC) {
+  Builder.getMF().getProperties().reset(
+      MachineFunctionProperties::Property::NoVRegs);
+  return Builder.getMRI()->createVirtualRegister(&RC);
+}
+
 void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                                    Register SrcReg) const {
   if (DestReg == SrcReg)
@@ -366,43 +360,48 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
-  const auto &AreClasses = [&](const TargetRegisterClass &Dest,
-                               const TargetRegisterClass &Src) {
-    return Dest.contains(DestReg) && Src.contains(SrcReg);
+  const auto &IsClass = [&](Register Reg, const TargetRegisterClass &RC) {
+    if (Reg.isPhysical() && !RC.contains(Reg))
+      return false;
+    if (Reg.isVirtual() &&
+        !Builder.getMRI()->getRegClass(Reg)->hasSuperClassEq(&RC))
+      return false;
+    return true;
   };
 
-  // Reg is either A or ALSB.
-  const auto &CopyThroughA = [&](Register Reg) {
-    bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
-    if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PH).addUse(MOS::A);
-    copyPhysRegImpl(Builder, Reg, SrcReg);
-    copyPhysRegImpl(Builder, DestReg, Reg);
-    if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PL).addDef(MOS::A);
+  const auto &AreClasses = [&](const TargetRegisterClass &Dest,
+                               const TargetRegisterClass &Src) {
+    return IsClass(DestReg, Dest) && IsClass(SrcReg, Src);
   };
 
   if (AreClasses(MOS::GPRRegClass, MOS::GPRRegClass)) {
-    if (SrcReg == MOS::A) {
+    if (IsClass(SrcReg, MOS::AcRegClass)) {
       assert(MOS::XYRegClass.contains(DestReg));
       Builder.buildInstr(MOS::TA).addDef(DestReg).addUse(SrcReg);
-    } else if (DestReg == MOS::A) {
+    } else if (IsClass(DestReg, MOS::AcRegClass)) {
       assert(MOS::XYRegClass.contains(SrcReg));
       Builder.buildInstr(MOS::T_A).addDef(DestReg).addUse(SrcReg);
-    } else
-      CopyThroughA(MOS::A);
+    } else {
+      Register Tmp = createVReg(Builder, MOS::AcRegClass);
+      copyPhysRegImpl(Builder, Tmp, SrcReg);
+      copyPhysRegImpl(Builder, DestReg, Tmp);
+    }
   } else if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
     Builder.buildInstr(MOS::STImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
     Builder.buildInstr(MOS::LDImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    CopyThroughA(MOS::A);
+    Register Tmp = createVReg(Builder, MOS::GPRRegClass);
+    copyPhysRegImpl(Builder, Tmp, SrcReg);
+    copyPhysRegImpl(Builder, DestReg, Tmp);
   } else if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
+    assert(SrcReg.isPhysical() && DestReg.isPhysical());
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo),
                     TRI.getSubReg(SrcReg, MOS::sublo));
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::subhi),
                     TRI.getSubReg(SrcReg, MOS::subhi));
   } else if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
+    assert(SrcReg.isPhysical() && DestReg.isPhysical());
     Register SrcReg8 =
         TRI.getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
     Register DestReg8 =
@@ -420,19 +419,13 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         copyPhysRegImpl(Builder, DestReg, SrcReg);
       } else {
         if (DestReg == MOS::C) {
-          bool PullA = false;
           if (!MOS::GPRRegClass.contains(SrcReg)) {
-            if (isMaybeLive(Builder, MOS::A)) {
-              Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
-              PullA = true;
-            }
-            copyPhysRegImpl(Builder, MOS::A, SrcReg);
-            SrcReg = MOS::A;
+            Register Tmp = createVReg(Builder, MOS::GPRRegClass);
+            copyPhysRegImpl(Builder, Tmp, SrcReg);
+            SrcReg = Tmp;
           }
           // C = SrcReg >= 1
           Builder.buildInstr(MOS::CMPImm, {MOS::C}, {SrcReg, INT64_C(1)});
-          if (PullA)
-            Builder.buildInstr(MOS::PL).addDef(MOS::A);
         } else {
           assert(DestReg == MOS::V);
           if (SrcReg == MOS::A) {
@@ -442,17 +435,13 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(1)});
           } else {
-            bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
-            if (IsAMaybeLive)
-              Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
-            copyPhysRegImpl(Builder, MOS::A, SrcReg);
+            Register Tmp = createVReg(Builder, MOS::AcRegClass);
+            copyPhysRegImpl(Builder, Tmp, SrcReg);
             std::prev(Builder.getInsertPt())
                 ->addOperand(MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true,
                                                        /*isImp=*/true));
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(1)});
-            if (IsAMaybeLive)
-              Builder.buildInstr(MOS::PL).addDef(MOS::A);
           }
         }
       }
@@ -462,17 +451,11 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
 
         Register Tmp = DestReg;
         if (!MOS::GPRRegClass.contains(Tmp))
-          Tmp = MOS::A;
-
-        bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
-        if (Tmp != DestReg && IsAMaybeLive)
-          Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+          Tmp = createVReg(Builder, MOS::GPRRegClass);
         Builder.buildInstr(MOS::SelectImm, {Tmp},
                            {SrcReg, INT64_C(1), INT64_C(0)});
         if (Tmp != DestReg)
           copyPhysRegImpl(Builder, DestReg, Tmp);
-        if (Tmp != DestReg && IsAMaybeLive)
-          Builder.buildInstr(MOS::PL).addDef(MOS::A);
       } else {
         Builder.buildInstr(MOS::SelectImm, {DestReg},
                            {SrcReg, INT64_C(1), INT64_C(0)});
@@ -663,11 +646,9 @@ void MOSInstrInfo::expandCMPImmTerm(MachineIRBuilder &Builder) const {
 
 void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
   MachineInstr &MI = *Builder.getInsertPt();
-  Builder
-      .buildInstr(MOS::SBCImag8,
-                  {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
-                  {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)})
-      .addDef(MOS::NZ, RegState::Implicit);
+  auto SBC = Builder.buildInstr(
+      MOS::SBCImag8, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+      {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
   Register NZOut = MI.getOperand(2).getReg();
   Register NZIn = MOS::N;
   if (NZOut == MOS::NoRegister) {
@@ -676,8 +657,10 @@ void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
   } else
     assert(MI.getOperand(4).getReg() == MOS::NoRegister &&
            "At most one of N and Z can be set in SBCNZImag8");
-  if (NZOut != MOS::NoRegister)
+  if (NZOut != MOS::NoRegister) {
+    SBC.addDef(MOS::NZ, RegState::Implicit);
     Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(1), INT64_C(0)});
+  }
   MI.eraseFromParent();
 }
 
@@ -688,16 +671,12 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
   // Since the 6502 has no instruction for this, use A as the destination
   // instead, then transfer to the real destination.
   if (MI.getOperand(0).getReg() == MI.getOperand(2).getReg()) {
-    bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
-    if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PH).addUse(MOS::A);
+    Register Tmp = createVReg(Builder, MOS::AcRegClass);
     Builder.buildInstr(MOS::LDAIdx)
-        .addDef(MOS::A)
+        .addDef(Tmp)
         .add(MI.getOperand(1))
         .add(MI.getOperand(2));
-    Builder.buildInstr(MOS::TA).add(MI.getOperand(0)).addUse(MOS::A);
-    if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PL).addDef(MOS::A);
+    Builder.buildInstr(MOS::TA).add(MI.getOperand(0)).addUse(Tmp);
     MI.eraseFromParent();
     return;
   }
@@ -777,14 +756,9 @@ void MOSInstrInfo::expandZExt1(MachineIRBuilder &Builder) const {
 
   assert(MOS::FlagRegClass.contains(Src));
 
-  bool IsAMaybeLive = isMaybeLive(Builder, MOS::A);
-
   Register Tmp = Dst;
-  if (!MOS::GPRRegClass.contains(Tmp)) {
-    Tmp = MOS::A;
-    if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PH).addUse(MOS::A);
-  }
+  if (!MOS::GPRRegClass.contains(Tmp))
+    Tmp = createVReg(Builder, MOS::GPRRegClass);
 
   MI.setDesc(TII.get(MOS::SelectImm));
   MI.getOperand(0).setReg(Tmp);
@@ -794,9 +768,6 @@ void MOSInstrInfo::expandZExt1(MachineIRBuilder &Builder) const {
   if (Tmp != Dst) {
     Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
     Builder.buildCopy(Dst, Tmp);
-
-    if (IsAMaybeLive)
-      Builder.buildInstr(MOS::PL).addDef(MOS::A);
   }
 }
 

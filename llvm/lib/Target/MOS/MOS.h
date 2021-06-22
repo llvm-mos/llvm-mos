@@ -22,6 +22,7 @@ void initializeMOSCombinerPass(PassRegistry &);
 void initializeMOSIndexIVPass(PassRegistry &);
 void initializeMOSLowerSelectPass(PassRegistry &);
 void initializeMOSNoRecursePass(PassRegistry &);
+void initializeMOSPostRAScavengingPass(PassRegistry &);
 void initializeMOSStaticStackAllocPass(PassRegistry &);
 
 } // namespace llvm

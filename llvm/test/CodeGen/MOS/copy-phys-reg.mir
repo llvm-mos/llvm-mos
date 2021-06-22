@@ -30,25 +30,9 @@ body: |
     liveins: $x
     ; CHECK-LABEL: name: xy_to_xy
     ; CHECK: liveins: $x
-    ; CHECK: $a = T_A $x
-    ; CHECK: $y = TA $a
+    ; CHECK: [[T_A:%[0-9]+]]:ac = T_A $x
+    ; CHECK: $y = TA [[T_A]]
     $y = COPY $x
-...
----
-name: xy_to_xy_preserve_a
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $a, $x
-    ; CHECK-LABEL: name: xy_to_xy_preserve_a
-    ; CHECK: liveins: $a, $x
-    ; CHECK: PH $a
-    ; CHECK: $a = T_A $x
-    ; CHECK: $y = TA $a
-    ; CHECK: $a = PL
-    ; CHECK: $c = CMPImm $a, 0
-    $y = COPY $x
-    $c = CMPImm $a, 0
 ...
 ---
 name: gpr_to_imag8
@@ -80,25 +64,9 @@ body: |
     liveins: $rc0
     ; CHECK-LABEL: name: imag8_to_imag8
     ; CHECK: liveins: $rc0
-    ; CHECK: $a = LDImag8 $rc0
-    ; CHECK: $rc1 = STImag8 $a
+    ; CHECK: [[LDImag8_:%[0-9]+]]:gpr = LDImag8 $rc0
+    ; CHECK: $rc1 = STImag8 [[LDImag8_]]
     $rc1 = COPY $rc0
-...
----
-name: imag8_to_imag8_preserve_a
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $rc0, $a, $x, $y
-    ; CHECK-LABEL: name: imag8_to_imag8_preserve_a
-    ; CHECK: liveins: $rc0, $a, $x, $y
-    ; CHECK: PH $a
-    ; CHECK: $a = LDImag8 $rc0
-    ; CHECK: $rc1 = STImag8 $a
-    ; CHECK: $a = PL
-    ; CHECK: RTS implicit $a, implicit $x, implicit $y
-    $rc1 = COPY $rc0
-    RTS implicit $a, implicit $x, implicit $y
 ...
 ---
 name: imag16_to_imag16
@@ -108,10 +76,10 @@ body: |
     liveins: $rs0
     ; CHECK-LABEL: name: imag16_to_imag16
     ; CHECK: liveins: $rs0
-    ; CHECK: $a = LDImag8 $rc0
-    ; CHECK: $rc2 = STImag8 $a
-    ; CHECK: $a = LDImag8 $rc1
-    ; CHECK: $rc3 = STImag8 $a
+    ; CHECK: [[LDImag8_:%[0-9]+]]:gpr = LDImag8 $rc0
+    ; CHECK: $rc2 = STImag8 [[LDImag8_]]
+    ; CHECK: [[LDImag8_1:%[0-9]+]]:gpr = LDImag8 $rc1
+    ; CHECK: $rc3 = STImag8 [[LDImag8_1]]
     $rs1 = COPY $rs0
 ...
 ---
@@ -144,25 +112,9 @@ body: |
     liveins: $rc2lsb
     ; CHECK-LABEL: name: imag8lsb_to_c
     ; CHECK: liveins: $rc2lsb
-    ; CHECK: $a = LDImag8 $rc2
-    ; CHECK: $c = CMPImm $a, 1
+    ; CHECK: [[LDImag8_:%[0-9]+]]:gpr = LDImag8 $rc2
+    ; CHECK: $c = CMPImm [[LDImag8_]], 1
     $c = COPY $rc2lsb
-...
----
-name: imag8lsb_to_c_preserve_a
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $rc2lsb, $a
-    ; CHECK-LABEL: name: imag8lsb_to_c_preserve_a
-    ; CHECK: liveins: $rc2lsb, $a
-    ; CHECK: PH $a
-    ; CHECK: $a = LDImag8 $rc2
-    ; CHECK: $c = CMPImm $a, 1
-    ; CHECK: $a = PL
-    ; CHECK: RTS implicit $a
-    $c = COPY $rc2lsb
-    RTS implicit $a
 ...
 ---
 name: alsb_to_v
@@ -185,25 +137,9 @@ body: |
     liveins: $xlsb
     ; CHECK-LABEL: name: non_alsb_to_v
     ; CHECK: liveins: $xlsb
-    ; CHECK: $a = T_A $x, implicit-def $nz
+    ; CHECK: [[T_A:%[0-9]+]]:ac = T_A $x, implicit-def $nz
     ; CHECK: $v = SelectImm $z, 0, 1
     $v = COPY $xlsb
-...
----
-name: non_alsb_to_v_preserve_a
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $xlsb, $a
-    ; CHECK-LABEL: name: non_alsb_to_v_preserve_a
-    ; CHECK: liveins: $xlsb, $a
-    ; CHECK: PH $a
-    ; CHECK: $a = T_A $x, implicit-def $nz
-    ; CHECK: $v = SelectImm $z, 0, 1
-    ; CHECK: $a = PL
-    ; CHECK: RTS implicit $a
-    $v = COPY $xlsb
-    RTS implicit $a
 ...
 ---
 name: flag_to_flag
@@ -235,23 +171,7 @@ body: |
     liveins: $v
     ; CHECK-LABEL: name: flag_to_nongpr_lsb
     ; CHECK: liveins: $v
-    ; CHECK: $a = SelectImm $v, 1, 0
-    ; CHECK: $rc2 = STImag8 $a
+    ; CHECK: [[SelectImm:%[0-9]+]]:gpr = SelectImm $v, 1, 0
+    ; CHECK: $rc2 = STImag8 [[SelectImm]]
     $rc2lsb = COPY $v
-...
----
-name: flag_to_nongpr_lsb_preserve_a
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $v, $a
-    ; CHECK-LABEL: name: flag_to_nongpr_lsb_preserve_a
-    ; CHECK: liveins: $v, $a
-    ; CHECK: PH $a
-    ; CHECK: $a = SelectImm $v, 1, 0
-    ; CHECK: $rc2 = STImag8 $a
-    ; CHECK: $a = PL
-    ; CHECK: RTS implicit $a
-    $rc2lsb = COPY $v
-    RTS implicit $a
 ...

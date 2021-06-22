@@ -35,6 +35,7 @@ add_llvm_target(MOSCodeGen
   MOSMachineFunctionInfo.cpp
   MOSMachineScheduler.cpp
   MOSNoRecurse.cpp
+  MOSPostRAScavenging.cpp
   MOSRegisterBankInfo.cpp
   MOSRegisterInfo.cpp
   MOSStaticStackAlloc.cpp

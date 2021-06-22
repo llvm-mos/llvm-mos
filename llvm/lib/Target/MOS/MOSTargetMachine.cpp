@@ -34,6 +34,7 @@
 #include "MOSLowerSelect.h"
 #include "MOSMachineScheduler.h"
 #include "MOSNoRecurse.h"
+#include "MOSPostRAScavenging.h"
 #include "MOSStaticStackAlloc.h"
 #include "MOSTargetObjectFile.h"
 #include "MOSTargetTransformInfo.h"
@@ -144,7 +145,6 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addMachineSSAOptimization() override;
-  bool addRegAssignAndRewriteOptimized() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 
@@ -207,22 +207,12 @@ void MOSPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 }
 
-bool MOSPassConfig::addRegAssignAndRewriteOptimized() {
-  bool Result = TargetPassConfig::addRegAssignAndRewriteOptimized();
-
-  // Clean up BUNDLE instructions emitted by spilling in the register allocator.
-  addPass(createUnpackMachineBundles(
-      [](const MachineFunction &MF) { return true; }));
-
-  return Result;
-}
-
 void MOSPassConfig::addPreSched2() {
+  addPass(createMOSPostRAScavengingPass());
   // Lower control flow pseudos.
   addPass(&FinalizeISelID);
   // Lower pseudos produced by control flow pseudos.
   addPass(&ExpandPostRAPseudosID);
-
   addPass(createMOSStaticStackAllocPass());
 }
 
