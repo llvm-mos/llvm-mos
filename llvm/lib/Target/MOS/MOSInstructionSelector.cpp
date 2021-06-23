@@ -44,6 +44,10 @@ using namespace MIPatternMatch;
 
 namespace {
 
+#define GET_GLOBALISEL_PREDICATE_BITSET
+#include "MOSGenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATE_BITSET
+
 class MOSInstructionSelector : public InstructionSelector {
 public:
   MOSInstructionSelector(const MOSTargetMachine &TM, MOSSubtarget &STI,
@@ -59,7 +63,6 @@ private:
 
   bool selectAddSub(MachineInstr &MI);
   bool selectAnyExt(MachineInstr &MI);
-  bool selectBr(MachineInstr &MI);
   bool selectBrCondImm(MachineInstr &MI);
   bool selectCmp(MachineInstr &MI);
   bool selectConstant(MachineInstr &MI);
@@ -88,16 +91,37 @@ private:
   // instruction sequence by reducing it to a more easily selectable sequence.
   bool selectAll(MachineInstrSpan MIS);
 
-  // Appease the vengeful base class.
-  void setupGeneratedPerFunctionState(MachineFunction &MF) override {}
+  /// tblgen-erated 'select' implementation, used as the initial selector for
+  /// the patterns that don't require complex C++.
+  bool selectImpl(MachineInstr &MI, CodeGenCoverage &CoverageInfo) const;
+
+#define GET_GLOBALISEL_PREDICATES_DECL
+#include "MOSGenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATES_DECL
+
+#define GET_GLOBALISEL_TEMPORARIES_DECL
+#include "MOSGenGlobalISel.inc"
+#undef GET_GLOBALISEL_TEMPORARIES_DECL
 };
 
 } // namespace
 
+#define GET_GLOBALISEL_IMPL
+#include "MOSGenGlobalISel.inc"
+#undef GET_GLOBALISEL_IMPL
+
 MOSInstructionSelector::MOSInstructionSelector(const MOSTargetMachine &TM,
                                                MOSSubtarget &STI,
                                                MOSRegisterBankInfo &RBI)
-    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI) {}
+    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
+#define GET_GLOBALISEL_PREDICATES_INIT
+#include "MOSGenGlobalISel.inc"
+#undef GET_GLOBALISEL_PREDICATES_INIT
+#define GET_GLOBALISEL_TEMPORARIES_INIT
+#include "MOSGenGlobalISel.inc"
+#undef GET_GLOBALISEL_TEMPORARIES_INIT
+{
+}
 
 // Returns the widest register class that can contain values of a given type.
 // Used to ensure that every virtual register gets some register class by the
@@ -121,6 +145,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     constrainGenericOp(MI);
     return true;
   }
+  if (selectImpl(MI, *CoverageInfo))
+    return true;
 
   switch (MI.getOpcode()) {
   default:
@@ -130,8 +156,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectAddSub(MI);
   case MOS::G_ANYEXT:
     return selectAnyExt(MI);
-  case MOS::G_BR:
-    return selectBr(MI);
   case MOS::G_BRCOND_IMM:
     return selectBrCondImm(MI);
   case MOS::G_CONSTANT:
@@ -175,17 +199,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
-
-  // Select IN.
-  if (MI.getOpcode() == MOS::G_ADD) {
-    auto RHSConst = getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(),
-                                                      *Builder.getMRI());
-    if (RHSConst && RHSConst->Value.isOneValue()) {
-      MI.RemoveOperand(2);
-      MI.setDesc(TII.get(MOS::IN));
-      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-    }
-  }
 
   unsigned Opcode;
   int64_t CarryInVal;
@@ -255,11 +268,6 @@ bool MOSInstructionSelector::selectAnyExt(MachineInstr &MI) {
   constrainGenericOp(*Copy);
 
   MI.eraseFromParent();
-  return true;
-}
-
-bool MOSInstructionSelector::selectBr(MachineInstr &MI) {
-  MI.setDesc(TII.get(MOS::JMP));
   return true;
 }
 
