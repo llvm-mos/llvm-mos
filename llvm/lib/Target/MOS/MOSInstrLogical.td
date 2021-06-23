@@ -165,8 +165,6 @@ def BR : MOSLogicalInstr {
 def JMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
   dag InOperandList = (ins label:$tgt);
 
-  let Pattern = [(br bb:$tgt)];
-
   let isBarrier = true;
   let isBranch = true;
   let isTerminator = true;
@@ -227,8 +225,6 @@ def IN : MOSLogicalInstr {
   dag OutOperandList = (outs XY:$dst);
   dag InOperandList = (ins XY:$src);
   let Constraints = "$src = $dst";
-
-  let Pattern = [(set XY:$dst, (add XY:$src, 1))];
 
   let isAdd = true;
 }
