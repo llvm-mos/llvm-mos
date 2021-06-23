@@ -5,70 +5,75 @@ name: selectimm_i1
 tracksRegLiveness: true
 body: |
   bb.0.entry:
-    liveins: $c
+    liveins: $a, $c
     ; CHECK-LABEL: name: selectimm_i1
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: liveins: $c
+    ; CHECK: liveins: $a, $c
     ; CHECK: $v = LDImm1 1
     ; CHECK: BR %bb.1, $c, 1
     ; CHECK: .2.entry:
     ; CHECK: successors: %bb.1(0x80000000)
+    ; CHECK: liveins: $a
     ; CHECK: $v = LDImm1 2
     ; CHECK: .1.entry:
     ; CHECK: successors: %bb.4(0x40000000), %bb.3(0x40000000)
-    ; CHECK: liveins: $v
+    ; CHECK: liveins: $a, $v
     ; CHECK: $xlsb = LDImm1 1
     ; CHECK: BR %bb.3, $v, 1
     ; CHECK: .4.entry:
     ; CHECK: successors: %bb.3(0x80000000)
+    ; CHECK: liveins: $a
     ; CHECK: $xlsb = LDImm1 2
     ; CHECK: .3.entry:
-    ; CHECK: liveins: $xlsb
-    ; CHECK: RTS implicit $xlsb
+    ; CHECK: liveins: $a, $xlsb
+    ; CHECK: RTS implicit $a, implicit $xlsb
     $v    = SelectImm $c, 1, 2
     $xlsb = SelectImm $v, 1, 2
-    RTS implicit $xlsb
+    RTS implicit $a, implicit $xlsb
 ...
 ---
 name: selectimm_gpr
 tracksRegLiveness: true
 body: |
   bb.0.entry:
-    liveins: $c
+    liveins: $a, $c
     ; CHECK-LABEL: name: selectimm_gpr
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: liveins: $c
+    ; CHECK: liveins: $a, $c
     ; CHECK: $x = LDImm 1
     ; CHECK: BR %bb.1, $c, 1
     ; CHECK: .2.entry:
     ; CHECK: successors: %bb.1(0x80000000)
+    ; CHECK: liveins: $a
     ; CHECK: $x = LDImm 2
     ; CHECK: .1.entry:
-    ; CHECK: liveins: $x
-    ; CHECK: RTS implicit $x
+    ; CHECK: liveins: $a, $x
+    ; CHECK: RTS implicit $a, implicit $x
     $x = SelectImm $c, 1, 2
-    RTS implicit $x
+    RTS implicit $a, implicit $x
 ...
 ---
 name: selectimm_nz
 tracksRegLiveness: true
 body: |
   bb.0.entry:
-    liveins: $n
+    liveins: $a, $n
     ; CHECK-LABEL: name: selectimm_nz
     ; CHECK: successors: %bb.2(0x40000000), %bb.3(0x40000000)
-    ; CHECK: liveins: $n
+    ; CHECK: liveins: $a, $n
     ; CHECK: BR %bb.3, $n, 1
     ; CHECK: .2.entry:
     ; CHECK: successors: %bb.1(0x80000000)
-    ; CHECK: $c = LDImm1 2
+    ; CHECK: liveins: $a
+    ; CHECK: $x = LDImm 2
     ; CHECK: JMP %bb.1
     ; CHECK: .3.entry:
     ; CHECK: successors: %bb.1(0x80000000)
-    ; CHECK: $c = LDImm1 1
+    ; CHECK: liveins: $a
+    ; CHECK: $x = LDImm 1
     ; CHECK: .1.entry:
-    ; CHECK: liveins: $c
-    ; CHECK: RTS implicit $c
-    $c = SelectImm $n, 1, 2
-    RTS implicit $c
+    ; CHECK: liveins: $a, $x
+    ; CHECK: RTS implicit $a, implicit $x
+    $x = SelectImm $n, 1, 2
+    RTS implicit $a, implicit $x
 ...

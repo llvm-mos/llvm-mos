@@ -157,10 +157,12 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   HeadMBB->removeSuccessor(TailMBB);
 
   // Add the false block between HeadMBB and TailMBB
-  // FIXME: Maintain branch probabilities through here.
   MachineBasicBlock *IfFalseMBB = F->CreateMachineBasicBlock(LLVM_BB);
   F->insert(TailMBB->getIterator(), IfFalseMBB);
   HeadMBB->addSuccessor(IfFalseMBB);
+  for (const auto& LiveIn : TailMBB->liveins())
+    if (LiveIn.PhysReg != Dst)
+      IfFalseMBB->addLiveIn(LiveIn);
   IfFalseMBB->addSuccessor(TailMBB);
 
   // Add a true block if necessary to avoid clobbering NZ.
@@ -173,6 +175,8 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // Add the unconditional branch from IfFalseMBB to TailMBB.
     Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
     Builder.buildInstr(MOS::JMP).addMBB(TailMBB);
+    for (const auto& LiveIn : IfFalseMBB->liveins())
+      IfTrueMBB->addLiveIn(LiveIn);
 
     Builder.setInsertPt(*HeadMBB, MI.getIterator());
   }
