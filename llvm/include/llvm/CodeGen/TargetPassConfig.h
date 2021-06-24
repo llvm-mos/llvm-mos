@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #ifndef LLVM_CODEGEN_TARGETPASSCONFIG_H
 #define LLVM_CODEGEN_TARGETPASSCONFIG_H
 
@@ -271,6 +273,10 @@ public:
   /// instructions, thereby constraining all generic virtual registers to
   /// register classes.
   virtual bool addGlobalInstructionSelect() { return true; }
+
+  /// Whether the target needs Machine Scheduling to function properly, even in
+  /// optnone functions.
+  virtual bool alwaysRequiresMachineScheduler() const { return false; }
 
   /// Add the complete, standard set of LLVM CodeGen passes.
   /// Fully developed targets will not generally override this.

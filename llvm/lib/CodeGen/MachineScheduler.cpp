@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -377,7 +379,9 @@ ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
 /// design would be to split blocks at scheduling boundaries, but LLVM has a
 /// general bias against block splitting purely for implementation simplicity.
 bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
+  PassConfig = &getAnalysis<TargetPassConfig>();
+  if (!PassConfig->alwaysRequiresMachineScheduler() &&
+      skipFunction(mf.getFunction()))
     return false;
 
   if (EnableMachineSched.getNumOccurrences()) {

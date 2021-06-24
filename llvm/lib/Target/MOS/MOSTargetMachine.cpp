@@ -144,6 +144,11 @@ public:
   void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
+
+  // Register pressure is too high around calls to work without detailed
+  // scheduling.
+  bool alwaysRequiresMachineScheduler() const override { return true; }
+
   void addPreSched2() override;
   void addPreEmitPass() override;
 
