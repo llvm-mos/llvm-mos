@@ -226,12 +226,16 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
   assert(LoBytes || HiBytes);
 
   Register A = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
-
-  Register C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(0)})
-                   .getReg(0);
+  Register P = Builder.getMRI()->createVirtualRegister(&MOS::PcRegClass);
+  Builder.buildInstr(MOS::LDCImm, {P}, {INT64_C(0)})
+      ->getOperand(0)
+      .setSubReg(MOS::subcarry);
   if (LoBytes) {
     Builder.buildCopy(A, Register(MOS::RC0));
-    Builder.buildInstr(MOS::ADCImm, {A, C, &MOS::VcRegClass}, {A, LoBytes, C});
+    auto Add = Builder.buildInstr(MOS::ADCImm, {A, P, P}, {A, LoBytes, P});
+    Add->getOperand(1).setSubReg(MOS::subcarry);
+    Add->getOperand(2).setSubReg(MOS::subv);
+    Add->getOperand(5).setSubReg(MOS::subcarry);
     Builder.buildCopy(MOS::RC0, A);
   }
 
@@ -241,6 +245,9 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
   if (LoBytes)
     LoCopy.addUse(A, RegState::Implicit);
 
-  Builder.buildInstr(MOS::ADCImm, {A, C, &MOS::VcRegClass}, {A, HiBytes, C});
+  auto Add = Builder.buildInstr(MOS::ADCImm, {A, P, P}, {A, HiBytes, P});
+  Add->getOperand(1).setSubReg(MOS::subcarry);
+  Add->getOperand(2).setSubReg(MOS::subv);
+  Add->getOperand(5).setSubReg(MOS::subcarry);
   Builder.buildCopy(MOS::RC1, A);
 }

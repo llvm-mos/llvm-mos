@@ -10,10 +10,10 @@ body: |
     ; CHECK-LABEL: name: addrlostk
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
@@ -31,10 +31,10 @@ body: |
     ; CHECK-LABEL: name: addrlostk_0
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $rc2 = COPY $rc0
@@ -50,10 +50,10 @@ body: |
     ; CHECK-LABEL: name: addrhistk
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc1
@@ -72,10 +72,10 @@ body: |
     ; CHECK-LABEL: name: addrhistk_0
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $rc3 = COPY $rc1
@@ -91,17 +91,17 @@ body: |
     ; CHECK-LABEL: name: incsp
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 46, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 46, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 251, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 251, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 210, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 210, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 4, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 4, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: RTS
     RTS
@@ -115,11 +115,11 @@ body: |
     ; CHECK-LABEL: name: incsp_hi_only
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc1
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc1
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 2, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 2, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: RTS
     RTS
@@ -134,10 +134,10 @@ body:             |
     ; CHECK-LABEL: name: ld_byte
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 253, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
@@ -153,10 +153,10 @@ body:             |
     ; CHECK-LABEL: name: ld_byte_high
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $rc2 = COPY $rc0
@@ -177,10 +177,10 @@ body:             |
     ; CHECK-LABEL: name: ld_byte_x
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 253, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
@@ -197,10 +197,10 @@ body:             |
     ; CHECK-LABEL: name: ld_byte_xlsb
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 253, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
@@ -217,10 +217,10 @@ body:             |
     ; CHECK-LABEL: name: ld_byte_c
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 253, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
@@ -238,10 +238,10 @@ body: |
     ; CHECK-LABEL: name: ld_ptr
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 252, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 252, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $y = LDImm 2
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0 + 2, align 2)
@@ -263,10 +263,10 @@ body:             |
     ; CHECK: PH $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 253, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $a = PL
     ; CHECK: $y = LDImm 1
@@ -283,10 +283,10 @@ body:             |
     ; CHECK-LABEL: name: st_byte_c
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 253, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = COPY $xlsb
     ; CHECK: $alsb = COPY $c
@@ -305,10 +305,10 @@ body:             |
     ; CHECK-LABEL: name: st_byte_high
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $rc2 = COPY $rc0
@@ -329,10 +329,10 @@ body: |
     ; CHECK-LABEL: name: st_ptr
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 252, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 252, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $a = COPY $rc0
     ; CHECK: $y = LDImm 2
@@ -354,10 +354,10 @@ body: |
     ; CHECK-LABEL: name: variable_sized
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 253, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 253, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $a = frame-setup COPY $rc4
     ; CHECK: frame-setup PH killed $a
@@ -373,10 +373,10 @@ body: |
     ; CHECK: $rc4 = frame-destroy COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 3, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 3, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 0, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: RTS implicit $rc4, implicit $rc5
     $a = LDStk %stack.2, 1 :: (load 1 from %stack.2 + 1)

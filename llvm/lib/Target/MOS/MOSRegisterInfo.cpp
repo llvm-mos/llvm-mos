@@ -111,11 +111,30 @@ MOSRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   return RC;
 }
 
+static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
+                             MachineBasicBlock::iterator End) {
+  int64_t PushCount = 0;
+  for (auto MI = Begin; MI != End; ++MI) {
+    switch (MI->getOpcode()) {
+    case MOS::PH:
+      ++PushCount;
+      break;
+    case MOS::PL:
+      if (!PushCount)
+        return false;
+      --PushCount;
+      break;
+    }
+  }
+  return !PushCount;
+}
+
 bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator I,
                                             MachineBasicBlock::iterator &UseMI,
                                             const TargetRegisterClass *RC,
                                             Register Reg) const {
+
   // Note: NZ cannot be live at this point, since it's only live in terminators,
   // and virtual registers are never inserted into terminators.
 
@@ -133,15 +152,9 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     report_fatal_error("Scavenger spill for register not yet implemented.");
   case MOS::A:
   case MOS::ALSB: {
-    bool CanUseHardStack = true;
-    for (auto MI = I; MI != UseMI; ++MI) {
-      if (MI->getOpcode() == MOS::PH || MI->getOpcode() == MOS::PL) {
-        CanUseHardStack = false;
-        break;
-      }
-    }
+    bool UseHardStack = pushPullBalanced(I, UseMI);
 
-    if (CanUseHardStack)
+    if (UseHardStack)
       Builder.buildInstr(MOS::PH).addUse(MOS::A);
     else
       Builder.buildInstr(MOS::STAbs)
@@ -150,7 +163,7 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
 
     Builder.setInsertPt(MBB, UseMI);
 
-    if (CanUseHardStack)
+    if (UseHardStack)
       Builder.buildInstr(MOS::PL).addDef(MOS::A);
     else
       Builder.buildInstr(MOS::LDAbs)
@@ -161,13 +174,21 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   case MOS::X:
   case MOS::XLSB:
   case MOS::Y:
-  case MOS::YLSB:
+  case MOS::YLSB: {
     const char *Save = Reg == MOS::X ? "__save_x" : "__save_y";
     Builder.buildInstr(MOS::STAbs).addUse(Reg).addExternalSymbol(Save);
 
     Builder.setInsertPt(MBB, UseMI);
     Builder.buildInstr(MOS::LDAbs).addDef(Reg).addExternalSymbol(Save);
     break;
+  }
+  case MOS::P: {
+    assert(pushPullBalanced(I, UseMI));
+    Builder.buildInstr(MOS::PH, {}, {Register(MOS::P)});
+    Builder.setInsertPt(MBB, UseMI);
+    Builder.buildInstr(MOS::PL, {MOS::P}, {});
+    break;
+  }
   }
 
   return true;
@@ -322,25 +343,22 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   int64_t Offset = MI->getOperand(2).getImm();
 
   if (Offset >= 256) {
+    Register P = MRI.createVirtualRegister(&MOS::PcRegClass);
     // Far stack accesses need a virtual base register, so materialize one here.
     Register NewBase = MRI.createVirtualRegister(&MOS::Imag16RegClass);
-    Register CLo = MRI.createVirtualRegister(&MOS::CcRegClass);
-    Register CHi = MRI.createVirtualRegister(&MOS::CcRegClass);
-    Register VLo = MRI.createVirtualRegister(&MOS::VcRegClass);
-    Register VHi = MRI.createVirtualRegister(&MOS::VcRegClass);
     auto Lo = Builder.buildInstr(MOS::AddrLostk)
                   .addDef(NewBase, /*Flags=*/0, MOS::sublo)
-                  .addDef(CLo)
-                  .addDef(VLo, RegState::Dead)
+                  .addDef(P, /*Flags=*/0, MOS::subcarry)
+                  .addDef(P, RegState::Dead, MOS::subv)
                   .add(MI->getOperand(1))
                   .add(MI->getOperand(2));
     auto Hi = Builder.buildInstr(MOS::AddrHistk)
                   .addDef(NewBase, /*Flags=*/0, MOS::subhi)
-                  .addDef(CHi, RegState::Dead)
-                  .addDef(VHi, RegState::Dead)
+                  .addDef(P, RegState::Dead, MOS::subcarry)
+                  .addDef(P, RegState::Dead, MOS::subv)
                   .add(MI->getOperand(1))
                   .add(MI->getOperand(2))
-                  .addUse(CLo)
+                  .addDef(P, /*Flags=*/0, MOS::subcarry)
                   .addUse(NewBase, RegState::Implicit);
     MI->getOperand(1).setReg(NewBase);
     MI->getOperand(2).setImm(0);

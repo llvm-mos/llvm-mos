@@ -168,6 +168,7 @@ let isPressureFineGrained = true in {
   def Yc : MOSReg8Class<(add Y)>;
   def Cc : MOSReg1Class<(add C)>;
   def Vc : MOSReg1Class<(add V)>;
+  def Pc : MOSReg8Class<(add P)>;
 }
 
 // "General purpose" register classes.

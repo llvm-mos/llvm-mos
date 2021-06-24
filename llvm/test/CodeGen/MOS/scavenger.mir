@@ -78,3 +78,16 @@ body: |
     %0:yc = LDImm 42
     RTS implicit $a, implicit $x, implicit $y
 ...
+---
+name: spill_p
+body: |
+  bb.0.entry:
+    liveins: $v
+    ; CHECK-LABEL: name: spill_p
+    ; CHECK: PH $p
+    ; CHECK: dead $p = COPY $a
+    ; CHECK: $p = PL
+    ; CHECK: RTS implicit $v
+    %0:pc = COPY $a
+    RTS implicit $v
+...

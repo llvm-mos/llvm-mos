@@ -24,20 +24,20 @@ body:             |
     ; CHECK: PH $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 254, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 255, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $a = PL
     ; CHECK: STAbs $a, target-index(mos-static-stack) :: (store 1 into %stack.0)
     ; CHECK: $a = LDAbs target-index(mos-static-stack) + 1 :: (load 1 from %stack.1)
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
-    ; CHECK: $a, $c, dead $v = ADCImm $a, 2, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 2, $c
     ; CHECK: $rc0 = COPY $a
     ; CHECK: $a = COPY $rc1, implicit $a
-    ; CHECK: $a, dead $c, dead $v = ADCImm $a, 0, $c
+    ; CHECK: $a, $c, $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: RTS
     STAbsOffset $a, %stack.0, 0 :: (store 1 into %stack.0)
