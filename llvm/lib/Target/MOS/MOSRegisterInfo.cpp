@@ -32,7 +32,7 @@
 using namespace llvm;
 
 cl::opt<int>
-    NumImagPtrs("num-imag-ptrs", cl::init(127),
+    NumImagPtrs("num-imag-ptrs", cl::init(127), cl::ZeroOrMore,
                 cl::desc("Number of imaginary (Imag8) pointer registers "
                          "available for compiler use."),
                 cl::value_desc("imaginary pointer registers"));
@@ -67,9 +67,12 @@ MOSRegisterInfo::MOSRegisterInfo()
   for (Register Ptr = MOS::RS0 + NumImagPtrs; Ptr <= MOS::RS127;
        Ptr = Ptr + 1) {
     Reserved.set(Ptr);
-    Reserved.set(getSubReg(Ptr, MOS::sublo));
-    Reserved.set(getSubReg(Ptr, MOS::subhi));
-    Reserved.set(getSubReg(Ptr, MOS::sublsb));
+    Register Lo = getSubReg(Ptr, MOS::sublo);
+    Reserved.set(Lo);
+    Reserved.set(getSubReg(Lo, MOS::sublsb));
+    Register Hi = getSubReg(Ptr, MOS::subhi);
+    Reserved.set(Hi);
+    Reserved.set(getSubReg(Hi, MOS::sublsb));
   }
 
   // Reserve stack pointers.
