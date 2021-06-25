@@ -84,12 +84,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
   getActionDefinitionsBuilder(G_ZEXT)
-      .legalFor({{S8, S1}})
-      // S1 must be first be extended to S8 before being extended further, since
-      // this may involve branching.
       .customIf(typeIs(1, S1))
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .maxScalar(0, S8)
       .unsupported();
 
   // Type Conversions
@@ -352,9 +348,10 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
     // Note: We can't use ICMP_SLT 0 here, since that may in turn require SEXT.
     // FIXME: Once the ICMP_SLT lowering is better, use that instead.
     auto SignMask = APInt::getSignMask(SrcTy.getSizeInBits());
-    auto Sign = Builder.buildAnd(SrcTy, Src, Builder.buildConstant(SrcTy, SignMask));
+    auto Sign =
+        Builder.buildAnd(SrcTy, Src, Builder.buildConstant(SrcTy, SignMask));
     auto Pos = Builder.buildICmp(CmpInst::ICMP_EQ, S1, Sign,
-                                  Builder.buildConstant(SrcTy, 0));
+                                 Builder.buildConstant(SrcTy, 0));
     auto NegOne = Builder.buildConstant(S8, -1);
     auto Zero = Builder.buildConstant(S8, 0);
 
@@ -388,21 +385,17 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
-  LLT S8 = LLT::scalar(8);
-
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
 
-  Register Tmp = Helper.MIRBuilder.buildZExt(S8, Src).getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
 
-  SmallVector<Register> Regs = {Tmp};
-  Register Zero = Helper.MIRBuilder.buildConstant(S8, 0).getReg(0);
-  for (int ByteSize = 1, DstSize = MRI.getType(Dst).getSizeInBytes();
-       ByteSize < DstSize; ++ByteSize)
-    Regs.push_back(Zero);
-
-  Helper.MIRBuilder.buildMerge(Dst, Regs);
-
+  assert(SrcTy == LLT::scalar(1));
+  auto One = Builder.buildConstant(DstTy, 1);
+  auto Zero = Builder.buildConstant(DstTy, 0);
+  Builder.buildSelect(Dst, Src, One, Zero);
   MI.eraseFromParent();
   return true;
 }

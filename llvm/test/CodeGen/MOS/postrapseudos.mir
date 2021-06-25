@@ -100,28 +100,3 @@ body: |
     ; CHECK: $v = CLV
     $v = LDImm1 0
 ...
----
-name: zext1_from_lsb
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: zext1_from_lsb
-    ; CHECK: $a = T_A $x
-    $a = ZExt1 $xlsb
-...
----
-name: zext1_from_flag_to_gpr
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: zext1_from_flag_to_gpr
-    ; CHECK: $a = SelectImm $c, 1, 0
-    $a = ZExt1 $c
-...
----
-name: zext1_from_flag_to_nongpr
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: zext1_from_flag_to_nongpr
-    ; CHECK: [[SelectImm:%[0-9]+]]:gpr = SelectImm $c, 1, 0
-    ; CHECK: $rc2 = COPY [[SelectImm]]
-    $rc2 = ZExt1 $c
-...

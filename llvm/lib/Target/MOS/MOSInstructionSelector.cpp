@@ -192,7 +192,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_PHI:
   case MOS::G_PTRTOINT:
   case MOS::G_XOR:
-  case MOS::G_ZEXT:
     return selectGeneric(MI);
   }
 }
@@ -813,9 +812,6 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
     break;
   case MOS::G_XOR:
     Opcode = MOS::EORImag8;
-    break;
-  case MOS::G_ZEXT:
-    Opcode = MOS::ZExt1;
     break;
   }
   MI.setDesc(TII.get(Opcode));

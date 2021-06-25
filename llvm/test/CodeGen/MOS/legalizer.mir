@@ -104,15 +104,46 @@ body: |
     RTS implicit %5, implicit %6, implicit %7, implicit %8
 ...
 ---
-name: zext
+name: zext_1
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: zext
+    ; CHECK-LABEL: name: zext_1
     ; CHECK: [[COPY:%[0-9]+]]:_(s1) = COPY $c
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[COPY]](s1)
-    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-    ; CHECK: RTS implicit [[ZEXT]](s8), implicit [[C]](s8), implicit [[C]](s8), implicit [[C]](s8)
+    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+    ; CHECK: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[C]](s16)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[C1]](s16)
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[COPY]](s1), [[UV]], [[UV2]]
+    ; CHECK: [[SELECT1:%[0-9]+]]:_(s8) = G_SELECT [[COPY]](s1), [[UV1]], [[UV3]]
+    ; CHECK: RTS implicit [[SELECT]](s8), implicit [[SELECT1]](s8)
     %0:_(s1) = COPY $c
+    %1:_(s16) = G_ZEXT %0
+    %2:_(s8), %3:_(s8) = G_UNMERGE_VALUES %1
+    RTS implicit %2, implicit %3
+...
+---
+name: zext_8
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: zext_8
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK: RTS implicit [[COPY]](s8), implicit [[C]](s8)
+    %0:_(s8) = COPY $a
+    %1:_(s16) = G_ZEXT %0
+    %2:_(s8), %3:_(s8) = G_UNMERGE_VALUES %1
+    RTS implicit %2, implicit %3
+...
+---
+name: zext_16
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: zext_16
+    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $rs1
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](s16)
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK: RTS implicit [[UV]](s8), implicit [[UV1]](s8), implicit [[C]](s8), implicit [[C]](s8)
+    %0:_(s16) = COPY $rs1
     %1:_(s32) = G_ZEXT %0
     %2:_(s8), %3:_(s8), %4:_(s8), %5:_(s8) = G_UNMERGE_VALUES %1
     RTS implicit %2, implicit %3, implicit %4, implicit %5
@@ -633,8 +664,10 @@ body: |
     ; CHECK-LABEL: name: ptradd_zext_1
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s1) = COPY $c
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[COPY1]](s1)
-    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[ZEXT]](s8)
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[COPY1]](s1), [[C]], [[C1]]
+    ; CHECK: [[INDEX:%[0-9]+]]:_(p0) = G_INDEX [[COPY]], [[SELECT]](s8)
     ; CHECK: RTS implicit [[INDEX]](p0)
     %0:_(p0) = COPY $rs0
     %1:_(s1) = COPY $c

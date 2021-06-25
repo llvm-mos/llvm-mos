@@ -629,9 +629,6 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::LDImm1:
     expandLDImm1(Builder);
     break;
-  case MOS::ZExt1:
-    expandZExt1(Builder);
-    break;
   }
 
   return Changed;
@@ -735,40 +732,6 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   }
 
   MI.setDesc(Builder.getTII().get(Opcode));
-}
-
-void MOSInstrInfo::expandZExt1(MachineIRBuilder &Builder) const {
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
-  const TargetInstrInfo &TII = Builder.getTII();
-
-  MachineInstr &MI = *Builder.getInsertPt();
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-
-  Register Src8 =
-      TRI.getMatchingSuperReg(Src, MOS::sublsb, &MOS::Anyi8RegClass);
-  if (Src8) {
-    copyPhysRegImpl(Builder, Dst, Src8);
-    MI.eraseFromParent();
-    return;
-  }
-
-  assert(MOS::FlagRegClass.contains(Src));
-
-  Register Tmp = Dst;
-  if (!MOS::GPRRegClass.contains(Tmp))
-    Tmp = createVReg(Builder, MOS::GPRRegClass);
-
-  MI.setDesc(TII.get(MOS::SelectImm));
-  MI.getOperand(0).setReg(Tmp);
-  MI.addOperand(MachineOperand::CreateImm(1));
-  MI.addOperand(MachineOperand::CreateImm(0));
-
-  if (Tmp != Dst) {
-    Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-    Builder.buildCopy(Dst, Tmp);
-  }
 }
 
 bool MOSInstrInfo::reverseBranchCondition(

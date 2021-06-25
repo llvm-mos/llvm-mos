@@ -58,15 +58,6 @@ def LDImm1 : MOSPseudo {
   let isReMaterializable = true;
 }
 
-// Zero-extend a 1-bit value to 8 bits. May be emitted using the diamond pattern
-// over a pair of immediate loads. Some argument combinations can be more
-// directly emitted though.
-def ZExt1 : MOSPseudo {
-  dag OutOperandList = (outs Anyi8:$dst);
-  dag InOperandList = (ins Anyi1:$src);
-}
-
-
 //===---------------------------------------------------------------------===//
 // Soft stack
 //===---------------------------------------------------------------------===//

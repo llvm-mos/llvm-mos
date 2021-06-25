@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -374,6 +375,20 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!handleAssignments(MIRBuilder, OutArgs, ArgsHandler, Info.CallConv,
                          Info.IsVarArg))
     return false;
+
+  // Move any complex operations out of the argument assignment region; they may
+  // generate control flow, which would cause the physical registers to be
+  // livein to basic blocks that are not the entry. This is illegal while in SSA
+  // form.
+  for (MachineBasicBlock::iterator I = CallSeqStart,
+                                   E = MIRBuilder.getInsertPt();
+       I != E; ++I)
+    switch (I->getOpcode()) {
+    case MOS::G_ZEXT:
+    case MOS::G_SEXT:
+      MIRBuilder.getMBB().insert(CallSeqStart, I->removeFromParent());
+      break;
+    }
 
   // Insert the call once the outgoing arguments are in place.
   MIRBuilder.insertInstr(Call);
