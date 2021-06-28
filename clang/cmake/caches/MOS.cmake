@@ -60,6 +60,7 @@ set(LLVM_MOS_TOOLCHAIN_TOOLS
     llvm-ar
     llvm-as
     llvm-cat
+    llvm-config
     llvm-cov
     llvm-diff
     llvm-dwarfdump
