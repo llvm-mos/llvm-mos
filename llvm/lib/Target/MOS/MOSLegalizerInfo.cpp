@@ -139,6 +139,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // FIXME: Make this a libcall.
   getActionDefinitionsBuilder({G_SDIVREM, G_UDIVREM}).lower();
 
+  getActionDefinitionsBuilder(
+      {G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT, G_SSHLSAT, G_USHLSAT})
+      .lower();
+
   getActionDefinitionsBuilder({G_LSHR, G_SHL})
       .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S64)
