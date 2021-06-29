@@ -171,7 +171,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .unsupported();
 
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({S1, S8})
+      .legalFor({S1, S8, P})
       .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
