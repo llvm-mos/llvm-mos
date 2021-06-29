@@ -480,25 +480,25 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
   Register Src = MI.getOperand(1).getReg();
   Register Amt = MI.getOperand(2).getReg();
 
-  // Presently, only left shifts by one bit are supported.
-  auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
-  if (!ConstantAmt)
-    return shiftLibcall(Helper, MRI, MI);
-
-  if (ConstantAmt->Value.getZExtValue() % 8 == 0)
-    return Helper.narrowScalarShiftByConstant(
-               MI, ConstantAmt->Value,
-               LLT::scalar(MRI.getType(Src).getSizeInBits() / 2),
-               MRI.getType(Amt)) == LegalizerHelper::Legalized;
-  if (ConstantAmt->Value.getZExtValue() != 1)
-    return shiftLibcall(Helper, MRI, MI);
-
   LLT Ty = MRI.getType(Dst);
   assert(Ty == MRI.getType(Src));
   assert(Ty.isByteSized());
 
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
+
+  // Presently, only left shifts by one bit are supported.
+  auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
+  if (!ConstantAmt)
+    return shiftLibcall(Helper, MRI, MI);
+
+  if (Ty != S8 && ConstantAmt->Value.getZExtValue() % 8 == 0)
+    return Helper.narrowScalarShiftByConstant(
+               MI, ConstantAmt->Value,
+               LLT::scalar(MRI.getType(Src).getSizeInBits() / 2),
+               MRI.getType(Amt)) == LegalizerHelper::Legalized;
+  if (ConstantAmt->Value.getZExtValue() != 1)
+    return shiftLibcall(Helper, MRI, MI);
 
   Register Carry = Builder.buildConstant(S1, 0).getReg(0);
   unsigned Opcode = MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE;
