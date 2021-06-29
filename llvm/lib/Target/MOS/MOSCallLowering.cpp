@@ -376,20 +376,6 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                          Info.IsVarArg))
     return false;
 
-  // Move any complex operations out of the argument assignment region; they may
-  // generate control flow, which would cause the physical registers to be
-  // livein to basic blocks that are not the entry. This is illegal while in SSA
-  // form.
-  for (MachineBasicBlock::iterator I = CallSeqStart,
-                                   E = MIRBuilder.getInsertPt();
-       I != E; ++I)
-    switch (I->getOpcode()) {
-    case MOS::G_ZEXT:
-    case MOS::G_SEXT:
-      MIRBuilder.getMBB().insert(CallSeqStart, I->removeFromParent());
-      break;
-    }
-
   // Insert the call once the outgoing arguments are in place.
   MIRBuilder.insertInstr(Call);
 

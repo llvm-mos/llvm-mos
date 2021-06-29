@@ -42,10 +42,13 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+  void moveAwayFromCalls(MachineFunction &MF);
 };
 
 bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
+
+  moveAwayFromCalls(MF);
 
   for (auto I = MF.begin(), E = MF.end(); I != E; ++I) {
     MachineBasicBlock &MBB = *I;
@@ -124,6 +127,63 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+// Before lowering selects, they and all attached instructions need to be
+// moved outside of call regions. Otherwise, they can create live physical
+// registers in basic blocks that are not entries, which is illegal in SSA
+// form.
+void MOSLowerSelect::moveAwayFromCalls(MachineFunction &MF) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (auto I = MBB.begin(), E = MBB.end(); I != E; ++I) {
+      if (I->getOpcode() != MOS::JSR)
+        continue;
+
+      SmallVector<MachineInstr *> PushedMIs;
+      SmallSet<Register,
+               CalculateSmallVectorDefaultInlinedElements<Register>::value>
+          UsedRegs;
+
+      const auto DefinesUsedReg = [&](const MachineInstr &MI) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg() || !MO.isDef())
+            continue;
+          if (UsedRegs.contains(MO.getReg()))
+            return true;
+        }
+        return false;
+      };
+
+      const auto TrackUsedRegs = [&](const MachineInstr &MI) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg() || !MO.isUse() || !MO.getReg().isVirtual())
+            continue;
+          UsedRegs.insert(MO.getReg());
+        }
+      };
+
+      auto J = std::prev(I);
+      for (; J->getOpcode() != MOS::ADJCALLSTACKDOWN; --J) {
+        if (J->getOpcode() == MOS::G_SELECT || DefinesUsedReg(*J)) {
+          TrackUsedRegs(*J);
+          auto NewJ = std::next(J);
+          PushedMIs.push_back(J->removeFromParent());
+          J = NewJ;
+        }
+      }
+      while (!PushedMIs.empty()) {
+        MBB.insert(J, PushedMIs.back());
+        PushedMIs.pop_back();
+      }
+
+// G_SELECTs should never appear in the return value part of calls, since
+// they're used for extensions, not truncations.
+#ifndef NDEBUG
+     for (auto J = std::next(I); J->getOpcode() != MOS::ADJCALLSTACKUP; ++J)
+       assert(J->getOpcode() != MOS::G_SELECT);
+#endif
+    }
+  }
 }
 
 } // namespace
