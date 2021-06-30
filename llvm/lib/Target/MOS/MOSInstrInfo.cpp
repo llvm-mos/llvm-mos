@@ -582,20 +582,33 @@ void MOSInstrInfo::loadStoreRegStackSlot(
          MRI.getRegClass(Reg)->hasSuperClassEq(&MOS::Imag16RegClass))) {
       MachineOperand Lo = MachineOperand::CreateReg(Reg, IsLoad);
       MachineOperand Hi = Lo;
+      Register Tmp = Reg;
       if (Reg.isPhysical()) {
         Lo.setReg(TRI->getSubReg(Reg, MOS::sublo));
         Hi.setReg(TRI->getSubReg(Reg, MOS::subhi));
       } else {
         assert(Reg.isVirtual());
+        // Live intervals for the original virtual register will already have
+        // been computed by this point. Since this code introduces subregisters,
+        // these must be using a new virtual register; otherwise there would be
+        // no subregister live ranges for the new instructions. This can cause
+        // VirtRegMap to fail.
+        Tmp = MRI.createVirtualRegister(&MOS::Imag16RegClass);
+        Lo.setReg(Tmp);
         Lo.setSubReg(MOS::sublo);
         if (Lo.isDef())
           Lo.setIsUndef();
+        Hi.setReg(Tmp);
         Hi.setSubReg(MOS::subhi);
       }
+      if (!IsLoad && Tmp != Reg)
+        Builder.buildCopy(Tmp, Reg);
       loadStoreByteStaticStackSlot(Builder, Lo, FrameIndex, 0,
                                    MF.getMachineMemOperand(MMO, 0, 1));
       loadStoreByteStaticStackSlot(Builder, Hi, FrameIndex, 1,
                                    MF.getMachineMemOperand(MMO, 1, 1));
+      if (IsLoad && Tmp != Reg)
+        Builder.buildCopy(Reg, Tmp);
     } else {
       loadStoreByteStaticStackSlot(
           Builder, MachineOperand::CreateReg(Reg, IsLoad), FrameIndex, 0, MMO);
