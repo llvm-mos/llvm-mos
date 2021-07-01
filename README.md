@@ -4,12 +4,13 @@ This directory and its sub-directories contain source code for LLVM-MOS,
 an experiment to support the MOS 65xx series of microprocessors as first-class
 targets within the LLVM architecture.
 
-**WARNING!** As of this writing, this compiler and toolchain *has signficant 
-bugs*.  You should not expect to drop it into your project and generate running
-programs immediately.  Because this experiment is still early, this compiler
-should *not* be publicly reviewed, compared, or benchmarked against other
-compilers at this time.  Until we change this warning, we disclaim any
-performance metric regarding LLVM-MOS.
+**WARNING!** This compiler and toolchain has not been audited for C99
+compatibility. Very little attention has been given to the quality of
+code it generates beyond making sure that it's possible to clean up
+later. Because of this, please don't publicly review, compare, or
+benchmark this compiler against other compilers at this time. You'll
+be surprised how much better the code will get once we turn our
+full attention to it.
 
 To keep this project a clean fork of LLVM, no target-specific source code or
 libraries are part of this project. These are contained in the related
