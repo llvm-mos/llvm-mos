@@ -73,7 +73,7 @@ private:
   bool selectLshrShlE(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
-  bool selectUAddSubE(MachineInstr &MI);
+  bool selectUAddESbc(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
 
   // Select instructions that correspond 1:1 to a target instruction.
@@ -179,8 +179,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_TRUNC:
     return selectTrunc(MI);
   case MOS::G_UADDE:
-  case MOS::G_USUBE:
-    return selectUAddSubE(MI);
+  case MOS::G_SBC:
+    return selectUAddESbc(MI);
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
 
@@ -209,7 +209,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
     CarryInVal = 0;
     break;
   case MOS::G_SUB:
-    Opcode = MOS::G_USUBE;
+    Opcode = MOS::G_SBC;
     CarryInVal = 1;
     break;
   }
@@ -728,7 +728,7 @@ bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectUAddSubE(MachineInstr &MI) {
+bool MOSInstructionSelector::selectUAddESbc(MachineInstr &MI) {
   unsigned ImmOpcode;
   unsigned Imag8Opcode;
   switch (MI.getOpcode()) {
@@ -738,7 +738,7 @@ bool MOSInstructionSelector::selectUAddSubE(MachineInstr &MI) {
     ImmOpcode = MOS::ADCImm;
     Imag8Opcode = MOS::ADCImag8;
     break;
-  case MOS::G_USUBE:
+  case MOS::G_SBC:
     ImmOpcode = MOS::SBCImm;
     Imag8Opcode = MOS::SBCImag8;
     break;

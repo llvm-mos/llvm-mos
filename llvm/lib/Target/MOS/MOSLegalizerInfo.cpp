@@ -190,8 +190,13 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .clampScalar(0, S8, S8)
       .unsupported();
   getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lower();
-  getActionDefinitionsBuilder({G_UADDE, G_USUBE})
+  getActionDefinitionsBuilder(G_UADDE)
       .legalFor({S8})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, S8, S8)
+      .unsupported();
+  getActionDefinitionsBuilder(G_USUBE)
+      .customFor({S8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
@@ -308,6 +313,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_UADDO:
   case G_USUBO:
     return legalizeUAddSubO(Helper, MRI, MI);
+  case G_USUBE:
+    return legalizeUSubE(Helper, MRI, MI);
 
   // Memory Operations
   case G_LOAD:
@@ -762,28 +769,34 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
                                         MachineRegisterInfo &MRI,
                                         MachineInstr &MI) const {
-  unsigned Opcode;
-  int64_t CarryInVal;
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode.");
-  case G_UADDO:
-    Opcode = G_UADDE;
-    CarryInVal = 0;
-    break;
-  case G_USUBO:
-    Opcode = G_USUBE;
-    CarryInVal = 1;
-    break;
-  }
-
+  unsigned Opcode = MI.getOpcode() == G_UADDO ? G_UADDE : G_USUBE;
   LLT S1 = LLT::scalar(1);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   Builder.buildInstr(Opcode, {MI.getOperand(0), MI.getOperand(1)},
                      {MI.getOperand(2), MI.getOperand(3),
-                      Builder.buildConstant(S1, CarryInVal)});
+                      Builder.buildConstant(S1, 0)});
   MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeUSubE(LegalizerHelper &Helper,
+                                     MachineRegisterInfo &MRI,
+                                     MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLT S1 = LLT::scalar(1);
+
+  Register CarryOut = MI.getOperand(1).getReg();
+  Register CarryIn = MI.getOperand(4).getReg();
+
+  Helper.Observer.changingInstr(MI);
+  MI.setDesc(Builder.getTII().get(MOS::G_SBC));
+  MI.getOperand(4).setReg(Builder.buildNot(S1, CarryIn).getReg(0));
+  MI.getOperand(1).setReg(MRI.createGenericVirtualRegister(S1));
+  Helper.Observer.changedInstr(MI);
+
+  Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
+  Builder.buildNot(CarryOut, MI.getOperand(1));
   return true;
 }
 

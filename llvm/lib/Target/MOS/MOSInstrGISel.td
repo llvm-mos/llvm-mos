@@ -57,6 +57,14 @@ def G_INDEX : MOSGenericInstruction {
   let InOperandList = (ins type0:$base, type1:$offset);
 }
 
+// 8-bit subtraction with carry in and out. The carry uses the 6502 convention
+// that a zero carry indicates a borrow. G_USUBE instead uses a one carry to
+// indicate a borrow.
+def G_SBC : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
+}
+
 // Shift an 8-bit value left one bit, placing $carry_in in the LSB and placing
 // the previous MSB bit into $carry_out. This "even" version can be chained to
 // perform multi-byte shifts.
