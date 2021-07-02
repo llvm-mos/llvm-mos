@@ -4,6 +4,10 @@ This directory and its sub-directories contain source code for LLVM-MOS,
 an experiment to support the MOS 65xx series of microprocessors as first-class
 targets within the LLVM architecture.
 
+Status:
+The LLVM SingleSource end-to-end test cases pass on a simulated 6502. This is true at
+-O0, -O3, -Os, and -Oz.
+
 **WARNING!** This compiler and toolchain has not been audited for C99
 compatibility. Very little attention has been given to the quality of
 code it generates beyond making sure that it's possible to clean up
