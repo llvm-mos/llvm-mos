@@ -489,7 +489,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: trunc_16_8
     ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]].sublo
+    ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY [[COPY]].sublo
     ; CHECK: RTS implicit [[COPY1]]
     %0:any(s16) = COPY $rs1
     %1:any(s8) = G_TRUNC %0
@@ -503,7 +503,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: trunc_16_1
     ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]].sublo
+    ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY [[COPY]].sublo
     ; CHECK: [[COPY2:%[0-9]+]]:anyi1 = COPY [[COPY1]].sublsb
     ; CHECK: RTS implicit [[COPY2]]
     %0:any(s16) = COPY $rs1

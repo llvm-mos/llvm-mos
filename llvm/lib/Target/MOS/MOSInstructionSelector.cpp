@@ -603,6 +603,7 @@ bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
+
   LLT S16 = LLT::scalar(16);
   LLT S8 = LLT::scalar(8);
   LLT S1 = LLT::scalar(1);
@@ -612,32 +613,11 @@ bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
 
   LLT FromType = Builder.getMRI()->getType(From);
   LLT ToType = Builder.getMRI()->getType(To);
+  assert(FromType == S16 && ToType == S1);
 
-  // Bring FromType to S8.
-  if (FromType == S16) {
-    auto Copy = Builder.buildCopy(S8, From);
-    Copy->getOperand(1).setSubReg(MOS::sublo);
-    From = Copy.getReg(0);
-    FromType = S8;
-    constrainGenericOp(*Copy);
-  }
-
-  // Bring FromType to S1.
-  if (FromType != ToType) {
-    assert(FromType == S8);
-    assert(ToType == S1);
-    auto Copy = Builder.buildCopy(S1, From);
-    Copy->getOperand(1).setSubReg(MOS::sublsb);
-    From = Copy.getReg(0);
-    FromType = S1;
-    constrainGenericOp(*Copy);
-  }
-
-  assert(FromType == ToType);
-  auto Copy = Builder.buildCopy(To, From);
-  constrainGenericOp(*Copy);
-
-  MI.eraseFromParent();
+  MachineInstrSpan MIS(MI, MI.getParent());
+  MI.getOperand(1).setReg(Builder.buildTrunc(S8, From).getReg(0));
+  selectAll(MIS);
   return true;
 }
 

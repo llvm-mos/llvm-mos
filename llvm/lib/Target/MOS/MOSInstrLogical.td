@@ -342,6 +342,9 @@ def : Pat<(i16 (anyext Anyi1:$s)),
                          (INSERT_SUBREG (i8 (IMPLICIT_DEF)), Anyi1:$s, sublsb),
                          sublo)>;
 
+def : Pat<(i1 (trunc Anyi8:$s)), (EXTRACT_SUBREG Anyi8:$s, sublsb)>;
+def : Pat<(i8 (trunc Imag16:$s)), (EXTRACT_SUBREG Imag16:$s, sublo)>;
+
 //===---------------------------------------------------------------------===//
 // Constant Patterns
 //===---------------------------------------------------------------------===//
