@@ -60,8 +60,17 @@ def G_INDEX : MOSGenericInstruction {
 // 8-bit subtraction with carry in and out. The carry uses the 6502 convention
 // that a zero carry indicates a borrow. G_USUBE instead uses a one carry to
 // indicate a borrow.
-def G_SBC : MOSGenericInstruction {
+def G_USBCE : MOSGenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
+}
+
+// 8-bit subtraction with carry in and overflow out. The carry uses the 6502
+// convention that a zero carry indicates a borrow. G_SSUBE instead uses a one
+// carry to indicate a borrow. Both use a one overflow to indicate a signed
+// overflow.
+def G_SSBCE : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$v);
   let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
 }
 

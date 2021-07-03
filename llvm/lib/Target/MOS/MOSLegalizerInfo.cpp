@@ -184,18 +184,18 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_ABS).lower();
 
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
-  getActionDefinitionsBuilder({G_UADDO, G_USUBO})
+  getActionDefinitionsBuilder({G_UADDO, G_SADDO, G_USUBO, G_SSUBO})
       .customFor({S8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
   getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lower();
-  getActionDefinitionsBuilder(G_UADDE)
+  getActionDefinitionsBuilder({G_UADDE, G_SADDE})
       .legalFor({S8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
       .unsupported();
-  getActionDefinitionsBuilder(G_USUBE)
+  getActionDefinitionsBuilder({G_USUBE, G_SSUBE})
       .customFor({S8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, S8, S8)
@@ -311,10 +311,13 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_PTR_ADD:
     return legalizePtrAdd(Helper, MRI, MI);
   case G_UADDO:
+  case G_SADDO:
   case G_USUBO:
-    return legalizeUAddSubO(Helper, MRI, MI);
+  case G_SSUBO:
+    return legalizeAddSubO(Helper, MRI, MI);
   case G_USUBE:
-    return legalizeUSubE(Helper, MRI, MI);
+  case G_SSUBE:
+    return legalizeSubE(Helper, MRI, MI);
 
   // Memory Operations
   case G_LOAD:
@@ -766,23 +769,40 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
 
 // Convert odd versions of generic add/sub to even versions, which can subsume
 // the odd versions via a zero carry-in.
-bool MOSLegalizerInfo::legalizeUAddSubO(LegalizerHelper &Helper,
-                                        MachineRegisterInfo &MRI,
-                                        MachineInstr &MI) const {
-  unsigned Opcode = MI.getOpcode() == G_UADDO ? G_UADDE : G_USUBE;
+bool MOSLegalizerInfo::legalizeAddSubO(LegalizerHelper &Helper,
+                                       MachineRegisterInfo &MRI,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
   LLT S1 = LLT::scalar(1);
 
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  Builder.buildInstr(Opcode, {MI.getOperand(0), MI.getOperand(1)},
-                     {MI.getOperand(2), MI.getOperand(3),
-                      Builder.buildConstant(S1, 0)});
+  unsigned Opcode;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case G_UADDO:
+    Opcode = G_UADDE;
+    break;
+  case G_SADDO:
+    Opcode = G_SADDE;
+    break;
+  case G_USUBO:
+    Opcode = G_USUBE;
+    break;
+  case G_SSUBO:
+    Opcode = G_SSUBE;
+    break;
+  }
+
+  Builder.buildInstr(
+      Opcode, {MI.getOperand(0), MI.getOperand(1)},
+      {MI.getOperand(2), MI.getOperand(3), Builder.buildConstant(S1, 0)});
   MI.eraseFromParent();
   return true;
 }
 
-bool MOSLegalizerInfo::legalizeUSubE(LegalizerHelper &Helper,
-                                     MachineRegisterInfo &MRI,
-                                     MachineInstr &MI) const {
+bool MOSLegalizerInfo::legalizeSubE(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   LLT S1 = LLT::scalar(1);
 
@@ -790,13 +810,16 @@ bool MOSLegalizerInfo::legalizeUSubE(LegalizerHelper &Helper,
   Register CarryIn = MI.getOperand(4).getReg();
 
   Helper.Observer.changingInstr(MI);
-  MI.setDesc(Builder.getTII().get(MOS::G_SBC));
   MI.getOperand(4).setReg(Builder.buildNot(S1, CarryIn).getReg(0));
-  MI.getOperand(1).setReg(MRI.createGenericVirtualRegister(S1));
+  if (MI.getOpcode() == MOS::G_USUBE) {
+    MI.setDesc(Builder.getTII().get(MOS::G_USBCE));
+    MI.getOperand(1).setReg(MRI.createGenericVirtualRegister(S1));
+    Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
+    Builder.buildNot(CarryOut, MI.getOperand(1));
+  } else
+    MI.setDesc(Builder.getTII().get(MOS::G_SSBCE));
   Helper.Observer.changedInstr(MI);
 
-  Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-  Builder.buildNot(CarryOut, MI.getOperand(1));
   return true;
 }
 

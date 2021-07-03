@@ -53,10 +53,10 @@ private:
                     MachineInstr &MI) const;
   bool legalizePtrAdd(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
-  bool legalizeUAddSubO(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                        MachineInstr &MI) const;
-  bool legalizeUSubE(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                     MachineInstr &MI) const;
+  bool legalizeAddSubO(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                       MachineInstr &MI) const;
+  bool legalizeSubE(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
 
   // Memory Operations
   bool legalizeLoad(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

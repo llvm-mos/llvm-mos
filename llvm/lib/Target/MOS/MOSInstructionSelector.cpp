@@ -73,7 +73,7 @@ private:
   bool selectLshrShlE(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
-  bool selectUAddESbc(MachineInstr &MI);
+  bool selectAddSbcE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
 
   // Select instructions that correspond 1:1 to a target instruction.
@@ -179,8 +179,10 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_TRUNC:
     return selectTrunc(MI);
   case MOS::G_UADDE:
-  case MOS::G_SBC:
-    return selectUAddESbc(MI);
+  case MOS::G_SADDE:
+  case MOS::G_USBCE:
+  case MOS::G_SSBCE:
+    return selectAddSbcE(MI);
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
 
@@ -209,7 +211,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
     CarryInVal = 0;
     break;
   case MOS::G_SUB:
-    Opcode = MOS::G_SBC;
+    Opcode = MOS::G_USBCE;
     CarryInVal = 1;
     break;
   }
@@ -728,19 +730,35 @@ bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectUAddESbc(MachineInstr &MI) {
+bool MOSInstructionSelector::selectAddSbcE(MachineInstr &MI) {
   unsigned ImmOpcode;
   unsigned Imag8Opcode;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode.");
   case MOS::G_UADDE:
+  case MOS::G_SADDE:
     ImmOpcode = MOS::ADCImm;
     Imag8Opcode = MOS::ADCImag8;
     break;
-  case MOS::G_SBC:
+  case MOS::G_USBCE:
+  case MOS::G_SSBCE:
     ImmOpcode = MOS::SBCImm;
     Imag8Opcode = MOS::SBCImag8;
+    break;
+  }
+
+  bool Signed;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode.");
+  case MOS::G_UADDE:
+  case MOS::G_USBCE:
+    Signed = false;
+    break;
+  case MOS::G_SADDE:
+  case MOS::G_SSBCE:
+    Signed = true;
     break;
   }
 
@@ -763,6 +781,11 @@ bool MOSInstructionSelector::selectUAddESbc(MachineInstr &MI) {
   } else {
     Instr = Builder.buildInstr(Imag8Opcode, {Result, CarryOut, S1},
                                {L, R, CarryIn});
+  }
+  if (Signed) {
+    Register Tmp = Instr.getReg(1);
+    Instr->getOperand(1).setReg(Instr.getReg(2));
+    Instr->getOperand(2).setReg(Tmp);
   }
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
