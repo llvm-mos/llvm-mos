@@ -185,14 +185,11 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
 
-  case MOS::G_AND:
   case MOS::G_IMPLICIT_DEF:
   case MOS::G_INTTOPTR:
   case MOS::G_FREEZE:
-  case MOS::G_OR:
   case MOS::G_PHI:
   case MOS::G_PTRTOINT:
-  case MOS::G_XOR:
     return selectGeneric(MI);
   }
 }
@@ -707,9 +704,6 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode.");
-  case MOS::G_AND:
-    Opcode = MOS::ANDImag8;
-    break;
   case MOS::G_FREEZE:
   case MOS::G_INTTOPTR:
   case MOS::G_PTRTOINT:
@@ -718,14 +712,8 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   case MOS::G_IMPLICIT_DEF:
     Opcode = MOS::IMPLICIT_DEF;
     break;
-  case MOS::G_OR:
-    Opcode = MOS::ORAImag8;
-    break;
   case MOS::G_PHI:
     Opcode = MOS::PHI;
-    break;
-  case MOS::G_XOR:
-    Opcode = MOS::EORImag8;
     break;
   }
   MI.setDesc(TII.get(Opcode));

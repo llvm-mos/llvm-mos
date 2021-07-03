@@ -282,6 +282,15 @@ body: |
     RTS implicit %2
 ...
 ---
+name: implicit_def
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    %0:any(s1) = G_IMPLICIT_DEF
+    RTS implicit %0
+...
+---
 name: ldimm1
 legalized: true
 regBankSelected: true

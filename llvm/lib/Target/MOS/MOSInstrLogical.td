@@ -102,18 +102,20 @@ def SBCImag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
 // Bitwise instructions
 //===---------------------------------------------------------------------===//
 
-class MOSBitwiseInstr<Instruction opcode> :
+class MOSBitwiseInstr<Instruction opcode, SDNode node> :
     MOSLogicalInstr, PseudoInstExpansion<(opcode addr8:$r)> {
   let OutOperandList = (outs Ac:$dst);
   let InOperandList = (ins Ac:$l, Imag8:$r);
   let Constraints = "$dst = $l";
 
+  let Pattern = [(set Ac:$dst, (node Ac:$l, Imag8:$r))];
+
   let isCommutable = true;
 }
 
-def ANDImag8 : MOSBitwiseInstr<AND_ZeroPage>;
-def EORImag8 : MOSBitwiseInstr<EOR_ZeroPage>;
-def ORAImag8 : MOSBitwiseInstr<ORA_ZeroPage>;
+def ANDImag8 : MOSBitwiseInstr<AND_ZeroPage, and>;
+def EORImag8 : MOSBitwiseInstr<EOR_ZeroPage, xor>;
+def ORAImag8 : MOSBitwiseInstr<ORA_ZeroPage, or>;
 
 //===---------------------------------------------------------------------===//
 // Shift/Rotate Instructions
