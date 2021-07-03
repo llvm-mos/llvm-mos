@@ -453,7 +453,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         if (!MOS::GPRRegClass.contains(Tmp))
           Tmp = createVReg(Builder, MOS::GPRRegClass);
         Builder.buildInstr(MOS::SelectImm, {Tmp},
-                           {SrcReg, INT64_C(-1), INT64_C(0)});
+                           {SrcReg, INT64_C(1), INT64_C(0)});
         if (Tmp != DestReg)
           copyPhysRegImpl(Builder, DestReg, Tmp);
       } else {

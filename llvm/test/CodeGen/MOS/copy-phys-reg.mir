@@ -160,7 +160,7 @@ body: |
     liveins: $v
     ; CHECK-LABEL: name: flag_to_gpr_lsb
     ; CHECK: liveins: $v
-    ; CHECK: $x = SelectImm $v, -1, 0
+    ; CHECK: $x = SelectImm $v, 1, 0
     $xlsb = COPY $v
 ...
 ---
@@ -171,7 +171,7 @@ body: |
     liveins: $v
     ; CHECK-LABEL: name: flag_to_nongpr_lsb
     ; CHECK: liveins: $v
-    ; CHECK: [[SelectImm:%[0-9]+]]:gpr = SelectImm $v, -1, 0
+    ; CHECK: [[SelectImm:%[0-9]+]]:gpr = SelectImm $v, 1, 0
     ; CHECK: $rc2 = STImag8 [[SelectImm]]
     $rc2lsb = COPY $v
 ...
