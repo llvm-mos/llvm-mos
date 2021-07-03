@@ -42,6 +42,12 @@ using namespace MIPatternMatch;
 
 #define DEBUG_TYPE "mos-isel"
 
+namespace llvm {
+namespace MOS {
+extern RegisterBank AnyRegBank;
+} // namespace MOS
+} // namespace llvm
+
 namespace {
 
 #define GET_GLOBALISEL_PREDICATE_BITSET
@@ -293,7 +299,7 @@ bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
 
   assert((!N || !Z) && "G_CMP can output at most one of N or Z.");
 
-  auto C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(1)});
+  auto C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(-1)});
 
   auto SBC = Builder.buildInstr(
       MOS::SBCNZImag8,
@@ -313,29 +319,15 @@ bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
   uint64_t Imm = MI.getOperand(1).getCImm()->getZExtValue();
 
   LLT DstTy = Builder.getMRI()->getType(Dst);
-  switch (DstTy.getSizeInBits()) {
-  default:
-    llvm_unreachable("Unexpected constant size.");
-  case 1: {
-    auto Ld = Builder.buildInstr(MOS::LDImm1, {Dst}, {Imm});
-    MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Ld, TII, TRI, RBI);
-  }
-  case 8: {
-    auto Ld = Builder.buildInstr(MOS::LDImm, {Dst}, {Imm});
-    MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Ld, TII, TRI, RBI);
-  }
-  case 16: {
-    MachineInstrSpan MIS(MI, MI.getParent());
-    auto Lo = Builder.buildConstant(S8, Imm & 0xFF);
-    auto Hi = Builder.buildConstant(S8, Imm >> 8);
-    Builder.buildMerge(MI.getOperand(0), {Lo, Hi});
-    MI.eraseFromParent();
-    selectAll(MIS);
-    return true;
-  }
-  }
+  assert(DstTy.getSizeInBits() == 16);
+
+  MachineInstrSpan MIS(MI, MI.getParent());
+  auto Lo = Builder.buildConstant(S8, Imm & 0xFF);
+  auto Hi = Builder.buildConstant(S8, Imm >> 8);
+  Builder.buildMerge(MI.getOperand(0), {Lo, Hi});
+  MI.eraseFromParent();
+  selectAll(MIS);
+  return true;
 }
 
 bool MOSInstructionSelector::selectIndex(MachineInstr &MI) {
@@ -843,6 +835,19 @@ void MOSInstructionSelector::constrainOperandRegClass(
 
 bool MOSInstructionSelector::selectAll(MachineInstrSpan MIS) {
   MachineRegisterInfo &MRI = MIS.begin()->getMF()->getRegInfo();
+
+  // Ensure that all new generic virtual registers have a register bank.
+  for (MachineInstr& MI : MIS)
+    for (MachineOperand &MO : MI.operands()) {
+      if (!MO.isReg())
+        continue;
+      Register Reg = MO.getReg();
+      if (!MO.getReg().isVirtual())
+        continue;
+      if (MRI.getRegClassOrNull(MO.getReg()))
+        continue;
+      MRI.setRegBank(Reg, MOS::AnyRegBank);
+    }
 
   // Select instructions in reverse block order. We permit erasing so have
   // to resort to manually iterating and recognizing the begin (rend) case.

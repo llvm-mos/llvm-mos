@@ -87,7 +87,7 @@ name: sec_implied
 # CHECK-LABEL: sec_implied
 body: |
   bb.0.entry:
-    $c = LDCImm 1
+    $c = LDCImm -1
     ; CHECK: sec{{$}}
     RTS
     ; CHECK-NEXT: rts

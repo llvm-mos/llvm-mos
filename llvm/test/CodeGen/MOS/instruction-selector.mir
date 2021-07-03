@@ -42,7 +42,7 @@ body: |
     ; CHECK-LABEL: name: sub
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY $a
-    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
+    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm -1
     ; CHECK: %2:ac, dead %4:cc, dead %3:vc = SBCImag8 [[COPY]], [[COPY1]], [[LDCImm]]
     ; CHECK: RTS implicit %2
     %0:any(s8) = COPY $x
@@ -58,7 +58,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: sub_imm
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
-    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
+    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm -1
     ; CHECK: %2:ac, dead %4:cc, dead %3:vc = SBCImm [[COPY]], 42, [[LDCImm]]
     ; CHECK: RTS implicit %2
     %0:any(s8) = COPY $x
@@ -226,7 +226,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $a
     ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY [[LDImm]]
-    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
+    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm -1
     ; CHECK: %7:ac, %2:cc, %3:gpr_lsb, %4:vc, $noreg = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]]
     ; CHECK: RTS implicit %2, implicit %3, implicit %4
     %0:any(s8) = COPY $a
@@ -244,7 +244,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $a
     ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 42
     ; CHECK: [[COPY1:%[0-9]+]]:imag8 = COPY [[LDImm]]
-    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm 1
+    ; CHECK: [[LDCImm:%[0-9]+]]:cc = LDCImm -1
     ; CHECK: %7:ac, %2:cc, $noreg, %4:vc, %5:gpr_lsb = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]]
     ; CHECK: RTS implicit %2, implicit %4, implicit %5
     %0:any(s8) = COPY $a
@@ -288,7 +288,7 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm1
-    ; CHECK: [[LDImm1_:%[0-9]+]]:cv_gpr_lsb = LDImm1 1
+    ; CHECK: [[LDImm1_:%[0-9]+]]:cv_gpr_lsb = LDImm1 -1
     ; CHECK: RTS implicit [[LDImm1_]]
     %0:any(s1) = G_CONSTANT i1 true
     RTS implicit %0
@@ -312,7 +312,7 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_16
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 210
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm -46
     ; CHECK: [[LDImm1:%[0-9]+]]:gpr = LDImm 4
     ; CHECK: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDImm]], %subreg.sublo, [[LDImm1]], %subreg.subhi
     ; CHECK: RTS implicit [[REG_SEQUENCE]]
@@ -357,7 +357,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: load_indexed_indir_offset
     ; CHECK: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm 255
+    ; CHECK: [[LDImm:%[0-9]+]]:yc = LDImm -1
     ; CHECK: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load 1)
     ; CHECK: RTS implicit [[LDYIndir]]
     %0:any(p0) = COPY $rs1

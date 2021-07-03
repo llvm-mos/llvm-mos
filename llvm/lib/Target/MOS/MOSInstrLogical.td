@@ -328,8 +328,8 @@ def STYIndir : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> 
 
 def : Pat<(add Ac:$l, (i8 imm:$imm)), (ADCImm Ac:$l, imm:$imm, (LDCImm 0))>;
 def : Pat<(add Ac:$l, Imag8:$r), (ADCImag8 Ac:$l, Imag8:$r, (LDCImm 0))>;
-def : Pat<(sub Ac:$l, (i8 imm:$imm)), (SBCImm Ac:$l, imm:$imm, (LDCImm 1))>;
-def : Pat<(sub Ac:$l, Imag8:$r), (SBCImag8 Ac:$l, Imag8:$r, (LDCImm 1))>;
+def : Pat<(sub Ac:$l, (i8 imm:$imm)), (SBCImm Ac:$l, imm:$imm, (LDCImm -1))>;
+def : Pat<(sub Ac:$l, Imag8:$r), (SBCImag8 Ac:$l, Imag8:$r, (LDCImm -1))>;
 
 //===---------------------------------------------------------------------===//
 // Integer Extension/Truncation Patterns
@@ -341,3 +341,10 @@ def : Pat<(i16 (anyext Anyi1:$s)),
           (INSERT_SUBREG (IMPLICIT_DEF),
                          (INSERT_SUBREG (i8 (IMPLICIT_DEF)), Anyi1:$s, sublsb),
                          sublo)>;
+
+//===---------------------------------------------------------------------===//
+// Constant Patterns
+//===---------------------------------------------------------------------===//
+
+def : Pat<(i1 imm:$s), (LDImm1 imm:$s)>;
+def : Pat<(i8 imm:$s), (LDImm imm:$s)>;

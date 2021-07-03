@@ -16,7 +16,7 @@ body: |
     liveins: $rc2, $c
     ; CHECK-LABEL: name: sbcnzimag8_n
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
-    ; CHECK: $xlsb = SelectImm $n, 1, 0
+    ; CHECK: $xlsb = SelectImm $n, -1, 0
     $a, $c, $xlsb, $v, $noreg = SBCNZImag8 $a, $rc2, $c, implicit-def $nz
 ...
 ---
@@ -26,7 +26,7 @@ body: |
     liveins: $rc2, $c
     ; CHECK-LABEL: name: sbcnzimag8_z
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
-    ; CHECK: $ylsb = SelectImm $z, 1, 0
+    ; CHECK: $ylsb = SelectImm $z, -1, 0
     $a, $c, $noreg, $v, $ylsb = SBCNZImag8 $a, $rc2, $c, implicit-def $nz
 ...
 ---
@@ -74,15 +74,15 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm1_lsb
     ; CHECK: $a = LDImm 1
-    $alsb = LDImm1 1
+    $alsb = LDImm1 -1
 ...
 ---
 name: ldcimm
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldcimm
-    ; CHECK: $c = LDCImm 1
-    $c = LDImm1 1
+    ; CHECK: $c = LDCImm -1
+    $c = LDImm1 -1
 ...
 ---
 name: set_v
@@ -90,7 +90,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: set_v
     ; CHECK: $v = BITAbs undef $a, &__set_v
-    $v = LDImm1 1
+    $v = LDImm1 -1
 ...
 ---
 name: clv

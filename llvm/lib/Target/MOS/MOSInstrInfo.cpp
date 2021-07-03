@@ -433,7 +433,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
             Builder.buildInstr(MOS::PL, {MOS::A}, {})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
-                               {Register(MOS::Z), INT64_C(0), INT64_C(1)});
+                               {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
           } else {
             Register Tmp = createVReg(Builder, MOS::AcRegClass);
             copyPhysRegImpl(Builder, Tmp, SrcReg);
@@ -441,7 +441,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                 ->addOperand(MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true,
                                                        /*isImp=*/true));
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
-                               {Register(MOS::Z), INT64_C(0), INT64_C(1)});
+                               {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
           }
         }
       }
@@ -453,12 +453,12 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         if (!MOS::GPRRegClass.contains(Tmp))
           Tmp = createVReg(Builder, MOS::GPRRegClass);
         Builder.buildInstr(MOS::SelectImm, {Tmp},
-                           {SrcReg, INT64_C(1), INT64_C(0)});
+                           {SrcReg, INT64_C(-1), INT64_C(0)});
         if (Tmp != DestReg)
           copyPhysRegImpl(Builder, DestReg, Tmp);
       } else {
         Builder.buildInstr(MOS::SelectImm, {DestReg},
-                           {SrcReg, INT64_C(1), INT64_C(0)});
+                           {SrcReg, INT64_C(-1), INT64_C(0)});
       }
     }
   } else
@@ -669,7 +669,7 @@ void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
            "At most one of N and Z can be set in SBCNZImag8");
   if (NZOut != MOS::NoRegister) {
     SBC.addDef(MOS::NZ, RegState::Implicit);
-    Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(1), INT64_C(0)});
+    Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(-1), INT64_C(0)});
   }
   MI.eraseFromParent();
 }
@@ -724,13 +724,14 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
     assert(MOS::GPRRegClass.contains(DestReg));
     Opcode = MOS::LDImm;
     MI.getOperand(0).setReg(DestReg);
+    MI.getOperand(1).setImm(!!Val);
     break;
   }
   case MOS::C:
     Opcode = MOS::LDCImm;
     break;
   case MOS::V:
-    if (Val == 1) {
+    if (Val) {
       auto Instr = Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
                        .addUse(MOS::A, RegState::Undef)
                        .addExternalSymbol("__set_v");
@@ -739,7 +740,7 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
       return;
     }
     Opcode = MOS::CLV;
-    // Remove imm 1
+    // Remove imm.
     MI.RemoveOperand(1);
     break;
   }

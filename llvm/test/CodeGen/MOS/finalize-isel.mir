@@ -9,26 +9,26 @@ body: |
     ; CHECK-LABEL: name: selectimm_i1
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
     ; CHECK: liveins: $a, $c
-    ; CHECK: $v = LDImm1 1
+    ; CHECK: $v = LDImm1 -1
     ; CHECK: BR %bb.1, $c, 1
     ; CHECK: .2.entry:
     ; CHECK: successors: %bb.1(0x80000000)
     ; CHECK: liveins: $a
-    ; CHECK: $v = LDImm1 2
+    ; CHECK: $v = LDImm1 0
     ; CHECK: .1.entry:
     ; CHECK: successors: %bb.4(0x40000000), %bb.3(0x40000000)
     ; CHECK: liveins: $a, $v
-    ; CHECK: $xlsb = LDImm1 1
+    ; CHECK: $xlsb = LDImm1 -1
     ; CHECK: BR %bb.3, $v, 1
     ; CHECK: .4.entry:
     ; CHECK: successors: %bb.3(0x80000000)
     ; CHECK: liveins: $a
-    ; CHECK: $xlsb = LDImm1 2
+    ; CHECK: $xlsb = LDImm1 0
     ; CHECK: .3.entry:
     ; CHECK: liveins: $a, $xlsb
     ; CHECK: RTS implicit $a, implicit $xlsb
-    $v    = SelectImm $c, 1, 2
-    $xlsb = SelectImm $v, 1, 2
+    $v    = SelectImm $c, -1, 0
+    $xlsb = SelectImm $v, -1, 0
     RTS implicit $a, implicit $xlsb
 ...
 ---

@@ -206,7 +206,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     case 0:
       OutMI.setOpcode(MOS::CLC_Implied);
       return;
-    case 1:
+    case -1:
       OutMI.setOpcode(MOS::SEC_Implied);
       return;
     }

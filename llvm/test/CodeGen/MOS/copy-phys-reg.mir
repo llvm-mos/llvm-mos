@@ -126,7 +126,7 @@ body: |
     ; CHECK: liveins: $alsb
     ; CHECK: PH $a
     ; CHECK: $a = PL implicit-def $nz
-    ; CHECK: $v = SelectImm $z, 0, 1
+    ; CHECK: $v = SelectImm $z, 0, -1
     $v = COPY $alsb
 ...
 ---
@@ -138,7 +138,7 @@ body: |
     ; CHECK-LABEL: name: non_alsb_to_v
     ; CHECK: liveins: $xlsb
     ; CHECK: [[T_A:%[0-9]+]]:ac = T_A $x, implicit-def $nz
-    ; CHECK: $v = SelectImm $z, 0, 1
+    ; CHECK: $v = SelectImm $z, 0, -1
     $v = COPY $xlsb
 ...
 ---
@@ -149,7 +149,7 @@ body: |
     liveins: $v
     ; CHECK-LABEL: name: flag_to_flag
     ; CHECK: liveins: $v
-    ; CHECK: $c = SelectImm $v, 1, 0
+    ; CHECK: $c = SelectImm $v, -1, 0
     $c = COPY $v
 ...
 ---
@@ -160,7 +160,7 @@ body: |
     liveins: $v
     ; CHECK-LABEL: name: flag_to_gpr_lsb
     ; CHECK: liveins: $v
-    ; CHECK: $x = SelectImm $v, 1, 0
+    ; CHECK: $x = SelectImm $v, -1, 0
     $xlsb = COPY $v
 ...
 ---
@@ -171,7 +171,7 @@ body: |
     liveins: $v
     ; CHECK-LABEL: name: flag_to_nongpr_lsb
     ; CHECK: liveins: $v
-    ; CHECK: [[SelectImm:%[0-9]+]]:gpr = SelectImm $v, 1, 0
+    ; CHECK: [[SelectImm:%[0-9]+]]:gpr = SelectImm $v, -1, 0
     ; CHECK: $rc2 = STImag8 [[SelectImm]]
     $rc2lsb = COPY $v
 ...
