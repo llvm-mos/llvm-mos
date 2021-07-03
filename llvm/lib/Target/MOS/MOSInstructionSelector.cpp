@@ -61,7 +61,6 @@ private:
   const MOSRegisterInfo &TRI;
   const MOSRegisterBankInfo &RBI;
 
-  bool selectAddSub(MachineInstr &MI);
   bool selectAnyExt(MachineInstr &MI);
   bool selectBrCondImm(MachineInstr &MI);
   bool selectCmp(MachineInstr &MI);
@@ -151,9 +150,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return false;
-  case MOS::G_ADD:
-  case MOS::G_SUB:
-    return selectAddSub(MI);
   case MOS::G_ANYEXT:
     return selectAnyExt(MI);
   case MOS::G_BRCOND_IMM:
@@ -196,34 +192,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_XOR:
     return selectGeneric(MI);
   }
-}
-
-bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-
-  unsigned Opcode;
-  int64_t CarryInVal;
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode.");
-  case MOS::G_ADD:
-    Opcode = MOS::G_UADDE;
-    CarryInVal = 0;
-    break;
-  case MOS::G_SUB:
-    Opcode = MOS::G_USBCE;
-    CarryInVal = 1;
-    break;
-  }
-
-  LLT S1 = LLT::scalar(1);
-
-  MachineInstrSpan MIS(MI, MI.getParent());
-  auto CarryIn = Builder.buildConstant(S1, CarryInVal);
-  Builder.buildInstr(Opcode, {MI.getOperand(0), S1},
-                     {MI.getOperand(1), MI.getOperand(2), CarryIn});
-  MI.eraseFromParent();
-  return selectAll(MIS);
 }
 
 bool MOSInstructionSelector::selectAnyExt(MachineInstr &MI) {
