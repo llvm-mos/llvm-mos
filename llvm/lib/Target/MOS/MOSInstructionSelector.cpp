@@ -61,7 +61,6 @@ private:
   const MOSRegisterInfo &TRI;
   const MOSRegisterBankInfo &RBI;
 
-  bool selectAnyExt(MachineInstr &MI);
   bool selectBrCondImm(MachineInstr &MI);
   bool selectCmp(MachineInstr &MI);
   bool selectConstant(MachineInstr &MI);
@@ -150,8 +149,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return false;
-  case MOS::G_ANYEXT:
-    return selectAnyExt(MI);
   case MOS::G_BRCOND_IMM:
     return selectBrCondImm(MI);
   case MOS::G_CONSTANT:
@@ -192,52 +189,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_XOR:
     return selectGeneric(MI);
   }
-}
-
-bool MOSInstructionSelector::selectAnyExt(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-  LLT S16 = LLT::scalar(16);
-  LLT S8 = LLT::scalar(8);
-  LLT S1 = LLT::scalar(1);
-
-  Register From = MI.getOperand(1).getReg();
-  Register To = MI.getOperand(0).getReg();
-
-  LLT FromType = Builder.getMRI()->getType(From);
-  LLT ToType = Builder.getMRI()->getType(To);
-
-  // Bring FromType to S8.
-  if (FromType == S1) {
-    Register Undef =
-        Builder.buildInstr(MOS::IMPLICIT_DEF, {&MOS::Anyi8RegClass}, {})
-            .getReg(0);
-    auto Insert = Builder.buildInstr(MOS::INSERT_SUBREG, {S8}, {Undef, From})
-                      .addImm(MOS::sublsb);
-    From = Insert.getReg(0);
-    FromType = S8;
-    constrainGenericOp(*Insert);
-  }
-
-  // Bring FromType to S16.
-  if (FromType != ToType) {
-    assert(FromType == S8);
-    assert(ToType == S16);
-    Register Undef =
-        Builder.buildInstr(MOS::IMPLICIT_DEF, {&MOS::Imag16RegClass}, {})
-            .getReg(0);
-    auto Insert = Builder.buildInstr(MOS::INSERT_SUBREG, {S16}, {Undef, From})
-                      .addImm(MOS::sublo);
-    From = Insert.getReg(0);
-    FromType = S16;
-    constrainGenericOp(*Insert);
-  }
-
-  assert(FromType == ToType);
-  auto Copy = Builder.buildCopy(To, From);
-  constrainGenericOp(*Copy);
-
-  MI.eraseFromParent();
-  return true;
 }
 
 // Given a G_CMP instruction Cmp and one of its output virtual registers,

@@ -154,9 +154,8 @@ body: |
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK: [[COPY:%[0-9]+]]:anyi1 = COPY $c
     ; CHECK: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:anyi8 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY [[INSERT_SUBREG]]
-    ; CHECK: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[COPY1]], 0, implicit-def $nz
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
+    ; CHECK: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[INSERT_SUBREG]], 0, implicit-def $nz
     ; CHECK: BR %bb.0, $z, 1
     ; CHECK: RTS
     %0:any(s1) = COPY $c
