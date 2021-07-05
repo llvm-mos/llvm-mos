@@ -49,38 +49,16 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
   /// registers must be avoided when selecting registers for arguments.
   BitVector Reserved;
 
-  /// A VReg containing the value of the stack pointer right before control flow
-  /// leaves the current function. The VReg is cached to avoid generating it
-  /// more than once.
-  Register SPReg = 0;
-
-  /// Size in bytes of the stack region used to pass arguments. Records space to
-  /// be allocated for those arguments via call frame pseudos.
+  /// Size in bytes of the stack region used to pass values. Records space to be
+  /// allocated for outgoing arguments via call frame pseudos. Unused for
+  /// outgoing return values; sufficient space will already have been allocated
+  /// by the caller.
   uint64_t StackSize = 0;
 
   MOSOutgoingValueHandler(MachineIRBuilder &MIRBuilder,
                           MachineInstrBuilder &MIB, MachineRegisterInfo &MRI)
       : OutgoingValueHandler(MIRBuilder, MRI, nullptr), MIB(MIB) {
     Reserved = MRI.getTargetRegisterInfo()->getReservedRegs(MIRBuilder.getMF());
-  }
-
-  Register getStackAddress(uint64_t Size, int64_t Offset,
-                           MachinePointerInfo &MPO,
-                           ISD::ArgFlagsTy Flags) override {
-    assert(1 <= Size && Size < 65536);
-    assert(0 <= Offset && Offset < 65536);
-
-    MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
-
-    LLT P = LLT::pointer(0, 16);
-
-    // Cache the SP virtual register to avoid generating it more than once.
-    if (!SPReg)
-      SPReg = MIRBuilder.buildCopy(P, Register(MOS::RS0)).getReg(0);
-
-    auto OffsetReg =
-        MIRBuilder.buildConstant(LLT::scalar(16), Offset).getReg(0);
-    return MIRBuilder.buildPtrAdd(P, SPReg, OffsetReg).getReg(0);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -134,26 +112,37 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
   }
 };
 
-/// Handler to receive values from formal arguments and call returns.
-struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
-  /// Function to mark the given register as live-in. These will be
-  /// function-level live-ins or implicit defs for formal arguments and call
-  /// statements, respectively.
-  std::function<void(Register Reg)> MakeLive;
+struct MOSOutgoingArgsHandler : MOSOutgoingValueHandler {
+  /// A VReg containing the value of the stack pointer right before control flow
+  /// leaves the current function. The VReg is cached to avoid generating it
+  /// more than once.
+  Register SPReg = 0;
 
-  /// Cache of the reserved registers for the current function.
-  BitVector Reserved;
+  MOSOutgoingArgsHandler(MachineIRBuilder &MIRBuilder, MachineInstrBuilder &MIB,
+                         MachineRegisterInfo &MRI)
+      : MOSOutgoingValueHandler(MIRBuilder, MIB, MRI) {}
 
-  /// Size of the stack region used to pass fixed arguments. This indicates the
-  /// beginning of the stack region used for the varargs portion of calls.
-  uint64_t StackSize = 0;
+  Register getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
+    MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
 
-  MOSIncomingValueHandler(MachineIRBuilder &MIRBuilder,
-                          MachineRegisterInfo &MRI,
-                          std::function<void(Register Reg)> MakeLive)
-      : IncomingValueHandler(MIRBuilder, MRI, nullptr), MakeLive(MakeLive) {
-    Reserved = MRI.getTargetRegisterInfo()->getReservedRegs(MIRBuilder.getMF());
+    LLT P = LLT::pointer(0, 16);
+
+    // Cache the SP virtual register to avoid generating it more than once.
+    if (!SPReg)
+      SPReg = MIRBuilder.buildCopy(P, Register(MOS::RS0)).getReg(0);
+
+    auto OffsetReg =
+        MIRBuilder.buildConstant(LLT::scalar(16), Offset).getReg(0);
+    return MIRBuilder.buildPtrAdd(P, SPReg, OffsetReg).getReg(0);
   }
+};
+
+struct MOSOutgoingReturnHandler : MOSOutgoingValueHandler {
+  MOSOutgoingReturnHandler(MachineIRBuilder &MIRBuilder,
+                           MachineInstrBuilder &MIB, MachineRegisterInfo &MRI)
+      : MOSOutgoingValueHandler(MIRBuilder, MIB, MRI) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
@@ -163,6 +152,24 @@ struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
     auto AddrReg = MIRBuilder.buildFrameIndex(LLT::pointer(0, 16), FI);
     return AddrReg.getReg(0);
+  }
+};
+
+/// Handler to receive values from formal arguments and call returns.
+struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
+  /// Size of the stack region used to pass fixed arguments. This indicates the
+  /// beginning of the stack region used for the varargs portion of calls, and
+  /// the minimum size to pre-allocate for incoming return values when emitting
+  /// call frame pseudo-instructions.
+  uint64_t StackSize = 0;
+
+  /// Cache of the reserved registers for the current function.
+  BitVector Reserved;
+
+  MOSIncomingValueHandler(MachineIRBuilder &MIRBuilder,
+                          MachineRegisterInfo &MRI)
+      : IncomingValueHandler(MIRBuilder, MRI, nullptr) {
+    Reserved = MRI.getTargetRegisterInfo()->getReservedRegs(MIRBuilder.getMF());
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -177,20 +184,9 @@ struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
 
     // Ensure that the physical register is considerd live at the point control
     // flow (re)enters to the current function.
-    MakeLive(PhysReg);
+    makeLive(PhysReg);
 
     MIRBuilder.buildCopy(ValVReg, PhysReg);
-  }
-
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
-    MachineFunction &MF = MIRBuilder.getMF();
-    // All such loads are invariant: if the values are later spilled, they'll be
-    // spilled to spill slots, not the original incoming argument slots.
-    auto *MMO = MF.getMachineMemOperand(
-        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant,
-        MemSize, inferAlignFromPtrInfo(MF, MPO));
-    MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 
   bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
@@ -204,11 +200,85 @@ struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
 
     // Use TableGen-ereted code to assign the argument to a location.
     bool Res = CC_MOS(ValNo, ValVT, LocVT, LocInfo, Flags, State);
-
-    // Record current max stack size so that space can be allocated for the
-    // outgoing arguments via call frame pseudos.
     StackSize = State.getNextStackOffset();
     return Res;
+  }
+
+  /// Mark the given register as live-in. These will be function-level live-ins
+  /// or implicit defs for formal arguments or call statements, respectively.
+  virtual void makeLive(Register PhysReg) = 0;
+};
+
+struct MOSIncomingArgsHandler : public MOSIncomingValueHandler {
+  MOSIncomingArgsHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+      : MOSIncomingValueHandler(MIRBuilder, MRI) {}
+
+  Register getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
+    auto &MFI = MIRBuilder.getMF().getFrameInfo();
+    int FI = MFI.CreateFixedObject(Size, Offset, true);
+    MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
+    auto AddrReg = MIRBuilder.buildFrameIndex(LLT::pointer(0, 16), FI);
+    return AddrReg.getReg(0);
+  }
+
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+    MachineFunction &MF = MIRBuilder.getMF();
+    // All such loads are invariant: if the values are later spilled, they'll be
+    // spilled to spill slots, not the original incoming argument slots.
+    auto *MMO = MF.getMachineMemOperand(
+        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant,
+        MemSize, inferAlignFromPtrInfo(MF, MPO));
+    MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
+  }
+
+  void makeLive(Register PhysReg) override {
+    MIRBuilder.getMBB().addLiveIn(PhysReg);
+  }
+};
+
+struct MOSIncomingReturnHandler : public MOSIncomingValueHandler {
+  MachineInstrBuilder &Call;
+
+  /// A VReg containing the value of the stack pointer right after control flow
+  /// returned to the current function. The VReg is cached to avoid generating
+  /// it more than once.
+  Register SPReg = 0;
+
+  MOSIncomingReturnHandler(MachineIRBuilder &MIRBuilder,
+                           MachineRegisterInfo &MRI, MachineInstrBuilder &Call)
+      : MOSIncomingValueHandler(MIRBuilder, MRI), Call(Call) {}
+
+  Register getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override {
+    MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
+
+    LLT P = LLT::pointer(0, 16);
+
+    // Cache the SP virtual register to avoid generating it more than once.
+    if (!SPReg)
+      SPReg = MIRBuilder.buildCopy(P, Register(MOS::RS0)).getReg(0);
+
+    auto OffsetReg =
+        MIRBuilder.buildConstant(LLT::scalar(16), Offset).getReg(0);
+    return MIRBuilder.buildPtrAdd(P, SPReg, OffsetReg).getReg(0);
+  }
+
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+    MachineFunction &MF = MIRBuilder.getMF();
+    // Such loads are not invariant; the same stack region may be reused for
+    // many different calls.
+    auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemSize,
+                                        inferAlignFromPtrInfo(MF, MPO));
+    MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
+  }
+
+  void makeLive(Register PhysReg) override {
+    Call.addDef(PhysReg, RegState::Implicit);
   }
 };
 
@@ -261,7 +331,7 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
     // Invoke TableGen compatibility layer. This will generate copies and stores
     // from the return value virtual register to physical and stack locations.
-    MOSOutgoingValueHandler Handler(MIRBuilder, Return, MRI);
+    MOSOutgoingReturnHandler Handler(MIRBuilder, Return, MRI);
     if (!handleAssignments(MIRBuilder, Args, Handler, F.getCallingConv(),
                            F.isVarArg()))
       return false;
@@ -293,10 +363,7 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     ++Idx;
   }
 
-  const auto MakeLive = [&](Register PhysReg) {
-    MIRBuilder.getMBB().addLiveIn(PhysReg);
-  };
-  MOSIncomingValueHandler Handler(MIRBuilder, MRI, MakeLive);
+  MOSIncomingArgsHandler Handler(MIRBuilder, MRI);
   // Invoke TableGen compatibility layer to create loads and copies from the
   // formal argument physical and stack locations to virtual registers.
   if (!handleAssignments(MIRBuilder, SplitArgs, Handler, F.getCallingConv(),
@@ -371,7 +438,7 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(Info.OrigRet, InArgs, DL);
 
   // Copy arguments from virtual registers to their real physical locations.
-  MOSOutgoingValueHandler ArgsHandler(MIRBuilder, Call, MRI);
+  MOSOutgoingArgsHandler ArgsHandler(MIRBuilder, Call, MRI);
   if (!handleAssignments(MIRBuilder, OutArgs, ArgsHandler, Info.CallConv,
                          Info.IsVarArg))
     return false;
@@ -379,25 +446,23 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Insert the call once the outgoing arguments are in place.
   MIRBuilder.insertInstr(Call);
 
+  uint64_t StackSize = ArgsHandler.StackSize;
+
   if (!Info.OrigRet.Ty->isVoidTy()) {
-    const auto MakeLive = [&](Register PhysReg) {
-      Call.addDef(PhysReg, RegState::Implicit);
-    };
     // Copy the return value from its physical location into a virtual register.
-    MOSIncomingValueHandler RetHandler(MIRBuilder, MRI, MakeLive);
+    MOSIncomingReturnHandler RetHandler(MIRBuilder, MRI, Call);
     if (!handleAssignments(MIRBuilder, InArgs, RetHandler, Info.CallConv,
                            Info.IsVarArg))
       return false;
+    StackSize = std::max(StackSize, RetHandler.StackSize);
   }
 
   // Now that the size of the argument stack region is known, the setup call
   // frame pseudo can be given its arguments.
-  CallSeqStart.addImm(ArgsHandler.StackSize).addImm(0);
+  CallSeqStart.addImm(StackSize).addImm(0);
 
   // Generate the call frame destroy pseudo with the correct sizes.
-  MIRBuilder.buildInstr(MOS::ADJCALLSTACKUP)
-      .addImm(ArgsHandler.StackSize)
-      .addImm(0);
+  MIRBuilder.buildInstr(MOS::ADJCALLSTACKUP).addImm(StackSize).addImm(0);
   return true;
 }
 

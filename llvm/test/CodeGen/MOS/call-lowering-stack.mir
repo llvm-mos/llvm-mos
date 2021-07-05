@@ -62,4 +62,18 @@
     ret void
     ; CHECK-NEXT: RTS
   }
+
+  define i64 @ret_stack() {
+    ; CHECK-LABEL: name: ret_stack
+
+    ret i64 0
+  }
+
+  define void @call_ret_stack() {
+    ; CHECK-LABEL: name: call_ret_stack
+
+    %1 = call i64 @ret_stack()
+
+    ret void
+  }
 ...
