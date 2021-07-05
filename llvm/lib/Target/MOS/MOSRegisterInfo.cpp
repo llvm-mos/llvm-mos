@@ -213,16 +213,22 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     Offset += MI->getOperand(FIOperandNum + 1).getImm();
 
   if (MFI.getStackID(Idx) == TargetStackID::Default) {
-    // Real Address = Offset Relative to Incoming SP + Incoming SP
-    // Frame Pointer = Incoming SP - Stack Size
-    // Real Address = Frame Pointer + Offset
-    // Substituting gives:
-    // Offset Relative to Incoming SP + Incoming SP = Incoming SP - Stack Size +
-    // Offset Rearranging gives: Offset = Offset Relative to Incoming SP + Stack
-    // Size
-
-    // Thus, effective offset relative to the frame pointer, we need to add in
-    // the stack size.
+    // All offsets are relative to the incoming SP
+    // 1) Addr = Offset_SP + SP
+    //
+    // However, the incoming SP isn't available throughout the function; only
+    // the frame pointer is. So we need to obtain the FP relative offset such
+    // that:
+    // 2) Addr = Offset_FP + FP
+    //
+    // Susbtituting (2) into (1) gives:
+    // 3) Offset_FP = Offset_SP + SP - FP
+    //
+    // The frame pointer is:
+    // 4) FP = SP - Stack_Size
+    //
+    // Substituting (4) into (3) gives:
+    // 5) Offset_FP = Offset_SP + Stack_Size
     Offset += MFI.getStackSize();
   }
 
