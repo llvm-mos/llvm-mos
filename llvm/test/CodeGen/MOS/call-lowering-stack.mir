@@ -67,13 +67,50 @@
     ; CHECK-LABEL: name: ret_stack
 
     ret i64 0
+    ; CHECK:      %0:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %1:_(s8), %2:_(s8), %3:_(s8), %4:_(s8), %5:_(s8), %6:_(s8), %7:_(s8), %8:_(s8) = G_UNMERGE_VALUES %0(s64)
+    ; CHECK-NEXT: $a = COPY %1(s8)
+    ; CHECK-NEXT: $x = COPY %2(s8)
+    ; CHECK-NEXT: $rc2 = COPY %3(s8)
+    ; CHECK-NEXT: $rc3 = COPY %4(s8)
+    ; CHECK-NEXT: %9:_(p0) = G_FRAME_INDEX %fixed-stack.3
+    ; CHECK-NEXT: G_STORE %5(s8), %9(p0) :: (store 1 into %fixed-stack.3)
+    ; CHECK-NEXT: %10:_(p0) = G_FRAME_INDEX %fixed-stack.2
+    ; CHECK-NEXT: G_STORE %6(s8), %10(p0) :: (store 1 into %fixed-stack.2)
+    ; CHECK-NEXT: %11:_(p0) = G_FRAME_INDEX %fixed-stack.1
+    ; CHECK-NEXT: G_STORE %7(s8), %11(p0) :: (store 1 into %fixed-stack.1)
+    ; CHECK-NEXT: %12:_(p0) = G_FRAME_INDEX %fixed-stack.0
+    ; CHECK-NEXT: G_STORE %8(s8), %12(p0) :: (store 1 into %fixed-stack.0)
+    ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $rc2, implicit $rc3
   }
 
   define void @call_ret_stack() {
     ; CHECK-LABEL: name: call_ret_stack
 
     %1 = call i64 @ret_stack()
+    ; CHECK:      ADJCALLSTACKDOWN 4, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: JSR @ret_stack, mos_csr, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
+    ; CHECK-NEXT: %1:_(s8) = COPY $a
+    ; CHECK-NEXT: %2:_(s8) = COPY $x
+    ; CHECK-NEXT: %3:_(s8) = COPY $rc2
+    ; CHECK-NEXT: %4:_(s8) = COPY $rc3
+    ; CHECK-NEXT: %9:_(p0) = COPY $rs0
+    ; CHECK-NEXT: %10:_(s16) = G_CONSTANT i16 0
+    ; CHECK-NEXT: %11:_(p0) = G_PTR_ADD %9, %10(s16)
+    ; CHECK-NEXT: %5:_(s8) = G_LOAD %11(p0) :: (load 1 from stack)
+    ; CHECK-NEXT: %12:_(s16) = G_CONSTANT i16 1
+    ; CHECK-NEXT: %13:_(p0) = G_PTR_ADD %9, %12(s16)
+    ; CHECK-NEXT: %6:_(s8) = G_LOAD %13(p0) :: (load 1 from stack + 1)
+    ; CHECK-NEXT: %14:_(s16) = G_CONSTANT i16 2
+    ; CHECK-NEXT: %15:_(p0) = G_PTR_ADD %9, %14(s16)
+    ; CHECK-NEXT: %7:_(s8) = G_LOAD %15(p0) :: (load 1 from stack + 2)
+    ; CHECK-NEXT: %16:_(s16) = G_CONSTANT i16 3
+    ; CHECK-NEXT: %17:_(p0) = G_PTR_ADD %9, %16(s16)
+    ; CHECK-NEXT: %8:_(s8) = G_LOAD %17(p0) :: (load 1 from stack + 3)
+    ; CHECK-NEXT: %0:_(s64) = G_MERGE_VALUES %1(s8), %2(s8), %3(s8), %4(s8), %5(s8), %6(s8), %7(s8), %8(s8)
+    ; CHECK-NEXT: ADJCALLSTACKUP 4, 0, implicit-def $rs0, implicit $rs0
 
     ret void
+    ; CHECK-NEXT: RTS
   }
 ...

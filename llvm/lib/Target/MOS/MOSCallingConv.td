@@ -20,7 +20,7 @@
 //   itself should never see aggregates.
 //
 // - Aggregate types are returned by a pointer passed as an implicit first
-//   argument. The resulting function returns void.This is handled directly by
+//   argument. The resulting function returns void. This is handled directly by
 //   Clang; LLVM itself should never see aggregates.
 //
 // - RS2 and RS4 (and subregisters) are callee-saved. All other Imag8 locations,
@@ -37,6 +37,12 @@
 //   functions must only be called if prototyped. The C standard requires this,
 //   but many platforms do not; their variable argument and regular calling
 //   conventions are identical. A notable exception is Apple ARM64.
+//
+// - Values may be returned on the soft stack if insufficiently many registers
+//   are available. Callers must reserve sufficient space for this as they do
+//   for arguments. The space reserved for arguments may overlap freely with the
+//   space used for return values; thus only enough space for the larger of the
+//   two need be allocated.
 //
 // For insight into the design of performant calling conventions, see the
 // following work by Davidson and Whalley. By their convention, this plaftorm
