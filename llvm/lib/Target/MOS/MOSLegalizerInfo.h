@@ -65,6 +65,9 @@ private:
                      MachineInstr &MI) const;
 
   // Control Flow
+  bool legalizePhi(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                   MachineInstr &MI) const;
+
   bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
 
