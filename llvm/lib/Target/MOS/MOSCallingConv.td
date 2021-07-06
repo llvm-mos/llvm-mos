@@ -30,10 +30,6 @@
 //   most 4 bytes of hard stack is allowed per frame, and spilling zero page
 //   registers to the soft stack isn't worthwhile.
 //
-// - The very last imaginary pointer register (if any) is caller-saved but not
-//   used to pass arguments. Similarly to Y, this ensures that one such register
-//   remains available to synthesize values for each of the others.
-//
 // - Variable arguments (those within the ellipses of the argument list) are
 //   passed through the stack. Named arguments before the variable arguments are
 //   passed as usual: first in registers, then stack. Note that the variable
