@@ -9,16 +9,17 @@ char_stats:                             ; @char_stats
 	lda	mos8(__rc5)
 	pha
 	lda	#mos16lo(__char_stats_sstk)
+	ldx	#mos16hi(__char_stats_sstk)
 	sta	mos8(__rc4)
-	lda	#mos16hi(__char_stats_sstk)
-	sta	mos8(__rc5)
+	stx	mos8(__rc5)
 	lda	mos8(__rc4)
 	sta	mos8(__rc2)
 	lda	mos8(__rc5)
 	sta	mos8(__rc3)
-	ldx	#0
-	lda	#2
-	sta	mos8(__rc6)
+	lda	#0
+	ldx	#2
+	stx	mos8(__rc6)
+	tax
 	lda	#0
 	jsr	__memset
 .LBB0_1:                                ; %while.body
@@ -28,16 +29,20 @@ char_stats:                             ; @char_stats
 	beq	.LBB0_3
 ; %bb.2:                                ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
-	sta	mos8(__rc2)
-	asl	mos8(__rc2)
-	lda	#0
+	asl
 	sta	mos8(__rc3)
-	rol	mos8(__rc3)
-	lda	#mos16lo(__char_stats_sstk)
+	lda	#0
+	rol
+	tay
+	ldx	#mos16lo(__char_stats_sstk)
+	stx	mos8(__rc2)
 	clc
+	lda	mos8(__rc3)
 	adc	mos8(__rc2)
 	sta	mos8(__rc2)
 	lda	#mos16hi(__char_stats_sstk)
+	sta	mos8(__rc3)
+	tya
 	adc	mos8(__rc3)
 	sta	mos8(__rc3)
 	ldy	#0

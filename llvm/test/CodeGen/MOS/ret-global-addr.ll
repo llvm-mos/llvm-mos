@@ -9,8 +9,8 @@ define i16 @main() {
 while.end:
   %0 = getelementptr [1 x i8], [1 x i8]* @a.b_c, i16 0, i16 0
   %1 = ptrtoint i8* %0 to i16
-; CHECK:      ldx #mos16hi(a.b_c)
-; CHECK-NEXT: lda #mos16lo(a.b_c)
+; CHECK:      lda #mos16lo(a.b_c)
+; CHECK-NEXT: ldx #mos16hi(a.b_c)
 ; CHECK-NEXT: rts
   ret i16 %1
 }

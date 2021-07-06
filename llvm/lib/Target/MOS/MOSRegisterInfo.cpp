@@ -391,6 +391,13 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
   }
 
   if (MOS::Imag16RegClass.contains(Loc)) {
+    if (!IsLoad) {
+      // Loc may not be fully alive at this point, which would create uses of
+      // undefined subregisters. Issuing a KILL here redefines the full 16-bit
+      // register, making both halves alive, regardless of which parts of the
+      // register were alive before.
+      Builder.buildInstr(MOS::KILL, {Loc}, {Loc});
+    }
     Register Lo = TRI.getSubReg(Loc, MOS::sublo);
     Register Hi = TRI.getSubReg(Loc, MOS::subhi);
     auto LoInstr = Builder.buildInstr(MI->getOpcode())

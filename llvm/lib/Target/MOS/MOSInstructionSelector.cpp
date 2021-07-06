@@ -736,45 +736,6 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
                     .addUse(Hi)
                     .addImm(MOS::subhi);
   constrainGenericOp(*RegSeq);
-
-  // Rewrite uses of subregisters of the dst to Lo and Hi. Otherwise, if the
-  // uses of sublo and subhi are actually independent, dead lane elimination may
-  // separate Dst into two separate virtual regisers, but without rewriting the
-  // register class from imag16 to imag8. This wastes considerable space and
-  // upsets the MachineVerifier.
-  std::vector<Register> Worklist = {Dst};
-  std::vector<MachineOperand *> MOs;
-  while (!Worklist.empty()) {
-    Register Reg = Worklist.back();
-    Worklist.pop_back();
-    for (MachineInstr &MI : Builder.getMRI()->use_nodbg_instructions(Reg)) {
-      if (MI.isCopy() && MI.getOperand(1).getReg().isVirtual() &&
-          !MI.getOperand(1).getSubReg()) {
-        Worklist.push_back(MI.getOperand(0).getReg());
-        continue;
-      }
-      for (int Idx = 0, IdxEnd = MI.getNumOperands(); Idx != IdxEnd; Idx++) {
-        MachineOperand &MO = MI.getOperand(Idx);
-        if (MO.isReg() && MO.getReg() == Reg && MO.isUse() && MO.getSubReg())
-          MOs.push_back(&MO);
-      }
-    }
-  }
-
-  // Machine operands cannot be directly modified in the above loop, since doing
-  // so would upset use_nodbg_instructions. (The set of use instructions would
-  // change.)
-  for (MachineOperand *MO : MOs) {
-    if (MO->getSubReg() == MOS::sublo) {
-      MO->setReg(Lo);
-      MO->setSubReg(0);
-    } else {
-      assert(MO->getSubReg() == MOS::subhi);
-
-      MO->setReg(Hi);
-      MO->setSubReg(0);
-    }
-  }
 }
 
 // Ensures that any virtual registers defined by this operation are given a
