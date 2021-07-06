@@ -148,7 +148,20 @@ struct MOSOutgoingReturnHandler : MOSOutgoingValueHandler {
                            MachinePointerInfo &MPO,
                            ISD::ArgFlagsTy Flags) override {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
-    int FI = MFI.CreateFixedObject(Size, Offset, true);
+
+    bool FoundFI = false;
+    int FI;
+    for (FI = MFI.getObjectIndexBegin(); FI; ++FI) {
+      assert(MFI.getObjectSize(FI) == 1);
+      if (MFI.getObjectOffset(FI) == Offset) {
+        MFI.setIsImmutableObjectIndex(FI, false);
+        FoundFI = true;
+        break;
+      }
+    }
+    if (!FoundFI)
+      FI = MFI.CreateFixedObject(Size, Offset, false);
+
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
     auto AddrReg = MIRBuilder.buildFrameIndex(LLT::pointer(0, 16), FI);
     return AddrReg.getReg(0);
