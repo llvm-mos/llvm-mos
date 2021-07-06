@@ -38,25 +38,6 @@ using namespace llvm;
 
 namespace {
 
-void reserveRegs(const BitVector &Reserved, const TargetRegisterInfo &TRI,
-                 CCState &State) {
-  // Ensure that reserved registers are not used in calling convention by
-  // marking them as already allocated.
-  for (Register R : Reserved.set_bits())
-    State.AllocateReg(R);
-
-  // Reserve the last pointer register and its subregisters. Otherwise, it may
-  // not be possible to load values.
-  for (Register R = MOS::RS127; R != MOS::RS0; R = R - 1) {
-    if (!Reserved.test(R)) {
-      State.AllocateReg(R);
-      State.AllocateReg(TRI.getSubReg(R, MOS::sublo));
-      State.AllocateReg(TRI.getSubReg(R, MOS::subhi));
-      break;
-    }
-  }
-}
-
 /// Handler to pass values outward to calls and return statements.
 struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
   /// The instruction causing control flow to leave the current function. This
@@ -109,10 +90,10 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
                  CCValAssign::LocInfo LocInfo,
                  const llvm::CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    const TargetRegisterInfo &TRI =
-        *MIRBuilder.getMRI()->getTargetRegisterInfo();
-
-    reserveRegs(Reserved, TRI, State);
+    // Ensure that reserved registers are not used in calling convention by
+    // marking them as already allocated.
+    for (Register R : Reserved.set_bits())
+      State.AllocateReg(R);
 
     // Use TableGen-ereted code to assign the argument to a location.
     bool Res;
@@ -225,10 +206,10 @@ struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
                  CCValAssign::LocInfo LocInfo,
                  const llvm::CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    const TargetRegisterInfo &TRI =
-        *MIRBuilder.getMRI()->getTargetRegisterInfo();
-
-    reserveRegs(Reserved, TRI, State);
+    // Ensure that reserved registers are not used in calling convention by
+    // marking them as already allocated.
+    for (Register R : Reserved.set_bits())
+      State.AllocateReg(R);
 
     // Use TableGen-ereted code to assign the argument to a location.
     bool Res = CC_MOS(ValNo, ValVT, LocVT, LocInfo, Flags, State);
