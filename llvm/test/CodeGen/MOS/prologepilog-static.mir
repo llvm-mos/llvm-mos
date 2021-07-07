@@ -25,8 +25,8 @@ body:             |
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
-    ; CHECK: $rc0 = COPY $a
-    ; CHECK: $a = COPY $rc1, implicit $a
+    ; CHECK: $rc0 = COPY killed $a
+    ; CHECK: $a = COPY $rc1
     ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: $a = PL
@@ -35,8 +35,8 @@ body:             |
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 2, $c
-    ; CHECK: $rc0 = COPY $a
-    ; CHECK: $a = COPY $rc1, implicit $a
+    ; CHECK: $rc0 = COPY killed $a
+    ; CHECK: $a = COPY $rc1
     ; CHECK: $a, $c, $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: RTS

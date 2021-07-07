@@ -227,9 +227,9 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
 
   Register A = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
   Register P = Builder.getMRI()->createVirtualRegister(&MOS::PcRegClass);
-  Builder.buildInstr(MOS::LDCImm, {P}, {INT64_C(0)})
-      ->getOperand(0)
-      .setSubReg(MOS::subcarry);
+  Builder.buildInstr(MOS::LDCImm)
+      .addDef(P, RegState::Undef, MOS::subcarry)
+      .addImm(0);
   if (LoBytes) {
     Builder.buildCopy(A, Register(MOS::RC0));
     auto Add = Builder.buildInstr(MOS::ADCImm, {A, P, P}, {A, LoBytes, P});
@@ -237,14 +237,12 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
     Add->getOperand(2).setSubReg(MOS::subv);
     Add->getOperand(5).setSubReg(MOS::subcarry);
     Builder.buildCopy(MOS::RC0, A);
+    // Without this, A would have two definitions; the register scavenger does
+    // not allow this.
+    A = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
   }
 
-  auto LoCopy = Builder.buildCopy(A, Register(MOS::RC1));
-  // The implicit use appeases the register scavenger, which wants to see one
-  // clear sequence of definitions and redefinitions.
-  if (LoBytes)
-    LoCopy.addUse(A, RegState::Implicit);
-
+  Builder.buildCopy(A, Register(MOS::RC1));
   auto Add = Builder.buildInstr(MOS::ADCImm, {A, P, P}, {A, HiBytes, P});
   Add->getOperand(1).setSubReg(MOS::subcarry);
   Add->getOperand(2).setSubReg(MOS::subv);

@@ -14,6 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -364,8 +366,6 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
   MCPhysReg Survivor = 0;
   MachineBasicBlock::iterator Pos;
   MachineBasicBlock &MBB = *From->getParent();
-  unsigned InstrLimit = 25;
-  unsigned InstrCountDown = InstrLimit;
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   LiveRegUnits Used(TRI);
 
@@ -404,8 +404,6 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
           break;
         Survivor = AvilableReg;
       }
-      if (--InstrCountDown == 0)
-        break;
 
       // Keep searching when we find a vreg since the spilled register will
       // be usefull for this other vreg as well later.
@@ -416,10 +414,8 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
           break;
         }
       }
-      if (FoundVReg) {
-        InstrCountDown = InstrLimit;
+      if (FoundVReg)
         Pos = I;
-      }
       if (I == MBB.begin())
         break;
     }
@@ -604,7 +600,6 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
 /// current instruction.
 static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
                              Register VReg, bool ReserveAfter) {
-  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 #ifndef NDEBUG
   // Verify that all definitions and uses are in the same basic block.
   const MachineBasicBlock *CommonMBB = nullptr;
@@ -617,7 +612,7 @@ static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
     assert(MBB == CommonMBB && "All defs+uses must be in the same basic block");
     if (MO.isDef()) {
       const MachineInstr &MI = *MO.getParent();
-      if (!MI.readsRegister(VReg, &TRI)) {
+      if (!MI.readsVirtualRegister(VReg)) {
         assert((!RealDef || RealDef == &MI) &&
                "Can have at most one definition which is not a redefinition");
         RealDef = &MI;
@@ -634,8 +629,8 @@ static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
   //
   // Definitions in MRI.def_begin() are unordered, search for the first.
   MachineRegisterInfo::def_iterator FirstDef = llvm::find_if(
-      MRI.def_operands(VReg), [VReg, &TRI](const MachineOperand &MO) {
-        return !MO.getParent()->readsRegister(VReg, &TRI);
+      MRI.def_operands(VReg), [VReg](const MachineOperand &MO) {
+        return !MO.getParent()->readsVirtualRegister(VReg);
       });
   assert(FirstDef != MRI.def_end() &&
          "Must have one definition that does not redefine vreg");

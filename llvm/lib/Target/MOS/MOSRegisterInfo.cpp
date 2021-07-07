@@ -283,10 +283,10 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
-  MachineOperand Dst = MI->getOperand(0);
+  MachineOperand& Dst = MI->getOperand(0);
   Register Base = MI->getOperand(3).getReg();
-  MachineOperand CDef = MI->getOperand(1);
-  MachineOperand VDef = MI->getOperand(2);
+  MachineOperand& CDef = MI->getOperand(1);
+  MachineOperand& VDef = MI->getOperand(2);
 
   int64_t OffsetImm = MI->getOperand(4).getImm();
   assert(0 <= OffsetImm && OffsetImm < 65536);
@@ -295,14 +295,13 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
 
   Register Src = TRI.getSubReg(Base, MOS::sublo);
 
-  Builder.buildInstr(MOS::LDCImm).add(CDef).addImm(0);
+  auto LDC = Builder.buildInstr(MOS::LDCImm).add(CDef).addImm(0);
+  if (LDC->getOperand(0).getSubReg())
+    LDC->getOperand(0).setIsUndef();
 
   if (!Offset)
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
   else {
-    MachineOperand CUse = CDef;
-    CUse.clearParent();
-    CUse.setIsUse();
     Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
     auto Instr = Builder.buildInstr(MOS::ADCImm)
                      .addDef(A)
@@ -310,7 +309,7 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
                      .add(VDef)
                      .addUse(A)
                      .addImm(Offset)
-                     .add(CUse);
+                     .addUse(CDef.getReg(), 0, CDef.getSubReg());
     Instr->getOperand(2).setIsDead();
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
   }
@@ -388,25 +387,13 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
                   .addDef(P, RegState::Dead, MOS::subv)
                   .add(MI->getOperand(2))
                   .add(MI->getOperand(3))
-                  .addDef(P, /*Flags=*/0, MOS::subcarry)
+                  .addUse(P, /*Flags=*/0, MOS::subcarry)
                   .addUse(NewBase, RegState::Implicit);
     MI->getOperand(2).setReg(NewBase);
     MI->getOperand(3).setImm(0);
 
     expandAddrLostk(Lo);
-
-    MachineInstrSpan MIS(Hi, Hi->getParent());
     expandAddrHistk(Hi);
-    for (auto &MI : MIS) {
-      if (MI.modifiesRegister(NewBase, &TRI)) {
-        // Keep scavenger from complaining about multiple definitions. We
-        // instead consider them all redefinitions of the original set by
-        // AddrLostk.
-        MI.addOperand(MachineOperand::CreateReg(NewBase, /*isDef=*/false,
-                                                /*isImp=*/true));
-      }
-    }
-
     expandLDSTStk(MI);
     return;
   }
@@ -459,7 +446,9 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
   // Transfer the value to A to be stored (if applicable).
   if (!IsLoad && Loc != A) {
     if (Loc == MOS::C || Loc == MOS::V)
-      Builder.buildInstr(MOS::COPY).addDef(A, 0, MOS::sublsb).addUse(Loc);
+      Builder.buildInstr(MOS::COPY)
+          .addDef(A, RegState::Undef, MOS::sublsb)
+          .addUse(Loc);
     else {
       assert(MOS::Anyi8RegClass.contains(Loc));
       Builder.buildCopy(A, Loc);
