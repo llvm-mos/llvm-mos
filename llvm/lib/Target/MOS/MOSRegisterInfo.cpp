@@ -273,7 +273,7 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     break;
   case MOS::LDStk:
   case MOS::STStk:
-    expandLDSTstk(MI);
+    expandLDSTStk(MI);
     break;
   }
 }
@@ -340,7 +340,7 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
   MI->eraseFromParent();
 }
 
-void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
+void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getMF();
   MachineIRBuilder Builder(*MI->getParent(), MI);
   MachineRegisterInfo &MRI = *Builder.getMRI();
@@ -348,29 +348,32 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
 
   const bool IsLoad = MI->getOpcode() == MOS::LDStk;
 
-  Register Loc = MI->getOperand(0).getReg();
-  int64_t Offset = MI->getOperand(2).getImm();
+  Register Loc =
+      IsLoad ? MI->getOperand(0).getReg() : MI->getOperand(1).getReg();
+  int64_t Offset = MI->getOperand(3).getImm();
 
   if (Offset >= 256) {
     Register P = MRI.createVirtualRegister(&MOS::PcRegClass);
-    // Far stack accesses need a virtual base register, so materialize one here.
-    Register NewBase = MRI.createVirtualRegister(&MOS::Imag16RegClass);
+    // Far stack accesses need a virtual base register, so materialize one here
+    // using the pointer provided.
+    Register NewBase =
+        IsLoad ? MI->getOperand(1).getReg() : MI->getOperand(0).getReg();
     auto Lo = Builder.buildInstr(MOS::AddrLostk)
-                  .addDef(NewBase, /*Flags=*/0, MOS::sublo)
+                  .addDef(TRI.getSubReg(NewBase, MOS::sublo))
                   .addDef(P, /*Flags=*/0, MOS::subcarry)
                   .addDef(P, RegState::Dead, MOS::subv)
-                  .add(MI->getOperand(1))
-                  .add(MI->getOperand(2));
+                  .add(MI->getOperand(2))
+                  .add(MI->getOperand(3));
     auto Hi = Builder.buildInstr(MOS::AddrHistk)
-                  .addDef(NewBase, /*Flags=*/0, MOS::subhi)
+                  .addDef(TRI.getSubReg(NewBase, MOS::subhi))
                   .addDef(P, RegState::Dead, MOS::subcarry)
                   .addDef(P, RegState::Dead, MOS::subv)
-                  .add(MI->getOperand(1))
                   .add(MI->getOperand(2))
+                  .add(MI->getOperand(3))
                   .addDef(P, /*Flags=*/0, MOS::subcarry)
                   .addUse(NewBase, RegState::Implicit);
-    MI->getOperand(1).setReg(NewBase);
-    MI->getOperand(2).setImm(0);
+    MI->getOperand(2).setReg(NewBase);
+    MI->getOperand(3).setImm(0);
 
     expandAddrLostk(Lo);
 
@@ -386,7 +389,7 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
       }
     }
 
-    expandLDSTstk(MI);
+    expandLDSTStk(MI);
     return;
   }
 
@@ -400,21 +403,27 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
     }
     Register Lo = TRI.getSubReg(Loc, MOS::sublo);
     Register Hi = TRI.getSubReg(Loc, MOS::subhi);
-    auto LoInstr = Builder.buildInstr(MI->getOpcode())
-                       .addReg(Lo, getDefRegState(IsLoad))
-                       .add(MI->getOperand(1))
-                       .add(MI->getOperand(2))
-                       .addMemOperand(MF.getMachineMemOperand(
-                           *MI->memoperands_begin(), 0, 1));
-    auto HiInstr = Builder.buildInstr(MI->getOpcode())
-                       .addReg(Hi, getDefRegState(IsLoad))
-                       .add(MI->getOperand(1))
-                       .addImm(MI->getOperand(2).getImm() + 1)
-                       .addMemOperand(MF.getMachineMemOperand(
-                           *MI->memoperands_begin(), 1, 1));
+    auto LoInstr = Builder.buildInstr(MI->getOpcode());
+    if (!IsLoad)
+      LoInstr.add(MI->getOperand(0));
+    LoInstr.addReg(Lo, getDefRegState(IsLoad));
+    if (IsLoad)
+      LoInstr.add(MI->getOperand(1));
+    LoInstr.add(MI->getOperand(2))
+        .add(MI->getOperand(3))
+        .addMemOperand(MF.getMachineMemOperand(*MI->memoperands_begin(), 0, 1));
+    auto HiInstr = Builder.buildInstr(MI->getOpcode());
+    if (!IsLoad)
+      HiInstr.add(MI->getOperand(0));
+    HiInstr.addReg(Hi, getDefRegState(IsLoad));
+    if (IsLoad)
+      HiInstr.add(MI->getOperand(1));
+    HiInstr.add(MI->getOperand(2))
+        .addImm(MI->getOperand(3).getImm() + 1)
+        .addMemOperand(MF.getMachineMemOperand(*MI->memoperands_begin(), 1, 1));
     MI->eraseFromParent();
-    expandLDSTstk(LoInstr);
-    expandLDSTstk(HiInstr);
+    expandLDSTStk(LoInstr);
+    expandLDSTStk(HiInstr);
     return;
   }
 
@@ -445,7 +454,7 @@ void MOSRegisterInfo::expandLDSTstk(MachineBasicBlock::iterator MI) const {
 
   Builder.buildInstr(IsLoad ? MOS::LDYIndir : MOS::STYIndir)
       .addReg(A, getDefRegState(IsLoad))
-      .add(MI->getOperand(1))
+      .add(MI->getOperand(2))
       .addUse(Y)
       .addMemOperand(*MI->memoperands_begin());
 

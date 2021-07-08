@@ -30,10 +30,10 @@ body: |
     ; CHECK-LABEL: name: spill_y
     ; CHECK: liveins: $y
     ; CHECK: [[COPY:%[0-9]+]]:anyi8 = COPY $y
-    ; CHECK: STStk [[COPY]], %stack.0, 0 :: (store 1 into %stack.0)
+    ; CHECK: dead early-clobber %2:imag16 = STStk [[COPY]], %stack.0, 0 :: (store 1 into %stack.0)
     ; CHECK: JSR &fn, mos_csr
-    ; CHECK: [[LDStk:%[0-9]+]]:anyi8 = LDStk %stack.0, 0 :: (load 1 from %stack.0)
-    ; CHECK: $y = COPY [[LDStk]]
+    ; CHECK: %3:anyi8, dead early-clobber %4:imag16 = LDStk %stack.0, 0 :: (load 1 from %stack.0)
+    ; CHECK: $y = COPY %3
     ; CHECK: RTS implicit $y
     %0:yc = COPY $y
     JSR &fn, mos_csr

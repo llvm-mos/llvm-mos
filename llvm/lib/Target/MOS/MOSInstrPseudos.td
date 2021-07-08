@@ -102,11 +102,18 @@ def AddrHistk : MOSPseudo {
   let isReMaterializable = true;
 }
 
+// LDStk and STStk require an additional pointer register; if the stack access
+// is far, this is used to materialize the necessary pointer. This "wastes" a
+// register in common cases, but it's better to use register allocator
+// mechanisms to keep a pointer register free than to scramble at the last
+// second to scavenge one up.
+
 // Loads a value (1, 8, or 16 bits) from the soft stack. Eliminated once the
 // offset from the frame register is known.
 def LDStk : MOSPseudo {
-  dag OutOperandList = (outs unknown:$dst);
+  dag OutOperandList = (outs unknown:$dst, Imag16:$scratch);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
+  let Constraints = "@earlyclobber $scratch";
 
   let mayLoad = true;
 }
@@ -114,7 +121,9 @@ def LDStk : MOSPseudo {
 // Stores a value (1, 8, or 16 bits) to the soft stack. Eliminated once the
 // offset from the frame register is known.
 def STStk : MOSPseudo {
+  dag OutOperandList = (outs Imag16:$scratch);
   dag InOperandList = (ins unknown:$src, Imag16:$base, i16imm:$fi);
+  let Constraints = "@earlyclobber $scratch";
 
   let mayStore = true;
 }

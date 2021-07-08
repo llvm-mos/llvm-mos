@@ -50,8 +50,10 @@ unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   default:
     return 0;
   case MOS::LDAbsOffset:
-  case MOS::LDStk:
     FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  case MOS::LDStk:
+    FrameIndex = MI.getOperand(2).getIndex();
     return MI.getOperand(0).getReg();
   }
 }
@@ -62,9 +64,11 @@ unsigned MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   default:
     return 0;
   case MOS::STAbsOffset:
-  case MOS::STStk:
     FrameIndex = MI.getOperand(1).getIndex();
     return MI.getOperand(0).getReg();
+  case MOS::STStk:
+    FrameIndex = MI.getOperand(2).getIndex();
+    return MI.getOperand(1).getReg();
   }
 }
 
@@ -571,9 +575,14 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   // either 8 or 16 bits. Emit a 16-bit pseudo to be lowered during frame index
   // elimination.
   if (!MF.getFunction().doesNotRecurse()) {
-    Builder.buildInstr(IsLoad ? MOS::LDStk : MOS::STStk)
-        .addReg(Reg, getDefRegState(IsLoad) | getKillRegState(IsKill))
-        .addFrameIndex(FrameIndex)
+    Register Ptr = MRI.createVirtualRegister(&MOS::Imag16RegClass);
+    auto Instr = Builder.buildInstr(IsLoad ? MOS::LDStk : MOS::STStk);
+    if (!IsLoad)
+      Instr.addDef(Ptr, RegState::EarlyClobber);
+    Instr.addReg(Reg, getDefRegState(IsLoad) | getKillRegState(IsKill));
+    if (IsLoad)
+      Instr.addDef(Ptr, RegState::EarlyClobber);
+    Instr.addFrameIndex(FrameIndex)
         .addImm(0)
         .addMemOperand(MMO);
   } else {
