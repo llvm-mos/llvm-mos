@@ -285,6 +285,8 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
 
   MachineOperand Dst = MI->getOperand(0);
   Register Base = MI->getOperand(3).getReg();
+  MachineOperand CDef = MI->getOperand(1);
+  MachineOperand VDef = MI->getOperand(2);
 
   int64_t OffsetImm = MI->getOperand(4).getImm();
   assert(0 <= OffsetImm && OffsetImm < 65536);
@@ -293,14 +295,22 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
 
   Register Src = TRI.getSubReg(Base, MOS::sublo);
 
-  Builder.buildInstr(MOS::LDCImm).addDef(MOS::C).addImm(0);
+  Builder.buildInstr(MOS::LDCImm).add(CDef).addImm(0);
 
   if (!Offset)
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
   else {
+    MachineOperand CUse = CDef;
+    CUse.clearParent();
+    CUse.setIsUse();
     Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
-    auto Instr = Builder.buildInstr(MOS::ADCImm, {A, MOS::C, MOS::V},
-                                    {A, int64_t(Offset), Register(MOS::C)});
+    auto Instr = Builder.buildInstr(MOS::ADCImm)
+                     .addDef(A)
+                     .add(CDef)
+                     .add(VDef)
+                     .addUse(A)
+                     .addImm(Offset)
+                     .add(CUse);
     Instr->getOperand(2).setIsDead();
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
   }
@@ -314,11 +324,15 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
   MachineOperand Dst = MI->getOperand(0);
+  MachineOperand CDef = MI->getOperand(1);
+  MachineOperand VDef = MI->getOperand(2);
   Register Base = MI->getOperand(3).getReg();
 
   int64_t OffsetImm = MI->getOperand(4).getImm();
   assert(0 <= OffsetImm && OffsetImm < 65536);
   auto Offset = static_cast<uint16_t>(OffsetImm);
+
+  MachineOperand CUse = MI->getOperand(5);
 
   Register Src = TRI.getSubReg(Base, MOS::subhi);
 
@@ -329,9 +343,13 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(Src);
   else {
     Register A = Builder.buildCopy(&MOS::AcRegClass, Src).getReg(0);
-    auto Instr =
-        Builder.buildInstr(MOS::ADCImm, {A, MOS::C, MOS::V},
-                           {A, int64_t(Offset >> 8), Register(MOS::C)});
+    auto Instr = Builder.buildInstr(MOS::ADCImm)
+                     .addDef(A)
+                     .add(CDef)
+                     .add(VDef)
+                     .addUse(A)
+                     .addImm(Offset >> 8)
+                     .add(CUse);
     Instr->getOperand(1).setIsDead();
     Instr->getOperand(2).setIsDead();
     Builder.buildInstr(MOS::COPY).add(Dst).addUse(A);
