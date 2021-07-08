@@ -50,6 +50,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   initializeMOSCombinerPass(PR);
   initializeMOSLowerSelectPass(PR);
   initializeMOSNoRecursePass(PR);
+  initializeMOSPostRAScavengingPass(PR);
   initializeMOSStaticStackAllocPass(PR);
 }
 
