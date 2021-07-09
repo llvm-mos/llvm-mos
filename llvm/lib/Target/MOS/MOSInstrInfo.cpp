@@ -610,18 +610,8 @@ void MOSInstrInfo::loadStoreRegStackSlot(
         Hi.setReg(Tmp);
         Hi.setSubReg(MOS::subhi);
       }
-      if (!IsLoad) {
-        if (Tmp != Reg)
+      if (!IsLoad && Tmp != Reg)
           Builder.buildCopy(Tmp, Reg);
-
-        // The register may not have been fully defined at this point. Adding a
-        // KILL here makes the entire value alive, regardless of whether or not
-        // it was prior to the store. We do this because this function does not
-        // have access to the detailed liveness information about the virtual
-        // register in use; if we did, we'd only need to store the portion of
-        // the virtual register that is actually alive.
-        Builder.buildInstr(MOS::KILL, {Tmp}, {Tmp});
-      }
       loadStoreByteStaticStackSlot(Builder, Lo, FrameIndex, 0,
                                    MF.getMachineMemOperand(MMO, 0, 1));
       loadStoreByteStaticStackSlot(Builder, Hi, FrameIndex, 1,
