@@ -79,15 +79,41 @@ body: |
     RTS implicit $a, implicit $x, implicit $y
 ...
 ---
-name: spill_p
+name: spill_c
+body: |
+  bb.0.entry:
+    liveins: $c
+    ; CHECK-LABEL: name: spill_c
+    ; CHECK: PH undef $p, implicit $c
+    ; CHECK: dead $p = COPY $a
+    ; CHECK: $p = PL
+    ; CHECK: RTS implicit $c
+    %0:pc = COPY $a
+    RTS implicit $c
+...
+---
+name: spill_v
 body: |
   bb.0.entry:
     liveins: $v
-    ; CHECK-LABEL: name: spill_p
-    ; CHECK: PH $p
+    ; CHECK-LABEL: name: spill_v
+    ; CHECK: PH undef $p, implicit $v
     ; CHECK: dead $p = COPY $a
     ; CHECK: $p = PL
     ; CHECK: RTS implicit $v
     %0:pc = COPY $a
     RTS implicit $v
+...
+---
+name: spill_cv
+body: |
+  bb.0.entry:
+    liveins: $c, $v
+    ; CHECK-LABEL: name: spill_cv
+    ; CHECK: PH $p
+    ; CHECK: dead $p = COPY $a
+    ; CHECK: $p = PL
+    ; CHECK: RTS implicit $c, implicit $v
+    %0:pc = COPY $a
+    RTS implicit $c, implicit $v
 ...

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "mos-reginfo"
@@ -149,6 +150,9 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   // overlap with any other save/restore pair for the same physical register.
 
   MachineIRBuilder Builder(MBB, I);
+  const TargetRegisterInfo &TRI =
+      *Builder.getMF().getSubtarget().getRegisterInfo();
+
   switch (Reg) {
   default:
     errs() << "Register: " << getName(Reg) << "\n";
@@ -186,10 +190,28 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     break;
   }
   case MOS::P: {
+    LiveRegUnits LiveUnits(TRI);
+    LiveUnits.addLiveOuts(MBB);
+    if (UseMI != MBB.end()) {
+      for (auto J = std::prev(MBB.end()); J != UseMI; --J)
+        LiveUnits.stepBackward(*J);
+      LiveUnits.stepBackward(*UseMI);
+    }
+
     assert(pushPullBalanced(I, UseMI));
-    Builder.buildInstr(MOS::PH, {}, {Register(MOS::P)});
+    const bool CLive = !LiveUnits.available(MOS::C);
+    const bool VLive = !LiveUnits.available(MOS::V);
+    assert(CLive || VLive);
+    auto Save = Builder.buildInstr(MOS::PH, {}, {Register(MOS::P)});
     Builder.setInsertPt(MBB, UseMI);
     Builder.buildInstr(MOS::PL, {MOS::P}, {});
+    if (CLive && !VLive) {
+      Save->getOperand(0).setIsUndef();
+      Save.addUse(MOS::C, RegState::Implicit);
+    } else if (!CLive && VLive) {
+      Save->getOperand(0).setIsUndef();
+      Save.addUse(MOS::V, RegState::Implicit);
+    }
     break;
   }
   }
@@ -283,10 +305,10 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
-  MachineOperand& Dst = MI->getOperand(0);
+  const MachineOperand &Dst = MI->getOperand(0);
   Register Base = MI->getOperand(3).getReg();
-  MachineOperand& CDef = MI->getOperand(1);
-  MachineOperand& VDef = MI->getOperand(2);
+  const MachineOperand &CDef = MI->getOperand(1);
+  const MachineOperand &VDef = MI->getOperand(2);
 
   int64_t OffsetImm = MI->getOperand(4).getImm();
   assert(0 <= OffsetImm && OffsetImm < 65536);
