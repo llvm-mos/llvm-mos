@@ -47,6 +47,12 @@ public:
   void lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
   void emitInstruction(const MachineInstr *MI) override;
+
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &OS) override;
+
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             const char *ExtraCode, raw_ostream &OS) override;
 };
 
 // Simple pseudo-instructions have their lowering (with expansion to real
@@ -66,6 +72,38 @@ void MOSAsmPrinter::emitInstruction(const MachineInstr *MI) {
 void MOSAsmPrinter::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
   if (!InstLowering.lowerOperand(MO, MCOp))
     llvm_unreachable("Failed to lower operand.");
+}
+
+bool MOSAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                    const char *ExtraCode, raw_ostream &OS) {
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
+    return false;
+
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  const MOSRegisterInfo &TRI =
+      *MO.getParent()->getMF()->getSubtarget<MOSSubtarget>().getRegisterInfo();
+
+  switch (MO.getType()) {
+  default:
+    errs() << "Unsupported inline asm operand: " << MO << "\n";
+    return true;
+  case MachineOperand::MO_Register:
+    Register Reg = MO.getReg();
+    if (MOS::Imag16RegClass.contains(Reg) || MOS::Imag8RegClass.contains(Reg))
+      OS << "mos8(" << TRI.getImag8SymbolName(Reg) << ")";
+    else
+      OS << TRI.getRegAsmName(Reg);
+    break;
+  }
+  return false;
+}
+
+bool MOSAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                                          const char *ExtraCode,
+                                          raw_ostream &OS) {
+  // Memory operands are simply stored in pointer registers; no extra work is
+  // required.
+  return PrintAsmOperand(MI, OpNo, ExtraCode, OS);
 }
 
 } // namespace

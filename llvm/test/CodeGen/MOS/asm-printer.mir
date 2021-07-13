@@ -172,3 +172,23 @@ body: |
     RTS
     ; CHECK-NEXT: rts
 ...
+---
+name: memory_operand
+# CHECK-LABEL: memory_operand
+body: |
+  bb.0.entry:
+    INLINEASM &"sta ($0),y", 17 /* sideeffect maystore attdialect */, 196622 /* mem:m */, $rs2
+    ; CHECK: sta (mos8(__rc4)),y
+    RTS
+    ; CHECK: rts
+...
+---
+name: gpr_operand
+# CHECK-LABEL: gpr_operand
+body: |
+  bb.0.entry:
+    INLINEASM &"st$0 1234", 1 /* sideeffect attdialect */, 720905 /* reguse:GPR */, $x
+    ; CHECK: stx 1234
+    RTS
+    ; CHECK: rts
+...
