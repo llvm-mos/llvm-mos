@@ -879,7 +879,7 @@ bool MOSLegalizerInfo::legalizePhi(LegalizerHelper &Helper,
   for (unsigned I = 1, IE = MI.getNumOperands(); I < IE; I += 2) {
     Register Reg = MI.getOperand(I).getReg();
     MachineBasicBlock *Block = MI.getOperand(I + 1).getMBB();
-    Builder.setInsertPt(*Block, Block->getFirstInstrTerminator());
+    Builder.setInsertPt(*Block, Block->getFirstTerminator());
     MI.getOperand(I).setReg(Builder.buildPtrToInt(S16, Reg).getReg(0));
   }
   Register Tmp = MRI.createGenericVirtualRegister(S16);

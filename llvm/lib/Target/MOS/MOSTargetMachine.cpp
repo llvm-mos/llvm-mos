@@ -150,6 +150,10 @@ public:
   // scheduling.
   bool alwaysRequiresMachineScheduler() const override { return true; }
 
+  // Register pressure is too high to work without optimized register
+  // allocation.
+  void addFastRegAlloc() override { addOptimizedRegAlloc(); }
+
   void addPreSched2() override;
   void addPreEmitPass() override;
 

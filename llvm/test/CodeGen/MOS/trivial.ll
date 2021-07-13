@@ -8,6 +8,6 @@ define i16 @main() {
 ; CHECK:      .text
 ; CHECK:      .globl main
 ; CHECK:      main:
-; CHECK:        lda #0
-; CHECK-NEXT:   ldx #0
+; CHECK:        ldx #0
+; CHECK-NEXT:   lda #0
 ; CHECK-NEXT:   rts
