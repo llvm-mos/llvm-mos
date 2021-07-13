@@ -83,6 +83,8 @@ MOSTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(MOS::Y, &MOS::GPRRegClass);
     }
   }
+  if (Constraint == "{cc}")
+    return std::make_pair(MOS::P, &MOS::PcRegClass);
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }

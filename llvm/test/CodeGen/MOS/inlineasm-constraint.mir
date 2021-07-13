@@ -38,4 +38,14 @@
     ret void
     ; CHECK-NEXT: RTS
   }
+
+  define void @clobber_cc() {
+  ; CHECK-LABEL: name: clobber_cc
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "", "~{cc}"()
+    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $p
+    ret void
+    ; CHECK-NEXT: RTS
+  }
 ...
