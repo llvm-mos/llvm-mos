@@ -3,8 +3,32 @@
 --- |
   target triple = "mos"
 
-  define void @inline_constraint_a() {
-  ; CHECK-LABEL: name: inline_constraint_a
+  define void @constraint_r() {
+  ; CHECK-LABEL: name: constraint_r
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "JSR 1234", "r"(i8 56)
+    ; CHECK:      %1:_(s8) = G_CONSTANT i8 56
+    ; CHECK-NEXT: %0:imag8 = COPY %1
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 655369 /* reguse:Imag8 */, %0
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
+  define void @constraint_R() {
+  ; CHECK-LABEL: name: constraint_R
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "JSR 1234", "R"(i8 56)
+    ; CHECK:      %1:_(s8) = G_CONSTANT i8 56
+    ; CHECK-NEXT: %0:gpr = COPY %1
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 720905 /* reguse:GPR */, %0
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
+  define void @constraint_a() {
+  ; CHECK-LABEL: name: constraint_a
   entry:
   ; CHECK-LABEL: entry:
     call void asm sideeffect "JSR 1234", "a"(i8 56)
@@ -15,8 +39,8 @@
     ; CHECK-NEXT: RTS
   }
 
-  define void @inline_constraint_x() {
-  ; CHECK-LABEL: name: inline_constraint_x
+  define void @constraint_x() {
+  ; CHECK-LABEL: name: constraint_x
   entry:
   ; CHECK-LABEL: entry:
     call void asm sideeffect "JSR 1234", "x"(i8 56)
@@ -27,8 +51,8 @@
     ; CHECK-NEXT: RTS
   }
 
-  define void @inline_constraint_y() {
-  ; CHECK-LABEL: name: inline_constraint_y
+  define void @constraint_y() {
+  ; CHECK-LABEL: name: constraint_y
   entry:
   ; CHECK-LABEL: entry:
     call void asm sideeffect "JSR 1234", "y"(i8 56)

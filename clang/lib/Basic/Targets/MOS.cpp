@@ -56,7 +56,6 @@ bool MOSTargetInfo::validateAsmConstraint(
     Info.setAllowsRegister();
     return true;
   }
-  return false;
 }
 
 static const char *const GCCRegNames[] = {
