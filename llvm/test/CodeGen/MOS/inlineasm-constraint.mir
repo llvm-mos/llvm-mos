@@ -3,14 +3,26 @@
 --- |
   target triple = "mos"
 
-  define void @constraint_r() {
-  ; CHECK-LABEL: name: constraint_r
+  define void @constraint_r_i8() {
+  ; CHECK-LABEL: name: constraint_r_i8
   entry:
   ; CHECK-LABEL: entry:
     call void asm sideeffect "JSR 1234", "r"(i8 56)
     ; CHECK:      %1:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: %0:imag8 = COPY %1
     ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 655369 /* reguse:Imag8 */, %0
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
+  define void @constraint_r_i16() {
+  ; CHECK-LABEL: name: constraint_r_i16
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "JSR 1234", "r"(i16 56)
+    ; CHECK:      %1:_(s16) = G_CONSTANT i16 56
+    ; CHECK-NEXT: %0:imag16 = COPY %1
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 1245193 /* reguse:Imag16 */, %0
     ret void
     ; CHECK-NEXT: RTS
   }

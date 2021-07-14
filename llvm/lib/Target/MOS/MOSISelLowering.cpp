@@ -50,6 +50,15 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(MOS::RS0);
 }
 
+unsigned MOSTargetLowering::getNumRegistersForInlineAsm(LLVMContext &Context,
+                                                        EVT VT) const {
+  // 16-bit inputs and outputs must be passed in Imag16 registers to allow using
+  // pointer values in inline assembly.
+  if (VT == MVT::i16)
+    return 1;
+  return TargetLowering::getNumRegistersForInlineAsm(Context, VT);
+}
+
 TargetLowering::ConstraintType
 MOSTargetLowering::getConstraintType(StringRef Constraint) const {
   if (Constraint.size() == 1) {
@@ -76,6 +85,8 @@ MOSTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     default:
       break;
     case 'r':
+      if (VT == MVT::i16)
+        return std::make_pair(0U, &MOS::Imag16RegClass);
       return std::make_pair(0U, &MOS::Imag8RegClass);
     case 'R':
       return std::make_pair(0U, &MOS::GPRRegClass);
@@ -166,7 +177,7 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineBasicBlock *IfFalseMBB = F->CreateMachineBasicBlock(LLVM_BB);
   F->insert(TailMBB->getIterator(), IfFalseMBB);
   HeadMBB->addSuccessor(IfFalseMBB);
-  for (const auto& LiveIn : TailMBB->liveins())
+  for (const auto &LiveIn : TailMBB->liveins())
     if (LiveIn.PhysReg != Dst)
       IfFalseMBB->addLiveIn(LiveIn);
   IfFalseMBB->addSuccessor(TailMBB);
@@ -181,7 +192,7 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // Add the unconditional branch from IfFalseMBB to TailMBB.
     Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
     Builder.buildInstr(MOS::JMP).addMBB(TailMBB);
-    for (const auto& LiveIn : IfFalseMBB->liveins())
+    for (const auto &LiveIn : IfFalseMBB->liveins())
       IfTrueMBB->addLiveIn(LiveIn);
 
     Builder.setInsertPt(*HeadMBB, MI.getIterator());

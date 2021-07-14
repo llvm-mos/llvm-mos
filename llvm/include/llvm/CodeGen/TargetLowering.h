@@ -19,6 +19,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #ifndef LLVM_CODEGEN_TARGETLOWERING_H
 #define LLVM_CODEGEN_TARGETLOWERING_H
 
@@ -1506,6 +1508,13 @@ public:
   virtual Align getABIAlignmentForCallingConv(Type *ArgTy,
                                               DataLayout DL) const {
     return DL.getABITypeAlign(ArgTy);
+  }
+
+  /// Certain targets require unusual breakdowns of certain types for inline
+  /// assembly.
+  virtual unsigned getNumRegistersForInlineAsm(LLVMContext &Context,
+                                               EVT VT) const {
+    return getNumRegisters(Context, VT);
   }
 
   /// If true, then instruction selection should seek to shrink the FP constant

@@ -112,8 +112,8 @@ static void getRegistersForValue(MachineFunction &MF,
   // Initialize NumRegs.
   unsigned NumRegs = 1;
   if (OpInfo.ConstraintVT != MVT::Other)
-    NumRegs =
-        TLI.getNumRegisters(MF.getFunction().getContext(), OpInfo.ConstraintVT);
+    NumRegs = TLI.getNumRegistersForInlineAsm(MF.getFunction().getContext(),
+                                              OpInfo.ConstraintVT);
 
   // If this is a constraint for a specific physical register, but the type of
   // the operand requires more than one register to be passed, we allocate the

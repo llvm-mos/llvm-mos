@@ -31,6 +31,9 @@ public:
     return false;
   }
 
+  unsigned getNumRegistersForInlineAsm(LLVMContext &Context,
+                                       EVT VT) const override;
+
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
