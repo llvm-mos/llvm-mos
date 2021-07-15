@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/Analysis.h"

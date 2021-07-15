@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS project.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"

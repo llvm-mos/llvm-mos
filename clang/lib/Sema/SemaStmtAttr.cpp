@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS project.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/EvaluatedExprVisitor.h"

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS project.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H

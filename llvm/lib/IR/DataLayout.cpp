@@ -15,7 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS project.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/IR/DataLayout.h"
 #include "llvm/ADT/DenseMap.h"

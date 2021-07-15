@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS project.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "clang/Driver/Driver.h"
 #include "InputInfo.h"

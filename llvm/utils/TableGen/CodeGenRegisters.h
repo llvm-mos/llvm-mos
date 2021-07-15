@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
 #define LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/ADT/SetVector.h"

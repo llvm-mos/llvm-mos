@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by LLVM-MOS.
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
