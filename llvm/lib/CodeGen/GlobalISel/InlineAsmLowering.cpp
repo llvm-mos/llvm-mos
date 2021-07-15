@@ -11,6 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+// Modified by LLVM-MOS.
+
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -670,8 +672,10 @@ bool InlineAsmLowering::lowerAsmOperandForConstraint(
       bool IsBool = CI->getBitWidth() == 1;
       int64_t ExtVal = IsBool ? CI->getZExtValue() : CI->getSExtValue();
       Ops.push_back(MachineOperand::CreateImm(ExtVal));
-      return true;
-    }
-    return false;
+    } else if (GlobalValue *GV = dyn_cast<GlobalValue>(Val)) {
+      Ops.push_back(MachineOperand::CreateGA(GV, 0));
+    } else
+      return false;
+    return true;
   }
 }

@@ -87,6 +87,12 @@ bool MOSAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   default:
     errs() << "Unsupported inline asm operand: " << MO << "\n";
     return true;
+  case MachineOperand::MO_Immediate:
+    OS << MO.getImm();
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    OS << MO.getGlobal()->getName();
+    break;
   case MachineOperand::MO_Register:
     Register Reg = MO.getReg();
     if (MOS::Imag16RegClass.contains(Reg) || MOS::Imag8RegClass.contains(Reg))

@@ -27,6 +27,38 @@
     ; CHECK-NEXT: RTS
   }
 
+  @global = global i32 0
+
+  define void @constraint_i_i8() {
+  ; CHECK-LABEL: name: constraint_i_i8
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "JSR 1234", "i"(i8 42)
+    ; CHECK: INLINEASM &"JSR 1234", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
+  define void @constraint_i_i16() {
+  ; CHECK-LABEL: name: constraint_i_i16
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "JSR 1234", "i"(i16 42)
+    ; CHECK: INLINEASM &"JSR 1234", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
+  define void @constraint_i_global() {
+  ; CHECK-LABEL: name: constraint_i_global
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "JSR 1234", "i"(i32* @global)
+    ; CHECK: INLINEASM &"JSR 1234", 9 /* sideeffect mayload attdialect */, 13 /* imm */, @global
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
   define void @constraint_R() {
   ; CHECK-LABEL: name: constraint_R
   entry:
