@@ -1,3 +1,5 @@
+# Modified by Daniel Thornburgh (mysterymath@gmail.com).
+
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
   Option

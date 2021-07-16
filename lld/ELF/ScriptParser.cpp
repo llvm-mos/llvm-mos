@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
+
 #include "ScriptParser.h"
 #include "Config.h"
 #include "Driver.h"

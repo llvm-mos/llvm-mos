@@ -2,6 +2,8 @@
 # RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=TAHITI
 # RUN: llc -O0 -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=FIJI
 
+# Modified by Daniel Thornburgh (mysterymath@gmail.com).
+
 ---
 name: test_implicit_def_s1025
 body: |

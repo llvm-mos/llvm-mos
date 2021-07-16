@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fsyntax-only %s
 
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
+
 void f1() __attribute__((leaf));
 
 void f2() __attribute__((leaf("abc"))); // expected-error {{'leaf' attribute takes no argument}}

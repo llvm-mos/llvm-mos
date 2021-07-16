@@ -6,6 +6,8 @@
 
 ; PR1198
 
+; Modified by Daniel Thornburgh (mysterymath@gmail.com).
+
 define i64 @foo(i64 %x, i64 %y) nounwind {
 ; X86-NOBMI-LABEL: foo:
 ; X86-NOBMI:       # %bb.0:

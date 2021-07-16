@@ -17,6 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Modified by Daniel Thornburgh (mysterymath@gmail.com).
+
 #ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 

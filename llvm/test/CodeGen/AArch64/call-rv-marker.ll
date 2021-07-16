@@ -1,6 +1,8 @@
 ; RUN: llc -o - %s | FileCheck --check-prefix=SELDAG --check-prefix=CHECK %s
 ; RUN: llc -global-isel -o - %s | FileCheck --check-prefix=GISEL --check-prefix=CHECK %s
 
+; Modified by Daniel Thornburgh (mysterymath@gmail.com).
+
 ; TODO: support marker generation with GlobalISel
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-iphoneos"
