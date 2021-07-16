@@ -34,6 +34,9 @@ For information about the current status of this project, please see
 To learn why this project exists, please see
 [Rationale](https://llvm-mos.org/wiki/Rationale).
 
+## Notice
+The llvm-mos project is not officially affiliated with or endorsed by the LLVM Foundation or LLVM project. Our project is a fork of LLVM that provides a new backend/target; our project is based on LLVM, not a part of LLVM. Our use of LLVM or other related trademarks does not imply affiliation or endorsement.
+
 # Getting started
 
 ## Download the LLVM-MOS tools
