@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/Triple.h"

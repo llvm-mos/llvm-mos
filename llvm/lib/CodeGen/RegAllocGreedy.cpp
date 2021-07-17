@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"

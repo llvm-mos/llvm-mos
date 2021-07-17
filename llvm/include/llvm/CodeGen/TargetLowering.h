@@ -19,7 +19,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #ifndef LLVM_CODEGEN_TARGETLOWERING_H
 #define LLVM_CODEGEN_TARGETLOWERING_H

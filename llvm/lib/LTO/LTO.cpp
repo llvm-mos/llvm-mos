@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/LTO/LTO.h"
 #include "llvm/ADT/SmallSet.h"

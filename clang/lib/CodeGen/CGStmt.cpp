@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"

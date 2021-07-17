@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/ADT/ArrayRef.h"

@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/ADT/DenseMap.h"

@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "TargetInfo.h"
 #include "ABIInfo.h"

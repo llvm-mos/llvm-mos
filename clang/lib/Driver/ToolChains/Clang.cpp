@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "Clang.h"
 #include "AMDGPU.h"

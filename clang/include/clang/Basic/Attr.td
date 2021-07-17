@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 // The documentation is organized by category. Attributes can have category-
 // specific documentation that is collated within the larger document.

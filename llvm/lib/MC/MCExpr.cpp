@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/ADT/Statistic.h"

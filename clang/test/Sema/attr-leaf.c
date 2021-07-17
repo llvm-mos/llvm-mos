@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -verify -fsyntax-only %s
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 void f1() __attribute__((leaf));
 

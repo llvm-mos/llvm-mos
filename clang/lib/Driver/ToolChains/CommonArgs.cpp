@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "CommonArgs.h"
 #include "Arch/AArch64.h"

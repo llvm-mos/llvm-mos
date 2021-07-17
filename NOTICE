@@ -1,0 +1,8 @@
+This distribution is part of the LLVM-MOS project.
+
+The LLVM-MOS project is based on the LLVM project, but is not otherwise
+endorsed or affiliated with the LLVM project. All modifications to LLVM
+are provided under the Apache License 2.0 with LLVM extensions.
+
+For an authoritative listing of which LLVM files have been modified and how,
+please use the git VCS available at https://github.com/llvm-mos/llvm-mos.

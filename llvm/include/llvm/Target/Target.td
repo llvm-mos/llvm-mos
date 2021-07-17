@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 // Include all information about LLVM intrinsics.
 include "llvm/IR/Intrinsics.td"

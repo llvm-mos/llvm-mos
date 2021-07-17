@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Modified by Daniel Thornburgh (mysterymath@gmail.com).
 
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/ADT/ArrayRef.h"
