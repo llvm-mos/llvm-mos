@@ -35,23 +35,35 @@ define void @may_recurse_inline_asm() {
   ret void
 }
 
+define void @may_recurse_interrupt() "interrupt" {
+; CHECK: define void @may_recurse_interrupt() #1 {
+  call void @may_recurse_interrupt_callee()
+  ret void
+}
+
+define void @may_recurse_interrupt_callee() {
+; CHECK: define void @may_recurse_interrupt_callee() {
+  ret void
+}
+
 define void @no_recurse_nocallback() {
-; CHECK: define void @no_recurse_nocallback() #1 {
+; CHECK: define void @no_recurse_nocallback() #2 {
   call void @external_nocallback()
   ret void
 }
 
 define void @no_recurse_inline_asm_nocallback() {
-; CHECK: define void @no_recurse_inline_asm_nocallback() #1 {
+; CHECK: define void @no_recurse_inline_asm_nocallback() #2 {
   call void asm "", ""() nocallback
   ret void
 }
 
 
 define void @no_recurse_once_removed() {
-; CHECK: define void @no_recurse_once_removed() #1 {
+; CHECK: define void @no_recurse_once_removed() #2 {
   call void @no_recurse_nocallback()
   ret void
 }
 
-; CHECK: #1 = { norecurse }
+; CHECK: #1 = { "interrupt" }
+; CHECK: #2 = { norecurse }

@@ -13,11 +13,11 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSNORECURSE_H
 #define LLVM_LIB_TARGET_MOS_MOSNORECURSE_H
 
-#include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 
-CallGraphSCCPass *createMOSNoRecursePass();
+ModulePass *createMOSNoRecursePass();
 
 } // end namespace llvm
 

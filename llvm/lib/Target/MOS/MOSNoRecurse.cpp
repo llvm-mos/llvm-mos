@@ -23,7 +23,9 @@
 #include "MOSNoRecurse.h"
 
 #include "MOS.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -34,40 +36,65 @@ using namespace llvm;
 
 namespace {
 
-struct MOSNoRecurse : public CallGraphSCCPass {
+struct MOSNoRecurse : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
+  SmallPtrSet<const CallGraphNode *, 8> ReachableFromInterrupt;
 
-  MOSNoRecurse() : CallGraphSCCPass(ID) {
+  MOSNoRecurse() : ModulePass(ID) {
     initializeMOSNoRecursePass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnSCC(CallGraphSCC &SCC) override;
+  bool runOnModule(Module &M) override;
+  void getAnalysisUsage(AnalysisUsage &Info) const override;
 
-  bool doInitialization(CallGraph &CG) override {
-    LLVM_DEBUG(dbgs() << "**** MOS NoRecurse Pass ****\n");
-    // For the conservative recursion analysis, any external call may call any
-    // externally-callable function so add an edge from the calls-external node
-    // to the called-by-external node.
-    assert(CG.getCallsExternalNode()->empty());
-    CG.getCallsExternalNode()->addCalledFunction(nullptr,
-                                                 CG.getExternalCallingNode());
-    // Report unchanged, since the call graph will be returned to its original
-    // condition on finalization.
-    return false;
-  }
-
-  bool doFinalization(CallGraph &CG) override {
-    // Remove the artificial edge added in initialization.
-    CG.getCallsExternalNode()->removeAllCalledFunctions();
-    return false;
-  }
+  bool runOnSCC(CallGraphSCC &SCC);
+  void markReachableFromInterrupt(const CallGraphNode &CGN);
 };
 
-static bool callsSelf(const CallGraphNode& N) {
+static bool callsSelf(const CallGraphNode &N) {
   for (const CallGraphNode::CallRecord &CR : N)
     if (CR.second == &N)
       return true;
   return false;
+}
+
+bool MOSNoRecurse::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "**** MOS NoRecurse Pass ****\n");
+
+  CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
+
+  // For the conservative recursion analysis, any external call may call any
+  // externally-callable function so add an edge from the calls-external node
+  // to the called-by-external node.
+  assert(CG.getCallsExternalNode()->empty());
+  CG.getCallsExternalNode()->addCalledFunction(nullptr,
+                                               CG.getExternalCallingNode());
+
+  // Walk the callgraph in bottom-up SCC order.
+  scc_iterator<CallGraph *> CGI = scc_begin(&CG);
+  CallGraphSCC CurSCC(CG, &CGI);
+  bool Changed = false;
+  for (; !CGI.isAtEnd(); ++CGI) {
+    CurSCC.initialize(*CGI);
+    Changed |= runOnSCC(CurSCC);
+  }
+
+  // Mark all functions reachable from an interrupt function as possibly
+  // recursive.
+  for (Function &F : M.functions()) {
+    if (F.hasFnAttribute("interrupt"))
+      markReachableFromInterrupt(*CG[&F]);
+  }
+  ReachableFromInterrupt.clear();
+
+  // Remove the artificial edge.
+  CG.getCallsExternalNode()->removeAllCalledFunctions();
+  return Changed;
+}
+
+void MOSNoRecurse::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<CallGraphWrapperPass>();
+  AU.addPreserved<CallGraphWrapperPass>();
 }
 
 bool MOSNoRecurse::runOnSCC(CallGraphSCC &SCC) {
@@ -99,6 +126,23 @@ bool MOSNoRecurse::runOnSCC(CallGraphSCC &SCC) {
   return true;
 }
 
+void MOSNoRecurse::markReachableFromInterrupt(const CallGraphNode &CGN) {
+  if (ReachableFromInterrupt.contains(&CGN))
+    return;
+  ReachableFromInterrupt.insert(&CGN);
+
+  Function *F = CGN.getFunction();
+  if (F && !F->isDeclaration()) {
+    LLVM_DEBUG(dbgs() << "Marking reachable from interrupt: " << F->getName()
+                      << "\n");
+    if (F->doesNotRecurse())
+      F->removeFnAttr(Attribute::NoRecurse);
+  }
+
+  for (const auto &CallRecord : CGN)
+    markReachableFromInterrupt(*CallRecord.second);
+}
+
 } // namespace
 
 char MOSNoRecurse::ID = 0;
@@ -108,6 +152,4 @@ INITIALIZE_PASS(
     "Detect non-recursive functions via detailed call graph analysis", false,
     false)
 
-CallGraphSCCPass *llvm::createMOSNoRecursePass() {
-  return new MOSNoRecurse();
-}
+ModulePass *llvm::createMOSNoRecursePass() { return new MOSNoRecurse(); }
