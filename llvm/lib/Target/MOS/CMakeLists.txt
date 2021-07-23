@@ -53,6 +53,7 @@ add_llvm_target(MOSCodeGen
   GlobalISel
   MC
   IPO
+  LTO
   Passes
   SelectionDAG
   Support

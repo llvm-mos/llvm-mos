@@ -27,6 +27,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/IR/Module.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -39,6 +40,7 @@ namespace {
 struct MOSNoRecurse : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
   SmallPtrSet<const CallGraphNode *, 8> ReachableFromInterrupt;
+  bool HasInterrupts = false;
 
   MOSNoRecurse() : ModulePass(ID) {
     initializeMOSNoRecursePass(*PassRegistry::getPassRegistry());
@@ -82,10 +84,27 @@ bool MOSNoRecurse::runOnModule(Module &M) {
   // Mark all functions reachable from an interrupt function as possibly
   // recursive.
   for (Function &F : M.functions()) {
-    if (F.hasFnAttribute("interrupt"))
+    if (F.hasFnAttribute("interrupt")) {
+      HasInterrupts = true;
       markReachableFromInterrupt(*CG[&F]);
+    }
   }
-  ReachableFromInterrupt.clear();
+
+  // Mark all libcalls as possibly recursive if we have interrupts, since
+  // there's no way to tell which will actually be called by an interrupt before
+  // the interrupt is compiled. But the compilation of the interrupt depends on
+  // whether or not it's norecurse, so we don't have much choice other than
+  // making the conservative assumption here.
+  if (HasInterrupts) {
+    for (const char *LibcallName : lto::LTO::getRuntimeLibcallSymbols()) {
+      Function *Libcall = M.getFunction(LibcallName);
+      if (Libcall && !Libcall->isDeclaration() && Libcall->doesNotRecurse()) {
+        LLVM_DEBUG(dbgs() << "Marking libcall as possibly recursive: "
+                          << Libcall->getName() << "\n");
+        Libcall->removeFnAttr(Attribute::NoRecurse);
+      }
+    }
+  }
 
   // Remove the artificial edge.
   CG.getCallsExternalNode()->removeAllCalledFunctions();

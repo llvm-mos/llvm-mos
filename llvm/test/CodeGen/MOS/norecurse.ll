@@ -46,6 +46,11 @@ define void @may_recurse_interrupt_callee() {
   ret void
 }
 
+define i8 @__udivqi3(i8 %a, i8 %b) {
+  ; CHECK: define i8 @__udivqi3(i8 %a, i8 %b) {
+  ret i8 %a
+}
+
 define void @no_recurse_nocallback() {
 ; CHECK: define void @no_recurse_nocallback() #2 {
   call void @external_nocallback()
