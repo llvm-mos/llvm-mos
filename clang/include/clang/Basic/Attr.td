@@ -370,6 +370,7 @@ def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetM68k : TargetArch<["m68k"]>;
+def TargetMOS : TargetArch<["mos"]>;
 def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
@@ -1590,6 +1591,13 @@ def M68kInterrupt : InheritableAttr, TargetSpecificAttr<TargetM68k> {
   let Args = [UnsignedArgument<"Number">];
   let ParseKind = "Interrupt";
   let HasCustomParsing = 1;
+  let Documentation = [Undocumented];
+}
+
+def MOSInterrupt : InheritableAttr, TargetSpecificAttr<TargetMOS> {
+  let Spellings = [GCC<"interrupt">];
+  let Subjects = SubjectList<[Function]>;
+  let ParseKind = "Interrupt";
   let Documentation = [Undocumented];
 }
 

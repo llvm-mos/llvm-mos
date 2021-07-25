@@ -6631,6 +6631,19 @@ static void handleM68kInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(UsedAttr::CreateImplicit(S.Context));
 }
 
+static void handleMOSInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!isFunctionOrMethod(D)) {
+    S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << "'interrupt'" << ExpectedFunction;
+    return;
+  }
+
+  if (!AL.checkExactlyNumArgs(S, 0))
+    return;
+
+  handleSimpleAttribute<MOSInterruptAttr>(S, D, AL);
+}
+
 static void handleAnyX86InterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Semantic checks for a function with the 'interrupt' attribute.
   // a) Must be a function.
@@ -6905,6 +6918,9 @@ static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   case llvm::Triple::m68k:
     handleM68kInterruptAttr(S, D, AL);
+    break;
+  case llvm::Triple::mos:
+    handleMOSInterruptAttr(S, D, AL);
     break;
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
