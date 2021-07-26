@@ -180,11 +180,14 @@ def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
   let isCall = true;
 }
 
-def RTS : MOSLogicalInstr, PseudoInstExpansion<(RTS_Implied)> {
+class Return<Instruction Opcode> : MOSLogicalInstr, PseudoInstExpansion<(Opcode)> {
   let isBarrier = true;
   let isReturn = true;
   let isTerminator = true;
 }
+
+def RTS : Return<RTS_Implied>;
+def RTI : Return<RTI_Implied>;
 
 //===---------------------------------------------------------------------===//
 // Immediate Load Instructions

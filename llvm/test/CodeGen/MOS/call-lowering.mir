@@ -207,4 +207,13 @@
     ret void
     ; CHECK-NEXT: RTS
   }
+
+  define void @interrupt() "interrupt" {
+  ; CHECK-LABEL: name: interrupt
+  entry:
+  ; CHECK-LABEL: entry:
+
+    ret void
+    ; CHECK-NEXT: RTI
+  }
 ...

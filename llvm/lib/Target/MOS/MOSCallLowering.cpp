@@ -312,15 +312,17 @@ void adjustArgFlags(CallLowering::ArgInfo &Arg, LLT Ty) {
 bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                   const Value *Val, ArrayRef<Register> VRegs,
                                   FunctionLoweringInfo &FLI) const {
-  auto Return = MIRBuilder.buildInstrNoInsert(MOS::RTS);
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = MF.getFunction();
+
+  auto Return = MIRBuilder.buildInstrNoInsert(
+      F.hasFnAttribute("interrupt") ? MOS::RTI : MOS::RTS);
 
   if (Val) {
-    MachineFunction &MF = MIRBuilder.getMF();
     MachineRegisterInfo &MRI = MF.getRegInfo();
     const TargetLowering &TLI = *getTLI();
     const DataLayout &DL = MF.getDataLayout();
     LLVMContext &Ctx = Val->getContext();
-    const Function &F = MF.getFunction();
 
     SmallVector<EVT> ValueVTs;
     ComputeValueVTs(TLI, DL, Val->getType(), ValueVTs);
