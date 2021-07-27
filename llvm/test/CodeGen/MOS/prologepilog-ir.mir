@@ -13,6 +13,16 @@
   entry:
     ret void
   }
+
+  define void @interrupt_axy() "interrupt" {
+  entry:
+    ret void
+  }
+
+  define void @interrupt_x() "interrupt" {
+  entry:
+    ret void
+  }
 ---
 name: norecurse
 stack:
@@ -71,4 +81,44 @@ body: |
     ; CHECK: RTS implicit $rc4, implicit $rc5
     $a = LDAbsOffset %stack.2, 1 :: (load 1 from %stack.2 + 1)
     RTS
+...
+---
+name: interrupt_axy
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: interrupt_axy
+    ; CHECK: frame-setup PH $a
+    ; CHECK: $a = frame-setup COPY $x
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup COPY $y
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $x = LDImm 42
+    ; CHECK: $a = LDImm 43
+    ; CHECK: $y = LDImm 44
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $y = frame-destroy COPY killed $a
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $x = frame-destroy COPY killed $a
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: RTI implicit $a, implicit $x, implicit $y
+    $x = LDImm 42
+    $a = LDImm 43
+    $y = LDImm 44
+    RTI
+...
+---
+name: interrupt_x
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: interrupt_x
+    ; CHECK: PH $a
+    ; CHECK: $a = frame-setup COPY $x
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $x = LDImm 42
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $x = frame-destroy COPY killed $a
+    ; CHECK: $a = PL
+    ; CHECK: RTI implicit $x
+    $x = LDImm 42
+    RTI
 ...

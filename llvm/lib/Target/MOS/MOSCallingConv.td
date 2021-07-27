@@ -136,3 +136,8 @@ def CC_MOS_VarArgs : CallingConv<[
 // implicitly by their subregisters, since the subregisters are what must be
 // saved and restored.
 def MOS_CSR : CalleeSavedRegs<(add RC4, RC5, RC8, RC9)>;
+
+// Interrupts save all registers except the stack pointer (which is restored
+// upon return by any function.)
+def MOS_Interrupt_CSR :
+  CalleeSavedRegs<(add A, X, Y, (sequence "RC%u", 2, 255))>;

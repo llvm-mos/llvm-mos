@@ -86,7 +86,9 @@ MOSRegisterInfo::MOSRegisterInfo()
 
 const MCPhysReg *
 MOSRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return MOS_CSR_SaveList;
+  return MF->getFunction().hasFnAttribute("interrupt")
+             ? MOS_Interrupt_CSR_SaveList
+             : MOS_CSR_SaveList;
 }
 
 const uint32_t *MOSRegisterInfo::getCallPreservedMask(const MachineFunction &MF,

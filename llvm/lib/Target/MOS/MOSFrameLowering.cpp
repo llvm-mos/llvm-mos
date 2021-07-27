@@ -61,8 +61,10 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // with impunity. This is slightly more expensive than saving/resting values
   // directly on the hard stack, but it's significantly simpler.
   for (const CalleeSavedInfo &CI : CSI) {
-    Register A = Builder.buildCopy(&MOS::AcRegClass, CI.getReg()).getReg(0);
-    Builder.buildInstr(MOS::PH, {}, {A});
+    Register Reg = CI.getReg();
+    if (Reg != MOS::A)
+      Reg = Builder.buildCopy(&MOS::AcRegClass, CI.getReg()).getReg(0);
+    Builder.buildInstr(MOS::PH, {}, {Reg});
   }
 
   // Record that the frame pointer is killed by these instructions.
@@ -79,8 +81,12 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   MachineInstrSpan MIS(MI, &MBB);
 
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
-    Register A = Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
-    Builder.buildCopy(CI.getReg(), A);
+    Register Reg = CI.getReg();
+    if (Reg != MOS::A)
+      Reg = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
+    Builder.buildInstr(MOS::PL, {Reg}, {});
+    if (Reg != CI.getReg())
+      Builder.buildCopy(CI.getReg(), Reg);
   }
 
   // Mark the CSRs as used by the return to ensure Machine Copy Propagation
