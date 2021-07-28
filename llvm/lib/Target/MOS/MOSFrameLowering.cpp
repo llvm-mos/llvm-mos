@@ -88,6 +88,23 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
     Builder.buildInstr(MOS::PH, {}, {Reg});
   }
 
+  // Interrupt handlers may or may not emit calls to these temporary locations,
+  // but this can occur after PEI. Accordingly, we conservatively save and
+  // restore these locations in every interrupt handler.
+  if (Builder.getMF().getFunction().hasFnAttribute("interrupt")) {
+    const auto Push = [&](const char *Sym, int Offset = 0) {
+      Register Tmp = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
+      auto Ld = Builder.buildInstr(MOS::LDAbs, {Tmp}, {}).addExternalSymbol(Sym);
+      Ld->getOperand(1).setOffset(Offset);
+      Builder.buildInstr(MOS::PH, {}, {Tmp});
+    };
+    Push("__save_a");
+    Push("__save_x");
+    Push("__save_y");
+    Push("__call_indir_target");
+    Push("__call_indir_target", 1);
+  }
+
   // Record that the frame pointer is killed by these instructions.
   for (auto MI = MIS.begin(), MIE = MIS.getInitial(); MI != MIE; ++MI)
     MI->setFlag(MachineInstr::FrameSetup);
@@ -100,6 +117,22 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineIRBuilder Builder(MBB, MI);
   MachineInstrSpan MIS(MI, &MBB);
+
+  // Interrupt handlers may or may not emit calls to these temporary locations,
+  // but this can occur after PEI. Accordingly, we conservatively save and
+  // restore these locations in every interrupt handler.
+  if (Builder.getMF().getFunction().hasFnAttribute("interrupt")) {
+    const auto Pull = [&](const char *Sym, int Offset = 0) {
+      Register Tmp = Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
+      auto St = Builder.buildInstr(MOS::STAbs, {}, {Tmp}).addExternalSymbol(Sym);
+      St->getOperand(1).setOffset(Offset);
+    };
+    Pull("__call_indir_target", 1);
+    Pull("__call_indir_target");
+    Pull("__save_y");
+    Pull("__save_x");
+    Pull("__save_a");
+  }
 
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Register Reg = CI.getReg();

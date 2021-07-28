@@ -92,9 +92,29 @@ body: |
     ; CHECK: frame-setup PH killed $a
     ; CHECK: $a = frame-setup COPY $y
     ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup LDAbs &__save_a
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup LDAbs &__save_x
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup LDAbs &__save_y
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup LDAbs &__call_indir_target
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup LDAbs &__call_indir_target + 1
+    ; CHECK: frame-setup PH killed $a
     ; CHECK: $x = LDImm 42
     ; CHECK: $a = LDImm 43
     ; CHECK: $y = LDImm 44
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: frame-destroy STAbs killed $a, &__call_indir_target + 1
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: frame-destroy STAbs killed $a, &__call_indir_target
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: frame-destroy STAbs killed $a, &__save_y
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: frame-destroy STAbs killed $a, &__save_x
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: frame-destroy STAbs killed $a, &__save_a
     ; CHECK: $a = frame-destroy PL
     ; CHECK: $y = frame-destroy COPY killed $a
     ; CHECK: $a = frame-destroy PL
@@ -117,8 +137,28 @@ body: |
   ; CHECK:   frame-setup PH $a
   ; CHECK:   $a = frame-setup COPY $x
   ; CHECK:   frame-setup PH killed $a
+  ; CHECK:   $a = frame-setup LDAbs &__save_a
+  ; CHECK:   frame-setup PH killed $a
+  ; CHECK:   $a = frame-setup LDAbs &__save_x
+  ; CHECK:   frame-setup PH killed $a
+  ; CHECK:   $a = frame-setup LDAbs &__save_y
+  ; CHECK:   frame-setup PH killed $a
+  ; CHECK:   $a = frame-setup LDAbs &__call_indir_target
+  ; CHECK:   frame-setup PH killed $a
+  ; CHECK:   $a = frame-setup LDAbs &__call_indir_target + 1
+  ; CHECK:   frame-setup PH killed $a
   ; CHECK: bb.1.entry:
   ; CHECK:   $x = LDImm 42
+  ; CHECK:   $a = frame-destroy PL
+  ; CHECK:   frame-destroy STAbs killed $a, &__call_indir_target + 1
+  ; CHECK:   $a = frame-destroy PL
+  ; CHECK:   frame-destroy STAbs killed $a, &__call_indir_target
+  ; CHECK:   $a = frame-destroy PL
+  ; CHECK:   frame-destroy STAbs killed $a, &__save_y
+  ; CHECK:   $a = frame-destroy PL
+  ; CHECK:   frame-destroy STAbs killed $a, &__save_x
+  ; CHECK:   $a = frame-destroy PL
+  ; CHECK:   frame-destroy STAbs killed $a, &__save_a
   ; CHECK:   $a = frame-destroy PL
   ; CHECK:   $x = frame-destroy COPY killed $a
   ; CHECK:   $a = frame-destroy PL
