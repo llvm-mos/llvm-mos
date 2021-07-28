@@ -27,14 +27,7 @@ public:
                               const TargetRegisterInfo *TRI,
                               std::vector<CalleeSavedInfo> &CSI) const override;
 
-  // Prologues and epilogues are pretty expensive on the 6502; in the worst case
-  // they involve a 16-bit addition. This ensures that they are sunk to as small
-  // a control flow region around the use of stack as possible. For example,
-  // shrink wrapping may move the prologue and epilogue blocks inside of a
-  // conditionally-executed block.
-  bool enableShrinkWrapping(const MachineFunction &MF) const override {
-    return true;
-  }
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
