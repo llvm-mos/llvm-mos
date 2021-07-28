@@ -108,17 +108,23 @@ body: |
 ...
 ---
 name: interrupt_x
+tracksRegLiveness: true
 body: |
+  ; CHECK-LABEL: name: interrupt_x
+  ; CHECK: bb.0.entry:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   liveins: $a, $x
+  ; CHECK:   frame-setup PH $a
+  ; CHECK:   $a = frame-setup COPY $x
+  ; CHECK:   frame-setup PH killed $a
+  ; CHECK: bb.1.entry:
+  ; CHECK:   $x = LDImm 42
+  ; CHECK:   $a = frame-destroy PL
+  ; CHECK:   $x = frame-destroy COPY killed $a
+  ; CHECK:   $a = frame-destroy PL
+  ; CHECK:   RTI implicit $a, implicit $x
   bb.0.entry:
-    ; CHECK-LABEL: name: interrupt_x
-    ; CHECK: PH $a
-    ; CHECK: $a = frame-setup COPY $x
-    ; CHECK: frame-setup PH killed $a
-    ; CHECK: $x = LDImm 42
-    ; CHECK: $a = frame-destroy PL
-    ; CHECK: $x = frame-destroy COPY killed $a
-    ; CHECK: $a = PL
-    ; CHECK: RTI implicit $x
+  bb.1.entry:
     $x = LDImm 42
     RTI
 ...

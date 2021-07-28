@@ -41,6 +41,13 @@ MOSFrameLowering::MOSFrameLowering()
 bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
+  // We need to A free to save anything else. If we don't save it explicitly,
+  // the register scavenger might to use __save_a to save A. This is normally
+  // fine, but for interrupts, __save_a itself needs to be saved.
+  if (MF.getFunction().hasFnAttribute("interrupt") &&
+      CSI.front().getReg() != MOS::A)
+    CSI.insert(CSI.begin(), CalleeSavedInfo{MOS::A});
+
   // We place the CSRs on the hard stack, which we don't explicitly model in
   // PEI. (spill/restore)CalleeSavedRegisters will emit the spills and reloads
   // sequentially to and from the hard stack.
