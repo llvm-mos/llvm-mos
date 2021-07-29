@@ -24,7 +24,7 @@
     ret void
   }
 
-  define preserve_mostcc void @interrupt_caller() "interrupt" {
+  define void @interrupt_caller() "interrupt" {
   entry:
     ret void
   }

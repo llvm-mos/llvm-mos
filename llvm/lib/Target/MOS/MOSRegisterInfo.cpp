@@ -83,9 +83,7 @@ MOSRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const uint32_t *
 MOSRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID CallingConv) const {
-  // We're using the calling convention of the caller (not the callee) as a
-  // signal that the entire module is using an altered calling convention.
-  return MF.getFunction().getCallingConv() == CallingConv::PreserveMost
+  return MF.getFunction().getParent()->getModuleFlag("mos-isr-used")
              ? MOS_PreserveMost_CSR_RegMask
              : MOS_CSR_RegMask;
 }
@@ -98,7 +96,7 @@ BitVector MOSRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // These will already be callee-saved, but the register allocator doesn't do
   // very well with that many CSRs available. Reserve them until we can make it
   // pickier about using them.
-  if (MF.getFunction().getCallingConv() == CallingConv::PreserveMost) {
+  if (MF.getFunction().getParent()->getModuleFlag("mos-isr-used")) {
     for (Register Reg = MOS::RS5; Reg <= MOS::RS127; Reg = Reg + 1)
       reserveAllSubregs(&Reserved, Reg);
   }
