@@ -141,3 +141,8 @@ def MOS_CSR : CalleeSavedRegs<(add RC4, RC5, RC8, RC9)>;
 // upon return by any function.)
 def MOS_Interrupt_CSR :
   CalleeSavedRegs<(add A, X, Y, (sequence "RC%u", 2, 255))>;
+
+// If interrupts are being used, then very few registers can be caller saved;
+// otherwise the interrupt prolog would be far too slow.
+def MOS_PreserveMost_CSR :
+  CalleeSavedRegs<(add RC4, RC5, (sequence "RC%u", 8, 255))>;

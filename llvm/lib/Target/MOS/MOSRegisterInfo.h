@@ -72,6 +72,9 @@ public:
   const char *getImag8SymbolName(Register Reg) const {
     return Imag8SymbolNames[Reg].c_str();
   }
+
+private:
+  void reserveAllSubregs(BitVector *Reserved, Register Reg) const;
 };
 
 } // namespace llvm

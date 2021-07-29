@@ -90,12 +90,14 @@ bool MOSNoRecurse::runOnModule(Module &M) {
     }
   }
 
-  // Mark all libcalls as possibly recursive if we have interrupts, since
-  // there's no way to tell which will actually be called by an interrupt before
-  // the interrupt is compiled. But the compilation of the interrupt depends on
-  // whether or not it's norecurse, so we don't have much choice other than
-  // making the conservative assumption here.
   if (HasInterrupts) {
+    Changed = true;
+
+    // Mark all libcalls as possibly recursive if we have interrupts, since
+    // there's no way to tell which will actually be called by an interrupt before
+    // the interrupt is compiled. But the compilation of the interrupt depends on
+    // whether or not it's norecurse, so we don't have much choice other than
+    // making the conservative assumption here.
     for (const char *LibcallName : lto::LTO::getRuntimeLibcallSymbols()) {
       Function *Libcall = M.getFunction(LibcallName);
       if (Libcall && !Libcall->isDeclaration() && Libcall->doesNotRecurse()) {
@@ -104,6 +106,11 @@ bool MOSNoRecurse::runOnModule(Module &M) {
         Libcall->removeFnAttr(Attribute::NoRecurse);
       }
     }
+
+    // Make most imaginary registers callee-saved to avoid ISRs having to save
+    // an unbounded number of them.
+    for (Function &F : M.functions())
+      F.setCallingConv(CallingConv::PreserveMost);
   }
 
   // Remove the artificial edge.

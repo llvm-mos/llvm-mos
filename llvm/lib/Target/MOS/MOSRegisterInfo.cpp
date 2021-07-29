@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -65,23 +66,11 @@ MOSRegisterInfo::MOSRegisterInfo()
                        "only 128 exist.");
 
   // Reserve all imaginary registers beyond the number allowed to the compiler.
-  for (Register Ptr = MOS::RS0 + NumImagPtrs; Ptr <= MOS::RS127;
-       Ptr = Ptr + 1) {
-    Reserved.set(Ptr);
-    Register Lo = getSubReg(Ptr, MOS::sublo);
-    Reserved.set(Lo);
-    Reserved.set(getSubReg(Lo, MOS::sublsb));
-    Register Hi = getSubReg(Ptr, MOS::subhi);
-    Reserved.set(Hi);
-    Reserved.set(getSubReg(Hi, MOS::sublsb));
-  }
+  for (Register Ptr = MOS::RS0 + NumImagPtrs; Ptr <= MOS::RS127; Ptr = Ptr + 1)
+    reserveAllSubregs(&Reserved, Ptr);
 
   // Reserve stack pointers.
-  Reserved.set(MOS::RS0);
-  Reserved.set(MOS::RC0);
-  Reserved.set(MOS::RC0LSB);
-  Reserved.set(MOS::RC1);
-  Reserved.set(MOS::RC1LSB);
+  reserveAllSubregs(&Reserved, MOS::RS0);
 }
 
 const MCPhysReg *
@@ -91,18 +80,27 @@ MOSRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
              : MOS_CSR_SaveList;
 }
 
-const uint32_t *MOSRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
-                                                      CallingConv::ID) const {
-  return MOS_CSR_RegMask;
+const uint32_t *
+MOSRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                      CallingConv::ID CallingConv) const {
+  // We're using the calling convention of the caller (not the callee) as a
+  // signal that the entire module is using an altered calling convention.
+  return MF.getFunction().getCallingConv() == CallingConv::PreserveMost
+             ? MOS_PreserveMost_CSR_RegMask
+             : MOS_CSR_RegMask;
 }
 
 BitVector MOSRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved = this->Reserved;
-  if (TFI->hasFP(MF)) {
-    Reserved.set(MOS::RS2);
-    Reserved.set(MOS::RC4);
-    Reserved.set(MOS::RC5);
+  if (TFI->hasFP(MF))
+    reserveAllSubregs(&Reserved, MOS::RS2);
+  // These will already be callee-saved, but the register allocator doesn't do
+  // very well with that many CSRs available. Reserve them until we can make it
+  // pickier about using them.
+  if (MF.getFunction().getCallingConv() == CallingConv::PreserveMost) {
+    for (Register Reg = MOS::RS5; Reg <= MOS::RS127; Reg = Reg + 1)
+      reserveAllSubregs(&Reserved, Reg);
   }
   return Reserved;
 }
@@ -519,4 +517,10 @@ bool MOSRegisterInfo::shouldCoalesce(
       (SrcRC == &MOS::AImag8RegClass || DstRC == &MOS::AImag8RegClass))
     return false;
   return true;
+}
+
+void MOSRegisterInfo::reserveAllSubregs(BitVector *Reserved,
+                                        Register Reg) const {
+  for (Register R : subregs_inclusive(Reg))
+    Reserved->set(R);
 }

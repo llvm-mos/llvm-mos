@@ -440,8 +440,7 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   auto Call = MIRBuilder.buildInstrNoInsert(MOS::JSR)
                   .add(Info.Callee)
-                  .addRegMask(TRI.getCallPreservedMask(
-                      MF, MF.getFunction().getCallingConv()));
+                  .addRegMask(TRI.getCallPreservedMask(MF, Info.CallConv));
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs) {

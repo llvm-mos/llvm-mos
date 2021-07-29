@@ -216,4 +216,15 @@
     ret void
     ; CHECK-NEXT: RTI
   }
+
+  define preserve_mostcc void @preserve_most_call() {
+  ; CHECK-LABEL: name: preserve_most_call
+  entry:
+  ; CHECK-LABEL: entry:
+
+    call void @void()
+    ; CHECK: JSR @void, mos_preservemost_csr
+    ret void
+    ; CHECK: RTS
+  }
 ...

@@ -6,66 +6,66 @@ declare void @external_mayrecurse()
 declare void @external_nocallback() nocallback
 
 define void @recurses_directly() {
-; CHECK: define void @recurses_directly() {
+; CHECK: define preserve_mostcc void @recurses_directly() {
   call void @recurses_directly()
   ret void
 }
 
 define void @recurses_indirectlya() {
-; CHECK: define void @recurses_indirectlya() {
+; CHECK: define preserve_mostcc void @recurses_indirectlya() {
   call void @recurses_indirectlyb()
   ret void
 }
 
 define void @recurses_indirectlyb() {
-; CHECK: define void @recurses_indirectlyb() {
+; CHECK: define preserve_mostcc void @recurses_indirectlyb() {
   call void @recurses_indirectlya()
   ret void
 }
 
 define void @may_recurse_external_call() {
-; CHECK: define void @may_recurse_external_call() {
+; CHECK: define preserve_mostcc void @may_recurse_external_call() {
   call void @external_mayrecurse()
   ret void
 }
 
 define void @may_recurse_inline_asm() {
-; CHECK: define void @may_recurse_inline_asm() {
+; CHECK: define preserve_mostcc void @may_recurse_inline_asm() {
   call void asm "", ""()
   ret void
 }
 
 define void @may_recurse_interrupt() "interrupt" {
-; CHECK: define void @may_recurse_interrupt() #1 {
+; CHECK: define preserve_mostcc void @may_recurse_interrupt() #1 {
   call void @may_recurse_interrupt_callee()
   ret void
 }
 
 define void @may_recurse_interrupt_callee() {
-; CHECK: define void @may_recurse_interrupt_callee() {
+; CHECK: define preserve_mostcc void @may_recurse_interrupt_callee() {
   ret void
 }
 
 define i8 @__udivqi3(i8 %a, i8 %b) {
-  ; CHECK: define i8 @__udivqi3(i8 %a, i8 %b) {
+  ; CHECK: define preserve_mostcc i8 @__udivqi3(i8 %a, i8 %b) {
   ret i8 %a
 }
 
 define void @no_recurse_nocallback() {
-; CHECK: define void @no_recurse_nocallback() #2 {
+; CHECK: define preserve_mostcc void @no_recurse_nocallback() #2 {
   call void @external_nocallback()
   ret void
 }
 
 define void @no_recurse_inline_asm_nocallback() {
-; CHECK: define void @no_recurse_inline_asm_nocallback() #2 {
+; CHECK: define preserve_mostcc void @no_recurse_inline_asm_nocallback() #2 {
   call void asm "", ""() nocallback
   ret void
 }
 
 
 define void @no_recurse_once_removed() {
-; CHECK: define void @no_recurse_once_removed() #2 {
+; CHECK: define preserve_mostcc void @no_recurse_once_removed() #2 {
   call void @no_recurse_nocallback()
   ret void
 }
