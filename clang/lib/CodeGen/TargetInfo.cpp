@@ -10941,6 +10941,8 @@ public:
 
     if (FD->getAttr<MOSInterruptAttr>())
       Fn->addFnAttr("interrupt");
+    if (FD->getAttr<MOSInterruptNorecurseAttr>())
+      Fn->addFnAttr("mos-interrupt-norecurse");
   }
 };
 

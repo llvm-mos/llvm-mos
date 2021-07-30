@@ -1601,6 +1601,12 @@ def MOSInterrupt : InheritableAttr, TargetSpecificAttr<TargetMOS> {
   let Documentation = [Undocumented];
 }
 
+def MOSInterruptNorecurse : InheritableAttr, TargetSpecificAttr<TargetMOS> {
+  let Spellings = [GCC<"interrupt_norecurse">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [Undocumented];
+}
+
 def Mode : Attr {
   let Spellings = [GCC<"mode">];
   let Subjects = SubjectList<[Var, Enum, TypedefName, Field], ErrorDiag>;
