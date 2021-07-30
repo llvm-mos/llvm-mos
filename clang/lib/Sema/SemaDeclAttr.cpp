@@ -6766,6 +6766,19 @@ static void handleMOSInterruptNorecurseAttr(Sema &S, Decl *D, const ParsedAttr &
   handleSimpleAttribute<MOSInterruptNorecurseAttr>(S, D, AL);
 }
 
+static void handleMOSInterruptNoISRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!isFunctionOrMethod(D)) {
+    S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << "'no_isr'" << ExpectedFunction;
+    return;
+  }
+
+  if (!AL.checkExactlyNumArgs(S, 0))
+    return;
+
+  handleSimpleAttribute<MOSNoISRAttr>(S, D, AL);
+}
+
 static void handleWebAssemblyExportNameAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!isFunctionOrMethod(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
@@ -7809,6 +7822,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_MOSInterruptNorecurse:
     handleMOSInterruptNorecurseAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_MOSNoISR:
+    handleMOSInterruptNoISRAttr(S, D, AL);
     break;
   case ParsedAttr::AT_WebAssemblyExportName:
     handleWebAssemblyExportNameAttr(S, D, AL);
