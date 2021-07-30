@@ -75,9 +75,8 @@ MOSRegisterInfo::MOSRegisterInfo()
 
 const MCPhysReg *
 MOSRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return MF->getFunction().hasFnAttribute("interrupt")
-             ? MOS_Interrupt_CSR_SaveList
-             : MOS_CSR_SaveList;
+  const MOSFrameLowering &TFI = *getFrameLowering(*MF);
+  return TFI.isISR(*MF) ? MOS_Interrupt_CSR_SaveList : MOS_CSR_SaveList;
 }
 
 const uint32_t *

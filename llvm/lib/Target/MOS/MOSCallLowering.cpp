@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSCallLowering.h"
+
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSCallingConv.h"
+#include "MOSFrameLowering.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 
@@ -313,10 +315,12 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                   const Value *Val, ArrayRef<Register> VRegs,
                                   FunctionLoweringInfo &FLI) const {
   MachineFunction &MF = MIRBuilder.getMF();
+  const auto &TFI = static_cast<const MOSFrameLowering &>(
+      *MF.getSubtarget().getFrameLowering());
   const Function &F = MF.getFunction();
 
-  auto Return = MIRBuilder.buildInstrNoInsert(
-      F.hasFnAttribute("interrupt") ? MOS::RTI : MOS::RTS);
+  auto Return =
+      MIRBuilder.buildInstrNoInsert(TFI.isISR(MF) ? MOS::RTI : MOS::RTS);
 
   if (Val) {
     MachineRegisterInfo &MRI = MF.getRegInfo();

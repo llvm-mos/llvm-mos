@@ -57,6 +57,9 @@ public:
   // Computes the size of the static stack.
   uint64_t staticSize(const MachineFrameInfo &MFI) const;
 
+  // Return whether or not the function is a direct ISR.
+  bool isISR(const MachineFunction& MF) const;
+
 private:
   void emitIncSP(MachineIRBuilder &Builder, int64_t Offset) const;
 };

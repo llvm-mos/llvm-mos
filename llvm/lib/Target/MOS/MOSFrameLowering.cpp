@@ -44,8 +44,7 @@ bool MOSFrameLowering::assignCalleeSavedSpillSlots(
   // We need to A free to save anything else. If we don't save it explicitly,
   // the register scavenger might to use __save_a to save A. This is normally
   // fine, but for interrupts, __save_a itself needs to be saved.
-  if (MF.getFunction().hasFnAttribute("interrupt") &&
-      CSI.front().getReg() != MOS::A)
+  if (isISR(MF) && CSI.front().getReg() != MOS::A)
     CSI.insert(CSI.begin(), CalleeSavedInfo{MOS::A});
 
   // We place the CSRs on the hard stack, which we don't explicitly model in
@@ -67,7 +66,7 @@ bool MOSFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // time shrink wrapping occurs.  Since there's no way for shrink wrapping to
   // determine which blocks will eventually use those locations, we can't use it
   // in that case.
-  return !MF.getFunction().hasFnAttribute("interrupt");
+  return !isISR(MF);
 }
 
 bool MOSFrameLowering::spillCalleeSavedRegisters(
@@ -91,10 +90,11 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // Interrupt handlers may or may not emit calls to these temporary locations,
   // but this can occur after PEI. Accordingly, we conservatively save and
   // restore these locations in every interrupt handler.
-  if (Builder.getMF().getFunction().hasFnAttribute("interrupt")) {
+  if (isISR(Builder.getMF())) {
     const auto Push = [&](const char *Sym, int Offset = 0) {
       Register Tmp = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
-      auto Ld = Builder.buildInstr(MOS::LDAbs, {Tmp}, {}).addExternalSymbol(Sym);
+      auto Ld =
+          Builder.buildInstr(MOS::LDAbs, {Tmp}, {}).addExternalSymbol(Sym);
       Ld->getOperand(1).setOffset(Offset);
       Builder.buildInstr(MOS::PH, {}, {Tmp});
     };
@@ -121,10 +121,12 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   // Interrupt handlers may or may not emit calls to these temporary locations,
   // but this can occur after PEI. Accordingly, we conservatively save and
   // restore these locations in every interrupt handler.
-  if (Builder.getMF().getFunction().hasFnAttribute("interrupt")) {
+  if (isISR(Builder.getMF())) {
     const auto Pull = [&](const char *Sym, int Offset = 0) {
-      Register Tmp = Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
-      auto St = Builder.buildInstr(MOS::STAbs, {}, {Tmp}).addExternalSymbol(Sym);
+      Register Tmp =
+          Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
+      auto St =
+          Builder.buildInstr(MOS::STAbs, {}, {Tmp}).addExternalSymbol(Sym);
       St->getOperand(1).setOffset(Offset);
     };
     Pull("__call_indir_target", 1);
@@ -308,4 +310,12 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
   Add->getOperand(2).setSubReg(MOS::subv);
   Add->getOperand(5).setSubReg(MOS::subcarry);
   Builder.buildCopy(MOS::RC1, A);
+}
+
+bool MOSFrameLowering::isISR(const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  if (F.hasFnAttribute("no-isr"))
+    return false;
+  return F.hasFnAttribute("interrupt") ||
+         F.hasFnAttribute("interrupt-norecurse");
 }
