@@ -39,7 +39,9 @@ namespace {
 
 struct MOSNoRecurse : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
-  SmallPtrSet<const CallGraphNode *, 8> ReachableFromInterrupt;
+  SmallPtrSet<const CallGraphNode *, 8> ReachableFromMultipleInterrupts;
+  SmallPtrSet<const CallGraphNode *, 8> ReachableFromCurrentNorecurseInterrupt;
+  SmallPtrSet<const CallGraphNode *, 8> ReachableFromOtherNorecurseInterrupt;
   bool HasInterrupts = false;
 
   MOSNoRecurse() : ModulePass(ID) {
@@ -50,7 +52,8 @@ struct MOSNoRecurse : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &Info) const override;
 
   bool runOnSCC(CallGraphSCC &SCC);
-  void markReachableFromInterrupt(const CallGraphNode &CGN);
+  void markReachableFromMultipleInterrupts(const CallGraphNode &CGN);
+  void visitNorecurseInterrupt(const CallGraphNode &CGN);
 };
 
 static bool callsSelf(const CallGraphNode &N) {
@@ -86,7 +89,19 @@ bool MOSNoRecurse::runOnModule(Module &M) {
   for (Function &F : M.functions()) {
     if (F.hasFnAttribute("interrupt")) {
       HasInterrupts = true;
-      markReachableFromInterrupt(*CG[&F]);
+      markReachableFromMultipleInterrupts(*CG[&F]);
+    }
+  }
+
+  // Mark all functions reachable from multiple interrupt-norecurse functions as
+  // possibly recursive.
+  for (Function &F : M.functions()) {
+    if (F.hasFnAttribute("interrupt-norecurse")) {
+      HasInterrupts = true;
+      visitNorecurseInterrupt(*CG[&F]);
+      for (const auto *CGN : ReachableFromCurrentNorecurseInterrupt)
+        ReachableFromOtherNorecurseInterrupt.insert(CGN);
+      ReachableFromCurrentNorecurseInterrupt.clear();
     }
   }
 
@@ -151,10 +166,11 @@ bool MOSNoRecurse::runOnSCC(CallGraphSCC &SCC) {
   return true;
 }
 
-void MOSNoRecurse::markReachableFromInterrupt(const CallGraphNode &CGN) {
-  if (ReachableFromInterrupt.contains(&CGN))
+void MOSNoRecurse::markReachableFromMultipleInterrupts(
+    const CallGraphNode &CGN) {
+  if (ReachableFromMultipleInterrupts.contains(&CGN))
     return;
-  ReachableFromInterrupt.insert(&CGN);
+  ReachableFromMultipleInterrupts.insert(&CGN);
 
   Function *F = CGN.getFunction();
   if (F && !F->isDeclaration()) {
@@ -165,9 +181,29 @@ void MOSNoRecurse::markReachableFromInterrupt(const CallGraphNode &CGN) {
   }
 
   for (const auto &CallRecord : CGN)
-    markReachableFromInterrupt(*CallRecord.second);
+    markReachableFromMultipleInterrupts(*CallRecord.second);
 }
 
+void MOSNoRecurse::visitNorecurseInterrupt(const CallGraphNode &CGN) {
+  if (ReachableFromMultipleInterrupts.contains(&CGN))
+    return;
+  if (ReachableFromCurrentNorecurseInterrupt.contains(&CGN))
+    return;
+  ReachableFromCurrentNorecurseInterrupt.insert(&CGN);
+
+  Function *F = CGN.getFunction();
+  if (F && !F->isDeclaration() &&
+      ReachableFromOtherNorecurseInterrupt.contains(&CGN)) {
+    LLVM_DEBUG(
+        dbgs() << "Marking reachable from multiple norecurse interrupts: "
+               << F->getName() << "\n");
+    ReachableFromMultipleInterrupts.insert(&CGN);
+    if (F->doesNotRecurse())
+      F->removeFnAttr(Attribute::NoRecurse);
+  }
+  for (const auto &CallRecord : CGN)
+    visitNorecurseInterrupt(*CallRecord.second);
+}
 } // namespace
 
 char MOSNoRecurse::ID = 0;

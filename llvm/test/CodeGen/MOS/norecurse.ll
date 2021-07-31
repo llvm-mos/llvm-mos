@@ -70,7 +70,31 @@ define void @no_recurse_once_removed() {
   ret void
 }
 
+define void @interrupt_norecurse_a() "interrupt-norecurse" {
+; CHECK: define void @interrupt_norecurse_a() #3 {
+  call void @called_by_one_interrupt_norecurse()
+  call void @called_by_two_interrupt_norecurse()
+  ret void
+}
+
+define void @interrupt_norecurse_b() "interrupt-norecurse" {
+; CHECK: define void @interrupt_norecurse_b() #3 {
+  call void @called_by_two_interrupt_norecurse()
+  ret void
+}
+
+define void @called_by_one_interrupt_norecurse() {
+; CHECK: define void @called_by_one_interrupt_norecurse() #2 {
+  ret void
+}
+
+define void @called_by_two_interrupt_norecurse() {
+; CHECK: define void @called_by_two_interrupt_norecurse() {
+  ret void
+}
+
 ; CHECK: #1 = { "interrupt" }
 ; CHECK: #2 = { norecurse }
+; CHECK: #3 = { norecurse "interrupt-norecurse" }
 ; CHECK: !llvm.module.flags = !{!0}
 ; CHECK: !0 = !{i32 1, !"mos-isr-used", i32 1}
