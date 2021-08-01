@@ -96,8 +96,9 @@ bool MOSNoRecurse::runOnModule(Module &M) {
   // Mark all functions reachable from multiple interrupt-norecurse functions as
   // possibly recursive.
   for (Function &F : M.functions()) {
-    if (F.hasFnAttribute("interrupt-norecurse")) {
-      HasInterrupts = true;
+    if (F.hasFnAttribute("interrupt-norecurse") || F.getName() == "main") {
+      if (F.hasFnAttribute("interrupt-norecurse"))
+        HasInterrupts = true;
       visitNorecurseInterrupt(*CG[&F]);
       for (const auto *CGN : ReachableFromCurrentNorecurseInterrupt)
         ReachableFromOtherNorecurseInterrupt.insert(CGN);

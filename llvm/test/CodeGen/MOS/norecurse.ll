@@ -73,6 +73,7 @@ define void @no_recurse_once_removed() {
 define void @interrupt_norecurse_a() "interrupt-norecurse" {
 ; CHECK: define void @interrupt_norecurse_a() #3 {
   call void @called_by_one_interrupt_norecurse()
+  call void @called_by_one_interrupt_norecurse_and_main()
   call void @called_by_two_interrupt_norecurse()
   ret void
 }
@@ -90,6 +91,16 @@ define void @called_by_one_interrupt_norecurse() {
 
 define void @called_by_two_interrupt_norecurse() {
 ; CHECK: define void @called_by_two_interrupt_norecurse() {
+  ret void
+}
+
+define void @called_by_one_interrupt_norecurse_and_main() {
+; CHECK: define void @called_by_one_interrupt_norecurse_and_main() {
+  ret void
+}
+
+define void @main() {
+  call void @called_by_one_interrupt_norecurse_and_main()
   ret void
 }
 
