@@ -118,6 +118,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .widenScalarToNextPow2(0)
       .maxScalar(0, S8);
 
+  getActionDefinitionsBuilder(G_BITREVERSE).lower();
+
   // Integer Operations
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR})
@@ -155,8 +157,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .maxScalar(1, S8)
       .custom();
 
-  getActionDefinitionsBuilder(G_ROTL).customFor({S8}).unsupported();
-  getActionDefinitionsBuilder(G_ROTR).customFor({S8}).unsupported();
+  getActionDefinitionsBuilder(G_ROTL).customFor({S8}).lower();
+  getActionDefinitionsBuilder(G_ROTR).customFor({S8}).lower();
 
   // FIXME: The default narrowing of G_ICMP is terrible.
   getActionDefinitionsBuilder(G_ICMP)
@@ -582,7 +584,7 @@ bool MOSLegalizerInfo::legalizeRotl(LegalizerHelper &Helper,
 
   Register RotateAmt = MI.getOperand(2).getReg();
   if (!mi_match(RotateAmt, MRI, m_SpecificICst(7)))
-    report_fatal_error("Not yet implemented.");
+    return Helper.lowerRotate(MI) == LegalizerHelper::Legalized;
 
   Register One = Builder.buildConstant(S8, 1).getReg(0);
   Helper.Observer.changingInstr(MI);
@@ -604,7 +606,7 @@ bool MOSLegalizerInfo::legalizeRotr(LegalizerHelper &Helper,
   Register RotateAmt = MI.getOperand(2).getReg();
 
   if (!mi_match(RotateAmt, MRI, m_SpecificICst(1)))
-    report_fatal_error("Not yet implemented.");
+    return Helper.lowerRotate(MI) == LegalizerHelper::Legalized;
 
   Register LSB =
       Builder.buildInstr(MOS::G_LSHRE, {S8, S1}, {Src, Builder.buildUndef(S1)})
