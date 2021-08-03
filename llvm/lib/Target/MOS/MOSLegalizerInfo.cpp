@@ -712,7 +712,7 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     swapComparison(Helper, MI);
     break;
   default:
-    report_fatal_error("Not yet implemented.");
+    llvm_unreachable("Unexpected integer comparison type.");
   }
 
   return true;
