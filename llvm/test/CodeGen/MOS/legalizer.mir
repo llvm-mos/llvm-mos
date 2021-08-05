@@ -660,6 +660,29 @@ body: |
     RTS implicit %2
 ...
 ---
+name: select_p
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: select_p
+    ; CHECK: [[COPY:%[0-9]+]]:_(s1) = COPY $alsb
+    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $rs0
+    ; CHECK: [[COPY2:%[0-9]+]]:_(p0) = COPY $rs1
+    ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s16) = G_PTRTOINT [[COPY1]](p0)
+    ; CHECK: [[PTRTOINT1:%[0-9]+]]:_(s16) = G_PTRTOINT [[COPY2]](p0)
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[PTRTOINT]](s16)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[PTRTOINT1]](s16)
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[COPY]](s1), [[UV]], [[UV2]]
+    ; CHECK: [[SELECT1:%[0-9]+]]:_(s8) = G_SELECT [[COPY]](s1), [[UV1]], [[UV3]]
+    ; CHECK: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[SELECT]](s8), [[SELECT1]](s8)
+    ; CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
+    ; CHECK: RTS implicit [[INTTOPTR]](p0)
+    %0:_(s1) = COPY $alsb
+    %1:_(p0) = COPY $rs0
+    %2:_(p0) = COPY $rs1
+    %3:_(p0) = G_SELECT %0, %1, %2
+    RTS implicit %3
+...
+---
 name: ptradd
 body: |
   bb.0.entry:
