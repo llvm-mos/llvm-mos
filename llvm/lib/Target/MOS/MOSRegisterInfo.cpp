@@ -57,10 +57,9 @@ MOSRegisterInfo::MOSRegisterInfo()
     std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
   }
 
-  // One for the stack pointer, one for the frame pointer, and one to ensure
-  // that zero-page indirect addressing modes can be used.
-  if (NumImagPtrs < 3)
-    report_fatal_error("At least three imaginary pointers must be available.");
+  // Fewer than 5 imaginary pointers can cause the register allocator to fail.
+  if (NumImagPtrs < 5)
+    report_fatal_error("At least five imaginary pointers must be available.");
   if (NumImagPtrs > 128)
     report_fatal_error("More than 128 imaginary pointers cannot be available: "
                        "only 128 exist.");
