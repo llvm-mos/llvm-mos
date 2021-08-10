@@ -8,22 +8,22 @@ char_stats:                             ; @char_stats
 	lda	mos8(__rc1)
 	adc	#254
 	sta	mos8(__rc1)
-	lda	mos8(__rc4)
+	lda	mos8(__rc6)
 	pha
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	pha
 	clc
 	lda	mos8(__rc0)
-	sta	mos8(__rc4)
+	sta	mos8(__rc6)
 	lda	mos8(__rc1)
-	sta	mos8(__rc5)
-	lda	mos8(__rc4)
+	sta	mos8(__rc7)
+	lda	mos8(__rc6)
 	sta	mos8(__rc2)
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	sta	mos8(__rc3)
 	lda	#0
 	ldx	#2
-	stx	mos8(__rc6)
+	stx	mos8(__rc4)
 	tax
 	lda	#0
 	jsr	__memset
@@ -41,10 +41,10 @@ char_stats:                             ; @char_stats
 	tax
 	clc
 	tya
-	adc	mos8(__rc4)
+	adc	mos8(__rc6)
 	sta	mos8(__rc2)
 	txa
-	adc	mos8(__rc5)
+	adc	mos8(__rc7)
 	sta	mos8(__rc3)
 	ldy	#0
 	lda	(mos8(__rc2)),y
@@ -57,15 +57,15 @@ char_stats:                             ; @char_stats
 	sta	(mos8(__rc2)),y
 	jmp	.LBB0_1
 .LBB0_3:                                ; %while.end
-	lda	mos8(__rc4)
+	lda	mos8(__rc6)
 	sta	mos8(__rc2)
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	sta	mos8(__rc3)
 	jsr	report_counts
 	pla
-	sta	mos8(__rc5)
+	sta	mos8(__rc7)
 	pla
-	sta	mos8(__rc4)
+	sta	mos8(__rc6)
 	clc
 	lda	mos8(__rc1)
 	adc	#2

@@ -225,8 +225,8 @@ body: |
     ; CHECK: $x = COPY [[COPY3]](s8)
     ; CHECK: $rc2 = COPY [[COPY4]](s8)
     ; CHECK: $rc3 = COPY [[COPY5]](s8)
-    ; CHECK: $rc6 = COPY [[C]](s8)
-    ; CHECK: JSR &__lshrsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc6, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
+    ; CHECK: $rc4 = COPY [[C]](s8)
+    ; CHECK: JSR &__lshrsi3, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
     ; CHECK: [[COPY6:%[0-9]+]]:_(s8) = COPY $a
     ; CHECK: [[COPY7:%[0-9]+]]:_(s8) = COPY $x
     ; CHECK: [[COPY8:%[0-9]+]]:_(s8) = COPY $rc2

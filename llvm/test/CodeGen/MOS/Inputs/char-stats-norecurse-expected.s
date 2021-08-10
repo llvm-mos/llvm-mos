@@ -4,21 +4,21 @@
 	.type	char_stats,@function
 char_stats:                             ; @char_stats
 ; %bb.0:                                ; %entry
-	lda	mos8(__rc4)
+	lda	mos8(__rc6)
 	pha
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	pha
 	lda	#mos16lo(__char_stats_sstk)
-	sta	mos8(__rc4)
+	sta	mos8(__rc6)
 	lda	#mos16hi(__char_stats_sstk)
-	sta	mos8(__rc5)
-	lda	mos8(__rc4)
+	sta	mos8(__rc7)
+	lda	mos8(__rc6)
 	sta	mos8(__rc2)
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	sta	mos8(__rc3)
 	ldx	#0
 	lda	#2
-	sta	mos8(__rc6)
+	sta	mos8(__rc4)
 	lda	#0
 	jsr	__memset
 .LBB0_1:                                ; %while.body
@@ -51,15 +51,15 @@ char_stats:                             ; @char_stats
 	sta	(mos8(__rc2)),y
 	jmp	.LBB0_1
 .LBB0_3:                                ; %while.end
-	lda	mos8(__rc4)
+	lda	mos8(__rc6)
 	sta	mos8(__rc2)
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	sta	mos8(__rc3)
 	jsr	report_counts
 	pla
-	sta	mos8(__rc5)
+	sta	mos8(__rc7)
 	pla
-	sta	mos8(__rc4)
+	sta	mos8(__rc6)
 	rts
 .Lfunc_end0:
 	.size	char_stats, .Lfunc_end0-char_stats

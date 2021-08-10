@@ -122,10 +122,6 @@ bool MOSNoRecurse::runOnModule(Module &M) {
         Libcall->removeFnAttr(Attribute::NoRecurse);
       }
     }
-
-    // Make most imaginary registers callee-saved to avoid ISRs having to save
-    // an unbounded number of them.
-    M.addModuleFlag(Module::ModFlagBehavior::Error, "mos-isr-used", true);
   }
 
   // Remove the artificial edge.

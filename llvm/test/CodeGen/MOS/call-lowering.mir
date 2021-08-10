@@ -45,9 +45,9 @@
   ; CHECK-LABEL: name: args_ptr
   entry:
   ; CHECK-LABEL: entry:
-    ; CHECK-NEXT: liveins: $rs1, $rs3
+    ; CHECK-NEXT: liveins: $rs1, $rs2
     ; CHECK:      %0:_(p0) = COPY $rs1
-    ; CHECK-NEXT: %1:_(p0) = COPY $rs3
+    ; CHECK-NEXT: %1:_(p0) = COPY $rs2
 
     ret void
     ; CHECK-NEXT: RTS

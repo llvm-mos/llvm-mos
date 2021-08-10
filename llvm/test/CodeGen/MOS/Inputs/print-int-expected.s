@@ -8,27 +8,27 @@ print_int:                              ; @print_int
 	bcc	.LBB0_2
 ; %bb.1:                                ; %if.end.preheader
 	sta	__save_a
-	lda	mos8(__rc4)
+	lda	mos8(__rc6)
 	pha
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	pha
 	lda	__save_a
 	ldx	#10
-	sta	mos8(__rc5)
+	sta	mos8(__rc7)
 	jsr	__udivqi3
-	sta	mos8(__rc4)
+	sta	mos8(__rc6)
 	ldx	#10
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	jsr	__umodqi3
-	sta	mos8(__rc5)
-	lda	mos8(__rc4)
+	sta	mos8(__rc7)
+	lda	mos8(__rc6)
 	jsr	print_int
-	lda	mos8(__rc5)
+	lda	mos8(__rc7)
 	sta	__save_a
 	pla
-	sta	mos8(__rc5)
+	sta	mos8(__rc7)
 	pla
-	sta	mos8(__rc4)
+	sta	mos8(__rc6)
 	lda	__save_a
 .LBB0_2:                                ; %if.then
 	clc

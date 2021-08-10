@@ -81,23 +81,14 @@ MOSRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const uint32_t *
 MOSRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID CallingConv) const {
-  return MF.getFunction().getParent()->getModuleFlag("mos-isr-used")
-             ? MOS_PreserveMost_CSR_RegMask
-             : MOS_CSR_RegMask;
+  return MOS_CSR_RegMask;
 }
 
 BitVector MOSRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved = this->Reserved;
   if (TFI->hasFP(MF))
-    reserveAllSubregs(&Reserved, MOS::RS2);
-  // These will already be callee-saved, but the register allocator doesn't do
-  // very well with that many CSRs available. Reserve them until we can make it
-  // pickier about using them.
-  if (MF.getFunction().getParent()->getModuleFlag("mos-isr-used")) {
-    for (Register Reg = MOS::RS5; Reg <= MOS::RS127; Reg = Reg + 1)
-      reserveAllSubregs(&Reserved, Reg);
-  }
+    reserveAllSubregs(&Reserved, getFrameRegister(MF));
   return Reserved;
 }
 
@@ -393,6 +384,11 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
     // using the pointer provided.
     Register NewBase =
         IsLoad ? MI->getOperand(1).getReg() : MI->getOperand(0).getReg();
+    // We can't scavenge a 16-bit register, so this can't be virtual here (after
+    // register allocation).
+    assert(!NewBase.isVirtual() && "LDSTStk must not use a virtual base "
+                                   "pointer after register allocation.");
+
     auto Lo = Builder.buildInstr(MOS::AddrLostk)
                   .addDef(TRI.getSubReg(NewBase, MOS::sublo))
                   .addDef(P, /*Flags=*/0, MOS::subcarry)
@@ -499,7 +495,7 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
 
 Register MOSRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
-  return TFI->hasFP(MF) ? MOS::RS2 : MOS::RS0;
+  return TFI->hasFP(MF) ? MOS::RS3 : MOS::RS0;
 }
 
 bool MOSRegisterInfo::shouldCoalesce(

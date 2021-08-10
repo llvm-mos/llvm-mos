@@ -360,18 +360,18 @@ body: |
     ; CHECK: $a = COPY $rc1
     ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
-    ; CHECK: $a = frame-setup COPY $rc4
+    ; CHECK: $a = frame-setup COPY $rc6
     ; CHECK: frame-setup PH killed $a
-    ; CHECK: $a = frame-setup COPY $rc5
+    ; CHECK: $a = frame-setup COPY $rc7
     ; CHECK: frame-setup PH killed $a
-    ; CHECK: $rs2 = COPY $rs0
+    ; CHECK: $rs3 = COPY $rs0
     ; CHECK: $y = LDImm 1
-    ; CHECK: $a = LDYIndir $rs2, killed $y :: (load 1 from %stack.2 + 1)
-    ; CHECK: $rs0 = COPY $rs2
+    ; CHECK: $a = LDYIndir $rs3, killed $y :: (load 1 from %stack.2 + 1)
+    ; CHECK: $rs0 = COPY $rs3
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc5 = frame-destroy COPY killed $a
+    ; CHECK: $rc7 = frame-destroy COPY killed $a
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc4 = frame-destroy COPY killed $a
+    ; CHECK: $rc6 = frame-destroy COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 3, $c
@@ -379,7 +379,67 @@ body: |
     ; CHECK: $a = COPY $rc1
     ; CHECK: $a, $c, $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
-    ; CHECK: RTS implicit $rc4, implicit $rc5
+    ; CHECK: RTS implicit $rc6, implicit $rc7
     $a, early-clobber $rs1 = LDStk %stack.2, 1 :: (load 1 from %stack.2 + 1)
+    RTS
+...
+---
+name: save_restore_csr
+stack:
+  - { id: 0, type: variable-sized }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: save_restore_csr
+    ; CHECK: $c = LDCImm 0
+    ; CHECK: $a = COPY $rc0
+    ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
+    ; CHECK: $rc0 = COPY killed $a
+    ; CHECK: $a = COPY $rc1
+    ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
+    ; CHECK: $rc1 = COPY killed $a
+    ; CHECK: $a = frame-setup COPY $rc6
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup COPY $rc7
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup COPY $rc8
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $a = frame-setup COPY $rc9
+    ; CHECK: frame-setup PH killed $a
+    ; CHECK: $rs3 = COPY $rs0
+    ; CHECK: $a = COPY $rc10
+    ; CHECK: $y = LDImm 1
+    ; CHECK: STYIndir killed $a, $rs3, killed $y :: (store 1 into %stack.1)
+    ; CHECK: $a = COPY $rc11
+    ; CHECK: $y = LDImm 0
+    ; CHECK: STYIndir killed $a, $rs3, killed $y :: (store 1 into %stack.2)
+    ; CHECK: $rs3 = IMPLICIT_DEF
+    ; CHECK: $rs4 = IMPLICIT_DEF
+    ; CHECK: $rs5 = IMPLICIT_DEF
+    ; CHECK: $y = LDImm 0
+    ; CHECK: $a = LDYIndir $rs3, killed $y :: (load 1 from %stack.2)
+    ; CHECK: $rc11 = COPY killed $a
+    ; CHECK: $y = LDImm 1
+    ; CHECK: $a = LDYIndir $rs3, killed $y :: (load 1 from %stack.1)
+    ; CHECK: $rc10 = COPY killed $a
+    ; CHECK: $rs0 = COPY $rs3
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $rc9 = frame-destroy COPY killed $a
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $rc8 = frame-destroy COPY killed $a
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $rc7 = frame-destroy COPY killed $a
+    ; CHECK: $a = frame-destroy PL
+    ; CHECK: $rc6 = frame-destroy COPY killed $a
+    ; CHECK: $c = LDCImm 0
+    ; CHECK: $a = COPY $rc0
+    ; CHECK: $a, $c, $v = ADCImm $a, 2, $c
+    ; CHECK: $rc0 = COPY killed $a
+    ; CHECK: $a = COPY $rc1
+    ; CHECK: $a, $c, $v = ADCImm $a, 0, $c
+    ; CHECK: $rc1 = COPY killed $a
+    ; CHECK: RTS implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11
+    $rs3 = IMPLICIT_DEF
+    $rs4 = IMPLICIT_DEF
+    $rs5 = IMPLICIT_DEF
     RTS
 ...

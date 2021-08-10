@@ -41,17 +41,37 @@ MOSFrameLowering::MOSFrameLowering()
 bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  auto GetHasY = [&]() {
+    for (const auto &I : CSI)
+      if (I.getReg() == MOS::Y)
+        return true;
+    return false;
+  };
+  bool HasY = GetHasY();
+
   // We need to A free to save anything else. If we don't save it explicitly,
   // the register scavenger might to use __save_a to save A. This is normally
   // fine, but for interrupts, __save_a itself needs to be saved.
   if (isISR(MF) && CSI.front().getReg() != MOS::A)
     CSI.insert(CSI.begin(), CalleeSavedInfo{MOS::A});
 
-  // We place the CSRs on the hard stack, which we don't explicitly model in
-  // PEI. (spill/restore)CalleeSavedRegisters will emit the spills and reloads
-  // sequentially to and from the hard stack.
-  for (CalleeSavedInfo &I : CSI)
-    I.setTargetSpilled();
+  for (CalleeSavedInfo &I : CSI) {
+    if (I.getReg().id() > MOS::RC9) {
+      if (isISR(MF) && !HasY) {
+        CSI.insert(CSI.begin() + 1, CalleeSavedInfo{MOS::Y});
+        CSI[1].setTargetSpilled();
+        HasY = true;
+      }
+      I.setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
+    } else {
+      // We place the first four CSRs on the hard stack, which we don't
+      // explicitly model in PEI.
+      I.setTargetSpilled();
+    }
+  }
+
   return true;
 }
 
@@ -74,6 +94,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineIRBuilder Builder(MBB, MI);
   MachineInstrSpan MIS(MI, &MBB);
+  const TargetInstrInfo &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
 
   // There are intentionally very few CSRs, few enough to place on the hard
   // stack without much risk of overflow. This is the only across-calls way
@@ -82,14 +103,16 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // directly on the hard stack, but it's significantly simpler.
   for (const CalleeSavedInfo &CI : CSI) {
     Register Reg = CI.getReg();
+    if (!CI.isTargetSpilled())
+      continue;
     if (Reg != MOS::A)
       Reg = Builder.buildCopy(&MOS::AcRegClass, CI.getReg()).getReg(0);
     Builder.buildInstr(MOS::PH, {}, {Reg});
   }
 
-  // Interrupt handlers may or may not emit calls to these temporary locations,
-  // but this can occur after PEI. Accordingly, we conservatively save and
-  // restore these locations in every interrupt handler.
+  // Interrupt handlers may or may not write to these temporary locations, but
+  // this can occur after PEI. Accordingly, we conservatively save and restore
+  // these locations in every interrupt handler.
   if (isISR(Builder.getMF())) {
     const auto Push = [&](const char *Sym, int Offset = 0) {
       Register Tmp = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
@@ -109,6 +132,20 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   for (auto MI = MIS.begin(), MIE = MIS.getInitial(); MI != MIE; ++MI)
     MI->setFlag(MachineInstr::FrameSetup);
 
+  // The frame pointer will be generated after the last frame setup instruction.
+
+  // Save registers to the soft stack afterwards, since this may require the
+  // frame pointer.
+  for (const CalleeSavedInfo &CI : CSI) {
+    Register Reg = CI.getReg();
+    if (CI.isTargetSpilled())
+      continue;
+    assert(!CI.isSpilledToReg());
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII.storeRegToStackSlot(MBB, Builder.getInsertPt(), Reg, true,
+                            CI.getFrameIdx(), RC, TRI);
+  }
+
   return true;
 }
 
@@ -116,11 +153,25 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineIRBuilder Builder(MBB, MI);
+  const TargetInstrInfo &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
+
+  for (const CalleeSavedInfo &CI : reverse(CSI)) {
+    Register Reg = CI.getReg();
+    if (CI.isTargetSpilled())
+      continue;
+    assert(!CI.isSpilledToReg());
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII.loadRegFromStackSlot(MBB, Builder.getInsertPt(), Reg, CI.getFrameIdx(),
+                             RC, TRI);
+  }
+
+  // Begin tracking the frame pointer exclusion region only after all soft stack
+  // CSR restores are emitted.
   MachineInstrSpan MIS(MI, &MBB);
 
-  // Interrupt handlers may or may not emit calls to these temporary locations,
-  // but this can occur after PEI. Accordingly, we conservatively save and
-  // restore these locations in every interrupt handler.
+  // Interrupt handlers may or may not write to these temporary locations, but
+  // this can occur after PEI. Accordingly, we conservatively save and restore
+  // these locations in every interrupt handler.
   if (isISR(Builder.getMF())) {
     const auto Pull = [&](const char *Sym, int Offset = 0) {
       Register Tmp =
@@ -138,6 +189,8 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
 
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Register Reg = CI.getReg();
+    if (!CI.isTargetSpilled())
+      continue;
     if (Reg != MOS::A)
       Reg = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
     Builder.buildInstr(MOS::PL, {Reg}, {});
@@ -168,11 +221,11 @@ void MOSFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
-  // If we have a frame pointer, the frame register RS2 needs to be saved as
+  // If we have a frame pointer, the frame register RS3 needs to be saved as
   // well, since the code that uses it hasn't yet been emitted.
   if (hasFP(MF)) {
-    SavedRegs.set(MOS::RC4);
-    SavedRegs.set(MOS::RC5);
+    SavedRegs.set(MOS::RC6);
+    SavedRegs.set(MOS::RC7);
   }
 }
 

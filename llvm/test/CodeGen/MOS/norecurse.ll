@@ -107,5 +107,3 @@ define void @main() {
 ; CHECK: #1 = { "interrupt" }
 ; CHECK: #2 = { norecurse }
 ; CHECK: #3 = { norecurse "interrupt-norecurse" }
-; CHECK: !llvm.module.flags = !{!0}
-; CHECK: !0 = !{i32 1, !"mos-isr-used", i32 1}

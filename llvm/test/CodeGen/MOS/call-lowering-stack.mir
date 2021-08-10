@@ -7,14 +7,14 @@
   ; CHECK-LABEL: name: args_stack
   entry:
   ; CHECK-LABEL: entry:
-    ; CHECK-NEXT: liveins: $a, $x, $rc2, $rc3, $rc6, $rc7
+    ; CHECK-NEXT: liveins: $a, $x, $rc2, $rc3, $rc4, $rc5
 
     ; CHECK:      %1:_(s8) = COPY $a
     ; CHECK-NEXT: %2:_(s8) = COPY $x
     ; CHECK-NEXT: %3:_(s8) = COPY $rc2
     ; CHECK-NEXT: %4:_(s8) = COPY $rc3
-    ; CHECK-NEXT: %5:_(s8) = COPY $rc6
-    ; CHECK-NEXT: %6:_(s8) = COPY $rc7
+    ; CHECK-NEXT: %5:_(s8) = COPY $rc4
+    ; CHECK-NEXT: %6:_(s8) = COPY $rc5
     ; CHECK-NEXT: %9:_(p0) = G_FRAME_INDEX %fixed-stack.1
     ; CHECK-NEXT: %7:_(s8) = G_LOAD %9(p0) :: (invariant load 1 from %fixed-stack.1)
     ; CHECK-NEXT: %10:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -36,8 +36,8 @@
     ; CHECK-NEXT: $x = COPY %2(s8)
     ; CHECK-NEXT: $rc2 = COPY %3(s8)
     ; CHECK-NEXT: $rc3 = COPY %4(s8)
-    ; CHECK-NEXT: $rc6 = COPY %5(s8)
-    ; CHECK-NEXT: $rc7 = COPY %6(s8)
+    ; CHECK-NEXT: $rc4 = COPY %5(s8)
+    ; CHECK-NEXT: $rc5 = COPY %6(s8)
     ; CHECK-NEXT: %9:_(p0) = COPY $rs0
     ; CHECK-NEXT: %10:_(s16) = G_CONSTANT i16 0
     ; CHECK-NEXT: %11:_(p0) = G_PTR_ADD %9, %10(s16)
@@ -45,7 +45,7 @@
     ; CHECK-NEXT: %12:_(s16) = G_CONSTANT i16 1
     ; CHECK-NEXT: %13:_(p0) = G_PTR_ADD %9, %12(s16)
     ; CHECK-NEXT: G_STORE %8(s8), %13(p0) :: (store 1 into stack + 1)
-    ; CHECK-NEXT: JSR @args_stack, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc6, implicit $rc7
+    ; CHECK-NEXT: JSR @args_stack, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5
     ; CHECK-NEXT: ADJCALLSTACKUP 2, 0, implicit-def $rs0, implicit $rs0
 
     ret void
@@ -62,13 +62,13 @@
     ; CHECK-NEXT: $x = COPY %2(s8)
     ; CHECK-NEXT: $rc2 = COPY %3(s8)
     ; CHECK-NEXT: $rc3 = COPY %4(s8)
-    ; CHECK-NEXT: $rc6 = COPY %5(s8)
-    ; CHECK-NEXT: $rc7 = COPY %6(s8)
+    ; CHECK-NEXT: $rc4 = COPY %5(s8)
+    ; CHECK-NEXT: $rc5 = COPY %6(s8)
     ; CHECK-NEXT: %9:_(p0) = G_FRAME_INDEX %fixed-stack.1
     ; CHECK-NEXT: G_STORE %7(s8), %9(p0) :: (store 1 into %fixed-stack.1)
     ; CHECK-NEXT: %10:_(p0) = G_FRAME_INDEX %fixed-stack.0
     ; CHECK-NEXT: G_STORE %8(s8), %10(p0) :: (store 1 into %fixed-stack.0)
-    ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc6, implicit $rc7
+    ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5
   }
 
   define void @call_ret_stack() {
@@ -76,13 +76,13 @@
 
     %1 = call i64 @ret_stack()
     ; CHECK:      ADJCALLSTACKDOWN 2, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: JSR @ret_stack, mos_csr, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc6, implicit-def $rc7
+    ; CHECK-NEXT: JSR @ret_stack, mos_csr, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5
     ; CHECK-NEXT: %1:_(s8) = COPY $a
     ; CHECK-NEXT: %2:_(s8) = COPY $x
     ; CHECK-NEXT: %3:_(s8) = COPY $rc2
     ; CHECK-NEXT: %4:_(s8) = COPY $rc3
-    ; CHECK-NEXT: %5:_(s8) = COPY $rc6
-    ; CHECK-NEXT: %6:_(s8) = COPY $rc7
+    ; CHECK-NEXT: %5:_(s8) = COPY $rc4
+    ; CHECK-NEXT: %6:_(s8) = COPY $rc5
     ; CHECK-NEXT: %9:_(p0) = COPY $rs0
     ; CHECK-NEXT: %10:_(s16) = G_CONSTANT i16 0
     ; CHECK-NEXT: %11:_(p0) = G_PTR_ADD %9, %10(s16)
