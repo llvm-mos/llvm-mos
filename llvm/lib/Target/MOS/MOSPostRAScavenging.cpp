@@ -19,6 +19,8 @@
 
 #include "MOSPostRAScavenging.h"
 
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
@@ -42,22 +44,28 @@ public:
 };
 
 bool MOSPostRAScavenging::runOnMachineFunction(MachineFunction &MF) {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::NoVRegs))
     return false;
 
   // Protect NZ from the scavenger by bundling.
-  for (MachineBasicBlock& MBB : MF)
+  for (MachineBasicBlock &MBB : MF)
     for (MachineInstr &MI : MBB)
-      if (MI.definesRegister(MOS::NZ))
-        MI.bundleWithSucc();
+      if (MI.definesRegister(MOS::NZ)) {
+        // Branch folding may have eliminated the use of N or Z.
+        auto Succ = ++MachineBasicBlock::iterator(MI);
+        if (Succ != MBB.end() && Succ->readsRegister(MOS::NZ, &TRI))
+          MI.bundleWithSucc();
+      }
 
   RegScavenger RS;
   scavengeFrameVirtualRegs(MF, RS);
 
   // Once all virtual registers are scavenged, nothing else in the pipeline can
   // be inserted between NZ defs and uses.
-  for (MachineBasicBlock& MBB : MF)
+  for (MachineBasicBlock &MBB : MF)
     for (auto MI = MBB.instr_begin(), ME = MBB.instr_end(); MI != ME; ++MI)
       if (MI->isBundledWithPred())
         MI->unbundleFromPred();
