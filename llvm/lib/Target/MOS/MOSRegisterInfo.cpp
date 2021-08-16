@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "mos-reginfo"
@@ -144,8 +145,7 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   default:
     errs() << "Register: " << getName(Reg) << "\n";
     report_fatal_error("Scavenger spill for register not yet implemented.");
-  case MOS::A:
-  case MOS::ALSB: {
+  case MOS::A: {
     bool UseHardStack = pushPullBalanced(I, UseMI);
 
     if (UseHardStack)
@@ -166,14 +166,16 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     break;
   }
   case MOS::X:
-  case MOS::XLSB:
-  case MOS::Y:
-  case MOS::YLSB: {
-    const char *Save = Reg == MOS::X ? "__save_x" : "__save_y";
-    Builder.buildInstr(MOS::STAbs).addUse(Reg).addExternalSymbol(Save);
+  case MOS::Y: {
+    assert(pushPullBalanced(I, UseMI));
+
+    Register A = Builder.buildCopy(&MOS::AcRegClass, Reg).getReg(0);
+    Builder.buildInstr(MOS::PH, {}, {A});
 
     Builder.setInsertPt(MBB, UseMI);
-    Builder.buildInstr(MOS::LDAbs).addDef(Reg).addExternalSymbol(Save);
+
+    A = Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
+    Builder.buildCopy(Reg, A);
     break;
   }
   case MOS::P: {
