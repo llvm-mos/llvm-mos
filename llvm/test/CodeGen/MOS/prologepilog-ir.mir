@@ -46,8 +46,8 @@ stack:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: norecurse
-    ; CHECK: $c = LDCImm 0
     ; CHECK: PH $a
+    ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: $rc0 = COPY killed $a
@@ -237,8 +237,8 @@ body: |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $a, $y, $rc6, $rc7, $rc8, $rc9, $rc10, $rc11
-  ; CHECK:   $c = LDCImm 0
   ; CHECK:   PH $a
+  ; CHECK:   $c = LDCImm 0
   ; CHECK:   $a = COPY $rc0
   ; CHECK:   $a, $c, $v = ADCImm $a, 254, $c
   ; CHECK:   $rc0 = COPY killed $a
@@ -304,8 +304,8 @@ body: |
   ; CHECK:   $a = frame-destroy PL
   ; CHECK:   $y = frame-destroy COPY killed $a
   ; CHECK:   $a = frame-destroy PL
-  ; CHECK:   $c = LDCImm 0
   ; CHECK:   PH $a
+  ; CHECK:   $c = LDCImm 0
   ; CHECK:   $a = COPY $rc0
   ; CHECK:   $a, $c, $v = ADCImm $a, 2, $c
   ; CHECK:   $rc0 = COPY killed $a

@@ -404,12 +404,11 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
         Survivor = AvilableReg;
       }
 
-      // Keep searching when we find a vreg of compatible class since the
-      // spilled register will be usefull for this other vreg as well later.
+      // Keep searching when we find a vreg since the spilled register will
+      // be usefull for this other vreg as well later.
       bool FoundVReg = false;
       for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isReg() && Register::isVirtualRegister(MO.getReg()) &&
-            MRI.getRegClass(MO.getReg())->contains(Survivor)) {
+        if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
           FoundVReg = true;
           break;
         }
