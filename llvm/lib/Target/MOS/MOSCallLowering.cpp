@@ -411,26 +411,13 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const DataLayout &DL = MF.getDataLayout();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
-  // Indirect call
-  if (Info.Callee.isReg()) {
-    // Store the callee in __call_indir_target.
+  bool IsIndirect = Info.Callee.isReg();
+  if (IsIndirect) {
+    // Store the callee in RS4 (used by the libcall).
     // Doing this before argument lowering gives additional freedom to
     // instruction scheduling. This just needs to happen some time before the
-    // call, and no specific registers or stack pointer state are required.
-    auto Unmerge =
-        MIRBuilder.buildUnmerge({LLT::scalar(8), LLT::scalar(8)}, Info.Callee);
-    Register Lo = Unmerge.getReg(0);
-    Register Hi = Unmerge.getReg(1);
-
-    // Do a bit of instruction selection here, since generic opcodes don't
-    // really have a mechanism for using external symbols as store destinations.
-    Register LoGPR = MIRBuilder.buildCopy(&MOS::GPRRegClass, Lo).getReg(0);
-    Register HiGPR = MIRBuilder.buildCopy(&MOS::GPRRegClass, Hi).getReg(0);
-    MIRBuilder.buildInstr(MOS::STAbs, {}, {LoGPR})
-        .addExternalSymbol("__call_indir_target");
-    auto HiST = MIRBuilder.buildInstr(MOS::STAbs, {}, {HiGPR})
-                    .addExternalSymbol("__call_indir_target");
-    HiST->getOperand(1).setOffset(1);
+    // call, and no specific arguments or stack pointer state are required.
+    MIRBuilder.buildCopy(MOS::RS4, Info.Callee);
 
     // Call __call_indir to execute the indirect call.
     Info.Callee.ChangeToES("__call_indir");
@@ -445,6 +432,10 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   auto Call = MIRBuilder.buildInstrNoInsert(MOS::JSR)
                   .add(Info.Callee)
                   .addRegMask(TRI.getCallPreservedMask(MF, Info.CallConv));
+
+  // Indirect calls store the callee in RS4.
+  if (IsIndirect)
+    Call.addUse(MOS::RS4, RegState::Implicit);
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs) {
