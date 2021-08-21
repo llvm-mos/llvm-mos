@@ -57,9 +57,9 @@ MOSRegisterInfo::MOSRegisterInfo()
     std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
   }
 
-  // Fewer than 5 imaginary pointers can cause the register allocator to fail.
-  if (NumImagPtrs < 5)
-    report_fatal_error("At least five imaginary pointers must be available.");
+  // Fewer than 6 imaginary pointers can cause the register allocator to fail.
+  if (NumImagPtrs < 6)
+    report_fatal_error("At least 6 imaginary pointers must be available.");
   if (NumImagPtrs > 128)
     report_fatal_error("More than 128 imaginary pointers cannot be available: "
                        "only 128 exist.");

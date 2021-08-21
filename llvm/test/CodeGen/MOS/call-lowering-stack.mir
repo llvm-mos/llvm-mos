@@ -1,6 +1,5 @@
-# RUN: llc -run-pass=irtranslator -verify-machineinstrs -num-imag-ptrs=5 -o - %s | FileCheck %s
+# RUN: llc -run-pass=irtranslator -verify-machineinstrs -o - %s | FileCheck %s
 --- |
-  ; Note that -num-imag-ptrs=5, forcing use of the stack for long argument lists.
   target triple = "mos"
 
   define void @args_stack(i64 %stack) {
