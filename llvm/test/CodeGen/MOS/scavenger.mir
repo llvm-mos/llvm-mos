@@ -53,19 +53,6 @@ body: |
     RTS implicit $a, implicit $x, implicit $y
 ...
 ---
-name: spill_x
-body: |
-  bb.0.entry:
-    liveins: $a, $x, $y
-    ; CHECK-LABEL: name: spill_x
-    ; CHECK: STAbs $x, &__save_x
-    ; CHECK: dead $x = LDImm 42
-    ; CHECK: $x = LDAbs &__save_x
-    ; CHECK: RTS implicit $a, implicit $x, implicit $y
-    %0:xy = LDImm 42
-    RTS implicit $a, implicit $x, implicit $y
-...
----
 name: spill_y
 body: |
   bb.0.entry:

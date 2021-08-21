@@ -120,14 +120,15 @@ static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
   return !PushCount;
 }
 
-static bool referencesSaveSymbol(const MachineInstr& MI, StringRef SaveSymbol) {
-  for (const MachineOperand& MO : MI.operands())
+static bool referencesSaveSymbol(const MachineInstr &MI, StringRef SaveSymbol) {
+  for (const MachineOperand &MO : MI.operands())
     if (MO.isSymbol() && SaveSymbol == MO.getSymbolName())
       return true;
   return false;
 }
 
-static bool saveBalanced(StringRef SaveSymbol, MachineBasicBlock::iterator Begin,
+static bool saveBalanced(StringRef SaveSymbol,
+                         MachineBasicBlock::iterator Begin,
                          MachineBasicBlock::iterator End) {
   bool SaveInUse = false;
   for (auto MI = Begin; MI != End; ++MI) {
@@ -152,7 +153,7 @@ static bool saveBalanced(StringRef SaveSymbol, MachineBasicBlock::iterator Begin
 }
 
 static bool canSave(StringRef SaveSymbol, MachineBasicBlock::iterator Begin,
-                         MachineBasicBlock::iterator End) {
+                    MachineBasicBlock::iterator End) {
   if (!saveBalanced(SaveSymbol, Begin->getParent()->begin(), Begin))
     return false;
 
@@ -188,15 +189,16 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     errs() << "Register: " << getName(Reg) << "\n";
     report_fatal_error("Scavenger spill for register not yet implemented.");
   case MOS::A: {
+    const char *Save = "__save_a";
     bool UseHardStack = pushPullBalanced(I, UseMI);
-    assert(UseHardStack || canSave("__save_a", I, UseMI));
+    assert(UseHardStack || canSave(Save, I, UseMI));
 
     if (UseHardStack)
       Builder.buildInstr(MOS::PH).addUse(MOS::A);
     else
       Builder.buildInstr(MOS::STAbs)
           .addUse(MOS::A)
-          .addExternalSymbol("__save_a");
+          .addExternalSymbol(Save);
 
     Builder.setInsertPt(MBB, UseMI);
 
@@ -205,12 +207,11 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     else
       Builder.buildInstr(MOS::LDAbs)
           .addDef(MOS::A)
-          .addExternalSymbol("__save_a");
+          .addExternalSymbol(Save);
     break;
   }
-  case MOS::X:
   case MOS::Y: {
-    const char *Save = Reg == MOS::X ? "__save_x" : "__save_y";
+    const char *Save = "__save_y";
     assert(canSave(Save, I, UseMI));
 
     Builder.buildInstr(MOS::STAbs).addUse(Reg).addExternalSymbol(Save);
@@ -247,6 +248,10 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   }
 
   return true;
+}
+
+bool MOSRegisterInfo::canSaveScavengerRegister(Register Reg) const {
+  return Reg != MOS::X;
 }
 
 void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,

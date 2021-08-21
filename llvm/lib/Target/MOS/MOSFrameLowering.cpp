@@ -122,7 +122,6 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       Builder.buildInstr(MOS::PH, {}, {Tmp});
     };
     Push("__save_a");
-    Push("__save_x");
     Push("__save_y");
   }
 
@@ -179,7 +178,6 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       St->getOperand(1).setOffset(Offset);
     };
     Pull("__save_y");
-    Pull("__save_x");
     Pull("__save_a");
   }
 

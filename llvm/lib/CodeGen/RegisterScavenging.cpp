@@ -394,7 +394,8 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
       if (Survivor == 0 || !Used.available(Survivor)) {
         MCPhysReg AvilableReg = 0;
         for (MCPhysReg Reg : AllocationOrder) {
-          if (!MRI.isReserved(Reg) && Used.available(Reg)) {
+          if (!MRI.isReserved(Reg) && Used.available(Reg) &&
+              TRI.canSaveScavengerRegister(Reg)) {
             AvilableReg = Reg;
             break;
           }

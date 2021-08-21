@@ -980,6 +980,12 @@ public:
     return false;
   }
 
+  /// Returns whether or not a target can support saveScavengerRegister for the
+  /// given Register.
+  virtual bool canSaveScavengerRegister(Register Reg) const {
+    return true;
+  }
+
   /// This method must be overriden to eliminate abstract frame indices from
   /// instructions which may use them. The instruction referenced by the
   /// iterator contains an MO_FrameIndex operand which must be eliminated by
