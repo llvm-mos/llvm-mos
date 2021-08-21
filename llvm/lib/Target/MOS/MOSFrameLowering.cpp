@@ -122,6 +122,8 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       Builder.buildInstr(MOS::PH, {}, {Tmp});
     };
     Push("__save_a");
+    Push("__save_x");
+    Push("__save_y");
   }
 
   // Record that the frame pointer is killed by these instructions.
@@ -176,6 +178,8 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
           Builder.buildInstr(MOS::STAbs, {}, {Tmp}).addExternalSymbol(Sym);
       St->getOperand(1).setOffset(Offset);
     };
+    Pull("__save_y");
+    Pull("__save_x");
     Pull("__save_a");
   }
 

@@ -980,26 +980,6 @@ public:
     return false;
   }
 
-  // Whether the given scavenger register can be saved across the given region
-  // of instructions. This may not always be possible, e.g., if a register is
-  // saved via push and pop, and the region contains an unbalanced push.
-  virtual bool
-  canSaveScavengerRegister(Register Reg, MachineBasicBlock::iterator I,
-                           MachineBasicBlock::iterator UseMI) const {
-    return true;
-  }
-
-  // Returns true if scavenging the given physical register now can help with
-  // scavenging a virtual register of the given class later. This causes the
-  // scavenger to attempt to widen the spilled region around virtual registers
-  // with the appropriate classes, hopefuly making savenging the contained
-  // registers less costly (ideally trivial).
-  virtual bool
-  scavengingRegHelpsScavengeClass(Register Reg,
-                                  const TargetRegisterClass *RC) const {
-    return true;
-  }
-
   /// This method must be overriden to eliminate abstract frame indices from
   /// instructions which may use them. The instruction referenced by the
   /// iterator contains an MO_FrameIndex operand which must be eliminated by

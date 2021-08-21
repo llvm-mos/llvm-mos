@@ -54,14 +54,6 @@ public:
                              const TargetRegisterClass *RC,
                              Register Reg) const override;
 
-  bool
-  canSaveScavengerRegister(Register Reg, MachineBasicBlock::iterator I,
-                           MachineBasicBlock::iterator UseMI) const override;
-
-  bool
-  scavengingRegHelpsScavengeClass(Register Reg,
-                                  const TargetRegisterClass *RC) const override;
-
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;

@@ -260,8 +260,8 @@ stack:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: st_byte
-    ; CHECK: $c = LDCImm 0
     ; CHECK: PH $a
+    ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 253, $c
     ; CHECK: $rc0 = COPY killed $a

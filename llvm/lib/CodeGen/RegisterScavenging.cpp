@@ -404,22 +404,17 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
         Survivor = AvilableReg;
       }
 
-      // Keep searching when we find a vreg with the appropriate class since the
-      // spilled register will be usefull for this other vreg as well later.
+      // Keep searching when we find a vreg since the spilled register will
+      // be usefull for this other vreg as well later.
       bool FoundVReg = false;
       for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isReg() && Register::isVirtualRegister(MO.getReg()) &&
-            TRI.scavengingRegHelpsScavengeClass(Survivor,
-                                                MRI.getRegClass(MO.getReg()))) {
+        if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
           FoundVReg = true;
           break;
         }
       }
-      if (FoundVReg) {
-        auto RestoreI = RestoreAfter ? From : std::next(From);
-        if (TRI.canSaveScavengerRegister(Survivor, I, RestoreI))
-          Pos = I;
-      }
+      if (FoundVReg)
+        Pos = I;
       if (I == MBB.begin())
         break;
     }
