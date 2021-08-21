@@ -187,8 +187,7 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   default:
     errs() << "Register: " << getName(Reg) << "\n";
     report_fatal_error("Scavenger spill for register not yet implemented.");
-  case MOS::A:
-  case MOS::ALSB: {
+  case MOS::A: {
     bool UseHardStack = pushPullBalanced(I, UseMI);
     assert(UseHardStack || canSave("__save_a", I, UseMI));
 
@@ -210,9 +209,7 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     break;
   }
   case MOS::X:
-  case MOS::XLSB:
-  case MOS::Y:
-  case MOS::YLSB: {
+  case MOS::Y: {
     const char *Save = Reg == MOS::X ? "__save_x" : "__save_y";
     assert(canSave(Save, I, UseMI));
 
