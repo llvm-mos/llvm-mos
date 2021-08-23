@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/CallingConv.h"
@@ -368,6 +369,12 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const DataLayout &DL = MF.getDataLayout();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const auto &TFI = static_cast<const MOSFrameLowering &>(
+      *MF.getSubtarget().getFrameLowering());
+
+  // The Decimal Flag is undefined upon interrupt and must be cleared.
+  if (TFI.isISR(MF))
+    MIRBuilder.buildInstr(MOS::CLD_Implied);
 
   SmallVector<ArgInfo> SplitArgs;
   unsigned Idx = 0;

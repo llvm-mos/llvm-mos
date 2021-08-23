@@ -208,6 +208,7 @@
   ; CHECK-LABEL: name: interrupt
   entry:
   ; CHECK-LABEL: entry:
+    ; CHECK-NEXT: CLD_Implied
 
     ret void
     ; CHECK-NEXT: RTI
