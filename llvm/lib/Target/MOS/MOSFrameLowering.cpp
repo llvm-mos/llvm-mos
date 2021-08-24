@@ -372,6 +372,9 @@ void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
   if (LoBytes && Offset < 0) {
     A = Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
     Builder.buildCopy(MOS::RC0, A);
+    // Extend the live range of P to here; otherwise the scavenger will attempt
+    // to push and pop P around the push of the low byte and fail.
+    Builder.buildInstr(MOS::KILL, {}, {P});
   }
 }
 

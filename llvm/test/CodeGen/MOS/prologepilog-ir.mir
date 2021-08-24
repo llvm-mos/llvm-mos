@@ -46,8 +46,8 @@ stack:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: norecurse
-    ; CHECK: PH $a
     ; CHECK: $c = LDCImm 0
+    ; CHECK: PH $a
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK: PH killed $a
@@ -57,6 +57,7 @@ body:             |
     ; CHECK: $a = PL
     ; CHECK: $rc0 = COPY killed $a
     ; CHECK: $a = PL
+    ; CHECK: KILL killed $p
     ; CHECK: STAbs $a, target-index(mos-static-stack) :: (store 1 into %stack.0)
     ; CHECK: $a = LDAbs target-index(mos-static-stack) + 1 :: (load 1 from %stack.1)
     ; CHECK: $c = LDCImm 0
@@ -203,8 +204,8 @@ body: |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $a, $y, $rc6, $rc7, $rc8, $rc9, $rc10, $rc11
-  ; CHECK:   PH $a
   ; CHECK:   $c = LDCImm 0
+  ; CHECK:   PH $a
   ; CHECK:   $a = COPY $rc0
   ; CHECK:   $a, $c, $v = ADCImm $a, 254, $c
   ; CHECK:   PH killed $a
@@ -214,6 +215,7 @@ body: |
   ; CHECK:   $a = PL
   ; CHECK:   $rc0 = COPY killed $a
   ; CHECK:   $a = PL
+  ; CHECK:   KILL killed $p
   ; CHECK:   frame-setup PH $a
   ; CHECK:   $a = frame-setup COPY $y
   ; CHECK:   frame-setup PH killed $a
