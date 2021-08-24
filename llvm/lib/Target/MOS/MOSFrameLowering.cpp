@@ -349,9 +349,9 @@ void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
     // If decreasing SP with the low byte first, an interrupt handler may see a
     // temporarily increased SP if the low byte borrows. The handler would then
     // clobber the interrupted function's stack. We can avoid this by saving the
-    // low byte temporarily and setting the high byte first. SP increases do not
-    // have this issue, since the SP temporarily decreasing is no problem, as
-    // the soft stack grows down.
+    // low byte temporarily and setting the high byte first. SP increases would
+    // have the inverse problem, but this is solved by setting them in the
+    // natural lo-high ordering.
     if (Offset < 0)
       Builder.buildInstr(MOS::PH, {}, {A});
     else

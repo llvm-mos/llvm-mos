@@ -19,6 +19,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSMachineFunctionInfo.h"
+#include "MOSRegisterInfo.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
@@ -261,7 +262,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   // Other Operations
 
-  getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
+  getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
 
   computeTables();
 }
@@ -348,6 +349,10 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeVAArg(Helper, MRI, MI);
   case G_VASTART:
     return legalizeVAStart(Helper, MRI, MI);
+
+  // Other Operations
+  case G_DYN_STACKALLOC:
+    return legalizeDynStackAlloc(Helper, MRI, MI);
   }
 }
 
@@ -999,6 +1004,56 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
   Builder.buildStore(
       Builder.buildFrameIndex(P, FuncInfo->getVarArgsStackIndex()),
       MI.getOperand(0), **MI.memoperands_begin());
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeDynStackAlloc(LegalizerHelper &Helper,
+                                       MachineRegisterInfo &MRI,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder& Builder = Helper.MIRBuilder;
+  Register Dst = MI.getOperand(0).getReg();
+  Register AllocSize = MI.getOperand(1).getReg();
+  Align Alignment = assumeAligned(MI.getOperand(2).getImm());
+
+  LLT PtrTy = MRI.getType(Dst);
+  LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+
+  auto SPTmp = Builder.buildCopy(PtrTy, Register(MOS::RS0));
+  SPTmp = Builder.buildCast(IntPtrTy, SPTmp);
+
+  // Subtract the final alloc from the SP. We use G_PTRTOINT here so we don't
+  // have to generate an extra instruction to negate the alloc and then use
+  // G_PTR_ADD to add the negative offset.
+  auto Alloc = Builder.buildSub(IntPtrTy, SPTmp, AllocSize);
+  if (Alignment > Align(1)) {
+    APInt AlignMask(IntPtrTy.getSizeInBits(), Alignment.value(), true);
+    AlignMask.negate();
+    auto AlignCst = Builder.buildConstant(IntPtrTy, AlignMask);
+    Alloc = Builder.buildAnd(IntPtrTy, Alloc, AlignCst);
+  }
+
+  SPTmp = Builder.buildCast(PtrTy, Alloc);
+
+  // Always set the high byte first. If the low byte were set first, an
+  // interrupt handler might observe a temporarily increased stack pointer,
+  // which would cause it to overwrite the interrupted function's stack.
+
+  // The ordering of these pseudos is ensured by their implicit arguments: both
+  // claim to read and write the entire stack pointer. This is true after a
+  // fashion; since the 16-bit operation is not atomic, the intermediate 16-bit
+  // values are important too.
+  auto Unmerge = Builder.buildUnmerge(LLT::scalar(8), SPTmp);
+  Register Lo = Unmerge.getReg(0);
+  Register Hi = Unmerge.getReg(1);
+  MRI.setRegClass(Lo, &MOS::GPRRegClass);
+  MRI.setRegClass(Hi, &MOS::GPRRegClass);
+
+  Builder.buildInstr(MOS::SetSPHi, {}, {Hi});
+  Builder.buildInstr(MOS::SetSPLo, {}, {Lo});
+
+  Builder.buildCopy(Dst, SPTmp);
+
   MI.eraseFromParent();
   return true;
 }

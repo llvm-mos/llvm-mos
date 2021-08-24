@@ -106,6 +106,7 @@ private:
   void expandSBCNZImag8(MachineIRBuilder &Builder) const;
   void expandLDIdx(MachineIRBuilder &Builder) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;
+  void expandSetSP(MachineIRBuilder &Builder) const;
 };
 
 namespace MOS {

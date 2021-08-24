@@ -661,6 +661,10 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::LDImm1:
     expandLDImm1(Builder);
     break;
+  case MOS::SetSPLo:
+  case MOS::SetSPHi:
+    expandSetSP(Builder);
+    break;
   }
 
   return Changed;
@@ -766,6 +770,19 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   }
 
   MI.setDesc(Builder.getTII().get(Opcode));
+}
+
+void MOSInstrInfo::expandSetSP(MachineIRBuilder &Builder) const {
+  auto &MI = *Builder.getInsertPt();
+  Register Src = MI.getOperand(0).getReg();
+
+  if (MI.getOpcode() == MOS::SetSPLo) {
+    copyPhysRegImpl(Builder, MOS::RC0, Src);
+  } else {
+    assert(MI.getOpcode() == MOS::SetSPHi);
+    copyPhysRegImpl(Builder, MOS::RC1, Src);
+  }
+  MI.eraseFromParent();
 }
 
 bool MOSInstrInfo::reverseBranchCondition(

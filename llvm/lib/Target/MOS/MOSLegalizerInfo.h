@@ -78,6 +78,10 @@ private:
                      MachineInstr &MI) const;
   bool legalizeVAStart(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
+
+  // Other Operations
+  bool legalizeDynStackAlloc(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                             MachineInstr &MI) const;
 };
 
 } // namespace llvm
