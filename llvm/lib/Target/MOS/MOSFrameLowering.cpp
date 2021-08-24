@@ -257,7 +257,7 @@ MachineBasicBlock::iterator MOSFrameLowering::eliminateCallFramePseudoInstr(
   if (MI->getOpcode() ==
       MF.getSubtarget().getInstrInfo()->getCallFrameSetupOpcode())
     Offset = -Offset;
-  emitIncSP(Builder, Offset);
+  offsetSP(Builder, Offset);
   return MBB.erase(MI);
 }
 
@@ -269,7 +269,7 @@ void MOSFrameLowering::emitPrologue(MachineFunction &MF,
 
   // If soft stack is used, decrease the soft stack pointer SP.
   if (MFI.getStackSize())
-    emitIncSP(Builder, -MFI.getStackSize());
+    offsetSP(Builder, -MFI.getStackSize());
 
   if (!hasFP(MF))
     return;
@@ -308,7 +308,7 @@ void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // If soft stack is used, increase the soft stack pointer SP.
   if (MFI.getStackSize())
-    emitIncSP(Builder, MFI.getStackSize());
+    offsetSP(Builder, MFI.getStackSize());
 }
 
 bool MOSFrameLowering::hasFP(const MachineFunction &MF) const {
@@ -324,7 +324,7 @@ uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
   return Size;
 }
 
-void MOSFrameLowering::emitIncSP(MachineIRBuilder &Builder,
+void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
                                  int64_t Offset) const {
   assert(Offset);
   assert(-32768 <= Offset && Offset < 32768);

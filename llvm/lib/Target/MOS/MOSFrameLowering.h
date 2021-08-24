@@ -61,7 +61,7 @@ public:
   bool isISR(const MachineFunction& MF) const;
 
 private:
-  void emitIncSP(MachineIRBuilder &Builder, int64_t Offset) const;
+  void offsetSP(MachineIRBuilder &Builder, int64_t Offset) const;
 };
 
 } // namespace llvm
