@@ -50,10 +50,12 @@ body:             |
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 254, $c
-    ; CHECK: $rc0 = COPY killed $a
+    ; CHECK: PH killed $a
     ; CHECK: $a = COPY $rc1
     ; CHECK: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK: $rc1 = COPY killed $a
+    ; CHECK: $a = PL
+    ; CHECK: $rc0 = COPY killed $a
     ; CHECK: $a = PL
     ; CHECK: STAbs $a, target-index(mos-static-stack) :: (store 1 into %stack.0)
     ; CHECK: $a = LDAbs target-index(mos-static-stack) + 1 :: (load 1 from %stack.1)
@@ -205,10 +207,12 @@ body: |
   ; CHECK:   $c = LDCImm 0
   ; CHECK:   $a = COPY $rc0
   ; CHECK:   $a, $c, $v = ADCImm $a, 254, $c
-  ; CHECK:   $rc0 = COPY killed $a
+  ; CHECK:   PH killed $a
   ; CHECK:   $a = COPY $rc1
   ; CHECK:   $a, $c, $v = ADCImm $a, 255, $c
   ; CHECK:   $rc1 = COPY killed $a
+  ; CHECK:   $a = PL
+  ; CHECK:   $rc0 = COPY killed $a
   ; CHECK:   $a = PL
   ; CHECK:   frame-setup PH $a
   ; CHECK:   $a = frame-setup COPY $y
