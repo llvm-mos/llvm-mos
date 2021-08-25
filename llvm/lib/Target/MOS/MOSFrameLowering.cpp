@@ -29,8 +29,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 
 #define DEBUG_TYPE "mos-framelowering"
 
@@ -315,11 +313,7 @@ void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
 
 bool MOSFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
-         TRI->hasStackRealignment(MF);
+  return MFI.isFrameAddressTaken() || MFI.hasVarSizedObjects();
 }
 
 uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
@@ -331,7 +325,7 @@ uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
 }
 
 void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
-                                int64_t Offset) const {
+                                 int64_t Offset) const {
   assert(Offset);
   assert(-32768 <= Offset && Offset < 32768);
 
