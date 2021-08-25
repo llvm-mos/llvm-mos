@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -485,6 +486,8 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
 
   Register SrcDst = MI.getOperand(0).getReg();
   Register Addr = MI.getOperand(1).getReg();
+  assert(MI.hasOneMemOperand());
+  const MachineMemOperand &MMO = **MI.memoperands_begin();
 
   MachineOperand SrcDstOp = MachineOperand::CreateReg(SrcDst, /*isDef=*/false);
 
@@ -519,19 +522,26 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
     return true;
   }
 
-  if (matchIndexed(Addr, Base, Offset, MRI)) {
-    auto Instr = Builder.buildInstr(IdxOpcode)
-                     .add(SrcDstOp)
-                     .add(Base)
-                     .add(Offset)
-                     .cloneMemRefs(MI);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      return false;
-    MI.eraseFromParent();
-    return true;
-  }
+  if (MMO.isVolatile()) {
+    // Always perform volatile accesses with zero index to prevent 6502 page
+    // crossing bugs from generating spurious reads to I/O registers.
+    Base.ChangeToRegister(Addr, /*isDef=*/false);
+    Offset.ChangeToImmediate(0);
+  } else {
+    if (matchIndexed(Addr, Base, Offset, MRI)) {
+      auto Instr = Builder.buildInstr(IdxOpcode)
+                      .add(SrcDstOp)
+                      .add(Base)
+                      .add(Offset)
+                      .cloneMemRefs(MI);
+      if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
 
-  matchIndirectIndexed(Addr, Base, Offset, MRI);
+    matchIndirectIndexed(Addr, Base, Offset, MRI);
+  }
 
   Register OffsetReg;
   if (Offset.isImm()) {
@@ -804,7 +814,7 @@ bool MOSInstructionSelector::selectAll(MachineInstrSpan MIS) {
   MachineRegisterInfo &MRI = MIS.begin()->getMF()->getRegInfo();
 
   // Ensure that all new generic virtual registers have a register bank.
-  for (MachineInstr& MI : MIS)
+  for (MachineInstr &MI : MIS)
     for (MachineOperand &MO : MI.operands()) {
       if (!MO.isReg())
         continue;
