@@ -11,8 +11,15 @@
 //
 //===---------------------------------------------------------------------===//
 
+def fold_global_offset_matchdata : GIDefMatchData<"std::pair<const MachineOperand*, int64_t>">;
+def fold_global_offset : GICombineRule<
+  (defs root:$root, fold_global_offset_matchdata:$matchinfo),
+  (match (wip_match_opcode G_PTR_ADD):$root,
+          [{ return matchFoldGlobalOffset(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{  return applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+
 def MOSCombinerHelper: GICombinerHelper<
-  "MOSGenCombinerHelper", [all_combines]> {
+  "MOSGenCombinerHelper", [all_combines, fold_global_offset]> {
   let DisableRuleOption = "moscombiner-disable-rule";
   let StateClass = "MOSCombinerHelperState";
   let AdditionalArguments = [];

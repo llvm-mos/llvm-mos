@@ -20,11 +20,14 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
@@ -34,6 +37,46 @@
 #define DEBUG_TYPE "mos-combiner"
 
 using namespace llvm;
+
+// G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
+// GLOBAL_VALUE @x + (y_const + z_const)
+static bool
+matchFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      std::pair<const MachineOperand *, int64_t> &MatchInfo) {
+  using namespace TargetOpcode;
+  assert(MI.getOpcode() == G_PTR_ADD);
+
+  Register Base = MI.getOperand(1).getReg();
+  Register Offset = MI.getOperand(2).getReg();
+
+  MachineInstr *GlobalBase = getOpcodeDef(G_GLOBAL_VALUE, Base, MRI);
+  auto ConstOffset = getConstantVRegValWithLookThrough(Offset, MRI);
+
+  if (!GlobalBase || !ConstOffset)
+    return false;
+  const MachineOperand *BaseGV = &GlobalBase->getOperand(1);
+  int64_t NewOffset = BaseGV->getOffset() + ConstOffset->Value.getSExtValue();
+  MatchInfo = {BaseGV, NewOffset};
+  return true;
+}
+
+// G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
+// GLOBAL_VALUE @x + (y_const + z_const)
+static bool
+applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &B, GISelChangeObserver &Observer,
+                      std::pair<const MachineOperand *, int64_t> &MatchInfo) {
+  using namespace TargetOpcode;
+  assert(MI.getOpcode() == G_PTR_ADD);
+  const TargetInstrInfo &TII = B.getTII();
+  Observer.changingInstr(MI);
+  MI.setDesc(TII.get(TargetOpcode::G_GLOBAL_VALUE));
+  MI.getOperand(1).ChangeToGA(MatchInfo.first->getGlobal(), MatchInfo.second,
+                              MatchInfo.first->getTargetFlags());
+  MI.RemoveOperand(2);
+  Observer.changedInstr(MI);
+  return true;
+}
 
 class MOSCombinerHelperState {
 protected:
@@ -60,7 +103,8 @@ class MOSCombinerInfo : public CombinerInfo {
 public:
   MOSCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
                   GISelKnownBits *KB, MachineDominatorTree *MDT)
-      : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
+      : CombinerInfo(/*AllowIllegalOps*/ true,
+                     /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
     if (!GeneratedRuleCfg.parseCommandLineOption())
