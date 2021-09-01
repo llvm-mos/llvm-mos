@@ -9,9 +9,9 @@ char_stats:                             ; @char_stats
 	lda	mos8(__rc7)
 	pha
 	lda	#mos16lo(__char_stats_sstk)
+	ldx	#mos16hi(__char_stats_sstk)
 	sta	mos8(__rc6)
-	lda	#mos16hi(__char_stats_sstk)
-	sta	mos8(__rc7)
+	stx	mos8(__rc7)
 	lda	mos8(__rc6)
 	sta	mos8(__rc2)
 	lda	mos8(__rc7)

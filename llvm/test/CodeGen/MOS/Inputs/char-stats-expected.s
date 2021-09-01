@@ -21,10 +21,9 @@ char_stats:                             ; @char_stats
 	sta	mos8(__rc2)
 	lda	mos8(__rc7)
 	sta	mos8(__rc3)
-	lda	#0
-	ldx	#2
-	stx	mos8(__rc4)
-	tax
+	ldx	#0
+	lda	#2
+	sta	mos8(__rc4)
 	lda	#0
 	jsr	__memset
 .LBB0_1:                                ; %while.body
@@ -34,17 +33,19 @@ char_stats:                             ; @char_stats
 	beq	.LBB0_3
 ; %bb.2:                                ; %while.body
                                         ;   in Loop: Header=BB0_1 Depth=1
-	asl
-	tay
+	sta	mos8(__rc2)
+	asl	mos8(__rc2)
 	lda	#0
-	rol
-	tax
+	sta	mos8(__rc3)
+	rol	mos8(__rc3)
 	clc
-	tya
-	adc	mos8(__rc6)
+	lda	mos8(__rc0)
+	ldx	mos8(__rc1)
+	clc
+	adc	mos8(__rc2)
 	sta	mos8(__rc2)
 	txa
-	adc	mos8(__rc7)
+	adc	mos8(__rc3)
 	sta	mos8(__rc3)
 	ldy	#0
 	lda	(mos8(__rc2)),y
