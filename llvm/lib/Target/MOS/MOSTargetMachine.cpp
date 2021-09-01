@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
@@ -144,6 +145,7 @@ public:
   bool addLegalizeMachineIR() override;
   void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
+  void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
 
   // Register pressure is too high around calls to work without detailed
@@ -199,6 +201,13 @@ void MOSPassConfig::addPreRegBankSelect() {
 bool MOSPassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
   return false;
+}
+
+void MOSPassConfig::addPreGlobalInstructionSelect() {
+  // This pass helps reduce the live ranges of constants to within a basic
+  // block, which can greatly improve machine scheduling, as they can now be
+  // moved around to keep register pressure low.
+  addPass(new Localizer());
 }
 
 bool MOSPassConfig::addGlobalInstructionSelect() {
