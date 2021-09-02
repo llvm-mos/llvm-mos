@@ -199,6 +199,10 @@ def AllocatableFlags : MOSReg1Class<(add Cc, Vc)>;
 def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 
 // Sum types of all available storage locations for a size.
-def Anyi1 : MOSReg1Class<(add Cc, Vc, ALSB, XLSB, YLSB,
-                         (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)))>;
+
+// NOTE: The V register is particularly difficult to copy into and out of, so it
+// should only be used with instructions that directly involve it, or perhaps to
+// avoid using a CSR.
+def Anyi1 : MOSReg1Class<(add Cc, ALSB, XLSB, YLSB,
+                         (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)), Vc)>;
 def Anyi8 : MOSReg8Class<(add GPR, Imag8)>;
