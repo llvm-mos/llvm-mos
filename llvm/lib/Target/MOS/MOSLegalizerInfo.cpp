@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -161,17 +162,19 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_ROTL).customFor({S8}).lower();
   getActionDefinitionsBuilder(G_ROTR).customFor({S8}).lower();
 
-  // FIXME: The default narrowing of G_ICMP is terrible.
   getActionDefinitionsBuilder(G_ICMP)
       .customFor({{S1, P}, {S1, S8}})
       .minScalar(1, S8)
-      .widenScalarToNextPow2(1)
-      .narrowScalar(1,
-                    [](const LegalityQuery &Query) {
-                      assert(Query.Types[1].getSizeInBits() % 2 == 0);
-                      return std::make_pair(1, Query.Types[1].divide(2));
-                    })
-      .unsupported();
+      .widenScalarIf(
+          [](const LegalityQuery &Query) {
+            assert(Query.Types[1].isScalar());
+            return !Query.Types[1].isByteSized();
+          },
+          [](const LegalityQuery &Query) {
+            return std::make_pair(
+                1, LLT::scalar(Query.Types[1].getSizeInBytes() * 8));
+          })
+      .custom();
 
   getActionDefinitionsBuilder(G_SELECT)
       .customFor({P})
@@ -655,14 +658,54 @@ static void swapComparison(LegalizerHelper &Helper, MachineInstr &MI) {
   Helper.Observer.changedInstr(MI);
 }
 
+static std::pair<Register, Register> splitHighRest(Register Reg,
+                                                   MachineIRBuilder &Builder) {
+  LLT S8 = LLT::scalar(8);
+
+  auto Unmerge = Builder.buildUnmerge(S8, Reg);
+  Register High = Unmerge.getReg(Unmerge->getNumOperands() - 2);
+
+  SmallVector<Register> RestParts;
+  for (unsigned Idx = 0, IdxEnd = Unmerge->getNumOperands() - 2; Idx < IdxEnd;
+       ++Idx)
+    RestParts.push_back(Unmerge.getReg(Idx));
+  Register Rest =
+      (RestParts.size() > 1)
+          ? Builder.buildMerge(LLT::scalar(RestParts.size() * 8), RestParts)
+                .getReg(0)
+          : RestParts[0];
+
+  return {High, Rest};
+}
+
 bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   Register Dst = MI.getOperand(0).getReg();
+  CmpInst::Predicate Pred =
+      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
   Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
+
+  // Implement most comparisons in terms of EQ, UGE, and SLT, as these can be
+  // implemented directly via 6502 flags.
+  switch (Pred) {
+  case CmpInst::ICMP_NE:
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_SGE:
+    negateInverseComparison(Helper, MI);
+    return true;
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_SLE:
+  case CmpInst::ICMP_SGT:
+    swapComparison(Helper, MI);
+    return true;
+  default:
+    break;
+  }
 
   LLT Type = MRI.getType(LHS);
 
@@ -678,14 +721,39 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     return true;
   }
 
-  assert(Type == LLT::scalar(8));
-
   LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
+
+  if (Type != S8) {
+    Register LHSHigh, LHSRest;
+    Register RHSHigh, RHSRest;
+    std::tie(LHSHigh, LHSRest) = splitHighRest(LHS, Builder);
+    std::tie(RHSHigh, RHSRest) = splitHighRest(RHS, Builder);
+
+    auto EqHigh = Builder.buildICmp(CmpInst::ICMP_EQ, S1, LHSHigh, RHSHigh);
+    // If EqHigh is false, we defer to CmpHigh, which is equal to EqHigh if
+    // Pred==ICMP_EQ.
+    auto CmpHigh = (Pred == CmpInst::ICMP_EQ)
+                       ? Builder.buildConstant(S1, 0)
+                       : Builder.buildICmp(Pred, S1, LHSHigh, RHSHigh);
+    auto RestPred = Pred;
+    if (CmpInst::isSigned(RestPred))
+      RestPred = CmpInst::getUnsignedPredicate(Pred);
+    auto CmpRest = Builder.buildICmp(RestPred, S1, LHSRest, RHSRest).getReg(0);
+
+    // If the high byte is equal, defer to the unsigned comparison on the rest.
+    // Otherwise, defer to the comparison on the high byte.
+    Builder.buildSelect(Dst, EqHigh, CmpRest, CmpHigh);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  assert(Type == LLT::scalar(8));
 
   // Lower 8-bit comparisons to a generic G_CMP instruction with similar
   // capabilities to the 6502's SBC and CMP instructions.
   // See www.6502.org/tutorials/compare_beyond.html.
-  switch (MI.getOperand(1).getPredicate()) {
+  switch (Pred) {
   case CmpInst::ICMP_EQ:
     Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, Dst /*=Z*/}, {LHS, RHS});
     MI.eraseFromParent();
@@ -708,17 +776,6 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     MI.eraseFromParent();
     break;
   }
-  case CmpInst::ICMP_NE:
-  case CmpInst::ICMP_ULT:
-  case CmpInst::ICMP_SGE:
-    negateInverseComparison(Helper, MI);
-    break;
-  case CmpInst::ICMP_ULE:
-  case CmpInst::ICMP_UGT:
-  case CmpInst::ICMP_SLE:
-  case CmpInst::ICMP_SGT:
-    swapComparison(Helper, MI);
-    break;
   default:
     llvm_unreachable("Unexpected integer comparison type.");
   }
@@ -1009,9 +1066,9 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
 }
 
 bool MOSLegalizerInfo::legalizeDynStackAlloc(LegalizerHelper &Helper,
-                                       MachineRegisterInfo &MRI,
-                                       MachineInstr &MI) const {
-  MachineIRBuilder& Builder = Helper.MIRBuilder;
+                                             MachineRegisterInfo &MRI,
+                                             MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
   Register Dst = MI.getOperand(0).getReg();
   Register AllocSize = MI.getOperand(1).getReg();
   Align Alignment = assumeAligned(MI.getOperand(2).getImm());
