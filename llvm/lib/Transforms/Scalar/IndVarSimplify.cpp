@@ -894,6 +894,7 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
 
   // Loop over all of the PHI nodes, looking for a simple counter.
   PHINode *BestPhi = nullptr;
+  uint64_t BestPhiWidth;
   const SCEV *BestInit = nullptr;
   BasicBlock *LatchBlock = L->getLoopLatch();
   assert(LatchBlock && "Must be in simplified form");
@@ -914,7 +915,12 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
     // AR may be wider than BECount. With eq/ne tests overflow is immaterial.
     // AR may not be a narrower type, or we may never exit.
     uint64_t PhiWidth = SE->getTypeSizeInBits(AR->getType());
-    if (PhiWidth < BCWidth || !DL.isLegalInteger(PhiWidth))
+    if (PhiWidth < BCWidth)
+      continue;
+
+    // Don't use an illegal integer if a legal integer can be used.
+    if (BestPhi && DL.isLegalInteger(BestPhiWidth) &&
+        !DL.isLegalInteger(PhiWidth))
       continue;
 
     // Avoid reusing a potentially undef value to compute other values that may
@@ -961,6 +967,7 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
         continue;
     }
     BestPhi = Phi;
+    BestPhiWidth = PhiWidth;
     BestInit = Init;
   }
   return BestPhi;
