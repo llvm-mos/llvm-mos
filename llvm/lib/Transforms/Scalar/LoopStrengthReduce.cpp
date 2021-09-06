@@ -1239,6 +1239,7 @@ static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
 /// Tally up interesting quantities from the given register.
 void Cost::RateRegister(const Formula &F, const SCEV *Reg,
                         SmallPtrSetImpl<const SCEV *> &Regs) {
+  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Reg)) {
     // If this is an addrec for another loop, it should be an invariant
     // with respect to L since L is the innermost loop (at least
@@ -1260,7 +1261,8 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
       return;
     }
 
-    unsigned LoopCost = 1;
+    unsigned LoopCost =
+        DL.isLegalInteger(SE->getTypeSizeInBits(AR->getType())) ? 1 : 2;
     if (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
 
