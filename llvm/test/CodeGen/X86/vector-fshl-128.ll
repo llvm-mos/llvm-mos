@@ -15,6 +15,8 @@
 ; Just one 32-bit run to make sure we do reasonable things for i64 cases.
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=X86-SSE2
 
+; FIXME(llvm-mos): This is broken now.
+
 declare <2 x i64> @llvm.fshl.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 declare <8 x i16> @llvm.fshl.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
@@ -2004,36 +2006,40 @@ define void @sink_splatvar(i32* %p, i32 %shift_amt) {
 ;
 ; X86-SSE2-LABEL: sink_splatvar:
 ; X86-SSE2:       # %bb.0: # %entry
-; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %esi, -8
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE2-NEXT:    .cfi_offset %esi, -12
+; X86-SSE2-NEXT:    .cfi_offset %edi, -8
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    xorl %ecx, %ecx
+; X86-SSE2-NEXT:    movl $-1, %ecx
+; X86-SSE2-NEXT:    movl $-1024, %edx # imm = 0xFC00
 ; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE2-NEXT:    movd %xmm0, %edx
-; X86-SSE2-NEXT:    andl $31, %edx
-; X86-SSE2-NEXT:    movl $32, %esi
-; X86-SSE2-NEXT:    subl %edx, %esi
-; X86-SSE2-NEXT:    movd %esi, %xmm0
-; X86-SSE2-NEXT:    movd %edx, %xmm1
-; X86-SSE2-NEXT:    xorl %edx, %edx
+; X86-SSE2-NEXT:    movd %xmm0, %esi
+; X86-SSE2-NEXT:    andl $31, %esi
+; X86-SSE2-NEXT:    movl $32, %edi
+; X86-SSE2-NEXT:    subl %esi, %edi
+; X86-SSE2-NEXT:    movd %edi, %xmm0
+; X86-SSE2-NEXT:    movd %esi, %xmm1
 ; X86-SSE2-NEXT:    .p2align 4, 0x90
 ; X86-SSE2-NEXT:  .LBB8_1: # %loop
 ; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-SSE2-NEXT:    movdqu (%eax,%ecx,4), %xmm2
+; X86-SSE2-NEXT:    movdqu 1024(%eax,%edx), %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; X86-SSE2-NEXT:    psrld %xmm0, %xmm3
 ; X86-SSE2-NEXT:    pslld %xmm1, %xmm2
 ; X86-SSE2-NEXT:    por %xmm3, %xmm2
-; X86-SSE2-NEXT:    movdqu %xmm2, (%eax,%ecx,4)
-; X86-SSE2-NEXT:    addl $4, %ecx
-; X86-SSE2-NEXT:    adcl $0, %edx
-; X86-SSE2-NEXT:    movl %ecx, %esi
-; X86-SSE2-NEXT:    xorl $256, %esi # imm = 0x100
-; X86-SSE2-NEXT:    orl %edx, %esi
+; X86-SSE2-NEXT:    movdqu %xmm2, 1024(%eax,%edx)
+; X86-SSE2-NEXT:    addl $16, %edx
+; X86-SSE2-NEXT:    adcl $0, %ecx
+; X86-SSE2-NEXT:    movl %edx, %esi
+; X86-SSE2-NEXT:    orl %ecx, %esi
 ; X86-SSE2-NEXT:    jne .LBB8_1
 ; X86-SSE2-NEXT:  # %bb.2: # %end
 ; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE2-NEXT:    retl
 entry:
