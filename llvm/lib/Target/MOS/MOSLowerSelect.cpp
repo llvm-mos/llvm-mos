@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 
 #define DEBUG_TYPE "mos-lower-select"
 
@@ -42,91 +43,90 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+  void lowerSelect(MachineInstr &MI);
   void moveAwayFromCalls(MachineFunction &MF);
 };
 
 bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
-  bool Changed = false;
 
   moveAwayFromCalls(MF);
 
+  SmallVector<MachineBasicBlock::iterator> SelectMBBIs;
   for (auto I = MF.begin(), E = MF.end(); I != E; ++I) {
     MachineBasicBlock &MBB = *I;
     for (MachineBasicBlock::iterator MBBI = MBB.begin(), MBBE = MBB.end();
-         MBBI != MBBE;) {
-      MachineInstr &MI = *MBBI;
-      if (MI.getOpcode() != MOS::G_SELECT) {
-        ++MBBI;
-        continue;
-      }
-
-      Changed = true;
-
-      Register Dst = MI.getOperand(0).getReg();
-      Register Tst = MI.getOperand(1).getReg();
-      Register TrueValue = MI.getOperand(2).getReg();
-      Register FalseValue = MI.getOperand(3).getReg();
-
-      MachineIRBuilder Builder(MI);
-
-      // To lower a G_SELECT instruction, we actually have to insert the diamond
-      // control-flow pattern. The incoming instruction knows the destination
-      // vreg to set, the condition to branch on, and the true/false values to
-      // select between.
-      const BasicBlock *LLVM_BB = MBB.getBasicBlock();
-      MachineFunction::iterator It = std::next(I);
-
-      //  thisMBB:
-      //   ...
-      //   %FalseValue = ...
-      //   %TrueValue = ...
-      //   ...
-      //   G_BRCOND_IMM %Tst, %sinkMBB, 1
-      //   fallthrough --> %copy0MBB
-      MachineBasicBlock *copy0MBB = MF.CreateMachineBasicBlock(LLVM_BB);
-      MachineBasicBlock *sinkMBB = MF.CreateMachineBasicBlock(LLVM_BB);
-      MF.insert(It, copy0MBB);
-      MF.insert(It, sinkMBB);
-
-      // Transfer the remainder of MBB and its successor edges to sinkMBB.
-      sinkMBB->splice(sinkMBB->begin(), &MBB, std::next(MBBI), MBBE);
-      sinkMBB->transferSuccessorsAndUpdatePHIs(&MBB);
-
-      // Next, add the true and fallthrough blocks as its successors.
-      MBB.addSuccessor(copy0MBB);
-      MBB.addSuccessor(sinkMBB);
-
-      Builder.buildInstr(MOS::G_BRCOND_IMM, {}, {Tst})
-          .addMBB(sinkMBB)
-          .addImm(1);
-
-      //  copy0MBB:
-      //   %FalseValue = ...
-      //   # fallthrough to sinkMBB
-      // Update machine-CFG edges
-      copy0MBB->addSuccessor(sinkMBB);
-
-      //  sinkMBB:
-      //   %Result = phi [ %TrueValue, thisMBB ], [ %FalseValue, copy0MBB ]
-      //  ...
-      Builder.setInsertPt(*sinkMBB, sinkMBB->begin());
-      Builder.buildInstr(MOS::G_PHI)
-          .addDef(Dst)
-          .addUse(TrueValue)
-          .addMBB(&MBB)
-          .addUse(FalseValue)
-          .addMBB(copy0MBB);
-
-      MI.eraseFromParent(); // The G_SELECT is gone now.
-
-      // New MBBs were added, but they cannot have any G_SELECTs in them.
-      // Continue processing the first instruction in sinkMBB.
-      I = copy0MBB->getIterator();
-      break;
-    }
+         MBBI != MBBE; ++MBBI)
+      if (MBBI->getOpcode() == MOS::G_SELECT)
+        SelectMBBIs.push_back(MBBI);
   }
 
+  bool Changed = !SelectMBBIs.empty();
+
+  for (MachineBasicBlock::iterator MBBI : SelectMBBIs)
+    lowerSelect(*MBBI);
+
   return Changed;
+}
+
+void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
+  assert(MI.getOpcode() == MOS::G_SELECT);
+  Register Dst = MI.getOperand(0).getReg();
+  Register Tst = MI.getOperand(1).getReg();
+  Register TrueValue = MI.getOperand(2).getReg();
+  Register FalseValue = MI.getOperand(3).getReg();
+
+  MachineIRBuilder Builder(MI);
+  MachineBasicBlock &MBB = Builder.getMBB();
+  MachineFunction &MF = Builder.getMF();
+
+  // To lower a G_SELECT instruction, we actually have to insert the diamond
+  // control-flow pattern. The incoming instruction knows the destination
+  // vreg to set, the condition to branch on, and the true/false values to
+  // select between.
+  const BasicBlock *LLVM_BB = MBB.getBasicBlock();
+  MachineFunction::iterator It = std::next(MBB.getIterator());
+
+  //  thisMBB:
+  //   ...
+  //   %FalseValue = ...
+  //   %TrueValue = ...
+  //   ...
+  //   G_BRCOND_IMM %Tst, %SinkMBB, 1
+  //   fallthrough --> %Copy0MBB
+  MachineBasicBlock *Copy0MBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *SinkMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  MF.insert(It, Copy0MBB);
+  MF.insert(It, SinkMBB);
+
+  // Transfer the remainder of MBB and its successor edges to SinkMBB.
+  SinkMBB->splice(SinkMBB->begin(), &MBB, std::next(MI.getIterator()),
+                  MBB.end());
+  SinkMBB->transferSuccessorsAndUpdatePHIs(&MBB);
+
+  // Next, add the true and fallthrough blocks as its successors.
+  MBB.addSuccessor(Copy0MBB);
+  MBB.addSuccessor(SinkMBB);
+
+  Builder.buildInstr(MOS::G_BRCOND_IMM, {}, {Tst}).addMBB(SinkMBB).addImm(1);
+
+  //  Copy0MBB:
+  //   %FalseValue = ...
+  //   # fallthrough to SinkMBB
+  // Update machine-CFG edges
+  Copy0MBB->addSuccessor(SinkMBB);
+
+  //  SinkMBB:
+  //   %Result = phi [ %TrueValue, thisMBB ], [ %FalseValue, Copy0MBB ]
+  //  ...
+  Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
+  Builder.buildInstr(MOS::G_PHI)
+      .addDef(Dst)
+      .addUse(TrueValue)
+      .addMBB(&MBB)
+      .addUse(FalseValue)
+      .addMBB(Copy0MBB);
+
+  MI.eraseFromParent(); // The G_SELECT is gone now.
 }
 
 // Before lowering selects, they and all attached instructions need to be
@@ -179,8 +179,8 @@ void MOSLowerSelect::moveAwayFromCalls(MachineFunction &MF) {
 // G_SELECTs should never appear in the return value part of calls, since
 // they're used for extensions, not truncations.
 #ifndef NDEBUG
-     for (auto J = std::next(I); J->getOpcode() != MOS::ADJCALLSTACKUP; ++J)
-       assert(J->getOpcode() != MOS::G_SELECT);
+      for (auto J = std::next(I); J->getOpcode() != MOS::ADJCALLSTACKUP; ++J)
+        assert(J->getOpcode() != MOS::G_SELECT);
 #endif
     }
   }
