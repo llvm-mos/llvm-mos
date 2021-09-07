@@ -3761,13 +3761,12 @@ void LSRInstance::GenerateSymbolicOffsetsImpl(LSRUse &LU, unsigned LUIdx,
     return;
   Formula F = Base;
   F.BaseGV = GV;
-  if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F))
-    return;
   if (IsScaledReg)
     F.ScaledReg = G;
   else
     F.BaseRegs[Idx] = G;
-  (void)InsertFormula(LU, LUIdx, F);
+  if (isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F))
+    (void)InsertFormula(LU, LUIdx, F);
 }
 
 /// Generate reuse formulae using symbolic offsets.
@@ -3792,25 +3791,24 @@ void LSRInstance::GenerateConstantOffsetsImpl(
     Formula F = Base;
     F.BaseOffset = (uint64_t)Base.BaseOffset - Offset;
 
-    if (isLegalUse(TTI, LU.MinOffset - Offset, LU.MaxOffset - Offset, LU.Kind,
-                   LU.AccessTy, F)) {
-      // Add the offset to the base register.
-      const SCEV *NewG = SE.getAddExpr(SE.getConstant(G->getType(), Offset), G);
-      // If it cancelled out, drop the base register, otherwise update it.
-      if (NewG->isZero()) {
-        if (IsScaledReg) {
-          F.Scale = 0;
-          F.ScaledReg = nullptr;
-        } else
-          F.deleteBaseReg(F.BaseRegs[Idx]);
-        F.canonicalize(*L);
-      } else if (IsScaledReg)
-        F.ScaledReg = NewG;
-      else
-        F.BaseRegs[Idx] = NewG;
+    // Add the offset to the base register.
+    const SCEV *NewG = SE.getAddExpr(SE.getConstant(G->getType(), Offset), G);
+    // If it cancelled out, drop the base register, otherwise update it.
+    if (NewG->isZero()) {
+      if (IsScaledReg) {
+        F.Scale = 0;
+        F.ScaledReg = nullptr;
+      } else
+        F.deleteBaseReg(F.BaseRegs[Idx]);
+      F.canonicalize(*L);
+    } else if (IsScaledReg)
+      F.ScaledReg = NewG;
+    else
+      F.BaseRegs[Idx] = NewG;
 
+    if (isLegalUse(TTI, LU.MinOffset - Offset, LU.MaxOffset - Offset, LU.Kind,
+                   LU.AccessTy, F))
       (void)InsertFormula(LU, LUIdx, F);
-    }
   };
 
   const SCEV *G = IsScaledReg ? Base.ScaledReg : Base.BaseRegs[Idx];
@@ -3846,8 +3844,6 @@ void LSRInstance::GenerateConstantOffsetsImpl(
     return;
   Formula F = Base;
   F.BaseOffset = (uint64_t)F.BaseOffset + Imm;
-  if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F))
-    return;
   if (IsScaledReg) {
     F.ScaledReg = G;
   } else {
@@ -3856,7 +3852,8 @@ void LSRInstance::GenerateConstantOffsetsImpl(
     // related with current loop while F.ScaledReg is not.
     F.canonicalize(*L);
   }
-  (void)InsertFormula(LU, LUIdx, F);
+  if (isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F))
+    (void)InsertFormula(LU, LUIdx, F);
 }
 
 /// GenerateConstantOffsets - Generate reuse formulae using symbolic offsets.
@@ -3926,10 +3923,6 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
     Formula F = Base;
     F.BaseOffset = NewBaseOffset;
 
-    // Check that this scale is legal.
-    if (!isLegalUse(TTI, Offset, Offset, LU.Kind, LU.AccessTy, F))
-      continue;
-
     // Compensate for the use having MinOffset built into it.
     F.BaseOffset = (uint64_t)F.BaseOffset + Offset - LU.MinOffset;
 
@@ -3964,7 +3957,8 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
     }
 
     // If we make it here and it's legal, add it.
-    (void)InsertFormula(LU, LUIdx, F);
+    if (isLegalUse(TTI, Offset, Offset, LU.Kind, LU.AccessTy, F))
+      (void)InsertFormula(LU, LUIdx, F);
   next:;
   }
 }
@@ -4225,9 +4219,6 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           continue;
         Formula NewF = F;
         NewF.BaseOffset = Offset;
-        if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy,
-                        NewF))
-          continue;
         NewF.ScaledReg = SE.getAddExpr(NegImmS, NewF.ScaledReg);
 
         // If the new scale is a constant in a register, and adding the constant
@@ -4241,7 +4232,9 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
 
         // OK, looks good.
         NewF.canonicalize(*this->L);
-        (void)InsertFormula(LU, LUIdx, NewF);
+        if (isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy,
+                        NewF))
+          (void)InsertFormula(LU, LUIdx, NewF);
       } else {
         // Use the immediate in a base register.
         for (size_t N = 0, NE = F.BaseRegs.size(); N != NE; ++N) {
