@@ -16,6 +16,7 @@
 #include "MOS.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 #define DEBUG_TYPE "mos-lower-select"
 
@@ -47,8 +48,22 @@ public:
   void moveAwayFromCalls(MachineFunction &MF);
 };
 
-bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
+// Returns whether the only use of a G_SELECT's result is the then or else part
+// of another G_SELECT. In that case, the former G_SELECT can be sunk into the
+// latter G_SELECT so long as the latter is expanded first.
+static bool onlyUseIsConditional(const MachineInstr &MI,
+                                 const MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == MOS::G_SELECT);
+  Register Dst = MI.getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(Dst))
+    return false;
+  const MachineInstr &OnlyUseMI = *MRI.use_nodbg_instructions(Dst).begin();
+  return OnlyUseMI.getOpcode() == MOS::G_SELECT &&
+         OnlyUseMI.getOperand(1).getReg() != Dst;
+}
 
+bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "Handling G_SELECTs in: " << MF.getName() << "\n\n");
   moveAwayFromCalls(MF);
 
   SmallVector<MachineBasicBlock::iterator> SelectMBBIs;
@@ -56,14 +71,47 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock &MBB = *I;
     for (MachineBasicBlock::iterator MBBI = MBB.begin(), MBBE = MBB.end();
          MBBI != MBBE; ++MBBI)
-      if (MBBI->getOpcode() == MOS::G_SELECT)
+      if (MBBI->getOpcode() == MOS::G_SELECT) {
+        LLVM_DEBUG(dbgs() << "Found: " << *MBBI);
         SelectMBBIs.push_back(MBBI);
+      }
   }
 
   bool Changed = !SelectMBBIs.empty();
 
-  for (MachineBasicBlock::iterator MBBI : SelectMBBIs)
-    lowerSelect(*MBBI);
+  LLVM_DEBUG(dbgs() << "\nIteratively lowering G_SELECTs.\n\n");
+
+  SmallVector<MachineBasicBlock::iterator> NewSelectMBBIs;
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  // Lower G_SELECTs in multiple passes to ensure the ordering is optimal.
+  while (!SelectMBBIs.empty()) {
+    NewSelectMBBIs.clear();
+    LLVM_DEBUG(dbgs() << "Begin iteration.\n");
+    for (MachineBasicBlock::iterator MBBI : SelectMBBIs) {
+      LLVM_DEBUG(dbgs() << *MBBI);
+
+      // If the only use of this instruction is conditioned on another G_SELECT,
+      // then this whole control flow section can be sunk into that conditional
+      // region. This can only occur if the other G_SELECT is lowered first, so
+      // skip this one for this pass. The actual sinking occurs when that
+      // G_SELECT is lowered, so by the time the next expansion pass occurs, the
+      // conditional G_SELECT is already in the correct basic block.
+      if (onlyUseIsConditional(*MBBI, MRI)) {
+        LLVM_DEBUG(dbgs() << "\tG_SELECT only used conditionally inside another "
+                             "G_SELECT. Deferring.\n");
+        NewSelectMBBIs.push_back(MBBI);
+      } else {
+        LLVM_DEBUG(dbgs() << "\tLowering.\n");
+        lowerSelect(*MBBI);
+      }
+    }
+    LLVM_DEBUG(dbgs() << "End iteration.\n\n");
+    if (NewSelectMBBIs.size() == SelectMBBIs.size())
+      report_fatal_error("Infinite loop encountered while lowering G_SELECT.");
+    std::swap(SelectMBBIs, NewSelectMBBIs);
+  }
+
+  LLVM_DEBUG(dbgs() << "\n");
 
   return Changed;
 }
@@ -78,6 +126,7 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   MachineBasicBlock &MBB = Builder.getMBB();
   MachineFunction &MF = Builder.getMF();
+  const MachineRegisterInfo &MRI = *Builder.getMRI();
 
   // To lower a G_SELECT instruction, we actually have to insert the diamond
   // control-flow pattern. The incoming instruction knows the destination
@@ -111,12 +160,31 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   Builder.buildInstr(MOS::G_BRCOND_IMM, {}, {Tst}).addMBB(TrueMBB).addImm(1);
   Builder.buildInstr(MOS::G_BR).addMBB(FalseMBB);
 
+  // Sink the True and False values if G_SELECTs. This causes all inserted
+  // control flow for the inner G_SELECT to be conditionalized on the outer. A
+  // global ordering constraint ensures the the outer G_SELECT is always
+  // expanded first.
+  if (MRI.hasOneNonDBGUse(TrueValue)) {
+    MachineInstr &DefMI = *MRI.def_instr_begin(TrueValue);
+    if (DefMI.getOpcode() == MOS::G_SELECT) {
+      DefMI.removeFromParent();
+      TrueMBB->insert(TrueMBB->begin(), &DefMI);
+    }
+  }
+  if (MRI.hasOneNonDBGUse(FalseValue)) {
+    MachineInstr &DefMI = *MRI.def_instr_begin(FalseValue);
+    if (DefMI.getOpcode() == MOS::G_SELECT) {
+      DefMI.removeFromParent();
+      FalseMBB->insert(FalseMBB->begin(), &DefMI);
+    }
+  }
+
   // The True and False blocks both jump through to the Sink block.
   TrueMBB->addSuccessor(SinkMBB);
   FalseMBB->addSuccessor(SinkMBB);
-  Builder.setInsertPt(*TrueMBB, TrueMBB->begin());
+  Builder.setInsertPt(*TrueMBB, TrueMBB->end());
   Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
-  Builder.setInsertPt(*FalseMBB, FalseMBB->begin());
+  Builder.setInsertPt(*FalseMBB, FalseMBB->end());
   Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
 
   //  SinkMBB:
@@ -169,6 +237,9 @@ void MOSLowerSelect::moveAwayFromCalls(MachineFunction &MF) {
       auto J = std::prev(I);
       for (; J->getOpcode() != MOS::ADJCALLSTACKDOWN; --J) {
         if (J->getOpcode() == MOS::G_SELECT || DefinesUsedReg(*J)) {
+          // Conservatively assume there was a store.
+          bool SawStore = true;
+          assert(J->isSafeToMove(nullptr, SawStore));
           TrackUsedRegs(*J);
           auto NewJ = std::next(J);
           PushedMIs.push_back(J->removeFromParent());
