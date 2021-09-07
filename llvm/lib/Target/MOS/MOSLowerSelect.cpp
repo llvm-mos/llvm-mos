@@ -88,14 +88,16 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
 
   //  thisMBB:
   //   ...
-  //   %FalseValue = ...
   //   %TrueValue = ...
+  //   %FalseValue = ...
   //   ...
-  //   G_BRCOND_IMM %Tst, %SinkMBB, 1
-  //   fallthrough --> %Copy0MBB
-  MachineBasicBlock *Copy0MBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  //   G_BRCOND_IMM %Tst, %TrueMBB, 1
+  //   G_BR --> %FalseMBB
+  MachineBasicBlock *TrueMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *FalseMBB = MF.CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *SinkMBB = MF.CreateMachineBasicBlock(LLVM_BB);
-  MF.insert(It, Copy0MBB);
+  MF.insert(It, TrueMBB);
+  MF.insert(It, FalseMBB);
   MF.insert(It, SinkMBB);
 
   // Transfer the remainder of MBB and its successor edges to SinkMBB.
@@ -103,28 +105,30 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
                   MBB.end());
   SinkMBB->transferSuccessorsAndUpdatePHIs(&MBB);
 
-  // Next, add the true and fallthrough blocks as its successors.
-  MBB.addSuccessor(Copy0MBB);
-  MBB.addSuccessor(SinkMBB);
+  // Next, add the True and False blocks as its successors.
+  MBB.addSuccessor(TrueMBB);
+  MBB.addSuccessor(FalseMBB);
+  Builder.buildInstr(MOS::G_BRCOND_IMM, {}, {Tst}).addMBB(TrueMBB).addImm(1);
+  Builder.buildInstr(MOS::G_BR).addMBB(FalseMBB);
 
-  Builder.buildInstr(MOS::G_BRCOND_IMM, {}, {Tst}).addMBB(SinkMBB).addImm(1);
-
-  //  Copy0MBB:
-  //   %FalseValue = ...
-  //   # fallthrough to SinkMBB
-  // Update machine-CFG edges
-  Copy0MBB->addSuccessor(SinkMBB);
+  // The True and False blocks both jump through to the Sink block.
+  TrueMBB->addSuccessor(SinkMBB);
+  FalseMBB->addSuccessor(SinkMBB);
+  Builder.setInsertPt(*TrueMBB, TrueMBB->begin());
+  Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
+  Builder.setInsertPt(*FalseMBB, FalseMBB->begin());
+  Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
 
   //  SinkMBB:
-  //   %Result = phi [ %TrueValue, thisMBB ], [ %FalseValue, Copy0MBB ]
+  //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
   //  ...
   Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
   Builder.buildInstr(MOS::G_PHI)
       .addDef(Dst)
       .addUse(TrueValue)
-      .addMBB(&MBB)
+      .addMBB(TrueMBB)
       .addUse(FalseValue)
-      .addMBB(Copy0MBB);
+      .addMBB(FalseMBB);
 
   MI.eraseFromParent(); // The G_SELECT is gone now.
 }
