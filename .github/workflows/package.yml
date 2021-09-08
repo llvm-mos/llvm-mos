@@ -22,7 +22,7 @@ jobs:
         if: startsWith(matrix.os, 'macos')
         run: |
           brew update
-          brew install ninja zip
+          brew install ninja
       - name: Check out source code
         uses: actions/checkout@v2
         with:
