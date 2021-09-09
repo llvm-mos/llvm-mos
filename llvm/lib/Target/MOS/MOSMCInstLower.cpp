@@ -248,6 +248,14 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MI->getOpcode() == MOS::PH ? MOS::PHA_Implied
                                                  : MOS::PLA_Implied);
       return;
+    case MOS::X:
+      OutMI.setOpcode(MI->getOpcode() == MOS::PH ? MOS::PHX_Implied
+                                                 : MOS::PLX_Implied);
+      return;
+    case MOS::Y:
+      OutMI.setOpcode(MI->getOpcode() == MOS::PH ? MOS::PHY_Implied
+                                                 : MOS::PLY_Implied);
+      return;
     case MOS::P:
       OutMI.setOpcode(MI->getOpcode() == MOS::PH ? MOS::PHP_Implied
                                                  : MOS::PLP_Implied);

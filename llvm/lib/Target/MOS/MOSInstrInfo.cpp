@@ -32,6 +32,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
+#include "MOSSubtarget.h"
 
 using namespace llvm;
 
@@ -361,8 +362,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
   if (DestReg == SrcReg)
     return;
 
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   const auto &IsClass = [&](Register Reg, const TargetRegisterClass &RC) {
     if (Reg.isPhysical() && !RC.contains(Reg))
@@ -432,17 +433,21 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
           Builder.buildInstr(MOS::CMPImm, {MOS::C}, {SrcReg, INT64_C(1)});
         } else {
           assert(DestReg == MOS::V);
-          if (SrcReg == MOS::A) {
-            Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
-            Builder.buildInstr(MOS::PL, {MOS::A}, {})
+          const TargetRegisterClass &StackRegClass =
+              STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
+
+          if (StackRegClass.contains(SrcReg)) {
+            Builder.buildInstr(MOS::PH, {}, {SrcReg});
+            Builder.buildInstr(MOS::PL, {SrcReg}, {})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
           } else {
-            Register Tmp = createVReg(Builder, MOS::AcRegClass);
+            Register Tmp = createVReg(Builder, StackRegClass);
             copyPhysRegImpl(Builder, Tmp, SrcReg);
             std::prev(Builder.getInsertPt())
-                ->addOperand(MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true,
+                ->addOperand(MachineOperand::CreateReg(MOS::NZ,
+                                                       /*isDef=*/true,
                                                        /*isImp=*/true));
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});

@@ -12,6 +12,7 @@
 #include "Arch/ARM.h"
 #include "Arch/M68k.h"
 #include "Arch/Mips.h"
+#include "Arch/MOS.h"
 #include "Arch/PPC.h"
 #include "Arch/SystemZ.h"
 #include "Arch/VE.h"
@@ -386,6 +387,9 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     mips::getMipsCPUAndABI(Args, T, CPUName, ABIName);
     return std::string(CPUName);
   }
+
+  case llvm::Triple::mos:
+    return mos::getMOSTargetCPU(Args);
 
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:

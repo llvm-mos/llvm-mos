@@ -22,7 +22,7 @@
     call void asm sideeffect "JSR 1234", "r"(i16 56)
     ; CHECK:      %1:_(s16) = G_CONSTANT i16 56
     ; CHECK-NEXT: %0:imag16 = COPY %1
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 1245193 /* reguse:Imag16 */, %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 1310729 /* reguse:Imag16 */, %0
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -66,7 +66,7 @@
     call void asm sideeffect "JSR 1234", "R"(i8 56)
     ; CHECK:      %1:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: %0:gpr = COPY %1
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 720905 /* reguse:GPR */, %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 786441 /* reguse:GPR */, %0
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -114,7 +114,7 @@
     call void asm sideeffect "JSR 1234", "d"(i8 56)
     ; CHECK:      %1:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: %0:xy = COPY %1(s8)
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 917513 /* reguse:XY */, %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 983049 /* reguse:XY */, %0
     ret void
     ; CHECK-NEXT: RTS
   }

@@ -27,6 +27,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
+using namespace llvm;
+
 #define DEBUG_TYPE "mccodeemitter"
 
 #define GET_INSTRMAP_INFO
@@ -47,6 +49,9 @@ void MOSMCCodeEmitter::emitInstruction(uint64_t Val, unsigned Size,
 void MOSMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   // Get byte count of instruction
   unsigned Size = Desc.getSize();
@@ -141,6 +146,7 @@ MCCodeEmitter *createMOSMCCodeEmitter(const MCInstrInfo &MCII,
   return new MOSMCCodeEmitter(MCII, Ctx);
 }
 
-#include "MOSGenMCCodeEmitter.inc"
-
 } // end of namespace llvm
+
+#define ENABLE_INSTR_PREDICATE_VERIFIER
+#include "MOSGenMCCodeEmitter.inc"

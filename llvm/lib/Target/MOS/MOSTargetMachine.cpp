@@ -86,12 +86,23 @@ MOSTargetMachine::MOSTargetMachine(const Target &T, const Triple &TT,
   setGlobalISelAbort(GlobalISelAbortMode::Enable);
 }
 
-const MOSSubtarget *MOSTargetMachine::getSubtargetImpl() const {
-  return &SubTarget;
-}
+const MOSSubtarget *
+MOSTargetMachine::getSubtargetImpl(const Function &F) const {
+  Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute FSAttr = F.getFnAttribute("target-features");
 
-const MOSSubtarget *MOSTargetMachine::getSubtargetImpl(const Function &) const {
-  return &SubTarget;
+  auto CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  auto FS = FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+
+  auto &I = SubtargetMap[CPU + FS];
+  if (!I) {
+    // This needs to be done before we create a new subtarget since any
+    // creation will depend on the TM and the code generation flags on the
+    // function that reside in TargetOptions.
+    resetTargetOptions(F);
+    I = std::make_unique<MOSSubtarget>(TargetTriple, CPU, FS, *this);
+  }
+  return I.get();
 }
 
 TargetTransformInfo

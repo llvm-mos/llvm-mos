@@ -1,0 +1,27 @@
+# RUN: llc -mtriple=mos -mcpu=mos65c02 -run-pass=postrapseudos -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: xlsb_to_v
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $xlsb
+    ; CHECK-LABEL: name: xlsb_to_v
+    ; CHECK: liveins: $xlsb
+    ; CHECK: PH $x
+    ; CHECK: $x = PL implicit-def $nz
+    ; CHECK: $v = SelectImm $z, 0, -1
+    $v = COPY $xlsb
+...
+---
+name: ylsb_to_v
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $ylsb
+    ; CHECK-LABEL: name: ylsb_to_v
+    ; CHECK: liveins: $ylsb
+    ; CHECK: PH $y
+    ; CHECK: $y = PL implicit-def $nz
+    ; CHECK: $v = SelectImm $z, 0, -1
+    $v = COPY $ylsb
+...

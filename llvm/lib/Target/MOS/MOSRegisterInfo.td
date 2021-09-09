@@ -188,6 +188,7 @@ let isPressureFineGrained = true in {
 let isAllocatable = false in {
   def Flag : MOSReg1Class<(add C, N, V, Z)>;
   def AP : MOSReg8Class<(add A, P)>;
+  def AXYP : MOSReg8Class<(add A, X, Y, P)>;
 }
 
 // While not directly used, unless this is present, the TableGen-erated intersection

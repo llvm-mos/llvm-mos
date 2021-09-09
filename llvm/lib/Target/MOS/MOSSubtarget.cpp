@@ -36,26 +36,12 @@ using namespace llvm;
 
 MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const MOSTargetMachine &TM)
-    : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS),
-      ELFArch(0),
-      InstrInfo(),
-      RegInfo(), FrameLowering(),
+    : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), ELFArch(0),
+      InstrInfo(), RegInfo(), FrameLowering(),
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)),
       CallLoweringInfo(&TLInfo),
       InstSelector(createMOSInstructionSelector(TM, *this, RegBankInfo)),
-      InlineAsmLoweringInfo(&TLInfo),
-
-      // Subtarget features
-      m_hasTinyEncoding(false),
-
-      m_Has6502Insns(false), m_Has6502BCDInsns(false), m_Has6502XInsns(false),
-      m_Has65C02Insns(false), m_HasR65C02Insns(false), m_HasW65C02Insns(false),
-      m_HasW65816Insns(false), m_Has65EL02Insns(false), m_Has65CE02Insns(false),
-      m_HasSWEET16Insns(false),
-
-      m_LongRegisterNames(false),
-
-      m_FeatureSetDummy(false) {}
+      InlineAsmLoweringInfo(&TLInfo) {}
 
 const MOSFrameLowering *MOSSubtarget::getFrameLowering() const {
   return &FrameLowering;

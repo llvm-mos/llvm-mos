@@ -28,8 +28,8 @@
 
 include "MOSInstrFormats.td"
 
-let Predicates = [Has6502] in
-{
+let Predicates = [Has6502] in {
+
 defm ORA : CC1_All<0b000, "ora">;
 defm AND : CC1_All<0b001, "and">;
 defm EOR : CC1_All<0b010, "eor">;
@@ -218,6 +218,19 @@ def DEX_Implied: InstLowA<"dex", 0b1100>;
 def NOP_Implied: InstLowA<"nop", 0b1110>;
 
 } // Predicates = [Has6502]
+
+let Predicates = [Has65C02] in {
+
+/// Single-byte opcodes
+/// PHY PLY PHX PLX
+/// 5A  7A  DA  FA
+
+def PHY_Implied: InstLowA<"phy", 0b0101>;
+def PLY_Implied: InstLowA<"ply", 0b0111>;
+def PHX_Implied: InstLowA<"phx", 0b1101>;
+def PLX_Implied: InstLowA<"plx", 0b1111>;
+
+} // Predicates = [Has65C02]
 
 include "MOSInstrInfoTables.td"
 include "MOSInstrPseudos.td"
