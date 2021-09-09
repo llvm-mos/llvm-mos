@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "MOSSubtarget.h"
 
 #define DEBUG_TYPE "mos-framelowering"
 
@@ -94,7 +95,10 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineIRBuilder Builder(MBB, MI);
   MachineInstrSpan MIS(MI, &MBB);
-  const TargetInstrInfo &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
+  const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const TargetRegisterClass &StackRegClass =
+      STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
 
   // There are intentionally very few CSRs, few enough to place on the hard
   // stack without much risk of overflow. This is the only across-calls way
@@ -105,8 +109,8 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
     Register Reg = CI.getReg();
     if (!CI.isTargetSpilled())
       continue;
-    if (Reg != MOS::A)
-      Reg = Builder.buildCopy(&MOS::AcRegClass, CI.getReg()).getReg(0);
+    if (!StackRegClass.contains(Reg))
+      Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
     Builder.buildInstr(MOS::PH, {}, {Reg});
   }
 
@@ -115,7 +119,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // these locations in every interrupt handler.
   if (isISR(Builder.getMF())) {
     const auto Push = [&](const char *Sym, int Offset = 0) {
-      Register Tmp = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
+      Register Tmp = Builder.getMRI()->createVirtualRegister(&StackRegClass);
       auto Ld =
           Builder.buildInstr(MOS::LDAbs, {Tmp}, {}).addExternalSymbol(Sym);
       Ld->getOperand(1).setOffset(Offset);
@@ -150,7 +154,10 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineIRBuilder Builder(MBB, MI);
-  const TargetInstrInfo &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
+  const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const TargetRegisterClass &StackRegClass =
+      STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
 
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Register Reg = CI.getReg();
@@ -172,7 +179,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   if (isISR(Builder.getMF())) {
     const auto Pull = [&](const char *Sym, int Offset = 0) {
       Register Tmp =
-          Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
+          Builder.buildInstr(MOS::PL, {&StackRegClass}, {}).getReg(0);
       auto St =
           Builder.buildInstr(MOS::STAbs, {}, {Tmp}).addExternalSymbol(Sym);
       St->getOperand(1).setOffset(Offset);
@@ -185,8 +192,8 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
     Register Reg = CI.getReg();
     if (!CI.isTargetSpilled())
       continue;
-    if (Reg != MOS::A)
-      Reg = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
+    if (!StackRegClass.contains(Reg))
+      Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
     Builder.buildInstr(MOS::PL, {Reg}, {});
     if (Reg != CI.getReg())
       Builder.buildCopy(CI.getReg(), Reg);

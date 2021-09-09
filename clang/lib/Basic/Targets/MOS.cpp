@@ -115,3 +115,15 @@ static const char *const GCCRegNames[] = {
 llvm::ArrayRef<const char *> MOSTargetInfo::getGCCRegNames() const {
   return llvm::makeArrayRef(GCCRegNames);
 }
+
+static constexpr llvm::StringLiteral ValidCPUNames[] = {
+    {"mos6502"},   {"mos6502x"},   {"mos65c02"},   {"mosr65c02"}, {"mosw65c02"},
+    {"mosw65816"}, {"mosw65el02"}, {"mosw65ce02"}, {"mossweet16"}};
+
+bool MOSTargetInfo::isValidCPUName(StringRef Name) const {
+  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+}
+
+void MOSTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+}

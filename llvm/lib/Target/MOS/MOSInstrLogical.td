@@ -266,14 +266,14 @@ def T_A : MOSTransfer<Ac, XY>;
 
 // PHA, PHP
 def PH : MOSLogicalInstr {
-  dag InOperandList = (ins AP:$src);
+  dag InOperandList = (ins AXYP:$src);
 
   let mayStore = true;
 }
 
 // PLA, PLP
 def PL : MOSLogicalInstr {
-  dag OutOperandList = (outs AP:$dst);
+  dag OutOperandList = (outs AXYP:$dst);
 
   let mayLoad = true;
 }

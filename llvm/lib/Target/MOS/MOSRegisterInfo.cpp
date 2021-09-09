@@ -182,43 +182,31 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   // overlap with any other save/restore pair for the same physical register.
 
   MachineIRBuilder Builder(MBB, I);
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   switch (Reg) {
   default:
     errs() << "Register: " << getName(Reg) << "\n";
     report_fatal_error("Scavenger spill for register not yet implemented.");
-  case MOS::A: {
-    const char *Save = "__save_a";
-    bool UseHardStack = pushPullBalanced(I, UseMI);
+  case MOS::A:
+  case MOS::Y: {
+    const char *Save = Reg == MOS::A ? "__save_a" : "__save_y";
+    bool UseHardStack =
+        (Reg == MOS::A || STI.has65C02()) && pushPullBalanced(I, UseMI);
     assert(UseHardStack || canSave(Save, I, UseMI));
 
     if (UseHardStack)
-      Builder.buildInstr(MOS::PH).addUse(MOS::A);
+      Builder.buildInstr(MOS::PH).addUse(Reg);
     else
-      Builder.buildInstr(MOS::STAbs)
-          .addUse(MOS::A)
-          .addExternalSymbol(Save);
+      Builder.buildInstr(MOS::STAbs).addUse(Reg).addExternalSymbol(Save);
 
     Builder.setInsertPt(MBB, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(MOS::PL).addDef(MOS::A);
+      Builder.buildInstr(MOS::PL).addDef(Reg);
     else
-      Builder.buildInstr(MOS::LDAbs)
-          .addDef(MOS::A)
-          .addExternalSymbol(Save);
-    break;
-  }
-  case MOS::Y: {
-    const char *Save = "__save_y";
-    assert(canSave(Save, I, UseMI));
-
-    Builder.buildInstr(MOS::STAbs).addUse(Reg).addExternalSymbol(Save);
-
-    Builder.setInsertPt(MBB, UseMI);
-    Builder.buildInstr(MOS::LDAbs).addDef(Reg).addExternalSymbol(Save);
+      Builder.buildInstr(MOS::LDAbs).addDef(Reg).addExternalSymbol(Save);
     break;
   }
   case MOS::P: {

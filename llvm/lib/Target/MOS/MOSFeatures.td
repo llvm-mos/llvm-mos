@@ -9,7 +9,7 @@
 //===---------------------------------------------------------------------===//
 
 def FeatureAltRegisterNamesOnly
-    : SubtargetFeature<"mos-long-register-names", "m_LongRegisterNames", 
+    : SubtargetFeature<"mos-long-register-names", "LongRegisterNames",
                         "true",
                         "Requires llvm_mos_* prefixes to all registers. "#
                         "Useful if your code has variable names that conflict "#

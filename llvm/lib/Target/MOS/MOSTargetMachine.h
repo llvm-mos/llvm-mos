@@ -31,8 +31,8 @@ public:
                    Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
                    CodeGenOpt::Level OL, bool JIT);
 
-  const MOSSubtarget *getSubtargetImpl() const;
-  const MOSSubtarget *getSubtargetImpl(const Function &) const override;
+  const MOSSubtarget *getSubtargetImpl() const { return &SubTarget; }
+  const MOSSubtarget *getSubtargetImpl(const Function &F) const override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return this->TLOF.get();
@@ -52,6 +52,7 @@ public:
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   MOSSubtarget SubTarget;
+  mutable StringMap<std::unique_ptr<MOSSubtarget>> SubtargetMap;
 };
 
 } // end namespace llvm

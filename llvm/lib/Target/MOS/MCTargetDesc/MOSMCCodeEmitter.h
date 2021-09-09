@@ -17,6 +17,7 @@
 #include "MOSFixupKinds.h"
 
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/DataTypes.h"
 
 #define GET_INSTRINFO_OPERAND_TYPES_ENUM
@@ -107,6 +108,11 @@ private:
 
   const MCInstrInfo &MCII;
   MCContext &Ctx;
+
+  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
+  void
+  verifyInstructionPredicates(const MCInst &MI,
+                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // namespace llvm

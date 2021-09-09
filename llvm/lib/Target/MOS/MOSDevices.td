@@ -9,51 +9,51 @@
 //===---------------------------------------------------------------------===//
 
 def Feature6502
-    : SubtargetFeature<"mos-insns-6502", "m_Has6502Insns", "false",
+    : SubtargetFeature<"mos-insns-6502", "Has6502Insns", "true",
                        "The original documented 6502 instruction set">;
 
 def Feature6502BCD
-    : SubtargetFeature<"mos-insns-6502-bcd", "m_Has6502BCDInsns", "false",
+    : SubtargetFeature<"mos-insns-6502-bcd", "Has6502BCDInsns", "true",
                        "BCD instruction support, including SED and CLD (most "
                        "6502 series CPUs support this)">;
 
 def Feature6502X
-    : SubtargetFeature<"mos-insns-6502x", "m_Has6502XInsns", "false",
+    : SubtargetFeature<"mos-insns-6502x", "Has6502XInsns", "true",
                        "The 'illegal' opcodes present on some early variants of "
                        "the original 6502 processor">;
 
 def Feature65C02
-    : SubtargetFeature<"mos-insns-65c02", "m_Has65C02Insns", "false",
+    : SubtargetFeature<"mos-insns-65c02", "Has65C02Insns", "true",
                        "The new and modified instructions present on the generic "
                        "65c02 and variants">;
 
 def FeatureR65C02
-    : SubtargetFeature<"mos-insns-r65c02", "m_HasR65C02Insns", "false",
+    : SubtargetFeature<"mos-insns-r65c02", "HasR65C02Insns", "true",
                        "The new and modified instructions present on Rockwell "
                        "and WDC 65c02">;
 
 def FeatureW65C02
-    : SubtargetFeature<"mos-insns-w65c02", "m_HasW65C02Insns", "false",
+    : SubtargetFeature<"mos-insns-w65c02", "HasW65C02Insns", "true",
                        "The new and modified instructions present on "
                        "WDC 65c02">;
 
 def FeatureW65816
-    : SubtargetFeature<"mos-insns-w65816", "m_HasW65816Insns", "false",
+    : SubtargetFeature<"mos-insns-w65816", "HasW65816Insns", "true",
                        "The new and modified instructions present on "
                        "WDC 65816">;
 
 def Feature65EL02
-    : SubtargetFeature<"mos-insns-65el02", "m_Has65EL02Insns", "false",
+    : SubtargetFeature<"mos-insns-65el02", "Has65EL02Insns", "true",
                        "The new and modified instructions present on "
                        "65EL02">;
 
 def Feature65CE02
-    : SubtargetFeature<"mos-insns-65ce02", "m_Has65CE02Insns", "false",
+    : SubtargetFeature<"mos-insns-65ce02", "Has65CE02Insns", "true",
                        "The new and modified instructions present on "
                        "WDC 65CE02">;
 
 def FeatureSWEET16
-    : SubtargetFeature<"mos-insns-sweet16", "m_HasSWEET16Insns", "false",
+    : SubtargetFeature<"mos-insns-sweet16", "HasSWEET16Insns", "true",
                         "The SWEET16 instruction set">;
 
 // A feature set aggregates features, grouping them. We don't want to create a
@@ -62,7 +62,7 @@ def FeatureSWEET16
 // this by simply setting the same dummy member for all feature sets, which is
 // then ignored.
 class FeatureSet<string name, string desc, list<SubtargetFeature> i>
-  : SubtargetFeature<name, "m_FeatureSetDummy", "true", desc, i>;
+  : SubtargetFeature<name, "FeatureSetDummy", "true", desc, i>;
 
 // A family of microcontrollers, defining a set of supported features.
 class Family<string name, string desc, list<SubtargetFeature> i>
