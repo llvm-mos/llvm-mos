@@ -164,14 +164,13 @@ def BR : MOSLogicalInstr {
   let isTerminator = true;
 }
 
-def JMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
-  dag InOperandList = (ins label:$tgt);
-
-  let Pattern = [(br bb:$tgt)];
-
-  let isBarrier = true;
-  let isBranch = true;
-  let isTerminator = true;
+let InOperandList = (ins label:$tgt),
+    Pattern = [(br bb:$tgt)],
+    isBarrier = true,
+    isBranch = true,
+    isTerminator = true in {
+  def BRA : MOSLogicalInstr, PseudoInstExpansion<(BRA_Relative pcrel8:$tgt)>;
+  def JMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)>;
 }
 
 def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
