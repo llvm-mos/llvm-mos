@@ -50,12 +50,15 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_MOS_ADDR8:
   case R_MOS_ADDR16_LO:
   case R_MOS_PCREL_8:
-  case R_MOS_ADDR24_SEGMENT_HI:
   case R_MOS_ADDR24_SEGMENT_LO:
     *loc = static_cast<unsigned char>(val);
     break;
   case R_MOS_ADDR16_HI:
+  case R_MOS_ADDR24_SEGMENT_HI:
     *loc = static_cast<unsigned char>(val >> 8);
+    break;
+  case R_MOS_ADDR24_BANK:
+    *loc = static_cast<unsigned char>(val >> 16);
     break;
   case R_MOS_ADDR16:
   case R_MOS_ADDR24_SEGMENT:
