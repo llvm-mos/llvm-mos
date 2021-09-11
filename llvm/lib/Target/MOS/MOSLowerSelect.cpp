@@ -97,8 +97,9 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
       // G_SELECT is lowered, so by the time the next expansion pass occurs, the
       // conditional G_SELECT is already in the correct basic block.
       if (onlyUseIsConditional(*MBBI, MRI)) {
-        LLVM_DEBUG(dbgs() << "\tG_SELECT only used conditionally inside another "
-                             "G_SELECT. Deferring.\n");
+        LLVM_DEBUG(
+            dbgs() << "\tG_SELECT only used conditionally inside another "
+                      "G_SELECT. Deferring.\n");
         NewSelectMBBIs.push_back(MBBI);
       } else {
         LLVM_DEBUG(dbgs() << "\tLowering.\n");
@@ -168,36 +169,58 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     MachineInstr &DefMI = *MRI.def_instr_begin(TrueValue);
     if (DefMI.getOpcode() == MOS::G_SELECT) {
       DefMI.removeFromParent();
-      TrueMBB->insert(TrueMBB->begin(), &DefMI);
+      TrueMBB->insert(TrueMBB->end(), &DefMI);
     }
   }
   if (MRI.hasOneNonDBGUse(FalseValue)) {
     MachineInstr &DefMI = *MRI.def_instr_begin(FalseValue);
     if (DefMI.getOpcode() == MOS::G_SELECT) {
       DefMI.removeFromParent();
-      FalseMBB->insert(FalseMBB->begin(), &DefMI);
+      FalseMBB->insert(FalseMBB->end(), &DefMI);
     }
   }
 
-  // The True and False blocks both jump through to the Sink block.
+  bool FoldedUse = false;
+  // A select is commonly used to branch on a complex condition. If the next
+  // instruction is a branch, and this is the only use of the select, then
+  // duplicate the conditional branch into the true and false basic blocks. This
+  // saves the PHI.
+  if (MRI.hasOneNonDBGUse(Dst)) {
+    MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Dst);
+    if (UseMI.getIterator() == SinkMBB->begin() &&
+        UseMI.getOpcode() == MOS::G_BRCOND_IMM) {
+      FoldedUse = true;
+      MachineInstr *TrueUseMI = UseMI.removeFromParent();
+      MachineInstr *FalseUseMI = MF.CloneMachineInstr(&UseMI);
+
+      TrueMBB->insert(TrueMBB->end(), TrueUseMI);
+      MRI.use_nodbg_begin(Dst)->setReg(TrueValue);
+
+      FalseMBB->insert(FalseMBB->end(), FalseUseMI);
+      MRI.use_nodbg_begin(Dst)->setReg(FalseValue);
+    }
+  }
+
   TrueMBB->addSuccessor(SinkMBB);
   FalseMBB->addSuccessor(SinkMBB);
+  // The True and False blocks both jump through to the Sink block.
   Builder.setInsertPt(*TrueMBB, TrueMBB->end());
   Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
   Builder.setInsertPt(*FalseMBB, FalseMBB->end());
   Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
 
-  //  SinkMBB:
-  //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
-  //  ...
-  Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
-  Builder.buildInstr(MOS::G_PHI)
-      .addDef(Dst)
-      .addUse(TrueValue)
-      .addMBB(TrueMBB)
-      .addUse(FalseValue)
-      .addMBB(FalseMBB);
-
+  if (!FoldedUse) {
+    //  SinkMBB:
+    //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
+    //  ...
+    Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
+    Builder.buildInstr(MOS::G_PHI)
+        .addDef(Dst)
+        .addUse(TrueValue)
+        .addMBB(TrueMBB)
+        .addUse(FalseValue)
+        .addMBB(FalseMBB);
+  }
   MI.eraseFromParent(); // The G_SELECT is gone now.
 }
 
