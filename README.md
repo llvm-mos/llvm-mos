@@ -6,10 +6,10 @@ targets within the LLVM architecture.
 
 Status:
 The LLVM SingleSource end-to-end test cases pass on a simulated 6502. This is true at
--O0, -O3, -Os, and -Oz.
+-O0, -O3, -Os, and -Oz. The compiler is believed to be C99 compatible, but the quality
+of generated code is not yet at even a v0.1 level.
 
-**WARNING!** This compiler and toolchain has not been audited for C99
-compatibility. Very little attention has been given to the quality of
+**WARNING!** Very little attention has been given to the quality of
 code it generates beyond making sure that it's possible to clean up
 later. Because of this, please don't publicly review, compare, or
 benchmark this compiler against other compilers at this time. You'll
