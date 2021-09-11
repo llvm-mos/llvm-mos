@@ -129,3 +129,48 @@ body: |
     %5:any(s8) = G_SELECT %4, %0, %3
     RTS implicit %5
 ...
+---
+name: tail_duplicate_brcond_imm
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: tail_duplicate_brcond_imm
+  ; CHECK: bb.0.entry:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[C:%[0-9]+]]:any(s1) = G_CONSTANT i1 false
+  ; CHECK:   [[C1:%[0-9]+]]:any(s1) = G_CONSTANT i1 true
+  ; CHECK:   G_BRCOND_IMM [[C]](s1), %bb.1, 1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
+  ; CHECK:   G_BRCOND_IMM [[C]](s1), %bb.4, 1
+  ; CHECK:   G_BR %bb.5
+  ; CHECK: bb.4:
+  ; CHECK:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
+  ; CHECK:   G_BRCOND_IMM [[C]](s1), %bb.3, 1
+  ; CHECK:   G_BR %bb.6
+  ; CHECK: bb.5:
+  ; CHECK:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
+  ; CHECK:   G_BRCOND_IMM [[C1]](s1), %bb.3, 1
+  ; CHECK:   G_BR %bb.6
+  ; CHECK: bb.6:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK: bb.2:
+  ; CHECK:   successors: %bb.3(0x80000000)
+  ; CHECK: bb.3:
+  ; CHECK:   [[PHI:%[0-9]+]]:any(s1) = G_PHI [[C1]](s1), %bb.2, [[C]](s1), %bb.4, [[C]](s1), %bb.5
+  ; CHECK:   RTS implicit [[PHI]](s1)
+  bb.0.entry:
+    %0:any(s1) = G_CONSTANT i1 false
+    %1:any(s1) = G_CONSTANT i1 true
+    G_BRCOND_IMM %0, %bb.1, 1
+    G_BR %bb.2
+  bb.1:
+    %3:any(s1) = G_SELECT %0, %0, %1
+    G_BRCOND_IMM %3, %bb.3, 1
+  bb.2:
+  bb.3:
+    %4:any(s1) = G_PHI %0, %bb.1, %1, %bb.2
+    RTS implicit %4
+...

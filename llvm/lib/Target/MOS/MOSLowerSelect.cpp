@@ -16,6 +16,7 @@
 #include "MOS.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 #define DEBUG_TYPE "mos-lower-select"
@@ -97,8 +98,9 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
       // G_SELECT is lowered, so by the time the next expansion pass occurs, the
       // conditional G_SELECT is already in the correct basic block.
       if (onlyUseIsConditional(*MBBI, MRI)) {
-        LLVM_DEBUG(dbgs() << "\tG_SELECT only used conditionally inside another "
-                             "G_SELECT. Deferring.\n");
+        LLVM_DEBUG(
+            dbgs() << "\tG_SELECT only used conditionally inside another "
+                      "G_SELECT. Deferring.\n");
         NewSelectMBBIs.push_back(MBBI);
       } else {
         LLVM_DEBUG(dbgs() << "\tLowering.\n");
@@ -114,6 +116,34 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "\n");
 
   return Changed;
+}
+
+Register getPhiValue(const MachineInstr &Phi, const MachineBasicBlock *MBB) {
+  assert(Phi.getOpcode() == MOS::G_PHI);
+  for (unsigned Idx = 1, End = Phi.getNumOperands(); Idx != End; Idx += 2)
+    if (Phi.getOperand(Idx + 1).getMBB() == MBB)
+      return Phi.getOperand(Idx).getReg();
+  llvm_unreachable("Could not find MBB in G_PHI.");
+}
+
+bool referencesSuccessor(const MachineBasicBlock &MBB,
+                         const MachineBasicBlock *Tgt) {
+  for (const MachineInstr &MI : MBB.terminators())
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.isMBB() && MO.getMBB() == Tgt)
+        return true;
+  return false;
+}
+
+void removePredecessorFromPhis(MachineBasicBlock *MBB,
+                               const MachineBasicBlock *PredMBB) {
+  for (MachineInstr &Phi : MBB->phis())
+    for (unsigned Idx = 1; Idx < Phi.getNumOperands();)
+      if (Phi.getOperand(Idx + 1).getMBB() == PredMBB) {
+        Phi.RemoveOperand(Idx);
+        Phi.RemoveOperand(Idx);
+      } else
+        Idx += 2;
 }
 
 void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
@@ -164,40 +194,75 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   // control flow for the inner G_SELECT to be conditionalized on the outer. A
   // global ordering constraint ensures the the outer G_SELECT is always
   // expanded first.
-  if (MRI.hasOneNonDBGUse(TrueValue)) {
-    MachineInstr &DefMI = *MRI.def_instr_begin(TrueValue);
-    if (DefMI.getOpcode() == MOS::G_SELECT) {
-      DefMI.removeFromParent();
-      TrueMBB->insert(TrueMBB->begin(), &DefMI);
+  const auto SinkValue = [&](MachineBasicBlock *MBB, Register Value) {
+    if (MRI.hasOneNonDBGUse(Value)) {
+      MachineInstr &DefMI = *MRI.def_instr_begin(Value);
+      if (DefMI.getOpcode() == MOS::G_SELECT) {
+        DefMI.removeFromParent();
+        MBB->insert(MBB->end(), &DefMI);
+      }
     }
-  }
-  if (MRI.hasOneNonDBGUse(FalseValue)) {
-    MachineInstr &DefMI = *MRI.def_instr_begin(FalseValue);
-    if (DefMI.getOpcode() == MOS::G_SELECT) {
-      DefMI.removeFromParent();
-      FalseMBB->insert(FalseMBB->begin(), &DefMI);
+  };
+  SinkValue(TrueMBB, TrueValue);
+  SinkValue(FalseMBB, FalseValue);
+
+  bool FoldedUse = false;
+  // A select is commonly used to branch on a complex condition. If the next
+  // instruction is a branch, and this is the only use of the select, then
+  // duplicate the conditional branch into the true and false basic blocks. This
+  // saves the PHI.
+  if (MRI.hasOneNonDBGUse(Dst)) {
+    MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Dst);
+    if (UseMI.getIterator() == SinkMBB->begin() &&
+        UseMI.getOpcode() == MOS::G_BRCOND_IMM) {
+      MachineBasicBlock *Tgt = UseMI.getOperand(1).getMBB();
+
+      FoldedUse = true;
+      MachineInstr *TrueUseMI = UseMI.removeFromParent();
+      MachineInstr *FalseUseMI = MF.CloneMachineInstr(&UseMI);
+
+      const auto InsertUseMI = [&](MachineBasicBlock *MBB, MachineInstr *UseMI, Register Value) {
+        MBB->insert(MBB->end(), UseMI);
+        if (!MBB->isSuccessor(Tgt)) {
+          MBB->addSuccessor(Tgt);
+          for (MachineInstr &Phi : Tgt->phis()) {
+            Phi.addOperand(MachineOperand::CreateReg(getPhiValue(Phi, SinkMBB),
+                                                    /*isDef=*/false));
+            Phi.addOperand(MachineOperand::CreateMBB(MBB));
+          }
+        }
+        MRI.use_nodbg_begin(Dst)->setReg(Value);
+      };
+      InsertUseMI(TrueMBB, TrueUseMI, TrueValue);
+      InsertUseMI(FalseMBB, FalseUseMI, FalseValue);
+
+      if (!referencesSuccessor(*SinkMBB, Tgt)) {
+        SinkMBB->removeSuccessor(Tgt, /*NormalizeProbs=*/true);
+        removePredecessorFromPhis(Tgt, SinkMBB);
+      }
     }
   }
 
-  // The True and False blocks both jump through to the Sink block.
   TrueMBB->addSuccessor(SinkMBB);
   FalseMBB->addSuccessor(SinkMBB);
+  // The True and False blocks both jump through to the Sink block.
   Builder.setInsertPt(*TrueMBB, TrueMBB->end());
   Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
   Builder.setInsertPt(*FalseMBB, FalseMBB->end());
   Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
 
-  //  SinkMBB:
-  //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
-  //  ...
-  Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
-  Builder.buildInstr(MOS::G_PHI)
-      .addDef(Dst)
-      .addUse(TrueValue)
-      .addMBB(TrueMBB)
-      .addUse(FalseValue)
-      .addMBB(FalseMBB);
-
+  if (!FoldedUse) {
+    //  SinkMBB:
+    //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
+    //  ...
+    Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
+    Builder.buildInstr(MOS::G_PHI)
+        .addDef(Dst)
+        .addUse(TrueValue)
+        .addMBB(TrueMBB)
+        .addUse(FalseValue)
+        .addMBB(FalseMBB);
+  }
   MI.eraseFromParent(); // The G_SELECT is gone now.
 }
 
