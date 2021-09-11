@@ -200,6 +200,7 @@ bool MOSInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   default:
     llvm_unreachable("Bad branch opcode");
   case MOS::BR:
+  case MOS::BRA:
     // BR range is [-128,127] starting from the PC location after the
     // instruction, which is two bytes after the start of the instruction.
     return -126 <= BrOffset && BrOffset <= 129;
@@ -214,6 +215,7 @@ MOSInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   default:
     llvm_unreachable("Bad branch opcode");
   case MOS::BR:
+  case MOS::BRA:
   case MOS::JMP:
     return MI.getOperand(0).getMBB();
   }
@@ -305,6 +307,8 @@ unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
   // Since analyzeBranch succeeded and any existing branches were removed, the
   // only remaining terminators are comparisons.
 
+  const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
+
   MachineIRBuilder Builder(MBB, MBB.end());
   unsigned NumAdded = 0;
   if (BytesAdded)
@@ -333,13 +337,34 @@ unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // Add unconditional branch if necessary.
   if (UBB) {
-    auto JMP = Builder.buildInstr(MOS::JMP).addMBB(UBB);
+    // For 65C02, assume BRA and relax into JMP in insertIndirectBranch if
+    // necessary.
+    auto JMP =
+        Builder.buildInstr(STI.has65C02() ? MOS::BRA : MOS::JMP).addMBB(UBB);
     ++NumAdded;
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(*JMP);
   }
 
   return NumAdded;
+}
+
+unsigned MOSInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                            MachineBasicBlock &NewDestBB,
+                                            const DebugLoc &DL,
+                                            int64_t BrOffset,
+                                            RegScavenger *RS) const {
+  // This method inserts a *direct* branch (JMP), despite its name.
+  // LLVM calls this method to fixup unconditional branches; it never calls
+  // insertBranch or some hypothetical "insertDirectBranch".
+  // See lib/CodeGen/BranchRelaxation.cpp for details.
+  // We end up here when a jump is too long for a BRA instruction.
+
+  MachineIRBuilder Builder(MBB, MBB.end());
+  Builder.setDebugLoc(DL);
+
+  auto JMP = Builder.buildInstr(MOS::JMP).addMBB(&NewDestBB);
+  return getInstSizeInBytes(*JMP);
 }
 
 void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
