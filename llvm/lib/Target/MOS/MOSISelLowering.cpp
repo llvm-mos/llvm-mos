@@ -164,6 +164,8 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineBasicBlock *HeadMBB = MBB;
   MachineFunction *F = MBB->getParent();
 
+  const MOSSubtarget &STI = F->getSubtarget<MOSSubtarget>();
+
   // Split out all instructions after MI into a new basic block, updating
   // liveins.
   MachineBasicBlock *TailMBB = HeadMBB->splitAt(MI);
@@ -194,7 +196,7 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Add the unconditional branch from IfFalseMBB to TailMBB.
     Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
-    Builder.buildInstr(MOS::JMP).addMBB(TailMBB);
+    Builder.buildInstr(STI.has65C02() ? MOS::BRA : MOS::JMP).addMBB(TailMBB);
     for (const auto &LiveIn : IfFalseMBB->liveins())
       IfTrueMBB->addLiveIn(LiveIn);
 

@@ -4,3 +4,5 @@
  	plx                         ; CHECK: encoding: [0xfa]
  	phy                         ; CHECK: encoding: [0x5a]
  	ply                         ; CHECK: encoding: [0x7a]
+
+ 	bra $ea                     ; CHECK: encoding: [0x80,0xea]
