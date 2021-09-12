@@ -37,16 +37,13 @@ std::string makeEFlagsString(unsigned EFlags) {
   return Str;
 }
 
-static bool equalsMask(unsigned Flags, unsigned Mask) {
-  return (Flags & Mask) == Mask;
-}
-
 bool checkEFlagsCompatibility(unsigned EFlags, unsigned ModuleEFlags) {
+  const unsigned Flags = EFlags | ModuleEFlags;
   // Mixing sweet16 with native or R65C02 with BCD is prohibited
-  return !!(ModuleEFlags & ELF::EF_MOS_ARCH_SWEET16) ==
-             !!(EFlags & ELF::EF_MOS_ARCH_SWEET16) &&
-         !equalsMask(EFlags | ModuleEFlags,
-                     ELF::EF_MOS_ARCH_6502_BCD | ELF::EF_MOS_ARCH_R65C02);
+  return (!(Flags & ELF::EF_MOS_ARCH_SWEET16) ||
+          !(Flags & ~ELF::EF_MOS_ARCH_SWEET16)) &&
+         (!(Flags & ELF::EF_MOS_ARCH_6502_BCD) ||
+          !(Flags & ELF::EF_MOS_ARCH_R65C02));
 }
 
 } // namespace MOS
