@@ -224,6 +224,9 @@ public:
     MRI = getContext().getRegisterInfo();
 
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+
+    if (MCAssembler *Asm = Parser.getStreamer().getAssemblerPtr())
+      Asm->setELFHeaderEFlags(MOS_MC::makeEFlags(STI.getFeatureBits()));
   }
   MCAsmLexer &getLexer() const { return Parser.getLexer(); }
   MCAsmParser &getParser() const { return Parser; }
@@ -606,7 +609,7 @@ public:
 #include "MOSGenAsmMatcher.inc"
 
 // Parse only registers that can be considered parameters to real MOS
-// instructions.  The instruction parser considers x, y, and s to be 
+// instructions.  The instruction parser considers x, y, and s to be
 // strings, not registers, so make a point of filtering those cases out
 // of what's acceptable.
 OperandMatchResultTy

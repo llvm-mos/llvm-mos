@@ -42,23 +42,42 @@ public:
   MOSSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const MOSTargetMachine &TM);
 
-  /// Gets the ELF architecture for the e_flags field
-  /// of an ELF object file.
-  unsigned getELFArch() const {
-    assert(ELFArch != 0 &&
-           "every device must have an associate ELF architecture");
-    return ELFArch;
+  /// Gets the e_flags value of an ELF object file.
+  unsigned getEFlags() const {
+    assert(EFlags != 0 &&
+           "every MOS subtarget must set at least one architecture feature");
+    return EFlags;
   }
 
-  const MOSFrameLowering *getFrameLowering() const override;
-  const MOSInstrInfo *getInstrInfo() const override;
-  const MOSRegisterInfo *getRegisterInfo() const override;
-  const MOSTargetLowering *getTargetLowering() const override;
-  const CallLowering *getCallLowering() const override;
-  const LegalizerInfo *getLegalizerInfo() const override;
-  const RegisterBankInfo *getRegBankInfo() const override;
-  InstructionSelector *getInstructionSelector() const override;
-  const InlineAsmLowering *getInlineAsmLowering() const override;
+  const MOSFrameLowering *getFrameLowering() const override {
+    return &FrameLowering;
+  }
+
+  const MOSInstrInfo *getInstrInfo() const override { return &InstrInfo; }
+
+  const MOSRegisterInfo *getRegisterInfo() const override { return &RegInfo; }
+
+  const MOSTargetLowering *getTargetLowering() const override {
+    return &TLInfo;
+  }
+
+  const CallLowering *getCallLowering() const override {
+    return &CallLoweringInfo;
+  }
+
+  const LegalizerInfo *getLegalizerInfo() const override { return &Legalizer; }
+
+  const RegisterBankInfo *getRegBankInfo() const override {
+    return &RegBankInfo;
+  }
+
+  InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
+  }
+
+  const InlineAsmLowering *getInlineAsmLowering() const override {
+    return &InlineAsmLoweringInfo;
+  }
 
   bool enableMachineScheduler() const override { return true; }
   bool enableSubRegLiveness() const override { return true; }
@@ -81,8 +100,8 @@ public:
   bool has65C02() const { return Has65C02Insns; }
 
 private:
-  /// The ELF e_flags architecture.
-  unsigned ELFArch;
+  /// The ELF e_flags architecture features.
+  unsigned EFlags = 0;
 
   // Subtarget feature settings
   // See MOS.td for details.
@@ -118,4 +137,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_MOS_SUBTARGET_
+#endif // LLVM_MOS_SUBTARGET_H

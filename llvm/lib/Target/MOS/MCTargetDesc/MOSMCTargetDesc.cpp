@@ -17,6 +17,7 @@
 #include "MOSMCELFStreamer.h"
 #include "MOSTargetStreamer.h"
 
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -35,6 +36,36 @@
 #include "MOSGenRegisterInfo.inc"
 
 using namespace llvm;
+
+namespace llvm {
+namespace MOS_MC {
+/// Makes an e_flags value based on subtarget features.
+unsigned makeEFlags(const FeatureBitset &Features) {
+  unsigned ELFArch = 0;
+  if (Features[MOS::Feature65C02])
+    ELFArch |= ELF::EF_MOS_ARCH_65C02;
+  if (Features[MOS::Feature65CE02])
+    ELFArch |= ELF::EF_MOS_ARCH_65CE02;
+  if (Features[MOS::Feature65EL02])
+    ELFArch |= ELF::EF_MOS_ARCH_65EL02;
+  if (Features[MOS::Feature6502])
+    ELFArch |= ELF::EF_MOS_ARCH_6502;
+  if (Features[MOS::Feature6502BCD])
+    ELFArch |= ELF::EF_MOS_ARCH_6502_BCD;
+  if (Features[MOS::Feature6502X])
+    ELFArch |= ELF::EF_MOS_ARCH_6502X;
+  if (Features[MOS::FeatureR65C02])
+    ELFArch |= ELF::EF_MOS_ARCH_R65C02;
+  if (Features[MOS::FeatureSWEET16])
+    ELFArch |= ELF::EF_MOS_ARCH_SWEET16;
+  if (Features[MOS::FeatureW65C02])
+    ELFArch |= ELF::EF_MOS_ARCH_W65C02;
+  if (Features[MOS::FeatureW65816])
+    ELFArch |= ELF::EF_MOS_ARCH_W65816;
+  return ELFArch;
+}
+} // namespace MOS_MC
+} // end namespace llvm
 
 MCInstrInfo *llvm::createMOSMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();

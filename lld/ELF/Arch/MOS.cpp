@@ -11,6 +11,7 @@
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MOSFlags.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Endian.h"
 
@@ -26,6 +27,7 @@ namespace {
 class MOS final : public TargetInfo {
 public:
   MOS();
+  uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
@@ -37,6 +39,30 @@ MOS::MOS() {
   defaultMaxPageSize = 1;
   defaultCommonPageSize = 1;
   noneRel = R_MOS_NONE;
+}
+
+static uint32_t getEFlags(InputFile *file) {
+  return cast<ObjFile<ELF32LE>>(file)->getObj().getHeader().e_flags;
+}
+
+uint32_t MOS::calcEFlags() const {
+  uint32_t outputFlags = 0;
+
+  for (InputFile *f : objectFiles) {
+    const uint32_t flags = getEFlags(f);
+    if (!llvm::MOS::checkEFlagsCompatibility(flags, outputFlags)) {
+      error("Input file '" + f->getName() +
+            "' uses bad MOS "
+            "feature combination from rest of output file.\n"
+            "Input file: " +
+            llvm::MOS::makeEFlagsString(flags) +
+            "Output file: " + llvm::MOS::makeEFlagsString(outputFlags));
+    }
+
+    outputFlags |= flags;
+  }
+
+  return outputFlags;
 }
 
 RelExpr MOS::getRelExpr(RelType type, const Symbol &s,
@@ -69,7 +95,7 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_MOS_FK_DATA_8:
     write64le(loc, static_cast<unsigned long long>(val));
-    break;  
+    break;
   default:
     error(getErrorLocation(loc) + "unrecognized relocation " +
           toString(rel.type));
