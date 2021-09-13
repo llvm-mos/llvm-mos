@@ -38,6 +38,13 @@ public:
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
 
+  bool validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
+                          StringRef Constraint, unsigned Size) const override;
+  bool validateInputSize(const llvm::StringMap<bool> &FeatureMap,
+                         StringRef Constraint, unsigned Size) const override;
+  bool validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
+                           StringRef Constraint, unsigned Size) const;
+
   const char *getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override;

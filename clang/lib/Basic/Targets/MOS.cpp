@@ -60,6 +60,36 @@ bool MOSTargetInfo::validateAsmConstraint(
   }
 }
 
+bool MOSTargetInfo::validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
+                                       StringRef Constraint,
+                                       unsigned Size) const {
+  // Strip off constraint modifiers.
+  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
+    Constraint = Constraint.substr(1);
+
+  return validateOperandSize(FeatureMap, Constraint, Size);
+}
+
+bool MOSTargetInfo::validateInputSize(const llvm::StringMap<bool> &FeatureMap,
+                                      StringRef Constraint,
+                                      unsigned Size) const {
+  return validateOperandSize(FeatureMap, Constraint, Size);
+}
+
+bool MOSTargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
+                                        StringRef Constraint,
+                                        unsigned Size) const {
+  switch (Constraint[0]) {
+  default:
+    return true;
+  case 'a':
+  case 'x':
+  case 'y':
+  case 'd':
+    return Size <= 8;
+  }
+}
+
 static const char *const GCCRegNames[] = {
     "a",     "x",     "y",     "p",     "rc0",   "rc1",   "rc2",   "rc3",
     "rc4",   "rc5",   "rc6",   "rc7",   "rc8",   "rc9",   "rc10",  "rc11",
