@@ -15,9 +15,11 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define DEBUG_TYPE "mos-lower-select"
 
@@ -221,17 +223,27 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
       MachineInstr *TrueUseMI = UseMI.removeFromParent();
       MachineInstr *FalseUseMI = MF.CloneMachineInstr(&UseMI);
 
-      const auto InsertUseMI = [&](MachineBasicBlock *MBB, MachineInstr *UseMI, Register Value) {
+      const auto InsertUseMI = [&](MachineBasicBlock *MBB, MachineInstr *UseMI,
+                                   Register Value) {
+        auto ConstVal = getConstantVRegValWithLookThrough(Value, MRI);
+        if (ConstVal) {
+          if (ConstVal->Value.getBoolValue() !=
+              static_cast<bool>(UseMI->getOperand(2).getImm()))
+            return;
+          UseMI->setDesc(Builder.getTII().get(MOS::G_BR));
+          UseMI->RemoveOperand(2);
+          UseMI->RemoveOperand(0);
+        } else
+          UseMI->getOperand(0).setReg(Value);
         MBB->insert(MBB->end(), UseMI);
         if (!MBB->isSuccessor(Tgt)) {
           MBB->addSuccessor(Tgt);
           for (MachineInstr &Phi : Tgt->phis()) {
             Phi.addOperand(MachineOperand::CreateReg(getPhiValue(Phi, SinkMBB),
-                                                    /*isDef=*/false));
+                                                     /*isDef=*/false));
             Phi.addOperand(MachineOperand::CreateMBB(MBB));
           }
         }
-        MRI.use_nodbg_begin(Dst)->setReg(Value);
       };
       InsertUseMI(TrueMBB, TrueUseMI, TrueValue);
       InsertUseMI(FalseMBB, FalseUseMI, FalseValue);
@@ -243,13 +255,19 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     }
   }
 
-  TrueMBB->addSuccessor(SinkMBB);
-  FalseMBB->addSuccessor(SinkMBB);
   // The True and False blocks both jump through to the Sink block.
-  Builder.setInsertPt(*TrueMBB, TrueMBB->end());
-  Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
-  Builder.setInsertPt(*FalseMBB, FalseMBB->end());
-  Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
+  if (TrueMBB->empty() ||
+      !TrueMBB->getLastNonDebugInstr()->isUnconditionalBranch()) {
+    TrueMBB->addSuccessor(SinkMBB);
+    Builder.setInsertPt(*TrueMBB, TrueMBB->end());
+    Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
+  }
+  if (FalseMBB->empty() ||
+      !FalseMBB->getLastNonDebugInstr()->isUnconditionalBranch()) {
+    FalseMBB->addSuccessor(SinkMBB);
+    Builder.setInsertPt(*FalseMBB, FalseMBB->end());
+    Builder.buildInstr(MOS::G_BR).addMBB(SinkMBB);
+  }
 
   if (!FoldedUse) {
     //  SinkMBB:

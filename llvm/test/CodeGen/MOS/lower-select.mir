@@ -147,19 +147,17 @@ body: |
   ; CHECK:   G_BRCOND_IMM [[C]](s1), %bb.4, 1
   ; CHECK:   G_BR %bb.5
   ; CHECK: bb.4:
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   G_BRCOND_IMM [[C]](s1), %bb.3, 1
+  ; CHECK:   successors: %bb.6(0x80000000)
   ; CHECK:   G_BR %bb.6
   ; CHECK: bb.5:
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
-  ; CHECK:   G_BRCOND_IMM [[C1]](s1), %bb.3, 1
-  ; CHECK:   G_BR %bb.6
+  ; CHECK:   successors: %bb.3(0x80000000)
+  ; CHECK:   G_BR %bb.3
   ; CHECK: bb.6:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK: bb.3:
-  ; CHECK:   [[PHI:%[0-9]+]]:any(s1) = G_PHI [[C1]](s1), %bb.2, [[C]](s1), %bb.4, [[C]](s1), %bb.5
+  ; CHECK:   [[PHI:%[0-9]+]]:any(s1) = G_PHI [[C1]](s1), %bb.2, [[C]](s1), %bb.5
   ; CHECK:   RTS implicit [[PHI]](s1)
   bb.0.entry:
     %0:any(s1) = G_CONSTANT i1 false
