@@ -51,18 +51,16 @@ public:
   void moveAwayFromCalls(MachineFunction &MF);
 };
 
-// Returns whether the only use of a G_SELECT's result is the then or else part
-// of another G_SELECT. In that case, the former G_SELECT can be sunk into the
-// latter G_SELECT so long as the latter is expanded first.
-static bool onlyUseIsConditional(const MachineInstr &MI,
-                                 const MachineRegisterInfo &MRI) {
+// Returns whether there's a chance that this G_SELECT and its user could be
+// folded together, so long as the user is lowered first.  In that case, this
+// G_SELECT should be deferred.
+static bool shouldDefer(const MachineInstr &MI,
+                        const MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == MOS::G_SELECT);
   Register Dst = MI.getOperand(0).getReg();
   if (!MRI.hasOneNonDBGUse(Dst))
     return false;
-  const MachineInstr &OnlyUseMI = *MRI.use_nodbg_instructions(Dst).begin();
-  return OnlyUseMI.getOpcode() == MOS::G_SELECT &&
-         OnlyUseMI.getOperand(1).getReg() != Dst;
+  return MRI.use_instr_nodbg_begin(Dst)->getOpcode() == MOS::G_SELECT;
 }
 
 bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
@@ -93,16 +91,10 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
     for (MachineBasicBlock::iterator MBBI : SelectMBBIs) {
       LLVM_DEBUG(dbgs() << *MBBI);
 
-      // If the only use of this instruction is conditioned on another G_SELECT,
-      // then this whole control flow section can be sunk into that conditional
-      // region. This can only occur if the other G_SELECT is lowered first, so
-      // skip this one for this pass. The actual sinking occurs when that
-      // G_SELECT is lowered, so by the time the next expansion pass occurs, the
-      // conditional G_SELECT is already in the correct basic block.
-      if (onlyUseIsConditional(*MBBI, MRI)) {
-        LLVM_DEBUG(
-            dbgs() << "\tG_SELECT only used conditionally inside another "
-                      "G_SELECT. Deferring.\n");
+      // We may be able to fold this G_SELECT together with its use, but only if
+      // the use is selected first.
+      if (shouldDefer(*MBBI, MRI)) {
+        LLVM_DEBUG(dbgs() << "\tDeferring.\n");
         NewSelectMBBIs.push_back(MBBI);
       } else {
         LLVM_DEBUG(dbgs() << "\tLowering.\n");
@@ -112,6 +104,9 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "End iteration.\n\n");
     if (NewSelectMBBIs.size() == SelectMBBIs.size())
       report_fatal_error("Infinite loop encountered while lowering G_SELECT.");
+
+    LLVM_DEBUG(if (!NewSelectMBBIs.empty()) MF.dump(););
+
     std::swap(SelectMBBIs, NewSelectMBBIs);
   }
 
@@ -200,6 +195,7 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     if (MRI.hasOneNonDBGUse(Value)) {
       MachineInstr &DefMI = *MRI.def_instr_begin(Value);
       if (DefMI.getOpcode() == MOS::G_SELECT) {
+        LLVM_DEBUG(dbgs() << "Sinking value: " << DefMI);
         DefMI.removeFromParent();
         MBB->insert(MBB->end(), &DefMI);
       }
@@ -217,6 +213,7 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Dst);
     if (UseMI.getIterator() == SinkMBB->begin() &&
         UseMI.getOpcode() == MOS::G_BRCOND_IMM) {
+      LLVM_DEBUG(dbgs() << "Folding use MI: " << UseMI);
       MachineBasicBlock *Tgt = UseMI.getOperand(1).getMBB();
 
       FoldedUse = true;
@@ -228,8 +225,12 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
         auto ConstVal = getConstantVRegValWithLookThrough(Value, MRI);
         if (ConstVal) {
           if (ConstVal->Value.getBoolValue() !=
-              static_cast<bool>(UseMI->getOperand(2).getImm()))
+              static_cast<bool>(UseMI->getOperand(2).getImm())) {
+            LLVM_DEBUG(dbgs() << "User branch cannot be taken; eliding.");
             return;
+          }
+          LLVM_DEBUG(dbgs()
+                     << "User branch is always taken. Making unconditional.");
           UseMI->setDesc(Builder.getTII().get(MOS::G_BR));
           UseMI->RemoveOperand(2);
           UseMI->RemoveOperand(0);
@@ -245,7 +246,9 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
           }
         }
       };
+      LLVM_DEBUG(dbgs() << "Creating True MBB:\n");
       InsertUseMI(TrueMBB, TrueUseMI, TrueValue);
+      LLVM_DEBUG(dbgs() << "Creating False MBB:\n");
       InsertUseMI(FalseMBB, FalseUseMI, FalseValue);
 
       if (!referencesSuccessor(*SinkMBB, Tgt)) {
