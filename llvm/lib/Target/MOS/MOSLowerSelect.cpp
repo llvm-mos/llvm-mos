@@ -187,19 +187,20 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   Builder.buildInstr(MOS::G_BRCOND_IMM, {}, {Tst}).addMBB(TrueMBB).addImm(1);
   Builder.buildInstr(MOS::G_BR).addMBB(FalseMBB);
 
-  // Sink the True and False values if G_SELECTs. This causes all inserted
-  // control flow for the inner G_SELECT to be conditionalized on the outer. A
-  // global ordering constraint ensures the the outer G_SELECT is always
-  // expanded first.
+  // Sink the True and False values if only used in the conditional part of the
+  // G_SELECT.
   const auto SinkValue = [&](MachineBasicBlock *MBB, Register Value) {
-    if (MRI.hasOneNonDBGUse(Value)) {
-      MachineInstr &DefMI = *MRI.def_instr_begin(Value);
-      if (DefMI.getOpcode() == MOS::G_SELECT) {
-        LLVM_DEBUG(dbgs() << "Sinking value: " << DefMI);
-        DefMI.removeFromParent();
-        MBB->insert(MBB->end(), &DefMI);
-      }
-    }
+    if (!MRI.hasOneNonDBGUse(Value))
+      return;
+    bool SawStore = true;
+    MachineInstr &DefMI = *MRI.def_instr_begin(Value);
+    if (!DefMI.isSafeToMove(nullptr, SawStore))
+      return;
+    if (Tst == Value)
+      return;
+    LLVM_DEBUG(dbgs() << "Sinking value: " << DefMI);
+    DefMI.removeFromParent();
+    MBB->insert(MBB->end(), &DefMI);
   };
   SinkValue(TrueMBB, TrueValue);
   SinkValue(FalseMBB, FalseValue);
