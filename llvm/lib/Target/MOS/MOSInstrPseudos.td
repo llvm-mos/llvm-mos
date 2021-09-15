@@ -180,8 +180,9 @@ def SBCNZImag8 : MOSPseudo {
   let Constraints = "$dst = $l, $carryout = $carryin";
 }
 
-// Terminator version of CMPimm. This ensures that this instruction stays
+// Terminator versions of CMP. Each of these instructions is ensured to stay
 // adjacent to the branch that consumes its N or Z value.
+
 def CMPImmTerm : MOSPseudo {
   dag OutOperandList = (outs Cc:$carry);
   dag InOperandList = (ins GPR:$l, i8imm:$r);
@@ -189,7 +190,16 @@ def CMPImmTerm : MOSPseudo {
   let Defs = [NZ];
 
   let isCompare = true;
+  let isTerminator = true;
+}
 
+def CMPImag8Term : MOSPseudo {
+  dag OutOperandList = (outs Cc:$carry);
+  dag InOperandList = (ins GPR:$l, Imag8:$r);
+
+  let Defs = [NZ];
+
+  let isCompare = true;
   let isTerminator = true;
 }
 

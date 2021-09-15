@@ -107,7 +107,7 @@ private:
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                        Register SrcReg) const;
 
-  void expandCMPImmTerm(MachineIRBuilder &Builder) const;
+  void expandCMPTerm(MachineIRBuilder &Builder) const;
   void expandSBCNZImag8(MachineIRBuilder &Builder) const;
   void expandLDIdx(MachineIRBuilder &Builder) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;

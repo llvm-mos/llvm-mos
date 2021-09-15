@@ -119,6 +119,26 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
+  case MOS::CMPImag8: {
+    switch (MI->getOperand(1).getReg()) {
+    default:
+      llvm_unreachable("Unexpected register.");
+    case MOS::A:
+      OutMI.setOpcode(MOS::CMP_ZeroPage);
+      break;
+    case MOS::X:
+      OutMI.setOpcode(MOS::CPX_ZeroPage);
+      break;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::CPY_ZeroPage);
+      break;
+    }
+    MCOperand Val;
+    if (!lowerOperand(MI->getOperand(2), Val))
+      llvm_unreachable("Failed to lower operand");
+    OutMI.addOperand(Val);
+    return;
+  }
   case MOS::LDImm:
   case MOS::LDAbs:
   case MOS::LDImag8:

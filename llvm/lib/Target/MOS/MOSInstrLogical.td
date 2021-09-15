@@ -224,6 +224,14 @@ def CMPImm : MOSLogicalInstr {
   let isCompare = true;
 }
 
+// CMP imag8, CPX imag8, CPY imag8
+def CMPImag8 : MOSLogicalInstr {
+  dag OutOperandList = (outs Cc:$carry);
+  dag InOperandList = (ins GPR:$l, Imag8:$r);
+
+  let isCompare = true;
+}
+
 //===---------------------------------------------------------------------===//
 // Increment/Decrement Instructions
 //===---------------------------------------------------------------------===//

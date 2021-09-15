@@ -53,6 +53,16 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: cmp_zeropage
+# CHECK-LABEL: cmp_zeropage
+body: |
+  bb.0.entry:
+    $c = CMPImag8 $a, $rc0
+    ; CHECK: cmp mos8(__rc0)
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |

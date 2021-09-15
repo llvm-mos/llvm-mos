@@ -240,6 +240,36 @@ inline CmpImm_match m_CmpImm(Register &LHS, int64_t &RHS, Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
+struct CmpImag8_match {
+  Register &LHS;
+  Register &RHS;
+  Register &Flag;
+
+  CmpImag8_match(Register &LHS, Register &RHS, Register &Flag)
+      : LHS(LHS), RHS(RHS), Flag(Flag) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register CondReg) {
+    auto DefSrcReg = getDefSrcRegIgnoringCopies(CondReg, MRI);
+    MachineInstr &CondMI = *DefSrcReg->MI;
+    if (CondMI.getOpcode() != MOS::G_CMP)
+      return false;
+    LHS = CondMI.getOperand(4).getReg();
+    RHS = CondMI.getOperand(5).getReg();
+    Flag = getCmpFlagForRegister(CondMI, DefSrcReg->Reg);
+
+    // CMPImag8 cannot set the V register.
+    return Flag != MOS::V;
+  }
+};
+
+// Match one of the outputs of a G_CMP to a CMPImag8 operation. LHS and RHS are
+// the left and right hand side of the comparison, while Flag is the virtual
+// (for C) or physical (for N and Z) register corresponding to the output by
+// which the G_CMP was reached.
+inline CmpImag8_match m_CmpImag8(Register &LHS, Register &RHS, Register &Flag) {
+  return {LHS, RHS, Flag};
+}
+
 bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
@@ -253,33 +283,50 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
 
   Register LHS;
-  int64_t RHS;
+  int64_t RHSConst;
   Register Flag;
-  if (!mi_match(CondReg, MRI, m_CmpImm(LHS, RHS, Flag))) {
-    MachineInstrSpan MIS(MI, MI.getParent());
-    auto CondExt = Builder.buildAnyExt(S8, CondReg);
-    auto Zero = Builder.buildConstant(S8, 0);
-    Register Z =
-        Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1 /*=Z*/}, {CondExt, Zero})
-            .getReg(3);
-    MI.getOperand(0).setReg(Z);
-    MI.getOperand(2).setImm(!FlagVal);
-    return selectAll(MIS);
+  if (mi_match(CondReg, MRI, m_CmpImm(LHS, RHSConst, Flag))) {
+    // Use the terminator version of CMPImm to ensure that the live range of N
+    // and Z is tightly curtailed.
+    unsigned Opcode = Flag == MOS::C ? MOS::CMPImm : MOS::CMPImmTerm;
+    auto Compare = Builder.buildInstr(Opcode, {S1}, {LHS, RHSConst});
+    if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
+      return false;
+
+    if (Flag == MOS::C)
+      Flag = Compare.getReg(0);
+
+    Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(Flag).addImm(FlagVal);
+    MI.eraseFromParent();
+    return true;
   }
 
-  // Use the terminator version of CMPImm to ensure that the live range of N and
-  // Z is tightly curtailed.
-  unsigned Opcode = Flag == MOS::C ? MOS::CMPImm : MOS::CMPImmTerm;
-  auto Compare = Builder.buildInstr(Opcode, {S1}, {LHS, RHS});
-  if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
-    return false;
+  Register RHS;
+  if (mi_match(CondReg, MRI, m_CmpImag8(LHS, RHS, Flag))) {
+    // Use the terminator version of CMPImag8 to ensure that the live range of N
+    // and Z is tightly curtailed.
+    unsigned Opcode = Flag == MOS::C ? MOS::CMPImag8 : MOS::CMPImag8Term;
+    auto Compare = Builder.buildInstr(Opcode, {S1}, {LHS, RHS});
+    if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
+      return false;
 
-  if (Flag == MOS::C)
-    Flag = Compare.getReg(0);
+    if (Flag == MOS::C)
+      Flag = Compare.getReg(0);
 
-  Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(Flag).addImm(FlagVal);
-  MI.eraseFromParent();
-  return true;
+    Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(Flag).addImm(FlagVal);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  MachineInstrSpan MIS(MI, MI.getParent());
+  auto CondExt = Builder.buildAnyExt(S8, CondReg);
+  auto Zero = Builder.buildConstant(S8, 0);
+  Register Z =
+      Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1 /*=Z*/}, {CondExt, Zero})
+          .getReg(3);
+  MI.getOperand(0).setReg(Z);
+  MI.getOperand(2).setImm(!FlagVal);
+  return selectAll(MIS);
 }
 
 bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
@@ -530,10 +577,10 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
   } else {
     if (matchIndexed(Addr, Base, Offset, MRI)) {
       auto Instr = Builder.buildInstr(IdxOpcode)
-                      .add(SrcDstOp)
-                      .add(Base)
-                      .add(Offset)
-                      .cloneMemRefs(MI);
+                       .add(SrcDstOp)
+                       .add(Base)
+                       .add(Offset)
+                       .cloneMemRefs(MI);
       if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();

@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSRegisterInfo.h"
 
+#include "MOSSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -32,7 +33,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include "MOSSubtarget.h"
 
 using namespace llvm;
 
@@ -612,9 +612,7 @@ void MOSInstrInfo::loadStoreRegStackSlot(
     Instr.addReg(Reg, getDefRegState(IsLoad) | getKillRegState(IsKill));
     if (IsLoad)
       Instr.addDef(Ptr, RegState::EarlyClobber);
-    Instr.addFrameIndex(FrameIndex)
-        .addImm(0)
-        .addMemOperand(MMO);
+    Instr.addFrameIndex(FrameIndex).addImm(0).addMemOperand(MMO);
   } else {
     if ((Reg.isPhysical() && MOS::Imag16RegClass.contains(Reg)) ||
         (Reg.isVirtual() &&
@@ -680,7 +678,8 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Changed = false;
     break;
   case MOS::CMPImmTerm:
-    expandCMPImmTerm(Builder);
+  case MOS::CMPImag8Term:
+    expandCMPTerm(Builder);
     break;
   case MOS::SBCNZImag8:
     expandSBCNZImag8(Builder);
@@ -700,9 +699,16 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return Changed;
 }
 
-void MOSInstrInfo::expandCMPImmTerm(MachineIRBuilder &Builder) const {
+void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
   MachineInstr &MI = *Builder.getInsertPt();
-  MI.setDesc(Builder.getTII().get(MOS::CMPImm));
+  switch (MI.getOpcode()) {
+  case MOS::CMPImmTerm:
+    MI.setDesc(Builder.getTII().get(MOS::CMPImm));
+    break;
+  case MOS::CMPImag8Term:
+    MI.setDesc(Builder.getTII().get(MOS::CMPImag8));
+    break;
+  }
   MI.addOperand(
       MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true, /*isImp=*/true));
 }
