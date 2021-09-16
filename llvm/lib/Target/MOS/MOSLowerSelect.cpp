@@ -192,9 +192,11 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   const auto SinkValue = [&](MachineBasicBlock *MBB, Register Value) {
     if (!MRI.hasOneNonDBGUse(Value))
       return;
-    bool SawStore = true;
     MachineInstr &DefMI = *MRI.def_instr_begin(Value);
+    bool SawStore = true;
     if (!DefMI.isSafeToMove(nullptr, SawStore))
+      return;
+    if (DefMI.getNumDefs() != 1)
       return;
     if (Tst == Value)
       return;
