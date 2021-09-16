@@ -754,24 +754,27 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   // capabilities to the 6502's SBC and CMP instructions.
   // See www.6502.org/tutorials/compare_beyond.html.
   switch (Pred) {
-  case CmpInst::ICMP_EQ:
-    Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, Dst /*=Z*/}, {LHS, RHS});
+  case CmpInst::ICMP_EQ: {
+    auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
+    Builder.buildCopy(Dst, Cmp.getReg(3) /*=Z*/);
     MI.eraseFromParent();
     break;
-  case CmpInst::ICMP_UGE:
-    Builder.buildInstr(MOS::G_CMP, {Dst /*=C*/, S1, S1, S1}, {LHS, RHS});
+  }
+  case CmpInst::ICMP_UGE: {
+    auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
+    Builder.buildCopy(Dst, Cmp.getReg(0) /*=C*/);
     MI.eraseFromParent();
     break;
+  }
   case CmpInst::ICMP_SLT: {
     // Subtractions of zero cannot overflow, so N is always correct.
     if (mi_match(RHS, MRI, m_SpecificICst(0))) {
-      Builder.buildInstr(MOS::G_CMP, {S1, Dst /*=N*/, S1, S1}, {LHS, RHS});
+      auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
+      Builder.buildCopy(Dst, Cmp.getReg(1) /*=N*/);
     } else {
       // General subtractions can overflow; if so, N is flipped.
       auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
-      Register N = Cmp.getReg(1);
-      Register V = Cmp.getReg(2);
-      Builder.buildXor(Dst, N, V);
+      Builder.buildXor(Dst, Cmp.getReg(1) /*=N*/, Cmp.getReg(2) /*=V*/);
     }
     MI.eraseFromParent();
     break;

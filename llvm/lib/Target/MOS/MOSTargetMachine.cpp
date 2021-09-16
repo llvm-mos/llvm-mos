@@ -15,8 +15,8 @@
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -242,6 +242,27 @@ MOSPassConfig::createMachineScheduler(MachineSchedContext *C) const {
   return new ScheduleDAGMILive(C, std::make_unique<MOSSchedStrategy>(C));
 }
 
+namespace {
+
+class MOSCSEConfigFull : public CSEConfigFull {
+public:
+  virtual ~MOSCSEConfigFull() = default;
+  virtual bool shouldCSEOpc(unsigned Opc) override;
+};
+
+bool MOSCSEConfigFull::shouldCSEOpc(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return CSEConfigFull::shouldCSEOpc(Opc);
+  case MOS::G_CMP:
+    return true;
+  }
+}
+
+} // namespace
+
 std::unique_ptr<CSEConfigBase> MOSPassConfig::getCSEConfig() const {
-  return getStandardCSEConfigForOpt(TM->getOptLevel());
+  if (TM->getOptLevel() == CodeGenOpt::None)
+    return std::make_unique<CSEConfigConstantOnly>();
+  return std::make_unique<MOSCSEConfigFull>();
 }
