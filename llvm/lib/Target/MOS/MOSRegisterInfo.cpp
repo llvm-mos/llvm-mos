@@ -121,50 +121,6 @@ static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
   return !PushCount;
 }
 
-static bool referencesSaveSymbol(const MachineInstr &MI, StringRef SaveSymbol) {
-  for (const MachineOperand &MO : MI.operands())
-    if (MO.isSymbol() && SaveSymbol == MO.getSymbolName())
-      return true;
-  return false;
-}
-
-static bool saveBalanced(StringRef SaveSymbol,
-                         MachineBasicBlock::iterator Begin,
-                         MachineBasicBlock::iterator End) {
-  bool SaveInUse = false;
-  for (auto MI = Begin; MI != End; ++MI) {
-    if (!referencesSaveSymbol(*MI, SaveSymbol))
-      continue;
-    switch (MI->getOpcode()) {
-    case MOS::STAbs:
-      if (SaveInUse)
-        return false;
-      SaveInUse = true;
-      break;
-    case MOS::LDAbs:
-      if (!SaveInUse)
-        return false;
-      SaveInUse = false;
-      break;
-    default:
-      llvm_unreachable("Unexpected opcode with save symbol.");
-    }
-  }
-  return !SaveInUse;
-}
-
-static bool canSave(StringRef SaveSymbol, MachineBasicBlock::iterator Begin,
-                    MachineBasicBlock::iterator End) {
-  if (!saveBalanced(SaveSymbol, Begin->getParent()->begin(), Begin))
-    return false;
-
-  for (auto MI = Begin; MI != End; ++MI)
-    if (referencesSaveSymbol(*MI, SaveSymbol))
-      return false;
-
-  return saveBalanced(SaveSymbol, End, Begin->getParent()->end());
-}
-
 bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator I,
                                             MachineBasicBlock::iterator &UseMI,
@@ -194,7 +150,6 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     const char *Save = Reg == MOS::A ? "__save_a" : "__save_y";
     bool UseHardStack =
         (Reg == MOS::A || STI.has65C02()) && pushPullBalanced(I, UseMI);
-    assert(UseHardStack || canSave(Save, I, UseMI));
 
     if (UseHardStack)
       Builder.buildInstr(MOS::PH).addUse(Reg);
