@@ -42,8 +42,7 @@ def G_BRCOND_IMM : MOSGenericInstruction {
 }
 
 // Produce the flag values equaivalent to "SEC; LDA #$l; SBC #$r". Only supports
-// 8-bit comparisons. At most one of N or Z can be live out of this instruction,
-// since saving N somewhere permanent clobbers Z, and vice versa.
+// 8-bit comparisons.
 def G_CMP : MOSGenericInstruction {
   let OutOperandList = (outs type0:$c, type0:$n, type0:$v, type0:$z);
   let InOperandList = (ins type1:$l, type1:$r);

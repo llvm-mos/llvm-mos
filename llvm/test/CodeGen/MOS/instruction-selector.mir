@@ -385,6 +385,35 @@ body: |
     RTS implicit %2, implicit %4, implicit %5
 ...
 ---
+name: cmp_nz
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmp_nz
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 6502: [[LDImm:%[0-9]+]]:gpr = LDImm 42
+    ; 6502: [[COPY1:%[0-9]+]]:imag8 = COPY [[LDImm]]
+    ; 6502: [[LDCImm:%[0-9]+]]:cc = LDCImm -1
+    ; 6502: %9:ac, %2:cc, %3:gpr_lsb, %4:vc, $noreg = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]]
+    ; 6502: [[LDCImm1:%[0-9]+]]:cc = LDCImm -1
+    ; 6502: %7:ac, $noreg, $noreg, $noreg, %5:gpr_lsb = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm1]]
+    ; 6502: RTS implicit %2, implicit %3, implicit %5
+    ; 65C02-LABEL: name: cmp_nz
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 65C02: [[LDImm:%[0-9]+]]:gpr = LDImm 42
+    ; 65C02: [[COPY1:%[0-9]+]]:imag8 = COPY [[LDImm]]
+    ; 65C02: [[LDCImm:%[0-9]+]]:cc = LDCImm -1
+    ; 65C02: %9:ac, %2:cc, %3:gpr_lsb, %4:vc, $noreg = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm]]
+    ; 65C02: [[LDCImm1:%[0-9]+]]:cc = LDCImm -1
+    ; 65C02: %7:ac, $noreg, $noreg, $noreg, %5:gpr_lsb = SBCNZImag8 [[COPY]], [[COPY1]], [[LDCImm1]]
+    ; 65C02: RTS implicit %2, implicit %3, implicit %5
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_CONSTANT i8 42
+    %2:any(s1), %3:any(s1), %4:any(s1), %5:any(s1) = G_CMP %0, %1
+    RTS implicit %2, implicit %3, implicit %5
+...
+---
 name: copy
 legalized: true
 regBankSelected: true

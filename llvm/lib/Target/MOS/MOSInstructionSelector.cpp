@@ -342,7 +342,18 @@ bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
   if (!Builder.getMRI()->use_nodbg_empty(CMPZ))
     Z = CMPZ;
 
-  assert((!N || !Z) && "G_CMP can output at most one of N or Z.");
+  // We can only extract one of N or Z at a time, so if both are needed,
+  // arbitrarily extract out the comparison that produces Z. This case
+  // should very rarely be hit, if ever.
+  if (N && Z) {
+    MachineInstrSpan MIS(MI, MI.getParent());
+    MI.getOperand(3).setReg(MOS::NoRegister);
+    Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
+    Builder.buildInstr(MOS::G_CMP,
+                       {MOS::NoRegister, MOS::NoRegister, MOS::NoRegister, Z},
+                       {MI.getOperand(4), MI.getOperand(5)});
+    return selectAll(MIS);
+  }
 
   auto C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(-1)});
 
