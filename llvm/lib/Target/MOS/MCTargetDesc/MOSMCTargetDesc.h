@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+class FeatureBitset;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
@@ -48,6 +49,11 @@ MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
 
 /// Creates an ELF object writer for MOS.
 std::unique_ptr<MCObjectTargetWriter> createMOSELFObjectWriter(uint8_t OSABI);
+
+namespace MOS_MC {
+/// Makes an e_flags value based on subtarget features.
+unsigned makeEFlags(const FeatureBitset &Features);
+} // namespace MOS_MC
 
 } // end namespace llvm
 

@@ -118,20 +118,6 @@ def FamilySWEET16
       "MOS 6502 compatible with SWEET16 virtual machine support", 
       [FeatureSWEET16]>;
 
-class ELFArch<string name>  : SubtargetFeature<"", "ELFArch",
-                                    !strconcat("ELF::",name), "">;
-// ELF e_flags architecture values
-def ELFArchMOS6502 : ELFArch<"EM_MOS_ARCH_6502">;
-def ELFArchMOS6502BCD : ELFArch<"EM_MOS_ARCH_6502_BCD">;
-def ELFArchMOS6502X : ELFArch<"EM_MOS_ARCH_6502X">;
-def ELFArchMOS65C02 : ELFArch<"EM_MOS_ARCH_65C02">;
-def ELFArchMOSR65C02 : ELFArch<"EM_MOS_ARCH_R65C02">;
-def ELFArchMOSW65C02 : ELFArch<"EM_MOS_ARCH_W65C02">;
-def ELFArchMOSW65816 : ELFArch<"EM_MOS_ARCH_W65816">;
-def ELFArchMOS65EL02 : ELFArch<"EM_MOS_ARCH_65EL02">;
-def ELFArchMOS65CE02 : ELFArch<"EM_MOS_ARCH_65CE02">;
-def ELFArchMOSSWEET16 : ELFArch<"EM_MOS_ARCH_SWEET16">;
-
 //===---------------------------------------------------------------------===//
 // MOS Families
 //===---------------------------------------------------------------------===//
@@ -144,17 +130,16 @@ def MOSSchedModel : SchedMachineModel {
   let CompleteModel = false;
 }
 
-class Device<string Name, Family Fam, ELFArch Arch,
+class Device<string Name, Family Fam,
              list<SubtargetFeature> ExtraFeatures = []>
-  : ProcessorModel<Name, MOSSchedModel, !listconcat([Fam,Arch],ExtraFeatures)>;
+  : ProcessorModel<Name, MOSSchedModel, !listconcat([Fam],ExtraFeatures)>;
 
-def : Device<"mos6502",  Family6502, ELFArchMOS6502>;
-def : Device<"mos6502x", Family6502X, ELFArchMOS6502X>;
-def : Device<"mos65c02", Family65C02, ELFArchMOS65C02>;
-def : Device<"mosr65c02", FamilyR65C02, ELFArchMOSR65C02>;
-def : Device<"mosw65c02", FamilyR65C02, ELFArchMOSW65C02>;
-def : Device<"mosw65816", FamilyW65816, ELFArchMOSW65816>;
-def : Device<"mosw65el02", Family65EL02, ELFArchMOS65EL02>;
-def : Device<"mosw65ce02", Family65CE02, ELFArchMOS65CE02>;
-def : Device<"mossweet16", FamilySWEET16, ELFArchMOSSWEET16>;
-
+def : Device<"mos6502",  Family6502>;
+def : Device<"mos6502x", Family6502X>;
+def : Device<"mos65c02", Family65C02>;
+def : Device<"mosr65c02", FamilyR65C02>;
+def : Device<"mosw65c02", FamilyW65C02>;
+def : Device<"mosw65816", FamilyW65816>;
+def : Device<"mosw65el02", Family65EL02>;
+def : Device<"mosw65ce02", Family65CE02>;
+def : Device<"mossweet16", FamilySWEET16>;

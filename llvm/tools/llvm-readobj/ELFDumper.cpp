@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MOSFlags.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -3237,6 +3238,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
                    unsigned(ELF::EF_MIPS_MACH));
   else if (e.e_machine == EM_RISCV)
     ElfFlags = printFlags(e.e_flags, makeArrayRef(ElfHeaderRISCVFlags));
+  else if (e.e_machine == EM_MOS)
+    ElfFlags = printFlags(e.e_flags, MOS::ElfHeaderMOSFlags);
   Str = "0x" + to_hexString(e.e_flags);
   if (!ElfFlags.empty())
     Str = Str + ", " + ElfFlags;
@@ -6220,6 +6223,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
     } else if (E.e_machine == EM_RISCV)
       W.printFlags("Flags", E.e_flags, makeArrayRef(ElfHeaderRISCVFlags));
+    else if (E.e_machine == EM_MOS)
+      W.printFlags("Flags", E.e_flags, MOS::ElfHeaderMOSFlags);
     else
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);

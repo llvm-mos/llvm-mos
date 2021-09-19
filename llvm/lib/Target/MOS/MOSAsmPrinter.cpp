@@ -18,9 +18,11 @@
 #include "TargetInfo/MOSTargetInfo.h"
 
 #include "llvm/ADT/StringSet.h"
+#include "llvm/BinaryFormat/MOSFlags.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -53,6 +55,8 @@ public:
 
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
+
+  void emitStartOfAsmFile(Module &M) override;
 };
 
 // Simple pseudo-instructions have their lowering (with expansion to real
@@ -110,6 +114,37 @@ bool MOSAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   // Memory operands are simply stored in pointer registers; no extra work is
   // required.
   return PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+}
+
+void MOSAsmPrinter::emitStartOfAsmFile(Module &M) {
+  unsigned ModuleEFlags = 0;
+
+  // Early check to see if module mixes incompatible feature bits.
+  for (const Function &F : M) {
+    const MOSSubtarget &STI =
+        static_cast<const MOSSubtarget &>(*TM.getSubtargetImpl(F));
+
+    const unsigned EFlags = STI.getEFlags();
+    if (!MOS::checkEFlagsCompatibility(EFlags, ModuleEFlags)) {
+      F.getContext().emitError("Function '" + F.getName() +
+                               "' uses bad MOS "
+                               "feature combination from rest of module.\n"
+                               "Function: " +
+                               MOS::makeEFlagsString(EFlags) + "Module: " +
+                               MOS::makeEFlagsString(ModuleEFlags));
+      report_fatal_error("Bad MOS feature combination");
+    }
+
+    ModuleEFlags |= EFlags;
+  }
+
+  // Output feature bits in e_flags
+  bool SaveFlag = OutStreamer->getUseAssemblerInfoForParsing();
+  OutStreamer->setUseAssemblerInfoForParsing(true);
+  MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
+  OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
+  if (Assembler)
+    Assembler->setELFHeaderEFlags(ModuleEFlags);
 }
 
 } // namespace

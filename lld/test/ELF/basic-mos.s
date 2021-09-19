@@ -1,7 +1,36 @@
 # REQUIRES: mos
-# RUN: llvm-mc -filetype=obj -triple=mos %s -o %t.o
-# RUN: ld.lld %t.o -o %t
-# RUN: llvm-readobj --file-headers --sections -l %t | FileCheck %s
+
+# RUN: llvm-mc -filetype=obj -triple=mos %s -o %t.o.6502
+# RUN: ld.lld %t.o.6502 -o %t.6502
+# RUN: llvm-readobj --file-headers --sections -l %t.6502 | FileCheck %s -check-prefixes=CHECK,6502
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos6502x %s -o %t.o.6502x
+# RUN: ld.lld %t.o.6502x -o %t.6502x
+# RUN: llvm-readobj --file-headers --sections -l %t.6502x | FileCheck %s -check-prefixes=CHECK,6502X
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65c02 %s -o %t.o.65c02
+# RUN: ld.lld %t.o.65c02 -o %t.65c02
+# RUN: llvm-readobj --file-headers --sections -l %t.65c02 | FileCheck %s -check-prefixes=CHECK,65C02
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosr65c02 %s -o %t.o.r65c02
+# RUN: ld.lld %t.o.r65c02 -o %t.r65c02
+# RUN: llvm-readobj --file-headers --sections -l %t.r65c02 | FileCheck %s -check-prefixes=CHECK,R65C02
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65c02 %s -o %t.o.w65c02
+# RUN: ld.lld %t.o.w65c02 -o %t.w65c02
+# RUN: llvm-readobj --file-headers --sections -l %t.w65c02 | FileCheck %s -check-prefixes=CHECK,W65C02
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65816 %s -o %t.o.w65816
+# RUN: ld.lld %t.o.w65816 -o %t.w65816
+# RUN: llvm-readobj --file-headers --sections -l %t.w65816 | FileCheck %s -check-prefixes=CHECK,W65816
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65el02 %s -o %t.o.65el02
+# RUN: ld.lld %t.o.65el02 -o %t.65el02
+# RUN: llvm-readobj --file-headers --sections -l %t.65el02 | FileCheck %s -check-prefixes=CHECK,65EL02
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65ce02 %s -o %t.o.65ce02
+# RUN: ld.lld %t.o.65ce02 -o %t.65ce02
+# RUN: llvm-readobj --file-headers --sections -l %t.65ce02 | FileCheck %s -check-prefixes=CHECK,65CE02
 
 # returns with 42 in accumulator
 .globl _start
@@ -29,7 +58,44 @@ _start:
 // CHECK-NEXT:   Entry: 0x100B4
 // CHECK-NEXT:   ProgramHeaderOffset: 0x34
 // CHECK-NEXT:   SectionHeaderOffset: 0x114
-// CHECK-NEXT:   Flags [ (0x0)
+//  6502-NEXT:   Flags [ (0x3)
+//  6502-NEXT:     EF_MOS_ARCH_6502 (0x1)
+//  6502-NEXT:     EF_MOS_ARCH_6502_BCD (0x2)
+// 6502X-NEXT:   Flags [ (0x7)
+// 6502X-NEXT:     EF_MOS_ARCH_6502 (0x1)
+// 6502X-NEXT:     EF_MOS_ARCH_6502X (0x4)
+// 6502X-NEXT:     EF_MOS_ARCH_6502_BCD (0x2)
+// 65C02-NEXT:   Flags [ (0xB)
+// 65C02-NEXT:     EF_MOS_ARCH_6502 (0x1)
+// 65C02-NEXT:     EF_MOS_ARCH_6502_BCD (0x2)
+// 65C02-NEXT:     EF_MOS_ARCH_65C02 (0x8)
+// R65C02-NEXT:  Flags [ (0x19)
+// R65C02-NEXT:    EF_MOS_ARCH_6502 (0x1)
+// R65C02-NEXT:    EF_MOS_ARCH_65C02 (0x8)
+// R65C02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
+// W65C02-NEXT:  Flags [ (0x39)
+// W65C02-NEXT:    EF_MOS_ARCH_6502 (0x1)
+// W65C02-NEXT:    EF_MOS_ARCH_65C02 (0x8)
+// W65C02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
+// W65C02-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
+// W65816-NEXT:  Flags [ (0x139)
+// W65816-NEXT:    EF_MOS_ARCH_6502 (0x1)
+// W65816-NEXT:    EF_MOS_ARCH_65C02 (0x8)
+// W65816-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
+// W65816-NEXT:    EF_MOS_ARCH_W65816 (0x100)
+// W65816-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
+// 65EL02-NEXT:  Flags [ (0x239)
+// 65EL02-NEXT:    EF_MOS_ARCH_6502 (0x1)
+// 65EL02-NEXT:    EF_MOS_ARCH_65C02 (0x8)
+// 65EL02-NEXT:    EF_MOS_ARCH_65EL02 (0x200)
+// 65EL02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
+// 65EL02-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
+// 65CE02-NEXT:  Flags [ (0x439)
+// 65CE02-NEXT:    EF_MOS_ARCH_6502 (0x1)
+// 65CE02-NEXT:    EF_MOS_ARCH_65C02 (0x8)
+// 65CE02-NEXT:    EF_MOS_ARCH_65CE02 (0x400)
+// 65CE02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
+// 65CE02-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   HeaderSize: 52
 // CHECK-NEXT:   ProgramHeaderEntrySize: 32
