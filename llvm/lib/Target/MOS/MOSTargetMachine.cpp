@@ -254,7 +254,7 @@ bool MOSCSEConfigFull::shouldCSEOpc(unsigned Opc) {
   switch (Opc) {
   default:
     return CSEConfigFull::shouldCSEOpc(Opc);
-  case MOS::G_CMP:
+  case MOS::G_SBC:
     return true;
   }
 }

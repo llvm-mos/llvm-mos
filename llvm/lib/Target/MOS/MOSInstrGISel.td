@@ -41,11 +41,12 @@ def G_BRCOND_IMM : MOSGenericInstruction {
   let isTerminator = true;
 }
 
-// Produce the flag values equaivalent to "SEC; LDA #$l; SBC #$r". Only supports
-// 8-bit comparisons.
-def G_CMP : MOSGenericInstruction {
-  let OutOperandList = (outs type0:$c, type0:$n, type0:$v, type0:$z);
-  let InOperandList = (ins type1:$l, type1:$r);
+// Generalized 8-bit subtraction and comparison operation. Subsumes SBC, CMP,
+// CPX, and CPY. Depending on the outputs and inputs are used, this will select
+// to one or more of these instructions.
+def G_SBC : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$a, type1:$cout, type1:$n, type1:$v, type1:$z);
+  let InOperandList = (ins type0:$l, type0:$r, type1:$cin);
 }
 
 // Return the result of adding a pointer value and an unsigned 8-bit offset.

@@ -748,33 +748,36 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     return true;
   }
 
-  assert(Type == LLT::scalar(8));
+  assert(Type == S8);
 
-  // Lower 8-bit comparisons to a generic G_CMP instruction with similar
-  // capabilities to the 6502's SBC and CMP instructions.
-  // See www.6502.org/tutorials/compare_beyond.html.
+  auto CIn = Builder.buildConstant(S1, 1);
+  // Lower 8-bit comparisons to a generic G_SBC instruction with similar
+  // capabilities to the 6502's SBC and CMP instructions.  See
+  // www.6502.org/tutorials/compare_beyond.html.
   switch (Pred) {
   case CmpInst::ICMP_EQ: {
-    auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
-    Builder.buildCopy(Dst, Cmp.getReg(3) /*=Z*/);
+    auto Sbc =
+        Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
+    Builder.buildCopy(Dst, Sbc.getReg(4) /*=Z*/);
     MI.eraseFromParent();
     break;
   }
   case CmpInst::ICMP_UGE: {
-    auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
-    Builder.buildCopy(Dst, Cmp.getReg(0) /*=C*/);
+    auto Sbc =
+        Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
+    Builder.buildCopy(Dst, Sbc.getReg(1) /*=C*/);
     MI.eraseFromParent();
     break;
   }
   case CmpInst::ICMP_SLT: {
     // Subtractions of zero cannot overflow, so N is always correct.
     if (mi_match(RHS, MRI, m_SpecificICst(0))) {
-      auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
-      Builder.buildCopy(Dst, Cmp.getReg(1) /*=N*/);
+      auto Sbc = Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
+      Builder.buildCopy(Dst, Sbc.getReg(2) /*=N*/);
     } else {
       // General subtractions can overflow; if so, N is flipped.
-      auto Cmp = Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1}, {LHS, RHS});
-      Builder.buildXor(Dst, Cmp.getReg(1) /*=N*/, Cmp.getReg(2) /*=V*/);
+      auto Sbc = Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
+      Builder.buildXor(Dst, Sbc.getReg(2) /*=N*/, Sbc.getReg(3) /*=V*/);
     }
     MI.eraseFromParent();
     break;

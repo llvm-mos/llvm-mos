@@ -69,7 +69,7 @@ private:
   const MOSRegisterBankInfo &RBI;
 
   bool selectBrCondImm(MachineInstr &MI);
-  bool selectCmp(MachineInstr &MI);
+  bool selectSbc(MachineInstr &MI);
   bool selectConstant(MachineInstr &MI);
   bool selectIndex(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
@@ -160,8 +160,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectBrCondImm(MI);
   case MOS::G_CONSTANT:
     return selectConstant(MI);
-  case MOS::G_CMP:
-    return selectCmp(MI);
+  case MOS::G_SBC:
+    return selectSbc(MI);
   case MOS::G_FRAME_INDEX:
     return selectFrameIndex(MI);
   case MOS::G_GLOBAL_VALUE:
@@ -195,14 +195,14 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   }
 }
 
-// Given a G_CMP instruction Cmp and one of its output virtual registers,
+// Given a G_SBC instruction Sbc and one of its flag output virtual registers,
 // returns the flag that corresponds to the register.
-static Register getCmpFlagForRegister(const MachineInstr &Cmp, Register Reg) {
+static Register getSbcFlagForRegister(const MachineInstr &Sbc, Register Reg) {
   static Register Flags[] = {MOS::C, MOS::N, MOS::V, MOS::Z};
   for (int Idx = 0; Idx < 4; ++Idx)
-    if (Cmp.getOperand(Idx).getReg() == Reg)
+    if (Sbc.getOperand(Idx + 1).getReg() == Reg)
       return Flags[Idx];
-  llvm_unreachable("Could not find register in G_CMP outputs.");
+  llvm_unreachable("Could not find register in G_SBC outputs.");
 }
 
 struct CmpImm_match {
@@ -216,26 +216,32 @@ struct CmpImm_match {
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
     auto DefSrcReg = getDefSrcRegIgnoringCopies(CondReg, MRI);
     MachineInstr &CondMI = *DefSrcReg->MI;
-    if (CondMI.getOpcode() != MOS::G_CMP)
+    if (CondMI.getOpcode() != MOS::G_SBC)
       return false;
+
     auto RHSConst =
-        getConstantVRegValWithLookThrough(CondMI.getOperand(5).getReg(), MRI);
+        getConstantVRegValWithLookThrough(CondMI.getOperand(6).getReg(), MRI);
     if (!RHSConst)
       return false;
 
-    LHS = CondMI.getOperand(4).getReg();
+    auto CInConst =
+        getConstantVRegValWithLookThrough(CondMI.getOperand(7).getReg(), MRI);
+    if (!CInConst || CInConst->Value.isNullValue())
+      return false;
+
+    LHS = CondMI.getOperand(5).getReg();
     RHS = RHSConst->Value.getZExtValue();
-    Flag = getCmpFlagForRegister(CondMI, DefSrcReg->Reg);
+    Flag = getSbcFlagForRegister(CondMI, DefSrcReg->Reg);
 
     // CMPImm cannot set the V register.
     return Flag != MOS::V;
   }
 };
 
-// Match one of the outputs of a G_CMP to a CMPImm operation. LHS and RHS are
+// Match one of the outputs of a G_SBC to a CMPImm operation. LHS and RHS are
 // the left and right hand side of the comparison, while Flag is the virtual
 // (for C) or physical (for N and Z) register corresponding to the output by
-// which the G_CMP was reached.
+// which the G_SBC was reached.
 inline CmpImm_match m_CmpImm(Register &LHS, int64_t &RHS, Register &Flag) {
   return {LHS, RHS, Flag};
 }
@@ -251,21 +257,27 @@ struct CmpImag8_match {
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
     auto DefSrcReg = getDefSrcRegIgnoringCopies(CondReg, MRI);
     MachineInstr &CondMI = *DefSrcReg->MI;
-    if (CondMI.getOpcode() != MOS::G_CMP)
+    if (CondMI.getOpcode() != MOS::G_SBC)
       return false;
-    LHS = CondMI.getOperand(4).getReg();
-    RHS = CondMI.getOperand(5).getReg();
-    Flag = getCmpFlagForRegister(CondMI, DefSrcReg->Reg);
+
+    auto CInConst =
+        getConstantVRegValWithLookThrough(CondMI.getOperand(7).getReg(), MRI);
+    if (!CInConst || CInConst->Value.isNullValue())
+      return false;
+
+    LHS = CondMI.getOperand(5).getReg();
+    RHS = CondMI.getOperand(6).getReg();
+    Flag = getSbcFlagForRegister(CondMI, DefSrcReg->Reg);
 
     // CMPImag8 cannot set the V register.
     return Flag != MOS::V;
   }
 };
 
-// Match one of the outputs of a G_CMP to a CMPImag8 operation. LHS and RHS are
+// Match one of the outputs of a G_SBC to a CMPImag8 operation. LHS and RHS are
 // the left and right hand side of the comparison, while Flag is the virtual
 // (for C) or physical (for N and Z) register corresponding to the output by
-// which the G_CMP was reached.
+// which the G_SBC was reached.
 inline CmpImag8_match m_CmpImag8(Register &LHS, Register &RHS, Register &Flag) {
   return {LHS, RHS, Flag};
 }
@@ -320,50 +332,48 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
 
   MachineInstrSpan MIS(MI, MI.getParent());
   auto CondExt = Builder.buildAnyExt(S8, CondReg);
-  auto Zero = Builder.buildConstant(S8, 0);
-  Register Z =
-      Builder.buildInstr(MOS::G_CMP, {S1, S1, S1, S1 /*=Z*/}, {CondExt, Zero})
-          .getReg(3);
+  auto Zero8 = Builder.buildConstant(S8, 0);
+  auto CIn = Builder.buildConstant(S1, 1);
+  Register Z = Builder
+                   .buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1 /*=Z*/},
+                               {CondExt, Zero8, CIn})
+                   .getReg(4);
   MI.getOperand(0).setReg(Z);
   MI.getOperand(2).setImm(!FlagVal);
   return selectAll(MIS);
 }
 
-bool MOSInstructionSelector::selectCmp(MachineInstr &MI) {
+bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
+  LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
+
   MachineIRBuilder Builder(MI);
 
-  Register CMPN = MI.getOperand(1).getReg();
-  Register CMPZ = MI.getOperand(3).getReg();
+  Register N = MI.getOperand(2).getReg();
+  Register Z = MI.getOperand(4).getReg();
 
-  Register N = MOS::NoRegister;
-  Register Z = MOS::NoRegister;
-  if (!Builder.getMRI()->use_nodbg_empty(CMPN))
-    N = CMPN;
-  if (!Builder.getMRI()->use_nodbg_empty(CMPZ))
-    Z = CMPZ;
+  if (Builder.getMRI()->use_nodbg_empty(N))
+    N = MOS::NoRegister;
+  if (Builder.getMRI()->use_nodbg_empty(Z))
+    Z = MOS::NoRegister;
 
   // We can only extract one of N or Z at a time, so if both are needed,
   // arbitrarily extract out the comparison that produces Z. This case
   // should very rarely be hit, if ever.
   if (N && Z) {
     MachineInstrSpan MIS(MI, MI.getParent());
-    MI.getOperand(3).setReg(MOS::NoRegister);
+    MI.getOperand(4).setReg(Builder.getMRI()->createGenericVirtualRegister(S1));
     Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-    Builder.buildInstr(MOS::G_CMP,
-                       {MOS::NoRegister, MOS::NoRegister, MOS::NoRegister, Z},
-                       {MI.getOperand(4), MI.getOperand(5)});
+    Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, Z},
+                       {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
     return selectAll(MIS);
   }
 
-  auto C = Builder.buildInstr(MOS::LDCImm, {&MOS::CcRegClass}, {INT64_C(-1)});
-
-  auto SBC = Builder.buildInstr(
-      MOS::SBCNZImag8,
-      {LLT::scalar(8), MI.getOperand(0), N, MI.getOperand(2), Z},
-      {MI.getOperand(4), MI.getOperand(5), C});
-  if (!constrainSelectedInstRegOperands(*SBC, TII, TRI, RBI))
+  MI.setDesc(Builder.getTII().get(MOS::SBCNZImag8));
+  MI.getOperand(2).setReg(N);
+  MI.getOperand(4).setReg(Z);
+  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
     return false;
-  MI.eraseFromParent();
   return true;
 }
 
