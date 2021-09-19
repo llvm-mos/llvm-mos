@@ -13,7 +13,7 @@ _start:
   lda #42
   rts
 
-// CHECK:       Machine: EM_MOS (0x1966)
+// CHECK:       Machine: EM_MCS6502 (0xFE)
 //  6502:       Flags [ (0x3)
 //  6502-NEXT:     EF_MOS_ARCH_6502 (0x1)
 //  6502-NEXT:     EF_MOS_ARCH_6502_BCD (0x2)

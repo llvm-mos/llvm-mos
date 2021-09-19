@@ -33,8 +33,8 @@ struct MCFixupKindInfo;
 class MOSObjectTargetWriter : public MCELFObjectTargetWriter {
 public:
   MOSObjectTargetWriter()
-      : MCELFObjectTargetWriter(false, 0, ELF::EM_MOS, false) {
-    val = ELF::EM_MOS;
+      : MCELFObjectTargetWriter(false, 0, ELF::EM_MCS6502, false) {
+    val = ELF::EM_MCS6502;
   }
 
   ~MOSObjectTargetWriter() override { val = 0; }

@@ -328,7 +328,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
   ECase(EM_BPF);
   ECase(EM_VE);
   ECase(EM_CSKY);
-  ECase(EM_MOS);
+  ECase(EM_MCS6502);
 #undef ECase
   IO.enumFallback<Hex16>(Value);
 }
@@ -699,7 +699,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
   case ELF::EM_X86_64:
     BCase(SHF_X86_64_LARGE);
     break;
-  case ELF::EM_MOS:
+  case ELF::EM_MCS6502:
     BCase(SHF_MOS_ZEROPAGE);
     break;
   default:
@@ -821,7 +821,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   case ELF::EM_68K:
 #include "llvm/BinaryFormat/ELFRelocs/M68k.def"
     break;
-  case ELF::EM_MOS:
+  case ELF::EM_MCS6502:
 #include "llvm/BinaryFormat/ELFRelocs/MOS.def"
     break;
   default:

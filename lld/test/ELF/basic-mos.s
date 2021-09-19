@@ -38,7 +38,7 @@ _start:
   lda #42
   rts
 
-// CHECK:      Format: elf32-mos
+// CHECK:      Format: elf32-mcs6502
 // CHECK-NEXT: Arch: mos
 // CHECK-NEXT: AddressSize: 32bit
 // CHECK-NEXT: LoadName: <Not found>
@@ -53,7 +53,7 @@ _start:
 // CHECK-NEXT:     Unused: (00 00 00 00 00 00 00)
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Type: Executable (0x2)
-// CHECK-NEXT:   Machine: EM_MOS (0x1966)
+// CHECK-NEXT:   Machine: EM_MCS6502 (0xFE)
 // CHECK-NEXT:   Version: 1
 // CHECK-NEXT:   Entry: 0x100B4
 // CHECK-NEXT:   ProgramHeaderOffset: 0x34

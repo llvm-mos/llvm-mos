@@ -87,7 +87,7 @@ TargetInfo *elf::getTarget() {
     return getSPARCV9TargetInfo();
   case EM_X86_64:
     return getX86_64TargetInfo();
-  case EM_MOS:
+  case EM_MCS6502:
     return getMOSTargetInfo();
   }
   llvm_unreachable("unknown target machine");

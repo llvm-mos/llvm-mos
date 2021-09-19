@@ -33,7 +33,7 @@ public:
 };
 
 MOSELFObjectWriter::MOSELFObjectWriter(uint8_t OSABI)
-    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_MOS, true) {}
+    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_MCS6502, true) {}
 
 unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx,
                                           const MCValue &Target,

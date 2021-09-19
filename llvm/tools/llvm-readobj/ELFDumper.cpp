@@ -1167,7 +1167,7 @@ static const EnumEntry<unsigned> ElfMachineType[] = {
   ENUM_ENT(EM_LANAI,         "EM_LANAI"),
   ENUM_ENT(EM_BPF,           "EM_BPF"),
   ENUM_ENT(EM_VE,            "NEC SX-Aurora Vector Engine"),
-  ENUM_ENT(EM_MOS,           "MOS Technologies")
+  ENUM_ENT(EM_MCS6502,       "MOS Technologies")
 };
 
 static const EnumEntry<unsigned> ElfSymbolBindings[] = {
@@ -1265,7 +1265,7 @@ getSectionFlagsForTarget(unsigned EMachine) {
     Ret.insert(Ret.end(), std::begin(ElfXCoreSectionFlags),
                std::end(ElfXCoreSectionFlags));
     break;
-  case EM_MOS:
+  case EM_MCS6502:
     Ret.insert(Ret.end(), std::begin(ElfMOSSectionFlags),
                std::end(ElfMOSSectionFlags));
     break;
@@ -3238,7 +3238,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
                    unsigned(ELF::EF_MIPS_MACH));
   else if (e.e_machine == EM_RISCV)
     ElfFlags = printFlags(e.e_flags, makeArrayRef(ElfHeaderRISCVFlags));
-  else if (e.e_machine == EM_MOS)
+  else if (e.e_machine == EM_MCS6502)
     ElfFlags = printFlags(e.e_flags, MOS::ElfHeaderMOSFlags);
   Str = "0x" + to_hexString(e.e_flags);
   if (!ElfFlags.empty())
@@ -3559,7 +3559,7 @@ static void printSectionDescription(formatted_raw_ostream &OS,
     OS << ", l (large)";
   else if (EMachine == EM_ARM)
     OS << ", y (purecode)";
-  else if (EMachine == EM_MOS)
+  else if (EMachine == EM_MCS6502)
     OS << ", z (zeropage)";
 
   OS << ", p (processor specific)\n";
@@ -6223,7 +6223,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
     } else if (E.e_machine == EM_RISCV)
       W.printFlags("Flags", E.e_flags, makeArrayRef(ElfHeaderRISCVFlags));
-    else if (E.e_machine == EM_MOS)
+    else if (E.e_machine == EM_MCS6502)
       W.printFlags("Flags", E.e_flags, MOS::ElfHeaderMOSFlags);
     else
       W.printFlags("Flags", E.e_flags);
