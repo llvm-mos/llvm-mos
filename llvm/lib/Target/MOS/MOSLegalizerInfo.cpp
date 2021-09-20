@@ -772,11 +772,13 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   case CmpInst::ICMP_SLT: {
     // Subtractions of zero cannot overflow, so N is always correct.
     if (mi_match(RHS, MRI, m_SpecificICst(0))) {
-      auto Sbc = Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
+      auto Sbc =
+          Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
       Builder.buildCopy(Dst, Sbc.getReg(2) /*=N*/);
     } else {
       // General subtractions can overflow; if so, N is flipped.
-      auto Sbc = Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
+      auto Sbc =
+          Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
       Builder.buildXor(Dst, Sbc.getReg(2) /*=N*/, Sbc.getReg(3) /*=V*/);
     }
     MI.eraseFromParent();
@@ -917,21 +919,27 @@ bool MOSLegalizerInfo::legalizeSubE(LegalizerHelper &Helper,
                                     MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
 
-  Register CarryOut = MI.getOperand(1).getReg();
-  Register CarryIn = MI.getOperand(4).getReg();
-
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(4).setReg(Builder.buildNot(S1, CarryIn).getReg(0));
+  auto CarryIn = Builder.buildNot(S1, MI.getOperand(4));
   if (MI.getOpcode() == MOS::G_USUBE) {
-    MI.setDesc(Builder.getTII().get(MOS::G_USBCE));
-    MI.getOperand(1).setReg(MRI.createGenericVirtualRegister(S1));
+    auto Sbc =
+        Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1},
+                           {MI.getOperand(2), MI.getOperand(3), CarryIn});
     Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-    Builder.buildNot(CarryOut, MI.getOperand(1));
-  } else
-    MI.setDesc(Builder.getTII().get(MOS::G_SSBCE));
-  Helper.Observer.changedInstr(MI);
+    Builder.buildCopy(MI.getOperand(0), Sbc.getReg(0));
+    Builder.buildNot(MI.getOperand(1), Sbc.getReg(1) /*=C*/);
+  } else {
+    assert(MI.getOpcode() == MOS::G_SSUBE);
+    auto Sbc =
+        Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1},
+                           {MI.getOperand(2), MI.getOperand(3), CarryIn});
+    Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
+    Builder.buildCopy(MI.getOperand(0), Sbc.getReg(0));
+    Builder.buildCopy(MI.getOperand(1), Sbc.getReg(3) /*=V*/);
+  }
 
+  MI.eraseFromParent();
   return true;
 }
 

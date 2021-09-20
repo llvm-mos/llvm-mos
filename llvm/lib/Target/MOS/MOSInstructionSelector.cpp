@@ -78,7 +78,7 @@ private:
   bool selectLshrShlE(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
-  bool selectAddSbcE(MachineInstr &MI);
+  bool selectAddE(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
 
   // Select instructions that correspond 1:1 to a target instruction.
@@ -180,9 +180,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectTrunc(MI);
   case MOS::G_UADDE:
   case MOS::G_SADDE:
-  case MOS::G_USBCE:
-  case MOS::G_SSBCE:
-    return selectAddSbcE(MI);
+    return selectAddE(MI);
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
 
@@ -367,6 +365,26 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, Z},
                        {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
     return selectAll(MIS);
+  }
+
+  if (!N && !Z) {
+    Register R = MI.getOperand(6).getReg();
+    auto RConst = getConstantVRegValWithLookThrough(R, *Builder.getMRI());
+    MachineInstrBuilder Instr;
+    if (RConst) {
+      assert(RConst->Value.getBitWidth() == 8);
+      Instr = Builder.buildInstr(
+          MOS::SBCImm, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+          {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
+    } else {
+      Instr = Builder.buildInstr(
+          MOS::SBCImag8, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+          {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
+    }
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
   }
 
   MI.setDesc(Builder.getTII().get(MOS::SBCNZImag8));
@@ -696,38 +714,7 @@ bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectAddSbcE(MachineInstr &MI) {
-  unsigned ImmOpcode;
-  unsigned Imag8Opcode;
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode.");
-  case MOS::G_UADDE:
-  case MOS::G_SADDE:
-    ImmOpcode = MOS::ADCImm;
-    Imag8Opcode = MOS::ADCImag8;
-    break;
-  case MOS::G_USBCE:
-  case MOS::G_SSBCE:
-    ImmOpcode = MOS::SBCImm;
-    Imag8Opcode = MOS::SBCImag8;
-    break;
-  }
-
-  bool Signed;
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode.");
-  case MOS::G_UADDE:
-  case MOS::G_USBCE:
-    Signed = false;
-    break;
-  case MOS::G_SADDE:
-  case MOS::G_SSBCE:
-    Signed = true;
-    break;
-  }
-
+bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
   Register Result = MI.getOperand(0).getReg();
   Register CarryOut = MI.getOperand(1).getReg();
   Register L = MI.getOperand(2).getReg();
@@ -742,17 +729,18 @@ bool MOSInstructionSelector::selectAddSbcE(MachineInstr &MI) {
   MachineInstrBuilder Instr;
   if (RConst) {
     assert(RConst->Value.getBitWidth() == 8);
-    Instr = Builder.buildInstr(ImmOpcode, {Result, CarryOut, S1},
+    Instr = Builder.buildInstr(MOS::ADCImm, {Result, CarryOut, S1},
                                {L, RConst->Value.getZExtValue(), CarryIn});
   } else {
-    Instr = Builder.buildInstr(Imag8Opcode, {Result, CarryOut, S1},
+    Instr = Builder.buildInstr(MOS::ADCImag8, {Result, CarryOut, S1},
                                {L, R, CarryIn});
   }
-  if (Signed) {
+  if (MI.getOpcode() == MOS::G_SADDE) {
     Register Tmp = Instr.getReg(1);
     Instr->getOperand(1).setReg(Instr.getReg(2));
     Instr->getOperand(2).setReg(Tmp);
-  }
+  } else
+    assert(MI.getOpcode() == MOS::G_UADDE);
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
 
