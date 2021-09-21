@@ -207,6 +207,15 @@ def CMPImag8Term : MOSPseudo {
 // Control flow
 //===---------------------------------------------------------------------===//
 
+// Generic BR that can branch on register LSB, C, or V. Branches to $tgt if
+// $tst = $val.
+def GBR : MOSPseudo {
+  dag InOperandList = (ins label:$tgt, CV_GPR_LSB:$tst, i1imm:$val);
+
+  let isBranch = true;
+  let isTerminator = true;
+}
+
 // Use the diamond control flow pattern to load one of two immediates based on
 // the value of a flag. The output must either be to CV_GPR_LSB or GPR.
 def SelectImm : MOSPseudo {

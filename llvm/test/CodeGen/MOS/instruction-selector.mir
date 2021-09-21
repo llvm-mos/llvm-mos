@@ -246,13 +246,19 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 6502: [[CMPImm:%[0-9]+]]:cc = CMPImm [[COPY]], 42
-    ; 6502: BR %bb.0, [[CMPImm]], 1
+    ; 6502: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
+    ; 6502: [[INSERT_SUBREG:%[0-9]+]]:gpr = INSERT_SUBREG [[DEF]], [[CMPImm]], %subreg.sublsb
+    ; 6502: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[INSERT_SUBREG]], 0, implicit-def $nz
+    ; 6502: BR %bb.0, $z, 0
     ; 6502: RTS
     ; 65C02-LABEL: name: cmpimm_brc
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 65C02: [[CMPImm:%[0-9]+]]:cc = CMPImm [[COPY]], 42
-    ; 65C02: BR %bb.0, [[CMPImm]], 1
+    ; 65C02: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
+    ; 65C02: [[INSERT_SUBREG:%[0-9]+]]:gpr = INSERT_SUBREG [[DEF]], [[CMPImm]], %subreg.sublsb
+    ; 65C02: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[INSERT_SUBREG]], 0, implicit-def $nz
+    ; 65C02: BR %bb.0, $z, 0
     ; 65C02: RTS
     %0:any(s8) = COPY $a
     %1:any(s8) = G_CONSTANT i8 42
@@ -322,14 +328,20 @@ body: |
     ; 6502: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 6502: [[COPY1:%[0-9]+]]:imag8 = COPY $x
     ; 6502: [[CMPImag8_:%[0-9]+]]:cc = CMPImag8 [[COPY]], [[COPY1]]
-    ; 6502: BR %bb.0, [[CMPImag8_]], 1
+    ; 6502: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
+    ; 6502: [[INSERT_SUBREG:%[0-9]+]]:gpr = INSERT_SUBREG [[DEF]], [[CMPImag8_]], %subreg.sublsb
+    ; 6502: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[INSERT_SUBREG]], 0, implicit-def $nz
+    ; 6502: BR %bb.0, $z, 0
     ; 6502: RTS
     ; 65C02-LABEL: name: cmpimag8_brc
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 65C02: [[COPY1:%[0-9]+]]:imag8 = COPY $x
     ; 65C02: [[CMPImag8_:%[0-9]+]]:cc = CMPImag8 [[COPY]], [[COPY1]]
-    ; 65C02: BR %bb.0, [[CMPImag8_]], 1
+    ; 65C02: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
+    ; 65C02: [[INSERT_SUBREG:%[0-9]+]]:gpr = INSERT_SUBREG [[DEF]], [[CMPImag8_]], %subreg.sublsb
+    ; 65C02: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[INSERT_SUBREG]], 0, implicit-def $nz
+    ; 65C02: BR %bb.0, $z, 0
     ; 65C02: RTS
     %0:any(s8) = COPY $a
     %1:any(s8) = COPY $x

@@ -238,6 +238,9 @@ def BRA_Relative : Inst16<"bra", OpcodeC0<0b100, 0b000>, Relative>;
 
 } // Predicates = [Has65C02]
 
+// Operand type for basic block and function labels.
+def label : Operand<OtherVT>;
+
 include "MOSInstrInfoTables.td"
 include "MOSInstrPseudos.td"
 include "MOSInstrLogical.td"

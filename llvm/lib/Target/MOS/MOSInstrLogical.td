@@ -67,9 +67,6 @@ class MOSLogicalInstr : Instruction {
   let isReMaterializable = true;
 }
 
-// Operand type for basic block and function labels.
-def label : Operand<OtherVT>;
-
 //===---------------------------------------------------------------------===//
 // Addition/Subtraction Instructions
 //===---------------------------------------------------------------------===//

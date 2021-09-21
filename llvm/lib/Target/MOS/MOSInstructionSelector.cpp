@@ -203,12 +203,12 @@ static Register getSbcFlagForRegister(const MachineInstr &Sbc, Register Reg) {
   llvm_unreachable("Could not find register in G_SBC outputs.");
 }
 
-struct CmpImm_match {
+struct CmpImmTerm_match {
   Register &LHS;
   int64_t &RHS;
   Register &Flag;
 
-  CmpImm_match(Register &LHS, int64_t &RHS, Register &Flag)
+  CmpImmTerm_match(Register &LHS, int64_t &RHS, Register &Flag)
       : LHS(LHS), RHS(RHS), Flag(Flag) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
@@ -231,25 +231,24 @@ struct CmpImm_match {
     RHS = RHSConst->Value.getZExtValue();
     Flag = getSbcFlagForRegister(CondMI, DefSrcReg->Reg);
 
-    // CMPImm cannot set the V register.
-    return Flag != MOS::V;
+    return Flag == MOS::N || Flag == MOS::Z;
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPImm operation. LHS and RHS are
-// the left and right hand side of the comparison, while Flag is the virtual
-// (for C) or physical (for N and Z) register corresponding to the output by
-// which the G_SBC was reached.
-inline CmpImm_match m_CmpImm(Register &LHS, int64_t &RHS, Register &Flag) {
+// Match one of the outputs of a G_SBC to a CMPImmTerm operation. LHS and RHS
+// are the left and right hand side of the comparison, while Flag is the
+// physical (N or Z) register corresponding to the output by which the G_SBC was
+// reached.
+inline CmpImmTerm_match m_CmpImmTerm(Register &LHS, int64_t &RHS, Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
-struct CmpImag8_match {
+struct CmpImag8Term_match {
   Register &LHS;
   Register &RHS;
   Register &Flag;
 
-  CmpImag8_match(Register &LHS, Register &RHS, Register &Flag)
+  CmpImag8Term_match(Register &LHS, Register &RHS, Register &Flag)
       : LHS(LHS), RHS(RHS), Flag(Flag) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
@@ -267,16 +266,15 @@ struct CmpImag8_match {
     RHS = CondMI.getOperand(6).getReg();
     Flag = getSbcFlagForRegister(CondMI, DefSrcReg->Reg);
 
-    // CMPImag8 cannot set the V register.
-    return Flag != MOS::V;
+    return Flag == MOS::N || Flag == MOS::Z;
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPImag8 operation. LHS and RHS are
-// the left and right hand side of the comparison, while Flag is the virtual
-// (for C) or physical (for N and Z) register corresponding to the output by
-// which the G_SBC was reached.
-inline CmpImag8_match m_CmpImag8(Register &LHS, Register &RHS, Register &Flag) {
+// Match one of the outputs of a G_SBC to a CMPImag8Term operation. LHS and RHS
+// are the left and right hand side of the comparison, while Flag is the
+// physical (N or Z) register corresponding to the output by which the G_SBC was
+// reached.
+inline CmpImag8Term_match m_CmpImag8Term(Register &LHS, Register &RHS, Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
@@ -295,11 +293,8 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   Register LHS;
   int64_t RHSConst;
   Register Flag;
-  if (mi_match(CondReg, MRI, m_CmpImm(LHS, RHSConst, Flag))) {
-    // Use the terminator version of CMPImm to ensure that the live range of N
-    // and Z is tightly curtailed.
-    unsigned Opcode = Flag == MOS::C ? MOS::CMPImm : MOS::CMPImmTerm;
-    auto Compare = Builder.buildInstr(Opcode, {S1}, {LHS, RHSConst});
+  if (mi_match(CondReg, MRI, m_CmpImmTerm(LHS, RHSConst, Flag))) {
+    auto Compare = Builder.buildInstr(MOS::CMPImmTerm, {S1}, {LHS, RHSConst});
     if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
       return false;
 
@@ -312,11 +307,8 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   }
 
   Register RHS;
-  if (mi_match(CondReg, MRI, m_CmpImag8(LHS, RHS, Flag))) {
-    // Use the terminator version of CMPImag8 to ensure that the live range of N
-    // and Z is tightly curtailed.
-    unsigned Opcode = Flag == MOS::C ? MOS::CMPImag8 : MOS::CMPImag8Term;
-    auto Compare = Builder.buildInstr(Opcode, {S1}, {LHS, RHS});
+  if (mi_match(CondReg, MRI, m_CmpImag8Term(LHS, RHS, Flag))) {
+    auto Compare = Builder.buildInstr(MOS::CMPImag8Term, {S1}, {LHS, RHS});
     if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
       return false;
 
@@ -347,13 +339,24 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
 
+  Register A = MI.getOperand(0).getReg();
   Register N = MI.getOperand(2).getReg();
+  Register V = MI.getOperand(3).getReg();
   Register Z = MI.getOperand(4).getReg();
+  Register R = MI.getOperand(6).getReg();
 
+  if (Builder.getMRI()->use_nodbg_empty(A))
+    A = MOS::NoRegister;
   if (Builder.getMRI()->use_nodbg_empty(N))
     N = MOS::NoRegister;
+  if (Builder.getMRI()->use_nodbg_empty(V))
+    V = MOS::NoRegister;
   if (Builder.getMRI()->use_nodbg_empty(Z))
     Z = MOS::NoRegister;
+
+  auto CInConst = getConstantVRegValWithLookThrough(MI.getOperand(7).getReg(),
+                                                    *Builder.getMRI());
+  bool CInSet = CInConst && !CInConst->Value.isNullValue();
 
   // We can only extract one of N or Z at a time, so if both are needed,
   // arbitrarily extract out the comparison that produces Z. This case
@@ -368,18 +371,30 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   }
 
   if (!N && !Z) {
-    Register R = MI.getOperand(6).getReg();
     auto RConst = getConstantVRegValWithLookThrough(R, *Builder.getMRI());
     MachineInstrBuilder Instr;
-    if (RConst) {
-      assert(RConst->Value.getBitWidth() == 8);
-      Instr = Builder.buildInstr(
-          MOS::SBCImm, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
-          {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
+    if (!A && !V && CInSet) {
+      if (RConst) {
+        assert(RConst->Value.getBitWidth() == 8);
+        Instr = Builder.buildInstr(
+            MOS::CMPImm, {MI.getOperand(1)},
+            {MI.getOperand(5), RConst->Value.getZExtValue()});
+      } else {
+        Instr = Builder.buildInstr(MOS::CMPImag8, {MI.getOperand(1)},
+                                   {MI.getOperand(5), MI.getOperand(6)});
+      }
     } else {
-      Instr = Builder.buildInstr(
-          MOS::SBCImag8, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
-          {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
+      if (RConst) {
+        assert(RConst->Value.getBitWidth() == 8);
+        Instr = Builder.buildInstr(
+            MOS::SBCImm, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+            {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
+      } else {
+        Instr = Builder.buildInstr(
+            MOS::SBCImag8,
+            {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+            {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
+      }
     }
     if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
       return false;

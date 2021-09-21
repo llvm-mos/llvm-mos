@@ -48,19 +48,27 @@ define zeroext i1 @ule(i16 %a, i16 %b) {
 ; CHECK-NEXT:    stx mos8(__rc5)
 ; CHECK-NEXT:    ldx mos8(__rc3)
 ; CHECK-NEXT:    cpx mos8(__rc5)
-; CHECK-NEXT:    bne .LBB2_3
+; CHECK-NEXT:    bne .LBB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc4)
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    cmp mos8(__rc4)
-; CHECK-NEXT:    bcc .LBB2_4
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcc .LBB2_3
+; CHECK-NEXT:    jmp .LBB2_4
 ; CHECK-NEXT:  .LBB2_2: ; %entry
+; CHECK-NEXT:    cpx mos8(__rc5)
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcs .LBB2_4
+; CHECK-NEXT:  .LBB2_3: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB2_4: ; %entry
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    beq .LBB2_6
+; CHECK-NEXT:  ; %bb.5: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
-; CHECK-NEXT:  .LBB2_3: ; %entry
-; CHECK-NEXT:    cpx mos8(__rc5)
-; CHECK-NEXT:    bcs .LBB2_2
-; CHECK-NEXT:  .LBB2_4: ; %entry
+; CHECK-NEXT:  .LBB2_6: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
 entry:
@@ -72,17 +80,25 @@ define zeroext i1 @ult(i16 %a, i16 %b) {
 ; CHECK-LABEL: ult:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    cpx mos8(__rc3)
-; CHECK-NEXT:    bne .LBB3_3
+; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    cmp mos8(__rc2)
-; CHECK-NEXT:    bcc .LBB3_4
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcc .LBB3_3
+; CHECK-NEXT:    jmp .LBB3_4
 ; CHECK-NEXT:  .LBB3_2: ; %entry
+; CHECK-NEXT:    cpx mos8(__rc3)
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcs .LBB3_4
+; CHECK-NEXT:  .LBB3_3: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB3_4: ; %entry
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    beq .LBB3_6
+; CHECK-NEXT:  ; %bb.5: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
-; CHECK-NEXT:  .LBB3_3: ; %entry
-; CHECK-NEXT:    cpx mos8(__rc3)
-; CHECK-NEXT:    bcs .LBB3_2
-; CHECK-NEXT:  .LBB3_4: ; %entry
+; CHECK-NEXT:  .LBB3_6: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
 entry:
@@ -94,17 +110,25 @@ define zeroext i1 @uge(i16 %a, i16 %b) {
 ; CHECK-LABEL: uge:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    cpx mos8(__rc3)
-; CHECK-NEXT:    bne .LBB4_3
+; CHECK-NEXT:    bne .LBB4_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    cmp mos8(__rc2)
-; CHECK-NEXT:    bcc .LBB4_4
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcc .LBB4_3
+; CHECK-NEXT:    jmp .LBB4_4
 ; CHECK-NEXT:  .LBB4_2: ; %entry
+; CHECK-NEXT:    cpx mos8(__rc3)
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcs .LBB4_4
+; CHECK-NEXT:  .LBB4_3: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB4_4: ; %entry
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    beq .LBB4_6
+; CHECK-NEXT:  ; %bb.5: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
-; CHECK-NEXT:  .LBB4_3: ; %entry
-; CHECK-NEXT:    cpx mos8(__rc3)
-; CHECK-NEXT:    bcs .LBB4_2
-; CHECK-NEXT:  .LBB4_4: ; %entry
+; CHECK-NEXT:  .LBB4_6: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
 entry:
@@ -118,19 +142,27 @@ define zeroext i1 @ugt(i16 %a, i16 %b) {
 ; CHECK-NEXT:    stx mos8(__rc5)
 ; CHECK-NEXT:    ldx mos8(__rc3)
 ; CHECK-NEXT:    cpx mos8(__rc5)
-; CHECK-NEXT:    bne .LBB5_3
+; CHECK-NEXT:    bne .LBB5_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc4)
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    cmp mos8(__rc4)
-; CHECK-NEXT:    bcc .LBB5_4
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcc .LBB5_3
+; CHECK-NEXT:    jmp .LBB5_4
 ; CHECK-NEXT:  .LBB5_2: ; %entry
+; CHECK-NEXT:    cpx mos8(__rc5)
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcs .LBB5_4
+; CHECK-NEXT:  .LBB5_3: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB5_4: ; %entry
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    beq .LBB5_6
+; CHECK-NEXT:  ; %bb.5: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
-; CHECK-NEXT:  .LBB5_3: ; %entry
-; CHECK-NEXT:    cpx mos8(__rc5)
-; CHECK-NEXT:    bcs .LBB5_2
-; CHECK-NEXT:  .LBB5_4: ; %entry
+; CHECK-NEXT:  .LBB5_6: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
 entry:
@@ -155,25 +187,31 @@ define zeroext i1 @sle(i16 %a, i16 %b) {
 ; CHECK-NEXT:  .LBB6_3: ; %entry
 ; CHECK-NEXT:    lda mos8(__rc3)
 ; CHECK-NEXT:    cmp mos8(__rc5)
-; CHECK-NEXT:    bne .LBB6_6
+; CHECK-NEXT:    bne .LBB6_8
 ; CHECK-NEXT:  ; %bb.4: ; %entry
 ; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    cpx mos8(__rc4)
-; CHECK-NEXT:    bcc .LBB6_9
-; CHECK-NEXT:  .LBB6_5: ; %entry
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcs .LBB6_6
+; CHECK-NEXT:  ; %bb.5: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB6_6: ; %entry
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    beq .LBB6_11
+; CHECK-NEXT:  .LBB6_7: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
-; CHECK-NEXT:  .LBB6_6: ; %entry
+; CHECK-NEXT:  .LBB6_8: ; %entry
 ; CHECK-NEXT:    sty mos8(__rc2)
 ; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    bvs .LBB6_8
-; CHECK-NEXT:  ; %bb.7: ; %entry
+; CHECK-NEXT:    bvs .LBB6_10
+; CHECK-NEXT:  ; %bb.9: ; %entry
 ; CHECK-NEXT:    lda #0
-; CHECK-NEXT:  .LBB6_8: ; %entry
+; CHECK-NEXT:  .LBB6_10: ; %entry
 ; CHECK-NEXT:    eor mos8(__rc2)
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    beq .LBB6_5
-; CHECK-NEXT:  .LBB6_9: ; %entry
+; CHECK-NEXT:    beq .LBB6_7
+; CHECK-NEXT:  .LBB6_11: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
 entry:
@@ -202,7 +240,7 @@ define zeroext i1 @slt(i16 %a, i16 %b) {
 ; CHECK-NEXT:  .LBB7_4: ; %entry
 ; CHECK-NEXT:    eor mos8(__rc2)
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    bne .LBB7_8
+; CHECK-NEXT:    bne .LBB7_10
 ; CHECK-NEXT:  .LBB7_5: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
@@ -213,8 +251,14 @@ define zeroext i1 @slt(i16 %a, i16 %b) {
 ; CHECK-NEXT:  .LBB7_7: ; %entry
 ; CHECK-NEXT:    lda mos8(__rc4)
 ; CHECK-NEXT:    cmp mos8(__rc2)
-; CHECK-NEXT:    bcs .LBB7_5
-; CHECK-NEXT:  .LBB7_8: ; %entry
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcs .LBB7_9
+; CHECK-NEXT:  ; %bb.8: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB7_9: ; %entry
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bne .LBB7_5
+; CHECK-NEXT:  .LBB7_10: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
 entry:
@@ -243,7 +287,7 @@ define zeroext i1 @sge(i16 %a, i16 %b) {
 ; CHECK-NEXT:  .LBB8_4: ; %entry
 ; CHECK-NEXT:    eor mos8(__rc2)
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    bne .LBB8_8
+; CHECK-NEXT:    bne .LBB8_10
 ; CHECK-NEXT:  .LBB8_5: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
@@ -254,8 +298,14 @@ define zeroext i1 @sge(i16 %a, i16 %b) {
 ; CHECK-NEXT:  .LBB8_7: ; %entry
 ; CHECK-NEXT:    lda mos8(__rc4)
 ; CHECK-NEXT:    cmp mos8(__rc2)
-; CHECK-NEXT:    bcs .LBB8_5
-; CHECK-NEXT:  .LBB8_8: ; %entry
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcs .LBB8_9
+; CHECK-NEXT:  ; %bb.8: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB8_9: ; %entry
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bne .LBB8_5
+; CHECK-NEXT:  .LBB8_10: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
 entry:
@@ -280,25 +330,31 @@ define zeroext i1 @sgt(i16 %a, i16 %b) {
 ; CHECK-NEXT:  .LBB9_3: ; %entry
 ; CHECK-NEXT:    lda mos8(__rc3)
 ; CHECK-NEXT:    cmp mos8(__rc5)
-; CHECK-NEXT:    bne .LBB9_6
+; CHECK-NEXT:    bne .LBB9_8
 ; CHECK-NEXT:  ; %bb.4: ; %entry
 ; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    cpx mos8(__rc4)
-; CHECK-NEXT:    bcc .LBB9_9
-; CHECK-NEXT:  .LBB9_5: ; %entry
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    bcs .LBB9_6
+; CHECK-NEXT:  ; %bb.5: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB9_6: ; %entry
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    beq .LBB9_11
+; CHECK-NEXT:  .LBB9_7: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
-; CHECK-NEXT:  .LBB9_6: ; %entry
+; CHECK-NEXT:  .LBB9_8: ; %entry
 ; CHECK-NEXT:    sty mos8(__rc2)
 ; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    bvs .LBB9_8
-; CHECK-NEXT:  ; %bb.7: ; %entry
+; CHECK-NEXT:    bvs .LBB9_10
+; CHECK-NEXT:  ; %bb.9: ; %entry
 ; CHECK-NEXT:    lda #0
-; CHECK-NEXT:  .LBB9_8: ; %entry
+; CHECK-NEXT:  .LBB9_10: ; %entry
 ; CHECK-NEXT:    eor mos8(__rc2)
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    beq .LBB9_5
-; CHECK-NEXT:  .LBB9_9: ; %entry
+; CHECK-NEXT:    beq .LBB9_7
+; CHECK-NEXT:  .LBB9_11: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
 entry:
