@@ -408,18 +408,18 @@ body: |
     ; CHECK: $a = PL
     ; CHECK: $rc0 = COPY killed $a
     ; CHECK: KILL killed $p
-    ; CHECK: $a = frame-setup COPY $rc6
+    ; CHECK: $a = frame-setup COPY $rc30
     ; CHECK: frame-setup PH killed $a
-    ; CHECK: $a = frame-setup COPY $rc7
+    ; CHECK: $a = frame-setup COPY $rc31
     ; CHECK: frame-setup PH killed $a
-    ; CHECK: $rs3 = COPY $rs0
+    ; CHECK: $rs15 = COPY $rs0
     ; CHECK: $y = LDImm 1
-    ; CHECK: $a = LDYIndir $rs3, killed $y :: (load 1 from %stack.2 + 1)
-    ; CHECK: $rs0 = COPY $rs3
+    ; CHECK: $a = LDYIndir $rs15, killed $y :: (load 1 from %stack.2 + 1)
+    ; CHECK: $rs0 = COPY $rs15
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc7 = frame-destroy COPY killed $a
+    ; CHECK: $rc31 = frame-destroy COPY killed $a
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc6 = frame-destroy COPY killed $a
+    ; CHECK: $rc30 = frame-destroy COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 3, $c
@@ -427,7 +427,7 @@ body: |
     ; CHECK: $a = COPY $rc1
     ; CHECK: $a, $c, $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
-    ; CHECK: RTS implicit $rc6, implicit $rc7
+    ; CHECK: RTS implicit $rc30, implicit $rc31
     $a, early-clobber $rs1 = LDStk %stack.2, 1 :: (load 1 from %stack.2 + 1)
     RTS
 ...
@@ -448,39 +448,39 @@ body: |
     ; CHECK: $a = PL
     ; CHECK: $rc0 = COPY killed $a
     ; CHECK: KILL killed $p
-    ; CHECK: $a = frame-setup COPY $rc6
+    ; CHECK: $a = frame-setup COPY $rc30
     ; CHECK: frame-setup PH killed $a
-    ; CHECK: $a = frame-setup COPY $rc7
+    ; CHECK: $a = frame-setup COPY $rc31
     ; CHECK: frame-setup PH killed $a
-    ; CHECK: $a = frame-setup COPY $rc8
+    ; CHECK: $a = frame-setup COPY $rc32
     ; CHECK: frame-setup PH killed $a
-    ; CHECK: $a = frame-setup COPY $rc9
+    ; CHECK: $a = frame-setup COPY $rc33
     ; CHECK: frame-setup PH killed $a
-    ; CHECK: $rs3 = COPY $rs0
-    ; CHECK: $a = COPY $rc10
+    ; CHECK: $rs15 = COPY $rs0
+    ; CHECK: $a = COPY $rc34
     ; CHECK: $y = LDImm 1
-    ; CHECK: STYIndir killed $a, $rs3, killed $y :: (store 1 into %stack.1)
-    ; CHECK: $a = COPY $rc11
+    ; CHECK: STYIndir killed $a, $rs15, killed $y :: (store 1 into %stack.1)
+    ; CHECK: $a = COPY $rc35
     ; CHECK: $y = LDImm 0
-    ; CHECK: STYIndir killed $a, $rs3, killed $y :: (store 1 into %stack.2)
-    ; CHECK: $rs3 = IMPLICIT_DEF
-    ; CHECK: $rs4 = IMPLICIT_DEF
-    ; CHECK: $rs5 = IMPLICIT_DEF
+    ; CHECK: STYIndir killed $a, $rs15, killed $y :: (store 1 into %stack.2)
+    ; CHECK: $rs15 = IMPLICIT_DEF
+    ; CHECK: $rs16 = IMPLICIT_DEF
+    ; CHECK: $rs17 = IMPLICIT_DEF
     ; CHECK: $y = LDImm 0
-    ; CHECK: $a = LDYIndir $rs3, killed $y :: (load 1 from %stack.2)
-    ; CHECK: $rc11 = COPY killed $a
+    ; CHECK: $a = LDYIndir $rs15, killed $y :: (load 1 from %stack.2)
+    ; CHECK: $rc35 = COPY killed $a
     ; CHECK: $y = LDImm 1
-    ; CHECK: $a = LDYIndir $rs3, killed $y :: (load 1 from %stack.1)
-    ; CHECK: $rc10 = COPY killed $a
-    ; CHECK: $rs0 = COPY $rs3
+    ; CHECK: $a = LDYIndir $rs15, killed $y :: (load 1 from %stack.1)
+    ; CHECK: $rc34 = COPY killed $a
+    ; CHECK: $rs0 = COPY $rs15
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc9 = frame-destroy COPY killed $a
+    ; CHECK: $rc33 = frame-destroy COPY killed $a
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc8 = frame-destroy COPY killed $a
+    ; CHECK: $rc32 = frame-destroy COPY killed $a
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc7 = frame-destroy COPY killed $a
+    ; CHECK: $rc31 = frame-destroy COPY killed $a
     ; CHECK: $a = frame-destroy PL
-    ; CHECK: $rc6 = frame-destroy COPY killed $a
+    ; CHECK: $rc30 = frame-destroy COPY killed $a
     ; CHECK: $c = LDCImm 0
     ; CHECK: $a = COPY $rc0
     ; CHECK: $a, $c, $v = ADCImm $a, 2, $c
@@ -488,9 +488,9 @@ body: |
     ; CHECK: $a = COPY $rc1
     ; CHECK: $a, $c, $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
-    ; CHECK: RTS implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11
-    $rs3 = IMPLICIT_DEF
-    $rs4 = IMPLICIT_DEF
-    $rs5 = IMPLICIT_DEF
+    ; CHECK: RTS implicit $rc30, implicit $rc31, implicit $rc32, implicit $rc33, implicit $rc34, implicit $rc35
+    $rs15 = IMPLICIT_DEF
+    $rs16 = IMPLICIT_DEF
+    $rs17 = IMPLICIT_DEF
     RTS
 ...

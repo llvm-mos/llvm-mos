@@ -10,12 +10,12 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; NMOS-LABEL: print_int:
 ; NMOS:       ; %bb.0: ; %entry
 ; NMOS-NEXT:    sta __save_a
-; NMOS-NEXT:    lda mos8(__rc6)
+; NMOS-NEXT:    lda mos8(__rc30)
 ; NMOS-NEXT:    pha
-; NMOS-NEXT:    lda mos8(__rc7)
+; NMOS-NEXT:    lda mos8(__rc31)
 ; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda __save_a
-; NMOS-NEXT:    sta mos8(__rc7)
+; NMOS-NEXT:    sta mos8(__rc31)
 ; NMOS-NEXT:    cmp #10
 ; NMOS-NEXT:    lda #1
 ; NMOS-NEXT:    bcs .LBB0_2
@@ -26,35 +26,35 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; NMOS-NEXT:    beq .LBB0_4
 ; NMOS-NEXT:  ; %bb.3: ; %if.end.preheader
 ; NMOS-NEXT:    ldx #10
-; NMOS-NEXT:    lda mos8(__rc7)
+; NMOS-NEXT:    lda mos8(__rc31)
 ; NMOS-NEXT:    jsr __udivqi3
-; NMOS-NEXT:    sta mos8(__rc6)
+; NMOS-NEXT:    sta mos8(__rc30)
 ; NMOS-NEXT:    ldx #10
-; NMOS-NEXT:    lda mos8(__rc7)
+; NMOS-NEXT:    lda mos8(__rc31)
 ; NMOS-NEXT:    jsr __umodqi3
-; NMOS-NEXT:    sta mos8(__rc7)
-; NMOS-NEXT:    lda mos8(__rc6)
+; NMOS-NEXT:    sta mos8(__rc31)
+; NMOS-NEXT:    lda mos8(__rc30)
 ; NMOS-NEXT:    jsr print_int
 ; NMOS-NEXT:  .LBB0_4: ; %if.then
 ; NMOS-NEXT:    clc
-; NMOS-NEXT:    lda mos8(__rc7)
+; NMOS-NEXT:    lda mos8(__rc31)
 ; NMOS-NEXT:    adc #48
 ; NMOS-NEXT:    ;APP
 ; NMOS-NEXT:    jsr 65490
 ; NMOS-NEXT:    ;NO_APP
 ; NMOS-NEXT:    pla
-; NMOS-NEXT:    sta mos8(__rc7)
+; NMOS-NEXT:    sta mos8(__rc31)
 ; NMOS-NEXT:    pla
-; NMOS-NEXT:    sta mos8(__rc6)
+; NMOS-NEXT:    sta mos8(__rc30)
 ; NMOS-NEXT:    rts
 ;
 ; CMOS-LABEL: print_int:
 ; CMOS:       ; %bb.0: ; %entry
-; CMOS-NEXT:    ldx mos8(__rc6)
+; CMOS-NEXT:    ldx mos8(__rc30)
 ; CMOS-NEXT:    phx
-; CMOS-NEXT:    ldx mos8(__rc7)
+; CMOS-NEXT:    ldx mos8(__rc31)
 ; CMOS-NEXT:    phx
-; CMOS-NEXT:    sta mos8(__rc7)
+; CMOS-NEXT:    sta mos8(__rc31)
 ; CMOS-NEXT:    cmp #10
 ; CMOS-NEXT:    lda #1
 ; CMOS-NEXT:    bcs .LBB0_2
@@ -65,26 +65,26 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; CMOS-NEXT:    beq .LBB0_4
 ; CMOS-NEXT:  ; %bb.3: ; %if.end.preheader
 ; CMOS-NEXT:    ldx #10
-; CMOS-NEXT:    lda mos8(__rc7)
+; CMOS-NEXT:    lda mos8(__rc31)
 ; CMOS-NEXT:    jsr __udivqi3
-; CMOS-NEXT:    sta mos8(__rc6)
+; CMOS-NEXT:    sta mos8(__rc30)
 ; CMOS-NEXT:    ldx #10
-; CMOS-NEXT:    lda mos8(__rc7)
+; CMOS-NEXT:    lda mos8(__rc31)
 ; CMOS-NEXT:    jsr __umodqi3
-; CMOS-NEXT:    sta mos8(__rc7)
-; CMOS-NEXT:    lda mos8(__rc6)
+; CMOS-NEXT:    sta mos8(__rc31)
+; CMOS-NEXT:    lda mos8(__rc30)
 ; CMOS-NEXT:    jsr print_int
 ; CMOS-NEXT:  .LBB0_4: ; %if.then
 ; CMOS-NEXT:    clc
-; CMOS-NEXT:    lda mos8(__rc7)
+; CMOS-NEXT:    lda mos8(__rc31)
 ; CMOS-NEXT:    adc #48
 ; CMOS-NEXT:    ;APP
 ; CMOS-NEXT:    jsr 65490
 ; CMOS-NEXT:    ;NO_APP
 ; CMOS-NEXT:    pla
-; CMOS-NEXT:    sta mos8(__rc7)
+; CMOS-NEXT:    sta mos8(__rc31)
 ; CMOS-NEXT:    pla
-; CMOS-NEXT:    sta mos8(__rc6)
+; CMOS-NEXT:    sta mos8(__rc30)
 ; CMOS-NEXT:    rts
 entry:
   %cmp12 = icmp ult i8 %x, 10

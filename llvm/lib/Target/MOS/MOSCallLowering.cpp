@@ -420,11 +420,11 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   bool IsIndirect = Info.Callee.isReg();
   if (IsIndirect) {
-    // Store the callee in RS4 (used by the libcall).
+    // Store the callee in RS8 (used by the libcall).
     // Doing this before argument lowering gives additional freedom to
     // instruction scheduling. This just needs to happen some time before the
     // call, and no specific arguments or stack pointer state are required.
-    MIRBuilder.buildCopy(MOS::RS4, Info.Callee);
+    MIRBuilder.buildCopy(MOS::RS8, Info.Callee);
 
     // Call __call_indir to execute the indirect call.
     Info.Callee.ChangeToES("__call_indir");
@@ -442,7 +442,7 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Indirect calls store the callee in RS4.
   if (IsIndirect)
-    Call.addUse(MOS::RS4, RegState::Implicit);
+    Call.addUse(MOS::RS8, RegState::Implicit);
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs) {

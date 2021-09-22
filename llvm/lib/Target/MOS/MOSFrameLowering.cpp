@@ -59,17 +59,17 @@ bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     CSI.insert(CSI.begin(), CalleeSavedInfo{MOS::A});
 
   for (CalleeSavedInfo &I : CSI) {
-    if (I.getReg().id() > MOS::RC9) {
+    if (I.getReg().id() < MOS::RC30 + 4) {
+      // We place the first four CSRs on the hard stack, which we don't
+      // explicitly model in PEI.
+      I.setTargetSpilled();
+    } else {
       if (isISR(MF) && !HasY) {
         CSI.insert(CSI.begin() + 1, CalleeSavedInfo{MOS::Y});
         CSI[1].setTargetSpilled();
         HasY = true;
       }
       I.setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
-    } else {
-      // We place the first four CSRs on the hard stack, which we don't
-      // explicitly model in PEI.
-      I.setTargetSpilled();
     }
   }
 
@@ -222,11 +222,11 @@ void MOSFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
-  // If we have a frame pointer, the frame register RS3 needs to be saved as
+  // If we have a frame pointer, the frame register RS15 needs to be saved as
   // well, since the code that uses it hasn't yet been emitted.
   if (hasFP(MF)) {
-    SavedRegs.set(MOS::RC6);
-    SavedRegs.set(MOS::RC7);
+    SavedRegs.set(MOS::RC30);
+    SavedRegs.set(MOS::RC31);
   }
 }
 

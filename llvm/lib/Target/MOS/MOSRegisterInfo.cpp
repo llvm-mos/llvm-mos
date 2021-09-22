@@ -487,7 +487,7 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
 
 Register MOSRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
-  return TFI->hasFP(MF) ? MOS::RS3 : MOS::RS0;
+  return TFI->hasFP(MF) ? MOS::RS15 : MOS::RS0;
 }
 
 bool MOSRegisterInfo::shouldCoalesce(

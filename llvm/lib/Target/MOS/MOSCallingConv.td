@@ -13,11 +13,8 @@
 // The C calling convention is mostly described inline. There are a few
 // additional points worth mentioning:
 //
-// - A, X, Y, RS1, RS2, and the flags are caller-saved. All other registers and
-//   imaginary locations are callee-saved. The number of caller-saved registers
-//   needed to be tightly constrained to allow for performant interrupt
-//   handlers, since interrupt handlers must save all caller-saved registers in
-//   the worst case.
+// - A, X, Y, RS1-RS14, and the flags are caller-saved. All other registers and
+//   imaginary locations are callee-saved.
 //
 // - Aggregate types (structs, arrays, etc.) are passed by pointer. The pointer
 //   is managed entirely by the caller, and may or may not be on the soft stack.
@@ -43,6 +40,8 @@
 //   space used for return values; thus only enough space for the larger of the
 //   two need be allocated.
 //
+// This calling convention was roughly based on that of RISC-V.
+//
 // For insight into the design of performant calling conventions, see the
 // following work by Davidson and Whalley. By their convention, this plaftorm
 // uses the "smarter hybrid" method, since LLVM performs both shrink wrapping
@@ -64,7 +63,7 @@ def CC_MOS : CallingConv<[
   //
   // RS0 is skipped since it's the stack pointer. Only caller-saved registers
   // are used.
-  CCIfPtr<CCAssignToReg<[RS1, RS2]>>,
+  CCIfPtr<CCAssignToReg<[RS1, RS2, RS3, RS4, RS5, RS6, RS7]>>,
 
   // 8-bit values are assigned to A, then X, then the caller-saved 8-bit
   // imaginary registers. Y is not used for arguments (but is still
@@ -72,7 +71,10 @@ def CC_MOS : CallingConv<[
   // out of the appropriate registers.
   //
   // RC0 and RC1 are skipped since they're the stack pointer.
-  CCIfType<[i8], CCAssignToReg<[A, X, RC2, RC3, RC4, RC5]>>,
+  CCIfType<[i8], CCAssignToReg<[
+    A, X, RC2, RC3, RC4, RC5, RC6, RC7, RC8, RC9, RC10, RC11, RC12, RC13, RC14,
+    RC15
+  ]>>,
 
   // Any 8-bit values that wouldn't fit anywhere else are passed directly on
   // the stack.
@@ -93,10 +95,10 @@ def CC_MOS_VarArgs : CallingConv<[
 ]>;
 }
 
-// All registers are callee saved past RS2. These are represented implicitly by
+// All registers are callee saved past RS14. These are represented implicitly by
 // their subregisters, since the subregisters are what must be saved and
 // restored.
-def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 6, 255)>;
+def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 30, 255)>;
 
 // Interrupts save all registers except the stack pointers (which are restored
 // upon return by any function) and the flags (which are implicitly saved by the

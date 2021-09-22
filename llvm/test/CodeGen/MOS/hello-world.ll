@@ -22,8 +22,6 @@ define i16 @main() local_unnamed_addr #0 {
 ; NMOS-NEXT:    pla
 ; NMOS-NEXT:    sta mos8(__rc0)
 ; NMOS-NEXT:    ; kill: killed $p
-; NMOS-NEXT:    lda mos8(__rc6)
-; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda #14
 ; NMOS-NEXT:    ldy #1
 ; NMOS-NEXT:    sta (mos8(__rc0)),y ; 1-byte Folded Spill
@@ -70,9 +68,7 @@ define i16 @main() local_unnamed_addr #0 {
 ; NMOS-NEXT:  ; %bb.2: ; %while.end
 ; NMOS-NEXT:    ldx #0
 ; NMOS-NEXT:    lda #0
-; NMOS-NEXT:    sta __save_a
-; NMOS-NEXT:    pla
-; NMOS-NEXT:    sta mos8(__rc6)
+; NMOS-NEXT:    pha
 ; NMOS-NEXT:    clc
 ; NMOS-NEXT:    lda mos8(__rc0)
 ; NMOS-NEXT:    adc #2
@@ -80,7 +76,7 @@ define i16 @main() local_unnamed_addr #0 {
 ; NMOS-NEXT:    lda mos8(__rc1)
 ; NMOS-NEXT:    adc #0
 ; NMOS-NEXT:    sta mos8(__rc1)
-; NMOS-NEXT:    lda __save_a
+; NMOS-NEXT:    pla
 ; NMOS-NEXT:    rts
 ;
 ; CMOS-LABEL: main:
@@ -95,8 +91,6 @@ define i16 @main() local_unnamed_addr #0 {
 ; CMOS-NEXT:    pla
 ; CMOS-NEXT:    sta mos8(__rc0)
 ; CMOS-NEXT:    ; kill: killed $p
-; CMOS-NEXT:    lda mos8(__rc6)
-; CMOS-NEXT:    pha
 ; CMOS-NEXT:    lda #14
 ; CMOS-NEXT:    ldy #1
 ; CMOS-NEXT:    sta (mos8(__rc0)),y ; 1-byte Folded Spill
@@ -143,9 +137,7 @@ define i16 @main() local_unnamed_addr #0 {
 ; CMOS-NEXT:  ; %bb.2: ; %while.end
 ; CMOS-NEXT:    ldx #0
 ; CMOS-NEXT:    lda #0
-; CMOS-NEXT:    sta __save_a
-; CMOS-NEXT:    pla
-; CMOS-NEXT:    sta mos8(__rc6)
+; CMOS-NEXT:    pha
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    lda mos8(__rc0)
 ; CMOS-NEXT:    adc #2
@@ -153,7 +145,7 @@ define i16 @main() local_unnamed_addr #0 {
 ; CMOS-NEXT:    lda mos8(__rc1)
 ; CMOS-NEXT:    adc #0
 ; CMOS-NEXT:    sta mos8(__rc1)
-; CMOS-NEXT:    lda __save_a
+; CMOS-NEXT:    pla
 ; CMOS-NEXT:    rts
 entry:
   br label %while.body
