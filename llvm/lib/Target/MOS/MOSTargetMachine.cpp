@@ -169,7 +169,6 @@ public:
 
   void addPreSched2() override;
   void addPreEmitPass() override;
-  void addPreEmitPass2() override;
 
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
@@ -233,15 +232,10 @@ void MOSPassConfig::addPreSched2() {
   addPass(&FinalizeISelID);
   // Lower pseudos produced by control flow pseudos.
   addPass(&ExpandPostRAPseudosID);
+  addPass(createMOSStaticStackAllocPass());
 }
 
 void MOSPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
-
-void MOSPassConfig::addPreEmitPass2() {
-  // This needs to occur at the very end to allow IPRA to collect regs in SCC
-  // order.
-  addPass(createMOSStaticStackAllocPass());
-}
 
 ScheduleDAGInstrs *
 MOSPassConfig::createMachineScheduler(MachineSchedContext *C) const {

@@ -49,8 +49,6 @@ public:
   // scheduling by claiming to emit it ourselves, then never doing so.
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
-  bool useIPRA() const override { return true; }
-
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   MOSSubtarget SubTarget;
