@@ -332,20 +332,20 @@ body: |
   ; 6502:   $a = frame-setup LDAbs &__save_y
   ; 6502:   frame-setup PH killed $a
   ; 6502:   $a = COPY $rc34
-  ; 6502:   $y = LDImm 0
-  ; 6502:   STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.1)
-  ; 6502:   $a = COPY $rc35
   ; 6502:   $y = LDImm 1
   ; 6502:   STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.0)
+  ; 6502:   $a = COPY $rc35
+  ; 6502:   $y = LDImm 0
+  ; 6502:   STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.1)
   ; 6502: bb.1.entry:
   ; 6502:   $rs15 = IMPLICIT_DEF
   ; 6502:   $rs16 = IMPLICIT_DEF
   ; 6502:   $rs17 = IMPLICIT_DEF
-  ; 6502:   $y = LDImm 1
-  ; 6502:   $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0)
-  ; 6502:   $rc35 = COPY killed $a
   ; 6502:   $y = LDImm 0
   ; 6502:   $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1)
+  ; 6502:   $rc35 = COPY killed $a
+  ; 6502:   $y = LDImm 1
+  ; 6502:   $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0)
   ; 6502:   $rc34 = COPY killed $a
   ; 6502:   $a = frame-destroy PL
   ; 6502:   frame-destroy STAbs killed $a, &__save_y
@@ -403,20 +403,20 @@ body: |
   ; 65C02:   $a = frame-setup LDAbs &__save_y
   ; 65C02:   frame-setup PH killed $a
   ; 65C02:   $a = COPY $rc34
-  ; 65C02:   $y = LDImm 0
-  ; 65C02:   STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.1)
-  ; 65C02:   $a = COPY $rc35
   ; 65C02:   $y = LDImm 1
   ; 65C02:   STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.0)
+  ; 65C02:   $a = COPY $rc35
+  ; 65C02:   $y = LDImm 0
+  ; 65C02:   STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.1)
   ; 65C02: bb.1.entry:
   ; 65C02:   $rs15 = IMPLICIT_DEF
   ; 65C02:   $rs16 = IMPLICIT_DEF
   ; 65C02:   $rs17 = IMPLICIT_DEF
-  ; 65C02:   $y = LDImm 1
-  ; 65C02:   $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0)
-  ; 65C02:   $rc35 = COPY killed $a
   ; 65C02:   $y = LDImm 0
   ; 65C02:   $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1)
+  ; 65C02:   $rc35 = COPY killed $a
+  ; 65C02:   $y = LDImm 1
+  ; 65C02:   $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0)
   ; 65C02:   $rc34 = COPY killed $a
   ; 65C02:   $a = frame-destroy PL
   ; 65C02:   frame-destroy STAbs killed $a, &__save_y

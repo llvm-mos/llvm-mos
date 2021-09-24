@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSRegisterInfo.h"
 
+#include "MOSSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -29,7 +30,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "MOSSubtarget.h"
 
 #define DEBUG_TYPE "mos-framelowering"
 
@@ -44,33 +44,13 @@ bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     std::vector<CalleeSavedInfo> &CSI) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  auto GetHasY = [&]() {
-    for (const auto &I : CSI)
-      if (I.getReg() == MOS::Y)
-        return true;
-    return false;
-  };
-  bool HasY = GetHasY();
-
-  // We need to A free to save anything else. If we don't save it explicitly,
-  // the register scavenger might to use __save_a to save A. This is normally
-  // fine, but for interrupts, __save_a itself needs to be saved.
-  if (isISR(MF) && CSI.front().getReg() != MOS::A)
-    CSI.insert(CSI.begin(), CalleeSavedInfo{MOS::A});
-
   for (CalleeSavedInfo &I : CSI) {
-    if (I.getReg().id() < MOS::RC30 + 4) {
-      // We place the first four CSRs on the hard stack, which we don't
-      // explicitly model in PEI.
+    // We place the first four CSRs on the hard stack, which we don't explicitly
+    // model in PEI.
+    if (I.getReg().id() < MOS::RC30 + 4)
       I.setTargetSpilled();
-    } else {
-      if (isISR(MF) && !HasY) {
-        CSI.insert(CSI.begin() + 1, CalleeSavedInfo{MOS::Y});
-        CSI[1].setTargetSpilled();
-        HasY = true;
-      }
+    else
       I.setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
-    }
   }
 
   return true;
@@ -228,6 +208,28 @@ void MOSFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(MOS::RC30);
     SavedRegs.set(MOS::RC31);
   }
+
+  // We need A to save anything else. This may require in turn saving A.
+  // Normally, this could be done with __save_A, but for ISRs, that location
+  // must also be saved. So we have to save A as a CSR, not through the
+  // scavenger. Luckily, due to the register ordering, we're ensured that A
+  // is saved before any other register.
+  if (isISR(MF) && !SavedRegs.none())
+    SavedRegs.set(MOS::A);
+
+  // We need Y to save anything to the soft stack. Similar reasoning applies to
+  // Y.
+  const auto MustSaveY = [&]() {
+    if (!isISR(MF))
+      return false;
+    for (Register R = MOS::RC34; R <= MOS::RC255; R = R + 1) {
+      if (SavedRegs.test(R))
+        return true;
+    }
+    return false;
+  };
+  if (MustSaveY())
+    SavedRegs.set(MOS::Y);
 }
 
 void MOSFrameLowering::processFunctionBeforeFrameFinalized(
@@ -332,7 +334,7 @@ uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
 }
 
 void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
-                                 int64_t Offset) const {
+                                int64_t Offset) const {
   assert(Offset);
   assert(-32768 <= Offset && Offset < 32768);
 
