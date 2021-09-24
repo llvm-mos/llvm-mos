@@ -30,6 +30,84 @@ body: |
     $a, $c, $noreg, $v, $ylsb = SBCNZImag8 $a, $rc2, $c, implicit-def $nz
 ...
 ---
+name: br_c
+body: |
+  bb.0.entry:
+    liveins: $c
+    ; CHECK-LABEL: name: br_c
+    ; CHECK: successors: %bb.0(0x80000000)
+    ; CHECK: BR %bb.0, $c, 1
+    ; CHECK: RTS
+    GBR %bb.0.entry, $c, 1
+    RTS
+...
+---
+name: br_v
+body: |
+  bb.0.entry:
+    liveins: $v
+    ; CHECK-LABEL: name: br_v
+    ; CHECK: successors: %bb.0(0x80000000)
+    ; CHECK: BR %bb.0, $v, 1
+    ; CHECK: RTS
+    GBR %bb.0.entry, $v, 1
+    RTS
+...
+---
+name: br_alsb_0
+body: |
+  bb.0.entry:
+    liveins: $alsb
+    ; CHECK-LABEL: name: br_alsb_0
+    ; CHECK: successors: %bb.0(0x80000000)
+    ; CHECK: $a = ORAImm $a, 0, implicit-def $nz
+    ; CHECK: BR %bb.0, $z, 1
+    ; CHECK: RTS
+    GBR %bb.0.entry, $alsb, 0
+    RTS
+...
+---
+name: br_alsb_1
+body: |
+  bb.0.entry:
+    liveins: $alsb
+    ; CHECK-LABEL: name: br_alsb_1
+    ; CHECK: successors: %bb.0(0x80000000)
+    ; CHECK: $a = ORAImm $a, 0, implicit-def $nz
+    ; CHECK: BR %bb.0, $z, 0
+    ; CHECK: RTS
+    GBR %bb.0.entry, $alsb, 1
+    RTS
+...
+---
+name: br_xlsb
+body: |
+  bb.0.entry:
+    liveins: $xlsb
+    ; CHECK-LABEL: name: br_xlsb
+    ; CHECK: successors: %bb.0(0x80000000)
+    ; CHECK: $x = DE $x
+    ; CHECK: $x = IN $x, implicit-def $nz
+    ; CHECK: BR %bb.0, $z, 0
+    ; CHECK: RTS
+    GBR %bb.0.entry, $xlsb, 1
+    RTS
+...
+---
+name: br_ylsb
+body: |
+  bb.0.entry:
+    liveins: $ylsb
+    ; CHECK-LABEL: name: br_ylsb
+    ; CHECK: successors: %bb.0(0x80000000)
+    ; CHECK: $y = DE $y
+    ; CHECK: $y = IN $y, implicit-def $nz
+    ; CHECK: BR %bb.0, $z, 0
+    ; CHECK: RTS
+    GBR %bb.0.entry, $ylsb, 1
+    RTS
+...
+---
 name: ldaidx
 body: |
   bb.0.entry:

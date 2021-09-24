@@ -199,6 +199,7 @@ bool MOSInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   switch (BranchOpc) {
   default:
     llvm_unreachable("Bad branch opcode");
+  case MOS::GBR:
   case MOS::BR:
   case MOS::BRA:
     // BR range is [-128,127] starting from the PC location after the
@@ -214,6 +215,7 @@ MOSInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Bad branch opcode");
+  case MOS::GBR:
   case MOS::BR:
   case MOS::BRA:
   case MOS::JMP:
@@ -681,6 +683,9 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::CMPImag8Term:
     expandCMPTerm(Builder);
     break;
+  case MOS::GBR:
+    expandGBR(Builder);
+    break;
   case MOS::SBCNZImag8:
     expandSBCNZImag8(Builder);
     break;
@@ -711,6 +716,32 @@ void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
   }
   MI.addOperand(
       MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true, /*isImp=*/true));
+}
+
+void MOSInstrInfo::expandGBR(MachineIRBuilder &Builder) const {
+  MachineInstr &MI = *Builder.getInsertPt();
+
+  MI.setDesc(Builder.getTII().get(MOS::BR));
+
+  Register Tst = MI.getOperand(1).getReg();
+  switch (Tst) {
+  case MOS::C:
+  case MOS::V:
+    return;
+  case MOS::ALSB:
+    Builder.buildInstr(MOS::ORAImm, {MOS::A}, {Register(MOS::A), UINT64_C(0)})
+        .addDef(MOS::NZ, RegState::Implicit);
+    break;
+  case MOS::XLSB:
+  case MOS::YLSB: {
+    Register R = Tst == MOS::XLSB ? MOS::X : MOS::Y;
+    Builder.buildInstr(MOS::DE, {R}, {R});
+    Builder.buildInstr(MOS::IN, {R}, {R}).addDef(MOS::NZ, RegState::Implicit);
+  }
+  }
+  // Branch on zero flag, which is now the inverse of the test.
+  MI.getOperand(1).setReg(MOS::Z);
+  MI.getOperand(2).setImm(MI.getOperand(2).getImm() ? 0 : 1);
 }
 
 void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {

@@ -99,20 +99,33 @@ def SBCImag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
 // Bitwise instructions
 //===---------------------------------------------------------------------===//
 
-class MOSBitwiseInstr<Instruction opcode, SDNode node> :
-    MOSLogicalInstr, PseudoInstExpansion<(opcode addr8:$r)> {
-  let OutOperandList = (outs Ac:$dst);
-  let InOperandList = (ins Ac:$l, Imag8:$r);
-  let Constraints = "$dst = $l";
+multiclass MOSBitwiseInstr<SDNode node> {
+  def Imm :
+      MOSLogicalInstr,
+      PseudoInstExpansion<(!cast<Instruction>(NAME#"_Immediate") imm8:$r)> {
+    let OutOperandList = (outs Ac:$dst);
+    let InOperandList = (ins Ac:$l, i8imm:$r);
+    let Constraints = "$dst = $l";
 
-  let Pattern = [(set Ac:$dst, (node Ac:$l, Imag8:$r))];
+    let Pattern = [(set Ac:$dst, (node Ac:$l, imm:$r))];
+  }
 
-  let isCommutable = true;
+  def Imag8 :
+      MOSLogicalInstr,
+      PseudoInstExpansion<(!cast<Instruction>(NAME#"_ZeroPage") addr8:$r)> {
+    let OutOperandList = (outs Ac:$dst);
+    let InOperandList = (ins Ac:$l, Imag8:$r);
+    let Constraints = "$dst = $l";
+
+    let Pattern = [(set Ac:$dst, (node Ac:$l, Imag8:$r))];
+
+    let isCommutable = true;
+  }
 }
 
-def ANDImag8 : MOSBitwiseInstr<AND_ZeroPage, and>;
-def EORImag8 : MOSBitwiseInstr<EOR_ZeroPage, xor>;
-def ORAImag8 : MOSBitwiseInstr<ORA_ZeroPage, or>;
+defm AND : MOSBitwiseInstr<and>;
+defm EOR : MOSBitwiseInstr<xor>;
+defm ORA : MOSBitwiseInstr<or>;
 
 //===---------------------------------------------------------------------===//
 // Shift/Rotate Instructions
@@ -232,6 +245,15 @@ def CMPImag8 : MOSLogicalInstr {
 //===---------------------------------------------------------------------===//
 // Increment/Decrement Instructions
 //===---------------------------------------------------------------------===//
+
+// DEX, DEY
+def DE : MOSLogicalInstr {
+  dag OutOperandList = (outs XY:$dst);
+  dag InOperandList = (ins XY:$src);
+  let Constraints = "$src = $dst";
+
+  let Pattern = [(set XY:$dst, (sub XY:$src, 1))];
+}
 
 // INX, INY
 def IN : MOSLogicalInstr {
