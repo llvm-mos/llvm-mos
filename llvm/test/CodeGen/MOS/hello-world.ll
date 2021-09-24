@@ -58,10 +58,10 @@ define i16 @main() local_unnamed_addr #0 {
 ; NMOS-NEXT:    tax
 ; NMOS-NEXT:    lda mos8(__rc2)
 ; NMOS-NEXT:    pha
-; NMOS-NEXT:    sty __save_y
+; NMOS-NEXT:    sty mos8(__rc29)
 ; NMOS-NEXT:    ldy #1
 ; NMOS-NEXT:    sta (mos8(__rc0)),y ; 1-byte Folded Spill
-; NMOS-NEXT:    ldy __save_y
+; NMOS-NEXT:    ldy mos8(__rc29)
 ; NMOS-NEXT:    pla
 ; NMOS-NEXT:    cmp #0
 ; NMOS-NEXT:    bne .LBB0_1

@@ -9,12 +9,12 @@ target triple = "mos"
 define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; NMOS-LABEL: print_int:
 ; NMOS:       ; %bb.0: ; %entry
-; NMOS-NEXT:    sta __save_a
+; NMOS-NEXT:    sta mos8(__rc28)
 ; NMOS-NEXT:    lda mos8(__rc30)
 ; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda mos8(__rc31)
 ; NMOS-NEXT:    pha
-; NMOS-NEXT:    lda __save_a
+; NMOS-NEXT:    lda mos8(__rc28)
 ; NMOS-NEXT:    sta mos8(__rc31)
 ; NMOS-NEXT:    cmp #10
 ; NMOS-NEXT:    lda #1

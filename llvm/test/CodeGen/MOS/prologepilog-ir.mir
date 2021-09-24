@@ -147,42 +147,42 @@ body: |
     ; 6502: frame-setup PH killed $a
     ; 6502: $a = frame-setup COPY $y
     ; 6502: frame-setup PH killed $a
-    ; 6502: $a = frame-setup LDAbs &__save_a
+    ; 6502: $a = frame-setup COPY $rc28
     ; 6502: frame-setup PH killed $a
-    ; 6502: $a = frame-setup LDAbs &__save_y
+    ; 6502: $a = frame-setup COPY $rc29
     ; 6502: frame-setup PH killed $a
     ; 6502: $x = LDImm 42
     ; 6502: $a = LDImm 43
     ; 6502: $y = LDImm 44
     ; 6502: $a = frame-destroy PL
-    ; 6502: frame-destroy STAbs killed $a, &__save_y
+    ; 6502: $rc29 = frame-destroy COPY killed $a
     ; 6502: $a = frame-destroy PL
-    ; 6502: frame-destroy STAbs killed $a, &__save_a
+    ; 6502: $rc28 = frame-destroy COPY killed $a
     ; 6502: $a = frame-destroy PL
     ; 6502: $y = frame-destroy COPY killed $a
     ; 6502: $a = frame-destroy PL
     ; 6502: $x = frame-destroy COPY killed $a
     ; 6502: $a = frame-destroy PL
-    ; 6502: RTI implicit $a, implicit $x, implicit $y
+    ; 6502: RTI implicit $a, implicit $x, implicit $y, implicit $rc28, implicit $rc29
     ; 65C02-LABEL: name: interrupt_axy
     ; 65C02: frame-setup PH $a
     ; 65C02: frame-setup PH $x
     ; 65C02: frame-setup PH $y
-    ; 65C02: $a = frame-setup LDAbs &__save_a
+    ; 65C02: $a = frame-setup COPY $rc28
     ; 65C02: frame-setup PH killed $a
-    ; 65C02: $a = frame-setup LDAbs &__save_y
+    ; 65C02: $a = frame-setup COPY $rc29
     ; 65C02: frame-setup PH killed $a
     ; 65C02: $x = LDImm 42
     ; 65C02: $a = LDImm 43
     ; 65C02: $y = LDImm 44
     ; 65C02: $a = frame-destroy PL
-    ; 65C02: frame-destroy STAbs killed $a, &__save_y
+    ; 65C02: $rc29 = frame-destroy COPY killed $a
     ; 65C02: $a = frame-destroy PL
-    ; 65C02: frame-destroy STAbs killed $a, &__save_a
+    ; 65C02: $rc28 = frame-destroy COPY killed $a
     ; 65C02: $y = frame-destroy PL
     ; 65C02: $x = frame-destroy PL
     ; 65C02: $a = frame-destroy PL
-    ; 65C02: RTI implicit $a, implicit $x, implicit $y
+    ; 65C02: RTI implicit $a, implicit $x, implicit $y, implicit $rc28, implicit $rc29
     $x = LDImm 42
     $a = LDImm 43
     $y = LDImm 44
@@ -199,39 +199,39 @@ body: |
   ; 6502:   frame-setup PH $a
   ; 6502:   $a = frame-setup COPY $x
   ; 6502:   frame-setup PH killed $a
-  ; 6502:   $a = frame-setup LDAbs &__save_a
+  ; 6502:   $a = frame-setup COPY $rc28
   ; 6502:   frame-setup PH killed $a
-  ; 6502:   $a = frame-setup LDAbs &__save_y
+  ; 6502:   $a = frame-setup COPY $rc29
   ; 6502:   frame-setup PH killed $a
   ; 6502: bb.1.entry:
   ; 6502:   $x = LDImm 42
   ; 6502:   $a = frame-destroy PL
-  ; 6502:   frame-destroy STAbs killed $a, &__save_y
+  ; 6502:   $rc29 = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
-  ; 6502:   frame-destroy STAbs killed $a, &__save_a
+  ; 6502:   $rc28 = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
   ; 6502:   $x = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
-  ; 6502:   RTI implicit $a, implicit $x
+  ; 6502:   RTI implicit $a, implicit $x, implicit $rc28, implicit $rc29
   ; 65C02-LABEL: name: interrupt_x
   ; 65C02: bb.0.entry:
   ; 65C02:   successors: %bb.1(0x80000000)
   ; 65C02:   liveins: $a, $x
   ; 65C02:   frame-setup PH $a
   ; 65C02:   frame-setup PH $x
-  ; 65C02:   $a = frame-setup LDAbs &__save_a
+  ; 65C02:   $a = frame-setup COPY $rc28
   ; 65C02:   frame-setup PH killed $a
-  ; 65C02:   $a = frame-setup LDAbs &__save_y
+  ; 65C02:   $a = frame-setup COPY $rc29
   ; 65C02:   frame-setup PH killed $a
   ; 65C02: bb.1.entry:
   ; 65C02:   $x = LDImm 42
   ; 65C02:   $a = frame-destroy PL
-  ; 65C02:   frame-destroy STAbs killed $a, &__save_y
+  ; 65C02:   $rc29 = frame-destroy COPY killed $a
   ; 65C02:   $a = frame-destroy PL
-  ; 65C02:   frame-destroy STAbs killed $a, &__save_a
+  ; 65C02:   $rc28 = frame-destroy COPY killed $a
   ; 65C02:   $x = frame-destroy PL
   ; 65C02:   $a = frame-destroy PL
-  ; 65C02:   RTI implicit $a, implicit $x
+  ; 65C02:   RTI implicit $a, implicit $x, implicit $rc28, implicit $rc29
   bb.0.entry:
   bb.1.entry:
     $x = LDImm 42
@@ -246,51 +246,51 @@ body: |
   ; 6502:   successors: %bb.1(0x80000000)
   ; 6502:   liveins: $a, $rc30, $rc31
   ; 6502:   frame-setup PH $a
+  ; 6502:   $a = frame-setup COPY $rc28
+  ; 6502:   frame-setup PH killed $a
+  ; 6502:   $a = frame-setup COPY $rc29
+  ; 6502:   frame-setup PH killed $a
   ; 6502:   $a = frame-setup COPY $rc30
   ; 6502:   frame-setup PH killed $a
   ; 6502:   $a = frame-setup COPY $rc31
   ; 6502:   frame-setup PH killed $a
-  ; 6502:   $a = frame-setup LDAbs &__save_a
-  ; 6502:   frame-setup PH killed $a
-  ; 6502:   $a = frame-setup LDAbs &__save_y
-  ; 6502:   frame-setup PH killed $a
   ; 6502: bb.1.entry:
   ; 6502:   $rs15 = IMPLICIT_DEF
-  ; 6502:   $a = frame-destroy PL
-  ; 6502:   frame-destroy STAbs killed $a, &__save_y
-  ; 6502:   $a = frame-destroy PL
-  ; 6502:   frame-destroy STAbs killed $a, &__save_a
   ; 6502:   $a = frame-destroy PL
   ; 6502:   $rc31 = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
   ; 6502:   $rc30 = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
-  ; 6502:   RTI implicit $a, implicit $rc30, implicit $rc31
+  ; 6502:   $rc29 = frame-destroy COPY killed $a
+  ; 6502:   $a = frame-destroy PL
+  ; 6502:   $rc28 = frame-destroy COPY killed $a
+  ; 6502:   $a = frame-destroy PL
+  ; 6502:   RTI implicit $a, implicit $rc28, implicit $rc29, implicit $rc30, implicit $rc31
   ; 65C02-LABEL: name: interrupt_csr
   ; 65C02: bb.0.entry:
   ; 65C02:   successors: %bb.1(0x80000000)
   ; 65C02:   liveins: $a, $rc30, $rc31
   ; 65C02:   frame-setup PH $a
+  ; 65C02:   $a = frame-setup COPY $rc28
+  ; 65C02:   frame-setup PH killed $a
+  ; 65C02:   $a = frame-setup COPY $rc29
+  ; 65C02:   frame-setup PH killed $a
   ; 65C02:   $a = frame-setup COPY $rc30
   ; 65C02:   frame-setup PH killed $a
   ; 65C02:   $a = frame-setup COPY $rc31
   ; 65C02:   frame-setup PH killed $a
-  ; 65C02:   $a = frame-setup LDAbs &__save_a
-  ; 65C02:   frame-setup PH killed $a
-  ; 65C02:   $a = frame-setup LDAbs &__save_y
-  ; 65C02:   frame-setup PH killed $a
   ; 65C02: bb.1.entry:
   ; 65C02:   $rs15 = IMPLICIT_DEF
-  ; 65C02:   $a = frame-destroy PL
-  ; 65C02:   frame-destroy STAbs killed $a, &__save_y
-  ; 65C02:   $a = frame-destroy PL
-  ; 65C02:   frame-destroy STAbs killed $a, &__save_a
   ; 65C02:   $a = frame-destroy PL
   ; 65C02:   $rc31 = frame-destroy COPY killed $a
   ; 65C02:   $a = frame-destroy PL
   ; 65C02:   $rc30 = frame-destroy COPY killed $a
   ; 65C02:   $a = frame-destroy PL
-  ; 65C02:   RTI implicit $a, implicit $rc30, implicit $rc31
+  ; 65C02:   $rc29 = frame-destroy COPY killed $a
+  ; 65C02:   $a = frame-destroy PL
+  ; 65C02:   $rc28 = frame-destroy COPY killed $a
+  ; 65C02:   $a = frame-destroy PL
+  ; 65C02:   RTI implicit $a, implicit $rc28, implicit $rc29, implicit $rc30, implicit $rc31
   bb.0.entry:
   bb.1.entry:
     $rs15 = IMPLICIT_DEF
@@ -319,6 +319,10 @@ body: |
   ; 6502:   frame-setup PH $a
   ; 6502:   $a = frame-setup COPY $y
   ; 6502:   frame-setup PH killed $a
+  ; 6502:   $a = frame-setup COPY $rc28
+  ; 6502:   frame-setup PH killed $a
+  ; 6502:   $a = frame-setup COPY $rc29
+  ; 6502:   frame-setup PH killed $a
   ; 6502:   $a = frame-setup COPY $rc30
   ; 6502:   frame-setup PH killed $a
   ; 6502:   $a = frame-setup COPY $rc31
@@ -326,10 +330,6 @@ body: |
   ; 6502:   $a = frame-setup COPY $rc32
   ; 6502:   frame-setup PH killed $a
   ; 6502:   $a = frame-setup COPY $rc33
-  ; 6502:   frame-setup PH killed $a
-  ; 6502:   $a = frame-setup LDAbs &__save_a
-  ; 6502:   frame-setup PH killed $a
-  ; 6502:   $a = frame-setup LDAbs &__save_y
   ; 6502:   frame-setup PH killed $a
   ; 6502:   $a = COPY $rc34
   ; 6502:   $y = LDImm 1
@@ -348,10 +348,6 @@ body: |
   ; 6502:   $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0)
   ; 6502:   $rc34 = COPY killed $a
   ; 6502:   $a = frame-destroy PL
-  ; 6502:   frame-destroy STAbs killed $a, &__save_y
-  ; 6502:   $a = frame-destroy PL
-  ; 6502:   frame-destroy STAbs killed $a, &__save_a
-  ; 6502:   $a = frame-destroy PL
   ; 6502:   $rc33 = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
   ; 6502:   $rc32 = frame-destroy COPY killed $a
@@ -359,6 +355,10 @@ body: |
   ; 6502:   $rc31 = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
   ; 6502:   $rc30 = frame-destroy COPY killed $a
+  ; 6502:   $a = frame-destroy PL
+  ; 6502:   $rc29 = frame-destroy COPY killed $a
+  ; 6502:   $a = frame-destroy PL
+  ; 6502:   $rc28 = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
   ; 6502:   $y = frame-destroy COPY killed $a
   ; 6502:   $a = frame-destroy PL
@@ -371,7 +371,7 @@ body: |
   ; 6502:   $a, $c, $v = ADCImm $a, 0, $c
   ; 6502:   $rc1 = COPY killed $a
   ; 6502:   $a = PL
-  ; 6502:   RTI implicit $a, implicit $y, implicit $rc30, implicit $rc31, implicit $rc32, implicit $rc33, implicit $rc34, implicit $rc35
+  ; 6502:   RTI implicit $a, implicit $y, implicit $rc28, implicit $rc29, implicit $rc30, implicit $rc31, implicit $rc32, implicit $rc33, implicit $rc34, implicit $rc35
   ; 65C02-LABEL: name: interrupt_csrs_save_y
   ; 65C02: bb.0.entry:
   ; 65C02:   successors: %bb.1(0x80000000)
@@ -390,6 +390,10 @@ body: |
   ; 65C02:   KILL killed $p
   ; 65C02:   frame-setup PH $a
   ; 65C02:   frame-setup PH $y
+  ; 65C02:   $a = frame-setup COPY $rc28
+  ; 65C02:   frame-setup PH killed $a
+  ; 65C02:   $a = frame-setup COPY $rc29
+  ; 65C02:   frame-setup PH killed $a
   ; 65C02:   $a = frame-setup COPY $rc30
   ; 65C02:   frame-setup PH killed $a
   ; 65C02:   $a = frame-setup COPY $rc31
@@ -397,10 +401,6 @@ body: |
   ; 65C02:   $a = frame-setup COPY $rc32
   ; 65C02:   frame-setup PH killed $a
   ; 65C02:   $a = frame-setup COPY $rc33
-  ; 65C02:   frame-setup PH killed $a
-  ; 65C02:   $a = frame-setup LDAbs &__save_a
-  ; 65C02:   frame-setup PH killed $a
-  ; 65C02:   $a = frame-setup LDAbs &__save_y
   ; 65C02:   frame-setup PH killed $a
   ; 65C02:   $a = COPY $rc34
   ; 65C02:   $y = LDImm 1
@@ -419,10 +419,6 @@ body: |
   ; 65C02:   $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0)
   ; 65C02:   $rc34 = COPY killed $a
   ; 65C02:   $a = frame-destroy PL
-  ; 65C02:   frame-destroy STAbs killed $a, &__save_y
-  ; 65C02:   $a = frame-destroy PL
-  ; 65C02:   frame-destroy STAbs killed $a, &__save_a
-  ; 65C02:   $a = frame-destroy PL
   ; 65C02:   $rc33 = frame-destroy COPY killed $a
   ; 65C02:   $a = frame-destroy PL
   ; 65C02:   $rc32 = frame-destroy COPY killed $a
@@ -430,6 +426,10 @@ body: |
   ; 65C02:   $rc31 = frame-destroy COPY killed $a
   ; 65C02:   $a = frame-destroy PL
   ; 65C02:   $rc30 = frame-destroy COPY killed $a
+  ; 65C02:   $a = frame-destroy PL
+  ; 65C02:   $rc29 = frame-destroy COPY killed $a
+  ; 65C02:   $a = frame-destroy PL
+  ; 65C02:   $rc28 = frame-destroy COPY killed $a
   ; 65C02:   $y = frame-destroy PL
   ; 65C02:   $a = frame-destroy PL
   ; 65C02:   PH $a
@@ -441,7 +441,7 @@ body: |
   ; 65C02:   $a, $c, $v = ADCImm $a, 0, $c
   ; 65C02:   $rc1 = COPY killed $a
   ; 65C02:   $a = PL
-  ; 65C02:   RTI implicit $a, implicit $y, implicit $rc30, implicit $rc31, implicit $rc32, implicit $rc33, implicit $rc34, implicit $rc35
+  ; 65C02:   RTI implicit $a, implicit $y, implicit $rc28, implicit $rc29, implicit $rc30, implicit $rc31, implicit $rc32, implicit $rc33, implicit $rc34, implicit $rc35
   bb.0.entry:
   bb.1.entry:
     $rs15 = IMPLICIT_DEF
@@ -515,15 +515,7 @@ body: |
     ; 6502: frame-setup PH killed $a
     ; 6502: $a = frame-setup COPY $rc29
     ; 6502: frame-setup PH killed $a
-    ; 6502: $a = frame-setup LDAbs &__save_a
-    ; 6502: frame-setup PH killed $a
-    ; 6502: $a = frame-setup LDAbs &__save_y
-    ; 6502: frame-setup PH killed $a
     ; 6502: JSR &fn, mos_csr
-    ; 6502: $a = frame-destroy PL
-    ; 6502: frame-destroy STAbs killed $a, &__save_y
-    ; 6502: $a = frame-destroy PL
-    ; 6502: frame-destroy STAbs killed $a, &__save_a
     ; 6502: $a = frame-destroy PL
     ; 6502: $rc29 = frame-destroy COPY killed $a
     ; 6502: $a = frame-destroy PL
@@ -646,15 +638,7 @@ body: |
     ; 65C02: frame-setup PH killed $a
     ; 65C02: $a = frame-setup COPY $rc29
     ; 65C02: frame-setup PH killed $a
-    ; 65C02: $a = frame-setup LDAbs &__save_a
-    ; 65C02: frame-setup PH killed $a
-    ; 65C02: $a = frame-setup LDAbs &__save_y
-    ; 65C02: frame-setup PH killed $a
     ; 65C02: JSR &fn, mos_csr
-    ; 65C02: $a = frame-destroy PL
-    ; 65C02: frame-destroy STAbs killed $a, &__save_y
-    ; 65C02: $a = frame-destroy PL
-    ; 65C02: frame-destroy STAbs killed $a, &__save_a
     ; 65C02: $a = frame-destroy PL
     ; 65C02: $rc29 = frame-destroy COPY killed $a
     ; 65C02: $a = frame-destroy PL

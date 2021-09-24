@@ -94,21 +94,6 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
     Builder.buildInstr(MOS::PH, {}, {Reg});
   }
 
-  // Interrupt handlers may or may not write to these temporary locations, but
-  // this can occur after PEI. Accordingly, we conservatively save and restore
-  // these locations in every interrupt handler.
-  if (isISR(Builder.getMF())) {
-    const auto Push = [&](const char *Sym, int Offset = 0) {
-      Register Tmp = Builder.getMRI()->createVirtualRegister(&StackRegClass);
-      auto Ld =
-          Builder.buildInstr(MOS::LDAbs, {Tmp}, {}).addExternalSymbol(Sym);
-      Ld->getOperand(1).setOffset(Offset);
-      Builder.buildInstr(MOS::PH, {}, {Tmp});
-    };
-    Push("__save_a");
-    Push("__save_y");
-  }
-
   // Record that the frame pointer is killed by these instructions.
   for (auto MI = MIS.begin(), MIE = MIS.getInitial(); MI != MIE; ++MI)
     MI->setFlag(MachineInstr::FrameSetup);
@@ -153,21 +138,6 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   // CSR restores are emitted.
   MachineInstrSpan MIS(MI, &MBB);
 
-  // Interrupt handlers may or may not write to these temporary locations, but
-  // this can occur after PEI. Accordingly, we conservatively save and restore
-  // these locations in every interrupt handler.
-  if (isISR(Builder.getMF())) {
-    const auto Pull = [&](const char *Sym, int Offset = 0) {
-      Register Tmp =
-          Builder.buildInstr(MOS::PL, {&StackRegClass}, {}).getReg(0);
-      auto St =
-          Builder.buildInstr(MOS::STAbs, {}, {Tmp}).addExternalSymbol(Sym);
-      St->getOperand(1).setOffset(Offset);
-    };
-    Pull("__save_y");
-    Pull("__save_a");
-  }
-
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Register Reg = CI.getReg();
     if (!CI.isTargetSpilled())
@@ -209,27 +179,32 @@ void MOSFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(MOS::RC31);
   }
 
-  // We need A to save anything else. This may require in turn saving A.
-  // Normally, this could be done with __save_A, but for ISRs, that location
-  // must also be saved. So we have to save A as a CSR, not through the
-  // scavenger. Luckily, due to the register ordering, we're ensured that A
-  // is saved before any other register.
-  if (isISR(MF) && !SavedRegs.none())
-    SavedRegs.set(MOS::A);
+  if (isISR(MF)) {
+    // Accesses to RS14 can occur through the register scavenger, which occurs
+    // after PEI. Conservatively assume these are used.
+    SavedRegs.set(MOS::RC28);
+    SavedRegs.set(MOS::RC29);
 
-  // We need Y to save anything to the soft stack. Similar reasoning applies to
-  // Y.
-  const auto MustSaveY = [&]() {
-    if (!isISR(MF))
+    // We need A to save anything else. This may require in turn saving A.
+    // Normally, this could be done with __save_A, but for ISRs, that location
+    // must also be saved. So we have to save A as a CSR, not through the
+    // scavenger. Luckily, due to the register ordering, we're ensured that A
+    // is saved before any other register.
+    if (!SavedRegs.none())
+      SavedRegs.set(MOS::A);
+
+    // We need Y to save anything to the soft stack. Similar reasoning applies
+    // to Y.
+    const auto MustSaveY = [&]() {
+      for (Register R = MOS::RC34; R <= MOS::RC255; R = R + 1) {
+        if (SavedRegs.test(R))
+          return true;
+      }
       return false;
-    for (Register R = MOS::RC34; R <= MOS::RC255; R = R + 1) {
-      if (SavedRegs.test(R))
-        return true;
-    }
-    return false;
-  };
-  if (MustSaveY())
-    SavedRegs.set(MOS::Y);
+    };
+    if (MustSaveY())
+      SavedRegs.set(MOS::Y);
+  }
 }
 
 void MOSFrameLowering::processFunctionBeforeFrameFinalized(

@@ -71,6 +71,9 @@ MOSRegisterInfo::MOSRegisterInfo()
 
   // Reserve stack pointers.
   reserveAllSubregs(&Reserved, MOS::RS0);
+
+  // Reserve one temporary register for use by register scavenger.
+  reserveAllSubregs(&Reserved, MOS::RS14);
 }
 
 const MCPhysReg *
@@ -147,21 +150,23 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     report_fatal_error("Scavenger spill for register not yet implemented.");
   case MOS::A:
   case MOS::Y: {
-    const char *Save = Reg == MOS::A ? "__save_a" : "__save_y";
+    // RS14 is reserved to save A and Y if necessary, but pushing is still
+    // preferred.
+    Register Save = Reg == MOS::A ? MOS::RC28 : MOS::RC29;
     bool UseHardStack =
         (Reg == MOS::A || STI.has65C02()) && pushPullBalanced(I, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(MOS::PH).addUse(Reg);
+      Builder.buildInstr(MOS::PH, {}, {Reg});
     else
-      Builder.buildInstr(MOS::STAbs).addUse(Reg).addExternalSymbol(Save);
+      Builder.buildInstr(MOS::STImag8, {Save}, {Reg});
 
     Builder.setInsertPt(MBB, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(MOS::PL).addDef(Reg);
+      Builder.buildInstr(MOS::PL, {Reg}, {});
     else
-      Builder.buildInstr(MOS::LDAbs).addDef(Reg).addExternalSymbol(Save);
+      Builder.buildInstr(MOS::LDImag8, {Reg}, {Save});
     break;
   }
   case MOS::P: {
