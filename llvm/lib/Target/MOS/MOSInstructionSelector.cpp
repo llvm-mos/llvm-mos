@@ -239,7 +239,8 @@ struct CmpImmTerm_match {
 // are the left and right hand side of the comparison, while Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC was
 // reached.
-inline CmpImmTerm_match m_CmpImmTerm(Register &LHS, int64_t &RHS, Register &Flag) {
+inline CmpImmTerm_match m_CmpImmTerm(Register &LHS, int64_t &RHS,
+                                     Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
@@ -274,7 +275,8 @@ struct CmpImag8Term_match {
 // are the left and right hand side of the comparison, while Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC was
 // reached.
-inline CmpImag8Term_match m_CmpImag8Term(Register &LHS, Register &RHS, Register &Flag) {
+inline CmpImag8Term_match m_CmpImag8Term(Register &LHS, Register &RHS,
+                                         Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
@@ -286,7 +288,6 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   int64_t FlagVal = MI.getOperand(2).getImm();
 
   LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
 
   MachineIRBuilder Builder(MI);
 
@@ -320,17 +321,14 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
     return true;
   }
 
-  MachineInstrSpan MIS(MI, MI.getParent());
-  auto CondExt = Builder.buildAnyExt(S8, CondReg);
-  auto Zero8 = Builder.buildConstant(S8, 0);
-  auto CIn = Builder.buildConstant(S1, 1);
-  Register Z = Builder
-                   .buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1 /*=Z*/},
-                               {CondExt, Zero8, CIn})
-                   .getReg(4);
-  MI.getOperand(0).setReg(Z);
-  MI.getOperand(2).setImm(!FlagVal);
-  return selectAll(MIS);
+  auto GBR = Builder.buildInstr(MOS::GBR)
+                 .addMBB(MI.getOperand(1).getMBB())
+                 .addUse(MI.getOperand(0).getReg())
+                 .addImm(MI.getOperand(2).getImm());
+  if (!constrainSelectedInstRegOperands(*GBR, TII, TRI, RBI))
+    return false;
+  MI.eraseFromParent();
+  return true;
 }
 
 bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {

@@ -329,7 +329,11 @@ unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
     UBB = FBB;
 
     // Add conditional branch.
-    auto BR = Builder.buildInstr(MOS::BR).addMBB(TBB);
+    Register Reg = Cond[0].getReg();
+    unsigned Opcode = Reg.isVirtual() || !MOS::FlagRegClass.contains(Reg)
+                          ? MOS::GBR
+                          : MOS::BR;
+    auto BR = Builder.buildInstr(Opcode).addMBB(TBB);
     for (const MachineOperand &Op : Cond)
       BR.add(Op);
     ++NumAdded;
