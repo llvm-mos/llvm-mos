@@ -805,15 +805,13 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
       auto Sbc =
           Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
       // The quickest way to XOR N with V is to XOR the accumulator with 0x80
-      // iff V, then reexamine N.
+      // iff V, then reexamine N of the accumulator.
       auto Eor = Builder.buildXor(S8, Sbc, Builder.buildConstant(S8, 0x80));
       auto Zero = Builder.buildConstant(S8, 0);
       auto One = Builder.buildConstant(S1, 1);
-      auto NewN =
-          Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {Eor, Zero, One})
-              .getReg(2) /*=N*/;
-      Builder.buildSelect(Dst, Sbc.getReg(3) /*=V*/, NewN,
-                          Sbc.getReg(2) /*=N*/);
+      Builder.buildInstr(
+          MOS::G_SBC, {S8, S1, Dst /*=N*/, S1, S1},
+          {Builder.buildSelect(S8, Sbc.getReg(3) /*=V*/, Eor, Sbc), Zero, One});
     }
     MI.eraseFromParent();
     break;
