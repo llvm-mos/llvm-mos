@@ -753,7 +753,7 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
       return true;
     }
 
-    // Perform multibyte signed comparisons by a multibyte subtraction. This saves 
+    // Perform multibyte signed comparisons by a multibyte subtraction.
     auto LHSUnmerge = Builder.buildUnmerge(S8, LHS);
     auto RHSUnmerge = Builder.buildUnmerge(S8, RHS);
     assert(LHSUnmerge->getNumOperands() == RHSUnmerge->getNumOperands());
