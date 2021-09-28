@@ -96,16 +96,16 @@ body: |
     ; CHECK-LABEL: name: sink_nested_select
     ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; CHECK: [[C:%[0-9]+]]:any(s8) = G_CONSTANT i8 1
-    ; CHECK: [[C1:%[0-9]+]]:any(s1) = G_CONSTANT i1 false
-    ; CHECK: [[C2:%[0-9]+]]:any(s1) = G_CONSTANT i1 true
-    ; CHECK: G_BRCOND_IMM [[C2]](s1), %bb.1, 1
+    ; CHECK: [[C1:%[0-9]+]]:any(s1) = G_CONSTANT i1 true
+    ; CHECK: G_BRCOND_IMM [[C1]](s1), %bb.1, 1
     ; CHECK: G_BR %bb.2
     ; CHECK: .1.entry:
     ; CHECK: successors: %bb.3(0x80000000)
     ; CHECK: G_BR %bb.3
     ; CHECK: .2.entry:
     ; CHECK: successors: %bb.4(0x40000000), %bb.5(0x40000000)
-    ; CHECK: G_BRCOND_IMM [[C1]](s1), %bb.4, 1
+    ; CHECK: [[C2:%[0-9]+]]:any(s1) = G_CONSTANT i1 false
+    ; CHECK: G_BRCOND_IMM [[C2]](s1), %bb.4, 1
     ; CHECK: G_BR %bb.5
     ; CHECK: .4.entry:
     ; CHECK: successors: %bb.6(0x80000000)

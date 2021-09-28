@@ -196,13 +196,59 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     bool SawStore = true;
     if (!DefMI.isSafeToMove(nullptr, SawStore))
       return;
-    if (DefMI.getNumDefs() != 1)
-      return;
+
+    for (const MachineOperand &MO : DefMI.operands()) {
+      if (!MO.isReg())
+        continue;
+      if (MO.getReg().isPhysical())
+        return;
+      // Note: Value is already determined to have exactly one non-dbg use.
+      if (!MO.isDef() || MO.getReg() == Value)
+        continue;
+      // Can't sink DefMI if it defines registers used outside the select.
+      if (!MRI.use_nodbg_empty(MO.getReg()))
+        return;
+    }
     if (Tst == Value)
       return;
     LLVM_DEBUG(dbgs() << "Sinking value: " << DefMI);
+
+    auto SrcMI =
+        MachineBasicBlock::reverse_iterator(MachineBasicBlock::iterator(DefMI));
+    auto SrcEnd = DefMI.getParent()->rend();
     DefMI.removeFromParent();
-    MBB->insert(MBB->end(), &DefMI);
+    auto DstMI = MBB->insert(MBB->end(), &DefMI);
+
+    for (; SrcMI != SrcEnd; ++SrcMI) {
+      SawStore = true;
+      if (!SrcMI->isSafeToMove(nullptr, SawStore))
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Considering sinking: " << *SrcMI);
+
+      // Can't sink SrcMI if any defined operand is used outside of the
+      // conditional MBB.
+      for (const MachineOperand &MO : SrcMI->operands()) {
+        if (!MO.isReg())
+          continue;
+        if (MO.getReg().isPhysical())
+          goto cont;
+        if (!MO.isDef())
+          continue;
+        for (const MachineInstr &UseMI :
+             MRI.use_nodbg_instructions(MO.getReg()))
+          if (UseMI.getParent() != MBB)
+            goto cont;
+      }
+      {
+        MachineInstr *MIToSink = &*SrcMI;
+        LLVM_DEBUG(dbgs() << "Sinking value: " << *MIToSink);
+        --SrcMI; // To be incremented on loop.
+        MIToSink->removeFromParent();
+        DstMI = MBB->insert(DstMI, MIToSink);
+      }
+    cont:;
+    }
   };
   SinkValue(TrueMBB, TrueValue);
   SinkValue(FalseMBB, FalseValue);
