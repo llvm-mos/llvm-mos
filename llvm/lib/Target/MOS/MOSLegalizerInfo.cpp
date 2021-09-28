@@ -724,33 +724,58 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
 
+  bool RHSIsZero = mi_match(RHS, MRI, m_SpecificICst(0));
+  Register CIn;
+
   if (Type != S8) {
-    Register LHSHigh, LHSRest;
-    Register RHSHigh, RHSRest;
-    std::tie(LHSHigh, LHSRest) = splitHighRest(LHS, Builder);
-    std::tie(RHSHigh, RHSRest) = splitHighRest(RHS, Builder);
+    if (Pred != CmpInst::ICMP_SLT) {
+      Register LHSHigh, LHSRest;
+      Register RHSHigh, RHSRest;
+      std::tie(LHSHigh, LHSRest) = splitHighRest(LHS, Builder);
+      std::tie(RHSHigh, RHSRest) = splitHighRest(RHS, Builder);
 
-    auto EqHigh = Builder.buildICmp(CmpInst::ICMP_EQ, S1, LHSHigh, RHSHigh);
-    // If EqHigh is false, we defer to CmpHigh, which is equal to EqHigh if
-    // Pred==ICMP_EQ.
-    auto CmpHigh = (Pred == CmpInst::ICMP_EQ)
-                       ? Builder.buildConstant(S1, 0)
-                       : Builder.buildICmp(Pred, S1, LHSHigh, RHSHigh);
-    auto RestPred = Pred;
-    if (CmpInst::isSigned(RestPred))
-      RestPred = CmpInst::getUnsignedPredicate(Pred);
-    auto CmpRest = Builder.buildICmp(RestPred, S1, LHSRest, RHSRest).getReg(0);
+      auto EqHigh = Builder.buildICmp(CmpInst::ICMP_EQ, S1, LHSHigh, RHSHigh);
+      // If EqHigh is false, we defer to CmpHigh, which is equal to EqHigh if
+      // Pred==ICMP_EQ.
+      auto CmpHigh = (Pred == CmpInst::ICMP_EQ)
+                         ? Builder.buildConstant(S1, 0)
+                         : Builder.buildICmp(Pred, S1, LHSHigh, RHSHigh);
+      auto RestPred = Pred;
+      if (CmpInst::isSigned(RestPred))
+        RestPred = CmpInst::getUnsignedPredicate(Pred);
+      auto CmpRest =
+          Builder.buildICmp(RestPred, S1, LHSRest, RHSRest).getReg(0);
 
-    // If the high byte is equal, defer to the unsigned comparison on the rest.
-    // Otherwise, defer to the comparison on the high byte.
-    Builder.buildSelect(Dst, EqHigh, CmpRest, CmpHigh);
-    MI.eraseFromParent();
-    return true;
+      // If the high byte is equal, defer to the unsigned comparison on the
+      // rest. Otherwise, defer to the comparison on the high byte.
+      Builder.buildSelect(Dst, EqHigh, CmpRest, CmpHigh);
+      MI.eraseFromParent();
+      return true;
+    }
+
+    // Perform multibyte signed comparisons by a multibyte subtraction. This saves 
+    auto LHSUnmerge = Builder.buildUnmerge(S8, LHS);
+    auto RHSUnmerge = Builder.buildUnmerge(S8, RHS);
+    assert(LHSUnmerge->getNumOperands() == RHSUnmerge->getNumOperands());
+    CIn = Builder.buildConstant(S1, 1).getReg(0);
+    for (unsigned Idx = 0, End = LHSUnmerge->getNumOperands() - 2; Idx != End;
+         ++Idx) {
+      auto Sbc = Builder.buildInstr(
+          MOS::G_SBC, {S8, S1, S1, S1, S1},
+          {LHSUnmerge->getOperand(Idx), RHSUnmerge->getOperand(Idx), CIn});
+      CIn = Sbc.getReg(1);
+    }
+    Type = S8;
+    LHS = LHSUnmerge->getOperand(LHSUnmerge->getNumOperands() - 2).getReg();
+    RHS = RHSUnmerge->getOperand(LHSUnmerge->getNumOperands() - 2).getReg();
+    // Fall through to produce the final SBC that determines the comparison
+    // result.
+  } else {
+    CIn = Builder.buildConstant(S1, 1).getReg(0);
   }
 
   assert(Type == S8);
 
-  auto CIn = Builder.buildConstant(S1, 1);
   // Lower 8-bit comparisons to a generic G_SBC instruction with similar
   // capabilities to the 6502's SBC and CMP instructions.  See
   // www.6502.org/tutorials/compare_beyond.html.
@@ -771,7 +796,7 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   }
   case CmpInst::ICMP_SLT: {
     // Subtractions of zero cannot overflow, so N is always correct.
-    if (mi_match(RHS, MRI, m_SpecificICst(0))) {
+    if (RHSIsZero) {
       auto Sbc =
           Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
       Builder.buildCopy(Dst, Sbc.getReg(2) /*=N*/);
