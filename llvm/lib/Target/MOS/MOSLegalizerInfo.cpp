@@ -779,7 +779,16 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
       // General subtractions can overflow; if so, N is flipped.
       auto Sbc =
           Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
-      Builder.buildXor(Dst, Sbc.getReg(2) /*=N*/, Sbc.getReg(3) /*=V*/);
+      // The quickest way to XOR N with V is to XOR the accumulator with 0x80
+      // iff V, then reexamine N.
+      auto Eor = Builder.buildXor(S8, Sbc, Builder.buildConstant(S8, 0x80));
+      auto Zero = Builder.buildConstant(S8, 0);
+      auto One = Builder.buildConstant(S1, 1);
+      auto NewN =
+          Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {Eor, Zero, One})
+              .getReg(2) /*=N*/;
+      Builder.buildSelect(Dst, Sbc.getReg(3) /*=V*/, NewN,
+                          Sbc.getReg(2) /*=N*/);
     }
     MI.eraseFromParent();
     break;

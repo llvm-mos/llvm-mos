@@ -141,41 +141,34 @@ entry:
 define zeroext i1 @sle(i16 %a, i16 %b) {
 ; CHECK-LABEL: sle:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    sec
+; CHECK-NEXT:    sta mos8(__rc5)
+; CHECK-NEXT:    stx mos8(__rc4)
 ; CHECK-NEXT:    lda mos8(__rc3)
-; CHECK-NEXT:    sbc mos8(__rc5)
-; CHECK-NEXT:    bmi .LBB6_2
+; CHECK-NEXT:    cmp mos8(__rc4)
+; CHECK-NEXT:    bne .LBB6_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldy #0
-; CHECK-NEXT:    jmp .LBB6_3
-; CHECK-NEXT:  .LBB6_2: ; %entry
-; CHECK-NEXT:    ldy #1
-; CHECK-NEXT:  .LBB6_3: ; %entry
-; CHECK-NEXT:    lda mos8(__rc3)
-; CHECK-NEXT:    cmp mos8(__rc5)
-; CHECK-NEXT:    bne .LBB6_6
-; CHECK-NEXT:  ; %bb.4: ; %entry
 ; CHECK-NEXT:    ldx mos8(__rc2)
-; CHECK-NEXT:    cpx mos8(__rc4)
-; CHECK-NEXT:    bcc .LBB6_9
-; CHECK-NEXT:  .LBB6_5: ; %entry
+; CHECK-NEXT:    cpx mos8(__rc5)
+; CHECK-NEXT:    bcc .LBB6_5
+; CHECK-NEXT:  .LBB6_2: ; %entry
 ; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    rts
+; CHECK-NEXT:  .LBB6_3: ; %entry
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    sbc mos8(__rc4)
+; CHECK-NEXT:    bvc .LBB6_6
+; CHECK-NEXT:  ; %bb.4: ; %entry
+; CHECK-NEXT:    eor #-128
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bpl .LBB6_2
+; CHECK-NEXT:  .LBB6_5: ; %entry
+; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB6_6: ; %entry
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    bvs .LBB6_8
-; CHECK-NEXT:  ; %bb.7: ; %entry
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:  .LBB6_8: ; %entry
-; CHECK-NEXT:    eor mos8(__rc2)
-; CHECK-NEXT:    ora #0
-; CHECK-NEXT:    beq .LBB6_5
-; CHECK-NEXT:  .LBB6_9: ; %entry
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    rts
+; CHECK-NEXT:    cpx mos8(__rc4)
+; CHECK-NEXT:    bpl .LBB6_2
+; CHECK-NEXT:    jmp .LBB6_5
 entry:
   %cmp = icmp sle i16 %a, %b
   ret i1 %cmp
@@ -184,39 +177,33 @@ entry:
 define zeroext i1 @slt(i16 %a, i16 %b) {
 ; CHECK-LABEL: slt:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(__rc4)
+; CHECK-NEXT:    cpx mos8(__rc3)
+; CHECK-NEXT:    bne .LBB7_3
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    cmp mos8(__rc2)
+; CHECK-NEXT:    bcc .LBB7_5
+; CHECK-NEXT:  .LBB7_2: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    rts
+; CHECK-NEXT:  .LBB7_3: ; %entry
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    sbc mos8(__rc3)
-; CHECK-NEXT:    bmi .LBB7_6
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldy #0
-; CHECK-NEXT:    cpx mos8(__rc3)
-; CHECK-NEXT:    beq .LBB7_7
-; CHECK-NEXT:  .LBB7_2: ; %entry
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    bvs .LBB7_4
-; CHECK-NEXT:  ; %bb.3: ; %entry
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:  .LBB7_4: ; %entry
-; CHECK-NEXT:    eor mos8(__rc2)
-; CHECK-NEXT:    ora #0
-; CHECK-NEXT:    bne .LBB7_8
+; CHECK-NEXT:    bvc .LBB7_6
+; CHECK-NEXT:  ; %bb.4: ; %entry
+; CHECK-NEXT:    eor #-128
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bpl .LBB7_2
 ; CHECK-NEXT:  .LBB7_5: ; %entry
-; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB7_6: ; %entry
-; CHECK-NEXT:    ldy #1
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    tay
 ; CHECK-NEXT:    cpx mos8(__rc3)
-; CHECK-NEXT:    bne .LBB7_2
-; CHECK-NEXT:  .LBB7_7: ; %entry
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    cmp mos8(__rc2)
-; CHECK-NEXT:    bcs .LBB7_5
-; CHECK-NEXT:  .LBB7_8: ; %entry
-; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    rts
+; CHECK-NEXT:    bpl .LBB7_2
+; CHECK-NEXT:    jmp .LBB7_5
 entry:
   %cmp = icmp slt i16 %a, %b
   ret i1 %cmp
@@ -225,39 +212,33 @@ entry:
 define zeroext i1 @sge(i16 %a, i16 %b) {
 ; CHECK-LABEL: sge:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(__rc4)
+; CHECK-NEXT:    cpx mos8(__rc3)
+; CHECK-NEXT:    bne .LBB8_3
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    cmp mos8(__rc2)
+; CHECK-NEXT:    bcc .LBB8_5
+; CHECK-NEXT:  .LBB8_2: ; %entry
+; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    rts
+; CHECK-NEXT:  .LBB8_3: ; %entry
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    sbc mos8(__rc3)
-; CHECK-NEXT:    bmi .LBB8_6
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldy #0
-; CHECK-NEXT:    cpx mos8(__rc3)
-; CHECK-NEXT:    beq .LBB8_7
-; CHECK-NEXT:  .LBB8_2: ; %entry
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    bvs .LBB8_4
-; CHECK-NEXT:  ; %bb.3: ; %entry
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:  .LBB8_4: ; %entry
-; CHECK-NEXT:    eor mos8(__rc2)
-; CHECK-NEXT:    ora #0
-; CHECK-NEXT:    bne .LBB8_8
+; CHECK-NEXT:    bvc .LBB8_6
+; CHECK-NEXT:  ; %bb.4: ; %entry
+; CHECK-NEXT:    eor #-128
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bpl .LBB8_2
 ; CHECK-NEXT:  .LBB8_5: ; %entry
-; CHECK-NEXT:    lda #1
+; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB8_6: ; %entry
-; CHECK-NEXT:    ldy #1
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    tay
 ; CHECK-NEXT:    cpx mos8(__rc3)
-; CHECK-NEXT:    bne .LBB8_2
-; CHECK-NEXT:  .LBB8_7: ; %entry
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    cmp mos8(__rc2)
-; CHECK-NEXT:    bcs .LBB8_5
-; CHECK-NEXT:  .LBB8_8: ; %entry
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    rts
+; CHECK-NEXT:    bpl .LBB8_2
+; CHECK-NEXT:    jmp .LBB8_5
 entry:
   %cmp = icmp sge i16 %a, %b
   ret i1 %cmp
@@ -266,41 +247,34 @@ entry:
 define zeroext i1 @sgt(i16 %a, i16 %b) {
 ; CHECK-LABEL: sgt:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    sec
+; CHECK-NEXT:    sta mos8(__rc5)
+; CHECK-NEXT:    stx mos8(__rc4)
 ; CHECK-NEXT:    lda mos8(__rc3)
-; CHECK-NEXT:    sbc mos8(__rc5)
-; CHECK-NEXT:    bmi .LBB9_2
+; CHECK-NEXT:    cmp mos8(__rc4)
+; CHECK-NEXT:    bne .LBB9_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldy #0
-; CHECK-NEXT:    jmp .LBB9_3
-; CHECK-NEXT:  .LBB9_2: ; %entry
-; CHECK-NEXT:    ldy #1
-; CHECK-NEXT:  .LBB9_3: ; %entry
-; CHECK-NEXT:    lda mos8(__rc3)
-; CHECK-NEXT:    cmp mos8(__rc5)
-; CHECK-NEXT:    bne .LBB9_6
-; CHECK-NEXT:  ; %bb.4: ; %entry
 ; CHECK-NEXT:    ldx mos8(__rc2)
-; CHECK-NEXT:    cpx mos8(__rc4)
-; CHECK-NEXT:    bcc .LBB9_9
-; CHECK-NEXT:  .LBB9_5: ; %entry
+; CHECK-NEXT:    cpx mos8(__rc5)
+; CHECK-NEXT:    bcc .LBB9_5
+; CHECK-NEXT:  .LBB9_2: ; %entry
 ; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    rts
+; CHECK-NEXT:  .LBB9_3: ; %entry
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    sbc mos8(__rc4)
+; CHECK-NEXT:    bvc .LBB9_6
+; CHECK-NEXT:  ; %bb.4: ; %entry
+; CHECK-NEXT:    eor #-128
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bpl .LBB9_2
+; CHECK-NEXT:  .LBB9_5: ; %entry
+; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB9_6: ; %entry
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    bvs .LBB9_8
-; CHECK-NEXT:  ; %bb.7: ; %entry
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:  .LBB9_8: ; %entry
-; CHECK-NEXT:    eor mos8(__rc2)
-; CHECK-NEXT:    ora #0
-; CHECK-NEXT:    beq .LBB9_5
-; CHECK-NEXT:  .LBB9_9: ; %entry
-; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    rts
+; CHECK-NEXT:    cpx mos8(__rc4)
+; CHECK-NEXT:    bpl .LBB9_2
+; CHECK-NEXT:    jmp .LBB9_5
 entry:
   %cmp = icmp sgt i16 %a, %b
   ret i1 %cmp
