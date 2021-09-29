@@ -9,12 +9,11 @@ The LLVM SingleSource end-to-end test cases pass on a simulated 6502. This is tr
 -O0, -O3, -Os, and -Oz. The compiler is believed to be C99 compatible, but the quality
 of generated code is not yet at even a v0.1 level.
 
-**WARNING!** Very little attention has been given to the quality of
-code it generates beyond making sure that it's possible to clean up
-later. Because of this, please don't publicly review, compare, or
-benchmark this compiler against other compilers at this time. You'll
-be surprised how much better the code will get once we turn our
-full attention to it.
+**WARNING!** While we're now in the process of optimizing the code generator's output,
+it's still early days. Code quality is rapidly improving, but it's still not nearly
+good enough for even a v0.1. Because of this, please don't publicly review, compare,
+or benchmark this compiler against other compilers at this time. Output generated
+now will only vaguely resemble output in even six month's time.
 
 To keep this project a clean fork of LLVM, no target-specific source code or
 libraries are part of this project. These are contained in the related
