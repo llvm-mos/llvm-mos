@@ -422,12 +422,14 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
     auto LoInstr = Builder.buildInstr(MI->getOpcode());
     if (!IsLoad) {
       LoInstr.add(MI->getOperand(0)); // scratch
-      LoInstr.add(MI->getOperand(1)); // scratch2
+      Register NewY = MRI.createVirtualRegister(&MOS::YcRegClass);
+      LoInstr.addDef(NewY, RegState::EarlyClobber); // scratch2 (FIXME: might need a new Yc vreg?)
     }
     LoInstr.addReg(Lo, getDefRegState(IsLoad));
     if (IsLoad) {
       LoInstr.add(MI->getOperand(1)); // scratch
-      LoInstr.add(MI->getOperand(2)); // scratch2
+      Register NewY = MRI.createVirtualRegister(&MOS::YcRegClass);
+      LoInstr.addDef(NewY, RegState::EarlyClobber); // scratch2 (FIXME: might need a new Yc vreg?)
     }
     LoInstr.add(MI->getOperand(3)) // base
         .add(MI->getOperand(4)) // offset
@@ -435,12 +437,14 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
     auto HiInstr = Builder.buildInstr(MI->getOpcode());
     if (!IsLoad) {
       HiInstr.add(MI->getOperand(0)); // scratch
-      HiInstr.add(MI->getOperand(1)); // scratch2 (FIXME: might need a new Yc vreg?)
+      Register NewY = MRI.createVirtualRegister(&MOS::YcRegClass);
+      HiInstr.addDef(NewY, RegState::EarlyClobber); // scratch2 (FIXME: might need a new Yc vreg?)
     }
     HiInstr.addReg(Hi, getDefRegState(IsLoad));
     if (IsLoad) {
       HiInstr.add(MI->getOperand(1)); // scratch
-      HiInstr.add(MI->getOperand(2)); // scratch2 (FIXME: might need a new Yc vreg?)
+      Register NewY = MRI.createVirtualRegister(&MOS::YcRegClass);
+      HiInstr.addDef(NewY, RegState::EarlyClobber); // scratch2 (FIXME: might need a new Yc vreg?)
     }
     HiInstr.add(MI->getOperand(3)) // base
         .addImm(MI->getOperand(4).getImm() + 1) // offset
