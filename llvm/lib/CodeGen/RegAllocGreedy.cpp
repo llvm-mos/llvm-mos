@@ -956,7 +956,9 @@ bool RAGreedy::canEvictInterference(
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())) ||
            (!canWiden(MRI, TII, TRI, VirtReg.reg()) &&
-            canWiden(MRI, TII, TRI, Intf->reg())));
+            canWiden(MRI, TII, TRI, Intf->reg())) ||
+           (VirtReg.isZeroLength(LIS->getSlotIndexes()) &&
+            !Intf->isZeroLength(LIS->getSlotIndexes())));
 
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = ExtraRegInfo[Intf->reg()].Cascade;
