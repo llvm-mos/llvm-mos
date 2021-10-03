@@ -342,7 +342,7 @@ def LDYIndir : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
 class MOSStore : MOSLogicalInstr {
   let mayStore = true;
 }
-// STA abs, STX abs, STZ abs
+// STA abs, STX abs
 def STAbs : MOSStore {
   dag InOperandList = (ins GPR:$src, i16imm:$dst);
 }
@@ -353,6 +353,12 @@ def STIdx : MOSStore {
 // STA (zp),y
 def STYIndir : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
   dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
+}
+
+// STZ abs,x
+def STZIdx : MOSStore {
+  dag InOperandList = (ins i16imm:$addr, Xc:$idx);
+  let Predicates = [Has65C02];
 }
 
 //===---------------------------------------------------------------------===//

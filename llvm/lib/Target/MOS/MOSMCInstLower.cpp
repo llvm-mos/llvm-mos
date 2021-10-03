@@ -306,6 +306,20 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
+  case MOS::STZIdx: {
+    switch (MI->getOperand(1).getReg()) {
+    default:
+      llvm_unreachable("Unexpected register.");
+    case MOS::X:
+      OutMI.setOpcode(MOS::STZ_AbsoluteX);
+      break;
+    }
+    MCOperand Val;
+    if (!lowerOperand(MI->getOperand(0), Val))
+      llvm_unreachable("Failed to lower operand");
+    OutMI.addOperand(Val);
+    return;
+  }
   case MOS::STImag8: {
     switch (MI->getOperand(1).getReg()) {
     default:
