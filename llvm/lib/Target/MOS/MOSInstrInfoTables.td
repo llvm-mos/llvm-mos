@@ -84,6 +84,8 @@ def : ZPIRE< STX_ZeroPage, STX_Absolute >;
 
 def : ZPIRE< STY_ZeroPage, STY_Absolute >;
 
+def : ZPIRE< STZ_ZeroPage, STZ_Absolute >;
+
 /// ---------------------------------------------------------------------------
 /// The MOS zero page instruction lowering table.
 def MOSZeroPageInstructionRelaxationTable : GenericTable {

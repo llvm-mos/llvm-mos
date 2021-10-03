@@ -236,6 +236,17 @@ def PLX_Implied: InstLowA<"plx", 0b1111>;
 
 def BRA_Relative : Inst16<"bra", OpcodeC0<0b100, 0b000>, Relative>;
 
+///       STZ
+/// zp    64
+/// abs   9C
+/// zp,X  74
+/// abs,X 9E
+
+def STZ_ZeroPage : Inst16<"stz", OpcodeC0<0b011, 0b001>, ZeroPage>;
+def STZ_Absolute : Inst24<"stz", OpcodeC0<0b100, 0b111>, Absolute>;
+def STZ_ZeroPageX : Inst16<"stz", OpcodeC0<0b011, 0b101>, ZeroPageX>;
+def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
+
 } // Predicates = [Has65C02]
 
 // Operand type for basic block and function labels.

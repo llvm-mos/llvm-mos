@@ -64,6 +64,7 @@ public:
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
+  const MOSSubtarget &STI;
   const MOSInstrInfo &TII;
   const MOSRegisterInfo &TRI;
   const MOSRegisterBankInfo &RBI;
@@ -118,7 +119,7 @@ private:
 MOSInstructionSelector::MOSInstructionSelector(const MOSTargetMachine &TM,
                                                MOSSubtarget &STI,
                                                MOSRegisterBankInfo &RBI)
-    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "MOSGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -593,6 +594,11 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
   unsigned AbsOpcode;
   unsigned IdxOpcode;
   unsigned YIndirOpcode;
+  unique_function<MachineInstrBuilder(unsigned)> BuildAbsIdxInstr =
+      [&Builder, &SrcDstOp](unsigned Opcode) {
+        return Builder.buildInstr(Opcode).add(SrcDstOp);
+      };
+
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode.");
@@ -606,6 +612,14 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
     AbsOpcode = MOS::STAbs;
     IdxOpcode = MOS::STIdx;
     YIndirOpcode = MOS::STYIndir;
+    // STZ
+    if (STI.has65C02() && isOperandImmEqual(SrcDstOp, 0, MRI)) {
+      AbsOpcode = MOS::STZ_Absolute;
+      IdxOpcode = MOS::STZIdx;
+      BuildAbsIdxInstr = [&Builder](unsigned Opcode) {
+        return Builder.buildInstr(Opcode);
+      };
+    }
     break;
   }
 
@@ -613,8 +627,7 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
   MachineOperand Offset = MachineOperand::CreateImm(0);
 
   if (matchConstantAddr(Addr, Base, MRI)) {
-    auto Instr =
-        Builder.buildInstr(AbsOpcode).add(SrcDstOp).add(Base).cloneMemRefs(MI);
+    auto Instr = BuildAbsIdxInstr(AbsOpcode).add(Base).cloneMemRefs(MI);
     if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
       return false;
     MI.eraseFromParent();
@@ -628,11 +641,8 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
     Offset.ChangeToImmediate(0);
   } else {
     if (matchIndexed(Addr, Base, Offset, MRI)) {
-      auto Instr = Builder.buildInstr(IdxOpcode)
-                       .add(SrcDstOp)
-                       .add(Base)
-                       .add(Offset)
-                       .cloneMemRefs(MI);
+      auto Instr =
+          BuildAbsIdxInstr(IdxOpcode).add(Base).add(Offset).cloneMemRefs(MI);
       if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
