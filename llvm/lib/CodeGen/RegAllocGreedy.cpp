@@ -203,6 +203,10 @@ class RAGreedy : public MachineFunctionPass,
     /// progress.
     RS_Split2,
 
+    /// (new for M6502) Attempt to widen register classes to hopefully avoid
+    /// spilling.
+    RS_Widen,
+
     /// Live range will be spilled.  No more splitting will be attempted.
     RS_Spill,
 
@@ -592,6 +596,7 @@ const char *const RAGreedy::StageName[] = {
     "RS_Assign",
     "RS_Split",
     "RS_Split2",
+    "RS_Widen",
     "RS_Spill",
     "RS_Memory",
     "RS_Done"
@@ -1818,7 +1823,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     // Remainder interval. Don't try splitting again, spill if it doesn't
     // allocate.
     if (IntvMap[I] == 0) {
-      setStage(Reg, RS_Spill);
+      setStage(Reg, /*RS_Spill*/RS_Widen);
       continue;
     }
 
@@ -2063,7 +2068,7 @@ unsigned RAGreedy::tryBlockSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   for (unsigned I = 0, E = LREdit.size(); I != E; ++I) {
     LiveInterval &LI = LIS->getInterval(LREdit.get(I));
     if (getStage(LI) == RS_New && IntvMap[I] == 0)
-      setStage(LI, RS_Spill);
+      setStage(LI, /*RS_Spill*/RS_Widen);
   }
 
   if (VerifyEnabled)
@@ -2104,6 +2109,8 @@ static unsigned getNumAllocatableRegsForConstraints(
 unsigned
 RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
                               SmallVectorImpl<Register> &NewVRegs) {
+  dbgs() << "tryInstructionSplit " << VirtReg
+         << "\n";
   const TargetRegisterClass *CurRC = MRI->getRegClass(VirtReg.reg());
   // There is no point to this if there are no larger sub-classes.
   if (!RegClassInfo.isProperSubClass(CurRC))
@@ -2496,6 +2503,13 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
     Register PhysReg = tryLocalSplit(VirtReg, Order, NewVRegs);
     if (PhysReg || !NewVRegs.empty())
       return PhysReg;
+    return tryInstructionSplit(VirtReg, Order, NewVRegs);
+  }
+
+  if (getStage(VirtReg) == RS_Widen) {
+    NamedRegionTimer T("widen", "Widen", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
+    SA->analyze(&VirtReg);
     return tryInstructionSplit(VirtReg, Order, NewVRegs);
   }
 
