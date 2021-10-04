@@ -253,6 +253,8 @@ class RAGreedy : public MachineFunctionPass,
   }
 
   void setStage(const LiveInterval &VirtReg, LiveRangeStage Stage) {
+    dbgs() << "setting interval " << VirtReg << " to stage " << StageName[Stage]
+           << "\n";
     ExtraRegInfo.resize(MRI->getNumVirtRegs());
     ExtraRegInfo[VirtReg.reg()].Stage = Stage;
   }
@@ -2066,6 +2068,9 @@ unsigned RAGreedy::tryBlockSplit(LiveInterval &VirtReg, AllocationOrder &Order,
 
   if (VerifyEnabled)
     MF->verify(this, "After splitting live range around basic blocks");
+
+  dbgs() << "Intervals after block split:\n";
+  LIS->dump();
   return 0;
 }
 
@@ -2150,6 +2155,8 @@ RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
 
   // Assign all new registers to RS_Spill. This was the last chance.
   setStage(LREdit.begin(), LREdit.end(), RS_Spill);
+  dbgs() << "Intervals after instruction split:\n";
+  LIS->dump();
   return 0;
 }
 
@@ -2460,6 +2467,9 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
     LLVM_DEBUG(dbgs() << '\n');
   }
   ++NumLocalSplits;
+
+  dbgs() << "Intervals after local split:\n";
+  LIS->dump();
 
   return 0;
 }
