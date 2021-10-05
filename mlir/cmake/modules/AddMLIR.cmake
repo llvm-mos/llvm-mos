@@ -1,3 +1,5 @@
+include(LLVMDistributionSupport)
+
 function(mlir_tablegen ofn)
   tablegen(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
@@ -13,6 +15,7 @@ function(add_mlir_dialect dialect dialect_namespace)
   mlir_tablegen(${dialect}Types.h.inc -gen-typedef-decls)
   mlir_tablegen(${dialect}Types.cpp.inc -gen-typedef-defs)
   mlir_tablegen(${dialect}Dialect.h.inc -gen-dialect-decls -dialect=${dialect_namespace})
+  mlir_tablegen(${dialect}Dialect.cpp.inc -gen-dialect-defs -dialect=${dialect_namespace})
   add_public_tablegen_target(MLIR${dialect}IncGen)
   add_dependencies(mlir-headers MLIR${dialect}IncGen)
 endfunction()
@@ -28,9 +31,9 @@ endfunction()
 
 
 # Generate Documentation
-function(add_mlir_doc doc_filename command output_file output_directory)
+function(add_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
-  tablegen(MLIR ${output_file}.md ${command})
+  tablegen(MLIR ${output_file}.md ${command} ${ARGN})
   set(GEN_DOC_FILE ${MLIR_BINARY_DIR}/docs/${output_directory}${output_file}.md)
   add_custom_command(
           OUTPUT ${GEN_DOC_FILE}
@@ -51,7 +54,7 @@ endfunction()
 #   with large dependencies.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
@@ -128,7 +131,9 @@ function(add_mlir_library name)
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
-    add_mlir_library_install(${name})
+    if(NOT ARG_DISABLE_INSTALL)
+      add_mlir_library_install(${name})
+    endif()
   else()
     # Add empty "phony" target
     add_custom_target(${name})
@@ -141,14 +146,7 @@ endfunction(add_mlir_library)
 # where non-standard library builds can be installed.
 function(add_mlir_library_install name)
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  set(export_to_mlirtargets)
-  if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-      "mlir-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-      NOT LLVM_DISTRIBUTION_COMPONENTS)
-      set(export_to_mlirtargets EXPORT MLIRTargets)
-    set_property(GLOBAL PROPERTY MLIR_HAS_EXPORTS True)
-  endif()
-
+  get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
   install(TARGETS ${name}
     COMPONENT ${name}
     ${export_to_mlirtargets}
@@ -166,10 +164,7 @@ function(add_mlir_library_install name)
   set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
 endfunction()
 
-# Declare an mlir library which is part of the public C-API and will be
-# compiled and exported into libMLIRPublicAPI.so/MLIRPublicAPI.dll.
-# This shared library is built regardless of the overall setting of building
-# libMLIR.so (which exports the C++ implementation).
+# Declare an mlir library which is part of the public C-API.
 function(add_mlir_public_c_api_library name)
   add_mlir_library(${name}
     ${ARGN}
@@ -190,7 +185,6 @@ function(add_mlir_public_c_api_library name)
     PRIVATE
     -DMLIR_CAPI_BUILDING_LIBRARY=1
   )
-  set_property(GLOBAL APPEND PROPERTY MLIR_PUBLIC_C_API_LIBS ${name})
 endfunction()
 
 # Declare the library associated with a dialect.

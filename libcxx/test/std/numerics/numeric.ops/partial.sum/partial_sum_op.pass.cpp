@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // <numeric>
-// UNSUPPORTED: clang-8
-// UNSUPPORTED: gcc-9
 
 // Became constexpr in C++20
 // template<InputIterator InIter,
@@ -102,11 +100,11 @@ test()
 TEST_CONSTEXPR_CXX20 bool
 test()
 {
-    test<input_iterator<const int*>, output_iterator<int*> >();
-    test<input_iterator<const int*>, forward_iterator<int*> >();
-    test<input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<input_iterator<const int*>, random_access_iterator<int*> >();
-    test<input_iterator<const int*>, int*>();
+    test<cpp17_input_iterator<const int*>, output_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, int*>();
 
     test<forward_iterator<const int*>, output_iterator<int*> >();
     test<forward_iterator<const int*>, forward_iterator<int*> >();

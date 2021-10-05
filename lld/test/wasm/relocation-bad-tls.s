@@ -1,11 +1,13 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: not wasm-ld %t.o -o %t.wasm 2>&1 | FileCheck %s
+# RUN: not wasm-ld --shared-memory %t.o -o %t.wasm 2>&1 | FileCheck %s
 
 .globl _start
 _start:
   .functype _start () -> ()
   i32.const foo@TLSREL
   i32.const bar@TLSREL
+  drop
+  drop
   end_function
 
 .section  .data,"",@

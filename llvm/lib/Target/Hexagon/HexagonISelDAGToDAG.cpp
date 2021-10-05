@@ -54,10 +54,9 @@ static cl::opt<bool> CheckSingleUse("hexagon-isel-su", cl::Hidden,
 #define GET_DAGISEL_BODY HexagonDAGToDAGISel
 #include "HexagonGenDAGISel.inc"
 
+namespace llvm {
 /// createHexagonISelDag - This pass converts a legalized DAG into a
 /// Hexagon-specific DAG, ready for instruction scheduling.
-///
-namespace llvm {
 FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOpt::Level OptLevel) {
   return new HexagonDAGToDAGISel(TM, OptLevel);
@@ -991,7 +990,7 @@ void HexagonDAGToDAGISel::ppSimplifyOrSelect0(std::vector<SDNode*> &&Nodes) {
 
     auto IsZero = [] (const SDValue &V) -> bool {
       if (ConstantSDNode *SC = dyn_cast<ConstantSDNode>(V.getNode()))
-        return SC->isNullValue();
+        return SC->isZero();
       return false;
     };
     auto IsSelect0 = [IsZero] (const SDValue &Op) -> bool {

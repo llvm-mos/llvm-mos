@@ -224,10 +224,10 @@ define <2 x half> @chain_hi_to_lo_global() {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    global_load_ushort v0, v[0:1], off
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    global_load_short_d16_hi v0, v[1:2], off
+; GCN-NEXT:    global_load_short_d16_hi v0, v[2:3], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -292,10 +292,10 @@ define <2 x half> @chain_hi_to_lo_flat() {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_load_short_d16_hi v0, v[1:2]
+; GCN-NEXT:    flat_load_short_d16_hi v0, v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -357,8 +357,6 @@ bb:
 define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %in, <2 x i16> addrspace(1)* nocapture %out) #0 {
 ; GFX900-LABEL: vload2_private:
 ; GFX900:       ; %bb.0: ; %entry
-; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s6, s9
-; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s7, 0
 ; GFX900-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX900-NEXT:    s_add_u32 s0, s0, s9
@@ -420,10 +418,6 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ;
 ; GFX10_DEFAULT-LABEL: vload2_private:
 ; GFX10_DEFAULT:       ; %bb.0: ; %entry
-; GFX10_DEFAULT-NEXT:    s_add_u32 s6, s6, s9
-; GFX10_DEFAULT-NEXT:    s_addc_u32 s7, s7, 0
-; GFX10_DEFAULT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
-; GFX10_DEFAULT-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s7
 ; GFX10_DEFAULT-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
 ; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10_DEFAULT-NEXT:    s_add_u32 s0, s0, s9
@@ -695,7 +689,7 @@ define <2 x i16> @chain_hi_to_lo_flat_other_dep(i16 addrspace(0)* %ptr) {
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v0, 2
+; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ushort v2, v[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)

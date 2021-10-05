@@ -15,6 +15,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -655,9 +656,15 @@ public:
   Elf_Word getType() const { return Nhdr.n_type; }
 };
 
-template <class ELFT>
-class Elf_Note_Iterator_Impl
-    : std::iterator<std::forward_iterator_tag, Elf_Note_Impl<ELFT>> {
+template <class ELFT> class Elf_Note_Iterator_Impl {
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = Elf_Note_Impl<ELFT>;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+private:
   // Nhdr being a nullptr marks the end of iteration.
   const Elf_Nhdr_Impl<ELFT> *Nhdr = nullptr;
   size_t RemainingSize = 0u;
@@ -730,8 +737,6 @@ public:
 
 template <class ELFT> struct Elf_CGProfile_Impl {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
-  Elf_Word cgp_from;
-  Elf_Word cgp_to;
   Elf_Xword cgp_weight;
 };
 

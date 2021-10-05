@@ -15,7 +15,6 @@
 
 #include "DNBDefs.h"
 #include "JSONGenerator.h"
-#include "MacOSX/DarwinLog/DarwinLogEvent.h"
 #include "MacOSX/Genealogy.h"
 #include "MacOSX/ThreadInfo.h"
 #include "RNBContext.h"
@@ -108,7 +107,6 @@ nub_bool_t
 DNBProcessSetEnableAsyncProfiling(nub_process_t pid, nub_bool_t enable,
                                   uint64_t interval_usec,
                                   DNBProfileDataScanType scan_type) DNB_EXPORT;
-DarwinLogEventVector DNBProcessGetAvailableDarwinLogEvents(nub_process_t pid);
 
 // Process status
 nub_bool_t DNBProcessIsAlive(nub_process_t pid) DNB_EXPORT;
@@ -239,4 +237,8 @@ nub_bool_t DNBResolveExecutablePath(const char *path, char *resolved_path,
 bool DNBGetOSVersionNumbers(uint64_t *major, uint64_t *minor, uint64_t *patch);
 /// \return the iOSSupportVersion of the host OS.
 std::string DNBGetMacCatalystVersionString();
+
+/// \return true if debugserver is running in translation
+/// (is an x86_64 process on arm64)
+bool DNBDebugserverIsTranslated();
 #endif

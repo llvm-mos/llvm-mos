@@ -479,10 +479,7 @@ void ClangASTSource::FindExternalLexicalDecls(
                    decl->getDeclKindName(), ast_dump);
       }
 
-      Decl *copied_decl = CopyDecl(decl);
-
-      if (!copied_decl)
-        continue;
+      CopyDecl(decl);
 
       // FIXME: We should add the copied decl to the 'decls' list. This would
       // add the copied Decl into the DeclContext and make sure that we
@@ -492,12 +489,6 @@ void ClangASTSource::FindExternalLexicalDecls(
       // lookup issues later on.
       // We can't just add them for now as the ASTImporter already added the
       // decl into the DeclContext and this would add it twice.
-
-      if (FieldDecl *copied_field = dyn_cast<FieldDecl>(copied_decl)) {
-        QualType copied_field_type = copied_field->getType();
-
-        m_ast_importer_sp->RequireCompleteType(copied_field_type);
-      }
     } else {
       SkippedDecls = true;
     }
@@ -850,8 +841,8 @@ void ClangASTSource::FindDeclInModules(NameSearchContext &context,
                                        ConstString name) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  ClangModulesDeclVendor *modules_decl_vendor =
-      m_target->GetClangModulesDeclVendor();
+  std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
+      GetClangModulesDeclVendor();
   if (!modules_decl_vendor)
     return;
 
@@ -983,8 +974,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
            interface_decl->getName(), selector_name);
   SymbolContextList sc_list;
 
-  const bool include_symbols = false;
-  const bool include_inlines = false;
+  ModuleFunctionSearchOptions function_options;
+  function_options.include_symbols = false;
+  function_options.include_inlines = false;
 
   std::string interface_name = interface_decl->getNameAsString();
 
@@ -995,9 +987,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     ConstString instance_method_name(ms.GetString());
 
     sc_list.Clear();
-    m_target->GetImages().FindFunctions(
-        instance_method_name, lldb::eFunctionNameTypeFull, include_symbols,
-        include_inlines, sc_list);
+    m_target->GetImages().FindFunctions(instance_method_name,
+                                        lldb::eFunctionNameTypeFull,
+                                        function_options, sc_list);
 
     if (sc_list.GetSize())
       break;
@@ -1008,9 +1000,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     ConstString class_method_name(ms.GetString());
 
     sc_list.Clear();
-    m_target->GetImages().FindFunctions(
-        class_method_name, lldb::eFunctionNameTypeFull, include_symbols,
-        include_inlines, sc_list);
+    m_target->GetImages().FindFunctions(class_method_name,
+                                        lldb::eFunctionNameTypeFull,
+                                        function_options, sc_list);
 
     if (sc_list.GetSize())
       break;
@@ -1021,9 +1013,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
     SymbolContextList candidate_sc_list;
 
-    m_target->GetImages().FindFunctions(
-        selector_name, lldb::eFunctionNameTypeSelector, include_symbols,
-        include_inlines, candidate_sc_list);
+    m_target->GetImages().FindFunctions(selector_name,
+                                        lldb::eFunctionNameTypeSelector,
+                                        function_options, candidate_sc_list);
 
     for (uint32_t ci = 0, ce = candidate_sc_list.GetSize(); ci != ce; ++ci) {
       SymbolContext candidate_sc;
@@ -1143,8 +1135,8 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     // Check the modules only if the debug information didn't have a complete
     // interface.
 
-    if (ClangModulesDeclVendor *modules_decl_vendor =
-            m_target->GetClangModulesDeclVendor()) {
+    if (std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
+            GetClangModulesDeclVendor()) {
       ConstString interface_name(interface_decl->getNameAsString().c_str());
       bool append = false;
       uint32_t max_matches = 1;
@@ -1313,8 +1305,8 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     // Check the modules only if the debug information didn't have a complete
     // interface.
 
-    ClangModulesDeclVendor *modules_decl_vendor =
-        m_target->GetClangModulesDeclVendor();
+    std::shared_ptr<ClangModulesDeclVendor> modules_decl_vendor =
+        GetClangModulesDeclVendor();
 
     if (!modules_decl_vendor)
       break;
@@ -1503,7 +1495,7 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
 
   LLDB_LOG(log,
            "LayoutRecordType on (ASTContext*){0} '{1}' for (RecordDecl*)"
-           "{3} [name = '{4}']",
+           "{2} [name = '{3}']",
            m_ast_context, m_clang_ast_context->getDisplayName(), record,
            record->getName());
 
@@ -1579,8 +1571,10 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
                                     fe = record->field_end();
          fi != fe; ++fi) {
       LLDB_LOG(log,
-               "LRT     (FieldDecl*){0}, Name = '{1}', Offset = {2} bits",
-               *fi, fi->getName(), field_offsets[*fi]);
+               "LRT     (FieldDecl*){0}, Name = '{1}', Type = '{2}', Offset = "
+               "{3} bits",
+               *fi, fi->getName(), fi->getType().getAsString(),
+               field_offsets[*fi]);
     }
     DeclFromParser<const CXXRecordDecl> parser_cxx_record =
         DynCast<const CXXRecordDecl>(parser_record);
@@ -1749,4 +1743,11 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
     return CompilerType();
 
   return m_clang_ast_context->GetType(copied_qual_type);
+}
+
+std::shared_ptr<ClangModulesDeclVendor>
+ClangASTSource::GetClangModulesDeclVendor() {
+  auto persistent_vars = llvm::cast<ClangPersistentVariables>(
+      m_target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+  return persistent_vars->GetClangModulesDeclVendor();
 }

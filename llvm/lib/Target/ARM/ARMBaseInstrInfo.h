@@ -120,8 +120,7 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
-                                      MachineInstr &MI,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveVariables *LV) const override;
 
   virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
@@ -289,15 +288,15 @@ public:
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                      Register &SrcReg2, int &CmpMask,
-                      int &CmpValue) const override;
+                      Register &SrcReg2, int64_t &CmpMask,
+                      int64_t &CmpValue) const override;
 
   /// optimizeCompareInstr - Convert the instruction to set the zero flag so
   /// that we can remove a "comparison with zero"; Remove a redundant CMP
   /// instruction if the flags can be updated in the same way by an earlier
   /// instruction such as SUB.
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
-                            Register SrcReg2, int CmpMask, int CmpValue,
+                            Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
   bool analyzeSelect(const MachineInstr &MI,
@@ -366,7 +365,9 @@ public:
 
   bool isUnspillableTerminatorImpl(const MachineInstr *MI) const override {
     return MI->getOpcode() == ARM::t2LoopEndDec ||
-           MI->getOpcode() == ARM::t2DoLoopStartTP;
+           MI->getOpcode() == ARM::t2DoLoopStartTP ||
+           MI->getOpcode() == ARM::t2WhileLoopStartLR ||
+           MI->getOpcode() == ARM::t2WhileLoopStartTP;
   }
 
 private:
@@ -642,12 +643,6 @@ static inline bool isJumpTableBranchOpcode(int Opc) {
   return Opc == ARM::BR_JTr || Opc == ARM::BR_JTm_i12 ||
          Opc == ARM::BR_JTm_rs || Opc == ARM::BR_JTadd || Opc == ARM::tBR_JTr ||
          Opc == ARM::t2BR_JT;
-}
-
-static inline bool isLowOverheadTerminatorOpcode(int Opc) {
-  return Opc == ARM::t2DoLoopStartTP || Opc == ARM::t2WhileLoopStart ||
-         Opc == ARM::t2WhileLoopStartLR || Opc == ARM::t2LoopEnd ||
-         Opc == ARM::t2LoopEndDec;
 }
 
 static inline

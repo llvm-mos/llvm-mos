@@ -3627,6 +3627,138 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   }
 }
 
+// Generates the mutual exclusion checks. The checks for parsed attributes are
+// written into OS and the checks for merging declaration attributes are
+// written into MergeOS.
+static void GenerateMutualExclusionsChecks(const Record &Attr,
+                                           const RecordKeeper &Records,
+                                           raw_ostream &OS,
+                                           raw_ostream &MergeDeclOS,
+                                           raw_ostream &MergeStmtOS) {
+  // Find all of the definitions that inherit from MutualExclusions and include
+  // the given attribute in the list of exclusions to generate the
+  // diagMutualExclusion() check.
+  std::vector<Record *> ExclusionsList =
+      Records.getAllDerivedDefinitions("MutualExclusions");
+
+  // We don't do any of this magic for type attributes yet.
+  if (Attr.isSubClassOf("TypeAttr"))
+    return;
+
+  // This means the attribute is either a statement attribute, a decl
+  // attribute, or both; find out which.
+  bool CurAttrIsStmtAttr =
+      Attr.isSubClassOf("StmtAttr") || Attr.isSubClassOf("DeclOrStmtAttr");
+  bool CurAttrIsDeclAttr =
+      !CurAttrIsStmtAttr || Attr.isSubClassOf("DeclOrStmtAttr");
+
+  std::vector<std::string> DeclAttrs, StmtAttrs;
+
+  for (const Record *Exclusion : ExclusionsList) {
+    std::vector<Record *> MutuallyExclusiveAttrs =
+        Exclusion->getValueAsListOfDefs("Exclusions");
+    auto IsCurAttr = [Attr](const Record *R) {
+      return R->getName() == Attr.getName();
+    };
+    if (llvm::any_of(MutuallyExclusiveAttrs, IsCurAttr)) {
+      // This list of exclusions includes the attribute we're looking for, so
+      // add the exclusive attributes to the proper list for checking.
+      for (const Record *AttrToExclude : MutuallyExclusiveAttrs) {
+        if (IsCurAttr(AttrToExclude))
+          continue;
+
+        if (CurAttrIsStmtAttr)
+          StmtAttrs.push_back((AttrToExclude->getName() + "Attr").str());
+        if (CurAttrIsDeclAttr)
+          DeclAttrs.push_back((AttrToExclude->getName() + "Attr").str());
+      }
+    }
+  }
+
+  // If there are any decl or stmt attributes, silence -Woverloaded-virtual
+  // warnings for them both.
+  if (!DeclAttrs.empty() || !StmtAttrs.empty())
+    OS << "  using ParsedAttrInfo::diagMutualExclusion;\n\n";
+
+  // If we discovered any decl or stmt attributes to test for, generate the
+  // predicates for them now.
+  if (!DeclAttrs.empty()) {
+    // Generate the ParsedAttrInfo subclass logic for declarations.
+    OS << "  bool diagMutualExclusion(Sema &S, const ParsedAttr &AL, "
+       << "const Decl *D) const override {\n";
+    for (const std::string &A : DeclAttrs) {
+      OS << "    if (const auto *A = D->getAttr<" << A << ">()) {\n";
+      OS << "      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)"
+         << " << AL << A;\n";
+      OS << "      S.Diag(A->getLocation(), diag::note_conflicting_attribute);";
+      OS << "      \nreturn false;\n";
+      OS << "    }\n";
+    }
+    OS << "    return true;\n";
+    OS << "  }\n\n";
+
+    // Also generate the declaration attribute merging logic if the current
+    // attribute is one that can be inheritted on a declaration. It is assumed
+    // this code will be executed in the context of a function with parameters:
+    // Sema &S, Decl *D, Attr *A and that returns a bool (false on diagnostic,
+    // true on success).
+    if (Attr.isSubClassOf("InheritableAttr")) {
+      MergeDeclOS << "  if (const auto *Second = dyn_cast<"
+                  << (Attr.getName() + "Attr").str() << ">(A)) {\n";
+      for (const std::string &A : DeclAttrs) {
+        MergeDeclOS << "    if (const auto *First = D->getAttr<" << A
+                    << ">()) {\n";
+        MergeDeclOS << "      S.Diag(First->getLocation(), "
+                    << "diag::err_attributes_are_not_compatible) << First << "
+                    << "Second;\n";
+        MergeDeclOS << "      S.Diag(Second->getLocation(), "
+                    << "diag::note_conflicting_attribute);\n";
+        MergeDeclOS << "      return false;\n";
+        MergeDeclOS << "    }\n";
+      }
+      MergeDeclOS << "    return true;\n";
+      MergeDeclOS << "  }\n";
+    }
+  }
+
+  // Statement attributes are a bit different from declarations. With
+  // declarations, each attribute is added to the declaration as it is
+  // processed, and so you can look on the Decl * itself to see if there is a
+  // conflicting attribute. Statement attributes are processed as a group
+  // because AttributedStmt needs to tail-allocate all of the attribute nodes
+  // at once. This means we cannot check whether the statement already contains
+  // an attribute to check for the conflict. Instead, we need to check whether
+  // the given list of semantic attributes contain any conflicts. It is assumed
+  // this code will be executed in the context of a function with parameters:
+  // Sema &S, const SmallVectorImpl<const Attr *> &C. The code will be within a
+  // loop which loops over the container C with a loop variable named A to
+  // represent the current attribute to check for conflicts.
+  //
+  // FIXME: it would be nice not to walk over the list of potential attributes
+  // to apply to the statement more than once, but statements typically don't
+  // have long lists of attributes on them, so re-walking the list should not
+  // be an expensive operation.
+  if (!StmtAttrs.empty()) {
+    MergeStmtOS << "    if (const auto *Second = dyn_cast<"
+                << (Attr.getName() + "Attr").str() << ">(A)) {\n";
+    MergeStmtOS << "      auto Iter = llvm::find_if(C, [](const Attr *Check) "
+                << "{ return isa<";
+    interleave(
+        StmtAttrs, [&](const std::string &Name) { MergeStmtOS << Name; },
+        [&] { MergeStmtOS << ", "; });
+    MergeStmtOS << ">(Check); });\n";
+    MergeStmtOS << "      if (Iter != C.end()) {\n";
+    MergeStmtOS << "        S.Diag((*Iter)->getLocation(), "
+                << "diag::err_attributes_are_not_compatible) << *Iter << "
+                << "Second;\n";
+    MergeStmtOS << "        S.Diag(Second->getLocation(), "
+                << "diag::note_conflicting_attribute);\n";
+    MergeStmtOS << "        return false;\n";
+    MergeStmtOS << "      }\n";
+    MergeStmtOS << "    }\n";
+  }
+}
+
 static void
 emitAttributeMatchRules(PragmaClangAttributeSupport &PragmaAttributeSupport,
                         raw_ostream &OS) {
@@ -3671,14 +3803,8 @@ static void GenerateLangOptRequirements(const Record &R,
   if (LangOpts.empty())
     return;
 
-  OS << "bool diagLangOpts(Sema &S, const ParsedAttr &Attr) ";
-  OS << "const override {\n";
-  OS << "  auto &LangOpts = S.LangOpts;\n";
-  OS << "  if (" << GenerateTestExpression(LangOpts) << ")\n";
-  OS << "    return true;\n\n";
-  OS << "  S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) ";
-  OS << "<< Attr;\n";
-  OS << "  return false;\n";
+  OS << "bool acceptsLangOpts(const LangOptions &LangOpts) const override {\n";
+  OS << "  return " << GenerateTestExpression(LangOpts) << ";\n";
   OS << "}\n\n";
 }
 
@@ -3775,6 +3901,8 @@ static bool IsKnownToGCC(const Record &Attr) {
 void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Parsed attribute helpers", OS);
 
+  OS << "#if !defined(WANT_DECL_MERGE_LOGIC) && "
+     << "!defined(WANT_STMT_MERGE_LOGIC)\n";
   PragmaClangAttributeSupport &PragmaAttributeSupport =
       getPragmaAttributeSupport(Records);
 
@@ -3794,6 +3922,12 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
       if (Subject->isSubClassOf("SubsetSubject"))
         GenerateCustomAppertainsTo(*Subject, OS);
   }
+
+  // This stream is used to collect all of the declaration attribute merging
+  // logic for performing mutual exclusion checks. This gets emitted at the
+  // end of the file in a helper function of its own.
+  std::string DeclMergeChecks, StmtMergeChecks;
+  raw_string_ostream MergeDeclOS(DeclMergeChecks), MergeStmtOS(StmtMergeChecks);
 
   // Generate a ParsedAttrInfo struct for each of the attributes.
   for (auto I = Attrs.begin(), E = Attrs.end(); I != E; ++I) {
@@ -3825,6 +3959,27 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
       }
       OS << "};\n";
     }
+
+    std::vector<std::string> ArgNames;
+    for (const auto &Arg : Attr.getValueAsListOfDefs("Args")) {
+      bool UnusedUnset;
+      if (Arg->getValueAsBitOrUnset("Fake", UnusedUnset))
+        continue;
+      ArgNames.push_back(Arg->getValueAsString("Name").str());
+      for (const auto &Class : Arg->getSuperClasses()) {
+        if (Class.first->getName().startswith("Variadic")) {
+          ArgNames.back().append("...");
+          break;
+        }
+      }
+    }
+    if (!ArgNames.empty()) {
+      OS << "static constexpr const char *" << I->first << "ArgNames[] = {\n";
+      for (const auto &N : ArgNames)
+        OS << '"' << N << "\",";
+      OS << "};\n";
+    }
+
     OS << "struct ParsedAttrInfo" << I->first
        << " final : public ParsedAttrInfo {\n";
     OS << "  ParsedAttrInfo" << I->first << "() {\n";
@@ -3846,8 +4001,11 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     OS << PragmaAttributeSupport.isAttributedSupported(*I->second) << ";\n";
     if (!Spellings.empty())
       OS << "    Spellings = " << I->first << "Spellings;\n";
+    if (!ArgNames.empty())
+      OS << "    ArgNames = " << I->first << "ArgNames;\n";
     OS << "  }\n";
     GenerateAppertainsTo(Attr, OS);
+    GenerateMutualExclusionsChecks(Attr, Records, OS, MergeDeclOS, MergeStmtOS);
     GenerateLangOptRequirements(Attr, OS);
     GenerateTargetRequirements(Attr, Dupes, OS);
     GenerateSpellingIndexToSemanticSpelling(Attr, OS);
@@ -3867,6 +4025,28 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
   // Generate the attribute match rules.
   emitAttributeMatchRules(PragmaAttributeSupport, OS);
+
+  OS << "#elif defined(WANT_DECL_MERGE_LOGIC)\n\n";
+
+  // Write out the declaration merging check logic.
+  OS << "static bool DiagnoseMutualExclusions(Sema &S, const NamedDecl *D, "
+     << "const Attr *A) {\n";
+  OS << MergeDeclOS.str();
+  OS << "  return true;\n";
+  OS << "}\n\n";
+
+  OS << "#elif defined(WANT_STMT_MERGE_LOGIC)\n\n";
+
+  // Write out the statement merging check logic.
+  OS << "static bool DiagnoseMutualExclusions(Sema &S, "
+     << "const SmallVectorImpl<const Attr *> &C) {\n";
+  OS << "  for (const Attr *A : C) {\n";
+  OS << MergeStmtOS.str();
+  OS << "  }\n";
+  OS << "  return true;\n";
+  OS << "}\n\n";
+
+  OS << "#endif\n";
 }
 
 // Emits the kind list of parsed attributes
@@ -4045,6 +4225,24 @@ void EmitClangAttrParserStringSwitches(RecordKeeper &Records,
 void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
                                                         raw_ostream &OS) {
   getPragmaAttributeSupport(Records).generateParsingHelpers(OS);
+}
+
+void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("Clang attribute documentation", OS);
+
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+  for (const auto *A : Attrs) {
+    if (!A->getValueAsBit("ASTNode"))
+      continue;
+    std::vector<Record *> Docs = A->getValueAsListOfDefs("Documentation");
+    assert(!Docs.empty());
+    // Only look at the first documentation if there are several.
+    // (Currently there's only one such attr, revisit if this becomes common).
+    StringRef Text =
+        Docs.front()->getValueAsOptionalString("Content").getValueOr("");
+    OS << "\nstatic const char AttrDoc_" << A->getName() << "[] = "
+       << "R\"reST(" << Text.trim() << ")reST\";\n";
+  }
 }
 
 enum class SpellingKind {

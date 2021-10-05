@@ -27,6 +27,7 @@
 namespace clang {
 class SourceManager;
 class Decl;
+class DynTypedNode;
 
 namespace clangd {
 
@@ -121,6 +122,9 @@ QualType declaredType(const TypeDecl *D);
 /// If the type is an undeduced auto, returns the type itself.
 llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
 
+/// Return attributes attached directly to a node.
+std::vector<const Attr *> getAttributes(const DynTypedNode &);
+
 /// Gets the nested name specifier necessary for spelling \p ND in \p
 /// DestContext, at \p InsertionPoint. It selects the shortest suffix of \p ND
 /// such that it is visible in \p DestContext.
@@ -170,6 +174,12 @@ std::string getQualification(ASTContext &Context,
 /// This means x has "unique external" linkage. If we computed linkage above,
 /// the cached value is incorrect. (clang catches this with an assertion).
 bool hasUnstableLinkage(const Decl *D);
+
+/// Checks whether \p D is more than \p MaxDepth away from translation unit
+/// scope.
+/// This is useful for limiting traversals to keep operation latencies
+/// reasonable.
+bool isDeeplyNested(const Decl *D, unsigned MaxDepth = 10);
 
 } // namespace clangd
 } // namespace clang

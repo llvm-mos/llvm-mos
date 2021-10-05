@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -69,7 +70,13 @@ namespace {
   public:
     static char ID;
 
-    RegAllocFast() : MachineFunctionPass(ID), StackSlotForVirtReg(-1) {}
+    RegAllocFast(const RegClassFilterFunc F = allocateAllRegClasses,
+                 bool ClearVirtRegs_ = true) :
+      MachineFunctionPass(ID),
+      ShouldAllocateClass(F),
+      StackSlotForVirtReg(-1),
+      ClearVirtRegs(ClearVirtRegs_) {
+    }
 
   private:
     MachineFrameInfo *MFI;
@@ -77,12 +84,15 @@ namespace {
     const TargetRegisterInfo *TRI;
     const TargetInstrInfo *TII;
     RegisterClassInfo RegClassInfo;
+    const RegClassFilterFunc ShouldAllocateClass;
 
     /// Basic block currently being allocated.
     MachineBasicBlock *MBB;
 
     /// Maps virtual regs to the frame index where these values are spilled.
     IndexedMap<int, VirtReg2IndexFunctor> StackSlotForVirtReg;
+
+    bool ClearVirtRegs;
 
     /// Everything we know about a live virtual register.
     struct LiveReg {
@@ -147,6 +157,8 @@ namespace {
     RegUnitSet UsedInInstr;
     RegUnitSet PhysRegUses;
     SmallVector<uint16_t, 8> DefOperandIndexes;
+    // Register masks attached to the current instruction.
+    SmallVector<const uint32_t *> RegMasks;
 
     void setPhysRegState(MCPhysReg PhysReg, unsigned NewState);
     bool isPhysRegFree(MCPhysReg PhysReg) const;
@@ -157,8 +169,17 @@ namespace {
         UsedInInstr.insert(*Units);
     }
 
+    // Check if physreg is clobbered by instruction's regmask(s).
+    bool isClobberedByRegMasks(MCPhysReg PhysReg) const {
+      return llvm::any_of(RegMasks, [PhysReg](const uint32_t *Mask) {
+        return MachineOperand::clobbersPhysReg(Mask, PhysReg);
+      });
+    }
+
     /// Check if a physreg or any of its aliases are used in this instruction.
     bool isRegUsedInInstr(MCPhysReg PhysReg, bool LookAtPhysRegUses) const {
+      if (LookAtPhysRegUses && isClobberedByRegMasks(PhysReg))
+        return true;
       for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
         if (UsedInInstr.count(*Units))
           return true;
@@ -202,8 +223,12 @@ namespace {
     }
 
     MachineFunctionProperties getSetProperties() const override {
-      return MachineFunctionProperties().set(
+      if (ClearVirtRegs) {
+        return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::NoVRegs);
+      }
+
+      return MachineFunctionProperties();
     }
 
     MachineFunctionProperties getClearedProperties() const override {
@@ -1088,6 +1113,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
   //   operands and early-clobbers.
 
   UsedInInstr.clear();
+  RegMasks.clear();
   BundleVirtRegsMap.clear();
 
   // Scan for special cases; Apply pre-assigned register defs to state.
@@ -1127,6 +1153,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
       }
     } else if (MO.isRegMask()) {
       HasRegMask = true;
+      RegMasks.push_back(MO.getRegMask());
     }
   }
 
@@ -1242,6 +1269,9 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
         continue;
       }
 
+      assert((!MO.isTied() || !isClobberedByRegMasks(MO.getReg())) &&
+             "tied def assigned to clobbered register");
+
       // Do not free tied operands and early clobbers.
       if (MO.isTied() || MO.isEarlyClobber())
         continue;
@@ -1258,19 +1288,16 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
   // Displace clobbered registers.
   if (HasRegMask) {
-    for (const MachineOperand &MO : MI.operands()) {
-      if (MO.isRegMask()) {
-        // MRI bookkeeping.
-        MRI->addPhysRegsUsedFromRegMask(MO.getRegMask());
+    assert(!RegMasks.empty() && "expected RegMask");
+    // MRI bookkeeping.
+    for (const auto *RM : RegMasks)
+      MRI->addPhysRegsUsedFromRegMask(RM);
 
-        // Displace clobbered registers.
-        const uint32_t *Mask = MO.getRegMask();
-        for (const LiveReg &LR : LiveVirtRegs) {
-          MCPhysReg PhysReg = LR.PhysReg;
-          if (PhysReg != 0 && MachineOperand::clobbersPhysReg(Mask, PhysReg))
-            displacePhysReg(MI, PhysReg);
-        }
-      }
+    // Displace clobbered registers.
+    for (const LiveReg &LR : LiveVirtRegs) {
+      MCPhysReg PhysReg = LR.PhysReg;
+      if (PhysReg != 0 && isClobberedByRegMasks(PhysReg))
+        displacePhysReg(MI, PhysReg);
     }
   }
 
@@ -1439,10 +1466,8 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
   RegUnitStates.assign(TRI->getNumRegUnits(), regFree);
   assert(LiveVirtRegs.empty() && "Mapping not cleared from last block?");
 
-  for (MachineBasicBlock *Succ : MBB.successors()) {
-    for (const MachineBasicBlock::RegisterMaskPair &LI : Succ->liveins())
-      setPhysRegState(LI.PhysReg, regPreAssigned);
-  }
+  for (auto &LiveReg : MBB.liveouts())
+    setPhysRegState(LiveReg.PhysReg, regPreAssigned);
 
   Coalesced.clear();
 
@@ -1528,9 +1553,11 @@ bool RegAllocFast::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     allocateBasicBlock(MBB);
 
-  // All machine operands and other references to virtual registers have been
-  // replaced. Remove the virtual registers.
-  MRI->clearVirtRegs();
+  if (ClearVirtRegs) {
+    // All machine operands and other references to virtual registers have been
+    // replaced. Remove the virtual registers.
+    MRI->clearVirtRegs();
+  }
 
   StackSlotForVirtReg.clear();
   LiveDbgValueMap.clear();
@@ -1539,4 +1566,10 @@ bool RegAllocFast::runOnMachineFunction(MachineFunction &MF) {
 
 FunctionPass *llvm::createFastRegisterAllocator() {
   return new RegAllocFast();
+}
+
+FunctionPass *llvm::createFastRegisterAllocator(
+  std::function<bool(const TargetRegisterInfo &TRI,
+                     const TargetRegisterClass &RC)> Ftor, bool ClearVirtRegs) {
+  return new RegAllocFast(Ftor, ClearVirtRegs);
 }

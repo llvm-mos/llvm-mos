@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -77,13 +78,14 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
     Str = Str.substr(0, Str.size()-1);
 
   // If the output streamer does not have mature MC support or the integrated
-  // assembler has been disabled, just emit the blob textually.
+  // assembler has been disabled or not required, just emit the blob textually.
   // Otherwise parse the asm and emit it via MC support.
   // This is useful in case the asm parser doesn't handle something but the
   // system assembler does.
   const MCAsmInfo *MCAI = TM.getMCAsmInfo();
   assert(MCAI && "No MCAsmInfo");
   if (!MCAI->useIntegratedAssembler() &&
+      !MCAI->parseInlineAsmUsingAsmParser() &&
       !OutStreamer->isIntegratedAssemblerRequired()) {
     emitInlineAsmStart();
     OutStreamer->emitRawText(Str);
@@ -128,7 +130,7 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
 
 static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
                                MachineModuleInfo *MMI, AsmPrinter *AP,
-                               unsigned LocCookie, raw_ostream &OS) {
+                               uint64_t LocCookie, raw_ostream &OS) {
   // Switch to the inline assembly variant.
   OS << "\t.intel_syntax\n\t";
 
@@ -269,14 +271,16 @@ static void EmitMSInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
 }
 
 static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
-                                MachineModuleInfo *MMI, int AsmPrinterVariant,
-                                AsmPrinter *AP, unsigned LocCookie,
+                                MachineModuleInfo *MMI, const MCAsmInfo *MAI,
+                                AsmPrinter *AP, uint64_t LocCookie,
                                 raw_ostream &OS) {
   int CurVariant = -1;            // The number of the {.|.|.} region we are in.
   const char *LastEmitted = AsmStr; // One past the last character emitted.
   unsigned NumOperands = MI->getNumOperands();
+  int AsmPrinterVariant = MAI->getAssemblerDialect();
 
-  OS << '\t';
+  if (MAI->getEmitGNUAsmStartIndentationMarker())
+    OS << '\t';
 
   while (*LastEmitted) {
     switch (*LastEmitted) {
@@ -479,7 +483,7 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
 
   // Get the !srcloc metadata node if we have it, and decode the loc cookie from
   // it.
-  unsigned LocCookie = 0;
+  uint64_t LocCookie = 0;
   const MDNode *LocMD = nullptr;
   for (unsigned i = MI->getNumOperands(); i != 0; --i) {
     if (MI->getOperand(i-1).isMetadata() &&
@@ -498,11 +502,9 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   SmallString<256> StringData;
   raw_svector_ostream OS(StringData);
 
-  // The variant of the current asmprinter.
-  int AsmPrinterVariant = MAI->getAssemblerDialect();
   AsmPrinter *AP = const_cast<AsmPrinter*>(this);
   if (MI->getInlineAsmDialect() == InlineAsm::AD_ATT)
-    EmitGCCInlineAsmStr(AsmStr, MI, MMI, AsmPrinterVariant, AP, LocCookie, OS);
+    EmitGCCInlineAsmStr(AsmStr, MI, MMI, MAI, AP, LocCookie, OS);
   else
     EmitMSInlineAsmStr(AsmStr, MI, MMI, AP, LocCookie, OS);
 
@@ -527,11 +529,6 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   }
 
   if (!RestrRegs.empty()) {
-    unsigned BufNum = addInlineAsmDiagBuffer(OS.str(), LocMD);
-    auto &SrcMgr = *MMI->getContext().getInlineSourceManager();
-    SMLoc Loc = SMLoc::getFromPointer(
-        SrcMgr.getMemoryBuffer(BufNum)->getBuffer().begin());
-
     std::string Msg = "inline asm clobber list contains reserved registers: ";
     ListSeparator LS;
     for (const Register &RR : RestrRegs) {
@@ -542,8 +539,10 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
         "Reserved registers on the clobber list may not be "
         "preserved across the asm statement, and clobbering them may "
         "lead to undefined behaviour.";
-    SrcMgr.PrintMessage(Loc, SourceMgr::DK_Warning, Msg);
-    SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note, Note);
+    MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
+        LocCookie, Msg, DiagnosticSeverity::DS_Warning));
+    MMI->getModule()->getContext().diagnose(
+        DiagnosticInfoInlineAsm(LocCookie, Note, DiagnosticSeverity::DS_Note));
   }
 
   emitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,
@@ -589,7 +588,7 @@ void AsmPrinter::PrintSpecial(const MachineInstr *MI, raw_ostream &OS,
 
 void AsmPrinter::PrintSymbolOperand(const MachineOperand &MO, raw_ostream &OS) {
   assert(MO.isGlobal() && "caller should check MO.isGlobal");
-  getSymbol(MO.getGlobal())->print(OS, MAI);
+  getSymbolPreferLocal(*MO.getGlobal())->print(OS, MAI);
   printOffset(MO.getOffset(), OS);
 }
 

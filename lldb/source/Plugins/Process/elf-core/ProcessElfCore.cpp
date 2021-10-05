@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include <memory>
 #include <mutex>
@@ -112,8 +112,6 @@ ProcessElfCore::~ProcessElfCore() {
 
 // PluginInterface
 ConstString ProcessElfCore::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t ProcessElfCore::GetPluginVersion() { return 1; }
 
 lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
     const elf::ELFProgramHeader &header) {
@@ -404,12 +402,8 @@ lldb::addr_t ProcessElfCore::GetImageInfoAddress() {
 // Parse a FreeBSD NT_PRSTATUS note - see FreeBSD sys/procfs.h for details.
 static void ParseFreeBSDPrStatus(ThreadData &thread_data,
                                  const DataExtractor &data,
-                                 const ArchSpec &arch) {
+                                 bool lp64) {
   lldb::offset_t offset = 0;
-  bool lp64 = (arch.GetMachine() == llvm::Triple::aarch64 ||
-               arch.GetMachine() == llvm::Triple::mips64 ||
-               arch.GetMachine() == llvm::Triple::ppc64 ||
-               arch.GetMachine() == llvm::Triple::x86_64);
   int pr_version = data.GetU32(&offset);
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
@@ -431,6 +425,27 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
 
   size_t len = data.GetByteSize() - offset;
   thread_data.gpregset = DataExtractor(data, offset, len);
+}
+
+// Parse a FreeBSD NT_PRPSINFO note - see FreeBSD sys/procfs.h for details.
+static void ParseFreeBSDPrPsInfo(ProcessElfCore &process,
+                                 const DataExtractor &data,
+                                 bool lp64) {
+  lldb::offset_t offset = 0;
+  int pr_version = data.GetU32(&offset);
+
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  if (log) {
+    if (pr_version > 1)
+      LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
+  }
+
+  // Skip pr_psinfosz, pr_fname, pr_psargs
+  offset += 108;
+  if (lp64)
+    offset += 4;
+
+  process.SetID(data.GetU32(&offset)); // pr_pid
 }
 
 static llvm::Error ParseNetBSDProcInfo(const DataExtractor &data,
@@ -502,9 +517,8 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 
     size_t note_start = offset;
     size_t note_size = llvm::alignTo(note.n_descsz, 4);
-    DataExtractor note_data(segment, note_start, note_size);
 
-    result.push_back({note, note_data});
+    result.push_back({note, DataExtractor(segment, note_start, note_size)});
     offset += note_size;
   }
 
@@ -512,6 +526,11 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 }
 
 llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
+  ArchSpec arch = GetArchitecture();
+  bool lp64 = (arch.GetMachine() == llvm::Triple::aarch64 ||
+               arch.GetMachine() == llvm::Triple::mips64 ||
+               arch.GetMachine() == llvm::Triple::ppc64 ||
+               arch.GetMachine() == llvm::Triple::x86_64);
   bool have_prstatus = false;
   bool have_prpsinfo = false;
   ThreadData thread_data;
@@ -532,10 +551,11 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     switch (note.info.n_type) {
     case ELF::NT_PRSTATUS:
       have_prstatus = true;
-      ParseFreeBSDPrStatus(thread_data, note.data, GetArchitecture());
+      ParseFreeBSDPrStatus(thread_data, note.data, lp64);
       break;
     case ELF::NT_PRPSINFO:
       have_prpsinfo = true;
+      ParseFreeBSDPrPsInfo(*this, note.data, lp64);
       break;
     case ELF::NT_FREEBSD_THRMISC: {
       lldb::offset_t offset = 0;
@@ -633,6 +653,32 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
                 llvm::inconvertibleErrorCode());
           had_nt_regs = true;
         } else if (note.info.n_type == NETBSD::AARCH64::NT_FPREGS) {
+          if (!had_nt_regs || tid != thread_data.tid)
+            return llvm::make_error<llvm::StringError>(
+                "Error parsing NetBSD core(5) notes: Unexpected order "
+                "of NOTEs PT_GETFPREG before PT_GETREG",
+                llvm::inconvertibleErrorCode());
+          thread_data.notes.push_back(note);
+        }
+      } break;
+      case llvm::Triple::x86: {
+        // Assume order PT_GETREGS, PT_GETFPREGS
+        if (note.info.n_type == NETBSD::I386::NT_REGS) {
+          // If this is the next thread, push the previous one first.
+          if (had_nt_regs) {
+            m_thread_data.push_back(thread_data);
+            thread_data = ThreadData();
+            had_nt_regs = false;
+          }
+
+          thread_data.gpregset = note.data;
+          thread_data.tid = tid;
+          if (thread_data.gpregset.GetByteSize() == 0)
+            return llvm::make_error<llvm::StringError>(
+                "Could not find general purpose registers note in core file.",
+                llvm::inconvertibleErrorCode());
+          had_nt_regs = true;
+        } else if (note.info.n_type == NETBSD::I386::NT_FPREGS) {
           if (!had_nt_regs || tid != thread_data.tid)
             return llvm::make_error<llvm::StringError>(
                 "Error parsing NetBSD core(5) notes: Unexpected order "
@@ -848,7 +894,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
 /// A note segment consists of one or more NOTE entries, but their types and
 /// meaning differ depending on the OS.
 llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
-    const elf::ELFProgramHeader &segment_header, DataExtractor segment_data) {
+    const elf::ELFProgramHeader &segment_header,
+    const DataExtractor &segment_data) {
   assert(segment_header.p_type == llvm::ELF::PT_NOTE);
 
   auto notes_or_error = parseSegment(segment_data);

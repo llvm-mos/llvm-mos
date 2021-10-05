@@ -1,18 +1,13 @@
 import lldb
+from intelpt_testcase import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
-class TestTraceLoad(TestBase):
+class TestTraceLoad(TraceIntelPTTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
-
-    def setUp(self):
-        TestBase.setUp(self)
-        if 'intel-pt' not in configuration.enabled_plugins:
-            self.skipTest("The intel-pt test plugin is not enabled")
-
 
     def testLoadTrace(self):
         src_dir = self.getSourceDir()
@@ -38,7 +33,10 @@ class TestTraceLoad(TestBase):
         # check that the Process and Thread objects were created correctly
         self.expect("thread info", substrs=["tid = 3842849"])
         self.expect("thread list", substrs=["Process 1234 stopped", "tid = 3842849"])
+        self.expect("thread trace dump info", substrs=['''Trace technology: intel-pt
 
+thread #1: tid = 3842849
+  Raw trace size: 4096 bytes'''])
 
     def testLoadInvalidTraces(self):
         src_dir = self.getSourceDir()
@@ -59,7 +57,7 @@ Schema:
 {
   "trace": {
     "type": "intel-pt",
-    "pt_cpu": {
+    "cpuInfo": {
       "vendor": "intel" | "unknown",
       "family": integer,
       "model": integer,
@@ -73,13 +71,13 @@ Schema:
 
         # Now we test a missing field in the intel-pt settings
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad4.json"), error=True,
-            substrs=['''error: missing value at traceSession.trace.pt_cpu.family
+            substrs=['''error: missing value at traceSession.trace.cpuInfo.family
 
 Context:
 {
   "processes": [],
   "trace": {
-    "pt_cpu": /* error: missing value */ {
+    "cpuInfo": /* error: missing value */ {
       "model": 79,
       "stepping": 1,
       "vendor": "intel"

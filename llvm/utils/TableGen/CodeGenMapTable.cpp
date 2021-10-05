@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// CodeGenMapTable provides functionality for the TabelGen to create
+// CodeGenMapTable provides functionality for the TableGen to create
 // relation mapping between instructions. Relation models are defined using
 // InstrMapping as a base class. This file implements the functionality which
 // parses these definitions and generates relation maps using the information
@@ -318,11 +318,10 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
   ListInit *ColFields = InstrMapDesc.getColFields();
   Record *MatchInstr = nullptr;
 
-  for (unsigned i = 0, e = RelatedInstrVec.size(); i < e; i++) {
+  for (llvm::Record *CurInstr : RelatedInstrVec) {
     bool MatchFound = true;
-    Record *CurInstr = RelatedInstrVec[i];
     for (unsigned j = 0, endCF = ColFields->size();
-        (j < endCF) && MatchFound; j++) {
+         (j < endCF) && MatchFound; j++) {
       Init *ColFieldJ = ColFields->getElement(j);
       Init *CurInstrInit = CurInstr->getValue(ColFieldJ)->getValue();
       std::string CurInstrVal = CurInstrInit->getAsUnquotedString();
@@ -342,8 +341,9 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
         }
 
         PrintFatalError("Multiple matches found for `" + KeyInstr->getName() +
-              "', for the relation `" + InstrMapDesc.getName() + "', row fields [" +
-              KeyValueStr + "], column `" + CurValueCol->getAsString() + "'");
+                        "', for the relation `" + InstrMapDesc.getName() +
+                        "', row fields [" + KeyValueStr + "], column `" +
+                        CurValueCol->getAsString() + "'");
       }
       MatchInstr = CurInstr;
     }

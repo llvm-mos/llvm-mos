@@ -54,7 +54,7 @@ struct MemMemTable {
   void Add(const uint8_t *Data, size_t Size) {
     if (Size <= 2) return;
     Size = std::min(Size, Word::GetMaxSize());
-    size_t Idx = SimpleFastHash(Data, Size) % kSize;
+    auto Idx = SimpleFastHash(Data, Size) % kSize;
     MemMemWords[Idx].Set(Data, Size);
   }
   const Word &Get(size_t Idx) {
@@ -169,7 +169,7 @@ private:
   size_t NumPCTables;
   size_t NumPCsInPCTables;
 
-  Set<const PCTableEntry*> ObservedPCs;
+  std::set<const PCTableEntry *> ObservedPCs;
   std::unordered_map<uintptr_t, uintptr_t> ObservedFuncs;  // PC => Counter.
 
   uint8_t *FocusFunctionCounterPtr = nullptr;

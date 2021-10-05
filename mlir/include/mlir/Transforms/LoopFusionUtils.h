@@ -35,6 +35,7 @@ struct FusionResult {
     FailBlockDependence,  // Fusion would violate another dependence in block.
     FailFusionDependence, // Fusion would reverse dependences between loops.
     FailComputationSlice, // Unable to compute src loop computation slice.
+    FailIncorrectSlice,   // Slice is computed, but it is incorrect.
   } value;
   FusionResult(ResultEnum v) : value(v) {}
 };
@@ -113,10 +114,13 @@ canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp, unsigned dstLoopDepth,
              ComputationSliceState *srcSlice,
              FusionStrategy fusionStrategy = FusionStrategy::Generic);
 
-/// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion point
-/// and source slice loop bounds specified in 'srcSlice'.
+/// Fuses 'srcForOp' into 'dstForOp' with destination loop block insertion
+/// point and source slice loop bounds specified in 'srcSlice'.
+/// `isInnermostSiblingInsertionFusion` enables cleanup of `srcForOp that is a
+/// single-iteration reduction loop being sibling-fused into a 'dstForOp'.
 void fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
-               const ComputationSliceState &srcSlice);
+               const ComputationSliceState &srcSlice,
+               bool isInnermostSiblingInsertionFusion = false);
 
 /// LoopNestStats aggregates various per-loop statistics (eg. loop trip count
 /// and operation count) for a loop nest up until (and including) the innermost

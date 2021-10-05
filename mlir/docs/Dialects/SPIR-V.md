@@ -92,8 +92,8 @@ The SPIR-V dialect adopts the following conventions for IR:
     (de)serialization.
 *   Ops with `mlir.snake_case` names are those that have no corresponding
     instructions (or concepts) in the binary format. They are introduced to
-    satisfy MLIR structural requirements. For example, `spv.mlir.endmodule` and
-    `spv.mlir.merge`. They map to no instructions during (de)serialization.
+    satisfy MLIR structural requirements. For example, `spv.mlir.merge`. They
+    map to no instructions during (de)serialization.
 
 (TODO: consider merging the last two cases and adopting `spv.mlir.` prefix for
 them.)
@@ -932,9 +932,15 @@ The attribute has a few fields:
 *   Binding number for the corresponding resource variable.
 *   Storage class for the corresponding resource variable.
 
-The SPIR-V dialect provides a [`LowerABIAttributesPass`][MlirSpirvPasses] for
-consuming these attributes and create SPIR-V module complying with the
-interface.
+The SPIR-V dialect provides a [`LowerABIAttributesPass`][MlirSpirvPasses] that
+uses this information to lower the entry point function and its ABI consistent
+with the Vulkan validation rules. Specifically,
+
+*   Creates `spv.GlobalVariable`s for the arguments, and replaces all uses of
+    the argument with this variable. The SSA value used for replacement is
+    obtained using the `spv.mlir.addressof` operation.
+*   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
+    `spv.module` for the entry function.
 
 ## Serialization and deserialization
 
@@ -1052,28 +1058,7 @@ is obtained from the layout specification of the memref. The storage class of
 the pointer type are derived from the memref's memory space with
 `SPIRVTypeConverter::getStorageClassForMemorySpace()`.
 
-### `SPIRVOpLowering`
-
-`mlir::SPIRVOpLowering` is a base class that can be used to define the patterns
-used for implementing the lowering. For now this only provides derived classes
-access to an instance of `mlir::SPIRVTypeLowering` class.
-
 ### Utility functions for lowering
-
-#### Setting shader interface
-
-The method `mlir::spirv::setABIAttrs` allows setting the [shader interface
-attributes](#shader-interface-abi) for a function that is to be an entry
-point function within the `spv.module` on lowering. A later pass
-`mlir::spirv::LowerABIAttributesPass` uses this information to lower the entry
-point function and its ABI consistent with the Vulkan validation
-rules. Specifically,
-
-*   Creates `spv.GlobalVariable`s for the arguments, and replaces all uses of
-    the argument with this variable. The SSA value used for replacement is
-    obtained using the `spv.mlir.addressof` operation.
-*   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
-    `spv.module` for the entry function.
 
 #### Setting layout for shader interface variables
 
@@ -1403,20 +1388,19 @@ dialect.
 [MlirDialectConversion]: ../DialectConversion.md
 [StructType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#Structure
 [SpirvTools]: https://github.com/KhronosGroup/SPIRV-Tools
-[Rationale]: ../Rationale/#block-arguments-vs-phi-nodes
+[Rationale]: ../Rationale/Rationale.md/#block-arguments-vs-phi-nodes
 [ODS]: ../OpDefinitions.md
 [GreedyPatternRewriter]: https://github.com/llvm/llvm-project/blob/main/mlir/lib/Transforms/Utils/GreedyPatternRewriteDriver.cpp
-[MlirDialectConversionTypeConversion]: ../DialectConversion.md#type-converter
-[MlirDialectConversionRewritePattern]: ../DialectConversion.md#conversion-patterns
-[MlirDialectConversionSignatureConversion]: ../DialectConversion.md#region-signature-conversion
+[MlirDialectConversionTypeConversion]: ../DialectConversion.md/#type-converter
+[MlirDialectConversionRewritePattern]: ../DialectConversion.md/#conversion-patterns
+[MlirDialectConversionSignatureConversion]: ../DialectConversion.md/#region-signature-conversion
 [MlirOpInterface]: ../Interfaces/#operation-interfaces
-[MlirIntegerType]: ../LangRef.md#integer-type
-[MlirFloatType]: ../LangRef.md#floating-point-types
-[MlirVectorType]: ../LangRef.md#vector-type
-[MlirMemrefType]: ../LangRef.md#memref-type
-[MlirIndexType]: ../LangRef.md#index-type
-[MlirGpuDialect]: ../Dialects/GPU.md
-[MlirStandardDialect]: ../Dialects/Standard.md
+[MlirIntegerType]: Builtin.md/#integertype
+[MlirVectorType]: Builtin.md/#vectortype
+[MlirMemrefType]: Builtin.md/#memreftype
+[MlirIndexType]: Builtin.md/#indextype
+[MlirGpuDialect]: GPU.md
+[MlirStandardDialect]: Standard.md
 [MlirSpirvHeaders]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Dialect/SPIRV
 [MlirSpirvLibs]: https://github.com/llvm/llvm-project/tree/main/mlir/lib/Dialect/SPIRV
 [MlirSpirvTests]: https://github.com/llvm/llvm-project/tree/main/mlir/test/Dialect/SPIRV

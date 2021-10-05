@@ -118,6 +118,14 @@ protected:
   /// the current PC.  Defaults to false.
   bool DollarIsPC = false;
 
+  /// Allow '.' token, when not referencing an identifier or constant, to refer
+  /// to the current PC. Defaults to true.
+  bool DotIsPC = true;
+
+  /// Whether the '*' token refers to the current PC. This is used for the
+  /// HLASM dialect.
+  bool StarIsPC = false;
+
   /// The '$' token, when followed immediately by hex characters, refers to
   /// a hex constant.  Defaults to false.
   bool DollarIsHexPrefix = false;
@@ -134,8 +142,23 @@ protected:
   /// at the beginning of statements. Defaults to false.
   bool RestrictCommentStringToStartOfStatement = false;
 
+  /// This indicates whether to allow additional "comment strings" to be lexed
+  /// as a comment. Setting this attribute to true, will ensure that C-style
+  /// line comments (// ..), C-style block comments (/* .. */), and "#" are
+  /// all treated as comments in addition to the string specified by the
+  /// CommentString attribute.
+  /// Default is true.
+  bool AllowAdditionalComments = true;
+
+  /// Should we emit the '\t' as the starting indentation marker for GNU inline
+  /// asm statements. Defaults to true.
+  bool EmitGNUAsmStartIndentationMarker = true;
+
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
+
+  /// Emit labels in purely upper case. Defaults to false.
+  bool EmitLabelsInUpperCase = false;
 
   // Print the EH begin symbol with an assignment. Defaults to false.
   bool UseAssignmentForEHBegin = false;
@@ -177,9 +200,33 @@ protected:
   /// Defaults to false.
   bool AllowAtInName = false;
 
-  /// This is true if the assembler allows $ @ ? characters at the start of
-  /// symbol names. Defaults to false.
-  bool AllowSymbolAtNameStart = false;
+  /// This is true if the assembler allows the "?" character at the start of
+  /// of a string to be lexed as an AsmToken::Identifier.
+  /// If the AsmLexer determines that the string can be lexed as a possible
+  /// comment, setting this option will have no effect, and the string will
+  /// still be lexed as a comment.
+  bool AllowQuestionAtStartOfIdentifier = false;
+
+  /// This is true if the assembler allows the "$" character at the start of
+  /// of a string to be lexed as an AsmToken::Identifier.
+  /// If the AsmLexer determines that the string can be lexed as a possible
+  /// comment, setting this option will have no effect, and the string will
+  /// still be lexed as a comment.
+  bool AllowDollarAtStartOfIdentifier = false;
+
+  /// This is true if the assembler allows the "@" character at the start of
+  /// a string to be lexed as an AsmToken::Identifier.
+  /// If the AsmLexer determines that the string can be lexed as a possible
+  /// comment, setting this option will have no effect, and the string will
+  /// still be lexed as a comment.
+  bool AllowAtAtStartOfIdentifier = false;
+
+  /// This is true if the assembler allows the "#" character at the start of
+  /// a string to be lexed as an AsmToken::Identifier.
+  /// If the AsmLexer determines that the string can be lexed as a possible
+  /// comment, setting this option will have no effect, and the string will
+  /// still be lexed as a comment.
+  bool AllowHashAtStartOfIdentifier = false;
 
   /// If this is true, symbol names with invalid characters will be printed in
   /// quotes.
@@ -224,6 +271,11 @@ protected:
   /// string of bytes.  For targets that do not support this, it shall be set to
   /// null.  Defaults to null.
   const char *ByteListDirective = nullptr;
+
+  /// This directive allows emission of a zero-terminated ascii string without
+  /// the standard C escape characters embedded into it.  If a target doesn't
+  /// support this, it can be set to null. Defaults to null.
+  const char *PlainStringDirective = nullptr;
 
   /// Form used for character literals in the assembly syntax.  Useful for
   /// producing strings as byte lists.  If a target does not use or support
@@ -320,6 +372,16 @@ protected:
   /// argument and how it is interpreted.  Defaults to NoAlignment.
   LCOMM::LCOMMType LCOMMDirectiveAlignmentType = LCOMM::NoAlignment;
 
+  /// True if the target only has basename for .file directive. False if the
+  /// target also needs the directory along with the basename. Defaults to true.
+  bool HasBasenameOnlyForFileDirective = true;
+
+  /// True if the target represents string constants as mostly raw characters in
+  /// paired double quotation with paired double quotation marks as the escape
+  /// mechanism to represent a double quotation mark within the string. Defaults
+  /// to false.
+  bool HasPairedDoubleQuoteStringConstants = false;
+
   // True if the target allows .align directives on functions. This is true for
   // most targets, so defaults to true.
   bool HasFunctionAlignment = true;
@@ -331,6 +393,10 @@ protected:
   /// True if the target has a single parameter .file directive, this is true
   /// for ELF targets.  Defaults to true.
   bool HasSingleParameterDotFile = true;
+
+  /// True if the target has a four strings .file directive, strings seperated
+  /// by comma. Defaults to false.
+  bool HasFourStringsDotFile = false;
 
   /// True if the target has a .ident directive, this is true for ELF targets.
   /// Defaults to false.
@@ -385,6 +451,10 @@ protected:
   /// Exception handling format for the target.  Defaults to None.
   ExceptionHandling ExceptionsType = ExceptionHandling::None;
 
+  /// True if target uses CFI unwind information for debugging purpose when
+  /// `ExceptionsType == ExceptionHandling::None`.
+  bool UsesCFIForDebug = false;
+
   /// Windows exception handling data (.pdata) encoding.  Defaults to Invalid.
   WinEH::EncodingType WinEHEncodingType = WinEH::EncodingType::Invalid;
 
@@ -435,6 +505,9 @@ protected:
   /// construction (see LLVMTargetMachine::initAsmInfo()).
   bool UseIntegratedAssembler;
 
+  /// Use AsmParser to parse inlineAsm when UseIntegratedAssembler is not set.
+  bool ParseInlineAsmUsingAsmParser;
+
   /// Preserve Comments in assembly
   bool PreserveAsmComments;
 
@@ -452,6 +525,9 @@ protected:
   // If true, then the lexer and expression parser will support %neg(),
   // %hi(), and similar unary operators.
   bool HasMipsExpressions = false;
+
+  // If true, use Motorola-style integers in Assembly (ex. $0ac).
+  bool UseMotorolaIntegers = false;
 
   // If true, emit function descriptor symbol on AIX.
   bool NeedsFunctionDescriptors = false;
@@ -558,6 +634,8 @@ public:
 
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
+  bool getDotIsPC() const { return DotIsPC; }
+  bool getStarIsPC() const { return StarIsPC; }
   bool getDollarIsHexPrefix() const { return DollarIsHexPrefix; }
   const char *getSeparatorString() const { return SeparatorString; }
 
@@ -569,7 +647,12 @@ public:
   bool getRestrictCommentStringToStartOfStatement() const {
     return RestrictCommentStringToStartOfStatement;
   }
+  bool shouldAllowAdditionalComments() const { return AllowAdditionalComments; }
+  bool getEmitGNUAsmStartIndentationMarker() const {
+    return EmitGNUAsmStartIndentationMarker;
+  }
   const char *getLabelSuffix() const { return LabelSuffix; }
+  bool shouldEmitLabelsInUpperCase() const { return EmitLabelsInUpperCase; }
 
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
@@ -593,7 +676,18 @@ public:
   const char *getCode64Directive() const { return Code64Directive; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
   bool doesAllowAtInName() const { return AllowAtInName; }
-  bool doesAllowSymbolAtNameStart() const { return AllowSymbolAtNameStart; }
+  bool doesAllowQuestionAtStartOfIdentifier() const {
+    return AllowQuestionAtStartOfIdentifier;
+  }
+  bool doesAllowAtAtStartOfIdentifier() const {
+    return AllowAtAtStartOfIdentifier;
+  }
+  bool doesAllowDollarAtStartOfIdentifier() const {
+    return AllowDollarAtStartOfIdentifier;
+  }
+  bool doesAllowHashAtStartOfIdentifier() const {
+    return AllowHashAtStartOfIdentifier;
+  }
   bool supportsNameQuoting() const { return SupportsQuotedNames; }
 
   bool doesSupportDataRegionDirectives() const {
@@ -613,6 +707,7 @@ public:
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
   const char *getByteListDirective() const { return ByteListDirective; }
+  const char *getPlainStringDirective() const { return PlainStringDirective; }
   AsmCharLiteralSyntax characterLiteralSyntax() const {
     return CharacterLiteralSyntax;
   }
@@ -634,9 +729,16 @@ public:
     return LCOMMDirectiveAlignmentType;
   }
 
+  bool hasBasenameOnlyForFileDirective() const {
+    return HasBasenameOnlyForFileDirective;
+  }
+  bool hasPairedDoubleQuoteStringConstants() const {
+    return HasPairedDoubleQuoteStringConstants;
+  }
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
+  bool hasFourStringsDotFile() const { return HasFourStringsDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }
   bool hasNoDeadStrip() const { return HasNoDeadStrip; }
   bool hasAltEntry() const { return HasAltEntry; }
@@ -668,6 +770,8 @@ public:
   void setExceptionsType(ExceptionHandling EH) {
     ExceptionsType = EH;
   }
+
+  bool doesUseCFIForDebug() const { return UsesCFIForDebug; }
 
   /// Returns true if the exception handling method for the platform uses call
   /// frame information to unwind.
@@ -714,6 +818,11 @@ public:
   /// Return true if assembly (inline or otherwise) should be parsed.
   bool useIntegratedAssembler() const { return UseIntegratedAssembler; }
 
+  /// Return true if target want to use AsmParser to parse inlineasm.
+  bool parseInlineAsmUsingAsmParser() const {
+    return ParseInlineAsmUsingAsmParser;
+  }
+
   bool binutilsIsAtLeast(int Major, int Minor) const {
     return BinutilsVersion >= std::make_pair(Major, Minor);
   }
@@ -721,6 +830,11 @@ public:
   /// Set whether assembly (inline or otherwise) should be parsed.
   virtual void setUseIntegratedAssembler(bool Value) {
     UseIntegratedAssembler = Value;
+  }
+
+  /// Set whether target want to use AsmParser to parse inlineasm.
+  virtual void setParseInlineAsmUsingAsmParser(bool Value) {
+    ParseInlineAsmUsingAsmParser = Value;
   }
 
   /// Return true if assembly (inline or otherwise) should be parsed.
@@ -745,6 +859,7 @@ public:
   void setRelaxELFRelocations(bool V) { RelaxELFRelocations = V; }
   bool hasMipsExpressions() const { return HasMipsExpressions; }
   bool needsFunctionDescriptors() const { return NeedsFunctionDescriptors; }
+  bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
 };
 
 } // end namespace llvm

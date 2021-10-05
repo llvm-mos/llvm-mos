@@ -8,11 +8,11 @@ Current status: Under development and not enabled by default
 
 * A relatively recent Python3 installation
 * Installation of python dependencies as specified in
-  `mlir/lib/Bindings/Python/requirements.txt`
+  `mlir/python/requirements.txt`
 
 ### CMake variables
 
-* **`MLIR_BINDINGS_PYTHON_ENABLED`**`:BOOL`
+* **`MLIR_ENABLE_BINDINGS_PYTHON`**`:BOOL`
 
   Enables building the Python bindings. Defaults to `OFF`.
 
@@ -23,7 +23,7 @@ Current status: Under development and not enabled by default
   multiple Python implementations, setting this explicitly to the preferred
   `python3` executable is strongly recommended.
 
-* **`MLIR_PYTHON_BINDINGS_VERSION_LOCKED`**`:BOOL`
+* **`MLIR_BINDINGS_PYTHON_LOCK_VERSION`**`:BOOL`
 
   Links the native extension against the Python runtime library, which is
   optional on some platforms. While setting this to `OFF` can yield some greater
@@ -55,17 +55,23 @@ python -m pip install --upgrade pip
 
 # Now the `python` command will resolve to your virtual environment and
 # packages will be installed there.
-python -m pip install -r mlir/lib/Bindings/Python/requirements.txt
+python -m pip install -r mlir/python/requirements.txt
 
 # Now run `cmake`, `ninja`, et al.
 ```
 
-For interactive use, it is sufficient to add the `python` directory in your
-`build/` directory to the `PYTHONPATH`. Typically:
+For interactive use, it is sufficient to add the
+`tools/mlir/python_packages/mlir_core/` directory in your `build/` directory to
+the `PYTHONPATH`. Typically:
 
 ```shell
-export PYTHONPATH=$(cd build && pwd)/python
+export PYTHONPATH=$(cd build && pwd)/tools/mlir/python_packages/mlir_core
 ```
+
+Note that if you have installed (i.e. via `ninja install`, et al), then
+python packages for all enabled projects will be in your install tree under
+`python_packages/` (i.e. `python_packages/mlir_core`). Official distributions
+are built with a more specialized setup.
 
 ## Design
 

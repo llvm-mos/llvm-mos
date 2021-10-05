@@ -64,6 +64,8 @@ Defined *ElfSym::riscvGlobalPointer;
 Defined *ElfSym::tlsModuleBase;
 DenseMap<const Symbol *, std::pair<const InputFile *, const InputFile *>>
     elf::backwardReferences;
+SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
+    elf::whyExtract;
 
 static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
   switch (sym.kind()) {
@@ -160,7 +162,9 @@ uint64_t Symbol::getGotVA() const {
   return in.got->getVA() + getGotOffset();
 }
 
-uint64_t Symbol::getGotOffset() const { return gotIndex * config->wordsize; }
+uint64_t Symbol::getGotOffset() const {
+  return gotIndex * target->gotEntrySize;
+}
 
 uint64_t Symbol::getGotPltVA() const {
   if (isInIplt)
@@ -170,8 +174,8 @@ uint64_t Symbol::getGotPltVA() const {
 
 uint64_t Symbol::getGotPltOffset() const {
   if (isInIplt)
-    return pltIndex * config->wordsize;
-  return (pltIndex + target->gotPltHeaderEntriesNum) * config->wordsize;
+    return pltIndex * target->gotEntrySize;
+  return (pltIndex + target->gotPltHeaderEntriesNum) * target->gotEntrySize;
 }
 
 uint64_t Symbol::getPltVA() const {
@@ -206,6 +210,9 @@ OutputSection *Symbol::getOutputSection() const {
 // If a symbol name contains '@', the characters after that is
 // a symbol version name. This function parses that.
 void Symbol::parseSymbolVersion() {
+  // Return if localized by a local: pattern in a version script.
+  if (versionId == VER_NDX_LOCAL)
+    return;
   StringRef s = getName();
   size_t pos = s.find('@');
   if (pos == 0 || pos == StringRef::npos)
@@ -277,7 +284,7 @@ uint8_t Symbol::computeBinding() const {
   if (config->relocatable)
     return binding;
   if ((visibility != STV_DEFAULT && visibility != STV_PROTECTED) ||
-      (versionId == VER_NDX_LOCAL && isDefined()))
+      (versionId == VER_NDX_LOCAL && !isLazy()))
     return STB_LOCAL;
   if (!config->gnuUnique && binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;
@@ -314,6 +321,11 @@ void elf::printTraceSymbol(const Symbol *sym) {
     s = ": definition of ";
 
   message(toString(sym->file) + s + sym->getName());
+}
+
+static void recordWhyExtract(const InputFile *reference,
+                             const InputFile &extracted, const Symbol &sym) {
+  whyExtract.emplace_back(toString(reference), &extracted, sym);
 }
 
 void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
@@ -366,8 +378,12 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
 
   // If -Bsymbolic or --dynamic-list is specified, or -Bsymbolic-functions is
   // specified and the symbol is STT_FUNC, the symbol is preemptible iff it is
-  // in the dynamic list.
-  if (config->symbolic || (config->bsymbolicFunctions && sym.isFunc()))
+  // in the dynamic list. -Bsymbolic-non-weak-functions is a non-weak subset of
+  // -Bsymbolic-functions.
+  if (config->symbolic ||
+      (config->bsymbolic == BsymbolicKind::Functions && sym.isFunc()) ||
+      (config->bsymbolic == BsymbolicKind::NonWeakFunctions && sym.isFunc() &&
+       sym.binding != STB_WEAK))
     return sym.inDynamicList;
   return true;
 }
@@ -523,6 +539,9 @@ void Symbol::resolveUndefined(const Undefined &other) {
     bool backref = config->warnBackrefs && other.file &&
                    file->groupId < other.file->groupId;
     fetch();
+
+    if (!config->whyExtract.empty())
+      recordWhyExtract(other.file, *file, *this);
 
     // We don't report backward references to weak symbols as they can be
     // overridden later.
@@ -733,7 +752,10 @@ template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
     return;
   }
 
+  const InputFile *oldFile = file;
   other.fetch();
+  if (!config->whyExtract.empty())
+    recordWhyExtract(oldFile, *file, *this);
 }
 
 void Symbol::resolveShared(const SharedSymbol &other) {

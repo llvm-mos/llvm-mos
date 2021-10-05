@@ -233,7 +233,7 @@ define <4 x float*> @vector_idx_mix_scalar_vector() {
 
 define <vscale x 4 x i32*> @scalable_idx_scalar() {
 ; CHECK-LABEL: @scalable_idx_scalar(
-; CHECK-NEXT:    ret <vscale x 4 x i32*> getelementptr (i32, <vscale x 4 x i32*> zeroinitializer, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> undef, i64 1, i32 0), <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    ret <vscale x 4 x i32*> getelementptr (i32, <vscale x 4 x i32*> zeroinitializer, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer))
 ;
   %gep = getelementptr i32, <vscale x 4 x i32*> zeroinitializer, i64 1
   ret <vscale x 4 x i32*> %gep
@@ -314,4 +314,33 @@ define i32* @D98611_3(i32* %c1, i64 %offset) {
   %ashr = ashr exact i64 %sub, 2
   %gep = getelementptr inbounds i32, i32* %c1, i64 %ashr
   ret i32* %gep
+}
+
+define <8 x i32*> @gep_vector_index_op2_poison([144 x i32]* %ptr) {
+; CHECK-LABEL: @gep_vector_index_op2_poison(
+; CHECK-NEXT:    ret <8 x i32*> poison
+;
+  %res = getelementptr inbounds [144 x i32], [144 x i32]* %ptr, i64 0, <8 x i64> poison
+  ret <8 x i32*> %res
+}
+
+%t.1 = type { i32, [144 x i32] }
+
+define <8 x i32*> @gep_vector_index_op3_poison(%t.1* %ptr) {
+; CHECK-LABEL: @gep_vector_index_op3_poison(
+; CHECK-NEXT:    ret <8 x i32*> poison
+;
+  %res = getelementptr inbounds %t.1, %t.1* %ptr, i64 0, i32 1, <8 x i64> poison
+  ret <8 x i32*> %res
+}
+
+%t.2 = type { i32, i32 }
+%t.3 = type { i32, [144 x %t.2 ] }
+
+define <8 x i32*> @gep_vector_index_op3_poison_constant_index_afterwards(%t.3* %ptr) {
+; CHECK-LABEL: @gep_vector_index_op3_poison_constant_index_afterwards(
+; CHECK-NEXT:    ret <8 x i32*> poison
+;
+  %res = getelementptr inbounds %t.3, %t.3* %ptr, i64 0, i32 1, <8 x i64> poison, i32 1
+  ret <8 x i32*> %res
 }

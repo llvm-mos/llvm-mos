@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ELFObjcopy.h"
-#include "CopyConfig.h"
+#include "CommonConfig.h"
+#include "ELFConfig.h"
 #include "Object.h"
 #include "llvm-objcopy.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -44,12 +45,12 @@
 #include <system_error>
 #include <utility>
 
-namespace llvm {
-namespace objcopy {
-namespace elf {
+using namespace llvm;
+using namespace llvm::ELF;
+using namespace llvm::objcopy;
+using namespace llvm::objcopy::elf;
+using namespace llvm::object;
 
-using namespace object;
-using namespace ELF;
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
 static bool isDebugSection(const SectionBase &Sec) {
@@ -70,7 +71,7 @@ static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !isDWOSection(Sec);
 }
 
-uint64_t getNewShfFlags(SectionFlag AllFlags) {
+static uint64_t getNewShfFlags(SectionFlag AllFlags) {
   uint64_t NewFlags = 0;
   if (AllFlags & SectionFlag::SecAlloc)
     NewFlags |= ELF::SHF_ALLOC;
@@ -132,7 +133,7 @@ static ElfType getOutputElfType(const MachineInfo &MI) {
     return MI.IsLittleEndian ? ELFT_ELF32LE : ELFT_ELF32BE;
 }
 
-static std::unique_ptr<Writer> createELFWriter(const CopyConfig &Config,
+static std::unique_ptr<Writer> createELFWriter(const CommonConfig &Config,
                                                Object &Obj, raw_ostream &Out,
                                                ElfType OutputElfType) {
   // Depending on the initial ELFT and OutputFormat we need a different Writer.
@@ -153,7 +154,7 @@ static std::unique_ptr<Writer> createELFWriter(const CopyConfig &Config,
   llvm_unreachable("Invalid output format");
 }
 
-static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
+static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
                                             Object &Obj, raw_ostream &Out,
                                             ElfType OutputElfType) {
   switch (Config.OutputFormat) {
@@ -203,8 +204,7 @@ static bool isCompressable(const SectionBase &Sec) {
 }
 
 static Error replaceDebugSections(
-    Object &Obj, SectionPred &RemovePred,
-    function_ref<bool(const SectionBase &)> ShouldReplace,
+    Object &Obj, function_ref<bool(const SectionBase &)> ShouldReplace,
     function_ref<Expected<SectionBase *>(const SectionBase *)> AddSection) {
   // Build a list of the debug sections we are going to replace.
   // We can't call `AddSection` while iterating over sections,
@@ -224,17 +224,7 @@ static Error replaceDebugSections(
     FromTo[S] = *NewSection;
   }
 
-  // Now we want to update the target sections of relocation
-  // sections. Also we will update the relocations themselves
-  // to update the symbol references.
-  for (auto &Sec : Obj.sections())
-    Sec.replaceSectionReferences(FromTo);
-
-  RemovePred = [ShouldReplace, RemovePred](const SectionBase &Sec) {
-    return ShouldReplace(Sec) || RemovePred(Sec);
-  };
-
-  return Error::success();
+  return Obj.replaceSections(FromTo);
 }
 
 static bool isUnneededSymbol(const Symbol &Sym) {
@@ -243,7 +233,8 @@ static bool isUnneededSymbol(const Symbol &Sym) {
          Sym.Type != STT_SECTION;
 }
 
-static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
+static Error updateAndRemoveSymbols(const CommonConfig &Config,
+                                    const ELFConfig &ELFConfig, Object &Obj) {
   // TODO: update or remove symbols only if there is an option that affects
   // them.
   if (!Obj.SymbolTable)
@@ -253,7 +244,7 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
     // Common and undefined symbols don't make sense as local symbols, and can
     // even cause crashes if we localize those, so skip them.
     if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
-        ((Config.LocalizeHidden &&
+        ((ELFConfig.LocalizeHidden &&
           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
          Config.SymbolsToLocalize.matches(Sym.Name)))
       Sym.Binding = STB_LOCAL;
@@ -303,7 +294,7 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
 
   auto RemoveSymbolsPred = [&](const Symbol &Sym) {
     if (Config.SymbolsToKeep.matches(Sym.Name) ||
-        (Config.KeepFileSymbols && Sym.Type == STT_FILE))
+        (ELFConfig.KeepFileSymbols && Sym.Type == STT_FILE))
       return false;
 
     if ((Config.DiscardMode == DiscardType::All ||
@@ -338,7 +329,8 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   return Obj.removeSymbols(RemoveSymbolsPred);
 }
 
-static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
+static Error replaceAndRemoveSections(const CommonConfig &Config,
+                                      const ELFConfig &ELFConfig, Object &Obj) {
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
   // Removes:
@@ -464,7 +456,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
   // and at least one of those symbols is present
   // (equivalently, the updated symbol table is not empty)
   // the symbol table and the string table should not be removed.
-  if ((!Config.SymbolsToKeep.empty() || Config.KeepFileSymbols) &&
+  if ((!Config.SymbolsToKeep.empty() || ELFConfig.KeepFileSymbols) &&
       Obj.SymbolTable && !Obj.SymbolTable->empty()) {
     RemovePred = [&Obj, RemovePred](const SectionBase &Sec) {
       if (&Sec == Obj.SymbolTable || &Sec == Obj.SymbolTable->getStrTab())
@@ -473,9 +465,12 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
     };
   }
 
+  if (Error E = Obj.removeSections(ELFConfig.AllowBrokenLinks, RemovePred))
+    return E;
+
   if (Config.CompressionType != DebugCompressionType::None) {
     if (Error Err = replaceDebugSections(
-            Obj, RemovePred, isCompressable,
+            Obj, isCompressable,
             [&Config, &Obj](const SectionBase *S) -> Expected<SectionBase *> {
               Expected<CompressedSection> NewSection =
                   CompressedSection::create(*S, Config.CompressionType);
@@ -487,7 +482,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
       return Err;
   } else if (Config.DecompressDebugSections) {
     if (Error Err = replaceDebugSections(
-            Obj, RemovePred,
+            Obj,
             [](const SectionBase &S) { return isa<CompressedSection>(&S); },
             [&Obj](const SectionBase *S) {
               const CompressedSection *CS = cast<CompressedSection>(S);
@@ -496,7 +491,61 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
       return Err;
   }
 
-  return Obj.removeSections(Config.AllowBrokenLinks, RemovePred);
+  return Error::success();
+}
+
+// Add symbol to the Object symbol table with the specified properties.
+static void addSymbol(Object &Obj, const NewSymbolInfo &SymInfo,
+                      uint8_t DefaultVisibility) {
+  SectionBase *Sec = Obj.findSection(SymInfo.SectionName);
+  uint64_t Value = Sec ? Sec->Addr + SymInfo.Value : SymInfo.Value;
+
+  uint8_t Bind = ELF::STB_GLOBAL;
+  uint8_t Type = ELF::STT_NOTYPE;
+  uint8_t Visibility = DefaultVisibility;
+
+  for (SymbolFlag FlagValue : SymInfo.Flags)
+    switch (FlagValue) {
+    case SymbolFlag::Global:
+      Bind = ELF::STB_GLOBAL;
+      break;
+    case SymbolFlag::Local:
+      Bind = ELF::STB_LOCAL;
+      break;
+    case SymbolFlag::Weak:
+      Bind = ELF::STB_WEAK;
+      break;
+    case SymbolFlag::Default:
+      Visibility = ELF::STV_DEFAULT;
+      break;
+    case SymbolFlag::Hidden:
+      Visibility = ELF::STV_HIDDEN;
+      break;
+    case SymbolFlag::Protected:
+      Visibility = ELF::STV_PROTECTED;
+      break;
+    case SymbolFlag::File:
+      Type = ELF::STT_FILE;
+      break;
+    case SymbolFlag::Section:
+      Type = ELF::STT_SECTION;
+      break;
+    case SymbolFlag::Object:
+      Type = ELF::STT_OBJECT;
+      break;
+    case SymbolFlag::Function:
+      Type = ELF::STT_FUNC;
+      break;
+    case SymbolFlag::IndirectFunction:
+      Type = ELF::STT_GNU_IFUNC;
+      break;
+    default: /* Other flag values are ignored for ELF. */
+      break;
+    };
+
+  Obj.SymbolTable->addSymbol(
+      SymInfo.SymbolName, Bind, Type, Sec, Value, Visibility,
+      Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
 }
 
 // This function handles the high level operations of GNU objcopy including
@@ -506,11 +555,8 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
 // any previous removals. Lastly whether or not something is removed shouldn't
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
-static Error handleArgs(const CopyConfig &Config, Object &Obj) {
-  if (Config.StripSwiftSymbols || Config.KeepUndefined)
-    return createStringError(llvm::errc::invalid_argument,
-                             "option not supported by llvm-objcopy for ELF");
-
+static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
+                        Object &Obj) {
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch.getValue().EMachine;
     Obj.OSABI = Config.OutputArch.getValue().OSABI;
@@ -518,7 +564,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 
   if (!Config.SplitDWO.empty() && Config.ExtractDWO) {
     return Obj.removeSections(
-        Config.AllowBrokenLinks,
+        ELFConfig.AllowBrokenLinks,
         [&Obj](const SectionBase &Sec) { return onlyKeepDWOPred(Obj, Sec); });
   }
 
@@ -535,21 +581,39 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   // remove the relocation sections before removing the symbols. That allows
   // us to avoid reporting the inappropriate errors about removing symbols
   // named in relocations.
-  if (Error E = replaceAndRemoveSections(Config, Obj))
+  if (Error E = replaceAndRemoveSections(Config, ELFConfig, Obj))
     return E;
 
-  if (Error E = updateAndRemoveSymbols(Config, Obj))
+  if (Error E = updateAndRemoveSymbols(Config, ELFConfig, Obj))
     return E;
 
   if (!Config.SectionsToRename.empty()) {
+    std::vector<RelocationSectionBase *> RelocSections;
+    DenseSet<SectionBase *> RenamedSections;
     for (SectionBase &Sec : Obj.sections()) {
+      auto *RelocSec = dyn_cast<RelocationSectionBase>(&Sec);
       const auto Iter = Config.SectionsToRename.find(Sec.Name);
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
         Sec.Name = std::string(SR.NewName);
         if (SR.NewFlags.hasValue())
           setSectionFlagsAndType(Sec, SR.NewFlags.getValue());
-      }
+        RenamedSections.insert(&Sec);
+      } else if (RelocSec && !(Sec.Flags & SHF_ALLOC))
+        // Postpone processing relocation sections which are not specified in
+        // their explicit '--rename-section' commands until after their target
+        // sections are renamed.
+        // Dynamic relocation sections (i.e. ones with SHF_ALLOC) should be
+        // renamed only explicitly. Otherwise, renaming, for example, '.got.plt'
+        // would affect '.rela.plt', which is not desirable.
+        RelocSections.push_back(RelocSec);
+    }
+
+    // Rename relocation sections according to their target sections.
+    for (RelocationSectionBase *RelocSec : RelocSections) {
+      auto Iter = RenamedSections.find(RelocSec->getSection());
+      if (Iter != RenamedSections.end())
+        RelocSec->Name = (RelocSec->getNamePrefix() + (*Iter)->Name).str();
     }
   }
 
@@ -572,27 +636,16 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
         // .rela.prefix.plt since GNU objcopy does so.
         const SectionBase *TargetSec = RelocSec->getSection();
         if (TargetSec && (TargetSec->Flags & SHF_ALLOC)) {
-          StringRef prefix;
-          switch (Sec.Type) {
-          case SHT_REL:
-            prefix = ".rel";
-            break;
-          case SHT_RELA:
-            prefix = ".rela";
-            break;
-          default:
-            llvm_unreachable("not a relocation section");
-          }
-
           // If the relocation section comes *after* the target section, we
           // don't add Config.AllocSectionsPrefix because we've already added
           // the prefix to TargetSec->Name. Otherwise, if the relocation
           // section comes *before* the target section, we add the prefix.
           if (PrefixedSections.count(TargetSec))
-            Sec.Name = (prefix + TargetSec->Name).str();
+            Sec.Name = (RelocSec->getNamePrefix() + TargetSec->Name).str();
           else
-            Sec.Name =
-                (prefix + Config.AllocSectionsPrefix + TargetSec->Name).str();
+            Sec.Name = (RelocSec->getNamePrefix() + Config.AllocSectionsPrefix +
+                        TargetSec->Name)
+                           .str();
         }
       }
     }
@@ -635,17 +688,12 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 
   // If the symbol table was previously removed, we need to create a new one
   // before adding new symbols.
-  if (!Obj.SymbolTable && !Config.ELF->SymbolsToAdd.empty())
+  if (!Obj.SymbolTable && !Config.SymbolsToAdd.empty())
     if (Error E = Obj.addNewSymbolTable())
       return E;
 
-  for (const NewSymbolInfo &SI : Config.ELF->SymbolsToAdd) {
-    SectionBase *Sec = Obj.findSection(SI.SectionName);
-    uint64_t Value = Sec ? Sec->Addr + SI.Value : SI.Value;
-    Obj.SymbolTable->addSymbol(
-        SI.SymbolName, SI.Bind, SI.Type, Sec, Value, SI.Visibility,
-        Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
-  }
+  for (const NewSymbolInfo &SI : Config.SymbolsToAdd)
+    addSymbol(Obj, SI, ELFConfig.NewSymbolVisibility);
 
   // --set-section-flags works with sections added by --add-section.
   if (!Config.SetSectionFlags.empty()) {
@@ -658,12 +706,12 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     }
   }
 
-  if (Config.EntryExpr)
-    Obj.Entry = Config.EntryExpr(Obj.Entry);
+  if (ELFConfig.EntryExpr)
+    Obj.Entry = ELFConfig.EntryExpr(Obj.Entry);
   return Error::success();
 }
 
-static Error writeOutput(const CopyConfig &Config, Object &Obj,
+static Error writeOutput(const CommonConfig &Config, Object &Obj,
                          raw_ostream &Out, ElfType OutputElfType) {
   std::unique_ptr<Writer> Writer =
       createWriter(Config, Obj, Out, OutputElfType);
@@ -672,8 +720,9 @@ static Error writeOutput(const CopyConfig &Config, Object &Obj,
   return Writer->write();
 }
 
-Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
-                           raw_ostream &Out) {
+Error objcopy::elf::executeObjcopyOnIHex(const CommonConfig &Config,
+                                         const ELFConfig &ELFConfig,
+                                         MemoryBuffer &In, raw_ostream &Out) {
   IHexReader Reader(&In);
   Expected<std::unique_ptr<Object>> Obj = Reader.create(true);
   if (!Obj)
@@ -681,16 +730,16 @@ Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
 
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
-  if (Error E = handleArgs(Config, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
 
-Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
-                                raw_ostream &Out) {
-  uint8_t NewSymbolVisibility =
-      Config.ELF->NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT);
-  BinaryReader Reader(&In, NewSymbolVisibility);
+Error objcopy::elf::executeObjcopyOnRawBinary(const CommonConfig &Config,
+                                              const ELFConfig &ELFConfig,
+                                              MemoryBuffer &In,
+                                              raw_ostream &Out) {
+  BinaryReader Reader(&In, ELFConfig.NewSymbolVisibility);
   Expected<std::unique_ptr<Object>> Obj = Reader.create(true);
   if (!Obj)
     return Obj.takeError();
@@ -699,13 +748,15 @@ Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
   // (-B<arch>).
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
-  if (Error E = handleArgs(Config, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
 
-Error executeObjcopyOnBinary(const CopyConfig &Config,
-                             object::ELFObjectFileBase &In, raw_ostream &Out) {
+Error objcopy::elf::executeObjcopyOnBinary(const CommonConfig &Config,
+                                           const ELFConfig &ELFConfig,
+                                           object::ELFObjectFileBase &In,
+                                           raw_ostream &Out) {
   ELFReader Reader(&In, Config.ExtractPartition);
   Expected<std::unique_ptr<Object>> Obj =
       Reader.create(!Config.SymbolsToAdd.empty());
@@ -716,7 +767,7 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
       Config.OutputArch ? getOutputElfType(Config.OutputArch.getValue())
                         : getOutputElfType(In);
 
-  if (Error E = handleArgs(Config, **Obj))
+  if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return createFileError(Config.InputFilename, std::move(E));
 
   if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))
@@ -724,7 +775,3 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
 
   return Error::success();
 }
-
-} // end namespace elf
-} // end namespace objcopy
-} // end namespace llvm

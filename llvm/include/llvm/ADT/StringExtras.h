@@ -13,6 +13,7 @@
 #ifndef LLVM_ADT_STRINGEXTRAS_H
 #define LLVM_ADT_STRINGEXTRAS_H
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -296,6 +297,17 @@ inline std::string itostr(int64_t X) {
     return utostr(static_cast<uint64_t>(X));
 }
 
+inline std::string toString(const APInt &I, unsigned Radix, bool Signed,
+                            bool formatAsCLiteral = false) {
+  SmallString<40> S;
+  I.toString(S, Radix, Signed, formatAsCLiteral);
+  return std::string(S.str());
+}
+
+inline std::string toString(const APSInt &I, unsigned Radix) {
+  return toString(I, Radix, I.isSigned());
+}
+
 /// StrInStrNoCase - Portable version of strcasestr.  Locates the first
 /// occurrence of string 's1' in string 's2', ignoring case.  Returns
 /// the offset of s2 in s1 or npos if s2 cannot be found.
@@ -487,6 +499,62 @@ public:
     }
     return Separator;
   }
+};
+
+/// A forward iterator over partitions of string over a separator.
+class SplittingIterator
+    : public iterator_facade_base<SplittingIterator, std::forward_iterator_tag,
+                                  StringRef> {
+  StringRef Current;
+  StringRef Next;
+  StringRef Separator;
+
+public:
+  SplittingIterator(StringRef Str, StringRef Separator)
+      : Next(Str), Separator(Separator) {
+    ++*this;
+  }
+
+  bool operator==(const SplittingIterator &R) const {
+    return Current == R.Current && Next == R.Next && Separator == R.Separator;
+  }
+
+  const StringRef &operator*() const { return Current; }
+
+  StringRef &operator*() { return Current; }
+
+  SplittingIterator &operator++() {
+    std::pair<StringRef, StringRef> Res = Next.split(Separator);
+    Current = Res.first;
+    Next = Res.second;
+    return *this;
+  }
+};
+
+/// Split the specified string over a separator and return a range-compatible
+/// iterable over its partitions.  Used to permit conveniently iterating
+/// over separated strings like so:
+///
+/// \code
+///   for (StringRef x : llvm::Split("foo,bar,baz", ','))
+///     ...;
+/// \end
+///
+/// Note that the passed string must remain valid throuhgout lifetime
+/// of the iterators.
+class Split {
+  StringRef Str;
+  std::string SeparatorStr;
+
+public:
+  Split(StringRef NewStr, StringRef Separator)
+      : Str(NewStr), SeparatorStr(Separator) {}
+  Split(StringRef NewStr, char Separator)
+      : Str(NewStr), SeparatorStr(1, Separator) {}
+
+  SplittingIterator begin() { return SplittingIterator(Str, SeparatorStr); }
+
+  SplittingIterator end() { return SplittingIterator("", SeparatorStr); }
 };
 
 } // end namespace llvm

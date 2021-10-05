@@ -381,8 +381,8 @@ void LoopBase<BlockT, LoopT>::verifyLoopNest(
 }
 
 template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth,
-                                    bool Verbose) const {
+void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, bool Verbose,
+                                    bool PrintNested, unsigned Depth) const {
   OS.indent(Depth * 2);
   if (static_cast<const LoopT *>(this)->isAnnotatedParallel())
     OS << "Parallel ";
@@ -407,10 +407,13 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth,
     if (Verbose)
       BB->print(OS);
   }
-  OS << "\n";
 
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    (*I)->print(OS, Depth + 2);
+  if (PrintNested) {
+    OS << "\n";
+
+    for (iterator I = begin(), E = end(); I != E; ++I)
+      (*I)->print(OS, /*Verbose*/ false, PrintNested, Depth + 2);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -571,7 +574,8 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
 }
 
 template <class BlockT, class LoopT>
-SmallVector<LoopT *, 4> LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() {
+SmallVector<LoopT *, 4>
+LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() const {
   SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
   // The outer-most loop actually goes into the result in the same relative
   // order as we walk it. But LoopInfo stores the top level loops in reverse
@@ -589,7 +593,7 @@ SmallVector<LoopT *, 4> LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() {
 
 template <class BlockT, class LoopT>
 SmallVector<LoopT *, 4>
-LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() {
+LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() const {
   SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
   // The outer-most loop actually goes into the result in the same relative
   // order as we walk it. LoopInfo stores the top level loops in reverse

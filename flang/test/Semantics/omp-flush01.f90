@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! RUN: %python %S/test_errors.py %s %flang -fopenmp
 
 ! 2.17.8 Flush construct [OpenMP 5.0]
 !        memory-order-clause ->
@@ -23,14 +23,11 @@ use omp_lib
     !$omp flush acquire
 
     !ERROR: expected end of line
-    !ERROR: expected end of line
     !$omp flush private(array)
-    !ERROR: expected end of line
     !ERROR: expected end of line
     !$omp flush num_threads(4)
 
     ! Mix allowed and not allowed clauses.
-    !ERROR: expected end of line
     !ERROR: expected end of line
     !$omp flush num_threads(4) acquire
   end if

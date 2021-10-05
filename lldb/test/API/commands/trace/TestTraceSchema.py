@@ -1,18 +1,12 @@
 import lldb
+from intelpt_testcase import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
-class TestTraceLoad(TestBase):
+class TestTraceLoad(TraceIntelPTTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
-
-    def setUp(self):
-        TestBase.setUp(self)
-        if 'intel-pt' not in configuration.enabled_plugins:
-            self.skipTest("The intel-pt test plugin is not enabled")
-
 
     def testSchema(self):
         self.expect("trace schema intel-pt", substrs=["trace", "triple", "threads", "traceFile"])
@@ -25,7 +19,7 @@ class TestTraceLoad(TestBase):
         self.expect("trace schema all", substrs=['''{
   "trace": {
     "type": "intel-pt",
-    "pt_cpu": {
+    "cpuInfo": {
       "vendor": "intel" | "unknown",
       "family": integer,
       "model": integer,

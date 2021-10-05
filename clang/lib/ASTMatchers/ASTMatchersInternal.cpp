@@ -756,6 +756,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, DeclaratorDecl>
 const internal::VariadicDynCastAllOfMatcher<Decl, ParmVarDecl> parmVarDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, AccessSpecDecl>
     accessSpecDecl;
+const internal::VariadicAllOfMatcher<CXXBaseSpecifier> cxxBaseSpecifier;
 const internal::VariadicAllOfMatcher<CXXCtorInitializer> cxxCtorInitializer;
 const internal::VariadicAllOfMatcher<TemplateArgument> templateArgument;
 const internal::VariadicAllOfMatcher<TemplateArgumentLoc> templateArgumentLoc;
@@ -840,6 +841,7 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, ParenListExpr> parenListExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, SubstNonTypeTemplateParmExpr>
     substNonTypeTemplateParmExpr;
 const internal::VariadicDynCastAllOfMatcher<Decl, UsingDecl> usingDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, UsingEnumDecl> usingEnumDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, UsingDirectiveDecl>
     usingDirectiveDecl;
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedLookupExpr>
@@ -998,19 +1000,20 @@ const internal::ArgumentAdaptingMatcherFunc<internal::ForEachDescendantMatcher>
     forEachDescendant = {};
 const internal::ArgumentAdaptingMatcherFunc<
     internal::HasParentMatcher,
-    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>,
-    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>>
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>,
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>>
     hasParent = {};
 const internal::ArgumentAdaptingMatcherFunc<
     internal::HasAncestorMatcher,
-    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>,
-    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc>>
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>,
+    internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>>
     hasAncestor = {};
 const internal::VariadicOperatorMatcherFunc<1, 1> unless = {
     internal::DynTypedMatcher::VO_UnaryNot};
 const internal::VariadicAllOfMatcher<NestedNameSpecifier> nestedNameSpecifier;
 const internal::VariadicAllOfMatcher<NestedNameSpecifierLoc>
     nestedNameSpecifierLoc;
+const internal::VariadicAllOfMatcher<Attr> attr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
     cudaKernelCallExpr;
 const AstTypeMatcher<BuiltinType> builtinType;

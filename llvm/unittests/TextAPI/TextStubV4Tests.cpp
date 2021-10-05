@@ -7,9 +7,9 @@
 //===-----------------------------------------------------------------------===/
 
 #include "TextStubHelpers.h"
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
-#include "llvm/TextAPI/MachO/TextAPIReader.h"
-#include "llvm/TextAPI/MachO/TextAPIWriter.h"
+#include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/TextAPIReader.h"
+#include "llvm/TextAPI/TextAPIWriter.h"
 #include "gtest/gtest.h"
 #include <string>
 #include <vector>
@@ -82,8 +82,8 @@ TEST(TBDv4, ReadFile) {
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   PlatformSet Platforms;
-  Platforms.insert(PlatformKind::macOS);
-  Platforms.insert(PlatformKind::iOS);
+  Platforms.insert(getPlatformFromName("macos"));
+  Platforms.insert(getPlatformFromName("ios"));
   auto Archs = AK_i386 | AK_x86_64;
   TargetList Targets = {
       Target(AK_i386, PlatformKind::macOS),

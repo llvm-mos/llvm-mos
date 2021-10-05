@@ -10,13 +10,14 @@
 #include "AttributeDetail.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinDialect.h"
-#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DecodeAttributesInterfaces.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Endian.h"
 
 using namespace mlir;
@@ -39,6 +40,17 @@ void BuiltinDialect::registerAttributes() {
                 SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
                 OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
                 UnitAttr>();
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayAttr
+//===----------------------------------------------------------------------===//
+
+void ArrayAttr::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  for (Attribute attr : getValue())
+    walkAttrsFn(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -79,11 +91,9 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
       storage.assign(value.begin(), value.end());
     // Check to see they are sorted already.
     bool isSorted = llvm::is_sorted(value);
-    if (!isSorted) {
-      // If not, do a general sort.
+    // If not, do a general sort.
+    if (!isSorted)
       llvm::array_pod_sort(storage.begin(), storage.end());
-      value = storage;
-    }
     return !isSorted;
   }
   return false;
@@ -198,6 +208,36 @@ DictionaryAttr DictionaryAttr::getEmptyUnchecked(MLIRContext *context) {
   return Base::get(context, ArrayRef<NamedAttribute>());
 }
 
+void DictionaryAttr::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  for (Attribute attr : llvm::make_second_range(getValue()))
+    walkAttrsFn(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// StringAttr
+//===----------------------------------------------------------------------===//
+
+StringAttr StringAttr::getEmptyStringAttrUnchecked(MLIRContext *context) {
+  return Base::get(context, "", NoneType::get(context));
+}
+
+/// Twine support for StringAttr.
+StringAttr StringAttr::get(MLIRContext *context, const Twine &twine) {
+  // Fast-path empty twine.
+  if (twine.isTriviallyEmpty())
+    return get(context);
+  SmallVector<char, 32> tempStr;
+  return Base::get(context, twine.toStringRef(tempStr), NoneType::get(context));
+}
+
+/// Twine support for StringAttr.
+StringAttr StringAttr::get(const Twine &twine, Type type) {
+  SmallVector<char, 32> tempStr;
+  return Base::get(type.getContext(), twine.toStringRef(tempStr), type);
+}
+
 //===----------------------------------------------------------------------===//
 // FloatAttr
 //===----------------------------------------------------------------------===//
@@ -232,13 +272,29 @@ LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // SymbolRefAttr
 //===----------------------------------------------------------------------===//
 
-FlatSymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value) {
-  return get(ctx, value, llvm::None).cast<FlatSymbolRefAttr>();
+SymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value,
+                                 ArrayRef<FlatSymbolRefAttr> nestedRefs) {
+  return get(StringAttr::get(ctx, value), nestedRefs);
 }
 
-StringRef SymbolRefAttr::getLeafReference() const {
+FlatSymbolRefAttr SymbolRefAttr::get(MLIRContext *ctx, StringRef value) {
+  return get(ctx, value, {}).cast<FlatSymbolRefAttr>();
+}
+
+FlatSymbolRefAttr SymbolRefAttr::get(StringAttr value) {
+  return get(value, {}).cast<FlatSymbolRefAttr>();
+}
+
+FlatSymbolRefAttr SymbolRefAttr::get(Operation *symbol) {
+  auto symName =
+      symbol->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
+  assert(symName && "value does not have a valid symbol name");
+  return SymbolRefAttr::get(symName);
+}
+
+StringAttr SymbolRefAttr::getLeafReference() const {
   ArrayRef<FlatSymbolRefAttr> nestedRefs = getNestedReferences();
-  return nestedRefs.empty() ? getRootReference() : nestedRefs.back().getValue();
+  return nestedRefs.empty() ? getRootReference() : nestedRefs.back().getAttr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -259,6 +315,14 @@ int64_t IntegerAttr::getSInt() const {
 uint64_t IntegerAttr::getUInt() const {
   assert(getType().isUnsignedInteger() && "must be unsigned integer");
   return getValue().getZExtValue();
+}
+
+/// Return the value as an APSInt which carries the signed from the type of
+/// the attribute.  This traps on signless integers types!
+APSInt IntegerAttr::getAPSInt() const {
+  assert(!getType().isSignlessInteger() &&
+         "Signless integers don't carry a sign for APSInt");
+  return APSInt(getValue(), getType().isUnsignedInteger());
 }
 
 LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,
@@ -302,89 +366,20 @@ LogicalResult OpaqueAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                  Type type) {
   if (!Dialect::isValidNamespace(dialect.strref()))
     return emitError() << "invalid dialect namespace '" << dialect << "'";
-  return success();
-}
 
-//===----------------------------------------------------------------------===//
-// ElementsAttr
-//===----------------------------------------------------------------------===//
-
-ShapedType ElementsAttr::getType() const {
-  return Attribute::getType().cast<ShapedType>();
-}
-
-/// Returns the number of elements held by this attribute.
-int64_t ElementsAttr::getNumElements() const {
-  return getType().getNumElements();
-}
-
-/// Return the value at the given index. If index does not refer to a valid
-/// element, then a null attribute is returned.
-Attribute ElementsAttr::getValue(ArrayRef<uint64_t> index) const {
-  if (auto denseAttr = dyn_cast<DenseElementsAttr>())
-    return denseAttr.getValue(index);
-  if (auto opaqueAttr = dyn_cast<OpaqueElementsAttr>())
-    return opaqueAttr.getValue(index);
-  return cast<SparseElementsAttr>().getValue(index);
-}
-
-/// Return if the given 'index' refers to a valid element in this attribute.
-bool ElementsAttr::isValidIndex(ArrayRef<uint64_t> index) const {
-  auto type = getType();
-
-  // Verify that the rank of the indices matches the held type.
-  auto rank = type.getRank();
-  if (rank == 0 && index.size() == 1 && index[0] == 0)
-    return true;
-  if (rank != static_cast<int64_t>(index.size()))
-    return false;
-
-  // Verify that all of the indices are within the shape dimensions.
-  auto shape = type.getShape();
-  return llvm::all_of(llvm::seq<int>(0, rank), [&](int i) {
-    return static_cast<int64_t>(index[i]) < shape[i];
-  });
-}
-
-ElementsAttr
-ElementsAttr::mapValues(Type newElementType,
-                        function_ref<APInt(const APInt &)> mapping) const {
-  if (auto intOrFpAttr = dyn_cast<DenseElementsAttr>())
-    return intOrFpAttr.mapValues(newElementType, mapping);
-  llvm_unreachable("unsupported ElementsAttr subtype");
-}
-
-ElementsAttr
-ElementsAttr::mapValues(Type newElementType,
-                        function_ref<APInt(const APFloat &)> mapping) const {
-  if (auto intOrFpAttr = dyn_cast<DenseElementsAttr>())
-    return intOrFpAttr.mapValues(newElementType, mapping);
-  llvm_unreachable("unsupported ElementsAttr subtype");
-}
-
-/// Method for support type inquiry through isa, cast and dyn_cast.
-bool ElementsAttr::classof(Attribute attr) {
-  return attr.isa<DenseIntOrFPElementsAttr, DenseStringElementsAttr,
-                  OpaqueElementsAttr, SparseElementsAttr>();
-}
-
-/// Returns the 1 dimensional flattened row-major index from the given
-/// multi-dimensional index.
-uint64_t ElementsAttr::getFlattenedIndex(ArrayRef<uint64_t> index) const {
-  assert(isValidIndex(index) && "expected valid multi-dimensional index");
-  auto type = getType();
-
-  // Reduce the provided multidimensional index into a flattended 1D row-major
-  // index.
-  auto rank = type.getRank();
-  auto shape = type.getShape();
-  uint64_t valueIndex = 0;
-  uint64_t dimMultiplier = 1;
-  for (int i = rank - 1; i >= 0; --i) {
-    valueIndex += index[i] * dimMultiplier;
-    dimMultiplier *= shape[i];
+  // Check that the dialect is actually registered.
+  MLIRContext *context = dialect.getContext();
+  if (!context->allowsUnregisteredDialects() &&
+      !context->getLoadedDialect(dialect.strref())) {
+    return emitError()
+           << "#" << dialect << "<\"" << attrData << "\"> : " << type
+           << " attribute created with unregistered dialect. If this is "
+              "intended, please call allowUnregisteredDialects() on the "
+              "MLIRContext, or use -allow-unregistered-dialect with "
+              "the MLIR opt tool used";
   }
-  return valueIndex;
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -556,7 +551,7 @@ DenseElementsAttr::AttributeElementIterator::AttributeElementIterator(
 
 Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
   auto owner = getFromOpaquePointer(base).cast<DenseElementsAttr>();
-  Type eltTy = owner.getType().getElementType();
+  Type eltTy = owner.getElementType();
   if (auto intEltTy = eltTy.dyn_cast<IntegerType>())
     return IntegerAttr::get(eltTy, *IntElementIterator(owner, index));
   if (eltTy.isa<IndexType>())
@@ -565,6 +560,25 @@ Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
     IntElementIterator intIt(owner, index);
     FloatElementIterator floatIt(floatEltTy.getFloatSemantics(), intIt);
     return FloatAttr::get(eltTy, *floatIt);
+  }
+  if (auto complexTy = eltTy.dyn_cast<ComplexType>()) {
+    auto complexEltTy = complexTy.getElementType();
+    ComplexIntElementIterator complexIntIt(owner, index);
+    if (complexEltTy.isa<IntegerType>()) {
+      auto value = *complexIntIt;
+      auto real = IntegerAttr::get(complexEltTy, value.real());
+      auto imag = IntegerAttr::get(complexEltTy, value.imag());
+      return ArrayAttr::get(complexTy.getContext(),
+                            ArrayRef<Attribute>{real, imag});
+    }
+
+    ComplexFloatElementIterator complexFloatIt(
+        complexEltTy.cast<FloatType>().getFloatSemantics(), complexIntIt);
+    auto value = *complexFloatIt;
+    auto real = FloatAttr::get(complexEltTy, value.real());
+    auto imag = FloatAttr::get(complexEltTy, value.imag());
+    return ArrayAttr::get(complexTy.getContext(),
+                          ArrayRef<Attribute>{real, imag});
   }
   if (owner.isa<DenseStringElementsAttr>()) {
     ArrayRef<StringRef> vals = owner.getRawStringData();
@@ -592,7 +606,7 @@ DenseElementsAttr::IntElementIterator::IntElementIterator(
     DenseElementsAttr attr, size_t dataIndex)
     : DenseElementIndexedIteratorImpl<IntElementIterator, APInt, APInt, APInt>(
           attr.getRawData().data(), attr.isSplat(), dataIndex),
-      bitWidth(getDenseElementBitWidth(attr.getType().getElementType())) {}
+      bitWidth(getDenseElementBitWidth(attr.getElementType())) {}
 
 APInt DenseElementsAttr::IntElementIterator::operator*() const {
   return readBits(getData(),
@@ -609,7 +623,7 @@ DenseElementsAttr::ComplexIntElementIterator::ComplexIntElementIterator(
                                       std::complex<APInt>, std::complex<APInt>,
                                       std::complex<APInt>>(
           attr.getRawData().data(), attr.isSplat(), dataIndex) {
-  auto complexType = attr.getType().getElementType().cast<ComplexType>();
+  auto complexType = attr.getElementType().cast<ComplexType>();
   bitWidth = getDenseElementBitWidth(complexType.getElementType());
 }
 
@@ -682,7 +696,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
            "expected attribute value to have element type");
     if (eltType.isa<FloatType>())
       intVal = values[i].cast<FloatAttr>().getValue().bitcastToAPInt();
-    else if (eltType.isa<IntegerType>())
+    else if (eltType.isa<IntegerType, IndexType>())
       intVal = values[i].cast<IntegerAttr>().getValue();
     else
       llvm_unreachable("unexpected element type");
@@ -832,21 +846,15 @@ DenseElementsAttr DenseElementsAttr::getRawIntOrFloat(ShapedType type,
                                                     isInt, isSigned);
 }
 
-/// A method used to verify specific type invariants that the templatized 'get'
-/// method cannot.
 bool DenseElementsAttr::isValidIntOrFloat(int64_t dataEltSize, bool isInt,
                                           bool isSigned) const {
-  return ::isValidIntOrFloat(getType().getElementType(), dataEltSize, isInt,
-                             isSigned);
+  return ::isValidIntOrFloat(getElementType(), dataEltSize, isInt, isSigned);
 }
-
-/// Check the information for a C++ data type, check if this type is valid for
-/// the current attribute.
 bool DenseElementsAttr::isValidComplex(int64_t dataEltSize, bool isInt,
                                        bool isSigned) const {
   return ::isValidIntOrFloat(
-      getType().getElementType().cast<ComplexType>().getElementType(),
-      dataEltSize / 2, isInt, isSigned);
+      getElementType().cast<ComplexType>().getElementType(), dataEltSize / 2,
+      isInt, isSigned);
 }
 
 /// Returns true if this attribute corresponds to a splat, i.e. if all element
@@ -855,75 +863,68 @@ bool DenseElementsAttr::isSplat() const {
   return static_cast<DenseElementsAttributeStorage *>(impl)->isSplat;
 }
 
-/// Return the held element values as a range of Attributes.
-auto DenseElementsAttr::getAttributeValues() const
-    -> llvm::iterator_range<AttributeElementIterator> {
-  return {attr_value_begin(), attr_value_end()};
-}
-auto DenseElementsAttr::attr_value_begin() const -> AttributeElementIterator {
-  return AttributeElementIterator(*this, 0);
-}
-auto DenseElementsAttr::attr_value_end() const -> AttributeElementIterator {
-  return AttributeElementIterator(*this, getNumElements());
+/// Return if the given complex type has an integer element type.
+static bool isComplexOfIntType(Type type) {
+  return type.cast<ComplexType>().getElementType().isa<IntegerType>();
 }
 
-/// Return the held element values as a range of bool. The element type of
-/// this attribute must be of integer type of bitwidth 1.
-auto DenseElementsAttr::getBoolValues() const
-    -> llvm::iterator_range<BoolElementIterator> {
-  auto eltType = getType().getElementType().dyn_cast<IntegerType>();
-  assert(eltType && eltType.getWidth() == 1 && "expected i1 integer type");
-  (void)eltType;
-  return {BoolElementIterator(*this, 0),
-          BoolElementIterator(*this, getNumElements())};
-}
-
-/// Return the held element values as a range of APInts. The element type of
-/// this attribute must be of integer type.
-auto DenseElementsAttr::getIntValues() const
-    -> llvm::iterator_range<IntElementIterator> {
-  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
-  return {raw_int_begin(), raw_int_end()};
-}
-auto DenseElementsAttr::int_value_begin() const -> IntElementIterator {
-  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
-  return raw_int_begin();
-}
-auto DenseElementsAttr::int_value_end() const -> IntElementIterator {
-  assert(getType().getElementType().isIntOrIndex() && "expected integral type");
-  return raw_int_end();
-}
 auto DenseElementsAttr::getComplexIntValues() const
     -> llvm::iterator_range<ComplexIntElementIterator> {
-  Type eltTy = getType().getElementType().cast<ComplexType>().getElementType();
-  (void)eltTy;
-  assert(eltTy.isa<IntegerType>() && "expected complex integral type");
+  assert(isComplexOfIntType(getElementType()) &&
+         "expected complex integral type");
   return {ComplexIntElementIterator(*this, 0),
           ComplexIntElementIterator(*this, getNumElements())};
+}
+auto DenseElementsAttr::complex_value_begin() const
+    -> ComplexIntElementIterator {
+  assert(isComplexOfIntType(getElementType()) &&
+         "expected complex integral type");
+  return ComplexIntElementIterator(*this, 0);
+}
+auto DenseElementsAttr::complex_value_end() const -> ComplexIntElementIterator {
+  assert(isComplexOfIntType(getElementType()) &&
+         "expected complex integral type");
+  return ComplexIntElementIterator(*this, getNumElements());
 }
 
 /// Return the held element values as a range of APFloat. The element type of
 /// this attribute must be of float type.
 auto DenseElementsAttr::getFloatValues() const
     -> llvm::iterator_range<FloatElementIterator> {
-  auto elementType = getType().getElementType().cast<FloatType>();
+  auto elementType = getElementType().cast<FloatType>();
   const auto &elementSemantics = elementType.getFloatSemantics();
   return {FloatElementIterator(elementSemantics, raw_int_begin()),
           FloatElementIterator(elementSemantics, raw_int_end())};
 }
 auto DenseElementsAttr::float_value_begin() const -> FloatElementIterator {
-  return getFloatValues().begin();
+  auto elementType = getElementType().cast<FloatType>();
+  return FloatElementIterator(elementType.getFloatSemantics(), raw_int_begin());
 }
 auto DenseElementsAttr::float_value_end() const -> FloatElementIterator {
-  return getFloatValues().end();
+  auto elementType = getElementType().cast<FloatType>();
+  return FloatElementIterator(elementType.getFloatSemantics(), raw_int_end());
 }
+
 auto DenseElementsAttr::getComplexFloatValues() const
     -> llvm::iterator_range<ComplexFloatElementIterator> {
-  Type eltTy = getType().getElementType().cast<ComplexType>().getElementType();
+  Type eltTy = getElementType().cast<ComplexType>().getElementType();
   assert(eltTy.isa<FloatType>() && "expected complex float type");
   const auto &semantics = eltTy.cast<FloatType>().getFloatSemantics();
   return {{semantics, {*this, 0}},
           {semantics, {*this, static_cast<size_t>(getNumElements())}}};
+}
+auto DenseElementsAttr::complex_float_value_begin() const
+    -> ComplexFloatElementIterator {
+  Type eltTy = getElementType().cast<ComplexType>().getElementType();
+  assert(eltTy.isa<FloatType>() && "expected complex float type");
+  return {eltTy.cast<FloatType>().getFloatSemantics(), {*this, 0}};
+}
+auto DenseElementsAttr::complex_float_value_end() const
+    -> ComplexFloatElementIterator {
+  Type eltTy = getElementType().cast<ComplexType>().getElementType();
+  assert(eltTy.isa<FloatType>() && "expected complex float type");
+  return {eltTy.cast<FloatType>().getFloatSemantics(),
+          {*this, static_cast<size_t>(getNumElements())}};
 }
 
 /// Return the raw storage data held by this attribute.
@@ -943,12 +944,28 @@ DenseElementsAttr DenseElementsAttr::reshape(ShapedType newType) {
   if (curType == newType)
     return *this;
 
-  (void)curType;
   assert(newType.getElementType() == curType.getElementType() &&
          "expected the same element type");
   assert(newType.getNumElements() == curType.getNumElements() &&
          "expected the same number of elements");
   return DenseIntOrFPElementsAttr::getRaw(newType, getRawData(), isSplat());
+}
+
+/// Return a new DenseElementsAttr that has the same data as the current
+/// attribute, but has bitcast elements such that it is now 'newType'. The new
+/// type must have the same shape and element types of the same bitwidth as the
+/// current type.
+DenseElementsAttr DenseElementsAttr::bitcast(Type newElType) {
+  ShapedType curType = getType();
+  Type curElType = curType.getElementType();
+  if (curElType == newElType)
+    return *this;
+
+  assert(getDenseElementBitWidth(newElType) ==
+             getDenseElementBitWidth(curElType) &&
+         "expected element types with the same bitwidth");
+  return DenseIntOrFPElementsAttr::getRaw(curType.clone(newElType),
+                                          getRawData(), isSplat());
 }
 
 DenseElementsAttr
@@ -960,6 +977,18 @@ DenseElementsAttr::mapValues(Type newElementType,
 DenseElementsAttr DenseElementsAttr::mapValues(
     Type newElementType, function_ref<APInt(const APFloat &)> mapping) const {
   return cast<DenseFPElementsAttr>().mapValues(newElementType, mapping);
+}
+
+ShapedType DenseElementsAttr::getType() const {
+  return Attribute::getType().cast<ShapedType>();
+}
+
+Type DenseElementsAttr::getElementType() const {
+  return getType().getElementType();
+}
+
+int64_t DenseElementsAttr::getNumElements() const {
+  return getType().getNumElements();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1260,19 +1289,19 @@ Attribute SparseElementsAttr::getValue(ArrayRef<uint64_t> index) const {
 
 /// Get a zero APFloat for the given sparse attribute.
 APFloat SparseElementsAttr::getZeroAPFloat() const {
-  auto eltType = getType().getElementType().cast<FloatType>();
+  auto eltType = getElementType().cast<FloatType>();
   return APFloat(eltType.getFloatSemantics());
 }
 
 /// Get a zero APInt for the given sparse attribute.
 APInt SparseElementsAttr::getZeroAPInt() const {
-  auto eltType = getType().getElementType().cast<IntegerType>();
-  return APInt::getNullValue(eltType.getWidth());
+  auto eltType = getElementType().cast<IntegerType>();
+  return APInt::getZero(eltType.getWidth());
 }
 
 /// Get a zero attribute for the given attribute type.
 Attribute SparseElementsAttr::getZeroAttr() const {
-  auto eltType = getType().getElementType();
+  auto eltType = getElementType();
 
   // Handle floating point elements.
   if (eltType.isa<FloatType>())
@@ -1306,4 +1335,72 @@ std::vector<ptrdiff_t> SparseElementsAttr::getFlattenedSparseIndices() const {
     flatSparseIndices.push_back(getFlattenedIndex(
         {&*std::next(sparseIndexValues.begin(), i * rank), rank}));
   return flatSparseIndices;
+}
+
+LogicalResult
+SparseElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                           ShapedType type, DenseIntElementsAttr sparseIndices,
+                           DenseElementsAttr values) {
+  ShapedType valuesType = values.getType();
+  if (valuesType.getRank() != 1)
+    return emitError() << "expected 1-d tensor for sparse element values";
+
+  // Verify the indices and values shape.
+  ShapedType indicesType = sparseIndices.getType();
+  auto emitShapeError = [&]() {
+    return emitError() << "expected shape ([" << type.getShape()
+                       << "]); inferred shape of indices literal (["
+                       << indicesType.getShape()
+                       << "]); inferred shape of values literal (["
+                       << valuesType.getShape() << "])";
+  };
+  // Verify indices shape.
+  size_t rank = type.getRank(), indicesRank = indicesType.getRank();
+  if (indicesRank == 2) {
+    if (indicesType.getDimSize(1) != static_cast<int64_t>(rank))
+      return emitShapeError();
+  } else if (indicesRank != 1 || rank != 1) {
+    return emitShapeError();
+  }
+  // Verify the values shape.
+  int64_t numSparseIndices = indicesType.getDimSize(0);
+  if (numSparseIndices != valuesType.getDimSize(0))
+    return emitShapeError();
+
+  // Verify that the sparse indices are within the value shape.
+  auto emitIndexError = [&](unsigned indexNum, ArrayRef<uint64_t> index) {
+    return emitError()
+           << "sparse index #" << indexNum
+           << " is not contained within the value shape, with index=[" << index
+           << "], and type=" << type;
+  };
+
+  // Handle the case where the index values are a splat.
+  auto sparseIndexValues = sparseIndices.getValues<uint64_t>();
+  if (sparseIndices.isSplat()) {
+    SmallVector<uint64_t> indices(rank, *sparseIndexValues.begin());
+    if (!ElementsAttr::isValidIndex(type, indices))
+      return emitIndexError(0, indices);
+    return success();
+  }
+
+  // Otherwise, reinterpret each index as an ArrayRef.
+  for (size_t i = 0, e = numSparseIndices; i != e; ++i) {
+    ArrayRef<uint64_t> index(&*std::next(sparseIndexValues.begin(), i * rank),
+                             rank);
+    if (!ElementsAttr::isValidIndex(type, index))
+      return emitIndexError(i, index);
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TypeAttr
+//===----------------------------------------------------------------------===//
+
+void TypeAttr::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getValue());
 }

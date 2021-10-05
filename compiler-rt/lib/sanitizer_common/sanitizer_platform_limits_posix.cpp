@@ -91,10 +91,10 @@
 #if SANITIZER_LINUX
 # include <utime.h>
 # include <sys/ptrace.h>
-#if defined(__mips64) || defined(__aarch64__) || defined(__arm__) || \
-    SANITIZER_RISCV64
-#  include <asm/ptrace.h>
-#  ifdef __arm__
+#    if defined(__mips64) || defined(__aarch64__) || defined(__arm__) || \
+        defined(__hexagon__) || SANITIZER_RISCV64
+#      include <asm/ptrace.h>
+#      ifdef __arm__
 typedef struct user_fpregs elf_fpregset_t;
 #   define ARM_VFPREGS_SIZE_ASAN (32 * 8 /*fpregs*/ + 4 /*fpscr*/)
 #   if !defined(ARM_VFPREGS_SIZE)
@@ -143,7 +143,6 @@ typedef struct user_fpregs elf_fpregset_t;
 # include <sys/procfs.h>
 #endif
 #include <sys/user.h>
-#include <linux/cyclades.h>
 #include <linux/if_eql.h>
 #include <linux/if_plip.h>
 #include <linux/lp.h>
@@ -243,12 +242,13 @@ namespace __sanitizer {
     defined(__powerpc64__) || defined(__arch64__) || defined(__sparcv9) || \
     defined(__x86_64__) || SANITIZER_RISCV64
 #define SIZEOF_STRUCT_USTAT 32
-#elif defined(__arm__) || defined(__i386__) || defined(__mips__) \
-  || defined(__powerpc__) || defined(__s390__) || defined(__sparc__)
-#define SIZEOF_STRUCT_USTAT 20
-#else
-#error Unknown size of struct ustat
-#endif
+#    elif defined(__arm__) || defined(__i386__) || defined(__mips__) ||    \
+        defined(__powerpc__) || defined(__s390__) || defined(__sparc__) || \
+        defined(__hexagon__)
+#      define SIZEOF_STRUCT_USTAT 20
+#    else
+#      error Unknown size of struct ustat
+#    endif
   unsigned struct_ustat_sz = SIZEOF_STRUCT_USTAT;
   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
@@ -312,6 +312,10 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   int glob_nomatch = GLOB_NOMATCH;
   int glob_altdirfunc = GLOB_ALTDIRFUNC;
 #endif
+
+#  if !SANITIZER_ANDROID
+  const int wordexp_wrde_dooffs = WRDE_DOOFFS;
+#  endif  // !SANITIZER_ANDROID
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID &&                               \
     (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
@@ -460,7 +464,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 
 #if SANITIZER_GLIBC
   unsigned struct_ax25_parms_struct_sz = sizeof(struct ax25_parms_struct);
-  unsigned struct_cyclades_monitor_sz = sizeof(struct cyclades_monitor);
 #if EV_VERSION > (0x010000)
   unsigned struct_input_keymap_entry_sz = sizeof(struct input_keymap_entry);
 #else
@@ -824,15 +827,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 #endif // SANITIZER_LINUX
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-  unsigned IOCTL_CYGETDEFTHRESH = CYGETDEFTHRESH;
-  unsigned IOCTL_CYGETDEFTIMEOUT = CYGETDEFTIMEOUT;
-  unsigned IOCTL_CYGETMON = CYGETMON;
-  unsigned IOCTL_CYGETTHRESH = CYGETTHRESH;
-  unsigned IOCTL_CYGETTIMEOUT = CYGETTIMEOUT;
-  unsigned IOCTL_CYSETDEFTHRESH = CYSETDEFTHRESH;
-  unsigned IOCTL_CYSETDEFTIMEOUT = CYSETDEFTIMEOUT;
-  unsigned IOCTL_CYSETTHRESH = CYSETTHRESH;
-  unsigned IOCTL_CYSETTIMEOUT = CYSETTIMEOUT;
   unsigned IOCTL_EQL_EMANCIPATE = EQL_EMANCIPATE;
   unsigned IOCTL_EQL_ENSLAVE = EQL_ENSLAVE;
   unsigned IOCTL_EQL_GETMASTRCFG = EQL_GETMASTRCFG;

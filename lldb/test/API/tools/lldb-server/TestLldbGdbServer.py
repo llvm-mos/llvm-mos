@@ -10,6 +10,9 @@ gdb remote packet functional areas.  For now it contains
 the initial set of tests implemented.
 """
 
+import binascii
+import itertools
+
 import unittest2
 import gdbremote_testcase
 import lldbgdbserverutils
@@ -17,7 +20,7 @@ from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbdwarf import *
-from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbutil, lldbplatformutil
 
 
 class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser):
@@ -28,7 +31,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
 
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
         self.test_sequence.add_log_lines(
             ["lldb-server <  26> read packet: $QThreadSuffixSupported#e4",
              "lldb-server <   6> send packet: $OK#9a"],
@@ -41,7 +44,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
 
-        self.add_no_ack_remote_stream()
+        self.do_handshake()
         self.test_sequence.add_log_lines(
             ["lldb-server <  27> read packet: $QListThreadsInStopReply#21",
              "lldb-server <   6> send packet: $OK#9a"],
@@ -78,13 +81,14 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.test_sequence.add_log_lines(["read packet: $qC#00",
                                           {"direction": "send",
                                            "regex": r"^\$QC([0-9a-fA-F]+)#",
-                                           "capture": {1: "thread_id"}},
+                                           "capture": {1: "thread_id_QC"}},
                                           "read packet: $?#00",
                                           {"direction": "send",
                                               "regex": r"^\$T[0-9a-fA-F]{2}thread:([0-9a-fA-F]+)",
-                                              "expect_captures": {1: "thread_id"}}],
+                                              "capture": {1: "thread_id_?"}}],
                                          True)
-        self.expect_gdbremote_sequence()
+        context = self.expect_gdbremote_sequence()
+        self.assertEqual(context.get("thread_id_QC"), context.get("thread_id_?"))
 
     def test_attach_commandline_continue_app_exits(self):
         self.build()
@@ -398,6 +402,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.Hg_switches_to_3_threads()
 
     @expectedFailureAll(oslist=["windows"]) # expect 4 threads
+    @add_test_categories(["llgs"])
     def test_Hg_switches_to_3_threads_attach_pass_correct_pid(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -427,18 +432,21 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.expect_gdbremote_sequence()
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_Hg_fails_on_another_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(1)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_Hg_fails_on_zero_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(0)
 
     @expectedFailureAll(oslist=["windows"])
+    @add_test_categories(["llgs"])
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -949,22 +957,84 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=True)
 
-    def test_qSupported_returns_known_stub_features(self):
+    def get_qSupported_dict(self, features=[]):
         self.build()
         self.set_inferior_startup_launch()
 
         # Start up the stub and start/prep the inferior.
         procs = self.prep_debug_monitor_and_inferior()
-        self.add_qSupported_packets()
+        self.add_qSupported_packets(features)
 
         # Run the packet stream.
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
         # Retrieve the qSupported features.
-        supported_dict = self.parse_qSupported_response(context)
+        return self.parse_qSupported_response(context)
+
+    def test_qSupported_returns_known_stub_features(self):
+        supported_dict = self.get_qSupported_dict()
         self.assertIsNotNone(supported_dict)
         self.assertTrue(len(supported_dict) > 0)
+
+    def test_qSupported_auvx(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('qXfer:auxv:read', '-'), expected)
+
+    def test_qSupported_libraries_svr4(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('qXfer:libraries-svr4:read', '-'),
+                         expected)
+
+    def test_qSupported_QPassSignals(self):
+        expected = ('+' if lldbplatformutil.getPlatform()
+                    in ["freebsd", "linux", "netbsd"] else '-')
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get('QPassSignals', '-'), expected)
+
+    @add_test_categories(["fork"])
+    def test_qSupported_fork_events(self):
+        supported_dict = (
+            self.get_qSupported_dict(['multiprocess+', 'fork-events+']))
+        self.assertEqual(supported_dict.get('multiprocess', '-'), '+')
+        self.assertEqual(supported_dict.get('fork-events', '-'), '+')
+        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
+
+    @add_test_categories(["fork"])
+    def test_qSupported_fork_events_without_multiprocess(self):
+        supported_dict = (
+            self.get_qSupported_dict(['fork-events+']))
+        self.assertEqual(supported_dict.get('multiprocess', '-'), '-')
+        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
+        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
+
+    @add_test_categories(["fork"])
+    def test_qSupported_vfork_events(self):
+        supported_dict = (
+            self.get_qSupported_dict(['multiprocess+', 'vfork-events+']))
+        self.assertEqual(supported_dict.get('multiprocess', '-'), '+')
+        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
+        self.assertEqual(supported_dict.get('vfork-events', '-'), '+')
+
+    @add_test_categories(["fork"])
+    def test_qSupported_vfork_events_without_multiprocess(self):
+        supported_dict = (
+            self.get_qSupported_dict(['vfork-events+']))
+        self.assertEqual(supported_dict.get('multiprocess', '-'), '-')
+        self.assertEqual(supported_dict.get('fork-events', '-'), '-')
+        self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
+
+    # We need to be able to self.runCmd to get cpuinfo,
+    # which is not possible when using a remote platform.
+    @skipIfRemote
+    def test_qSupported_memory_tagging(self):
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get("memory-tagging", '-'),
+                         '+' if self.isAArch64MTE() else '-')
 
     @skipIfWindows # No pty support to test any inferior output
     def test_written_M_content_reads_back_correctly(self):
@@ -1179,3 +1249,125 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             # Make sure we read back what we wrote.
             self.assertEqual(read_value, expected_reg_values[thread_index])
             thread_index += 1
+
+    @skipIfWindows # No pty support to test any inferior output
+    @add_test_categories(["llgs"])
+    def test_launch_via_A(self):
+        self.build()
+        exe_path = self.getBuildArtifact("a.out")
+        args = [exe_path, "stderr:arg1", "stderr:arg2", "stderr:arg3"]
+        hex_args = [binascii.b2a_hex(x.encode()).decode() for x in args]
+
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+        self.do_handshake()
+        # NB: strictly speaking we should use %x here but this packet
+        # is deprecated, so no point in changing lldb-server's expectations
+        self.test_sequence.add_log_lines(
+            ["read packet: $A %d,0,%s,%d,1,%s,%d,2,%s,%d,3,%s#00" %
+             tuple(itertools.chain.from_iterable(
+                 [(len(x), x) for x in hex_args])),
+             "send packet: $OK#00",
+             "read packet: $c#00",
+             "send packet: $W00#00"],
+            True)
+        context = self.expect_gdbremote_sequence()
+        self.assertEqual(context["O_content"],
+                         b'arg1\r\narg2\r\narg3\r\n')
+
+    @skipIfWindows # No pty support to test any inferior output
+    @add_test_categories(["llgs"])
+    def test_launch_via_vRun(self):
+        self.build()
+        exe_path = self.getBuildArtifact("a.out")
+        args = [exe_path, "stderr:arg1", "stderr:arg2", "stderr:arg3"]
+        hex_args = [binascii.b2a_hex(x.encode()).decode() for x in args]
+
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+        self.do_handshake()
+        self.test_sequence.add_log_lines(
+            ["read packet: $vRun;%s;%s;%s;%s#00" % tuple(hex_args),
+             {"direction": "send",
+              "regex": r"^\$T([0-9a-fA-F]+)"},
+             "read packet: $c#00",
+             "send packet: $W00#00"],
+            True)
+        context = self.expect_gdbremote_sequence()
+        self.assertEqual(context["O_content"],
+                         b'arg1\r\narg2\r\narg3\r\n')
+
+    @add_test_categories(["llgs"])
+    def test_launch_via_vRun_no_args(self):
+        self.build()
+        exe_path = self.getBuildArtifact("a.out")
+        hex_path = binascii.b2a_hex(exe_path.encode()).decode()
+
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+        self.do_handshake()
+        self.test_sequence.add_log_lines(
+            ["read packet: $vRun;%s#00" % (hex_path,),
+             {"direction": "send",
+              "regex": r"^\$T([0-9a-fA-F]+)"},
+             "read packet: $c#00",
+             "send packet: $W00#00"],
+            True)
+        self.expect_gdbremote_sequence()
+
+    @skipIfWindows # No pty support to test any inferior output
+    @add_test_categories(["llgs"])
+    def test_QEnvironment(self):
+        self.build()
+        exe_path = self.getBuildArtifact("a.out")
+        env = {"FOO": "test", "BAR": "a=z"}
+        args = [exe_path, "print-env:FOO", "print-env:BAR"]
+        hex_args = [binascii.b2a_hex(x.encode()).decode() for x in args]
+
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+        self.do_handshake()
+
+        for key, value in env.items():
+            self.test_sequence.add_log_lines(
+                ["read packet: $QEnvironment:%s=%s#00" % (key, value),
+                 "send packet: $OK#00"],
+                True)
+        self.test_sequence.add_log_lines(
+            ["read packet: $vRun;%s#00" % (";".join(hex_args),),
+             {"direction": "send",
+              "regex": r"^\$T([0-9a-fA-F]+)"},
+             "read packet: $c#00",
+             "send packet: $W00#00"],
+            True)
+        context = self.expect_gdbremote_sequence()
+        self.assertEqual(context["O_content"], b"test\r\na=z\r\n")
+
+    @skipIfWindows # No pty support to test any inferior output
+    @add_test_categories(["llgs"])
+    def test_QEnvironmentHexEncoded(self):
+        self.build()
+        exe_path = self.getBuildArtifact("a.out")
+        env = {"FOO": "test", "BAR": "a=z", "BAZ": "a*}#z"}
+        args = [exe_path, "print-env:FOO", "print-env:BAR", "print-env:BAZ"]
+        hex_args = [binascii.b2a_hex(x.encode()).decode() for x in args]
+
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+        self.do_handshake()
+
+        for key, value in env.items():
+            hex_enc = binascii.b2a_hex(("%s=%s" % (key, value)).encode()).decode()
+            self.test_sequence.add_log_lines(
+                ["read packet: $QEnvironmentHexEncoded:%s#00" % (hex_enc,),
+                 "send packet: $OK#00"],
+                True)
+        self.test_sequence.add_log_lines(
+            ["read packet: $vRun;%s#00" % (";".join(hex_args),),
+             {"direction": "send",
+              "regex": r"^\$T([0-9a-fA-F]+)"},
+             "read packet: $c#00",
+             "send packet: $W00#00"],
+            True)
+        context = self.expect_gdbremote_sequence()
+        self.assertEqual(context["O_content"], b"test\r\na=z\r\na*}#z\r\n")

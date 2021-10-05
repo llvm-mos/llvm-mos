@@ -11,6 +11,7 @@
 #include "ABISysV_arm64.h"
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/Process.h"
 
 LLDB_PLUGIN_DEFINE(ABIAArch64)
 
@@ -22,6 +23,18 @@ void ABIAArch64::Initialize() {
 void ABIAArch64::Terminate() {
   ABISysV_arm64::Terminate();
   ABIMacOSX_arm64::Terminate();
+}
+
+lldb::addr_t ABIAArch64::FixCodeAddress(lldb::addr_t pc) {
+  if (lldb::ProcessSP process_sp = GetProcessSP())
+    return FixAddress(pc, process_sp->GetCodeAddressMask());
+  return pc;
+}
+
+lldb::addr_t ABIAArch64::FixDataAddress(lldb::addr_t pc) {
+  if (lldb::ProcessSP process_sp = GetProcessSP())
+    return FixAddress(pc, process_sp->GetDataAddressMask());
+  return pc;
 }
 
 std::pair<uint32_t, uint32_t>
@@ -39,12 +52,13 @@ std::string ABIAArch64::GetMCName(std::string reg) {
   MapRegisterName(reg, "x30", "lr");
   return reg;
 }
+
 uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Case("lr", LLDB_REGNUM_GENERIC_RA)
-      .Case("sp", LLDB_REGNUM_GENERIC_SP)
-      .Case("fp", LLDB_REGNUM_GENERIC_FP)
+      .Cases("lr", "x30", LLDB_REGNUM_GENERIC_RA)
+      .Cases("sp", "x31", LLDB_REGNUM_GENERIC_SP)
+      .Cases("fp", "x29", LLDB_REGNUM_GENERIC_FP)
       .Case("cpsr", LLDB_REGNUM_GENERIC_FLAGS)
       .Case("x0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("x1", LLDB_REGNUM_GENERIC_ARG2)
@@ -55,4 +69,12 @@ uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
       .Case("x6", LLDB_REGNUM_GENERIC_ARG7)
       .Case("x7", LLDB_REGNUM_GENERIC_ARG8)
       .Default(LLDB_INVALID_REGNUM);
+}
+
+void ABIAArch64::AugmentRegisterInfo(lldb_private::RegisterInfo &info) {
+  lldb_private::MCBasedABI::AugmentRegisterInfo(info);
+
+  // GDB sends x31 as "sp".  Add the "x31" alt_name for convenience.
+  if (!strcmp(info.name, "sp") && !info.alt_name)
+    info.alt_name = "x31";
 }

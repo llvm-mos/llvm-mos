@@ -124,11 +124,30 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
 
 bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
-    llvm::function_ref<bool(unsigned, Stmt *)> Callback) {
+    llvm::function_ref<bool(unsigned, Stmt *)> Callback,
+    llvm::function_ref<void(OMPLoopBasedDirective *)>
+        OnTransformationCallback) {
   CurStmt = CurStmt->IgnoreContainers();
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
-    if (auto *Dir = dyn_cast<OMPTileDirective>(CurStmt))
-      CurStmt = Dir->getTransformedStmt();
+    while (true) {
+      auto *OrigStmt = CurStmt;
+      if (auto *Dir = dyn_cast<OMPTileDirective>(OrigStmt)) {
+        OnTransformationCallback(Dir);
+        CurStmt = Dir->getTransformedStmt();
+      } else if (auto *Dir = dyn_cast<OMPUnrollDirective>(OrigStmt)) {
+        OnTransformationCallback(Dir);
+        CurStmt = Dir->getTransformedStmt();
+      } else {
+        break;
+      }
+
+      if (!CurStmt) {
+        // May happen if the loop transformation does not result in a generated
+        // loop (such as full unrolling).
+        CurStmt = OrigStmt;
+        break;
+      }
+    }
     if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
       CurStmt = CanonLoop->getLoopStmt();
     if (Callback(Cnt, CurStmt))
@@ -232,6 +251,25 @@ void OMPLoopDirective::setFinalsConditions(ArrayRef<Expr *> A) {
   assert(A.size() == getLoopsNumber() &&
          "Number of finals conditions is not the same as the collapsed number");
   llvm::copy(A, getFinalsConditions().begin());
+}
+
+OMPMetaDirective *OMPMetaDirective::Create(const ASTContext &C,
+                                           SourceLocation StartLoc,
+                                           SourceLocation EndLoc,
+                                           ArrayRef<OMPClause *> Clauses,
+                                           Stmt *AssociatedStmt, Stmt *IfStmt) {
+  auto *Dir = createDirective<OMPMetaDirective>(
+      C, Clauses, AssociatedStmt, /*NumChildren=*/1, StartLoc, EndLoc);
+  Dir->setIfStmt(IfStmt);
+  return Dir;
+}
+
+OMPMetaDirective *OMPMetaDirective::CreateEmpty(const ASTContext &C,
+                                                unsigned NumClauses,
+                                                EmptyShell) {
+  return createEmptyDirective<OMPMetaDirective>(C, NumClauses,
+                                                /*HasAssociatedStmt=*/true,
+                                                /*NumChildren=*/1);
 }
 
 OMPParallelDirective *OMPParallelDirective::Create(
@@ -353,6 +391,25 @@ OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
   return createEmptyDirective<OMPTileDirective>(
       C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
+}
+
+OMPUnrollDirective *
+OMPUnrollDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
+                           Stmt *AssociatedStmt, Stmt *TransformedStmt,
+                           Stmt *PreInits) {
+  auto *Dir = createDirective<OMPUnrollDirective>(
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  return Dir;
+}
+
+OMPUnrollDirective *OMPUnrollDirective::CreateEmpty(const ASTContext &C,
+                                                    unsigned NumClauses) {
+  return createEmptyDirective<OMPUnrollDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation());
 }
 
 OMPForSimdDirective *
@@ -1958,4 +2015,39 @@ OMPInteropDirective *OMPInteropDirective::CreateEmpty(const ASTContext &C,
                                                       unsigned NumClauses,
                                                       EmptyShell) {
   return createEmptyDirective<OMPInteropDirective>(C, NumClauses);
+}
+
+OMPDispatchDirective *OMPDispatchDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+    SourceLocation TargetCallLoc) {
+  auto *Dir = createDirective<OMPDispatchDirective>(
+      C, Clauses, AssociatedStmt, /*NumChildren=*/0, StartLoc, EndLoc);
+  Dir->setTargetCallLoc(TargetCallLoc);
+  return Dir;
+}
+
+OMPDispatchDirective *OMPDispatchDirective::CreateEmpty(const ASTContext &C,
+                                                        unsigned NumClauses,
+                                                        EmptyShell) {
+  return createEmptyDirective<OMPDispatchDirective>(C, NumClauses,
+                                                    /*HasAssociatedStmt=*/true,
+                                                    /*NumChildren=*/0);
+}
+
+OMPMaskedDirective *OMPMaskedDirective::Create(const ASTContext &C,
+                                               SourceLocation StartLoc,
+                                               SourceLocation EndLoc,
+                                               ArrayRef<OMPClause *> Clauses,
+                                               Stmt *AssociatedStmt) {
+  return createDirective<OMPMaskedDirective>(C, Clauses, AssociatedStmt,
+                                             /*NumChildren=*/0, StartLoc,
+                                             EndLoc);
+}
+
+OMPMaskedDirective *OMPMaskedDirective::CreateEmpty(const ASTContext &C,
+                                                    unsigned NumClauses,
+                                                    EmptyShell) {
+  return createEmptyDirective<OMPMaskedDirective>(C, NumClauses,
+                                                  /*HasAssociatedStmt=*/true);
 }

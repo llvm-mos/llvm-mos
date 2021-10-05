@@ -3,13 +3,13 @@
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
-# RUN:   | llvm-objdump -d --mattr=+experimental-v - --riscv-no-aliases \
+# RUN:   | llvm-objdump -d --mattr=+experimental-v -M no-aliases - \
 # RUN:   | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
 # RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
-vse1.v v24, (a0)
-# CHECK-INST: vse1.v v24, (a0)
+vsm.v v24, (a0)
+# CHECK-INST: vsm.v v24, (a0)
 # CHECK-ENCODING: [0x27,0x0c,0xb5,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c b5 02 <unknown>

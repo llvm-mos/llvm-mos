@@ -142,6 +142,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(asmStmt);
   REGISTER_MATCHER(atomicExpr);
   REGISTER_MATCHER(atomicType);
+  REGISTER_MATCHER(attr);
   REGISTER_MATCHER(autoType);
   REGISTER_MATCHER(autoreleasePoolStmt)
   REGISTER_MATCHER(binaryConditionalOperator);
@@ -175,6 +176,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(coreturnStmt);
   REGISTER_MATCHER(coyieldExpr);
   REGISTER_MATCHER(cudaKernelCallExpr);
+  REGISTER_MATCHER(cxxBaseSpecifier);
   REGISTER_MATCHER(cxxBindTemporaryExpr);
   REGISTER_MATCHER(cxxBoolLiteral);
   REGISTER_MATCHER(cxxCatchStmt);
@@ -235,6 +237,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(fieldDecl);
   REGISTER_MATCHER(fixedPointLiteral);
   REGISTER_MATCHER(floatLiteral);
+  REGISTER_MATCHER(forCallable);
   REGISTER_MATCHER(forDecomposition);
   REGISTER_MATCHER(forEach);
   REGISTER_MATCHER(forEachArgumentWithParam);
@@ -559,6 +562,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(userDefinedLiteral);
   REGISTER_MATCHER(usesADL);
   REGISTER_MATCHER(usingDecl);
+  REGISTER_MATCHER(usingEnumDecl);
   REGISTER_MATCHER(usingDirectiveDecl);
   REGISTER_MATCHER(valueDecl);
   REGISTER_MATCHER(varDecl);

@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/NormalFloat.h"
-#include "utils/FPUtil/TestHelpers.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/NormalFloat.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 
 #include <limits.h>
@@ -28,11 +28,11 @@ class LdExpTestTemplate : public __llvm_libc::testing::Test {
   // A normalized mantissa to be used with tests.
   static constexpr UIntType mantissa = NormalFloat::one + 0x1234;
 
-  const T zero = __llvm_libc::fputil::FPBits<T>::zero();
-  const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();
-  const T inf = __llvm_libc::fputil::FPBits<T>::inf();
-  const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
-  const T nan = __llvm_libc::fputil::FPBits<T>::buildNaN(1);
+  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
+  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
+  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
+  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
 
 public:
   typedef T (*LdExpFunc)(T, int);
@@ -121,7 +121,7 @@ public:
     FPBits resultBits(result);
     ASSERT_FALSE(resultBits.isZero());
     // Verify that the result is indeed subnormal.
-    ASSERT_EQ(resultBits.exponent, uint16_t(0));
+    ASSERT_EQ(resultBits.getUnbiasedExponent(), uint16_t(0));
     // But if the exp is so less that normalization leads to zero, then
     // the result should be zero.
     result = func(x, -FPBits::maxExponent - int(mantissaWidth) - 5);

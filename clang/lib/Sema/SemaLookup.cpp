@@ -759,11 +759,20 @@ static void GetOpenCLBuiltinFctOverloads(
       Context.getDefaultCallingConvention(false, false, true));
   PI.Variadic = false;
 
+  // Do not attempt to create any FunctionTypes if there are no return types,
+  // which happens when a type belongs to a disabled extension.
+  if (RetTypes.size() == 0)
+    return;
+
   // Create FunctionTypes for each (gen)type.
   for (unsigned IGenType = 0; IGenType < GenTypeMaxCnt; IGenType++) {
     SmallVector<QualType, 5> ArgList;
 
     for (unsigned A = 0; A < ArgTypes.size(); A++) {
+      // Bail out if there is an argument that has no available types.
+      if (ArgTypes[A].size() == 0)
+        return;
+
       // Builtins such as "max" have an "sgentype" argument that represents
       // the corresponding scalar type of a gentype.  The number of gentypes
       // must be a multiple of the number of sgentypes.
@@ -798,19 +807,16 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
   // as argument.  Only meaningful for generic types, otherwise equals 1.
   unsigned GenTypeMaxCnt;
 
+  ASTContext &Context = S.Context;
+
   for (unsigned SignatureIndex = 0; SignatureIndex < Len; SignatureIndex++) {
     const OpenCLBuiltinStruct &OpenCLBuiltin =
         BuiltinTable[FctIndex + SignatureIndex];
-    ASTContext &Context = S.Context;
 
-    // Ignore this BIF if its version does not match the language options.
-    unsigned OpenCLVersion = Context.getLangOpts().OpenCLVersion;
-    if (Context.getLangOpts().OpenCLCPlusPlus)
-      OpenCLVersion = 200;
-    if (OpenCLVersion < OpenCLBuiltin.MinVersion)
-      continue;
-    if ((OpenCLBuiltin.MaxVersion != 0) &&
-        (OpenCLVersion >= OpenCLBuiltin.MaxVersion))
+    // Ignore this builtin function if it is not available in the currently
+    // selected language version.
+    if (!isOpenCLVersionContainedInMask(Context.getLangOpts(),
+                                        OpenCLBuiltin.Versions))
       continue;
 
     // Ignore this builtin function if it carries an extension macro that is
@@ -850,28 +856,25 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
     DeclContext *Parent = Context.getTranslationUnitDecl();
     FunctionDecl *NewOpenCLBuiltin;
 
-    for (unsigned Index = 0; Index < GenTypeMaxCnt; Index++) {
+    for (const auto &FTy : FunctionList) {
       NewOpenCLBuiltin = FunctionDecl::Create(
-          Context, Parent, Loc, Loc, II, FunctionList[Index],
-          /*TInfo=*/nullptr, SC_Extern, false,
-          FunctionList[Index]->isFunctionProtoType());
+          Context, Parent, Loc, Loc, II, FTy, /*TInfo=*/nullptr, SC_Extern,
+          S.getCurFPFeatures().isFPConstrained(), false,
+          FTy->isFunctionProtoType());
       NewOpenCLBuiltin->setImplicit();
 
       // Create Decl objects for each parameter, adding them to the
       // FunctionDecl.
-      if (const FunctionProtoType *FP =
-              dyn_cast<FunctionProtoType>(FunctionList[Index])) {
-        SmallVector<ParmVarDecl *, 16> ParmList;
-        for (unsigned IParm = 0, e = FP->getNumParams(); IParm != e; ++IParm) {
-          ParmVarDecl *Parm = ParmVarDecl::Create(
-              Context, NewOpenCLBuiltin, SourceLocation(), SourceLocation(),
-              nullptr, FP->getParamType(IParm),
-              /*TInfo=*/nullptr, SC_None, nullptr);
-          Parm->setScopeInfo(0, IParm);
-          ParmList.push_back(Parm);
-        }
-        NewOpenCLBuiltin->setParams(ParmList);
+      const auto *FP = cast<FunctionProtoType>(FTy);
+      SmallVector<ParmVarDecl *, 4> ParmList;
+      for (unsigned IParm = 0, e = FP->getNumParams(); IParm != e; ++IParm) {
+        ParmVarDecl *Parm = ParmVarDecl::Create(
+            Context, NewOpenCLBuiltin, SourceLocation(), SourceLocation(),
+            nullptr, FP->getParamType(IParm), nullptr, SC_None, nullptr);
+        Parm->setScopeInfo(0, IParm);
+        ParmList.push_back(Parm);
       }
+      NewOpenCLBuiltin->setParams(ParmList);
 
       // Add function attributes.
       if (OpenCLBuiltin.IsPure)
@@ -3157,7 +3160,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
       ArgType.addVolatile();
 
     // This isn't /really/ specified by the standard, but it's implied
-    // we should be working from an RValue in the case of move to ensure
+    // we should be working from a PRValue in the case of move to ensure
     // that we prefer to bind to rvalue references, and an LValue in the
     // case of copy to ensure we don't bind to rvalue references.
     // Possibly an XValue is actually correct in the case of move, but
@@ -3166,7 +3169,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
     if (SM == CXXCopyConstructor || SM == CXXCopyAssignment)
       VK = VK_LValue;
     else
-      VK = VK_RValue;
+      VK = VK_PRValue;
   }
 
   OpaqueValueExpr FakeArg(LookupLoc, ArgType, VK);
@@ -3183,8 +3186,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
   if (VolatileThis)
     ThisTy.addVolatile();
   Expr::Classification Classification =
-    OpaqueValueExpr(LookupLoc, ThisTy,
-                    RValueThis ? VK_RValue : VK_LValue).Classify(Context);
+      OpaqueValueExpr(LookupLoc, ThisTy, RValueThis ? VK_PRValue : VK_LValue)
+          .Classify(Context);
 
   // Now we perform lookup on the name we computed earlier and do overload
   // resolution. Lookup is only performed directly into the class since there
@@ -3730,7 +3733,7 @@ NamedDecl *VisibleDeclsRecord::checkHidden(NamedDecl *ND) {
       // A shadow declaration that's created by a resolved using declaration
       // is not hidden by the same using declaration.
       if (isa<UsingShadowDecl>(ND) && isa<UsingDecl>(D) &&
-          cast<UsingShadowDecl>(ND)->getUsingDecl() == D)
+          cast<UsingShadowDecl>(ND)->getIntroducer() == D)
         continue;
 
       // We've found a declaration that hides this one.
@@ -3833,6 +3836,7 @@ private:
     if (CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(Ctx))
       Result.getSema().ForceDeclarationOfImplicitMembers(Class);
 
+    llvm::SmallVector<NamedDecl *, 4> DeclsToVisit;
     // We sometimes skip loading namespace-level results (they tend to be huge).
     bool Load = LoadExternal ||
                 !(isa<TranslationUnitDecl>(Ctx) || isa<NamespaceDecl>(Ctx));
@@ -3842,11 +3846,20 @@ private:
               : Ctx->noload_lookups(/*PreserveInternalState=*/false)) {
       for (auto *D : R) {
         if (auto *ND = Result.getAcceptableDecl(D)) {
-          Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);
-          Visited.add(ND);
+          // Rather than visit immediately, we put ND into a vector and visit
+          // all decls, in order, outside of this loop. The reason is that
+          // Consumer.FoundDecl() may invalidate the iterators used in the two
+          // loops above.
+          DeclsToVisit.push_back(ND);
         }
       }
     }
+
+    for (auto *ND : DeclsToVisit) {
+      Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);
+      Visited.add(ND);
+    }
+    DeclsToVisit.clear();
 
     // Traverse using directives for qualified name lookup.
     if (QualifiedNameLookup) {

@@ -961,9 +961,7 @@ public:
   /// Returns a float which is bitcasted from an all one value int.
   ///
   /// \param Semantics - type float semantics
-  /// \param BitWidth - Select float type
-  static APFloat getAllOnesValue(const fltSemantics &Semantics,
-                                 unsigned BitWidth);
+  static APFloat getAllOnesValue(const fltSemantics &Semantics);
 
   /// Used to insert APFloat objects, or objects that contain APFloat objects,
   /// into FoldingSets.
@@ -1132,8 +1130,20 @@ public:
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
   }
-  double convertToDouble() const { return getIEEE().convertToDouble(); }
-  float convertToFloat() const { return getIEEE().convertToFloat(); }
+
+  /// Converts this APFloat to host double value.
+  ///
+  /// \pre The APFloat must be built using semantics, that can be represented by
+  /// the host double type without loss of precision. It can be IEEEdouble and
+  /// shorter semantics, like IEEEsingle and others.
+  double convertToDouble() const;
+
+  /// Converts this APFloat to host float value.
+  ///
+  /// \pre The APFloat must be built using semantics, that can be represented by
+  /// the host float type without loss of precision. It can be IEEEsingle and
+  /// shorter semantics, like IEEEhalf.
+  float convertToFloat() const;
 
   bool operator==(const APFloat &RHS) const { return compare(RHS) == cmpEqual; }
 

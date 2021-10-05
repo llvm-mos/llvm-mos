@@ -434,7 +434,8 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
       warning("profile data may be out of date - object is newer",
               ObjectFilename);
   auto CoverageOrErr =
-      CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArches);
+      CoverageMapping::load(ObjectFilenames, PGOFilename, CoverageArches,
+                            ViewOpts.CompilationDirectory);
   if (Error E = CoverageOrErr.takeError()) {
     error("Failed to load coverage: " + toString(std::move(E)),
           join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "));
@@ -739,6 +740,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
                         cl::aliasopt(NumThreads));
 
+  cl::opt<std::string> CompilationDirectory(
+      "compilation-dir", cl::init(""),
+      cl::desc("Directory used as a base for relative coverage mapping paths"));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -779,10 +784,18 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
     // If path-equivalence was given and is a comma seperated pair then set
     // PathRemapping.
-    auto EquivPair = StringRef(PathRemap).split(',');
-    if (!(EquivPair.first.empty() && EquivPair.second.empty()))
+    if (!PathRemap.empty()) {
+      auto EquivPair = StringRef(PathRemap).split(',');
+      if (EquivPair.first.empty() || EquivPair.second.empty()) {
+        error("invalid argument '" + PathRemap +
+                  "', must be in format 'from,to'",
+              "-path-equivalence");
+        return 1;
+      }
+
       PathRemapping = {std::string(EquivPair.first),
                        std::string(EquivPair.second)};
+    }
 
     // If a demangler is supplied, check if it exists and register it.
     if (!DemanglerOpts.empty()) {
@@ -873,6 +886,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
+    ViewOpts.CompilationDirectory = CompilationDirectory;
 
     return 0;
   };

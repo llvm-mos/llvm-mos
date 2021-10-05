@@ -1109,6 +1109,8 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::XXLXORdpz:
   case PPC::XXLEQVOnes:
   case PPC::XXSPLTI32DX:
+  case PPC::XXSPLTIW:
+  case PPC::XXSPLTIDP:
   case PPC::V_SET0B:
   case PPC::V_SET0H:
   case PPC::V_SET0:
@@ -1541,6 +1543,11 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
   if (Cond[1].getReg() == PPC::CTR || Cond[1].getReg() == PPC::CTR8)
     return false;
 
+  // If the conditional branch uses a physical register, then it cannot be
+  // turned into a select.
+  if (Register::isPhysicalRegister(Cond[1].getReg()))
+    return false;
+
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC =
@@ -1834,6 +1841,22 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (SrcPrimed && !KillSrc)
       BuildMI(MBB, I, DL, get(PPC::XXMTACC), SrcReg).addReg(SrcReg);
     return;
+  } else if (PPC::G8pRCRegClass.contains(DestReg) &&
+             PPC::G8pRCRegClass.contains(SrcReg)) {
+    // TODO: Handle G8RC to G8pRC (and vice versa) copy.
+    unsigned DestRegIdx = DestReg - PPC::G8p0;
+    MCRegister DestRegSub0 = PPC::X0 + 2 * DestRegIdx;
+    MCRegister DestRegSub1 = PPC::X0 + 2 * DestRegIdx + 1;
+    unsigned SrcRegIdx = SrcReg - PPC::G8p0;
+    MCRegister SrcRegSub0 = PPC::X0 + 2 * SrcRegIdx;
+    MCRegister SrcRegSub1 = PPC::X0 + 2 * SrcRegIdx + 1;
+    BuildMI(MBB, I, DL, get(PPC::OR8), DestRegSub0)
+        .addReg(SrcRegSub0)
+        .addReg(SrcRegSub0, getKillRegState(KillSrc));
+    BuildMI(MBB, I, DL, get(PPC::OR8), DestRegSub1)
+        .addReg(SrcRegSub1)
+        .addReg(SrcRegSub1, getKillRegState(KillSrc));
+    return;
   } else
     llvm_unreachable("Impossible reg-to-reg copy");
 
@@ -1886,6 +1909,8 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
     assert(Subtarget.pairedVectorMemops() &&
            "Register unexpected when paired memops are disabled.");
     OpcodeIndex = SOK_PairedVecSpill;
+  } else if (PPC::G8pRCRegClass.hasSubClassEq(RC)) {
+    OpcodeIndex = SOK_PairedG8Spill;
   } else {
     llvm_unreachable("Unknown regclass!");
   }
@@ -2325,8 +2350,8 @@ bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
 }
 
 bool PPCInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                  Register &SrcReg2, int &Mask,
-                                  int &Value) const {
+                                  Register &SrcReg2, int64_t &Mask,
+                                  int64_t &Value) const {
   unsigned Opc = MI.getOpcode();
 
   switch (Opc) {
@@ -2355,7 +2380,8 @@ bool PPCInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 }
 
 bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
-                                        Register SrcReg2, int Mask, int Value,
+                                        Register SrcReg2, int64_t Mask,
+                                        int64_t Value,
                                         const MachineRegisterInfo *MRI) const {
   if (DisableCmpOpt)
     return false;
@@ -2893,6 +2919,7 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_TLSGD_FLAG, "ppc-tlsgd"},
       {MO_TLSLD_FLAG, "ppc-tlsld"},
       {MO_TPREL_FLAG, "ppc-tprel"},
+      {MO_TLSGDM_FLAG, "ppc-tlsgdm"},
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
       {MO_GOT_TLSLD_PCREL_FLAG, "ppc-got-tlsld-pcrel"},
       {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"}};
@@ -2990,7 +3017,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
             .addReg(SrcVSR + VecNo)
             .addReg(SrcVSR + VecNo);
     }
-    // BUILD_UACC is expanded to 4 copies of the underlying vsx regisers.
+    // BUILD_UACC is expanded to 4 copies of the underlying vsx registers.
     // So after building the 4 copies, we can replace the BUILD_UACC instruction
     // with a NOP.
     LLVM_FALLTHROUGH;
@@ -3084,6 +3111,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
 
+    // FIXME: Maybe we can expand it in 'PowerPC Expand Atomic' pass.
   case PPC::CFENCE8: {
     auto Val = MI.getOperand(0).getReg();
     BuildMI(MBB, MI, DL, get(PPC::CMPD), PPC::CR7).addReg(Val).addReg(Val);
@@ -3141,11 +3169,11 @@ void PPCInstrInfo::replaceInstrOperandWithImm(MachineInstr &MI,
   Register InUseReg = MI.getOperand(OpNo).getReg();
   MI.getOperand(OpNo).ChangeToImmediate(Imm);
 
-  if (MI.implicit_operands().empty())
-    return;
-
   // We need to make sure that the MI didn't have any implicit use
-  // of this REG any more.
+  // of this REG any more. We don't call MI.implicit_operands().empty() to
+  // return early, since MI's MCID might be changed in calling context, as a
+  // result its number of explicit operands may be changed, thus the begin of
+  // implicit operand is changed.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   int UseOpIdx = MI.findRegisterUseOperandIdx(InUseReg, false, TRI);
   if (UseOpIdx >= 0) {
@@ -3751,7 +3779,7 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   bool Simplified = false;
 
   // If final mask is 0, MI result should be 0 too.
-  if (FinalMask.isNullValue()) {
+  if (FinalMask.isZero()) {
     bool Is64Bit =
         (MI.getOpcode() == PPC::RLWINM8 || MI.getOpcode() == PPC::RLWINM8_rec);
     Simplified = true;
@@ -4744,7 +4772,12 @@ bool PPCInstrInfo::transformToNewImmFormFedByAdd(
   LLVM_DEBUG(DefMI.dump());
 
   MI.getOperand(III.OpNoForForwarding).setReg(RegMO->getReg());
-  MI.getOperand(III.OpNoForForwarding).setIsKill(RegMO->isKill());
+  if (RegMO->isKill()) {
+    MI.getOperand(III.OpNoForForwarding).setIsKill(true);
+    // Clear the killed flag in RegMO. Doing this here can handle some cases
+    // that DefMI and MI are not in same basic block.
+    RegMO->setIsKill(false);
+  }
   MI.getOperand(III.ImmOpNo).setImm(Imm);
 
   // FIXME: fix kill/dead flag if MI and DefMI are not in same basic block.
@@ -5217,8 +5250,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
               return false;
             const IntegerType *IntTy =
               dyn_cast<IntegerType>(CalleeFn->getReturnType());
-            const AttributeSet &Attrs =
-              CalleeFn->getAttributes().getRetAttributes();
+            const AttributeSet &Attrs = CalleeFn->getAttributes().getRetAttrs();
             if (IntTy && IntTy->getBitWidth() <= 32)
               return Attrs.hasAttribute(SignExt ? Attribute::SExt :
                                                   Attribute::ZExt);

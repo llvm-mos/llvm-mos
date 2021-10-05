@@ -89,7 +89,7 @@ void CallGraph::addToCallGraph(Function *F) {
   if (!F->hasLocalLinkage() ||
       F->hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                          /* IgnoreAssumeLikeCalls */ true,
-                         /* IgnoreLLVMUsed */ true))
+                         /* IgnoreLLVMUsed */ false))
     ExternalCallingNode->addCalledFunction(nullptr, Node);
 
   populateCallGraphNode(Node);

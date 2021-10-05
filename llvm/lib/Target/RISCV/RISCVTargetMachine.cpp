@@ -37,9 +37,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
+  initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
-  initializeRISCVCleanupVSETVLIPass(*PR);
+  initializeRISCVInsertVSETVLIPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT) {
@@ -149,6 +150,9 @@ TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void RISCVPassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
+
+  addPass(createRISCVGatherScatterLoweringPass());
+
   TargetPassConfig::addIRPasses();
 }
 
@@ -191,8 +195,7 @@ void RISCVPassConfig::addPreEmitPass2() {
 }
 
 void RISCVPassConfig::addPreRegAlloc() {
-  if (TM->getOptLevel() != CodeGenOpt::None) {
+  if (TM->getOptLevel() != CodeGenOpt::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
-    addPass(createRISCVCleanupVSETVLIPass());
-  }
+  addPass(createRISCVInsertVSETVLIPass());
 }

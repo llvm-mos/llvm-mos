@@ -10,22 +10,19 @@
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; X86-LABEL: test_srem_odd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    sarl $3, %eax
-; X86-NEXT:    imull $-1084587701, %eax, %eax # imm = 0xBF5A814B
-; X86-NEXT:    addl $21691754, %eax # imm = 0x14AFD6A
-; X86-NEXT:    cmpl $43383509, %eax # imm = 0x295FAD5
+; X86-NEXT:    imull $526025035, {{[0-9]+}}(%esp), %eax # imm = 0x1F5A814B
+; X86-NEXT:    addl $2711469, %eax # imm = 0x295FAD
+; X86-NEXT:    andl $536870911, %eax # imm = 0x1FFFFFFF
+; X86-NEXT:    cmpl $5422939, %eax # imm = 0x52BF5B
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_srem_odd:
 ; X64:       # %bb.0:
-; X64-NEXT:    shll $3, %edi
-; X64-NEXT:    sarl $3, %edi
-; X64-NEXT:    imull $-1084587701, %edi, %eax # imm = 0xBF5A814B
-; X64-NEXT:    addl $21691754, %eax # imm = 0x14AFD6A
-; X64-NEXT:    cmpl $43383509, %eax # imm = 0x295FAD5
+; X64-NEXT:    imull $526025035, %edi, %eax # imm = 0x1F5A814B
+; X64-NEXT:    addl $2711469, %eax # imm = 0x295FAD
+; X64-NEXT:    andl $536870911, %eax # imm = 0x1FFFFFFF
+; X64-NEXT:    cmpl $5422939, %eax # imm = 0x52BF5B
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %srem = srem i29 %X, 99
@@ -209,8 +206,8 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE2-NEXT:    addq %rcx, %rax
 ; SSE2-NEXT:    movq %rax, %xmm2
 ; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pcmpeqd {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pcmpeqd {{.*}}(%rip), %xmm2
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,2]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,3]
@@ -264,10 +261,10 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE41-NEXT:    addq %rcx, %rax
 ; SSE41-NEXT:    movq %rax, %xmm2
 ; SSE41-NEXT:    pand %xmm1, %xmm2
-; SSE41-NEXT:    pcmpeqq {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    pcmpeqq {{.*}}(%rip), %xmm2
+; SSE41-NEXT:    pcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    pxor %xmm1, %xmm2
 ; SSE41-NEXT:    pextrb $0, %xmm0, %eax
 ; SSE41-NEXT:    pextrb $8, %xmm0, %edx
@@ -316,12 +313,12 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; AVX1-NEXT:    addq %rcx, %rax
 ; AVX1-NEXT:    vmovq %rax, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqq {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX1-NEXT:    vpextrb $8, %xmm0, %edx
@@ -373,7 +370,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [8589934591,8589934591,8589934591,8589934591]
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqq {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -425,8 +422,8 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; AVX512VL-NEXT:    addq %rcx, %rax
 ; AVX512VL-NEXT:    vmovq %rax, %xmm1
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpandq {{.*}}(%rip){1to4}, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpcmpneqq {{.*}}(%rip), %ymm0, %k0
+; AVX512VL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpcmpneqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
 ; AVX512VL-NEXT:    kshiftrw $1, %k0, %k1
 ; AVX512VL-NEXT:    kmovw %k1, %edx
 ; AVX512VL-NEXT:    kshiftrw $2, %k0, %k1

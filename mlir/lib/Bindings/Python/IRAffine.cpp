@@ -97,7 +97,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(m, DerivedTy::pyClassName, py::module_local());
     cls.def(py::init<PyAffineExpr &>());
     DerivedTy::bindDerived(cls);
   }
@@ -367,7 +367,8 @@ public:
   bool isEq() { return mlirIntegerSetIsConstraintEq(set, pos); }
 
   static void bind(py::module &m) {
-    py::class_<PyIntegerSetConstraint>(m, "IntegerSetConstraint")
+    py::class_<PyIntegerSetConstraint>(m, "IntegerSetConstraint",
+                                       py::module_local())
         .def_property_readonly("expr", &PyIntegerSetConstraint::getExpr)
         .def_property_readonly("is_eq", &PyIntegerSetConstraint::isEq);
   }
@@ -427,7 +428,7 @@ void mlir::python::populateIRAffine(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyAffineExpr and derived classes.
   //----------------------------------------------------------------------------
-  py::class_<PyAffineExpr>(m, "AffineExpr")
+  py::class_<PyAffineExpr>(m, "AffineExpr", py::module_local())
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyAffineExpr::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineExpr::createFromCapsule)
@@ -515,7 +516,7 @@ void mlir::python::populateIRAffine(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyAffineMap.
   //----------------------------------------------------------------------------
-  py::class_<PyAffineMap>(m, "AffineMap")
+  py::class_<PyAffineMap>(m, "AffineMap", py::module_local())
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyAffineMap::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineMap::createFromCapsule)
@@ -538,6 +539,23 @@ void mlir::python::populateIRAffine(py::module &m) {
              printAccum.parts.append(")");
              return printAccum.join();
            })
+      .def_static("compress_unused_symbols",
+                  [](py::list affineMaps, DefaultingPyMlirContext context) {
+                    SmallVector<MlirAffineMap> maps;
+                    pyListToVector<PyAffineMap, MlirAffineMap>(
+                        affineMaps, maps, "attempting to create an AffineMap");
+                    std::vector<MlirAffineMap> compressed(affineMaps.size());
+                    auto populate = [](void *result, intptr_t idx,
+                                       MlirAffineMap m) {
+                      static_cast<MlirAffineMap *>(result)[idx] = (m);
+                    };
+                    mlirAffineMapCompressUnusedSymbols(
+                        maps.data(), maps.size(), compressed.data(), populate);
+                    std::vector<PyAffineMap> res;
+                    for (auto m : compressed)
+                      res.push_back(PyAffineMap(context->getRef(), m));
+                    return res;
+                  })
       .def_property_readonly(
           "context",
           [](PyAffineMap &self) { return self.getContext().getObject(); },
@@ -637,6 +655,14 @@ void mlir::python::populateIRAffine(py::module &m) {
                  mlirAffineMapGetMinorSubMap(self, nResults);
              return PyAffineMap(self.getContext(), affineMap);
            })
+      .def("replace",
+           [](PyAffineMap &self, PyAffineExpr &expression,
+              PyAffineExpr &replacement, intptr_t numResultDims,
+              intptr_t numResultSyms) {
+             MlirAffineMap affineMap = mlirAffineMapReplace(
+                 self, expression, replacement, numResultDims, numResultSyms);
+             return PyAffineMap(self.getContext(), affineMap);
+           })
       .def_property_readonly(
           "is_permutation",
           [](PyAffineMap &self) { return mlirAffineMapIsPermutation(self); })
@@ -661,7 +687,7 @@ void mlir::python::populateIRAffine(py::module &m) {
   //----------------------------------------------------------------------------
   // Mapping of PyIntegerSet.
   //----------------------------------------------------------------------------
-  py::class_<PyIntegerSet>(m, "IntegerSet")
+  py::class_<PyIntegerSet>(m, "IntegerSet", py::module_local())
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyIntegerSet::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyIntegerSet::createFromCapsule)

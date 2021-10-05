@@ -8,7 +8,7 @@
 
 #include "EmulateInstructionMIPS.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Opcode.h"
@@ -159,8 +159,8 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
       target->createMCSubtargetInfo(triple.getTriple(), cpu, features));
   assert(m_asm_info.get() && m_subtype_info.get());
 
-  m_context = std::make_unique<llvm::MCContext>(m_asm_info.get(),
-                                                m_reg_info.get(), nullptr);
+  m_context = std::make_unique<llvm::MCContext>(
+      triple, m_asm_info.get(), m_reg_info.get(), m_subtype_info.get());
   assert(m_context.get());
 
   m_disasm.reset(target->createMCDisassembler(*m_subtype_info, *m_context));
@@ -1018,8 +1018,9 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
 
       const size_t bytes_read =
           target->ReadMemory(next_addr, /* Address of next instruction */
-                             true,      /* prefer_file_cache */
-                             buf, sizeof(uint32_t), error, &load_addr);
+                             buf, sizeof(uint32_t), error, 
+                             false,  /* force_live_memory */
+                             &load_addr);
 
       if (bytes_read == 0)
         return true;
@@ -2945,9 +2946,9 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_V(llvm::MCInst &insn,
                                                   bool bnz) {
   bool success = false;
   int32_t target = 0;
-  llvm::APInt wr_val = llvm::APInt::getNullValue(128);
+  llvm::APInt wr_val = llvm::APInt::getZero(128);
   llvm::APInt fail_value = llvm::APInt::getMaxValue(128);
-  llvm::APInt zero_value = llvm::APInt::getNullValue(128);
+  llvm::APInt zero_value = llvm::APInt::getZero(128);
   RegisterValue reg_value;
 
   uint32_t wt = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());

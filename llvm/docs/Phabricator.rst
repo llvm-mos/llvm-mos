@@ -47,6 +47,18 @@ repository is to run:
   arc diff HEAD~
 
 
+Sometime you may want to create a draft revision to show the proof of concept
+or for experimental purposes, In that case you can use the `--draft` option. It
+will either create a new draft revisoin or convert the original revision to a
+draft revision depending on your local branch status. The good part is: it will not
+send mail to llvm-commit mailing list, patch reviewers, and all other subscribers,
+buildbot will also run on every patch update:
+
+::
+
+  arc diff --draft HEAD~
+
+
 If you later update your commit message, you need to add the `--verbatim`
 option to have `arc` update the description on Phabricator:
 
@@ -157,6 +169,53 @@ people prefer it over a web interface, we do not generate automated mail
 when a review changes state, for example by clicking "Accept Revision" in
 the web interface. Thus, please type LGTM into the comment box to accept
 a change from Phabricator.
+
+.. _pre-merge-testing:
+
+Pre-merge testing
+-----------------
+
+The pre-merge tests are a continuous integration (CI) workflow. The workflow 
+checks the patches uploaded to Phabricator before a user merges them to the main 
+branch - thus the term *pre-merge testing*. 
+
+When a user uploads a patch to Phabricator, Phabricator triggers the checks and
+then displays the results. This way bugs in a patch are contained during the 
+code review stage and do not pollute the main branch. 
+
+If you notice issues or have an idea on how to improve pre-merge checks, please 
+`create a new issue <https://github.com/google/llvm-premerge-checks/issues/new>`_ 
+or give a ❤️ to an existing one.
+
+Requirements
+^^^^^^^^^^^^
+
+To get a patch on Phabricator tested, the build server must be able to apply the
+patch to the checked out git repository. Please make sure that either:
+
+* You set a git hash as ``sourceControlBaseRevision`` in Phabricator which is
+  available on the GitHub repository, 
+* **or** you define the dependencies of your patch in Phabricator, 
+* **or** your patch can be applied to the main branch.
+
+Only then can the build server apply the patch locally and run the builds and
+tests.
+
+Accessing build results
+^^^^^^^^^^^^^^^^^^^^^^^
+Phabricator will automatically trigger a build for every new patch you upload or
+modify. Phabricator shows the build results at the top of the entry. Clicking on 
+the links (in the red box) will show more details:
+
+  .. image:: Phabricator_premerge_results.png
+
+The CI will compile and run tests, run clang-format and clang-tidy on lines
+changed.
+
+If a unit test failed, this is shown below the build status. You can also expand
+the unit test to see the details:
+
+  .. image:: Phabricator_premerge_unit_tests.png
 
 Committing a change
 -------------------

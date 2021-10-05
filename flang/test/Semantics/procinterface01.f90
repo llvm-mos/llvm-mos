@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %python %S/test_symbols.py %s %flang_fc1
 ! Tests for "proc-interface" semantics.
 ! These cases are all valid.
 

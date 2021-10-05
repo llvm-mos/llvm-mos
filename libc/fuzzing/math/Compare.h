@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_FUZZING_MATH_COMPARE_H
 #define LLVM_LIBC_FUZZING_MATH_COMPARE_H
 
+#include "src/__support/FPUtil/FPBits.h"
 #include "utils/CPP/TypeTraits.h"
-#include "utils/FPUtil/FPBits.h"
 
 template <typename T>
 __llvm_libc::cpp::EnableIfType<__llvm_libc::cpp::IsFloatingPointType<T>::Value,
@@ -23,7 +23,7 @@ ValuesEqual(T x1, T x2) {
     return bits2.isNaN() && bits2.isNaN();
 
   // For all other values, we want the values to be bitwise equal.
-  return bits1.bitsAsUInt() == bits2.bitsAsUInt();
+  return bits1.uintval() == bits2.uintval();
 }
 
 template <typename T>

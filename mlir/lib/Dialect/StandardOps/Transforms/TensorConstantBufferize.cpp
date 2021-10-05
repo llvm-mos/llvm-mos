@@ -46,7 +46,7 @@ memref::GlobalOp GlobalCreator::getGlobalFor(ConstantOp constantOp) {
   auto global = globalBuilder.create<memref::GlobalOp>(
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
-      /*type=*/typeConverter.convertType(type),
+      /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
       /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
       /*constant=*/true);
   symbolTable.insert(global);
@@ -66,7 +66,7 @@ public:
         globals(globals) {}
 
   LogicalResult
-  matchAndRewrite(ConstantOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getType().dyn_cast<RankedTensorType>();
     if (!type)
@@ -81,6 +81,13 @@ public:
 };
 } // namespace
 
+void mlir::populateTensorConstantBufferizePatterns(
+    GlobalCreator &globalCreator, BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns) {
+  patterns.add<BufferizeTensorConstantOp>(globalCreator, typeConverter,
+                                          patterns.getContext());
+}
+
 namespace {
 struct TensorConstantBufferizePass
     : public TensorConstantBufferizeBase<TensorConstantBufferizePass> {
@@ -94,7 +101,7 @@ struct TensorConstantBufferizePass
     ConversionTarget target(*context);
 
     target.addLegalDialect<memref::MemRefDialect>();
-    patterns.add<BufferizeTensorConstantOp>(globals, typeConverter, context);
+    populateTensorConstantBufferizePatterns(globals, typeConverter, patterns);
     target.addDynamicallyLegalOp<ConstantOp>(
         [&](ConstantOp op) { return typeConverter.isLegal(op.getType()); });
     if (failed(applyPartialConversion(module, target, std::move(patterns))))

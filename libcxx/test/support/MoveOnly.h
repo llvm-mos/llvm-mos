@@ -48,6 +48,9 @@ public:
         { return MoveOnly{data_ + x.data_}; }
     TEST_CONSTEXPR_CXX14 MoveOnly operator*(const MoveOnly& x) const
         { return MoveOnly{data_ * x.data_}; }
+
+    template<class T, class U>
+    friend void operator,(T t, U u) = delete;
 };
 
 namespace std {
@@ -62,6 +65,6 @@ struct hash<MoveOnly>
 
 }
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
-#endif  // MOVEONLY_H
+#endif // MOVEONLY_H

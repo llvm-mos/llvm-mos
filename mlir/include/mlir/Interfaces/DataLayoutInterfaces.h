@@ -144,6 +144,9 @@ public:
   explicit DataLayout(DataLayoutOpInterface op);
   explicit DataLayout(ModuleOp op);
 
+  /// Returns the layout of the closest parent operation carrying layout info.
+  static DataLayout closest(Operation *op);
+
   /// Returns the size of the given type in the current scope.
   unsigned getTypeSize(Type t) const;
 
@@ -160,7 +163,7 @@ private:
   /// Combined layout spec at the given scope.
   const DataLayoutSpecInterface originalLayout;
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// List of enclosing layout specs.
   SmallVector<DataLayoutSpecInterface, 2> layoutStack;
 #endif

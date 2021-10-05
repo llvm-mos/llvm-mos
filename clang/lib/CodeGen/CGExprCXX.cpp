@@ -87,6 +87,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
       Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
   return EmitCall(FnInfo, Callee, ReturnValue, Args, nullptr,
+                  CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation());
 }
 
@@ -112,7 +113,7 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
   commonEmitCXXMemberOrOperatorCall(*this, DtorDecl, This, ImplicitParam,
                                     ImplicitParamTy, CE, Args, nullptr);
   return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
-                  ReturnValueSlot(), Args, nullptr,
+                  ReturnValueSlot(), Args, nullptr, CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation{});
 }
 
@@ -472,7 +473,8 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   EmitCallArgs(Args, FPT, E->arguments());
   return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
                                                       /*PrefixSize=*/0),
-                  Callee, ReturnValue, Args, nullptr, E->getExprLoc());
+                  Callee, ReturnValue, Args, nullptr, E == MustTailCall,
+                  E->getExprLoc());
 }
 
 RValue
@@ -607,15 +609,18 @@ CodeGenFunction::EmitCXXConstructExpr(const CXXConstructExpr *E,
     return;
 
   // Elide the constructor if we're constructing from a temporary.
-  // The temporary check is required because Sema sets this on NRVO
-  // returns.
   if (getLangOpts().ElideConstructors && E->isElidable()) {
-    assert(getContext().hasSameUnqualifiedType(E->getType(),
-                                               E->getArg(0)->getType()));
-    if (E->getArg(0)->isTemporaryObject(getContext(), CD->getParent())) {
-      EmitAggExpr(E->getArg(0), Dest);
-      return;
-    }
+    // FIXME: This only handles the simplest case, where the source object
+    //        is passed directly as the first argument to the constructor.
+    //        This should also handle stepping though implicit casts and
+    //        conversion sequences which involve two steps, with a
+    //        conversion operator followed by a converting constructor.
+    const Expr *SrcObj = E->getArg(0);
+    assert(SrcObj->isTemporaryObject(getContext(), CD->getParent()));
+    assert(
+        getContext().hasSameUnqualifiedType(E->getType(), SrcObj->getType()));
+    EmitAggExpr(SrcObj, Dest);
+    return;
   }
 
   if (const ArrayType *arrayType
@@ -1321,8 +1326,7 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   llvm::Function *Fn = dyn_cast<llvm::Function>(CalleePtr);
   if (CalleeDecl->isReplaceableGlobalAllocationFunction() &&
       Fn && Fn->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
-    CallOrInvoke->addAttribute(llvm::AttributeList::FunctionIndex,
-                               llvm::Attribute::Builtin);
+    CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
   }
 
   return RV;

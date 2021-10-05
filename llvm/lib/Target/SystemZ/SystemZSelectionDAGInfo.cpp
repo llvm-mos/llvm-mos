@@ -45,6 +45,17 @@ static SDValue emitMemMem(SelectionDAG &DAG, const SDLoc &DL, unsigned Sequence,
                      DAG.getConstant(Size, DL, PtrVT));
 }
 
+static SDValue emitMemMemVarLen(SelectionDAG &DAG, const SDLoc &DL,
+                                unsigned Loop, SDValue Chain, SDValue Dst,
+                                SDValue Src, SDValue Size) {
+  SDValue LenMinus1 = DAG.getNode(ISD::ADD, DL, MVT::i64,
+                                  DAG.getZExtOrTrunc(Size, DL, MVT::i64),
+                                  DAG.getConstant(-1, DL, MVT::i64));
+  SDValue TripC = DAG.getNode(ISD::SRL, DL, MVT::i64, LenMinus1,
+                              DAG.getConstant(8, DL, MVT::i64));
+  return DAG.getNode(Loop, DL, MVT::Other, Chain, Dst, Src, LenMinus1, TripC);
+}
+
 SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
@@ -55,7 +66,8 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemcpy(
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size))
     return emitMemMem(DAG, DL, SystemZISD::MVC, SystemZISD::MVC_LOOP,
                       Chain, Dst, Src, CSize->getZExtValue());
-  return SDValue();
+
+  return emitMemMemVarLen(DAG, DL, SystemZISD::MVC_LOOP, Chain, Dst, Src, Size);
 }
 
 // Handle a memset of 1, 2, 4 or 8 bytes with the operands given by
@@ -81,11 +93,12 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
   if (IsVolatile)
     return SDValue();
 
+  auto *CByte = dyn_cast<ConstantSDNode>(Byte);
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size)) {
     uint64_t Bytes = CSize->getZExtValue();
     if (Bytes == 0)
       return SDValue();
-    if (auto *CByte = dyn_cast<ConstantSDNode>(Byte)) {
+    if (CByte) {
       // Handle cases that can be done using at most two of
       // MVI, MVHI, MVHHI and MVGHI.  The latter two can only be
       // used if ByteVal is all zeros or all ones; in other casees,
@@ -125,7 +138,6 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
     assert(Bytes >= 2 && "Should have dealt with 0- and 1-byte cases already");
 
     // Handle the special case of a memset of 0, which can use XC.
-    auto *CByte = dyn_cast<ConstantSDNode>(Byte);
     if (CByte && CByte->getZExtValue() == 0)
       return emitMemMem(DAG, DL, SystemZISD::XC, SystemZISD::XC_LOOP,
                         Chain, Dst, Dst, Bytes);
@@ -138,6 +150,12 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
     return emitMemMem(DAG, DL, SystemZISD::MVC, SystemZISD::MVC_LOOP,
                       Chain, DstPlus1, Dst, Bytes - 1);
   }
+
+  // Variable length
+  if (CByte && CByte->getZExtValue() == 0)
+    // Handle the special case of a variable length memset of 0 with XC.
+    return emitMemMemVarLen(DAG, DL, SystemZISD::XC_LOOP, Chain, Dst, Dst, Size);
+
   return SDValue();
 }
 

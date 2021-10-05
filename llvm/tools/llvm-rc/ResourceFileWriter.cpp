@@ -99,7 +99,7 @@ static bool stripQuotes(StringRef &Str, bool &IsLongString) {
     return false;
 
   // Just take the contents of the string, checking if it's been marked long.
-  IsLongString = Str.startswith_lower("L");
+  IsLongString = Str.startswith_insensitive("L");
   if (IsLongString)
     Str = Str.drop_front();
 
@@ -1553,10 +1553,11 @@ ResourceFileWriter::loadFile(StringRef File) const {
           Path, /*IsText=*/false, /*RequiresNullTerminator=*/false));
   }
 
-  if (auto Result =
-          llvm::sys::Process::FindInEnvPath("INCLUDE", File, Params.NoInclude))
-    return errorOrToExpected(MemoryBuffer::getFile(
-        *Result, /*IsText=*/false, /*RequiresNullTerminator=*/false));
+  if (!Params.NoInclude) {
+    if (auto Result = llvm::sys::Process::FindInEnvPath("INCLUDE", File))
+      return errorOrToExpected(MemoryBuffer::getFile(
+          *Result, /*IsText=*/false, /*RequiresNullTerminator=*/false));
+  }
 
   return make_error<StringError>("error : file not found : " + Twine(File),
                                  inconvertibleErrorCode());

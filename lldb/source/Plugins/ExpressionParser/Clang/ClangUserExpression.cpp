@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#include <stdio.h>
-#if HAVE_SYS_TYPES_H
+#include <cstdio>
 #include <sys/types.h>
-#endif
 
 #include <cstdlib>
 #include <map>
@@ -90,7 +86,7 @@ ClangUserExpression::ClangUserExpression(
   }
 }
 
-ClangUserExpression::~ClangUserExpression() {}
+ClangUserExpression::~ClangUserExpression() = default;
 
 void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -349,16 +345,17 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
 
 static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
                             DiagnosticManager &diagnostic_manager) {
-  ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
-  if (!decl_vendor)
-    return;
-
   if (!target->GetEnableAutoImportClangModules())
     return;
 
   auto *persistent_state = llvm::cast<ClangPersistentVariables>(
       target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
   if (!persistent_state)
+    return;
+
+  std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
+      persistent_state->GetClangModulesDeclVendor();
+  if (!decl_vendor)
     return;
 
   StackFrame *frame = exe_ctx.GetFramePtr();
@@ -688,15 +685,22 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     SetupCppModuleImports(exe_ctx);
     // If we did load any modules, then retry parsing.
     if (!m_imported_cpp_modules.empty()) {
+      // Create a dedicated diagnostic manager for the second parse attempt.
+      // These diagnostics are only returned to the caller if using the fallback
+      // actually succeeded in getting the expression to parse. This prevents
+      // that module-specific issues regress diagnostic quality with the
+      // fallback mode.
+      DiagnosticManager retry_manager;
       // The module imports are injected into the source code wrapper,
       // so recreate those.
-      CreateSourceCode(diagnostic_manager, exe_ctx, m_imported_cpp_modules,
+      CreateSourceCode(retry_manager, exe_ctx, m_imported_cpp_modules,
                        /*for_completion*/ false);
-      // Clear the error diagnostics from the previous parse attempt.
-      diagnostic_manager.Clear();
-      parse_success = TryParse(diagnostic_manager, exe_scope, exe_ctx,
+      parse_success = TryParse(retry_manager, exe_scope, exe_ctx,
                                execution_policy, keep_result_in_memory,
                                generate_debug_info);
+      // Return the parse diagnostics if we were successful.
+      if (parse_success)
+        diagnostic_manager = std::move(retry_manager);
     }
   }
   if (!parse_success)

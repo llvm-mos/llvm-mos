@@ -57,14 +57,14 @@ void mlir::visitUsedValuesDefinedAbove(
 }
 
 void mlir::getUsedValuesDefinedAbove(Region &region, Region &limit,
-                                     llvm::SetVector<Value> &values) {
+                                     SetVector<Value> &values) {
   visitUsedValuesDefinedAbove(region, limit, [&](OpOperand *operand) {
     values.insert(operand->get());
   });
 }
 
 void mlir::getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
-                                     llvm::SetVector<Value> &values) {
+                                     SetVector<Value> &values) {
   for (Region &region : regions)
     getUsedValuesDefinedAbove(region, region, values);
 }
@@ -428,7 +428,9 @@ BlockEquivalenceData::BlockEquivalenceData(Block *block)
       orderIt += numResults;
     }
     auto opHash = OperationEquivalence::computeHash(
-        &op, OperationEquivalence::Flags::IgnoreOperands);
+        &op, OperationEquivalence::ignoreHashValue,
+        OperationEquivalence::ignoreHashValue,
+        OperationEquivalence::IgnoreLocations);
     hash = llvm::hash_combine(hash, opHash);
   }
 }
@@ -491,7 +493,9 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
   for (int opI = 0; lhsIt != lhsE && rhsIt != rhsE; ++lhsIt, ++rhsIt, ++opI) {
     // Check that the operations are equivalent.
     if (!OperationEquivalence::isEquivalentTo(
-            &*lhsIt, &*rhsIt, OperationEquivalence::Flags::IgnoreOperands))
+            &*lhsIt, &*rhsIt, OperationEquivalence::ignoreValueEquivalence,
+            OperationEquivalence::ignoreValueEquivalence,
+            OperationEquivalence::Flags::IgnoreLocations))
       return failure();
 
     // Compare the operands of the two operations. If the operand is within

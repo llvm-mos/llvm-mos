@@ -16,8 +16,10 @@
 
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -39,7 +41,7 @@ static cl::opt<unsigned> UnrollThresholdLocal(
 static cl::opt<unsigned> UnrollThresholdIf(
   "amdgpu-unroll-threshold-if",
   cl::desc("Unroll threshold increment for AMDGPU for each if statement inside loop"),
-  cl::init(150), cl::Hidden);
+  cl::init(200), cl::Hidden);
 
 static cl::opt<bool> UnrollRuntimeLocal(
   "amdgpu-unroll-runtime-local",
@@ -100,11 +102,16 @@ AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       TLI(ST->getTargetLowering()) {}
 
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                            TTI::UnrollingPreferences &UP) {
+                                            TTI::UnrollingPreferences &UP,
+                                            OptimizationRemarkEmitter *ORE) {
   const Function &F = *L->getHeader()->getParent();
   UP.Threshold = AMDGPU::getIntegerAttribute(F, "amdgpu-unroll-threshold", 300);
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
+
+  // Conditional branch in a loop back edge needs 3 additional exec
+  // manipulations in average.
+  UP.BEInsns += 3;
 
   // TODO: Do we want runtime unrolling?
 
@@ -498,7 +505,7 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     Info.Ordering = static_cast<AtomicOrdering>(OrderingVal);
     Info.ReadMem = true;
     Info.WriteMem = true;
-    Info.IsVolatile = !Volatile->isNullValue();
+    Info.IsVolatile = !Volatile->isZero();
     return true;
   }
   default:
@@ -506,14 +513,12 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
-int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
-                                       TTI::TargetCostKind CostKind,
-                                       TTI::OperandValueKind Opd1Info,
-                                       TTI::OperandValueKind Opd2Info,
-                                       TTI::OperandValueProperties Opd1PropInfo,
-                                       TTI::OperandValueProperties Opd2PropInfo,
-                                       ArrayRef<const Value *> Args,
-                                       const Instruction *CxtI) {
+InstructionCost GCNTTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    const Instruction *CxtI) {
   EVT OrigTy = TLI->getValueType(DL, Ty);
   if (!OrigTy.isSimple()) {
     // FIXME: We're having to query the throughput cost so that the basic
@@ -529,7 +534,7 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
 
-    std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
     bool IsFloat = Ty->isFPOrFPVectorTy();
     // Assume that floating point arithmetic operations cost twice as much as
@@ -553,7 +558,7 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     // similarly to what getCastInstrCost() does.
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       unsigned Num = cast<FixedVectorType>(VTy)->getNumElements();
-      unsigned Cost = getArithmeticInstrCost(
+      InstructionCost Cost = getArithmeticInstrCost(
           Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
           Opd1PropInfo, Opd2PropInfo, Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of
@@ -567,7 +572,7 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   }
 
   // Legalize the type.
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // Because we don't have any legal vector operations, but the legal types, we
@@ -727,8 +732,9 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   }
 }
 
-int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                      TTI::TargetCostKind CostKind) {
+InstructionCost
+GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                  TTI::TargetCostKind CostKind) {
   if (ICA.getID() == Intrinsic::fabs)
     return 0;
 
@@ -756,7 +762,7 @@ int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
     // CostModel will pass a vector RetTy and VF is 1.
-    unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
+    InstructionCost ScalarizationCost = InstructionCost::getInvalid();
     if (RetVF > 1) {
       ScalarizationCost = 0;
       if (!RetTy->isVoidTy())
@@ -772,7 +778,7 @@ int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
 
   // Legalize the type.
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
 
   unsigned NElts = LT.second.isVector() ?
     LT.second.getVectorNumElements() : 1;
@@ -807,56 +813,71 @@ int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return LT.first * NElts * InstRate;
 }
 
-unsigned GCNTTIImpl::getCFInstrCost(unsigned Opcode,
-                                    TTI::TargetCostKind CostKind) {
-  if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
-    return Opcode == Instruction::PHI ? 0 : 1;
-
-  // XXX - For some reason this isn't called for switch.
+InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
+                                           TTI::TargetCostKind CostKind,
+                                           const Instruction *I) {
+  assert((I == nullptr || I->getOpcode() == Opcode) &&
+         "Opcode should reflect passed instruction.");
+  const bool SCost =
+      (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency);
+  const int CBrCost = SCost ? 5 : 7;
   switch (Opcode) {
-  case Instruction::Br:
-  case Instruction::Ret:
-    return 10;
-  default:
-    return BaseT::getCFInstrCost(Opcode, CostKind);
+  case Instruction::Br: {
+    // Branch instruction takes about 4 slots on gfx900.
+    auto BI = dyn_cast_or_null<BranchInst>(I);
+    if (BI && BI->isUnconditional())
+      return SCost ? 1 : 4;
+    // Suppose conditional branch takes additional 3 exec manipulations
+    // instructions in average.
+    return CBrCost;
   }
+  case Instruction::Switch: {
+    auto SI = dyn_cast_or_null<SwitchInst>(I);
+    // Each case (including default) takes 1 cmp + 1 cbr instructions in
+    // average.
+    return (SI ? (SI->getNumCases() + 1) : 4) * (CBrCost + 1);
+  }
+  case Instruction::Ret:
+    return SCost ? 1 : 10;
+  }
+  return BaseT::getCFInstrCost(Opcode, CostKind, I);
 }
 
-int GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
-                                           bool IsPairwise,
-                                           TTI::TargetCostKind CostKind) {
+InstructionCost
+GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                                       Optional<FastMathFlags> FMF,
+                                       TTI::TargetCostKind CostKind) {
+  if (TTI::requiresOrderedReduction(FMF))
+    return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
   // Computes cost on targets that have packed math instructions(which support
   // 16-bit types only).
-  if (IsPairwise ||
-      !ST->hasVOP3PInsts() ||
-      OrigTy.getScalarSizeInBits() != 16)
-    return BaseT::getArithmeticReductionCost(Opcode, Ty, IsPairwise, CostKind);
+  if (!ST->hasVOP3PInsts() || OrigTy.getScalarSizeInBits() != 16)
+    return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
   return LT.first * getFullRateInstrCost();
 }
 
-int GCNTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                       bool IsPairwise, bool IsUnsigned,
-                                       TTI::TargetCostKind CostKind) {
+InstructionCost
+GCNTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                                   bool IsUnsigned,
+                                   TTI::TargetCostKind CostKind) {
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
   // Computes cost on targets that have packed math instructions(which support
   // 16-bit types only).
-  if (IsPairwise ||
-      !ST->hasVOP3PInsts() ||
-      OrigTy.getScalarSizeInBits() != 16)
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsPairwise, IsUnsigned,
-                                         CostKind);
+  if (!ST->hasVOP3PInsts() || OrigTy.getScalarSizeInBits() != 16)
+    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
 
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
   return LT.first * getHalfRateInstrCost(CostKind);
 }
 
-int GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                      unsigned Index) {
+InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                               unsigned Index) {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -1111,9 +1132,10 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
 }
 
-unsigned GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *VT,
-                                    ArrayRef<int> Mask, int Index,
-                                    VectorType *SubTp) {
+InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
+                                           VectorType *VT, ArrayRef<int> Mask,
+                                           int Index, VectorType *SubTp) {
+  Kind = improveShuffleKindFromMask(Kind, Mask);
   if (ST->hasVOP3PInsts()) {
     if (cast<FixedVectorType>(VT)->getNumElements() == 2 &&
         DL.getTypeSizeInBits(VT->getElementType()) == 16) {
@@ -1204,8 +1226,9 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
 }
 
 void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::UnrollingPreferences &UP) {
-  CommonTTI.getUnrollingPreferences(L, SE, UP);
+                                         TTI::UnrollingPreferences &UP,
+                                         OptimizationRemarkEmitter *ORE) {
+  CommonTTI.getUnrollingPreferences(L, SE, UP, ORE);
 }
 
 void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -1218,122 +1241,4 @@ int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
              ? getFullRateInstrCost()
              : ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
                                       : getQuarterRateInstrCost(CostKind);
-}
-
-R600TTIImpl::R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(static_cast<const R600Subtarget *>(TM->getSubtargetImpl(F))),
-      TLI(ST->getTargetLowering()), CommonTTI(TM, F) {}
-
-unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
-  return 4 * 128; // XXX - 4 channels. Should these count as vector instead?
-}
-
-unsigned R600TTIImpl::getNumberOfRegisters(bool Vec) const {
-  return getHardwareNumberOfRegisters(Vec);
-}
-
-TypeSize
-R600TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-  return TypeSize::getFixed(32);
-}
-
-unsigned R600TTIImpl::getMinVectorRegisterBitWidth() const {
-  return 32;
-}
-
-unsigned R600TTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
-  if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
-      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS)
-    return 128;
-  if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-      AddrSpace == AMDGPUAS::REGION_ADDRESS)
-    return 64;
-  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
-    return 32;
-
-  if ((AddrSpace == AMDGPUAS::PARAM_D_ADDRESS ||
-      AddrSpace == AMDGPUAS::PARAM_I_ADDRESS ||
-      (AddrSpace >= AMDGPUAS::CONSTANT_BUFFER_0 &&
-      AddrSpace <= AMDGPUAS::CONSTANT_BUFFER_15)))
-    return 128;
-  llvm_unreachable("unhandled address space");
-}
-
-bool R600TTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
-                                             Align Alignment,
-                                             unsigned AddrSpace) const {
-  // We allow vectorization of flat stores, even though we may need to decompose
-  // them later if they may access private memory. We don't have enough context
-  // here, and legalization can handle it.
-  return (AddrSpace != AMDGPUAS::PRIVATE_ADDRESS);
-}
-
-bool R600TTIImpl::isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
-                                              Align Alignment,
-                                              unsigned AddrSpace) const {
-  return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
-}
-
-bool R600TTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
-                                               Align Alignment,
-                                               unsigned AddrSpace) const {
-  return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
-}
-
-unsigned R600TTIImpl::getMaxInterleaveFactor(unsigned VF) {
-  // Disable unrolling if the loop is not vectorized.
-  // TODO: Enable this again.
-  if (VF == 1)
-    return 1;
-
-  return 8;
-}
-
-unsigned R600TTIImpl::getCFInstrCost(unsigned Opcode,
-                                     TTI::TargetCostKind CostKind) {
-  if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
-    return Opcode == Instruction::PHI ? 0 : 1;
-
-  // XXX - For some reason this isn't called for switch.
-  switch (Opcode) {
-  case Instruction::Br:
-  case Instruction::Ret:
-    return 10;
-  default:
-    return BaseT::getCFInstrCost(Opcode, CostKind);
-  }
-}
-
-int R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                    unsigned Index) {
-  switch (Opcode) {
-  case Instruction::ExtractElement:
-  case Instruction::InsertElement: {
-    unsigned EltSize
-      = DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
-    if (EltSize < 32) {
-      return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
-    }
-
-    // Extracts are just reads of a subregister, so are free. Inserts are
-    // considered free because we don't want to have any cost for scalarizing
-    // operations, and we don't have to copy into a different register class.
-
-    // Dynamic indexing isn't free and is best avoided.
-    return Index == ~0u ? 2 : 0;
-  }
-  default:
-    return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
-  }
-}
-
-void R600TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                          TTI::UnrollingPreferences &UP) {
-  CommonTTI.getUnrollingPreferences(L, SE, UP);
-}
-
-void R600TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                        TTI::PeelingPreferences &PP) {
-  CommonTTI.getPeelingPreferences(L, SE, PP);
 }

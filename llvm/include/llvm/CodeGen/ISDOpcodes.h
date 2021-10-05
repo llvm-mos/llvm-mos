@@ -55,9 +55,16 @@ enum NodeType {
   /// value that has already been zero or sign extended from a narrower type.
   /// These nodes take two operands.  The first is the node that has already
   /// been extended, and the second is a value type node indicating the width
-  /// of the extension
+  /// of the extension.
+  /// NOTE: In case of the source value (or any vector element value) is
+  /// poisoned the assertion will not be true for that value.
   AssertSext,
   AssertZext,
+
+  /// AssertAlign - These nodes record if a register contains a value that
+  /// has a known alignment and the trailing bits are known to be zero.
+  /// NOTE: In case of the source value (or any vector element value) is
+  /// poisoned the assertion will not be true for that value.
   AssertAlign,
 
   /// Various leaf nodes.
@@ -340,9 +347,8 @@ enum NodeType {
   USHLSAT,
 
   /// RESULT = [US]MULFIX(LHS, RHS, SCALE) - Perform fixed point multiplication
-  /// on
-  /// 2 integers with the same width and scale. SCALE represents the scale of
-  /// both operands as fixed point numbers. This SCALE parameter must be a
+  /// on 2 integers with the same width and scale. SCALE represents the scale
+  /// of both operands as fixed point numbers. This SCALE parameter must be a
   /// constant integer. A scale of zero is effectively performing
   /// multiplication on 2 integers.
   SMULFIX,
@@ -594,10 +600,12 @@ enum NodeType {
 
   /// STEP_VECTOR(IMM) - Returns a scalable vector whose lanes are comprised
   /// of a linear sequence of unsigned values starting from 0 with a step of
-  /// IMM, where IMM must be a constant positive integer value. The operation
-  /// does not support returning fixed-width vectors or non-constant operands.
-  /// If the sequence value exceeds the limit allowed for the element type then
-  /// the values for those lanes are undefined.
+  /// IMM, where IMM must be a TargetConstant with type equal to the vector
+  /// element type. The arithmetic is performed modulo the bitwidth of the
+  /// element.
+  ///
+  /// The operation does not support returning fixed-width vectors or
+  /// non-constant operands.
   STEP_VECTOR,
 
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
@@ -606,7 +614,14 @@ enum NodeType {
   MULHU,
   MULHS,
 
-  /// [US]{MIN/MAX} - Binary minimum or maximum or signed or unsigned
+  // ABDS/ABDU - Absolute difference - Return the absolute difference between
+  // two numbers interpreted as signed/unsigned.
+  // i.e trunc(abs(sext(Op0) - sext(Op1))) becomes abds(Op0, Op1)
+  //  or trunc(abs(zext(Op0) - zext(Op1))) becomes abdu(Op0, Op1)
+  ABDS,
+  ABDU,
+
+  /// [US]{MIN/MAX} - Binary minimum or maximum of signed or unsigned
   /// integers.
   SMIN,
   SMAX,
@@ -771,17 +786,17 @@ enum NodeType {
   FP_TO_UINT,
 
   /// FP_TO_[US]INT_SAT - Convert floating point value in operand 0 to a
-  /// signed or unsigned integer type with the bit width given in operand 1 with
-  /// the following semantics:
+  /// signed or unsigned scalar integer type given in operand 1 with the
+  /// following semantics:
   ///
   ///  * If the value is NaN, zero is returned.
   ///  * If the value is larger/smaller than the largest/smallest integer,
   ///    the largest/smallest integer is returned (saturation).
   ///  * Otherwise the result of rounding the value towards zero is returned.
   ///
-  /// The width given in operand 1 must be equal to, or smaller than, the scalar
-  /// result type width. It may end up being smaller than the result witdh as a
-  /// result of integer type legalization.
+  /// The scalar width of the type given in operand 1 must be equal to, or
+  /// smaller than, the scalar result type width. It may end up being smaller
+  /// than the result width as a result of integer type legalization.
   FP_TO_SINT_SAT,
   FP_TO_UINT_SAT,
 
@@ -846,8 +861,8 @@ enum NodeType {
   STRICT_FP_TO_FP16,
 
   /// Perform various unary floating-point operations inspired by libm. For
-  /// FPOWI, the result is undefined if if the integer operand doesn't fit
-  /// into 32 bits.
+  /// FPOWI, the result is undefined if if the integer operand doesn't fit into
+  /// sizeof(int).
   FNEG,
   FABS,
   FSQRT,
@@ -1085,6 +1100,10 @@ enum NodeType {
   /// specifier.
   PREFETCH,
 
+  /// ARITH_FENCE - This corresponds to a arithmetic fence intrinsic. Both its
+  /// operand and output are the same floating type.
+  ARITH_FENCE,
+
   /// OUTCHAIN = ATOMIC_FENCE(INCHAIN, ordering, scope)
   /// This corresponds to the fence instruction. It takes an input chain, and
   /// two integer constants: an AtomicOrdering and a SynchronizationScope.
@@ -1247,6 +1266,12 @@ NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
 
 /// Whether this is a vector-predicated Opcode.
 bool isVPOpcode(unsigned Opcode);
+
+/// Whether this is a vector-predicated binary operation opcode.
+bool isVPBinaryOp(unsigned Opcode);
+
+/// Whether this is a vector-predicated reduction opcode.
+bool isVPReduction(unsigned Opcode);
 
 /// The operand position of the vector mask.
 Optional<unsigned> getVPMaskIdx(unsigned Opcode);

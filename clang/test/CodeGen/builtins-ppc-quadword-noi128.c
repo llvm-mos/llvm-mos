@@ -6,6 +6,9 @@
 // RUN: %clang_cc1 -O2 -target-feature +altivec -target-feature +power8-vector \
 // RUN:   -triple powerpc64-aix-unknown -emit-llvm %s -o - | FileCheck \
 // RUN:   %s -check-prefix=CHECK-AIX
+// RUN: %clang_cc1 -O2 -target-feature +altivec -target-feature +power8-vector \
+// RUN:   -triple powerpc-aix-unknown -emit-llvm %s -o - | FileCheck \
+// RUN:   %s -check-prefix=CHECK-AIX
 #include <altivec.h>
 // CHECK-LE-LABEL: @test_subc(
 // CHECK-LE-NEXT:  entry:
@@ -75,8 +78,8 @@ vector unsigned char test_sube(vector unsigned char a, vector unsigned char b,
 // CHECK-LE-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
-// CHECK-LE-NEXT:    [[VADDUQM_I_NEG:%.*]] = sub <1 x i128> [[TMP2]], [[TMP0]]
-// CHECK-LE-NEXT:    [[VSUBUQM_I:%.*]] = sub <1 x i128> [[VADDUQM_I_NEG]], [[TMP1]]
+// CHECK-LE-NEXT:    [[VADDUQM_I_NEG:%.*]] = add <1 x i128> [[TMP0]], [[TMP1]]
+// CHECK-LE-NEXT:    [[VSUBUQM_I:%.*]] = sub <1 x i128> [[TMP2]], [[VADDUQM_I_NEG]]
 // CHECK-LE-NEXT:    [[TMP3:%.*]] = bitcast <1 x i128> [[VSUBUQM_I]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP3]]
 //
@@ -85,8 +88,8 @@ vector unsigned char test_sube(vector unsigned char a, vector unsigned char b,
 // CHECK-AIX-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[B:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[C:%.*]] to <1 x i128>
 // CHECK-AIX-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[A:%.*]] to <1 x i128>
-// CHECK-AIX-NEXT:    [[VADDUQM_I_NEG:%.*]] = sub <1 x i128> [[TMP2]], [[TMP0]]
-// CHECK-AIX-NEXT:    [[VSUBUQM_I:%.*]] = sub <1 x i128> [[VADDUQM_I_NEG]], [[TMP1]]
+// CHECK-AIX-NEXT:    [[VADDUQM_I_NEG:%.*]] = add <1 x i128> [[TMP0]], [[TMP1]]
+// CHECK-AIX-NEXT:    [[VSUBUQM_I:%.*]] = sub <1 x i128> [[TMP2]], [[VADDUQM_I_NEG]]
 // CHECK-AIX-NEXT:    [[TMP3:%.*]] = bitcast <1 x i128> [[VSUBUQM_I]] to <16 x i8>
 // CHECK-AIX-NEXT:    ret <16 x i8> [[TMP3]]
 //

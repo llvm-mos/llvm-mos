@@ -87,6 +87,9 @@ bool RISCVTargetInfo::validateAsmConstraint(
     // An address that is held in a general-purpose register.
     Info.setAllowsMemory();
     return true;
+  case 'S': // A symbolic address
+    Info.setAllowsRegister();
+    return true;
   case 'v':
     // A vector register.
     if (Name[1] == 'r' || Name[1] == 'm') {
@@ -102,7 +105,7 @@ std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
   case 'v':
-    R = std::string("v");
+    R = std::string("^") + std::string(Constraint, 2);
     Constraint += 1;
     break;
   default:
@@ -204,9 +207,6 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasZbp)
     Builder.defineMacro("__riscv_zbp", "93000");
 
-  if (HasZbproposedc)
-    Builder.defineMacro("__riscv_zbproposedc", "93000");
-
   if (HasZbr)
     Builder.defineMacro("__riscv_zbr", "93000");
 
@@ -239,6 +239,16 @@ ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
                                              Builtin::FirstTSBuiltin);
 }
 
+bool RISCVTargetInfo::initFeatureMap(
+    llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
+    const std::vector<std::string> &FeaturesVec) const {
+
+  if (getTriple().getArch() == llvm::Triple::riscv64)
+    Features["64bit"] = true;
+
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+}
+
 /// Return true if has this feature, need to sync with handleTargetFeatures.
 bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
   bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
@@ -246,6 +256,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
       .Case("riscv", true)
       .Case("riscv32", !Is64Bit)
       .Case("riscv64", Is64Bit)
+      .Case("64bit", Is64Bit)
       .Case("m", HasM)
       .Case("a", HasA)
       .Case("f", HasF)
@@ -260,7 +271,6 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
       .Case("experimental-zbf", HasZbf)
       .Case("experimental-zbm", HasZbm)
       .Case("experimental-zbp", HasZbp)
-      .Case("experimental-zbproposedc", HasZbproposedc)
       .Case("experimental-zbr", HasZbr)
       .Case("experimental-zbs", HasZbs)
       .Case("experimental-zbt", HasZbt)
@@ -302,8 +312,6 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasZbm = true;
     else if (Feature == "+experimental-zbp")
       HasZbp = true;
-    else if (Feature == "+experimental-zbproposedc")
-      HasZbproposedc = true;
     else if (Feature == "+experimental-zbr")
       HasZbr = true;
     else if (Feature == "+experimental-zbs")

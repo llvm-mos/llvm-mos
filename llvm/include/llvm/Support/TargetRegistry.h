@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -58,6 +59,11 @@ class raw_ostream;
 class raw_pwrite_stream;
 class TargetMachine;
 class TargetOptions;
+namespace mca {
+class CustomBehaviour;
+class InstrPostProcess;
+class SourceMgr;
+} // namespace mca
 
 MCStreamer *createNullStreamer(MCContext &Ctx);
 // Takes ownership of \p TAB and \p CE.
@@ -113,6 +119,13 @@ MCSymbolizer *createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                                  void *DisInfo, MCContext *Ctx,
                                  std::unique_ptr<MCRelocationInfo> &&RelInfo);
 
+mca::CustomBehaviour *createCustomBehaviour(const MCSubtargetInfo &STI,
+                                            const mca::SourceMgr &SrcMgr,
+                                            const MCInstrInfo &MCII);
+
+mca::InstrPostProcess *createInstrPostProcess(const MCSubtargetInfo &STI,
+                                              const MCInstrInfo &MCII);
+
 /// Target - Wrapper for Target specific information.
 ///
 /// For registration purposes, this is a POD type so that targets can be
@@ -130,6 +143,9 @@ public:
   using MCAsmInfoCtorFnTy = MCAsmInfo *(*)(const MCRegisterInfo &MRI,
                                            const Triple &TT,
                                            const MCTargetOptions &Options);
+  using MCObjectFileInfoCtorFnTy = MCObjectFileInfo *(*)(MCContext &Ctx,
+                                                         bool PIC,
+                                                         bool LargeCodeModel);
   using MCInstrInfoCtorFnTy = MCInstrInfo *(*)();
   using MCInstrAnalysisCtorFnTy = MCInstrAnalysis *(*)(const MCInstrInfo *Info);
   using MCRegInfoCtorFnTy = MCRegisterInfo *(*)(const Triple &TT);
@@ -183,6 +199,12 @@ public:
                       std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll);
+  using XCOFFStreamerCtorTy =
+      MCStreamer *(*)(const Triple &T, MCContext &Ctx,
+                      std::unique_ptr<MCAsmBackend> &&TAB,
+                      std::unique_ptr<MCObjectWriter> &&OW,
+                      std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll);
+
   using NullTargetStreamerCtorTy = MCTargetStreamer *(*)(MCStreamer &S);
   using AsmTargetStreamerCtorTy = MCTargetStreamer *(*)(
       MCStreamer &S, formatted_raw_ostream &OS, MCInstPrinter *InstPrint,
@@ -195,6 +217,15 @@ public:
       const Triple &TT, LLVMOpInfoCallback GetOpInfo,
       LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo, MCContext *Ctx,
       std::unique_ptr<MCRelocationInfo> &&RelInfo);
+
+  using CustomBehaviourCtorTy =
+      mca::CustomBehaviour *(*)(const MCSubtargetInfo &STI,
+                                const mca::SourceMgr &SrcMgr,
+                                const MCInstrInfo &MCII);
+
+  using InstrPostProcessCtorTy =
+      mca::InstrPostProcess *(*)(const MCSubtargetInfo &STI,
+                                 const MCInstrInfo &MCII);
 
 private:
   /// Next - The next registered target in the linked list, maintained by the
@@ -220,6 +251,9 @@ private:
   /// MCAsmInfoCtorFn - Constructor function for this target's MCAsmInfo, if
   /// registered.
   MCAsmInfoCtorFnTy MCAsmInfoCtorFn;
+
+  /// Constructor function for this target's MCObjectFileInfo, if registered.
+  MCObjectFileInfoCtorFnTy MCObjectFileInfoCtorFn;
 
   /// MCInstrInfoCtorFn - Constructor function for this target's MCInstrInfo,
   /// if registered.
@@ -270,6 +304,7 @@ private:
   MachOStreamerCtorTy MachOStreamerCtorFn = nullptr;
   ELFStreamerCtorTy ELFStreamerCtorFn = nullptr;
   WasmStreamerCtorTy WasmStreamerCtorFn = nullptr;
+  XCOFFStreamerCtorTy XCOFFStreamerCtorFn = nullptr;
 
   /// Construction function for this target's null TargetStreamer, if
   /// registered (default = nullptr).
@@ -290,6 +325,14 @@ private:
   /// MCSymbolizerCtorFn - Construction function for this target's
   /// MCSymbolizer, if registered (default = llvm::createMCSymbolizer)
   MCSymbolizerCtorTy MCSymbolizerCtorFn = nullptr;
+
+  /// CustomBehaviourCtorFn - Construction function for this target's
+  /// CustomBehaviour, if registered (default = nullptr).
+  CustomBehaviourCtorTy CustomBehaviourCtorFn = nullptr;
+
+  /// InstrPostProcessCtorFn - Construction function for this target's
+  /// InstrPostProcess, if registered (default = nullptr).
+  InstrPostProcessCtorTy InstrPostProcessCtorFn = nullptr;
 
 public:
   Target() = default;
@@ -341,6 +384,19 @@ public:
     if (!MCAsmInfoCtorFn)
       return nullptr;
     return MCAsmInfoCtorFn(MRI, Triple(TheTriple), Options);
+  }
+
+  /// Create a MCObjectFileInfo implementation for the specified target
+  /// triple.
+  ///
+  MCObjectFileInfo *createMCObjectFileInfo(MCContext &Ctx, bool PIC,
+                                           bool LargeCodeModel = false) const {
+    if (!MCObjectFileInfoCtorFn) {
+      MCObjectFileInfo *MOFI = new MCObjectFileInfo();
+      MOFI->initMCObjectFileInfo(Ctx, PIC, LargeCodeModel);
+      return MOFI;
+    }
+    return MCObjectFileInfoCtorFn(Ctx, PIC, LargeCodeModel);
   }
 
   /// createMCInstrInfo - Create a MCInstrInfo implementation.
@@ -513,8 +569,12 @@ public:
     case Triple::GOFF:
       report_fatal_error("GOFF MCObjectStreamer not implemented yet");
     case Triple::XCOFF:
-      S = createXCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                              std::move(Emitter), RelaxAll);
+      if (XCOFFStreamerCtorFn)
+        S = XCOFFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
+                                std::move(Emitter), RelaxAll);
+      else
+        S = createXCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
+                                std::move(Emitter), RelaxAll);
       break;
     }
     if (ObjectTargetStreamerCtorFn)
@@ -592,6 +652,25 @@ public:
               std::move(RelInfo));
   }
 
+  /// createCustomBehaviour - Create a target specific CustomBehaviour.
+  /// This class is used by llvm-mca and requires backend functionality.
+  mca::CustomBehaviour *createCustomBehaviour(const MCSubtargetInfo &STI,
+                                              const mca::SourceMgr &SrcMgr,
+                                              const MCInstrInfo &MCII) const {
+    if (CustomBehaviourCtorFn)
+      return CustomBehaviourCtorFn(STI, SrcMgr, MCII);
+    return nullptr;
+  }
+
+  /// createInstrPostProcess - Create a target specific InstrPostProcess.
+  /// This class is used by llvm-mca and requires backend functionality.
+  mca::InstrPostProcess *createInstrPostProcess(const MCSubtargetInfo &STI,
+                                                const MCInstrInfo &MCII) const {
+    if (InstrPostProcessCtorFn)
+      return InstrPostProcessCtorFn(STI, MCII);
+    return nullptr;
+  }
+
   /// @}
 };
 
@@ -603,8 +682,7 @@ struct TargetRegistry {
   // function).
   TargetRegistry() = delete;
 
-  class iterator
-      : public std::iterator<std::forward_iterator_tag, Target, ptrdiff_t> {
+  class iterator {
     friend struct TargetRegistry;
 
     const Target *Current = nullptr;
@@ -612,6 +690,12 @@ struct TargetRegistry {
     explicit iterator(Target *T) : Current(T) {}
 
   public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = Target;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     iterator() = default;
 
     bool operator==(const iterator &x) const { return Current == x.Current; }
@@ -706,6 +790,19 @@ struct TargetRegistry {
   /// @param Fn - A function to construct a MCAsmInfo for the target.
   static void RegisterMCAsmInfo(Target &T, Target::MCAsmInfoCtorFnTy Fn) {
     T.MCAsmInfoCtorFn = Fn;
+  }
+
+  /// Register a MCObjectFileInfo implementation for the given target.
+  ///
+  /// Clients are responsible for ensuring that registration doesn't occur
+  /// while another thread is attempting to access the registry. Typically
+  /// this is done by initializing all targets at program startup.
+  ///
+  /// @param T - The target being registered.
+  /// @param Fn - A function to construct a MCObjectFileInfo for the target.
+  static void RegisterMCObjectFileInfo(Target &T,
+                                       Target::MCObjectFileInfoCtorFnTy Fn) {
+    T.MCObjectFileInfoCtorFn = Fn;
   }
 
   /// RegisterMCInstrInfo - Register a MCInstrInfo implementation for the
@@ -863,6 +960,10 @@ struct TargetRegistry {
     T.WasmStreamerCtorFn = Fn;
   }
 
+  static void RegisterXCOFFStreamer(Target &T, Target::XCOFFStreamerCtorTy Fn) {
+    T.XCOFFStreamerCtorFn = Fn;
+  }
+
   static void RegisterNullTargetStreamer(Target &T,
                                          Target::NullTargetStreamerCtorTy Fn) {
     T.NullTargetStreamerCtorFn = Fn;
@@ -904,6 +1005,34 @@ struct TargetRegistry {
   /// @param Fn - A function to construct an MCSymbolizer for the target.
   static void RegisterMCSymbolizer(Target &T, Target::MCSymbolizerCtorTy Fn) {
     T.MCSymbolizerCtorFn = Fn;
+  }
+
+  /// RegisterCustomBehaviour - Register a CustomBehaviour
+  /// implementation for the given target.
+  ///
+  /// Clients are responsible for ensuring that registration doesn't occur
+  /// while another thread is attempting to access the registry. Typically
+  /// this is done by initializing all targets at program startup.
+  ///
+  /// @param T - The target being registered.
+  /// @param Fn - A function to construct a CustomBehaviour for the target.
+  static void RegisterCustomBehaviour(Target &T,
+                                      Target::CustomBehaviourCtorTy Fn) {
+    T.CustomBehaviourCtorFn = Fn;
+  }
+
+  /// RegisterInstrPostProcess - Register an InstrPostProcess
+  /// implementation for the given target.
+  ///
+  /// Clients are responsible for ensuring that registration doesn't occur
+  /// while another thread is attempting to access the registry. Typically
+  /// this is done by initializing all targets at program startup.
+  ///
+  /// @param T - The target being registered.
+  /// @param Fn - A function to construct an InstrPostProcess for the target.
+  static void RegisterInstrPostProcess(Target &T,
+                                       Target::InstrPostProcessCtorTy Fn) {
+    T.InstrPostProcessCtorFn = Fn;
   }
 
   /// @}
@@ -968,6 +1097,39 @@ private:
 struct RegisterMCAsmInfoFn {
   RegisterMCAsmInfoFn(Target &T, Target::MCAsmInfoCtorFnTy Fn) {
     TargetRegistry::RegisterMCAsmInfo(T, Fn);
+  }
+};
+
+/// Helper template for registering a target object file info implementation.
+/// This invokes the static "Create" method on the class to actually do the
+/// construction.  Usage:
+///
+/// extern "C" void LLVMInitializeFooTarget() {
+///   extern Target TheFooTarget;
+///   RegisterMCObjectFileInfo<FooMCObjectFileInfo> X(TheFooTarget);
+/// }
+template <class MCObjectFileInfoImpl> struct RegisterMCObjectFileInfo {
+  RegisterMCObjectFileInfo(Target &T) {
+    TargetRegistry::RegisterMCObjectFileInfo(T, &Allocator);
+  }
+
+private:
+  static MCObjectFileInfo *Allocator(MCContext &Ctx, bool PIC,
+                                     bool LargeCodeModel = false) {
+    return new MCObjectFileInfoImpl(Ctx, PIC, LargeCodeModel);
+  }
+};
+
+/// Helper template for registering a target object file info implementation.
+/// This invokes the specified function to do the construction.  Usage:
+///
+/// extern "C" void LLVMInitializeFooTarget() {
+///   extern Target TheFooTarget;
+///   RegisterMCObjectFileInfoFn X(TheFooTarget, TheFunction);
+/// }
+struct RegisterMCObjectFileInfoFn {
+  RegisterMCObjectFileInfoFn(Target &T, Target::MCObjectFileInfoCtorFnTy Fn) {
+    TargetRegistry::RegisterMCObjectFileInfo(T, Fn);
   }
 };
 

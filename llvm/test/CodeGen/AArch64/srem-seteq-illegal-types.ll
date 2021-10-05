@@ -4,14 +4,14 @@
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; CHECK-LABEL: test_srem_odd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #33099
-; CHECK-NEXT:    mov w10, #64874
-; CHECK-NEXT:    sbfx w8, w0, #0, #29
-; CHECK-NEXT:    movk w9, #48986, lsl #16
-; CHECK-NEXT:    movk w10, #330, lsl #16
-; CHECK-NEXT:    madd w8, w8, w9, w10
-; CHECK-NEXT:    mov w9, #64213
-; CHECK-NEXT:    movk w9, #661, lsl #16
+; CHECK-NEXT:    mov w8, #33099
+; CHECK-NEXT:    mov w9, #24493
+; CHECK-NEXT:    movk w8, #8026, lsl #16
+; CHECK-NEXT:    movk w9, #41, lsl #16
+; CHECK-NEXT:    madd w8, w0, w8, w9
+; CHECK-NEXT:    mov w9, #48987
+; CHECK-NEXT:    and w8, w8, #0x1fffffff
+; CHECK-NEXT:    movk w9, #82, lsl #16
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -32,7 +32,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-NEXT:    add w9, w9, w10
 ; CHECK-NEXT:    mov w10, #6
 ; CHECK-NEXT:    msub w8, w9, w10, w8
-; CHECK-NEXT:    cmp w8, #1 // =1
+; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %srem = srem i4 %X, 6

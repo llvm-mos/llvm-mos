@@ -1456,6 +1456,13 @@ void CFGBuilder::findConstructionContexts(
     // TODO: Handle other cases. For now, fail to find construction contexts.
     break;
   }
+  case Stmt::ParenExprClass: {
+    // If expression is placed into parenthesis we should propagate the parent
+    // construction context to subexpressions.
+    auto *PE = cast<ParenExpr>(Child);
+    findConstructionContexts(Layer, PE->getSubExpr());
+    break;
+  }
   default:
     break;
   }
@@ -3040,7 +3047,7 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
   // control-flow transfer of '&&' or '||' go directly into the then/else
   // blocks directly.
   BinaryOperator *Cond =
-      I->getConditionVariable()
+      (I->isConsteval() || I->getConditionVariable())
           ? nullptr
           : dyn_cast<BinaryOperator>(I->getCond()->IgnoreParens());
   CFGBlock *LastBlock;
@@ -3054,7 +3061,9 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
     Block->setTerminator(I);
 
     // See if this is a known constant.
-    const TryResult &KnownVal = tryEvaluateBool(I->getCond());
+    TryResult KnownVal;
+    if (!I->isConsteval())
+      KnownVal = tryEvaluateBool(I->getCond());
 
     // Add the successors.  If we know that specific branches are
     // unreachable, inform addSuccessor() of that knowledge.

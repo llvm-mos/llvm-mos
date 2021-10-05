@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DLL.h"
+#include "COFFLinkerContext.h"
 #include "Chunks.h"
 #include "SymbolTable.h"
 #include "llvm/Object/COFF.h"
@@ -158,7 +159,6 @@ binImports(const std::vector<DefinedImportData *> &imports) {
   return v;
 }
 
-// Export table
 // See Microsoft PE/COFF spec 4.3 for details.
 
 // A chunk for the delay import descriptor table etnry.
@@ -525,6 +525,8 @@ public:
       if (e.forwardChunk) {
         write32le(p, e.forwardChunk->getRVA() | bit);
       } else {
+        assert(cast<Defined>(e.sym)->getRVA() != 0 &&
+               "Exported symbol unmapped");
         write32le(p, cast<Defined>(e.sym)->getRVA() | bit);
       }
     }
@@ -630,7 +632,7 @@ uint64_t DelayLoadContents::getDirSize() {
   return dirs.size() * sizeof(delay_import_directory_table_entry);
 }
 
-void DelayLoadContents::create(Defined *h) {
+void DelayLoadContents::create(COFFLinkerContext &ctx, Defined *h) {
   helper = h;
   std::vector<std::vector<DefinedImportData *>> v = binImports(imports);
 
@@ -659,13 +661,13 @@ void DelayLoadContents::create(Defined *h) {
         // call targets for Control Flow Guard.
         StringRef symName = saver.save("__imp_load_" + extName);
         s->loadThunkSym =
-            cast<DefinedSynthetic>(symtab->addSynthetic(symName, t));
+            cast<DefinedSynthetic>(ctx.symtab.addSynthetic(symName, t));
       }
     }
     thunks.push_back(tm);
     StringRef tmName =
         saver.save("__tailMerge_" + syms[0]->getDLLName().lower());
-    symtab->addSynthetic(tmName, tm);
+    ctx.symtab.addSynthetic(tmName, tm);
     // Terminate with null values.
     addresses.push_back(make<NullChunk>(8));
     names.push_back(make<NullChunk>(8));

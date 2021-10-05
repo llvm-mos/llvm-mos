@@ -103,13 +103,15 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_msvc_new_array_longlong,         {OpNewLike,   1, 0,  -1}}, // new[](unsigned long long)
   {LibFunc_msvc_new_array_longlong_nothrow, {MallocLike,  2, 0,  -1}}, // new[](unsigned long long, nothrow)
   {LibFunc_aligned_alloc,       {AlignedAllocLike, 2, 1,  -1}},
+  {LibFunc_memalign,            {AlignedAllocLike, 2, 1,  -1}},
   {LibFunc_calloc,              {CallocLike,  2, 0,   1}},
   {LibFunc_vec_calloc,          {CallocLike,  2, 0,   1}},
   {LibFunc_realloc,             {ReallocLike, 2, 1,  -1}},
   {LibFunc_vec_realloc,         {ReallocLike, 2, 1,  -1}},
   {LibFunc_reallocf,            {ReallocLike, 2, 1,  -1}},
   {LibFunc_strdup,              {StrDupLike,  1, -1, -1}},
-  {LibFunc_strndup,             {StrDupLike,  2, 1,  -1}}
+  {LibFunc_strndup,             {StrDupLike,  2, 1,  -1}},
+  {LibFunc___kmpc_alloc_shared, {MallocLike,  1, 0,  -1}},
   // TODO: Handle "int posix_memalign(void **, size_t, size_t)"
 };
 
@@ -133,16 +135,14 @@ static const Function *getCalledFunction(const Value *V, bool LookThroughBitCast
   return nullptr;
 }
 
-/// Returns the allocation data for the given value if it's either a call to a
-/// known allocation function, or a call to a function with the allocsize
-/// attribute.
+/// Returns the allocation data for the given value if it's a call to a known
+/// allocation function.
 static Optional<AllocFnsTy>
 getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
                              const TargetLibraryInfo *TLI) {
   // Make sure that the function is available.
-  StringRef FnName = Callee->getName();
   LibFunc TLIFn;
-  if (!TLI || !TLI->getLibFunc(FnName, TLIFn) || !TLI->has(TLIFn))
+  if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
     return None;
 
   const auto *Iter = find_if(
@@ -455,7 +455,8 @@ bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
            TLIFn == LibFunc_msvc_delete_array_ptr32_int ||      // delete[](void*, uint)
            TLIFn == LibFunc_msvc_delete_array_ptr64_longlong || // delete[](void*, ulonglong)
            TLIFn == LibFunc_msvc_delete_array_ptr32_nothrow || // delete[](void*, nothrow)
-           TLIFn == LibFunc_msvc_delete_array_ptr64_nothrow)   // delete[](void*, nothrow)
+           TLIFn == LibFunc_msvc_delete_array_ptr64_nothrow || // delete[](void*, nothrow)
+           TLIFn == LibFunc___kmpc_free_shared) // OpenMP Offloading RTL free
     ExpectedNumParams = 2;
   else if (TLIFn == LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t || // delete(void*, align_val_t, nothrow)
            TLIFn == LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t || // delete[](void*, align_val_t, nothrow)
@@ -489,9 +490,8 @@ const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
   if (Callee == nullptr || IsNoBuiltinCall)
     return nullptr;
 
-  StringRef FnName = Callee->getName();
   LibFunc TLIFn;
-  if (!TLI || !TLI->getLibFunc(FnName, TLIFn) || !TLI->has(TLIFn))
+  if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
     return nullptr;
 
   return isLibFreeFunction(Callee, TLIFn) ? dyn_cast<CallInst>(I) : nullptr;
@@ -609,7 +609,7 @@ ObjectSizeOffsetVisitor::ObjectSizeOffsetVisitor(const DataLayout &DL,
 
 SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
   IntTyBits = DL.getIndexTypeSizeInBits(V->getType());
-  Zero = APInt::getNullValue(IntTyBits);
+  Zero = APInt::getZero(IntTyBits);
 
   V = V->stripPointerCasts();
   if (Instruction *I = dyn_cast<Instruction>(V)) {
@@ -955,7 +955,14 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
 
   // must be a VLA
   assert(I.isArrayAllocation());
-  Value *ArraySize = I.getArraySize();
+
+  // If needed, adjust the alloca's operand size to match the pointer size.
+  // Subsequent math operations expect the types to match.
+  Value *ArraySize = Builder.CreateZExtOrTrunc(
+      I.getArraySize(), DL.getIntPtrType(I.getContext()));
+  assert(ArraySize->getType() == Zero->getType() &&
+         "Expected zero constant to have pointer type");
+
   Value *Size = ConstantInt::get(ArraySize->getType(),
                                  DL.getTypeAllocSize(I.getAllocatedType()));
   Size = Builder.CreateMul(Size, ArraySize);

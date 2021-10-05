@@ -72,7 +72,7 @@ template class llvm::SymbolTableListTraits<GlobalIFunc>;
 //
 
 Module::Module(StringRef MID, LLVMContext &C)
-    : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>()),
+    : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>(-1)),
       Materializer(), ModuleID(std::string(MID)),
       SourceFileName(std::string(MID)), DL("") {
   Context.addModule(this);
@@ -112,6 +112,10 @@ Module::createRNG(const StringRef Name) const {
 /// if a global with the specified name is not found.
 GlobalValue *Module::getNamedValue(StringRef Name) const {
   return cast_or_null<GlobalValue>(getValueSymbolTable().lookup(Name));
+}
+
+unsigned Module::getNumNamedValues() const {
+  return getValueSymbolTable().size();
 }
 
 /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
@@ -506,7 +510,7 @@ std::string Module::getUniqueIntrinsicName(StringRef BaseName, Intrinsic::ID Id,
     }
 
     // A declaration with this name already exists. Remember it.
-    FunctionType *FT = dyn_cast<FunctionType>(F->getType()->getElementType());
+    FunctionType *FT = dyn_cast<FunctionType>(F->getValueType());
     auto UinItInserted = UniquedIntrinsicNames.insert({{Id, FT}, Count});
     if (FT == Proto) {
       // It was a declaration for our prototype. This entry was allocated in the
@@ -667,6 +671,69 @@ bool Module::getRtLibUseGOT() const {
 
 void Module::setRtLibUseGOT() {
   addModuleFlag(ModFlagBehavior::Max, "RtLibUseGOT", 1);
+}
+
+bool Module::getUwtable() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("uwtable"));
+  return Val && (cast<ConstantInt>(Val->getValue())->getZExtValue() > 0);
+}
+
+void Module::setUwtable() { addModuleFlag(ModFlagBehavior::Max, "uwtable", 1); }
+
+FramePointerKind Module::getFramePointer() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("frame-pointer"));
+  return static_cast<FramePointerKind>(
+      Val ? cast<ConstantInt>(Val->getValue())->getZExtValue() : 0);
+}
+
+void Module::setFramePointer(FramePointerKind Kind) {
+  addModuleFlag(ModFlagBehavior::Max, "frame-pointer", static_cast<int>(Kind));
+}
+
+StringRef Module::getStackProtectorGuard() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard");
+  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+    return MDS->getString();
+  return {};
+}
+
+void Module::setStackProtectorGuard(StringRef Kind) {
+  MDString *ID = MDString::get(getContext(), Kind);
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard", ID);
+}
+
+StringRef Module::getStackProtectorGuardReg() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard-reg");
+  if (auto *MDS = dyn_cast_or_null<MDString>(MD))
+    return MDS->getString();
+  return {};
+}
+
+void Module::setStackProtectorGuardReg(StringRef Reg) {
+  MDString *ID = MDString::get(getContext(), Reg);
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-reg", ID);
+}
+
+int Module::getStackProtectorGuardOffset() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard-offset");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getSExtValue();
+  return INT_MAX;
+}
+
+void Module::setStackProtectorGuardOffset(int Offset) {
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-offset", Offset);
+}
+
+unsigned Module::getOverrideStackAlignment() const {
+  Metadata *MD = getModuleFlag("override-stack-alignment");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getZExtValue();
+  return 0;
+}
+
+void Module::setOverrideStackAlignment(unsigned Align) {
+  addModuleFlag(ModFlagBehavior::Error, "override-stack-alignment", Align);
 }
 
 void Module::setSDKVersion(const VersionTuple &V) {

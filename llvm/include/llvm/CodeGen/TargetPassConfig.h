@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Target-Independent Code Generator Pass Configuration Options pass.
-//
+///
 //===----------------------------------------------------------------------===//
 
 
@@ -410,6 +410,10 @@ protected:
   virtual bool addPreRewrite() {
     return false;
   }
+
+  /// addPostFastRegAllocRewrite - Add passes to the optimized register
+  /// allocation pipeline after fast register allocation is complete.
+  virtual bool addPostFastRegAllocRewrite() { return false; }
 
   /// Add passes to be run immediately after virtual registers are rewritten
   /// to physical registers.

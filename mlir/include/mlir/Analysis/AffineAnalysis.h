@@ -15,6 +15,7 @@
 #ifndef MLIR_ANALYSIS_AFFINE_ANALYSIS_H
 #define MLIR_ANALYSIS_AFFINE_ANALYSIS_H
 
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -24,8 +25,36 @@ namespace mlir {
 class AffineApplyOp;
 class AffineForOp;
 class AffineValueMap;
-class FlatAffineConstraints;
+class FlatAffineValueConstraints;
 class Operation;
+
+/// A description of a (parallelizable) reduction in an affine loop.
+struct LoopReduction {
+  /// Reduction kind.
+  AtomicRMWKind kind;
+
+  /// Position of the iteration argument that acts as accumulator.
+  unsigned iterArgPosition;
+
+  /// The value being reduced.
+  Value value;
+};
+
+/// Populate `supportedReductions` with descriptors of the supported reductions.
+void getSupportedReductions(
+    AffineForOp forOp, SmallVectorImpl<LoopReduction> &supportedReductions);
+
+/// Returns true if `forOp' is a parallel loop. If `parallelReductions` is
+/// provided, populates it with descriptors of the parallelizable reductions and
+/// treats them as not preventing parallelization.
+bool isLoopParallel(
+    AffineForOp forOp,
+    SmallVectorImpl<LoopReduction> *parallelReductions = nullptr);
+
+/// Returns true if `forOp' doesn't have memory dependences preventing
+/// parallelization. This function doesn't check iter_args and should be used
+/// only as a building block for full parallel-checking functions.
+bool isLoopMemoryParallel(AffineForOp forOp);
 
 /// Returns in `affineApplyOps`, the sequence of those AffineApplyOp
 /// Operations that are reachable via a search starting from `operands` and
@@ -42,7 +71,7 @@ void getReachableAffineApplyOps(ArrayRef<Value> operands,
 /// AffineIfOp.
 //  TODO: handle non-unit strides.
 LogicalResult getIndexSet(MutableArrayRef<Operation *> ops,
-                          FlatAffineConstraints *domain);
+                          FlatAffineValueConstraints *domain);
 
 /// Encapsulates a memref load or store access information.
 struct MemRefAccess {
@@ -111,7 +140,7 @@ struct DependenceResult {
 
 DependenceResult checkMemrefAccessDependence(
     const MemRefAccess &srcAccess, const MemRefAccess &dstAccess,
-    unsigned loopDepth, FlatAffineConstraints *dependenceConstraints,
+    unsigned loopDepth, FlatAffineValueConstraints *dependenceConstraints,
     SmallVector<DependenceComponent, 2> *dependenceComponents,
     bool allowRAR = false);
 

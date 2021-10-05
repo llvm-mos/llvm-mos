@@ -77,6 +77,9 @@ func private @vectors(vector<1 x f32>, vector<2x4xf32>)
 func private @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
                  tensor<1x?x4x?x?xi32>, tensor<i8>)
 
+// CHECK: func private @tensor_encoding(tensor<16x32xf64, "sparse">)
+func private @tensor_encoding(tensor<16x32xf64, "sparse">)
+
 // CHECK: func private @memrefs(memref<1x?x4x?x?xi32, #map{{[0-9]+}}>, memref<8xi8>)
 func private @memrefs(memref<1x?x4x?x?xi32, #map0>, memref<8xi8, #map1, #map1>)
 
@@ -174,6 +177,21 @@ func private @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
 
 // CHECK: func private @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
 func private @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
+
+// CHECK: func private @memref_with_custom_elem(memref<1x?x!test.memref_element>)
+func private @memref_with_custom_elem(memref<1x?x!test.memref_element>)
+
+// CHECK: func private @memref_of_memref(memref<1xmemref<1xf64>>)
+func private @memref_of_memref(memref<1xmemref<1xf64>>)
+
+// CHECK: func private @memref_of_unranked_memref(memref<1xmemref<*xf32>>)
+func private @memref_of_unranked_memref(memref<1xmemref<*xf32>>)
+
+// CHECK: func private @unranked_memref_of_memref(memref<*xmemref<1xf32>>)
+func private @unranked_memref_of_memref(memref<*xmemref<1xf32>>)
+
+// CHECK: func private @unranked_memref_of_unranked_memref(memref<*xmemref<*xi32>>)
+func private @unranked_memref_of_unranked_memref(memref<*xmemref<*xi32>>)
 
 // CHECK: func private @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
 func private @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
@@ -792,7 +810,7 @@ func @sparsetensorattr() -> () {
 // CHECK: "fooi32"() {bar = sparse<> : tensor<1x1xi32>} : () -> ()
   "fooi32"(){bar = sparse<> : tensor<1x1xi32>} : () -> ()
 // CHECK: "fooi64"() {bar = sparse<0, -1> : tensor<1xi64>} : () -> ()
-  "fooi64"(){bar = sparse<[[0]], [-1]> : tensor<1xi64>} : () -> ()
+  "fooi64"(){bar = sparse<[0], [-1]> : tensor<1xi64>} : () -> ()
 // CHECK: "foo2"() {bar = sparse<> : tensor<0xi32>} : () -> ()
   "foo2"(){bar = sparse<> : tensor<0xi32>} : () -> ()
 // CHECK: "foo3"() {bar = sparse<> : tensor<i32>} : () -> ()
@@ -1221,6 +1239,12 @@ func @"\"_string_symbol_reference\""() {
   return
 }
 
+// CHECK-LABEL: func private @parse_opaque_attr_escape
+func private @parse_opaque_attr_escape() {
+    // CHECK: value = #foo<"\22escaped\\\0A\22">
+    "foo.constant"() {value = #foo<"\"escaped\\\n\"">} : () -> ()
+}
+
 // CHECK-LABEL: func private @string_attr_name
 // CHECK-SAME: {"0 . 0", nested = {"0 . 0"}}
 func private @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
@@ -1280,6 +1304,28 @@ func @pretty_names() {
   // CHECK: %q, %q_1, %q_2, %r = test.string_attr_pretty_name attributes {names = ["q", "q", "q", "r"]}
 
   // CHECK: return
+  return
+}
+
+
+// This tests the behavior of "default dialect":
+// operations like `test.default_dialect` can define a default dialect
+// used in nested region.
+// CHECK-LABEL: func @default_dialect
+func @default_dialect() {
+  test.default_dialect {
+    // The test dialect is the default in this region, the following two
+    // operations are parsed identically.
+    // CHECK-NOT: test.parse_integer_literal
+    parse_integer_literal : 5
+    // CHECK: parse_integer_literal : 6
+    test.parse_integer_literal : 6
+    // Verify that only an op prefix is stripped, not an attribute value for
+    // example.
+    // CHECK:  "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
+    "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
+    "test.terminator"() : ()->()
+  }
   return
 }
 

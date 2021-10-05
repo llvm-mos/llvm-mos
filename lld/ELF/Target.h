@@ -109,11 +109,11 @@ public:
   uint64_t getImageBase() const;
 
   // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got.
-  bool gotBaseSymInGotPlt = true;
+  bool gotBaseSymInGotPlt = false;
 
+  static constexpr RelType noneRel = 0;
   RelType copyRel;
   RelType gotRel;
-  RelType noneRel;
   RelType pltRel;
   RelType relativeRel;
   RelType iRelativeRel;
@@ -122,6 +122,7 @@ public:
   RelType tlsGotRel;
   RelType tlsModuleIndexRel;
   RelType tlsOffsetRel;
+  unsigned gotEntrySize = config->wordsize;
   unsigned pltEntrySize;
   unsigned pltHeaderSize;
   unsigned ipltEntrySize;

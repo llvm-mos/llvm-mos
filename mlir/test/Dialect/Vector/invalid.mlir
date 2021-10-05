@@ -80,13 +80,6 @@ func @extract_vector_type(%arg0: index) {
 
 // -----
 
-func @extract_position_empty(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected non-empty position attribute}}
-  %1 = vector.extract %arg0[] : vector<4x8x16xf32>
-}
-
-// -----
-
 func @extract_position_rank_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute of rank smaller than vector}}
   %1 = vector.extract %arg0[0, 0, 0, 0] : vector<4x8x16xf32>
@@ -134,13 +127,6 @@ func @insert_element_wrong_type(%arg0: i32, %arg1: vector<4xf32>) {
   %c = constant 3 : i32
   // expected-error@+1 {{'vector.insertelement' op failed to verify that source operand type matches element type of result}}
   %0 = "vector.insertelement" (%arg0, %arg1, %c) : (i32, vector<4xf32>, i32) -> (vector<4xf32>)
-}
-
-// -----
-
-func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected non-empty position attribute}}
-  %1 = vector.insert %a, %b[] : f32 into vector<4x8x16xf32>
 }
 
 // -----
@@ -339,6 +325,18 @@ func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
 
 // -----
 
+func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
+  %c1 = constant 1 : i1
+  %c3 = constant 3 : index
+  %cst = constant 3.0 : f32
+  // expected-note@+1 {{prior use here}}
+  %mask = splat %c1 : vector<3x8x7xi1>
+  // expected-error@+1 {{expects different type than prior uses: 'vector<3x7xi1>' vs 'vector<3x8x7xi1>'}}
+  %0 = vector.transfer_read %arg0[%c3, %c3, %c3], %cst, %mask {permutation_map = affine_map<(d0, d1, d2)->(d0, 0, d2)>} : memref<?x?x?xf32>, vector<3x8x7xf32>
+}
+
+// -----
+
 func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
@@ -363,8 +361,29 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
   %vf0 = splat %f0 : vector<2x3xf32>
-  // expected-error@+1 {{ expects the optional masked attr of same rank as permutation_map results: affine_map<(d0, d1) -> (d0, d1)>}}
-  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {masked = [false], permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
+  // expected-error@+1 {{ expects the optional in_bounds attr of same rank as permutation_map results: affine_map<(d0, d1) -> (d0, d1)>}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [true], permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
+}
+
+// -----
+
+func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
+  %c3 = constant 3 : index
+  %f0 = constant 0.0 : f32
+  %vf0 = splat %f0 : vector<2x3xf32>
+  // expected-error@+1 {{requires broadcast dimensions to be in-bounds}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [false, true], permutation_map = affine_map<(d0, d1)->(0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
+}
+
+// -----
+
+func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
+  %c3 = constant 3 : index
+  %f0 = constant 0.0 : f32
+  %vf0 = splat %f0 : vector<2x3xf32>
+  %mask = splat %c1 : vector<2x3xi1>
+  // expected-error@+1 {{does not support masks with vector element type}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0, %mask {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
 }
 
 // -----
@@ -457,6 +476,17 @@ func @test_vector.transfer_write(%arg0: memref<?x?x?xf32>) {
   %cst = constant dense<3.0> : vector<3 x 7 x f32>
   // expected-error@+1 {{requires a permutation_map that is a permutation (found one dim used more than once)}}
   vector.transfer_write %cst, %arg0[%c3, %c3, %c3] {permutation_map = affine_map<(d0, d1, d2)->(d0, d0)>} : vector<3x7xf32>, memref<?x?x?xf32>
+}
+
+// -----
+
+func @test_vector.transfer_write(%arg0: memref<?xf32>, %arg1: vector<7xf32>) {
+  %c3 = constant 3 : index
+  %cst = constant 3.0 : f32
+  // expected-error@+1 {{should not have broadcast dimensions}}
+  vector.transfer_write %arg1, %arg0[%c3]
+      {permutation_map = affine_map<(d0) -> (0)>}
+      : vector<7xf32>, memref<?xf32>
 }
 
 // -----
@@ -834,86 +864,6 @@ func @constant_mask_with_zero_mask_dim_size() {
   %0 = vector.constant_mask [0, 2] : vector<4x3xi1>
 }
 
-
-// -----
-
-func @extract_slices_non_unit_strides(%arg0 : vector<4x2xf32>) {
-  // expected-error@+1 {{requires unit strides}}
-  %0 = vector.extract_slices %arg0, [2, 2], [1, 3]
-    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
-}
-
-// -----
-
-func @extract_slices_tuple_element_wrong_rank(%arg0 : vector<4x2xf32>) {
-  // expected-error@+1 {{requires vector tuple elements of rank 2}}
-  %0 = vector.extract_slices %arg0, [2, 2], [1, 1]
-    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2x3xf32>>
-}
-
-// -----
-
-func @extract_slices_sizes_strides_wrong_rank(%arg0 : vector<4x2xf32>) {
-  // expected-error@+1 {{requires sizes and strides of rank}}
-  %0 = vector.extract_slices %arg0, [2, 2], [1, 1, 1]
-    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
-}
-
-// -----
-
-func @extract_slices_invalid_tuple_element_type(%arg0 : vector<4x2xf32>) {
-  // expected-error@+1 {{invalid tuple element type}}
-  %0 = vector.extract_slices %arg0, [2, 2], [1, 1]
-    : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<4x2xf32>>
-}
-
-// -----
-
-func @tuple_of_non_vectors(%arg0 : vector<4x2xf32>) {
-  %c0 = constant 0 : index
-  // expected-error@+1 {{must be vector of any type values}}
-  %0 = vector.tuple %arg0, %c0 : vector<4x2xf32>, index
-}
-
-// -----
-
-func @tuple_get_of_non_vectors(%arg0 : tuple<vector<4x2xf32>, index>) {
-  // expected-error@+1 {{vector of any type values}}
-  %0 = vector.tuple_get %arg0, 0 : tuple<vector<4x2xf32>, index>
-}
-
-// -----
-
-func @insert_slices_non_unit_strides(%arg0 : tuple<vector<2x2xf32>, vector<2x2xf32>>) {
-  // expected-error@+1 {{requires unit strides}}
-  %0 = vector.insert_slices %arg0, [2, 2], [1, 3]
-    : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
-}
-
-// -----
-
-func @insert_slices_tuple_element_wrong_rank(%arg0 : tuple<vector<2x2xf32>, vector<2x2x3xf32>>) {
-  // expected-error@+1 {{requires vector tuple elements of rank 2}}
-  %0 = vector.insert_slices %arg0, [2, 2], [1, 1]
-    : tuple<vector<2x2xf32>, vector<2x2x3xf32>> into vector<4x2xf32>
-}
-
-// -----
-
-func @insert_slices_sizes_strides_wrong_rank(%arg0 : tuple<vector<2x2xf32>, vector<2x2xf32>>) {
-  // expected-error@+1 {{requires sizes and strides of rank}}
-  %0 = vector.insert_slices %arg0, [2, 2], [1, 1, 1]
-    : tuple<vector<2x2xf32>, vector<2x2xf32>> into vector<4x2xf32>
-}
-
-// -----
-
-func @insert_slices_invalid_tuple_element_type(%arg0 : tuple<vector<2x2xf32>, vector<4x2xf32>>) {
-  // expected-error@+1 {{invalid tuple element type}}
-  %0 = vector.insert_slices %arg0, [2, 2], [1, 1]
-    : tuple<vector<2x2xf32>, vector<4x2xf32>> into vector<4x2xf32>
-}
-
 // -----
 
 func @print_no_result(%arg0 : f32) -> i32 {
@@ -990,27 +940,9 @@ func @shape_cast_wrong_element_type(%arg0 : vector<5x1x3x2xf32>) {
 
 // -----
 
-func @shape_cast_wrong_element_type_tuple(%arg0 : tuple<vector<5x4x2xf32>,
-                                                        vector<3x4x2xf32>>) {
-  // expected-error@+1 {{op source/result vectors must have same element type}}
-  %0 = vector.shape_cast %arg0 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
-                                 tuple<vector<20x2xi32>, vector<12x2xi32>>
-}
-
-// -----
-
 func @shape_cast_wrong_num_elements(%arg0 : vector<5x1x3x2xf32>) {
   // expected-error@+1 {{op source/result number of elements must match}}
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<10x2xf32>
-}
-
-// -----
-
-func @shape_cast_wrong_num_elements_tuple(%arg0 : tuple<vector<5x4x2xf32>,
-                                                        vector<3x4x2xf32>>) {
-  // expected-error@+1 {{op source/result number of elements must match}}
-  %0 = vector.shape_cast %arg0 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
-                                 tuple<vector<21x2xf32>, vector<13x2xf32>>
 }
 
 // -----
@@ -1022,45 +954,9 @@ func @shape_cast_invalid_rank_reduction(%arg0 : vector<5x1x3x2xf32>) {
 
 // -----
 
-func @shape_cast_invalid_rank_reduction_tuple(%arg0
-  : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>) {
-  // expected-error@+1 {{invalid shape cast}}
-  %0 = vector.shape_cast %arg0: tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
-                                tuple<vector<10x4xf32>, vector<6x4xf32>>
-}
-
-// -----
-
 func @shape_cast_invalid_rank_expansion(%arg0 : vector<15x2xf32>) {
   // expected-error@+1 {{invalid shape cast}}
   %0 = vector.shape_cast %arg0 : vector<15x2xf32> to vector<5x2x3x1xf32>
-}
-
-// -----
-
-func @shape_cast_invalid_rank_expansion_tuple(%arg0 : tuple<vector<20x2xf32>,
-                                                            vector<12x2xf32>>) {
-  // expected-error@+1 {{invalid shape cast}}
-  %0 = vector.shape_cast %arg0 : tuple<vector<20x2xf32>, vector<12x2xf32>> to
-                                 tuple<vector<5x2x4xf32>, vector<4x3x2xf32>>
-}
-
-// -----
-
-func @shape_cast_source_result_different_types(
-  %arg1 : tuple<vector<20x2xf32>, vector<12x2xf32>>) {
-  // expected-error@+1 {{source/result must be of same type}}
-  %1 = vector.shape_cast %arg1 : tuple<vector<20x2xf32>, vector<12x2xf32>> to
-                                 vector<5x2x4xf32>
-}
-
-// -----
-
-func @shape_cast_different_tuple_sizes(
-  %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>>) {
-  // expected-error@+1 {{op source/result tuples must be the same size}}
-  %1 = vector.shape_cast %arg1 : tuple<vector<5x4x2xf32>, vector<3x4x2xf32>> to
-                                 tuple<vector<20x2xf32>>
 }
 
 // -----
@@ -1198,11 +1094,12 @@ func @type_cast_layout(%arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] ->
 
 // -----
 
-func @store_unsupported_layout(%memref : memref<200x100xf32, affine_map<(d0, d1) -> (d1, d0)>>,
+func @store_unsupported_layout(%memref : memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>>,
                                %i : index, %j : index, %value : vector<8xf32>) {
-  // expected-error@+1 {{'vector.store' op base memref should have a default identity layout}}
-  vector.store %value, %memref[%i, %j] : memref<200x100xf32, affine_map<(d0, d1) -> (d1, d0)>>,
+  // expected-error@+1 {{'vector.store' op most minor memref dim must have unit stride}}
+  vector.store %value, %memref[%i, %j] : memref<200x100xf32, affine_map<(d0, d1) -> (200*d0 + 2*d1)>>,
                                          vector<8xf32>
+  return
 }
 
 // -----

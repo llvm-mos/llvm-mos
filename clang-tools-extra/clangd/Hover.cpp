@@ -19,6 +19,7 @@
 #include "support/Markup.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -28,6 +29,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
@@ -129,6 +131,13 @@ std::string printDefinition(const Decl *D, const PrintingPolicy &PP) {
   return Definition;
 }
 
+const char *getMarkdownLanguage(const ASTContext &Ctx) {
+  const auto &LangOpts = Ctx.getLangOpts();
+  if (LangOpts.ObjC && LangOpts.CPlusPlus)
+    return "objective-cpp";
+  return LangOpts.ObjC ? "objective-c" : "cpp";
+}
+
 std::string printType(QualType QT, const PrintingPolicy &PP) {
   // TypePrinter doesn't resolve decltypes, so resolve them here.
   // FIXME: This doesn't handle composite types that contain a decltype in them.
@@ -223,7 +232,8 @@ fetchTemplateParameters(const TemplateParameterList *Params,
       if (TTPD->hasDefaultArgument()) {
         P.Default.emplace();
         llvm::raw_string_ostream Out(*P.Default);
-        TTPD->getDefaultArgument().getArgument().print(PP, Out);
+        TTPD->getDefaultArgument().getArgument().print(PP, Out,
+                                                       /*IncludeType*/ false);
       }
     }
     TempParameters.push_back(std::move(P));
@@ -505,7 +515,7 @@ llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
   if (auto *CE = llvm::dyn_cast<CallExpr>(RHS->IgnoreCasts())) {
     if (CE->getNumArgs() != 1)
       return llvm::None;
-    auto *ND = llvm::dyn_cast<NamedDecl>(CE->getCalleeDecl());
+    auto *ND = llvm::dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl());
     if (!ND || !ND->getIdentifier() || ND->getName() != "move" ||
         !ND->isInStdNamespace())
       return llvm::None;
@@ -586,7 +596,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
     // Dependent enums (e.g. nested in template classes) don't have values yet.
     if (!ECD->getType()->isDependentType())
-      HI.Value = ECD->getInitVal().toString(10);
+      HI.Value = toString(ECD->getInitVal(), 10);
   }
 
   HI.Definition = printDefinition(D, PP);
@@ -718,6 +728,20 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
   return llvm::None;
 }
 
+// Generates hover info for attributes.
+llvm::Optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
+  HoverInfo HI;
+  HI.Name = A->getSpelling();
+  if (A->hasScope())
+    HI.LocalScope = A->getScopeName()->getName().str();
+  {
+    llvm::raw_string_ostream OS(HI.Definition);
+    A->printPretty(OS, AST.getASTContext().getPrintingPolicy());
+  }
+  HI.Documentation = Attr::getDocumentation(A->getKind()).str();
+  return HI;
+}
+
 bool isParagraphBreak(llvm::StringRef Rest) {
   return Rest.ltrim(" \t").startswith("\n");
 }
@@ -769,10 +793,30 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
     const auto *Record = FD->getParent();
     if (Record)
       Record = Record->getDefinition();
-    if (Record && !Record->isInvalidDecl() && !Record->isDependentType()) {
-      HI.Offset = Ctx.getFieldOffset(FD) / 8;
-      if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType()))
-        HI.Size = Size->getQuantity();
+    if (Record && !Record->isInvalidDecl() && !Record->isDependentType() &&
+        !FD->isBitField()) {
+      const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Record);
+      HI.Offset = Layout.getFieldOffset(FD->getFieldIndex()) / 8;
+      if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType())) {
+        HI.Size = FD->isZeroSize(Ctx) ? 0 : Size->getQuantity();
+        unsigned EndOfField = *HI.Offset + *HI.Size;
+
+        // Calculate padding following the field.
+        if (!Record->isUnion() &&
+            FD->getFieldIndex() + 1 < Layout.getFieldCount()) {
+          // Measure padding up to the next class field.
+          unsigned NextOffset =
+              Layout.getFieldOffset(FD->getFieldIndex() + 1) / 8;
+          if (NextOffset >= EndOfField) // next field could be a bitfield!
+            HI.Padding = NextOffset - EndOfField;
+        } else {
+          // Measure padding up to the end of the object.
+          HI.Padding = Layout.getSize().getQuantity() - EndOfField;
+        }
+      }
+      // Offset in a union is always zero, so not really useful to report.
+      if (Record->isUnion())
+        HI.Offset.reset();
     }
     return;
   }
@@ -883,6 +927,22 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (TokensTouchingCursor.empty())
     return llvm::None;
 
+  // Show full header file path if cursor is on include directive.
+  if (const auto MainFilePath =
+          getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM)) {
+    for (const auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
+      if (Inc.Resolved.empty() || Inc.HashLine != Pos.line)
+        continue;
+      HoverInfo HI;
+      HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
+      // FIXME: We don't have a fitting value for Kind.
+      HI.Definition =
+          URIForFile::canonicalize(Inc.Resolved, *MainFilePath).file().str();
+      HI.DefinitionLanguage = "";
+      return HI;
+    }
+  }
+
   // To be used as a backup for highlighting the selected token, we use back as
   // it aligns better with biases elsewhere (editors tend to send the position
   // for the left of the hovered token).
@@ -938,6 +998,8 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
         maybeAddCalleeArgInfo(N, *HI, PP);
       } else if (const Expr *E = N->ASTNode.get<Expr>()) {
         HI = getHoverContents(E, AST, PP, Index);
+      } else if (const Attr *A = N->ASTNode.get<Attr>()) {
+        HI = getHoverContents(A, AST);
       }
       // FIXME: support hovers for other nodes?
       //  - built-in types
@@ -952,6 +1014,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (auto Formatted =
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
+  HI->DefinitionLanguage = getMarkdownLanguage(AST.getASTContext());
   HI->SymRange = halfOpenToRange(SM, HighlightRange);
 
   return HI;
@@ -959,6 +1022,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
 
 markup::Document HoverInfo::present() const {
   markup::Document Output;
+
   // Header contains a text of the form:
   // variable `var`
   //
@@ -1012,9 +1076,12 @@ markup::Document HoverInfo::present() const {
     Output.addParagraph().appendText(
         llvm::formatv("Offset: {0} byte{1}", *Offset, *Offset == 1 ? "" : "s")
             .str());
-  if (Size)
-    Output.addParagraph().appendText(
+  if (Size) {
+    auto &P = Output.addParagraph().appendText(
         llvm::formatv("Size: {0} byte{1}", *Size, *Size == 1 ? "" : "s").str());
+    if (Padding && *Padding != 0)
+      P.appendText(llvm::formatv(" (+{0} padding)", *Padding).str());
+  }
 
   if (CalleeArgInfo) {
     assert(CallPassType);
@@ -1056,7 +1123,8 @@ markup::Document HoverInfo::present() const {
                                            : Definition;
     // Note that we don't print anything for global namespace, to not annoy
     // non-c++ projects or projects that are not making use of namespaces.
-    Output.addCodeBlock(ScopeComment + DefinitionWithAccess);
+    Output.addCodeBlock(ScopeComment + DefinitionWithAccess,
+                        DefinitionLanguage);
   }
 
   return Output;

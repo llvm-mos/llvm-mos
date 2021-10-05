@@ -19,13 +19,26 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
 
+std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&ref) {
+  const Symbol &symbol{ref.GetLastSymbol()};
+  if (auto dyType{DynamicType::From(symbol)}) {
+    return TypedWrapper<Designator, DataRef>(*dyType, std::move(ref));
+  }
+  return std::nullopt;
+}
+
+std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &symbol) {
+  return AsGenericExpr(DataRef{symbol});
+}
+
 Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
   return std::visit(
       [&](auto &&x) {
         using T = std::decay_t<decltype(x)>;
-        if constexpr (common::HasMember<T, TypelessExpression> ||
-            std::is_same_v<T, Expr<SomeDerived>>) {
-          return expr; // no parentheses around typeless or derived type
+        if constexpr (common::HasMember<T, TypelessExpression>) {
+          return expr; // no parentheses around typeless
+        } else if constexpr (std::is_same_v<T, Expr<SomeDerived>>) {
+          return AsGenericExpr(Parentheses<SomeDerived>{std::move(x)});
         } else {
           return std::visit(
               [](auto &&y) {
@@ -36,6 +49,15 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
         }
       },
       std::move(expr.u));
+}
+
+std::optional<DataRef> ExtractDataRef(
+    const ActualArgument &arg, bool intoSubstring) {
+  if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
+    return ExtractDataRef(*expr, intoSubstring);
+  } else {
+    return std::nullopt;
+  }
 }
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
@@ -463,14 +485,6 @@ Expr<SomeLogical> LogicalNegation(Expr<SomeLogical> &&x) {
       std::move(x.u));
 }
 
-template <typename T>
-Expr<LogicalResult> PackageRelation(
-    RelationalOperator opr, Expr<T> &&x, Expr<T> &&y) {
-  static_assert(IsSpecificIntrinsicType<T>);
-  return Expr<LogicalResult>{
-      Relational<SomeType>{Relational<T>{opr, std::move(x), std::move(y)}}};
-}
-
 template <TypeCategory CAT>
 Expr<LogicalResult> PromoteAndRelate(
     RelationalOperator opr, Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
@@ -603,20 +617,16 @@ std::optional<Expr<SomeType>> ConvertToType(
     if (auto *cx{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
       auto converted{
           ConvertToKind<TypeCategory::Character>(type.kind(), std::move(*cx))};
-      if (type.charLength()) {
-        if (const auto &len{type.charLength()->GetExplicit()}) {
-          Expr<SomeInteger> lenParam{*len};
-          Expr<SubscriptInteger> length{Convert<SubscriptInteger>{lenParam}};
-          converted = std::visit(
-              [&](auto &&x) {
-                using Ty = std::decay_t<decltype(x)>;
-                using CharacterType = typename Ty::Result;
-                return Expr<SomeCharacter>{
-                    Expr<CharacterType>{SetLength<CharacterType::kind>{
-                        std::move(x), std::move(length)}}};
-              },
-              std::move(converted.u));
-        }
+      if (auto length{type.GetCharLength()}) {
+        converted = std::visit(
+            [&](auto &&x) {
+              using Ty = std::decay_t<decltype(x)>;
+              using CharacterType = typename Ty::Result;
+              return Expr<SomeCharacter>{
+                  Expr<CharacterType>{SetLength<CharacterType::kind>{
+                      std::move(x), std::move(*length)}}};
+            },
+            std::move(converted.u));
       }
       return Expr<SomeType>{std::move(converted)};
     }
@@ -665,6 +675,11 @@ std::optional<Expr<SomeType>> ConvertToType(
 }
 
 bool IsAssumedRank(const Symbol &original) {
+  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (assoc->rank()) {
+      return false; // in SELECT RANK case
+    }
+  }
   const Symbol &symbol{semantics::ResolveAssociations(original)};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     return details->IsAssumedRank();
@@ -681,6 +696,13 @@ bool IsAssumedRank(const ActualArgument &arg) {
     CHECK(assumedTypeDummy);
     return IsAssumedRank(*assumedTypeDummy);
   }
+}
+
+bool IsCoarray(const ActualArgument &arg) {
+  if (const auto *expr{arg.UnwrapExpr()}) {
+    return IsCoarray(*expr);
+  }
+  return false;
 }
 
 bool IsProcedure(const Expr<SomeType> &expr) {
@@ -735,18 +757,23 @@ bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
 }
 
 // IsNullPointer()
-struct IsNullPointerHelper : public AllTraverse<IsNullPointerHelper, false> {
-  using Base = AllTraverse<IsNullPointerHelper, false>;
-  IsNullPointerHelper() : Base(*this) {}
-  using Base::operator();
-  bool operator()(const ProcedureRef &call) const {
-    auto *intrinsic{call.proc().GetSpecificIntrinsic()};
+struct IsNullPointerHelper {
+  template <typename A> bool operator()(const A &) const { return false; }
+  template <typename T> bool operator()(const FunctionRef<T> &call) const {
+    const auto *intrinsic{call.proc().GetSpecificIntrinsic()};
     return intrinsic &&
         intrinsic->characteristics.value().attrs.test(
             characteristics::Procedure::Attr::NullPointer);
   }
   bool operator()(const NullPointer &) const { return true; }
+  template <typename T> bool operator()(const Parentheses<T> &x) const {
+    return (*this)(x.left());
+  }
+  template <typename T> bool operator()(const Expr<T> &x) const {
+    return std::visit(*this, x.u);
+  }
 };
+
 bool IsNullPointer(const Expr<SomeType> &expr) {
   return IsNullPointerHelper{}(expr);
 }
@@ -1107,10 +1134,12 @@ bool IsSaved(const Symbol &original) {
     return false; // ASSOCIATE(non-variable)
   } else if (scopeKind == Scope::Kind::Module) {
     return true; // BLOCK DATA entities must all be in COMMON, handled below
-  } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true;
   } else if (scopeKind == Scope::Kind::DerivedType) {
     return false; // this is a component
+  } else if (symbol.attrs().test(Attr::SAVE)) {
+    return true;
+  } else if (symbol.test(Symbol::Flag::InDataStmt)) {
+    return true;
   } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
@@ -1134,6 +1163,7 @@ bool IsDummy(const Symbol &symbol) {
       common::visitors{[](const EntityDetails &x) { return x.isDummy(); },
           [](const ObjectEntityDetails &x) { return x.isDummy(); },
           [](const ProcEntityDetails &x) { return x.isDummy(); },
+          [](const SubprogramDetails &x) { return x.isDummy(); },
           [](const auto &) { return false; }},
       ResolveAssociations(symbol).details());
 }
@@ -1156,6 +1186,40 @@ bool IsLenTypeParameter(const Symbol &symbol) {
   return param && param->attr() == common::TypeParamAttr::Len;
 }
 
+bool IsExtensibleType(const DerivedTypeSpec *derived) {
+  return derived && !IsIsoCType(derived) &&
+      !derived->typeSymbol().attrs().test(Attr::BIND_C) &&
+      !derived->typeSymbol().get<DerivedTypeDetails>().sequence();
+}
+
+bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
+  if (!derived) {
+    return false;
+  } else {
+    const auto &symbol{derived->typeSymbol()};
+    return &symbol.owner() == symbol.owner().context().GetBuiltinsScope() &&
+        symbol.name() == "__builtin_"s + name;
+  }
+}
+
+bool IsIsoCType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "c_ptr") ||
+      IsBuiltinDerivedType(derived, "c_funptr");
+}
+
+bool IsTeamType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "team_type");
+}
+
+bool IsBadCoarrayType(const DerivedTypeSpec *derived) {
+  return IsTeamType(derived) || IsIsoCType(derived);
+}
+
+bool IsEventTypeOrLockType(const DerivedTypeSpec *derivedTypeSpec) {
+  return IsBuiltinDerivedType(derivedTypeSpec, "event_type") ||
+      IsBuiltinDerivedType(derivedTypeSpec, "lock_type");
+}
+
 int CountLenParameters(const DerivedTypeSpec &type) {
   return std::count_if(type.parameters().begin(), type.parameters().end(),
       [](const auto &pair) { return pair.second.isLen(); });
@@ -1172,6 +1236,31 @@ int CountNonConstantLenParameters(const DerivedTypeSpec &type) {
           return true;
         }
       });
+}
+
+// Are the type parameters of type1 compile-time compatible with the
+// corresponding kind type parameters of type2?  Return true if all constant
+// valued parameters are equal.
+// Used to check assignment statements and argument passing.  See 15.5.2.4(4)
+bool AreTypeParamCompatible(const semantics::DerivedTypeSpec &type1,
+    const semantics::DerivedTypeSpec &type2) {
+  for (const auto &[name, param1] : type1.parameters()) {
+    if (semantics::MaybeIntExpr paramExpr1{param1.GetExplicit()}) {
+      if (IsConstantExpr(*paramExpr1)) {
+        const semantics::ParamValue *param2{type2.FindParameter(name)};
+        if (param2) {
+          if (semantics::MaybeIntExpr paramExpr2{param2->GetExplicit()}) {
+            if (IsConstantExpr(*paramExpr2)) {
+              if (ToInt64(*paramExpr1) != ToInt64(*paramExpr2)) {
+                return false;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
 }
 
 const Symbol &GetUsedModule(const UseDetails &details) {

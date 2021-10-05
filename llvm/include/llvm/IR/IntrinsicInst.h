@@ -204,6 +204,11 @@ public:
 
   void replaceVariableLocationOp(Value *OldValue, Value *NewValue);
   void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
+  /// Adding a new location operand will always result in this intrinsic using
+  /// an ArgList, and must always be accompanied by a new expression that uses
+  /// the new operand.
+  void addVariableLocationOps(ArrayRef<Value *> NewValues,
+                              DIExpression *NewExpr);
 
   void setVariable(DILocalVariable *NewVar) {
     setArgOperand(1, MetadataAsValue::get(NewVar->getContext(), NewVar));
@@ -263,6 +268,13 @@ public:
 
   Metadata *getRawExpression() const {
     return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
+  }
+
+  /// Use of this should generally be avoided; instead,
+  /// replaceVariableLocationOp and addVariableLocationOps should be used where
+  /// possible to avoid creating invalid state.
+  void setRawLocation(Metadata *Location) {
+    return setArgOperand(0, MetadataAsValue::get(getContext(), Location));
   }
 
   /// Get the size (in bits) of the variable, or fragment of the variable that
@@ -377,43 +389,85 @@ public:
 /// This is the common base class for vector predication intrinsics.
 class VPIntrinsic : public IntrinsicInst {
 public:
-  static Optional<int> GetMaskParamPos(Intrinsic::ID IntrinsicID);
-  static Optional<int> GetVectorLengthParamPos(Intrinsic::ID IntrinsicID);
+  /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
+  /// \p Params.
+  static Function *getDeclarationForParams(Module *M, Intrinsic::ID,
+                                           ArrayRef<Value *> Params);
+
+  static Optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);
+  static Optional<unsigned> getVectorLengthParamPos(Intrinsic::ID IntrinsicID);
 
   /// The llvm.vp.* intrinsics for this instruction Opcode
-  static Intrinsic::ID GetForOpcode(unsigned OC);
+  static Intrinsic::ID getForOpcode(unsigned OC);
 
   // Whether \p ID is a VP intrinsic ID.
-  static bool IsVPIntrinsic(Intrinsic::ID);
+  static bool isVPIntrinsic(Intrinsic::ID);
 
-  /// \return the mask parameter or nullptr.
+  /// \return The mask parameter or nullptr.
   Value *getMaskParam() const;
+  void setMaskParam(Value *);
 
-  /// \return the vector length parameter or nullptr.
+  /// \return The vector length parameter or nullptr.
   Value *getVectorLengthParam() const;
+  void setVectorLengthParam(Value *);
 
-  /// \return whether the vector length param can be ignored.
+  /// \return Whether the vector length param can be ignored.
   bool canIgnoreVectorLengthParam() const;
 
-  /// \return the static element count (vector number of elements) the vector
+  /// \return The static element count (vector number of elements) the vector
   /// length parameter applies to.
   ElementCount getStaticVectorLength() const;
 
+  /// \return The alignment of the pointer used by this load/store/gather or
+  /// scatter.
+  MaybeAlign getPointerAlignment() const;
+  // MaybeAlign setPointerAlignment(Align NewAlign); // TODO
+
+  /// \return The pointer operand of this load,store, gather or scatter.
+  Value *getMemoryPointerParam() const;
+  static Optional<unsigned> getMemoryPointerParamPos(Intrinsic::ID);
+
+  /// \return The data (payload) operand of this store or scatter.
+  Value *getMemoryDataParam() const;
+  static Optional<unsigned> getMemoryDataParamPos(Intrinsic::ID);
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
-    return IsVPIntrinsic(I->getIntrinsicID());
+    return isVPIntrinsic(I->getIntrinsicID());
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
   // Equivalent non-predicated opcode
-  unsigned getFunctionalOpcode() const {
-    return GetFunctionalOpcodeForVP(getIntrinsicID());
+  Optional<unsigned> getFunctionalOpcode() const {
+    return getFunctionalOpcodeForVP(getIntrinsicID());
   }
 
   // Equivalent non-predicated opcode
-  static unsigned GetFunctionalOpcodeForVP(Intrinsic::ID ID);
+  static Optional<unsigned> getFunctionalOpcodeForVP(Intrinsic::ID ID);
+};
+
+/// This represents vector predication reduction intrinsics.
+class VPReductionIntrinsic : public VPIntrinsic {
+public:
+  static bool isVPReduction(Intrinsic::ID ID);
+
+  unsigned getStartParamPos() const;
+  unsigned getVectorParamPos() const;
+
+  static Optional<unsigned> getStartParamPos(Intrinsic::ID ID);
+  static Optional<unsigned> getVectorParamPos(Intrinsic::ID ID);
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    return VPReductionIntrinsic::isVPReduction(I->getIntrinsicID());
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
 };
 
 /// This is the common base class for constrained floating point intrinsics.
@@ -423,6 +477,7 @@ public:
   bool isTernaryOp() const;
   Optional<RoundingMode> getRoundingMode() const;
   Optional<fp::ExceptionBehavior> getExceptionBehavior() const;
+  bool isDefaultFPEnvironment() const;
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I);
@@ -449,6 +504,47 @@ public:
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
+};
+
+/// This class represents min/max intrinsics.
+class MinMaxIntrinsic : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    switch (I->getIntrinsicID()) {
+    case Intrinsic::umin:
+    case Intrinsic::umax:
+    case Intrinsic::smin:
+    case Intrinsic::smax:
+      return true;
+    default:
+      return false;
+    }
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Value *getLHS() const { return const_cast<Value *>(getArgOperand(0)); }
+  Value *getRHS() const { return const_cast<Value *>(getArgOperand(1)); }
+
+  /// Returns the comparison predicate underlying the intrinsic.
+  ICmpInst::Predicate getPredicate() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::umin:
+      return ICmpInst::Predicate::ICMP_ULT;
+    case Intrinsic::umax:
+      return ICmpInst::Predicate::ICMP_UGT;
+    case Intrinsic::smin:
+      return ICmpInst::Predicate::ICMP_SLT;
+    case Intrinsic::smax:
+      return ICmpInst::Predicate::ICMP_SGT;
+    default:
+      llvm_unreachable("Invalid intrinsic");
+    }
+  }
+
+  /// Whether the intrinsic is signed or unsigned.
+  bool isSigned() const { return ICmpInst::isSigned(getPredicate()); };
 };
 
 /// This class represents an intrinsic that is based on a binary operation.
@@ -841,7 +937,8 @@ class MemCpyInst : public MemTransferInst {
 public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::memcpy;
+    return I->getIntrinsicID() == Intrinsic::memcpy ||
+           I->getIntrinsicID() == Intrinsic::memcpy_inline;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -861,10 +958,10 @@ public:
 };
 
 /// This class wraps the llvm.memcpy.inline intrinsic.
-class MemCpyInlineInst : public MemTransferInst {
+class MemCpyInlineInst : public MemCpyInst {
 public:
   ConstantInt *getLength() const {
-    return cast<ConstantInt>(MemTransferInst::getLength());
+    return cast<ConstantInt>(MemCpyInst::getLength());
   }
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
@@ -1146,6 +1243,86 @@ public:
   void setScopeList(MDNode *ScopeList) {
     setOperand(Intrinsic::NoAliasScopeDeclScopeArg,
                MetadataAsValue::get(getContext(), ScopeList));
+  }
+};
+
+// Defined in Statepoint.h -- NOT a subclass of IntrinsicInst
+class GCStatepointInst;
+
+/// Common base class for representing values projected from a statepoint.
+/// Currently, the only projections available are gc.result and gc.relocate.
+class GCProjectionInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate ||
+      I->getIntrinsicID() == Intrinsic::experimental_gc_result;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  /// Return true if this relocate is tied to the invoke statepoint.
+  /// This includes relocates which are on the unwinding path.
+  bool isTiedToInvoke() const {
+    const Value *Token = getArgOperand(0);
+
+    return isa<LandingPadInst>(Token) || isa<InvokeInst>(Token);
+  }
+
+  /// The statepoint with which this gc.relocate is associated.
+  const GCStatepointInst *getStatepoint() const;
+};
+
+/// Represents calls to the gc.relocate intrinsic.
+class GCRelocateInst : public GCProjectionInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  /// The index into the associate statepoint's argument list
+  /// which contains the base pointer of the pointer whose
+  /// relocation this gc.relocate describes.
+  unsigned getBasePtrIndex() const {
+    return cast<ConstantInt>(getArgOperand(1))->getZExtValue();
+  }
+
+  /// The index into the associate statepoint's argument list which
+  /// contains the pointer whose relocation this gc.relocate describes.
+  unsigned getDerivedPtrIndex() const {
+    return cast<ConstantInt>(getArgOperand(2))->getZExtValue();
+  }
+
+  Value *getBasePtr() const;
+  Value *getDerivedPtr() const;
+};
+
+/// Represents calls to the gc.result intrinsic.
+class GCResultInst : public GCProjectionInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_result;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+
+/// This represents the llvm.assume intrinsic.
+class AssumeInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::assume;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 };
 

@@ -7,12 +7,19 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCInstrDesc.h"
-
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
+#include "llvm/MC/MCInstrDesc.h"
+
 namespace llvm {
+
+// This needs to be kept in sync with the field bits in SIRegisterClass.
+enum SIRCFlags : uint8_t {
+  // For vector registers.
+  HasVGPR = 1 << 0,
+  HasAGPR = 1 << 1
+}; // enum SIRCFlags
 
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.
@@ -91,7 +98,7 @@ enum : uint64_t {
   D16Buf = UINT64_C(1) << 50,
 
   // FLAT instruction accesses FLAT_GLBL segment.
-  IsFlatGlobal = UINT64_C(1) << 51,
+  FlatGlobal = UINT64_C(1) << 51,
 
   // Uses floating point double precision rounding mode
   FPDPRounding = UINT64_C(1) << 52,
@@ -106,7 +113,7 @@ enum : uint64_t {
   IsDOT = UINT64_C(1) << 55,
 
   // FLAT instruction accesses FLAT_SCRATCH segment.
-  IsFlatScratch = UINT64_C(1) << 56,
+  FlatScratch = UINT64_C(1) << 56,
 
   // Atomic without return.
   IsAtomicNoRet = UINT64_C(1) << 57,

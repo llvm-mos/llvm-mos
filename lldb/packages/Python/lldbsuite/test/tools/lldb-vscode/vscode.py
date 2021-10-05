@@ -81,33 +81,45 @@ def read_packet(f, verbose=False, trace_file=None):
         # Decode the JSON bytes into a python dictionary
         return json.loads(json_str)
 
-    return None
+    raise Exception("unexpected malformed message from lldb-vscode: " + line)
 
 
 def packet_type_is(packet, packet_type):
     return 'type' in packet and packet['type'] == packet_type
 
+def dump_dap_log(log_file):
+    print("========= DEBUG ADAPTER PROTOCOL LOGS =========")
+    if log_file is None:
+        print("no log file available")
+    else:
+        with open(log_file, "r") as file:
+            print(file.read())
+    print("========= END =========")
 
-def read_packet_thread(vs_comm):
+
+def read_packet_thread(vs_comm, log_file):
     done = False
-    while not done:
-        packet = read_packet(vs_comm.recv, trace_file=vs_comm.trace_file)
-        # `packet` will be `None` on EOF. We want to pass it down to
-        # handle_recv_packet anyway so the main thread can handle unexpected
-        # termination of lldb-vscode and stop waiting for new packets.
-        done = not vs_comm.handle_recv_packet(packet)
+    try:
+        while not done:
+            packet = read_packet(vs_comm.recv, trace_file=vs_comm.trace_file)
+            # `packet` will be `None` on EOF. We want to pass it down to
+            # handle_recv_packet anyway so the main thread can handle unexpected
+            # termination of lldb-vscode and stop waiting for new packets.
+            done = not vs_comm.handle_recv_packet(packet)
+    finally:
+        dump_dap_log(log_file)
 
 
 class DebugCommunication(object):
 
-    def __init__(self, recv, send, init_commands):
+    def __init__(self, recv, send, init_commands, log_file=None):
         self.trace_file = None
         self.send = send
         self.recv = recv
         self.recv_packets = []
         self.recv_condition = threading.Condition()
         self.recv_thread = threading.Thread(target=read_packet_thread,
-                                            args=(self,))
+                                            args=(self, log_file))
         self.process_event_body = None
         self.exit_status = None
         self.initialize_body = None
@@ -494,7 +506,7 @@ class DebugCommunication(object):
                        initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None,
                        attachCommands=None, terminateCommands=None,
-                       coreFile=None):
+                       coreFile=None, postRunCommands=None):
         args_dict = {}
         if pid is not None:
             args_dict['pid'] = pid
@@ -519,6 +531,8 @@ class DebugCommunication(object):
             args_dict['attachCommands'] = attachCommands
         if coreFile:
             args_dict['coreFile'] = coreFile
+        if postRunCommands:
+            args_dict['postRunCommands'] = postRunCommands
         command_dict = {
             'command': 'attach',
             'type': 'request',
@@ -621,7 +635,8 @@ class DebugCommunication(object):
                        stopCommands=None, exitCommands=None,
                        terminateCommands=None ,sourcePath=None,
                        debuggerRoot=None, launchCommands=None, sourceMap=None,
-                       runInTerminal=False, expectFailure=False):
+                       runInTerminal=False, expectFailure=False,
+                       postRunCommands=None):
         args_dict = {
             'program': program
         }
@@ -662,6 +677,8 @@ class DebugCommunication(object):
             args_dict['sourceMap'] = sourceMap
         if runInTerminal:
             args_dict['runInTerminal'] = runInTerminal
+        if postRunCommands:
+            args_dict['postRunCommands'] = postRunCommands
         command_dict = {
             'command': 'launch',
             'type': 'request',
@@ -923,10 +940,13 @@ class DebugCommunication(object):
 
 
 class DebugAdaptor(DebugCommunication):
-    def __init__(self, executable=None, port=None, init_commands=[], log_file=None):
+    def __init__(self, executable=None, port=None, init_commands=[], log_file=None, env=None):
         self.process = None
         if executable is not None:
             adaptor_env = os.environ.copy()
+            if env is not None:
+                adaptor_env.update(env)
+
             if log_file:
                 adaptor_env['LLDBVSCODE_LOG'] = log_file
             self.process = subprocess.Popen([executable],
@@ -935,7 +955,7 @@ class DebugAdaptor(DebugCommunication):
                                             stderr=subprocess.PIPE,
                                             env=adaptor_env)
             DebugCommunication.__init__(self, self.process.stdout,
-                                        self.process.stdin, init_commands)
+                                        self.process.stdin, init_commands, log_file)
         elif port is not None:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(('127.0.0.1', port))

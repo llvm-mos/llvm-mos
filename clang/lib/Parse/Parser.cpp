@@ -309,6 +309,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
       return false;
 
     case tok::annot_pragma_openmp:
+    case tok::annot_attr_openmp:
     case tok::annot_pragma_openmp_end:
       // Stop before an OpenMP pragma boundary.
       if (OpenMPDirectiveParsing)
@@ -494,6 +495,7 @@ void Parser::Initialize() {
   Ident_instancetype = nullptr;
   Ident_final = nullptr;
   Ident_sealed = nullptr;
+  Ident_abstract = nullptr;
   Ident_override = nullptr;
   Ident_GNU_final = nullptr;
   Ident_import = nullptr;
@@ -503,10 +505,12 @@ void Parser::Initialize() {
 
   Ident_vector = nullptr;
   Ident_bool = nullptr;
+  Ident_Bool = nullptr;
   Ident_pixel = nullptr;
   if (getLangOpts().AltiVec || getLangOpts().ZVector) {
     Ident_vector = &PP.getIdentifierTable().get("vector");
     Ident_bool = &PP.getIdentifierTable().get("bool");
+    Ident_Bool = &PP.getIdentifierTable().get("_Bool");
   }
   if (getLangOpts().AltiVec)
     Ident_pixel = &PP.getIdentifierTable().get("pixel");
@@ -795,6 +799,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::annot_pragma_opencl_extension:
     HandlePragmaOpenCLExtension();
     return nullptr;
+  case tok::annot_attr_openmp:
   case tok::annot_pragma_openmp: {
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, attrs);
@@ -1079,8 +1084,6 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
                                                        DS, AnonRecord);
     DS.complete(TheDecl);
-    if (getLangOpts().OpenCL)
-      Actions.setCurrentOpenCLExtensionForDecl(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
       return Actions.BuildDeclaratorGroup(decls);
@@ -1213,7 +1216,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // a definition.  Late parsed attributes are checked at the end.
   if (Tok.isNot(tok::equal)) {
     for (const ParsedAttr &AL : D.getAttributes())
-      if (AL.isKnownToGCC() && !AL.isCXX11Attribute())
+      if (AL.isKnownToGCC() && !AL.isStandardAttributeSyntax())
         Diag(AL.getLoc(), diag::warn_attribute_on_function_definition) << AL;
   }
 
@@ -1695,6 +1698,11 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
     break;
 
   case Sema::NC_Type: {
+    if (TryAltiVecVectorToken())
+      // vector has been found as a type id when altivec is enabled but
+      // this is followed by a declaration specifier so this is really the
+      // altivec vector token.  Leave it unannotated.
+      break;
     SourceLocation BeginLoc = NameLoc;
     if (SS.isNotEmpty())
       BeginLoc = SS.getBeginLoc();
@@ -1736,6 +1744,11 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
     return ANK_Success;
 
   case Sema::NC_NonType:
+    if (TryAltiVecVectorToken())
+      // vector has been found as a non-type id when altivec is enabled but
+      // this is followed by a declaration specifier so this is really the
+      // altivec vector token.  Leave it unannotated.
+      break;
     Tok.setKind(tok::annot_non_type);
     setNonTypeAnnotation(Tok, Classification.getNonTypeDecl());
     Tok.setLocation(NameLoc);

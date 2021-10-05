@@ -1065,3 +1065,12 @@ bb3:
   %m = mul nuw i8 %x, 0
   br label %bb2
 }
+
+
+define <2 x i1> @heterogeneous_constvector(<2 x i8> %x) {
+; CHECK-LABEL: @heterogeneous_constvector(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %c = icmp ult <2 x i8> %x, <i8 undef, i8 poison>
+  ret <2 x i1> %c
+}

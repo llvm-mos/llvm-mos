@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/Hypot.h"
-#include "utils/FPUtil/TestHelpers.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/Hypot.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
@@ -25,11 +25,11 @@ private:
   using Func = T (*)(T, T);
   using FPBits = __llvm_libc::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
-  const T nan = __llvm_libc::fputil::FPBits<T>::buildNaN(1);
-  const T inf = __llvm_libc::fputil::FPBits<T>::inf();
-  const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
-  const T zero = __llvm_libc::fputil::FPBits<T>::zero();
-  const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::buildNaN(1));
+  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
+  const T negInf = T(__llvm_libc::fputil::FPBits<T>::negInf());
+  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
+  const T negZero = T(__llvm_libc::fputil::FPBits<T>::negZero());
 
 public:
   void testSpecialNumbers(Func func) {
@@ -52,7 +52,7 @@ public:
     for (UIntType v = FPBits::minSubnormal, w = FPBits::maxSubnormal;
          v <= FPBits::maxSubnormal && w >= FPBits::minSubnormal;
          v += step, w -= step) {
-      T x = FPBits(v), y = FPBits(w);
+      T x = T(FPBits(v)), y = T(FPBits(w));
       T result = func(x, y);
       mpfr::BinaryInput<T> input{x, y};
       ASSERT_MPFR_MATCH(mpfr::Operation::Hypot, input, result, 0.5);
@@ -65,7 +65,7 @@ public:
     for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
          v <= FPBits::maxNormal && w >= FPBits::minNormal;
          v += step, w -= step) {
-      T x = FPBits(v), y = FPBits(w);
+      T x = T(FPBits(v)), y = T(FPBits(w));
       T result = func(x, y);
       mpfr::BinaryInput<T> input{x, y};
       ASSERT_MPFR_MATCH(mpfr::Operation::Hypot, input, result, 0.5);

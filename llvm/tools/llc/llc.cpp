@@ -126,9 +126,10 @@ static cl::opt<bool> DisableSimplifyLibCalls("disable-simplify-libcalls",
 static cl::opt<bool> ShowMCEncoding("show-mc-encoding", cl::Hidden,
                                     cl::desc("Show encoding in .s output"));
 
-static cl::opt<bool> EnableDwarfDirectory(
-    "enable-dwarf-directory", cl::Hidden,
-    cl::desc("Use .file directives with an explicit directory."));
+static cl::opt<bool>
+    DwarfDirectory("dwarf-directory", cl::Hidden,
+                   cl::desc("Use .file directives with an explicit directory"),
+                   cl::init(true));
 
 static cl::opt<bool> AsmVerbose("asm-verbose",
                                 cl::desc("Add comments to directives."),
@@ -200,8 +201,7 @@ static cl::opt<RunPassOption, true, cl::parser<std::string>> RunPass(
 
 static int compileModule(char **, LLVMContext &);
 
-LLVM_ATTRIBUTE_NORETURN static void reportError(Twine Msg,
-                                                StringRef Filename = "") {
+[[noreturn]] static void reportError(Twine Msg, StringRef Filename = "") {
   SmallString<256> Prefix;
   if (!Filename.empty()) {
     if (Filename == "-")
@@ -212,7 +212,7 @@ LLVM_ATTRIBUTE_NORETURN static void reportError(Twine Msg,
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN static void reportError(Error Err, StringRef Filename) {
+[[noreturn]] static void reportError(Error Err, StringRef Filename) {
   assert(Err);
   handleAllErrors(createFileError(Filename, std::move(Err)),
                   [&](const ErrorInfoBase &EI) { reportError(EI.message()); });
@@ -276,7 +276,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   std::error_code EC;
   sys::fs::OpenFlags OpenFlags = sys::fs::OF_None;
   if (!Binary)
-    OpenFlags |= sys::fs::OF_Text;
+    OpenFlags |= sys::fs::OF_TextWithCRLF;
   auto FDOut = std::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
   if (EC) {
     reportError(EC.message());
@@ -329,8 +329,6 @@ int main(int argc, char **argv) {
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
-  LLVMContext Context;
-
   // Initialize targets first, so that --version shows registered targets.
   InitializeAllTargets();
   InitializeAllTargetMCs();
@@ -352,6 +350,7 @@ int main(int argc, char **argv) {
   initializeVectorization(*Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
   initializeExpandReductionsPass(*Registry);
+  initializeExpandVectorPredicationPass(*Registry);
   initializeHardwareLoopsPass(*Registry);
   initializeTransformUtils(*Registry);
   initializeReplaceWithVeclibLegacyPass(*Registry);
@@ -364,6 +363,7 @@ int main(int argc, char **argv) {
 
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
 
+  LLVMContext Context;
   Context.setDiscardValueNames(DiscardValueNames);
 
   // Set a diagnostic handler that doesn't exit on the first error
@@ -472,7 +472,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
     Options.DisableIntegratedAS = NoIntegratedAssembler;
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
-    Options.MCOptions.MCUseDwarfDirectory = EnableDwarfDirectory;
+    Options.MCOptions.MCUseDwarfDirectory = DwarfDirectory;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;
     Options.MCOptions.IASSearchPaths = IncludeDirs;

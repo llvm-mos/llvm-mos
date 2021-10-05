@@ -188,56 +188,26 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
-static VPValue *getSingleOperandOrNull(VPUser &U) {
-  if (U.getNumOperands() == 1)
-    return U.getOperand(0);
-
-  return nullptr;
-}
-
-static const VPValue *getSingleOperandOrNull(const VPUser &U) {
-  if (U.getNumOperands() == 1)
-    return U.getOperand(0);
-
-  return nullptr;
-}
-
-static void resetSingleOpUser(VPUser &U, VPValue *NewVal) {
-  assert(U.getNumOperands() <= 1 && "Didn't expect more than one operand!");
-  if (!NewVal) {
-    if (U.getNumOperands() == 1)
-      U.removeLastOperand();
-    return;
-  }
-
-  if (U.getNumOperands() == 1)
-    U.setOperand(0, NewVal);
-  else
-    U.addOperand(NewVal);
-}
-
 VPValue *VPBlockBase::getCondBit() {
-  return getSingleOperandOrNull(CondBitUser);
+  return CondBitUser.getSingleOperandOrNull();
 }
 
 const VPValue *VPBlockBase::getCondBit() const {
-  return getSingleOperandOrNull(CondBitUser);
+  return CondBitUser.getSingleOperandOrNull();
 }
 
-void VPBlockBase::setCondBit(VPValue *CV) {
-  resetSingleOpUser(CondBitUser, CV);
-}
+void VPBlockBase::setCondBit(VPValue *CV) { CondBitUser.resetSingleOpUser(CV); }
 
 VPValue *VPBlockBase::getPredicate() {
-  return getSingleOperandOrNull(PredicateUser);
+  return PredicateUser.getSingleOperandOrNull();
 }
 
 const VPValue *VPBlockBase::getPredicate() const {
-  return getSingleOperandOrNull(PredicateUser);
+  return PredicateUser.getSingleOperandOrNull();
 }
 
 void VPBlockBase::setPredicate(VPValue *CV) {
-  resetSingleOpUser(PredicateUser, CV);
+  PredicateUser.resetSingleOpUser(CV);
 }
 
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
@@ -249,10 +219,7 @@ void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
 
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
-  while (It != end() && (isa<VPWidenPHIRecipe>(&*It) ||
-                         isa<VPWidenIntOrFpInductionRecipe>(&*It) ||
-                         isa<VPPredInstPHIRecipe>(&*It) ||
-                         isa<VPWidenCanonicalIVRecipe>(&*It)))
+  while (It != end() && It->isPhi())
     It++;
   return It;
 }
@@ -403,7 +370,45 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
   }
 }
 
+VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
+  assert((SplitAt == end() || SplitAt->getParent() == this) &&
+         "can only split at a position in the same block");
+
+  SmallVector<VPBlockBase *, 2> Succs(getSuccessors().begin(),
+                                      getSuccessors().end());
+  // First, disconnect the current block from its successors.
+  for (VPBlockBase *Succ : Succs)
+    VPBlockUtils::disconnectBlocks(this, Succ);
+
+  // Create new empty block after the block to split.
+  auto *SplitBlock = new VPBasicBlock(getName() + ".split");
+  VPBlockUtils::insertBlockAfter(SplitBlock, this);
+
+  // Add successors for block to split to new block.
+  for (VPBlockBase *Succ : Succs)
+    VPBlockUtils::connectBlocks(SplitBlock, Succ);
+
+  // Finally, move the recipes starting at SplitAt to new block.
+  for (VPRecipeBase &ToMove :
+       make_early_inc_range(make_range(SplitAt, this->end())))
+    ToMove.moveBefore(*SplitBlock, SplitBlock->end());
+
+  return SplitBlock;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
+  if (getSuccessors().empty()) {
+    O << Indent << "No successors\n";
+  } else {
+    O << Indent << "Successor(s): ";
+    ListSeparator LS;
+    for (auto *Succ : getSuccessors())
+      O << LS << Succ->getName();
+    O << '\n';
+  }
+}
+
 void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
   O << Indent << getName() << ":\n";
@@ -421,15 +426,7 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
     O << '\n';
   }
 
-  if (getSuccessors().empty()) {
-    O << Indent << "No successors\n";
-  } else {
-    O << Indent << "Successor(s): ";
-    ListSeparator LS;
-    for (auto *Succ : getSuccessors())
-      O << LS << Succ->getName();
-    O << '\n';
-  }
+  printSuccessors(O, Indent);
 
   if (const VPValue *CBV = getCondBit()) {
     O << Indent << "CondBit: ";
@@ -507,8 +504,100 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
     BlockBase->print(O, NewIndent, SlotTracker);
   }
   O << Indent << "}\n";
+
+  printSuccessors(O, Indent);
 }
 #endif
+
+bool VPRecipeBase::mayWriteToMemory() const {
+  switch (getVPDefID()) {
+  case VPWidenMemoryInstructionSC: {
+    return cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
+  }
+  case VPReplicateSC:
+  case VPWidenCallSC:
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
+        ->mayWriteToMemory();
+  case VPBranchOnMaskSC:
+    return false;
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenPHISC:
+  case VPBlendSC:
+  case VPWidenSC:
+  case VPWidenGEPSC:
+  case VPReductionSC:
+  case VPWidenSelectSC: {
+    const Instruction *I =
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    (void)I;
+    assert((!I || !I->mayWriteToMemory()) &&
+           "underlying instruction may write to memory");
+    return false;
+  }
+  default:
+    return true;
+  }
+}
+
+bool VPRecipeBase::mayReadFromMemory() const {
+  switch (getVPDefID()) {
+  case VPWidenMemoryInstructionSC: {
+    return !cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
+  }
+  case VPReplicateSC:
+  case VPWidenCallSC:
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
+        ->mayReadFromMemory();
+  case VPBranchOnMaskSC:
+    return false;
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenPHISC:
+  case VPBlendSC:
+  case VPWidenSC:
+  case VPWidenGEPSC:
+  case VPReductionSC:
+  case VPWidenSelectSC: {
+    const Instruction *I =
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    (void)I;
+    assert((!I || !I->mayReadFromMemory()) &&
+           "underlying instruction may read from memory");
+    return false;
+  }
+  default:
+    return true;
+  }
+}
+
+bool VPRecipeBase::mayHaveSideEffects() const {
+  switch (getVPDefID()) {
+  case VPBranchOnMaskSC:
+    return false;
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenPHISC:
+  case VPBlendSC:
+  case VPWidenSC:
+  case VPWidenGEPSC:
+  case VPReductionSC:
+  case VPWidenSelectSC: {
+    const Instruction *I =
+        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    (void)I;
+    assert((!I || !I->mayHaveSideEffects()) &&
+           "underlying instruction has side-effects");
+    return false;
+  }
+  case VPReplicateSC: {
+    auto *R = cast<VPReplicateRecipe>(this);
+    return R->getUnderlyingInstr()->mayHaveSideEffects();
+  }
+  default:
+    return true;
+  }
+}
 
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
@@ -598,6 +687,30 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     State.set(this, Call, Part);
     break;
   }
+  case VPInstruction::FirstOrderRecurrenceSplice: {
+    // Generate code to combine the previous and current values in vector v3.
+    //
+    //   vector.ph:
+    //     v_init = vector(..., ..., ..., a[-1])
+    //     br vector.body
+    //
+    //   vector.body
+    //     i = phi [0, vector.ph], [i+4, vector.body]
+    //     v1 = phi [v_init, vector.ph], [v2, vector.body]
+    //     v2 = a[i, i+1, i+2, i+3];
+    //     v3 = vector(v1(3), v2(0, 1, 2))
+
+    // For the first part, use the recurrence phi (v1), otherwise v2.
+    auto *V1 = State.get(getOperand(0), 0);
+    Value *PartMinus1 = Part == 0 ? V1 : State.get(getOperand(1), Part - 1);
+    if (!PartMinus1->getType()->isVectorTy()) {
+      State.set(this, PartMinus1, Part);
+    } else {
+      Value *V2 = State.get(getOperand(1), Part);
+      State.set(this, Builder.CreateVectorSplice(PartMinus1, V2, -1), Part);
+    }
+    break;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -640,7 +753,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
     break;
-
+  case VPInstruction::FirstOrderRecurrenceSplice:
+    O << "first-order splice";
+    break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
@@ -674,6 +789,7 @@ void VPlan::execute(VPTransformState *State) {
     State->VPValue2Value[Entry.second] = Entry.first;
 
   BasicBlock *VectorPreHeaderBB = State->CFG.PrevBB;
+  State->CFG.VectorPreHeader = VectorPreHeaderBB;
   BasicBlock *VectorHeaderBB = VectorPreHeaderBB->getSingleSuccessor();
   assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
 
@@ -698,6 +814,28 @@ void VPlan::execute(VPTransformState *State) {
 
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
+
+  // Fix the latch value of reduction and first-order recurrences phis in the
+  // vector loop.
+  VPBasicBlock *Header = Entry->getEntryBasicBlock();
+  for (VPRecipeBase &R : Header->phis()) {
+    auto *PhiR = dyn_cast<VPWidenPHIRecipe>(&R);
+    if (!PhiR || !(isa<VPFirstOrderRecurrencePHIRecipe>(&R) ||
+                   isa<VPReductionPHIRecipe>(&R)))
+      continue;
+    // For first-order recurrences and in-order reduction phis, only a single
+    // part is generated, which provides the last part from the previous
+    // iteration. Otherwise all UF parts are generated.
+    bool SinglePartNeeded = isa<VPFirstOrderRecurrencePHIRecipe>(&R) ||
+                            cast<VPReductionPHIRecipe>(&R)->isOrdered();
+    unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
+    for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
+      Value *VecPhi = State->get(PhiR, Part);
+      Value *Val = State->get(PhiR->getBackedgeValue(),
+                              SinglePartNeeded ? State->UF - 1 : Part);
+      cast<PHINode>(VecPhi)->addIncoming(Val, VectorLatchBB);
+    }
+  }
 
   // Setup branch terminator successors for VPBBs in VPBBsToFix based on
   // VPBB's successors.
@@ -804,12 +942,12 @@ void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-const Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
+Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
          Twine(getOrCreateBID(Block));
 }
 
-const Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
+Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
   const std::string &Name = Block->getName();
   if (!Name.empty())
     return Name;
@@ -1008,7 +1146,21 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-PHI " << VPlanIngredient(getUnderlyingValue());
+  O << Indent << "WIDEN-PHI ";
+
+  auto *OriginalPhi = cast<PHINode>(getUnderlyingValue());
+  // Unless all incoming values are modeled in VPlan  print the original PHI
+  // directly.
+  // TODO: Remove once all VPWidenPHIRecipe instances keep all relevant incoming
+  // values as VPValues.
+  if (getNumOperands() != OriginalPhi->getNumOperands()) {
+    O << VPlanIngredient(OriginalPhi);
+    return;
+  }
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
 }
 
 void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -1075,7 +1227,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
 
   if (!isStore()) {
-    getVPValue()->printAsOperand(O, SlotTracker);
+    getVPSingleValue()->printAsOperand(O, SlotTracker);
     O << " = ";
   }
   O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
@@ -1105,7 +1257,7 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
         VF.isScalar() ? Indices.back() : ConstantVector::get(Indices);
     // Add the consecutive indices to the vector value.
     Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
-    State.set(getVPValue(), CanonicalVectorIV, Part);
+    State.set(getVPSingleValue(), CanonicalVectorIV, Part);
   }
 }
 
@@ -1113,8 +1265,118 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
 void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
-  getVPValue()->printAsOperand(O, SlotTracker);
+  getVPSingleValue()->printAsOperand(O, SlotTracker);
   O << " = WIDEN-CANONICAL-INDUCTION";
+}
+#endif
+
+void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
+  auto &Builder = State.Builder;
+  // Create a vector from the initial value.
+  auto *VectorInit = getStartValue()->getLiveInIRValue();
+
+  Type *VecTy = State.VF.isScalar()
+                    ? VectorInit->getType()
+                    : VectorType::get(VectorInit->getType(), State.VF);
+
+  if (State.VF.isVector()) {
+    auto *IdxTy = Builder.getInt32Ty();
+    auto *One = ConstantInt::get(IdxTy, 1);
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(State.CFG.VectorPreHeader->getTerminator());
+    auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, State.VF);
+    auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
+    VectorInit = Builder.CreateInsertElement(
+        PoisonValue::get(VecTy), VectorInit, LastIdx, "vector.recur.init");
+  }
+
+  // Create a phi node for the new recurrence.
+  PHINode *EntryPart = PHINode::Create(
+      VecTy, 2, "vector.recur", &*State.CFG.PrevBB->getFirstInsertionPt());
+  EntryPart->addIncoming(VectorInit, State.CFG.VectorPreHeader);
+  State.set(this, EntryPart, 0);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                            VPSlotTracker &SlotTracker) const {
+  O << Indent << "FIRST-ORDER-RECURRENCE-PHI ";
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPReductionPHIRecipe::execute(VPTransformState &State) {
+  PHINode *PN = cast<PHINode>(getUnderlyingValue());
+  auto &Builder = State.Builder;
+
+  // In order to support recurrences we need to be able to vectorize Phi nodes.
+  // Phi nodes have cycles, so we need to vectorize them in two stages. This is
+  // stage #1: We create a new vector PHI node with no incoming edges. We'll use
+  // this value when we vectorize all of the instructions that use the PHI.
+  bool ScalarPHI = State.VF.isScalar() || IsInLoop;
+  Type *VecTy =
+      ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), State.VF);
+
+  BasicBlock *HeaderBB = State.CFG.PrevBB;
+  assert(State.LI->getLoopFor(HeaderBB)->getHeader() == HeaderBB &&
+         "recipe must be in the vector loop header");
+  unsigned LastPartForNewPhi = isOrdered() ? 1 : State.UF;
+  for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
+    Value *EntryPart =
+        PHINode::Create(VecTy, 2, "vec.phi", &*HeaderBB->getFirstInsertionPt());
+    State.set(this, EntryPart, Part);
+  }
+
+  // Reductions do not have to start at zero. They can start with
+  // any loop invariant values.
+  VPValue *StartVPV = getStartValue();
+  Value *StartV = StartVPV->getLiveInIRValue();
+
+  Value *Iden = nullptr;
+  RecurKind RK = RdxDesc.getRecurrenceKind();
+  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
+    // MinMax reduction have the start value as their identify.
+    if (ScalarPHI) {
+      Iden = StartV;
+    } else {
+      IRBuilderBase::InsertPointGuard IPBuilder(Builder);
+      Builder.SetInsertPoint(State.CFG.VectorPreHeader->getTerminator());
+      StartV = Iden =
+          Builder.CreateVectorSplat(State.VF, StartV, "minmax.ident");
+    }
+  } else {
+    Constant *IdenC = RecurrenceDescriptor::getRecurrenceIdentity(
+        RK, VecTy->getScalarType(), RdxDesc.getFastMathFlags());
+    Iden = IdenC;
+
+    if (!ScalarPHI) {
+      Iden = ConstantVector::getSplat(State.VF, IdenC);
+      IRBuilderBase::InsertPointGuard IPBuilder(Builder);
+      Builder.SetInsertPoint(State.CFG.VectorPreHeader->getTerminator());
+      Constant *Zero = Builder.getInt32(0);
+      StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
+    }
+  }
+
+  for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
+    Value *EntryPart = State.get(this, Part);
+    // Make sure to add the reduction start value only to the
+    // first unroll part.
+    Value *StartVal = (Part == 0) ? StartV : Iden;
+    cast<PHINode>(EntryPart)->addIncoming(StartVal, State.CFG.VectorPreHeader);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                 VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-REDUCTION-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
 }
 #endif
 
@@ -1211,26 +1473,6 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
   Slots[V] = NextSlot++;
 }
 
-void VPSlotTracker::assignSlots(const VPBlockBase *VPBB) {
-  if (auto *Region = dyn_cast<VPRegionBlock>(VPBB))
-    assignSlots(Region);
-  else
-    assignSlots(cast<VPBasicBlock>(VPBB));
-}
-
-void VPSlotTracker::assignSlots(const VPRegionBlock *Region) {
-  ReversePostOrderTraversal<const VPBlockBase *> RPOT(Region->getEntry());
-  for (const VPBlockBase *Block : RPOT)
-    assignSlots(Block);
-}
-
-void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
-  for (const VPRecipeBase &Recipe : *VPBB) {
-    for (VPValue *Def : Recipe.definedValues())
-      assignSlot(Def);
-  }
-}
-
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
 
   for (const VPValue *V : Plan.VPExternalDefs)
@@ -1239,7 +1481,13 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
 
-  ReversePostOrderTraversal<const VPBlockBase *> RPOT(Plan.getEntry());
-  for (const VPBlockBase *Block : RPOT)
-    assignSlots(Block);
+  ReversePostOrderTraversal<
+      VPBlockRecursiveTraversalWrapper<const VPBlockBase *>>
+      RPOT(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
+          Plan.getEntry()));
+  for (const VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
+    for (const VPRecipeBase &Recipe : *VPBB)
+      for (VPValue *Def : Recipe.definedValues())
+        assignSlot(Def);
 }

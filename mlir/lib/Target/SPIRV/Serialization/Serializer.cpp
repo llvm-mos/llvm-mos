@@ -99,7 +99,7 @@ LogicalResult Serializer::serialize() {
 
   // Iterate over the module body to serialize it. Assumptions are that there is
   // only one basic block in the moduleOp
-  for (auto &op : module.getBlock()) {
+  for (auto &op : *module.getBody()) {
     if (failed(processOperation(&op))) {
       return failure();
     }
@@ -241,6 +241,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   case spirv::Decoration::NonWritable:
   case spirv::Decoration::NoPerspective:
   case spirv::Decoration::Restrict:
+  case spirv::Decoration::RelaxedPrecision:
     // For unit attributes, the args list has no values so we do nothing
     if (auto unitAttr = attr.second.dyn_cast<UnitAttr>())
       break;
@@ -321,13 +322,13 @@ LogicalResult Serializer::processType(Location loc, Type type,
                                       uint32_t &typeID) {
   // Maintains a set of names for nested identified struct types. This is used
   // to properly serialize recursive references.
-  llvm::SetVector<StringRef> serializationCtx;
+  SetVector<StringRef> serializationCtx;
   return processTypeImpl(loc, type, typeID, serializationCtx);
 }
 
 LogicalResult
 Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
-                            llvm::SetVector<StringRef> &serializationCtx) {
+                            SetVector<StringRef> &serializationCtx) {
   typeID = getTypeID(type);
   if (typeID) {
     return success();
@@ -380,7 +381,7 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
 LogicalResult Serializer::prepareBasicType(
     Location loc, Type type, uint32_t resultID, spirv::Opcode &typeEnum,
     SmallVectorImpl<uint32_t> &operands, bool &deferSerialization,
-    llvm::SetVector<StringRef> &serializationCtx) {
+    SetVector<StringRef> &serializationCtx) {
   deferSerialization = false;
 
   if (isVoidType(type)) {
@@ -805,11 +806,15 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
   auto opcode =
       isSpec ? spirv::Opcode::OpSpecConstant : spirv::Opcode::OpConstant;
 
-  // According to SPIR-V spec, "When the type's bit width is less than 32-bits,
-  // the literal's value appears in the low-order bits of the word, and the
-  // high-order bits must be 0 for a floating-point type, or 0 for an integer
-  // type with Signedness of 0, or sign extended when Signedness is 1."
-  if (bitwidth == 32 || bitwidth == 16) {
+  switch (bitwidth) {
+    // According to SPIR-V spec, "When the type's bit width is less than
+    // 32-bits, the literal's value appears in the low-order bits of the word,
+    // and the high-order bits must be 0 for a floating-point type, or 0 for an
+    // integer type with Signedness of 0, or sign extended when Signedness
+    // is 1."
+  case 32:
+  case 16:
+  case 8: {
     uint32_t word = 0;
     if (isSigned) {
       word = static_cast<int32_t>(value.getSExtValue());
@@ -818,10 +823,10 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     }
     (void)encodeInstructionInto(typesGlobalValues, opcode,
                                 {typeID, resultID, word});
-  }
-  // According to SPIR-V spec: "When the type's bit width is larger than one
-  // word, the literal’s low-order words appear first."
-  else if (bitwidth == 64) {
+  } break;
+    // According to SPIR-V spec: "When the type's bit width is larger than one
+    // word, the literal’s low-order words appear first."
+  case 64: {
     struct DoubleWord {
       uint32_t word1;
       uint32_t word2;
@@ -833,7 +838,8 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     }
     (void)encodeInstructionInto(typesGlobalValues, opcode,
                                 {typeID, resultID, words.word1, words.word2});
-  } else {
+  } break;
+  default: {
     std::string valueStr;
     llvm::raw_string_ostream rss(valueStr);
     value.print(rss, /*isSigned=*/false);
@@ -841,6 +847,7 @@ uint32_t Serializer::prepareConstantInt(Location loc, IntegerAttr intAttr,
     emitError(loc, "cannot serialize ")
         << bitwidth << "-bit integer literal: " << rss.str();
     return 0;
+  }
   }
 
   if (!isSpec) {
@@ -959,7 +966,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
   //   OpPhi | result type | result <id> | (value <id>, parent block <id>) pair
   // So we need to collect all predecessor blocks and the arguments they send
   // to this block.
-  SmallVector<std::pair<Block *, Operation::operand_iterator>, 4> predecessors;
+  SmallVector<std::pair<Block *, OperandRange>, 4> predecessors;
   for (Block *predecessor : block->getPredecessors()) {
     auto *terminator = predecessor->getTerminator();
     // The predecessor here is the immediate one according to MLIR's IR
@@ -971,7 +978,21 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     // structured control flow op's merge block.
     predecessor = getPhiIncomingBlock(predecessor);
     if (auto branchOp = dyn_cast<spirv::BranchOp>(terminator)) {
-      predecessors.emplace_back(predecessor, branchOp.operand_begin());
+      predecessors.emplace_back(predecessor, branchOp.getOperands());
+    } else if (auto branchCondOp =
+                   dyn_cast<spirv::BranchConditionalOp>(terminator)) {
+      Optional<OperandRange> blockOperands;
+
+      for (auto successorIdx :
+           llvm::seq<unsigned>(0, predecessor->getNumSuccessors()))
+        if (predecessor->getSuccessors()[successorIdx] == block) {
+          blockOperands = branchCondOp.getSuccessorOperands(successorIdx);
+          break;
+        }
+
+      assert(blockOperands && !blockOperands->empty() &&
+             "expected non-empty block operand range");
+      predecessors.emplace_back(predecessor, *blockOperands);
     } else {
       return terminator->emitError("unimplemented terminator for Phi creation");
     }
@@ -996,7 +1017,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     phiArgs.push_back(phiID);
 
     for (auto predIndex : llvm::seq<unsigned>(0, predecessors.size())) {
-      Value value = *(predecessors[predIndex].second + argIndex);
+      Value value = predecessors[predIndex].second[argIndex];
       uint32_t predBlockId = getOrCreateBlockID(predecessors[predIndex].first);
       LLVM_DEBUG(llvm::dbgs() << "[phi] use predecessor (id = " << predBlockId
                               << ") value " << value << ' ');
@@ -1076,7 +1097,6 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processGlobalVariableOp(op);
       })
       .Case([&](spirv::LoopOp op) { return processLoopOp(op); })
-      .Case([&](spirv::ModuleEndOp) { return success(); })
       .Case([&](spirv::ReferenceOfOp op) { return processReferenceOfOp(op); })
       .Case([&](spirv::SelectionOp op) { return processSelectionOp(op); })
       .Case([&](spirv::SpecConstantOp op) { return processSpecConstantOp(op); })

@@ -33,9 +33,11 @@ configure_lit_site_cfg(
   "LLVM_LIBS_DIR"
   "SHLIBDIR"
   "LLVM_LIT_TOOLS_DIR"
+  "LLVM_EXTERNAL_LIT"
   "CLANG_BINARY_DIR"
   "CLANG_SOURCE_DIR"
   "CLANG_TOOLS_DIR"
+  "CMAKE_LIBRARY_OUTPUT_DIRECTORY"
   )
 
 configure_lit_site_cfg(
@@ -68,6 +70,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-import-test
   clang-rename
   clang-refactor
+  clang-repl
   clang-diff
   clang-scan-deps
   diagtool
@@ -107,6 +110,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-config
     FileCheck count not
     llc
+    llvm-ar
     llvm-as
     llvm-bcanalyzer
     llvm-cat
@@ -120,10 +124,12 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-objcopy
     llvm-objdump
     llvm-profdata
+    llvm-rc
     llvm-readelf
     llvm-readobj
     llvm-strip
     llvm-symbolizer
+    llvm-windres
     opt
     split-file
     yaml2obj

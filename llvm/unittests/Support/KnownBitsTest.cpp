@@ -166,7 +166,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           KnownMulHU.One &= Res;
           KnownMulHU.Zero &= ~Res;
 
-          if (!N2.isNullValue()) {
+          if (!N2.isZero()) {
             Res = N1.udiv(N2);
             KnownUDiv.One &= Res;
             KnownUDiv.Zero &= ~Res;
@@ -230,7 +230,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
 
       // The following are conservatively correct, but not guaranteed to be
       // precise.
-      KnownBits ComputedMul = KnownBits::computeForMul(Known1, Known2);
+      KnownBits ComputedMul = KnownBits::mul(Known1, Known2);
       EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
       EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
 
@@ -266,6 +266,23 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       EXPECT_TRUE(ComputedAShr.Zero.isSubsetOf(KnownAShr.Zero));
       EXPECT_TRUE(ComputedAShr.One.isSubsetOf(KnownAShr.One));
     });
+  });
+
+  // Also test 'unary' binary cases where the same argument is repeated.
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    KnownBits KnownMul(Bits);
+    KnownMul.Zero.setAllBits();
+    KnownMul.One.setAllBits();
+
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      APInt Res = N * N;
+      KnownMul.One &= Res;
+      KnownMul.Zero &= ~Res;
+    });
+
+    KnownBits ComputedMul = KnownBits::mul(Known, Known, /*SelfMultiply*/ true);
+    EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
+    EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
   });
 }
 
@@ -447,8 +464,8 @@ TEST(KnownBitsTest, SExtInReg) {
   unsigned Bits = 4;
   for (unsigned FromBits = 1; FromBits <= Bits; ++FromBits) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known) {
-      APInt CommonOne = APInt::getAllOnesValue(Bits);
-      APInt CommonZero = APInt::getAllOnesValue(Bits);
+      APInt CommonOne = APInt::getAllOnes(Bits);
+      APInt CommonZero = APInt::getAllOnes(Bits);
       unsigned ExtBits = Bits - FromBits;
       ForeachNumInKnownBits(Known, [&](const APInt &N) {
         APInt Ext = N << ExtBits;
@@ -461,6 +478,22 @@ TEST(KnownBitsTest, SExtInReg) {
       EXPECT_EQ(CommonZero, KnownSExtInReg.Zero);
     });
   }
+}
+
+TEST(KnownBitsTest, CommonBitsSet) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      bool HasCommonBitsSet = false;
+      ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+        ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+          HasCommonBitsSet |= N1.intersects(N2);
+        });
+      });
+      EXPECT_EQ(!HasCommonBitsSet,
+                KnownBits::haveNoCommonBitsSet(Known1, Known2));
+    });
+  });
 }
 
 } // end anonymous namespace

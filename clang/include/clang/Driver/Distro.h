@@ -37,6 +37,7 @@ public:
     DebianStretch,
     DebianBuster,
     DebianBullseye,
+    DebianBookworm,
     Exherbo,
     RHEL5,
     RHEL6,
@@ -71,6 +72,7 @@ public:
     UbuntuFocal,
     UbuntuGroovy,
     UbuntuHirsute,
+    UbuntuImpish,
     UnknownDistro
   };
 
@@ -118,11 +120,11 @@ public:
   bool IsOpenSUSE() const { return DistroVal == OpenSUSE; }
 
   bool IsDebian() const {
-    return DistroVal >= DebianLenny && DistroVal <= DebianBullseye;
+    return DistroVal >= DebianLenny && DistroVal <= DebianBookworm;
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuHirsute;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuImpish;
   }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }

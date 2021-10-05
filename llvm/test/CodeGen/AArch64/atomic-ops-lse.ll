@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs -mattr=+outline-atomics < %s | FileCheck %s --check-prefix=OUTLINE-ATOMICS
 ; RUN: llc -mtriple=aarch64_be-none-linux-gnu -disable-post-ra -verify-machineinstrs -mattr=+lse < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs -mattr=+lse < %s | FileCheck %s --check-prefix=CHECK-REG
-; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs -mcpu=saphira < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs -mcpu=saphira -mattr=-lse2 < %s | FileCheck %s
 
 ; Point of CHECK-REG is to make sure UNPREDICTABLE instructions aren't created
 ; (i.e. reusing a register for status & data in store exclusive).
@@ -394,14 +394,14 @@ define dso_local i8 @test_atomic_load_min_i8(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB18_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB18_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -422,14 +422,14 @@ define dso_local i16 @test_atomic_load_min_i16(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB19_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB19_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -450,13 +450,13 @@ define dso_local i32 @test_atomic_load_min_i32(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB20_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB20_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -477,13 +477,13 @@ define dso_local i64 @test_atomic_load_min_i64(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB21_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB21_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -504,13 +504,13 @@ define dso_local void @test_atomic_load_min_i32_noret(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB22_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB22_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i32* @var32, i32 %offset seq_cst
@@ -529,13 +529,13 @@ define dso_local void @test_atomic_load_min_i64_noret(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB23_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB23_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i64* @var64, i64 %offset seq_cst
@@ -552,17 +552,18 @@ define dso_local i8 @test_atomic_load_umin_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB24_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldaxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB24_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i8* @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -579,17 +580,18 @@ define dso_local i16 @test_atomic_load_umin_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB25_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldaxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB25_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i16* @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -608,13 +610,13 @@ define dso_local i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB26_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB26_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -635,13 +637,13 @@ define dso_local i64 @test_atomic_load_umin_i64(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB27_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB27_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -662,13 +664,13 @@ define dso_local void @test_atomic_load_umin_i32_noret(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB28_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB28_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i32* @var32, i32 %offset seq_cst
@@ -687,13 +689,13 @@ define dso_local void @test_atomic_load_umin_i64_noret(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB29_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB29_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i64* @var64, i64 %offset seq_cst
@@ -712,14 +714,14 @@ define dso_local i8 @test_atomic_load_max_i8(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB30_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB30_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -740,14 +742,14 @@ define dso_local i16 @test_atomic_load_max_i16(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB31_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB31_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -768,13 +770,13 @@ define dso_local i32 @test_atomic_load_max_i32(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB32_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB32_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -795,13 +797,13 @@ define dso_local i64 @test_atomic_load_max_i64(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB33_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB33_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -822,13 +824,13 @@ define dso_local void @test_atomic_load_max_i32_noret(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB34_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB34_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i32* @var32, i32 %offset seq_cst
@@ -847,13 +849,13 @@ define dso_local void @test_atomic_load_max_i64_noret(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB35_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB35_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i64* @var64, i64 %offset seq_cst
@@ -870,17 +872,18 @@ define dso_local i8 @test_atomic_load_umax_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB36_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldaxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB36_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i8* @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -897,17 +900,18 @@ define dso_local i16 @test_atomic_load_umax_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB37_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldaxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB37_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i16* @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -926,13 +930,13 @@ define dso_local i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB38_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB38_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -953,13 +957,13 @@ define dso_local i64 @test_atomic_load_umax_i64(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB39_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB39_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -980,13 +984,13 @@ define dso_local void @test_atomic_load_umax_i32_noret(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB40_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB40_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i32* @var32, i32 %offset seq_cst
@@ -1005,13 +1009,13 @@ define dso_local void @test_atomic_load_umax_i64_noret(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB41_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB41_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i64* @var64, i64 %offset seq_cst
@@ -1272,6 +1276,29 @@ define dso_local i32 @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
    ret i32 %old
 }
 
+define dso_local i32 @test_atomic_cmpxchg_i32_monotonic_acquire(i32 %wanted, i32 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i32_monotonic_acquire:
+; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i32_monotonic_acquire:
+; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    adrp x2, var32
+; OUTLINE-ATOMICS-NEXT:    add x2, x2, :lo12:var32
+; OUTLINE-ATOMICS-NEXT:    bl __aarch64_cas4_acq
+; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    ret
+   %pair = cmpxchg i32* @var32, i32 %wanted, i32 %new monotonic acquire
+   %old = extractvalue { i32, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
+
+; CHECK: casa w0, w1, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i32 %old
+}
+
 define dso_local i64 @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i64:
@@ -1313,6 +1340,52 @@ define dso_local i128 @test_atomic_cmpxchg_i128(i128 %wanted, i128 %new) nounwin
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var128
 
 ; CHECK: caspa x0, x1, x2, x3, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i128 %old
+}
+
+define dso_local i128 @test_atomic_cmpxchg_i128_monotonic_seqcst(i128 %wanted, i128 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i128_monotonic_seqcst:
+; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i128_monotonic_seqcst:
+; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    adrp x4, var128
+; OUTLINE-ATOMICS-NEXT:    add x4, x4, :lo12:var128
+; OUTLINE-ATOMICS-NEXT:    bl __aarch64_cas16_acq_rel
+; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    ret
+   %pair = cmpxchg i128* @var128, i128 %wanted, i128 %new monotonic seq_cst
+   %old = extractvalue { i128, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var128
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var128
+
+; CHECK: caspal x0, x1, x2, x3, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i128 %old
+}
+
+define dso_local i128 @test_atomic_cmpxchg_i128_release_acquire(i128 %wanted, i128 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i128_release_acquire:
+; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i128_release_acquire:
+; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    adrp x4, var128
+; OUTLINE-ATOMICS-NEXT:    add x4, x4, :lo12:var128
+; OUTLINE-ATOMICS-NEXT:    bl __aarch64_cas16_acq_rel
+; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    ret
+   %pair = cmpxchg i128* @var128, i128 %wanted, i128 %new release acquire
+   %old = extractvalue { i128, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var128
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var128
+
+; CHECK: caspal x0, x1, x2, x3, [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
    ret i128 %old
@@ -3511,6 +3584,52 @@ define dso_local i32 @test_atomic_cmpxchg_i32_seq_cst(i32 %wanted, i32 %new) nou
    ret i32 %old
 }
 
+define dso_local i32 @test_atomic_cmpxchg_i32_monotonic_seq_cst(i32 %wanted, i32 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i32_monotonic_seq_cst:
+; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i32_monotonic_seq_cst:
+; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    adrp x2, var32
+; OUTLINE-ATOMICS-NEXT:    add x2, x2, :lo12:var32
+; OUTLINE-ATOMICS-NEXT:    bl __aarch64_cas4_acq_rel
+; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    ret
+   %pair = cmpxchg i32* @var32, i32 %wanted, i32 %new monotonic seq_cst
+   %old = extractvalue { i32, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
+
+; CHECK: casal w0, w1, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i32 %old
+}
+
+define dso_local i32 @test_atomic_cmpxchg_i32_release_acquire(i32 %wanted, i32 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i32_release_acquire:
+; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i32_release_acquire:
+; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    adrp x2, var32
+; OUTLINE-ATOMICS-NEXT:    add x2, x2, :lo12:var32
+; OUTLINE-ATOMICS-NEXT:    bl __aarch64_cas4_acq_rel
+; OUTLINE-ATOMICS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    ret
+   %pair = cmpxchg i32* @var32, i32 %wanted, i32 %new release acquire
+   %old = extractvalue { i32, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
+
+; CHECK: casal w0, w1, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i32 %old
+}
+
 define dso_local i64 @test_atomic_cmpxchg_i64_seq_cst(i64 %wanted, i64 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i64_seq_cst:
@@ -3563,14 +3682,14 @@ define dso_local i8 @test_atomic_load_max_i8_acq_rel(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB158_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB158_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3591,14 +3710,14 @@ define dso_local i16 @test_atomic_load_max_i16_acq_rel(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB159_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB159_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3619,13 +3738,13 @@ define dso_local i32 @test_atomic_load_max_i32_acq_rel(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB160_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB160_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3646,13 +3765,13 @@ define dso_local i64 @test_atomic_load_max_i64_acq_rel(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB161_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB161_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3673,13 +3792,13 @@ define dso_local void @test_atomic_load_max_i32_noret_acq_rel(i32 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB162_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB162_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i32* @var32, i32 %offset acq_rel
@@ -3698,13 +3817,13 @@ define dso_local void @test_atomic_load_max_i64_noret_acq_rel(i64 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB163_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB163_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i64* @var64, i64 %offset acq_rel
@@ -3723,14 +3842,14 @@ define dso_local i8 @test_atomic_load_max_i8_acquire(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB164_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB164_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3751,14 +3870,14 @@ define dso_local i16 @test_atomic_load_max_i16_acquire(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB165_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB165_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3779,13 +3898,13 @@ define dso_local i32 @test_atomic_load_max_i32_acquire(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB166_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB166_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3806,13 +3925,13 @@ define dso_local i64 @test_atomic_load_max_i64_acquire(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB167_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB167_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3833,13 +3952,13 @@ define dso_local void @test_atomic_load_max_i32_noret_acquire(i32 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB168_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB168_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i32* @var32, i32 %offset acquire
@@ -3858,13 +3977,13 @@ define dso_local void @test_atomic_load_max_i64_noret_acquire(i64 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB169_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB169_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i64* @var64, i64 %offset acquire
@@ -3883,14 +4002,14 @@ define dso_local i8 @test_atomic_load_max_i8_monotonic(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB170_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB170_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3911,14 +4030,14 @@ define dso_local i16 @test_atomic_load_max_i16_monotonic(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB171_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB171_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3939,13 +4058,13 @@ define dso_local i32 @test_atomic_load_max_i32_monotonic(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB172_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB172_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3966,13 +4085,13 @@ define dso_local i64 @test_atomic_load_max_i64_monotonic(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB173_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB173_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -3993,13 +4112,13 @@ define dso_local void @test_atomic_load_max_i32_noret_monotonic(i32 %offset) nou
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB174_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB174_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i32* @var32, i32 %offset monotonic
@@ -4018,13 +4137,13 @@ define dso_local void @test_atomic_load_max_i64_noret_monotonic(i64 %offset) nou
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB175_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB175_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i64* @var64, i64 %offset monotonic
@@ -4043,14 +4162,14 @@ define dso_local i8 @test_atomic_load_max_i8_release(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB176_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB176_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4071,14 +4190,14 @@ define dso_local i16 @test_atomic_load_max_i16_release(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB177_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB177_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4099,13 +4218,13 @@ define dso_local i32 @test_atomic_load_max_i32_release(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB178_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB178_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4126,13 +4245,13 @@ define dso_local i64 @test_atomic_load_max_i64_release(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB179_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB179_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4153,13 +4272,13 @@ define dso_local void @test_atomic_load_max_i32_noret_release(i32 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB180_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB180_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i32* @var32, i32 %offset release
@@ -4178,13 +4297,13 @@ define dso_local void @test_atomic_load_max_i64_noret_release(i64 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB181_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB181_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i64* @var64, i64 %offset release
@@ -4203,14 +4322,14 @@ define dso_local i8 @test_atomic_load_max_i8_seq_cst(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB182_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB182_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4231,14 +4350,14 @@ define dso_local i16 @test_atomic_load_max_i16_seq_cst(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB183_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB183_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4259,13 +4378,13 @@ define dso_local i32 @test_atomic_load_max_i32_seq_cst(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB184_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB184_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4286,13 +4405,13 @@ define dso_local i64 @test_atomic_load_max_i64_seq_cst(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB185_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB185_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4313,13 +4432,13 @@ define dso_local void @test_atomic_load_max_i32_noret_seq_cst(i32 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB186_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB186_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i32* @var32, i32 %offset seq_cst
@@ -4338,13 +4457,13 @@ define dso_local void @test_atomic_load_max_i64_noret_seq_cst(i64 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB187_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, gt
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB187_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw max i64* @var64, i64 %offset seq_cst
@@ -4363,14 +4482,14 @@ define dso_local i8 @test_atomic_load_min_i8_acq_rel(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB188_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB188_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4391,14 +4510,14 @@ define dso_local i16 @test_atomic_load_min_i16_acq_rel(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB189_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB189_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4419,13 +4538,13 @@ define dso_local i32 @test_atomic_load_min_i32_acq_rel(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB190_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB190_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4446,13 +4565,13 @@ define dso_local i64 @test_atomic_load_min_i64_acq_rel(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB191_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB191_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4473,13 +4592,13 @@ define dso_local void @test_atomic_load_min_i32_noret_acq_rel(i32 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB192_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB192_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i32* @var32, i32 %offset acq_rel
@@ -4498,13 +4617,13 @@ define dso_local void @test_atomic_load_min_i64_noret_acq_rel(i64 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB193_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB193_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i64* @var64, i64 %offset acq_rel
@@ -4523,14 +4642,14 @@ define dso_local i8 @test_atomic_load_min_i8_acquire(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB194_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB194_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4551,14 +4670,14 @@ define dso_local i16 @test_atomic_load_min_i16_acquire(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB195_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB195_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4579,13 +4698,13 @@ define dso_local i32 @test_atomic_load_min_i32_acquire(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB196_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB196_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4606,13 +4725,13 @@ define dso_local i64 @test_atomic_load_min_i64_acquire(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB197_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB197_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4633,13 +4752,13 @@ define dso_local void @test_atomic_load_min_i32_noret_acquire(i32 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB198_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB198_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i32* @var32, i32 %offset acquire
@@ -4658,13 +4777,13 @@ define dso_local void @test_atomic_load_min_i64_noret_acquire(i64 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB199_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB199_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i64* @var64, i64 %offset acquire
@@ -4683,14 +4802,14 @@ define dso_local i8 @test_atomic_load_min_i8_monotonic(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB200_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB200_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4711,14 +4830,14 @@ define dso_local i16 @test_atomic_load_min_i16_monotonic(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB201_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB201_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4739,13 +4858,13 @@ define dso_local i32 @test_atomic_load_min_i32_monotonic(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB202_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB202_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4766,13 +4885,13 @@ define dso_local i64 @test_atomic_load_min_i64_monotonic(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB203_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB203_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4793,13 +4912,13 @@ define dso_local void @test_atomic_load_min_i32_noret_monotonic(i32 %offset) nou
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB204_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB204_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i32* @var32, i32 %offset monotonic
@@ -4818,13 +4937,13 @@ define dso_local void @test_atomic_load_min_i64_noret_monotonic(i64 %offset) nou
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB205_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB205_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i64* @var64, i64 %offset monotonic
@@ -4843,14 +4962,14 @@ define dso_local i8 @test_atomic_load_min_i8_release(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB206_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB206_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4871,14 +4990,14 @@ define dso_local i16 @test_atomic_load_min_i16_release(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB207_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB207_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4899,13 +5018,13 @@ define dso_local i32 @test_atomic_load_min_i32_release(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB208_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB208_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4926,13 +5045,13 @@ define dso_local i64 @test_atomic_load_min_i64_release(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB209_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB209_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -4953,13 +5072,13 @@ define dso_local void @test_atomic_load_min_i32_noret_release(i32 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB210_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB210_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i32* @var32, i32 %offset release
@@ -4978,13 +5097,13 @@ define dso_local void @test_atomic_load_min_i64_noret_release(i64 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB211_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB211_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i64* @var64, i64 %offset release
@@ -5003,14 +5122,14 @@ define dso_local i8 @test_atomic_load_min_i8_seq_cst(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB212_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrb w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxtb w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxtb
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB212_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -5031,14 +5150,14 @@ define dso_local i16 @test_atomic_load_min_i16_seq_cst(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB213_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxrh w10, [x9]
 ; OUTLINE-ATOMICS-NEXT:    sxth w8, w10
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, sxth
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w10, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB213_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -5059,13 +5178,13 @@ define dso_local i32 @test_atomic_load_min_i32_seq_cst(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB214_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB214_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -5086,13 +5205,13 @@ define dso_local i64 @test_atomic_load_min_i64_seq_cst(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB215_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB215_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -5113,13 +5232,13 @@ define dso_local void @test_atomic_load_min_i32_noret_seq_cst(i32 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB216_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB216_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i32* @var32, i32 %offset seq_cst
@@ -5138,13 +5257,13 @@ define dso_local void @test_atomic_load_min_i64_noret_seq_cst(i64 %offset) nounw
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB217_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, le
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB217_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw min i64* @var64, i64 %offset seq_cst
@@ -7101,17 +7220,18 @@ define dso_local i8 @test_atomic_load_umax_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB308_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldaxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB308_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i8* @var8, i8 %offset acq_rel
 ; CHECK-NOT: dmb
@@ -7128,17 +7248,18 @@ define dso_local i16 @test_atomic_load_umax_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB309_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldaxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB309_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i16* @var16, i16 %offset acq_rel
 ; CHECK-NOT: dmb
@@ -7157,13 +7278,13 @@ define dso_local i32 @test_atomic_load_umax_i32_acq_rel(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB310_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB310_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7184,13 +7305,13 @@ define dso_local i64 @test_atomic_load_umax_i64_acq_rel(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB311_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB311_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7211,13 +7332,13 @@ define dso_local void @test_atomic_load_umax_i32_noret_acq_rel(i32 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB312_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB312_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i32* @var32, i32 %offset acq_rel
@@ -7236,13 +7357,13 @@ define dso_local void @test_atomic_load_umax_i64_noret_acq_rel(i64 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB313_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB313_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i64* @var64, i64 %offset acq_rel
@@ -7259,17 +7380,18 @@ define dso_local i8 @test_atomic_load_umax_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB314_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldaxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB314_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i8* @var8, i8 %offset acquire
 ; CHECK-NOT: dmb
@@ -7286,17 +7408,18 @@ define dso_local i16 @test_atomic_load_umax_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB315_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldaxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB315_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i16* @var16, i16 %offset acquire
 ; CHECK-NOT: dmb
@@ -7315,13 +7438,13 @@ define dso_local i32 @test_atomic_load_umax_i32_acquire(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB316_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB316_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7342,13 +7465,13 @@ define dso_local i64 @test_atomic_load_umax_i64_acquire(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB317_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB317_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7369,13 +7492,13 @@ define dso_local void @test_atomic_load_umax_i32_noret_acquire(i32 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB318_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB318_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i32* @var32, i32 %offset acquire
@@ -7394,13 +7517,13 @@ define dso_local void @test_atomic_load_umax_i64_noret_acquire(i64 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB319_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB319_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i64* @var64, i64 %offset acquire
@@ -7417,17 +7540,18 @@ define dso_local i8 @test_atomic_load_umax_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB320_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB320_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i8* @var8, i8 %offset monotonic
 ; CHECK-NOT: dmb
@@ -7444,17 +7568,18 @@ define dso_local i16 @test_atomic_load_umax_i16_monotonic(i16 %offset) nounwind 
 ; CHECK-LABEL: test_atomic_load_umax_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB321_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB321_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i16* @var16, i16 %offset monotonic
 ; CHECK-NOT: dmb
@@ -7473,13 +7598,13 @@ define dso_local i32 @test_atomic_load_umax_i32_monotonic(i32 %offset) nounwind 
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB322_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB322_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7500,13 +7625,13 @@ define dso_local i64 @test_atomic_load_umax_i64_monotonic(i64 %offset) nounwind 
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB323_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB323_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7527,13 +7652,13 @@ define dso_local void @test_atomic_load_umax_i32_noret_monotonic(i32 %offset) no
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB324_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB324_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i32* @var32, i32 %offset monotonic
@@ -7552,13 +7677,13 @@ define dso_local void @test_atomic_load_umax_i64_noret_monotonic(i64 %offset) no
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB325_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB325_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i64* @var64, i64 %offset monotonic
@@ -7575,17 +7700,18 @@ define dso_local i8 @test_atomic_load_umax_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB326_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB326_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i8* @var8, i8 %offset release
 ; CHECK-NOT: dmb
@@ -7602,17 +7728,18 @@ define dso_local i16 @test_atomic_load_umax_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB327_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB327_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i16* @var16, i16 %offset release
 ; CHECK-NOT: dmb
@@ -7631,13 +7758,13 @@ define dso_local i32 @test_atomic_load_umax_i32_release(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB328_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB328_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7658,13 +7785,13 @@ define dso_local i64 @test_atomic_load_umax_i64_release(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB329_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB329_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7685,13 +7812,13 @@ define dso_local void @test_atomic_load_umax_i32_noret_release(i32 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB330_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB330_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i32* @var32, i32 %offset release
@@ -7710,13 +7837,13 @@ define dso_local void @test_atomic_load_umax_i64_noret_release(i64 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB331_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB331_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i64* @var64, i64 %offset release
@@ -7733,17 +7860,18 @@ define dso_local i8 @test_atomic_load_umax_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB332_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldaxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB332_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i8* @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -7760,17 +7888,18 @@ define dso_local i16 @test_atomic_load_umax_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB333_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; OUTLINE-ATOMICS-NEXT:    ldaxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB333_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax i16* @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -7789,13 +7918,13 @@ define dso_local i32 @test_atomic_load_umax_i32_seq_cst(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB334_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB334_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7816,13 +7945,13 @@ define dso_local i64 @test_atomic_load_umax_i64_seq_cst(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB335_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB335_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7843,13 +7972,13 @@ define dso_local void @test_atomic_load_umax_i32_noret_seq_cst(i32 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB336_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB336_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i32* @var32, i32 %offset seq_cst
@@ -7868,13 +7997,13 @@ define dso_local void @test_atomic_load_umax_i64_noret_seq_cst(i64 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB337_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, hi
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB337_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umax i64* @var64, i64 %offset seq_cst
@@ -7891,17 +8020,18 @@ define dso_local i8 @test_atomic_load_umin_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB338_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldaxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB338_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i8* @var8, i8 %offset acq_rel
 ; CHECK-NOT: dmb
@@ -7918,17 +8048,18 @@ define dso_local i16 @test_atomic_load_umin_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB339_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldaxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB339_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i16* @var16, i16 %offset acq_rel
 ; CHECK-NOT: dmb
@@ -7947,13 +8078,13 @@ define dso_local i32 @test_atomic_load_umin_i32_acq_rel(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB340_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB340_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -7974,13 +8105,13 @@ define dso_local i64 @test_atomic_load_umin_i64_acq_rel(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB341_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB341_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8001,13 +8132,13 @@ define dso_local void @test_atomic_load_umin_i32_noret_acq_rel(i32 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB342_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB342_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i32* @var32, i32 %offset acq_rel
@@ -8026,13 +8157,13 @@ define dso_local void @test_atomic_load_umin_i64_noret_acq_rel(i64 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB343_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB343_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i64* @var64, i64 %offset acq_rel
@@ -8049,17 +8180,18 @@ define dso_local i8 @test_atomic_load_umin_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB344_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldaxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB344_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i8* @var8, i8 %offset acquire
 ; CHECK-NOT: dmb
@@ -8076,17 +8208,18 @@ define dso_local i16 @test_atomic_load_umin_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB345_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldaxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB345_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i16* @var16, i16 %offset acquire
 ; CHECK-NOT: dmb
@@ -8105,13 +8238,13 @@ define dso_local i32 @test_atomic_load_umin_i32_acquire(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB346_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB346_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8132,13 +8265,13 @@ define dso_local i64 @test_atomic_load_umin_i64_acquire(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB347_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB347_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8159,13 +8292,13 @@ define dso_local void @test_atomic_load_umin_i32_noret_acquire(i32 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB348_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB348_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i32* @var32, i32 %offset acquire
@@ -8184,13 +8317,13 @@ define dso_local void @test_atomic_load_umin_i64_noret_acquire(i64 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB349_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB349_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i64* @var64, i64 %offset acquire
@@ -8207,17 +8340,18 @@ define dso_local i8 @test_atomic_load_umin_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB350_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB350_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i8* @var8, i8 %offset monotonic
 ; CHECK-NOT: dmb
@@ -8234,17 +8368,18 @@ define dso_local i16 @test_atomic_load_umin_i16_monotonic(i16 %offset) nounwind 
 ; CHECK-LABEL: test_atomic_load_umin_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB351_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB351_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i16* @var16, i16 %offset monotonic
 ; CHECK-NOT: dmb
@@ -8263,13 +8398,13 @@ define dso_local i32 @test_atomic_load_umin_i32_monotonic(i32 %offset) nounwind 
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB352_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB352_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8290,13 +8425,13 @@ define dso_local i64 @test_atomic_load_umin_i64_monotonic(i64 %offset) nounwind 
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB353_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB353_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8317,13 +8452,13 @@ define dso_local void @test_atomic_load_umin_i32_noret_monotonic(i32 %offset) no
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB354_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB354_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i32* @var32, i32 %offset monotonic
@@ -8342,13 +8477,13 @@ define dso_local void @test_atomic_load_umin_i64_noret_monotonic(i64 %offset) no
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB355_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB355_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i64* @var64, i64 %offset monotonic
@@ -8365,17 +8500,18 @@ define dso_local i8 @test_atomic_load_umin_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB356_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB356_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i8* @var8, i8 %offset release
 ; CHECK-NOT: dmb
@@ -8392,17 +8528,18 @@ define dso_local i16 @test_atomic_load_umin_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB357_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB357_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i16* @var16, i16 %offset release
 ; CHECK-NOT: dmb
@@ -8421,13 +8558,13 @@ define dso_local i32 @test_atomic_load_umin_i32_release(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB358_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB358_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8448,13 +8585,13 @@ define dso_local i64 @test_atomic_load_umin_i64_release(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB359_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB359_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8475,13 +8612,13 @@ define dso_local void @test_atomic_load_umin_i32_noret_release(i32 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB360_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB360_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i32* @var32, i32 %offset release
@@ -8500,13 +8637,13 @@ define dso_local void @test_atomic_load_umin_i64_noret_release(i64 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB361_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB361_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i64* @var64, i64 %offset release
@@ -8523,17 +8660,18 @@ define dso_local i8 @test_atomic_load_umin_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var8
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var8
-; OUTLINE-ATOMICS-NEXT:  .LBB362_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrb w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxtb
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldaxrb w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB362_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i8* @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -8550,17 +8688,18 @@ define dso_local i16 @test_atomic_load_umin_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
+; OUTLINE-ATOMICS-NEXT:    and w8, w0, #0xffff
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var16
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var16
-; OUTLINE-ATOMICS-NEXT:  .LBB363_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    ldaxrh w8, [x9]
-; OUTLINE-ATOMICS-NEXT:    cmp w8, w0, uxth
-; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; OUTLINE-ATOMICS-NEXT:    ldaxrh w0, [x9]
+; OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB363_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin i16* @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -8579,13 +8718,13 @@ define dso_local i32 @test_atomic_load_umin_i32_seq_cst(i32 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB364_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp w8, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB364_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov w0, w8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8606,13 +8745,13 @@ define dso_local i64 @test_atomic_load_umin_i64_seq_cst(i64 %offset) nounwind {
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x9, var64
 ; OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB365_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x8, [x9]
 ; OUTLINE-ATOMICS-NEXT:    cmp x8, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x10, x8, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w11, x10, [x9]
-; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB365_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    mov x0, x8
 ; OUTLINE-ATOMICS-NEXT:    ret
@@ -8633,13 +8772,13 @@ define dso_local void @test_atomic_load_umin_i32_noret_seq_cst(i32 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var32
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var32
-; OUTLINE-ATOMICS-NEXT:  .LBB366_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr w9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w0
 ; OUTLINE-ATOMICS-NEXT:    csel w9, w9, w0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, w9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB366_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i32* @var32, i32 %offset seq_cst
@@ -8658,13 +8797,13 @@ define dso_local void @test_atomic_load_umin_i64_noret_seq_cst(i64 %offset) noun
 ; OUTLINE-ATOMICS:       // %bb.0:
 ; OUTLINE-ATOMICS-NEXT:    adrp x8, var64
 ; OUTLINE-ATOMICS-NEXT:    add x8, x8, :lo12:var64
-; OUTLINE-ATOMICS-NEXT:  .LBB367_1: // %atomicrmw.start
+; OUTLINE-ATOMICS-NEXT:  .LBB[[LOOPSTART:.*]]: // %atomicrmw.start
 ; OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
 ; OUTLINE-ATOMICS-NEXT:    ldaxr x9, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cmp x9, x0
 ; OUTLINE-ATOMICS-NEXT:    csel x9, x9, x0, ls
 ; OUTLINE-ATOMICS-NEXT:    stlxr w10, x9, [x8]
-; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB367_1
+; OUTLINE-ATOMICS-NEXT:    cbnz w10, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
 ; OUTLINE-ATOMICS-NEXT:    ret
    atomicrmw umin i64* @var64, i64 %offset seq_cst
@@ -9297,4 +9436,14 @@ define dso_local void @test_atomic_load_xor_i64_noret_seq_cst(i64 %offset) nounw
   ret void
 }
 
+define dso_local i128 @test_atomic_load_i128() nounwind {
+; CHECK-LABEL: test_atomic_load_i128:
+; CHECK: ldxp
+; CHECK: stxp
 
+; OUTLINE-ATOMICS-LABEL: test_atomic_load_i128:
+; OUTLINE-ATOMICS: ldxp
+; OUTLINE-ATOMICS: stxp
+   %pair = load atomic i128, i128* @var128 monotonic, align 16
+   ret i128 %pair
+}

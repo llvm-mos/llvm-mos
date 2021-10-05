@@ -20,6 +20,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -170,8 +171,8 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 }
 
 /// Get the latch condition instruction.
-static ICmpInst *getLatchCmpInst(const Loop &L) {
-  if (BasicBlock *Latch = L.getLoopLatch())
+ICmpInst *Loop::getLatchCmpInst() const {
+  if (BasicBlock *Latch = getLoopLatch())
     if (BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator()))
       if (BI->isConditional())
         return dyn_cast<ICmpInst>(BI->getCondition());
@@ -182,7 +183,7 @@ static ICmpInst *getLatchCmpInst(const Loop &L) {
 /// Return the final value of the loop induction variable if found.
 static Value *findFinalIVValue(const Loop &L, const PHINode &IndVar,
                                const Instruction &StepInst) {
-  ICmpInst *LatchCmpInst = getLatchCmpInst(L);
+  ICmpInst *LatchCmpInst = L.getLatchCmpInst();
   if (!LatchCmpInst)
     return nullptr;
 
@@ -296,7 +297,7 @@ PHINode *Loop::getInductionVariable(ScalarEvolution &SE) const {
 
   BasicBlock *Header = getHeader();
   assert(Header && "Expected a valid loop header");
-  ICmpInst *CmpInst = getLatchCmpInst(*this);
+  ICmpInst *CmpInst = getLatchCmpInst();
   if (!CmpInst)
     return nullptr;
 
@@ -380,10 +381,6 @@ BranchInst *Loop::getLoopGuardBranch() const {
   if (!ExitFromLatch)
     return nullptr;
 
-  BasicBlock *ExitFromLatchSucc = ExitFromLatch->getUniqueSuccessor();
-  if (!ExitFromLatchSucc)
-    return nullptr;
-
   BasicBlock *GuardBB = Preheader->getUniquePredecessor();
   if (!GuardBB)
     return nullptr;
@@ -397,7 +394,17 @@ BranchInst *Loop::getLoopGuardBranch() const {
   BasicBlock *GuardOtherSucc = (GuardBI->getSuccessor(0) == Preheader)
                                    ? GuardBI->getSuccessor(1)
                                    : GuardBI->getSuccessor(0);
-  return (GuardOtherSucc == ExitFromLatchSucc) ? GuardBI : nullptr;
+
+  // Check if ExitFromLatch (or any BasicBlock which is an empty unique
+  // successor of ExitFromLatch) is equal to GuardOtherSucc. If
+  // skipEmptyBlockUntil returns GuardOtherSucc, then the guard branch for the
+  // loop is GuardBI (return GuardBI), otherwise return nullptr.
+  if (&LoopNest::skipEmptyBlockUntil(ExitFromLatch, GuardOtherSucc,
+                                     /*CheckUniquePred=*/true) ==
+      GuardOtherSucc)
+    return GuardBI;
+  else
+    return nullptr;
 }
 
 bool Loop::isCanonical(ScalarEvolution &SE) const {
@@ -662,7 +669,7 @@ Loop::LocRange Loop::getLocRange() const {
 LLVM_DUMP_METHOD void Loop::dump() const { print(dbgs()); }
 
 LLVM_DUMP_METHOD void Loop::dumpVerbose() const {
-  print(dbgs(), /*Depth=*/0, /*Verbose=*/true);
+  print(dbgs(), /*Verbose=*/true);
 }
 #endif
 
@@ -1037,6 +1044,77 @@ MDNode *llvm::findOptionMDForLoopID(MDNode *LoopID, StringRef Name) {
 
 MDNode *llvm::findOptionMDForLoop(const Loop *TheLoop, StringRef Name) {
   return findOptionMDForLoopID(TheLoop->getLoopID(), Name);
+}
+
+/// Find string metadata for loop
+///
+/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
+/// operand or null otherwise.  If the string metadata is not found return
+/// Optional's not-a-value.
+Optional<const MDOperand *> llvm::findStringMetadataForLoop(const Loop *TheLoop,
+                                                            StringRef Name) {
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    return nullptr;
+  case 2:
+    return &MD->getOperand(1);
+  default:
+    llvm_unreachable("loop metadata has 0 or 1 operand");
+  }
+}
+
+Optional<bool> llvm::getOptionalBoolLoopAttribute(const Loop *TheLoop,
+                                                  StringRef Name) {
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    // When the value is absent it is interpreted as 'attribute set'.
+    return true;
+  case 2:
+    if (ConstantInt *IntMD =
+            mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+      return IntMD->getZExtValue();
+    return true;
+  }
+  llvm_unreachable("unexpected number of options");
+}
+
+bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
+  return getOptionalBoolLoopAttribute(TheLoop, Name).getValueOr(false);
+}
+
+llvm::Optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
+                                                      StringRef Name) {
+  const MDOperand *AttrMD =
+      findStringMetadataForLoop(TheLoop, Name).getValueOr(nullptr);
+  if (!AttrMD)
+    return None;
+
+  ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(AttrMD->get());
+  if (!IntMD)
+    return None;
+
+  return IntMD->getSExtValue();
+}
+
+int llvm::getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
+                              int Default) {
+  return getOptionalIntLoopAttribute(TheLoop, Name).getValueOr(Default);
+}
+
+static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
+
+bool llvm::hasMustProgress(const Loop *L) {
+  return getBooleanLoopAttribute(L, LLVMLoopMustProgress);
+}
+
+bool llvm::isMustProgress(const Loop *L) {
+  return L->getHeader()->getParent()->mustProgress() || hasMustProgress(L);
 }
 
 bool llvm::isValidAsAccessGroup(MDNode *Node) {

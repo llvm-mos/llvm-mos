@@ -52,6 +52,10 @@
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 
+#if defined(_WIN32)
+#include "llvm/Config/config.h"
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;
@@ -83,12 +87,16 @@ bool ShouldAddLine(uint32_t requested_line, uint32_t actual_line,
 
 static bool ShouldUseNativeReader() {
 #if defined(_WIN32)
+#if LLVM_ENABLE_DIA_SDK
   llvm::StringRef use_native = ::getenv("LLDB_USE_NATIVE_PDB_READER");
-  return use_native.equals_lower("on") || use_native.equals_lower("yes") ||
-         use_native.equals_lower("1") || use_native.equals_lower("true");
-#else
-  return true;
+  if (!use_native.equals_insensitive("on") &&
+      !use_native.equals_insensitive("yes") &&
+      !use_native.equals_insensitive("1") &&
+      !use_native.equals_insensitive("true"))
+    return false;
 #endif
+#endif
+  return true;
 }
 
 void SymbolFilePDB::Initialize() {
@@ -128,7 +136,7 @@ SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
 SymbolFilePDB::SymbolFilePDB(lldb::ObjectFileSP objfile_sp)
     : SymbolFile(std::move(objfile_sp)), m_session_up(), m_global_scope_up() {}
 
-SymbolFilePDB::~SymbolFilePDB() {}
+SymbolFilePDB::~SymbolFilePDB() = default;
 
 uint32_t SymbolFilePDB::CalculateAbilities() {
   uint32_t abilities = 0;
@@ -784,10 +792,12 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
 }
 
 uint32_t SymbolFilePDB::ResolveSymbolContext(
-    const lldb_private::FileSpec &file_spec, uint32_t line, bool check_inlines,
+    const lldb_private::SourceLocationSpec &src_location_spec,
     SymbolContextItem resolve_scope, lldb_private::SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t old_size = sc_list.GetSize();
+  const FileSpec &file_spec = src_location_spec.GetFileSpec();
+  const uint32_t line = src_location_spec.GetLine().getValueOr(0);
   if (resolve_scope & lldb::eSymbolContextCompUnit) {
     // Locate all compilation units with line numbers referencing the specified
     // file.  For example, if `file_spec` is <vector>, then this should return
@@ -806,7 +816,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
       // this file unless the FileSpec matches. For inline functions, we don't
       // have to match the FileSpec since they could be defined in headers
       // other than file specified in FileSpec.
-      if (!check_inlines) {
+      if (!src_location_spec.GetCheckInlines()) {
         std::string source_file = compiland->getSourceFileFullPath();
         if (source_file.empty())
           continue;
@@ -1708,8 +1718,6 @@ lldb_private::ConstString SymbolFilePDB::GetPluginName() {
   return g_name;
 }
 
-uint32_t SymbolFilePDB::GetPluginVersion() { return 1; }
-
 IPDBSession &SymbolFilePDB::GetPDBSession() { return *m_session_up; }
 
 const IPDBSession &SymbolFilePDB::GetPDBSession() const {
@@ -1813,7 +1821,7 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
             sequence.get(), prev_addr + prev_length, prev_line, 0,
             prev_source_idx, false, false, false, false, true);
 
-        line_table->InsertSequence(sequence.release());
+        line_table->InsertSequence(sequence.get());
         sequence = line_table->CreateLineSequenceContainer();
       }
 

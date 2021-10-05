@@ -54,8 +54,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("now");
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
-  if (llvm::sys::path::filename(Exec).equals_lower("ld.lld") ||
-      llvm::sys::path::stem(Exec).equals_lower("ld.lld")) {
+  if (llvm::sys::path::filename(Exec).equals_insensitive("ld.lld") ||
+      llvm::sys::path::stem(Exec).equals_insensitive("ld.lld")) {
     CmdArgs.push_back("-z");
     CmdArgs.push_back("rodynamic");
     CmdArgs.push_back("-z");
@@ -189,13 +189,9 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
     std::vector<std::string> FP;
-    if (D.CCCIsCXX()) {
-      if (auto CXXStdlibPath = getCXXStdlibPath()) {
-        SmallString<128> P(*CXXStdlibPath);
-        llvm::sys::path::append(P, M.gccSuffix());
-        FP.push_back(std::string(P.str()));
-      }
-    }
+    SmallString<128> P(getStdlibPath());
+    llvm::sys::path::append(P, M.gccSuffix());
+    FP.push_back(std::string(P.str()));
     return FP;
   };
 
@@ -246,6 +242,8 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
                           .flag("+fsanitize=hwaddress")
                           .flag("-fexceptions")
                           .flag("+fno-exceptions"));
+  // Use Itanium C++ ABI for the compat multilib.
+  Multilibs.push_back(Multilib("compat", {}, {}, 12).flag("+fc++-abi=itanium"));
 
   Multilibs.FilterOut([&](const Multilib &M) {
     std::vector<std::string> RD = FilePaths(M);
@@ -267,6 +265,8 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
                    options::OPT_fno_experimental_relative_cxx_abi_vtables,
                    /*default=*/false),
       "fexperimental-relative-c++-abi-vtables", Flags);
+  addMultilibFlag(Args.getLastArgValue(options::OPT_fcxx_abi_EQ) == "itanium",
+                  "fc++-abi=itanium", Flags);
 
   Multilibs.setFilePathsCallback(FilePaths);
 
@@ -362,11 +362,31 @@ void Fuchsia::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  const Driver &D = getDriver();
+  std::string Target = getTripleString();
+
+  auto AddCXXIncludePath = [&](StringRef Path) {
+    std::string Version = detectLibcxxVersion(Path);
+    if (Version.empty())
+      return;
+
+    // First add the per-target include path.
+    SmallString<128> TargetDir(Path);
+    llvm::sys::path::append(TargetDir, Target, "c++", Version);
+    if (getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+
+    // Second add the generic one.
+    SmallString<128> Dir(Path);
+    llvm::sys::path::append(Dir, "c++", Version);
+    addSystemInclude(DriverArgs, CC1Args, Dir);
+  };
+
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
-    SmallString<128> P(getDriver().Dir);
-    llvm::sys::path::append(P, "..", "include", "c++", "v1");
-    addSystemInclude(DriverArgs, CC1Args, P.str());
+    SmallString<128> P(D.Dir);
+    llvm::sys::path::append(P, "..", "include");
+    AddCXXIncludePath(P);
     break;
   }
 
@@ -416,14 +436,4 @@ SanitizerMask Fuchsia::getDefaultSanitizers() const {
     break;
   }
   return Res;
-}
-
-void Fuchsia::addProfileRTLibs(const llvm::opt::ArgList &Args,
-                               llvm::opt::ArgStringList &CmdArgs) const {
-  // Add linker option -u__llvm_profile_runtime to cause runtime
-  // initialization module to be linked in.
-  if (needsProfileRT(Args))
-    CmdArgs.push_back(Args.MakeArgString(
-        Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
-  ToolChain::addProfileRTLibs(Args, CmdArgs);
 }

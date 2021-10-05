@@ -286,7 +286,7 @@ static unsigned HashMachineInstr(const MachineInstr &MI) {
 
 /// HashEndOfMBB - Hash the last instruction in the MBB.
 static unsigned HashEndOfMBB(const MachineBasicBlock &MBB) {
-  MachineBasicBlock::const_iterator I = MBB.getLastNonDebugInstr();
+  MachineBasicBlock::const_iterator I = MBB.getLastNonDebugInstr(false);
   if (I == MBB.end())
     return 0;
 
@@ -566,9 +566,9 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   // Move the iterators to the beginning of the MBB if we only got debug
   // instructions before the tail. This is to avoid splitting a block when we
   // only got debug instructions before the tail (to be invariant on -g).
-  if (skipDebugInstructionsForward(MBB1->begin(), MBB1->end()) == I1)
+  if (skipDebugInstructionsForward(MBB1->begin(), MBB1->end(), false) == I1)
     I1 = MBB1->begin();
-  if (skipDebugInstructionsForward(MBB2->begin(), MBB2->end()) == I2)
+  if (skipDebugInstructionsForward(MBB2->begin(), MBB2->end(), false) == I2)
     I2 = MBB2->begin();
 
   bool FullBlockTail1 = I1 == MBB1->begin();
@@ -611,7 +611,7 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   // there are fallthroughs, and we don't know until after layout.
   if (AfterPlacement && FullBlockTail1 && FullBlockTail2) {
     auto BothFallThrough = [](MachineBasicBlock *MBB) {
-      if (MBB->succ_size() != 0 && !MBB->canFallThrough())
+      if (!MBB->succ_empty() && !MBB->canFallThrough())
         return false;
       MachineFunction::iterator I(MBB);
       MachineFunction *MF = MBB->getParent();
@@ -1198,14 +1198,13 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
   // Renumbering blocks alters EH scope membership, recalculate it.
   EHScopeMembership = getEHScopeMembership(MF);
 
-  for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
-       I != E; ) {
-    MachineBasicBlock *MBB = &*I++;
-    MadeChange |= OptimizeBlock(MBB);
+  for (MachineBasicBlock &MBB :
+       llvm::make_early_inc_range(llvm::drop_begin(MF))) {
+    MadeChange |= OptimizeBlock(&MBB);
 
     // If it is dead, remove it.
-    if (MBB->pred_empty()) {
-      RemoveDeadBlock(MBB);
+    if (MBB.pred_empty()) {
+      RemoveDeadBlock(&MBB);
       MadeChange = true;
       ++NumDeadBlocks;
     }
@@ -1307,16 +1306,6 @@ static void salvageDebugInfoFromEmptyBlock(const TargetInstrInfo *TII,
   for (MachineBasicBlock *PredBB : MBB.predecessors())
     if (PredBB->succ_size() == 1)
       copyDebugInfoToPredecessor(TII, MBB, *PredBB);
-
-  // For AutoFDO, if the block is removed, we won't be able to sample it. To
-  // avoid assigning a zero weight for BB, move all its pseudo probes into once
-  // of its predecessors or successors and mark them dangling. This should allow
-  // the counts inference a chance to get a more reasonable weight for the
-  // block.
-  if (!MBB.pred_empty())
-    MBB.moveAndDanglePseudoProbes(*MBB.pred_begin());
-  else if (!MBB.succ_empty())
-    MBB.moveAndDanglePseudoProbes(*MBB.succ_begin());
 }
 
 bool BranchFolder::OptimizeBlock(MachineBasicBlock *MBB) {
@@ -1763,10 +1752,8 @@ ReoptimizeBlock:
 
 bool BranchFolder::HoistCommonCode(MachineFunction &MF) {
   bool MadeChange = false;
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ) {
-    MachineBasicBlock *MBB = &*I++;
-    MadeChange |= HoistCommonCodeInSuccs(MBB);
-  }
+  for (MachineBasicBlock &MBB : llvm::make_early_inc_range(MF))
+    MadeChange |= HoistCommonCodeInSuccs(&MBB);
 
   return MadeChange;
 }
@@ -1929,8 +1916,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator FIE = FBB->end();
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
-    TIB = skipDebugInstructionsForward(TIB, TIE);
-    FIB = skipDebugInstructionsForward(FIB, FIE);
+    TIB = skipDebugInstructionsForward(TIB, TIE, false);
+    FIB = skipDebugInstructionsForward(FIB, FIE, false);
     if (TIB == TIE || FIB == FIE)
       break;
 

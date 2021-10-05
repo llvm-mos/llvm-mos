@@ -219,9 +219,7 @@ void internal__exit(int exitcode) {
   _exit(exitcode);
 }
 
-unsigned int internal_sleep(unsigned int seconds) {
-  return sleep(seconds);
-}
+void internal_usleep(u64 useconds) { usleep(useconds); }
 
 uptr internal_getpid() {
   return getpid();
@@ -511,24 +509,12 @@ void MprotectMallocZones(void *addr, int prot) {
   }
 }
 
-BlockingMutex::BlockingMutex() {
-  internal_memset(this, 0, sizeof(*this));
+void FutexWait(atomic_uint32_t *p, u32 cmp) {
+  // FIXME: implement actual blocking.
+  sched_yield();
 }
 
-void BlockingMutex::Lock() {
-  CHECK(sizeof(OSSpinLock) <= sizeof(opaque_storage_));
-  CHECK_EQ(OS_SPINLOCK_INIT, 0);
-  CHECK_EQ(owner_, 0);
-  OSSpinLockLock((OSSpinLock*)&opaque_storage_);
-}
-
-void BlockingMutex::Unlock() {
-  OSSpinLockUnlock((OSSpinLock*)&opaque_storage_);
-}
-
-void BlockingMutex::CheckLocked() {
-  CHECK_NE(*(OSSpinLock*)&opaque_storage_, 0);
-}
+void FutexWake(atomic_uint32_t *p, u32 count) {}
 
 u64 NanoTime() {
   timeval tv;
@@ -546,6 +532,9 @@ u64 MonotonicNanoTime() {
 
 uptr GetTlsSize() {
   return 0;
+}
+
+void InitTlsSize() {
 }
 
 uptr TlsBaseAddr() {
@@ -776,8 +765,8 @@ void *internal_start_thread(void *(*func)(void *arg), void *arg) {
 void internal_join_thread(void *th) { pthread_join((pthread_t)th, 0); }
 
 #if !SANITIZER_GO
-static BlockingMutex syslog_lock(LINKER_INITIALIZED);
-#endif
+static Mutex syslog_lock;
+#  endif
 
 void WriteOneLineToSyslog(const char *s) {
 #if !SANITIZER_GO
@@ -792,7 +781,7 @@ void WriteOneLineToSyslog(const char *s) {
 
 // buffer to store crash report application information
 static char crashreporter_info_buff[__sanitizer::kErrorMessageBufferSize] = {};
-static BlockingMutex crashreporter_info_mutex(LINKER_INITIALIZED);
+static Mutex crashreporter_info_mutex;
 
 extern "C" {
 // Integrate with crash reporter libraries.
@@ -822,7 +811,7 @@ asm(".desc ___crashreporter_info__, 0x10");
 }  // extern "C"
 
 static void CRAppendCrashLogMessage(const char *msg) {
-  BlockingMutexLock l(&crashreporter_info_mutex);
+  Lock l(&crashreporter_info_mutex);
   internal_strlcat(crashreporter_info_buff, msg,
                    sizeof(crashreporter_info_buff));
 #if HAVE_CRASHREPORTERCLIENT_H
@@ -866,7 +855,7 @@ void LogFullErrorReport(const char *buffer) {
   // the reporting thread holds the thread registry mutex, and asl_log waits
   // for GCD to dispatch a new thread, the process will deadlock, because the
   // pthread_create wrapper needs to acquire the lock as well.
-  BlockingMutexLock l(&syslog_lock);
+  Lock l(&syslog_lock);
   if (common_flags()->log_to_syslog)
     WriteToSyslog(buffer);
 
@@ -1181,26 +1170,35 @@ static uptr GetTaskInfoMaxAddress() {
 
 uptr GetMaxUserVirtualAddress() {
   static uptr max_vm = GetTaskInfoMaxAddress();
-  if (max_vm != 0)
-    return max_vm - 1;
+  if (max_vm != 0) {
+    const uptr ret_value = max_vm - 1;
+    CHECK_LE(ret_value, SANITIZER_MMAP_RANGE_SIZE);
+    return ret_value;
+  }
 
   // xnu cannot provide vm address limit
 # if SANITIZER_WORDSIZE == 32
-  return 0xffe00000 - 1;
+  constexpr uptr fallback_max_vm = 0xffe00000 - 1;
 # else
-  return 0x200000000 - 1;
+  constexpr uptr fallback_max_vm = 0x200000000 - 1;
 # endif
+  static_assert(fallback_max_vm <= SANITIZER_MMAP_RANGE_SIZE,
+                "Max virtual address must be less than mmap range size.");
+  return fallback_max_vm;
 }
 
 #else // !SANITIZER_IOS
 
 uptr GetMaxUserVirtualAddress() {
 # if SANITIZER_WORDSIZE == 64
-  return (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
+  constexpr uptr max_vm = (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
 # else // SANITIZER_WORDSIZE == 32
   static_assert(SANITIZER_WORDSIZE == 32, "Wrong wordsize");
-  return (1ULL << 32) - 1;  // 0xffffffff;
+  constexpr uptr max_vm = (1ULL << 32) - 1;  // 0xffffffff;
 # endif
+  static_assert(max_vm <= SANITIZER_MMAP_RANGE_SIZE,
+                "Max virtual address must be less than mmap range size.");
+  return max_vm;
 }
 #endif
 

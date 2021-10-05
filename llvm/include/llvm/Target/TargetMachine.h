@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGET_TARGETMACHINE_H
 #define LLVM_TARGET_TARGETMACHINE_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
@@ -20,6 +21,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
@@ -109,6 +111,9 @@ protected: // Can only create subclasses.
 
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
+
+  // PGO related tunables.
+  Optional<PGOOptions> PGOOption = None;
 
 public:
   const TargetOptions DefaultOptions;
@@ -303,6 +308,9 @@ public:
     return false;
   }
 
+  void setPGOOption(Optional<PGOOptions> PGOOpt) { PGOOption = PGOOpt; }
+  const Optional<PGOOptions> &getPGOOption() const { return PGOOption; }
+
   /// If the specified generic pointer could be assumed as a pointer to a
   /// specific address space, return that address space.
   ///
@@ -330,8 +338,7 @@ public:
 
   /// Allow the target to modify the pass pipeline with New Pass Manager
   /// (similar to adjustPassManager for Legacy Pass manager).
-  virtual void registerPassBuilderCallbacks(PassBuilder &,
-                                            bool DebugPassManager) {}
+  virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.

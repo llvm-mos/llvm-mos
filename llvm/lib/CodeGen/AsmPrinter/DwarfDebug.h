@@ -440,7 +440,11 @@ private:
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;
   AccelTable<AppleAccelTableTypeData> AccelTypes;
 
-  // Identify a debugger for "tuning" the debug info.
+  /// Identify a debugger for "tuning" the debug info.
+  ///
+  /// The "tuning" should be used to set defaults for individual feature flags
+  /// in DwarfDebug; if a given feature has a more specific command-line option,
+  /// that option should take precedence over the tuning.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
@@ -466,9 +470,6 @@ private:
 
   /// Construct a DIE for this abstract scope.
   void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
-
-  /// Construct a DIE for the subprogram definition \p SP and return it.
-  DIE &constructSubprogramDefinitionDIE(const DISubprogram *SP);
 
   /// Construct DIEs for call site entries describing the calls in \p MF.
   void constructCallSiteEntryDIEs(const DISubprogram &SP, DwarfCompileUnit &CU,
@@ -611,7 +612,7 @@ private:
                          DenseSet<InlinedEntity> &ProcessedVars);
 
   /// Build the location list for all DBG_VALUEs in the
-  /// function that describe the same variable. If the resulting 
+  /// function that describe the same variable. If the resulting
   /// list has only one entry that is valid for entire variable's
   /// scope return true.
   bool buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
@@ -630,6 +631,9 @@ protected:
 
   /// Gather and emit post-function debug information.
   void endFunctionImpl(const MachineFunction *MF) override;
+
+  /// Get Dwarf compile unit ID for line table.
+  unsigned getDwarfCompileUnitIDForLineTable(const DwarfCompileUnit &CU);
 
   void skippedNonDebugFunction() override;
 
@@ -834,6 +838,7 @@ public:
   bool tuneForGDB() const { return DebuggerTuning == DebuggerKind::GDB; }
   bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
   bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
+  bool tuneForDBX() const { return DebuggerTuning == DebuggerKind::DBX; }
   /// @}
 
   const MCSymbol *getSectionLabel(const MCSection *S);

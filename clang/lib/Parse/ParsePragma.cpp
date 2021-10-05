@@ -405,9 +405,11 @@ void Parser::initializePragmaHandlers() {
 
   UnrollHintHandler = std::make_unique<PragmaUnrollHintHandler>("unroll");
   PP.AddPragmaHandler(UnrollHintHandler.get());
+  PP.AddPragmaHandler("GCC", UnrollHintHandler.get());
 
   NoUnrollHintHandler = std::make_unique<PragmaUnrollHintHandler>("nounroll");
   PP.AddPragmaHandler(NoUnrollHintHandler.get());
+  PP.AddPragmaHandler("GCC", NoUnrollHintHandler.get());
 
   UnrollAndJamHintHandler =
       std::make_unique<PragmaUnrollHintHandler>("unroll_and_jam");
@@ -523,9 +525,11 @@ void Parser::resetPragmaHandlers() {
   LoopHintHandler.reset();
 
   PP.RemovePragmaHandler(UnrollHintHandler.get());
+  PP.RemovePragmaHandler("GCC", UnrollHintHandler.get());
   UnrollHintHandler.reset();
 
   PP.RemovePragmaHandler(NoUnrollHintHandler.get());
+  PP.RemovePragmaHandler("GCC", NoUnrollHintHandler.get());
   NoUnrollHintHandler.reset();
 
   PP.RemovePragmaHandler(UnrollAndJamHintHandler.get());
@@ -788,11 +792,9 @@ void Parser::HandlePragmaOpenCLExtension() {
       // Therefore, it should never be added by default.
       Opt.acceptsPragma(Name);
     }
-    Actions.setCurrentOpenCLExtension(Name);
   } else if (State == End) {
-    if (Name != Actions.getCurrentOpenCLExtension())
-      PP.Diag(NameLoc, diag::warn_pragma_begin_end_mismatch);
-    Actions.setCurrentOpenCLExtension("");
+    // There is no behavior for this directive. We only accept this for
+    // backward compatibility.
   } else if (!Opt.isKnown(Name) || !Opt.isWithPragma(Name))
     PP.Diag(NameLoc, diag::warn_pragma_unknown_extension) << Ident;
   else if (Opt.isSupportedExtension(Name, getLangOpts()))
@@ -1589,6 +1591,15 @@ void Parser::HandlePragmaAttribute() {
       return SkipToEnd();
     if (ExpectAndConsume(tok::l_paren, diag::err_expected_lparen_after, "("))
       return SkipToEnd();
+
+    // FIXME: The practical usefulness of completion here is limited because
+    // we only get here if the line has balanced parens.
+    if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      // FIXME: suppress completion of unsupported attributes?
+      Actions.CodeCompleteAttribute(AttributeCommonInfo::Syntax::AS_GNU);
+      return SkipToEnd();
+    }
 
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_pragma_attribute_expected_attribute_name);

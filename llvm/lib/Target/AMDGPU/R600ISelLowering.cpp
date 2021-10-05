@@ -13,11 +13,12 @@
 
 #include "R600ISelLowering.h"
 #include "AMDGPU.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 
@@ -451,9 +452,9 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
   default: return AMDGPUTargetLowering::LowerOperation(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return LowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::INSERT_VECTOR_ELT: return LowerINSERT_VECTOR_ELT(Op, DAG);
-  case ISD::SHL_PARTS: return LowerSHLParts(Op, DAG);
+  case ISD::SHL_PARTS:
   case ISD::SRA_PARTS:
-  case ISD::SRL_PARTS: return LowerSRXParts(Op, DAG);
+  case ISD::SRL_PARTS: return LowerShiftParts(Op, DAG);
   case ISD::UADDO: return LowerUADDSUBO(Op, DAG, ISD::ADD, AMDGPUISD::CARRY);
   case ISD::USUBO: return LowerUADDSUBO(Op, DAG, ISD::SUB, AMDGPUISD::BORROW);
   case ISD::FCOS:
@@ -765,78 +766,11 @@ SDValue R600TargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
       DAG.getConstantFP(numbers::pif, DL, MVT::f32));
 }
 
-SDValue R600TargetLowering::LowerSHLParts(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-
-  SDValue Lo = Op.getOperand(0);
-  SDValue Hi = Op.getOperand(1);
-  SDValue Shift = Op.getOperand(2);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue One  = DAG.getConstant(1, DL, VT);
-
-  SDValue Width  = DAG.getConstant(VT.getSizeInBits(), DL, VT);
-  SDValue Width1 = DAG.getConstant(VT.getSizeInBits() - 1, DL, VT);
-  SDValue BigShift  = DAG.getNode(ISD::SUB, DL, VT, Shift, Width);
-  SDValue CompShift = DAG.getNode(ISD::SUB, DL, VT, Width1, Shift);
-
-  // The dance around Width1 is necessary for 0 special case.
-  // Without it the CompShift might be 32, producing incorrect results in
-  // Overflow. So we do the shift in two steps, the alternative is to
-  // add a conditional to filter the special case.
-
-  SDValue Overflow = DAG.getNode(ISD::SRL, DL, VT, Lo, CompShift);
-  Overflow = DAG.getNode(ISD::SRL, DL, VT, Overflow, One);
-
-  SDValue HiSmall = DAG.getNode(ISD::SHL, DL, VT, Hi, Shift);
-  HiSmall = DAG.getNode(ISD::OR, DL, VT, HiSmall, Overflow);
-  SDValue LoSmall = DAG.getNode(ISD::SHL, DL, VT, Lo, Shift);
-
-  SDValue HiBig = DAG.getNode(ISD::SHL, DL, VT, Lo, BigShift);
-  SDValue LoBig = Zero;
-
-  Hi = DAG.getSelectCC(DL, Shift, Width, HiSmall, HiBig, ISD::SETULT);
-  Lo = DAG.getSelectCC(DL, Shift, Width, LoSmall, LoBig, ISD::SETULT);
-
-  return DAG.getNode(ISD::MERGE_VALUES, DL, DAG.getVTList(VT,VT), Lo, Hi);
-}
-
-SDValue R600TargetLowering::LowerSRXParts(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-
-  SDValue Lo = Op.getOperand(0);
-  SDValue Hi = Op.getOperand(1);
-  SDValue Shift = Op.getOperand(2);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue One  = DAG.getConstant(1, DL, VT);
-
-  const bool SRA = Op.getOpcode() == ISD::SRA_PARTS;
-
-  SDValue Width  = DAG.getConstant(VT.getSizeInBits(), DL, VT);
-  SDValue Width1 = DAG.getConstant(VT.getSizeInBits() - 1, DL, VT);
-  SDValue BigShift  = DAG.getNode(ISD::SUB, DL, VT, Shift, Width);
-  SDValue CompShift = DAG.getNode(ISD::SUB, DL, VT, Width1, Shift);
-
-  // The dance around Width1 is necessary for 0 special case.
-  // Without it the CompShift might be 32, producing incorrect results in
-  // Overflow. So we do the shift in two steps, the alternative is to
-  // add a conditional to filter the special case.
-
-  SDValue Overflow = DAG.getNode(ISD::SHL, DL, VT, Hi, CompShift);
-  Overflow = DAG.getNode(ISD::SHL, DL, VT, Overflow, One);
-
-  SDValue HiSmall = DAG.getNode(SRA ? ISD::SRA : ISD::SRL, DL, VT, Hi, Shift);
-  SDValue LoSmall = DAG.getNode(ISD::SRL, DL, VT, Lo, Shift);
-  LoSmall = DAG.getNode(ISD::OR, DL, VT, LoSmall, Overflow);
-
-  SDValue LoBig = DAG.getNode(SRA ? ISD::SRA : ISD::SRL, DL, VT, Hi, BigShift);
-  SDValue HiBig = SRA ? DAG.getNode(ISD::SRA, DL, VT, Hi, Width1) : Zero;
-
-  Hi = DAG.getSelectCC(DL, Shift, Width, HiSmall, HiBig, ISD::SETULT);
-  Lo = DAG.getSelectCC(DL, Shift, Width, LoSmall, LoBig, ISD::SETULT);
-
-  return DAG.getNode(ISD::MERGE_VALUES, DL, DAG.getVTList(VT,VT), Lo, Hi);
+SDValue R600TargetLowering::LowerShiftParts(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDValue Lo, Hi;
+  expandShiftParts(Op.getNode(), Lo, Hi, DAG);
+  return DAG.getMergeValues({Lo, Hi}, SDLoc(Op));
 }
 
 SDValue R600TargetLowering::LowerUADDSUBO(SDValue Op, SelectionDAG &DAG,
@@ -894,7 +828,7 @@ SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,
 
 bool R600TargetLowering::isZero(SDValue Op) const {
   if(ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Op)) {
-    return Cst->isNullValue();
+    return Cst->isZero();
   } else if(ConstantFPSDNode *CstFP = dyn_cast<ConstantFPSDNode>(Op)){
     return CstFP->isZero();
   } else {
@@ -1631,7 +1565,7 @@ EVT R600TargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
 }
 
 bool R600TargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
-                                          const SelectionDAG &DAG) const {
+                                          const MachineFunction &MF) const {
   // Local and Private addresses do not handle vectors. Limit to i32
   if ((AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::PRIVATE_ADDRESS)) {
     return (MemVT.getSizeInBits() <= 32);

@@ -16,9 +16,11 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <utility>
 using namespace llvm;
@@ -610,15 +612,16 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
       return New;
   }
 
-  // When linking a global for an indirect symbol, it will always be linked.
-  // However we need to check if it was not already scheduled to satisfy a
-  // reference from a regular global value initializer. We know if it has been
-  // schedule if the "New" GlobalValue that is mapped here for the indirect
-  // symbol is the same as the one already mapped. If there is an entry in the
+  // If the global is being linked for an indirect symbol, it may have already
+  // been scheduled to satisfy a regular symbol. Similarly, a global being linked
+  // for a regular symbol may have already been scheduled for an indirect
+  // symbol. Check for these cases by looking in the other value map and
+  // confirming the same value has been scheduled.  If there is an entry in the
   // ValueMap but the value is different, it means that the value already had a
   // definition in the destination module (linkonce for instance), but we need a
-  // new definition for the indirect symbol ("New" will be different.
-  if (ForIndirectSymbol && ValueMap.lookup(SGV) == New)
+  // new definition for the indirect symbol ("New" will be different).
+  if ((ForIndirectSymbol && ValueMap.lookup(SGV) == New) ||
+      (!ForIndirectSymbol && IndirectSymbolValueMap.lookup(SGV) == New))
     return New;
 
   if (ForIndirectSymbol || shouldLink(New, *SGV))
@@ -646,12 +649,14 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
 
 AttributeList IRLinker::mapAttributeTypes(LLVMContext &C, AttributeList Attrs) {
   for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
-    for (Attribute::AttrKind TypedAttr :
-         {Attribute::ByVal, Attribute::StructRet, Attribute::ByRef,
-          Attribute::InAlloca}) {
-      if (Attrs.hasAttribute(i, TypedAttr)) {
-        if (Type *Ty = Attrs.getAttribute(i, TypedAttr).getValueAsType()) {
-          Attrs = Attrs.replaceAttributeType(C, i, TypedAttr, TypeMap.get(Ty));
+    for (int AttrIdx = Attribute::FirstTypeAttr;
+         AttrIdx <= Attribute::LastTypeAttr; AttrIdx++) {
+      Attribute::AttrKind TypedAttr = (Attribute::AttrKind)AttrIdx;
+      if (Attrs.hasAttributeAtIndex(i, TypedAttr)) {
+        if (Type *Ty =
+                Attrs.getAttributeAtIndex(i, TypedAttr).getValueAsType()) {
+          Attrs = Attrs.replaceAttributeTypeAtIndex(C, i, TypedAttr,
+                                                    TypeMap.get(Ty));
           break;
         }
       }
@@ -1206,6 +1211,10 @@ void IRLinker::linkNamedMDNodes() {
     // Don't link module flags here. Do them separately.
     if (&NMD == SrcModFlags)
       continue;
+    // Don't import pseudo probe descriptors here for thinLTO. They will be
+    // emitted by the originating module.
+    if (IsPerformingImport && NMD.getName() == PseudoProbeDescMetadataName)
+      continue;
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands())
@@ -1437,7 +1446,39 @@ Error IRLinker::run() {
   if (DstM.getDataLayout().isDefault())
     DstM.setDataLayout(SrcM->getDataLayout());
 
-  if (SrcM->getDataLayout() != DstM.getDataLayout()) {
+  // Copy the target triple from the source to dest if the dest's is empty.
+  if (DstM.getTargetTriple().empty() && !SrcM->getTargetTriple().empty())
+    DstM.setTargetTriple(SrcM->getTargetTriple());
+
+  Triple SrcTriple(SrcM->getTargetTriple()), DstTriple(DstM.getTargetTriple());
+
+  // During CUDA compilation we have to link with the bitcode supplied with
+  // CUDA. libdevice bitcode either has no data layout set (pre-CUDA-11), or has
+  // the layout that is different from the one used by LLVM/clang (it does not
+  // include i128). Issuing a warning is not very helpful as there's not much
+  // the user can do about it.
+  bool EnableDLWarning = true;
+  bool EnableTripleWarning = true;
+  if (SrcTriple.isNVPTX() && DstTriple.isNVPTX()) {
+    std::string ModuleId = SrcM->getModuleIdentifier();
+    StringRef FileName = llvm::sys::path::filename(ModuleId);
+    bool SrcIsLibDevice =
+        FileName.startswith("libdevice") && FileName.endswith(".10.bc");
+    bool SrcHasLibDeviceDL =
+        (SrcM->getDataLayoutStr().empty() ||
+         SrcM->getDataLayoutStr() == "e-i64:64-v16:16-v32:32-n16:32:64");
+    // libdevice bitcode uses nvptx64-nvidia-gpulibs or just
+    // 'nvptx-unknown-unknown' triple (before CUDA-10.x) and is compatible with
+    // all NVPTX variants.
+    bool SrcHasLibDeviceTriple = (SrcTriple.getVendor() == Triple::NVIDIA &&
+                                  SrcTriple.getOSName() == "gpulibs") ||
+                                 (SrcTriple.getVendorName() == "unknown" &&
+                                  SrcTriple.getOSName() == "unknown");
+    EnableTripleWarning = !(SrcIsLibDevice && SrcHasLibDeviceTriple);
+    EnableDLWarning = !(SrcIsLibDevice && SrcHasLibDeviceDL);
+  }
+
+  if (EnableDLWarning && (SrcM->getDataLayout() != DstM.getDataLayout())) {
     emitWarning("Linking two modules of different data layouts: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
                 SrcM->getDataLayoutStr() + "' whereas '" +
@@ -1445,13 +1486,7 @@ Error IRLinker::run() {
                 DstM.getDataLayoutStr() + "'\n");
   }
 
-  // Copy the target triple from the source to dest if the dest's is empty.
-  if (DstM.getTargetTriple().empty() && !SrcM->getTargetTriple().empty())
-    DstM.setTargetTriple(SrcM->getTargetTriple());
-
-  Triple SrcTriple(SrcM->getTargetTriple()), DstTriple(DstM.getTargetTriple());
-
-  if (!SrcM->getTargetTriple().empty()&&
+  if (EnableTripleWarning && !SrcM->getTargetTriple().empty() &&
       !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
@@ -1507,6 +1542,20 @@ Error IRLinker::run() {
         DstM.appendModuleInlineAsm(S);
       }
     });
+  }
+
+  // Reorder the globals just added to the destination module to match their
+  // original order in the source module.
+  Module::GlobalListType &Globals = DstM.getGlobalList();
+  for (GlobalVariable &GV : SrcM->globals()) {
+    if (GV.hasAppendingLinkage())
+      continue;
+    Value *NewValue = Mapper.mapValue(GV);
+    if (NewValue) {
+      auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
+      if (NewGV)
+        Globals.splice(Globals.end(), Globals, NewGV->getIterator());
+    }
   }
 
   // Merge the module flags into the DstM module.

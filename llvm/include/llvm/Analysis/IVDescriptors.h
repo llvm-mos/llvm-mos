@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_IVDESCRIPTORS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -69,9 +70,11 @@ public:
 
   RecurrenceDescriptor(Value *Start, Instruction *Exit, RecurKind K,
                        FastMathFlags FMF, Instruction *ExactFP, Type *RT,
-                       bool Signed, SmallPtrSetImpl<Instruction *> &CI)
+                       bool Signed, bool Ordered,
+                       SmallPtrSetImpl<Instruction *> &CI)
       : StartValue(Start), LoopExitInstr(Exit), Kind(K), FMF(FMF),
-        ExactFPMathInst(ExactFP), RecurrenceType(RT), IsSigned(Signed) {
+        ExactFPMathInst(ExactFP), RecurrenceType(RT), IsSigned(Signed),
+        IsOrdered(Ordered) {
     CastInsts.insert(CI.begin(), CI.end());
   }
 
@@ -114,7 +117,7 @@ public:
   /// compare instruction to the select instruction and stores this pointer in
   /// 'PatternLastInst' member of the returned struct.
   static InstDesc isRecurrenceInstr(Instruction *I, RecurKind Kind,
-                                    InstDesc &Prev, FastMathFlags FMF);
+                                    InstDesc &Prev, FastMathFlags FuncFMF);
 
   /// Returns true if instruction I has multiple uses in Insts
   static bool hasMultipleUsesOf(Instruction *I,
@@ -124,19 +127,21 @@ public:
   /// Returns true if all uses of the instruction I is within the Set.
   static bool areAllUsesIn(Instruction *I, SmallPtrSetImpl<Instruction *> &Set);
 
-  /// Returns a struct describing if the instruction is a
-  /// Select(ICmp(X, Y), X, Y) instruction pattern corresponding to a min(X, Y)
-  /// or max(X, Y). \p Prev specifies the description of an already processed
-  /// select instruction, so its corresponding cmp can be matched to it.
-  static InstDesc isMinMaxSelectCmpPattern(Instruction *I,
-                                           const InstDesc &Prev);
+  /// Returns a struct describing if the instruction is a llvm.(s/u)(min/max),
+  /// llvm.minnum/maxnum or a Select(ICmp(X, Y), X, Y) pair of instructions
+  /// corresponding to a min(X, Y) or max(X, Y), matching the recurrence kind \p
+  /// Kind. \p Prev specifies the description of an already processed select
+  /// instruction, so its corresponding cmp can be matched to it.
+  static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
+                                  const InstDesc &Prev);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
   static InstDesc isConditionalRdxPattern(RecurKind Kind, Instruction *I);
 
   /// Returns identity corresponding to the RecurrenceKind.
-  static Constant *getRecurrenceIdentity(RecurKind K, Type *Tp);
+  static Constant *getRecurrenceIdentity(RecurKind K, Type *Tp,
+                                         FastMathFlags FMF);
 
   /// Returns the opcode corresponding to the RecurrenceKind.
   static unsigned getOpcode(RecurKind Kind);
@@ -146,7 +151,7 @@ public:
   /// non-null, the minimal bit width needed to compute the reduction will be
   /// computed.
   static bool AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
-                              FastMathFlags FMF,
+                              FastMathFlags FuncFMF,
                               RecurrenceDescriptor &RedDes,
                               DemandedBits *DB = nullptr,
                               AssumptionCache *AC = nullptr,
@@ -171,7 +176,7 @@ public:
   /// to handle Phi as a first-order recurrence.
   static bool
   isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                         DenseMap<Instruction *, Instruction *> &SinkAfter,
+                         MapVector<Instruction *, Instruction *> &SinkAfter,
                          DominatorTree *DT);
 
   RecurKind getRecurrenceKind() const { return Kind; }
@@ -227,6 +232,9 @@ public:
   /// Returns true if all source operands of the recurrence are SExtInsts.
   bool isSigned() const { return IsSigned; }
 
+  /// Expose an ordered FP reduction to the instance users.
+  bool isOrdered() const { return IsOrdered; }
+
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
   /// be treated as a set of reductions instructions for in-loop reductions.
   SmallVector<Instruction *, 4> getReductionOpChain(PHINode *Phi,
@@ -249,6 +257,10 @@ private:
   Type *RecurrenceType = nullptr;
   // True if all source operands of the recurrence are SExtInsts.
   bool IsSigned = false;
+  // True if this recurrence can be treated as an in-order reduction.
+  // Currently only a non-reassociative FAdd can be considered in-order,
+  // if it is also the only FAdd in the PHI's use chain.
+  bool IsOrdered = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
 };
@@ -318,6 +330,11 @@ public:
                           : Instruction::BinaryOpsEnd;
   }
 
+  Type *getElementType() const {
+    assert(IK == IK_PtrInduction && "Only pointer induction has element type");
+    return ElementType;
+  }
+
   /// Returns a reference to the type cast instructions in the induction
   /// update chain, that are redundant when guarded with a runtime
   /// SCEV overflow check.
@@ -329,6 +346,7 @@ private:
   /// Private constructor - used by \c isInductionPHI.
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
                       BinaryOperator *InductionBinOp = nullptr,
+                      Type *ElementType = nullptr,
                       SmallVectorImpl<Instruction *> *Casts = nullptr);
 
   /// Start value.
@@ -339,6 +357,9 @@ private:
   const SCEV *Step = nullptr;
   // Instruction that advances induction variable.
   BinaryOperator *InductionBinOp = nullptr;
+  // Element type for pointer induction variables.
+  // TODO: This can be dropped once support for typed pointers is removed.
+  Type *ElementType = nullptr;
   // Instructions used for type-casts of the induction variable,
   // that are redundant when guarded with a runtime SCEV overflow check.
   SmallVector<Instruction *, 2> RedundantCasts;

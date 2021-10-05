@@ -514,7 +514,7 @@ ClangExpressionParser::ClangExpressionParser(
     LLDB_LOGF(log, "Using SIMD alignment: %d",
               target_info->getSimdDefaultAlign());
     LLDB_LOGF(log, "Target datalayout string: '%s'",
-              target_info->getDataLayout().getStringRepresentation().c_str());
+              target_info->getDataLayoutString());
     LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
     LLDB_LOGF(log, "Target vector alignment: %d",
               target_info->getMaxVectorAlign());
@@ -658,7 +658,8 @@ ClangExpressionParser::ClangExpressionParser(
   //
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
-  m_compiler->getTarget().adjust(m_compiler->getLangOpts());
+  m_compiler->getTarget().adjust(m_compiler->getDiagnostics(),
+		                 m_compiler->getLangOpts());
 
   // 6. Set up the diagnostic buffer for reporting errors
 
@@ -687,11 +688,11 @@ ClangExpressionParser::ClangExpressionParser(
     break;
   }
 
-  if (ClangModulesDeclVendor *decl_vendor =
-          target_sp->GetClangModulesDeclVendor()) {
-    if (auto *clang_persistent_vars = llvm::cast<ClangPersistentVariables>(
-            target_sp->GetPersistentExpressionStateForLanguage(
-                lldb::eLanguageTypeC))) {
+  if (auto *clang_persistent_vars = llvm::cast<ClangPersistentVariables>(
+          target_sp->GetPersistentExpressionStateForLanguage(
+              lldb::eLanguageTypeC))) {
+    if (std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
+            clang_persistent_vars->GetClangModulesDeclVendor()) {
       std::unique_ptr<PPCallbacks> pp_callbacks(
           new LLDBPreprocessorCallbacks(*decl_vendor, *clang_persistent_vars,
                                         m_compiler->getSourceManager()));
@@ -724,7 +725,7 @@ ClangExpressionParser::ClangExpressionParser(
       m_compiler->getCodeGenOpts(), *m_llvm_context));
 }
 
-ClangExpressionParser::~ClangExpressionParser() {}
+ClangExpressionParser::~ClangExpressionParser() = default;
 
 namespace {
 
@@ -1068,7 +1069,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     }
 
     if (temp_fd != -1) {
-      lldb_private::NativeFile file(temp_fd, File::eOpenOptionWrite, true);
+      lldb_private::NativeFile file(temp_fd, File::eOpenOptionWriteOnly, true);
       const size_t expr_text_len = strlen(expr_text);
       size_t bytes_written = expr_text_len;
       if (file.Write(expr_text, bytes_written).Success()) {

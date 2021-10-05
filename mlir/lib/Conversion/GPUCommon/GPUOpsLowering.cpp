@@ -14,10 +14,8 @@
 using namespace mlir;
 
 LogicalResult
-GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
-                                   ArrayRef<Value> operands,
+GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
                                    ConversionPatternRewriter &rewriter) const {
-  assert(operands.empty() && "func op is not expected to have operands");
   Location loc = gpuFuncOp.getLoc();
 
   SmallVector<LLVM::GlobalOp, 3> workgroupBuffers;
@@ -38,7 +36,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
     auto globalOp = rewriter.create<LLVM::GlobalOp>(
         gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
         LLVM::Linkage::Internal, name, /*value=*/Attribute(),
-        gpu::GPUDialect::getWorkgroupAddressSpace());
+        /*alignment=*/0, gpu::GPUDialect::getWorkgroupAddressSpace());
     workgroupBuffers.push_back(globalOp);
   }
 
@@ -58,7 +56,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
   SmallVector<NamedAttribute, 4> attributes;
   for (const auto &attr : gpuFuncOp->getAttrs()) {
     if (attr.first == SymbolTable::getSymbolAttrName() ||
-        attr.first == impl::getTypeAttrName() ||
+        attr.first == function_like_impl::getTypeAttrName() ||
         attr.first == gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
       continue;
     attributes.push_back(attr);
@@ -70,7 +68,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
     attributes.emplace_back(kernelAttributeName, rewriter.getUnitAttr());
   auto llvmFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       gpuFuncOp.getLoc(), gpuFuncOp.getName(), funcType,
-      LLVM::Linkage::External, attributes);
+      LLVM::Linkage::External, /*dsoLocal*/ false, attributes);
 
   {
     // Insert operations that correspond to converted workgroup and private

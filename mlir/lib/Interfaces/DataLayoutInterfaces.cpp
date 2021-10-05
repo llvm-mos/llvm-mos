@@ -13,6 +13,7 @@
 #include "mlir/IR/Operation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -22,7 +23,7 @@ using namespace mlir;
 
 /// Reports that the given type is missing the data layout information and
 /// exits.
-static LLVM_ATTRIBUTE_NORETURN void reportMissingDataLayout(Type type) {
+[[noreturn]] static void reportMissingDataLayout(Type type) {
   std::string message;
   llvm::raw_string_ostream os(message);
   os << "neither the scoping op nor the type class provide data layout "
@@ -52,6 +53,17 @@ unsigned mlir::detail::getDefaultTypeSizeInBits(Type type,
                                                 DataLayoutEntryListRef params) {
   if (type.isa<IntegerType, FloatType>())
     return type.getIntOrFloatBitWidth();
+
+  if (auto ctype = type.dyn_cast<ComplexType>()) {
+    auto et = ctype.getElementType();
+    auto innerAlignment =
+        getDefaultPreferredAlignment(et, dataLayout, params) * 8;
+    auto innerSize = getDefaultTypeSizeInBits(et, dataLayout, params);
+
+    // Include padding required to align the imaginary value in the complex
+    // type.
+    return llvm::alignTo(innerSize, innerAlignment) + innerSize;
+  }
 
   // Index is an integer of some bitwidth.
   if (type.isa<IndexType>())
@@ -92,6 +104,9 @@ unsigned mlir::detail::getDefaultABIAlignment(
                : 4;
   }
 
+  if (auto ctype = type.dyn_cast<ComplexType>())
+    return getDefaultABIAlignment(ctype.getElementType(), dataLayout, params);
+
   if (auto typeInterface = type.dyn_cast<DataLayoutTypeInterface>())
     return typeInterface.getABIAlignment(dataLayout, params);
 
@@ -109,6 +124,10 @@ unsigned mlir::detail::getDefaultPreferredAlignment(
   // (ABI alignment may be smaller).
   if (type.isa<IntegerType, IndexType>())
     return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type));
+
+  if (auto ctype = type.dyn_cast<ComplexType>())
+    return getDefaultPreferredAlignment(ctype.getElementType(), dataLayout,
+                                        params);
 
   if (auto typeInterface = type.dyn_cast<DataLayoutTypeInterface>())
     return typeInterface.getPreferredAlignment(dataLayout, params);
@@ -250,7 +269,7 @@ mlir::DataLayout::DataLayout() : DataLayout(ModuleOp()) {}
 
 mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
     : originalLayout(getCombinedDataLayout(op)), scope(op) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
 #endif
@@ -258,14 +277,27 @@ mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
 
 mlir::DataLayout::DataLayout(ModuleOp op)
     : originalLayout(getCombinedDataLayout(op)), scope(op) {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
 #endif
 }
 
+mlir::DataLayout mlir::DataLayout::closest(Operation *op) {
+  // Search the closest parent either being a module operation or implementing
+  // the data layout interface.
+  while (op) {
+    if (auto module = dyn_cast<ModuleOp>(op))
+      return DataLayout(module);
+    if (auto iface = dyn_cast<DataLayoutOpInterface>(op))
+      return DataLayout(iface);
+    op = op->getParentOp();
+  }
+  return DataLayout();
+}
+
 void mlir::DataLayout::checkValid() const {
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<DataLayoutSpecInterface> specs;
   collectParentLayouts(scope, specs);
   assert(specs.size() == layoutStack.size() &&
@@ -408,6 +440,11 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 
     const auto *iface =
         dialect->getRegisteredInterface<DataLayoutDialectInterface>();
+    if (!iface) {
+      return emitError(loc)
+             << "the '" << dialect->getNamespace()
+             << "' dialect does not support identifier data layout entries";
+    }
     if (failed(iface->verifyEntry(kvp.second, loc)))
       return failure();
   }

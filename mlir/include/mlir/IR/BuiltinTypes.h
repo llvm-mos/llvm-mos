@@ -9,8 +9,7 @@
 #ifndef MLIR_IR_BUILTINTYPES_H
 #define MLIR_IR_BUILTINTYPES_H
 
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Types.h"
+#include "SubElementInterfaces.h"
 
 namespace llvm {
 struct fltSemantics;
@@ -192,6 +191,12 @@ public:
 #define GET_TYPEDEF_CLASSES
 #include "mlir/IR/BuiltinTypes.h.inc"
 
+//===----------------------------------------------------------------------===//
+// Tablegen Interface Declarations
+//===----------------------------------------------------------------------===//
+
+#include "mlir/IR/BuiltinTypeInterfaces.h.inc"
+
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // MemRefType
@@ -266,7 +271,9 @@ inline bool BaseMemRefType::classof(Type type) {
 }
 
 inline bool BaseMemRefType::isValidElementType(Type type) {
-  return type.isIntOrIndexOrFloat() || type.isa<ComplexType, VectorType>();
+  return type.isIntOrIndexOrFloat() ||
+         type.isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>() ||
+         type.isa<MemRefElementTypeInterface>();
 }
 
 inline bool FloatType::classof(Type type) {
@@ -312,7 +319,7 @@ inline bool TensorType::classof(Type type) {
 //===----------------------------------------------------------------------===//
 
 /// Returns the strides of the MemRef if the layout map is in strided form.
-/// MemRefs with layout maps in strided form include:
+/// MemRefs with a layout map in strided form include:
 ///   1. empty or identity layout map, in which case the stride information is
 ///      the canonical form computed from sizes;
 ///   2. single affine map layout of the form `K + k0 * d0 + ... kn * dn`,
@@ -321,14 +328,13 @@ inline bool TensorType::classof(Type type) {
 /// A stride specification is a list of integer values that are either static
 /// or dynamic (encoded with getDynamicStrideOrOffset()). Strides encode the
 /// distance in the number of elements between successive entries along a
-/// particular dimension. For example, `memref<42x16xf32, (64 * d0 + d1)>`
-/// specifies a view into a non-contiguous memory region of `42` by `16` `f32`
-/// elements in which the distance between two consecutive elements along the
-/// outer dimension is `1` and the distance between two consecutive elements
-/// along the inner dimension is `64`.
+/// particular dimension.
 ///
-/// Returns whether a simple strided form can be extracted from the composition
-/// of the layout map.
+/// For example, `memref<42x16xf32, (64 * d0 + d1)>` specifies a view into a
+/// non-contiguous memory region of `42` by `16` `f32` elements in which the
+/// distance between two consecutive elements along the outer dimension is `1`
+/// and the distance between two consecutive elements along the inner dimension
+/// is `64`.
 ///
 /// The convention is that the strides for dimensions d0, .. dn appear in
 /// order to make indexing intuitive into the result.

@@ -1,4 +1,4 @@
-//===- ReduceAttributes.cpp - Specialized Delta Pass -------------------===//
+//===- ReduceAttributes.cpp - Specialized Delta Pass ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -84,7 +84,7 @@ public:
                           AttrPtrVecVecTy &AttributeSetsToPreserve) {
     assert(AttributeSetsToPreserve.empty() && "Should not be sharing vectors.");
     AttributeSetsToPreserve.reserve(AL.getNumAttrSets());
-    for (unsigned SetIdx : seq(AL.index_begin(), AL.index_end())) {
+    for (unsigned SetIdx : AL.indexes()) {
       AttrPtrIdxVecVecTy AttributesToPreserve;
       AttributesToPreserve.first = SetIdx;
       visitAttributeSet(AL.getAttributes(AttributesToPreserve.first),

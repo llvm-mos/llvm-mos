@@ -58,6 +58,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfWindows
     @expectedFailureNetBSD
     @expectedFailureDarwin # No signals delivered
+    @skipIfAsan # Times out under asan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_process_without_tid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -69,6 +71,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipUnlessPlatform(["netbsd"])
     @expectedFailureNetBSD
+    @skipIfAsan # Times out under asan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_one_thread(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -82,6 +86,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfWindows
     @expectedFailureNetBSD
     @expectedFailureDarwin # Only one signal delivered
+    @skipIfAsan # Times out under asan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_all_threads(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -96,6 +102,9 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
+    @skipIfAsan # Times out under asan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_process_by_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -109,6 +118,9 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
+    @skipIfAsan # Times out under asan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_process_minus_one(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -121,6 +133,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_minus_one(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -132,6 +146,9 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
+    @skipIfAsan # Times out under asan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_all_threads_by_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -147,6 +164,9 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
+    @skipIfAsan # Times out under asan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_minus_one_by_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -160,6 +180,9 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
+    @skipIfAsan # Times out under asan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_minus_one_by_minus_one(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -171,6 +194,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
             threads)
 
     @skipUnlessPlatform(["netbsd"])
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_two_of_three_threads(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -188,6 +212,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
 
     @skipUnlessPlatform(["netbsd"])
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_two_signals(self):
         self.build()
         self.set_inferior_startup_launch()

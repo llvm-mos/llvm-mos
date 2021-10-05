@@ -109,7 +109,7 @@ bool llvm::LowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
     MCOp = lowerSymbolOperand(MO, MO.getMBB()->getSymbol(), AP);
     break;
   case MachineOperand::MO_GlobalAddress:
-    MCOp = lowerSymbolOperand(MO, AP.getSymbol(MO.getGlobal()), AP);
+    MCOp = lowerSymbolOperand(MO, AP.getSymbolPreferLocal(*MO.getGlobal()), AP);
     break;
   case MachineOperand::MO_BlockAddress:
     MCOp = lowerSymbolOperand(
@@ -148,20 +148,21 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   assert(TRI && "TargetRegisterInfo expected");
 
   uint64_t TSFlags = MI->getDesc().TSFlags;
-  int NumOps = MI->getNumExplicitOperands();
+  unsigned NumOps = MI->getNumExplicitOperands();
 
-  for (const MachineOperand &MO : MI->explicit_operands()) {
-    int OpNo = (int)MI->getOperandNo(&MO);
-    assert(OpNo >= 0 && "Operand number doesn't fit in an 'int' type");
+  // Skip policy, VL and SEW operands which are the last operands if present.
+  if (RISCVII::hasVecPolicyOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasVLOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasSEWOp(TSFlags))
+    --NumOps;
 
-    // Skip VL and SEW operands which are the last two operands if present.
-    if ((TSFlags & RISCVII::HasVLOpMask) && OpNo == (NumOps - 2))
-      continue;
-    if ((TSFlags & RISCVII::HasSEWOpMask) && OpNo == (NumOps - 1))
-      continue;
+  for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
+    const MachineOperand &MO = MI->getOperand(OpNo);
 
     // Skip merge op. It should be the first operand after the result.
-    if ((TSFlags & RISCVII::HasMergeOpMask) && OpNo == 1) {
+    if (RISCVII::hasMergeOp(TSFlags) && OpNo == 1) {
       assert(MI->getNumExplicitDefs() == 1);
       continue;
     }
@@ -198,7 +199,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
 
   // Unmasked pseudo instructions need to append dummy mask operand to
   // V instructions. All V instructions are modeled as the masked version.
-  if (TSFlags & RISCVII::HasDummyMaskOpMask)
+  if (RISCVII::hasDummyMaskOp(TSFlags))
     OutMI.addOperand(MCOperand::createReg(RISCV::NoRegister));
 
   return true;

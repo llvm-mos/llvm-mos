@@ -292,7 +292,11 @@ struct MIMGBaseOpcodeInfo {
   bool LodOrClampOrMip;
   bool HasD16;
   bool MSAA;
+  bool BVH;
 };
+
+LLVM_READONLY
+const MIMGBaseOpcodeInfo *getMIMGBaseOpcode(unsigned Opc);
 
 LLVM_READONLY
 const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
@@ -347,6 +351,11 @@ int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
 LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
 
+LLVM_READONLY
+unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
+                           const MIMGDimInfo *Dim, bool IsA16,
+                           bool IsG16Supported);
+
 struct MIMGInfo {
   uint16_t Opcode;
   uint16_t BaseOpcode;
@@ -395,7 +404,19 @@ LLVM_READONLY
 bool getMUBUFHasSoffset(unsigned Opc);
 
 LLVM_READONLY
+bool getMUBUFIsBufferInv(unsigned Opc);
+
+LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP1IsSingle(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP2IsSingle(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP3IsSingle(unsigned Opc);
 
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
@@ -466,6 +487,14 @@ struct Waitcnt {
 
   bool hasWait() const {
     return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u || VsCnt != ~0u;
+  }
+
+  bool hasWaitExceptVsCnt() const {
+    return VmCnt != ~0u || ExpCnt != ~0u || LgkmCnt != ~0u;
+  }
+
+  bool hasWaitVsCnt() const {
+    return VsCnt != ~0u;
   }
 
   bool dominates(const Waitcnt &Other) const {
@@ -664,6 +693,10 @@ uint64_t encodeMsg(uint64_t MsgId,
 
 unsigned getInitialPSInputAddr(const Function &F);
 
+bool getHasColorExport(const Function &F);
+
+bool getHasDepthExport(const Function &F);
+
 LLVM_READNONE
 bool isShader(CallingConv::ID CC);
 
@@ -712,9 +745,11 @@ bool isGFX9Plus(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
 bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
+bool isGFX10_AEncoding(const MCSubtargetInfo &STI);
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
 bool isGFX90A(const MCSubtargetInfo &STI);
+bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 
 /// Is Reg - scalar register
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI);

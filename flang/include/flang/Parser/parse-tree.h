@@ -1779,7 +1779,7 @@ struct Designator {
 struct Variable {
   UNION_CLASS_BOILERPLATE(Variable);
   mutable TypedExpr typedExpr;
-  parser::CharBlock GetSource() const;
+  CharBlock GetSource() const;
   std::variant<common::Indirection<Designator>,
       common::Indirection<FunctionReference>>
       u;
@@ -3805,7 +3805,7 @@ struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
       OpenMPLoopConstruct, OpenMPBlockConstruct, OpenMPAtomicConstruct,
-      OpenMPExecutableAllocate, OpenMPDeclarativeAllocate,
+      OpenMPDeclarativeAllocate, OpenMPExecutableAllocate,
       OpenMPCriticalConstruct>
       u;
 };

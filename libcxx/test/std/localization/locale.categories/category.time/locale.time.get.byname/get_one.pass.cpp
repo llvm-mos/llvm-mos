@@ -24,7 +24,7 @@
 //               ios_base::iostate& err, tm *t, char format, char modifier = 0) const;
 
 // TODO: investigation needed
-// XFAIL: linux-gnu
+// XFAIL: target={{.*}}-linux-gnu{{.*}}
 
 #include <locale>
 #include <cassert>
@@ -33,7 +33,7 @@
 
 #include "platform_support.h" // locale name macros
 
-typedef input_iterator<const char*> I;
+typedef cpp17_input_iterator<const char*> I;
 
 typedef std::time_get_byname<char, I> F;
 

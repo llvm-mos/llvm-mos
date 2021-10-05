@@ -4,7 +4,6 @@
 ; initialization and splat vector initialization and to optimize the
 ; choice of splat value works correctly.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: same_const_one_replaced_i16x8:
@@ -165,6 +164,22 @@ define <8 x i16> @swizzle_one_i16x8(<8 x i16> %src, <8 x i16> %mask) {
   ret <8 x i16> %v0
 }
 
+; CHECK-LABEL: half_shuffle_i32x4:
+; CHECK-NEXT: .functype        half_shuffle_i32x4 (v128) -> (v128)
+; CHECK:      i8x16.shuffle $push[[L0:[0-9]+]]=, $0, $0, 0, 0, 0, 0, 8, 9, 10, 11, 0, 1, 2, 3, 0, 0, 0, 0
+; CHECK:      i32x4.replace_lane
+; CHECK:      i32x4.replace_lane
+; CHECK:      return
+define <4 x i32> @half_shuffle_i32x4(<4 x i32> %src) {
+  %s0 = extractelement <4 x i32> %src, i32 0
+  %s2 = extractelement <4 x i32> %src, i32 2
+  %v0 = insertelement <4 x i32> undef, i32 0, i32 0
+  %v1 = insertelement <4 x i32> %v0, i32 %s2, i32 1
+  %v2 = insertelement <4 x i32> %v1, i32 %s0, i32 2
+  %v3 = insertelement <4 x i32> %v2, i32 3, i32 3
+  ret <4 x i32> %v3
+}
+
 ; CHECK-LABEL: mashup_swizzle_i8x16:
 ; CHECK-NEXT:  .functype       mashup_swizzle_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK-NEXT:  i8x16.swizzle   $push[[L0:[0-9]+]]=, $0, $1
@@ -196,7 +211,7 @@ define <16 x i8> @mashup_swizzle_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %spla
 ; CHECK-LABEL: mashup_const_i8x16:
 ; CHECK-NEXT:  .functype       mashup_const_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK:       v128.const      $push[[L0:[0-9]+]]=, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0
-; CHECK:       i8x16.replace_lane
+; CHECK:       v128.load8_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       return
@@ -219,7 +234,7 @@ define <16 x i8> @mashup_const_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %splatt
 ; CHECK-LABEL: mashup_splat_i8x16:
 ; CHECK-NEXT:  .functype       mashup_splat_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK:       i8x16.splat     $push[[L0:[0-9]+]]=, $2
-; CHECK:       i8x16.replace_lane
+; CHECK:       v128.load8_lane
 ; CHECK:       i8x16.replace_lane
 ; CHECK:       return
 define <16 x i8> @mashup_splat_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %splatted) {

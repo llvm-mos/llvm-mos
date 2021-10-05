@@ -473,32 +473,31 @@ TargetInstrInfo::canFoldCopy(const MachineInstr &MI, unsigned FoldIdx) const {
 
 MCInst TargetInstrInfo::getNop() const { llvm_unreachable("Not implemented"); }
 
+std::pair<unsigned, unsigned>
+TargetInstrInfo::getPatchpointUnfoldableRange(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::STACKMAP:
+    // StackMapLiveValues are foldable
+    return std::make_pair(0, StackMapOpers(&MI).getVarIdx());
+  case TargetOpcode::PATCHPOINT:
+    // For PatchPoint, the call args are not foldable (even if reported in the
+    // stackmap e.g. via anyregcc).
+    return std::make_pair(0, PatchPointOpers(&MI).getVarIdx());
+  case TargetOpcode::STATEPOINT:
+    // For statepoints, fold deopt and gc arguments, but not call arguments.
+    return std::make_pair(MI.getNumDefs(), StatepointOpers(&MI).getVarIdx());
+  default:
+    llvm_unreachable("unexpected stackmap opcode");
+  }
+}
+
 static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
                                     ArrayRef<unsigned> Ops, int FrameIndex,
                                     const TargetInstrInfo &TII) {
   unsigned StartIdx = 0;
   unsigned NumDefs = 0;
-  switch (MI.getOpcode()) {
-  case TargetOpcode::STACKMAP: {
-    // StackMapLiveValues are foldable
-    StartIdx = StackMapOpers(&MI).getVarIdx();
-    break;
-  }
-  case TargetOpcode::PATCHPOINT: {
-    // For PatchPoint, the call args are not foldable (even if reported in the
-    // stackmap e.g. via anyregcc).
-    StartIdx = PatchPointOpers(&MI).getVarIdx();
-    break;
-  }
-  case TargetOpcode::STATEPOINT: {
-    // For statepoints, fold deopt and gc arguments, but not call arguments.
-    StartIdx = StatepointOpers(&MI).getVarIdx();
-    NumDefs = MI.getNumDefs();
-    break;
-  }
-  default:
-    llvm_unreachable("unexpected stackmap opcode");
-  }
+  // getPatchpointUnfoldableRange throws guarantee if MI is not a patchpoint.
+  std::tie(NumDefs, StartIdx) = TII.getPatchpointUnfoldableRange(MI);
 
   unsigned DefToFoldIdx = MI.getNumOperands();
 
@@ -1262,22 +1261,6 @@ int TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   unsigned DefClass = DefMI.getDesc().getSchedClass();
   unsigned UseClass = UseMI.getDesc().getSchedClass();
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
-}
-
-/// If we can determine the operand latency from the def only, without itinerary
-/// lookup, do so. Otherwise return -1.
-int TargetInstrInfo::computeDefOperandLatency(
-    const InstrItineraryData *ItinData, const MachineInstr &DefMI) const {
-
-  // Let the target hook getInstrLatency handle missing itineraries.
-  if (!ItinData)
-    return getInstrLatency(ItinData, DefMI);
-
-  if(ItinData->isEmpty())
-    return defaultDefLatency(ItinData->SchedModel, DefMI);
-
-  // ...operand lookup required
-  return -1;
 }
 
 bool TargetInstrInfo::getRegSequenceInputs(

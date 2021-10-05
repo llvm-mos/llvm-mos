@@ -1997,6 +1997,12 @@ public:
     return const_cast<DeclContext*>(this)->getNonClosureAncestor();
   }
 
+  // Retrieve the nearest context that is not a transparent context.
+  DeclContext *getNonTransparentContext();
+  const DeclContext *getNonTransparentContext() const {
+    return const_cast<DeclContext *>(this)->getNonTransparentContext();
+  }
+
   /// getPrimaryContext - There may be many different
   /// declarations of the same entity (including forward declarations
   /// of classes, multiple definitions of namespaces, etc.), each with
@@ -2378,7 +2384,7 @@ public:
 
   using udir_iterator_base =
       llvm::iterator_adaptor_base<udir_iterator, lookup_iterator,
-                                  std::random_access_iterator_tag,
+                                  typename lookup_iterator::iterator_category,
                                   UsingDirectiveDecl *>;
 
   struct udir_iterator : udir_iterator_base {

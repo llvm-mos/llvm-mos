@@ -21,12 +21,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "Utils/WebAssemblyTypeUtilities.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -841,8 +842,7 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
   //    INST ..., TeeReg, ...
   //    INST ..., Reg, ...
   //    INST ..., Reg, ...
-  for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
-    MachineInstr &MI = *I++;
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     if (!WebAssembly::isTee(MI.getOpcode()))
       continue;
     Register TeeReg = MI.getOperand(0).getReg();
@@ -1523,6 +1523,7 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
       }
       case WebAssembly::END_BLOCK:
       case WebAssembly::END_LOOP:
+      case WebAssembly::DELEGATE:
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       default:

@@ -14,8 +14,10 @@ add_mlir_dialect_library(MLIRMemRef
 
   LINK_LIBS PUBLIC
   MLIRDialect
+  MLIRDialectUtils
   MLIRInferTypeOpInterface
   MLIRIR
+  MLIRMemRefUtils
   MLIRStandard
   MLIRTensor
   MLIRViewLikeInterface

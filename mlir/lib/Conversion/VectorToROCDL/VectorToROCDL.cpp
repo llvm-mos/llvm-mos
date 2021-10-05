@@ -14,8 +14,10 @@
 #include "mlir/Conversion/VectorToROCDL/VectorToROCDL.h"
 
 #include "../PassDetail.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -28,7 +30,7 @@ using namespace mlir;
 using namespace mlir::vector;
 
 static LogicalResult replaceTransferOpWithMubuf(
-    ConversionPatternRewriter &rewriter, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter, ValueRange operands,
     LLVMTypeConverter &typeConverter, Location loc, TransferReadOp xferOp,
     Type &vecTy, Value &dwordConfig, Value &vindex, Value &offsetSizeInBytes,
     Value &glc, Value &slc) {
@@ -38,11 +40,11 @@ static LogicalResult replaceTransferOpWithMubuf(
 }
 
 static LogicalResult replaceTransferOpWithMubuf(
-    ConversionPatternRewriter &rewriter, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter, ValueRange operands,
     LLVMTypeConverter &typeConverter, Location loc, TransferWriteOp xferOp,
     Type &vecTy, Value &dwordConfig, Value &vindex, Value &offsetSizeInBytes,
     Value &glc, Value &slc) {
-  auto adaptor = TransferWriteOpAdaptor(operands);
+  auto adaptor = TransferWriteOpAdaptor(operands, xferOp->getAttrDictionary());
   rewriter.replaceOpWithNewOp<ROCDL::MubufStoreOp>(xferOp, adaptor.vector(),
                                                    dwordConfig, vindex,
                                                    offsetSizeInBytes, glc, slc);
@@ -60,10 +62,8 @@ public:
   using ConvertOpToLLVMPattern<ConcreteOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(ConcreteOp xferOp, ArrayRef<Value> operands,
+  matchAndRewrite(ConcreteOp xferOp, typename ConcreteOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    typename ConcreteOp::Adaptor adaptor(operands);
-
     if (xferOp.getVectorType().getRank() > 1 ||
         llvm::size(xferOp.indices()) == 0)
       return failure();
@@ -72,7 +72,7 @@ public:
       return failure();
 
     // Have it handled in vector->llvm conversion pass.
-    if (!xferOp.isMaskedDim(0))
+    if (xferOp.isDimInBounds(0))
       return failure();
 
     auto toLLVMTy = [&](Type t) {
@@ -137,8 +137,8 @@ public:
         loc, toLLVMTy(i32Ty),
         rewriter.getIntegerAttr(rewriter.getIntegerType(32), 0));
     return replaceTransferOpWithMubuf(
-        rewriter, operands, *this->getTypeConverter(), loc, xferOp, vecTy,
-        dwordConfig, int32Zero, int32Zero, int1False, int1False);
+        rewriter, adaptor.getOperands(), *this->getTypeConverter(), loc, xferOp,
+        vecTy, dwordConfig, int32Zero, int32Zero, int1False, int1False);
   }
 };
 } // end anonymous namespace
@@ -161,6 +161,7 @@ void LowerVectorToROCDLPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
 
   populateVectorToROCDLConversionPatterns(converter, patterns);
+  populateMemRefToLLVMConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());

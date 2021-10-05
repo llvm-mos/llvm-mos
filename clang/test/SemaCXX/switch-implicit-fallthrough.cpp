@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wimplicit-fallthrough %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wimplicit-fallthrough -Wunreachable-code-fallthrough %s
 
 
 int fallthrough(int n) {
@@ -185,10 +185,33 @@ int fallthrough_position(int n) {
       return 1;
       [[clang::fallthrough]];  // expected-warning{{fallthrough annotation in unreachable code}}
     case 222:
+      return 2;
+      __attribute__((fallthrough)); // expected-warning{{fallthrough annotation in unreachable code}}
+    case 223:
       n += 400;
-    case 223:          // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
-      ;
+    case 224: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+        ;
   }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code-fallthrough"
+  switch (n) {
+      n += 300;
+      [[clang::fallthrough]];  // no warning here
+    case 221:
+      return 1;
+      [[clang::fallthrough]];  // no warning here
+    case 222:
+      return 2;
+      __attribute__((fallthrough)); // no warning here
+    case 223:
+      if (1)
+        return 3;
+      __attribute__((fallthrough)); // no warning here
+    case 224:
+      n += 400;
+  }
+#pragma clang diagnostic pop
 
   long p = static_cast<long>(n) * n;
   switch (sizeof(p)) {

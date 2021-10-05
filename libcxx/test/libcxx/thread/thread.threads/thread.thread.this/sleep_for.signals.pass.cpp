@@ -14,9 +14,7 @@
 // Until 58a0a70fb2f1, this_thread::sleep_for misbehaves when interrupted by
 // a signal, as tested here. Disable the test on the corresponding system
 // libraries.
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
 // <thread>
 

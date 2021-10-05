@@ -200,8 +200,7 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
   if (!EnableSWP)
     return false;
 
-  if (mf.getFunction().getAttributes().hasAttribute(
-          AttributeList::FunctionIndex, Attribute::OptimizeForSize) &&
+  if (mf.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
       !EnableSWPOptSize.getPosition())
     return false;
 
@@ -813,11 +812,10 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
             SU.addPred(Dep);
             continue;
           }
-          AliasResult AAResult = AA->alias(
-              MemoryLocation::getAfter(MMO1->getValue(), MMO1->getAAInfo()),
-              MemoryLocation::getAfter(MMO2->getValue(), MMO2->getAAInfo()));
-
-          if (AAResult != NoAlias) {
+          if (!AA->isNoAlias(
+                  MemoryLocation::getAfter(MMO1->getValue(), MMO1->getAAInfo()),
+                  MemoryLocation::getAfter(MMO2->getValue(),
+                                           MMO2->getAAInfo()))) {
             SDep Dep(Load, SDep::Barrier);
             Dep.setLatency(1);
             SU.addPred(Dep);

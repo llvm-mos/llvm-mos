@@ -34,7 +34,7 @@ DiagnosticBuilder ClangTidyCheck::diag(StringRef Message,
 
 DiagnosticBuilder
 ClangTidyCheck::configurationDiag(StringRef Description,
-                                  DiagnosticIDs::Level Level) {
+                                  DiagnosticIDs::Level Level) const {
   return Context->configurationDiag(Description, Level);
 }
 
@@ -147,19 +147,20 @@ llvm::Optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
 
   StringRef Value = Iter->getValue().Value;
   StringRef Closest;
-  unsigned EditDistance = -1;
+  unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
     if (IgnoreCase) {
-      if (Value.equals_lower(NameAndEnum.second))
+      if (Value.equals_insensitive(NameAndEnum.second))
         return NameAndEnum.first;
     } else if (Value.equals(NameAndEnum.second)) {
       return NameAndEnum.first;
-    } else if (Value.equals_lower(NameAndEnum.second)) {
+    } else if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;
       EditDistance = 0;
       continue;
     }
-    unsigned Distance = Value.edit_distance(NameAndEnum.second);
+    unsigned Distance =
+        Value.edit_distance(NameAndEnum.second, true, EditDistance);
     if (Distance < EditDistance) {
       EditDistance = Distance;
       Closest = NameAndEnum.second;

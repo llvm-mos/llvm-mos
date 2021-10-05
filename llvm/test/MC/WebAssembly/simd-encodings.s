@@ -1,4 +1,4 @@
-# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128 < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd < %s | FileCheck %s
 
 main:
     .functype main () -> ()
@@ -280,7 +280,8 @@ main:
     # CHECK: v128.bitselect # encoding: [0xfd,0x52]
     v128.bitselect
 
-    # TODO: v128.any_true # encoding: [0xfd,0x53]
+    # CHECK: v128.any_true # encoding: [0xfd,0x53]
+    v128.any_true
 
     # CHECK: v128.load8_lane 32, 1 # encoding: [0xfd,0x54,0x00,0x20,0x01]
     v128.load8_lane 32, 1
@@ -596,7 +597,8 @@ main:
     # CHECK: i32x4.extmul_high_i16x8_u # encoding: [0xfd,0xbf,0x01]
     i32x4.extmul_high_i16x8_u
 
-    # TODO: i64x2.abs # encoding: [0xfd,0xc0,0x01]
+    # CHECK: i64x2.abs # encoding: [0xfd,0xc0,0x01]
+    i64x2.abs
 
     # CHECK: i64x2.neg # encoding: [0xfd,0xc1,0x01]
     i64x2.neg
@@ -653,17 +655,23 @@ main:
     # CHECK: i64x2.mul # encoding: [0xfd,0xd5,0x01]
     i64x2.mul
 
-    # TODO: i64x2.eq # encoding: [0xfd,0xd6,0x01]
+    # CHECK: i64x2.eq # encoding: [0xfd,0xd6,0x01]
+    i64x2.eq
 
-    # TODO: i64x2.ne # encoding: [0xfd,0xd7,0x01]
+    # CHECK: i64x2.ne # encoding: [0xfd,0xd7,0x01]
+    i64x2.ne
 
-    # TODO: i64x2.lt_s # encoding: [0xfd,0xd8,0x01]
+    # CHECK: i64x2.lt_s # encoding: [0xfd,0xd8,0x01]
+    i64x2.lt_s
 
-    # TODO: i64x2.gt_s # encoding: [0xfd,0xd9,0x01]
+    # CHECK: i64x2.gt_s # encoding: [0xfd,0xd9,0x01]
+    i64x2.gt_s
 
-    # TODO: i64x2.le_s # encoding: [0xfd,0xda,0x01]
+    # CHECK: i64x2.le_s # encoding: [0xfd,0xda,0x01]
+    i64x2.le_s
 
-    # TODO: i64x2.ge_s # encoding: [0xfd,0xdb,0x01]
+    # CHECK: i64x2.ge_s # encoding: [0xfd,0xdb,0x01]
+    i64x2.ge_s
 
     # CHECK: i64x2.extmul_low_i32x4_s # encoding: [0xfd,0xdc,0x01]
     i64x2.extmul_low_i32x4_s
@@ -770,5 +778,17 @@ main:
 
     # CHECK: f64x2.convert_low_i32x4_u # encoding: [0xfd,0xff,0x01]
     f64x2.convert_low_i32x4_u
+
+    # CHECK: f32x4.fma # encoding: [0xfd,0xaf,0x01]
+    f32x4.fma
+
+    # CHECK: f32x4.fms # encoding: [0xfd,0xb0,0x01]
+    f32x4.fms
+
+    # CHECK: f64x2.fma # encoding: [0xfd,0xcf,0x01]
+    f64x2.fma
+
+    # CHECK: f64x2.fms # encoding: [0xfd,0xd0,0x01]
+    f64x2.fms
 
     end_function

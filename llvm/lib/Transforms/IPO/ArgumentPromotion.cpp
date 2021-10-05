@@ -82,7 +82,6 @@
 #include <iterator>
 #include <map>
 #include <set>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -140,7 +139,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
        ++I, ++ArgNo) {
     if (ByValArgsToTransform.count(&*I)) {
       // Simple byval argument? Just add all the struct element types.
-      Type *AgTy = cast<PointerType>(I->getType())->getElementType();
+      Type *AgTy = I->getParamByValType();
       StructType *STy = cast<StructType>(AgTy);
       llvm::append_range(Params, STy->elements());
       ArgAttrVec.insert(ArgAttrVec.end(), STy->getNumElements(),
@@ -149,7 +148,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     } else if (!ArgsToPromote.count(&*I)) {
       // Unchanged argument
       Params.push_back(I->getType());
-      ArgAttrVec.push_back(PAL.getParamAttributes(ArgNo));
+      ArgAttrVec.push_back(PAL.getParamAttrs(ArgNo));
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
@@ -232,8 +231,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
 
   // Recompute the parameter attributes list based on the new arguments for
   // the function.
-  NF->setAttributes(AttributeList::get(F->getContext(), PAL.getFnAttributes(),
-                                       PAL.getRetAttributes(), ArgAttrVec));
+  NF->setAttributes(AttributeList::get(F->getContext(), PAL.getFnAttrs(),
+                                       PAL.getRetAttrs(), ArgAttrVec));
   ArgAttrVec.clear();
 
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
@@ -243,6 +242,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   // to pass in the loaded pointers.
   //
   SmallVector<Value *, 16> Args;
+  const DataLayout &DL = F->getParent()->getDataLayout();
   while (!F->use_empty()) {
     CallBase &CB = cast<CallBase>(*F->user_back());
     assert(CB.getCalledFunction() == F);
@@ -257,20 +257,24 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
          ++I, ++AI, ++ArgNo)
       if (!ArgsToPromote.count(&*I) && !ByValArgsToTransform.count(&*I)) {
         Args.push_back(*AI); // Unmodified argument
-        ArgAttrVec.push_back(CallPAL.getParamAttributes(ArgNo));
+        ArgAttrVec.push_back(CallPAL.getParamAttrs(ArgNo));
       } else if (ByValArgsToTransform.count(&*I)) {
         // Emit a GEP and load for each element of the struct.
-        Type *AgTy = cast<PointerType>(I->getType())->getElementType();
+        Type *AgTy = I->getParamByValType();
         StructType *STy = cast<StructType>(AgTy);
         Value *Idxs[2] = {
             ConstantInt::get(Type::getInt32Ty(F->getContext()), 0), nullptr};
+        const StructLayout *SL = DL.getStructLayout(STy);
+        Align StructAlign = *I->getParamAlign();
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
           auto *Idx =
               IRB.CreateGEP(STy, *AI, Idxs, (*AI)->getName() + "." + Twine(i));
           // TODO: Tell AA about the new values?
-          Args.push_back(IRB.CreateLoad(STy->getElementType(i), Idx,
-                                        Idx->getName() + ".val"));
+          Align Alignment =
+              commonAlignment(StructAlign, SL->getElementOffset(i));
+          Args.push_back(IRB.CreateAlignedLoad(
+              STy->getElementType(i), Idx, Alignment, Idx->getName() + ".val"));
           ArgAttrVec.push_back(AttributeSet());
         }
       } else if (!I->use_empty()) {
@@ -309,9 +313,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
               IRB.CreateLoad(OrigLoad->getType(), V, V->getName() + ".val");
           newLoad->setAlignment(OrigLoad->getAlign());
           // Transfer the AA info too.
-          AAMDNodes AAInfo;
-          OrigLoad->getAAMetadata(AAInfo);
-          newLoad->setAAMetadata(AAInfo);
+          newLoad->setAAMetadata(OrigLoad->getAAMetadata());
 
           Args.push_back(newLoad);
           ArgAttrVec.push_back(AttributeSet());
@@ -321,7 +323,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     // Push any varargs arguments on the list.
     for (; AI != CB.arg_end(); ++AI, ++ArgNo) {
       Args.push_back(*AI);
-      ArgAttrVec.push_back(CallPAL.getParamAttributes(ArgNo));
+      ArgAttrVec.push_back(CallPAL.getParamAttrs(ArgNo));
     }
 
     SmallVector<OperandBundleDef, 1> OpBundles;
@@ -337,9 +339,9 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       NewCS = NewCall;
     }
     NewCS->setCallingConv(CB.getCallingConv());
-    NewCS->setAttributes(
-        AttributeList::get(F->getContext(), CallPAL.getFnAttributes(),
-                           CallPAL.getRetAttributes(), ArgAttrVec));
+    NewCS->setAttributes(AttributeList::get(F->getContext(),
+                                            CallPAL.getFnAttrs(),
+                                            CallPAL.getRetAttrs(), ArgAttrVec));
     NewCS->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
     Args.clear();
     ArgAttrVec.clear();
@@ -357,8 +359,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     // F.
     CB.eraseFromParent();
   }
-
-  const DataLayout &DL = F->getParent()->getDataLayout();
 
   // Since we have now created the new function, splice the body of the old
   // function right into the new function, leaving the old rotting hulk of the
@@ -385,14 +385,14 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       Instruction *InsertPt = &NF->begin()->front();
 
       // Just add all the struct element types.
-      Type *AgTy = cast<PointerType>(I->getType())->getElementType();
-      Value *TheAlloca = new AllocaInst(
-          AgTy, DL.getAllocaAddrSpace(), nullptr,
-          I->getParamAlign().getValueOr(DL.getPrefTypeAlign(AgTy)), "",
-          InsertPt);
+      Type *AgTy = I->getParamByValType();
+      Align StructAlign = *I->getParamAlign();
+      Value *TheAlloca = new AllocaInst(AgTy, DL.getAllocaAddrSpace(), nullptr,
+                                        StructAlign, "", InsertPt);
       StructType *STy = cast<StructType>(AgTy);
       Value *Idxs[2] = {ConstantInt::get(Type::getInt32Ty(F->getContext()), 0),
                         nullptr};
+      const StructLayout *SL = DL.getStructLayout(STy);
 
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
         Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
@@ -400,21 +400,13 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
             AgTy, TheAlloca, Idxs, TheAlloca->getName() + "." + Twine(i),
             InsertPt);
         I2->setName(I->getName() + "." + Twine(i));
-        new StoreInst(&*I2++, Idx, InsertPt);
+        Align Alignment = commonAlignment(StructAlign, SL->getElementOffset(i));
+        new StoreInst(&*I2++, Idx, false, Alignment, InsertPt);
       }
 
       // Anything that used the arg should now use the alloca.
       I->replaceAllUsesWith(TheAlloca);
       TheAlloca->takeName(&*I);
-
-      // If the alloca is used in a call, we must clear the tail flag since
-      // the callee now uses an alloca from the caller.
-      for (User *U : TheAlloca->users()) {
-        CallInst *Call = dyn_cast<CallInst>(U);
-        if (!Call)
-          continue;
-        Call->setTailCall(false);
-      }
       continue;
     }
 
@@ -949,7 +941,10 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // If this is a byval argument, and if the aggregate type is small, just
     // pass the elements, which is always safe, if the passed value is densely
     // packed or if we can prove the padding bytes are never accessed.
-    bool isSafeToPromote = PtrArg->hasByValAttr() &&
+    //
+    // Only handle arguments with specified alignment; if it's unspecified, the
+    // actual alignment of the argument is target-specific.
+    bool isSafeToPromote = PtrArg->hasByValAttr() && PtrArg->getParamAlign() &&
                            (ArgumentPromotionPass::isDenselyPacked(AgTy, DL) ||
                             !canPaddingBeAccessed(PtrArg));
     if (isSafeToPromote) {

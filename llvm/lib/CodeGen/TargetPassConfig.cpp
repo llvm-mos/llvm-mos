@@ -39,6 +39,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
@@ -164,6 +165,31 @@ static cl::opt<GlobalISelAbortMode> EnableGlobalISelAbort(
         clEnumValN(GlobalISelAbortMode::Enable, "1", "Enable the abort"),
         clEnumValN(GlobalISelAbortMode::DisableWithDiag, "2",
                    "Disable the abort but emit a diagnostic on failure")));
+
+// An option that disables inserting FS-AFDO discriminators before emit.
+// This is mainly for debugging and tuning purpose.
+static cl::opt<bool>
+    FSNoFinalDiscrim("fs-no-final-discrim", cl::init(false), cl::Hidden,
+                     cl::desc("Do not insert FS-AFDO discriminators before "
+                              "emit."));
+// Disable MIRProfileLoader before RegAlloc. This is for for debugging and
+// tuning purpose.
+static cl::opt<bool> DisableRAFSProfileLoader(
+    "disable-ra-fsprofile-loader", cl::init(true), cl::Hidden,
+    cl::desc("Disable MIRProfileLoader before RegAlloc"));
+// Disable MIRProfileLoader before BloackPlacement. This is for for debugging
+// and tuning purpose.
+static cl::opt<bool> DisableLayoutFSProfileLoader(
+    "disable-layout-fsprofile-loader", cl::init(true), cl::Hidden,
+    cl::desc("Disable MIRProfileLoader before BlockPlacement"));
+// Specify FSProfile file name.
+static cl::opt<std::string>
+    FSProfileFile("fs-profile-file", cl::init(""), cl::value_desc("filename"),
+                  cl::desc("Flow Sensitive profile file name."), cl::Hidden);
+// Specify Remapping file for FSProfile.
+static cl::opt<std::string> FSRemappingFile(
+    "fs-remapping-file", cl::init(""), cl::value_desc("filename"),
+    cl::desc("Flow Sensitive profile remapping file name."), cl::Hidden);
 
 // Temporary option to allow experimenting with MachineScheduler as a post-RA
 // scheduler. Targets can "properly" enable this with
@@ -300,6 +326,28 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   return TargetID;
 }
 
+// Find the FSProfile file name. The internal option takes the precedence
+// before getting from TargetMachine.
+static const std::string getFSProfileFile(const TargetMachine *TM) {
+  if (!FSProfileFile.empty())
+    return FSProfileFile.getValue();
+  const Optional<PGOOptions> &PGOOpt = TM->getPGOOption();
+  if (PGOOpt == None || PGOOpt->Action != PGOOptions::SampleUse)
+    return std::string();
+  return PGOOpt->ProfileFile;
+}
+
+// Find the Profile remapping file name. The internal option takes the
+// precedence before getting from TargetMachine.
+static const std::string getFSRemappingFile(const TargetMachine *TM) {
+  if (!FSRemappingFile.empty())
+    return FSRemappingFile.getValue();
+  const Optional<PGOOptions> &PGOOpt = TM->getPGOOption();
+  if (PGOOpt == None || PGOOpt->Action != PGOOptions::SampleUse)
+    return std::string();
+  return PGOOpt->ProfileRemappingFile;
+}
+
 //===---------------------------------------------------------------------===//
 /// TargetPassConfig
 //===---------------------------------------------------------------------===//
@@ -333,6 +381,8 @@ struct InsertedPass {
 } // end anonymous namespace
 
 namespace llvm {
+
+extern cl::opt<bool> EnableFSDiscriminator;
 
 class PassConfigImpl {
 public:
@@ -847,8 +897,8 @@ void TargetPassConfig::addIRPasses() {
 
   // Run GC lowering passes for builtin collectors
   // TODO: add a pass insertion point here
-  addPass(createGCLoweringPass());
-  addPass(createShadowStackGCLoweringPass());
+  addPass(&GCLoweringID);
+  addPass(&ShadowStackGCLoweringID);
   addPass(createLowerConstantIntrinsicsPass());
 
   // Make sure that no unreachable blocks are instruction selected.
@@ -863,6 +913,11 @@ void TargetPassConfig::addIRPasses() {
 
   if (getOptLevel() != CodeGenOpt::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
+
+  // Expand vector predication intrinsics into standard IR instructions.
+  // This pass has to run before ScalarizeMaskedMemIntrin and ExpandReduction
+  // passes since it emits those kinds of intrinsics.
+  addPass(createExpandVectorPredicationPass());
 
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
@@ -924,7 +979,6 @@ void TargetPassConfig::addPassesToHandleExceptions() {
 void TargetPassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOpt::None && !DisableCGP)
     addPass(createCodeGenPreparePass());
-  addPass(createRewriteSymbolsPass());
 }
 
 /// Add common passes that perform LLVM IR to IR transforms in preparation for
@@ -1099,6 +1153,18 @@ void TargetPassConfig::addMachinePasses() {
   // where it becomes safe again so stop debugifying here.
   DebugifyIsSafe = false;
 
+  // Add a FSDiscriminator pass right before RA, so that we could get
+  // more precise SampleFDO profile for RA.
+  if (EnableFSDiscriminator) {
+    addPass(createMIRAddFSDiscriminatorsPass(
+        sampleprof::FSDiscriminatorPass::Pass1));
+    const std::string ProfileFile = getFSProfileFile(TM);
+    if (!ProfileFile.empty() && !DisableRAFSProfileLoader)
+      addPass(
+          createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
+                                     sampleprof::FSDiscriminatorPass::Pass1));
+  }
+
   // Run register allocation and passes that are tightly coupled with it,
   // including phi elimination and scheduling.
   if (getOptimizeRegAlloc())
@@ -1108,6 +1174,8 @@ void TargetPassConfig::addMachinePasses() {
 
   // Run post-ra passes.
   addPostRegAlloc();
+
+  addPass(&RemoveRedundantDebugValuesID);
 
   addPass(&FixupStatepointCallerSavedID);
 
@@ -1162,6 +1230,14 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&XRayInstrumentationID);
   addPass(&PatchableFunctionID);
 
+  if (EnableFSDiscriminator && !FSNoFinalDiscrim)
+    // Add FS discriminators here so that all the instruction duplicates
+    // in different BBs get their own discriminators. With this, we can "sum"
+    // the SampleFDO counters instead of using MAX. This will improve the
+    // SampleFDO profile quality.
+    addPass(createMIRAddFSDiscriminatorsPass(
+        sampleprof::FSDiscriminatorPass::PassLast));
+
   addPreEmitPass();
 
   if (TM->Options.EnableIPRA)
@@ -1199,10 +1275,6 @@ void TargetPassConfig::addMachinePasses() {
 
   // Add passes that directly emit MI after all other MI passes.
   addPreEmitPass2();
-
-  // Insert pseudo probe annotation for callsite profiling
-  if (TM->Options.PseudoProbeForProfiling)
-    addPass(createPseudoProbeInserter());
 
   AddingMachinePasses = false;
 }
@@ -1311,11 +1383,15 @@ FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
 }
 
 bool TargetPassConfig::addRegAssignAndRewriteFast() {
-  if (RegAlloc != &useDefaultRegisterAllocator &&
-      RegAlloc != &createFastRegisterAllocator)
+  if (RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator &&
+      RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator)
     report_fatal_error("Must use fast (default) register allocator for unoptimized regalloc.");
 
   addPass(createRegAllocPass(false));
+
+  // Allow targets to change the register assignments after
+  // fast register allocation.
+  addPostFastRegAllocRewrite();
   return true;
 }
 
@@ -1351,9 +1427,9 @@ void TargetPassConfig::addFastRegAlloc() {
 /// optimized register allocation, including coalescing, machine instruction
 /// scheduling, and register allocation itself.
 void TargetPassConfig::addOptimizedRegAlloc() {
-  addPass(&DetectDeadLanesID, false);
+  addPass(&DetectDeadLanesID);
 
-  addPass(&ProcessImplicitDefsID, false);
+  addPass(&ProcessImplicitDefsID);
 
   // LiveVariables currently requires pure SSA form.
   //
@@ -1365,16 +1441,16 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   // When LiveVariables is removed this has to be removed/moved either.
   // Explicit addition of UnreachableMachineBlockElim allows stopping before or
   // after it with -stop-before/-stop-after.
-  addPass(&UnreachableMachineBlockElimID, false);
-  addPass(&LiveVariablesID, false);
+  addPass(&UnreachableMachineBlockElimID);
+  addPass(&LiveVariablesID);
 
   // Edge splitting is smarter with machine loop info.
-  addPass(&MachineLoopInfoID, false);
+  addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID, false);
 
   // Eventually, we want to run LiveIntervals before PHI elimination.
   if (EarlyLiveIntervals)
-    addPass(&LiveIntervalsID, false);
+    addPass(&LiveIntervalsID);
 
   addPass(&TwoAddressInstructionPassID, false);
   addPass(&RegisterCoalescerID);
@@ -1437,6 +1513,15 @@ bool TargetPassConfig::addGCPasses() {
 
 /// Add standard basic block placement passes.
 void TargetPassConfig::addBlockPlacement() {
+  if (EnableFSDiscriminator) {
+    addPass(createMIRAddFSDiscriminatorsPass(
+        sampleprof::FSDiscriminatorPass::Pass2));
+    const std::string ProfileFile = getFSProfileFile(TM);
+    if (!ProfileFile.empty() && !DisableLayoutFSProfileLoader)
+      addPass(
+          createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
+                                     sampleprof::FSDiscriminatorPass::Pass2));
+  }
   if (addPass(&MachineBlockPlacementID)) {
     // Run a separate pass to collect block placement statistics.
     if (EnableBlockPlacementStats)

@@ -83,7 +83,7 @@ void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
 
   if (!Base || Base == Label) {
     unsigned idx = DD->getAddressPool().getIndex(Label);
-    Die.addValue(DIEValueAllocator, Attribute,
+    addAttribute(Die, Attribute,
                  DD->getDwarfVersion() >= 5 ? dwarf::DW_FORM_addrx
                                             : dwarf::DW_FORM_GNU_addr_index,
                  DIEInteger(idx));
@@ -100,7 +100,7 @@ void DwarfCompileUnit::addLabelAddress(DIE &Die, dwarf::Attribute Attribute,
     addPoolOpAddress(*Loc, Label);
     addBlock(Die, Attribute, dwarf::DW_FORM_exprloc, Loc);
   } else
-    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_LLVM_addrx_offset,
+    addAttribute(Die, Attribute, dwarf::DW_FORM_LLVM_addrx_offset,
                  new (DIEValueAllocator) DIEAddrOffset(
                      DD->getAddressPool().getIndex(Base), Label, Base));
 }
@@ -112,11 +112,9 @@ void DwarfCompileUnit::addLocalLabelAddress(DIE &Die,
     DD->addArangeLabel(SymbolCU(this, Label));
 
   if (Label)
-    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_addr,
-                 DIELabel(Label));
+    addAttribute(Die, Attribute, dwarf::DW_FORM_addr, DIELabel(Label));
   else
-    Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_addr,
-                 DIEInteger(0));
+    addAttribute(Die, Attribute, dwarf::DW_FORM_addr, DIEInteger(0));
 }
 
 unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
@@ -184,6 +182,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     addFlag(*VariableDIE, dwarf::DW_AT_declaration);
   else
     addGlobalName(GV->getName(), *VariableDIE, DeclContext);
+
+  addAnnotation(*VariableDIE, GV->getAnnotations());
 
   if (uint32_t AlignInBytes = GV->getAlignInBytes())
     addUInt(*VariableDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
@@ -1105,9 +1105,10 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
   // shouldn't be found by lookup.
   AbsDef = &ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, nullptr);
   ContextCU->applySubprogramAttributesToDefinition(SP, *AbsDef);
-
-  if (!ContextCU->includeMinimalInlineScopes())
-    ContextCU->addUInt(*AbsDef, dwarf::DW_AT_inline, None, dwarf::DW_INL_inlined);
+  ContextCU->addSInt(*AbsDef, dwarf::DW_AT_inline,
+                     DD->getDwarfVersion() <= 4 ? Optional<dwarf::Form>()
+                                                : dwarf::DW_FORM_implicit_const,
+                     dwarf::DW_INL_inlined);
   if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
     ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
 }
@@ -1164,7 +1165,7 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
 }
 
 DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
-                                                 DIE *CalleeDIE,
+                                                 const DISubprogram *CalleeSP,
                                                  bool IsTail,
                                                  const MCSymbol *PCAddr,
                                                  const MCSymbol *CallAddr,
@@ -1178,7 +1179,8 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
     addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
                MachineLocation(CallReg));
   } else {
-    assert(CalleeDIE && "No DIE for call site entry origin");
+    DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP);
+    assert(CalleeDIE && "Could not create DIE for call site entry origin");
     addDIEEntry(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_origin),
                 *CalleeDIE);
   }
@@ -1266,6 +1268,16 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   StringRef Name = Module->getName();
   if (!Name.empty())
     addString(*IMDie, dwarf::DW_AT_name, Name);
+
+  // This is for imported module with renamed entities (such as variables and
+  // subprograms).
+  DINodeArray Elements = Module->getElements();
+  for (const auto *Element : Elements) {
+    if (!Element)
+      continue;
+    IMDie->addChild(
+        constructImportedEntityDIE(cast<DIImportedEntity>(Element)));
+  }
 
   return IMDie;
 }
@@ -1472,7 +1484,7 @@ void DwarfCompileUnit::addLocationList(DIE &Die, dwarf::Attribute Attribute,
   dwarf::Form Form = (DD->getDwarfVersion() >= 5)
                          ? dwarf::DW_FORM_loclistx
                          : DD->getDwarfSectionOffsetForm();
-  Die.addValue(DIEValueAllocator, Attribute, Form, DIELocList(Index));
+  addAttribute(Die, Attribute, Form, DIELocList(Index));
 }
 
 void DwarfCompileUnit::applyVariableAttributes(const DbgVariable &Var,
@@ -1481,10 +1493,12 @@ void DwarfCompileUnit::applyVariableAttributes(const DbgVariable &Var,
   if (!Name.empty())
     addString(VariableDie, dwarf::DW_AT_name, Name);
   const auto *DIVar = Var.getVariable();
-  if (DIVar)
+  if (DIVar) {
     if (uint32_t AlignInBytes = DIVar->getAlignInBytes())
       addUInt(VariableDie, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
               AlignInBytes);
+    addAnnotation(VariableDie, DIVar->getAnnotations());
+  }
 
   addSourceLine(VariableDie, DIVar);
   addType(VariableDie, Var.getType());
@@ -1504,7 +1518,7 @@ void DwarfCompileUnit::applyLabelAttributes(const DbgLabel &Label,
 /// Add a Dwarf expression attribute data and value.
 void DwarfCompileUnit::addExpr(DIELoc &Die, dwarf::Form Form,
                                const MCExpr *Expr) {
-  Die.addValue(DIEValueAllocator, (dwarf::Attribute)0, Form, DIEExpr(Expr));
+  addAttribute(Die, (dwarf::Attribute)0, Form, DIEExpr(Expr));
 }
 
 void DwarfCompileUnit::applySubprogramAttributesToDefinition(
@@ -1538,7 +1552,7 @@ void DwarfCompileUnit::addAddrTableBase() {
 }
 
 void DwarfCompileUnit::addBaseTypeRef(DIEValueList &Die, int64_t Idx) {
-  Die.addValue(DIEValueAllocator, (dwarf::Attribute)0, dwarf::DW_FORM_udata,
+  addAttribute(Die, (dwarf::Attribute)0, dwarf::DW_FORM_udata,
                new (DIEValueAllocator) DIEBaseTypeRef(this, Idx));
 }
 

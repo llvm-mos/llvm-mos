@@ -5,10 +5,8 @@
 ; enabled as indicator symbols will cause link time odr violations.
 ; This is to fix PR 47925.
 ;
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
 ; RUN: opt < %s -passes='asan-pipeline'             -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
 ; Check that enabling odr indicators enables comdat for globals.
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
 ; RUN: opt < %s -passes='asan-pipeline'             -asan-globals-live-support=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -33,22 +31,22 @@ target triple = "x86_64-unknown-linux-gnu"
 ; NOCOMDAT-NOT: $_ZZ4funcvE10static_var.{{[01-9a-f]+}} = comdat any
 ; NOCOMDAT-NOT: $.str.{{[01-9a-f]+}} = comdat any
 
-; COMDAT: @global = global { i32, [60 x i8] } zeroinitializer, comdat, align 32
-; COMDAT: @dyn_init_global = global { i32, [60 x i8] } zeroinitializer, comdat, align 32
-; COMDAT: @_ZZ4funcvE10static_var = internal global { i32, [60 x i8] } zeroinitializer, comdat($_ZZ4funcvE10static_var.{{[01-9a-f]+}}), align 32
-; COMDAT: @.str = internal constant { [14 x i8], [50 x i8] } { [14 x i8] c"Hello, world!\00", [50 x i8] zeroinitializer }, comdat($.str.{{[01-9a-f]+}}), align 32
+; COMDAT: @global = global { i32, [28 x i8] } zeroinitializer, comdat, align 32
+; COMDAT: @dyn_init_global = global { i32, [28 x i8] } zeroinitializer, comdat, align 32
+; COMDAT: @_ZZ4funcvE10static_var = internal global { i32, [28 x i8] } zeroinitializer, comdat($_ZZ4funcvE10static_var.{{[01-9a-f]+}}), align 32
+; COMDAT: @.str = internal constant { [14 x i8], [18 x i8] } { [14 x i8] c"Hello, world!\00", [18 x i8] zeroinitializer }, comdat($.str.{{[01-9a-f]+}}), align 32
 
-; NOCOMDAT: @global = global { i32, [60 x i8] } zeroinitializer, align 32
-; NOCOMDAT: @dyn_init_global = global { i32, [60 x i8] } zeroinitializer, align 32
-; NOCOMDAT: @_ZZ4funcvE10static_var = internal global { i32, [60 x i8] } zeroinitializer, align 32
-; NOCOMDAT: @.str = internal constant { [14 x i8], [50 x i8] } { [14 x i8] c"Hello, world!\00", [50 x i8] zeroinitializer }, align 32
+; NOCOMDAT: @global = global { i32, [28 x i8] } zeroinitializer, align 32
+; NOCOMDAT: @dyn_init_global = global { i32, [28 x i8] } zeroinitializer, align 32
+; NOCOMDAT: @_ZZ4funcvE10static_var = internal global { i32, [28 x i8] } zeroinitializer, align 32
+; NOCOMDAT: @.str = internal constant { [14 x i8], [18 x i8] } { [14 x i8] c"Hello, world!\00", [18 x i8] zeroinitializer }, align 32
 
 ; Check emitted location descriptions:
 ; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
 ; CHECK: [[FILENAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [22 x i8] c"/tmp/asan-globals.cpp\00", align 1
 ; CHECK: [[LOCDESCR:@___asan_gen_.[0-9]+]] = private unnamed_addr constant { [22 x i8]*, i32, i32 } { [22 x i8]* [[FILENAME]], i32 5, i32 5 }
-; COMDAT: @__asan_global_global = {{.*}}i64 ptrtoint ({ i32, [60 x i8] }* @global to i64){{.*}} section "asan_globals"{{.*}}, !associated
-; COMDAT: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [50 x i8] }* @{{.str|1}} to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; COMDAT: @__asan_global_global = {{.*}}i64 ptrtoint ({ i32, [28 x i8] }* @global to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; COMDAT: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [18 x i8] }* @{{.str|1}} to i64){{.*}} section "asan_globals"{{.*}}, !associated
 
 ; The metadata has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.

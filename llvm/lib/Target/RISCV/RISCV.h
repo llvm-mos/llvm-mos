@@ -37,6 +37,9 @@ bool LowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
 
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM);
 
+FunctionPass *createRISCVGatherScatterLoweringPass();
+void initializeRISCVGatherScatterLoweringPass(PassRegistry &);
+
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 
@@ -46,8 +49,8 @@ void initializeRISCVExpandPseudoPass(PassRegistry &);
 FunctionPass *createRISCVExpandAtomicPseudoPass();
 void initializeRISCVExpandAtomicPseudoPass(PassRegistry &);
 
-FunctionPass *createRISCVCleanupVSETVLIPass();
-void initializeRISCVCleanupVSETVLIPass(PassRegistry &);
+FunctionPass *createRISCVInsertVSETVLIPass();
+void initializeRISCVInsertVSETVLIPass(PassRegistry &);
 
 InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,

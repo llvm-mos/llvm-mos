@@ -369,7 +369,7 @@ Value *Mapper::mapValue(const Value *V) {
       if (NewTy != IA->getFunctionType())
         V = InlineAsm::get(NewTy, IA->getAsmString(), IA->getConstraintString(),
                            IA->hasSideEffects(), IA->isAlignStack(),
-                           IA->getDialect());
+                           IA->getDialect(), IA->canThrow());
     }
 
     return getVM()[V] = const_cast<Value *>(V);
@@ -944,12 +944,13 @@ void Mapper::remapInstruction(Instruction *I) {
     LLVMContext &C = CB->getContext();
     AttributeList Attrs = CB->getAttributes();
     for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
-      for (Attribute::AttrKind TypedAttr :
-             {Attribute::ByVal, Attribute::StructRet, Attribute::ByRef,
-              Attribute::InAlloca}) {
-        if (Type *Ty = Attrs.getAttribute(i, TypedAttr).getValueAsType()) {
-          Attrs = Attrs.replaceAttributeType(C, i, TypedAttr,
-                                             TypeMapper->remapType(Ty));
+      for (int AttrIdx = Attribute::FirstTypeAttr;
+           AttrIdx <= Attribute::LastTypeAttr; AttrIdx++) {
+        Attribute::AttrKind TypedAttr = (Attribute::AttrKind)AttrIdx;
+        if (Type *Ty =
+                Attrs.getAttributeAtIndex(i, TypedAttr).getValueAsType()) {
+          Attrs = Attrs.replaceAttributeTypeAtIndex(C, i, TypedAttr,
+                                                    TypeMapper->remapType(Ty));
           break;
         }
       }
@@ -1032,8 +1033,8 @@ void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
     Elements.push_back(NewV);
   }
 
-  GV.setInitializer(ConstantArray::get(
-      cast<ArrayType>(GV.getType()->getElementType()), Elements));
+  GV.setInitializer(
+      ConstantArray::get(cast<ArrayType>(GV.getValueType()), Elements));
 }
 
 void Mapper::scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,

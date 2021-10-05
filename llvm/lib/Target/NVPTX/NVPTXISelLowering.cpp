@@ -1175,7 +1175,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
 
 TargetLoweringBase::LegalizeTypeAction
 NVPTXTargetLowering::getPreferredVectorAction(MVT VT) const {
-  if (VT.getVectorNumElements() != 1 && VT.getScalarType() == MVT::i1)
+  if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
+      VT.getScalarType() == MVT::i1)
     return TypeSplitVector;
   if (VT == MVT::v2f16)
     return TypeLegal;
@@ -2529,7 +2530,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     // to newly created nodes. The SDNodes for params have to
     // appear in the same order as their order of appearance
     // in the original function. "idx+1" holds that order.
-    if (!PAL.hasParamAttribute(i, Attribute::ByVal)) {
+    if (!PAL.hasParamAttr(i, Attribute::ByVal)) {
       bool aggregateIsPacked = false;
       if (StructType *STy = dyn_cast<StructType>(Ty))
         aggregateIsPacked = STy->isPacked();
@@ -2652,7 +2653,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (!isABI)
     return Chain;
 
-  const DataLayout DL = DAG.getDataLayout();
+  const DataLayout &DL = DAG.getDataLayout();
   SmallVector<EVT, 16> VTs;
   SmallVector<uint64_t, 16> Offsets;
   ComputePTXValueVTs(*this, DL, RetTy, VTs, &Offsets);
@@ -3489,6 +3490,10 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_s8_row_stride:
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_u8_row_stride:
   case Intrinsic::nvvm_wmma_m16n16k16_load_a_u8_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_a_bf16_col:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_a_bf16_col_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_a_bf16_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_a_bf16_row_stride:
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_s8_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_s8_col_stride:
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_u8_col_stride:
@@ -3496,7 +3501,11 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_s8_row:
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_s8_row_stride:
   case Intrinsic::nvvm_wmma_m16n16k16_load_b_u8_row_stride:
-  case Intrinsic::nvvm_wmma_m16n16k16_load_b_u8_row: {
+  case Intrinsic::nvvm_wmma_m16n16k16_load_b_u8_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_b_bf16_col:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_b_bf16_col_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_b_bf16_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_b_bf16_row_stride: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3514,6 +3523,14 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m32n8k16_load_a_s8_row_stride:
   case Intrinsic::nvvm_wmma_m32n8k16_load_a_u8_row_stride:
   case Intrinsic::nvvm_wmma_m32n8k16_load_a_u8_row:
+  case Intrinsic::nvvm_wmma_m16n16k16_load_a_bf16_col:
+  case Intrinsic::nvvm_wmma_m16n16k16_load_a_bf16_col_stride:
+  case Intrinsic::nvvm_wmma_m16n16k16_load_a_bf16_row:
+  case Intrinsic::nvvm_wmma_m16n16k16_load_a_bf16_row_stride:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_a_tf32_col:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_a_tf32_col_stride:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_a_tf32_row:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_a_tf32_row_stride:
 
   case Intrinsic::nvvm_wmma_m8n32k16_load_b_s8_col:
   case Intrinsic::nvvm_wmma_m8n32k16_load_b_s8_col_stride:
@@ -3522,7 +3539,17 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n32k16_load_b_s8_row:
   case Intrinsic::nvvm_wmma_m8n32k16_load_b_s8_row_stride:
   case Intrinsic::nvvm_wmma_m8n32k16_load_b_u8_row_stride:
-  case Intrinsic::nvvm_wmma_m8n32k16_load_b_u8_row: {
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_u8_row:
+  case Intrinsic::nvvm_wmma_m16n16k16_load_b_bf16_col:
+  case Intrinsic::nvvm_wmma_m16n16k16_load_b_bf16_col_stride:
+  case Intrinsic::nvvm_wmma_m16n16k16_load_b_bf16_row:
+  case Intrinsic::nvvm_wmma_m16n16k16_load_b_bf16_row_stride:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_col:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_col_stride:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_row:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_row_stride:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3560,7 +3587,9 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_s4_col:
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_s4_col_stride:
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col_stride:
-  case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col: {
+  case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3602,7 +3631,11 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_col:
   case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_row:
   case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_col_stride:
-  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_row_stride: {
+  case Intrinsic::nvvm_wmma_m8n32k16_load_c_f32_row_stride:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_c_f32_col:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_c_f32_row:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_c_f32_col_stride:
+  case Intrinsic::nvvm_wmma_m16n16k8_load_c_f32_row_stride: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v8f32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3611,6 +3644,16 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.align = Align(16);
     return true;
   }
+
+  case Intrinsic::nvvm_wmma_m32n8k16_load_a_bf16_col:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_a_bf16_col_stride:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_a_bf16_row:
+  case Intrinsic::nvvm_wmma_m32n8k16_load_a_bf16_row_stride:
+
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_bf16_col:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_bf16_col_stride:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_bf16_row:
+  case Intrinsic::nvvm_wmma_m8n32k16_load_b_bf16_row_stride:
 
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_s32_col:
   case Intrinsic::nvvm_wmma_m16n16k16_load_c_s32_col_stride:
@@ -3640,13 +3683,46 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_col:
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_col_stride:
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row:
-  case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row_stride: {
+  case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row_stride:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(8);
+    return true;
+  }
+
+  case Intrinsic::nvvm_wmma_m8n8k4_load_a_f64_col:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_a_f64_col_stride:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_a_f64_row:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_a_f64_row_stride:
+
+  case Intrinsic::nvvm_wmma_m8n8k4_load_b_f64_col:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_b_f64_col_stride:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_b_f64_row:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_b_f64_row_stride: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::f64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(8);
+    return true;
+  }
+
+  case Intrinsic::nvvm_wmma_m8n8k4_load_c_f64_col:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_c_f64_col_stride:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_c_f64_row:
+  case Intrinsic::nvvm_wmma_m8n8k4_load_c_f64_row_stride: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v2f64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(16);
     return true;
   }
 
@@ -3682,7 +3758,11 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_col:
   case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_row:
   case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_col_stride:
-  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_row_stride: {
+  case Intrinsic::nvvm_wmma_m8n32k16_store_d_f32_row_stride:
+  case Intrinsic::nvvm_wmma_m16n16k8_store_d_f32_col:
+  case Intrinsic::nvvm_wmma_m16n16k8_store_d_f32_row:
+  case Intrinsic::nvvm_wmma_m16n16k8_store_d_f32_col_stride:
+  case Intrinsic::nvvm_wmma_m16n16k8_store_d_f32_row_stride: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::v8f32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3727,6 +3807,19 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(8);
+    return true;
+  }
+
+  case Intrinsic::nvvm_wmma_m8n8k4_store_d_f64_col:
+  case Intrinsic::nvvm_wmma_m8n8k4_store_d_f64_col_stride:
+  case Intrinsic::nvvm_wmma_m8n8k4_store_d_f64_row:
+  case Intrinsic::nvvm_wmma_m8n8k4_store_d_f64_row_stride: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v2f64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(16);
     return true;
   }
 
@@ -4304,14 +4397,7 @@ bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
 
   // Allow unsafe math if unsafe-fp-math attribute explicitly says so.
   const Function &F = MF.getFunction();
-  if (F.hasFnAttribute("unsafe-fp-math")) {
-    Attribute Attr = F.getFnAttribute("unsafe-fp-math");
-    StringRef Val = Attr.getValueAsString();
-    if (Val == "true")
-      return true;
-  }
-
-  return false;
+  return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
 }
 
 /// PerformADDCombineWithOperands - Try DAG combinations for an ADD with

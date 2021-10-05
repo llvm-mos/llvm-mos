@@ -10,11 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_TOSA_IR_TOSA_OPS_H
-#define DIALECT_TOSA_IR_TOSA_OPS_H
+#ifndef MLIR_DIALECT_TOSA_IR_TOSAOPS_H
+#define MLIR_DIALECT_TOSA_IR_TOSAOPS_H
 
 #include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Traits.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -35,4 +37,4 @@ namespace tosa {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.h.inc"
 
-#endif // TOSA_OPS_H
+#endif // MLIR_DIALECT_TOSA_IR_TOSAOPS_H

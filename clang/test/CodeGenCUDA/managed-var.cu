@@ -27,21 +27,21 @@ struct vec {
   float x,y,z;
 };
 
-// DEV-DAG: @x.managed = dso_local addrspace(1) externally_initialized global i32 1, align 4
-// DEV-DAG: @x = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
+// DEV-DAG: @x.managed = addrspace(1) externally_initialized global i32 1, align 4
+// DEV-DAG: @x = addrspace(1) externally_initialized global i32 addrspace(1)* null
 // NORDC-DAG: @x.managed = internal global i32 1
-// RDC-DAG: @x.managed = dso_local global i32 1
+// RDC-DAG: @x.managed = global i32 1
 // NORDC-DAG: @x = internal externally_initialized global i32* null
-// RDC-DAG: @x = dso_local externally_initialized global i32* null
+// RDC-DAG: @x = externally_initialized global i32* null
 // HOST-DAG: @[[DEVNAMEX:[0-9]+]] = {{.*}}c"x\00"
 __managed__ int x = 1;
 
-// DEV-DAG: @v.managed = dso_local addrspace(1) externally_initialized global [100 x %struct.vec] zeroinitializer, align 4
-// DEV-DAG: @v = dso_local addrspace(1) externally_initialized global [100 x %struct.vec] addrspace(1)* null
+// DEV-DAG: @v.managed = addrspace(1) externally_initialized global [100 x %struct.vec] zeroinitializer, align 4
+// DEV-DAG: @v = addrspace(1) externally_initialized global [100 x %struct.vec] addrspace(1)* null
 __managed__ vec v[100];
 
-// DEV-DAG: @v2.managed = dso_local addrspace(1) externally_initialized global <{ %struct.vec, [99 x %struct.vec] }> <{ %struct.vec { float 1.000000e+00, float 1.000000e+00, float 1.000000e+00 }, [99 x %struct.vec] zeroinitializer }>, align 4
-// DEV-DAG: @v2 = dso_local addrspace(1) externally_initialized global <{ %struct.vec, [99 x %struct.vec] }> addrspace(1)* null
+// DEV-DAG: @v2.managed = addrspace(1) externally_initialized global <{ %struct.vec, [99 x %struct.vec] }> <{ %struct.vec { float 1.000000e+00, float 1.000000e+00, float 1.000000e+00 }, [99 x %struct.vec] zeroinitializer }>, align 4
+// DEV-DAG: @v2 = addrspace(1) externally_initialized global <{ %struct.vec, [99 x %struct.vec] }> addrspace(1)* null
 __managed__ vec v2[100] = {{1, 1, 1}};
 
 // DEV-DAG: @ex.managed = external addrspace(1) global i32, align 4
@@ -50,17 +50,17 @@ __managed__ vec v2[100] = {{1, 1, 1}};
 // HOST-DAG: @ex = external externally_initialized global i32*
 extern __managed__ int ex;
 
-// NORDC-D-DAG: @_ZL2sx.managed = dso_local addrspace(1) externally_initialized global i32 1, align 4
-// NORDC-D-DAG: @_ZL2sx = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
-// RDC-D-DAG: @_ZL2sx.static.[[HASH:.*]].managed = dso_local addrspace(1) externally_initialized global i32 1, align 4
-// RDC-D-DAG: @_ZL2sx.static.[[HASH]] = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
+// NORDC-D-DAG: @_ZL2sx.managed = addrspace(1) externally_initialized global i32 1, align 4
+// NORDC-D-DAG: @_ZL2sx = addrspace(1) externally_initialized global i32 addrspace(1)* null
+// RDC-D-DAG: @_ZL2sx__static__[[HASH:.*]].managed = addrspace(1) externally_initialized global i32 1, align 4
+// RDC-D-DAG: @_ZL2sx__static__[[HASH]] = addrspace(1) externally_initialized global i32 addrspace(1)* null
 // HOST-DAG: @_ZL2sx.managed = internal global i32 1
 // HOST-DAG: @_ZL2sx = internal externally_initialized global i32* null
 // NORDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx\00"
-// RDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx.static.[[HASH:.*]]\00"
+// RDC-DAG: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx__static__[[HASH:.*]]\00"
 
-// POSTFIX:  @_ZL2sx.static.[[HASH:.*]] = dso_local addrspace(1) externally_initialized global i32 addrspace(1)* null
-// POSTFIX: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx.static.[[HASH]]\00"
+// POSTFIX:  @_ZL2sx__static__[[HASH:.*]] = addrspace(1) externally_initialized global i32 addrspace(1)* null
+// POSTFIX: @[[DEVNAMESX:[0-9]+]] = {{.*}}c"_ZL2sx__static__[[HASH]]\00"
 static __managed__ int sx = 1;
 
 // DEV-DAG: @llvm.compiler.used
@@ -146,7 +146,7 @@ float load3() {
 // HOST:  %3 = getelementptr inbounds [100 x %struct.vec], [100 x %struct.vec]* %2, i64 0, i64 1, i32 1
 // HOST:  %4 = ptrtoint float* %3 to i64
 // HOST:  %5 = sub i64 %4, %1
-// HOST:  %6 = sdiv i64 %5, 4
+// HOST:  %6 = sdiv exact i64 %5, 4
 // HOST:  %7 = sitofp i64 %6 to float
 // HOST:  ret float %7
 float addr_taken2() {

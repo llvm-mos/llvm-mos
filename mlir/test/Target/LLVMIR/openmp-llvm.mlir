@@ -151,6 +151,13 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
 // CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_VAR_1:.*]])
 llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
+// Check that the allocas are emitted by the OpenMPIRBuilder at the top of the
+// function, before the condition. Allocas are only emitted by the builder when
+// the `if` clause is present. We match specific SSA value names since LLVM
+// actually produces those names.
+// CHECK: %tid.addr{{.*}} = alloca i32
+// CHECK: %zero.addr{{.*}} = alloca i32
+
 // CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_VAR_1]], 0
   %0 = llvm.mlir.constant(0 : index) : i32
   %1 = llvm.icmp "slt" %arg0, %0 : i32
@@ -183,6 +190,60 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
 // CHECK: define internal void @[[OMP_OUTLINED_FN_IF_1]]
   // CHECK: call void @__kmpc_barrier
+
+// -----
+
+// CHECK-LABEL: @test_nested_alloca_ip
+llvm.func @test_nested_alloca_ip(%arg0: i32) -> () {
+
+  // Check that the allocas are emitted by the OpenMPIRBuilder at the top of
+  // the function, before the condition. Allocas are only emitted by the
+  // builder when the `if` clause is present. We match specific SSA value names
+  // since LLVM actually produces those names and ensure they come before the
+  // "icmp" that is the first operation we emit.
+  // CHECK: %tid.addr{{.*}} = alloca i32
+  // CHECK: %zero.addr{{.*}} = alloca i32
+  // CHECK: icmp slt i32 %{{.*}}, 0
+  %0 = llvm.mlir.constant(0 : index) : i32
+  %1 = llvm.icmp "slt" %arg0, %0 : i32
+
+  omp.parallel if(%1 : i1) {
+    // The "parallel" operation will be outlined, check the the function is
+    // produced. Inside that function, further allocas should be placed before
+    // another "icmp".
+    // CHECK: define
+    // CHECK: %tid.addr{{.*}} = alloca i32
+    // CHECK: %zero.addr{{.*}} = alloca i32
+    // CHECK: icmp slt i32 %{{.*}}, 1
+    %2 = llvm.mlir.constant(1 : index) : i32
+    %3 = llvm.icmp "slt" %arg0, %2 : i32
+
+    omp.parallel if(%3 : i1) {
+      // One more nesting level.
+      // CHECK: define
+      // CHECK: %tid.addr{{.*}} = alloca i32
+      // CHECK: %zero.addr{{.*}} = alloca i32
+      // CHECK: icmp slt i32 %{{.*}}, 2
+
+      %4 = llvm.mlir.constant(2 : index) : i32
+      %5 = llvm.icmp "slt" %arg0, %4 : i32
+
+      omp.parallel if(%5 : i1) {
+        omp.barrier
+        omp.terminator
+      }
+
+      omp.barrier
+      omp.terminator
+    }
+    omp.barrier
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+// -----
 
 // CHECK-LABEL: define void @test_omp_parallel_3()
 llvm.func @test_omp_parallel_3() -> () {
@@ -318,7 +379,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
       llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
       // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @[[$wsloop_loc_struct]],
-    }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (i64, i64, i64) -> ()
+    }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0, 0]> : vector<10xi32>} : (i64, i64, i64) -> ()
     omp.terminator
   }
   llvm.return
@@ -336,7 +397,7 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (i64, i64, i64) -> ()
+  }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0, 0]> : vector<10xi32>} : (i64, i64, i64) -> ()
   llvm.return
 }
 
@@ -352,6 +413,144 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     llvm.store %3, %4 : !llvm.ptr<f32>
     omp.yield
-  }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (i64, i64, i64) -> ()
+  }) {inclusive, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0, 0]> : vector<10xi32>} : (i64, i64, i64) -> ()
+  llvm.return
+}
+
+llvm.func @body(i64)
+
+llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_auto(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(auto) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_runtime(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(runtime) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+llvm.func @test_omp_wsloop_guided(%lb : i64, %ub : i64, %step : i64) -> () {
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(guided) {
+  // CHECK: call void @__kmpc_dispatch_init_8u
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+// -----
+
+omp.critical.declare @mutex
+
+// CHECK-LABEL: @omp_critical
+llvm.func @omp_critical(%x : !llvm.ptr<i32>, %xval : i32) -> () {
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_.var{{.*}}, i32 0)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_.var{{.*}})
+
+  // CHECK: call void @__kmpc_critical_with_hint({{.*}}critical_user_mutex.var{{.*}}, i32 2)
+  // CHECK: br label %omp.critical.region
+  // CHECK: omp.critical.region
+  omp.critical(@mutex) hint(contended) {
+  // CHECK: store
+    llvm.store %xval, %x : !llvm.ptr<i32>
+    omp.terminator
+  }
+  // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex.var{{.*}})
+  llvm.return
+}
+
+// -----
+
+// Check that the loop bounds are emitted in the correct location in case of
+// collapse. This only checks the overall shape of the IR, detailed checking
+// is done by the OpenMPIRBuilder.
+
+// CHECK-LABEL: @collapse_wsloop
+// CHECK: i32* noalias %[[TIDADDR:[0-9A-Za-z.]*]]
+// CHECK: load i32, i32* %[[TIDADDR]]
+// CHECK: store
+// CHECK: load
+// CHECK: %[[LB0:.*]] = load i32
+// CHECK: %[[UB0:.*]] = load i32
+// CHECK: %[[STEP0:.*]] = load i32
+// CHECK: %[[LB1:.*]] = load i32
+// CHECK: %[[UB1:.*]] = load i32
+// CHECK: %[[STEP1:.*]] = load i32
+// CHECK: %[[LB2:.*]] = load i32
+// CHECK: %[[UB2:.*]] = load i32
+// CHECK: %[[STEP2:.*]] = load i32
+llvm.func @collapse_wsloop(
+    %0: i32, %1: i32, %2: i32,
+    %3: i32, %4: i32, %5: i32,
+    %6: i32, %7: i32, %8: i32,
+    %20: !llvm.ptr<i32>) {
+  omp.parallel {
+    // CHECK: icmp slt i32 %[[LB0]], 0
+    // CHECK-COUNT-4: select
+    // CHECK: %[[TRIPCOUNT0:.*]] = select
+    // CHECK: br label %[[PREHEADER:.*]]
+    //
+    // CHECK: [[PREHEADER]]:
+    // CHECK: icmp slt i32 %[[LB1]], 0
+    // CHECK-COUNT-4: select
+    // CHECK: %[[TRIPCOUNT1:.*]] = select
+    // CHECK: icmp slt i32 %[[LB2]], 0
+    // CHECK-COUNT-4: select
+    // CHECK: %[[TRIPCOUNT2:.*]] = select
+    // CHECK: %[[PROD:.*]] = mul nuw i32 %[[TRIPCOUNT0]], %[[TRIPCOUNT1]]
+    // CHECK: %[[TOTAL:.*]] = mul nuw i32 %[[PROD]], %[[TRIPCOUNT2]]
+    // CHECK: br label %[[COLLAPSED_PREHEADER:.*]]
+    //
+    // CHECK: [[COLLAPSED_PREHEADER]]:
+    // CHECK: store i32 0, i32*
+    // CHECK: %[[TOTAL_SUB_1:.*]] = sub i32 %[[TOTAL]], 1
+    // CHECK: store i32 %[[TOTAL_SUB_1]], i32*
+    // CHECK: call void @__kmpc_for_static_init_4u
+    omp.wsloop (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) collapse(3) {
+      %31 = llvm.load %20 : !llvm.ptr<i32>
+      %32 = llvm.add %31, %arg0 : i32
+      %33 = llvm.add %32, %arg1 : i32
+      %34 = llvm.add %33, %arg2 : i32
+      llvm.store %34, %20 : !llvm.ptr<i32>
+      omp.yield
+    }
+    omp.terminator
+  }
   llvm.return
 }

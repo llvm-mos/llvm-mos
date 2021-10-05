@@ -120,6 +120,12 @@ namespace llvm {
       return changeExtendedTypeToInteger();
     }
 
+    /// Test if the given EVT has zero size, this will fail if called on a
+    /// scalable type
+    bool isZeroSized() const {
+      return !isScalableVector() && getSizeInBits() == 0;
+    }
+
     /// Test if the given EVT is simple (as opposed to being extended).
     bool isSimple() const {
       return V.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE;
@@ -207,7 +213,9 @@ namespace llvm {
     }
 
     /// Return true if the bit size is a multiple of 8.
-    bool isByteSized() const { return getSizeInBits().isKnownMultipleOf(8); }
+    bool isByteSized() const {
+      return !isZeroSized() && getSizeInBits().isKnownMultipleOf(8);
+    }
 
     /// Return true if the size is a power-of-two number of bytes.
     bool isRound() const {
@@ -299,19 +307,16 @@ namespace llvm {
 
     /// Given a vector type, return the number of elements it contains.
     unsigned getVectorNumElements() const {
-#ifdef STRICT_FIXED_SIZE_VECTORS
-      assert(isFixedLengthVector() && "Invalid vector type!");
-#else
       assert(isVector() && "Invalid vector type!");
+
       if (isScalableVector())
-        WithColor::warning()
-            << "Possible incorrect use of EVT::getVectorNumElements() for "
-               "scalable vector. Scalable flag may be dropped, use "
-               "EVT::getVectorElementCount() instead\n";
-#endif
-      if (isSimple())
-        return V.getVectorNumElements();
-      return getExtendedVectorNumElements();
+        llvm::reportInvalidSizeRequest(
+            "Possible incorrect use of EVT::getVectorNumElements() for "
+            "scalable vector. Scalable flag may be dropped, use "
+            "EVT::getVectorElementCount() instead");
+
+      return isSimple() ? V.getVectorNumElements()
+                        : getExtendedVectorNumElements();
     }
 
     // Given a (possibly scalable) vector type, return the ElementCount

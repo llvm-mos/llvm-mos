@@ -38,7 +38,7 @@ of:
 1. Buffer optimizations such as `buffer-hoisting`, `buffer-loop-hoisting`, and
    `promote-buffers-to-stack`, which do optimizations that are only exposed
    after bufferization.
-1. Finally, running the [buffer deallocation](BufferDeallocation.md) pass.
+1. Finally, running the [buffer deallocation](BufferDeallocationInternals.md) pass.
 
 After buffer deallocation has been completed, the program will be quite
 difficult to transform due to the presence of the deallocation ops. Thus, other
@@ -139,10 +139,10 @@ class BufferizeCastOp : public OpConversionPattern<tensor::CastOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(tensor::CastOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::CastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto resultType = getTypeConverter()->convertType(op.getType());
-    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, resultType, operands[0]);
+    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, resultType, adaptor.source());
     return success();
   }
 };

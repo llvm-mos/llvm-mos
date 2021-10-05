@@ -1,4 +1,4 @@
-if (MLIR_CUDA_CONVERSIONS_ENABLED)
+if (MLIR_ENABLE_CUDA_CONVERSIONS)
   set(NVPTX_LIBS
     NVPTXCodeGen
     NVPTXDesc
@@ -6,7 +6,7 @@ if (MLIR_CUDA_CONVERSIONS_ENABLED)
   )
 endif()
 
-if (MLIR_ROCM_CONVERSIONS_ENABLED)
+if (MLIR_ENABLE_ROCM_CONVERSIONS)
   set(AMDGPU_LIBS
     MCParser
     AMDGPUAsmParser
@@ -16,8 +16,26 @@ if (MLIR_ROCM_CONVERSIONS_ENABLED)
   )
 endif()
 
-add_mlir_dialect_library(MLIRGPU
+add_mlir_dialect_library(MLIRGPUOps
   IR/GPUDialect.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
+
+  DEPENDS
+  MLIRGPUOpsIncGen
+  MLIRGPUOpInterfacesIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRDLTI
+  MLIRIR
+  MLIRMemRef
+  MLIRSideEffectInterfaces
+  MLIRSupport
+  MLIRLLVMIR
+  )
+
+add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
   Transforms/KernelOutlining.cpp
@@ -37,8 +55,6 @@ add_mlir_dialect_library(MLIRGPU
   ${AMDGPU_LIBS}
 
   DEPENDS
-  MLIRGPUOpsIncGen
-  MLIRGPUOpInterfacesIncGen
   MLIRGPUPassIncGen
   MLIRParallelLoopMapperAttrGen
   MLIRParallelLoopMapperEnumsGen
@@ -46,22 +62,20 @@ add_mlir_dialect_library(MLIRGPU
   LINK_LIBS PUBLIC
   MLIRAsync
   MLIRDataLayoutInterfaces
-  MLIRDLTI
-  MLIREDSC
+  MLIRGPUOps
   MLIRIR
-  MLIRMemRef
   MLIRLLVMIR
   MLIRLLVMToLLVMIRTranslation
-  MLIRSCF
+  MLIRMemRef
   MLIRPass
-  MLIRSideEffectInterfaces
+  MLIRSCF
   MLIRStandard
   MLIRSupport
   MLIRTransformUtils
   )
 
-if(MLIR_CUDA_RUNNER_ENABLED)
-  if(NOT MLIR_CUDA_CONVERSIONS_ENABLED)
+if(MLIR_ENABLE_CUDA_RUNNER)
+  if(NOT MLIR_ENABLE_CUDA_CONVERSIONS)
     message(SEND_ERROR
       "Building mlir with cuda support requires the NVPTX backend")
   endif()
@@ -78,20 +92,20 @@ if(MLIR_CUDA_RUNNER_ENABLED)
   endif()
 
   # Enable gpu-to-cubin pass.
-  target_compile_definitions(obj.MLIRGPU
+  target_compile_definitions(obj.MLIRGPUTransforms
     PRIVATE
     MLIR_GPU_TO_CUBIN_PASS_ENABLE=1
   )
 
   # Add CUDA headers includes and the libcuda.so library.
-  target_include_directories(obj.MLIRGPU
+  target_include_directories(obj.MLIRGPUTransforms
     PRIVATE
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )
 
   find_library(CUDA_DRIVER_LIBRARY cuda)
 
-  target_link_libraries(MLIRGPU
+  target_link_libraries(MLIRGPUTransforms
     PRIVATE
     MLIRNVVMToLLVMIRTranslation
     ${CUDA_DRIVER_LIBRARY}
@@ -99,7 +113,7 @@ if(MLIR_CUDA_RUNNER_ENABLED)
 
 endif()
 
-if(MLIR_ROCM_RUNNER_ENABLED)
+if(MLIR_ENABLE_ROCM_RUNNER)
   if (NOT ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD))
     message(SEND_ERROR
       "Building mlir with ROCm support requires the AMDGPU backend")
@@ -127,21 +141,21 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     message(STATUS "ROCm HIP version: ${HIP_VERSION}")
   endif()
 
-  target_compile_definitions(obj.MLIRGPU
+  target_compile_definitions(obj.MLIRGPUOps
     PRIVATE
     __HIP_PLATFORM_HCC__
     __ROCM_PATH__="${ROCM_PATH}"
     MLIR_GPU_TO_HSACO_PASS_ENABLE=1
   )
 
-  target_include_directories(obj.MLIRGPU
+  target_include_directories(obj.MLIRGPUOps
     PRIVATE
     ${MLIR_SOURCE_DIR}/../lld/include
     ${HIP_PATH}/include
     ${ROCM_PATH}/include
   )
 
-  target_link_libraries(MLIRGPU
+  target_link_libraries(MLIRGPUOps
     PRIVATE
     lldELF
     MLIRROCDLToLLVMIRTranslation

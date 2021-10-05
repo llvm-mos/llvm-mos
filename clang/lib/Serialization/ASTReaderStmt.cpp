@@ -185,11 +185,13 @@ void ASTStmtReader::VisitDefaultStmt(DefaultStmt *S) {
 
 void ASTStmtReader::VisitLabelStmt(LabelStmt *S) {
   VisitStmt(S);
+  bool IsSideEntry = Record.readInt();
   auto *LD = readDeclAs<LabelDecl>();
   LD->setStmt(S);
   S->setDecl(LD);
   S->setSubStmt(Record.readSubStmt());
   S->setIdentLoc(readSourceLocation());
+  S->setSideEntry(IsSideEntry);
 }
 
 void ASTStmtReader::VisitAttributedStmt(AttributedStmt *S) {
@@ -211,11 +213,11 @@ void ASTStmtReader::VisitAttributedStmt(AttributedStmt *S) {
 void ASTStmtReader::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
 
-  S->setConstexpr(Record.readInt());
   bool HasElse = Record.readInt();
   bool HasVar = Record.readInt();
   bool HasInit = Record.readInt();
 
+  S->setStatementKind(static_cast<IfStatementKind>(Record.readInt()));
   S->setCond(Record.readSubExpr());
   S->setThen(Record.readSubStmt());
   if (HasElse)
@@ -577,6 +579,16 @@ void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
   }
 
   E->setSubExpr(Record.readSubExpr());
+}
+
+void ASTStmtReader::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
+  VisitExpr(E);
+
+  E->setLocation(readSourceLocation());
+  E->setLParenLocation(readSourceLocation());
+  E->setRParenLocation(readSourceLocation());
+
+  E->setTypeSourceInfo(Record.readTypeSourceInfo());
 }
 
 void ASTStmtReader::VisitPredefinedExpr(PredefinedExpr *E) {
@@ -1099,10 +1111,9 @@ void ASTStmtReader::VisitCastExpr(CastExpr *E) {
 
 void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {
   bool hasFP_Features;
-  BinaryOperator::Opcode opc;
   VisitExpr(E);
   E->setHasStoredFPFeatures(hasFP_Features = Record.readInt());
-  E->setOpcode(opc = (BinaryOperator::Opcode)Record.readInt());
+  E->setOpcode((BinaryOperator::Opcode)Record.readInt());
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
   E->setOperatorLoc(readSourceLocation());
@@ -2296,6 +2307,13 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
   VisitOMPLoopBasedDirective(D);
 }
 
+void ASTStmtReader::VisitOMPMetaDirective(OMPMetaDirective *D) {
+  VisitStmt(D);
+  // The NumClauses field was read in ReadStmtFromStream.
+  Record.skipInts(1);
+  VisitOMPExecutableDirective(D);
+}
+
 void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
@@ -2307,6 +2325,10 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
+  VisitOMPLoopBasedDirective(D);
+}
+
+void ASTStmtReader::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
   VisitOMPLoopBasedDirective(D);
 }
 
@@ -2593,6 +2615,17 @@ void ASTStmtReader::VisitOMPInteropDirective(OMPInteropDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
+void ASTStmtReader::VisitOMPDispatchDirective(OMPDispatchDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  D->setTargetCallLoc(Record.readSourceLocation());
+}
+
+void ASTStmtReader::VisitOMPMaskedDirective(OMPMaskedDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+}
+
 //===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
@@ -2720,9 +2753,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_IF:
       S = IfStmt::CreateEmpty(
           Context,
-          /* HasElse=*/Record[ASTStmtReader::NumStmtFields + 1],
-          /* HasVar=*/Record[ASTStmtReader::NumStmtFields + 2],
-          /* HasInit=*/Record[ASTStmtReader::NumStmtFields + 3]);
+          /* HasElse=*/Record[ASTStmtReader::NumStmtFields],
+          /* HasVar=*/Record[ASTStmtReader::NumStmtFields + 1],
+          /* HasInit=*/Record[ASTStmtReader::NumStmtFields + 2]);
       break;
 
     case STMT_SWITCH:
@@ -2788,6 +2821,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = ConstantExpr::CreateEmpty(
           Context, static_cast<ConstantExpr::ResultStorageKind>(
                        /*StorageKind=*/Record[ASTStmtReader::NumExprFields]));
+      break;
+
+    case EXPR_SYCL_UNIQUE_STABLE_NAME:
+      S = SYCLUniqueStableNameExpr::CreateEmpty(Context);
       break;
 
     case EXPR_PREDEFINED:
@@ -3153,6 +3190,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = OMPCanonicalLoop::createEmpty(Context);
       break;
 
+    case STMT_OMP_META_DIRECTIVE:
+      S = OMPMetaDirective::CreateEmpty(
+          Context, Record[ASTStmtReader::NumStmtFields], Empty);
+      break;
+
     case STMT_OMP_PARALLEL_DIRECTIVE:
       S =
         OMPParallelDirective::CreateEmpty(Context,
@@ -3172,6 +3214,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPTileDirective::CreateEmpty(Context, NumClauses, NumLoops);
+      break;
+    }
+
+    case STMT_OMP_UNROLL_DIRECTIVE: {
+      assert(Record[ASTStmtReader::NumStmtFields] == 1 && "Unroll directive accepts only a single loop");
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPUnrollDirective::CreateEmpty(Context, NumClauses);
       break;
     }
 
@@ -3510,6 +3559,16 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_OMP_INTEROP_DIRECTIVE:
       S = OMPInteropDirective::CreateEmpty(
+          Context, Record[ASTStmtReader::NumStmtFields], Empty);
+      break;
+
+    case STMT_OMP_DISPATCH_DIRECTIVE:
+      S = OMPDispatchDirective::CreateEmpty(
+          Context, Record[ASTStmtReader::NumStmtFields], Empty);
+      break;
+
+    case STMT_OMP_MASKED_DIRECTIVE:
+      S = OMPMaskedDirective::CreateEmpty(
           Context, Record[ASTStmtReader::NumStmtFields], Empty);
       break;
 

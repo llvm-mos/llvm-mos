@@ -48,3 +48,48 @@ void mlir::getPositionsOfShapeOne(
     }
   }
 }
+
+Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
+                                            OpFoldResult ofr) {
+  if (auto value = ofr.dyn_cast<Value>())
+    return value;
+  auto attr = ofr.dyn_cast<Attribute>().dyn_cast<IntegerAttr>();
+  assert(attr && "expect the op fold result casts to an integer attribute");
+  return b.create<ConstantIndexOp>(loc, attr.getValue().getSExtValue());
+}
+
+SmallVector<Value>
+mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
+                                      ArrayRef<OpFoldResult> valueOrAttrVec) {
+  return llvm::to_vector<4>(
+      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
+        return getValueOrCreateConstantIndexOp(b, loc, value);
+      }));
+}
+
+Value ArithBuilder::_and(Value lhs, Value rhs) {
+  return b.create<AndOp>(loc, lhs, rhs);
+}
+Value ArithBuilder::add(Value lhs, Value rhs) {
+  if (lhs.getType().isa<IntegerType>())
+    return b.create<AddIOp>(loc, lhs, rhs);
+  return b.create<AddFOp>(loc, lhs, rhs);
+}
+Value ArithBuilder::mul(Value lhs, Value rhs) {
+  if (lhs.getType().isa<IntegerType>())
+    return b.create<MulIOp>(loc, lhs, rhs);
+  return b.create<MulFOp>(loc, lhs, rhs);
+}
+Value ArithBuilder::sgt(Value lhs, Value rhs) {
+  if (lhs.getType().isa<IndexType, IntegerType>())
+    return b.create<CmpIOp>(loc, CmpIPredicate::sgt, lhs, rhs);
+  return b.create<CmpFOp>(loc, CmpFPredicate::OGT, lhs, rhs);
+}
+Value ArithBuilder::slt(Value lhs, Value rhs) {
+  if (lhs.getType().isa<IndexType, IntegerType>())
+    return b.create<CmpIOp>(loc, CmpIPredicate::slt, lhs, rhs);
+  return b.create<CmpFOp>(loc, CmpFPredicate::OLT, lhs, rhs);
+}
+Value ArithBuilder::select(Value cmp, Value lhs, Value rhs) {
+  return b.create<SelectOp>(loc, cmp, lhs, rhs);
+}

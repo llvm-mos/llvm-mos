@@ -686,7 +686,7 @@ generate a reproducer for warnings or errors while using modules.
 .. option:: -gen-reproducer
 
   Generates preprocessed source files, a reproducer script and if relevant, a
-  cache containing: built module pcm's and all headers needed to rebuilt the
+  cache containing: built module pcm's and all headers needed to rebuild the
   same modules.
 
 .. _rpass:
@@ -1478,6 +1478,26 @@ Note that floating-point operations performed as part of constant initialization
    * ``maytrap`` The compiler avoids transformations that may raise exceptions that would not have been raised by the original code. Constant folding performed by the compiler is exempt from this option.
    * ``strict`` The compiler ensures that all transformations strictly preserve the floating point exception semantics of the original code.
 
+.. option:: -f[no-]protect-parens:
+
+   This option pertains to floating-point types, complex types with
+   floating-point components, and vectors of these types. Some arithmetic
+   expression transformations that are mathematically correct and permissible
+   according to the C and C++ language standards may be incorrect when dealing
+   with floating-point types, such as reassociation and distribution. Further,
+   the optimizer may ignore parentheses when computing arithmetic expressions
+   in circumstances where the parenthesized and unparenthesized expression
+   express the same mathematical value. For example (a+b)+c is the same
+   mathematical value as a+(b+c), but the optimizer is free to evaluate the 
+   additions in any order regardless of the parentheses. When enabled, this
+   option forces the optimizer to honor the order of operations with respect
+   to parentheses in all circumstances.
+
+   Note that floating-point contraction (option `-ffp-contract=`) is disabled
+   when `-fprotect-parens` is enabled.  Also note that in safe floating-point
+   modes, such as `-ffp-model=precise` or `-ffp-model=strict`, this option
+   has no effect because the optimizer is prohibited from making unsafe
+   transformations.
 
 .. _fp-constant-eval:
 
@@ -1614,20 +1634,28 @@ are listed below.
 
    This flag is enabled by default for sanitizers in the ``cfi`` group.
 
-.. option:: -fsanitize-blacklist=/path/to/blacklist/file
+.. option:: -fsanitize-ignorelist=/path/to/ignorelist/file
 
    Disable or modify sanitizer checks for objects (source files, functions,
    variables, types) listed in the file. See
    :doc:`SanitizerSpecialCaseList` for file format description.
 
-.. option:: -fno-sanitize-blacklist
+.. option:: -fno-sanitize-ignorelist
 
-   Don't use blacklist file, if it was specified earlier in the command line.
+   Don't use ignorelist file, if it was specified earlier in the command line.
 
 **-f[no-]sanitize-coverage=[type,features,...]**
 
    Enable simple code coverage in addition to certain sanitizers.
    See :doc:`SanitizerCoverage` for more details.
+
+**-f[no-]sanitize-address-outline-instrumentation**
+
+   Controls how address sanitizer code is generated. If enabled will always use
+   a function call instead of inlining the code. Turning this option on could
+   reduce the binary size, but might result in a worse run-time performance.
+
+   See :doc: `AddressSanitizer` for more details.
 
 **-f[no-]sanitize-stats**
 
@@ -2306,6 +2334,14 @@ In these cases, you can use the flag ``-fno-profile-instr-generate`` (or
 Note that these flags should appear after the corresponding profile
 flags to have an effect.
 
+.. note::
+
+  When none of the translation units inside a binary is instrumented, in the
+  case of Fuchsia the profile runtime will not be linked into the binary and
+  no profile will be produced, while on other platforms the profile runtime
+  will be linked and profile will be produced but there will not be any
+  counters.
+
 Instrumenting only selected files or functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2535,7 +2571,8 @@ below. If multiple flags are present, the last one is used.
    non-trivial, non-aggregate C++ class in the modules that contain a
    definition of one of its constructors. This relies on the additional
    assumption that all classes that are not trivially constructible have a
-   non-trivial constructor that is used somewhere.
+   non-trivial constructor that is used somewhere. The negation,
+   -fno-use-ctor-homing, ensures that constructor homing is not used.
 
    This flag is not enabled by default, and needs to be used with -cc1 or
    -Xclang.
@@ -2573,13 +2610,12 @@ While Clang generally emits standard DWARF debug info (http://dwarfstd.org),
 different debuggers may know how to take advantage of different specific DWARF
 features. You can "tune" the debug info for one of several different debuggers.
 
-.. option:: -ggdb, -glldb, -gsce
+.. option:: -ggdb, -glldb, -gsce, -gdbx
 
-  Tune the debug info for the ``gdb``, ``lldb``, or Sony PlayStation\ |reg|
-  debugger, respectively. Each of these options implies **-g**. (Therefore, if
-  you want both **-gline-tables-only** and debugger tuning, the tuning option
-  must come first.)
-
+  Tune the debug info for the ``gdb``, ``lldb``, Sony PlayStation\ |reg|
+  debugger, or ``dbx``, respectively. Each of these options implies **-g**.
+  (Therefore, if you want both **-gline-tables-only** and debugger tuning, the
+  tuning option must come first.)
 
 Controlling LLVM IR Output
 --------------------------
@@ -2928,7 +2964,7 @@ tools as well as open source tools such as `SPIRV-LLVM Translator
 to produce SPIR-V binary. More details are provided in `the offline
 compilation from OpenCL kernel sources into SPIR-V using open source
 tools
-<https://www.khronos.org/blog/offline-compilation-of-opencl-kernels-into-spir-v-using-open-source-tooling>`_.
+<https://github.com/KhronosGroup/OpenCL-Guide/blob/main/chapters/os_tooling.md>`_.
 
 Clang currently supports OpenCL C language standards up to v2.0. Clang mainly
 supports full profile. There is only very limited support of the embedded
@@ -3211,13 +3247,14 @@ Clang currently supports C++ for OpenCL v1.0.
 For detailed information about this language refer to the C++ for OpenCL
 Programming Language Documentation available
 in `the latest build
-<https://github.com/KhronosGroup/Khronosdotorg/blob/master/api/opencl/assets/CXX_for_OpenCL.pdf>`_
+<https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html>`_
 or in `the official release
-<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r1>`_.
+<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r2>`_.
 
 To enable the C++ for OpenCL mode, pass one of following command line options when
-compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-std=clc++`` or
-``-std=CLC++``.
+compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-cl-std=clc++1.0``,
+``-cl-std=CLC++1.0``, ``-std=clc++``, ``-std=CLC++``, ``-std=clc++1.0`` or
+``-std=CLC++1.0``.
 
    .. code-block:: c++
 
@@ -3680,8 +3717,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fno-sanitize-address-use-after-scope
                               Disable use-after-scope detection in AddressSanitizer
       -fno-sanitize-address-use-odr-indicator
-                              Disable ODR indicator globals
-      -fno-sanitize-blacklist Don't use blacklist file for sanitizers
+                               Disable ODR indicator globals
+      -fno-sanitize-ignorelist Don't use ignorelist file for sanitizers
       -fno-sanitize-cfi-cross-dso
                               Disable control flow integrity (CFI) checks for cross-DSO calls.
       -fno-sanitize-coverage=<value>
@@ -3725,12 +3762,14 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Enable linker dead stripping of globals in AddressSanitizer
       -fsanitize-address-poison-custom-array-cookie
                               Enable poisoning array cookies when using custom operator new[] in AddressSanitizer
+      -fsanitize-address-use-after-return=<mode>
+                              Select the mode of detecting stack use-after-return in AddressSanitizer: never | runtime (default) | always
       -fsanitize-address-use-after-scope
                               Enable use-after-scope detection in AddressSanitizer
       -fsanitize-address-use-odr-indicator
                               Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
-      -fsanitize-blacklist=<value>
-                              Path to blacklist file for sanitizers
+      -fsanitize-ignorelist=<value>
+                              Path to ignorelist file for sanitizers
       -fsanitize-cfi-cross-dso
                               Enable control flow integrity (CFI) checks for cross-DSO calls.
       -fsanitize-cfi-icall-generalize-pointers

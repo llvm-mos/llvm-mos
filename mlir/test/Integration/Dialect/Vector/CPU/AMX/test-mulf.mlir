@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm="enable-amx" -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm="enable-amx" -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -31,7 +31,7 @@ func @kernel2(%arg0: memref<2x4xbf16>,
   return
 }
 
-func @entry() {
+func @entry() -> i32 {
   %f0 = constant 0.0: f32
   %c0 = constant 0: index
   %c1 = constant 1: index
@@ -79,5 +79,6 @@ func @entry() {
   memref.dealloc %b : memref<2x4xbf16>
   memref.dealloc %c : memref<2x2xf32>
 
-  return
+  %i0 = constant 0 : i32
+  return %i0 : i32
 }

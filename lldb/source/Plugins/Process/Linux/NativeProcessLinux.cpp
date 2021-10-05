@@ -8,9 +8,9 @@
 
 #include "NativeProcessLinux.h"
 
-#include <errno.h>
-#include <stdint.h>
-#include <string.h>
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
 #include <unistd.h>
 
 #include <fstream>
@@ -30,6 +30,7 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
+#include "lldb/Host/linux/Host.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
@@ -52,9 +53,18 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 
+#ifdef __aarch64__
+#include <asm/hwcap.h>
+#include <sys/auxv.h>
+#endif
+
 // Support hardware breakpoints in case it has not been defined
 #ifndef TRAP_HWBKPT
 #define TRAP_HWBKPT 4
+#endif
+
+#ifndef HWCAP2_MTE
+#define HWCAP2_MTE (1 << 18)
 #endif
 
 using namespace lldb;
@@ -97,8 +107,7 @@ static bool ProcessVmReadvSupported() {
   return is_supported;
 }
 
-namespace {
-void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
+static void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   if (!log)
     return;
@@ -124,7 +133,7 @@ void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
     LLDB_LOG(log, "arg {0}: '{1}'", i, *args);
 }
 
-void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
+static void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   uint8_t *ptr = (uint8_t *)bytes;
   const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
   for (uint32_t i = 0; i < loop_count; i++) {
@@ -133,7 +142,7 @@ void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   }
 }
 
-void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
+static void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
   if (!log)
     return;
@@ -183,7 +192,6 @@ void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
 static constexpr unsigned k_ptrace_word_size = sizeof(void *);
 static_assert(sizeof(long) >= k_ptrace_word_size,
               "Size of long must be larger than ptrace word size");
-} // end of anonymous namespace
 
 // Simple helper function to ensure flags are enabled on the given file
 // descriptor.
@@ -280,13 +288,29 @@ NativeProcessLinux::Factory::Attach(
       pid, -1, native_delegate, Info.GetArchitecture(), mainloop, *tids_or));
 }
 
+NativeProcessLinux::Extension
+NativeProcessLinux::Factory::GetSupportedExtensions() const {
+  NativeProcessLinux::Extension supported =
+      Extension::multiprocess | Extension::fork | Extension::vfork |
+      Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
+
+#ifdef __aarch64__
+  // At this point we do not have a process so read auxv directly.
+  if ((getauxval(AT_HWCAP2) & HWCAP2_MTE))
+    supported |= Extension::memory_tagging;
+#endif
+
+  return supported;
+}
+
 // Public Instance Methods
 
 NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
                                        NativeDelegate &delegate,
                                        const ArchSpec &arch, MainLoop &mainloop,
                                        llvm::ArrayRef<::pid_t> tids)
-    : NativeProcessELF(pid, terminal_fd, delegate), m_arch(arch) {
+    : NativeProcessELF(pid, terminal_fd, delegate), m_arch(arch),
+      m_main_loop(mainloop), m_intel_pt_manager(pid) {
   if (m_terminal_fd != -1) {
     Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
     assert(status.Success());
@@ -298,8 +322,7 @@ NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
   assert(m_sigchld_handle && status.Success());
 
   for (const auto &tid : tids) {
-    NativeThreadLinux &thread = AddThread(tid);
-    thread.SetStoppedBySignal(SIGSTOP);
+    NativeThreadLinux &thread = AddThread(tid, /*resume*/ false);
     ThreadWasCreated(thread);
   }
 
@@ -383,13 +406,21 @@ Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
   ptrace_opts |= PTRACE_O_TRACEEXIT;
 
   // Have the tracer trace threads which spawn in the inferior process.
-  // TODO: if we want to support tracing the inferiors' child, add the
-  // appropriate ptrace flags here (PTRACE_O_TRACEFORK, PTRACE_O_TRACEVFORK)
   ptrace_opts |= PTRACE_O_TRACECLONE;
 
   // Have the tracer notify us before execve returns (needed to disable legacy
   // SIGTRAP generation)
   ptrace_opts |= PTRACE_O_TRACEEXEC;
+
+  // Have the tracer trace forked children.
+  ptrace_opts |= PTRACE_O_TRACEFORK;
+
+  // Have the tracer trace vforks.
+  ptrace_opts |= PTRACE_O_TRACEVFORK;
+
+  // Have the tracer trace vfork-done in order to restore breakpoints after
+  // the child finishes sharing memory.
+  ptrace_opts |= PTRACE_O_TRACEVFORKDONE;
 
   return PtraceWrapper(PTRACE_SETOPTIONS, pid, nullptr, (void *)ptrace_opts);
 }
@@ -444,11 +475,7 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
     LLDB_LOG(log, "tid {0}, si_code: {1}, si_pid: {2}", pid, info.si_code,
              info.si_pid);
 
-    NativeThreadLinux &thread = AddThread(pid);
-
-    // Resume the newly created thread.
-    ResumeThread(thread, eStateRunning, LLDB_INVALID_SIGNAL_NUMBER);
-    ThreadWasCreated(thread);
+    MonitorClone(pid, llvm::None);
     return;
   }
 
@@ -512,29 +539,24 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
   }
 }
 
-void NativeProcessLinux::WaitForNewThread(::pid_t tid) {
+void NativeProcessLinux::WaitForCloneNotification(::pid_t pid) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
-  if (GetThreadByID(tid)) {
-    // We are already tracking the thread - we got the event on the new thread
-    // (see MonitorSignal) before this one. We are done.
-    return;
-  }
-
-  // The thread is not tracked yet, let's wait for it to appear.
+  // The PID is not tracked yet, let's wait for it to appear.
   int status = -1;
   LLDB_LOG(log,
-           "received thread creation event for tid {0}. tid not tracked "
-           "yet, waiting for thread to appear...",
-           tid);
-  ::pid_t wait_pid = llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, &status, __WALL);
-  // Since we are waiting on a specific tid, this must be the creation event.
+           "received clone event for pid {0}. pid not tracked yet, "
+           "waiting for it to appear...",
+           pid);
+  ::pid_t wait_pid =
+      llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &status, __WALL);
+  // Since we are waiting on a specific pid, this must be the creation event.
   // But let's do some checks just in case.
-  if (wait_pid != tid) {
+  if (wait_pid != pid) {
     LLDB_LOG(log,
-             "waiting for tid {0} failed. Assuming the thread has "
+             "waiting for pid {0} failed. Assuming the pid has "
              "disappeared in the meantime",
-             tid);
+             pid);
     // The only way I know of this could happen is if the whole process was
     // SIGKILLed in the mean time. In any case, we can't do anything about that
     // now.
@@ -542,18 +564,15 @@ void NativeProcessLinux::WaitForNewThread(::pid_t tid) {
   }
   if (WIFEXITED(status)) {
     LLDB_LOG(log,
-             "waiting for tid {0} returned an 'exited' event. Not "
-             "tracking the thread.",
-             tid);
+             "waiting for pid {0} returned an 'exited' event. Not "
+             "tracking it.",
+             pid);
     // Also a very improbable event.
+    m_pending_pid_map.erase(pid);
     return;
   }
 
-  LLDB_LOG(log, "pid = {0}: tracking new thread tid {1}", GetID(), tid);
-  NativeThreadLinux &new_thread = AddThread(tid);
-
-  ResumeThread(new_thread, eStateRunning, LLDB_INVALID_SIGNAL_NUMBER);
-  ThreadWasCreated(new_thread);
+  MonitorClone(pid, llvm::None);
 }
 
 void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
@@ -564,26 +583,26 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
   assert(info.si_signo == SIGTRAP && "Unexpected child signal!");
 
   switch (info.si_code) {
-  // TODO: these two cases are required if we want to support tracing of the
-  // inferiors' children.  We'd need this to debug a monitor. case (SIGTRAP |
-  // (PTRACE_EVENT_FORK << 8)): case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
-
+  case (SIGTRAP | (PTRACE_EVENT_FORK << 8)):
+  case (SIGTRAP | (PTRACE_EVENT_VFORK << 8)):
   case (SIGTRAP | (PTRACE_EVENT_CLONE << 8)): {
-    // This is the notification on the parent thread which informs us of new
-    // thread creation. We don't want to do anything with the parent thread so
-    // we just resume it. In case we want to implement "break on thread
-    // creation" functionality, we would need to stop here.
+    // This can either mean a new thread or a new process spawned via
+    // clone(2) without SIGCHLD or CLONE_VFORK flag.  Note that clone(2)
+    // can also cause PTRACE_EVENT_FORK and PTRACE_EVENT_VFORK if one
+    // of these flags are passed.
 
     unsigned long event_message = 0;
     if (GetEventMessage(thread.GetID(), &event_message).Fail()) {
       LLDB_LOG(log,
-               "pid {0} received thread creation event but "
-               "GetEventMessage failed so we don't know the new tid",
+               "pid {0} received clone() event but GetEventMessage failed "
+               "so we don't know the new pid/tid",
                thread.GetID());
-    } else
-      WaitForNewThread(event_message);
+      ResumeThread(thread, thread.GetState(), LLDB_INVALID_SIGNAL_NUMBER);
+    } else {
+      if (!MonitorClone(event_message, {{(info.si_code >> 8), thread.GetID()}}))
+        WaitForCloneNotification(event_message);
+    }
 
-    ResumeThread(thread, thread.GetState(), LLDB_INVALID_SIGNAL_NUMBER);
     break;
   }
 
@@ -646,6 +665,16 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
     }
     ResumeThread(thread, state, LLDB_INVALID_SIGNAL_NUMBER);
 
+    break;
+  }
+
+  case (SIGTRAP | (PTRACE_EVENT_VFORK_DONE << 8)): {
+    if (bool(m_enabled_extensions & Extension::vfork)) {
+      thread.SetStoppedByVForkDone();
+      StopRunningThreads(thread.GetID());
+    }
+    else
+      ResumeThread(thread, thread.GetState(), LLDB_INVALID_SIGNAL_NUMBER);
     break;
   }
 
@@ -858,6 +887,85 @@ void NativeProcessLinux::MonitorSignal(const siginfo_t &info,
   StopRunningThreads(thread.GetID());
 }
 
+bool NativeProcessLinux::MonitorClone(
+    lldb::pid_t child_pid,
+    llvm::Optional<NativeProcessLinux::CloneInfo> clone_info) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  LLDB_LOG(log, "clone, child_pid={0}, clone info?={1}", child_pid,
+           clone_info.hasValue());
+
+  auto find_it = m_pending_pid_map.find(child_pid);
+  if (find_it == m_pending_pid_map.end()) {
+    // not in the map, so this is the first signal for the PID
+    m_pending_pid_map.insert({child_pid, clone_info});
+    return false;
+  }
+  m_pending_pid_map.erase(find_it);
+
+  // second signal for the pid
+  assert(clone_info.hasValue() != find_it->second.hasValue());
+  if (!clone_info) {
+    // child signal does not indicate the event, so grab the one stored
+    // earlier
+    clone_info = find_it->second;
+  }
+
+  LLDB_LOG(log, "second signal for child_pid={0}, parent_tid={1}, event={2}",
+           child_pid, clone_info->parent_tid, clone_info->event);
+
+  auto *parent_thread = GetThreadByID(clone_info->parent_tid);
+  assert(parent_thread);
+
+  switch (clone_info->event) {
+  case PTRACE_EVENT_CLONE: {
+    // PTRACE_EVENT_CLONE can either mean a new thread or a new process.
+    // Try to grab the new process' PGID to figure out which one it is.
+    // If PGID is the same as the PID, then it's a new process.  Otherwise,
+    // it's a thread.
+    auto tgid_ret = getPIDForTID(child_pid);
+    if (tgid_ret != child_pid) {
+      // A new thread should have PGID matching our process' PID.
+      assert(!tgid_ret || tgid_ret.getValue() == GetID());
+
+      NativeThreadLinux &child_thread = AddThread(child_pid, /*resume*/ true);
+      ThreadWasCreated(child_thread);
+
+      // Resume the parent.
+      ResumeThread(*parent_thread, parent_thread->GetState(),
+                   LLDB_INVALID_SIGNAL_NUMBER);
+      break;
+    }
+  }
+    LLVM_FALLTHROUGH;
+  case PTRACE_EVENT_FORK:
+  case PTRACE_EVENT_VFORK: {
+    bool is_vfork = clone_info->event == PTRACE_EVENT_VFORK;
+    std::unique_ptr<NativeProcessLinux> child_process{new NativeProcessLinux(
+        static_cast<::pid_t>(child_pid), m_terminal_fd, m_delegate, m_arch,
+        m_main_loop, {static_cast<::pid_t>(child_pid)})};
+    if (!is_vfork)
+      child_process->m_software_breakpoints = m_software_breakpoints;
+
+    Extension expected_ext = is_vfork ? Extension::vfork : Extension::fork;
+    if (bool(m_enabled_extensions & expected_ext)) {
+      m_delegate.NewSubprocess(this, std::move(child_process));
+      // NB: non-vfork clone() is reported as fork
+      parent_thread->SetStoppedByFork(is_vfork, child_pid);
+      StopRunningThreads(parent_thread->GetID());
+    } else {
+      child_process->Detach();
+      ResumeThread(*parent_thread, parent_thread->GetState(),
+                   LLDB_INVALID_SIGNAL_NUMBER);
+    }
+    break;
+  }
+  default:
+    llvm_unreachable("unknown clone_info.event");
+  }
+
+  return true;
+}
+
 bool NativeProcessLinux::SupportHardwareSingleStepping() const {
   if (m_arch.GetMachine() == llvm::Triple::arm || m_arch.IsMIPS())
     return false;
@@ -954,8 +1062,7 @@ Status NativeProcessLinux::Detach() {
           e; // Save the error, but still attempt to detach from other threads.
   }
 
-  m_processor_trace_monitor.clear();
-  m_pt_proces_trace_id = LLDB_INVALID_UID;
+  m_intel_pt_manager.Clear();
 
   return error;
 }
@@ -1322,6 +1429,132 @@ llvm::Error NativeProcessLinux::DeallocateMemory(lldb::addr_t addr) {
   return llvm::Error::success();
 }
 
+Status NativeProcessLinux::ReadMemoryTags(int32_t type, lldb::addr_t addr,
+                                          size_t len,
+                                          std::vector<uint8_t> &tags) {
+  llvm::Expected<NativeRegisterContextLinux::MemoryTaggingDetails> details =
+      GetCurrentThread()->GetRegisterContext().GetMemoryTaggingDetails(type);
+  if (!details)
+    return Status(details.takeError());
+
+  // Ignore 0 length read
+  if (!len)
+    return Status();
+
+  // lldb will align the range it requests but it is not required to by
+  // the protocol so we'll do it again just in case.
+  // Remove non address bits too. Ptrace calls may work regardless but that
+  // is not a guarantee.
+  MemoryTagManager::TagRange range(details->manager->RemoveNonAddressBits(addr),
+                                   len);
+  range = details->manager->ExpandToGranule(range);
+
+  // Allocate enough space for all tags to be read
+  size_t num_tags = range.GetByteSize() / details->manager->GetGranuleSize();
+  tags.resize(num_tags * details->manager->GetTagSizeInBytes());
+
+  struct iovec tags_iovec;
+  uint8_t *dest = tags.data();
+  lldb::addr_t read_addr = range.GetRangeBase();
+
+  // This call can return partial data so loop until we error or
+  // get all tags back.
+  while (num_tags) {
+    tags_iovec.iov_base = dest;
+    tags_iovec.iov_len = num_tags;
+
+    Status error = NativeProcessLinux::PtraceWrapper(
+        details->ptrace_read_req, GetID(), reinterpret_cast<void *>(read_addr),
+        static_cast<void *>(&tags_iovec), 0, nullptr);
+
+    if (error.Fail()) {
+      // Discard partial reads
+      tags.resize(0);
+      return error;
+    }
+
+    size_t tags_read = tags_iovec.iov_len;
+    assert(tags_read && (tags_read <= num_tags));
+
+    dest += tags_read * details->manager->GetTagSizeInBytes();
+    read_addr += details->manager->GetGranuleSize() * tags_read;
+    num_tags -= tags_read;
+  }
+
+  return Status();
+}
+
+Status NativeProcessLinux::WriteMemoryTags(int32_t type, lldb::addr_t addr,
+                                           size_t len,
+                                           const std::vector<uint8_t> &tags) {
+  llvm::Expected<NativeRegisterContextLinux::MemoryTaggingDetails> details =
+      GetCurrentThread()->GetRegisterContext().GetMemoryTaggingDetails(type);
+  if (!details)
+    return Status(details.takeError());
+
+  // Ignore 0 length write
+  if (!len)
+    return Status();
+
+  // lldb will align the range it requests but it is not required to by
+  // the protocol so we'll do it again just in case.
+  // Remove non address bits too. Ptrace calls may work regardless but that
+  // is not a guarantee.
+  MemoryTagManager::TagRange range(details->manager->RemoveNonAddressBits(addr),
+                                   len);
+  range = details->manager->ExpandToGranule(range);
+
+  // Not checking number of tags here, we may repeat them below
+  llvm::Expected<std::vector<lldb::addr_t>> unpacked_tags_or_err =
+      details->manager->UnpackTagsData(tags);
+  if (!unpacked_tags_or_err)
+    return Status(unpacked_tags_or_err.takeError());
+
+  llvm::Expected<std::vector<lldb::addr_t>> repeated_tags_or_err =
+      details->manager->RepeatTagsForRange(*unpacked_tags_or_err, range);
+  if (!repeated_tags_or_err)
+    return Status(repeated_tags_or_err.takeError());
+
+  // Repack them for ptrace to use
+  llvm::Expected<std::vector<uint8_t>> final_tag_data =
+      details->manager->PackTags(*repeated_tags_or_err);
+  if (!final_tag_data)
+    return Status(final_tag_data.takeError());
+
+  struct iovec tags_vec;
+  uint8_t *src = final_tag_data->data();
+  lldb::addr_t write_addr = range.GetRangeBase();
+  // unpacked tags size because the number of bytes per tag might not be 1
+  size_t num_tags = repeated_tags_or_err->size();
+
+  // This call can partially write tags, so we loop until we
+  // error or all tags have been written.
+  while (num_tags > 0) {
+    tags_vec.iov_base = src;
+    tags_vec.iov_len = num_tags;
+
+    Status error = NativeProcessLinux::PtraceWrapper(
+        details->ptrace_write_req, GetID(),
+        reinterpret_cast<void *>(write_addr), static_cast<void *>(&tags_vec), 0,
+        nullptr);
+
+    if (error.Fail()) {
+      // Don't attempt to restore the original values in the case of a partial
+      // write
+      return error;
+    }
+
+    size_t tags_written = tags_vec.iov_len;
+    assert(tags_written && (tags_written <= num_tags));
+
+    src += tags_written * details->manager->GetTagSizeInBytes();
+    write_addr += details->manager->GetGranuleSize() * tags_written;
+    num_tags -= tags_written;
+  }
+
+  return Status();
+}
+
 size_t NativeProcessLinux::UpdateThreads() {
   // The NativeProcessLinux monitoring threads are always up to date with
   // respect to thread state and they keep the thread list populated properly.
@@ -1511,12 +1744,33 @@ bool NativeProcessLinux::StopTrackingThread(lldb::tid_t thread_id) {
   }
 
   if (found)
-    StopTracingForThread(thread_id);
+    NotifyTracersOfThreadDestroyed(thread_id);
+
   SignalIfAllThreadsStopped();
   return found;
 }
 
-NativeThreadLinux &NativeProcessLinux::AddThread(lldb::tid_t thread_id) {
+Status NativeProcessLinux::NotifyTracersOfNewThread(lldb::tid_t tid) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Status error(m_intel_pt_manager.OnThreadCreated(tid));
+  if (error.Fail())
+    LLDB_LOG(log, "Failed to trace a new thread with intel-pt, tid = {0}. {1}",
+             tid, error.AsCString());
+  return error;
+}
+
+Status NativeProcessLinux::NotifyTracersOfThreadDestroyed(lldb::tid_t tid) {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Status error(m_intel_pt_manager.OnThreadDestroyed(tid));
+  if (error.Fail())
+    LLDB_LOG(log,
+             "Failed to stop a destroyed thread with intel-pt, tid = {0}. {1}",
+             tid, error.AsCString());
+  return error;
+}
+
+NativeThreadLinux &NativeProcessLinux::AddThread(lldb::tid_t thread_id,
+                                                 bool resume) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
   LLDB_LOG(log, "pid {0} adding thread with tid {1}", GetID(), thread_id);
 
@@ -1528,22 +1782,19 @@ NativeThreadLinux &NativeProcessLinux::AddThread(lldb::tid_t thread_id) {
     SetCurrentThreadID(thread_id);
 
   m_threads.push_back(std::make_unique<NativeThreadLinux>(*this, thread_id));
+  NativeThreadLinux &thread =
+      static_cast<NativeThreadLinux &>(*m_threads.back());
 
-  if (m_pt_proces_trace_id != LLDB_INVALID_UID) {
-    auto traceMonitor = ProcessorTraceMonitor::Create(
-        GetID(), thread_id, m_pt_process_trace_config, true);
-    if (traceMonitor) {
-      m_pt_traced_thread_group.insert(thread_id);
-      m_processor_trace_monitor.insert(
-          std::make_pair(thread_id, std::move(*traceMonitor)));
-    } else {
-      LLDB_LOG(log, "failed to start trace on thread {0}", thread_id);
-      Status error(traceMonitor.takeError());
-      LLDB_LOG(log, "error {0}", error);
-    }
-  }
+  Status tracing_error = NotifyTracersOfNewThread(thread.GetID());
+  if (tracing_error.Fail()) {
+    thread.SetStoppedByProcessorTrace(tracing_error.AsCString());
+    StopRunningThreads(thread.GetID());
+  } else if (resume)
+    ResumeThread(thread, eStateRunning, LLDB_INVALID_SIGNAL_NUMBER);
+  else
+    thread.SetStoppedBySignal(SIGSTOP);
 
-  return static_cast<NativeThreadLinux &>(*m_threads.back());
+  return thread;
 }
 
 Status NativeProcessLinux::GetLoadedModuleFileSpec(const char *module_path,
@@ -1761,263 +2012,43 @@ Status NativeProcessLinux::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   return error;
 }
 
-llvm::Expected<ProcessorTraceMonitor &>
-NativeProcessLinux::LookupProcessorTraceInstance(lldb::user_id_t traceid,
-                                                 lldb::tid_t thread) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-  if (thread == LLDB_INVALID_THREAD_ID && traceid == m_pt_proces_trace_id) {
-    LLDB_LOG(log, "thread not specified: {0}", traceid);
-    return Status("tracing not active thread not specified").ToError();
-  }
-
-  for (auto& iter : m_processor_trace_monitor) {
-    if (traceid == iter.second->GetTraceID() &&
-        (thread == iter.first || thread == LLDB_INVALID_THREAD_ID))
-      return *(iter.second);
-  }
-
-  LLDB_LOG(log, "traceid not being traced: {0}", traceid);
-  return Status("tracing not active for this thread").ToError();
+llvm::Expected<TraceSupportedResponse> NativeProcessLinux::TraceSupported() {
+  if (IntelPTManager::IsSupported())
+    return TraceSupportedResponse{"intel-pt", "Intel Processor Trace"};
+  return NativeProcessProtocol::TraceSupported();
 }
 
-Status NativeProcessLinux::GetMetaData(lldb::user_id_t traceid,
-                                       lldb::tid_t thread,
-                                       llvm::MutableArrayRef<uint8_t> &buffer,
-                                       size_t offset) {
-  TraceOptions trace_options;
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-  Status error;
-
-  LLDB_LOG(log, "traceid {0}", traceid);
-
-  auto perf_monitor = LookupProcessorTraceInstance(traceid, thread);
-  if (!perf_monitor) {
-    LLDB_LOG(log, "traceid not being traced: {0}", traceid);
-    buffer = buffer.slice(buffer.size());
-    error = perf_monitor.takeError();
-    return error;
+Error NativeProcessLinux::TraceStart(StringRef json_request, StringRef type) {
+  if (type == "intel-pt") {
+    if (Expected<TraceIntelPTStartRequest> request =
+            json::parse<TraceIntelPTStartRequest>(json_request,
+                                                  "TraceIntelPTStartRequest")) {
+      std::vector<lldb::tid_t> process_threads;
+      for (auto &thread : m_threads)
+        process_threads.push_back(thread->GetID());
+      return m_intel_pt_manager.TraceStart(*request, process_threads);
+    } else
+      return request.takeError();
   }
-  return (*perf_monitor).ReadPerfTraceData(buffer, offset);
+
+  return NativeProcessProtocol::TraceStart(json_request, type);
 }
 
-Status NativeProcessLinux::GetData(lldb::user_id_t traceid, lldb::tid_t thread,
-                                   llvm::MutableArrayRef<uint8_t> &buffer,
-                                   size_t offset) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-  Status error;
-
-  LLDB_LOG(log, "traceid {0}", traceid);
-
-  auto perf_monitor = LookupProcessorTraceInstance(traceid, thread);
-  if (!perf_monitor) {
-    LLDB_LOG(log, "traceid not being traced: {0}", traceid);
-    buffer = buffer.slice(buffer.size());
-    error = perf_monitor.takeError();
-    return error;
-  }
-  return (*perf_monitor).ReadPerfTraceAux(buffer, offset);
+Error NativeProcessLinux::TraceStop(const TraceStopRequest &request) {
+  if (request.type == "intel-pt")
+    return m_intel_pt_manager.TraceStop(request);
+  return NativeProcessProtocol::TraceStop(request);
 }
 
-Status NativeProcessLinux::GetTraceConfig(lldb::user_id_t traceid,
-                                          TraceOptions &config) {
-  Status error;
-  if (config.getThreadID() == LLDB_INVALID_THREAD_ID &&
-      m_pt_proces_trace_id == traceid) {
-    if (m_pt_proces_trace_id == LLDB_INVALID_UID) {
-      error.SetErrorString("tracing not active for this process");
-      return error;
-    }
-    config = m_pt_process_trace_config;
-  } else {
-    auto perf_monitor =
-        LookupProcessorTraceInstance(traceid, config.getThreadID());
-    if (!perf_monitor) {
-      error = perf_monitor.takeError();
-      return error;
-    }
-    error = (*perf_monitor).GetTraceConfig(config);
-  }
-  return error;
+Expected<json::Value> NativeProcessLinux::TraceGetState(StringRef type) {
+  if (type == "intel-pt")
+    return m_intel_pt_manager.GetState();
+  return NativeProcessProtocol::TraceGetState(type);
 }
 
-llvm::Expected<TraceTypeInfo> NativeProcessLinux::GetSupportedTraceType() {
-  if (ProcessorTraceMonitor::IsSupported())
-    return TraceTypeInfo{"intel-pt", "Intel Processor Trace"};
-  return NativeProcessProtocol::GetSupportedTraceType();
-}
-
-lldb::user_id_t
-NativeProcessLinux::StartTraceGroup(const TraceOptions &config,
-                                           Status &error) {
-
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-  if (config.getType() != TraceType::eTraceTypeProcessorTrace)
-    return LLDB_INVALID_UID;
-
-  if (m_pt_proces_trace_id != LLDB_INVALID_UID) {
-    error.SetErrorString("tracing already active on this process");
-    return m_pt_proces_trace_id;
-  }
-
-  for (const auto &thread_sp : m_threads) {
-    if (auto traceInstance = ProcessorTraceMonitor::Create(
-            GetID(), thread_sp->GetID(), config, true)) {
-      m_pt_traced_thread_group.insert(thread_sp->GetID());
-      m_processor_trace_monitor.insert(
-          std::make_pair(thread_sp->GetID(), std::move(*traceInstance)));
-    }
-  }
-
-  m_pt_process_trace_config = config;
-  error = ProcessorTraceMonitor::GetCPUType(m_pt_process_trace_config);
-
-  // Trace on Complete process will have traceid of 0
-  m_pt_proces_trace_id = 0;
-
-  LLDB_LOG(log, "Process Trace ID {0}", m_pt_proces_trace_id);
-  return m_pt_proces_trace_id;
-}
-
-lldb::user_id_t NativeProcessLinux::StartTrace(const TraceOptions &config,
-                                               Status &error) {
-  if (config.getType() != TraceType::eTraceTypeProcessorTrace)
-    return NativeProcessProtocol::StartTrace(config, error);
-
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-
-  lldb::tid_t threadid = config.getThreadID();
-
-  if (threadid == LLDB_INVALID_THREAD_ID)
-    return StartTraceGroup(config, error);
-
-  auto thread_sp = GetThreadByID(threadid);
-  if (!thread_sp) {
-    // Thread not tracked by lldb so don't trace.
-    error.SetErrorString("invalid thread id");
-    return LLDB_INVALID_UID;
-  }
-
-  const auto &iter = m_processor_trace_monitor.find(threadid);
-  if (iter != m_processor_trace_monitor.end()) {
-    LLDB_LOG(log, "Thread already being traced");
-    error.SetErrorString("tracing already active on this thread");
-    return LLDB_INVALID_UID;
-  }
-
-  auto traceMonitor =
-      ProcessorTraceMonitor::Create(GetID(), threadid, config, false);
-  if (!traceMonitor) {
-    error = traceMonitor.takeError();
-    LLDB_LOG(log, "error {0}", error);
-    return LLDB_INVALID_UID;
-  }
-  lldb::user_id_t ret_trace_id = (*traceMonitor)->GetTraceID();
-  m_processor_trace_monitor.insert(
-      std::make_pair(threadid, std::move(*traceMonitor)));
-  return ret_trace_id;
-}
-
-Status NativeProcessLinux::StopTracingForThread(lldb::tid_t thread) {
-  Status error;
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-  LLDB_LOG(log, "Thread {0}", thread);
-
-  const auto& iter = m_processor_trace_monitor.find(thread);
-  if (iter == m_processor_trace_monitor.end()) {
-    error.SetErrorString("tracing not active for this thread");
-    return error;
-  }
-
-  if (iter->second->GetTraceID() == m_pt_proces_trace_id) {
-    // traceid maps to the whole process so we have to erase it from the thread
-    // group.
-    LLDB_LOG(log, "traceid maps to process");
-    m_pt_traced_thread_group.erase(thread);
-  }
-  m_processor_trace_monitor.erase(iter);
-
-  return error;
-}
-
-Status NativeProcessLinux::StopTrace(lldb::user_id_t traceid,
-                                     lldb::tid_t thread) {
-  Status error;
-
-  TraceOptions trace_options;
-  trace_options.setThreadID(thread);
-  error = NativeProcessLinux::GetTraceConfig(traceid, trace_options);
-
-  if (error.Fail())
-    return error;
-
-  switch (trace_options.getType()) {
-  case lldb::TraceType::eTraceTypeProcessorTrace:
-    if (traceid == m_pt_proces_trace_id &&
-        thread == LLDB_INVALID_THREAD_ID)
-      StopProcessorTracingOnProcess();
-    else
-      error = StopProcessorTracingOnThread(traceid, thread);
-    break;
-  default:
-    error.SetErrorString("trace not supported");
-    break;
-  }
-
-  return error;
-}
-
-void NativeProcessLinux::StopProcessorTracingOnProcess() {
-  for (auto thread_id_iter : m_pt_traced_thread_group)
-    m_processor_trace_monitor.erase(thread_id_iter);
-  m_pt_traced_thread_group.clear();
-  m_pt_proces_trace_id = LLDB_INVALID_UID;
-}
-
-Status NativeProcessLinux::StopProcessorTracingOnThread(lldb::user_id_t traceid,
-                                                        lldb::tid_t thread) {
-  Status error;
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-
-  if (thread == LLDB_INVALID_THREAD_ID) {
-    for (auto& iter : m_processor_trace_monitor) {
-      if (iter.second->GetTraceID() == traceid) {
-        // Stopping a trace instance for an individual thread hence there will
-        // only be one traceid that can match.
-        m_processor_trace_monitor.erase(iter.first);
-        return error;
-      }
-      LLDB_LOG(log, "Trace ID {0}", iter.second->GetTraceID());
-    }
-
-    LLDB_LOG(log, "Invalid TraceID");
-    error.SetErrorString("invalid trace id");
-    return error;
-  }
-
-  // thread is specified so we can use find function on the map.
-  const auto& iter = m_processor_trace_monitor.find(thread);
-  if (iter == m_processor_trace_monitor.end()) {
-    // thread not found in our map.
-    LLDB_LOG(log, "thread not being traced");
-    error.SetErrorString("tracing not active for this thread");
-    return error;
-  }
-  if (iter->second->GetTraceID() != traceid) {
-    // traceid did not match so it has to be invalid.
-    LLDB_LOG(log, "Invalid TraceID");
-    error.SetErrorString("invalid trace id");
-    return error;
-  }
-
-  LLDB_LOG(log, "UID - {0} , Thread -{1}", traceid, thread);
-
-  if (traceid == m_pt_proces_trace_id) {
-    // traceid maps to the whole process so we have to erase it from the thread
-    // group.
-    LLDB_LOG(log, "traceid maps to process");
-    m_pt_traced_thread_group.erase(thread);
-  }
-  m_processor_trace_monitor.erase(iter);
-
-  return error;
+Expected<std::vector<uint8_t>> NativeProcessLinux::TraceGetBinaryData(
+    const TraceGetBinaryDataRequest &request) {
+  if (request.type == "intel-pt")
+    return m_intel_pt_manager.GetBinaryData(request);
+  return NativeProcessProtocol::TraceGetBinaryData(request);
 }

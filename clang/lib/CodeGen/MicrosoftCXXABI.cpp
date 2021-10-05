@@ -131,7 +131,12 @@ public:
 
   /// MSVC needs an extra flag to indicate a catchall.
   CatchTypeInfo getCatchAllTypeInfo() override {
-    return CatchTypeInfo{nullptr, 0x40};
+    // For -EHa catch(...) must handle HW exception
+    // Adjective = HT_IsStdDotDot (0x40), only catch C++ exceptions
+    if (getContext().getLangOpts().EHAsynch)
+      return CatchTypeInfo{nullptr, 0};
+    else
+      return CatchTypeInfo{nullptr, 0x40};
   }
 
   bool shouldTypeidBeNullChecked(bool IsDeref, QualType SrcRecordTy) override;
@@ -842,7 +847,7 @@ MicrosoftCXXABI::getRecordArgABI(const CXXRecordDecl *RD) const {
     // arguments was not supported and resulted in a compiler error. In 19.14
     // and later versions, such arguments are now passed indirectly.
     TypeInfo Info = getContext().getTypeInfo(RD->getTypeForDecl());
-    if (Info.AlignIsRequired && Info.Align > 4)
+    if (Info.isAlignRequired() && Info.Align > 4)
       return RAA_Indirect;
 
     // If C++ prohibits us from making a copy, construct the arguments directly
@@ -1223,7 +1228,7 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
     llvm::Value *VtorDispPtr =
         Builder.CreateInBoundsGEP(CGF.Int8Ty, Int8This, VBaseOffset);
     // vtorDisp is always the 32-bits before the vbase in the class layout.
-    VtorDispPtr = Builder.CreateConstGEP1_32(VtorDispPtr, -4);
+    VtorDispPtr = Builder.CreateConstGEP1_32(CGF.Int8Ty, VtorDispPtr, -4);
     VtorDispPtr = Builder.CreateBitCast(
         VtorDispPtr, CGF.Int32Ty->getPointerTo(AS), "vtordisp.ptr");
 
@@ -1946,7 +1951,7 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
       CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
 
     llvm::Value *VFuncPtr =
-        Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
+        Builder.CreateConstInBoundsGEP1_64(Ty, VTable, ML.Index, "vfn");
     VFunc = Builder.CreateAlignedLoad(Ty, VFuncPtr, CGF.getPointerAlign());
   }
 
@@ -2046,7 +2051,7 @@ MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
   if (MD->isExternallyVisible())
     ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));
 
-  CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn);
+  CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/false);
   CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
 
   // Add the "thunk" attribute so that LLVM knows that the return type is
@@ -2075,14 +2080,14 @@ MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
 
   // Load the vfptr and then callee from the vftable.  The callee should have
   // adjusted 'this' so that the vfptr is at offset zero.
+  llvm::Type *ThunkPtrTy = ThunkTy->getPointerTo();
   llvm::Value *VTable = CGF.GetVTablePtr(
-      getThisAddress(CGF), ThunkTy->getPointerTo()->getPointerTo(), MD->getParent());
+      getThisAddress(CGF), ThunkPtrTy->getPointerTo(), MD->getParent());
 
-  llvm::Value *VFuncPtr =
-      CGF.Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
+  llvm::Value *VFuncPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
+      ThunkPtrTy, VTable, ML.Index, "vfn");
   llvm::Value *Callee =
-    CGF.Builder.CreateAlignedLoad(ThunkTy->getPointerTo(), VFuncPtr,
-                                  CGF.getPointerAlign());
+    CGF.Builder.CreateAlignedLoad(ThunkPtrTy, VFuncPtr, CGF.getPointerAlign());
 
   CGF.EmitMustTailThunk(MD, getThisValue(CGF), {ThunkTy, Callee});
 
@@ -2167,8 +2172,7 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
   }
 
   assert(Offsets.size() ==
-         cast<llvm::ArrayType>(cast<llvm::PointerType>(GV->getType())
-                               ->getElementType())->getNumElements());
+         cast<llvm::ArrayType>(GV->getValueType())->getNumElements());
   llvm::ArrayType *VBTableType =
     llvm::ArrayType::get(CGM.IntTy, Offsets.size());
   llvm::Constant *Init = llvm::ConstantArray::get(VBTableType, Offsets);
@@ -2197,7 +2201,7 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
                  CharUnits::fromQuantity(TA.Virtual.Microsoft.VtordispOffset));
     VtorDispPtr = CGF.Builder.CreateElementBitCast(VtorDispPtr, CGF.Int32Ty);
     llvm::Value *VtorDisp = CGF.Builder.CreateLoad(VtorDispPtr, "vtordisp");
-    V = CGF.Builder.CreateGEP(This.getPointer(),
+    V = CGF.Builder.CreateGEP(This.getElementType(), This.getPointer(),
                               CGF.Builder.CreateNeg(VtorDisp));
 
     // Unfortunately, having applied the vtordisp means that we no
@@ -2223,7 +2227,7 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
     // Non-virtual adjustment might result in a pointer outside the allocated
     // object, e.g. if the final overrider class is laid out after the virtual
     // base that declares a method in the most derived class.
-    V = CGF.Builder.CreateConstGEP1_32(V, TA.NonVirtual);
+    V = CGF.Builder.CreateConstGEP1_32(CGF.Int8Ty, V, TA.NonVirtual);
   }
 
   // Don't need to bitcast back, the call CodeGen will handle this.
@@ -4334,7 +4338,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
   };
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), TIType, /*isConstant=*/true, getLinkageForRTTI(T),
-      llvm::ConstantStruct::get(TIType, Fields), StringRef(MangledName));
+      llvm::ConstantStruct::get(TIType, Fields), MangledName.str());
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   GV->setSection(".xdata");
   if (GV->isWeakForLinker())
@@ -4344,6 +4348,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
 
 void MicrosoftCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr && "SubExpr cannot be null");
   QualType ThrowType = SubExpr->getType();
   // The exception object lives on the stack and it's address is passed to the
   // runtime function.

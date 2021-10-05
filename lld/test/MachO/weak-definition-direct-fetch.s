@@ -45,41 +45,46 @@
 # RUN: %lld -lSystem -o %t/nonweak-weak-dylibs -L%t -lfoo -lweakfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-weak-dylibs | FileCheck %s --check-prefix=PREFER-NONWEAK-DYLIB
 
-# RUN: %lld -lSystem -o %t/weak-nonweak-objs -L%t %t/weakfoo.o %t/foo.o %t/test.o
+# RUN: %lld -lSystem -o %t/weak-nonweak-objs %t/weakfoo.o %t/foo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-nonweak-objs | FileCheck %s --check-prefix=PREFER-NONWEAK-OBJECT
-# RUN: %lld -lSystem -o %t/nonweak-weak-objs -L%t %t/foo.o %t/weakfoo.o %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-weak-objs %t/foo.o %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-weak-objs | FileCheck %s --check-prefix=PREFER-NONWEAK-OBJECT
 
-# RUN: %lld -lSystem -o %t/weak-nonweak-archives -L%t %t/weakfoo.a %t/foo.a %t/test.o
+# RUN: %lld -lSystem -o %t/weak-nonweak-archives %t/weakfoo.a %t/foo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-nonweak-archives | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
-# RUN: %lld -lSystem -o %t/nonweak-weak-archives -L%t %t/foo.a %t/weakfoo.a %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-weak-archives %t/foo.a %t/weakfoo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-weak-archives | FileCheck %s --check-prefix=PREFER-NONWEAK-OBJECT
 
 ## The remaining lines test symbol pairs of different types.
 
+## (Weak) archive symbols take precedence over weak dylib symbols.
 # RUN: %lld -lSystem -o %t/weak-dylib-weak-ar -L%t -lweakfoo %t/weakfoo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 # RUN: %lld -lSystem -o %t/weak-ar-weak-dylib -L%t %t/weakfoo.a -lweakfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
+## (Weak) archive symbols have the same precedence as dylib symbols.
 # RUN: %lld -lSystem -o %t/weak-ar-nonweak-dylib -L%t %t/weakfoo.a -lfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-nonweak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 # RUN: %lld -lSystem -o %t/nonweak-dylib-weak-ar -L%t -lfoo %t/weakfoo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-NONWEAK-DYLIB
 
+## Weak defined symbols take precedence over weak dylib symbols.
 # RUN: %lld -lSystem -o %t/weak-dylib-weak-obj -L%t -lweakfoo %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-dylib-weak-obj | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 # RUN: %lld -lSystem -o %t/weak-obj-weak-dylib -L%t %t/weakfoo.o -lweakfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-obj-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
+## Weak defined symbols take precedence over dylib symbols.
 # RUN: %lld -lSystem -o %t/weak-obj-nonweak-dylib -L%t %t/weakfoo.o -lfoo %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-obj-nonweak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 # RUN: %lld -lSystem -o %t/nonweak-dylib-weak-obj -L%t -lfoo %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-dylib-weak-obj | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
-# RUN: %lld -lSystem -o %t/weak-obj-nonweak-ar -L%t %t/weakfoo.o %t/foo.a %t/test.o
+## Weak defined symbols take precedence over archive symbols.
+# RUN: %lld -lSystem -o %t/weak-obj-nonweak-ar %t/weakfoo.o %t/foo.a %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-obj-nonweak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
-# RUN: %lld -lSystem -o %t/nonweak-ar-weak-obj -L%t %t/foo.a %t/weakfoo.o %t/test.o
+# RUN: %lld -lSystem -o %t/nonweak-ar-weak-obj %t/foo.a %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/nonweak-ar-weak-obj | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
 #--- foo.s

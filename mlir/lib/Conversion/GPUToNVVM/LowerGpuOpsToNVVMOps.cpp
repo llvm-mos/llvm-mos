@@ -13,7 +13,11 @@
 
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
@@ -53,10 +57,9 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   ///     %shfl_pred = llvm.extractvalue %shfl[1 : index] :
   ///         !llvm<"{ float, i1 }">
   LogicalResult
-  matchAndRewrite(gpu::ShuffleOp op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    gpu::ShuffleOpAdaptor adaptor(operands);
 
     auto valueTy = adaptor.value().getType();
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
@@ -127,6 +130,36 @@ struct LowerGpuOpsToNVVMOpsPass
       return converter.convertType(MemRefType::Builder(type).setMemorySpace(0));
     });
 
+    // Lowering for MMAMatrixType.
+    converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
+      // The number of items in structToReturn are dependent on the the dataType
+      // and the MMA operand that this operation is associated with.
+      llvm::DenseMap<StringRef, int64_t> numElemsPerThreadF16,
+          numElemsPerThreadF32;
+      numElemsPerThreadF16["AOp"] = 8;
+      numElemsPerThreadF16["BOp"] = 8;
+      numElemsPerThreadF16["COp"] = 4;
+      numElemsPerThreadF32["AOp"] = 8;
+      numElemsPerThreadF32["BOp"] = 8;
+      numElemsPerThreadF32["COp"] = 8;
+      Type structToReturn;
+      if (type.getElementType().isF16()) {
+        // Number of f16's in 32-bit.
+        unsigned vecSize = 2;
+        Type vec = VectorType::get(vecSize, FloatType::getF16(&getContext()));
+        unsigned size = numElemsPerThreadF16[type.getOperand()];
+        SmallVector<Type> elements(size, vec);
+        structToReturn =
+            LLVM::LLVMStructType::getLiteral(&getContext(), elements);
+      } else if (type.getElementType().isF32()) {
+        unsigned size = numElemsPerThreadF32[type.getOperand()];
+        SmallVector<Type> elements(size, FloatType::getF32(&getContext()));
+        structToReturn =
+            LLVM::LLVMStructType::getLiteral(&getContext(), elements);
+      }
+      return structToReturn;
+    });
+
     RewritePatternSet patterns(m.getContext());
     RewritePatternSet llvmPatterns(m.getContext());
 
@@ -137,7 +170,9 @@ struct LowerGpuOpsToNVVMOpsPass
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     populateStdToLLVMConversionPatterns(converter, llvmPatterns);
+    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
+    populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
     LLVMConversionTarget target(getContext());
     configureGpuToNVVMConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
@@ -152,9 +187,9 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
-  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
-                      LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op,
-                      LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
+  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
+                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
+                      LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
@@ -194,6 +229,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                   "__nv_cos");
   patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__nv_expf",
                                                   "__nv_exp");
+  patterns.add<OpToFuncCallLowering<math::Exp2Op>>(converter, "__nv_exp2f",
+                                                   "__nv_exp2");
   patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(converter, "__nv_expm1f",
                                                     "__nv_expm1");
   patterns.add<OpToFuncCallLowering<FloorFOp>>(converter, "__nv_floorf",

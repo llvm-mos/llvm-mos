@@ -73,11 +73,14 @@ FunctionPass *createX86AvoidStoreForwardingBlocks();
 /// Return a pass that lowers EFLAGS copy pseudo instructions.
 FunctionPass *createX86FlagsCopyLoweringPass();
 
-/// Return a pass that expands WinAlloca pseudo-instructions.
-FunctionPass *createX86WinAllocaExpander();
+/// Return a pass that expands DynAlloca pseudo-instructions.
+FunctionPass *createX86DynAllocaExpander();
 
 /// Return a pass that config the tile registers.
 FunctionPass *createX86TileConfigPass();
+
+/// Return a pass that config the tile registers after fast reg allocation.
+FunctionPass *createX86FastTileConfigPass();
 
 /// Return a pass that insert pseudo tile config instruction.
 FunctionPass *createX86PreTileConfigPass();
@@ -172,8 +175,10 @@ void initializeX86PartialReductionPass(PassRegistry &);
 void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
 void initializeX86PreTileConfigPass(PassRegistry &);
+void initializeX86FastTileConfigPass(PassRegistry &);
 void initializeX86TileConfigPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
+void initializeX86PreAMXConfigPassPass(PassRegistry &);
 void initializeX86LowerTileCopyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 

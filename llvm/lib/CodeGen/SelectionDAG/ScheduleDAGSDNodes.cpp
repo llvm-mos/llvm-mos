@@ -742,7 +742,7 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
   /// Returns true if \p DV has any VReg operand locations which don't exist in
   /// VRBaseMap.
   auto HasUnknownVReg = [&VRBaseMap](SDDbgValue *DV) {
-    for (SDDbgOperand L : DV->getLocationOps()) {
+    for (const SDDbgOperand &L : DV->getLocationOps()) {
       if (L.getKind() == SDDbgOperand::SDNODE &&
           VRBaseMap.count({L.getSDNode(), L.getResNo()}) == 0)
         return true;
@@ -765,7 +765,7 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
     // node yet. In the former case we should emit an undef dbg_value, but we
     // can do it later. And for the latter we'll want to wait until all
     // dependent nodes have been visited.
-    if (HasUnknownVReg(DV))
+    if (!DV->isInvalidated() && HasUnknownVReg(DV))
       continue;
     MachineInstr *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap);
     if (!DbgMI)

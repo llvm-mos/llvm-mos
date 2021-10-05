@@ -13,12 +13,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/VersionTuple.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
-#include "llvm/TextAPI/MachO/Platform.h"
-#include "llvm/TextAPI/MachO/Target.h"
+#include "llvm/TextAPI/Architecture.h"
+#include "llvm/TextAPI/Platform.h"
+#include "llvm/TextAPI/Target.h"
 
 #include <vector>
 
@@ -33,9 +35,16 @@ using SectionRenameMap = llvm::DenseMap<NamePair, NamePair>;
 using SegmentRenameMap = llvm::DenseMap<llvm::StringRef, llvm::StringRef>;
 
 struct PlatformInfo {
+  llvm::MachO::Target target;
   llvm::VersionTuple minimum;
   llvm::VersionTuple sdk;
 };
+
+inline uint32_t encodeVersion(const llvm::VersionTuple &version) {
+  return ((version.getMajor() << 020) |
+          (version.getMinor().getValueOr(0) << 010) |
+          version.getSubminor().getValueOr(0));
+}
 
 enum class NamespaceKind {
   twolevel,
@@ -48,6 +57,19 @@ enum class UndefinedSymbolTreatment {
   warning,
   suppress,
   dynamic_lookup,
+};
+
+enum class ICFLevel {
+  unknown,
+  none,
+  safe,
+  all,
+};
+
+struct SectionAlign {
+  llvm::StringRef segName;
+  llvm::StringRef sectName;
+  uint32_t align;
 };
 
 struct SegmentProtection {
@@ -72,46 +94,75 @@ public:
 };
 
 struct Configuration {
-  Symbol *entry;
+  Symbol *entry = nullptr;
   bool hasReexports = false;
   bool allLoad = false;
+  bool applicationExtension = false;
+  bool archMultiple = false;
+  bool exportDynamic = false;
   bool forceLoadObjC = false;
+  bool forceLoadSwift = false;
   bool staticLink = false;
   bool implicitDylibs = false;
   bool isPic = false;
   bool headerPadMaxInstallNames = false;
   bool ltoNewPassManager = LLVM_ENABLE_NEW_PASS_MANAGER;
   bool markDeadStrippableDylib = false;
+  bool printDylibSearch = false;
   bool printEachFile = false;
   bool printWhyLoad = false;
   bool searchDylibsFirst = false;
   bool saveTemps = false;
   bool adhocCodesign = false;
   bool emitFunctionStarts = false;
+  bool emitBitcodeBundle = false;
+  bool emitDataInCodeInfo = false;
+  bool emitEncryptionInfo = false;
   bool timeTraceEnabled = false;
+  bool dataConst = false;
+  bool dedupLiterals = true;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
   uint32_t timeTraceGranularity = 500;
+  unsigned optimize;
   std::string progName;
+
+  // For `clang -arch arm64 -arch x86_64`, clang will:
+  // 1. invoke the linker twice, to write one temporary output per arch
+  // 2. invoke `lipo` to merge the two outputs into a single file
+  // `outputFile` is the name of the temporary file the linker writes to.
+  // `finalOutput `is the name of the file lipo writes to after the link.
+  llvm::StringRef outputFile;
+  llvm::StringRef finalOutput;
+
   llvm::StringRef installName;
   llvm::StringRef mapFile;
-  llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
+  llvm::StringRef thinLTOJobs;
+  llvm::StringRef umbrella;
+  uint32_t ltoo = 2;
+  llvm::CachePruningPolicy thinLTOCachePolicy;
+  llvm::StringRef thinLTOCacheDir;
+  bool deadStripDylibs = false;
   bool demangle = false;
-  llvm::MachO::Target target;
+  bool deadStrip = false;
   PlatformInfo platformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
+  ICFLevel icfLevel = ICFLevel::none;
   llvm::MachO::HeaderFileType outputType;
   std::vector<llvm::StringRef> systemLibraryRoots;
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
   std::vector<llvm::StringRef> runtimePaths;
+  std::vector<std::string> astPaths;
   std::vector<Symbol *> explicitUndefineds;
-  // There are typically very few custom segmentProtections, so use a vector
-  // instead of a map.
+  llvm::StringSet<> explicitDynamicLookups;
+  // There are typically few custom sectionAlignments or segmentProtections,
+  // so use a vector instead of a map.
+  std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
 
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
@@ -120,6 +171,14 @@ struct Configuration {
 
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
+
+  bool zeroModTime = false;
+
+  llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
+
+  llvm::MachO::PlatformKind platform() const {
+    return platformInfo.target.Platform;
+  }
 };
 
 // The symbol with the highest priority should be ordered first in the output

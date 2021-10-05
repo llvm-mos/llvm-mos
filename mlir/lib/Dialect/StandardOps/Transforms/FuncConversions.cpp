@@ -20,7 +20,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
   /// Hook for derived classes to implement combined matching and rewriting.
   LogicalResult
-  matchAndRewrite(CallOp callOp, ArrayRef<Value> operands,
+  matchAndRewrite(CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Convert the original function results.
     SmallVector<Type, 1> convertedResults;
@@ -30,8 +30,8 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
-    rewriter.replaceOpWithNewOp<CallOp>(callOp, callOp.callee(),
-                                        convertedResults, operands);
+    rewriter.replaceOpWithNewOp<CallOp>(
+        callOp, callOp.callee(), convertedResults, adaptor.getOperands());
     return success();
   }
 };
@@ -52,6 +52,12 @@ public:
   using OpInterfaceConversionPattern<
       BranchOpInterface>::OpInterfaceConversionPattern;
 
+  BranchOpInterfaceTypeConversion(
+      TypeConverter &typeConverter, MLIRContext *ctx,
+      function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand)
+      : OpInterfaceConversionPattern(typeConverter, ctx, /*benefit=*/1),
+        shouldConvertBranchOperand(shouldConvertBranchOperand) {}
+
   LogicalResult
   matchAndRewrite(BranchOpInterface op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
@@ -61,18 +67,23 @@ public:
     for (int succIdx = 0, succEnd = op->getBlock()->getNumSuccessors();
          succIdx < succEnd; ++succIdx) {
       auto successorOperands = op.getSuccessorOperands(succIdx);
-      if (!successorOperands)
+      if (!successorOperands || successorOperands->empty())
         continue;
+
       for (int idx = successorOperands->getBeginOperandIndex(),
                eidx = idx + successorOperands->size();
            idx < eidx; ++idx) {
-        newOperands[idx] = operands[idx];
+        if (!shouldConvertBranchOperand || shouldConvertBranchOperand(op, idx))
+          newOperands[idx] = operands[idx];
       }
     }
     rewriter.updateRootInPlace(
         op, [newOperands, op]() { op->setOperands(newOperands); });
     return success();
   }
+
+private:
+  function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand;
 };
 } // end anonymous namespace
 
@@ -85,22 +96,22 @@ public:
   using OpConversionPattern<ReturnOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(ReturnOp op, ArrayRef<Value> operands,
+  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     // For a return, all operands go to the results of the parent, so
     // rewrite them all.
-    Operation *operation = op.getOperation();
-    rewriter.updateRootInPlace(
-        op, [operands, operation]() { operation->setOperands(operands); });
+    rewriter.updateRootInPlace(op,
+                               [&] { op->setOperands(adaptor.getOperands()); });
     return success();
   }
 };
 } // end anonymous namespace
 
 void mlir::populateBranchOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, TypeConverter &typeConverter) {
-  patterns.add<BranchOpInterfaceTypeConversion>(typeConverter,
-                                                patterns.getContext());
+    RewritePatternSet &patterns, TypeConverter &typeConverter,
+    function_ref<bool(BranchOpInterface, int)> shouldConvertBranchOperand) {
+  patterns.insert<BranchOpInterfaceTypeConversion>(
+      typeConverter, patterns.getContext(), shouldConvertBranchOperand);
 }
 
 bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
@@ -150,6 +161,11 @@ bool mlir::isNotBranchOpInterfaceOrReturnLikeOp(Operation *op) {
   // this to handle unknown operations, as well.
   Block *block = op->getBlock();
   if (!block || &block->back() != op)
+    return true;
+
+  // We don't want to handle terminators in nested regions, assume they are
+  // always legal.
+  if (!isa_and_nonnull<FuncOp>(op->getParentOp()))
     return true;
 
   return false;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <climits>
 #include <iomanip>
-#include <limits.h>
 
 #include "lldb/Host/Editline.h"
 
@@ -153,6 +153,11 @@ std::vector<EditLineStringType> SplitLines(const EditLineStringType &input) {
     result.push_back(input.substr(start, end - start));
     start = end + 1;
   }
+  // Treat an empty history session as a single command of zero-length instead
+  // of returning an empty vector.
+  if (result.empty()) {
+    result.emplace_back();
+  }
   return result;
 }
 
@@ -200,7 +205,7 @@ private:
   // Use static GetHistory() function to get a EditlineHistorySP to one of
   // these objects
   EditlineHistory(const std::string &prefix, uint32_t size, bool unique_entries)
-      : m_history(nullptr), m_event(), m_prefix(prefix), m_path() {
+      : m_prefix(prefix) {
     m_history = history_winit();
     history_w(m_history, &m_event, H_SETSIZE, size);
     if (unique_entries)
@@ -293,11 +298,15 @@ public:
   }
 
 protected:
-  HistoryW *m_history; // The history object
-  HistEventW m_event;  // The history event needed to contain all history events
-  std::string m_prefix; // The prefix name (usually the editline program name)
-                        // to use when loading/saving history
-  std::string m_path;   // Path to the history file
+  /// The history object.
+  HistoryW *m_history = nullptr;
+  /// The history event needed to contain all history events.
+  HistEventW m_event;
+  /// The prefix name (usually the editline program name) to use when
+  /// loading/saving history.
+  std::string m_prefix;
+  /// Path to the history file.
+  std::string m_path;
 };
 }
 }
@@ -1001,11 +1010,11 @@ unsigned char Editline::TabCommand(int ch) {
     switch (completion.GetMode()) {
     case CompletionMode::Normal: {
       std::string to_add = completion.GetCompletion();
-      to_add = to_add.substr(request.GetCursorArgumentPrefix().size());
       // Terminate the current argument with a quote if it started with a quote.
       if (!request.GetParsedLine().empty() && request.GetParsedArg().IsQuoted())
         to_add.push_back(request.GetParsedArg().GetQuoteChar());
       to_add.push_back(' ');
+      el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
       // Clear all the autosuggestion parts if the only single space can be completed.
       if (to_add == " ")
@@ -1097,6 +1106,21 @@ unsigned char Editline::TypedCharacter(int ch) {
   return CC_REDISPLAY;
 }
 
+void Editline::AddFunctionToEditLine(const EditLineCharType *command,
+                                     const EditLineCharType *helptext,
+                                     EditlineCommandCallbackType callbackFn) {
+  el_wset(m_editline, EL_ADDFN, command, helptext, callbackFn);
+}
+
+void Editline::SetEditLinePromptCallback(
+    EditlinePromptCallbackType callbackFn) {
+  el_set(m_editline, EL_PROMPT, callbackFn);
+}
+
+void Editline::SetGetCharacterFunction(EditlineGetCharCallbackType callbackFn) {
+  el_wset(m_editline, EL_GETCFN, callbackFn);
+}
+
 void Editline::ConfigureEditor(bool multiline) {
   if (m_editline && m_multiline_enabled == multiline)
     return;
@@ -1123,74 +1147,83 @@ void Editline::ConfigureEditor(bool multiline) {
   el_set(m_editline, EL_CLIENTDATA, this);
   el_set(m_editline, EL_SIGNAL, 0);
   el_set(m_editline, EL_EDITOR, "emacs");
-  el_set(m_editline, EL_PROMPT,
-         (EditlinePromptCallbackType)([](EditLine *editline) {
-           return Editline::InstanceFor(editline)->Prompt();
-         }));
 
-  el_wset(m_editline, EL_GETCFN, (EditlineGetCharCallbackType)([](
-                                     EditLine *editline, EditLineGetCharType *c) {
-            return Editline::InstanceFor(editline)->GetCharacter(c);
-          }));
+  SetGetCharacterFunction([](EditLine *editline, EditLineGetCharType *c) {
+    return Editline::InstanceFor(editline)->GetCharacter(c);
+  });
+
+  SetEditLinePromptCallback([](EditLine *editline) {
+    return Editline::InstanceFor(editline)->Prompt();
+  });
 
   // Commands used for multiline support, registered whether or not they're
   // used
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-break-line"),
-          EditLineConstString("Insert a line break"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->BreakLineCommand(ch);
-          }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-end-or-add-line"),
-          EditLineConstString("End editing or continue when incomplete"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->EndOrAddLineCommand(ch);
-          }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-delete-next-char"),
-          EditLineConstString("Delete next character"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->DeleteNextCharCommand(ch);
-          }));
-  el_wset(
-      m_editline, EL_ADDFN, EditLineConstString("lldb-delete-previous-char"),
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-break-line"),
+      EditLineConstString("Insert a line break"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->BreakLineCommand(ch);
+      });
+
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-end-or-add-line"),
+      EditLineConstString("End editing or continue when incomplete"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->EndOrAddLineCommand(ch);
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-delete-next-char"),
+      EditLineConstString("Delete next character"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->DeleteNextCharCommand(ch);
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-delete-previous-char"),
       EditLineConstString("Delete previous character"),
-      (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
+      [](EditLine *editline, int ch) {
         return Editline::InstanceFor(editline)->DeletePreviousCharCommand(ch);
-      }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-previous-line"),
-          EditLineConstString("Move to previous line"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->PreviousLineCommand(ch);
-          }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-next-line"),
-          EditLineConstString("Move to next line"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->NextLineCommand(ch);
-          }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-previous-history"),
-          EditLineConstString("Move to previous history"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->PreviousHistoryCommand(ch);
-          }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-next-history"),
-          EditLineConstString("Move to next history"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->NextHistoryCommand(ch);
-          }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-buffer-start"),
-          EditLineConstString("Move to start of buffer"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->BufferStartCommand(ch);
-          }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-buffer-end"),
-          EditLineConstString("Move to end of buffer"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->BufferEndCommand(ch);
-          }));
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-fix-indentation"),
-          EditLineConstString("Fix line indentation"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->FixIndentationCommand(ch);
-          }));
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-previous-line"),
+      EditLineConstString("Move to previous line"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->PreviousLineCommand(ch);
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-next-line"),
+      EditLineConstString("Move to next line"), [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->NextLineCommand(ch);
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-previous-history"),
+      EditLineConstString("Move to previous history"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->PreviousHistoryCommand(ch);
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-next-history"),
+      EditLineConstString("Move to next history"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->NextHistoryCommand(ch);
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-buffer-start"),
+      EditLineConstString("Move to start of buffer"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->BufferStartCommand(ch);
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-buffer-end"),
+      EditLineConstString("Move to end of buffer"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->BufferEndCommand(ch);
+      });
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-fix-indentation"),
+      EditLineConstString("Fix line indentation"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->FixIndentationCommand(ch);
+      });
 
   // Register the complete callback under two names for compatibility with
   // older clients using custom .editrc files (largely because libedit has a
@@ -1201,10 +1234,12 @@ void Editline::ConfigureEditor(bool multiline) {
                                                      int ch) {
     return Editline::InstanceFor(editline)->TabCommand(ch);
   };
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-complete"),
-          EditLineConstString("Invoke completion"), complete_callback);
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb_complete"),
-          EditLineConstString("Invoke completion"), complete_callback);
+  AddFunctionToEditLine(EditLineConstString("lldb-complete"),
+                        EditLineConstString("Invoke completion"),
+                        complete_callback);
+  AddFunctionToEditLine(EditLineConstString("lldb_complete"),
+                        EditLineConstString("Invoke completion"),
+                        complete_callback);
 
   // General bindings we don't mind being overridden
   if (!multiline) {
@@ -1212,21 +1247,22 @@ void Editline::ConfigureEditor(bool multiline) {
            NULL); // Cycle through backwards search, entering string
 
     if (m_suggestion_callback) {
-      el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-apply-complete"),
-              EditLineConstString("Adopt autocompletion"),
-              (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-                return Editline::InstanceFor(editline)->ApplyAutosuggestCommand(
-                    ch);
-              }));
+      AddFunctionToEditLine(
+          EditLineConstString("lldb-apply-complete"),
+          EditLineConstString("Adopt autocompletion"),
+          [](EditLine *editline, int ch) {
+            return Editline::InstanceFor(editline)->ApplyAutosuggestCommand(ch);
+          });
 
       el_set(m_editline, EL_BIND, "^f", "lldb-apply-complete",
              NULL); // Apply a part that is suggested automatically
 
-      el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-typed-character"),
-              EditLineConstString("Typed character"),
-              (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-                return Editline::InstanceFor(editline)->TypedCharacter(ch);
-              }));
+      AddFunctionToEditLine(
+          EditLineConstString("lldb-typed-character"),
+          EditLineConstString("Typed character"),
+          [](EditLine *editline, int ch) {
+            return Editline::InstanceFor(editline)->TypedCharacter(ch);
+          });
 
       char bind_key[2] = {0, 0};
       llvm::StringRef ascii_chars =
@@ -1261,11 +1297,12 @@ void Editline::ConfigureEditor(bool multiline) {
   el_source(m_editline, nullptr);
 
   // Register an internal binding that external developers shouldn't use
-  el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-revert-line"),
-          EditLineConstString("Revert line to saved state"),
-          (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
-            return Editline::InstanceFor(editline)->RevertLineCommand(ch);
-          }));
+  AddFunctionToEditLine(
+      EditLineConstString("lldb-revert-line"),
+      EditLineConstString("Revert line to saved state"),
+      [](EditLine *editline, int ch) {
+        return Editline::InstanceFor(editline)->RevertLineCommand(ch);
+      });
 
   // Register keys that perform auto-indent correction
   if (m_fix_indentation_callback && m_fix_indentation_callback_chars) {
@@ -1521,8 +1558,10 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
 
   interrupted = m_editor_status == EditorStatus::Interrupted;
   if (!interrupted) {
-    // Save the completed entry in history before returning
-    m_history_sp->Enter(CombineLines(m_input_lines).c_str());
+    // Save the completed entry in history before returning. Don't save empty
+    // input as that just clutters the command history.
+    if (!m_input_lines.empty())
+      m_history_sp->Enter(CombineLines(m_input_lines).c_str());
 
     lines = GetInputAsStringList();
   }

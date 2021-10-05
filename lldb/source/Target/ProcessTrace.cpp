@@ -59,8 +59,6 @@ ProcessTrace::~ProcessTrace() {
 
 ConstString ProcessTrace::GetPluginName() { return GetPluginNameStatic(); }
 
-uint32_t ProcessTrace::GetPluginVersion() { return 1; }
-
 void ProcessTrace::DidAttach(ArchSpec &process_arch) {
   ListenerSP listener_sp(
       Listener::MakeListener("lldb.process_trace.did_attach_listener"));
@@ -86,8 +84,6 @@ bool ProcessTrace::DoUpdateThreadList(ThreadList &old_thread_list,
 void ProcessTrace::RefreshStateAfterStop() {}
 
 Status ProcessTrace::DoDestroy() { return Status(); }
-
-bool ProcessTrace::IsAlive() { return true; }
 
 size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
                                 Status &error) {

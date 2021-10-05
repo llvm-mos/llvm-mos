@@ -45,6 +45,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -538,15 +539,20 @@ static Value *getUnwindDestToken(Instruction *EHPad,
 static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     BasicBlock *BB, BasicBlock *UnwindEdge,
     UnwindDestMemoTy *FuncletUnwindMap = nullptr) {
-  for (BasicBlock::iterator BBI = BB->begin(), E = BB->end(); BBI != E; ) {
-    Instruction *I = &*BBI++;
-
+  for (Instruction &I : llvm::make_early_inc_range(*BB)) {
     // We only need to check for function calls: inlined invoke
     // instructions require no special handling.
-    CallInst *CI = dyn_cast<CallInst>(I);
+    CallInst *CI = dyn_cast<CallInst>(&I);
 
-    if (!CI || CI->doesNotThrow() || CI->isInlineAsm())
+    if (!CI || CI->doesNotThrow())
       continue;
+
+    if (CI->isInlineAsm()) {
+      InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
+      if (!IA->canThrow()) {
+        continue;
+      }
+    }
 
     // We do not need to (and in fact, cannot) convert possibly throwing calls
     // to @llvm.experimental_deoptimize (resp. @llvm.experimental.guard) into
@@ -782,7 +788,8 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
 /// When inlining a call site that has !llvm.mem.parallel_loop_access,
 /// !llvm.access.group, !alias.scope or !noalias metadata, that metadata should
 /// be propagated to all memory-accessing cloned instructions.
-static void PropagateCallSiteMetadata(CallBase &CB, ValueToValueMapTy &VMap) {
+static void PropagateCallSiteMetadata(CallBase &CB, Function::iterator FStart,
+                                      Function::iterator FEnd) {
   MDNode *MemParallelLoopAccess =
       CB.getMetadata(LLVMContext::MD_mem_parallel_loop_access);
   MDNode *AccessGroup = CB.getMetadata(LLVMContext::MD_access_group);
@@ -791,41 +798,33 @@ static void PropagateCallSiteMetadata(CallBase &CB, ValueToValueMapTy &VMap) {
   if (!MemParallelLoopAccess && !AccessGroup && !AliasScope && !NoAlias)
     return;
 
-  for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
-       VMI != VMIE; ++VMI) {
-    // Check that key is an instruction, to skip the Argument mapping, which
-    // points to an instruction in the original function, not the inlined one.
-    if (!VMI->second || !isa<Instruction>(VMI->first))
-      continue;
+  for (BasicBlock &BB : make_range(FStart, FEnd)) {
+    for (Instruction &I : BB) {
+      // This metadata is only relevant for instructions that access memory.
+      if (!I.mayReadOrWriteMemory())
+        continue;
 
-    Instruction *NI = dyn_cast<Instruction>(VMI->second);
-    if (!NI)
-      continue;
-
-    // This metadata is only relevant for instructions that access memory.
-    if (!NI->mayReadOrWriteMemory())
-      continue;
-
-    if (MemParallelLoopAccess) {
-      // TODO: This probably should not overwrite MemParalleLoopAccess.
-      MemParallelLoopAccess = MDNode::concatenate(
-          NI->getMetadata(LLVMContext::MD_mem_parallel_loop_access),
-          MemParallelLoopAccess);
-      NI->setMetadata(LLVMContext::MD_mem_parallel_loop_access,
+      if (MemParallelLoopAccess) {
+        // TODO: This probably should not overwrite MemParalleLoopAccess.
+        MemParallelLoopAccess = MDNode::concatenate(
+            I.getMetadata(LLVMContext::MD_mem_parallel_loop_access),
+            MemParallelLoopAccess);
+        I.setMetadata(LLVMContext::MD_mem_parallel_loop_access,
                       MemParallelLoopAccess);
+      }
+
+      if (AccessGroup)
+        I.setMetadata(LLVMContext::MD_access_group, uniteAccessGroups(
+            I.getMetadata(LLVMContext::MD_access_group), AccessGroup));
+
+      if (AliasScope)
+        I.setMetadata(LLVMContext::MD_alias_scope, MDNode::concatenate(
+            I.getMetadata(LLVMContext::MD_alias_scope), AliasScope));
+
+      if (NoAlias)
+        I.setMetadata(LLVMContext::MD_noalias, MDNode::concatenate(
+            I.getMetadata(LLVMContext::MD_noalias), NoAlias));
     }
-
-    if (AccessGroup)
-      NI->setMetadata(LLVMContext::MD_access_group, uniteAccessGroups(
-          NI->getMetadata(LLVMContext::MD_access_group), AccessGroup));
-
-    if (AliasScope)
-      NI->setMetadata(LLVMContext::MD_alias_scope, MDNode::concatenate(
-          NI->getMetadata(LLVMContext::MD_alias_scope), AliasScope));
-
-    if (NoAlias)
-      NI->setMetadata(LLVMContext::MD_noalias, MDNode::concatenate(
-          NI->getMetadata(LLVMContext::MD_noalias), NoAlias));
   }
 }
 
@@ -846,9 +845,9 @@ public:
   /// subsequent remap() calls.
   void clone();
 
-  /// Remap instructions in the given VMap from the original to the cloned
+  /// Remap instructions in the given range from the original to the cloned
   /// metadata.
-  void remap(ValueToValueMapTy &VMap);
+  void remap(Function::iterator FStart, Function::iterator FEnd);
 };
 
 ScopedAliasMetadataDeepCloner::ScopedAliasMetadataDeepCloner(
@@ -909,34 +908,27 @@ void ScopedAliasMetadataDeepCloner::clone() {
   }
 }
 
-void ScopedAliasMetadataDeepCloner::remap(ValueToValueMapTy &VMap) {
+void ScopedAliasMetadataDeepCloner::remap(Function::iterator FStart,
+                                          Function::iterator FEnd) {
   if (MDMap.empty())
     return; // Nothing to do.
 
-  for (auto Entry : VMap) {
-    // Check that key is an instruction, to skip the Argument mapping, which
-    // points to an instruction in the original function, not the inlined one.
-    if (!Entry->second || !isa<Instruction>(Entry->first))
-      continue;
+  for (BasicBlock &BB : make_range(FStart, FEnd)) {
+    for (Instruction &I : BB) {
+      // TODO: The null checks for the MDMap.lookup() results should no longer
+      // be necessary.
+      if (MDNode *M = I.getMetadata(LLVMContext::MD_alias_scope))
+        if (MDNode *MNew = MDMap.lookup(M))
+          I.setMetadata(LLVMContext::MD_alias_scope, MNew);
 
-    Instruction *I = dyn_cast<Instruction>(Entry->second);
-    if (!I)
-      continue;
+      if (MDNode *M = I.getMetadata(LLVMContext::MD_noalias))
+        if (MDNode *MNew = MDMap.lookup(M))
+          I.setMetadata(LLVMContext::MD_noalias, MNew);
 
-    // Only update scopes when we find them in the map. If they are not, it is
-    // because we already handled that instruction before. This is faster than
-    // tracking which instructions we already updated.
-    if (MDNode *M = I->getMetadata(LLVMContext::MD_alias_scope))
-      if (MDNode *MNew = MDMap.lookup(M))
-        I->setMetadata(LLVMContext::MD_alias_scope, MNew);
-
-    if (MDNode *M = I->getMetadata(LLVMContext::MD_noalias))
-      if (MDNode *MNew = MDMap.lookup(M))
-        I->setMetadata(LLVMContext::MD_noalias, MNew);
-
-    if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I))
-      if (MDNode *MNew = MDMap.lookup(Decl->getScopeList()))
-        Decl->setScopeList(MNew);
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        if (MDNode *MNew = MDMap.lookup(Decl->getScopeList()))
+          Decl->setScopeList(MNew);
+    }
   }
 }
 
@@ -945,7 +937,8 @@ void ScopedAliasMetadataDeepCloner::remap(ValueToValueMapTy &VMap) {
 /// parameters with noalias metadata specifying the new scope, and tag all
 /// non-derived loads, stores and memory intrinsics with the new alias scopes.
 static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
-                                  const DataLayout &DL, AAResults *CalleeAAR) {
+                                  const DataLayout &DL, AAResults *CalleeAAR,
+                                  ClonedCodeInfo &InlinedFunctionInfo) {
   if (!EnableNoAliasConversion)
     return;
 
@@ -1015,7 +1008,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         continue;
 
       Instruction *NI = dyn_cast<Instruction>(VMI->second);
-      if (!NI)
+      if (!NI || InlinedFunctionInfo.isSimplified(I, NI))
         continue;
 
       bool IsArgMemOnlyCall = false, IsFuncCall = false;
@@ -1041,6 +1034,11 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         IsFuncCall = true;
         if (CalleeAAR) {
           FunctionModRefBehavior MRB = CalleeAAR->getModRefBehavior(Call);
+
+          // We'll retain this knowledge without additional metadata.
+          if (AAResults::onlyAccessesInaccessibleMem(MRB))
+            continue;
+
           if (AAResults::onlyAccessesArgPointees(MRB))
             IsArgMemOnlyCall = true;
         }
@@ -1259,8 +1257,7 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // existing attribute value (i.e. attributes such as dereferenceable,
     // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
     AttributeList AL = NewRetVal->getAttributes();
-    AttributeList NewAL =
-        AL.addAttributes(Context, AttributeList::ReturnIndex, Valid);
+    AttributeList NewAL = AL.addRetAttributes(Context, Valid);
     NewRetVal->setAttributes(NewAL);
   }
 }
@@ -1296,7 +1293,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
 
       CallInst *NewAsmp =
           IRBuilder<>(&CB).CreateAlignmentAssumption(DL, ArgVal, Align);
-      AC->registerAssumption(NewAsmp);
+      AC->registerAssumption(cast<AssumeInst>(NewAsmp));
     }
   }
 }
@@ -1376,13 +1373,13 @@ static void UpdateCallGraphAfterInlining(CallBase &CB,
   CallerNode->removeCallEdgeFor(*cast<CallBase>(&CB));
 }
 
-static void HandleByValArgumentInit(Value *Dst, Value *Src, Module *M,
-                                    BasicBlock *InsertBlock,
+static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
+                                    Module *M, BasicBlock *InsertBlock,
                                     InlineFunctionInfo &IFI) {
-  Type *AggTy = cast<PointerType>(Src->getType())->getElementType();
   IRBuilder<> Builder(InsertBlock, InsertBlock->begin());
 
-  Value *Size = Builder.getInt64(M->getDataLayout().getTypeStoreSize(AggTy));
+  Value *Size =
+      Builder.getInt64(M->getDataLayout().getTypeStoreSize(ByValType));
 
   // Always generate a memcpy of alignment 1 here because we don't know
   // the alignment of the src pointer.  Other optimizations can infer
@@ -1393,13 +1390,13 @@ static void HandleByValArgumentInit(Value *Dst, Value *Src, Module *M,
 
 /// When inlining a call site that has a byval argument,
 /// we have to make the implicit memcpy explicit by adding it.
-static Value *HandleByValArgument(Value *Arg, Instruction *TheCall,
+static Value *HandleByValArgument(Type *ByValType, Value *Arg,
+                                  Instruction *TheCall,
                                   const Function *CalledFunc,
                                   InlineFunctionInfo &IFI,
                                   unsigned ByValAlignment) {
-  PointerType *ArgTy = cast<PointerType>(Arg->getType());
-  Type *AggTy = ArgTy->getElementType();
-
+  assert(cast<PointerType>(Arg->getType())
+             ->isOpaqueOrPointeeTypeMatches(ByValType));
   Function *Caller = TheCall->getFunction();
   const DataLayout &DL = Caller->getParent()->getDataLayout();
 
@@ -1427,7 +1424,7 @@ static Value *HandleByValArgument(Value *Arg, Instruction *TheCall,
   }
 
   // Create the alloca.  If we have DataLayout, use nice alignment.
-  Align Alignment(DL.getPrefTypeAlignment(AggTy));
+  Align Alignment(DL.getPrefTypeAlignment(ByValType));
 
   // If the byval had an alignment specified, we *must* use at least that
   // alignment, as it is required by the byval argument (and uses of the
@@ -1435,7 +1432,7 @@ static Value *HandleByValArgument(Value *Arg, Instruction *TheCall,
   Alignment = max(Alignment, MaybeAlign(ByValAlignment));
 
   Value *NewAlloca =
-      new AllocaInst(AggTy, DL.getAllocaAddrSpace(), nullptr, Alignment,
+      new AllocaInst(ByValType, DL.getAllocaAddrSpace(), nullptr, Alignment,
                      Arg->getName(), &*Caller->begin()->begin());
   IFI.StaticAllocas.push_back(cast<AllocaInst>(NewAlloca));
 
@@ -1520,9 +1517,11 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
          BI != BE; ++BI) {
       // Loop metadata needs to be updated so that the start and end locs
       // reference inlined-at locations.
-      auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode, &IANodes](
-                                   const DILocation &Loc) -> DILocation * {
-        return inlineDebugLoc(&Loc, InlinedAtNode, Ctx, IANodes).get();
+      auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode,
+                                &IANodes](Metadata *MD) -> Metadata * {
+        if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+          return inlineDebugLoc(Loc, InlinedAtNode, Ctx, IANodes).get();
+        return MD;
       };
       updateLoopMetadataDebugLocations(*BI, updateLoopInfoLoc);
 
@@ -1670,10 +1669,11 @@ void llvm::updateProfileCallee(
 /// 3. Otherwise, a call to objc_retain is inserted if the call in the caller is
 ///    a retainRV call.
 static void
-inlineRetainOrClaimRVCalls(CallBase &CB,
+inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
   Module *Mod = CB.getModule();
-  bool IsRetainRV = objcarc::hasAttachedCallOpBundle(&CB, true),
+  assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
+  bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
        IsClaimRV = !IsRetainRV;
 
   for (auto *RI : Returns) {
@@ -1693,43 +1693,47 @@ inlineRetainOrClaimRVCalls(CallBase &CB,
         continue;
 
       if (auto *II = dyn_cast<IntrinsicInst>(&*CurI)) {
-        if (II->getIntrinsicID() == Intrinsic::objc_autoreleaseReturnValue &&
-            II->hasNUses(0) &&
-            objcarc::GetRCIdentityRoot(II->getOperand(0)) == RetOpnd) {
-          // If we've found a matching authoreleaseRV call:
-          // - If claimRV is attached to the call, insert a call to objc_release
-          //   and erase the autoreleaseRV call.
-          // - If retainRV is attached to the call, just erase the autoreleaseRV
-          //   call.
-          if (IsClaimRV) {
-            Builder.SetInsertPoint(II);
-            Function *IFn =
-                Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
-            Value *BC =
-                Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-            Builder.CreateCall(IFn, BC, "");
-          }
-          II->eraseFromParent();
-          InsertRetainCall = false;
+        if (II->getIntrinsicID() != Intrinsic::objc_autoreleaseReturnValue ||
+            !II->hasNUses(0) ||
+            objcarc::GetRCIdentityRoot(II->getOperand(0)) != RetOpnd)
+          break;
+
+        // If we've found a matching authoreleaseRV call:
+        // - If claimRV is attached to the call, insert a call to objc_release
+        //   and erase the autoreleaseRV call.
+        // - If retainRV is attached to the call, just erase the autoreleaseRV
+        //   call.
+        if (IsClaimRV) {
+          Builder.SetInsertPoint(II);
+          Function *IFn =
+              Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
+          Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
+          Builder.CreateCall(IFn, BC, "");
         }
-      } else if (auto *CI = dyn_cast<CallInst>(&*CurI)) {
-        if (objcarc::GetRCIdentityRoot(CI) == RetOpnd &&
-            !objcarc::hasAttachedCallOpBundle(CI)) {
-          // If we've found an unannotated call that defines RetOpnd, add a
-          // "clang.arc.attachedcall" operand bundle.
-          Value *BundleArgs[] = {ConstantInt::get(
-              Builder.getInt64Ty(),
-              objcarc::getAttachedCallOperandBundleEnum(IsRetainRV))};
-          OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
-          auto *NewCall = CallBase::addOperandBundle(
-              CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
-          NewCall->copyMetadata(*CI);
-          CI->replaceAllUsesWith(NewCall);
-          CI->eraseFromParent();
-          InsertRetainCall = false;
-        }
+        II->eraseFromParent();
+        InsertRetainCall = false;
+        break;
       }
 
+      auto *CI = dyn_cast<CallInst>(&*CurI);
+
+      if (!CI)
+        break;
+
+      if (objcarc::GetRCIdentityRoot(CI) != RetOpnd ||
+          objcarc::hasAttachedCallOpBundle(CI))
+        break;
+
+      // If we've found an unannotated call that defines RetOpnd, add a
+      // "clang.arc.attachedcall" operand bundle.
+      Value *BundleArgs[] = {*objcarc::getAttachedARCFunction(&CB)};
+      OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
+      auto *NewCall = CallBase::addOperandBundle(
+          CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
+      NewCall->copyMetadata(*CI);
+      CI->replaceAllUsesWith(NewCall);
+      CI->eraseFromParent();
+      InsertRetainCall = false;
       break;
     }
 
@@ -1893,8 +1897,13 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   { // Scope to destroy VMap after cloning.
     ValueToValueMapTy VMap;
+    struct ByValInit {
+      Value *Dst;
+      Value *Src;
+      Type *Ty;
+    };
     // Keep a list of pair (dst, src) to emit byval initializations.
-    SmallVector<std::pair<Value*, Value*>, 4> ByValInit;
+    SmallVector<ByValInit, 4> ByValInits;
 
     // When inlining a function that contains noalias scope metadata,
     // this metadata needs to be cloned so that the inlined blocks
@@ -1919,10 +1928,12 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       // or readnone, because the copy would be unneeded: the callee doesn't
       // modify the struct.
       if (CB.isByValArgument(ArgNo)) {
-        ActualArg = HandleByValArgument(ActualArg, &CB, CalledFunc, IFI,
+        ActualArg = HandleByValArgument(CB.getParamByValType(ArgNo), ActualArg,
+                                        &CB, CalledFunc, IFI,
                                         CalledFunc->getParamAlignment(ArgNo));
         if (ActualArg != *AI)
-          ByValInit.push_back(std::make_pair(ActualArg, (Value*) *AI));
+          ByValInits.push_back(
+              {ActualArg, (Value *)*AI, CB.getParamByValType(ArgNo)});
       }
 
       VMap[&*I] = ActualArg;
@@ -1946,13 +1957,14 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // happy with whatever the cloner can do.
     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
                               /*ModuleLevelChanges=*/false, Returns, ".i",
-                              &InlinedFunctionInfo, &CB);
+                              &InlinedFunctionInfo);
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;
 
     // Insert retainRV/clainRV runtime calls.
-    if (objcarc::hasAttachedCallOpBundle(&CB))
-      inlineRetainOrClaimRVCalls(CB, Returns);
+    objcarc::ARCInstKind RVCallKind = objcarc::getAttachedARCFunctionKind(&CB);
+    if (RVCallKind != objcarc::ARCInstKind::None)
+      inlineRetainOrClaimRVCalls(CB, RVCallKind, Returns);
 
     // Updated caller/callee profiles only when requested. For sample loader
     // inlining, the context-sensitive inlinee profile doesn't need to be
@@ -1969,8 +1981,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     }
 
     // Inject byval arguments initialization.
-    for (std::pair<Value*, Value*> &Init : ByValInit)
-      HandleByValArgumentInit(Init.first, Init.second, Caller->getParent(),
+    for (ByValInit &Init : ByValInits)
+      HandleByValArgumentInit(Init.Ty, Init.Dst, Init.Src, Caller->getParent(),
                               &*FirstNewBlock, IFI);
 
     Optional<OperandBundleUse> ParentDeopt =
@@ -2033,26 +2045,25 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Now clone the inlined noalias scope metadata.
     SAMetadataCloner.clone();
-    SAMetadataCloner.remap(VMap);
+    SAMetadataCloner.remap(FirstNewBlock, Caller->end());
 
     // Add noalias metadata if necessary.
-    AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR);
+    AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo);
 
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.
     AddReturnAttributes(CB, VMap);
 
     // Propagate metadata on the callsite if necessary.
-    PropagateCallSiteMetadata(CB, VMap);
+    PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());
 
     // Register any cloned assumptions.
     if (IFI.GetAssumptionCache)
       for (BasicBlock &NewBlock :
            make_range(FirstNewBlock->getIterator(), Caller->end()))
         for (Instruction &I : NewBlock)
-          if (auto *II = dyn_cast<IntrinsicInst>(&I))
-            if (II->getIntrinsicID() == Intrinsic::assume)
-              IFI.GetAssumptionCache(*Caller).registerAssumption(II);
+          if (auto *II = dyn_cast<AssumeInst>(&I))
+            IFI.GetAssumptionCache(*Caller).registerAssumption(II);
   }
 
   // If there are any alloca instructions in the block that used to be the entry
@@ -2099,9 +2110,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   SmallVector<Value*,4> VarArgsToForward;
   SmallVector<AttributeSet, 4> VarArgsAttrs;
   for (unsigned i = CalledFunc->getFunctionType()->getNumParams();
-       i < CB.getNumArgOperands(); i++) {
+       i < CB.arg_size(); i++) {
     VarArgsToForward.push_back(CB.getArgOperand(i));
-    VarArgsAttrs.push_back(CB.getAttributes().getParamAttributes(i));
+    VarArgsAttrs.push_back(CB.getAttributes().getParamAttrs(i));
   }
 
   bool InlinedMustTailCalls = false, InlinedDeoptimizeCalls = false;
@@ -2116,8 +2127,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     for (Function::iterator BB = FirstNewBlock, E = Caller->end(); BB != E;
          ++BB) {
-      for (auto II = BB->begin(); II != BB->end();) {
-        Instruction &I = *II++;
+      for (Instruction &I : llvm::make_early_inc_range(*BB)) {
         CallInst *CI = dyn_cast<CallInst>(&I);
         if (!CI)
           continue;
@@ -2134,15 +2144,15 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
           if (!Attrs.isEmpty() || !VarArgsAttrs.empty()) {
             for (unsigned ArgNo = 0;
                  ArgNo < CI->getFunctionType()->getNumParams(); ++ArgNo)
-              ArgAttrs.push_back(Attrs.getParamAttributes(ArgNo));
+              ArgAttrs.push_back(Attrs.getParamAttrs(ArgNo));
           }
 
           // Add VarArg attributes.
           ArgAttrs.append(VarArgsAttrs.begin(), VarArgsAttrs.end());
-          Attrs = AttributeList::get(CI->getContext(), Attrs.getFnAttributes(),
-                                     Attrs.getRetAttributes(), ArgAttrs);
+          Attrs = AttributeList::get(CI->getContext(), Attrs.getFnAttrs(),
+                                     Attrs.getRetAttrs(), ArgAttrs);
           // Add VarArgs to existing parameters.
-          SmallVector<Value *, 6> Params(CI->arg_operands());
+          SmallVector<Value *, 6> Params(CI->args());
           Params.append(VarArgsToForward.begin(), VarArgsToForward.end());
           CallInst *NewCI = CallInst::Create(
               CI->getFunctionType(), CI->getCalledOperand(), Params, "", CI);
@@ -2189,7 +2199,11 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   // Leave lifetime markers for the static alloca's, scoping them to the
   // function we just inlined.
-  if (InsertLifetime && !IFI.StaticAllocas.empty()) {
+  // We need to insert lifetime intrinsics even at O0 to avoid invalid
+  // access caused by multithreaded coroutines. The check
+  // `Caller->isPresplitCoroutine()` would affect AlwaysInliner at O0 only.
+  if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
+      !IFI.StaticAllocas.empty()) {
     IRBuilder<> builder(&FirstNewBlock->front());
     for (unsigned ai = 0, ae = IFI.StaticAllocas.size(); ai != ae; ++ai) {
       AllocaInst *AI = IFI.StaticAllocas[ai];
@@ -2322,7 +2336,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       // As such, we replace the cleanupret with unreachable.
       if (auto *CleanupRet = dyn_cast<CleanupReturnInst>(BB->getTerminator()))
         if (CleanupRet->unwindsToCaller() && EHPadForCallUnwindsLocally)
-          changeToUnreachable(CleanupRet, /*UseLLVMTrap=*/false);
+          changeToUnreachable(CleanupRet);
 
       Instruction *I = BB->getFirstNonPHI();
       if (!I->isEHPad())
@@ -2376,6 +2390,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
         SmallVector<OperandBundleDef, 1> OpBundles;
         DeoptCall->getOperandBundlesAsDefs(OpBundles);
+        auto DeoptAttributes = DeoptCall->getAttributes();
         DeoptCall->eraseFromParent();
         assert(!OpBundles.empty() &&
                "Expected at least the deopt operand bundle");
@@ -2384,6 +2399,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         CallInst *NewDeoptCall =
             Builder.CreateCall(NewDeoptIntrinsic, CallArgs, OpBundles);
         NewDeoptCall->setCallingConv(CallingConv);
+        NewDeoptCall->setAttributes(DeoptAttributes);
         if (NewDeoptCall->getType()->isVoidTy())
           Builder.CreateRetVoid();
         else
@@ -2436,14 +2452,17 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // before we splice the inlined code into the CFG and lose track of which
   // blocks were actually inlined, collect the call sites. We only do this if
   // call graph updates weren't requested, as those provide value handle based
-  // tracking of inlined call sites instead.
+  // tracking of inlined call sites instead. Calls to intrinsics are not
+  // collected because they are not inlineable.
   if (InlinedFunctionInfo.ContainsCalls && !IFI.CG) {
     // Otherwise just collect the raw call sites that were inlined.
     for (BasicBlock &NewBB :
          make_range(FirstNewBlock->getIterator(), Caller->end()))
       for (Instruction &I : NewBB)
         if (auto *CB = dyn_cast<CallBase>(&I))
-          IFI.InlinedCallSites.push_back(CB);
+          if (!(CB->getCalledFunction() &&
+                CB->getCalledFunction()->isIntrinsic()))
+            IFI.InlinedCallSites.push_back(CB);
   }
 
   // If we cloned in _exactly one_ basic block, and if that block ends in a

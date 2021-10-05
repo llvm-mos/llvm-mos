@@ -287,9 +287,23 @@ bool AffineMap::isSingleConstant() const {
   return getNumResults() == 1 && getResult(0).isa<AffineConstantExpr>();
 }
 
+bool AffineMap::isConstant() const {
+  return llvm::all_of(getResults(), [](AffineExpr expr) {
+    return expr.isa<AffineConstantExpr>();
+  });
+}
+
 int64_t AffineMap::getSingleConstantResult() const {
   assert(isSingleConstant() && "map must have a single constant result");
   return getResult(0).cast<AffineConstantExpr>().getValue();
+}
+
+SmallVector<int64_t> AffineMap::getConstantResults() const {
+  assert(isConstant() && "map must have only constant results");
+  SmallVector<int64_t> result;
+  for (auto expr : getResults())
+    result.emplace_back(expr.cast<AffineConstantExpr>().getValue());
+  return result;
 }
 
 unsigned AffineMap::getNumDims() const {
@@ -320,6 +334,14 @@ AffineExpr AffineMap::getResult(unsigned idx) const {
 
 unsigned AffineMap::getDimPosition(unsigned idx) const {
   return getResult(idx).cast<AffineDimExpr>().getPosition();
+}
+
+unsigned AffineMap::getPermutedPosition(unsigned input) const {
+  assert(isPermutation() && "invalid permutation request");
+  for (unsigned i = 0, numResults = getNumResults(); i < numResults; i++)
+    if (getDimPosition(i) == input)
+      return i;
+  llvm_unreachable("incorrect permutation request");
 }
 
 /// Folds the results of the application of an affine map on the provided
@@ -425,6 +447,15 @@ AffineMap AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map,
   return AffineMap::get(numResultDims, numResultSyms, newResults, getContext());
 }
 
+AffineMap
+AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map) const {
+  SmallVector<AffineExpr, 4> newResults;
+  newResults.reserve(getNumResults());
+  for (AffineExpr e : getResults())
+    newResults.push_back(e.replace(map));
+  return AffineMap::inferFromExprList(newResults).front();
+}
+
 AffineMap AffineMap::compose(AffineMap map) const {
   assert(getNumDims() == map.getNumResults() && "Number of results mismatch");
   // Prepare `map` by concatenating the symbols and rewriting its exprs.
@@ -494,6 +525,11 @@ AffineMap AffineMap::getSubMap(ArrayRef<unsigned> resultPos) const {
   return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
 }
 
+AffineMap AffineMap::getSliceMap(unsigned start, unsigned length) const {
+  return AffineMap::get(getNumDims(), getNumSymbols(),
+                        getResults().slice(start, length), getContext());
+}
+
 AffineMap AffineMap::getMajorSubMap(unsigned numResults) const {
   if (numResults == 0)
     return AffineMap();
@@ -543,6 +579,41 @@ AffineMap mlir::compressUnusedDims(AffineMap map) {
   return compressDims(map, unusedDims);
 }
 
+static SmallVector<AffineMap>
+compressUnusedImpl(ArrayRef<AffineMap> maps,
+                   llvm::function_ref<AffineMap(AffineMap)> compressionFun) {
+  if (maps.empty())
+    return SmallVector<AffineMap>();
+  SmallVector<AffineExpr> allExprs;
+  allExprs.reserve(maps.size() * maps.front().getNumResults());
+  unsigned numDims = maps.front().getNumDims(),
+           numSymbols = maps.front().getNumSymbols();
+  for (auto m : maps) {
+    assert(numDims == m.getNumDims() && numSymbols == m.getNumSymbols() &&
+           "expected maps with same num dims and symbols");
+    llvm::append_range(allExprs, m.getResults());
+  }
+  AffineMap unifiedMap = compressionFun(
+      AffineMap::get(numDims, numSymbols, allExprs, maps.front().getContext()));
+  unsigned unifiedNumDims = unifiedMap.getNumDims(),
+           unifiedNumSymbols = unifiedMap.getNumSymbols();
+  ArrayRef<AffineExpr> unifiedResults = unifiedMap.getResults();
+  SmallVector<AffineMap> res;
+  res.reserve(maps.size());
+  for (auto m : maps) {
+    res.push_back(AffineMap::get(unifiedNumDims, unifiedNumSymbols,
+                                 unifiedResults.take_front(m.getNumResults()),
+                                 m.getContext()));
+    unifiedResults = unifiedResults.drop_front(m.getNumResults());
+  }
+  return res;
+}
+
+SmallVector<AffineMap> mlir::compressUnusedDims(ArrayRef<AffineMap> maps) {
+  return compressUnusedImpl(maps,
+                            [](AffineMap m) { return compressUnusedDims(m); });
+}
+
 AffineMap
 mlir::compressSymbols(AffineMap map,
                       const llvm::SmallDenseSet<unsigned> &unusedSymbols) {
@@ -574,6 +645,11 @@ AffineMap mlir::compressUnusedSymbols(AffineMap map) {
     if (!usedSymbols.contains(d))
       unusedSymbols.insert(d);
   return compressSymbols(map, unusedSymbols);
+}
+
+SmallVector<AffineMap> mlir::compressUnusedSymbols(ArrayRef<AffineMap> maps) {
+  return compressUnusedImpl(
+      maps, [](AffineMap m) { return compressUnusedSymbols(m); });
 }
 
 AffineMap mlir::simplifyAffineMap(AffineMap map) {
@@ -617,6 +693,19 @@ AffineMap mlir::inversePermutation(AffineMap map) {
   if (seenExprs.size() != map.getNumInputs())
     return AffineMap();
   return AffineMap::get(map.getNumResults(), 0, seenExprs, map.getContext());
+}
+
+AffineMap mlir::inverseAndBroadcastProjectedPermuation(AffineMap map) {
+  assert(map.isProjectedPermutation());
+  MLIRContext *context = map.getContext();
+  AffineExpr zero = mlir::getAffineConstantExpr(0, context);
+  // Start with all the results as 0.
+  SmallVector<AffineExpr, 4> exprs(map.getNumInputs(), zero);
+  for (unsigned i : llvm::seq(unsigned(0), map.getNumResults())) {
+    // Reverse each dimension existing in the oringal map result.
+    exprs[map.getDimPosition(i)] = getAffineDimExpr(i, context);
+  }
+  return AffineMap::get(map.getNumResults(), /*symbolCount=*/0, exprs, context);
 }
 
 AffineMap mlir::concatAffineMaps(ArrayRef<AffineMap> maps) {

@@ -161,11 +161,10 @@ public:
                                 lldb::SymbolContextItem resolve_scope,
                                 lldb_private::SymbolContext &sc) override;
 
-  uint32_t
-  ResolveSymbolContext(const lldb_private::FileSpec &file_spec, uint32_t line,
-                       bool check_inlines,
-                       lldb::SymbolContextItem resolve_scope,
-                       lldb_private::SymbolContextList &sc_list) override;
+  uint32_t ResolveSymbolContext(
+      const lldb_private::SourceLocationSpec &src_location_spec,
+      lldb::SymbolContextItem resolve_scope,
+      lldb_private::SymbolContextList &sc_list) override;
 
   void
   FindGlobalVariables(lldb_private::ConstString name,
@@ -220,8 +219,6 @@ public:
 
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
 
   DWARFDebugAbbrev *DebugAbbrev();
 
@@ -318,6 +315,8 @@ public:
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
+  /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
+  static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
@@ -366,6 +365,9 @@ protected:
 
   lldb::TypeSP ParseType(const lldb_private::SymbolContext &sc,
                          const DWARFDIE &die, bool *type_is_new);
+
+  bool ParseSupportFiles(DWARFUnit &dwarf_cu, const lldb::ModuleSP &module,
+                         lldb_private::FileSpecList &support_files);
 
   lldb_private::Type *ResolveTypeUID(const DWARFDIE &die,
                                      bool assert_not_being_parsed);

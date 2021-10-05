@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 
+#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "utils/CPP/TypeTraits.h"
-#include "utils/FPUtil/BasicOperations.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
@@ -22,18 +22,14 @@ class NextAfterTestTemplate : public __llvm_libc::testing::Test {
   using MantissaWidth = __llvm_libc::fputil::MantissaWidth<T>;
   using UIntType = typename FPBits::UIntType;
 
-#if (defined(__x86_64__) || defined(__i386__))
   static constexpr int bitWidthOfType =
-      __llvm_libc::cpp::IsSame<T, long double>::Value ? 80 : (sizeof(T) * 8);
-#else
-  static constexpr int bitWidthOfType = sizeof(T) * 8;
-#endif
+      __llvm_libc::fputil::FloatProperties<T>::bitWidth;
 
-  const T zero = FPBits::zero();
-  const T negZero = FPBits::negZero();
-  const T inf = FPBits::inf();
-  const T negInf = FPBits::negInf();
-  const T nan = FPBits::buildNaN(1);
+  const T zero = T(FPBits::zero());
+  const T negZero = T(FPBits::negZero());
+  const T inf = T(FPBits::inf());
+  const T negInf = T(FPBits::negInf());
+  const T nan = T(FPBits::buildNaN(1));
   const UIntType minSubnormal = FPBits::minSubnormal;
   const UIntType maxSubnormal = FPBits::maxSubnormal;
   const UIntType minNormal = FPBits::minNormal;
@@ -163,25 +159,29 @@ public:
     result = func(x, 0);
     FPBits xBits = FPBits(x);
     FPBits resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.exponent, uint16_t(xBits.exponent - 1));
-    ASSERT_EQ(resultBits.mantissa, (UIntType(1) << MantissaWidth::value) - 1);
+    ASSERT_EQ(resultBits.getUnbiasedExponent(),
+              uint16_t(xBits.getUnbiasedExponent() - 1));
+    ASSERT_EQ(resultBits.getMantissa(),
+              (UIntType(1) << MantissaWidth::value) - 1);
 
     result = func(x, T(33.0));
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.exponent, xBits.exponent);
-    ASSERT_EQ(resultBits.mantissa, xBits.mantissa + UIntType(1));
+    ASSERT_EQ(resultBits.getUnbiasedExponent(), xBits.getUnbiasedExponent());
+    ASSERT_EQ(resultBits.getMantissa(), xBits.getMantissa() + UIntType(1));
 
     x = -x;
 
     result = func(x, 0);
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.exponent, uint16_t(xBits.exponent - 1));
-    ASSERT_EQ(resultBits.mantissa, (UIntType(1) << MantissaWidth::value) - 1);
+    ASSERT_EQ(resultBits.getUnbiasedExponent(),
+              uint16_t(xBits.getUnbiasedExponent() - 1));
+    ASSERT_EQ(resultBits.getMantissa(),
+              (UIntType(1) << MantissaWidth::value) - 1);
 
     result = func(x, T(-33.0));
     resultBits = FPBits(result);
-    ASSERT_EQ(resultBits.exponent, xBits.exponent);
-    ASSERT_EQ(resultBits.mantissa, xBits.mantissa + UIntType(1));
+    ASSERT_EQ(resultBits.getUnbiasedExponent(), xBits.getUnbiasedExponent());
+    ASSERT_EQ(resultBits.getMantissa(), xBits.getMantissa() + UIntType(1));
   }
 };
 

@@ -294,7 +294,7 @@ private:
   SmallSetVector<MachineInstr *, 8> MaybeDeadCopies;
 
   /// Multimap tracking debug users in current BB
-  DenseMap<MachineInstr*, SmallVector<MachineInstr*, 2>> CopyDbgUsers;
+  DenseMap<MachineInstr *, SmallSet<MachineInstr *, 2>> CopyDbgUsers;
 
   CopyTracker Tracker;
 
@@ -321,7 +321,7 @@ void MachineCopyPropagation::ReadRegister(MCRegister Reg, MachineInstr &Reader,
         LLVM_DEBUG(dbgs() << "MCP: Copy is used - not dead: "; Copy->dump());
         MaybeDeadCopies.remove(Copy);
       } else {
-        CopyDbgUsers[Copy].push_back(&Reader);
+        CopyDbgUsers[Copy].insert(&Reader);
       }
     }
   }
@@ -414,6 +414,31 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   if (!UseI.isCopy())
     return false;
 
+  const TargetRegisterClass *CopySrcRC =
+      TRI->getMinimalPhysRegClass(CopySrcReg);
+  const TargetRegisterClass *UseDstRC =
+      TRI->getMinimalPhysRegClass(UseI.getOperand(0).getReg());
+  const TargetRegisterClass *CrossCopyRC = TRI->getCrossCopyRegClass(CopySrcRC);
+
+  // If cross copy register class is not the same as copy source register class
+  // then it is not possible to copy the register directly and requires a cross
+  // register class copy. Fowarding this copy without checking register class of
+  // UseDst may create additional cross register copies when expanding the copy
+  // instruction in later passes.
+  if (CopySrcRC != CrossCopyRC) {
+    const TargetRegisterClass *CopyDstRC =
+        TRI->getMinimalPhysRegClass(Copy.getOperand(0).getReg());
+
+    // Check if UseDstRC matches the necessary register class to copy from
+    // CopySrc's register class. If so then forwarding the copy will not
+    // introduce any cross-class copys. Else if CopyDstRC matches then keep the
+    // copy and do not forward. If neither UseDstRC or CopyDstRC matches then
+    // we may need a cross register copy later but we do not worry about it
+    // here.
+    if (UseDstRC != CrossCopyRC && CopyDstRC == CrossCopyRC)
+      return false;
+  }
+
   /// COPYs don't have register class constraints, so if the user instruction
   /// is a COPY, we just try to avoid introducing additional cross-class
   /// COPYs.  For example:
@@ -430,9 +455,6 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   ///
   /// so we have reduced the number of cross-class COPYs and potentially
   /// introduced a nop COPY that can be removed.
-  const TargetRegisterClass *UseDstRC =
-      TRI->getMinimalPhysRegClass(UseI.getOperand(0).getReg());
-
   const TargetRegisterClass *SuperRC = UseDstRC;
   for (TargetRegisterClass::sc_iterator SuperRCI = UseDstRC->getSuperClasses();
        SuperRC; SuperRC = *SuperRCI++)
@@ -734,7 +756,11 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       // Update matching debug values, if any.
       assert(MaybeDead->isCopy());
       Register SrcReg = MaybeDead->getOperand(1).getReg();
-      MRI->updateDbgUsersToReg(SrcReg, CopyDbgUsers[MaybeDead]);
+      Register DestReg = MaybeDead->getOperand(0).getReg();
+      SmallVector<MachineInstr *> MaybeDeadDbgUsers(
+          CopyDbgUsers[MaybeDead].begin(), CopyDbgUsers[MaybeDead].end());
+      MRI->updateDbgUsersToReg(DestReg.asMCReg(), SrcReg.asMCReg(),
+                               MaybeDeadDbgUsers);
 
       MaybeDead->eraseFromParent();
       Changed = true;
@@ -866,12 +892,32 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
       if (MO.isDef())
         Tracker.invalidateRegister(MO.getReg().asMCReg(), *TRI);
 
-      if (MO.readsReg())
-        Tracker.invalidateRegister(MO.getReg().asMCReg(), *TRI);
+      if (MO.readsReg()) {
+        if (MO.isDebug()) {
+          //  Check if the register in the debug instruction is utilized
+          // in a copy instruction, so we can update the debug info if the
+          // register is changed.
+          for (MCRegUnitIterator RUI(MO.getReg().asMCReg(), TRI); RUI.isValid();
+               ++RUI) {
+            if (auto *Copy = Tracker.findCopyDefViaUnit(*RUI, *TRI)) {
+              CopyDbgUsers[Copy].insert(MI);
+            }
+          }
+        } else {
+          Tracker.invalidateRegister(MO.getReg().asMCReg(), *TRI);
+        }
+      }
     }
   }
 
   for (auto *Copy : MaybeDeadCopies) {
+
+    Register Src = Copy->getOperand(1).getReg();
+    Register Def = Copy->getOperand(0).getReg();
+    SmallVector<MachineInstr *> MaybeDeadDbgUsers(CopyDbgUsers[Copy].begin(),
+                                                  CopyDbgUsers[Copy].end());
+
+    MRI->updateDbgUsersToReg(Src.asMCReg(), Def.asMCReg(), MaybeDeadDbgUsers);
     Copy->eraseFromParent();
     ++NumDeletes;
   }

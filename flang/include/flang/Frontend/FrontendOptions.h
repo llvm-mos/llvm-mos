@@ -25,7 +25,7 @@ enum ActionKind {
   /// -test-io mode
   InputOutputTest,
 
-  /// -E mode.
+  /// -E mode
   PrintPreprocessedInput,
 
   /// -fsyntax-only
@@ -37,6 +37,10 @@ enum ActionKind {
   /// Parse, unparse the parse-tree and output a Fortran source file
   DebugUnparse,
 
+  /// Parse, unparse the parse-tree and output a Fortran source file, skip the
+  /// semantic checks
+  DebugUnparseNoSema,
+
   /// Parse, resolve the sybmols, unparse the parse-tree and then output a
   /// Fortran source file
   DebugUnparseWithSymbols,
@@ -46,6 +50,12 @@ enum ActionKind {
 
   /// Parse, run semantics and then output the parse tree
   DebugDumpParseTree,
+
+  /// Parse, run semantics and then output the parse tree and symbols
+  DebugDumpAll,
+
+  /// Parse and then output the parse tree, skip the semantic checks
+  DebugDumpParseTreeNoSema,
 
   /// Dump provenance
   DebugDumpProvenance,
@@ -60,8 +70,17 @@ enum ActionKind {
   /// Parse, run semantics and then output the pre-FIR tree
   DebugPreFIRTree,
 
+  /// `-fget-definition`
+  GetDefinition,
+
   /// Parse, run semantics and then dump symbol sources map
-  GetSymbolsSources
+  GetSymbolsSources,
+
+  /// Only execute frontend initialization
+  InitOnly,
+
+  /// Run a plugin action
+  PluginAction
 
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)
@@ -71,13 +90,13 @@ enum ActionKind {
 /// \return True if the file extension should be processed as fixed form
 bool isFixedFormSuffix(llvm::StringRef suffix);
 
-// TODO: Find a more suitable location for this. Added for compability with
-// f18.cpp (this is equivalent to `asFortran` defined there).
-Fortran::parser::AnalyzedObjectsAsFortran getBasicAsFortran();
-
 /// \param suffix The file extension
 /// \return True if the file extension should be processed as free form
 bool isFreeFormSuffix(llvm::StringRef suffix);
+
+/// \param suffix The file extension
+/// \return True if the file should be preprocessed
+bool mustBePreprocessed(llvm::StringRef suffix);
 
 enum class Language : uint8_t {
   Unknown,
@@ -137,6 +156,12 @@ class FrontendInputFile {
   /// stdin this is never modified.
   bool isFixedForm_ = false;
 
+  /// Must this file be preprocessed? Note that in Flang the preprocessor is
+  /// always run. This flag is used to control whether predefined and command
+  /// line preprocessor macros are enabled or not. In practice, this is
+  /// sufficient to implement gfortran`s logic controlled with `-cpp/-nocpp`.
+  unsigned mustBePreprocessed_ : 1;
+
 public:
   FrontendInputFile() = default;
   FrontendInputFile(llvm::StringRef file, InputKind kind)
@@ -147,7 +172,9 @@ public:
     auto pathDotIndex{file.rfind(".")};
     std::string pathSuffix{file.substr(pathDotIndex + 1)};
     isFixedForm_ = isFixedFormSuffix(pathSuffix);
+    mustBePreprocessed_ = mustBePreprocessed(pathSuffix);
   }
+
   FrontendInputFile(const llvm::MemoryBuffer *buffer, InputKind kind)
       : buffer_(buffer), kind_(kind) {}
 
@@ -157,6 +184,7 @@ public:
   bool IsFile() const { return !IsBuffer(); }
   bool IsBuffer() const { return buffer_ != nullptr; }
   bool IsFixedForm() const { return isFixedForm_; }
+  bool MustBePreprocessed() const { return mustBePreprocessed_; }
 
   llvm::StringRef file() const {
     assert(IsFile());
@@ -170,41 +198,64 @@ public:
 };
 
 /// FrontendOptions - Options for controlling the behavior of the frontend.
-class FrontendOptions {
-public:
+struct FrontendOptions {
+  FrontendOptions()
+      : showHelp(false), showVersion(false), instrumentedParse(false),
+        needProvenanceRangeToCharBlockMappings(false) {}
+
   /// Show the -help text.
-  unsigned showHelp_ : 1;
+  unsigned showHelp : 1;
 
   /// Show the -version text.
-  unsigned showVersion_ : 1;
+  unsigned showVersion : 1;
 
   /// Instrument the parse to get a more verbose log
-  unsigned instrumentedParse_ : 1;
+  unsigned instrumentedParse : 1;
+
+  /// Enable Provenance to character-stream mapping. Allows e.g. IDEs to find
+  /// symbols based on source-code location. This is not needed in regular
+  /// compilation.
+  unsigned needProvenanceRangeToCharBlockMappings : 1;
+
+  /// Input values from `-fget-definition`
+  struct GetDefinitionVals {
+    unsigned line;
+    unsigned startColumn;
+    unsigned endColumn;
+  };
+  GetDefinitionVals getDefVals;
 
   /// The input files and their types.
-  std::vector<FrontendInputFile> inputs_;
+  std::vector<FrontendInputFile> inputs;
 
   /// The output file, if any.
-  std::string outputFile_;
+  std::string outputFile;
 
   /// The frontend action to perform.
-  frontend::ActionKind programAction_;
+  frontend::ActionKind programAction;
 
   // The form to process files in, if specified.
-  FortranForm fortranForm_ = FortranForm::Unknown;
+  FortranForm fortranForm = FortranForm::Unknown;
 
   // The column after which characters are ignored in fixed form lines in the
   // source file.
-  int fixedFormColumns_ = 72;
+  int fixedFormColumns = 72;
+
+  /// The input kind, either specified via -x argument or deduced from the input
+  /// file name.
+  InputKind dashX;
 
   // Language features
-  common::LanguageFeatureControl features_;
+  common::LanguageFeatureControl features;
 
   // Source file encoding
-  Fortran::parser::Encoding encoding_{Fortran::parser::Encoding::UTF_8};
+  Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
 
-public:
-  FrontendOptions() : showHelp_(false), showVersion_(false) {}
+  /// The list of plugins to load.
+  std::vector<std::string> plugins;
+
+  /// The name of the action to run when using a plugin action.
+  std::string ActionName;
 
   // Return the appropriate input kind for a file extension. For example,
   /// "*.f" would return Language::Fortran.

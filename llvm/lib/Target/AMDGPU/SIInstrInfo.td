@@ -16,7 +16,7 @@ class GCNPredicateControl : PredicateControl {
   Predicate VIAssemblerPredicate = isGFX8GFX9;
 }
 
-// Execpt for the NONE field, this must be kept in sync with the
+// Except for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in AMDGPUInstrInfo.cpp
 def SIEncodingFamily {
   int NONE = -1;
@@ -527,15 +527,7 @@ def atomic_store_local_64_m0 : PatFrag <
 def si_setcc_uniform : PatFrag <
   (ops node:$lhs, node:$rhs, node:$cond),
   (setcc node:$lhs, node:$rhs, node:$cond), [{
-  for (SDNode *Use : N->uses()) {
-    if (Use->isMachineOpcode() || Use->getOpcode() != ISD::CopyToReg)
-      return false;
-
-    unsigned Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
-    if (Reg != AMDGPU::SCC)
-      return false;
-  }
-  return true;
+  return !N->isDivergent();
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -813,6 +805,12 @@ def NegSubInlineConstV216 : PatLeaf<(build_vector), [{
   return (isNullConstantOrUndef(Src0) && isNegInlineImmediate(Src1.getNode())) ||
          (isNullConstantOrUndef(Src1) && isNegInlineImmediate(Src0.getNode()));
 }], getNegV2I16Imm>;
+
+
+def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
+  return fp16SrcZerosHighBits(N->getOpcode());
+}]>;
+
 
 //===----------------------------------------------------------------------===//
 // MUBUF/SMEM Patterns
@@ -1709,7 +1707,7 @@ class getInsVOP3OpSel <RegisterOperand Src0RC, RegisterOperand Src1RC,
                     Src0Mod, Src1Mod, Src2Mod, 1/*HasOpSel*/, 0>.ret;
 }
 
-class getInsDPPBase <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+class getInsDPPBase <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
                  int NumSrcArgs, bit HasModifiers,
                  Operand Src0Mod, Operand Src1Mod> {
 
@@ -1719,45 +1717,45 @@ class getInsDPPBase <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass 
             !if (!eq(NumSrcArgs, 1),
               !if (HasModifiers,
                 // VOP1_DPP with modifiers
-                (ins DstRC:$old, Src0Mod:$src0_modifiers,
+                (ins OldRC:$old, Src0Mod:$src0_modifiers,
                      Src0RC:$src0)
               /* else */,
                 // VOP1_DPP without modifiers
-                (ins DstRC:$old, Src0RC:$src0)
+                (ins OldRC:$old, Src0RC:$src0)
               /* endif */),
               !if (HasModifiers,
                 // VOP2_DPP with modifiers
-                (ins DstRC:$old,
+                (ins OldRC:$old,
                      Src0Mod:$src0_modifiers, Src0RC:$src0,
                      Src1Mod:$src1_modifiers, Src1RC:$src1)
               /* else */,
                 // VOP2_DPP without modifiers
-                (ins DstRC:$old,
+                (ins OldRC:$old,
                      Src0RC:$src0, Src1RC:$src1)
                 )));
 }
 
-class getInsDPP <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+class getInsDPP <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
                  int NumSrcArgs, bit HasModifiers,
                  Operand Src0Mod, Operand Src1Mod> {
-  dag ret = !con(getInsDPPBase<DstRC, Src0RC, Src1RC, NumSrcArgs,
+  dag ret = !con(getInsDPPBase<OldRC, Src0RC, Src1RC, NumSrcArgs,
                                HasModifiers, Src0Mod, Src1Mod>.ret,
                  (ins dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                   bank_mask:$bank_mask, bound_ctrl:$bound_ctrl));
 }
 
-class getInsDPP16 <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+class getInsDPP16 <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
                  int NumSrcArgs, bit HasModifiers,
                  Operand Src0Mod, Operand Src1Mod> {
-  dag ret = !con(getInsDPP<DstRC, Src0RC, Src1RC, NumSrcArgs,
+  dag ret = !con(getInsDPP<OldRC, Src0RC, Src1RC, NumSrcArgs,
                            HasModifiers, Src0Mod, Src1Mod>.ret,
                  (ins FI:$fi));
 }
 
-class getInsDPP8 <RegisterOperand DstRC, RegisterClass Src0RC, RegisterClass Src1RC,
+class getInsDPP8 <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
                  int NumSrcArgs, bit HasModifiers,
                  Operand Src0Mod, Operand Src1Mod> {
-  dag ret = !con(getInsDPPBase<DstRC, Src0RC, Src1RC, NumSrcArgs,
+  dag ret = !con(getInsDPPBase<OldRC, Src0RC, Src1RC, NumSrcArgs,
                                HasModifiers, Src0Mod, Src1Mod>.ret,
                  (ins dpp8:$dpp8, FI:$fi));
 }
@@ -1858,9 +1856,9 @@ class getAsm64 <bit HasDst, int NumSrcArgs, bit HasIntClamp, bit HasModifiers,
 
 // Returns the assembly string for the inputs and outputs of a VOP3P
 // instruction.
-class getAsmVOP3P <bit HasDst, int NumSrcArgs, bit HasModifiers,
-                   bit HasClamp, ValueType DstVT = i32> {
-  string dst = " $vdst";
+class getAsmVOP3P <int NumSrcArgs, bit HasModifiers,
+                   bit HasClamp> {
+  string dst = "$vdst";
   string src0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
   string src1 = !if(!eq(NumSrcArgs, 1), "",
                    !if(!eq(NumSrcArgs, 2), " $src1",
@@ -1877,11 +1875,10 @@ class getAsmVOP3P <bit HasDst, int NumSrcArgs, bit HasModifiers,
 
 class getAsmVOP3OpSel <int NumSrcArgs,
                        bit HasClamp,
-                       bit HasOMod,
                        bit Src0HasMods,
                        bit Src1HasMods,
                        bit Src2HasMods> {
-  string dst = " $vdst";
+  string dst = "$vdst";
 
   string isrc0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
   string isrc1 = !if(!eq(NumSrcArgs, 1), "",
@@ -2020,8 +2017,7 @@ class getHasSDWA <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
             );
 }
 
-class getHasDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
-                 ValueType Src1VT = i32> {
+class getHasDPP <int NumSrcArgs> {
   bit ret = !if(!eq(NumSrcArgs, 3),
                 0, // NumSrcArgs == 3 - No DPP for VOP3
                 1);
@@ -2029,14 +2025,14 @@ class getHasDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 
 class getHasExt64BitDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32> {
-  bit ret = !and(getHasDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret,
+  bit ret = !and(getHasDPP<NumSrcArgs>.ret,
                  getHas64BitOps<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret);
 }
 
 // Function that checks if instruction supports DPP and SDWA
 class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                  ValueType Src1VT = i32> {
-  bit ret = !or(getHasDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret,
+  bit ret = !or(getHasDPP<NumSrcArgs>.ret,
                 getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret);
 }
 
@@ -2100,6 +2096,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;
   field bit EmitDst = HasDst; // force dst encoding, see v_movreld_b32 special case
+  field bit EmitDstSel = EmitDst;
   field int NumSrcArgs = getNumSrcArgs<Src0VT, Src1VT, Src2VT>.ret;
   field bit HasSrc0 = !ne(Src0VT.Value, untyped.Value);
   field bit HasSrc1 = !ne(Src1VT.Value, untyped.Value);
@@ -2139,7 +2136,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field bit HasSrc2Mods = !if(HasModifiers, !or(HasSrc2FloatMods, HasSrc2IntMods), 0);
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
-  field bit HasExtDPP = getHasDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
+  field bit HasExtDPP = getHasDPP<NumSrcArgs>.ret;
   field bit HasExt64BitDPP = getHasExt64BitDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtSDWA = getHasSDWA<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasExtSDWA9 = HasExtSDWA;
@@ -2147,6 +2144,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
 
   field bit IsMAI = 0;
   field bit IsDOT = 0;
+  field bit IsSingle = 0;
 
   field Operand Src0PackedMod = !if(HasSrc0FloatMods, PackedF16InputMods, PackedI16InputMods);
   field Operand Src1PackedMod = !if(HasSrc1FloatMods, PackedF16InputMods, PackedI16InputMods);
@@ -2189,16 +2187,18 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
-  field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasModifiers, HasClamp, DstVT>.ret;
+  field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
-                                              HasClamp, HasOMod,
+                                              HasClamp,
                                               HasSrc0FloatMods,
                                               HasSrc1FloatMods,
                                               HasSrc2FloatMods>.ret;
   field string AsmDPP = !if(HasExtDPP,
                             getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
   field string AsmDPP16 = getAsmDPP16<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
-  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0, DstVT>.ret;
+  // DPP8 encoding has no fields for modifiers, and it is enforced by setting
+  // the asm operand name via this HasModifiers flag
+  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
 
@@ -2503,6 +2503,15 @@ def getGlobalSaddrOp : InstrMapping {
   let ValueCols = [["1"]];
 }
 
+// Maps a GLOBAL SADDR to its VADDR form.
+def getGlobalVaddrOp : InstrMapping {
+  let FilterClass = "GlobalSaddrTable";
+  let RowFields = ["SaddrOp"];
+  let ColFields = ["IsSaddr"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
+}
+
 // Maps a v_cmpx opcode with sdst to opcode without sdst.
 def getVCMPXNoSDstOp : InstrMapping {
   let FilterClass = "VCMPXNoSDstTable";
@@ -2536,6 +2545,14 @@ def getFlatScratchInstSSfromSV : InstrMapping {
   let ColFields = ["Mode"];
   let KeyCol = ["SV"];
   let ValueCols = [["SS"]];
+}
+
+def getFlatScratchInstSVfromSS : InstrMapping {
+  let FilterClass = "FlatScratchInst";
+  let RowFields = ["SVOp"];
+  let ColFields = ["Mode"];
+  let KeyCol = ["SS"];
+  let ValueCols = [["SV"]];
 }
 
 include "SIInstructions.td"

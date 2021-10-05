@@ -300,7 +300,7 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent;
-          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+          Kind = x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
           if (FixupOffset < 3)
             return make_error<JITLinkError>("GOTLD at invalid offset " +
                                             formatv("{0}", FixupOffset));
@@ -312,6 +312,17 @@ private:
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent - 4;
           Kind = x86_64::RequestGOTAndTransformToDelta32;
+          break;
+        case MachOPCRel32TLV:
+          if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
+            TargetSymbol = TargetSymbolOrErr->GraphSymbol;
+          else
+            return TargetSymbolOrErr.takeError();
+          Addend = *(const little32_t *)FixupContent;
+          Kind = x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable;
+          if (FixupOffset < 3)
+            return make_error<JITLinkError>("TLV at invalid offset " +
+                                            formatv("{0}", FixupOffset));
           break;
         case MachOPointer32:
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
@@ -392,9 +403,6 @@ private:
           assert(TargetSymbol && "No target symbol from parsePairRelocation?");
           break;
         }
-        case MachOPCRel32TLV:
-          return make_error<JITLinkError>(
-              "MachO TLV relocations not yet supported");
         }
 
         LLVM_DEBUG({
@@ -416,8 +424,6 @@ class PerGraphGOTAndPLTStubsBuilder_MachO_x86_64
     : public PerGraphGOTAndPLTStubsBuilder<
           PerGraphGOTAndPLTStubsBuilder_MachO_x86_64> {
 public:
-  static const uint8_t NullGOTEntryContent[8];
-  static const uint8_t StubContent[6];
 
   using PerGraphGOTAndPLTStubsBuilder<
       PerGraphGOTAndPLTStubsBuilder_MachO_x86_64>::
@@ -426,14 +432,11 @@ public:
   bool isGOTEdgeToFix(Edge &E) const {
     return E.getKind() == x86_64::RequestGOTAndTransformToDelta32 ||
            E.getKind() ==
-               x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable;
+               x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable;
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
-    auto &GOTEntryBlock = G.createContentBlock(
-        getGOTSection(), getGOTEntryBlockContent(), 0, 8, 0);
-    GOTEntryBlock.addEdge(x86_64::Pointer64, 0, Target, 0);
-    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
+    return x86_64::createAnonymousPointer(G, getGOTSection(), &Target);
   }
 
   void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
@@ -442,8 +445,8 @@ public:
     case x86_64::RequestGOTAndTransformToDelta32:
       E.setKind(x86_64::Delta32);
       break;
-    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadRelaxable:
-      E.setKind(x86_64::PCRel32GOTLoadRelaxable);
+    case x86_64::RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable:
+      E.setKind(x86_64::PCRel32GOTLoadREXRelaxable);
       break;
     default:
       llvm_unreachable("Not a GOT transform edge");
@@ -457,12 +460,8 @@ public:
   }
 
   Symbol &createPLTStub(Symbol &Target) {
-    auto &StubContentBlock =
-        G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
-    // Re-use GOT entries for stub targets.
-    auto &GOTEntrySymbol = getGOTEntry(Target);
-    StubContentBlock.addEdge(x86_64::Delta32, 2, GOTEntrySymbol, -4);
-    return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
+    return x86_64::createAnonymousPointerJumpStub(G, getStubsSection(),
+                                                  getGOTEntry(Target));
   }
 
   void fixPLTEdge(Edge &E, Symbol &Stub) {
@@ -470,10 +469,10 @@ public:
     assert(E.getAddend() == 0 &&
            "BranchPCRel32 edge has unexpected addend value");
 
-    // Set the edge kind to BranchPCRel32ToPtrJumpStubRelaxable. We will use
+    // Set the edge kind to BranchPCRel32ToPtrJumpStubBypassable. We will use
     // this to check for stub optimization opportunities in the
     // optimizeMachO_x86_64_GOTAndStubs pass below.
-    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubRelaxable);
+    E.setKind(x86_64::BranchPCRel32ToPtrJumpStubBypassable);
     E.setTarget(Stub);
   }
 
@@ -493,103 +492,11 @@ private:
     return *StubsSection;
   }
 
-  StringRef getGOTEntryBlockContent() {
-    return StringRef(reinterpret_cast<const char *>(NullGOTEntryContent),
-                     sizeof(NullGOTEntryContent));
-  }
-
-  StringRef getStubBlockContent() {
-    return StringRef(reinterpret_cast<const char *>(StubContent),
-                     sizeof(StubContent));
-  }
-
   Section *GOTSection = nullptr;
   Section *StubsSection = nullptr;
 };
 
-const uint8_t
-    PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::NullGOTEntryContent[8] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-const uint8_t PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::StubContent[6] = {
-    0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
 } // namespace
-
-static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
-  LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
-
-  for (auto *B : G.blocks())
-    for (auto &E : B->edges())
-      if (E.getKind() == x86_64::PCRel32GOTLoadRelaxable) {
-        assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
-
-        // Optimize GOT references.
-        auto &GOTBlock = E.getTarget().getBlock();
-        assert(GOTBlock.getSize() == G.getPointerSize() &&
-               "GOT entry block should be pointer sized");
-        assert(GOTBlock.edges_size() == 1 &&
-               "GOT entry should only have one outgoing edge");
-
-        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
-        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
-
-        // Check that this is a recognized MOV instruction.
-        // FIXME: Can we assume this?
-        constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
-        if (strncmp(B->getContent().data() + E.getOffset() - 3,
-                    reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
-          continue;
-
-        int64_t Displacement = TargetAddr - EdgeAddr + 4;
-        if (Displacement >= std::numeric_limits<int32_t>::min() &&
-            Displacement <= std::numeric_limits<int32_t>::max()) {
-          E.setTarget(GOTTarget);
-          E.setKind(x86_64::Delta32);
-          E.setAddend(E.getAddend() - 4);
-          auto *BlockData = reinterpret_cast<uint8_t *>(
-              const_cast<char *>(B->getContent().data()));
-          BlockData[E.getOffset() - 2] = 0x8d;
-          LLVM_DEBUG({
-            dbgs() << "  Replaced GOT load wih LEA:\n    ";
-            printEdge(dbgs(), *B, E, x86_64::getEdgeKindName(E.getKind()));
-            dbgs() << "\n";
-          });
-        }
-      } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubRelaxable) {
-        auto &StubBlock = E.getTarget().getBlock();
-        assert(
-            StubBlock.getSize() ==
-                sizeof(
-                    PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::StubContent) &&
-            "Stub block should be stub sized");
-        assert(StubBlock.edges_size() == 1 &&
-               "Stub block should only have one outgoing edge");
-
-        auto &GOTBlock = StubBlock.edges().begin()->getTarget().getBlock();
-        assert(GOTBlock.getSize() == G.getPointerSize() &&
-               "GOT block should be pointer sized");
-        assert(GOTBlock.edges_size() == 1 &&
-               "GOT block should only have one outgoing edge");
-
-        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
-        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
-
-        int64_t Displacement = TargetAddr - EdgeAddr + 4;
-        if (Displacement >= std::numeric_limits<int32_t>::min() &&
-            Displacement <= std::numeric_limits<int32_t>::max()) {
-          E.setKind(x86_64::BranchPCRel32);
-          E.setTarget(GOTTarget);
-          LLVM_DEBUG({
-            dbgs() << "  Replaced stub branch with direct branch:\n    ";
-            printEdge(dbgs(), *B, E, x86_64::getEdgeKindName(E.getKind()));
-            dbgs() << "\n";
-          });
-        }
-      }
-
-  return Error::success();
-}
 
 namespace llvm {
 namespace jitlink {
@@ -604,9 +511,8 @@ public:
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
 
 private:
-  Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
-                   char *BlockWorkingMem) const {
-    return x86_64::applyFixup(G, B, E, BlockWorkingMem);
+  Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
+    return x86_64::applyFixup(G, B, E, nullptr);
   }
 };
 
@@ -625,11 +531,12 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
     // Add eh-frame passses.
-    StringRef EHFrameSectionName = "__TEXT,__eh_frame";
-    Config.PrePrunePasses.push_back(EHFrameSplitter(EHFrameSectionName));
+    Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
+    Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
+
+    // Add compact unwind splitter pass.
     Config.PrePrunePasses.push_back(
-        EHFrameEdgeFixer(EHFrameSectionName, G->getPointerSize(),
-                         x86_64::Delta64, x86_64::Delta32, x86_64::NegDelta32));
+        CompactUnwindSplitter("__LD,__compact_unwind"));
 
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
@@ -642,7 +549,7 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
         PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::asPass);
 
     // Add GOT/Stubs optimizer pass.
-    Config.PreFixupPasses.push_back(optimizeMachO_x86_64_GOTAndStubs);
+    Config.PreFixupPasses.push_back(x86_64::optimize_x86_64_GOTAndStubs);
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
@@ -650,6 +557,15 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 
   // Construct a JITLinker and run the link function.
   MachOJITLinker_x86_64::link(std::move(Ctx), std::move(G), std::move(Config));
+}
+
+LinkGraphPassFunction createEHFrameSplitterPass_MachO_x86_64() {
+  return EHFrameSplitter("__TEXT,__eh_frame");
+}
+
+LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_x86_64() {
+  return EHFrameEdgeFixer("__TEXT,__eh_frame", x86_64::PointerSize,
+                          x86_64::Delta64, x86_64::Delta32, x86_64::NegDelta32);
 }
 
 } // end namespace jitlink

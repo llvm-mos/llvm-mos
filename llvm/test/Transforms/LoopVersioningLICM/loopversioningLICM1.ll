@@ -1,5 +1,5 @@
 ; RUN: opt < %s  -O1  -S -loop-versioning-licm -licm -debug-only=loop-versioning-licm -enable-new-pm=0 2>&1 | FileCheck %s
-; RUN: opt < %s -S -passes='default<O1>,loop-versioning-licm,licm' -debug-only=loop-versioning-licm 2>&1 | FileCheck %s
+; RUN: opt < %s -S -passes='default<O1>,function(loop-versioning-licm,loop-mssa(licm))' -debug-only=loop-versioning-licm 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;
 ; Test to confirm loop is a candidate for LoopVersioningLICM.
@@ -16,8 +16,8 @@
 ; CHECK-NEXT: store i32 %add, i32* %arrayidx, align 4, !alias.scope !2, !noalias !2
 ; CHECK-NEXT: %add8 = add nsw i32 %[[induction]], %add
 ; CHECK-NEXT: %inc = add nuw i32 %j.113, 1
-; CHECK-NEXT: %exitcond.not = icmp eq i32 %inc, %itr
-; CHECK-NEXT: br i1 %exitcond.not, label %for.inc11.loopexit.loopexit8, label %for.body3, !llvm.loop !5
+; CHECK-NEXT: %cmp2 = icmp ult i32 %inc, %itr
+; CHECK-NEXT: br i1 %cmp2, label %for.body3, label %for.inc11.loopexit.loopexit9, !llvm.loop !5
 define i32 @foo(i32* nocapture %var1, i32* nocapture readnone %var2, i32* nocapture %var3, i32 %itr) #0 {
 entry:
   %cmp14 = icmp eq i32 %itr, 0

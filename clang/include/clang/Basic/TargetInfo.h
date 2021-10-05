@@ -40,7 +40,6 @@
 
 namespace llvm {
 struct fltSemantics;
-class DataLayout;
 }
 
 namespace clang {
@@ -65,7 +64,7 @@ struct TransferrableTargetInfo {
   unsigned char BFloat16Width, BFloat16Align;
   unsigned char FloatWidth, FloatAlign;
   unsigned char DoubleWidth, DoubleAlign;
-  unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align;
+  unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align, Ibm128Align;
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
@@ -105,7 +104,7 @@ struct TransferrableTargetInfo {
   unsigned MaxTLSAlign;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
-    *DoubleFormat, *LongDoubleFormat, *Float128Format;
+      *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format;
 
   ///===---- Target Data Type Query Methods -------------------------------===//
   enum IntType {
@@ -127,12 +126,14 @@ struct TransferrableTargetInfo {
     Float = 0,
     Double,
     LongDouble,
-    Float128
+    Float128,
+    Ibm128
   };
+
 protected:
-  IntType SizeType, IntMaxType, PtrDiffType, IntPtrType, WCharType,
-          WIntType, Char16Type, Char32Type, Int64Type, SigAtomicType,
-          ProcessIDType;
+  IntType SizeType, IntMaxType, PtrDiffType, IntPtrType, WCharType, WIntType,
+      Char16Type, Char32Type, Int64Type, Int16Type, SigAtomicType,
+      ProcessIDType;
 
   /// Whether Objective-C's built-in boolean type should be signed char.
   ///
@@ -201,18 +202,17 @@ protected:
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
+  bool HasIbm128;
   bool HasStrictFP;
 
   unsigned char MaxAtomicPromoteWidth, MaxAtomicInlineWidth;
   unsigned short SimdDefaultAlign;
-  std::unique_ptr<llvm::DataLayout> DataLayout;
+  std::string DataLayoutString;
+  const char *UserLabelPrefix;
   const char *MCountName;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangASMap *AddrSpaceMap;
-  const unsigned *GridValues =
-      nullptr; // Array of target-specific GPU grid values that must be
-               // consistent between host RTL (plugin), device RTL, and clang.
 
   mutable StringRef PlatformName;
   mutable VersionTuple PlatformMinVersion;
@@ -238,7 +238,9 @@ protected:
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
-  void resetDataLayout(StringRef DL);
+  // UserLabelPrefix must match DL's getGlobalPrefix() when interpreted
+  // as a DataLayout object.
+  void resetDataLayout(StringRef DL, const char *UserLabelPrefix = "");
 
 public:
   /// Construct a target for the given options.
@@ -348,6 +350,10 @@ public:
   IntType getInt64Type() const { return Int64Type; }
   IntType getUInt64Type() const {
     return getCorrespondingUnsignedType(Int64Type);
+  }
+  IntType getInt16Type() const { return Int16Type; }
+  IntType getUInt16Type() const {
+    return getCorrespondingUnsignedType(Int16Type);
   }
   IntType getSigAtomicType() const { return SigAtomicType; }
   IntType getProcessIDType() const { return ProcessIDType; }
@@ -591,6 +597,9 @@ public:
   /// Determine whether the _BFloat16 type is supported on this target.
   virtual bool hasBFloat16Type() const { return HasBFloat16; }
 
+  /// Determine whether the __ibm128 type is supported on this target.
+  virtual bool hasIbm128Type() const { return HasIbm128; }
+
   /// Determine whether constrained floating point is supported on this target.
   virtual bool hasStrictFP() const { return HasStrictFP; }
 
@@ -612,8 +621,8 @@ public:
   }
 
   /// Return the largest alignment for which a suitably-sized allocation with
-  /// '::operator new(size_t)' is guaranteed to produce a correctly-aligned
-  /// pointer.
+  /// '::operator new(size_t)' or 'malloc' is guaranteed to produce a
+  /// correctly-aligned pointer.
   unsigned getNewAlign() const {
     return NewAlign ? NewAlign : std::max(LongDoubleAlign, LongLongAlign);
   }
@@ -669,11 +678,22 @@ public:
     return *Float128Format;
   }
 
+  /// getIbm128Width/Align/Format - Return the size/align/format of
+  /// '__ibm128'.
+  unsigned getIbm128Width() const { return 128; }
+  unsigned getIbm128Align() const { return Ibm128Align; }
+  const llvm::fltSemantics &getIbm128Format() const { return *Ibm128Format; }
+
   /// Return the mangled code of long double.
   virtual const char *getLongDoubleMangling() const { return "e"; }
 
   /// Return the mangled code of __float128.
   virtual const char *getFloat128Mangling() const { return "g"; }
+
+  /// Return the mangled code of __ibm128.
+  virtual const char *getIbm128Mangling() const {
+    llvm_unreachable("ibm128 not implemented on this target");
+  }
 
   /// Return the mangled code of bfloat.
   virtual const char *getBFloat16Mangling() const {
@@ -746,6 +766,12 @@ public:
     // it.
     return PointerWidth;
   }
+
+  /// \brief Returns the default value of the __USER_LABEL_PREFIX__ macro,
+  /// which is the prefix given to user symbols by default.
+  ///
+  /// On most platforms this is "", but it is "_" on some.
+  const char *getUserLabelPrefix() const { return UserLabelPrefix; }
 
   /// Returns the name of the mcount instrumentation function.
   const char *getMCountName() const {
@@ -858,6 +884,11 @@ public:
   /// across the current set of primary and secondary targets.
   virtual ArrayRef<Builtin::Info> getTargetBuiltins() const = 0;
 
+  /// Returns target-specific min and max values VScale_Range.
+  virtual Optional<std::pair<unsigned, unsigned>>
+  getVScaleRange(const LangOptions &LangOpts) const {
+    return None;
+  }
   /// The __builtin_clz* and __builtin_ctz* built-in
   /// functions are specified to have undefined results for zero inputs, but
   /// on targets that support these operations in a way that provides
@@ -1079,6 +1110,12 @@ public:
     return std::string(1, *Constraint);
   }
 
+  /// Replace some escaped characters with another string based on
+  /// target-specific rules
+  virtual llvm::Optional<std::string> handleAsmEscapedChar(char C) const {
+    return llvm::None;
+  }
+
   /// Returns a string of target-specific clobbers, in LLVM format.
   virtual const char *getClobbers() const = 0;
 
@@ -1096,9 +1133,9 @@ public:
   /// Returns the target ID if supported.
   virtual llvm::Optional<std::string> getTargetID() const { return llvm::None; }
 
-  const llvm::DataLayout &getDataLayout() const {
-    assert(DataLayout && "Uninitialized DataLayout!");
-    return *DataLayout;
+  const char *getDataLayoutString() const {
+    assert(!DataLayoutString.empty() && "Uninitialized DataLayout!");
+    return DataLayoutString.c_str();
   }
 
   struct GCCRegAlias {
@@ -1130,19 +1167,13 @@ public:
            getTriple().isWindowsItaniumEnvironment() || getTriple().isPS4CPU();
   }
 
-  /// An optional hook that targets can implement to perform semantic
-  /// checking on attribute((section("foo"))) specifiers.
-  ///
-  /// In this case, "foo" is passed in to be checked.  If the section
-  /// specifier is invalid, the backend should return an Error that indicates
-  /// the problem.
-  ///
-  /// This hook is a simple quality of implementation feature to catch errors
-  /// and give good diagnostics in cases when the assembler or code generator
-  /// would otherwise reject the section specifier.
-  ///
-  virtual llvm::Error isValidSectionSpecifier(StringRef SR) const {
-    return llvm::Error::success();
+  // Does this target have PS4 specific dllimport/export handling?
+  virtual bool hasPS4DLLImportExport() const {
+    return getTriple().isPS4CPU() ||
+           // Windows Itanium support allows for testing the SCEI flavour of
+           // dllimport/export handling on a Windows system.
+           (getTriple().isWindowsItaniumEnvironment() &&
+            getTriple().getVendor() == llvm::Triple::SCEI);
   }
 
   /// Set forced language options.
@@ -1150,7 +1181,7 @@ public:
   /// Apply changes to the target information with respect to certain
   /// language options which change the target configuration and adjust
   /// the language based on the target options where applicable.
-  virtual void adjust(LangOptions &Opts);
+  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts);
 
   /// Adjust target options based on codegen options.
   virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,
@@ -1215,6 +1246,12 @@ public:
   /// \return False on error (invalid unit name).
   virtual bool setFPMath(StringRef Name) {
     return false;
+  }
+
+  /// Check if target has a given feature enabled
+  virtual bool hasFeatureEnabled(const llvm::StringMap<bool> &Features,
+                                 StringRef Name) const {
+    return Features.lookup(Name);
   }
 
   /// Enable or disable a specific target feature;
@@ -1386,10 +1423,10 @@ public:
     return LangAS::Default;
   }
 
-  /// Return a target-specific GPU grid value based on the GVIDX enum \p gv
-  unsigned getGridValue(llvm::omp::GVIDX gv) const {
-    assert(GridValues != nullptr && "GridValues not initialized");
-    return GridValues[gv];
+  // access target-specific GPU grid values that must be consistent between
+  // host RTL (plugin), deviceRTL and clang.
+  virtual const llvm::omp::GV &getGridValue() const {
+    llvm_unreachable("getGridValue not implemented on this target");
   }
 
   /// Retrieve the name of the platform as it is used in the
@@ -1402,6 +1439,12 @@ public:
 
   bool isBigEndian() const { return BigEndian; }
   bool isLittleEndian() const { return !BigEndian; }
+
+  /// Whether the option -fextend-arguments={32,64} is supported on the target.
+  virtual bool supportsExtendIntArgs() const { return false; }
+
+  /// Controls if __arithmetic_fence is supported in the targeted backend.
+  virtual bool checkArithmeticFenceSupported() const { return false; }
 
   /// Gets the default calling convention for the given target and
   /// declaration context.
@@ -1464,7 +1507,8 @@ public:
   virtual void setSupportedOpenCLOpts() {}
 
   virtual void supportAllOpenCLOpts(bool V = true) {
-#define OPENCLEXTNAME(Ext) getTargetOpts().OpenCLFeaturesMap[#Ext] = V;
+#define OPENCLEXTNAME(Ext)                                                     \
+  setFeatureEnabled(getTargetOpts().OpenCLFeaturesMap, #Ext, V);
 #include "clang/Basic/OpenCLExtensions.def"
   }
 
@@ -1483,10 +1527,6 @@ public:
       getTargetOpts().OpenCLFeaturesMap[Name] = V;
     }
   }
-
-  /// Define OpenCL macros based on target settings and language version
-  void getOpenCLFeatureDefines(const LangOptions &Opts,
-                               MacroBuilder &Builder) const;
 
   /// Get supported OpenCL extensions and optional core features.
   llvm::StringMap<bool> &getSupportedOpenCLOpts() {
@@ -1527,10 +1567,15 @@ public:
     return true;
   }
 
+  /// Check that OpenCL target has valid options setting based on OpenCL
+  /// version.
+  virtual bool validateOpenCLTarget(const LangOptions &Opts,
+                                    DiagnosticsEngine &Diags) const;
+
   virtual void setAuxTarget(const TargetInfo *Aux) {}
 
-  /// Whether target allows debuginfo types for decl only variables.
-  virtual bool allowDebugInfoForExternalVar() const { return false; }
+  /// Whether target allows debuginfo types for decl only variables/functions.
+  virtual bool allowDebugInfoForExternalRef() const { return false; }
 
 protected:
   /// Copy type and layout related info.

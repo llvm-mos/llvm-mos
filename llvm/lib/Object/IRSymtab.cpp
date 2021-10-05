@@ -202,6 +202,7 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
 
     storage::Comdat Comdat;
     setStr(Comdat.Name, Saver.save(Name));
+    Comdat.SelectionKind = C->getSelectionKind();
     Comdats.push_back(Comdat);
   }
 
@@ -233,7 +234,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     raw_svector_ostream OS(Name);
     Msymtab.printSymbolName(OS, Msym);
   }
-  setStr(Sym.Name, Saver.save(StringRef(Name)));
+  setStr(Sym.Name, Saver.save(Name.str()));
 
   auto Flags = Msymtab.getSymbolFlags(Msym);
   if (Flags & object::BasicSymbolRef::SF_Undefined)
@@ -280,15 +281,19 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     if (!GVar)
       return make_error<StringError>("Only variables can have common linkage!",
                                      inconvertibleErrorCode());
-    Uncommon().CommonSize = GV->getParent()->getDataLayout().getTypeAllocSize(
-        GV->getType()->getElementType());
+    Uncommon().CommonSize =
+        GV->getParent()->getDataLayout().getTypeAllocSize(GV->getValueType());
     Uncommon().CommonAlign = GVar->getAlignment();
   }
 
   const GlobalObject *Base = GV->getBaseObject();
-  if (!Base)
-    return make_error<StringError>("Unable to determine comdat of alias!",
-                                   inconvertibleErrorCode());
+  if (!Base) {
+    if (isa<GlobalIFunc>(GV))
+      Base = cast<GlobalIFunc>(GV)->getResolverFunction();
+    if (!Base)
+      return make_error<StringError>("Unable to determine comdat of alias!",
+                                     inconvertibleErrorCode());
+  }
   if (const Comdat *C = Base->getComdat()) {
     Expected<int> ComdatIndexOrErr = getComdatIndex(C, GV->getParent());
     if (!ComdatIndexOrErr)

@@ -89,6 +89,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("focal", Distro::UbuntuFocal)
                     .Case("groovy", Distro::UbuntuGroovy)
                     .Case("hirsute", Distro::UbuntuHirsute)
+                    .Case("impish", Distro::UbuntuImpish)
                     .Default(Distro::UnknownDistro);
   return Version;
 }
@@ -149,6 +150,8 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         return Distro::DebianBuster;
       case 11:
         return Distro::DebianBullseye;
+      case 12:
+        return Distro::DebianBookworm;
       default:
         return Distro::UnknownDistro;
       }
@@ -160,6 +163,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         .Case("stretch/sid", Distro::DebianStretch)
         .Case("buster/sid", Distro::DebianBuster)
         .Case("bullseye/sid", Distro::DebianBullseye)
+        .Case("bookworm/sid", Distro::DebianBookworm)
         .Default(Distro::UnknownDistro);
   }
 

@@ -9,6 +9,7 @@
 #include "MCTargetDesc/SystemZInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -405,6 +406,13 @@ private:
     SMLoc StartLoc, EndLoc;
   };
 
+  SystemZTargetStreamer &getTargetStreamer() {
+    assert(getParser().getStreamer().getTargetStreamer() &&
+           "do not have a target streamer");
+    MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
+    return static_cast<SystemZTargetStreamer &>(TS);
+  }
+
   bool parseRegister(Register &Reg, bool RestoreOnFailure = false);
 
   bool parseIntegerRegister(Register &Reg, RegisterGroup Group);
@@ -420,6 +428,7 @@ private:
   bool parseAddressRegister(Register &Reg);
 
   bool ParseDirectiveInsn(SMLoc L);
+  bool ParseDirectiveMachine(SMLoc L);
 
   OperandMatchResultTy parseAddress(OperandVector &Operands,
                                     MemoryKind MemKind,
@@ -459,6 +468,12 @@ private:
 
   // A digit in HLASM is a number from 0 to 9.
   inline bool isHLASMAlnum(char C) { return isHLASMAlpha(C) || isDigit(C); }
+
+  // Are we parsing using the AD_HLASM dialect?
+  inline bool isParsingHLASM() { return getMAIAssemblerDialect() == AD_HLASM; }
+
+  // Are we parsing using the AD_ATT dialect?
+  inline bool isParsingATT() { return getMAIAssemblerDialect() == AD_ATT; }
 
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
@@ -824,7 +839,7 @@ SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterKind Kind) {
   }
 
   // Handle register names of the form %<prefix><number>
-  if (Parser.getTok().is(AsmToken::Percent)) {
+  if (isParsingATT() && Parser.getTok().is(AsmToken::Percent)) {
     if (parseRegister(Reg))
       return MatchOperand_ParseFail;
 
@@ -906,6 +921,9 @@ SystemZAsmParser::parseAnyRegister(OperandVector &Operands) {
     Operands.push_back(SystemZOperand::createImm(Register, StartLoc, EndLoc));
   }
   else {
+    if (isParsingHLASM())
+      return MatchOperand_NoMatch;
+
     Register Reg;
     if (parseRegister(Reg))
       return MatchOperand_ParseFail;
@@ -1013,7 +1031,7 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
   if (getLexer().is(AsmToken::LParen)) {
     Parser.Lex();
 
-    if (getLexer().is(AsmToken::Percent)) {
+    if (isParsingATT() && getLexer().is(AsmToken::Percent)) {
       // Parse the first register.
       HaveReg1 = true;
       if (parseRegister(Reg1))
@@ -1056,7 +1074,7 @@ bool SystemZAsmParser::parseAddress(bool &HaveReg1, Register &Reg1,
         if (parseIntegerRegister(Reg2, RegGR))
           return true;
       } else {
-        if (parseRegister(Reg2))
+        if (isParsingATT() && parseRegister(Reg2))
           return true;
       }
     }
@@ -1201,6 +1219,8 @@ bool SystemZAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".insn")
     return ParseDirectiveInsn(DirectiveID.getLoc());
+  if (IDVal == ".machine")
+    return ParseDirectiveMachine(DirectiveID.getLoc());
 
   return true;
 }
@@ -1313,6 +1333,28 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
   return false;
 }
 
+/// ParseDirectiveMachine
+/// ::= .machine [ mcpu ]
+bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  if (Parser.getTok().isNot(AsmToken::Identifier) &&
+      Parser.getTok().isNot(AsmToken::String))
+    return Error(L, "unexpected token in '.machine' directive");
+
+  StringRef CPU = Parser.getTok().getIdentifier();
+  Parser.Lex();
+  if (parseToken(AsmToken::EndOfStatement))
+    return addErrorSuffix(" in '.machine' directive");
+
+  MCSubtargetInfo &STI = copySTI();
+  STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
+  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+
+  getTargetStreamer().emitMachine(CPU);
+
+  return false;
+}
+
 bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc, bool RestoreOnFailure) {
   Register Reg;
@@ -1372,10 +1414,38 @@ bool SystemZAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     // Read any subsequent operands.
     while (getLexer().is(AsmToken::Comma)) {
       Parser.Lex();
+
+      if (isParsingHLASM() && getLexer().is(AsmToken::Space))
+        return Error(
+            Parser.getTok().getLoc(),
+            "No space allowed between comma that separates operand entries");
+
       if (parseOperand(Operands, Name)) {
         return true;
       }
     }
+
+    // Under the HLASM variant, we could have the remark field
+    // The remark field occurs after the operation entries
+    // There is a space that separates the operation entries and the
+    // remark field.
+    if (isParsingHLASM() && getTok().is(AsmToken::Space)) {
+      // We've confirmed that there is a Remark field.
+      StringRef Remark(getLexer().LexUntilEndOfStatement());
+      Parser.Lex();
+
+      // If there is nothing after the space, then there is nothing to emit
+      // We could have a situation as this:
+      // "  \n"
+      // After lexing above, we will have
+      // "\n"
+      // This isn't an explicit remark field, so we don't have to output
+      // this as a comment.
+      if (Remark.size())
+        // Output the entire Remarks Field as a comment
+        getStreamer().AddComment(Remark);
+    }
+
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       SMLoc Loc = getLexer().getLoc();
       return Error(Loc, "unexpected token in argument list");
@@ -1413,7 +1483,7 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
   // a context-dependent parse routine, which gives the required register
   // class.  The code is here to mop up other cases, like those where
   // the instruction isn't recognized.
-  if (Parser.getTok().is(AsmToken::Percent)) {
+  if (isParsingATT() && Parser.getTok().is(AsmToken::Percent)) {
     Register Reg;
     if (parseRegister(Reg))
       return true;
@@ -1448,10 +1518,6 @@ bool SystemZAsmParser::parseOperand(OperandVector &Operands,
     Operands.push_back(SystemZOperand::createImm(Expr, StartLoc, EndLoc));
   return false;
 }
-
-static std::string SystemZMnemonicSpellCheck(StringRef S,
-                                             const FeatureBitset &FBS,
-                                             unsigned VariantID = 0);
 
 bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                                OperandVector &Operands,
@@ -1533,6 +1599,10 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
   // For consistency with the GNU assembler, treat immediates as offsets
   // from ".".
   if (auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
+    if (isParsingHLASM()) {
+      Error(StartLoc, "Expected PC-relative expression");
+      return MatchOperand_ParseFail;
+    }
     if (isOutOfRangeConstant(CE)) {
       Error(StartLoc, "offset out of range");
       return MatchOperand_ParseFail;
@@ -1606,7 +1676,7 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
 }
 
 bool SystemZAsmParser::isLabel(AsmToken &Token) {
-  if (getMAIAssemblerDialect() == AD_ATT)
+  if (isParsingATT())
     return true;
 
   // HLASM labels are ordinary symbols.

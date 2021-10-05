@@ -112,9 +112,9 @@ public:
 
 } // end anonymous namespace
 
-/// Provide DenseMapInfo for MemOpKey.
 namespace llvm {
 
+/// Provide DenseMapInfo for MemOpKey.
 template <> struct DenseMapInfo<MemOpKey> {
   using PtrInfo = DenseMapInfo<const MachineOperand *>;
 
@@ -503,9 +503,7 @@ bool X86OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
   MachineBasicBlock *MBB = (*LEAs.begin()->second.begin())->getParent();
 
   // Process all instructions in basic block.
-  for (auto I = MBB->begin(), E = MBB->end(); I != E;) {
-    MachineInstr &MI = *I++;
-
+  for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
     // Instruction must be load or store.
     if (!MI.mayLoadOrStore())
       continue;

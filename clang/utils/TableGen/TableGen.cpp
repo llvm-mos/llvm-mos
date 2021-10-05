@@ -30,6 +30,7 @@ enum ActionType {
   GenClangAttrSubjectMatchRulesParserStringSwitches,
   GenClangAttrImpl,
   GenClangAttrList,
+  GenClangAttrDocTable,
   GenClangAttrSubjectMatchRuleList,
   GenClangAttrPCHRead,
   GenClangAttrPCHWrite,
@@ -63,6 +64,7 @@ enum ActionType {
   GenClangCommentCommandInfo,
   GenClangCommentCommandList,
   GenClangOpenCLBuiltins,
+  GenClangOpenCLBuiltinTests,
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
@@ -114,6 +116,8 @@ cl::opt<ActionType> Action(
                    "Generate clang attribute implementations"),
         clEnumValN(GenClangAttrList, "gen-clang-attr-list",
                    "Generate a clang attribute list"),
+        clEnumValN(GenClangAttrDocTable, "gen-clang-attr-doc-table",
+                   "Generate a table of attribute documentation"),
         clEnumValN(GenClangAttrSubjectMatchRuleList,
                    "gen-clang-attr-subject-match-rule-list",
                    "Generate a clang attribute subject match rule list"),
@@ -194,6 +198,8 @@ cl::opt<ActionType> Action(
                    "documentation comments"),
         clEnumValN(GenClangOpenCLBuiltins, "gen-clang-opencl-builtins",
                    "Generate OpenCL builtin declaration handlers"),
+        clEnumValN(GenClangOpenCLBuiltinTests, "gen-clang-opencl-builtin-tests",
+                   "Generate OpenCL builtin declaration tests"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
@@ -276,6 +282,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenClangAttrList:
     EmitClangAttrList(Records, OS);
+    break;
+  case GenClangAttrDocTable:
+    EmitClangAttrDocTable(Records, OS);
     break;
   case GenClangAttrSubjectMatchRuleList:
     EmitClangAttrSubjectMatchRuleList(Records, OS);
@@ -370,6 +379,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenClangOpenCLBuiltins:
     EmitClangOpenCLBuiltins(Records, OS);
+    break;
+  case GenClangOpenCLBuiltinTests:
+    EmitClangOpenCLBuiltinTests(Records, OS);
     break;
   case GenClangSyntaxNodeList:
     EmitClangSyntaxNodeList(Records, OS);

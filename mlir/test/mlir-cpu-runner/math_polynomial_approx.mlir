@@ -1,11 +1,15 @@
 // RUN:   mlir-opt %s -test-math-polynomial-approximation                      \
 // RUN:               -convert-vector-to-llvm                                  \
 // RUN:               -convert-std-to-llvm                                     \
+// RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext    \
 // RUN: | FileCheck %s
+
+// XFAIL: s390x
+// (see https://bugs.llvm.org/show_bug.cgi?id=51204)
 
 // -------------------------------------------------------------------------- //
 // Tanh.
@@ -110,6 +114,45 @@ func @log2() {
   return
 }
 
+func @log1p() {
+  // CHECK: 0.00995033
+  %0 = constant 0.01 : f32
+  %1 = math.log1p %0 : f32
+  vector.print %1 : f32
+
+  // CHECK: -4.60517, -0.693147, 0, 1.38629
+  %2 = constant dense<[-0.99, -0.5, 0.0, 3.0]> : vector<4xf32>
+  %3 = math.log1p %2 : vector<4xf32>
+  vector.print %3 : vector<4xf32>
+
+  // CHECK: 0.0953102, 0.182322, 0.262364, 0.336472, 0.405465, 0.470004, 0.530628, 0.587787
+  %4 = constant dense<[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]> : vector<8xf32>
+  %5 = math.log1p %4 : vector<8xf32>
+  vector.print %5 : vector<8xf32>
+
+  // CHECK: -inf
+  %neg_one = constant -1.0 : f32
+  %log_neg_one = math.log1p %neg_one : f32
+  vector.print %log_neg_one : f32
+
+  // CHECK: nan
+  %neg_two = constant -2.0 : f32
+  %log_neg_two = math.log1p %neg_two : f32
+  vector.print %log_neg_two : f32
+
+  // CHECK: inf
+  %inf = constant 0x7f800000 : f32
+  %log_inf = math.log1p %inf : f32
+  vector.print %log_inf : f32
+
+  // CHECK: -inf, nan, inf, 9.99995e-06
+  %special_vec = constant dense<[-1.0, -1.1, 0x7f800000, 0.00001]> : vector<4xf32>
+  %log_special_vec = math.log1p %special_vec : vector<4xf32>
+  vector.print %log_special_vec : vector<4xf32>
+
+  return
+}
+
 // -------------------------------------------------------------------------- //
 // Exp.
 // -------------------------------------------------------------------------- //
@@ -147,10 +190,125 @@ func @exp() {
   return
 }
 
+func @expm1() {
+  // CHECK: 1e-10
+  %0 = constant 1.0e-10 : f32
+  %1 = math.expm1 %0 : f32
+  vector.print %1 : f32
+
+  // CHECK: -0.00995016, 0.0100502, 0.648721, 6.38905
+  %2 = constant dense<[-0.01, 0.01, 0.5, 2.0]> : vector<4xf32>
+  %3 = math.expm1 %2 : vector<4xf32>
+  vector.print %3 : vector<4xf32>
+
+  // CHECK: -0.181269, 0, 0.221403, 0.491825, 0.822119, 1.22554, 1.71828, 2.32012
+  %4 = constant dense<[-0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]> : vector<8xf32>
+  %5 = math.expm1 %4 : vector<8xf32>
+  vector.print %5 : vector<8xf32>
+
+  // CHECK: -1
+  %neg_inf = constant 0xff800000 : f32
+  %expm1_neg_inf = math.expm1 %neg_inf : f32
+  vector.print %expm1_neg_inf : f32
+
+  // CHECK: inf
+  %inf = constant 0x7f800000 : f32
+  %expm1_inf = math.expm1 %inf : f32
+  vector.print %expm1_inf : f32
+
+  // CHECK: -1, inf, 1e-10
+  %special_vec = constant dense<[0xff800000, 0x7f800000, 1.0e-10]> : vector<3xf32>
+  %log_special_vec = math.expm1 %special_vec : vector<3xf32>
+  vector.print %log_special_vec : vector<3xf32>
+
+  return
+}
+// -------------------------------------------------------------------------- //
+// Sin.
+// -------------------------------------------------------------------------- //
+func @sin() {
+  // CHECK: 0
+  %0 = constant 0.0 : f32
+  %sin_0 = math.sin %0 : f32
+  vector.print %sin_0 : f32
+
+  // CHECK: 0.707107
+  %pi_over_4 = constant 0.78539816339 : f32
+  %sin_pi_over_4 = math.sin %pi_over_4 : f32
+  vector.print %sin_pi_over_4 : f32
+
+  // CHECK: 1
+  %pi_over_2 = constant 1.57079632679 : f32
+  %sin_pi_over_2 = math.sin %pi_over_2 : f32
+  vector.print %sin_pi_over_2 : f32
+
+
+  // CHECK: 0
+  %pi = constant 3.14159265359 : f32
+  %sin_pi = math.sin %pi : f32
+  vector.print %sin_pi : f32
+
+  // CHECK: -1
+  %pi_3_over_2 = constant 4.71238898038 : f32
+  %sin_pi_3_over_2 = math.sin %pi_3_over_2 : f32
+  vector.print %sin_pi_3_over_2 : f32
+
+  // CHECK: 0, 0.866025, -1
+  %vec_x = constant dense<[9.42477796077, 2.09439510239, -1.57079632679]> : vector<3xf32>
+  %sin_vec_x = math.sin %vec_x : vector<3xf32>
+  vector.print %sin_vec_x : vector<3xf32>
+
+  return
+}
+
+// -------------------------------------------------------------------------- //
+// cos.
+// -------------------------------------------------------------------------- //
+
+func @cos() {
+  // CHECK: 1
+  %0 = constant 0.0 : f32
+  %cos_0 = math.cos %0 : f32
+  vector.print %cos_0 : f32
+
+  // CHECK: 0.707107
+  %pi_over_4 = constant 0.78539816339 : f32
+  %cos_pi_over_4 = math.cos %pi_over_4 : f32
+  vector.print %cos_pi_over_4 : f32
+
+  //// CHECK: 0
+  %pi_over_2 = constant 1.57079632679 : f32
+  %cos_pi_over_2 = math.cos %pi_over_2 : f32
+  vector.print %cos_pi_over_2 : f32
+
+  /// CHECK: -1
+  %pi = constant 3.14159265359 : f32
+  %cos_pi = math.cos %pi : f32
+  vector.print %cos_pi : f32
+
+  // CHECK: 0
+  %pi_3_over_2 = constant 4.71238898038 : f32
+  %cos_pi_3_over_2 = math.cos %pi_3_over_2 : f32
+  vector.print %cos_pi_3_over_2 : f32
+
+  // CHECK: -1, -0.5, 0
+  %vec_x = constant dense<[9.42477796077, 2.09439510239, -1.57079632679]> : vector<3xf32>
+  %cos_vec_x = math.cos %vec_x : vector<3xf32>
+  vector.print %cos_vec_x : vector<3xf32>
+
+
+  return
+}
+
+
 func @main() {
   call @tanh(): () -> ()
   call @log(): () -> ()
   call @log2(): () -> ()
+  call @log1p(): () -> ()
   call @exp(): () -> ()
+  call @expm1(): () -> ()
+  call @sin(): () -> ()
+  call @cos(): () -> ()
   return
 }

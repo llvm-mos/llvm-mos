@@ -119,8 +119,7 @@ void LiveVariables::MarkVirtRegAliveInBlock(VarInfo &VRInfo,
   MarkVirtRegAliveInBlock(VRInfo, DefBlock, MBB, WorkList);
 
   while (!WorkList.empty()) {
-    MachineBasicBlock *Pred = WorkList.back();
-    WorkList.pop_back();
+    MachineBasicBlock *Pred = WorkList.pop_back_val();
     MarkVirtRegAliveInBlock(VRInfo, DefBlock, Pred, WorkList);
   }
 }
@@ -484,8 +483,7 @@ void LiveVariables::HandlePhysRegDef(Register Reg, MachineInstr *MI,
 void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
                                       SmallVectorImpl<unsigned> &Defs) {
   while (!Defs.empty()) {
-    Register Reg = Defs.back();
-    Defs.pop_back();
+    Register Reg = Defs.pop_back_val();
     for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
          SubRegs.isValid(); ++SubRegs) {
       unsigned SubReg = *SubRegs;
@@ -497,7 +495,7 @@ void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
 
 void LiveVariables::runOnInstr(MachineInstr &MI,
                                SmallVectorImpl<unsigned> &Defs) {
-  assert(!MI.isDebugInstr());
+  assert(!MI.isDebugOrPseudoInstr());
   // Process all of the operands of the instruction...
   unsigned NumOperandsToProcess = MI.getNumOperands();
 
@@ -572,7 +570,7 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, const unsigned NumRegs) {
   DistanceMap.clear();
   unsigned Dist = 0;
   for (MachineInstr &MI : *MBB) {
-    if (MI.isDebugInstr())
+    if (MI.isDebugOrPseudoInstr())
       continue;
     DistanceMap.insert(std::make_pair(&MI, Dist++));
 

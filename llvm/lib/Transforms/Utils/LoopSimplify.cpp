@@ -513,7 +513,7 @@ ReprocessLoop:
 
       // Zap the dead pred's terminator and replace it with unreachable.
       Instruction *TI = P->getTerminator();
-      changeToUnreachable(TI, /*UseLLVMTrap=*/false, PreserveLCSSA,
+      changeToUnreachable(TI, PreserveLCSSA,
                           /*DTU=*/nullptr, MSSAU);
       Changed = true;
     }
@@ -779,8 +779,7 @@ namespace {
       AU.addPreserved<DependenceAnalysisWrapperPass>();
       AU.addPreservedID(BreakCriticalEdgesID);  // No critical edges added.
       AU.addPreserved<BranchProbabilityInfoWrapperPass>();
-      if (EnableMSSALoopDependency)
-        AU.addPreserved<MemorySSAWrapperPass>();
+      AU.addPreserved<MemorySSAWrapperPass>();
     }
 
     /// verifyAnalysis() - Verify LoopSimplifyForm's guarantees.
@@ -814,12 +813,10 @@ bool LoopSimplify::runOnFunction(Function &F) {
       &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   MemorySSA *MSSA = nullptr;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
-  if (EnableMSSALoopDependency) {
-    auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-    if (MSSAAnalysis) {
-      MSSA = &MSSAAnalysis->getMSSA();
-      MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
-    }
+  auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+  if (MSSAAnalysis) {
+    MSSA = &MSSAAnalysis->getMSSA();
+    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
 
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
@@ -865,9 +862,6 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
-  PA.preserve<BasicAA>();
-  PA.preserve<GlobalsAA>();
-  PA.preserve<SCEVAA>();
   PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<DependenceAnalysis>();
   if (MSSAAnalysis)

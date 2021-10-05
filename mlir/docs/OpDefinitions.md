@@ -90,7 +90,7 @@ their semantics via a special [TableGen backend][TableGenBackend]:
 *   The `OpTrait` class hierarchy: They are used to specify special properties
     and constraints of the operation, including whether the operation has side
     effect or whether its output has the same shape as the input.
-*   The `ins`/`outs` marker: These are two special makers builtin to the
+*   The `ins`/`outs` marker: These are two special markers builtin to the
     `OpDefinitionsGen` backend. They lead the definitions of operands/attributes
     and results respectively.
 *   The `TypeConstraint` class hierarchy: They are used to specify the
@@ -229,6 +229,17 @@ the `SameVariadicOperandSize` or `AttrSizedOperandSegments` trait is needed to
 indicate that all variable length operands have the same number of dynamic
 values.
 
+#### VariadicOfVariadic operands
+
+To declare a variadic operand that has a variadic number of sub-ranges, wrap the
+`TypeConstraint` for the operand with `VariadicOfVariadic<...,
+"<segment-attribute-name>">`.
+
+The second field of the `VariadicOfVariadic` is the name of an `I32ElementsAttr`
+argument that contains the sizes of the variadic sub-ranges. This attribute will
+be used when determining the size of sub-ranges, or when updating the size of
+sub-ranges.
+
 #### Optional operands
 
 To declare an optional operand, wrap the `TypeConstraint` for the operand with
@@ -341,9 +352,9 @@ currently only be specified as the last successor in the successor list.
 Traits are operation properties that affect syntax or semantics. MLIR C++ models
 various traits in the `mlir::OpTrait` namespace.
 
-Both operation traits, [interfaces](Interfaces.md#utilizing-the-ods-framework),
+Both operation traits, [interfaces](Interfaces.md/#utilizing-the-ods-framework),
 and constraints involving multiple operands/attributes/results are provided as
-the second template parameter to the `Op` class. They should be deriving from
+the third template parameter to the `Op` class. They should be deriving from
 the `OpTrait` class. See [Constraints](#constraints) for more information.
 
 ### Builder methods
@@ -605,7 +616,7 @@ The available directives are as follows:
 *   `functional-type` ( inputs , results )
 
     -   Formats the `inputs` and `results` arguments as a
-        [function type](LangRef.md#function-type).
+        [function type](Dialects/Builtin.md/#functiontype).
     -   The constraints on `inputs` and `results` are the same as the `input` of
         the `type` directive.
 
@@ -717,6 +728,8 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `OpAsmParser::OperandType &`
     -   Optional: `Optional<OpAsmParser::OperandType> &`
     -   Variadic: `SmallVectorImpl<OpAsmParser::OperandType> &`
+    -   VariadicOfVariadic:
+        `SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &`
 *   Ref Directives
     -   A reference directive is passed to the parser using the same mapping as
         the input operand. For example, a single region would be passed as a
@@ -731,6 +744,7 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `Type &`
     -   Optional: `Type &`
     -   Variadic: `SmallVectorImpl<Type> &`
+    -   VariadicOfVariadic: `SmallVectorImpl<SmallVector<Type>> &`
 *   `attr-dict` Directive: `NamedAttrList &`
 
 When a variable is optional, the value should only be specified if the variable
@@ -749,6 +763,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Value`
     -   Optional: `Value`
     -   Variadic: `OperandRange`
+    -   VariadicOfVariadic: `OperandRangeRange`
 *   Ref Directives
     -   A reference directive is passed to the printer using the same mapping as
         the input operand. For example, a single region would be passed as a
@@ -763,6 +778,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `TypeRange`
+    -   VariadicOfVariadic: `TypeRangeRange`
 *   `attr-dict` Directive: `DictionaryAttr`
 
 When a variable is optional, the provided value may be null.
@@ -814,7 +830,7 @@ def ReturnOp : ... {
 
 ##### Unit Attributes
 
-In MLIR, the [`unit` Attribute](LangRef.md#unit-attribute) is special in that it
+In MLIR, the [`unit` Attribute](Dialects/Builtin.md/#unitattr) is special in that it
 only has one possible value, i.e. it derives meaning from its existence. When a
 unit attribute is used to anchor an optional group and is not the first element
 of the group, the presence of the unit attribute can be directly correlated with
@@ -923,7 +939,7 @@ be defined.
 
 When this boolean field is set to `true`, it indicates that the op implements a
 `canonicalize` method for simple "matchAndRewrite" style canonicalization
-patterns.  If `hasCanonicalizer` is 0, then an implementation of
+patterns. If `hasCanonicalizer` is 0, then an implementation of
 `::getCanonicalizationPatterns()` is implemented to call this function.
 
 ### `hasFolder`
@@ -1010,7 +1026,7 @@ Constraint is a core concept in table-driven operation definition: operation
 verification and graph operation matching are all based on satisfying
 constraints. So both the operation definition and rewrite rules specification
 significantly involve writing constraints. We have the `Constraint` class in
-[`OpBase.td`][OpBase] has the common base class for all constraints.
+[`OpBase.td`][OpBase] as the common base class for all constraints.
 
 An operation's constraint can cover different range; it may
 
@@ -1095,15 +1111,15 @@ is used. They serve as "hooks" to the enclosing environment. This includes
     information of the current operation.
 *   `$_self` will be replaced with the entity this predicate is attached to.
     E.g., `BoolAttr` is an attribute constraint that wraps a
-    `CPred<"$_self.isa<BoolAttr>()">`. Then for `F32:$attr`,`$_self` will be
+    `CPred<"$_self.isa<BoolAttr>()">`. Then for `BoolAttr:$attr`,`$_self` will be
     replaced by `$attr`. For type constraints, it's a little bit special since
     we want the constraints on each type definition reads naturally and we want
     to attach type constraints directly to an operand/result, `$_self` will be
     replaced by the operand/result's type. E.g., for `F32` in `F32:$operand`,
-    its `$_self` will be expanded as `getOperand(...).getType()`.
+    its `$_self` will be expanded as `operand(...).getType()`.
 
 TODO: Reconsider the leading symbol for special placeholders. Eventually we want
-to allow referencing operand/result $-names; such $-names can start with
+to allow referencing operand/result `$-name`s; such `$-name`s can start with
 underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
@@ -1179,7 +1195,7 @@ bitwidth.
 
 ODS attributes are defined as having a storage type (corresponding to a backing
 `mlir::Attribute` that _stores_ the attribute), a return type (corresponding to
-the C++ _return_ type of the generated of the helper getters) as well as method
+the C++ _return_ type of the generated helper getters) as well as a method
 to convert between the internal storage and the helper method.
 
 ### Attribute decorators
@@ -1408,8 +1424,8 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
 
 ## Type Definitions
 
-MLIR defines the TypeDef class hierarchy to enable generation of data types from
-their specifications. A type is defined by specializing the TypeDef class with
+MLIR defines the `TypeDef` class hierarchy to enable generation of data types from
+their specifications. A type is defined by specializing the `TypeDef` class with
 concrete contents for all the fields it requires. For example, an integer type
 could be defined as:
 
@@ -1466,7 +1482,7 @@ should be a longer explanation.
 
 ### Type parameters
 
-The `parameters` field is a list of the types parameters. If no parameters are
+The `parameters` field is a list of the type's parameters. If no parameters are
 specified (the default), this type is considered a singleton type. Parameters
 are in the `"c++Type":$paramName` format. To use C++ types as parameters which
 need allocation in the storage constructor, there are two options:
@@ -1611,7 +1627,7 @@ that they should not be generated.
 
 The default build methods may cover a majority of the simple cases related to
 type construction, but when they cannot satisfy a type's needs, you can define
-additional convenience get methods in the `builders` field as follows:
+additional convenience 'get' methods in the `builders` field as follows:
 
 ```tablegen
 def MyType : ... {
@@ -1634,10 +1650,10 @@ def MyType : ... {
 ```
 
 The `builders` field is a list of custom builders that are added to the type
-class. In this example, we provide a several different convenience builders that
+class. In this example, we provide several different convenience builders that
 are useful in different scenarios. The `ins` prefix is common to many function
 declarations in ODS, which use a TableGen [`dag`](#tablegen-syntax). What
-follows is a comma-separated list of types (quoted string or CArg) and names
+follows is a comma-separated list of types (quoted string or `CArg`) and names
 prefixed with the `$` sign. The use of `CArg` allows for providing a default
 value to that argument. Let's take a look at each of these builders individually
 
@@ -1659,10 +1675,10 @@ class MyType : /*...*/ {
 
 This builder is identical to the one that will be automatically generated for
 `MyType`. The `context` parameter is implicitly added by the generator, and is
-used when building the file Type instance (with `Base::get`). The distinction
+used when building the Type instance (with `Base::get`). The distinction
 here is that we can provide the implementation of this `get` method. With this
 style of builder definition only the declaration is generated, the implementor
-of MyType will need to provide a definition of `MyType::get`.
+of `MyType` will need to provide a definition of `MyType::get`.
 
 The second builder will generate the declaration of a builder method that looks
 like:
@@ -1739,8 +1755,8 @@ MyType MyType::get(Type typeParam) {
 ```
 
 In this builder example, the main difference from the third builder example
-three is that the `MLIRContext` parameter is no longer added. This is because
-the builder type used `TypeBuilderWithInferredContext` implies that the context
+there is that the `MLIRContext` parameter is no longer added. This is because
+the type builder used `TypeBuilderWithInferredContext` implies that the context
 parameter is not necessary as it can be inferred from the arguments to the
 builder.
 
@@ -1753,7 +1769,7 @@ very helpful way to understand and debug issues. To build `mlir-tblgen`, run
 `cmake --build . --target mlir-tblgen` in your build directory and find the
 `mlir-tblgen` binary in the `bin/` subdirectory. All the supported generators
 can be found via `mlir-tblgen --help`. For example, `--gen-op-decls` and
-`--gen-op-defs` as explained in [Generated C++ code](#generated-c++-code).
+`--gen-op-defs` as explained in [Generated C++ code](#generated-c-code).
 
 To see the generated code, invoke `mlir-tblgen` with a specific generator by
 providing include paths via `-I`. For example,
@@ -1778,7 +1794,7 @@ mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/fi
 
 ### Requirements and existing mechanisms analysis
 
-The op description should as declarative as possible to allow a wide range of
+The op description should be as declarative as possible to allow a wide range of
 tools to work with them and query methods generated from them. In particular
 this means specifying traits, constraints and shape inference information in a
 way that is easily analyzable (e.g., avoid opaque calls to C++ functions where
@@ -1809,7 +1825,7 @@ requirements that were desirable:
         will consider it.
 *   MLIR allows both defined and undefined ops.
     *   Defined ops should have fixed semantics and could have a corresponding
-        reference implementation defined using, for example, EDSC.
+        reference implementation defined.
     *   Dialects are under full control of the dialect owner and normally live
         with the framework of the dialect.
 *   The op's traits (e.g., commutative) are modelled along with the op in the
@@ -1844,6 +1860,6 @@ requirements that were desirable:
 [OpBase]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/OpBase.td
 [OpDefinitionsGen]: https://github.com/llvm/llvm-project/blob/main/mlir/tools/mlir-tblgen/OpDefinitionsGen.cpp
 [EnumsGen]: https://github.com/llvm/llvm-project/blob/main/mlir/tools/mlir-tblgen/EnumsGen.cpp
-[StringAttr]: LangRef.md#string-attribute
-[IntegerAttr]: LangRef.md#integer-attribute
+[StringAttr]: Dialects/Builtin.md/#stringattr
+[IntegerAttr]: Dialects/Builtin.md/#integertype
 [AttrClasses]: https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/Attributes.h

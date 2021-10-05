@@ -13,7 +13,6 @@ if (CLANGD_ENABLE_REMOTE)
     MonitoringServiceProto
     )
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
   # FIXME(kirillbobyrev): target_compile_definitions is not working with
   # add_clang_library for some reason. Is there any way to make this
@@ -38,6 +37,7 @@ if (CLANGD_ENABLE_REMOTE)
 
   add_subdirectory(marshalling)
   add_subdirectory(server)
+  add_subdirectory(monitor)
 else()
   # Provides a no-op implementation of clangdRemoteIndex.
   add_subdirectory(unimplemented)

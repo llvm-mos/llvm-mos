@@ -91,7 +91,10 @@ void OffsetToProvenanceMappings::Put(const OffsetToProvenanceMappings &that) {
 }
 
 ProvenanceRange OffsetToProvenanceMappings::Map(std::size_t at) const {
-  //  CHECK(!provenanceMap_.empty());
+  if (provenanceMap_.empty()) {
+    CHECK(at == 0);
+    return {};
+  }
   std::size_t low{0}, count{provenanceMap_.size()};
   while (count > 1) {
     std::size_t mid{low + (count >> 1)};
@@ -320,12 +323,20 @@ const char *AllSources::GetSource(ProvenanceRange range) const {
 std::optional<SourcePosition> AllSources::GetSourcePosition(
     Provenance prov) const {
   const Origin &origin{MapToOrigin(prov)};
-  if (const auto *inc{std::get_if<Inclusion>(&origin.u)}) {
-    std::size_t offset{origin.covers.MemberOffset(prov)};
-    return inc->source.FindOffsetLineAndColumn(offset);
-  } else {
-    return std::nullopt;
-  }
+  return std::visit(
+      common::visitors{
+          [&](const Inclusion &inc) -> std::optional<SourcePosition> {
+            std::size_t offset{origin.covers.MemberOffset(prov)};
+            return inc.source.FindOffsetLineAndColumn(offset);
+          },
+          [&](const Macro &) {
+            return GetSourcePosition(origin.replaces.start());
+          },
+          [](const CompilerInsertion &) -> std::optional<SourcePosition> {
+            return std::nullopt;
+          },
+      },
+      origin.u);
 }
 
 std::optional<ProvenanceRange> AllSources::GetFirstFileProvenance() const {
@@ -590,7 +601,7 @@ std::optional<CharBlock> AllCookedSources::GetCharBlock(
       return result;
     }
   }
-  return nullptr;
+  return std::nullopt;
 }
 
 void AllCookedSources::Dump(llvm::raw_ostream &o) const {

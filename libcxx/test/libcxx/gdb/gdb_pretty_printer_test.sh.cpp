@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: host-has-gdb
+// REQUIRES: host-has-gdb-with-python
 // UNSUPPORTED: libcpp-has-no-localization
 // UNSUPPORTED: c++03
 
@@ -92,24 +91,28 @@ void MarkAsLive(Type &&) {}
 template <typename TypeToPrint> void ComparePrettyPrintToChars(
     TypeToPrint value,
     const char *expectation) {
+  MarkAsLive(value);
   StopForDebugger(&value, &expectation);
 }
 
 template <typename TypeToPrint> void ComparePrettyPrintToRegex(
     TypeToPrint value,
     const char *expectation) {
+  MarkAsLive(value);
   StopForDebugger(&value, &expectation);
 }
 
 void CompareExpressionPrettyPrintToChars(
     std::string value,
     const char *expectation) {
+  MarkAsLive(value);
   StopForDebugger(&value, &expectation);
 }
 
 void CompareExpressionPrettyPrintToRegex(
     std::string value,
     const char *expectation) {
+  MarkAsLive(value);
   StopForDebugger(&value, &expectation);
 }
 
@@ -427,9 +430,9 @@ void multiset_test() {
 
 void vector_test() {
   std::vector<bool> test0 = {true, false};
-  ComparePrettyPrintToChars(test0,
+  ComparePrettyPrintToRegex(test0,
                             "std::vector<bool> of "
-                            "length 2, capacity 64 = {1, 0}");
+                            "length 2, capacity (32|64) = {1, 0}");
   for (int i = 0; i < 31; ++i) {
     test0.push_back(true);
     test0.push_back(false);
@@ -444,9 +447,9 @@ void vector_test() {
   ComparePrettyPrintToRegex(
       test0,
       "std::vector<bool> of length 65, "
-      "capacity 128 = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, "
-      "1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, "
-      "1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1}");
+      "capacity (96|128) = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, "
+      "0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, "
+      "0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1}");
 
   std::vector<int> test1;
   ComparePrettyPrintToChars(test1, "std::vector of length 0, capacity 0");
@@ -608,25 +611,27 @@ void shared_ptr_test() {
   // due to which there is one more count for the pointer. Hence, all the
   // following tests are testing with expected count plus 1.
   std::shared_ptr<const int> test0 = std::make_shared<const int>(5);
+  // The python regular expression matcher treats newlines as significant, so
+  // these regular expressions should be on one line.
   ComparePrettyPrintToRegex(
       test0,
-      R"(std::shared_ptr<int> count 2, weak 0 containing = {__ptr_ = 0x[a-f0-9]+})");
+      R"(std::shared_ptr<int> count [2\?], weak [0\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
 
   std::shared_ptr<const int> test1(test0);
   ComparePrettyPrintToRegex(
       test1,
-      R"(std::shared_ptr<int> count 3, weak 0 containing = {__ptr_ = 0x[a-f0-9]+})");
+      R"(std::shared_ptr<int> count [3\?], weak [0\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
 
   {
     std::weak_ptr<const int> test2 = test1;
     ComparePrettyPrintToRegex(
         test0,
-        R"(std::shared_ptr<int> count 3, weak 1 containing = {__ptr_ = 0x[a-f0-9]+})");
+        R"(std::shared_ptr<int> count [3\?], weak [1\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
   }
 
   ComparePrettyPrintToRegex(
       test0,
-      R"(std::shared_ptr<int> count 3, weak 0 containing = {__ptr_ = 0x[a-f0-9]+})");
+      R"(std::shared_ptr<int> count [3\?], weak [0\?]( \(libc\+\+ missing debug info\))? containing = {__ptr_ = 0x[a-f0-9]+})");
 
   std::shared_ptr<const int> test3;
   ComparePrettyPrintToChars(test3, "std::shared_ptr is nullptr");

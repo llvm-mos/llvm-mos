@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_tool(llvm-reduce
+  DeltaManager.cpp
   TestRunner.cpp
   deltas/Delta.cpp
   deltas/ReduceAliases.cpp
@@ -24,8 +25,10 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceGlobalVars.cpp
   deltas/ReduceInstructions.cpp
   deltas/ReduceMetadata.cpp
+  deltas/ReduceModuleData.cpp
   deltas/ReduceOperandBundles.cpp
   deltas/ReduceSpecialGlobals.cpp
+  deltas/ReduceOperands.cpp
   llvm-reduce.cpp
 
   DEPENDS

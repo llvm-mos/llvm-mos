@@ -70,6 +70,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -412,7 +413,7 @@ class RAGreedy : public MachineFunctionPass,
   ArrayRef<uint8_t> RegCosts;
 
 public:
-  RAGreedy();
+  RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Greedy Register Allocator"; }
@@ -421,7 +422,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override;
   Spiller &spiller() override { return *SpillerInstance; }
-  void enqueue(LiveInterval *LI) override;
+  void enqueueImpl(LiveInterval *LI) override;
   LiveInterval *dequeue() override;
   MCRegister selectOrSplit(LiveInterval &,
                            SmallVectorImpl<Register> &) override;
@@ -472,12 +473,13 @@ private:
   bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool) const;
   bool canEvictInterference(LiveInterval &, MCRegister, bool, EvictionCost &,
                             const SmallVirtRegSet &) const;
-  bool canEvictInterferenceInRange(LiveInterval &VirtReg, MCRegister PhysReg,
-                                   SlotIndex Start, SlotIndex End,
-                                   EvictionCost &MaxCost) const;
+  bool canEvictInterferenceInRange(const LiveInterval &VirtReg,
+                                   MCRegister PhysReg, SlotIndex Start,
+                                   SlotIndex End, EvictionCost &MaxCost) const;
   MCRegister getCheapestEvicteeWeight(const AllocationOrder &Order,
-                                      LiveInterval &VirtReg, SlotIndex Start,
-                                      SlotIndex End, float *BestEvictWeight);
+                                      const LiveInterval &VirtReg,
+                                      SlotIndex Start, SlotIndex End,
+                                      float *BestEvictWeight) const;
   void evictInterference(LiveInterval &, MCRegister,
                          SmallVectorImpl<Register> &);
   bool mayRecolorAllInterferences(MCRegister PhysReg, LiveInterval &VirtReg,
@@ -546,19 +548,50 @@ private:
 
   bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
 
-  /// Compute and report the number of spills and reloads for a loop.
-  void reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
-                                    unsigned &FoldedReloads, unsigned &Spills,
-                                    unsigned &FoldedSpills);
+  /// Greedy RA statistic to remark.
+  struct RAGreedyStats {
+    unsigned Reloads = 0;
+    unsigned FoldedReloads = 0;
+    unsigned ZeroCostFoldedReloads = 0;
+    unsigned Spills = 0;
+    unsigned FoldedSpills = 0;
+    unsigned Copies = 0;
+    float ReloadsCost = 0.0f;
+    float FoldedReloadsCost = 0.0f;
+    float SpillsCost = 0.0f;
+    float FoldedSpillsCost = 0.0f;
+    float CopiesCost = 0.0f;
 
-  /// Report the number of spills and reloads for each loop.
-  void reportNumberOfSplillsReloads() {
-    for (MachineLoop *L : *Loops) {
-      unsigned Reloads, FoldedReloads, Spills, FoldedSpills;
-      reportNumberOfSplillsReloads(L, Reloads, FoldedReloads, Spills,
-                                   FoldedSpills);
+    bool isEmpty() {
+      return !(Reloads || FoldedReloads || Spills || FoldedSpills ||
+               ZeroCostFoldedReloads || Copies);
     }
-  }
+
+    void add(RAGreedyStats other) {
+      Reloads += other.Reloads;
+      FoldedReloads += other.FoldedReloads;
+      ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;
+      Spills += other.Spills;
+      FoldedSpills += other.FoldedSpills;
+      Copies += other.Copies;
+      ReloadsCost += other.ReloadsCost;
+      FoldedReloadsCost += other.FoldedReloadsCost;
+      SpillsCost += other.SpillsCost;
+      FoldedSpillsCost += other.FoldedSpillsCost;
+      CopiesCost += other.CopiesCost;
+    }
+
+    void report(MachineOptimizationRemarkMissed &R);
+  };
+
+  /// Compute statistic for a basic block.
+  RAGreedyStats computeStats(MachineBasicBlock &MBB);
+
+  /// Compute and report statistic through a remark.
+  RAGreedyStats reportStats(MachineLoop *L);
+
+  /// Report the statistic for each loop.
+  void reportStats();
 };
 
 } // end anonymous namespace
@@ -604,7 +637,22 @@ FunctionPass* llvm::createGreedyRegisterAllocator() {
   return new RAGreedy();
 }
 
-RAGreedy::RAGreedy(): MachineFunctionPass(ID) {
+namespace llvm {
+FunctionPass* createGreedyRegisterAllocator(
+  std::function<bool(const TargetRegisterInfo &TRI,
+                     const TargetRegisterClass &RC)> Ftor);
+
+}
+
+FunctionPass* llvm::createGreedyRegisterAllocator(
+  std::function<bool(const TargetRegisterInfo &TRI,
+                     const TargetRegisterClass &RC)> Ftor) {
+  return new RAGreedy(Ftor);
+}
+
+RAGreedy::RAGreedy(RegClassFilterFunc F):
+  MachineFunctionPass(ID),
+  RegAllocBase(F) {
 }
 
 void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -661,7 +709,7 @@ void RAGreedy::LRE_WillShrinkVirtReg(Register VirtReg) {
   // Register is assigned, put it back on the queue for reassignment.
   LiveInterval &LI = LIS->getInterval(VirtReg);
   Matrix->unassign(LI);
-  enqueue(&LI);
+  RegAllocBase::enqueue(&LI);
 }
 
 void RAGreedy::LRE_DidCloneVirtReg(Register New, Register Old) {
@@ -684,7 +732,7 @@ void RAGreedy::releaseMemory() {
   GlobalCand.clear();
 }
 
-void RAGreedy::enqueue(LiveInterval *LI) { enqueue(Queue, LI); }
+void RAGreedy::enqueueImpl(LiveInterval *LI) { enqueue(Queue, LI); }
 
 void RAGreedy::enqueue(PQueue &CurQueue, LiveInterval *LI) {
   // Prioritize live ranges by size, assigning larger ranges first.
@@ -715,7 +763,7 @@ void RAGreedy::enqueue(PQueue &CurQueue, LiveInterval *LI) {
     bool ReverseLocal = TRI->reverseLocalAssignment();
     const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
     bool ForceGlobal = !ReverseLocal &&
-      (Size / SlotIndex::InstrDist) > (2 * RC.getNumRegs());
+      (Size / SlotIndex::InstrDist) > (2 * RCI.getNumAllocatableRegs(&RC));
 
     if (ExtraRegInfo[Reg].Stage == RS_Assign && !ForceGlobal && !LI->empty() &&
         LIS->intervalIsInOneMBB(*LI)) {
@@ -736,6 +784,8 @@ void RAGreedy::enqueue(PQueue &CurQueue, LiveInterval *LI) {
       // don't fit should be spilled (or split) ASAP so they don't create
       // interference.  Mark a bit to prioritize global above local ranges.
       Prio = (1u << 29) + Size;
+
+      Prio |= RC.AllocationPriority << 24;
     }
     // Mark a higher bit to prioritize global and local above RS_Split.
     Prio |= (1u << 31);
@@ -809,7 +859,7 @@ MCRegister RAGreedy::tryAssign(LiveInterval &VirtReg,
     return PhysReg;
 
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << " is available at cost "
-                    << Cost << '\n');
+                    << (unsigned)Cost << '\n');
   MCRegister CheapReg = tryEvict(VirtReg, Order, NewVRegs, Cost, FixedRegisters);
   return CheapReg ? CheapReg : PhysReg;
 }
@@ -1003,7 +1053,7 @@ bool RAGreedy::canEvictInterference(
 /// \param MaxCost Only look for cheaper candidates and update with new cost
 ///                when returning true.
 /// \return True when interference can be evicted cheaper than MaxCost.
-bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
+bool RAGreedy::canEvictInterferenceInRange(const LiveInterval &VirtReg,
                                            MCRegister PhysReg, SlotIndex Start,
                                            SlotIndex End,
                                            EvictionCost &MaxCost) const {
@@ -1011,6 +1061,7 @@ bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
 
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
+    Q.collectInterferingVRegs();
 
     // Check if any interfering live range is heavier than MaxWeight.
     for (const LiveInterval *Intf : reverse(Q.interferingVRegs())) {
@@ -1055,9 +1106,9 @@ bool RAGreedy::canEvictInterferenceInRange(LiveInterval &VirtReg,
 /// \return The PhysReg which is the best candidate for eviction and the
 /// eviction cost in BestEvictweight
 MCRegister RAGreedy::getCheapestEvicteeWeight(const AllocationOrder &Order,
-                                              LiveInterval &VirtReg,
+                                              const LiveInterval &VirtReg,
                                               SlotIndex Start, SlotIndex End,
-                                              float *BestEvictweight) {
+                                              float *BestEvictweight) const {
   EvictionCost BestEvictCost;
   BestEvictCost.setMax();
   BestEvictCost.MaxWeight = VirtReg.weight();
@@ -1314,8 +1365,9 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
 
     // Abort if the spill cannot be inserted at the MBB' start
     MachineBasicBlock *MBB = MF->getBlockNumbered(Number);
-    if (!MBB->empty() &&
-        SlotIndex::isEarlierInstr(LIS->getInstructionIndex(MBB->instr_front()),
+    auto FirstNonDebugInstr = MBB->getFirstNonDebugInstr();
+    if (FirstNonDebugInstr != MBB->end() &&
+        SlotIndex::isEarlierInstr(LIS->getInstructionIndex(*FirstNonDebugInstr),
                                   SA->getFirstSplitPoint(Number)))
       return false;
     // Interference for the live-in value.
@@ -1580,25 +1632,9 @@ bool RAGreedy::splitCanCauseLocalSpill(unsigned VirtRegToSplit,
       return false;
   }
 
-  // Check if the local interval will evict a cheaper interval.
-  float CheapestEvictWeight = 0;
-  MCRegister FutureEvictedPhysReg = getCheapestEvicteeWeight(
-      Order, LIS->getInterval(VirtRegToSplit), Cand.Intf.first(),
-      Cand.Intf.last(), &CheapestEvictWeight);
-
-  // Have we found an interval that can be evicted?
-  if (FutureEvictedPhysReg) {
-    float splitArtifactWeight =
-        VRAI->futureWeight(LIS->getInterval(VirtRegToSplit),
-                           Cand.Intf.first().getPrevIndex(), Cand.Intf.last());
-    // Will the weight of the local interval be higher than the cheapest evictee
-    // weight? If so it will evict it and will not cause a spill.
-    if (splitArtifactWeight >= 0 && splitArtifactWeight > CheapestEvictWeight)
-      return false;
-  }
-
-  // The local interval is not able to find non interferencing assignment and
-  // not able to evict a less worthy interval, therfore, it can cause a spill.
+  // The local interval is not able to find non interferencing assignment
+  // and not able to evict a less worthy interval, therfore, it can cause a
+  // spill.
   return true;
 }
 
@@ -2121,7 +2157,7 @@ RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   // the constraints on the virtual register.
   // Otherwise, splitting just inserts uncoalescable copies that do not help
   // the allocation.
-  for (const auto &Use : Uses) {
+  for (const SlotIndex Use : Uses) {
     if (const MachineInstr *MI = Indexes->getInstructionFromIndex(Use))
       if (MI->isFullCopy() ||
           SuperRCNumAllocatableRegs ==
@@ -2448,12 +2484,12 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   bool LiveAfter = BestAfter != NumGaps || BI.LiveOut;
   unsigned NewGaps = LiveBefore + BestAfter - BestBefore + LiveAfter;
   if (NewGaps >= NumGaps) {
-    LLVM_DEBUG(dbgs() << "Tagging non-progress ranges: ");
+    LLVM_DEBUG(dbgs() << "Tagging non-progress ranges:");
     assert(!ProgressRequired && "Didn't make progress when it was required.");
     for (unsigned I = 0, E = IntvMap.size(); I != E; ++I)
       if (IntvMap[I] == 1) {
         setStage(LIS->getInterval(LREdit.get(I)), RS_Split2);
-        LLVM_DEBUG(dbgs() << printReg(LREdit.get(I)));
+        LLVM_DEBUG(dbgs() << ' ' << printReg(LREdit.get(I)));
       }
     LLVM_DEBUG(dbgs() << '\n');
   }
@@ -2491,17 +2527,6 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
                      TimerGroupDescription, TimePassesIsEnabled);
 
   SA->analyze(&VirtReg);
-
-  // FIXME: SplitAnalysis may repair broken live ranges coming from the
-  // coalescer. That may cause the range to become allocatable which means that
-  // tryRegionSplit won't be making progress. This check should be replaced with
-  // an assertion when the coalescer is fixed.
-  if (SA->didRepairRange()) {
-    // VirtReg has changed, so all cached queries are invalid.
-    Matrix->invalidateVirtRegs();
-    if (Register PhysReg = tryAssign(VirtReg, Order, NewVRegs, FixedRegisters))
-      return PhysReg;
-  }
 
   // First try to split around a region spanning multiple blocks. RS_Split2
   // ranges already made dubious progress with region splitting, so they go
@@ -2938,7 +2963,12 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
     if (Register::isPhysicalRegister(Reg))
       continue;
 
-    assert(VRM->hasPhys(Reg) && "We have unallocated variable!!");
+    // This may be a skipped class
+    if (!VRM->hasPhys(Reg)) {
+      assert(!ShouldAllocateClass(*TRI, *MRI->getRegClass(Reg)) &&
+             "We have an unallocated variable which should have been handled");
+      continue;
+    }
 
     // Get the live interval mapped with this virtual register to be able
     // to check for the interference with the new color.
@@ -3149,72 +3179,159 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   return 0;
 }
 
-void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
-                                            unsigned &FoldedReloads,
-                                            unsigned &Spills,
-                                            unsigned &FoldedSpills) {
-  Reloads = 0;
-  FoldedReloads = 0;
-  Spills = 0;
-  FoldedSpills = 0;
-
-  // Sum up the spill and reloads in subloops.
-  for (MachineLoop *SubLoop : *L) {
-    unsigned SubReloads;
-    unsigned SubFoldedReloads;
-    unsigned SubSpills;
-    unsigned SubFoldedSpills;
-
-    reportNumberOfSplillsReloads(SubLoop, SubReloads, SubFoldedReloads,
-                                 SubSpills, SubFoldedSpills);
-    Reloads += SubReloads;
-    FoldedReloads += SubFoldedReloads;
-    Spills += SubSpills;
-    FoldedSpills += SubFoldedSpills;
+void RAGreedy::RAGreedyStats::report(MachineOptimizationRemarkMissed &R) {
+  using namespace ore;
+  if (Spills) {
+    R << NV("NumSpills", Spills) << " spills ";
+    R << NV("TotalSpillsCost", SpillsCost) << " total spills cost ";
   }
+  if (FoldedSpills) {
+    R << NV("NumFoldedSpills", FoldedSpills) << " folded spills ";
+    R << NV("TotalFoldedSpillsCost", FoldedSpillsCost)
+      << " total folded spills cost ";
+  }
+  if (Reloads) {
+    R << NV("NumReloads", Reloads) << " reloads ";
+    R << NV("TotalReloadsCost", ReloadsCost) << " total reloads cost ";
+  }
+  if (FoldedReloads) {
+    R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+    R << NV("TotalFoldedReloadsCost", FoldedReloadsCost)
+      << " total folded reloads cost ";
+  }
+  if (ZeroCostFoldedReloads)
+    R << NV("NumZeroCostFoldedReloads", ZeroCostFoldedReloads)
+      << " zero cost folded reloads ";
+  if (Copies) {
+    R << NV("NumVRCopies", Copies) << " virtual registers copies ";
+    R << NV("TotalCopiesCost", CopiesCost) << " total copies cost ";
+  }
+}
 
+RAGreedy::RAGreedyStats RAGreedy::computeStats(MachineBasicBlock &MBB) {
+  RAGreedyStats Stats;
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   int FI;
+
+  auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
+    return MFI.isSpillSlotObjectIndex(cast<FixedStackPseudoSourceValue>(
+        A->getPseudoValue())->getFrameIndex());
+  };
+  auto isPatchpointInstr = [](const MachineInstr &MI) {
+    return MI.getOpcode() == TargetOpcode::PATCHPOINT ||
+           MI.getOpcode() == TargetOpcode::STACKMAP ||
+           MI.getOpcode() == TargetOpcode::STATEPOINT;
+  };
+  for (MachineInstr &MI : MBB) {
+    if (MI.isCopy()) {
+      MachineOperand &Dest = MI.getOperand(0);
+      MachineOperand &Src = MI.getOperand(1);
+      if (Dest.isReg() && Src.isReg() && Dest.getReg().isVirtual() &&
+          Src.getReg().isVirtual())
+        ++Stats.Copies;
+      continue;
+    }
+
+    SmallVector<const MachineMemOperand *, 2> Accesses;
+    if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI)) {
+      ++Stats.Reloads;
+      continue;
+    }
+    if (TII->isStoreToStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI)) {
+      ++Stats.Spills;
+      continue;
+    }
+    if (TII->hasLoadFromStackSlot(MI, Accesses) &&
+        llvm::any_of(Accesses, isSpillSlotAccess)) {
+      if (!isPatchpointInstr(MI)) {
+        Stats.FoldedReloads += Accesses.size();
+        continue;
+      }
+      // For statepoint there may be folded and zero cost folded stack reloads.
+      std::pair<unsigned, unsigned> NonZeroCostRange =
+          TII->getPatchpointUnfoldableRange(MI);
+      SmallSet<unsigned, 16> FoldedReloads;
+      SmallSet<unsigned, 16> ZeroCostFoldedReloads;
+      for (unsigned Idx = 0, E = MI.getNumOperands(); Idx < E; ++Idx) {
+        MachineOperand &MO = MI.getOperand(Idx);
+        if (!MO.isFI() || !MFI.isSpillSlotObjectIndex(MO.getIndex()))
+          continue;
+        if (Idx >= NonZeroCostRange.first && Idx < NonZeroCostRange.second)
+          FoldedReloads.insert(MO.getIndex());
+        else
+          ZeroCostFoldedReloads.insert(MO.getIndex());
+      }
+      // If stack slot is used in folded reload it is not zero cost then.
+      for (unsigned Slot : FoldedReloads)
+        ZeroCostFoldedReloads.erase(Slot);
+      Stats.FoldedReloads += FoldedReloads.size();
+      Stats.ZeroCostFoldedReloads += ZeroCostFoldedReloads.size();
+      continue;
+    }
+    Accesses.clear();
+    if (TII->hasStoreToStackSlot(MI, Accesses) &&
+        llvm::any_of(Accesses, isSpillSlotAccess)) {
+      Stats.FoldedSpills += Accesses.size();
+    }
+  }
+  // Set cost of collected statistic by multiplication to relative frequency of
+  // this basic block.
+  float RelFreq = MBFI->getBlockFreqRelativeToEntryBlock(&MBB);
+  Stats.ReloadsCost = RelFreq * Stats.Reloads;
+  Stats.FoldedReloadsCost = RelFreq * Stats.FoldedReloads;
+  Stats.SpillsCost = RelFreq * Stats.Spills;
+  Stats.FoldedSpillsCost = RelFreq * Stats.FoldedSpills;
+  Stats.CopiesCost = RelFreq * Stats.Copies;
+  return Stats;
+}
+
+RAGreedy::RAGreedyStats RAGreedy::reportStats(MachineLoop *L) {
+  RAGreedyStats Stats;
+
+  // Sum up the spill and reloads in subloops.
+  for (MachineLoop *SubLoop : *L)
+    Stats.add(reportStats(SubLoop));
 
   for (MachineBasicBlock *MBB : L->getBlocks())
     // Handle blocks that were not included in subloops.
     if (Loops->getLoopFor(MBB) == L)
-      for (MachineInstr &MI : *MBB) {
-        SmallVector<const MachineMemOperand *, 2> Accesses;
-        auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
-          return MFI.isSpillSlotObjectIndex(
-              cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
-                  ->getFrameIndex());
-        };
+      Stats.add(computeStats(*MBB));
 
-        if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
-          ++Reloads;
-        else if (TII->hasLoadFromStackSlot(MI, Accesses) &&
-                 llvm::any_of(Accesses, isSpillSlotAccess))
-          ++FoldedReloads;
-        else if (TII->isStoreToStackSlot(MI, FI) &&
-                 MFI.isSpillSlotObjectIndex(FI))
-          ++Spills;
-        else if (TII->hasStoreToStackSlot(MI, Accesses) &&
-                 llvm::any_of(Accesses, isSpillSlotAccess))
-          ++FoldedSpills;
-      }
-
-  if (Reloads || FoldedReloads || Spills || FoldedSpills) {
+  if (!Stats.isEmpty()) {
     using namespace ore;
 
     ORE->emit([&]() {
-      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "LoopSpillReload",
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "LoopSpillReloadCopies",
                                         L->getStartLoc(), L->getHeader());
-      if (Spills)
-        R << NV("NumSpills", Spills) << " spills ";
-      if (FoldedSpills)
-        R << NV("NumFoldedSpills", FoldedSpills) << " folded spills ";
-      if (Reloads)
-        R << NV("NumReloads", Reloads) << " reloads ";
-      if (FoldedReloads)
-        R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+      Stats.report(R);
       R << "generated in loop";
+      return R;
+    });
+  }
+  return Stats;
+}
+
+void RAGreedy::reportStats() {
+  if (!ORE->allowExtraAnalysis(DEBUG_TYPE))
+    return;
+  RAGreedyStats Stats;
+  for (MachineLoop *L : *Loops)
+    Stats.add(reportStats(L));
+  // Process non-loop blocks.
+  for (MachineBasicBlock &MBB : *MF)
+    if (!Loops->getLoopFor(&MBB))
+      Stats.add(computeStats(MBB));
+  if (!Stats.isEmpty()) {
+    using namespace ore;
+
+    ORE->emit([&]() {
+      DebugLoc Loc;
+      if (auto *SP = MF->getFunction().getSubprogram())
+        Loc = DILocation::get(SP->getContext(), SP->getLine(), 1, SP);
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "SpillReloadCopies", Loc,
+                                        &MF->front());
+      Stats.report(R);
+      R << "generated in function";
       return R;
     });
   }
@@ -3281,7 +3398,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   if (VerifyEnabled)
     MF->verify(this, "Before post optimization");
   postOptimization();
-  reportNumberOfSplillsReloads();
+  reportStats();
 
   releaseMemory();
   return true;

@@ -7,13 +7,13 @@ add_llvm_component_library(LLVMCodeGen
   BranchFolding.cpp
   BranchRelaxation.cpp
   BreakFalseDeps.cpp
-  BuiltinGCs.cpp
   BasicBlockSections.cpp
   CalcSpillWeights.cpp
   CallingConvLower.cpp
   CFGuardLongjmp.cpp
   CFIInstrInserter.cpp
   CodeGen.cpp
+  CodeGenCommonISel.cpp
   CodeGenPassBuilder.cpp
   CodeGenPrepare.cpp
   CommandFlags.cpp
@@ -29,6 +29,7 @@ add_llvm_component_library(LLVMCodeGen
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
+  ExpandVectorPredication.cpp
   FaultMaps.cpp
   FEntryInserter.cpp
   FinalizeISel.cpp
@@ -37,7 +38,6 @@ add_llvm_component_library(LLVMCodeGen
   GCMetadata.cpp
   GCMetadataPrinter.cpp
   GCRootLowering.cpp
-  GCStrategy.cpp
   GlobalMerge.cpp
   HardwareLoops.cpp
   IfConversion.cpp
@@ -92,6 +92,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineLoopUtils.cpp
   MachineModuleInfo.cpp
   MachineModuleInfoImpls.cpp
+  MachineModuleSlotTracker.cpp
   MachineOperand.cpp
   MachineOptimizationRemarkEmitter.cpp
   MachineOutliner.cpp
@@ -107,6 +108,9 @@ add_llvm_component_library(LLVMCodeGen
   MachineStripDebug.cpp
   MachineTraceMetrics.cpp
   MachineVerifier.cpp
+  MIRFSDiscriminator.cpp
+  MIRSampleProfile.cpp
+  MIRYamlMapping.cpp
   ModuloSchedule.cpp
   MultiHazardRecognizer.cpp
   PatchableFunction.cpp
@@ -140,6 +144,7 @@ add_llvm_component_library(LLVMCodeGen
   RegisterCoalescer.cpp
   RegisterPressure.cpp
   RegisterScavenging.cpp
+  RemoveRedundantDebugValues.cpp
   RenameIndependentSubregs.cpp
   MachineStableHash.cpp
   MIRVRegNamerUtils.cpp

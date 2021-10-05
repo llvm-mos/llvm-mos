@@ -36,6 +36,12 @@ const char *CudaVersionToString(CudaVersion V) {
     return "11.1";
   case CudaVersion::CUDA_112:
     return "11.2";
+  case CudaVersion::CUDA_113:
+    return "11.3";
+  case CudaVersion::CUDA_114:
+    return "11.4";
+  case CudaVersion::NEW:
+    return "";
   }
   llvm_unreachable("invalid enum");
 }
@@ -54,21 +60,25 @@ CudaVersion CudaStringToVersion(const llvm::Twine &S) {
       .Case("11.0", CudaVersion::CUDA_110)
       .Case("11.1", CudaVersion::CUDA_111)
       .Case("11.2", CudaVersion::CUDA_112)
+      .Case("11.3", CudaVersion::CUDA_113)
+      .Case("11.4", CudaVersion::CUDA_114)
       .Default(CudaVersion::UNKNOWN);
 }
 
+namespace {
 struct CudaArchToStringMap {
   CudaArch arch;
   const char *arch_name;
   const char *virtual_arch_name;
 };
+} // namespace
 
 #define SM2(sm, ca)                                                            \
   { CudaArch::SM_##sm, "sm_" #sm, ca }
 #define SM(sm) SM2(sm, "compute_" #sm)
 #define GFX(gpu)                                                               \
   { CudaArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn" }
-CudaArchToStringMap arch_names[] = {
+static const CudaArchToStringMap arch_names[] = {
     // clang-format off
     {CudaArch::UNUSED, "", ""},
     SM2(20, "compute_20"), SM2(21, "compute_20"), // Fermi
@@ -103,10 +113,13 @@ CudaArchToStringMap arch_names[] = {
     GFX(1010), // gfx1010
     GFX(1011), // gfx1011
     GFX(1012), // gfx1012
+    GFX(1013), // gfx1013
     GFX(1030), // gfx1030
     GFX(1031), // gfx1031
     GFX(1032), // gfx1032
     GFX(1033), // gfx1033
+    GFX(1034), // gfx1034
+    GFX(1035), // gfx1035
     // clang-format on
 };
 #undef SM
@@ -181,7 +194,7 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
 CudaVersion MaxVersionForCudaArch(CudaArch A) {
   // AMD GPUs do not depend on CUDA versions.
   if (IsAMDGpuArch(A))
-    return CudaVersion::LATEST;
+    return CudaVersion::NEW;
 
   switch (A) {
   case CudaArch::UNKNOWN:
@@ -189,8 +202,10 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_20:
   case CudaArch::SM_21:
     return CudaVersion::CUDA_80;
+  case CudaArch::SM_30:
+    return CudaVersion::CUDA_110;
   default:
-    return CudaVersion::LATEST;
+    return CudaVersion::NEW;
   }
 }
 
@@ -222,6 +237,10 @@ CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
     return CudaVersion::CUDA_111;
   case 112:
     return CudaVersion::CUDA_112;
+  case 113:
+    return CudaVersion::CUDA_113;
+  case 114:
+    return CudaVersion::CUDA_114;
   default:
     return CudaVersion::UNKNOWN;
   }

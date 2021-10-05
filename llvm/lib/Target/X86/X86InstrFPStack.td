@@ -24,6 +24,7 @@ def SDTX86Fild      : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 def SDTX86Fist      : SDTypeProfile<0, 2, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 
 def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
+def SDTX86CwdLoad   : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
 def X86fld          : SDNode<"X86ISD::FLD", SDTX86Fld,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -37,6 +38,9 @@ def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
                              [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
+                              SDNPMemOperand]>;
+def X86fp_cwd_set16 : SDNode<"X86ISD::FLDCW16m",           SDTX86CwdLoad,
+                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                               SDNPMemOperand]>;
 
 def X86fstf32 : PatFrag<(ops node:$val, node:$ptr),
@@ -373,6 +377,13 @@ def TST_F  : FPI<0xD9, MRM_E4, (outs), (ins), "ftst">;
 } // SchedRW
 } // Uses = [FPCW], mayRaiseFPException = 1
 
+let SchedRW = [WriteFTest] in {
+def XAM_Fp32  : FpIf32<(outs), (ins RFP32:$src), OneArgFP, []>;
+def XAM_Fp64  : FpIf64<(outs), (ins RFP64:$src), OneArgFP, []>;
+def XAM_Fp80  : FpI_<(outs), (ins RFP80:$src), OneArgFP, []>;
+def XAM_F     : FPI<0xD9, MRM_E5, (outs), (ins), "fxam">;
+} // SchedRW
+
 // Versions of FP instructions that take a single memory operand.  Added for the
 //   disassembler; remove as they are included with patterns elsewhere.
 let SchedRW = [WriteFComLd], Uses = [FPCW], mayRaiseFPException = 1,
@@ -705,7 +716,8 @@ def FNSTCW16m : I<0xD9, MRM7m,                   // [mem16] = X87 control world
 } // SchedRW
 let Defs = [FPSW,FPCW], mayLoad = 1 in
 def FLDCW16m  : I<0xD9, MRM5m,                   // X87 control world = [mem16]
-                  (outs), (ins i16mem:$dst), "fldcw\t$dst", []>,
+                  (outs), (ins i16mem:$dst), "fldcw\t$dst",
+                  [(X86fp_cwd_set16 addr:$dst)]>,
                 Sched<[WriteLoad]>;
 
 // FPU control instructions
@@ -727,7 +739,6 @@ def FNOP : I<0xD9, MRM_D0, (outs), (ins), "fnop", []>, Sched<[WriteNop]>;
 let SchedRW = [WriteMicrocoded] in {
 let Defs = [FPSW] in {
 def WAIT : I<0x9B, RawFrm, (outs), (ins), "wait", []>;
-def FXAM : I<0xD9, MRM_E5, (outs), (ins), "fxam", []>;
 def FDECSTP : I<0xD9, MRM_F6, (outs), (ins), "fdecstp", []>;
 def FINCSTP : I<0xD9, MRM_F7, (outs), (ins), "fincstp", []>;
 let Uses = [FPCW], mayRaiseFPException = 1 in {

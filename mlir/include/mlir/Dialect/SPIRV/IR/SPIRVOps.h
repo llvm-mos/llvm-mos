@@ -13,22 +13,24 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_SPIRVOPS_H_
 #define MLIR_DIALECT_SPIRV_IR_SPIRVOPS_H_
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOpTraits.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+
+// TableGen'erated operation interfaces for querying versions, extensions, and
+// capabilities.
+#include "mlir/Dialect/SPIRV/IR/SPIRVAvailability.h.inc"
 
 namespace mlir {
 class OpBuilder;
 
 namespace spirv {
 class VerCapExtAttr;
-
-// TableGen'erated operation interfaces for querying versions, extensions, and
-// capabilities.
-#include "mlir/Dialect/SPIRV/IR/SPIRVAvailability.h.inc"
 } // namespace spirv
 } // namespace mlir
 

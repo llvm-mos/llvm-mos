@@ -1,8 +1,13 @@
-! RUN: %flang-new --version 2>&1 | FileCheck %s
-! RUN: not %flang-new --versions 2>&1 | FileCheck %s --check-prefix=ERROR
 
-! REQUIRES: new-flang-driver
+!-----------
+! RUN LINES
+!-----------
+! RUN: %flang --version 2>&1 | FileCheck %s
+! RUN: not %flang --versions 2>&1 | FileCheck %s --check-prefix=ERROR
 
+!-----------------------
+! EXPECTED OUTPUT
+!-----------------------
 ! CHECK: flang-new version
 ! CHECK-NEXT: Target:
 ! CHECK-NEXT: Thread model:

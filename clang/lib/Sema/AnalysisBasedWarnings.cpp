@@ -1125,7 +1125,7 @@ namespace {
                 // unreachable in all instantiations of the template.
                 if (!IsTemplateInstantiation)
                   S.Diag(AS->getBeginLoc(),
-                         diag::warn_fallthrough_attr_unreachable);
+                         diag::warn_unreachable_fallthrough_attr);
                 markFallthroughVisited(AS);
                 ++AnnotatedCnt;
                 break;
@@ -2403,7 +2403,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // Check for violations of "called once" parameter properties.
-  if (S.getLangOpts().ObjC &&
+  if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
       shouldAnalyzeCalledOnceParameters(Diags, D->getBeginLoc())) {
     if (AC.getCFG()) {
       CalledOnceCheckReporter Reporter(S, IPData->CalledOnceData);

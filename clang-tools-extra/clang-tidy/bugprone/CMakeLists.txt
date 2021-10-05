@@ -13,10 +13,12 @@ add_clang_library(clangTidyBugproneModule
   CopyConstructorInitCheck.cpp
   DanglingHandleCheck.cpp
   DynamicStaticInitializersCheck.cpp
+  EasilySwappableParametersCheck.cpp
   ExceptionEscapeCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
   ForwardingReferenceOverloadCheck.cpp
+  ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
   IncorrectRoundingsCheck.cpp
   InfiniteLoopCheck.cpp
@@ -45,6 +47,7 @@ add_clang_library(clangTidyBugproneModule
   StringLiteralWithEmbeddedNulCheck.cpp
   SuspiciousEnumUsageCheck.cpp
   SuspiciousIncludeCheck.cpp
+  SuspiciousMemoryComparisonCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
   SuspiciousMissingCommaCheck.cpp
   SuspiciousSemicolonCheck.cpp
@@ -55,6 +58,7 @@ add_clang_library(clangTidyBugproneModule
   TooSmallLoopVariableCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
   UndelegatedConstructorCheck.cpp
+  UnhandledExceptionAtNewCheck.cpp
   UnhandledSelfAssignmentCheck.cpp
   UnusedRaiiCheck.cpp
   UnusedReturnValueCheck.cpp

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/Utils.h"
-
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Utils.h"
@@ -24,6 +23,9 @@
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+#define DEBUG_TYPE "transforms-utils"
+
 using namespace mlir;
 
 // Perform the replacement in `op`.
@@ -208,8 +210,8 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 LogicalResult mlir::replaceAllMemRefUsesWith(
     Value oldMemRef, Value newMemRef, ArrayRef<Value> extraIndices,
     AffineMap indexRemap, ArrayRef<Value> extraOperands,
-    ArrayRef<Value> symbolOperands, Operation *domInstFilter,
-    Operation *postDomInstFilter, bool allowNonDereferencingOps,
+    ArrayRef<Value> symbolOperands, Operation *domOpFilter,
+    Operation *postDomOpFilter, bool allowNonDereferencingOps,
     bool replaceInDeallocOp) {
   unsigned newMemRefRank = newMemRef.getType().cast<MemRefType>().getRank();
   (void)newMemRefRank; // unused in opt mode
@@ -231,25 +233,25 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
 
   std::unique_ptr<DominanceInfo> domInfo;
   std::unique_ptr<PostDominanceInfo> postDomInfo;
-  if (domInstFilter)
-    domInfo = std::make_unique<DominanceInfo>(
-        domInstFilter->getParentOfType<FuncOp>());
+  if (domOpFilter)
+    domInfo =
+        std::make_unique<DominanceInfo>(domOpFilter->getParentOfType<FuncOp>());
 
-  if (postDomInstFilter)
+  if (postDomOpFilter)
     postDomInfo = std::make_unique<PostDominanceInfo>(
-        postDomInstFilter->getParentOfType<FuncOp>());
+        postDomOpFilter->getParentOfType<FuncOp>());
 
   // Walk all uses of old memref; collect ops to perform replacement. We use a
   // DenseSet since an operation could potentially have multiple uses of a
   // memref (although rare), and the replacement later is going to erase ops.
   DenseSet<Operation *> opsToReplace;
   for (auto *op : oldMemRef.getUsers()) {
-    // Skip this use if it's not dominated by domInstFilter.
-    if (domInstFilter && !domInfo->dominates(domInstFilter, op))
+    // Skip this use if it's not dominated by domOpFilter.
+    if (domOpFilter && !domInfo->dominates(domOpFilter, op))
       continue;
 
-    // Skip this use if it's not post-dominated by postDomInstFilter.
-    if (postDomInstFilter && !postDomInfo->postDominates(postDomInstFilter, op))
+    // Skip this use if it's not post-dominated by postDomOpFilter.
+    if (postDomOpFilter && !postDomInfo->postDominates(postDomOpFilter, op))
       continue;
 
     // Skip dealloc's - no replacement is necessary, and a memref replacement
@@ -261,13 +263,20 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
     // for the memref to be used in a non-dereferencing way outside of the
     // region where this replacement is happening.
     if (!isa<AffineMapAccessInterface>(*op)) {
-      if (!allowNonDereferencingOps)
+      if (!allowNonDereferencingOps) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Memref replacement failed: non-deferencing memref op: \n"
+                   << *op << '\n');
         return failure();
-      // Currently we support the following non-dereferencing ops to be a
-      // candidate for replacement: Dealloc, CallOp and ReturnOp.
-      // TODO: Add support for other kinds of ops.
-      if (!op->hasTrait<OpTrait::MemRefsNormalizable>())
+      }
+      // Non-dereferencing ops with the MemRefsNormalizable trait are
+      // supported for replacement.
+      if (!op->hasTrait<OpTrait::MemRefsNormalizable>()) {
+        LLVM_DEBUG(llvm::dbgs() << "Memref replacement failed: use without a "
+                                   "memrefs normalizable trait: \n"
+                                << *op << '\n');
         return failure();
+      }
     }
 
     // We'll first collect and then replace --- since replacement erases the op
@@ -380,6 +389,246 @@ void mlir::createAffineComputationSlice(
   }
 }
 
+/// Enum to set patterns of affine expr in tiled-layout map.
+/// TileFloorDiv: <dim expr> div <tile size>
+/// TileMod: <dim expr> mod <tile size>
+/// TileNone: None of the above
+/// Example:
+/// #tiled_2d_128x256 = affine_map<(d0, d1)
+///            -> (d0 div 128, d1 div 256, d0 mod 128, d1 mod 256)>
+/// "d0 div 128" and "d1 div 256" ==> TileFloorDiv
+/// "d0 mod 128" and "d1 mod 256" ==> TileMod
+enum TileExprPattern { TileFloorDiv, TileMod, TileNone };
+
+/// Check if `map` is a tiled layout. In the tiled layout, specific k dimensions
+/// being floordiv'ed by respective tile sizes appeare in a mod with the same
+/// tile sizes, and no other expression involves those k dimensions. This
+/// function stores a vector of tuples (`tileSizePos`) including AffineExpr for
+/// tile size, positions of corresponding `floordiv` and `mod`. If it is not a
+/// tiled layout, an empty vector is returned.
+static LogicalResult getTileSizePos(
+    AffineMap map,
+    SmallVectorImpl<std::tuple<AffineExpr, unsigned, unsigned>> &tileSizePos) {
+  // Create `floordivExprs` which is a vector of tuples including LHS and RHS of
+  // `floordiv` and its position in `map` output.
+  // Example: #tiled_2d_128x256 = affine_map<(d0, d1)
+  //                -> (d0 div 128, d1 div 256, d0 mod 128, d1 mod 256)>
+  // In this example, `floordivExprs` includes {d0, 128, 0} and {d1, 256, 1}.
+  SmallVector<std::tuple<AffineExpr, AffineExpr, unsigned>, 4> floordivExprs;
+  unsigned pos = 0;
+  for (AffineExpr expr : map.getResults()) {
+    if (expr.getKind() == AffineExprKind::FloorDiv) {
+      AffineBinaryOpExpr binaryExpr = expr.cast<AffineBinaryOpExpr>();
+      if (binaryExpr.getRHS().isa<AffineConstantExpr>())
+        floordivExprs.emplace_back(
+            std::make_tuple(binaryExpr.getLHS(), binaryExpr.getRHS(), pos));
+    }
+    pos++;
+  }
+  // Not tiled layout if `floordivExprs` is empty.
+  if (floordivExprs.empty()) {
+    tileSizePos = SmallVector<std::tuple<AffineExpr, unsigned, unsigned>>{};
+    return success();
+  }
+
+  // Check if LHS of `floordiv` is used in LHS of `mod`. If not used, `map` is
+  // not tiled layout.
+  for (std::tuple<AffineExpr, AffineExpr, unsigned> fexpr : floordivExprs) {
+    AffineExpr floordivExprLHS = std::get<0>(fexpr);
+    AffineExpr floordivExprRHS = std::get<1>(fexpr);
+    unsigned floordivPos = std::get<2>(fexpr);
+
+    // Walk affinexpr of `map` output except `fexpr`, and check if LHS and RHS
+    // of `fexpr` are used in LHS and RHS of `mod`. If LHS of `fexpr` is used
+    // other expr, the map is not tiled layout. Example of non tiled layout:
+    //   affine_map<(d0, d1, d2) -> (d0, d1, d2 floordiv 256, d2 floordiv 256)>
+    //   affine_map<(d0, d1, d2) -> (d0, d1, d2 floordiv 256, d2 mod 128)>
+    //   affine_map<(d0, d1, d2) -> (d0, d1, d2 floordiv 256, d2 mod 256, d2 mod
+    //   256)>
+    bool found = false;
+    pos = 0;
+    for (AffineExpr expr : map.getResults()) {
+      bool notTiled = false;
+      if (pos != floordivPos) {
+        expr.walk([&](AffineExpr e) {
+          if (e == floordivExprLHS) {
+            if (expr.getKind() == AffineExprKind::Mod) {
+              AffineBinaryOpExpr binaryExpr = expr.cast<AffineBinaryOpExpr>();
+              // If LHS and RHS of `mod` are the same with those of floordiv.
+              if (floordivExprLHS == binaryExpr.getLHS() &&
+                  floordivExprRHS == binaryExpr.getRHS()) {
+                // Save tile size (RHS of `mod`), and position of `floordiv` and
+                // `mod` if same expr with `mod` is not found yet.
+                if (!found) {
+                  tileSizePos.emplace_back(
+                      std::make_tuple(binaryExpr.getRHS(), floordivPos, pos));
+                  found = true;
+                } else {
+                  // Non tiled layout: Have multilpe `mod` with the same LHS.
+                  // eg. affine_map<(d0, d1, d2) -> (d0, d1, d2 floordiv 256, d2
+                  // mod 256, d2 mod 256)>
+                  notTiled = true;
+                }
+              } else {
+                // Non tiled layout: RHS of `mod` is different from `floordiv`.
+                // eg. affine_map<(d0, d1, d2) -> (d0, d1, d2 floordiv 256, d2
+                // mod 128)>
+                notTiled = true;
+              }
+            } else {
+              // Non tiled layout: LHS is the same, but not `mod`.
+              // eg. affine_map<(d0, d1, d2) -> (d0, d1, d2 floordiv 256, d2
+              // floordiv 256)>
+              notTiled = true;
+            }
+          }
+        });
+      }
+      if (notTiled) {
+        tileSizePos = SmallVector<std::tuple<AffineExpr, unsigned, unsigned>>{};
+        return success();
+      }
+      pos++;
+    }
+  }
+  return success();
+}
+
+/// Check if `dim` dimension of memrefType with `layoutMap` becomes dynamic
+/// after normalization. Dimensions that include dynamic dimensions in the map
+/// output will become dynamic dimensions. Return true if `dim` is dynamic
+/// dimension.
+///
+/// Example:
+/// #map0 = affine_map<(d0, d1) -> (d0, d1 floordiv 32, d1 mod 32)>
+///
+/// If d1 is dynamic dimension, 2nd and 3rd dimension of map output are dynamic.
+/// memref<4x?xf32, #map0>  ==>  memref<4x?x?xf32>
+static bool
+isNormalizedMemRefDynamicDim(unsigned dim, AffineMap layoutMap,
+                             SmallVectorImpl<unsigned> &inMemrefTypeDynDims,
+                             MLIRContext *context) {
+  bool isDynamicDim = false;
+  AffineExpr expr = layoutMap.getResults()[dim];
+  // Check if affine expr of the dimension includes dynamic dimension of input
+  // memrefType.
+  expr.walk([&inMemrefTypeDynDims, &isDynamicDim, &context](AffineExpr e) {
+    if (e.isa<AffineDimExpr>()) {
+      for (unsigned dm : inMemrefTypeDynDims) {
+        if (e == getAffineDimExpr(dm, context)) {
+          isDynamicDim = true;
+        }
+      }
+    }
+  });
+  return isDynamicDim;
+}
+
+/// Create affine expr to calculate dimension size for a tiled-layout map.
+static AffineExpr createDimSizeExprForTiledLayout(AffineExpr oldMapOutput,
+                                                  TileExprPattern pat) {
+  // Create map output for the patterns.
+  // "floordiv <tile size>" ==> "ceildiv <tile size>"
+  // "mod <tile size>" ==> "<tile size>"
+  AffineExpr newMapOutput;
+  AffineBinaryOpExpr binaryExpr = nullptr;
+  switch (pat) {
+  case TileExprPattern::TileMod:
+    binaryExpr = oldMapOutput.cast<AffineBinaryOpExpr>();
+    newMapOutput = binaryExpr.getRHS();
+    break;
+  case TileExprPattern::TileFloorDiv:
+    binaryExpr = oldMapOutput.cast<AffineBinaryOpExpr>();
+    newMapOutput = getAffineBinaryOpExpr(
+        AffineExprKind::CeilDiv, binaryExpr.getLHS(), binaryExpr.getRHS());
+    break;
+  default:
+    newMapOutput = oldMapOutput;
+  }
+  return newMapOutput;
+}
+
+/// Create new maps to calculate each dimension size of `newMemRefType`, and
+/// create `newDynamicSizes` from them by using AffineApplyOp.
+///
+/// Steps for normalizing dynamic memrefs for a tiled layout map
+/// Example:
+///    #map0 = affine_map<(d0, d1) -> (d0, d1 floordiv 32, d1 mod 32)>
+///    %0 = dim %arg0, %c1 :memref<4x?xf32>
+///    %1 = alloc(%0) : memref<4x?xf32, #map0>
+///
+/// (Before this function)
+/// 1. Check if `map`(#map0) is a tiled layout using `getTileSizePos()`. Only
+/// single layout map is supported.
+///
+/// 2. Create normalized memrefType using `isNormalizedMemRefDynamicDim()`. It
+/// is memref<4x?x?xf32> in the above example.
+///
+/// (In this function)
+/// 3. Create new maps to calculate each dimension of the normalized memrefType
+/// using `createDimSizeExprForTiledLayout()`. In the tiled layout, the
+/// dimension size can be calculated by replacing "floordiv <tile size>" with
+/// "ceildiv <tile size>" and "mod <tile size>" with "<tile size>".
+/// - New map in the above example
+///   #map0 = affine_map<(d0, d1) -> (d0)>
+///   #map1 = affine_map<(d0, d1) -> (d1 ceildiv 32)>
+///   #map2 = affine_map<(d0, d1) -> (32)>
+///
+/// 4. Create AffineApplyOp to apply the new maps. The output of AffineApplyOp
+/// is used in dynamicSizes of new AllocOp.
+///   %0 = dim %arg0, %c1 : memref<4x?xf32>
+///   %c4 = constant 4 : index
+///   %1 = affine.apply #map1(%c4, %0)
+///   %2 = affine.apply #map2(%c4, %0)
+static void createNewDynamicSizes(MemRefType oldMemRefType,
+                                  MemRefType newMemRefType, AffineMap map,
+                                  memref::AllocOp *allocOp, OpBuilder b,
+                                  SmallVectorImpl<Value> &newDynamicSizes) {
+  // Create new input for AffineApplyOp.
+  SmallVector<Value, 4> inAffineApply;
+  ArrayRef<int64_t> oldMemRefShape = oldMemRefType.getShape();
+  unsigned dynIdx = 0;
+  for (unsigned d = 0; d < oldMemRefType.getRank(); ++d) {
+    if (oldMemRefShape[d] < 0) {
+      // Use dynamicSizes of allocOp for dynamic dimension.
+      inAffineApply.emplace_back(allocOp->dynamicSizes()[dynIdx]);
+      dynIdx++;
+    } else {
+      // Create ConstantOp for static dimension.
+      Attribute constantAttr =
+          b.getIntegerAttr(b.getIndexType(), oldMemRefShape[d]);
+      inAffineApply.emplace_back(
+          b.create<ConstantOp>(allocOp->getLoc(), constantAttr));
+    }
+  }
+
+  // Create new map to calculate each dimension size of new memref for each
+  // original map output. Only for dynamic dimesion of `newMemRefType`.
+  unsigned newDimIdx = 0;
+  ArrayRef<int64_t> newMemRefShape = newMemRefType.getShape();
+  SmallVector<std::tuple<AffineExpr, unsigned, unsigned>> tileSizePos;
+  (void)getTileSizePos(map, tileSizePos);
+  for (AffineExpr expr : map.getResults()) {
+    if (newMemRefShape[newDimIdx] < 0) {
+      // Create new maps to calculate each dimension size of new memref.
+      enum TileExprPattern pat = TileExprPattern::TileNone;
+      for (auto pos : tileSizePos) {
+        if (newDimIdx == std::get<1>(pos))
+          pat = TileExprPattern::TileFloorDiv;
+        else if (newDimIdx == std::get<2>(pos))
+          pat = TileExprPattern::TileMod;
+      }
+      AffineExpr newMapOutput = createDimSizeExprForTiledLayout(expr, pat);
+      AffineMap newMap =
+          AffineMap::get(map.getNumInputs(), map.getNumSymbols(), newMapOutput);
+      Value affineApp =
+          b.create<AffineApplyOp>(allocOp->getLoc(), newMap, inAffineApply);
+      newDynamicSizes.emplace_back(affineApp);
+    }
+    newDimIdx++;
+  }
+}
+
 // TODO: Currently works for static memrefs with a single layout map.
 LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
   MemRefType memrefType = allocOp->getType();
@@ -397,17 +646,33 @@ LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
   Value oldMemRef = allocOp->getResult();
 
   SmallVector<Value, 4> symbolOperands(allocOp->symbolOperands());
-  memref::AllocOp newAlloc = b.create<memref::AllocOp>(
-      allocOp->getLoc(), newMemRefType, allocOp->alignmentAttr());
   AffineMap layoutMap = memrefType.getAffineMaps().front();
+  memref::AllocOp newAlloc;
+  // Check if `layoutMap` is a tiled layout. Only single layout map is
+  // supported for normalizing dynamic memrefs.
+  SmallVector<std::tuple<AffineExpr, unsigned, unsigned>> tileSizePos;
+  (void)getTileSizePos(layoutMap, tileSizePos);
+  if (newMemRefType.getNumDynamicDims() > 0 && !tileSizePos.empty()) {
+    MemRefType oldMemRefType = oldMemRef.getType().cast<MemRefType>();
+    SmallVector<Value, 4> newDynamicSizes;
+    createNewDynamicSizes(oldMemRefType, newMemRefType, layoutMap, allocOp, b,
+                          newDynamicSizes);
+    // Add the new dynamic sizes in new AllocOp.
+    newAlloc =
+        b.create<memref::AllocOp>(allocOp->getLoc(), newMemRefType,
+                                  newDynamicSizes, allocOp->alignmentAttr());
+  } else {
+    newAlloc = b.create<memref::AllocOp>(allocOp->getLoc(), newMemRefType,
+                                         allocOp->alignmentAttr());
+  }
   // Replace all uses of the old memref.
   if (failed(replaceAllMemRefUsesWith(oldMemRef, /*newMemRef=*/newAlloc,
                                       /*extraIndices=*/{},
                                       /*indexRemap=*/layoutMap,
                                       /*extraOperands=*/{},
                                       /*symbolOperands=*/symbolOperands,
-                                      /*domInstFilter=*/nullptr,
-                                      /*postDomInstFilter=*/nullptr,
+                                      /*domOpFilter=*/nullptr,
+                                      /*postDomOpFilter=*/nullptr,
                                       /*allowDereferencingOps=*/true))) {
     // If it failed (due to escapes for example), bail out.
     newAlloc.erase();
@@ -440,8 +705,12 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   // We don't do any checks for one-to-one'ness; we assume that it is
   // one-to-one.
 
-  // TODO: Only for static memref's for now.
-  if (memrefType.getNumDynamicDims() > 0)
+  // Normalize only static memrefs and dynamic memrefs with a tiled-layout map
+  // for now.
+  // TODO: Normalize the other types of dynamic memrefs.
+  SmallVector<std::tuple<AffineExpr, unsigned, unsigned>> tileSizePos;
+  (void)getTileSizePos(layoutMaps.front(), tileSizePos);
+  if (memrefType.getNumDynamicDims() > 0 && tileSizePos.empty())
     return memrefType;
 
   // We have a single map that is not an identity map. Create a new memref
@@ -449,9 +718,15 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   ArrayRef<int64_t> shape = memrefType.getShape();
   // FlatAffineConstraint may later on use symbolicOperands.
   FlatAffineConstraints fac(rank, numSymbolicOperands);
+  SmallVector<unsigned, 4> memrefTypeDynDims;
   for (unsigned d = 0; d < rank; ++d) {
-    fac.addConstantLowerBound(d, 0);
-    fac.addConstantUpperBound(d, shape[d] - 1);
+    // Use constraint system only in static dimensions.
+    if (shape[d] > 0) {
+      fac.addBound(FlatAffineConstraints::LB, d, 0);
+      fac.addBound(FlatAffineConstraints::UB, d, shape[d] - 1);
+    } else {
+      memrefTypeDynDims.emplace_back(d);
+    }
   }
   // We compose this map with the original index (logical) space to derive
   // the upper bounds for the new index space.
@@ -464,15 +739,23 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   fac.projectOut(newRank, fac.getNumIds() - newRank - fac.getNumLocalIds());
   SmallVector<int64_t, 4> newShape(newRank);
   for (unsigned d = 0; d < newRank; ++d) {
-    // The lower bound for the shape is always zero.
-    auto ubConst = fac.getConstantUpperBound(d);
-    // For a static memref and an affine map with no symbols, this is
-    // always bounded.
-    assert(ubConst.hasValue() && "should always have an upper bound");
-    if (ubConst.getValue() < 0)
-      // This is due to an invalid map that maps to a negative space.
-      return memrefType;
-    newShape[d] = ubConst.getValue() + 1;
+    // Check if each dimension of normalized memrefType is dynamic.
+    bool isDynDim = isNormalizedMemRefDynamicDim(
+        d, layoutMap, memrefTypeDynDims, b.getContext());
+    if (isDynDim) {
+      newShape[d] = -1;
+    } else {
+      // The lower bound for the shape is always zero.
+      auto ubConst = fac.getConstantBound(FlatAffineConstraints::UB, d);
+      // For a static memref and an affine map with no symbols, this is
+      // always bounded.
+      assert(ubConst.hasValue() && "should always have an upper bound");
+      if (ubConst.getValue() < 0)
+        // This is due to an invalid map that maps to a negative space.
+        return memrefType;
+      // If dimension of new memrefType is dynamic, the value is -1.
+      newShape[d] = ubConst.getValue() + 1;
+    }
   }
 
   // Create the new memref type after trivializing the old layout map.

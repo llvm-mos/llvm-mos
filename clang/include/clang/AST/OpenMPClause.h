@@ -888,6 +888,114 @@ public:
   }
 };
 
+/// Representation of the 'full' clause of the '#pragma omp unroll' directive.
+///
+/// \code
+/// #pragma omp unroll full
+/// for (int i = 0; i < 64; ++i)
+/// \endcode
+class OMPFullClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Build an empty clause.
+  explicit OMPFullClause() : OMPClause(llvm::omp::OMPC_full, {}, {}) {}
+
+public:
+  /// Build an AST node for a 'full' clause.
+  ///
+  /// \param C        Context of the AST.
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc   Ending location of the clause.
+  static OMPFullClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                               SourceLocation EndLoc);
+
+  /// Build an empty 'full' AST node for deserialization.
+  ///
+  /// \param C Context of the AST.
+  static OMPFullClause *CreateEmpty(const ASTContext &C);
+
+  child_range children() { return {child_iterator(), child_iterator()}; }
+  const_child_range children() const {
+    return {const_child_iterator(), const_child_iterator()};
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_full;
+  }
+};
+
+/// Representation of the 'partial' clause of the '#pragma omp unroll'
+/// directive.
+///
+/// \code
+/// #pragma omp unroll partial(4)
+/// for (int i = start; i < end; ++i)
+/// \endcode
+class OMPPartialClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Optional argument to the clause (unroll factor).
+  Stmt *Factor;
+
+  /// Build an empty clause.
+  explicit OMPPartialClause() : OMPClause(llvm::omp::OMPC_partial, {}, {}) {}
+
+  /// Set the unroll factor.
+  void setFactor(Expr *E) { Factor = E; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build an AST node for a 'partial' clause.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the 'partial' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Factor    Clause argument.
+  static OMPPartialClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                  SourceLocation LParenLoc,
+                                  SourceLocation EndLoc, Expr *Factor);
+
+  /// Build an empty 'partial' AST node for deserialization.
+  ///
+  /// \param C     Context of the AST.
+  static OMPPartialClause *CreateEmpty(const ASTContext &C);
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the argument of the clause or nullptr if not set.
+  Expr *getFactor() const { return cast_or_null<Expr>(Factor); }
+
+  child_range children() { return child_range(&Factor, &Factor + 1); }
+  const_child_range children() const {
+    return const_child_range(&Factor, &Factor + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_partial;
+  }
+};
+
 /// This represents 'collapse' clause in the '#pragma omp ...'
 /// directive.
 ///
@@ -1897,13 +2005,13 @@ class OMPUpdateClause final
     return IsExtended ? 2 : 0;
   }
 
-  /// Sets the the location of '(' in clause for 'depobj' directive.
+  /// Sets the location of '(' in clause for 'depobj' directive.
   void setLParenLoc(SourceLocation Loc) {
     assert(IsExtended && "Expected extended clause.");
     *getTrailingObjects<SourceLocation>() = Loc;
   }
 
-  /// Sets the the location of '(' in clause for 'depobj' directive.
+  /// Sets the location of '(' in clause for 'depobj' directive.
   void setArgumentLoc(SourceLocation Loc) {
     assert(IsExtended && "Expected extended clause.");
     *std::next(getTrailingObjects<SourceLocation>(), 1) = Loc;
@@ -1977,13 +2085,13 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
-  /// Gets the the location of '(' in clause for 'depobj' directive.
+  /// Gets the location of '(' in clause for 'depobj' directive.
   SourceLocation getLParenLoc() const {
     assert(IsExtended && "Expected extended clause.");
     return *getTrailingObjects<SourceLocation>();
   }
 
-  /// Gets the the location of argument in clause for 'depobj' directive.
+  /// Gets the location of argument in clause for 'depobj' directive.
   SourceLocation getArgumentLoc() const {
     assert(IsExtended && "Expected extended clause.");
     return *std::next(getTrailingObjects<SourceLocation>(), 1);
@@ -5498,7 +5606,8 @@ private:
   /// Map-type-modifiers for the 'map' clause.
   OpenMPMapModifierKind MapTypeModifiers[NumberOfOMPMapClauseModifiers] = {
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
-      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
+      OMPC_MAP_MODIFIER_unknown};
 
   /// Location of map-type-modifiers for the 'map' clause.
   SourceLocation MapTypeModifiersLoc[NumberOfOMPMapClauseModifiers];
@@ -7649,6 +7758,146 @@ public:
   }
 };
 
+/// This represents 'novariants' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp dispatch novariants(a > 5)
+/// \endcode
+/// In this example directive '#pragma omp dispatch' has simple 'novariants'
+/// clause with condition 'a > 5'.
+class OMPNovariantsClause final : public OMPClause,
+                                  public OMPClauseWithPreInit {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Condition of the 'if' clause.
+  Stmt *Condition = nullptr;
+
+  /// Set condition.
+  void setCondition(Expr *Cond) { Condition = Cond; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'novariants' clause with condition \a Cond.
+  ///
+  /// \param Cond Condition of the clause.
+  /// \param HelperCond Helper condition for the construct.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPNovariantsClause(Expr *Cond, Stmt *HelperCond,
+                      OpenMPDirectiveKind CaptureRegion,
+                      SourceLocation StartLoc, SourceLocation LParenLoc,
+                      SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_novariants, StartLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), Condition(Cond) {
+    setPreInitStmt(HelperCond, CaptureRegion);
+  }
+
+  /// Build an empty clause.
+  OMPNovariantsClause()
+      : OMPClause(llvm::omp::OMPC_novariants, SourceLocation(),
+                  SourceLocation()),
+        OMPClauseWithPreInit(this) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns condition.
+  Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
+
+  child_range children() { return child_range(&Condition, &Condition + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Condition, &Condition + 1);
+  }
+
+  child_range used_children();
+  const_child_range used_children() const {
+    auto Children = const_cast<OMPNovariantsClause *>(this)->used_children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_novariants;
+  }
+};
+
+/// This represents 'nocontext' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp dispatch nocontext(a > 5)
+/// \endcode
+/// In this example directive '#pragma omp dispatch' has simple 'nocontext'
+/// clause with condition 'a > 5'.
+class OMPNocontextClause final : public OMPClause, public OMPClauseWithPreInit {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Condition of the 'if' clause.
+  Stmt *Condition = nullptr;
+
+  /// Set condition.
+  void setCondition(Expr *Cond) { Condition = Cond; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'nocontext' clause with condition \a Cond.
+  ///
+  /// \param Cond Condition of the clause.
+  /// \param HelperCond Helper condition for the construct.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPNocontextClause(Expr *Cond, Stmt *HelperCond,
+                     OpenMPDirectiveKind CaptureRegion, SourceLocation StartLoc,
+                     SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_nocontext, StartLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), Condition(Cond) {
+    setPreInitStmt(HelperCond, CaptureRegion);
+  }
+
+  /// Build an empty clause.
+  OMPNocontextClause()
+      : OMPClause(llvm::omp::OMPC_nocontext, SourceLocation(),
+                  SourceLocation()),
+        OMPClauseWithPreInit(this) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns condition.
+  Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
+
+  child_range children() { return child_range(&Condition, &Condition + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Condition, &Condition + 1);
+  }
+
+  child_range used_children();
+  const_child_range used_children() const {
+    auto Children = const_cast<OMPNocontextClause *>(this)->used_children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_nocontext;
+  }
+};
+
 /// This represents 'detach' clause in the '#pragma omp task' directive.
 ///
 /// \code
@@ -8085,6 +8334,77 @@ public:
   }
 };
 
+/// This represents 'filter' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp masked filter(tid)
+/// \endcode
+/// In this example directive '#pragma omp masked' has 'filter' clause with
+/// thread id.
+class OMPFilterClause final : public OMPClause, public OMPClauseWithPreInit {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Express of the 'filter' clause.
+  Stmt *ThreadID = nullptr;
+
+  /// Sets the thread identifier.
+  void setThreadID(Expr *TID) { ThreadID = TID; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'filter' clause with thread-id \a ThreadID.
+  ///
+  /// \param ThreadID Thread identifier.
+  /// \param HelperE Helper expression associated with this clause.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPFilterClause(Expr *ThreadID, Stmt *HelperE,
+                  OpenMPDirectiveKind CaptureRegion, SourceLocation StartLoc,
+                  SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_filter, StartLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), ThreadID(ThreadID) {
+    setPreInitStmt(HelperE, CaptureRegion);
+  }
+
+  /// Build an empty clause.
+  OMPFilterClause()
+      : OMPClause(llvm::omp::OMPC_filter, SourceLocation(), SourceLocation()),
+        OMPClauseWithPreInit(this) {}
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Return thread identifier.
+  Expr *getThreadID() { return cast<Expr>(ThreadID); }
+
+  /// Return thread identifier.
+  Expr *getThreadID() const { return cast<Expr>(ThreadID); }
+
+  child_range children() { return child_range(&ThreadID, &ThreadID + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&ThreadID, &ThreadID + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_filter;
+  }
+};
+
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>
@@ -8227,10 +8547,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo *TI);
 
 /// Clang specific specialization of the OMPContext to lookup target features.
 struct TargetOMPContext final : public llvm::omp::OMPContext {
-
   TargetOMPContext(ASTContext &ASTCtx,
                    std::function<void(StringRef)> &&DiagUnknownTrait,
-                   const FunctionDecl *CurrentFunctionDecl);
+                   const FunctionDecl *CurrentFunctionDecl,
+                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits);
+
   virtual ~TargetOMPContext() = default;
 
   /// See llvm::omp::OMPContext::matchesISATrait

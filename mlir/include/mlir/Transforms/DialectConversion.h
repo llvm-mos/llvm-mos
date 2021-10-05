@@ -366,13 +366,91 @@ private:
   using RewritePattern::rewrite;
 };
 
-namespace detail {
-/// OpOrInterfaceConversionPatternBase is a wrapper around ConversionPattern
-/// that allows for matching and rewriting against an instance of a derived
-/// operation class or an Interface as opposed to a raw Operation.
+/// OpConversionPattern is a wrapper around ConversionPattern that allows for
+/// matching and rewriting against an instance of a derived operation class as
+/// opposed to a raw Operation.
 template <typename SourceOp>
-struct OpOrInterfaceConversionPatternBase : public ConversionPattern {
-  using ConversionPattern::ConversionPattern;
+class OpConversionPattern : public ConversionPattern {
+public:
+  using OpAdaptor = typename SourceOp::Adaptor;
+
+  OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
+  OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
+                      PatternBenefit benefit = 1)
+      : ConversionPattern(typeConverter, SourceOp::getOperationName(), benefit,
+                          context) {}
+
+  /// Wrappers around the ConversionPattern methods that pass the derived op
+  /// type.
+  void rewrite(Operation *op, ArrayRef<Value> operands,
+               ConversionPatternRewriter &rewriter) const final {
+    rewrite(cast<SourceOp>(op), OpAdaptor(operands, op->getAttrDictionary()),
+            rewriter);
+  }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    return matchAndRewrite(cast<SourceOp>(op),
+                           OpAdaptor(operands, op->getAttrDictionary()),
+                           rewriter);
+  }
+
+  /// Rewrite and Match methods that operate on the SourceOp type and accept the
+  /// raw operand values.
+  /// NOTICE: These methods are deprecated and will be removed. All new code
+  /// should use the adaptor methods below instead.
+  virtual void rewrite(SourceOp op, ArrayRef<Value> operands,
+                       ConversionPatternRewriter &rewriter) const {
+    llvm_unreachable("must override matchAndRewrite or a rewrite method");
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    if (failed(match(op)))
+      return failure();
+    rewrite(op, OpAdaptor(operands, op->getAttrDictionary()), rewriter);
+    return success();
+  }
+
+  /// Rewrite and Match methods that operate on the SourceOp type. These must be
+  /// overridden by the derived pattern class.
+  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
+                       ConversionPatternRewriter &rewriter) const {
+    ValueRange operands = adaptor.getOperands();
+    rewrite(op,
+            ArrayRef<Value>(operands.getBase().get<const Value *>(),
+                            operands.size()),
+            rewriter);
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const {
+    ValueRange operands = adaptor.getOperands();
+    return matchAndRewrite(
+        op,
+        ArrayRef<Value>(operands.getBase().get<const Value *>(),
+                        operands.size()),
+        rewriter);
+  }
+
+private:
+  using ConversionPattern::matchAndRewrite;
+};
+
+/// OpInterfaceConversionPattern is a wrapper around ConversionPattern that
+/// allows for matching and rewriting against an instance of an OpInterface
+/// class as opposed to a raw Operation.
+template <typename SourceOp>
+class OpInterfaceConversionPattern : public ConversionPattern {
+public:
+  OpInterfaceConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : ConversionPattern(Pattern::MatchInterfaceOpTypeTag(),
+                          SourceOp::getInterfaceID(), benefit, context) {}
+  OpInterfaceConversionPattern(TypeConverter &typeConverter,
+                               MLIRContext *context, PatternBenefit benefit = 1)
+      : ConversionPattern(typeConverter, Pattern::MatchInterfaceOpTypeTag(),
+                          SourceOp::getInterfaceID(), benefit, context) {}
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
@@ -386,15 +464,12 @@ struct OpOrInterfaceConversionPatternBase : public ConversionPattern {
     return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
   }
 
-  // TODO: Use OperandAdaptor when it supports access to unnamed operands.
-
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
   /// overridden by the derived pattern class.
   virtual void rewrite(SourceOp op, ArrayRef<Value> operands,
                        ConversionPatternRewriter &rewriter) const {
     llvm_unreachable("must override matchAndRewrite or a rewrite method");
   }
-
   virtual LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
@@ -406,39 +481,6 @@ struct OpOrInterfaceConversionPatternBase : public ConversionPattern {
 
 private:
   using ConversionPattern::matchAndRewrite;
-};
-} // namespace detail
-
-/// OpConversionPattern is a wrapper around ConversionPattern that allows for
-/// matching and rewriting against an instance of a derived operation class as
-/// opposed to a raw Operation.
-template <typename SourceOp>
-struct OpConversionPattern
-    : public detail::OpOrInterfaceConversionPatternBase<SourceOp> {
-  OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
-      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
-            SourceOp::getOperationName(), benefit, context) {}
-  OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
-                      PatternBenefit benefit = 1)
-      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
-            typeConverter, SourceOp::getOperationName(), benefit, context) {}
-};
-
-/// OpInterfaceConversionPattern is a wrapper around ConversionPattern that
-/// allows for matching and rewriting against an instance of an OpInterface
-/// class as opposed to a raw Operation.
-template <typename SourceOp>
-struct OpInterfaceConversionPattern
-    : public detail::OpOrInterfaceConversionPatternBase<SourceOp> {
-  OpInterfaceConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
-      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
-            Pattern::MatchInterfaceOpTypeTag(), SourceOp::getInterfaceID(),
-            benefit, context) {}
-  OpInterfaceConversionPattern(TypeConverter &typeConverter,
-                               MLIRContext *context, PatternBenefit benefit = 1)
-      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
-            typeConverter, Pattern::MatchInterfaceOpTypeTag(),
-            SourceOp::getInterfaceID(), benefit, context) {}
 };
 
 /// Add a pattern to the given pattern list to convert the signature of a
@@ -479,9 +521,12 @@ public:
   /// Apply a signature conversion to the entry block of the given region. This
   /// replaces the entry block with a new block containing the updated
   /// signature. The new entry block to the region is returned for convenience.
+  ///
+  /// If provided, `converter` will be used for any materializations.
   Block *
   applySignatureConversion(Region *region,
-                           TypeConverter::SignatureConversion &conversion);
+                           TypeConverter::SignatureConversion &conversion,
+                           TypeConverter *converter = nullptr);
 
   /// Convert the types of block arguments within the given region. This
   /// replaces each block with a new block containing the updated signature. The
@@ -495,8 +540,13 @@ public:
   /// Convert the types of block arguments within the given region except for
   /// the entry region. This replaces each non-entry block with a new block
   /// containing the updated signature.
-  LogicalResult convertNonEntryRegionTypes(Region *region,
-                                           TypeConverter &converter);
+  ///
+  /// If special conversion behavior is needed for the non-entry blocks (for
+  /// example, we need to convert only a subset of a BB arguments), such
+  /// behavior can be specified in blockConversions.
+  LogicalResult convertNonEntryRegionTypes(
+      Region *region, TypeConverter &converter,
+      ArrayRef<TypeConverter::SignatureConversion> blockConversions);
 
   /// Replace all the uses of the block argument `from` with value `to`.
   void replaceUsesOfBlockArgument(BlockArgument from, Value to);
@@ -613,8 +663,7 @@ public:
   /// dynamically legal on the target.
   using DynamicLegalityCallbackFn = std::function<bool(Operation *)>;
 
-  ConversionTarget(MLIRContext &ctx)
-      : unknownOpsDynamicallyLegal(false), ctx(ctx) {}
+  ConversionTarget(MLIRContext &ctx) : ctx(ctx) {}
   virtual ~ConversionTarget() = default;
 
   //===--------------------------------------------------------------------===//
@@ -637,18 +686,6 @@ public:
   void addLegalOp() {
     addLegalOp<OpT>();
     addLegalOp<OpT2, OpTs...>();
-  }
-
-  /// Register the given operation as dynamically legal, i.e. requiring custom
-  /// handling by the target via 'isDynamicallyLegal'.
-  template <typename OpT>
-  void addDynamicallyLegalOp() {
-    setOpAction<OpT>(LegalizationAction::Dynamic);
-  }
-  template <typename OpT, typename OpT2, typename... OpTs>
-  void addDynamicallyLegalOp() {
-    addDynamicallyLegalOp<OpT>();
-    addDynamicallyLegalOp<OpT2, OpTs...>();
   }
 
   /// Register the given operation as dynamically legal and set the dynamic
@@ -724,36 +761,26 @@ public:
   }
 
   /// Register the operations of the given dialects as dynamically legal, i.e.
-  /// requiring custom handling by the target via 'isDynamicallyLegal'.
+  /// requiring custom handling by the callback.
   template <typename... Names>
-  void addDynamicallyLegalDialect(StringRef name, Names... names) {
+  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback,
+                                  StringRef name, Names... names) {
     SmallVector<StringRef, 2> dialectNames({name, names...});
     setDialectAction(dialectNames, LegalizationAction::Dynamic);
-  }
-  template <typename... Args>
-  void addDynamicallyLegalDialect(
-      Optional<DynamicLegalityCallbackFn> callback = llvm::None) {
-    SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
-    setDialectAction(dialectNames, LegalizationAction::Dynamic);
-    if (callback)
-      setLegalityCallback(dialectNames, *callback);
+    setLegalityCallback(dialectNames, std::move(callback));
   }
   template <typename... Args>
   void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback) {
-    SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
-    setDialectAction(dialectNames, LegalizationAction::Dynamic);
-    setLegalityCallback(dialectNames, callback);
+    addDynamicallyLegalDialect(std::move(callback),
+                               Args::getDialectNamespace()...);
   }
 
   /// Register unknown operations as dynamically legal. For operations(and
   /// dialects) that do not have a set legalization action, treat them as
-  /// dynamically legal and invoke the given callback if valid or
-  /// 'isDynamicallyLegal'.
+  /// dynamically legal and invoke the given callback.
   void markUnknownOpDynamicallyLegal(const DynamicLegalityCallbackFn &fn) {
-    unknownOpsDynamicallyLegal = true;
-    unknownLegalityFn = fn;
+    setLegalityCallback(fn);
   }
-  void markUnknownOpDynamicallyLegal() { unknownOpsDynamicallyLegal = true; }
 
   /// Register the operations of the given dialects as illegal, i.e.
   /// operations of this dialect are not supported by the target.
@@ -780,14 +807,6 @@ public:
   /// legal, None is returned.
   Optional<LegalOpDetails> isLegal(Operation *op) const;
 
-protected:
-  /// Runs a custom legalization query for the given operation. This should
-  /// return true if the given operation is legal, otherwise false.
-  virtual bool isDynamicallyLegal(Operation *op) const {
-    llvm_unreachable(
-        "targets with custom legalization must override 'isDynamicallyLegal'");
-  }
-
 private:
   /// Set the dynamic legality callback for the given operation.
   void setLegalityCallback(OperationName name,
@@ -796,6 +815,9 @@ private:
   /// Set the dynamic legality callback for the given dialects.
   void setLegalityCallback(ArrayRef<StringRef> dialects,
                            const DynamicLegalityCallbackFn &callback);
+
+  /// Set the dynamic legality callback for the unknown ops.
+  void setLegalityCallback(const DynamicLegalityCallbackFn &callback);
 
   /// Set the recursive legality callback for the given operation and mark the
   /// operation as recursively legal.
@@ -811,7 +833,7 @@ private:
     bool isRecursivelyLegal;
 
     /// The legality callback if this operation is dynamically legal.
-    Optional<DynamicLegalityCallbackFn> legalityFn;
+    DynamicLegalityCallbackFn legalityFn;
   };
 
   /// Get the legalization information for the given operation.
@@ -833,11 +855,7 @@ private:
   llvm::StringMap<DynamicLegalityCallbackFn> dialectLegalityFns;
 
   /// An optional legality callback for unknown operations.
-  Optional<DynamicLegalityCallbackFn> unknownLegalityFn;
-
-  /// Flag indicating if unknown operations should be treated as dynamically
-  /// legal.
-  bool unknownOpsDynamicallyLegal;
+  DynamicLegalityCallbackFn unknownLegalityFn;
 
   /// The current context this target applies to.
   MLIRContext &ctx;

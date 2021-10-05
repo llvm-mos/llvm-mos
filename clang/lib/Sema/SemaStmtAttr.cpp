@@ -210,6 +210,12 @@ static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) NoMergeAttr(S.Context, A);
 }
 
+static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                SourceRange Range) {
+  // Validation is in Sema::ActOnAttributedStmt().
+  return ::new (S.Context) MustTailAttr(S.Context, A);
+}
+
 static Attr *handleLikely(Sema &S, Stmt *St, const ParsedAttr &A,
                           SourceRange Range) {
 
@@ -237,9 +243,22 @@ static Attr *handleLeaf(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) LeafAttr(S.Context, A);
 }
 
+#define WANT_STMT_MERGE_LOGIC
+#include "clang/Sema/AttrParsedAttrImpl.inc"
+#undef WANT_STMT_MERGE_LOGIC
+
 static void
 CheckForIncompatibleAttributes(Sema &S,
                                const SmallVectorImpl<const Attr *> &Attrs) {
+  // The vast majority of attributed statements will only have one attribute
+  // on them, so skip all of the checking in the common case.
+  if (Attrs.size() < 2)
+    return;
+
+  // First, check for the easy cases that are table-generated for us.
+  if (!DiagnoseMutualExclusions(S, Attrs))
+    return;
+
   // There are 6 categories of loop hints attributes: vectorize, interleave,
   // unroll, unroll_and_jam, pipeline and distribute. Except for distribute they
   // come in two variants: a state form and a numeric form.  The state form
@@ -342,32 +361,6 @@ CheckForIncompatibleAttributes(Sema &S,
           << CategoryState.NumericAttr->getDiagnosticName(Policy);
     }
   }
-
-  // C++20 [dcl.attr.likelihood]p1 The attribute-token likely shall not appear
-  // in an attribute-specifier-seq that contains the attribute-token unlikely.
-  const LikelyAttr *Likely = nullptr;
-  const UnlikelyAttr *Unlikely = nullptr;
-  for (const auto *I : Attrs) {
-    if (const auto *Attr = dyn_cast<LikelyAttr>(I)) {
-      if (Unlikely) {
-        S.Diag(Attr->getLocation(), diag::err_attributes_are_not_compatible)
-            << Attr << Unlikely << Attr->getRange();
-        S.Diag(Unlikely->getLocation(), diag::note_conflicting_attribute)
-            << Unlikely->getRange();
-        return;
-      }
-      Likely = Attr;
-    } else if (const auto *Attr = dyn_cast<UnlikelyAttr>(I)) {
-      if (Likely) {
-        S.Diag(Attr->getLocation(), diag::err_attributes_are_not_compatible)
-            << Attr << Likely << Attr->getRange();
-        S.Diag(Likely->getLocation(), diag::note_conflicting_attribute)
-            << Likely->getRange();
-        return;
-      }
-      Unlikely = Attr;
-    }
-  }
 }
 
 static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -435,6 +428,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleSuppressAttr(S, St, A, Range);
   case ParsedAttr::AT_NoMerge:
     return handleNoMergeAttr(S, St, A, Range);
+  case ParsedAttr::AT_MustTail:
+    return handleMustTailAttr(S, St, A, Range);
   case ParsedAttr::AT_Likely:
     return handleLikely(S, St, A, Range);
   case ParsedAttr::AT_Unlikely:
@@ -451,19 +446,13 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
   }
 }
 
-StmtResult Sema::ProcessStmtAttributes(Stmt *S,
-                                       const ParsedAttributesView &AttrList,
-                                       SourceRange Range) {
-  SmallVector<const Attr*, 8> Attrs;
-  for (const ParsedAttr &AL : AttrList) {
-    if (Attr *a = ProcessStmtAttribute(*this, S, AL, Range))
-      Attrs.push_back(a);
+void Sema::ProcessStmtAttributes(Stmt *S,
+                                 const ParsedAttributesWithRange &InAttrs,
+                                 SmallVectorImpl<const Attr *> &OutAttrs) {
+  for (const ParsedAttr &AL : InAttrs) {
+    if (const Attr *A = ProcessStmtAttribute(*this, S, AL, InAttrs.Range))
+      OutAttrs.push_back(A);
   }
 
-  CheckForIncompatibleAttributes(*this, Attrs);
-
-  if (Attrs.empty())
-    return S;
-
-  return ActOnAttributedStmt(Range.getBegin(), Attrs, S);
+  CheckForIncompatibleAttributes(*this, OutAttrs);
 }

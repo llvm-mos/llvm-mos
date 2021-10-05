@@ -42,7 +42,6 @@
 #include <limits>
 #include <list>
 #include <memory>
-#include <string>
 #include <system_error>
 
 using namespace llvm;
@@ -247,8 +246,8 @@ static Error checkOverlappingElement(std::list<MachOElement> &Elements,
   if (Size == 0)
     return Error::success();
 
-  for (auto it=Elements.begin() ; it != Elements.end(); ++it) {
-    auto E = *it;
+  for (auto it = Elements.begin(); it != Elements.end(); ++it) {
+    const auto &E = *it;
     if ((Offset >= E.Offset && Offset < E.Offset + E.Size) ||
         (Offset + Size > E.Offset && Offset + Size < E.Offset + E.Size) ||
         (Offset <= E.Offset && Offset + Size >= E.Offset + E.Size))
@@ -259,7 +258,7 @@ static Error checkOverlappingElement(std::list<MachOElement> &Elements,
     auto nt = it;
     nt++;
     if (nt != Elements.end()) {
-      auto N = *nt;
+      const auto &N = *nt;
       if (Offset + Size <= N.Offset) {
         Elements.insert(nt, {Offset, Size, Name});
         return Error::success();
@@ -2035,7 +2034,14 @@ bool MachOObjectFile::isSectionBSS(DataRefImpl Sec) const {
           SectionType == MachO::S_GB_ZEROFILL);
 }
 
-bool MachOObjectFile::isDebugSection(StringRef SectionName) const {
+bool MachOObjectFile::isDebugSection(DataRefImpl Sec) const {
+  Expected<StringRef> SectionNameOrErr = getSectionName(Sec);
+  if (!SectionNameOrErr) {
+    // TODO: Report the error message properly.
+    consumeError(SectionNameOrErr.takeError());
+    return false;
+  }
+  StringRef SectionName = SectionNameOrErr.get();
   return SectionName.startswith("__debug") ||
          SectionName.startswith("__zdebug") ||
          SectionName.startswith("__apple") || SectionName == "__gdb_index" ||

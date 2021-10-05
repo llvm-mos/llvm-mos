@@ -50,7 +50,6 @@ class RISCVSubtarget : public RISCVGenSubtargetInfo {
   bool HasStdExtZbr = false;
   bool HasStdExtZbs = false;
   bool HasStdExtZbt = false;
-  bool HasStdExtZbproposedc = false;
   bool HasStdExtV = false;
   bool HasStdExtZvlsseg = false;
   bool HasStdExtZvamo = false;
@@ -62,6 +61,7 @@ class RISCVSubtarget : public RISCVGenSubtargetInfo {
   bool EnableSaveRestore = false;
   unsigned XLen = 32;
   MVT XLenVT = MVT::i32;
+  uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
   BitVector UserReservedRegister;
   RISCVFrameLowering FrameLowering;
@@ -117,7 +117,6 @@ public:
   bool hasStdExtZbr() const { return HasStdExtZbr; }
   bool hasStdExtZbs() const { return HasStdExtZbs; }
   bool hasStdExtZbt() const { return HasStdExtZbt; }
-  bool hasStdExtZbproposedc() const { return HasStdExtZbproposedc; }
   bool hasStdExtV() const { return HasStdExtV; }
   bool hasStdExtZvlsseg() const { return HasStdExtZvlsseg; }
   bool hasStdExtZvamo() const { return HasStdExtZvamo; }
@@ -133,6 +132,9 @@ public:
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
+  }
+  unsigned getMaxInterleaveFactor() const {
+    return hasStdExtV() ? MaxInterleaveFactor : 1;
   }
 
 protected:
@@ -153,8 +155,8 @@ public:
   // implied by the architecture.
   unsigned getMaxRVVVectorSizeInBits() const;
   unsigned getMinRVVVectorSizeInBits() const;
-  unsigned getLMULForFixedLengthVector(MVT VT) const;
   unsigned getMaxLMULForFixedLengthVectors() const;
+  unsigned getMaxELENForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;
 };
 } // End llvm namespace

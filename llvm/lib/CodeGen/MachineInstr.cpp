@@ -1319,12 +1319,10 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
   int64_t OverlapB =
       KnownWidthB ? WidthB + OffsetB - MinOffset : MemoryLocation::UnknownSize;
 
-  AliasResult AAResult = AA->alias(
+  return !AA->isNoAlias(
       MemoryLocation(ValA, OverlapA, UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
       MemoryLocation(ValB, OverlapB,
                      UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
-
-  return (AAResult != NoAlias);
 }
 
 bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
@@ -2085,7 +2083,7 @@ MachineInstrExpressionTrait::getHashValue(const MachineInstr* const &MI) {
 
 void MachineInstr::emitError(StringRef Msg) const {
   // Find the source location cookie.
-  unsigned LocCookie = 0;
+  uint64_t LocCookie = 0;
   const MDNode *LocMD = nullptr;
   for (unsigned i = getNumOperands(); i != 0; --i) {
     if (getOperand(i-1).isMetadata() &&
@@ -2374,5 +2372,11 @@ MachineInstr::getFoldedRestoreSize(const TargetInstrInfo *TII) const {
 unsigned MachineInstr::getDebugInstrNum() {
   if (DebugInstrNum == 0)
     DebugInstrNum = getParent()->getParent()->getNewDebugInstrNum();
+  return DebugInstrNum;
+}
+
+unsigned MachineInstr::getDebugInstrNum(MachineFunction &MF) {
+  if (DebugInstrNum == 0)
+    DebugInstrNum = MF.getNewDebugInstrNum();
   return DebugInstrNum;
 }

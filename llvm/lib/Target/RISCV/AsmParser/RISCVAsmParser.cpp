@@ -169,6 +169,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   bool parseDirectiveOption();
   bool parseDirectiveAttribute();
+  bool parseDirectiveInsn(SMLoc L);
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().getFeatureBits()[Feature])) {
@@ -504,6 +505,24 @@ public:
     return (isRV64() && isUInt<5>(Imm)) || isUInt<4>(Imm);
   }
 
+  bool isUImm2() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isUInt<2>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm3() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isUInt<3>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isUImm5() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
@@ -511,6 +530,15 @@ public:
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isUInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm7() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isUInt<7>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm5() const {
@@ -528,8 +556,7 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<6>(Imm) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isInt<6>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6NonZero() const {
@@ -841,10 +868,18 @@ public:
       switch (c) {
       default:
         llvm_unreachable("FenceArg must contain only [iorw]");
-      case 'i': Imm |= RISCVFenceField::I; break;
-      case 'o': Imm |= RISCVFenceField::O; break;
-      case 'r': Imm |= RISCVFenceField::R; break;
-      case 'w': Imm |= RISCVFenceField::W; break;
+      case 'i':
+        Imm |= RISCVFenceField::I;
+        break;
+      case 'o':
+        Imm |= RISCVFenceField::O;
+        break;
+      case 'r':
+        Imm |= RISCVFenceField::R;
+        break;
+      case 'w':
+        Imm |= RISCVFenceField::W;
+        break;
       }
     }
     Inst.addOperand(MCOperand::createImm(Imm));
@@ -953,10 +988,6 @@ bool RISCVAsmParser::generateImmOutOfRangeError(
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
 
-static std::string RISCVMnemonicSpellCheck(StringRef S,
-                                          const FeatureBitset &FBS,
-                                          unsigned VariantID = 0);
-
 bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              OperandVector &Operands,
                                              MCStreamer &Out,
@@ -965,9 +996,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MCInst Inst;
   FeatureBitset MissingFeatures;
 
-  auto Result =
-    MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
-                         MatchingInlineAsm);
+  auto Result = MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
+                                     MatchingInlineAsm);
   switch (Result) {
   default:
     break;
@@ -991,12 +1021,12 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MnemonicFail: {
     FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
     std::string Suggestion = RISCVMnemonicSpellCheck(
-      ((RISCVOperand &)*Operands[0]).getToken(), FBS);
+        ((RISCVOperand &)*Operands[0]).getToken(), FBS, 0);
     return Error(IDLoc, "unrecognized instruction mnemonic" + Suggestion);
   }
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = IDLoc;
-    if (ErrorInfo != ~0U) {
+    if (ErrorInfo != ~0ULL) {
       if (ErrorInfo >= Operands.size())
         return Error(ErrorLoc, "too few operands for instruction");
 
@@ -1013,11 +1043,11 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   // corresponding operand is missing.
   if (Result > FIRST_TARGET_MATCH_RESULT_TY) {
     SMLoc ErrorLoc = IDLoc;
-    if (ErrorInfo != ~0U && ErrorInfo >= Operands.size())
-        return Error(ErrorLoc, "too few operands for instruction");
+    if (ErrorInfo != ~0ULL && ErrorInfo >= Operands.size())
+      return Error(ErrorLoc, "too few operands for instruction");
   }
 
-  switch(Result) {
+  switch (Result) {
   default:
     break;
   case Match_InvalidImmXLenLI:
@@ -1306,6 +1336,11 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
     auto SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
     if (!SysReg)
       SysReg = RISCVSysReg::lookupSysRegByAltName(Identifier);
+    if (!SysReg)
+      if ((SysReg = RISCVSysReg::lookupSysRegByDeprecatedName(Identifier)))
+        Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
+                       SysReg->Name + "'");
+
     // Accept a named Sys Reg if the required features are present.
     if (SysReg) {
       if (!SysReg->haveRequiredFeatures(getSTI().getFeatureBits())) {
@@ -1581,14 +1616,12 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
     else
       goto MatchFail;
 
-    unsigned SewLog2 = Log2_32(Sew / 8);
     unsigned LmulLog2 = Log2_32(Lmul);
-    RISCVVSEW VSEW = static_cast<RISCVVSEW>(SewLog2);
-    RISCVVLMUL VLMUL =
-        static_cast<RISCVVLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
+    RISCVII::VLMUL VLMUL =
+        static_cast<RISCVII::VLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
 
     unsigned VTypeI =
-        RISCVVType::encodeVTYPE(VLMUL, VSEW, TailAgnostic, MaskAgnostic);
+        RISCVVType::encodeVTYPE(VLMUL, Sew, TailAgnostic, MaskAgnostic);
     Operands.push_back(RISCVOperand::createVType(VTypeI, S, isRV64()));
     return MatchOperand_Success;
   }
@@ -1826,8 +1859,10 @@ bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".option")
     return parseDirectiveOption();
-  else if (IDVal == ".attribute")
+  if (IDVal == ".attribute")
     return parseDirectiveAttribute();
+  if (IDVal == ".insn")
+    return parseDirectiveInsn(DirectiveID.getLoc());
 
   return true;
 }
@@ -1961,7 +1996,7 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
   if (Parser.getTok().is(AsmToken::Identifier)) {
     StringRef Name = Parser.getTok().getIdentifier();
     Optional<unsigned> Ret =
-        ELFAttrs::attrTypeFromString(Name, RISCVAttrs::RISCVAttributeTags);
+        ELFAttrs::attrTypeFromString(Name, RISCVAttrs::getRISCVAttributeTags());
     if (!Ret.hasValue()) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
@@ -2035,19 +2070,18 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
     clearFeatureBits(RISCV::FeatureStdExtB, "experimental-b");
     clearFeatureBits(RISCV::FeatureStdExtV, "experimental-v");
-    clearFeatureBits(RISCV::FeatureExtZfh, "experimental-zfh");
-    clearFeatureBits(RISCV::FeatureExtZba, "experimental-zba");
-    clearFeatureBits(RISCV::FeatureExtZbb, "experimental-zbb");
-    clearFeatureBits(RISCV::FeatureExtZbc, "experimental-zbc");
-    clearFeatureBits(RISCV::FeatureExtZbe, "experimental-zbe");
-    clearFeatureBits(RISCV::FeatureExtZbf, "experimental-zbf");
-    clearFeatureBits(RISCV::FeatureExtZbm, "experimental-zbm");
-    clearFeatureBits(RISCV::FeatureExtZbp, "experimental-zbp");
-    clearFeatureBits(RISCV::FeatureExtZbproposedc, "experimental-zbproposedc");
-    clearFeatureBits(RISCV::FeatureExtZbr, "experimental-zbr");
-    clearFeatureBits(RISCV::FeatureExtZbs, "experimental-zbs");
-    clearFeatureBits(RISCV::FeatureExtZbt, "experimental-zbt");
-    clearFeatureBits(RISCV::FeatureExtZvamo, "experimental-zvamo");
+    clearFeatureBits(RISCV::FeatureStdExtZfh, "experimental-zfh");
+    clearFeatureBits(RISCV::FeatureStdExtZba, "experimental-zba");
+    clearFeatureBits(RISCV::FeatureStdExtZbb, "experimental-zbb");
+    clearFeatureBits(RISCV::FeatureStdExtZbc, "experimental-zbc");
+    clearFeatureBits(RISCV::FeatureStdExtZbe, "experimental-zbe");
+    clearFeatureBits(RISCV::FeatureStdExtZbf, "experimental-zbf");
+    clearFeatureBits(RISCV::FeatureStdExtZbm, "experimental-zbm");
+    clearFeatureBits(RISCV::FeatureStdExtZbp, "experimental-zbp");
+    clearFeatureBits(RISCV::FeatureStdExtZbr, "experimental-zbr");
+    clearFeatureBits(RISCV::FeatureStdExtZbs, "experimental-zbs");
+    clearFeatureBits(RISCV::FeatureStdExtZbt, "experimental-zbt");
+    clearFeatureBits(RISCV::FeatureStdExtZvamo, "experimental-zvamo");
     clearFeatureBits(RISCV::FeatureStdExtZvlsseg, "experimental-zvlsseg");
 
     while (!Arch.empty()) {
@@ -2081,32 +2115,29 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
         StringRef Ext =
             Arch.take_until([](char c) { return ::isdigit(c) || c == '_'; });
         if (Ext == "zba")
-          setFeatureBits(RISCV::FeatureExtZba, "experimental-zba");
+          setFeatureBits(RISCV::FeatureStdExtZba, "experimental-zba");
         else if (Ext == "zbb")
-          setFeatureBits(RISCV::FeatureExtZbb, "experimental-zbb");
+          setFeatureBits(RISCV::FeatureStdExtZbb, "experimental-zbb");
         else if (Ext == "zbc")
-          setFeatureBits(RISCV::FeatureExtZbc, "experimental-zbc");
+          setFeatureBits(RISCV::FeatureStdExtZbc, "experimental-zbc");
         else if (Ext == "zbe")
-          setFeatureBits(RISCV::FeatureExtZbe, "experimental-zbe");
+          setFeatureBits(RISCV::FeatureStdExtZbe, "experimental-zbe");
         else if (Ext == "zbf")
-          setFeatureBits(RISCV::FeatureExtZbf, "experimental-zbf");
+          setFeatureBits(RISCV::FeatureStdExtZbf, "experimental-zbf");
         else if (Ext == "zbm")
-          setFeatureBits(RISCV::FeatureExtZbm, "experimental-zbm");
+          setFeatureBits(RISCV::FeatureStdExtZbm, "experimental-zbm");
         else if (Ext == "zbp")
-          setFeatureBits(RISCV::FeatureExtZbp, "experimental-zbp");
-        else if (Ext == "zbproposedc")
-          setFeatureBits(RISCV::FeatureExtZbproposedc,
-                         "experimental-zbproposedc");
+          setFeatureBits(RISCV::FeatureStdExtZbp, "experimental-zbp");
         else if (Ext == "zbr")
-          setFeatureBits(RISCV::FeatureExtZbr, "experimental-zbr");
+          setFeatureBits(RISCV::FeatureStdExtZbr, "experimental-zbr");
         else if (Ext == "zbs")
-          setFeatureBits(RISCV::FeatureExtZbs, "experimental-zbs");
+          setFeatureBits(RISCV::FeatureStdExtZbs, "experimental-zbs");
         else if (Ext == "zbt")
-          setFeatureBits(RISCV::FeatureExtZbt, "experimental-zbt");
+          setFeatureBits(RISCV::FeatureStdExtZbt, "experimental-zbt");
         else if (Ext == "zfh")
-          setFeatureBits(RISCV::FeatureExtZfh, "experimental-zfh");
+          setFeatureBits(RISCV::FeatureStdExtZfh, "experimental-zfh");
         else if (Ext == "zvamo")
-          setFeatureBits(RISCV::FeatureExtZvamo, "experimental-zvamo");
+          setFeatureBits(RISCV::FeatureStdExtZvamo, "experimental-zvamo");
         else if (Ext == "zvlsseg")
           setFeatureBits(RISCV::FeatureStdExtZvlsseg, "experimental-zvlsseg");
         else
@@ -2155,31 +2186,29 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
         formalArchStr = (Twine(formalArchStr) + "_b0p93").str();
       if (getFeatureBits(RISCV::FeatureStdExtV))
         formalArchStr = (Twine(formalArchStr) + "_v0p10").str();
-      if (getFeatureBits(RISCV::FeatureExtZfh))
+      if (getFeatureBits(RISCV::FeatureStdExtZfh))
         formalArchStr = (Twine(formalArchStr) + "_zfh0p1").str();
-      if (getFeatureBits(RISCV::FeatureExtZba))
+      if (getFeatureBits(RISCV::FeatureStdExtZba))
         formalArchStr = (Twine(formalArchStr) + "_zba0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbb))
+      if (getFeatureBits(RISCV::FeatureStdExtZbb))
         formalArchStr = (Twine(formalArchStr) + "_zbb0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbc))
+      if (getFeatureBits(RISCV::FeatureStdExtZbc))
         formalArchStr = (Twine(formalArchStr) + "_zbc0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbe))
+      if (getFeatureBits(RISCV::FeatureStdExtZbe))
         formalArchStr = (Twine(formalArchStr) + "_zbe0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbf))
+      if (getFeatureBits(RISCV::FeatureStdExtZbf))
         formalArchStr = (Twine(formalArchStr) + "_zbf0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbm))
+      if (getFeatureBits(RISCV::FeatureStdExtZbm))
         formalArchStr = (Twine(formalArchStr) + "_zbm0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbp))
+      if (getFeatureBits(RISCV::FeatureStdExtZbp))
         formalArchStr = (Twine(formalArchStr) + "_zbp0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbproposedc))
-        formalArchStr = (Twine(formalArchStr) + "_zbproposedc0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbr))
+      if (getFeatureBits(RISCV::FeatureStdExtZbr))
         formalArchStr = (Twine(formalArchStr) + "_zbr0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbs))
+      if (getFeatureBits(RISCV::FeatureStdExtZbs))
         formalArchStr = (Twine(formalArchStr) + "_zbs0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZbt))
+      if (getFeatureBits(RISCV::FeatureStdExtZbt))
         formalArchStr = (Twine(formalArchStr) + "_zbt0p93").str();
-      if (getFeatureBits(RISCV::FeatureExtZvamo))
+      if (getFeatureBits(RISCV::FeatureStdExtZvamo))
         formalArchStr = (Twine(formalArchStr) + "_zvamo0p10").str();
       if (getFeatureBits(RISCV::FeatureStdExtZvlsseg))
         formalArchStr = (Twine(formalArchStr) + "_zvlsseg0p10").str();
@@ -2189,6 +2218,37 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
   }
 
   return false;
+}
+
+/// parseDirectiveInsn
+/// ::= .insn [ format encoding, (operands (, operands)*) ]
+bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+
+  // Expect instruction format as identifier.
+  StringRef Format;
+  SMLoc ErrorLoc = Parser.getTok().getLoc();
+  if (Parser.parseIdentifier(Format))
+    return Error(ErrorLoc, "expected instruction format");
+
+  if (Format != "r" && Format != "r4" && Format != "i" && Format != "b" &&
+      Format != "sb" && Format != "u" && Format != "j" && Format != "uj" &&
+      Format != "s")
+    return Error(ErrorLoc, "invalid instruction format");
+
+  std::string FormatName = (".insn_" + Format).str();
+
+  ParseInstructionInfo Info;
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>, 8> Operands;
+
+  if (ParseInstruction(Info, FormatName, L, Operands))
+    return true;
+
+  unsigned Opcode;
+  uint64_t ErrorInfo;
+  return MatchAndEmitInstruction(L, Opcode, Operands, Parser.getStreamer(),
+                                 ErrorInfo,
+                                 /*MatchingInlineAsm=*/false);
 }
 
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
@@ -2201,14 +2261,19 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
 
 void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
                                  MCStreamer &Out) {
-  RISCVMatInt::InstSeq Seq;
-  RISCVMatInt::generateInstSeq(Value, isRV64(), Seq);
+  RISCVMatInt::InstSeq Seq =
+      RISCVMatInt::generateInstSeq(Value, getSTI().getFeatureBits());
 
   MCRegister SrcReg = RISCV::X0;
   for (RISCVMatInt::Inst &Inst : Seq) {
     if (Inst.Opc == RISCV::LUI) {
       emitToStreamer(
           Out, MCInstBuilder(RISCV::LUI).addReg(DestReg).addImm(Inst.Imm));
+    } else if (Inst.Opc == RISCV::ADDUW) {
+      emitToStreamer(Out, MCInstBuilder(RISCV::ADDUW)
+                              .addReg(DestReg)
+                              .addReg(SrcReg)
+                              .addReg(RISCV::X0));
     } else {
       emitToStreamer(
           Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addImm(
@@ -2325,10 +2390,10 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   //
   //   TmpLabel: AUIPC tmp, %pcrel_hi(symbol)
   //             [S|L]X    rd, %pcrel_lo(TmpLabel)(tmp)
-  MCOperand DestReg = Inst.getOperand(0);
+  unsigned DestRegOpIdx = HasTmpReg ? 1 : 0;
+  MCOperand DestReg = Inst.getOperand(DestRegOpIdx);
   unsigned SymbolOpIdx = HasTmpReg ? 2 : 1;
-  unsigned TmpRegOpIdx = HasTmpReg ? 1 : 0;
-  MCOperand TmpReg = Inst.getOperand(TmpRegOpIdx);
+  MCOperand TmpReg = Inst.getOperand(0);
   const MCExpr *Symbol = Inst.getOperand(SymbolOpIdx).getExpr();
   emitAuipcInstPair(DestReg, TmpReg, Symbol, RISCVMCExpr::VK_RISCV_PCREL_HI,
                     Opcode, IDLoc, Out);
@@ -2395,7 +2460,8 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                             .addOperand(Inst.getOperand(0))
                             .addOperand(Inst.getOperand(0))
                             .addReg(RISCV::V0));
-  } else if (Inst.getNumOperands() == 5) {
+  } else if (Inst.getNumOperands() == 5 &&
+             Inst.getOperand(0).getReg() == RISCV::V0) {
     // masked va >= x, vd == v0
     //
     //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
@@ -2413,6 +2479,31 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                             .addOperand(Inst.getOperand(0))
                             .addOperand(Inst.getOperand(0))
                             .addOperand(Inst.getOperand(1)));
+  } else if (Inst.getNumOperands() == 5) {
+    // masked va >= x, any vd
+    //
+    // pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
+    // expansion: vmslt{u}.vx vt, va, x; vmandnot.mm vt, v0, vt; vmandnot.mm vd,
+    // vd, v0; vmor.mm vd, vt, vd
+    assert(Inst.getOperand(1).getReg() != RISCV::V0 &&
+           "The temporary vector register should not be V0.");
+    emitToStreamer(Out, MCInstBuilder(Opcode)
+                            .addOperand(Inst.getOperand(1))
+                            .addOperand(Inst.getOperand(2))
+                            .addOperand(Inst.getOperand(3))
+                            .addReg(RISCV::NoRegister));
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDNOT_MM)
+                            .addOperand(Inst.getOperand(1))
+                            .addReg(RISCV::V0)
+                            .addOperand(Inst.getOperand(1)));
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDNOT_MM)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0))
+                            .addReg(RISCV::V0));
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMOR_MM)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addOperand(Inst.getOperand(0)));
   }
 }
 
@@ -2436,9 +2527,20 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultMaskRegOp() const {
 
 bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
+  if (Inst.getOpcode() == RISCV::PseudoVMSGEU_VX_M_T ||
+      Inst.getOpcode() == RISCV::PseudoVMSGE_VX_M_T) {
+    unsigned DestReg = Inst.getOperand(0).getReg();
+    unsigned TempReg = Inst.getOperand(1).getReg();
+    if (DestReg == TempReg) {
+      SMLoc Loc = Operands.back()->getStartLoc();
+      return Error(Loc, "The temporary vector register cannot be the same as "
+                        "the destination register.");
+    }
+  }
+
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
-  unsigned Constraints =
-      (MCID.TSFlags & RISCVII::ConstraintMask) >> RISCVII::ConstraintShift;
+  RISCVII::VConstraintType Constraints =
+      RISCVII::getConstraint(MCID.TSFlags);
   if (Constraints == RISCVII::NoConstraint)
     return false;
 

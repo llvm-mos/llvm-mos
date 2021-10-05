@@ -37,6 +37,12 @@ whether the required libraries have been built, you can use the
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
+In the default configuration, the tests are built against headers that form a
+fake installation root of libc++. This installation root has to be updated when
+changes are made to the headers, so you should re-run the `cxx-test-depends`
+target before running the tests manually with `lit` when you make any sort of
+change, including to the headers.
+
 Sometimes you'll want to change the way LIT is running the tests. Custom options
 can be specified using the `--param=<name>=<val>` flag. The most common option
 you'll want to change is the standard dialect (ie -std=c++XX). By default the
@@ -120,7 +126,7 @@ default.
 
 .. option:: std=<standard version>
 
-  **Values**: c++03, c++11, c++14, c++17, c++2a, c++2b
+  **Values**: c++03, c++11, c++14, c++17, c++20, c++2b
 
   Change the standard version used when building the tests.
 
@@ -147,7 +153,7 @@ default.
   **Default**: False
 
   Enable or disable testing against the installed version of libc++ library.
-  This impacts whether the ``with_system_cxx_lib`` Lit feature is defined or
+  This impacts whether the ``use_system_cxx_lib`` Lit feature is defined or
   not. The ``cxx_library_root`` and ``cxx_runtime_root`` parameters should
   still be used to specify the path of the library to link to and run against,
   respectively.
@@ -221,12 +227,11 @@ An example build would look like:
 .. code-block:: bash
 
   $ cd build
-  $ cmake [options] <path to libcxx sources>
-  $ make cxx-benchmarks
+  $ ninja cxx-benchmarks
 
 This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
-``build/benchmarks``.
+``build/projects/libcxx/benchmarks``.
 
 The benchmarks can also be built against the platforms native standard library
 using the ``-DLIBCXX_BUILD_BENCHMARKS_NATIVE_STDLIB=ON`` CMake option. This
@@ -249,8 +254,7 @@ For example:
 
 .. code-block:: bash
 
-  $ cd build/benchmarks
-  $ make cxx-benchmarks
+  $ cd build/projects/libcxx/benchmarks
   $ ./algorithms.libcxx.out # Runs all the benchmarks
   $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
 

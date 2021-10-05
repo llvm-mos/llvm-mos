@@ -42,6 +42,7 @@ endfunction(collect_object_file_deps)
 # Usage:
 #     add_entrypoint_library(
 #       DEPENDS <list of add_entrypoint_object targets>
+#       EXT_DEPS <list of external object targets, no type checking is done>
 #     )
 #
 # NOTE: If one wants an entrypoint to be availabe in a library, then they will
@@ -52,7 +53,7 @@ function(add_entrypoint_library target_name)
     "ENTRYPOINT_LIBRARY"
     "" # No optional arguments
     "" # No single value arguments
-    "DEPENDS" # Multi-value arguments
+    "DEPENDS;EXT_DEPS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
@@ -76,16 +77,17 @@ function(add_entrypoint_library target_name)
   foreach(dep IN LISTS all_deps)
     list(APPEND objects $<TARGET_OBJECTS:${dep}>)
   endforeach(dep)
+
+  foreach(dep IN LISTS ENTRYPOINT_LIBRARY_EXT_DEPS)
+    list(APPEND objects $<TARGET_OBJECTS:${dep}>)
+  endforeach(dep)
+
   add_library(
     ${target_name}
     STATIC
     ${objects}
   )
-  set_target_properties(
-    ${target_name}
-    PROPERTIES
-      ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  )
+  set_target_properties(${target_name}  PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endfunction(add_entrypoint_library)
 
 # Rule to build a shared library of redirector objects.
@@ -112,18 +114,9 @@ function(add_redirector_library target_name)
     SHARED
     ${obj_files}
   )
-  set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-  target_link_libraries(
-    ${target_name}
-    -nostdlib -lc -lm
-  )
-
-  set_target_properties(
-    ${target_name}
-    PROPERTIES
-      LINKER_LANGUAGE "C"
-  )
+  set_target_properties(${target_name}  PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  target_link_libraries(${target_name}  -nostdlib -lc -lm)
+  set_target_properties(${target_name}  PROPERTIES LINKER_LANGUAGE "C")
 endfunction(add_redirector_library)
 
 set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")

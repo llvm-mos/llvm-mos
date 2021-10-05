@@ -28,6 +28,18 @@
 // Don't format out enums and structs.
 // clang-format off
 
+/// return flags of __tgt_target_XXX public APIs
+enum __tgt_target_return_t : int {
+  /// successful offload executed on a target device
+  OMP_TGT_SUCCESS = 0,
+  /// offload may not execute on the requested target device
+  /// this scenario can be caused by the device not available or unsupported
+  /// as described in the Execution Model in the specifcation
+  /// this status may not be used for target device execution failure
+  /// which should be handled internally in libomptarget
+  OMP_TGT_FAIL = ~0
+};
+
 /// Data attributes for each data reference used in an OpenMP target region.
 enum tgt_map_type {
   // No flags
@@ -56,6 +68,10 @@ enum tgt_map_type {
   OMP_TGT_MAPTYPE_CLOSE           = 0x400,
   // runtime error if not already allocated
   OMP_TGT_MAPTYPE_PRESENT         = 0x1000,
+  // use a separate reference counter so that the data cannot be unmapped within
+  // the structured region
+  // This is an OpenMP extension for the sake of OpenACC support.
+  OMP_TGT_MAPTYPE_OMPX_HOLD       = 0x2000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG      = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
@@ -184,18 +200,19 @@ int omp_get_num_devices(void);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t size, int device_num);
 void omp_target_free(void *device_ptr, int device_num);
-int omp_target_is_present(void *ptr, int device_num);
-int omp_target_memcpy(void *dst, void *src, size_t length, size_t dst_offset,
-                      size_t src_offset, int dst_device, int src_device);
-int omp_target_memcpy_rect(void *dst, void *src, size_t element_size,
+int omp_target_is_present(const void *ptr, int device_num);
+int omp_target_memcpy(void *dst, const void *src, size_t length,
+                      size_t dst_offset, size_t src_offset, int dst_device,
+                      int src_device);
+int omp_target_memcpy_rect(void *dst, const void *src, size_t element_size,
                            int num_dims, const size_t *volume,
                            const size_t *dst_offsets, const size_t *src_offsets,
                            const size_t *dst_dimensions,
                            const size_t *src_dimensions, int dst_device,
                            int src_device);
-int omp_target_associate_ptr(void *host_ptr, void *device_ptr, size_t size,
-                             size_t device_offset, int device_num);
-int omp_target_disassociate_ptr(void *host_ptr, int device_num);
+int omp_target_associate_ptr(const void *host_ptr, const void *device_ptr,
+                             size_t size, size_t device_offset, int device_num);
+int omp_target_disassociate_ptr(const void *host_ptr, int device_num);
 
 /// Explicit target memory allocators
 /// Using the llvm_ prefix until they become part of the OpenMP standard.
@@ -208,6 +225,9 @@ void __tgt_register_requires(int64_t flags);
 
 /// adds a target shared library to the target execution image
 void __tgt_register_lib(__tgt_bin_desc *desc);
+
+/// Initialize all RTLs at once
+void __tgt_init_all_rtls();
 
 /// removes a target shared library from the target execution image
 void __tgt_unregister_lib(__tgt_bin_desc *desc);
@@ -330,6 +350,9 @@ void __kmpc_push_target_tripcount(int64_t device_id, uint64_t loop_tripcount);
 void __kmpc_push_target_tripcount_mapper(ident_t *loc, int64_t device_id,
                                          uint64_t loop_tripcount);
 
+void __tgt_set_info_flag(uint32_t);
+
+int __tgt_print_device_info(int64_t device_id);
 #ifdef __cplusplus
 }
 #endif

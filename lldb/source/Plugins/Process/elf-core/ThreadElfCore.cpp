@@ -20,6 +20,7 @@
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
+#include "Plugins/Process/Utility/RegisterContextNetBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextNetBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextOpenBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextOpenBSD_x86_64.h"
@@ -107,6 +108,9 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
         break;
+      case llvm::Triple::x86:
+        reg_interface = new RegisterContextNetBSD_i386(arch);
+        break;
       case llvm::Triple::x86_64:
         reg_interface = new RegisterContextNetBSD_x86_64(arch);
         break;
@@ -167,9 +171,8 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     switch (arch.GetMachine()) {
     case llvm::Triple::aarch64:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm64>(
-          *this, std::make_unique<RegisterInfoPOSIX_arm64>(arch),
-          m_gpregset_data, m_notes);
+      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_arm64::Create(
+          *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::arm:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm>(

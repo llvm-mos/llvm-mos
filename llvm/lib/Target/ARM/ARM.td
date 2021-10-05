@@ -437,6 +437,11 @@ def FeatureLOB            : SubtargetFeature<"lob", "HasLOB", "true",
                                              "Enable Low Overhead Branch "
                                              "extensions">;
 
+def FeatureFixCMSE_CVE_2021_35465 : SubtargetFeature<"fix-cmse-cve-2021-35465",
+                                        "FixCMSE_CVE_2021_35465", "true",
+                                        "Mitigate against the cve-2021-35465 "
+                                        "security vulnurability">;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
@@ -573,8 +578,9 @@ def FeatureHardenSlsRetBr : SubtargetFeature<"harden-sls-retbr",
 def FeatureHardenSlsBlr : SubtargetFeature<"harden-sls-blr",
   "HardenSlsBlr", "true",
   "Harden against straight line speculation across indirect calls">;
-
-
+def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
+  "HardenSlsNoComdat", "true",
+  "Generate thunk code for SLS mitigation in the normal text section">;
 
 //===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.
@@ -1000,12 +1006,15 @@ def : Processor<"arm1136jf-s",      ARMV6Itineraries,   [ARMv6,
                                                          FeatureVFP2,
                                                          FeatureHasSlowFPVMLx]>;
 
-def : Processor<"cortex-m0",        ARMV6Itineraries,   [ARMv6m]>;
-def : Processor<"cortex-m0plus",    ARMV6Itineraries,   [ARMv6m]>;
-def : Processor<"cortex-m1",        ARMV6Itineraries,   [ARMv6m]>;
-def : Processor<"sc000",            ARMV6Itineraries,   [ARMv6m]>;
+def : Processor<"cortex-m0",        ARMV6Itineraries,   [ARMv6m,
+                                                         FeatureHasNoBranchPredictor]>;
+def : Processor<"cortex-m0plus",    ARMV6Itineraries,   [ARMv6m,
+                                                         FeatureHasNoBranchPredictor]>;
+def : Processor<"cortex-m1",        ARMV6Itineraries,   [ARMv6m,
+                                                         FeatureHasNoBranchPredictor]>;
+def : Processor<"sc000",            ARMV6Itineraries,   [ARMv6m,
+                                                         FeatureHasNoBranchPredictor]>;
 
-def : Processor<"arm1176j-s",       ARMV6Itineraries,   [ARMv6kz]>;
 def : Processor<"arm1176jz-s",      ARMV6Itineraries,   [ARMv6kz]>;
 def : Processor<"arm1176jzf-s",     ARMV6Itineraries,   [ARMv6kz,
                                                          FeatureVFP2,
@@ -1199,7 +1208,8 @@ def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
                                                          FeatureUseMISched]>;
 
 def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
-                                                         FeatureNoMovt]>;
+                                                         FeatureNoMovt,
+                                                         FeatureHasNoBranchPredictor]>;
 
 def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
                                                          FeatureDSP,
@@ -1208,7 +1218,8 @@ def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
-                                                         FeatureHasNoBranchPredictor]>;
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureDSP,
@@ -1217,7 +1228,8 @@ def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
-                                                         FeatureHasNoBranchPredictor]>;
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m55", CortexM4Model,      [ARMv81mMainline,
                                                          FeatureDSP,
@@ -1226,7 +1238,8 @@ def : ProcessorModel<"cortex-m55", CortexM4Model,      [ARMv81mMainline,
                                                          FeatureHasNoBranchPredictor,
                                                          FeaturePrefLoopAlign32,
                                                          FeatureHasSlowFPVMLx,
-                                                         HasMVEFloatOps]>;
+                                                         HasMVEFloatOps,
+                                                         FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,

@@ -25,7 +25,7 @@
 #include <string>
 
 // C inclues
-#include <stdlib.h>
+#include <cstdlib>
 #include <sys/sysctl.h>
 #include <sys/syslimits.h>
 #include <sys/types.h>
@@ -243,6 +243,12 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
     len = sizeof(is_64_bit_capable);
     ::sysctlbyname("hw.cpu64bit_capable", &is_64_bit_capable, &len, NULL, 0);
 
+    if (cputype == CPU_TYPE_ARM64 && cpusubtype == CPU_SUBTYPE_ARM64E) {
+      // The arm64e architecture is a preview. Pretend the host architecture
+      // is arm64.
+      cpusubtype = CPU_SUBTYPE_ARM64_ALL;
+    }
+
     if (is_64_bit_capable) {
       if (cputype & CPU_ARCH_ABI64) {
         // We have a 64 bit kernel on a 64 bit system
@@ -377,17 +383,22 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
 
   auto xcrun = [](const std::string &sdk,
                   llvm::StringRef developer_dir = "") -> std::string {
-    std::string xcrun_cmd = "xcrun --show-sdk-path --sdk " + sdk;
-    if (!developer_dir.empty())
-      xcrun_cmd = "/usr/bin/env DEVELOPER_DIR=\"" + developer_dir.str() +
-                  "\" " + xcrun_cmd;
+    Args args;
+    if (!developer_dir.empty()) {
+      args.AppendArgument("/usr/bin/env");
+      args.AppendArgument("DEVELOPER_DIR=" + developer_dir.str());
+    }
+    args.AppendArgument("/usr/bin/xcrun");
+    args.AppendArgument("--show-sdk-path");
+    args.AppendArgument("--sdk");
+    args.AppendArgument(sdk);
 
     int status = 0;
     int signo = 0;
     std::string output_str;
     lldb_private::Status error =
-        Host::RunShellCommand(xcrun_cmd, FileSpec(), &status, &signo,
-                              &output_str, std::chrono::seconds(15));
+        Host::RunShellCommand(args, FileSpec(), &status, &signo, &output_str,
+                              std::chrono::seconds(15));
 
     // Check that xcrun return something useful.
     if (status != 0 || output_str.empty())
@@ -507,10 +518,10 @@ extern "C" bool _dyld_get_shared_cache_uuid(uuid_t uuid);
 namespace {
 class SharedCacheInfo {
 public:
-  const UUID &GetUUID() const { return m_uuid; };
+  const UUID &GetUUID() const { return m_uuid; }
   const llvm::StringMap<SharedCacheImageInfo> &GetImages() const {
     return m_images;
-  };
+  }
 
   SharedCacheInfo();
 

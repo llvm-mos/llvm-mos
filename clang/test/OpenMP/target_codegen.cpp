@@ -394,7 +394,7 @@ int foo(int n) {
 
 // CHECK: define internal void [[HVT0_:@.+]](i[[SZ]]* {{%[^,]+}}, i[[SZ]] {{%[^,]+}})
 // CHECK: define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, [[KMP_TASK_T_WITH_PRIVATES]]* noalias %1)
-// CHECK-DAG: [[RET:%.+]] = call i32 @__tgt_target_nowait_mapper(%struct.ident_t* @{{.+}}, i64 [[DEVICE:%.+]], i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SIZE:%.+]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0), i8** null, i8** null)
+// CHECK-DAG: [[RET:%.+]] = call i32 @__tgt_target_nowait_mapper(%struct.ident_t* @{{.+}}, i64 [[DEVICE:%.+]], i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i64* [[SIZE:%.+]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0), i8** null, i8** null, i32 0, i8* null, i32 0, i8* null)
 // CHECK-DAG: [[DEVICE]] = sext i32 [[DEV:%.+]] to i64
 // CHECK-DAG: [[DEV]] = load i32, i32* [[DEVADDR:%.+]], align
 // CHECK-DAG: [[DEVADDR]] = getelementptr inbounds [[ANON_T]], [[ANON_T]]* {{%.+}}, i32 0, i32 2
@@ -404,7 +404,8 @@ int foo(int n) {
 // CHECK-DAG: [[BPRADDR]] = load [2 x i8*]*, [2 x i8*]** [[FPPTR_BPR:%.+]], align
 // CHECK-DAG: [[PRADDR]] = load [2 x i8*]*, [2 x i8*]** [[FPPTR_PR:%.+]], align
 // CHECK-DAG: [[SIZEADDR]] = load [2 x i64]*, [2 x i64]** [[FPPTR_SIZE:%.+]], align
-// CHECK-DAG: call void (i8*, ...) {{%[0-9]+}}(i8* {{%[^,]+}}, i[[SZ]]*** [[FPPTR_PLOCAL:%.+]], i32** [[FPPTR_GLOBAL:%.+]], [2 x i8*]** [[FPPTR_BPR]], [2 x i8*]** [[FPPTR_PR]], [2 x i64]** [[FPPTR_SIZE]])
+// CHECK-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%[0-9]+}} to void (i8*,
+// CHECK-DAG: call void [[FN]](i8* {{%[^,]+}}, i[[SZ]]*** [[FPPTR_PLOCAL:%.+]], i32** [[FPPTR_GLOBAL:%.+]], [2 x i8*]** [[FPPTR_BPR]], [2 x i8*]** [[FPPTR_PR]], [2 x i64]** [[FPPTR_SIZE]])
 // CHECK-DAG: [[PLOCALADDR:%.+]] = load i[[SZ]]**, i[[SZ]]*** [[FPPTR_PLOCAL]], align
 // CHECK-DAG: {{%.+}} = load i32*, i32** [[FPPTR_GLOBAL:%.+]], align
 // CHECK: [[ERROR:%.+]] = icmp ne i32 [[RET]], 0

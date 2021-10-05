@@ -15,8 +15,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscvtti"
 
-int RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind) {
+InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                            TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy() &&
          "getIntImmCost can only estimate cost of materialising integers");
 
@@ -27,13 +27,13 @@ int RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
   // Otherwise, we check how many instructions it will take to materialise.
   const DataLayout &DL = getDataLayout();
   return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty),
-                                    getST()->is64Bit());
+                                    getST()->getFeatureBits());
 }
 
-int RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                    const APInt &Imm, Type *Ty,
-                                    TTI::TargetCostKind CostKind,
-                                    Instruction *Inst) {
+InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                                const APInt &Imm, Type *Ty,
+                                                TTI::TargetCostKind CostKind,
+                                                Instruction *Inst) {
   assert(Ty->isIntegerTy() &&
          "getIntImmCost can only estimate cost of materialising integers");
 
@@ -52,8 +52,15 @@ int RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // split up large offsets in GEP into better parts than ConstantHoisting
     // can.
     return TTI::TCC_Free;
-  case Instruction::Add:
   case Instruction::And:
+    // zext.h
+    if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())
+      return TTI::TCC_Free;
+    // zext.w
+    if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZbb())
+      return TTI::TCC_Free;
+    LLVM_FALLTHROUGH;
+  case Instruction::Add:
   case Instruction::Or:
   case Instruction::Xor:
   case Instruction::Mul:
@@ -88,9 +95,10 @@ int RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   return TTI::TCC_Free;
 }
 
-int RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
-                                      const APInt &Imm, Type *Ty,
-                                      TTI::TargetCostKind CostKind) {
+InstructionCost
+RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
+                                  const APInt &Imm, Type *Ty,
+                                  TTI::TargetCostKind CostKind) {
   // Prevent hoisting in unknown cases.
   return TTI::TCC_Free;
 }
@@ -111,18 +119,6 @@ bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   // These reductions have no equivalent in RVV
   case Intrinsic::vector_reduce_mul:
   case Intrinsic::vector_reduce_fmul:
-  // The fmin and fmax intrinsics are not currently supported due to a
-  // discrepancy between the LLVM semantics and the RVV 0.10 ISA behaviour with
-  // regards to signaling NaNs: the vector fmin/fmax reduction intrinsics match
-  // the behaviour minnum/maxnum intrinsics, whereas the vfredmin/vfredmax
-  // instructions match the vfmin/vfmax instructions which match the equivalent
-  // scalar fmin/fmax instructions as defined in 2.2 F/D/Q extension (see
-  // https://bugs.llvm.org/show_bug.cgi?id=27363).
-  // This behaviour is likely fixed in version 2.3 of the RISC-V F/D/Q
-  // extension, where fmin/fmax behave like minnum/maxnum, but until then the
-  // intrinsics are left unsupported.
-  case Intrinsic::vector_reduce_fmax:
-  case Intrinsic::vector_reduce_fmin:
     return true;
   }
 }
@@ -141,7 +137,7 @@ Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
   return BaseT::getMaxVScale();
 }
 
-unsigned RISCVTTIImpl::getGatherScatterOpCost(
+InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -162,7 +158,7 @@ unsigned RISCVTTIImpl::getGatherScatterOpCost(
 
   auto *VTy = cast<FixedVectorType>(DataTy);
   unsigned NumLoads = VTy->getNumElements();
-  unsigned MemOpCost =
+  InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0, CostKind, I);
   return NumLoads * MemOpCost;
 }

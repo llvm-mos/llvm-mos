@@ -2614,7 +2614,7 @@ void Sema::WarnExactTypedMethods(ObjCMethodDecl *ImpMethodDecl,
   if (MethodDecl->getImplementationControl() == ObjCMethodDecl::Optional)
     return;
   // don't issue warning when primary class's method is
-  // depecated/unavailable.
+  // deprecated/unavailable.
   if (MethodDecl->hasAttr<UnavailableAttr>() ||
       MethodDecl->hasAttr<DeprecatedAttr>())
     return;
@@ -3427,8 +3427,10 @@ void Sema::AddMethodToGlobalPool(ObjCMethodDecl *Method, bool impl,
 
   GlobalMethodPool::iterator Pos = MethodPool.find(Method->getSelector());
   if (Pos == MethodPool.end())
-    Pos = MethodPool.insert(std::make_pair(Method->getSelector(),
-                                           GlobalMethods())).first;
+    Pos = MethodPool
+              .insert(std::make_pair(Method->getSelector(),
+                                     GlobalMethodPool::Lists()))
+              .first;
 
   Method->setDefined(impl);
 
@@ -3636,7 +3638,7 @@ ObjCMethodDecl *Sema::LookupImplementedMethodInGlobalPool(Selector Sel) {
   if (Pos == MethodPool.end())
     return nullptr;
 
-  GlobalMethods &Methods = Pos->second;
+  GlobalMethodPool::Lists &Methods = Pos->second;
   for (const ObjCMethodList *Method = &Methods.first; Method;
        Method = Method->getNext())
     if (Method->getMethod() &&
@@ -4407,10 +4409,12 @@ private:
 
 void Sema::CheckObjCMethodDirectOverrides(ObjCMethodDecl *method,
                                           ObjCMethodDecl *overridden) {
-  if (const auto *attr = overridden->getAttr<ObjCDirectAttr>()) {
+  if (overridden->isDirectMethod()) {
+    const auto *attr = overridden->getAttr<ObjCDirectAttr>();
     Diag(method->getLocation(), diag::err_objc_override_direct_method);
     Diag(attr->getLocation(), diag::note_previous_declaration);
-  } else if (const auto *attr = method->getAttr<ObjCDirectAttr>()) {
+  } else if (method->isDirectMethod()) {
+    const auto *attr = method->getAttr<ObjCDirectAttr>();
     Diag(attr->getLocation(), diag::err_objc_direct_on_override)
         << isa<ObjCProtocolDecl>(overridden->getDeclContext());
     Diag(overridden->getLocation(), diag::note_previous_declaration);
@@ -4830,7 +4834,7 @@ Decl *Sema::ActOnMethodDeclaration(
     // If this method overrides a previous @synthesize declaration,
     // register it with the property.  Linear search through all
     // properties here, because the autosynthesized stub hasn't been
-    // made visible yet, so it can be overriden by a later
+    // made visible yet, so it can be overridden by a later
     // user-specified implementation.
     for (ObjCPropertyImplDecl *PropertyImpl : ImpDecl->property_impls()) {
       if (auto *Setter = PropertyImpl->getSetterMethodDecl())
@@ -4856,7 +4860,8 @@ Decl *Sema::ActOnMethodDeclaration(
     // the canonical declaration.
     if (!ObjCMethod->isDirectMethod()) {
       const ObjCMethodDecl *CanonicalMD = ObjCMethod->getCanonicalDecl();
-      if (const auto *attr = CanonicalMD->getAttr<ObjCDirectAttr>()) {
+      if (CanonicalMD->isDirectMethod()) {
+        const auto *attr = CanonicalMD->getAttr<ObjCDirectAttr>();
         ObjCMethod->addAttr(
             ObjCDirectAttr::CreateImplicit(Context, attr->getLocation()));
       }
@@ -4901,14 +4906,16 @@ Decl *Sema::ActOnMethodDeclaration(
             Diag(IMD->getLocation(), diag::note_previous_declaration);
           };
 
-          if (const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>()) {
+          if (ObjCMethod->isDirectMethod()) {
+            const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>();
             if (ObjCMethod->getCanonicalDecl() != IMD) {
               diagContainerMismatch();
             } else if (!IMD->isDirectMethod()) {
               Diag(attr->getLocation(), diag::err_objc_direct_missing_on_decl);
               Diag(IMD->getLocation(), diag::note_previous_declaration);
             }
-          } else if (const auto *attr = IMD->getAttr<ObjCDirectAttr>()) {
+          } else if (IMD->isDirectMethod()) {
+            const auto *attr = IMD->getAttr<ObjCDirectAttr>();
             if (ObjCMethod->getCanonicalDecl() != IMD) {
               diagContainerMismatch();
             } else {

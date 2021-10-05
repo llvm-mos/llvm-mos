@@ -1,4 +1,4 @@
-//===-- runtime/edit-output.cpp ---------------------------------*- C++ -*-===//
+//===-- runtime/edit-output.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -74,14 +74,14 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit, INT n) {
   } else if (n == 0) {
     leadingZeroes = 1;
   }
-  int total{signChars + leadingZeroes + digits};
-  if (editWidth > 0 && total > editWidth) {
+  int subTotal{signChars + leadingZeroes + digits};
+  int leadingSpaces{std::max(0, editWidth - subTotal)};
+  if (editWidth > 0 && leadingSpaces + subTotal > editWidth) {
     return io.EmitRepeated('*', editWidth);
   }
-  int leadingSpaces{std::max(0, editWidth - total)};
   if (edit.IsListDirected()) {
-    if (static_cast<std::size_t>(total) >
-            io.GetConnectionState().RemainingSpaceInRecord() &&
+    int total{std::max(leadingSpaces, 1) + subTotal};
+    if (io.GetConnectionState().NeedAdvance(static_cast<std::size_t>(total)) &&
         !io.AdvanceRecord()) {
       return false;
     }
@@ -135,9 +135,7 @@ bool RealOutputEditingBase::EmitPrefix(
             : 0};
     length += prefixLength + suffixLength;
     ConnectionState &connection{io_.GetConnectionState()};
-    return (connection.positionInRecord == 0 ||
-               length <= connection.RemainingSpaceInRecord() ||
-               io_.AdvanceRecord()) &&
+    return (!connection.NeedAdvance(length) || io_.AdvanceRecord()) &&
         io_.Emit(" (", prefixLength);
   } else if (width > length) {
     return io_.EmitRepeated(' ', width - length);
@@ -270,6 +268,7 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
   // Multiple conversions may be needed to get the right number of
   // effective rounded fractional digits.
   int extraDigits{0};
+  bool canIncrease{true};
   while (true) {
     decimal::ConversionToDecimalResult converted{
         Convert(extraDigits + fracDigits, edit, flags)};
@@ -279,11 +278,12 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
     }
     int scale{IsZero() ? 1 : edit.modes.scale}; // kP
     int expo{converted.decimalExponent + scale};
-    if (expo > extraDigits && extraDigits >= 0) {
+    if (expo > extraDigits && extraDigits >= 0 && canIncrease) {
       extraDigits = expo;
       if (!edit.digits.has_value()) { // F0
         fracDigits = sizeof buffer_ - extraDigits - 2; // sign & NUL
       }
+      canIncrease = false; // only once
       continue;
     } else if (expo < extraDigits && extraDigits > -fracDigits) {
       extraDigits = std::max(expo, -fracDigits);
@@ -416,7 +416,7 @@ bool RealOutputEditing<binaryPrecision>::Edit(const DataEdit &edit) {
 
 bool ListDirectedLogicalOutput(IoStatementState &io,
     ListDirectedStatementState<Direction::Output> &list, bool truth) {
-  return list.EmitLeadingSpaceOrAdvance(io, 1) && io.Emit(truth ? "T" : "F", 1);
+  return list.EmitLeadingSpaceOrAdvance(io) && io.Emit(truth ? "T" : "F", 1);
 }
 
 bool EditLogicalOutput(IoStatementState &io, const DataEdit &edit, bool truth) {
@@ -436,38 +436,51 @@ bool EditLogicalOutput(IoStatementState &io, const DataEdit &edit, bool truth) {
 bool ListDirectedDefaultCharacterOutput(IoStatementState &io,
     ListDirectedStatementState<Direction::Output> &list, const char *x,
     std::size_t length) {
-  bool ok{list.EmitLeadingSpaceOrAdvance(io, length, true)};
+  bool ok{true};
   MutableModes &modes{io.mutableModes()};
   ConnectionState &connection{io.GetConnectionState()};
   if (modes.delim) {
+    ok = ok && list.EmitLeadingSpaceOrAdvance(io);
     // Value is delimited with ' or " marks, and interior
-    // instances of that character are doubled.  When split
-    // over multiple lines, delimit each lines' part.
-    ok &= io.Emit(&modes.delim, 1);
+    // instances of that character are doubled.
+    ok = ok && io.Emit(&modes.delim, 1);
+    auto EmitOne{[&](char ch) {
+      if (connection.NeedAdvance(1)) {
+        ok = ok && io.AdvanceRecord();
+      }
+      ok = ok && io.Emit(&ch, 1);
+    }};
     for (std::size_t j{0}; j < length; ++j) {
-      if (list.NeedAdvance(connection, 2)) {
-        ok &= io.Emit(&modes.delim, 1) && io.AdvanceRecord() &&
-            io.Emit(&modes.delim, 1);
-      }
+      // Doubled delimiters must be put on the same record
+      // in order to be acceptable as list-directed or NAMELIST
+      // input; however, this requirement is not always possible
+      // when the records have a fixed length, as is the case with
+      // internal output.  The standard is silent on what should
+      // happen, and no two extant Fortran implementations do
+      // the same thing when tested with this case.
+      // This runtime splits the doubled delimiters across
+      // two records for lack of a better alternative.
       if (x[j] == modes.delim) {
-        ok &= io.EmitRepeated(modes.delim, 2);
-      } else {
-        ok &= io.Emit(&x[j], 1);
+        EmitOne(x[j]);
       }
+      EmitOne(x[j]);
     }
-    ok &= io.Emit(&modes.delim, 1);
+    EmitOne(modes.delim);
   } else {
     // Undelimited list-directed output
+    ok = ok &&
+        list.EmitLeadingSpaceOrAdvance(
+            io, length > 0 && !list.lastWasUndelimitedCharacter());
     std::size_t put{0};
-    while (put < length) {
+    while (ok && put < length) {
       auto chunk{std::min(length - put, connection.RemainingSpaceInRecord())};
-      ok &= io.Emit(x + put, chunk);
+      ok = ok && io.Emit(x + put, chunk);
       put += chunk;
       if (put < length) {
-        ok &= io.AdvanceRecord() && io.Emit(" ", 1);
+        ok = ok && io.AdvanceRecord() && io.Emit(" ", 1);
       }
     }
-    list.lastWasUndelimitedCharacter = true;
+    list.set_lastWasUndelimitedCharacter(true);
   }
   return ok;
 }

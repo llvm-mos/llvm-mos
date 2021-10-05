@@ -129,6 +129,7 @@ namespace {
   };
 
   struct GroupInfo {
+    llvm::StringRef GroupName;
     std::vector<const Record*> DiagsInGroup;
     std::vector<std::string> SubGroups;
     unsigned IDNo;
@@ -174,6 +175,7 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
     Record *Group = DiagGroups[i];
     GroupInfo &GI =
         DiagsInGroup[std::string(Group->getValueAsString("GroupName"))];
+    GI.GroupName = Group->getName();
     GI.Defs.push_back(Group);
 
     std::vector<Record*> SubGroups = Group->getValueAsListOfDefs("SubGroups");
@@ -557,7 +559,7 @@ struct PluralPiece : SelectPiece {
 struct DiffPiece : Piece {
   DiffPiece() : Piece(DiffPieceClass) {}
 
-  Piece *Options[2] = {};
+  Piece *Parts[4] = {};
   int Indexes[2] = {};
 
   static bool classof(const Piece *P) {
@@ -614,7 +616,7 @@ struct DiagnosticTextBuilder {
     return It->second.Root;
   }
 
-  LLVM_ATTRIBUTE_NORETURN void PrintFatalError(llvm::Twine const &Msg) const {
+  [[noreturn]] void PrintFatalError(llvm::Twine const &Msg) const {
     assert(EvaluatingRecord && "not evaluating a record?");
     llvm::PrintFatalError(EvaluatingRecord->getLoc(), Msg);
   }
@@ -633,9 +635,18 @@ private:
     }
 
     DiagText(DiagnosticTextBuilder &Builder, StringRef Text)
-        : Builder(Builder), Root(parseDiagText(Text)) {}
+        : Builder(Builder), Root(parseDiagText(Text, StopAt::End)) {}
 
-    Piece *parseDiagText(StringRef &Text, bool Nested = false);
+    enum class StopAt {
+      // Parse until the end of the string.
+      End,
+      // Additionally stop if we hit a non-nested '|' or '}'.
+      PipeOrCloseBrace,
+      // Additionally stop if we hit a non-nested '$'.
+      Dollar,
+    };
+
+    Piece *parseDiagText(StringRef &Text, StopAt Stop);
     int parseModifier(StringRef &) const;
 
   public:
@@ -901,7 +912,24 @@ struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
 
   void VisitPlural(PluralPiece *P) { VisitSelect(P); }
 
-  void VisitDiff(DiffPiece *P) { Visit(P->Options[1]); }
+  void VisitDiff(DiffPiece *P) {
+    // Render %diff{a $ b $ c|d}e,f as %select{a %e b %f c|d}.
+    PlaceholderPiece E(MT_Placeholder, P->Indexes[0]);
+    PlaceholderPiece F(MT_Placeholder, P->Indexes[1]);
+
+    MultiPiece FirstOption;
+    FirstOption.Pieces.push_back(P->Parts[0]);
+    FirstOption.Pieces.push_back(&E);
+    FirstOption.Pieces.push_back(P->Parts[1]);
+    FirstOption.Pieces.push_back(&F);
+    FirstOption.Pieces.push_back(P->Parts[2]);
+
+    SelectPiece Select(MT_Diff);
+    Select.Options.push_back(&FirstOption);
+    Select.Options.push_back(P->Parts[3]);
+
+    VisitSelect(&Select);
+  }
 
   std::vector<std::string> &RST;
 };
@@ -955,9 +983,13 @@ public:
 
   void VisitDiff(DiffPiece *P) {
     Result += "%diff{";
-    Visit(P->Options[0]);
+    Visit(P->Parts[0]);
+    Result += "$";
+    Visit(P->Parts[1]);
+    Result += "$";
+    Visit(P->Parts[2]);
     Result += "|";
-    Visit(P->Options[1]);
+    Visit(P->Parts[3]);
     Result += "}";
     addInt(mapIndex(P->Indexes[0]));
     Result += ",";
@@ -982,16 +1014,19 @@ int DiagnosticTextBuilder::DiagText::parseModifier(StringRef &Text) const {
 }
 
 Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
-                                                      bool Nested) {
+                                                      StopAt Stop) {
   std::vector<Piece *> Parsed;
+
+  constexpr llvm::StringLiteral StopSets[] = {"%", "%|}", "%|}$"};
+  llvm::StringRef StopSet = StopSets[static_cast<int>(Stop)];
 
   while (!Text.empty()) {
     size_t End = (size_t)-2;
     do
-      End = Nested ? Text.find_first_of("%|}", End + 2)
-                   : Text.find_first_of('%', End + 2);
-    while (End < Text.size() - 1 && Text[End] == '%' &&
-           (Text[End + 1] == '%' || Text[End + 1] == '|'));
+      End = Text.find_first_of(StopSet, End + 2);
+    while (
+        End < Text.size() - 1 && Text[End] == '%' &&
+        (Text[End + 1] == '%' || Text[End + 1] == '|' || Text[End + 1] == '$'));
 
     if (End) {
       Parsed.push_back(New<TextPiece>(Text.slice(0, End), "diagtext"));
@@ -1000,7 +1035,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
         break;
     }
 
-    if (Text[0] == '|' || Text[0] == '}')
+    if (Text[0] == '|' || Text[0] == '}' || Text[0] == '$')
       break;
 
     // Drop the '%'.
@@ -1023,6 +1058,12 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
                                .Case("", MT_Placeholder)
                                .Default(MT_Unknown);
 
+    auto ExpectAndConsume = [&](StringRef Prefix) {
+      if (!Text.consume_front(Prefix))
+        Builder.PrintFatalError("expected '" + Prefix + "' while parsing %" +
+                                Modifier);
+    };
+
     switch (ModType) {
     case MT_Unknown:
       Builder.PrintFatalError("Unknown modifier type: " + Modifier);
@@ -1030,11 +1071,11 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
       SelectPiece *Select = New<SelectPiece>(MT_Select);
       do {
         Text = Text.drop_front(); // '{' or '|'
-        Select->Options.push_back(parseDiagText(Text, true));
+        Select->Options.push_back(
+            parseDiagText(Text, StopAt::PipeOrCloseBrace));
         assert(!Text.empty() && "malformed %select");
       } while (Text.front() == '|');
-      // Drop the trailing '}'.
-      Text = Text.drop_front(1);
+      ExpectAndConsume("}");
       Select->Index = parseModifier(Text);
       Parsed.push_back(Select);
       continue;
@@ -1051,24 +1092,24 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
         Plural->OptionPrefixes.push_back(
             New<TextPiece>(Text.slice(0, End), "diagtext"));
         Text = Text.slice(End, StringRef::npos);
-        Plural->Options.push_back(parseDiagText(Text, true));
-        assert(!Text.empty() && "malformed %select");
+        Plural->Options.push_back(
+            parseDiagText(Text, StopAt::PipeOrCloseBrace));
+        assert(!Text.empty() && "malformed %plural");
       } while (Text.front() == '|');
-      // Drop the trailing '}'.
-      Text = Text.drop_front(1);
+      ExpectAndConsume("}");
       Plural->Index = parseModifier(Text);
       Parsed.push_back(Plural);
       continue;
     }
     case MT_Sub: {
       SubstitutionPiece *Sub = New<SubstitutionPiece>();
-      Text = Text.drop_front(); // '{'
+      ExpectAndConsume("{");
       size_t NameSize = Text.find_first_of('}');
       assert(NameSize != size_t(-1) && "failed to find the end of the name");
       assert(NameSize != 0 && "empty name?");
       Sub->Name = Text.substr(0, NameSize).str();
       Text = Text.drop_front(NameSize);
-      Text = Text.drop_front(); // '}'
+      ExpectAndConsume("}");
       if (!Text.empty()) {
         while (true) {
           if (!isdigit(Text[0]))
@@ -1086,14 +1127,17 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     }
     case MT_Diff: {
       DiffPiece *Diff = New<DiffPiece>();
-      Text = Text.drop_front(); // '{'
-      Diff->Options[0] = parseDiagText(Text, true);
-      Text = Text.drop_front(); // '|'
-      Diff->Options[1] = parseDiagText(Text, true);
-
-      Text = Text.drop_front(); // '}'
+      ExpectAndConsume("{");
+      Diff->Parts[0] = parseDiagText(Text, StopAt::Dollar);
+      ExpectAndConsume("$");
+      Diff->Parts[1] = parseDiagText(Text, StopAt::Dollar);
+      ExpectAndConsume("$");
+      Diff->Parts[2] = parseDiagText(Text, StopAt::PipeOrCloseBrace);
+      ExpectAndConsume("|");
+      Diff->Parts[3] = parseDiagText(Text, StopAt::PipeOrCloseBrace);
+      ExpectAndConsume("}");
       Diff->Indexes[0] = parseModifier(Text);
-      Text = Text.drop_front(); // ','
+      ExpectAndConsume(",");
       Diff->Indexes[1] = parseModifier(Text);
       Parsed.push_back(Diff);
       continue;
@@ -1237,8 +1281,8 @@ void clang::EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
     OS << ", \"";
     OS.write_escaped(DiagTextBuilder.buildForDefinition(&R)) << '"';
 
-    // Warning associated with the diagnostic. This is stored as an index into
-    // the alphabetically sorted warning table.
+    // Warning group associated with the diagnostic. This is stored as an index
+    // into the alphabetically sorted warning group table.
     if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
       std::map<std::string, GroupInfo>::iterator I = DiagsInGroup.find(
           std::string(DI->getDef()->getValueAsString("GroupName")));
@@ -1445,18 +1489,20 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
   for (auto const &I: DiagsInGroup)
     MaxLen = std::max(MaxLen, (unsigned)I.first.size());
 
-  OS << "\n#ifdef GET_DIAG_TABLE\n";
+  OS << "\n#ifdef DIAG_ENTRY\n";
   unsigned SubGroupIndex = 1, DiagArrayIndex = 1;
   for (auto const &I: DiagsInGroup) {
     // Group option string.
-    OS << "  { /* ";
+    OS << "DIAG_ENTRY(";
+    OS << I.second.GroupName << " /* ";
+
     if (I.first.find_first_not_of("abcdefghijklmnopqrstuvwxyz"
                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                    "0123456789!@#$%^*-+=:?") !=
         std::string::npos)
       PrintFatalError("Invalid character in diagnostic group '" + I.first +
                       "'");
-    OS << I.first << " */ " << std::string(MaxLen - I.first.size(), ' ');
+    OS << I.first << " */, ";
     // Store a pascal-style length byte at the beginning of the string.
     std::string Name = char(I.first.size()) + I.first;
     OS << GroupNames.GetOrAddStringOffset(Name, false) << ", ";
@@ -1475,7 +1521,7 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
         DiagArrayIndex += DiagsInPedantic.size();
       DiagArrayIndex += V.size() + 1;
     } else {
-      OS << "/* Empty */     0, ";
+      OS << "0, ";
     }
 
     // Subgroups.
@@ -1488,12 +1534,12 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
         SubGroupIndex += GroupsInPedantic.size();
       SubGroupIndex += SubGroups.size() + 1;
     } else {
-      OS << "/* Empty */         0";
+      OS << "0";
     }
 
-    OS << " },\n";
+    OS << ")\n";
   }
-  OS << "#endif // GET_DIAG_TABLE\n\n";
+  OS << "#endif // DIAG_ENTRY\n\n";
 }
 
 /// Emit the table of diagnostic categories.

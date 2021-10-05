@@ -57,7 +57,6 @@ class TypeID {
 
 public:
   TypeID() : TypeID(get<void>()) {}
-  TypeID(const TypeID &) = default;
 
   /// Comparison operations.
   bool operator==(const TypeID &other) const {
@@ -137,6 +136,32 @@ TypeID TypeID::get() {
 }
 
 } // end namespace mlir
+
+// Declare/define an explicit specialization for TypeID: this forces the
+// compiler to emit a strong definition for a class and controls which
+// translation unit and shared object will actually have it.
+// This can be useful to turn to a link-time failure what would be in other
+// circumstances a hard-to-catch runtime bug when a TypeID is hidden in two
+// different shared libraries and instances of the same class only gets the same
+// TypeID inside a given DSO.
+#define DECLARE_EXPLICIT_TYPE_ID(CLASS_NAME)                                   \
+  namespace mlir {                                                             \
+  namespace detail {                                                           \
+  template <>                                                                  \
+  LLVM_EXTERNAL_VISIBILITY TypeID TypeIDExported::get<CLASS_NAME>();           \
+  }                                                                            \
+  }
+
+#define DEFINE_EXPLICIT_TYPE_ID(CLASS_NAME)                                    \
+  namespace mlir {                                                             \
+  namespace detail {                                                           \
+  template <>                                                                  \
+  LLVM_EXTERNAL_VISIBILITY TypeID TypeIDExported::get<CLASS_NAME>() {          \
+    static TypeID::Storage instance;                                           \
+    return TypeID(&instance);                                                  \
+  }                                                                            \
+  }                                                                            \
+  }
 
 namespace llvm {
 template <> struct DenseMapInfo<mlir::TypeID> {

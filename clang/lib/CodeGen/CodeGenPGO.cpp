@@ -649,6 +649,14 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   void VisitIfStmt(const IfStmt *S) {
     RecordStmtCount(S);
+
+    if (S->isConsteval()) {
+      const Stmt *Stm = S->isNegatedConsteval() ? S->getThen() : S->getElse();
+      if (Stm)
+        Visit(Stm);
+      return;
+    }
+
     uint64_t ParentCount = CurrentCount;
     if (S->getInit())
       Visit(S->getInit());
@@ -960,6 +968,12 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
     Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step),
         makeArrayRef(Args));
+}
+
+void CodeGenPGO::setValueProfilingFlag(llvm::Module &M) {
+  if (CGM.getCodeGenOpts().hasProfileClangInstr())
+    M.addModuleFlag(llvm::Module::Warning, "EnableValueProfiling",
+                    uint32_t(EnableValueProfiling));
 }
 
 // This method either inserts a call to the profile run-time during

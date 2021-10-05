@@ -215,6 +215,16 @@ class Sliceable {
 protected:
   using ClassTy = pybind11::class_<Derived>;
 
+  intptr_t wrapIndex(intptr_t index) {
+    if (index < 0)
+      index = length + index;
+    if (index < 0 || index >= length) {
+      throw python::SetPyError(PyExc_IndexError,
+                               "attempt to access out of bounds");
+    }
+    return index;
+  }
+
 public:
   explicit Sliceable(intptr_t startIndex, intptr_t length, intptr_t step)
       : startIndex(startIndex), length(length), step(step) {
@@ -228,12 +238,7 @@ public:
   /// by taking elements in inverse order. Throws if the index is out of bounds.
   ElementTy dunderGetItem(intptr_t index) {
     // Negative indices mean we count from the end.
-    if (index < 0)
-      index = length + index;
-    if (index < 0 || index >= length) {
-      throw python::SetPyError(PyExc_IndexError,
-                               "attempt to access out of bounds");
-    }
+    index = wrapIndex(index);
 
     // Compute the linear index given the current slice properties.
     int linearIndex = index * step + startIndex;
@@ -255,12 +260,29 @@ public:
                                                sliceLength, step * extraStep);
   }
 
+  /// Returns a new vector (mapped to Python list) containing elements from two
+  /// slices. The new vector is necessary because slices may not be contiguous
+  /// or even come from the same original sequence.
+  std::vector<ElementTy> dunderAdd(Derived &other) {
+    std::vector<ElementTy> elements;
+    elements.reserve(length + other.length);
+    for (intptr_t i = 0; i < length; ++i) {
+      elements.push_back(dunderGetItem(i));
+    }
+    for (intptr_t i = 0; i < other.length; ++i) {
+      elements.push_back(other.dunderGetItem(i));
+    }
+    return elements;
+  }
+
   /// Binds the indexing and length methods in the Python class.
   static void bind(pybind11::module &m) {
-    auto clazz = pybind11::class_<Derived>(m, Derived::pyClassName)
+    auto clazz = pybind11::class_<Derived>(m, Derived::pyClassName,
+                                           pybind11::module_local())
                      .def("__len__", &Sliceable::dunderLen)
                      .def("__getitem__", &Sliceable::dunderGetItem)
-                     .def("__getitem__", &Sliceable::dunderGetItemSlice);
+                     .def("__getitem__", &Sliceable::dunderGetItemSlice)
+                     .def("__add__", &Sliceable::dunderAdd);
     Derived::bindDerived(clazz);
   }
 
