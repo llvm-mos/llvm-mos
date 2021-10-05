@@ -384,7 +384,7 @@ body: |
     ; 6502: STAbs [[LDImm]], 1234 :: (store 1)
     ; 6502: RTS
     ; 65C02-LABEL: name: store_zero_absolute_const
-    ; 65C02: STZ_Absolute 1234 :: (store 1)
+    ; 65C02: STZAbs 1234 :: (store 1)
     ; 65C02: RTS
     %0:any(s8) = G_CONSTANT i8 0
     %1:any(s16) = G_CONSTANT i16 1234
@@ -403,7 +403,7 @@ body: |
     ; 6502: STAbs [[LDImm]], @.str :: (store 1)
     ; 6502: RTS
     ; 65C02-LABEL: name: store_zero_absolute_gv
-    ; 65C02: STZ_Absolute @.str :: (store 1)
+    ; 65C02: STZAbs @.str :: (store 1)
     ; 65C02: RTS
     %0:any(s8) = G_CONSTANT i8 0
     %1:any(p0) = G_GLOBAL_VALUE @.str

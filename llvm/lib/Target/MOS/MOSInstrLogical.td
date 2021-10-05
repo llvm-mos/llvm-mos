@@ -355,10 +355,15 @@ def STYIndir : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> 
   dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
 }
 
-// STZ abs,x
-def STZIdx : MOSStore {
-  dag InOperandList = (ins i16imm:$addr, Xc:$idx);
-  let Predicates = [Has65C02];
+let Predicates = [Has65C02] in {
+  // STZ abs
+  def STZAbs : MOSStore, PseudoInstExpansion<(STZ_Absolute addr16:$addr)> {
+    dag InOperandList = (ins i16imm:$addr);
+  }
+  // STZ abs,x
+  def STZIdx : MOSStore, PseudoInstExpansion<(STZ_AbsoluteX addr16:$addr)> {
+    dag InOperandList = (ins i16imm:$addr, Xc:$idx);
+  }
 }
 
 //===---------------------------------------------------------------------===//
