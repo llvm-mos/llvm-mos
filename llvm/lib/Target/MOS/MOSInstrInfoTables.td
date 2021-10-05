@@ -85,6 +85,7 @@ def : ZPIRE< STX_ZeroPage, STX_Absolute >;
 def : ZPIRE< STY_ZeroPage, STY_Absolute >;
 
 def : ZPIRE< STZ_ZeroPage, STZ_Absolute >;
+def : ZPIRE< STZ_ZeroPageX, STZ_AbsoluteX >;
 
 /// ---------------------------------------------------------------------------
 /// The MOS zero page instruction lowering table.

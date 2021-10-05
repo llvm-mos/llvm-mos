@@ -614,7 +614,7 @@ bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
     YIndirOpcode = MOS::STYIndir;
     // STZ
     if (STI.has65C02() && isOperandImmEqual(SrcDstOp, 0, MRI)) {
-      AbsOpcode = MOS::STZ_Absolute;
+      AbsOpcode = MOS::STZAbs;
       IdxOpcode = MOS::STZIdx;
       BuildAbsIdxInstr = [&Builder](unsigned Opcode) {
         return Builder.buildInstr(Opcode);
