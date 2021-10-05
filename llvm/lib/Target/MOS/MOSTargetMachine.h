@@ -40,8 +40,7 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
-  void registerPassBuilderCallbacks(PassBuilder &,
-                                    bool DebugPassManager) override;
+  void registerPassBuilderCallbacks(PassBuilder &) override;
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 

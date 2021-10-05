@@ -893,8 +893,6 @@ public:
     MachineInstr *SrcDef = getDefIgnoringCopies(SrcReg, MRI);
     if (!SrcDef)
       return false;
-    MachineInstr *SrcDef = DefSrcReg->MI;
-    SrcReg = DefSrcReg->Reg;
 
     LLT OpTy = MRI.getType(SrcReg);
     LLT DestTy = MRI.getType(MI.getReg(0));

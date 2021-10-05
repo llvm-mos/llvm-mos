@@ -266,8 +266,6 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // Other Operations
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
-
-  computeTables();
 }
 
 bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
@@ -520,7 +518,7 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
   LLT S8 = LLT::scalar(8);
 
   // Presently, only left shifts by one bit are supported.
-  auto ConstantAmt = getConstantVRegValWithLookThrough(Amt, MRI);
+  auto ConstantAmt = getIConstantVRegValWithLookThrough(Amt, MRI);
   if (!ConstantAmt)
     return shiftLibcall(Helper, MRI, MI);
 
@@ -577,10 +575,10 @@ bool MOSLegalizerInfo::shiftLibcall(LegalizerHelper &Helper,
   Type *HLAmtTy = IntegerType::get(Ctx, 8);
 
   SmallVector<CallLowering::ArgInfo, 3> Args;
-  Args.push_back({MI.getOperand(1).getReg(), HLTy});
-  Args.push_back({MI.getOperand(2).getReg(), HLAmtTy});
+  Args.push_back({MI.getOperand(1).getReg(), HLTy, 0});
+  Args.push_back({MI.getOperand(2).getReg(), HLAmtTy, 1});
   if (!createLibcall(Helper.MIRBuilder, Libcall,
-                     {MI.getOperand(0).getReg(), HLTy}, Args))
+                     {MI.getOperand(0).getReg(), HLTy, 0}, Args))
     return false;
 
   MI.eraseFromParent();
@@ -864,7 +862,7 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   MachineOperand &Offset = MI.getOperand(2);
 
   MachineInstr *GlobalBase = getOpcodeDef(G_GLOBAL_VALUE, Base.getReg(), MRI);
-  auto ConstOffset = getConstantVRegValWithLookThrough(Offset.getReg(), MRI);
+  auto ConstOffset = getIConstantVRegValWithLookThrough(Offset.getReg(), MRI);
 
   // Fold constant offsets into global value operand.
   if (GlobalBase && ConstOffset) {

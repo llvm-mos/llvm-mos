@@ -57,9 +57,7 @@
 let Entry = 1 in {
 def CC_MOS : CallingConv<[
   // Pointers are preferentially assigned to imaginary registers so indirect
-  // addressing modes work without additional copying. If there aren't any
-  // remaining, they'll fall through and be split to 8-bit values to be
-  // assigned separately.
+  // addressing modes work without additional copying.
   //
   // RS0 is skipped since it's the stack pointer. Only caller-saved registers
   // are used.
@@ -76,22 +74,15 @@ def CC_MOS : CallingConv<[
     RC15
   ]>>,
 
-  // Any 8-bit values that wouldn't fit anywhere else are passed directly on
-  // the stack.
-  CCIfType<[i8], CCAssignToStack<1, 1>>,
-
-  // Larger types are here implicitily split to bytes, then they repeat the
-  // whole convention.
+  // Values that wouldn't fit anywhere else are passed directly on the stack.
+  CCAssignToStack<0, 1>,
 ]>;
 
 // Calling convention for the variable section of a variadic function call.
 // Named arguments in such functions still use the above calling convention.
 def CC_MOS_VarArgs : CallingConv<[
-  // Assign all 8-bit values directly to the stack. This allows variable arguments
-  CCIfType<[i8], CCAssignToStack<1, 1>>,
-
-  // Larger types are here implicitily split to bytes, then they repeat the
-  // whole convention.
+  // All values are passed directly on the stack.
+  CCAssignToStack<0, 1>,
 ]>;
 }
 

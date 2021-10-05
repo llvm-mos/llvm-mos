@@ -9,7 +9,6 @@
 #include "MOS.h"
 
 #include "CommonArgs.h"
-#include "InputInfo.h"
 
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"

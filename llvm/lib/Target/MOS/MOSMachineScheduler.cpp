@@ -39,52 +39,52 @@ using namespace llvm;
 MOSSchedStrategy::MOSSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C) {}
 
-void MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
+bool MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
                                     SchedCandidate &TryCand,
                                     SchedBoundary *Zone) const {
 
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
     TryCand.Reason = NodeOrder;
-    return;
+    return true;
   }
 
   if (tryLess(
           registerClassPressureDiff(MOS::AcRegClass, TryCand.SU, TryCand.AtTop),
           registerClassPressureDiff(MOS::AcRegClass, Cand.SU, Cand.AtTop),
           TryCand, Cand, PhysReg))
-    return;
+    return TryCand.Reason != NoCand;
 
   if (tryLess(
           registerClassPressureDiff(MOS::XYRegClass, TryCand.SU, TryCand.AtTop),
           registerClassPressureDiff(MOS::XYRegClass, Cand.SU, Cand.AtTop),
           TryCand, Cand, PhysReg))
-    return;
+    return TryCand.Reason != NoCand;
 
   if (tryLess(
           registerClassPressureDiff(MOS::Imag8RegClass, TryCand.SU,
                                     TryCand.AtTop),
           registerClassPressureDiff(MOS::Imag8RegClass, Cand.SU, Cand.AtTop),
           TryCand, Cand, PhysReg))
-    return;
+    return TryCand.Reason != NoCand;
 
   // Avoid exceeding the target's limit.
   if (DAG->isTrackingPressure() &&
       tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
                   RegExcess, TRI, DAG->MF))
-    return;
+    return TryCand.Reason != NoCand;
 
   // Avoid increasing the max critical pressure in the scheduled region.
   if (DAG->isTrackingPressure() &&
       tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
                   TryCand, Cand, RegCritical, TRI, DAG->MF))
-    return;
+    return TryCand.Reason != NoCand;
 
   // Avoid increasing the max pressure of the entire region.
   if (DAG->isTrackingPressure() &&
       tryPressure(TryCand.RPDelta.CurrentMax, Cand.RPDelta.CurrentMax, TryCand,
                   Cand, RegMax, TRI, DAG->MF))
-    return;
+    return TryCand.Reason != NoCand;
 
   // We only compare a subset of features when comparing nodes between
   // Top and Bottom boundary. Some properties are simply incomparable, in many
@@ -97,8 +97,11 @@ void MOSSchedStrategy::tryCandidate(SchedCandidate &Cand,
     if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
         (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
       TryCand.Reason = NodeOrder;
+      return true;
     }
   }
+
+  return false;
 }
 
 // Returns the change in pressure in a SU for a physical register.

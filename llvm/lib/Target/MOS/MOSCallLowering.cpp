@@ -41,6 +41,35 @@ using namespace llvm;
 
 namespace {
 
+struct MOSValueAssigner : CallLowering::ValueAssigner {
+
+  /// Cached copy of the reserved register set for the current fn. These
+  /// registers must be avoided when selecting registers for arguments.
+  BitVector Reserved;
+
+  MOSValueAssigner(bool IsIncoming, MachineRegisterInfo &MRI,
+                   const MachineFunction &MF)
+      : CallLowering::ValueAssigner(IsIncoming, CC_MOS, CC_MOS_VarArgs) {
+    Reserved = MRI.getTargetRegisterInfo()->getReservedRegs(MF);
+  }
+
+  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
+                 CCState &State) override {
+    // Ensure that reserved registers are not used in calling convention by
+    // marking them as already allocated.
+    for (Register R : Reserved.set_bits())
+      State.AllocateReg(R);
+
+    if (getAssignFn(!Info.IsFixed)(ValNo, ValVT, LocVT, LocInfo, Flags,
+          State))
+      return true;
+    StackOffset = State.getNextStackOffset();
+    return false;
+  }
+};
+
 /// Handler to pass values outward to calls and return statements.
 struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
   /// The instruction causing control flow to leave the current function. This
@@ -48,24 +77,12 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
   /// registers used to pass arguments.
   MachineInstrBuilder &MIB;
 
-  /// Cached copy of the reserved register set for the current fn. These
-  /// registers must be avoided when selecting registers for arguments.
-  BitVector Reserved;
-
-  /// Size in bytes of the stack region used to pass values. Records space to be
-  /// allocated for outgoing arguments via call frame pseudos. Unused for
-  /// outgoing return values; sufficient space will already have been allocated
-  /// by the caller.
-  uint64_t StackSize = 0;
-
   MOSOutgoingValueHandler(MachineIRBuilder &MIRBuilder,
                           MachineInstrBuilder &MIB, MachineRegisterInfo &MRI)
-      : OutgoingValueHandler(MIRBuilder, MRI, nullptr), MIB(MIB) {
-    Reserved = MRI.getTargetRegisterInfo()->getReservedRegs(MIRBuilder.getMF());
-  }
+      : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign &VA) override {
+                        CCValAssign VA) override {
     switch (VA.getLocVT().getSizeInBits()) {
     default:
       report_fatal_error("Not yet implemented.");
@@ -81,37 +98,12 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
     MIRBuilder.buildCopy(PhysReg, ValVReg);
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
-    auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size,
+    auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, MemTy,
                                         inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
-  }
-
-  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
-                 CCValAssign::LocInfo LocInfo,
-                 const llvm::CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
-                 CCState &State) override {
-    // Ensure that reserved registers are not used in calling convention by
-    // marking them as already allocated.
-    for (Register R : Reserved.set_bits())
-      State.AllocateReg(R);
-
-    // Use TableGen-ereted code to assign the argument to a location.
-    bool Res;
-    if (Info.IsFixed) {
-      Res = CC_MOS(ValNo, ValVT, LocVT, LocInfo, Flags, State);
-    } else {
-      // The variable portion of vararg calls are always passed through the
-      // stack.
-      Res = CC_MOS_VarArgs(ValNo, ValVT, LocVT, LocInfo, Flags, State);
-    }
-
-    // Record current max stack size so that space can be allocated for the
-    // outgoing arguments via call frame pseudos.
-    StackSize = State.getNextStackOffset();
-    return Res;
   }
 };
 
@@ -173,23 +165,12 @@ struct MOSOutgoingReturnHandler : MOSOutgoingValueHandler {
 
 /// Handler to receive values from formal arguments and call returns.
 struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
-  /// Size of the stack region used to pass fixed arguments. This indicates the
-  /// beginning of the stack region used for the varargs portion of calls, and
-  /// the minimum size to pre-allocate for incoming return values when emitting
-  /// call frame pseudo-instructions.
-  uint64_t StackSize = 0;
-
-  /// Cache of the reserved registers for the current function.
-  BitVector Reserved;
-
   MOSIncomingValueHandler(MachineIRBuilder &MIRBuilder,
                           MachineRegisterInfo &MRI)
-      : IncomingValueHandler(MIRBuilder, MRI, nullptr) {
-    Reserved = MRI.getTargetRegisterInfo()->getReservedRegs(MIRBuilder.getMF());
-  }
+      : IncomingValueHandler(MIRBuilder, MRI) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign &VA) override {
+                        CCValAssign VA) override {
     switch (VA.getLocVT().getSizeInBits()) {
     default:
       report_fatal_error("Not yet implemented.");
@@ -203,21 +184,6 @@ struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
     makeLive(PhysReg);
 
     MIRBuilder.buildCopy(ValVReg, PhysReg);
-  }
-
-  bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
-                 CCValAssign::LocInfo LocInfo,
-                 const llvm::CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
-                 CCState &State) override {
-    // Ensure that reserved registers are not used in calling convention by
-    // marking them as already allocated.
-    for (Register R : Reserved.set_bits())
-      State.AllocateReg(R);
-
-    // Use TableGen-ereted code to assign the argument to a location.
-    bool Res = CC_MOS(ValNo, ValVT, LocVT, LocInfo, Flags, State);
-    StackSize = State.getNextStackOffset();
-    return Res;
   }
 
   /// Mark the given register as live-in. These will be function-level live-ins
@@ -239,14 +205,14 @@ struct MOSIncomingArgsHandler : public MOSIncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     // All such loads are invariant: if the values are later spilled, they'll be
     // spilled to spill slots, not the original incoming argument slots.
     auto *MMO = MF.getMachineMemOperand(
-        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant,
-        MemSize, inferAlignFromPtrInfo(MF, MPO));
+        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemTy,
+        inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 
@@ -283,12 +249,12 @@ struct MOSIncomingReturnHandler : public MOSIncomingValueHandler {
     return MIRBuilder.buildPtrAdd(P, SPReg, OffsetReg).getReg(0);
   }
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t MemSize,
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     // Such loads are not invariant; the same stack region may be reused for
     // many different calls.
-    auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemSize,
+    auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,
                                         inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
@@ -344,7 +310,7 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     // description for TableGen compatibility layer.
     SmallVector<ArgInfo> Args;
     for (size_t Idx = 0; Idx < VRegs.size(); ++Idx) {
-      Args.emplace_back(VRegs[Idx], ValueVTs[Idx].getTypeForEVT(Ctx));
+      Args.emplace_back(VRegs[Idx], ValueVTs[Idx].getTypeForEVT(Ctx), 0);
       setArgFlags(Args.back(), AttributeList::ReturnIndex, DL, F);
       adjustArgFlags(Args.back(), ValueLLTs[Idx]);
     }
@@ -352,8 +318,9 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     // Invoke TableGen compatibility layer. This will generate copies and stores
     // from the return value virtual register to physical and stack locations.
     MOSOutgoingReturnHandler Handler(MIRBuilder, Return, MRI);
-    if (!handleAssignments(MIRBuilder, Args, Handler, F.getCallingConv(),
-                           F.isVarArg()))
+    MOSValueAssigner Assigner(/*IsIncoming=*/false, MRI, MF);
+    if (!determineAndHandleAssignments(Handler, Assigner, Args, MIRBuilder,
+                                       F.getCallingConv(), F.isVarArg()))
       return false;
   }
 
@@ -383,26 +350,27 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       continue;
 
     // Copy flag information over from the function to the argument descriptors.
-    ArgInfo OrigArg{VRegs[Idx], Arg.getType()};
+    ArgInfo OrigArg{VRegs[Idx], Arg.getType(), Idx};
     setArgFlags(OrigArg, Idx + AttributeList::FirstArgIndex, DL, F);
     splitToValueTypes(OrigArg, SplitArgs, DL);
     ++Idx;
   }
 
   MOSIncomingArgsHandler Handler(MIRBuilder, MRI);
+  MOSValueAssigner Assigner(/*IsIncoming=*/true, MRI, MF);
   // Invoke TableGen compatibility layer to create loads and copies from the
   // formal argument physical and stack locations to virtual registers.
-  if (!handleAssignments(MIRBuilder, SplitArgs, Handler, F.getCallingConv(),
-                         F.isVarArg()))
+  if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
+                                     F.getCallingConv(), F.isVarArg()))
     return false;
 
   // Record the beginning of the varargs region of the stack by creating a fake
-  // stack argument at that location. The varargs instructions are lowered by
+  // stack argument a4 that location. The varargs instructions are lowered by
   // walking a pointer forward from that memory location.
   if (F.isVarArg()) {
     auto *FuncInfo = MF.getInfo<MOSFunctionInfo>();
     FuncInfo->setVarArgsStackIndex(MF.getFrameInfo().CreateFixedObject(
-        /*Size=*/1, Handler.StackSize, /*IsImmutable=*/true));
+        /*Size=*/1, Assigner.StackOffset, /*IsImmutable=*/true));
   }
 
   return true;
@@ -455,22 +423,25 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Copy arguments from virtual registers to their real physical locations.
   MOSOutgoingArgsHandler ArgsHandler(MIRBuilder, Call, MRI);
-  if (!handleAssignments(MIRBuilder, OutArgs, ArgsHandler, Info.CallConv,
-                         Info.IsVarArg))
+  MOSValueAssigner ArgsAssigner(/*IsIncoming=*/false, MRI, MF);
+  if (!determineAndHandleAssignments(ArgsHandler, ArgsAssigner, OutArgs,
+                                     MIRBuilder, Info.CallConv, Info.IsVarArg))
     return false;
 
   // Insert the call once the outgoing arguments are in place.
   MIRBuilder.insertInstr(Call);
 
-  uint64_t StackSize = ArgsHandler.StackSize;
+  uint64_t StackSize = ArgsAssigner.StackOffset;
 
   if (!Info.OrigRet.Ty->isVoidTy()) {
     // Copy the return value from its physical location into a virtual register.
     MOSIncomingReturnHandler RetHandler(MIRBuilder, MRI, Call);
-    if (!handleAssignments(MIRBuilder, InArgs, RetHandler, Info.CallConv,
-                           Info.IsVarArg))
+    MOSValueAssigner RetAssigner(/*IsIncoming=*/true, MRI, MF);
+    if (!determineAndHandleAssignments(RetHandler, RetAssigner, InArgs,
+                                       MIRBuilder, Info.CallConv,
+                                       Info.IsVarArg))
       return false;
-    StackSize = std::max(StackSize, RetHandler.StackSize);
+    StackSize = std::max(StackSize, RetAssigner.StackOffset);
   }
 
   // Now that the size of the argument stack region is known, the setup call

@@ -218,12 +218,12 @@ struct CmpImmTerm_match {
       return false;
 
     auto RHSConst =
-        getConstantVRegValWithLookThrough(CondMI.getOperand(6).getReg(), MRI);
+        getIConstantVRegValWithLookThrough(CondMI.getOperand(6).getReg(), MRI);
     if (!RHSConst)
       return false;
 
     auto CInConst =
-        getConstantVRegValWithLookThrough(CondMI.getOperand(7).getReg(), MRI);
+        getIConstantVRegValWithLookThrough(CondMI.getOperand(7).getReg(), MRI);
     if (!CInConst || CInConst->Value.isNullValue())
       return false;
 
@@ -259,7 +259,7 @@ struct CmpImag8Term_match {
       return false;
 
     auto CInConst =
-        getConstantVRegValWithLookThrough(CondMI.getOperand(7).getReg(), MRI);
+        getIConstantVRegValWithLookThrough(CondMI.getOperand(7).getReg(), MRI);
     if (!CInConst || CInConst->Value.isNullValue())
       return false;
 
@@ -352,8 +352,8 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   if (Builder.getMRI()->use_nodbg_empty(Z))
     Z = MOS::NoRegister;
 
-  auto CInConst = getConstantVRegValWithLookThrough(MI.getOperand(7).getReg(),
-                                                    *Builder.getMRI());
+  auto CInConst = getIConstantVRegValWithLookThrough(MI.getOperand(7).getReg(),
+                                                     *Builder.getMRI());
   bool CInSet = CInConst && !CInConst->Value.isNullValue();
 
   // We can only extract one of N or Z at a time, so if both are needed,
@@ -369,7 +369,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   }
 
   if (!N && !Z) {
-    auto RConst = getConstantVRegValWithLookThrough(R, *Builder.getMRI());
+    auto RConst = getIConstantVRegValWithLookThrough(R, *Builder.getMRI());
     MachineInstrBuilder Instr;
     if (!A && !V && CInSet) {
       if (RConst) {
@@ -529,7 +529,7 @@ static bool matchConstantAddr(Register Addr, MachineOperand &BaseOut,
   }
 
   // Handle registers that can be resolved to constant values (e.g. IntToPtr).
-  if (auto ConstAddr = getConstantVRegValWithLookThrough(Addr, MRI)) {
+  if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
     BaseOut.ChangeToImmediate(ConstAddr->Value.getZExtValue());
     return true;
   }
@@ -738,7 +738,7 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
 
   LLT S1 = LLT::scalar(1);
 
-  auto RConst = getConstantVRegValWithLookThrough(R, *Builder.getMRI());
+  auto RConst = getIConstantVRegValWithLookThrough(R, *Builder.getMRI());
   MachineInstrBuilder Instr;
   if (RConst) {
     assert(RConst->Value.getBitWidth() == 8);

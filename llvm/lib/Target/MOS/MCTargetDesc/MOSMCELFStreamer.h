@@ -34,7 +34,7 @@ public:
       const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc = SMLoc(),
       MOSMCExpr::VariantKind ModifierKind = MOSMCExpr::VK_MOS_NONE);
 
-  void InitSections(bool NoExecStack) override;
+  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
 };
 
 MCStreamer *createMOSMCELFStreamer(const Triple &T, MCContext &Ctx,

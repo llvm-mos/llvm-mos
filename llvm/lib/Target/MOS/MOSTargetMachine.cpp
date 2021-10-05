@@ -110,8 +110,7 @@ MOSTargetMachine::getTargetTransformInfo(const Function &F) {
   return TargetTransformInfo(MOSTTIImpl(this, F));
 }
 
-void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
-                                                    bool DebugPassManager) {
+void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineParsingCallback(
       [](StringRef Name, LoopPassManager &PM,
          ArrayRef<PassBuilder::PipelineElement>) {
@@ -124,8 +123,8 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
       });
 
   PB.registerLateLoopOptimizationsEPCallback(
-      [](LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
-        if (Level != PassBuilder::OptimizationLevel::O0) {
+      [](LoopPassManager &PM, OptimizationLevel Level) {
+        if (Level != OptimizationLevel::O0) {
           PM.addPass(MOSIndexIV());
 
           // New induction variables may have been added.

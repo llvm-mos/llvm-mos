@@ -25,10 +25,11 @@ using namespace llvm;
 
 namespace llvm {
 
-void MOSMCELFStreamer::InitSections(bool NoExecStack) {
+void MOSMCELFStreamer::initSections(bool NoExecStack,
+                                    const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   SwitchSection(Ctx.getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(1);
+  emitCodeAlignment(1, &STI);
 
   if (NoExecStack)
     SwitchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));

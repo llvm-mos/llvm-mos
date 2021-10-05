@@ -1525,6 +1525,12 @@ public:
     return getRegisterType(Context, VT);
   }
 
+  // Variant of the above that includes flags, particularly isPointer.
+  virtual MVT getRegisterTypeForCallingConv(LLVMContext &Context,
+      CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const {
+    return getRegisterTypeForCallingConv(Context, CC, VT);
+  }
+
   /// Certain targets require unusual breakdowns of certain types. For MIPS,
   /// this occurs when a vector type is used, as vector are passed through the
   /// integer register set.
@@ -1532,6 +1538,12 @@ public:
                                                  CallingConv::ID CC,
                                                  EVT VT) const {
     return getNumRegisters(Context, VT);
+  }
+
+  // Variant of the above that includes flags, particularly isPointer.
+  virtual unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+      CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const {
+    return getNumRegistersForCallingConv(Context, CC, VT);
   }
 
   /// Certain targets have context sensitive alignment requirements, where one

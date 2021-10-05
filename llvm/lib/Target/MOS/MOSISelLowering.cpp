@@ -50,6 +50,20 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(MOS::RS0);
 }
 
+MVT MOSTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+    CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const {
+  if (Flags.isPointer())
+    return MVT::i16;
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT, Flags);
+}
+
+unsigned MOSTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
+    CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const {
+  if (Flags.isPointer())
+    return 1;
+  return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT, Flags);
+}
+
 unsigned MOSTargetLowering::getNumRegistersForInlineAsm(LLVMContext &Context,
                                                         EVT VT) const {
   // 16-bit inputs and outputs must be passed in Imag16 registers to allow using

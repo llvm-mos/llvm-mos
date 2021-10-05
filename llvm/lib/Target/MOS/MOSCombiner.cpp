@@ -50,7 +50,7 @@ matchFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register Offset = MI.getOperand(2).getReg();
 
   MachineInstr *GlobalBase = getOpcodeDef(G_GLOBAL_VALUE, Base, MRI);
-  auto ConstOffset = getConstantVRegValWithLookThrough(Offset, MRI);
+  auto ConstOffset = getIConstantVRegValWithLookThrough(Offset, MRI);
 
   if (!GlobalBase || !ConstOffset)
     return false;

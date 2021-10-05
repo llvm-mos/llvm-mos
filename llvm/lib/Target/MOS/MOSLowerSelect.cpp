@@ -271,7 +271,7 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
 
       const auto InsertUseMI = [&](MachineBasicBlock *MBB, MachineInstr *UseMI,
                                    Register Value) {
-        auto ConstVal = getConstantVRegValWithLookThrough(Value, MRI);
+        auto ConstVal = getIConstantVRegValWithLookThrough(Value, MRI);
         if (ConstVal) {
           if (ConstVal->Value.getBoolValue() !=
               static_cast<bool>(UseMI->getOperand(2).getImm())) {

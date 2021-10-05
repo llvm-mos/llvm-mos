@@ -74,11 +74,10 @@ public:
                           uint64_t Value, bool IsResolved,
                           const MCSubtargetInfo *STI) const override;
 
-  bool evaluateTargetFixup(const MCAssembler &Asm,
-                                   const MCAsmLayout &Layout,
-                                   const MCFixup &Fixup, const MCFragment *DF,
-                                   const MCValue &Target, uint64_t &Value,
-                                   bool &WasForced) override;
+  bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
+                           const MCFixup &Fixup, const MCFragment *DF,
+                           const MCValue &Target, uint64_t &Value,
+                           bool &WasForced) override;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -108,7 +107,8 @@ public:
   /// output.
   /// \param STI the subtarget information for the associated instruction.
   /// \param [out] Res On return, the relaxed instruction.
-  void relaxInstruction(MCInst &Inst, const MCSubtargetInfo &STI) const override;
+  void relaxInstruction(MCInst &Inst,
+                        const MCSubtargetInfo &STI) const override;
 
   /// If the instruction can be relaxed, return the opcode of the instruction
   /// that this instruction can be relaxed to.  If the instruction cannot
@@ -119,7 +119,8 @@ public:
   /// target cannot generate such a sequence, it should return an error.
   ///
   /// \return - True on success.
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 
 private:
   Triple::OSType OSType;

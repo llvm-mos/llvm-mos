@@ -297,7 +297,6 @@ Retry:
     break;
 
   case tok::kw_asm: {
-    ProhibitAttributes(Attrs);
     bool msAsm = false;
     Res = ParseAsmStatement(msAsm);
     Res = Actions.ActOnFinishFullStmt(Res.get());

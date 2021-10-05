@@ -21,7 +21,7 @@ class MOSSchedStrategy : public GenericScheduler {
 public:
   MOSSchedStrategy(const MachineSchedContext *C);
 
-  void tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                     SchedBoundary *Zone) const override;
 
   int registerClassPressureDiff(const TargetRegisterClass &RC, const SUnit *SU,

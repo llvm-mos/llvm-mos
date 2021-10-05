@@ -13,8 +13,8 @@
 #include "MCTargetDesc/MOSAsmBackend.h"
 #include "MCTargetDesc/MOSELFObjectWriter.h"
 #include "MCTargetDesc/MOSFixupKinds.h"
-#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MCTargetDesc/MOSMCExpr.h"
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -37,8 +37,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <climits>
-#include <memory>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace llvm {
@@ -162,8 +162,8 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     return;
   }
   auto Offset = Fixup.getOffset();
-  assert(((Bytes + Offset) <= Data.size()) && 
-    "Invalid offset within MOS instruction for modifier!");
+  assert(((Bytes + Offset) <= Data.size()) &&
+         "Invalid offset within MOS instruction for modifier!");
   for (unsigned int T = Offset; T < (Bytes + Offset); T++) {
     Data[T] = Value & 0xff;
     Value = Value >> 8;
@@ -214,14 +214,12 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   const auto *MME = dyn_cast<MOSMCExpr>(Fixup.getValue());
   // If this is a target-specific relaxation, e.g. a modifier, then the Info
   // field already knows the exact width of the answer, so decide now.
-  if (MME != nullptr)
-  {
+  if (MME != nullptr) {
     return (Info.TargetSize > 8);
   }
   // Now the fixup kind is not target-specific.  Yet, if it requires more than
   // 8 bits, then relaxation is needed.
-  if (Info.TargetSize > 8)
-  {
+  if (Info.TargetSize > 8) {
     return true;
   }
   // In order to resolve an eight to sixteen bit possible relaxation, we need to
@@ -231,8 +229,7 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   const char *FixupNameStart = Fixup.getValue()->getLoc().getPointer();
   // If there's no symbol name, and if the fixup does not have a known size,
   // then  we can't assume it lives in zero page.
-  if (FixupNameStart == nullptr)
-  {
+  if (FixupNameStart == nullptr) {
     return true;
   }
   size_t FixupLength = 0;
@@ -292,7 +289,7 @@ MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind) {
     return MCAsmBackend::getFixupKindInfo(Kind);
   }
-  
+
   return MOSFixupKinds::getFixupKindInfo(static_cast<MOS::Fixups>(Kind), this);
 }
 
@@ -346,7 +343,8 @@ void MOSAsmBackend::relaxInstruction(MCInst &Inst,
   }
 }
 
-bool MOSAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool MOSAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                 const MCSubtargetInfo *STI) const {
   // todo: fix for virtual targets
   while ((Count--) > 0) {
     OS << 0xEA; // Sports. It's in the game.  Knowing the 6502 hexadecimal

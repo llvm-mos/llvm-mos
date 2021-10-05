@@ -36,6 +36,12 @@ public:
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context,
+      CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const override;
+
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+      CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const override;
+
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;

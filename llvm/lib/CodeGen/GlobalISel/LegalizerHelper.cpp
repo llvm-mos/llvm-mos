@@ -2959,6 +2959,21 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   if (MIRBuilder.getDataLayout().isBigEndian())
     return UnableToLegalize;
 
+  auto &Ctx = MF.getFunction().getContext();
+  if (TLI.allowsMemoryAccess(Ctx, MIRBuilder.getDataLayout(), MemTy, MMO)) {
+    if (isa<GSExtLoad>(LoadMI)) {
+      auto NewLoad = MIRBuilder.buildLoad(MemTy, PtrReg, MMO);
+      MIRBuilder.buildSExt(DstReg, NewLoad);
+    } else if (isa<GZExtLoad>(LoadMI)) {
+      auto NewLoad = MIRBuilder.buildLoad(MemTy, PtrReg, MMO);
+      MIRBuilder.buildZExt(DstReg, NewLoad);
+    } else {
+      return UnableToLegalize;
+    }
+    LoadMI.eraseFromParent();
+    return Legalized;
+  }
+
   // This load needs splitting into power of 2 sized loads.
   //
   // Our strategy here is to generate anyextending loads for the smaller
@@ -2985,10 +3000,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     //
     // Assume we're being asked to decompose an unaligned load.
     // TODO: If this requires multiple splits, handle them all at once.
-    auto &Ctx = MF.getFunction().getContext();
-    if (TLI.allowsMemoryAccess(Ctx, MIRBuilder.getDataLayout(), MemTy, MMO))
-      return UnableToLegalize;
-
     SmallSplitSize = LargeSplitSize = MemSizeInBits / 2;
   }
 

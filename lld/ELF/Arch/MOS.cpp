@@ -38,7 +38,6 @@ public:
 MOS::MOS() {
   defaultMaxPageSize = 1;
   defaultCommonPageSize = 1;
-  noneRel = R_MOS_NONE;
 }
 
 static uint32_t getEFlags(InputFile *file) {
