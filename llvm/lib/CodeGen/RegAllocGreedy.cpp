@@ -203,9 +203,9 @@ class RAGreedy : public MachineFunctionPass,
     /// progress.
     RS_Split2,
 
-    /// (new for M6502) Attempt to widen register classes to hopefully avoid
-    /// spilling.
-    RS_Widen,
+    /// (new for llvm-mos) Attempt to spill to a wider register class to hopefully
+    /// spilling to the stack.
+    RS_LightSpill,
 
     /// Live range will be spilled.  No more splitting will be attempted.
     RS_Spill,
@@ -596,7 +596,7 @@ const char *const RAGreedy::StageName[] = {
     "RS_Assign",
     "RS_Split",
     "RS_Split2",
-    "RS_Widen",
+    "RS_LightSpill",
     "RS_Spill",
     "RS_Memory",
     "RS_Done"
@@ -1823,7 +1823,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     // Remainder interval. Don't try splitting again, spill if it doesn't
     // allocate.
     if (IntvMap[I] == 0) {
-      setStage(Reg, /*RS_Spill*/RS_Widen);
+      setStage(Reg, /*RS_Spill*/RS_LightSpill);
       continue;
     }
 
@@ -2068,7 +2068,7 @@ unsigned RAGreedy::tryBlockSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   for (unsigned I = 0, E = LREdit.size(); I != E; ++I) {
     LiveInterval &LI = LIS->getInterval(LREdit.get(I));
     if (getStage(LI) == RS_New && IntvMap[I] == 0)
-      setStage(LI, /*RS_Spill*/RS_Widen);
+      setStage(LI, /*RS_Spill*/RS_LightSpill);
   }
 
   if (VerifyEnabled)
@@ -2119,7 +2119,9 @@ RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   // Always enable split spill mode, since we're effectively spilling to a
   // register.
   LiveRangeEdit LREdit(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-  if (getStage(VirtReg) == RS_Widen) {
+  if (getStage(VirtReg) == RS_LightSpill) {
+    // Don't rematerialize during the light-spill stage, as this can cause
+    // register classes to become over-constrained.
     dbgs() << "Disabling remat for " << VirtReg << "\n";
     LREdit.setRematEnable(false);
   }
@@ -2510,8 +2512,8 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
     return tryInstructionSplit(VirtReg, Order, NewVRegs);
   }
 
-  if (getStage(VirtReg) == RS_Widen) {
-    NamedRegionTimer T("widen", "Widen", TimerGroupName,
+  if (getStage(VirtReg) == RS_LightSpill) {
+    NamedRegionTimer T("light_spill", "Light Spilling", TimerGroupName,
                        TimerGroupDescription, TimePassesIsEnabled);
     SA->analyze(&VirtReg);
     return tryInstructionSplit(VirtReg, Order, NewVRegs);
