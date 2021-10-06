@@ -208,7 +208,15 @@ class MOSImmediateLoad<RegisterClass dst, Operand val> : MOSLogicalInstr {
   dag OutOperandList = (outs dst:$dst);
   dag InOperandList = (ins val:$val);
 
-  let isAsCheapAsAMove = true;
+  // XXX: Disable isAsCheapAsAMove to help the register allocator make better
+  // decisions. See discussion at <https://github.com/llvm-mos/llvm-mos/issues/89>.
+  //
+  // When isAsCheapAsAMove is enabled, the register allocator may decide to
+  // rematerialize an LDImm instead of copying to a temporary location.
+  // This constrains the register class to GPR, and can lead to spilling the
+  // register to the stack even if it would be better to copy it to an Imag8.
+  // FIXME: We actually WANT LDImm to be rematerialized in many circumstances. Hmm...
+  //let isAsCheapAsAMove = true;
   let isMoveImm = true;
 }
 
