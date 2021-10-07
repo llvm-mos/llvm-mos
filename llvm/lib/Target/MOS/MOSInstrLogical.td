@@ -261,7 +261,14 @@ def IN : MOSLogicalInstr {
   dag InOperandList = (ins XY:$src);
   let Constraints = "$src = $dst";
 
-  let Pattern = [(set XY:$dst, (add XY:$src, 1))];
+  let isAdd = true;
+}
+
+// INC zp
+def INCImag8 : MOSLogicalInstr, PseudoInstExpansion<(INC_ZeroPage addr8:$dst)> {
+  dag OutOperandList = (outs Imag8:$dst);
+  dag InOperandList = (ins Imag8:$src);
+  let Constraints = "$src = $dst";
 
   let isAdd = true;
 }
@@ -342,7 +349,7 @@ def LDYIndir : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
 class MOSStore : MOSLogicalInstr {
   let mayStore = true;
 }
-// STA abs, STX abs, STZ abs
+// STA abs, STX abs
 def STAbs : MOSStore {
   dag InOperandList = (ins GPR:$src, i16imm:$dst);
 }
@@ -353,6 +360,17 @@ def STIdx : MOSStore {
 // STA (zp),y
 def STYIndir : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
   dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
+}
+
+let Predicates = [Has65C02] in {
+  // STZ abs
+  def STZAbs : MOSStore, PseudoInstExpansion<(STZ_Absolute addr16:$addr)> {
+    dag InOperandList = (ins i16imm:$addr);
+  }
+  // STZ abs,x
+  def STZIdx : MOSStore, PseudoInstExpansion<(STZ_AbsoluteX addr16:$addr)> {
+    dag InOperandList = (ins i16imm:$addr, Xc:$idx);
+  }
 }
 
 //===---------------------------------------------------------------------===//

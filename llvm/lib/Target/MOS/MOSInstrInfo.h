@@ -110,12 +110,20 @@ private:
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                        Register SrcReg) const;
 
-  void expandCMPTerm(MachineIRBuilder &Builder) const;
-  void expandGBR(MachineIRBuilder &Builder) const;
-  void expandSBCNZImag8(MachineIRBuilder &Builder) const;
+  // Post RA pseudos
   void expandLDIdx(MachineIRBuilder &Builder) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;
+  void expandINC(MachineIRBuilder &Builder) const;
+
+  // Soft stack pseudos
   void expandSetSP(MachineIRBuilder &Builder) const;
+
+  // NZ pseudos
+  void expandSBCNZImag8(MachineIRBuilder &Builder) const;
+  void expandCMPTerm(MachineIRBuilder &Builder) const;
+
+  // Control flow pseudos
+  void expandGBR(MachineIRBuilder &Builder) const;
 };
 
 namespace MOS {
