@@ -65,13 +65,6 @@ define i16 @dec_i16(i16 %a) {
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    sbc #1
 ; CHECK-NEXT:    tay
-; CHECK-NEXT:    bcc .LBB4_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    sec
-; CHECK-NEXT:    jmp .LBB4_3
-; CHECK-NEXT:  .LBB4_2: ; %entry
-; CHECK-NEXT:    clc
-; CHECK-NEXT:  .LBB4_3: ; %entry
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    sbc #0
 ; CHECK-NEXT:    tax

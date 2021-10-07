@@ -67,13 +67,6 @@ define i16 @sub_i16(i16 %a, i16 %b) {
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    sbc mos8(__rc2)
 ; CHECK-NEXT:    tay
-; CHECK-NEXT:    bcc .LBB4_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    sec
-; CHECK-NEXT:    jmp .LBB4_3
-; CHECK-NEXT:  .LBB4_2: ; %entry
-; CHECK-NEXT:    clc
-; CHECK-NEXT:  .LBB4_3: ; %entry
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    sbc mos8(__rc3)
 ; CHECK-NEXT:    tax
@@ -87,21 +80,14 @@ entry:
 define i8* @sub_ptr(i8* %a, i16 %b) {
 ; CHECK-LABEL: sub_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(__rc5)
-; CHECK-NEXT:    stx mos8(__rc4)
-; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    sta mos8(__rc4)
+; CHECK-NEXT:    stx mos8(__rc5)
 ; CHECK-NEXT:    sec
-; CHECK-NEXT:    sbc mos8(__rc5)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    bcc .LBB5_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    sec
-; CHECK-NEXT:    jmp .LBB5_3
-; CHECK-NEXT:  .LBB5_2: ; %entry
-; CHECK-NEXT:    clc
-; CHECK-NEXT:  .LBB5_3: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    sbc mos8(__rc4)
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    sbc mos8(__rc5)
 ; CHECK-NEXT:    sta mos8(__rc4)
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    txa
