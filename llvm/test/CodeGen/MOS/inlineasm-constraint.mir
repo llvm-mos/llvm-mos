@@ -10,7 +10,7 @@
     call void asm sideeffect "JSR 1234", "r"(i8 56)
     ; CHECK:      %1:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: %0:imag8 = COPY %1
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 655369 /* reguse:Imag8 */, %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse:Imag8 */, %0
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -22,7 +22,7 @@
     call void asm sideeffect "JSR 1234", "r"(i16 56)
     ; CHECK:      %1:_(s16) = G_CONSTANT i16 56
     ; CHECK-NEXT: %0:imag16 = COPY %1
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 1310729 /* reguse:Imag16 */, %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse:Imag16 */, %0
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -34,7 +34,7 @@
   entry:
   ; CHECK-LABEL: entry:
     call void asm sideeffect "JSR 1234", "i"(i8 42)
-    ; CHECK: INLINEASM &"JSR 1234", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42
+    ; CHECK: INLINEASM &"JSR 1234", {{.*}} /* sideeffect mayload attdialect */, {{.*}} /* imm */, 42
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -44,7 +44,7 @@
   entry:
   ; CHECK-LABEL: entry:
     call void asm sideeffect "JSR 1234", "i"(i16 42)
-    ; CHECK: INLINEASM &"JSR 1234", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42
+    ; CHECK: INLINEASM &"JSR 1234", {{.*}} /* sideeffect mayload attdialect */, {{.*}} /* imm */, 42
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -54,7 +54,7 @@
   entry:
   ; CHECK-LABEL: entry:
     call void asm sideeffect "JSR 1234", "i"(i32* @global)
-    ; CHECK: INLINEASM &"JSR 1234", 9 /* sideeffect mayload attdialect */, 13 /* imm */, @global
+    ; CHECK: INLINEASM &"JSR 1234", {{.*}} /* sideeffect mayload attdialect */, {{.*}} /* imm */, @global
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -66,7 +66,7 @@
     call void asm sideeffect "JSR 1234", "R"(i8 56)
     ; CHECK:      %1:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: %0:gpr = COPY %1
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 786441 /* reguse:GPR */, %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse:GPR */, %0
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -78,7 +78,7 @@
     call void asm sideeffect "JSR 1234", "a"(i8 56)
     ; CHECK:      %0:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: $a = COPY %0(s8)
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 9 /* reguse */, $a
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse */, $a
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -90,7 +90,7 @@
     call void asm sideeffect "JSR 1234", "x"(i8 56)
     ; CHECK:      %0:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: $x = COPY %0(s8)
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 9 /* reguse */, $x
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse */, $x
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -102,7 +102,7 @@
     call void asm sideeffect "JSR 1234", "y"(i8 56)
     ; CHECK:      %0:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: $y = COPY %0(s8)
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 9 /* reguse */, $y
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse */, $y
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -114,7 +114,7 @@
     call void asm sideeffect "JSR 1234", "d"(i8 56)
     ; CHECK:      %1:_(s8) = G_CONSTANT i8 56
     ; CHECK-NEXT: %0:xy = COPY %1(s8)
-    ; CHECK-NEXT: INLINEASM &"JSR 1234", 1 /* sideeffect attdialect */, 983049 /* reguse:XY */, %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse:XY */, %0
     ret void
     ; CHECK-NEXT: RTS
   }
@@ -124,7 +124,7 @@
   entry:
   ; CHECK-LABEL: entry:
     call void asm sideeffect "", "~{cc}"()
-    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $p
+    ; CHECK-NEXT: INLINEASM &"", {{.*}} /* sideeffect attdialect */, {{.*}} /* clobber */, implicit-def early-clobber $p
     ret void
     ; CHECK-NEXT: RTS
   }

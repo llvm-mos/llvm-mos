@@ -683,15 +683,9 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   default:
     Changed = false;
     break;
-  case MOS::CMPImmTerm:
-  case MOS::CMPImag8Term:
-    expandCMPTerm(Builder);
-    break;
-  case MOS::GBR:
-    expandGBR(Builder);
-    break;
-  case MOS::SBCNZImag8:
-    expandSBCNZImag8(Builder);
+  // Post RA
+  case MOS::INC:
+    expandINC(Builder);
     break;
   case MOS::LDIdx:
     expandLDIdx(Builder);
@@ -699,75 +693,34 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::LDImm1:
     expandLDImm1(Builder);
     break;
+
+  // Soft stack
   case MOS::SetSPLo:
   case MOS::SetSPHi:
     expandSetSP(Builder);
+    break;
+
+  // NZ
+  case MOS::SBCNZImag8:
+    expandSBCNZImag8(Builder);
+    break;
+  case MOS::CMPImmTerm:
+  case MOS::CMPImag8Term:
+    expandCMPTerm(Builder);
+    break;
+
+  // Control flow
+  case MOS::GBR:
+    expandGBR(Builder);
     break;
   }
 
   return Changed;
 }
 
-void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
-  MachineInstr &MI = *Builder.getInsertPt();
-  switch (MI.getOpcode()) {
-  case MOS::CMPImmTerm:
-    MI.setDesc(Builder.getTII().get(MOS::CMPImm));
-    break;
-  case MOS::CMPImag8Term:
-    MI.setDesc(Builder.getTII().get(MOS::CMPImag8));
-    break;
-  }
-  MI.addOperand(
-      MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true, /*isImp=*/true));
-}
-
-void MOSInstrInfo::expandGBR(MachineIRBuilder &Builder) const {
-  MachineInstr &MI = *Builder.getInsertPt();
-
-  MI.setDesc(Builder.getTII().get(MOS::BR));
-
-  Register Tst = MI.getOperand(1).getReg();
-  switch (Tst) {
-  case MOS::C:
-  case MOS::V:
-    return;
-  case MOS::ALSB:
-    Builder.buildInstr(MOS::ORAImm, {MOS::A}, {Register(MOS::A), UINT64_C(0)})
-        .addDef(MOS::NZ, RegState::Implicit);
-    break;
-  case MOS::XLSB:
-  case MOS::YLSB: {
-    Register R = Tst == MOS::XLSB ? MOS::X : MOS::Y;
-    Builder.buildInstr(MOS::DE, {R}, {R});
-    Builder.buildInstr(MOS::IN, {R}, {R}).addDef(MOS::NZ, RegState::Implicit);
-  }
-  }
-  // Branch on zero flag, which is now the inverse of the test.
-  MI.getOperand(1).setReg(MOS::Z);
-  MI.getOperand(2).setImm(MI.getOperand(2).getImm() ? 0 : 1);
-}
-
-void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
-  MachineInstr &MI = *Builder.getInsertPt();
-  auto SBC = Builder.buildInstr(
-      MOS::SBCImag8, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
-      {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
-  Register NZOut = MI.getOperand(2).getReg();
-  Register NZIn = MOS::N;
-  if (NZOut == MOS::NoRegister) {
-    NZOut = MI.getOperand(4).getReg();
-    NZIn = MOS::Z;
-  } else
-    assert(MI.getOperand(4).getReg() == MOS::NoRegister &&
-           "At most one of N and Z can be set in SBCNZImag8");
-  if (NZOut != MOS::NoRegister) {
-    SBC.addDef(MOS::NZ, RegState::Implicit);
-    Builder.buildInstr(MOS::SelectImm, {NZOut},
-                       {NZIn, INT64_C(-1), INT64_C(0)});
-  }
-  MI.eraseFromParent();
-}
+//===---------------------------------------------------------------------===//
+// Post RA pseudos
+//===---------------------------------------------------------------------===//
 
 void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
@@ -843,6 +796,43 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   MI.setDesc(Builder.getTII().get(Opcode));
 }
 
+void MOSInstrInfo::expandINC(MachineIRBuilder &Builder) const {
+  const auto &TII = Builder.getTII();
+
+  auto &MI = *Builder.getInsertPt();
+  Register R = MI.getOperand(0).getReg();
+
+  switch (R) {
+  case MOS::A: {
+    Register P = createVReg(Builder, MOS::PcRegClass);
+    Builder.buildInstr(MOS::LDCImm)
+        .addDef(P, RegState::Undef, MOS::subcarry)
+        .addImm(0);
+    Builder.buildInstr(MOS::ADCImm)
+        .addDef(MOS::A)
+        .addDef(P, RegState::Dead, MOS::subcarry)
+        .addDef(P, RegState::Dead, MOS::subv)
+        .addUse(MOS::A, RegState::Kill)
+        .addImm(1)
+        .addUse(P, 0, MOS::subcarry);
+    MI.eraseFromParent();
+    break;
+  }
+  case MOS::X:
+  case MOS::Y:
+    MI.setDesc(TII.get(MOS::IN));
+    break;
+  default:
+    assert(MOS::Imag8RegClass.contains(R));
+    MI.setDesc(TII.get(MOS::INCImag8));
+    break;
+  }
+}
+
+//===---------------------------------------------------------------------===//
+// Soft stack pseudos
+//===---------------------------------------------------------------------===//
+
 void MOSInstrInfo::expandSetSP(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
   Register Src = MI.getOperand(0).getReg();
@@ -854,6 +844,75 @@ void MOSInstrInfo::expandSetSP(MachineIRBuilder &Builder) const {
     copyPhysRegImpl(Builder, MOS::RC1, Src);
   }
   MI.eraseFromParent();
+}
+
+//===---------------------------------------------------------------------===//
+// NZ pseudos
+//===---------------------------------------------------------------------===//
+
+void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
+  MachineInstr &MI = *Builder.getInsertPt();
+  auto SBC = Builder.buildInstr(
+      MOS::SBCImag8, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+      {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
+  Register NZOut = MI.getOperand(2).getReg();
+  Register NZIn = MOS::N;
+  if (NZOut == MOS::NoRegister) {
+    NZOut = MI.getOperand(4).getReg();
+    NZIn = MOS::Z;
+  } else
+    assert(MI.getOperand(4).getReg() == MOS::NoRegister &&
+           "At most one of N and Z can be set in SBCNZImag8");
+  if (NZOut != MOS::NoRegister) {
+    SBC.addDef(MOS::NZ, RegState::Implicit);
+    Builder.buildInstr(MOS::SelectImm, {NZOut},
+                       {NZIn, INT64_C(-1), INT64_C(0)});
+  }
+  MI.eraseFromParent();
+}
+
+void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
+  MachineInstr &MI = *Builder.getInsertPt();
+  switch (MI.getOpcode()) {
+  case MOS::CMPImmTerm:
+    MI.setDesc(Builder.getTII().get(MOS::CMPImm));
+    break;
+  case MOS::CMPImag8Term:
+    MI.setDesc(Builder.getTII().get(MOS::CMPImag8));
+    break;
+  }
+  MI.addOperand(
+      MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true, /*isImp=*/true));
+}
+
+//===---------------------------------------------------------------------===//
+// Control flow pseudos
+//===---------------------------------------------------------------------===//
+
+void MOSInstrInfo::expandGBR(MachineIRBuilder &Builder) const {
+  MachineInstr &MI = *Builder.getInsertPt();
+
+  MI.setDesc(Builder.getTII().get(MOS::BR));
+
+  Register Tst = MI.getOperand(1).getReg();
+  switch (Tst) {
+  case MOS::C:
+  case MOS::V:
+    return;
+  case MOS::ALSB:
+    Builder.buildInstr(MOS::ORAImm, {MOS::A}, {Register(MOS::A), UINT64_C(0)})
+        .addDef(MOS::NZ, RegState::Implicit);
+    break;
+  case MOS::XLSB:
+  case MOS::YLSB: {
+    Register R = Tst == MOS::XLSB ? MOS::X : MOS::Y;
+    Builder.buildInstr(MOS::DE, {R}, {R});
+    Builder.buildInstr(MOS::IN, {R}, {R}).addDef(MOS::NZ, RegState::Implicit);
+  }
+  }
+  // Branch on zero flag, which is now the inverse of the test.
+  MI.getOperand(1).setReg(MOS::Z);
+  MI.getOperand(2).setImm(MI.getOperand(2).getImm() ? 0 : 1);
 }
 
 bool MOSInstrInfo::reverseBranchCondition(

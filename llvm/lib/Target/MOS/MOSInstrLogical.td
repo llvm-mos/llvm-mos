@@ -261,7 +261,14 @@ def IN : MOSLogicalInstr {
   dag InOperandList = (ins XY:$src);
   let Constraints = "$src = $dst";
 
-  let Pattern = [(set XY:$dst, (add XY:$src, 1))];
+  let isAdd = true;
+}
+
+// INC zp
+def INCImag8 : MOSLogicalInstr, PseudoInstExpansion<(INC_ZeroPage addr8:$dst)> {
+  dag OutOperandList = (outs Imag8:$dst);
+  dag InOperandList = (ins Imag8:$src);
+  let Constraints = "$src = $dst";
 
   let isAdd = true;
 }
