@@ -56,8 +56,12 @@ bool MOSPostRAScavenging::runOnMachineFunction(MachineFunction &MF) {
       if (MI.definesRegister(MOS::NZ)) {
         // Branch folding may have eliminated the use of N or Z.
         auto Succ = ++MachineBasicBlock::iterator(MI);
-        if (Succ != MBB.end() && Succ->readsRegister(MOS::NZ, &TRI))
+        if (Succ != MBB.end() && Succ->readsRegister(MOS::NZ, &TRI)) {
           MI.bundleWithSucc();
+          for (MachineOperand &MO : Succ->operands())
+            if (MO.isReg() && (MO.getReg() == MOS::N || MO.getReg() == MOS::Z))
+              MO.setIsInternalRead();
+        }
       }
 
   RegScavenger RS;
@@ -67,8 +71,12 @@ bool MOSPostRAScavenging::runOnMachineFunction(MachineFunction &MF) {
   // be inserted between NZ defs and uses.
   for (MachineBasicBlock &MBB : MF)
     for (auto MI = MBB.instr_begin(), ME = MBB.instr_end(); MI != ME; ++MI)
-      if (MI->isBundledWithPred())
+      if (MI->isBundledWithPred()) {
         MI->unbundleFromPred();
+        for (MachineOperand &MO : MI->operands())
+          if (MO.isReg() && MO.isInternalRead())
+            MO.setIsInternalRead(false);
+      }
 
   return true;
 }
