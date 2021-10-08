@@ -28,6 +28,33 @@ body: |
     $rc0 = INC $rc0
 ...
 ---
+name: dec_a
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: dec_a
+    ; CHECK: undef %0.subcarry:pc = LDCImm 0
+    ; CHECK: $a, dead %0.subcarry:pc, dead %0.subv:pc = ADCImm killed $a, 255, %0.subcarry
+    $a = DEC $a
+...
+---
+name: dec_xy
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: dec_xy
+    ; CHECK: $x = DE $x
+    ; CHECK: $y = DE $y
+    $x = DEC $x
+    $y = DEC $y
+...
+---
+name: dec_imag8
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: dec_imag8
+    ; CHECK: $rc0 = DECImag8 $rc0
+    $rc0 = DEC $rc0
+...
+---
 name: sbcnzimag8
 body: |
   bb.0.entry:

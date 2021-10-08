@@ -50,9 +50,8 @@ entry:
 define i8 @dec_i8(i8 %a) {
 ; CHECK-LABEL: dec_i8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    dex
-; CHECK-NEXT:    txa
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    adc #255
 ; CHECK-NEXT:    rts
 entry:
   %0 = sub i8 %a, 1
