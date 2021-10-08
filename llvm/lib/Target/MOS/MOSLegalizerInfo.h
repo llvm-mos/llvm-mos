@@ -39,6 +39,8 @@ private:
                      MachineInstr &MI) const;
 
   // Integer Operations
+  bool legalizeAddSub(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
   bool legalizeXor(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
   bool legalizeLshrShl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

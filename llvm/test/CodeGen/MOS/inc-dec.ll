@@ -20,15 +20,41 @@ define i16 @inc_i16(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #1
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    adc #0
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bne .LBB1_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    inx
+; CHECK-NEXT:  .LBB1_2: ; %entry
 ; CHECK-NEXT:    rts
 entry:
   %0 = add i16 %a, 1
   ret i16 %0
+}
+
+define i32 @inc_i32(i32 %a) {
+; CHECK-LABEL: inc_i32:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ldy mos8(__rc2)
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    adc #1
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bne .LBB2_4
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    inx
+; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    bne .LBB2_4
+; CHECK-NEXT:  ; %bb.2: ; %entry
+; CHECK-NEXT:    iny
+; CHECK-NEXT:    cpy #0
+; CHECK-NEXT:    bne .LBB2_4
+; CHECK-NEXT:  ; %bb.3: ; %entry
+; CHECK-NEXT:    inc mos8(__rc3)
+; CHECK-NEXT:  .LBB2_4: ; %entry
+; CHECK-NEXT:    sty mos8(__rc2)
+; CHECK-NEXT:    rts
+entry:
+  %0 = add i32 %a, 1
+  ret i32 %0
 }
 
 define i8* @inc_ptr(i8* %a) {
@@ -72,6 +98,28 @@ define i16 @dec_i16(i16 %a) {
 entry:
   %0 = sub i16 %a, 1
   ret i16 %0
+}
+
+define i32 @dec_i32(i32 %a) {
+; CHECK-LABEL: dec_i32:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    sbc #1
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    sbc #0
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    sbc #0
+; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    lda mos8(__rc3)
+; CHECK-NEXT:    sbc #0
+; CHECK-NEXT:    sta mos8(__rc3)
+; CHECK-NEXT:    tya
+; CHECK-NEXT:    rts
+entry:
+  %0 = sub i32 %a, 1
+  ret i32 %0
 }
 
 define i8* @dec_ptr(i8* %a) {
