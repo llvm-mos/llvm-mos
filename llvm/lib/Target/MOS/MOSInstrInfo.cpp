@@ -696,7 +696,8 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
   // Post RA
   case MOS::INC:
-    expandINC(Builder);
+  case MOS::DEC:
+    expandIncDec(Builder);
     break;
   case MOS::LDIdx:
     expandLDIdx(Builder);
@@ -807,11 +808,13 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   MI.setDesc(Builder.getTII().get(Opcode));
 }
 
-void MOSInstrInfo::expandINC(MachineIRBuilder &Builder) const {
+void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
   const auto &TII = Builder.getTII();
 
   auto &MI = *Builder.getInsertPt();
   Register R = MI.getOperand(0).getReg();
+  bool IsInc = MI.getOpcode() == MOS::INC;
+  assert(IsInc || MI.getOpcode() == MOS::DEC);
 
   switch (R) {
   case MOS::A: {
@@ -824,18 +827,18 @@ void MOSInstrInfo::expandINC(MachineIRBuilder &Builder) const {
         .addDef(P, RegState::Dead, MOS::subcarry)
         .addDef(P, RegState::Dead, MOS::subv)
         .addUse(MOS::A, RegState::Kill)
-        .addImm(1)
+        .addImm(IsInc ? 1 : 255)
         .addUse(P, 0, MOS::subcarry);
     MI.eraseFromParent();
     break;
   }
   case MOS::X:
   case MOS::Y:
-    MI.setDesc(TII.get(MOS::IN));
+    MI.setDesc(TII.get(IsInc ? MOS::IN : MOS::DE));
     break;
   default:
     assert(MOS::Imag8RegClass.contains(R));
-    MI.setDesc(TII.get(MOS::INCImag8));
+    MI.setDesc(TII.get(IsInc ? MOS::INCImag8 : MOS::DECImag8));
     break;
   }
 }

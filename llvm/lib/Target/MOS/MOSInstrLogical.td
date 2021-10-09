@@ -246,31 +246,26 @@ def CMPImag8 : MOSLogicalInstr {
 // Increment/Decrement Instructions
 //===---------------------------------------------------------------------===//
 
-// DEX, DEY
-def DE : MOSLogicalInstr {
-  dag OutOperandList = (outs XY:$dst);
-  dag InOperandList = (ins XY:$src);
-  let Constraints = "$src = $dst";
+multiclass MOSIncDec {
+  def NAME : MOSLogicalInstr {
+    dag OutOperandList = (outs XY:$dst);
+    dag InOperandList = (ins XY:$src);
+    let Constraints = "$src = $dst";
+  }
 
-  let Pattern = [(set XY:$dst, (sub XY:$src, 1))];
+  def CImag8 : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPage) addr8:$dst)> {
+    dag OutOperandList = (outs Imag8:$dst);
+    dag InOperandList = (ins Imag8:$src);
+    let Constraints = "$src = $dst";
+  }
 }
 
-// INX, INY
-def IN : MOSLogicalInstr {
-  dag OutOperandList = (outs XY:$dst);
-  dag InOperandList = (ins XY:$src);
-  let Constraints = "$src = $dst";
+// DEX, DEY, DEC
+defm DE : MOSIncDec;
 
-  let isAdd = true;
-}
-
-// INC zp
-def INCImag8 : MOSLogicalInstr, PseudoInstExpansion<(INC_ZeroPage addr8:$dst)> {
-  dag OutOperandList = (outs Imag8:$dst);
-  dag InOperandList = (ins Imag8:$src);
-  let Constraints = "$src = $dst";
-
-  let isAdd = true;
+// INX, INY, INC
+let isAdd = true in {
+  defm IN : MOSIncDec;
 }
 
 //===---------------------------------------------------------------------===//

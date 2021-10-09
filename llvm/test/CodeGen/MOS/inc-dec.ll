@@ -50,9 +50,8 @@ entry:
 define i8 @dec_i8(i8 %a) {
 ; CHECK-LABEL: dec_i8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    dex
-; CHECK-NEXT:    txa
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    adc #255
 ; CHECK-NEXT:    rts
 entry:
   %0 = sub i8 %a, 1
@@ -65,13 +64,6 @@ define i16 @dec_i16(i16 %a) {
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    sbc #1
 ; CHECK-NEXT:    tay
-; CHECK-NEXT:    bcc .LBB4_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    sec
-; CHECK-NEXT:    jmp .LBB4_3
-; CHECK-NEXT:  .LBB4_2: ; %entry
-; CHECK-NEXT:    clc
-; CHECK-NEXT:  .LBB4_3: ; %entry
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    sbc #0
 ; CHECK-NEXT:    tax

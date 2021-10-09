@@ -64,8 +64,15 @@ def INC : MOSPseudo {
 
   let Constraints = "$dst = $src";
   let Pattern = [(set GPRImag8:$dst, (add GPRImag8:$src, 1))];
-
   let isAdd = true;
+}
+
+def DEC : MOSPseudo {
+  dag OutOperandList = (outs GPRImag8:$dst);
+  dag InOperandList = (ins GPRImag8:$src);
+
+  let Constraints = "$dst = $src";
+  let Pattern = [(set GPRImag8:$dst, (sub GPRImag8:$src, 1))];
 }
 
 //===---------------------------------------------------------------------===//
