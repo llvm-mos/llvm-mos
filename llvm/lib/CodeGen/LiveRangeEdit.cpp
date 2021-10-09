@@ -151,8 +151,6 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM, VNInfo *OrigVNI,
   if (!Remattable.count(OrigVNI))
     return false;
 
-  dbgs() << "Asking canRematerializeAt for " << *RM.OrigMI;
-
   // No defining instruction provided.
   SlotIndex DefIdx;
   assert(RM.OrigMI && "No defining instruction for remattable value");

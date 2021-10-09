@@ -423,9 +423,7 @@ void TargetInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                     const MachineInstr &Orig,
                                     const TargetRegisterInfo &TRI) const {
   MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
-  dbgs() << "reMaterializing " << *MI << "\n";
   MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
-  dbgs() << "reMaterialized as: " << *MI << "\n";
   MBB.insert(I, MI);
 }
 

@@ -45,12 +45,6 @@ MOSInstrInfo::MOSInstrInfo()
     : MOSGenInstrInfo(/*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
                       /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP) {}
 
-bool MOSInstrInfo::isReallyTriviallyReMaterializable(
-    const MachineInstr &MI, AAResults *AA) const {
-  dbgs() << "Asking remattability for " << MI;
-  return false;
-}
-
 unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {

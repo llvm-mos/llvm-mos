@@ -257,8 +257,6 @@ class RAGreedy : public MachineFunctionPass,
   }
 
   void setStage(const LiveInterval &VirtReg, LiveRangeStage Stage) {
-    dbgs() << "setting interval " << VirtReg << " to stage " << StageName[Stage]
-           << "\n";
     ExtraRegInfo.resize(MRI->getNumVirtRegs());
     ExtraRegInfo[VirtReg.reg()].Stage = Stage;
   }
@@ -1823,7 +1821,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     // Remainder interval. Don't try splitting again, spill if it doesn't
     // allocate.
     if (IntvMap[I] == 0) {
-      setStage(Reg, /*RS_Spill*/RS_LightSpill);
+      setStage(Reg, RS_LightSpill);
       continue;
     }
 
@@ -2068,14 +2066,11 @@ unsigned RAGreedy::tryBlockSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   for (unsigned I = 0, E = LREdit.size(); I != E; ++I) {
     LiveInterval &LI = LIS->getInterval(LREdit.get(I));
     if (getStage(LI) == RS_New && IntvMap[I] == 0)
-      setStage(LI, /*RS_Spill*/RS_LightSpill);
+      setStage(LI, RS_LightSpill);
   }
 
   if (VerifyEnabled)
     MF->verify(this, "After splitting live range around basic blocks");
-
-  dbgs() << "Intervals after block split:\n";
-  LIS->dump();
   return 0;
 }
 
@@ -2109,8 +2104,6 @@ static unsigned getNumAllocatableRegsForConstraints(
 unsigned
 RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
                               SmallVectorImpl<Register> &NewVRegs) {
-  dbgs() << "tryInstructionSplit " << VirtReg
-         << "\n";
   const TargetRegisterClass *CurRC = MRI->getRegClass(VirtReg.reg());
   // There is no point to this if there are no larger sub-classes.
   if (!RegClassInfo.isProperSubClass(CurRC))
@@ -2122,7 +2115,6 @@ RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   if (getStage(VirtReg) == RS_LightSpill) {
     // Don't rematerialize during the light-spill stage, as this can cause
     // register classes to become over-constrained.
-    dbgs() << "Disabling remat for " << VirtReg << "\n";
     LREdit.setRematEnable(false);
   }
   SE->reset(LREdit, SplitEditor::SM_Size);
@@ -2168,8 +2160,6 @@ RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
 
   // Assign all new registers to RS_Spill. This was the last chance.
   setStage(LREdit.begin(), LREdit.end(), RS_Spill);
-  dbgs() << "Intervals after instruction split:\n";
-  LIS->dump();
   return 0;
 }
 
@@ -2480,9 +2470,6 @@ unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
     LLVM_DEBUG(dbgs() << '\n');
   }
   ++NumLocalSplits;
-
-  dbgs() << "Intervals after local split:\n";
-  LIS->dump();
 
   return 0;
 }
