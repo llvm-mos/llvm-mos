@@ -203,6 +203,10 @@ class RAGreedy : public MachineFunctionPass,
     /// progress.
     RS_Split2,
 
+    /// (new for llvm-mos) Attempt to spill to a wider register class to hopefully
+    /// avoid spilling to the stack.
+    RS_LightSpill,
+
     /// Live range will be spilled.  No more splitting will be attempted.
     RS_Spill,
 
@@ -590,6 +594,7 @@ const char *const RAGreedy::StageName[] = {
     "RS_Assign",
     "RS_Split",
     "RS_Split2",
+    "RS_LightSpill",
     "RS_Spill",
     "RS_Memory",
     "RS_Done"
@@ -956,7 +961,9 @@ bool RAGreedy::canEvictInterference(
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())) ||
            (!canWiden(MRI, TII, TRI, VirtReg.reg()) &&
-            canWiden(MRI, TII, TRI, Intf->reg())));
+            canWiden(MRI, TII, TRI, Intf->reg())) ||
+           (VirtReg.isZeroLength(LIS->getSlotIndexes()) &&
+            !Intf->isZeroLength(LIS->getSlotIndexes())));
 
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = ExtraRegInfo[Intf->reg()].Cascade;
@@ -1814,7 +1821,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     // Remainder interval. Don't try splitting again, spill if it doesn't
     // allocate.
     if (IntvMap[I] == 0) {
-      setStage(Reg, RS_Spill);
+      setStage(Reg, RS_LightSpill);
       continue;
     }
 
@@ -2059,7 +2066,7 @@ unsigned RAGreedy::tryBlockSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   for (unsigned I = 0, E = LREdit.size(); I != E; ++I) {
     LiveInterval &LI = LIS->getInterval(LREdit.get(I));
     if (getStage(LI) == RS_New && IntvMap[I] == 0)
-      setStage(LI, RS_Spill);
+      setStage(LI, RS_LightSpill);
   }
 
   if (VerifyEnabled)
@@ -2105,6 +2112,11 @@ RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   // Always enable split spill mode, since we're effectively spilling to a
   // register.
   LiveRangeEdit LREdit(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  if (getStage(VirtReg) == RS_LightSpill) {
+    // Don't rematerialize during the light-spill stage, as this can cause
+    // register classes to become over-constrained.
+    LREdit.setRematEnable(false);
+  }
   SE->reset(LREdit, SplitEditor::SM_Size);
 
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
@@ -2484,6 +2496,13 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
     Register PhysReg = tryLocalSplit(VirtReg, Order, NewVRegs);
     if (PhysReg || !NewVRegs.empty())
       return PhysReg;
+    return tryInstructionSplit(VirtReg, Order, NewVRegs);
+  }
+
+  if (getStage(VirtReg) == RS_LightSpill) {
+    NamedRegionTimer T("light_spill", "Light Spilling", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
+    SA->analyze(&VirtReg);
     return tryInstructionSplit(VirtReg, Order, NewVRegs);
   }
 
