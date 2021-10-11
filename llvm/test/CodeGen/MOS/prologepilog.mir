@@ -159,7 +159,7 @@ body:             |
     ; CHECK: KILL killed $p
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
-    $a, early-clobber $rs1, early-clobber $y = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
+    $a, early-clobber $rs1 = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
 ...
 ---
 name: ld_byte_high
@@ -186,7 +186,7 @@ body:             |
     ; CHECK: $rc3 = COPY killed $a
     ; CHECK: $y = LDImm 0
     ; CHECK: $a = LDYIndir $rs1, killed $y :: (load 1 from %stack.0 + 254)
-    $a, early-clobber $rs1, early-clobber $y = LDStk %stack.0, 254 :: (load 1 from %stack.0 + 254)
+    $a, early-clobber $rs1 = LDStk %stack.0, 254 :: (load 1 from %stack.0 + 254)
 ...
 ---
 name: ld_byte_x
@@ -209,7 +209,7 @@ body:             |
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
     ; CHECK: $x = COPY killed $a
-    $x, early-clobber $rs1, early-clobber $y = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
+    $x, early-clobber $rs1 = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
 ...
 ---
 name: ld_byte_xlsb
@@ -232,7 +232,7 @@ body:             |
     ; CHECK: $y = LDImm 1
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
     ; CHECK: $x = COPY killed $a
-    $xlsb, early-clobber $rs1, early-clobber $y = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
+    $xlsb, early-clobber $rs1 = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
 ...
 ---
 name: ld_byte_c
@@ -256,7 +256,7 @@ body:             |
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.1 + 1)
     ; CHECK: $c = COPY $alsb
     ; CHECK: $xlsb = COPY killed $c
-    $c, early-clobber $rs1, early-clobber $y = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
+    $c, early-clobber $rs1 = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
     $xlsb = COPY killed $c
 ...
 ---
@@ -282,7 +282,7 @@ body: |
     ; CHECK: $y = LDImm 3
     ; CHECK: $a = LDYIndir $rs0, killed $y :: (load 1 from %stack.0 + 3, basealign 2)
     ; CHECK: $rc1 = COPY killed $a
-    $rs0, early-clobber $rs1, early-clobber $y = LDStk %stack.0, 2 :: (load 2 from %stack.0 + 2)
+    $rs0, early-clobber $rs1 = LDStk %stack.0, 2 :: (load 2 from %stack.0 + 2)
 
 ...
 ---
@@ -307,7 +307,7 @@ body:             |
     ; CHECK: KILL killed $p
     ; CHECK: $y = LDImm 1
     ; CHECK: STYIndir $a, $rs0, killed $y :: (store 1 into %stack.1 + 1)
-    early-clobber $rs1, early-clobber $y = STStk $a, %stack.1, 1 :: (store 1 into %stack.1 + 1)
+    early-clobber $rs1 = STStk $a, %stack.1, 1 :: (store 1 into %stack.1 + 1)
 ...
 ---
 name: st_byte_c
@@ -332,7 +332,7 @@ body:             |
     ; CHECK: $y = LDImm 1
     ; CHECK: STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.1 + 1)
     $c = COPY $xlsb
-    early-clobber $rs1, early-clobber $y = STStk killed $c, %stack.1, 1 :: (store 1 into %stack.1 + 1)
+    early-clobber $rs1 = STStk killed $c, %stack.1, 1 :: (store 1 into %stack.1 + 1)
 ...
 ---
 name: st_byte_high
@@ -360,7 +360,7 @@ body:             |
     ; CHECK: $a = COPY $x
     ; CHECK: $y = LDImm 0
     ; CHECK: STYIndir killed $a, $rs1, killed $y :: (store 1 into %stack.0 + 254)
-    early-clobber $rs1, early-clobber $y = STStk $x, %stack.0, 254 :: (store 1 into %stack.0 + 254)
+    early-clobber $rs1 = STStk $x, %stack.0, 254 :: (store 1 into %stack.0 + 254)
 ...
 ---
 name: st_ptr
@@ -386,7 +386,7 @@ body: |
     ; CHECK: $a = COPY $rc1
     ; CHECK: $y = LDImm 3
     ; CHECK: STYIndir killed $a, $rs0, killed $y :: (store 1 into %stack.0 + 3, basealign 2)
-    early-clobber $rs1, early-clobber $y = STStk $rs0, %stack.0, 2 :: (store 2 into %stack.0 + 2)
+    early-clobber $rs1 = STStk $rs0, %stack.0, 2 :: (store 2 into %stack.0 + 2)
 
 ...
 ---
@@ -428,7 +428,7 @@ body: |
     ; CHECK: $a, $c, $v = ADCImm $a, 0, $c
     ; CHECK: $rc1 = COPY killed $a
     ; CHECK: RTS implicit $rc30, implicit $rc31
-    $a, early-clobber $rs1, early-clobber $y = LDStk %stack.2, 1 :: (load 1 from %stack.2 + 1)
+    $a, early-clobber $rs1 = LDStk %stack.2, 1 :: (load 1 from %stack.2 + 1)
     RTS
 ...
 ---
