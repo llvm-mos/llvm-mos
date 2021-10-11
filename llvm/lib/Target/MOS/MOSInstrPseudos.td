@@ -128,9 +128,9 @@ def AddrHistk : MOSPseudo {
 // Loads a value (1, 8, or 16 bits) from the soft stack. Eliminated once the
 // offset from the frame register is known.
 def LDStk : MOSPseudo {
-  dag OutOperandList = (outs unknown:$dst, Imag16:$scratch, Yc:$scratch2);
+  dag OutOperandList = (outs unknown:$dst, Imag16:$scratch);
   dag InOperandList = (ins Imag16:$base, i16imm:$offset);
-  let Constraints = "@earlyclobber $scratch,@earlyclobber $scratch2";
+  let Constraints = "@earlyclobber $scratch";
 
   let mayLoad = true;
 }
@@ -138,9 +138,9 @@ def LDStk : MOSPseudo {
 // Stores a value (1, 8, or 16 bits) to the soft stack. Eliminated once the
 // offset from the frame register is known.
 def STStk : MOSPseudo {
-  dag OutOperandList = (outs Imag16:$scratch, Yc:$scratch2);
+  dag OutOperandList = (outs Imag16:$scratch);
   dag InOperandList = (ins unknown:$src, Imag16:$base, i16imm:$fi);
-  let Constraints = "@earlyclobber $scratch,@earlyclobber $scratch2";
+  let Constraints = "@earlyclobber $scratch";
 
   let mayStore = true;
 }

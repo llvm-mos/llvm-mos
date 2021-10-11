@@ -372,15 +372,15 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
   const bool IsLoad = MI->getOpcode() == MOS::LDStk;
 
   Register Loc =
-      IsLoad ? MI->getOperand(0).getReg() : MI->getOperand(2).getReg(); // dst/src
-  int64_t Offset = MI->getOperand(4).getImm(); // offset
+      IsLoad ? MI->getOperand(0).getReg() : MI->getOperand(1).getReg();
+  int64_t Offset = MI->getOperand(3).getImm();
 
   if (Offset >= 256) {
     Register P = MRI.createVirtualRegister(&MOS::PcRegClass);
     // Far stack accesses need a virtual base register, so materialize one here
     // using the pointer provided.
     Register NewBase =
-        IsLoad ? MI->getOperand(1).getReg() : MI->getOperand(0).getReg(); // scratch
+        IsLoad ? MI->getOperand(1).getReg() : MI->getOperand(0).getReg();
     // We can't scavenge a 16-bit register, so this can't be virtual here (after
     // register allocation).
     assert(!NewBase.isVirtual() && "LDSTStk must not use a virtual base "
@@ -390,18 +390,18 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
                   .addDef(TRI.getSubReg(NewBase, MOS::sublo))
                   .addDef(P, /*Flags=*/0, MOS::subcarry)
                   .addDef(P, RegState::Dead, MOS::subv)
-                  .add(MI->getOperand(3)) // base
-                  .add(MI->getOperand(4)); // offset
+                  .add(MI->getOperand(2))
+                  .add(MI->getOperand(3));
     auto Hi = Builder.buildInstr(MOS::AddrHistk)
                   .addDef(TRI.getSubReg(NewBase, MOS::subhi))
                   .addDef(P, RegState::Dead, MOS::subcarry)
                   .addDef(P, RegState::Dead, MOS::subv)
-                  .add(MI->getOperand(3)) // base
-                  .add(MI->getOperand(4)) // offset
+                  .add(MI->getOperand(2))
+                  .add(MI->getOperand(3))
                   .addUse(P, /*Flags=*/0, MOS::subcarry)
                   .addUse(NewBase, RegState::Implicit);
-    MI->getOperand(3).setReg(NewBase); // base
-    MI->getOperand(4).setImm(0); // offset
+    MI->getOperand(2).setReg(NewBase);
+    MI->getOperand(3).setImm(0);
 
     expandAddrLostk(Lo);
     expandAddrHistk(Hi);
@@ -420,34 +420,22 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
     Register Lo = TRI.getSubReg(Loc, MOS::sublo);
     Register Hi = TRI.getSubReg(Loc, MOS::subhi);
     auto LoInstr = Builder.buildInstr(MI->getOpcode());
-    if (!IsLoad) {
-      LoInstr.add(MI->getOperand(0)); // scratch
-      Register NewY = MRI.createVirtualRegister(&MOS::YcRegClass);
-      LoInstr.addDef(NewY, RegState::EarlyClobber); // scratch2
-    }
+    if (!IsLoad)
+      LoInstr.add(MI->getOperand(0));
     LoInstr.addReg(Lo, getDefRegState(IsLoad));
-    if (IsLoad) {
-      LoInstr.add(MI->getOperand(1)); // scratch
-      Register NewY = MRI.createVirtualRegister(&MOS::YcRegClass);
-      LoInstr.addDef(NewY, RegState::EarlyClobber); // scratch2
-    }
-    LoInstr.add(MI->getOperand(3)) // base
-        .add(MI->getOperand(4)) // offset
+    if (IsLoad)
+      LoInstr.add(MI->getOperand(1));
+    LoInstr.add(MI->getOperand(2))
+        .add(MI->getOperand(3))
         .addMemOperand(MF.getMachineMemOperand(*MI->memoperands_begin(), 0, 1));
     auto HiInstr = Builder.buildInstr(MI->getOpcode());
-    if (!IsLoad) {
-      HiInstr.add(MI->getOperand(0)); // scratch
-      Register NewY = MRI.createVirtualRegister(&MOS::YcRegClass);
-      HiInstr.addDef(NewY, RegState::EarlyClobber); // scratch2
-    }
+    if (!IsLoad)
+      HiInstr.add(MI->getOperand(0));
     HiInstr.addReg(Hi, getDefRegState(IsLoad));
-    if (IsLoad) {
-      HiInstr.add(MI->getOperand(1)); // scratch
-      Register NewY = MRI.createVirtualRegister(&MOS::YcRegClass);
-      HiInstr.addDef(NewY, RegState::EarlyClobber); // scratch2
-    }
-    HiInstr.add(MI->getOperand(3)) // base
-        .addImm(MI->getOperand(4).getImm() + 1) // offset
+    if (IsLoad)
+      HiInstr.add(MI->getOperand(1));
+    HiInstr.add(MI->getOperand(2))
+        .addImm(MI->getOperand(3).getImm() + 1)
         .addMemOperand(MF.getMachineMemOperand(*MI->memoperands_begin(), 1, 1));
     MI->eraseFromParent();
     expandLDSTStk(LoInstr);
@@ -484,8 +472,8 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
 
   Builder.buildInstr(IsLoad ? MOS::LDYIndir : MOS::STYIndir)
       .addReg(A, getDefRegState(IsLoad))
-      .add(MI->getOperand(3)) // base
-      .addUse(Y) // offset
+      .add(MI->getOperand(2))
+      .addUse(Y)
       .addMemOperand(*MI->memoperands_begin());
 
   // Transfer the loaded value out of A (if applicable).

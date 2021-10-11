@@ -72,8 +72,6 @@ bool LiveRangeEdit::checkRematerializable(VNInfo *VNI,
                                           AAResults *aa) {
   assert(DefMI && "Missing instruction");
   ScannedRemattable = true;
-  if (!EnableRemat)
-    return false;
   if (!TII.isTriviallyReMaterializable(*DefMI, aa))
     return false;
   Remattable.insert(VNI);
@@ -137,10 +135,6 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
       return false;
   }
   return true;
-}
-
-void LiveRangeEdit::setRematEnable(bool Enable) {
-    EnableRemat = Enable;
 }
 
 bool LiveRangeEdit::canRematerializeAt(Remat &RM, VNInfo *OrigVNI,

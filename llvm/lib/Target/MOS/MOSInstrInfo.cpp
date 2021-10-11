@@ -54,7 +54,7 @@ unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     FrameIndex = MI.getOperand(1).getIndex();
     return MI.getOperand(0).getReg();
   case MOS::LDStk:
-    FrameIndex = MI.getOperand(3).getIndex();
+    FrameIndex = MI.getOperand(2).getIndex();
     return MI.getOperand(0).getReg();
   }
 }
@@ -68,8 +68,8 @@ unsigned MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     FrameIndex = MI.getOperand(1).getIndex();
     return MI.getOperand(0).getReg();
   case MOS::STStk:
-    FrameIndex = MI.getOperand(3).getIndex();
-    return MI.getOperand(2).getReg();
+    FrameIndex = MI.getOperand(2).getIndex();
+    return MI.getOperand(1).getReg();
   }
 }
 
@@ -612,17 +612,12 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   // elimination.
   if (!MF.getFunction().doesNotRecurse()) {
     Register Ptr = MRI.createVirtualRegister(&MOS::Imag16RegClass);
-    Register Y = MRI.createVirtualRegister(&MOS::YcRegClass);
     auto Instr = Builder.buildInstr(IsLoad ? MOS::LDStk : MOS::STStk);
-    if (!IsLoad) {
+    if (!IsLoad)
       Instr.addDef(Ptr, RegState::EarlyClobber);
-      Instr.addDef(Y, RegState::EarlyClobber);
-    }
     Instr.addReg(Reg, getDefRegState(IsLoad) | getKillRegState(IsKill));
-    if (IsLoad) {
+    if (IsLoad)
       Instr.addDef(Ptr, RegState::EarlyClobber);
-      Instr.addDef(Y, RegState::EarlyClobber);
-    }
     Instr.addFrameIndex(FrameIndex).addImm(0).addMemOperand(MMO);
   } else {
     if ((Reg.isPhysical() && MOS::Imag16RegClass.contains(Reg)) ||
