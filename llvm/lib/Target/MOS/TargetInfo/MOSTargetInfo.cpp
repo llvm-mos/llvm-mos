@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Module.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "TargetInfo/MOSTargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 
 namespace llvm {
 Target &getTheMOSTarget() {
@@ -16,7 +16,7 @@ Target &getTheMOSTarget() {
 }
 } // namespace llvm
 
-extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTargetInfo() { // NOLINT
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTargetInfo() { // NOLINT
   llvm::RegisterTarget<llvm::Triple::mos> X(llvm::getTheMOSTarget(), "mos",
                                             "MOS Technologies 65xx and variants", "MOS");
 }
