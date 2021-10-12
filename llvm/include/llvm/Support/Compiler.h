@@ -212,6 +212,12 @@
 #define LLVM_READONLY
 #endif
 
+#if __has_attribute(minsize)
+#define LLVM_ATTRIBUTE_MINSIZE __attribute__((minsize))
+#else
+#define LLVM_ATTRIBUTE_MINSIZE
+#endif
+
 #if __has_builtin(__builtin_expect) || LLVM_GNUC_PREREQ(4, 0, 0)
 #define LLVM_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
 #define LLVM_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
@@ -240,6 +246,15 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE __forceinline
 #else
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
+#endif
+
+/// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
+/// so, mark a method "no debug" because debug info makes the debugger
+/// experience worse.  GCC introduced this in GCC 4.0
+#if __has_attribute(nodebug) || LLVM_GNUC_PREREQ(4, 0, 0)
+#define LLVM_ATTRIBUTE_NODEBUG __attribute__((nodebug))
+#else
+#define LLVM_ATTRIBUTE_NODEBUG
 #endif
 
 #if __has_attribute(returns_nonnull) || LLVM_GNUC_PREREQ(4, 9, 0)

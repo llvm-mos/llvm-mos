@@ -42,7 +42,6 @@ void DynamicRegisterInfo::MoveFrom(DynamicRegisterInfo &&info) {
   m_set_names = std::move(info.m_set_names);
   m_value_regs_map = std::move(info.m_value_regs_map);
   m_invalidate_regs_map = std::move(info.m_invalidate_regs_map);
-  m_dynamic_reg_size_map = std::move(info.m_dynamic_reg_size_map);
 
   m_reg_data_byte_size = info.m_reg_data_byte_size;
   m_finalized = info.m_finalized;
@@ -273,25 +272,6 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
 
     reg_info.byte_size = bitsize / 8;
 
-    llvm::StringRef dwarf_opcode_string;
-    if (reg_info_dict->GetValueForKeyAsString("dynamic_size_dwarf_expr_bytes",
-                                              dwarf_opcode_string)) {
-      reg_info.dynamic_size_dwarf_len = dwarf_opcode_string.size() / 2;
-      assert(reg_info.dynamic_size_dwarf_len > 0);
-
-      std::vector<uint8_t> dwarf_opcode_bytes(reg_info.dynamic_size_dwarf_len);
-      uint32_t j;
-      StringExtractor opcode_extractor(dwarf_opcode_string);
-      uint32_t ret_val = opcode_extractor.GetHexBytesAvail(dwarf_opcode_bytes);
-      UNUSED_IF_ASSERT_DISABLED(ret_val);
-      assert(ret_val == reg_info.dynamic_size_dwarf_len);
-
-      for (j = 0; j < reg_info.dynamic_size_dwarf_len; ++j)
-        m_dynamic_reg_size_map[i].push_back(dwarf_opcode_bytes[j]);
-
-      reg_info.dynamic_size_dwarf_expr_bytes = m_dynamic_reg_size_map[i].data();
-    }
-
     llvm::StringRef format_str;
     if (reg_info_dict->GetValueForKeyAsString("format", format_str, nullptr)) {
       if (OptionArgParser::ToFormat(format_str.str().c_str(), reg_info.format,
@@ -399,6 +379,45 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   return m_regs.size();
 }
 
+size_t DynamicRegisterInfo::SetRegisterInfo(
+    std::vector<DynamicRegisterInfo::Register> &&regs,
+    const ArchSpec &arch) {
+  assert(!m_finalized);
+
+  for (auto it : llvm::enumerate(regs)) {
+    uint32_t local_regnum = it.index();
+    const DynamicRegisterInfo::Register &reg = it.value();
+
+    assert(reg.name);
+    assert(reg.set_name);
+
+    if (!reg.value_regs.empty())
+      m_value_regs_map[local_regnum] = std::move(reg.value_regs);
+    if (!reg.invalidate_regs.empty())
+      m_invalidate_regs_map[local_regnum] = std::move(reg.invalidate_regs);
+
+    struct RegisterInfo reg_info {
+      reg.name.AsCString(), reg.alt_name.AsCString(), reg.byte_size,
+          reg.byte_offset, reg.encoding, reg.format,
+          {reg.regnum_ehframe, reg.regnum_dwarf, reg.regnum_generic,
+           reg.regnum_remote, local_regnum},
+          // value_regs and invalidate_regs are filled by Finalize()
+          nullptr, nullptr
+    };
+
+    m_regs.push_back(reg_info);
+
+    uint32_t set = GetRegisterSetIndexByName(reg.set_name, true);
+    assert(set < m_sets.size());
+    assert(set < m_set_reg_nums.size());
+    assert(set < m_set_names.size());
+    m_set_reg_nums[set].push_back(local_regnum);
+  };
+
+  Finalize(arch);
+  return m_regs.size();
+}
+
 void DynamicRegisterInfo::AddRegister(RegisterInfo reg_info,
                                       ConstString &set_name) {
   assert(!m_finalized);
@@ -419,14 +438,6 @@ void DynamicRegisterInfo::AddRegister(RegisterInfo reg_info,
     // invalidate until Finalize() is called
     reg_info.invalidate_regs = nullptr;
   }
-  if (reg_info.dynamic_size_dwarf_expr_bytes) {
-    for (i = 0; i < reg_info.dynamic_size_dwarf_len; ++i)
-      m_dynamic_reg_size_map[reg_num].push_back(
-          reg_info.dynamic_size_dwarf_expr_bytes[i]);
-
-    reg_info.dynamic_size_dwarf_expr_bytes =
-        m_dynamic_reg_size_map[reg_num].data();
-  }
 
   m_regs.push_back(reg_info);
   uint32_t set = GetRegisterSetIndexByName(set_name, true);
@@ -434,29 +445,6 @@ void DynamicRegisterInfo::AddRegister(RegisterInfo reg_info,
   assert(set < m_set_reg_nums.size());
   assert(set < m_set_names.size());
   m_set_reg_nums[set].push_back(reg_num);
-}
-
-void DynamicRegisterInfo::AddSupplementaryRegister(RegisterInfo new_reg_info,
-                                                   ConstString &set_name) {
-  assert(new_reg_info.value_regs != nullptr);
-  const uint32_t reg_num = m_regs.size();
-  AddRegister(new_reg_info, set_name);
-
-  reg_to_regs_map new_invalidates;
-  for (uint32_t value_reg : m_value_regs_map[reg_num]) {
-    // copy value_regs to invalidate_regs
-    new_invalidates[reg_num].push_back(value_reg);
-
-    // copy invalidate_regs from the parent register
-    llvm::append_range(new_invalidates[reg_num], m_invalidate_regs_map[value_reg]);
-
-    // add reverse invalidate entries
-    for (uint32_t x : new_invalidates[reg_num])
-      new_invalidates[x].push_back(new_reg_info.kinds[eRegisterKindLLDB]);
-  }
-
-  for (const auto &x : new_invalidates)
-    llvm::append_range(m_invalidate_regs_map[x.first], x.second);
 }
 
 void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
@@ -719,12 +707,6 @@ DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) const {
   return nullptr;
 }
 
-RegisterInfo *DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) {
-  if (i < m_regs.size())
-    return &m_regs[i];
-  return nullptr;
-}
-
 const RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(uint32_t kind,
                                                          uint32_t num) const {
   uint32_t reg_index = ConvertRegisterKindToRegisterNumber(kind, num);
@@ -739,8 +721,9 @@ const RegisterSet *DynamicRegisterInfo::GetRegisterSet(uint32_t i) const {
   return nullptr;
 }
 
-uint32_t DynamicRegisterInfo::GetRegisterSetIndexByName(ConstString &set_name,
-                                                        bool can_create) {
+uint32_t
+DynamicRegisterInfo::GetRegisterSetIndexByName(const ConstString &set_name,
+                                               bool can_create) {
   name_collection::iterator pos, end = m_set_names.end();
   for (pos = m_set_names.begin(); pos != end; ++pos) {
     if (*pos == set_name)
@@ -773,7 +756,6 @@ void DynamicRegisterInfo::Clear() {
   m_set_names.clear();
   m_value_regs_map.clear();
   m_invalidate_regs_map.clear();
-  m_dynamic_reg_size_map.clear();
   m_reg_data_byte_size = 0;
   m_finalized = false;
 }
@@ -836,4 +818,29 @@ DynamicRegisterInfo::GetRegisterInfo(llvm::StringRef reg_name) const {
     if (reg_info.name == reg_name)
       return &reg_info;
   return nullptr;
+}
+
+void lldb_private::addSupplementaryRegister(
+    std::vector<DynamicRegisterInfo::Register> &regs,
+    DynamicRegisterInfo::Register new_reg_info) {
+  assert(!new_reg_info.value_regs.empty());
+  const uint32_t reg_num = regs.size();
+  regs.push_back(new_reg_info);
+
+  std::map<uint32_t, std::vector<uint32_t>> new_invalidates;
+  for (uint32_t value_reg : new_reg_info.value_regs) {
+    // copy value_regs to invalidate_regs
+    new_invalidates[reg_num].push_back(value_reg);
+
+    // copy invalidate_regs from the parent register
+    llvm::append_range(new_invalidates[reg_num],
+                       regs[value_reg].invalidate_regs);
+
+    // add reverse invalidate entries
+    for (uint32_t x : new_invalidates[reg_num])
+      new_invalidates[x].push_back(reg_num);
+  }
+
+  for (const auto &x : new_invalidates)
+    llvm::append_range(regs[x.first].invalidate_regs, x.second);
 }

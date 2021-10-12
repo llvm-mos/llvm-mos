@@ -3801,7 +3801,7 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
 
 bool ARMTargetLowering::isReadOnly(const GlobalValue *GV) const {
   if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(GV))
-    if (!(GV = GA->getBaseObject()))
+    if (!(GV = GA->getAliaseeObject()))
       return false;
   if (const auto *V = dyn_cast<GlobalVariable>(GV))
     return V->isConstant();
@@ -14968,6 +14968,7 @@ PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   SDValue Op0 = Ext.getOperand(0);
   EVT VecVT = Op0.getValueType();
+  unsigned ResNo = Op0.getResNo();
   unsigned Lane = Ext.getConstantOperandVal(1);
   if (VecVT.getVectorNumElements() != 4)
     return SDValue();
@@ -14976,7 +14977,8 @@ PerformExtractEltToVMOVRRD(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto OtherIt = find_if(Op0->uses(), [&](SDNode *V) {
     return V->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
            isa<ConstantSDNode>(V->getOperand(1)) &&
-           V->getConstantOperandVal(1) == Lane + 1;
+           V->getConstantOperandVal(1) == Lane + 1 &&
+           V->getOperand(0).getResNo() == ResNo;
   });
   if (OtherIt == Op0->uses().end())
     return SDValue();
@@ -15779,11 +15781,12 @@ static SDValue PerformVDUPCombine(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue PerformLOADCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI) {
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const ARMSubtarget *Subtarget) {
   EVT VT = N->getValueType(0);
 
   // If this is a legal vector load, try to combine it into a VLD1_UPD.
-  if (ISD::isNormalLoad(N) && VT.isVector() &&
+  if (Subtarget->hasNEON() && ISD::isNormalLoad(N) && VT.isVector() &&
       DCI.DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return CombineBaseUpdate(N, DCI);
 
@@ -17997,9 +18000,12 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SMAX:
   case ISD::UMAX:
     return PerformMinMaxCombine(N, DCI.DAG, Subtarget);
-  case ARMISD::CMOV: return PerformCMOVCombine(N, DCI.DAG);
-  case ARMISD::BRCOND: return PerformBRCONDCombine(N, DCI.DAG);
-  case ISD::LOAD:       return PerformLOADCombine(N, DCI);
+  case ARMISD::CMOV:
+    return PerformCMOVCombine(N, DCI.DAG);
+  case ARMISD::BRCOND:
+    return PerformBRCONDCombine(N, DCI.DAG);
+  case ISD::LOAD:
+    return PerformLOADCombine(N, DCI, Subtarget);
   case ARMISD::VLD1DUP:
   case ARMISD::VLD2DUP:
   case ARMISD::VLD3DUP:
