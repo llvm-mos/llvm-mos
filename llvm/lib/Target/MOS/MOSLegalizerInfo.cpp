@@ -245,7 +245,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .clampScalar(0, S8, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).lower();
+  getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).custom();
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
@@ -335,6 +335,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeSubE(Helper, MRI, MI);
 
   // Memory Operations
+  case G_SEXTLOAD:
+  case G_ZEXTLOAD:
   case G_LOAD:
     return legalizeLoad(Helper, MRI, MI);
   case G_STORE:
@@ -993,10 +995,26 @@ bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
-  Register Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
   Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-  Builder.buildIntToPtr(MI.getOperand(0), Tmp);
+  Register Tmp;
+  const MachineMemOperand &MMO = **MI.memoperands_begin();
+  switch (MI.getOpcode()) {
+  case MOS::G_SEXTLOAD:
+    Tmp = MRI.createGenericVirtualRegister(MMO.getType());
+    Builder.buildSExt(MI.getOperand(0), Tmp);
+    break;
+  case MOS::G_ZEXTLOAD:
+    Tmp = MRI.createGenericVirtualRegister(MMO.getType());
+    Builder.buildZExt(MI.getOperand(0), Tmp);
+    break;
+  default:
+    assert(MRI.getType(MI.getOperand(0).getReg()).isPointer());
+    Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
+    Builder.buildIntToPtr(MI.getOperand(0), Tmp);
+    break;
+  }
   Helper.Observer.changingInstr(MI);
+  MI.setDesc(Builder.getTII().get(MOS::G_LOAD));
   MI.getOperand(0).setReg(Tmp);
   Helper.Observer.changedInstr(MI);
   return true;

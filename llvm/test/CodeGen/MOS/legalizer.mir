@@ -1111,17 +1111,16 @@ body: |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[UV]], [[UV2]], [[C2]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY [[SBC]](s8)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC1]](s1), [[C1]], [[C2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SELECT]](s1), [[C1]], [[C2]]
-    ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[UV1]], [[UV3]], [[SELECT1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY [[SBC5]](s8)
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[COPY1]](s8), [[COPY2]](s8)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC1]](s1)
+    ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[UV1]], [[UV3]], [[COPY2]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[SBC5]](s8)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[COPY1]](s8), [[COPY3]](s8)
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
     ; CHECK-NEXT: [[UV4:%[0-9]+]]:gpr(s8), [[UV5:%[0-9]+]]:gpr(s8) = G_UNMERGE_VALUES [[INTTOPTR]](p0)
     ; CHECK-NEXT: SetSPHi [[UV5]](s8), implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: SetSPLo [[UV4]](s8), implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
-    ; CHECK-NEXT: RTS implicit [[COPY3]](p0)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
+    ; CHECK-NEXT: RTS implicit [[COPY4]](p0)
     %0:_(s16) = G_CONSTANT i16 2
     %1:_(p0) = G_DYN_STACKALLOC %0:_(s16), 1
     RTS implicit %1
@@ -1164,21 +1163,20 @@ body: |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[UV]], [[UV2]], [[C1]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY [[SBC]](s8)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC1]](s1), [[C]], [[C1]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SELECT]](s1), [[C]], [[C1]]
-    ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[UV1]], [[UV3]], [[SELECT1]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[SBC5]](s8)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s1) = COPY [[SBC1]](s1)
+    ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[UV1]], [[UV3]], [[COPY3]]
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s8) = COPY [[SBC5]](s8)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 -8
     ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[C2]](s16)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[COPY2]], [[UV4]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s8) = G_AND [[COPY3]], [[UV5]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s8) = G_AND [[COPY4]], [[UV5]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[AND]](s8), [[AND1]](s8)
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
     ; CHECK-NEXT: [[UV6:%[0-9]+]]:gpr(s8), [[UV7:%[0-9]+]]:gpr(s8) = G_UNMERGE_VALUES [[INTTOPTR]](p0)
     ; CHECK-NEXT: SetSPHi [[UV7]](s8), implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: SetSPLo [[UV6]](s8), implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
-    ; CHECK-NEXT: RTS implicit [[COPY4]](p0)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
+    ; CHECK-NEXT: RTS implicit [[COPY5]](p0)
     %0:_(s16) = COPY $rs1
     %1:_(p0) = G_DYN_STACKALLOC %0, 8
     RTS implicit %1
