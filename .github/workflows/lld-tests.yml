@@ -2,6 +2,7 @@ name: LLD Tests
 
 on:
   push:
+    branches: [main, sync]
     paths:
       - 'lld/**'
       - 'llvm/**'

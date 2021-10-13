@@ -2,6 +2,7 @@ name: Clang Tests
 
 on:
   push:
+    branches: [main, sync]
     paths:
       - 'clang/**'
       - 'llvm/**'
