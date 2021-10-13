@@ -204,6 +204,10 @@ class RAGreedy : public MachineFunctionPass,
     /// progress.
     RS_Split2,
 
+    /// (new for llvm-mos) Attempt to spill to a wider register class to hopefully
+    /// avoid spilling to the stack.
+    RS_LightSpill,
+
     /// Live range will be spilled.  No more splitting will be attempted.
     RS_Spill,
 
@@ -514,7 +518,8 @@ private:
   unsigned tryBlockSplit(LiveInterval&, AllocationOrder&,
                          SmallVectorImpl<Register>&);
   unsigned tryInstructionSplit(LiveInterval&, AllocationOrder&,
-                               SmallVectorImpl<Register>&);
+                               SmallVectorImpl<Register>&,
+                               bool LightSpill);
   unsigned tryLocalSplit(LiveInterval&, AllocationOrder&,
     SmallVectorImpl<Register>&);
   unsigned trySplit(LiveInterval&, AllocationOrder&,
@@ -623,6 +628,7 @@ const char *const RAGreedy::StageName[] = {
     "RS_Assign",
     "RS_Split",
     "RS_Split2",
+    "RS_LightSpill",
     "RS_Spill",
     "RS_Memory",
     "RS_Done"
@@ -1006,7 +1012,9 @@ bool RAGreedy::canEvictInterference(
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())) ||
            (!canWiden(MRI, TII, TRI, VirtReg.reg()) &&
-            canWiden(MRI, TII, TRI, Intf->reg())));
+            canWiden(MRI, TII, TRI, Intf->reg())) ||
+           (VirtReg.isZeroLength(LIS->getSlotIndexes()) &&
+            !Intf->isZeroLength(LIS->getSlotIndexes())));
 
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = ExtraRegInfo[Intf->reg()].Cascade;
@@ -1850,7 +1858,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     // Remainder interval. Don't try splitting again, spill if it doesn't
     // allocate.
     if (IntvMap[I] == 0) {
-      setStage(Reg, RS_Spill);
+      setStage(Reg, RS_LightSpill);
       continue;
     }
 
@@ -2095,7 +2103,7 @@ unsigned RAGreedy::tryBlockSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   for (unsigned I = 0, E = LREdit.size(); I != E; ++I) {
     LiveInterval &LI = LIS->getInterval(LREdit.get(I));
     if (getStage(LI) == RS_New && IntvMap[I] == 0)
-      setStage(LI, RS_Spill);
+      setStage(LI, RS_LightSpill);
   }
 
   if (VerifyEnabled)
@@ -2132,7 +2140,8 @@ static unsigned getNumAllocatableRegsForConstraints(
 /// This is similar to spilling to a larger register class.
 unsigned
 RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
-                              SmallVectorImpl<Register> &NewVRegs) {
+                              SmallVectorImpl<Register> &NewVRegs,
+                              bool LightSpill) {
   const TargetRegisterClass *CurRC = MRI->getRegClass(VirtReg.reg());
   // There is no point to this if there are no larger sub-classes.
   if (!RegClassInfo.isProperSubClass(CurRC))
@@ -2141,6 +2150,11 @@ RAGreedy::tryInstructionSplit(LiveInterval &VirtReg, AllocationOrder &Order,
   // Always enable split spill mode, since we're effectively spilling to a
   // register.
   LiveRangeEdit LREdit(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  if (LightSpill) {
+    // Don't rematerialize during the light-spill stage, as this can cause
+    // register classes to become over-constrained.
+    LREdit.setRematEnable(false);
+  }
   SE->reset(LREdit, SplitEditor::SM_Size);
 
   ArrayRef<SlotIndex> Uses = SA->getUseSlots();
@@ -2520,7 +2534,14 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
     Register PhysReg = tryLocalSplit(VirtReg, Order, NewVRegs);
     if (PhysReg || !NewVRegs.empty())
       return PhysReg;
-    return tryInstructionSplit(VirtReg, Order, NewVRegs);
+    return tryInstructionSplit(VirtReg, Order, NewVRegs, false);
+  }
+
+  if (getStage(VirtReg) == RS_LightSpill) {
+    NamedRegionTimer T("light_spill", "Light Spilling", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
+    SA->analyze(&VirtReg);
+    return tryInstructionSplit(VirtReg, Order, NewVRegs, true);
   }
 
   NamedRegionTimer T("global_split", "Global Splitting", TimerGroupName,
@@ -3068,6 +3089,7 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
                                        SmallVectorImpl<Register> &NewVRegs,
                                        SmallVirtRegSet &FixedRegisters,
                                        unsigned Depth) {
+
   uint8_t CostPerUseLimit = uint8_t(~0u);
   // First try assigning a free register.
   auto Order =
