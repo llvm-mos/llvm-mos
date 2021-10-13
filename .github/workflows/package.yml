@@ -1,5 +1,7 @@
 name: Packaging
-on: [push]
+on:
+  push:
+    branches: [main]
 jobs:
   package:
     runs-on: ${{ matrix.os }}

@@ -2,6 +2,7 @@ name: LLVM Tests
 
 on:
   push:
+    branches: [main, sync]
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
