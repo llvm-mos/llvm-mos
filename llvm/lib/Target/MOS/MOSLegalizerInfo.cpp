@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -472,13 +473,22 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
     // the G_XOR dead.
 
     for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Dst)) {
-      if (UseMI.getOpcode() != MOS::G_BRCOND_IMM)
-        continue;
-      assert(UseMI.getOperand(0).getReg() == Dst);
-      Helper.Observer.changingInstr(UseMI);
-      UseMI.getOperand(0).setReg(Not);
-      UseMI.getOperand(2).setImm(!UseMI.getOperand(2).getImm());
-      Helper.Observer.changedInstr(UseMI);
+      if (UseMI.getOpcode() == MOS::G_BRCOND_IMM) {
+        assert(UseMI.getOperand(0).getReg() == Dst);
+        Helper.Observer.changingInstr(UseMI);
+        UseMI.getOperand(0).setReg(Not);
+        UseMI.getOperand(2).setImm(!UseMI.getOperand(2).getImm());
+        Helper.Observer.changedInstr(UseMI);
+      } else if (UseMI.getOpcode() == MOS::G_SELECT &&
+                 mi_match(UseMI.getOperand(2).getReg(), MRI, m_ZeroInt()) &&
+                 mi_match(UseMI.getOperand(3).getReg(), MRI, m_AllOnesInt())) {
+        Helper.Observer.changingInstr(UseMI);
+        UseMI.getOperand(1).setReg(Not);
+        UseMI.RemoveOperand(3);
+        UseMI.RemoveOperand(2);
+        UseMI.setDesc(Helper.MIRBuilder.getTII().get(MOS::COPY));
+        Helper.Observer.changedInstr(UseMI);
+      }
     }
 
     if (!isTriviallyDead(MI, MRI)) {
