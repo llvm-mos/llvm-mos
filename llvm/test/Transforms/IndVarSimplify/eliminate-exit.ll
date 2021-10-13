@@ -675,8 +675,8 @@ define i32 @exit_cond_depends_on_inner_loop() {
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[EXIT:%.*]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_OUTER_NEXT]] = add nuw nsw i32 [[IV_OUTER]], 1
-; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = icmp ult i32 [[IV_OUTER]], 100
-; CHECK-NEXT:    br i1 [[OUTER_COND_2]], label [[OUTER_HEADER]], label [[EXIT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_OUTER_NEXT]], 101
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[OUTER_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[X_RES:%.*]] = phi i32 [ [[X_LCSSA]], [[OUTER_EXITING_1]] ], [ -1, [[OUTER_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[X_RES]]
