@@ -31,16 +31,25 @@ public:
     return false;
   }
 
+  // While integer division isn't "cheap", long division is not all that much
+  // slower than long multiplication, and the division->multiplication
+  // optimization this disables performs multiplciation at double the width,
+  // which is extraordinarily more expensive.
+  bool isIntDivCheap(EVT VT, AttributeList Attr) const override { return true; }
+
   unsigned getNumRegistersForInlineAsm(LLVMContext &Context,
                                        EVT VT) const override;
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
-  MVT getRegisterTypeForCallingConv(LLVMContext &Context,
-      CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const override;
+  MVT getRegisterTypeForCallingConv(
+      LLVMContext &Context, CallingConv::ID CC, EVT VT,
+      const ISD::ArgFlagsTy &Flags) const override;
 
-  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
-      CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const override;
+  unsigned
+  getNumRegistersForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                EVT VT,
+                                const ISD::ArgFlagsTy &Flags) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
