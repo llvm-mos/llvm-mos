@@ -47,71 +47,26 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  void lowerSelect(MachineInstr &MI);
+  MachineFunction::reverse_iterator lowerSelect(MachineInstr &MI);
   void moveAwayFromCalls(MachineFunction &MF);
 };
 
-// Returns whether there's a chance that this G_SELECT and its user could be
-// folded together, so long as the user is lowered first.  In that case, this
-// G_SELECT should be deferred.
-static bool shouldDefer(const MachineInstr &MI,
-                        const MachineRegisterInfo &MRI) {
-  assert(MI.getOpcode() == MOS::G_SELECT);
-  Register Dst = MI.getOperand(0).getReg();
-  if (!MRI.hasOneNonDBGUse(Dst))
-    return false;
-  return MRI.use_instr_nodbg_begin(Dst)->getOpcode() == MOS::G_SELECT;
-}
-
 bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "Handling G_SELECTs in: " << MF.getName() << "\n\n");
+  LLVM_DEBUG(dbgs() << "\n\nHandling G_SELECTs in: " << MF.getName() << "\n\n");
   moveAwayFromCalls(MF);
 
-  SmallVector<MachineBasicBlock::iterator> SelectMBBIs;
-  for (auto I = MF.begin(), E = MF.end(); I != E; ++I) {
+  bool Changed = false;
+  for (auto I = MF.rbegin(), E = MF.rend(); I != E; ++I) {
     MachineBasicBlock &MBB = *I;
-    for (MachineBasicBlock::iterator MBBI = MBB.begin(), MBBE = MBB.end();
-         MBBI != MBBE; ++MBBI)
+    for (auto MBBI = MBB.rbegin(), MBBE = MBB.rend(); MBBI != MBBE; ++MBBI) {
       if (MBBI->getOpcode() == MOS::G_SELECT) {
-        LLVM_DEBUG(dbgs() << "Found: " << *MBBI);
-        SelectMBBIs.push_back(MBBI);
-      }
-  }
-
-  bool Changed = !SelectMBBIs.empty();
-
-  LLVM_DEBUG(dbgs() << "\nIteratively lowering G_SELECTs.\n\n");
-
-  SmallVector<MachineBasicBlock::iterator> NewSelectMBBIs;
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  // Lower G_SELECTs in multiple passes to ensure the ordering is optimal.
-  while (!SelectMBBIs.empty()) {
-    NewSelectMBBIs.clear();
-    LLVM_DEBUG(dbgs() << "Begin iteration.\n");
-    for (MachineBasicBlock::iterator MBBI : SelectMBBIs) {
-      LLVM_DEBUG(dbgs() << *MBBI);
-
-      // We may be able to fold this G_SELECT together with its use, but only if
-      // the use is selected first.
-      if (shouldDefer(*MBBI, MRI)) {
-        LLVM_DEBUG(dbgs() << "\tDeferring.\n");
-        NewSelectMBBIs.push_back(MBBI);
-      } else {
-        LLVM_DEBUG(dbgs() << "\tLowering.\n");
-        lowerSelect(*MBBI);
+        LLVM_DEBUG(dbgs() << "Lowering: " << *MBBI);
+        Changed = true;
+        I = lowerSelect(*MBBI);
+        break;
       }
     }
-    LLVM_DEBUG(dbgs() << "End iteration.\n\n");
-    if (NewSelectMBBIs.size() == SelectMBBIs.size())
-      report_fatal_error("Infinite loop encountered while lowering G_SELECT.");
-
-    LLVM_DEBUG(if (!NewSelectMBBIs.empty()) MF.dump(););
-
-    std::swap(SelectMBBIs, NewSelectMBBIs);
   }
-
-  LLVM_DEBUG(dbgs() << "\n");
-
   return Changed;
 }
 
@@ -143,7 +98,8 @@ void removePredecessorFromPhis(MachineBasicBlock *MBB,
         Idx += 2;
 }
 
-void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
+MachineFunction::reverse_iterator
+MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_SELECT);
   Register Dst = MI.getOperand(0).getReg();
   Register Tst = MI.getOperand(1).getReg();
@@ -154,6 +110,37 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   MachineBasicBlock &MBB = Builder.getMBB();
   MachineFunction &MF = Builder.getMF();
   const MachineRegisterInfo &MRI = *Builder.getMRI();
+
+  SmallVector<Register> Dsts = {Dst};
+  SmallVector<Register> TrueValues = {TrueValue};
+  SmallVector<Register> FalseValues = {FalseValue};
+  SmallVector<MachineBasicBlock::iterator> SelectsToRemove = {MI};
+
+  // Collect G_SELECT instructions in the same basic block with the same test
+  // and merge them into this one.
+  SmallSet<Register, 8> UsedRegs;
+  for (const auto &MO : MI.operands())
+    if (MO.isReg() && MO.isUse())
+      UsedRegs.insert(MO.getReg());
+  for (auto MBBI = std::next(MachineBasicBlock::reverse_iterator(MI)),
+            MBBE = MBB.rend();
+       MBBI != MBBE; ++MBBI) {
+    for (const auto &MO : MBBI->operands())
+      if (MO.isReg() && MO.isUse())
+        UsedRegs.insert(MO.getReg());
+
+    if (MBBI->getOpcode() == MOS::G_SELECT &&
+        MBBI->getOperand(1).getReg() == Tst &&
+        !UsedRegs.contains(MBBI->getOperand(0).getReg())) {
+      LLVM_DEBUG(dbgs() << "Absorbing select with same test: " << *MBBI);
+      Dsts.push_back(MBBI->getOperand(0).getReg());
+      TrueValues.push_back(MBBI->getOperand(2).getReg());
+      FalseValues.push_back(MBBI->getOperand(3).getReg());
+      SelectsToRemove.push_back(*MBBI);
+    }
+  }
+  assert(Dsts.size() == TrueValues.size());
+  assert(TrueValues.size() == FalseValues.size());
 
   // To lower a G_SELECT instruction, we actually have to insert the diamond
   // control-flow pattern. The incoming instruction knows the destination
@@ -250,15 +237,17 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     cont:;
     }
   };
-  SinkValue(TrueMBB, TrueValue);
-  SinkValue(FalseMBB, FalseValue);
+  for (Register TrueValue : TrueValues)
+    SinkValue(TrueMBB, TrueValue);
+  for (Register FalseValue : FalseValues)
+    SinkValue(FalseMBB, FalseValue);
 
   bool FoldedUse = false;
   // A select is commonly used to branch on a complex condition. If the next
   // instruction is a branch, and this is the only use of the select, then
   // duplicate the conditional branch into the true and false basic blocks. This
   // saves the PHI.
-  if (MRI.hasOneNonDBGUse(Dst)) {
+  if (Dsts.size() == 1 && MRI.hasOneNonDBGUse(Dst)) {
     MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Dst);
     if (UseMI.getIterator() == SinkMBB->begin() &&
         UseMI.getOpcode() == MOS::G_BRCOND_IMM) {
@@ -275,11 +264,11 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
         if (ConstVal) {
           if (ConstVal->Value.getBoolValue() !=
               static_cast<bool>(UseMI->getOperand(2).getImm())) {
-            LLVM_DEBUG(dbgs() << "User branch cannot be taken; eliding.");
+            LLVM_DEBUG(dbgs() << "User branch cannot be taken; eliding.\n");
             return;
           }
           LLVM_DEBUG(dbgs()
-                     << "User branch is always taken. Making unconditional.");
+                     << "User branch is always taken. Making unconditional.\n");
           UseMI->setDesc(Builder.getTII().get(MOS::G_BR));
           UseMI->RemoveOperand(2);
           UseMI->RemoveOperand(0);
@@ -326,14 +315,21 @@ void MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
     //  ...
     Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
-    Builder.buildInstr(MOS::G_PHI)
-        .addDef(Dst)
-        .addUse(TrueValue)
-        .addMBB(TrueMBB)
-        .addUse(FalseValue)
-        .addMBB(FalseMBB);
+    for (unsigned Idx = 0, End = Dsts.size(); Idx != End; ++Idx) {
+      Register Dst = Dsts[Idx];
+      Register TrueValue = TrueValues[Idx];
+      Register FalseValue = FalseValues[Idx];
+      Builder.buildInstr(MOS::G_PHI)
+          .addDef(Dst)
+          .addUse(TrueValue)
+          .addMBB(TrueMBB)
+          .addUse(FalseValue)
+          .addMBB(FalseMBB);
+    }
   }
-  MI.eraseFromParent(); // The G_SELECT is gone now.
+  for (const auto Select : SelectsToRemove)
+    Select->eraseFromParent();
+  return MachineFunction::reverse_iterator(*SinkMBB);
 }
 
 // Before lowering selects, they and all attached instructions need to be
