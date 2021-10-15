@@ -543,8 +543,7 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
 
   auto RHSConst =
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
-  if (MI.getOpcode() == MOS::G_SUB || !RHSConst ||
-      RHSConst->Value.getZExtValue() != 1)
+  if (!RHSConst || RHSConst->Value.getZExtValue() != 1)
     return Helper.narrowScalarAddSub(MI, 0, S8) !=
            LegalizerHelper::UnableToLegalize;
 
@@ -554,14 +553,20 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
 
   SmallVector<Register> DstParts;
 
-  Register DstLow =
-      Builder.buildAdd(S8, Low, Builder.buildConstant(S8, 1)).getReg(0);
-  auto Carry = Builder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), DstLow,
-                                 Builder.buildConstant(S8, 0));
-  auto RestInc =
-      Builder.buildAdd(RestTy, Rest, Builder.buildConstant(RestTy, 1));
+  bool IsAdd = MI.getOpcode() == MOS::G_ADD;
+  assert(IsAdd || MI.getOpcode() == MOS::G_SUB);
+
+  auto OneLow = Builder.buildConstant(S8, 1);
+  Register DstLow = IsAdd ? Builder.buildAdd(S8, Low, OneLow).getReg(0)
+                          : Builder.buildSub(S8, Low, OneLow).getReg(0);
+  auto CarryBorrow =
+      Builder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), IsAdd ? DstLow : Low,
+                        Builder.buildConstant(S8, 0));
+  auto OneRest = Builder.buildConstant(RestTy, 1);
+  auto RestIncDec = IsAdd ? Builder.buildAdd(RestTy, Rest, OneRest)
+                          : Builder.buildSub(RestTy, Rest, OneRest);
   Register DstRest =
-      Builder.buildSelect(RestTy, Carry, RestInc, Rest).getReg(0);
+      Builder.buildSelect(RestTy, CarryBorrow, RestIncDec, Rest).getReg(0);
 
   mergeLowRest(Dst, DstLow, DstRest, Builder);
   MI.eraseFromParent();
