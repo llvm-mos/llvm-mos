@@ -204,7 +204,7 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
         MachineBasicBlock::reverse_iterator(MachineBasicBlock::iterator(DefMI));
     auto SrcEnd = DefMI.getParent()->rend();
     DefMI.removeFromParent();
-    auto DstMI = MBB->insert(MBB->end(), &DefMI);
+    MBB->insert(MBB->begin(), &DefMI);
 
     for (; SrcMI != SrcEnd; ++SrcMI) {
       SawStore = true;
@@ -232,7 +232,7 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
         LLVM_DEBUG(dbgs() << "Sinking value: " << *MIToSink);
         --SrcMI; // To be incremented on loop.
         MIToSink->removeFromParent();
-        DstMI = MBB->insert(DstMI, MIToSink);
+        MBB->insert(MBB->begin(), MIToSink);
       }
     cont:;
     }
