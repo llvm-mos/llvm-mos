@@ -63,10 +63,12 @@ define i8* @inc_ptr(i8* %a) {
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #1
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bne .LBB3_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    inc mos8(__rc3)
+; CHECK-NEXT:  .LBB3_2: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    lda mos8(__rc3)
-; CHECK-NEXT:    adc #0
-; CHECK-NEXT:    sta mos8(__rc3)
 ; CHECK-NEXT:    rts
 entry:
   %0 = getelementptr i8, i8* %a, i32 1

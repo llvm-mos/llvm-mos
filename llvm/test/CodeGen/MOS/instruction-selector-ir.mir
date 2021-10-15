@@ -34,10 +34,6 @@
     entry:
       ret void
   }
-  define void @load_volatile_not_indexed() {
-    entry:
-      ret void
-  }
   define void @store_indexed() {
     entry:
       ret void
@@ -162,32 +158,6 @@ body: |
     %1:any(s8) = COPY $a
     %2:any(p0) = G_INDEX %0, %1
     %3:any(s8) = G_LOAD %2 :: (load 1)
-    RTS implicit %3
-...
----
-name: load_volatile_not_indexed
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: load_volatile_not_indexed
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm target-flags(lo) @.str
-    ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm target-flags(hi) @.str
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDImm]], %subreg.sublo, [[LDImm1]], %subreg.subhi
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY $a
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ac = COPY [[LDImm]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac = COPY [[LDImm1]]
-    ; CHECK-NEXT: [[LDImm1_:%[0-9]+]]:cc = LDImm1 0
-    ; CHECK-NEXT: [[ADCImag8_:%[0-9]+]]:ac, [[ADCImag8_1:%[0-9]+]]:cc, [[ADCImag8_2:%[0-9]+]]:vc = ADCImag8 [[COPY1]], [[COPY]], [[LDImm1_]]
-    ; CHECK-NEXT: [[ADCImm:%[0-9]+]]:ac, [[ADCImm1:%[0-9]+]]:cc, [[ADCImm2:%[0-9]+]]:vc = ADCImm [[COPY2]], 0, [[ADCImag8_1]]
-    ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:imag16 = REG_SEQUENCE [[ADCImag8_]], %subreg.sublo, [[ADCImm]], %subreg.subhi
-    ; CHECK-NEXT: [[LDImm2:%[0-9]+]]:yc = LDImm 0
-    ; CHECK-NEXT: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[REG_SEQUENCE1]], [[LDImm2]] :: (volatile load (s8))
-    ; CHECK-NEXT: RTS implicit [[LDYIndir]]
-    %0:any(p0) = G_GLOBAL_VALUE @.str
-    %1:any(s8) = COPY $a
-    %2:any(p0) = G_INDEX %0, %1
-    %3:any(s8) = G_LOAD %2 :: (volatile load 1)
     RTS implicit %3
 ...
 ---

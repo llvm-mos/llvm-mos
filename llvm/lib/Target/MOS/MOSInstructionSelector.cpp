@@ -72,7 +72,6 @@ private:
   bool selectBrCondImm(MachineInstr &MI);
   bool selectSbc(MachineInstr &MI);
   bool selectConstant(MachineInstr &MI);
-  bool selectIndex(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
   bool selectLoadStore(MachineInstr &MI);
@@ -167,8 +166,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectFrameIndex(MI);
   case MOS::G_GLOBAL_VALUE:
     return selectGlobalValue(MI);
-  case MOS::G_INDEX:
-    return selectIndex(MI);
   case MOS::G_LOAD:
   case MOS::G_STORE:
     return selectLoadStore(MI);
@@ -426,33 +423,6 @@ bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
   MI.eraseFromParent();
   selectAll(MIS);
   return true;
-}
-
-bool MOSInstructionSelector::selectIndex(MachineInstr &MI) {
-  Register Dst = MI.getOperand(0).getReg();
-  Register Base = MI.getOperand(1).getReg();
-  Register Offset = MI.getOperand(2).getReg();
-
-  MachineIRBuilder Builder(MI);
-
-  LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
-
-  MachineInstrSpan MIS(MI, MI.getParent());
-
-  auto Unmerge = Builder.buildUnmerge(S8, Base);
-  Register BaseLo = Unmerge.getReg(0), BaseHi = Unmerge.getReg(1);
-
-  auto AddLo =
-      Builder.buildUAdde(S8, S1, BaseLo, Offset, Builder.buildConstant(S1, 0));
-  Register SumLo = AddLo.getReg(0);
-  Register CarryLo = AddLo.getReg(1);
-  auto AddHi =
-      Builder.buildUAdde(S8, S1, BaseHi, Builder.buildConstant(S8, 0), CarryLo);
-  Register SumHi = AddHi.getReg(0);
-  composePtr(Builder, Dst, SumLo, SumHi);
-  MI.eraseFromParent();
-  return selectAll(MIS);
 }
 
 bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {

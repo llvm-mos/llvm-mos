@@ -13,42 +13,49 @@ define i16 @main() local_unnamed_addr #0 {
 ; NMOS-LABEL: main:
 ; NMOS:       ; %bb.0: ; %entry
 ; NMOS-NEXT:    lda #14
-; NMOS-NEXT:    sta mos8(__rc4)
-; NMOS-NEXT:    lda #72
 ; NMOS-NEXT:    sta mos8(__rc5)
-; NMOS-NEXT:    ldy #mos16lo(.str+1)
+; NMOS-NEXT:    lda #mos16lo(.str+1)
 ; NMOS-NEXT:    ldx #mos16hi(.str+1)
+; NMOS-NEXT:    sta mos8(__rc2)
+; NMOS-NEXT:    stx mos8(__rc3)
+; NMOS-NEXT:    tax
+; NMOS-NEXT:    ldy #72
 ; NMOS-NEXT:  .LBB0_1: ; %while.body
 ; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; NMOS-NEXT:    sty mos8(__rc6)
-; NMOS-NEXT:    sty mos8(__rc2)
-; NMOS-NEXT:    stx mos8(__rc3)
-; NMOS-NEXT:    lda mos8(__rc5)
+; NMOS-NEXT:    tya
 ; NMOS-NEXT:    ;APP
 ; NMOS-NEXT:    jsr 65490
 ; NMOS-NEXT:    ;NO_APP
+; NMOS-NEXT:    inx
+; NMOS-NEXT:    cpx #0
+; NMOS-NEXT:    bne .LBB0_3
+; NMOS-NEXT:  ; %bb.2: ; %while.body
+; NMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; NMOS-NEXT:    lda mos8(__rc3)
+; NMOS-NEXT:    sta mos8(__rc4)
+; NMOS-NEXT:    inc mos8(__rc4)
+; NMOS-NEXT:    jmp .LBB0_4
+; NMOS-NEXT:  .LBB0_3: ; %while.body
+; NMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; NMOS-NEXT:    lda mos8(__rc3)
+; NMOS-NEXT:    sta mos8(__rc4)
+; NMOS-NEXT:  .LBB0_4: ; %while.body
+; NMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; NMOS-NEXT:    ldy #0
 ; NMOS-NEXT:    lda (mos8(__rc2)),y
-; NMOS-NEXT:    sta mos8(__rc5)
-; NMOS-NEXT:    clc
-; NMOS-NEXT:    lda mos8(__rc4)
-; NMOS-NEXT:    adc #-1
-; NMOS-NEXT:    sta mos8(__rc2)
-; NMOS-NEXT:    clc
-; NMOS-NEXT:    lda mos8(__rc6)
-; NMOS-NEXT:    adc #1
 ; NMOS-NEXT:    tay
-; NMOS-NEXT:    txa
-; NMOS-NEXT:    adc #0
-; NMOS-NEXT:    tax
-; NMOS-NEXT:    lda mos8(__rc2)
+; NMOS-NEXT:    clc
+; NMOS-NEXT:    lda mos8(__rc5)
+; NMOS-NEXT:    adc #-1
+; NMOS-NEXT:    stx mos8(__rc2)
 ; NMOS-NEXT:    sty mos8(__rc29)
-; NMOS-NEXT:    ldy mos8(__rc2)
-; NMOS-NEXT:    sty mos8(__rc4)
+; NMOS-NEXT:    ldy mos8(__rc4)
+; NMOS-NEXT:    sty mos8(__rc3)
 ; NMOS-NEXT:    ldy mos8(__rc29)
+; NMOS-NEXT:    sta mos8(__rc5)
 ; NMOS-NEXT:    cmp #0
 ; NMOS-NEXT:    bne .LBB0_1
-; NMOS-NEXT:  ; %bb.2: ; %while.end
+; NMOS-NEXT:  ; %bb.5: ; %while.end
 ; NMOS-NEXT:    ldx #0
 ; NMOS-NEXT:    lda #0
 ; NMOS-NEXT:    rts
@@ -56,42 +63,49 @@ define i16 @main() local_unnamed_addr #0 {
 ; CMOS-LABEL: main:
 ; CMOS:       ; %bb.0: ; %entry
 ; CMOS-NEXT:    lda #14
-; CMOS-NEXT:    sta mos8(__rc4)
-; CMOS-NEXT:    lda #72
 ; CMOS-NEXT:    sta mos8(__rc5)
-; CMOS-NEXT:    ldy #mos16lo(.str+1)
+; CMOS-NEXT:    lda #mos16lo(.str+1)
 ; CMOS-NEXT:    ldx #mos16hi(.str+1)
+; CMOS-NEXT:    sta mos8(__rc2)
+; CMOS-NEXT:    stx mos8(__rc3)
+; CMOS-NEXT:    tax
+; CMOS-NEXT:    ldy #72
 ; CMOS-NEXT:  .LBB0_1: ; %while.body
 ; CMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CMOS-NEXT:    sty mos8(__rc6)
-; CMOS-NEXT:    sty mos8(__rc2)
-; CMOS-NEXT:    stx mos8(__rc3)
-; CMOS-NEXT:    lda mos8(__rc5)
+; CMOS-NEXT:    tya
 ; CMOS-NEXT:    ;APP
 ; CMOS-NEXT:    jsr 65490
 ; CMOS-NEXT:    ;NO_APP
+; CMOS-NEXT:    inx
+; CMOS-NEXT:    cpx #0
+; CMOS-NEXT:    bne .LBB0_3
+; CMOS-NEXT:  ; %bb.2: ; %while.body
+; CMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CMOS-NEXT:    lda mos8(__rc3)
+; CMOS-NEXT:    sta mos8(__rc4)
+; CMOS-NEXT:    inc mos8(__rc4)
+; CMOS-NEXT:    bra .LBB0_4
+; CMOS-NEXT:  .LBB0_3: ; %while.body
+; CMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CMOS-NEXT:    lda mos8(__rc3)
+; CMOS-NEXT:    sta mos8(__rc4)
+; CMOS-NEXT:  .LBB0_4: ; %while.body
+; CMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CMOS-NEXT:    ldy #0
 ; CMOS-NEXT:    lda (mos8(__rc2)),y
-; CMOS-NEXT:    sta mos8(__rc5)
-; CMOS-NEXT:    clc
-; CMOS-NEXT:    lda mos8(__rc4)
-; CMOS-NEXT:    adc #-1
-; CMOS-NEXT:    sta mos8(__rc2)
-; CMOS-NEXT:    clc
-; CMOS-NEXT:    lda mos8(__rc6)
-; CMOS-NEXT:    adc #1
 ; CMOS-NEXT:    tay
-; CMOS-NEXT:    txa
-; CMOS-NEXT:    adc #0
-; CMOS-NEXT:    tax
-; CMOS-NEXT:    lda mos8(__rc2)
+; CMOS-NEXT:    clc
+; CMOS-NEXT:    lda mos8(__rc5)
+; CMOS-NEXT:    adc #-1
+; CMOS-NEXT:    stx mos8(__rc2)
 ; CMOS-NEXT:    phy
-; CMOS-NEXT:    ldy mos8(__rc2)
-; CMOS-NEXT:    sty mos8(__rc4)
+; CMOS-NEXT:    ldy mos8(__rc4)
+; CMOS-NEXT:    sty mos8(__rc3)
 ; CMOS-NEXT:    ply
+; CMOS-NEXT:    sta mos8(__rc5)
 ; CMOS-NEXT:    cmp #0
 ; CMOS-NEXT:    bne .LBB0_1
-; CMOS-NEXT:  ; %bb.2: ; %while.end
+; CMOS-NEXT:  ; %bb.5: ; %while.end
 ; CMOS-NEXT:    ldx #0
 ; CMOS-NEXT:    lda #0
 ; CMOS-NEXT:    rts

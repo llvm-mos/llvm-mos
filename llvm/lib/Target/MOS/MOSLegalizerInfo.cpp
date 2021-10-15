@@ -965,56 +965,73 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  MachineOperand &Result = MI.getOperand(0);
-  MachineOperand &Base = MI.getOperand(1);
-  MachineOperand &Offset = MI.getOperand(2);
+  Register Result = MI.getOperand(0).getReg();
+  Register Base = MI.getOperand(1).getReg();
+  Register Offset = MI.getOperand(2).getReg();
 
-  MachineInstr *GlobalBase = getOpcodeDef(G_GLOBAL_VALUE, Base.getReg(), MRI);
-  auto ConstOffset = getIConstantVRegValWithLookThrough(Offset.getReg(), MRI);
+  MachineInstr *GlobalBase = getOpcodeDef(G_GLOBAL_VALUE, Base, MRI);
+  auto ConstOffset = getIConstantVRegValWithLookThrough(Offset, MRI);
 
   // Fold constant offsets into global value operand.
   if (GlobalBase && ConstOffset) {
     const MachineOperand &Op = GlobalBase->getOperand(1);
     Builder.buildInstr(G_GLOBAL_VALUE)
-        .add(Result)
+        .addDef(Result)
         .addGlobalAddress(Op.getGlobal(),
                           Op.getOffset() + ConstOffset->Value.getSExtValue());
     MI.eraseFromParent();
     return true;
   }
 
+  const auto BuildIndex = [&](Register Base, Register Src) {
+    auto Index =
+        Builder.buildInstr(MOS::G_INDEX, {LLT::pointer(0, 16)}, {Base, Src});
+    bool AnyUses = false;
+    for (MachineOperand &Use : MRI.use_nodbg_operands(Result)) {
+      MachineInstr &UseMI = *Use.getParent();
+      // G_INDEX can only be folded into loads and stores.
+      if (!UseMI.mayLoadOrStore())
+        continue;
+      // G_INDEX cannot safely be used with volatile loads/stores, since this
+      // may cause spurious reads to I/O registers due to the NMOS indexing bug.
+      if ((*UseMI.memoperands_begin())->isVolatile())
+        continue;
+      AnyUses = true;
+      Helper.Observer.changingInstr(UseMI);
+      Use.setReg(Index.getReg(0));
+      Helper.Observer.changedInstr(UseMI);
+    }
+    if (!AnyUses)
+      Index->eraseFromParent();
+  };
+
   // Adds of zero-extended offsets can instead use G_INDEX, with the goal of
   // selecting indexed addressing modes.
-  MachineInstr *ZExtOffset = getOpcodeDef(G_ZEXT, Offset.getReg(), MRI);
+  MachineInstr *ZExtOffset = getOpcodeDef(G_ZEXT, Offset, MRI);
   if (ZExtOffset) {
     Register Src = ZExtOffset->getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
     if (SrcTy.getSizeInBits() < 8)
       Src = Builder.buildZExt(S8, Src).getReg(0);
 
-    Helper.Observer.changingInstr(MI);
-    MI.setDesc(Builder.getTII().get(MOS::G_INDEX));
-    Offset.setReg(Src);
-    Helper.Observer.changedInstr(MI);
-    return true;
+    BuildIndex(Base, Src);
+  } else if (ConstOffset && ConstOffset->Value.isNonNegative() &&
+             ConstOffset->Value.getActiveBits() <= 8) {
+    // Similarly for offsets that fit in 8-bit unsigned constants.
+    Register Const =
+        Builder.buildConstant(S8, ConstOffset->Value.trunc(8)).getReg(0);
+    BuildIndex(Base, Const);
   }
 
-  // Similarly for offsets that fit in 8-bit unsigned constants.
-  if (ConstOffset && ConstOffset->Value.isNonNegative() &&
-      ConstOffset->Value.getActiveBits() <= 8) {
-    auto Const = Builder.buildConstant(S8, ConstOffset->Value.trunc(8));
-    Helper.Observer.changingInstr(MI);
-    MI.setDesc(Builder.getTII().get(MOS::G_INDEX));
-    Offset.setReg(Const.getReg(0));
-    Helper.Observer.changedInstr(MI);
-    return true;
+  // The G_INDEX operations above may make this Result unused.
+  if (!MRI.use_nodbg_empty(Result)) {
+    // Generalized pointer additions must be lowered to 16-bit integer
+    // arithmetic.
+    LLT S16 = LLT::scalar(16);
+    auto PtrVal = Builder.buildPtrToInt(S16, Base);
+    auto Sum = Builder.buildAdd(S16, PtrVal, Offset);
+    Builder.buildIntToPtr(Result, Sum);
   }
-
-  // Generalized pointer additions must be lowered to 16-bit integer arithmetic.
-  LLT S16 = LLT::scalar(16);
-  auto PtrVal = Builder.buildPtrToInt(S16, MI.getOperand(1));
-  auto Sum = Builder.buildAdd(S16, PtrVal, MI.getOperand(2));
-  Builder.buildIntToPtr(MI.getOperand(0), Sum);
   MI.eraseFromParent();
   return true;
 }
