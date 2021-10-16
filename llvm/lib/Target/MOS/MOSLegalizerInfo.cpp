@@ -559,9 +559,9 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
   auto OneLow = Builder.buildConstant(S8, 1);
   Register DstLow = IsAdd ? Builder.buildAdd(S8, Low, OneLow).getReg(0)
                           : Builder.buildSub(S8, Low, OneLow).getReg(0);
-  auto CarryBorrow =
-      Builder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), IsAdd ? DstLow : Low,
-                        Builder.buildConstant(S8, 0));
+  auto CarryBorrow = Builder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), DstLow,
+                                       IsAdd ? Builder.buildConstant(S8, 0)
+                                             : Builder.buildConstant(S8, 255));
   auto OneRest = Builder.buildConstant(RestTy, 1);
   auto RestIncDec = IsAdd ? Builder.buildAdd(RestTy, Rest, OneRest)
                           : Builder.buildSub(RestTy, Rest, OneRest);
