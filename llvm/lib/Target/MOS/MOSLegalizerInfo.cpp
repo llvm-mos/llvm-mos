@@ -543,9 +543,12 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
 
   auto RHSConst =
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
-  if (!RHSConst || RHSConst->Value.getZExtValue() != 1)
+  if (!RHSConst || (RHSConst->Value.getZExtValue() != 1 &&
+                    RHSConst->Value.getSExtValue() != -1))
     return Helper.narrowScalarAddSub(MI, 0, S8) !=
            LegalizerHelper::UnableToLegalize;
+
+  // Handle multi-byte increments and decrements.
 
   Register Low, Rest;
   std::tie(Low, Rest) = splitLowRest(MI.getOperand(1).getReg(), Builder);
@@ -553,8 +556,9 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
 
   SmallVector<Register> DstParts;
 
-  bool IsAdd = MI.getOpcode() == MOS::G_ADD;
-  assert(IsAdd || MI.getOpcode() == MOS::G_SUB);
+  assert(MI.getOpcode() == MOS::G_ADD || MI.getOpcode() == MOS::G_SUB);
+  bool IsAdd =
+      (MI.getOpcode() == MOS::G_ADD) ^ (RHSConst->Value.getSExtValue() == -1);
 
   auto OneLow = Builder.buildConstant(S8, 1);
   Register DstLow = IsAdd ? Builder.buildAdd(S8, Low, OneLow).getReg(0)

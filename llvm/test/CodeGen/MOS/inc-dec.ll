@@ -134,10 +134,12 @@ define i8* @dec_ptr(i8* %a) {
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #255
+; CHECK-NEXT:    cmp #255
+; CHECK-NEXT:    bne .LBB7_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    dec mos8(__rc3)
+; CHECK-NEXT:  .LBB7_2: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    lda mos8(__rc3)
-; CHECK-NEXT:    adc #255
-; CHECK-NEXT:    sta mos8(__rc3)
 ; CHECK-NEXT:    rts
 entry:
   %0 = getelementptr i8, i8* %a, i32 -1
