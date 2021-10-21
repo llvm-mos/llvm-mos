@@ -165,14 +165,15 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_memcpy);
     TLI.setAvailable(LibFunc_memset);
 
-    // A few other C library functions are also available to make the test suite
-    // work.
+    // A few other C library functions are also available.
 
     TLI.setAvailable(LibFunc_printf);
     TLI.setAvailable(LibFunc_sprintf);
     TLI.setAvailable(LibFunc_snprintf);
     TLI.setAvailable(LibFunc_vsnprintf);
     TLI.setAvailable(LibFunc_vprintf);
+    TLI.setAvailable(LibFunc_putchar);
+    TLI.setAvailable(LibFunc_puts);
 
     TLI.setAvailable(LibFunc_abs);
     TLI.setAvailable(LibFunc_labs);
