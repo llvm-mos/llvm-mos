@@ -2381,9 +2381,11 @@ public:
   /// no scale.
   struct AddrMode {
     GlobalValue *BaseGV = nullptr;
-    int64_t      BaseOffs = 0;
-    bool         HasBaseReg = false;
-    int64_t      Scale = 0;
+    int64_t BaseOffs = 0;
+    bool HasBaseReg = false;
+    Type *BaseType = nullptr;
+    int64_t Scale = 0;
+    Type *ScaleType = nullptr;
     AddrMode() = default;
   };
 

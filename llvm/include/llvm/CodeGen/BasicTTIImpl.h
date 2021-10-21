@@ -307,6 +307,20 @@ public:
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
+  bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
+                             bool HasBaseReg, Type *BaseType, int64_t Scale,
+                             Type *ScaleType, unsigned AddrSpace,
+                             Instruction *I = nullptr) {
+    TargetLoweringBase::AddrMode AM;
+    AM.BaseGV = BaseGV;
+    AM.BaseOffs = BaseOffset;
+    AM.HasBaseReg = HasBaseReg;
+    AM.BaseType = BaseType;
+    AM.Scale = Scale;
+    AM.ScaleType = ScaleType;
+    return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
+  }
+
   bool isIndexedLoadLegal(TTI::MemIndexedMode M, Type *Ty,
                           const DataLayout &DL) const {
     EVT VT = getTLI()->getValueType(DL, Ty);
@@ -339,6 +353,20 @@ public:
     AM.BaseOffs = BaseOffset;
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
+    return getTLI()->getScalingFactorCost(DL, AM, Ty, AddrSpace);
+  }
+
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       Type *BaseType, int64_t Scale,
+                                       Type *ScaleType, unsigned AddrSpace) {
+    TargetLoweringBase::AddrMode AM;
+    AM.BaseGV = BaseGV;
+    AM.BaseOffs = BaseOffset;
+    AM.HasBaseReg = HasBaseReg;
+    AM.BaseType = BaseType;
+    AM.Scale = Scale;
+    AM.ScaleType = ScaleType;
     return getTLI()->getScalingFactorCost(DL, AM, Ty, AddrSpace);
   }
 

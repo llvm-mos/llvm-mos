@@ -207,6 +207,14 @@ public:
     return !BaseGV && BaseOffset == 0 && (Scale == 0 || Scale == 1);
   }
 
+  bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
+                             bool HasBaseReg, Type *BaseType, int64_t Scale,
+                             Type *ScaleType, unsigned AddrSpace,
+                             Instruction *I = nullptr) const {
+    return isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
+                                 AddrSpace, I);
+  }
+
   bool isLSRCostLess(TTI::LSRCost &C1, TTI::LSRCost &C2) const {
     return std::tie(C1.NumRegs, C1.AddRecCost, C1.NumIVMuls, C1.NumBaseAdds,
                     C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
@@ -282,6 +290,18 @@ public:
     // Guess that all legal addressing mode are free.
     if (isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
                               AddrSpace))
+      return 0;
+    return -1;
+  }
+
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       Type *BaseType, int64_t Scale,
+                                       Type *ScaleType,
+                                       unsigned AddrSpace) const {
+    // Guess that all legal addressing mode are free.
+    if (isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, BaseType,
+                              Scale, ScaleType, AddrSpace))
       return 0;
     return -1;
   }

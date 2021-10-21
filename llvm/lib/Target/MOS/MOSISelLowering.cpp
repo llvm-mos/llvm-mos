@@ -123,20 +123,44 @@ MOSTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
+bool is8BitIndex(Type *Ty) {
+  if (!Ty)
+    return false;
+  return Ty == Type::getInt8Ty(Ty->getContext());
+}
+
 bool MOSTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                               const AddrMode &AM, Type *Ty,
                                               unsigned AddrSpace,
                                               Instruction *I) const {
-  // In general, the basereg and scalereg are the 16-bit GEP index type, which
-  // cannot be natively supported.
-
-  if (AM.Scale)
+  if (AM.Scale > 1 || AM.Scale < 0)
     return false;
 
+  if (AM.Scale) {
+    assert(AM.Scale == 1);
+    if (!AM.HasBaseReg) {
+      // Indexed addressing mode.
+      if (is8BitIndex(AM.ScaleType))
+        return true;
+
+      // Consider a reg + 8-bit offset selectable via the indirect indexed
+      // addressing mode.
+      return !AM.BaseGV && 0 <= AM.BaseOffs && AM.BaseOffs < 256;
+    }
+
+    // Indirect indexed addressing mode: 16-bit register + 8-bit index register.
+    // Doesn't matter which is 8-bit and which is 16-bit.
+    return !AM.BaseGV && !AM.BaseOffs &&
+           (is8BitIndex(AM.BaseType) || is8BitIndex(AM.ScaleType));
+  }
+
   if (AM.HasBaseReg) {
-    // A 16-bit base reg can be placed into a Imag16 register, then the base
-    // offset added using the Y indexed addressing mode. This requires the Y
-    // index reg as well as the base reg, but that's what it's there for.
+    // Indexed addressing mode.
+    if (is8BitIndex(AM.BaseType))
+      return true;
+
+    // Consider an reg + 8-bit offset selectable via the indirect indexed
+    // addressing mode.
     return !AM.BaseGV && 0 <= AM.BaseOffs && AM.BaseOffs < 256;
   }
 

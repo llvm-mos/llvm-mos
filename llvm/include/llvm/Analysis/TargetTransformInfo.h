@@ -613,6 +613,17 @@ public:
                              unsigned AddrSpace = 0,
                              Instruction *I = nullptr) const;
 
+  /// Return true if the addressing mode represented by AM is legal for
+  /// this target, for a load/store of the specified type.
+  /// The type may be VoidTy, in which case only return true if the addressing
+  /// mode is legal for a load/store of any legal type.
+  /// If target returns true in LSRWithInstrQueries(), I may be valid.
+  /// TODO: Handle pre/postinc as well.
+  bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
+                             bool HasBaseReg, Type *BaseType, int64_t Scale,
+                             Type *ScaleType, unsigned AddrSpace = 0,
+                             Instruction *I = nullptr) const;
+
   /// Return true if LSR cost of C1 is lower than C1.
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2) const;
@@ -695,6 +706,18 @@ public:
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        int64_t BaseOffset, bool HasBaseReg,
                                        int64_t Scale,
+                                       unsigned AddrSpace = 0) const;
+
+  /// Return the cost of the scaling factor used in the addressing
+  /// mode represented by AM for this target, for a load/store
+  /// of the specified type.
+  /// If the AM is supported, the return value must be >= 0.
+  /// If the AM is not supported, it returns a negative value.
+  /// TODO: Handle pre/postinc as well.
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       Type *BaseType, int64_t Scale,
+                                       Type *ScaleType,
                                        unsigned AddrSpace = 0) const;
 
   /// Return true if the loop strength reduce pass should make
@@ -1503,6 +1526,11 @@ public:
                                      int64_t BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace,
                                      Instruction *I) = 0;
+  virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
+                                     int64_t BaseOffset, bool HasBaseReg,
+                                     Type *BaseType, int64_t Scale,
+                                     Type *ScaleType, unsigned AddrSpace,
+                                     Instruction *I) = 0;
   virtual bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                              TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool isNumRegsMajorCostOfLSR() = 0;
@@ -1528,6 +1556,11 @@ public:
   virtual InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                                int64_t BaseOffset,
                                                bool HasBaseReg, int64_t Scale,
+                                               unsigned AddrSpace) = 0;
+  virtual InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                               int64_t BaseOffset,
+                                               bool HasBaseReg, Type *BaseType,
+                                               int64_t Scale, Type *ScaleType,
                                                unsigned AddrSpace) = 0;
   virtual bool LSRWithInstrQueries() = 0;
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) = 0;
@@ -1865,6 +1898,13 @@ public:
     return Impl.isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
                                       AddrSpace, I);
   }
+  bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
+                             bool HasBaseReg, Type *BaseType, int64_t Scale,
+                             Type *ScaleType, unsigned AddrSpace,
+                             Instruction *I) override {
+    return Impl.isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg,
+                                      BaseType, Scale, ScaleType, AddrSpace, I);
+  }
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2) override {
     return Impl.isLSRCostLess(C1, C2);
@@ -1928,6 +1968,14 @@ public:
                                        unsigned AddrSpace) override {
     return Impl.getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
                                      AddrSpace);
+  }
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       Type *BaseType, int64_t Scale,
+                                       Type *ScaleType,
+                                       unsigned AddrSpace) override {
+    return Impl.getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg,
+                                     BaseType, Scale, ScaleType, AddrSpace);
   }
   bool LSRWithInstrQueries() override { return Impl.LSRWithInstrQueries(); }
   bool isTruncateFree(Type *Ty1, Type *Ty2) override {

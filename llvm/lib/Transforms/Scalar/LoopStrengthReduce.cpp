@@ -404,6 +404,10 @@ struct Formula {
   bool hasRegsUsedByUsesOtherThan(size_t LUIdx,
                                   const RegUseTracker &RegUses) const;
 
+
+  Type *baseType() const;
+  Type *scaleType() const;
+
   void print(raw_ostream &OS) const;
   void dump() const;
 };
@@ -606,6 +610,18 @@ bool Formula::hasRegsUsedByUsesOtherThan(size_t LUIdx,
     if (RegUses.isRegUsedByUsesOtherThan(BaseReg, LUIdx))
       return true;
   return false;
+}
+
+Type *Formula::baseType() const {
+  if (BaseRegs.empty())
+    return nullptr;
+  return BaseRegs.front()->getType();
+}
+
+Type *Formula::scaleType() const {
+  if (!ScaledReg)
+    return nullptr;
+  return ScaledReg->getType();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1243,8 +1259,8 @@ public:
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
                                  GlobalValue *BaseGV, int64_t BaseOffset,
-                                 bool HasBaseReg, int64_t Scale,
-                                 Instruction *Fixup = nullptr);
+                                 bool HasBaseReg, Type *BaseType, int64_t Scale,
+                                 Type *ScaleType, Instruction *Fixup = nullptr);
 
 static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
   if (isa<SCEVUnknown>(Reg) || isa<SCEVConstant>(Reg))
@@ -1408,7 +1424,8 @@ void Cost::RateFormula(const Formula &F,
     // specifically not supported.
     if (LU.Kind == LSRUse::Address && Offset != 0 &&
         !isAMCompletelyFolded(*TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
-                              Offset, F.HasBaseReg, F.Scale, Fixup.UserInst))
+                              Offset, F.HasBaseReg, F.baseType(), F.Scale,
+                              F.scaleType(), Fixup.UserInst))
       C.NumBaseAdds++;
   }
 
@@ -1662,12 +1679,14 @@ LLVM_DUMP_METHOD void LSRUse::dump() const {
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
                                  GlobalValue *BaseGV, int64_t BaseOffset,
-                                 bool HasBaseReg, int64_t Scale,
-                                 Instruction *Fixup/*= nullptr*/) {
+                                 bool HasBaseReg, Type *BaseType, int64_t Scale,
+                                 Type *ScaleType,
+                                 Instruction *Fixup /*= nullptr*/) {
   switch (Kind) {
   case LSRUse::Address:
     return TTI.isLegalAddressingMode(AccessTy.MemTy, BaseGV, BaseOffset,
-                                     HasBaseReg, Scale, AccessTy.AddrSpace, Fixup);
+                                     HasBaseReg, BaseType, Scale, ScaleType,
+                                     AccessTy.AddrSpace, Fixup);
 
   case LSRUse::ICmpZero:
     // There's not even a target hook for querying whether it would be legal to
@@ -1717,7 +1736,8 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  int64_t MinOffset, int64_t MaxOffset,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
                                  GlobalValue *BaseGV, int64_t BaseOffset,
-                                 bool HasBaseReg, int64_t Scale) {
+                                 bool HasBaseReg, Type *BaseType, int64_t Scale,
+                                 Type *ScaleType) {
   // Check for overflow.
   if (((int64_t)((uint64_t)BaseOffset + MinOffset) > BaseOffset) !=
       (MinOffset > 0))
@@ -1729,9 +1749,9 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
   MaxOffset = (uint64_t)BaseOffset + MaxOffset;
 
   return isAMCompletelyFolded(TTI, Kind, AccessTy, BaseGV, MinOffset,
-                              HasBaseReg, Scale) &&
+                              HasBaseReg, BaseType, Scale, ScaleType) &&
          isAMCompletelyFolded(TTI, Kind, AccessTy, BaseGV, MaxOffset,
-                              HasBaseReg, Scale);
+                              HasBaseReg, BaseType, Scale, ScaleType);
 }
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
@@ -1747,29 +1767,31 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
   // compile time sake.
   assert((F.isCanonical(L) || F.Scale != 0));
   return isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy,
-                              F.BaseGV, F.BaseOffset, F.HasBaseReg, F.Scale);
+                              F.BaseGV, F.BaseOffset, F.HasBaseReg,
+                              F.baseType(), F.Scale, F.scaleType());
 }
 
 /// Test whether we know how to expand the current formula.
 static bool isLegalUse(const TargetTransformInfo &TTI, int64_t MinOffset,
                        int64_t MaxOffset, LSRUse::KindType Kind,
                        MemAccessTy AccessTy, GlobalValue *BaseGV,
-                       int64_t BaseOffset, bool HasBaseReg, int64_t Scale) {
+                       int64_t BaseOffset, bool HasBaseReg, Type *BaseType,
+                       int64_t Scale, Type *ScaleType) {
   // We know how to expand completely foldable formulae.
   return isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy, BaseGV,
-                              BaseOffset, HasBaseReg, Scale) ||
+                              BaseOffset, HasBaseReg, BaseType, Scale, ScaleType) ||
          // Or formulae that use a base register produced by a sum of base
          // registers.
          (Scale == 1 &&
           isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy,
-                               BaseGV, BaseOffset, true, 0));
+                               BaseGV, BaseOffset, true, BaseType, 0, nullptr));
 }
 
 static bool isLegalUse(const TargetTransformInfo &TTI, int64_t MinOffset,
                        int64_t MaxOffset, LSRUse::KindType Kind,
                        MemAccessTy AccessTy, const Formula &F) {
   return isLegalUse(TTI, MinOffset, MaxOffset, Kind, AccessTy, F.BaseGV,
-                    F.BaseOffset, F.HasBaseReg, F.Scale);
+                    F.BaseOffset, F.HasBaseReg, F.baseType(), F.Scale, F.scaleType());
 }
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
@@ -1779,14 +1801,15 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
     for (const LSRFixup &Fixup : LU.Fixups)
       if (!isAMCompletelyFolded(TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
                                 (F.BaseOffset + Fixup.Offset), F.HasBaseReg,
-                                F.Scale, Fixup.UserInst))
+                                F.baseType(), F.Scale, F.scaleType(),
+                                Fixup.UserInst))
         return false;
     return true;
   }
 
   return isAMCompletelyFolded(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind,
                               LU.AccessTy, F.BaseGV, F.BaseOffset, F.HasBaseReg,
-                              F.Scale);
+                              F.baseType(), F.Scale, F.scaleType());
 }
 
 static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
@@ -1806,10 +1829,10 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
     // Check the scaling factor cost with both the min and max offsets.
     InstructionCost ScaleCostMinOffset = TTI.getScalingFactorCost(
         LU.AccessTy.MemTy, F.BaseGV, F.BaseOffset + LU.MinOffset, F.HasBaseReg,
-        F.Scale, LU.AccessTy.AddrSpace);
+        F.baseType(), F.Scale, F.scaleType(), LU.AccessTy.AddrSpace);
     InstructionCost ScaleCostMaxOffset = TTI.getScalingFactorCost(
         LU.AccessTy.MemTy, F.BaseGV, F.BaseOffset + LU.MaxOffset, F.HasBaseReg,
-        F.Scale, LU.AccessTy.AddrSpace);
+        F.baseType(), F.Scale, F.scaleType(), LU.AccessTy.AddrSpace);
 
     assert(ScaleCostMinOffset.isValid() && ScaleCostMaxOffset.isValid() &&
            "Legal addressing mode has an illegal cost!");
@@ -1829,7 +1852,7 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
                              LSRUse::KindType Kind, MemAccessTy AccessTy,
                              GlobalValue *BaseGV, int64_t BaseOffset,
-                             bool HasBaseReg) {
+                             bool HasBaseReg, Type *BaseType) {
   // Fast-path: zero is always foldable.
   if (BaseOffset == 0 && !BaseGV) return true;
 
@@ -1845,7 +1868,8 @@ static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
   }
 
   return isAMCompletelyFolded(TTI, Kind, AccessTy, BaseGV, BaseOffset,
-                              HasBaseReg, Scale);
+                              HasBaseReg, BaseType, Scale,
+                              /*ScaleType=*/nullptr);
 }
 
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
@@ -1872,7 +1896,8 @@ static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
   int64_t Scale = Kind == LSRUse::ICmpZero ? -1 : 1;
 
   return isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy, BaseGV,
-                              BaseOffset, HasBaseReg, Scale);
+                              BaseOffset, HasBaseReg, S->getType(), Scale,
+                              /*ScaleType=*/nullptr);
 }
 
 namespace {
@@ -2010,7 +2035,8 @@ class LSRInstance {
   UseMapTy UseMap;
 
   bool reconcileNewOffset(LSRUse &LU, int64_t NewOffset, bool HasBaseReg,
-                          LSRUse::KindType Kind, MemAccessTy AccessTy);
+                          Type *BaseType, LSRUse::KindType Kind,
+                          MemAccessTy AccessTy);
 
   std::pair<size_t, int64_t> getUse(const SCEV *&Expr, LSRUse::KindType Kind,
                                     MemAccessTy AccessTy);
@@ -2560,7 +2586,8 @@ LSRInstance::OptimizeLoopTermCond() {
 /// Determine if the given use can accommodate a fixup at the given offset and
 /// other details. If so, update the use and return true.
 bool LSRInstance::reconcileNewOffset(LSRUse &LU, int64_t NewOffset,
-                                     bool HasBaseReg, LSRUse::KindType Kind,
+                                     bool HasBaseReg, Type *BaseType,
+                                     LSRUse::KindType Kind,
                                      MemAccessTy AccessTy) {
   int64_t NewMinOffset = LU.MinOffset;
   int64_t NewMaxOffset = LU.MaxOffset;
@@ -2585,12 +2612,12 @@ bool LSRInstance::reconcileNewOffset(LSRUse &LU, int64_t NewOffset,
   // Conservatively assume HasBaseReg is true for now.
   if (NewOffset < LU.MinOffset) {
     if (!isAlwaysFoldable(TTI, Kind, NewAccessTy, /*BaseGV=*/nullptr,
-                          LU.MaxOffset - NewOffset, HasBaseReg))
+                          LU.MaxOffset - NewOffset, HasBaseReg, BaseType))
       return false;
     NewMinOffset = NewOffset;
   } else if (NewOffset > LU.MaxOffset) {
     if (!isAlwaysFoldable(TTI, Kind, NewAccessTy, /*BaseGV=*/nullptr,
-                          NewOffset - LU.MinOffset, HasBaseReg))
+                          NewOffset - LU.MinOffset, HasBaseReg, BaseType))
       return false;
     NewMaxOffset = NewOffset;
   }
@@ -2613,7 +2640,7 @@ std::pair<size_t, int64_t> LSRInstance::getUse(const SCEV *&Expr,
 
   // Basic uses can't accept any offset, for example.
   if (!isAlwaysFoldable(TTI, Kind, AccessTy, /*BaseGV=*/ nullptr,
-                        Offset, /*HasBaseReg=*/ true)) {
+                        Offset, /*HasBaseReg=*/ true, Expr->getType())) {
     Expr = Copy;
     Offset = 0;
   }
@@ -2624,9 +2651,11 @@ std::pair<size_t, int64_t> LSRInstance::getUse(const SCEV *&Expr,
     // A use already existed with this base.
     size_t LUIdx = P.first->second;
     LSRUse &LU = Uses[LUIdx];
-    if (reconcileNewOffset(LU, Offset, /*HasBaseReg=*/true, Kind, AccessTy))
+    if (reconcileNewOffset(LU, Offset, /*HasBaseReg=*/true, Expr->getType(),
+                           Kind, AccessTy)) {
       // Reuse this use.
       return std::make_pair(LUIdx, Offset);
+    }
   }
 
   // Create a new use.
@@ -3179,7 +3208,7 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
   MemAccessTy AccessTy = getAccessType(TTI, UserInst, Operand);
   int64_t IncOffset = IncConst->getValue()->getSExtValue();
   if (!isAlwaysFoldable(TTI, LSRUse::Address, AccessTy, /*BaseGV=*/nullptr,
-                        IncOffset, /*HasBaseReg=*/false))
+                        IncOffset, /*HasBaseReg=*/false, /*BaseType=*/nullptr))
     return false;
 
   return true;
@@ -4640,8 +4669,8 @@ void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
       if (!LUThatHas)
         continue;
 
-      if (!reconcileNewOffset(*LUThatHas, F.BaseOffset, /*HasBaseReg=*/ false,
-                              LU.Kind, LU.AccessTy))
+      if (!reconcileNewOffset(*LUThatHas, F.BaseOffset, /*HasBaseReg=*/false,
+                              /*HasBaseType=*/nullptr, LU.Kind, LU.AccessTy))
         continue;
 
       LLVM_DEBUG(dbgs() << "  Deleting use "; LU.print(dbgs()); dbgs() << '\n');

@@ -345,6 +345,17 @@ bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                         Scale, AddrSpace, I);
 }
 
+bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
+                                                int64_t BaseOffset,
+                                                bool HasBaseReg, Type *BaseType,
+                                                int64_t Scale, Type *ScaleType,
+                                                unsigned AddrSpace,
+                                                Instruction *I) const {
+  return TTIImpl->isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg,
+                                        BaseType, Scale, ScaleType, AddrSpace,
+                                        I);
+}
+
 bool TargetTransformInfo::isLSRCostLess(LSRCost &C1, LSRCost &C2) const {
   return TTIImpl->isLSRCostLess(C1, C2);
 }
@@ -433,6 +444,16 @@ InstructionCost TargetTransformInfo::getScalingFactorCost(
     int64_t Scale, unsigned AddrSpace) const {
   InstructionCost Cost = TTIImpl->getScalingFactorCost(
       Ty, BaseGV, BaseOffset, HasBaseReg, Scale, AddrSpace);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
+InstructionCost TargetTransformInfo::getScalingFactorCost(
+    Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset, bool HasBaseReg,
+    Type *BaseType, int64_t Scale, Type *ScaleType, unsigned AddrSpace) const {
+  InstructionCost Cost =
+      TTIImpl->getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg,
+                                    BaseType, Scale, ScaleType, AddrSpace);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
