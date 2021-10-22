@@ -19,18 +19,16 @@ define i32 @test_01(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ], [ 0, [[OUTER_PREHEADER]] ]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -91,18 +89,16 @@ define i32 @test_01a(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ], [ 0, [[OUTER_PREHEADER]] ]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -162,18 +158,16 @@ define i32 @test_02(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ], [ 0, [[OUTER_PREHEADER]] ]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -237,21 +231,19 @@ define i32 @test_03(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[INNER_PREHEADER:%.*]], label [[NO_INNER:%.*]]
 ; CHECK:       inner.preheader:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       no_inner:
 ; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ], [ [[OUTER_IV]], [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE_LOOPEXIT:%.*]]
 ; CHECK:       outer.backedge.loopexit:
@@ -322,8 +314,6 @@ define i32 @test_04(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[INNER_PREHEADER:%.*]], label [[NO_INNER:%.*]]
 ; CHECK:       inner.preheader:
-; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       no_inner:
 ; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = call i1 @cond()
@@ -335,13 +325,13 @@ define i32 @test_04(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ], [ [[OUTER_IV]], [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX1]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE_LOOPEXIT:%.*]]
 ; CHECK:       outer.backedge.loopexit:
@@ -416,18 +406,16 @@ define i32 @test_05(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -483,18 +471,16 @@ define i32 @test_05a(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -549,18 +535,16 @@ define i32 @test_05b(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp sgt i32 [[B]], [[IV]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -615,18 +599,16 @@ define i32 @test_05c(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -681,18 +663,16 @@ define i32 @test_05d(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ugt i32 [[B]], [[IV]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -748,18 +728,16 @@ define i32 @test_05e(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ugt i32 [[B]], [[IV]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -814,18 +792,16 @@ define i32 @test_05f(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ugt i32 [[B]], [[IV]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp sgt i32 [[B]], [[IV]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -880,18 +856,16 @@ define i32 @test_05g(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp sgt i32 [[B]], [[IV]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -946,18 +920,16 @@ define i32 @test_05h(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp sgt i32 [[B]], [[IV]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ugt i32 [[B]], [[IV]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -1012,18 +984,16 @@ define i32 @test_06(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_MERGE:%.*]], [[OUTER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer.backedge:
@@ -1082,21 +1052,19 @@ define i32 @test_07(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[INNER_PREHEADER:%.*]], label [[NO_INNER:%.*]]
 ; CHECK:       inner.preheader:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       no_inner:
 ; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ], [ [[OUTER_IV]], [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE_LOOPEXIT:%.*]]
 ; CHECK:       outer.backedge.loopexit:
@@ -1162,8 +1130,6 @@ define i32 @test_08(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[INNER_PREHEADER:%.*]], label [[NO_INNER:%.*]]
 ; CHECK:       inner.preheader:
-; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       no_inner:
 ; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = call i1 @cond()
@@ -1175,13 +1141,13 @@ define i32 @test_08(i32 %a, i32* %bp) {
 ; CHECK-NEXT:    br label [[OUTER_BACKEDGE]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ], [ [[OUTER_IV]], [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX1]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[SIGNED_COND:%.*]] = icmp slt i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[SIGNED_COND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    [[UNSIGNED_COND:%.*]] = icmp ult i32 [[IV]], [[B]]
+; CHECK-NEXT:    br i1 [[UNSIGNED_COND]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[INNER_LOOP_COND]], label [[INNER]], label [[OUTER_BACKEDGE_LOOPEXIT:%.*]]
 ; CHECK:       outer.backedge.loopexit:

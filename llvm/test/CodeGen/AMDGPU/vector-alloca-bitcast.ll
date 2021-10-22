@@ -86,9 +86,8 @@ entry:
 ; GCN-LABEL: {{^}}vector_write_read_bitcast_to_float:
 ; GCN-ALLOCA: buffer_store_dword
 
-; FIXME (llvm-mos): This is broken now.
-; COM:GCN-PROMOTE-COUNT-6: v_cmp_eq_u16
-; COM:GCN-PROMOTE-COUNT-6: v_cndmask
+; GCN-PROMOTE-COUNT-6: v_cmp_eq_u16
+; GCN-PROMOTE-COUNT-6: v_cndmask
 
 ; GCN: s_cbranch
 

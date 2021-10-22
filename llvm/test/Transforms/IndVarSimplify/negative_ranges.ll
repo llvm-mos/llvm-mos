@@ -9,16 +9,15 @@ define i32 @test_01(i32* %p, i32* %s) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[END:%.*]] = load i32, i32* [[S:%.*]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[END]], i32 [[START]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[GUARDED:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[IV]], [[END]]
+; CHECK-NEXT:    br i1 [[C1]], label [[GUARDED:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -57,16 +56,15 @@ define i32 @test_02(i32* %p, i32* %s) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[END:%.*]] = load i32, i32* [[S:%.*]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[END]], i32 [[START]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[GUARDED:%.*]], label [[SIDE_EXIT:%.*]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[IV]], [[END]]
+; CHECK-NEXT:    br i1 [[C1]], label [[GUARDED:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:

@@ -87,8 +87,8 @@ define void @loop(double* %X, double* %Y) {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[X]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store double [[RETVAL_0_I]], double* [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], 20000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[I_05]], 19999
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]], !llvm.loop [[LOOP7:![0-9]+]]
 ;
 entry:
   %X.addr = alloca double*, align 8
@@ -195,8 +195,8 @@ define void @loop2(float* %A, float* %B, i32* %C, float %x) {
 ; CHECK-NEXT:    [[ADD_SINK:%.*]] = phi float [ [[ADD]], [[ELSE]] ], [ [[MUL2_I81_I]], [[LOOP_BODY]] ]
 ; CHECK-NEXT:    store float [[ADD_SINK]], float* [[B_GEP_0]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    [[CMP_0:%.*]] = icmp ult i64 [[IV1]], 9999
+; CHECK-NEXT:    br i1 [[CMP_0]], label [[LOOP_BODY]], label [[EXIT]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

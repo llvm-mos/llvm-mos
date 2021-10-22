@@ -13,7 +13,7 @@
 define void @test_predicated_simple_unsigned(i32* %p, i32* %arr) {
 ; CHECK-LABEL: @test_predicated_simple_unsigned(
 ; CHECK-NEXT:  preheader:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0:!range !.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[PREHEADER:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -62,7 +62,7 @@ fail:
 define void @test_predicated_simple_signed(i32* %p, i32* %arr) {
 ; CHECK-LABEL: @test_predicated_simple_signed(
 ; CHECK-NEXT:  preheader:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[LEN]], [[PREHEADER:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -288,11 +288,10 @@ exit:
 define void @predicated_inside_loop_signed_neg(i32 %arg) nounwind #0 {
 ; CHECK-LABEL: @predicated_inside_loop_signed_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[ARG:%.*]], i32 1)
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG]], 1
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[GUARDED:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guarded:
@@ -308,8 +307,8 @@ define void @predicated_inside_loop_signed_neg(i32 %arg) nounwind #0 {
 ; CHECK-NEXT:    br label [[OUTER_INC]]
 ; CHECK:       outer.inc:
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_INC]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[OUTER]], label [[EXIT]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[I_INC]], [[ARG]]
+; CHECK-NEXT:    br i1 [[CMP4]], label [[OUTER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -350,12 +349,10 @@ exit:
 define void @predicated_inside_loop_signed_pos(i32 %arg) nounwind #0 {
 ; CHECK-LABEL: @predicated_inside_loop_signed_pos(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG:%.*]], -1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 1)
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG]], 1
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[GUARDED:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guarded:
@@ -371,8 +368,8 @@ define void @predicated_inside_loop_signed_pos(i32 %arg) nounwind #0 {
 ; CHECK-NEXT:    br label [[OUTER_INC]]
 ; CHECK:       outer.inc:
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_INC]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[OUTER]], label [[EXIT]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[I_INC]], [[SUB1]]
+; CHECK-NEXT:    br i1 [[CMP4]], label [[OUTER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -412,11 +409,10 @@ exit:
 define void @predicated_inside_loop_unsigned(i32 %arg) nounwind #0 {
 ; CHECK-LABEL: @predicated_inside_loop_unsigned(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[ARG:%.*]], i32 1)
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[OUTER_INC:%.*]] ]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG]], 1
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[ARG:%.*]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[SUB1]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[GUARDED:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guarded:
@@ -432,8 +428,8 @@ define void @predicated_inside_loop_unsigned(i32 %arg) nounwind #0 {
 ; CHECK-NEXT:    br label [[OUTER_INC]]
 ; CHECK:       outer.inc:
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_INC]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[OUTER]], label [[EXIT]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[I_INC]], [[ARG]]
+; CHECK-NEXT:    br i1 [[CMP4]], label [[OUTER]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

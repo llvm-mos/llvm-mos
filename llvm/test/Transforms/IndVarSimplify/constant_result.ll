@@ -12,8 +12,8 @@ define i16 @foo() {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [400 x i16], [400 x i16]* @Y, i16 0, i16 [[I]]
 ; CHECK-NEXT:    store i16 0, i16* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i16 [[I]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i16 [[INC]], 400
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[INC]], 400
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i16 400
 ;

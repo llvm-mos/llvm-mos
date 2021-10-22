@@ -166,6 +166,8 @@ static bool IVUseShouldUsePostIncValue(Instruction *User, Value *Operand,
 /// return true.  Otherwise, return false.
 bool IVUsers::AddUsersImpl(Instruction *I,
                            SmallPtrSetImpl<Loop*> &PreheaderLoopNests) {
+  const DataLayout &DL = I->getModule()->getDataLayout();
+
   // Add this IV user to the Processed set before returning false to ensure that
   // all IV users are members of the set. See IVUsers::isIVUserOrOperand.
   if (!Processed.insert(I).second)
@@ -181,8 +183,10 @@ bool IVUsers::AddUsersImpl(Instruction *I,
     return false;
 
   // LSR is not APInt clean, do not touch integers bigger than 64-bits.
+  // Also avoid creating IVs of non-native types. For example, we don't want a
+  // 64-bit IV in 32-bit code just because the loop has one 64-bit cast.
   uint64_t Width = SE->getTypeSizeInBits(I->getType());
-  if (Width > 64)
+  if (Width > 64 || !DL.isLegalInteger(Width))
     return false;
 
   // Don't attempt to promote ephemeral values to indvars. They will be removed
