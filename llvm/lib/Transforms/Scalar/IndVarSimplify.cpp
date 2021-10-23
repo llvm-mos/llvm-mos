@@ -1821,8 +1821,9 @@ bool IndVarSimplify::run(Loop *L) {
     SmallVector<BasicBlock*, 16> ExitingBlocks;
     L->getExitingBlocks(ExitingBlocks);
     for (BasicBlock *ExitingBB : ExitingBlocks) {
+      BranchInst *Term = dyn_cast<BranchInst>(ExitingBB->getTerminator());
       // Can't rewrite non-branch yet.
-      if (!isa<BranchInst>(ExitingBB->getTerminator()))
+      if (!Term)
         continue;
 
       // If our exitting block exits multiple loops, we can only rewrite the
@@ -1848,6 +1849,24 @@ bool IndVarSimplify::run(Loop *L) {
       PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
       if (!IndVar)
         continue;
+
+      uint64_t IndVarWidth = SE->getTypeSizeInBits(IndVar->getType());
+      if (!DL.isLegalInteger(IndVarWidth)) {
+        const auto *Cond = dyn_cast<CmpInst>(Term->getCondition());
+        if (!Cond)
+          continue;
+
+        uint64_t CondWidth =
+            SE->getTypeSizeInBits(Cond->getOperand(0)->getType());
+
+        // Don't replace a legal exit condition with an illegal one.
+        if (DL.isLegalInteger(CondWidth))
+          continue;
+
+        // Don't widen an illegal exit condition.
+        if (IndVarWidth > CondWidth)
+          continue;
+      }
 
       // Avoid high cost expansions.  Note: This heuristic is questionable in
       // that our definition of "high cost" is not exactly principled.
