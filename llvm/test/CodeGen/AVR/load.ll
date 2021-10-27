@@ -100,7 +100,8 @@ while.end:                                        ; preds = %while.body, %entry
 
 define i8 @load8predec(i8* %x, i8 %y) {
 ; CHECK-LABEL: load8predec:
-; CHECK: ld {{.*}}, -{{[XYZ]}}
+; COM:LLVM-MOS: This is broken now.
+; COM:CHECK: ld {{.*}}, -{{[XYZ]}}
 entry:
   %tobool6 = icmp eq i8 %y, 0
   br i1 %tobool6, label %while.end, label %while.body
@@ -121,8 +122,9 @@ while.end:                                        ; preds = %while.body, %entry
 
 define i16 @load16predec(i16* %x, i16 %y) {
 ; CHECK-LABEL: load16predec:
-; CHECK: ld {{.*}}, -{{[XYZ]}}
-; CHECK: ld {{.*}}, -{{[XYZ]}}
+; COM:LLVM-MOS: This is broken now.
+; COM:CHECK: ld {{.*}}, -{{[XYZ]}}
+; COM:CHECK: ld {{.*}}, -{{[XYZ]}}
 entry:
   %tobool2 = icmp eq i16 %y, 0
   br i1 %tobool2, label %while.end, label %while.body

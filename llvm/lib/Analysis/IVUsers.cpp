@@ -165,7 +165,8 @@ static bool IVUseShouldUsePostIncValue(Instruction *User, Value *Operand,
 /// reducible SCEV, recursively add its users to the IVUsesByStride set and
 /// return true.  Otherwise, return false.
 bool IVUsers::AddUsersImpl(Instruction *I,
-                           SmallPtrSetImpl<Loop*> &PreheaderLoopNests) {
+                           SmallPtrSetImpl<Loop *> &PreheaderLoopNests,
+                           bool AllowNonNative) {
   const DataLayout &DL = I->getModule()->getDataLayout();
 
   // Add this IV user to the Processed set before returning false to ensure that
@@ -186,8 +187,11 @@ bool IVUsers::AddUsersImpl(Instruction *I,
   // Also avoid creating IVs of non-native types. For example, we don't want a
   // 64-bit IV in 32-bit code just because the loop has one 64-bit cast.
   uint64_t Width = SE->getTypeSizeInBits(I->getType());
-  if (Width > 64 || !DL.isLegalInteger(Width))
+  bool IsNative = DL.isLegalInteger(Width);
+  if (Width > 64 || (!AllowNonNative && !IsNative))
     return false;
+  if (IsNative)
+    AllowNonNative = false;
 
   // Don't attempt to promote ephemeral values to indvars. They will be removed
   // later anyway.
@@ -233,13 +237,13 @@ bool IVUsers::AddUsersImpl(Instruction *I,
     bool AddUserToIVUsers = false;
     if (LI->getLoopFor(User->getParent()) != L) {
       if (isa<PHINode>(User) || Processed.count(User) ||
-          !AddUsersImpl(User, PreheaderLoopNests)) {
+          !AddUsersImpl(User, PreheaderLoopNests, AllowNonNative)) {
         LLVM_DEBUG(dbgs() << "FOUND USER in other loop: " << *User << '\n'
                           << "   OF SCEV: " << *ISE << '\n');
         AddUserToIVUsers = true;
       }
     } else if (Processed.count(User) ||
-               !AddUsersImpl(User, PreheaderLoopNests)) {
+               !AddUsersImpl(User, PreheaderLoopNests, AllowNonNative)) {
       LLVM_DEBUG(dbgs() << "FOUND USER: " << *User << '\n'
                         << "   OF SCEV: " << *ISE << '\n');
       AddUserToIVUsers = true;
@@ -294,7 +298,7 @@ bool IVUsers::AddUsersIfInteresting(Instruction *I) {
   // loops so we don't traverse the domtree for each user.
   SmallPtrSet<Loop*,16> PreheaderLoopNests;
 
-  return AddUsersImpl(I, PreheaderLoopNests);
+  return AddUsersImpl(I, PreheaderLoopNests, /*AllowNonNative=*/true);
 }
 
 IVStrideUse &IVUsers::AddUser(Instruction *User, Value *Operand) {
