@@ -174,7 +174,8 @@ bool IVUsers::AddUsersImpl(Instruction *I,
   if (!Processed.insert(I).second)
     return true;    // Instruction already handled.
 
-  if (!SE->isSCEVable(I->getType()))
+  Type *Ty = I->getType();
+  if (!SE->isSCEVable(Ty))
     return false;   // Void and FP expressions cannot be reduced.
 
   // IVUsers is used by LSR which assumes that all SCEV expressions are safe to
@@ -185,9 +186,11 @@ bool IVUsers::AddUsersImpl(Instruction *I,
 
   // LSR is not APInt clean, do not touch integers bigger than 64-bits.
   // Also avoid creating IVs of non-native types. For example, we don't want a
-  // 64-bit IV in 32-bit code just because the loop has one 64-bit cast.
-  uint64_t Width = SE->getTypeSizeInBits(I->getType());
-  bool IsNative = DL.isLegalInteger(Width);
+  // 64-bit IV in 32-bit code just because the loop has one 64-bit cast. We
+  // do consider the address space 0 index type legal; otherwise there's likely
+  // no way for LSR to intelligently apply addressing modes.
+  uint64_t Width = SE->getTypeSizeInBits(Ty);
+  bool IsNative = DL.isLegalInteger(Width) || Width == DL.getIndexSizeInBits(0);
   if (Width > 64 || (!AllowNonNative && !IsNative))
     return false;
   if (IsNative)

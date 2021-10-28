@@ -38,25 +38,27 @@ define void @schedule_block() {
 ; CHECK:       while.body1013:
 ; CHECK-NEXT:    br label [[FOR_COND_I2472:%.*]]
 ; CHECK:       for.cond.i2472:
-; CHECK-NEXT:    [[I_0_I:%.*]] = phi i32 [ 0, [[WHILE_BODY1013]] ], [ [[LSR_IV_NEXT:%.*]], [[FOR_END34_I:%.*]] ]
+; CHECK-NEXT:    [[I_0_I:%.*]] = phi i32 [ 0, [[WHILE_BODY1013]] ], [ [[TMP2:%.*]], [[FOR_END34_I:%.*]] ]
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND3_PREHEADER_I:%.*]], label [[IF_END107_I_LOOPEXIT:%.*]]
 ; CHECK:       for.cond3.preheader.i:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[I_0_I]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I_0_I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND3_I:%.*]]
 ; CHECK:       for.cond3.i:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT]], [[FOR_BODY5_I:%.*]] ], [ [[TMP0]], [[FOR_COND3_PREHEADER_I]] ]
+; CHECK-NEXT:    [[INDVARS_IV301_I2691:%.*]] = phi i64 [ [[INDVARS_IV_NEXT302_I:%.*]], [[FOR_BODY5_I:%.*]] ], [ [[TMP1]], [[FOR_COND3_PREHEADER_I]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY5_I]]
 ; CHECK:       for.body5.i:
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT302_I]] = add nsw i64 [[INDVARS_IV301_I2691]], 1
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND3_I]], label [[FOR_BODY5_I_FOR_END_I2475_LOOPEXIT_CRIT_EDGE:%.*]]
 ; CHECK:       for.body5.i.for.end.i2475.loopexit_crit_edge:
+; CHECK-NEXT:    [[TMP2]] = trunc i64 [[INDVARS_IV_NEXT302_I]] to i32
 ; CHECK-NEXT:    br label [[FOR_END34_I]]
 ; CHECK:       for.end34.i:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND_I2472]], label [[IF_ELSE_I2488:%.*]]
 ; CHECK:       if.else.i2488:
 ; CHECK-NEXT:    br i1 undef, label [[IF_END107_I:%.*]], label [[FOR_BODY45_PREHEADER_I:%.*]]
 ; CHECK:       for.body45.preheader.i:
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I_0_I]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[I_0_I]] to i64
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end107.i.loopexit:
 ; CHECK-NEXT:    br label [[IF_END107_I]]
