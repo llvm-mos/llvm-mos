@@ -59,6 +59,8 @@ public:
                              unsigned AddrSpace,
                              Instruction *I = nullptr) const override;
 
+  bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;

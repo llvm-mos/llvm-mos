@@ -50,15 +50,17 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(MOS::RS0);
 }
 
-MVT MOSTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
-    CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const {
+MVT MOSTargetLowering::getRegisterTypeForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT,
+    const ISD::ArgFlagsTy &Flags) const {
   if (Flags.isPointer())
     return MVT::i16;
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT, Flags);
 }
 
-unsigned MOSTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
-    CallingConv::ID CC, EVT VT, const ISD::ArgFlagsTy& Flags) const {
+unsigned MOSTargetLowering::getNumRegistersForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT,
+    const ISD::ArgFlagsTy &Flags) const {
   if (Flags.isPointer())
     return 1;
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT, Flags);
@@ -140,6 +142,12 @@ bool MOSTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   // Any other combination of GV and BaseOffset are just global offsets.
   return true;
+}
+
+bool MOSTargetLowering::isTruncateFree(Type *SrcTy, Type *DstTy) const {
+  if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+    return false;
+  return SrcTy->getPrimitiveSizeInBits() > DstTy->getPrimitiveSizeInBits();
 }
 
 MachineBasicBlock *
