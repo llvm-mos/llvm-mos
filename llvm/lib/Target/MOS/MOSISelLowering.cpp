@@ -150,6 +150,12 @@ bool MOSTargetLowering::isTruncateFree(Type *SrcTy, Type *DstTy) const {
   return SrcTy->getPrimitiveSizeInBits() > DstTy->getPrimitiveSizeInBits();
 }
 
+bool MOSTargetLowering::isZExtFree(Type *SrcTy, Type *DstTy) const {
+  if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+    return false;
+  return SrcTy->getPrimitiveSizeInBits() < DstTy->getPrimitiveSizeInBits();
+}
+
 MachineBasicBlock *
 MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *MBB) const {

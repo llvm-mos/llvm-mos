@@ -61,6 +61,8 @@ public:
 
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
 
+  bool isZExtFree(Type *SrcTy, Type *DstTy) const override;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;

@@ -290,6 +290,8 @@ public:
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) const { return false; }
 
+  bool isZExtFree(Type *Ty1, Type *Ty2) const { return false; }
+
   bool isProfitableToHoist(Instruction *I) const { return true; }
 
   bool useAA() const { return false; }

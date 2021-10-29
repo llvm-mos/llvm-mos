@@ -708,6 +708,10 @@ public:
   /// by referencing its sub-register AX.
   bool isTruncateFree(Type *Ty1, Type *Ty2) const;
 
+  /// Return true if it's free to zero extend a value of type Ty1 to type
+  /// Ty2.
+  bool isZExtFree(Type *Ty1, Type *Ty2) const;
+
   /// Return true if it is profitable to hoist instruction in the
   /// then/else to before if.
   bool isProfitableToHoist(Instruction *I) const;
@@ -1527,6 +1531,7 @@ public:
                                                unsigned AddrSpace) = 0;
   virtual bool LSRWithInstrQueries() = 0;
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) = 0;
+  virtual bool isZExtFree(Type *Ty1, Type *Ty2) = 0;
   virtual bool isProfitableToHoist(Instruction *I) = 0;
   virtual bool useAA() = 0;
   virtual bool isTypeLegal(Type *Ty) = 0;
@@ -1927,6 +1932,9 @@ public:
   bool LSRWithInstrQueries() override { return Impl.LSRWithInstrQueries(); }
   bool isTruncateFree(Type *Ty1, Type *Ty2) override {
     return Impl.isTruncateFree(Ty1, Ty2);
+  }
+  bool isZExtFree(Type *Ty1, Type *Ty2) override {
+    return Impl.isZExtFree(Ty1, Ty2);
   }
   bool isProfitableToHoist(Instruction *I) override {
     return Impl.isProfitableToHoist(I);

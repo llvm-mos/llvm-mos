@@ -12,16 +12,16 @@ target triple = "mos"
 define i16 @main() local_unnamed_addr #0 {
 ; NMOS-LABEL: main:
 ; NMOS:       ; %bb.0: ; %entry
-; NMOS-NEXT:    ldx #0
+; NMOS-NEXT:    ldx #1
 ; NMOS-NEXT:    lda #72
 ; NMOS-NEXT:  .LBB0_1: ; %while.body
 ; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NMOS-NEXT:    ;APP
 ; NMOS-NEXT:    jsr 65490
 ; NMOS-NEXT:    ;NO_APP
-; NMOS-NEXT:    lda .str+1,x
+; NMOS-NEXT:    lda .str,x
 ; NMOS-NEXT:    inx
-; NMOS-NEXT:    cpx #14
+; NMOS-NEXT:    cpx #15
 ; NMOS-NEXT:    bne .LBB0_1
 ; NMOS-NEXT:  ; %bb.2: ; %while.end
 ; NMOS-NEXT:    ldx #0
@@ -30,16 +30,16 @@ define i16 @main() local_unnamed_addr #0 {
 ;
 ; CMOS-LABEL: main:
 ; CMOS:       ; %bb.0: ; %entry
-; CMOS-NEXT:    ldx #0
+; CMOS-NEXT:    ldx #1
 ; CMOS-NEXT:    lda #72
 ; CMOS-NEXT:  .LBB0_1: ; %while.body
 ; CMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CMOS-NEXT:    ;APP
 ; CMOS-NEXT:    jsr 65490
 ; CMOS-NEXT:    ;NO_APP
-; CMOS-NEXT:    lda .str+1,x
+; CMOS-NEXT:    lda .str,x
 ; CMOS-NEXT:    inx
-; CMOS-NEXT:    cpx #14
+; CMOS-NEXT:    cpx #15
 ; CMOS-NEXT:    bne .LBB0_1
 ; CMOS-NEXT:  ; %bb.2: ; %while.end
 ; CMOS-NEXT:    ldx #0

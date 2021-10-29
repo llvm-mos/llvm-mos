@@ -380,6 +380,10 @@ struct Formula {
   /// field rather than a register.
   int64_t UnfoldedOffset = 0;
 
+  /// The type of this formula, if it has one, or null otherwise. This type
+  /// is meaningless except for the bit size.
+  Type *Ty = nullptr;
+
   Formula() = default;
 
   void initialMatch(const SCEV *S, Loop *L, ScalarEvolution &SE);
@@ -393,7 +397,6 @@ struct Formula {
   bool hasZeroEnd() const;
 
   size_t getNumRegs() const;
-  Type *getType() const;
 
   void deleteBaseReg(const SCEV *&S);
 
@@ -479,6 +482,10 @@ void Formula::initialMatch(const SCEV *S, Loop *L, ScalarEvolution &SE) {
     HasBaseReg = true;
   }
   canonicalize(*L);
+  Ty = !BaseRegs.empty() ? BaseRegs.front()->getType()
+       : ScaledReg       ? ScaledReg->getType()
+       : BaseGV          ? BaseGV->getType()
+                         : nullptr;
 }
 
 /// Check whether or not this formula satisfies the canonical
@@ -574,15 +581,6 @@ bool Formula::hasZeroEnd() const {
 /// not include register uses implied by non-constant addrec strides.
 size_t Formula::getNumRegs() const {
   return !!ScaledReg + BaseRegs.size();
-}
-
-/// Return the type of this formula, if it has one, or null otherwise. This type
-/// is meaningless except for the bit size.
-Type *Formula::getType() const {
-  return !BaseRegs.empty() ? BaseRegs.front()->getType() :
-         ScaledReg ? ScaledReg->getType() :
-         BaseGV ? BaseGV->getType() :
-         nullptr;
 }
 
 /// Delete the given base reg from the BaseRegs list.
@@ -1271,6 +1269,7 @@ static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
 /// Tally up interesting quantities from the given register.
 void Cost::RateRegister(const Formula &F, const SCEV *Reg,
                         SmallPtrSetImpl<const SCEV *> &Regs) {
+  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Reg)) {
     // If this is an addrec for another loop, it should be an invariant
     // with respect to L since L is the innermost loop (at least
@@ -1292,7 +1291,8 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
       return;
     }
 
-    unsigned LoopCost = 1;
+    unsigned LoopCost =
+        DL.isLegalInteger(SE->getTypeSizeInBits(AR->getType())) ? 1 : 2;
     if (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
 
@@ -1422,7 +1422,7 @@ void Cost::RateFormula(const Formula &F,
   // additional instruction (at least fill).
   // TODO: Need distinguish register class?
   unsigned TTIRegNum = TTI->getNumberOfRegisters(
-                       TTI->getRegisterClassForType(false, F.getType())) - 1;
+                       TTI->getRegisterClassForType(false, F.Ty)) - 1;
   if (C.NumRegs > TTIRegNum) {
     // Cost already exceeded TTIRegNum, then only newly added register can add
     // new instructions.
@@ -2045,6 +2045,7 @@ class LSRInstance {
   void GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx, Formula Base);
   void GenerateScales(LSRUse &LU, unsigned LUIdx, Formula Base);
   void GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base);
+  void GenerateZExts(LSRUse &LU, unsigned LUIdx, Formula Base);
   void GenerateCrossUseConstantOffsets();
   void GenerateAllReuseFormulae();
 
@@ -3408,6 +3409,7 @@ LSRInstance::InsertSupplementalFormula(const SCEV *S,
   Formula F;
   F.BaseRegs.push_back(S);
   F.HasBaseReg = true;
+  F.Ty = S->getType();
   bool Inserted = InsertFormula(LU, LUIdx, F);
   assert(Inserted && "Supplemental formula already exists!"); (void)Inserted;
 }
@@ -3920,7 +3922,7 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
   if (LU.Kind != LSRUse::ICmpZero) return;
 
   // Determine the integer type for the base formula.
-  Type *IntTy = Base.getType();
+  Type *IntTy = Base.Ty;
   if (!IntTy) return;
   if (SE.getTypeSizeInBits(IntTy) > 64) return;
 
@@ -4011,7 +4013,7 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
 /// modes, for example.
 void LSRInstance::GenerateScales(LSRUse &LU, unsigned LUIdx, Formula Base) {
   // Determine the integer type for the base formula.
-  Type *IntTy = Base.getType();
+  Type *IntTy = Base.Ty;
   if (!IntTy) return;
 
   // If this Formula already has a scaled register, we can't add another one.
@@ -4080,7 +4082,7 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
   if (Base.BaseGV) return;
 
   // Determine the integer type for the base formula.
-  Type *DstTy = Base.getType();
+  Type *DstTy = Base.Ty;
   if (!DstTy) return;
   if (DstTy->isPointerTy())
     return;
@@ -4096,6 +4098,7 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
   for (Type *SrcTy : Types) {
     if (SrcTy != DstTy && TTI.isTruncateFree(SrcTy, DstTy)) {
       Formula F = Base;
+      F.Ty = SrcTy;
 
       // Sometimes SCEV is able to prove zero during ext transform. It may
       // happen if SCEV did not do all possible transforms while creating the
@@ -4128,6 +4131,67 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
       (void)InsertFormula(LU, LUIdx, F);
     }
   }
+}
+
+void LSRInstance::GenerateZExts(LSRUse &LU, unsigned LUIdx, Formula Base) {
+  if (!Base.Ty)
+    return;
+
+  const auto &DL = SE.getDataLayout();
+  bool Changed = false;
+  auto Regs = Base.BaseRegs;
+  if (Base.Scale == 1)
+    Regs.push_back(Base.ScaledReg);
+  for (unsigned Idx = 0, EndIdx = Regs.size(); Idx != EndIdx; ++Idx) {
+    const auto *Reg = Regs[Idx];
+    Type *Ty = Reg->getType();
+    if (Ty->isPointerTy())
+      continue;
+
+    const auto Width = SE.getTypeSizeInBits(Ty);
+    if (DL.isLegalInteger(Width))
+      continue;
+
+    unsigned NarrowWidth = 0;
+
+    bool CannotNarrow = false;
+    for (const auto &Fixup : LU.Fixups) {
+      const auto *R = denormalizeForPostIncUse(Reg, Fixup.PostIncLoops, SE);
+      if (!SE.isKnownNonNegative(R)) {
+        CannotNarrow = true;
+        break;
+      }
+      const auto Range = SE.getUnsignedRange(R);
+      const unsigned NumActiveBytes = (Range.getActiveBits() + 7) / 8;
+      unsigned FixupNarrowWidth = NumActiveBytes * 8;
+      if (!FixupNarrowWidth) {
+        CannotNarrow = true;
+        break;
+      }
+      NarrowWidth = std::max(NarrowWidth, FixupNarrowWidth);
+    }
+    if (CannotNarrow)
+      continue;
+
+    if (!DL.isLegalInteger(NarrowWidth))
+      continue;
+
+    Type *NarrowTy = Type::getIntNTy(Ty->getContext(), NarrowWidth);
+    if (!TTI.isZExtFree(NarrowTy, Reg->getType()))
+      continue;
+
+    const auto *Narrow = SE.getTruncateExpr(Reg, NarrowTy);
+    if (Idx == Base.BaseRegs.size())
+      Base.ScaledReg = Narrow;
+    else
+      Base.BaseRegs[Idx] = Narrow;
+    Changed = true;
+  }
+  if (!Changed)
+    return;
+
+  Base.canonicalize(*L);
+  (void)InsertFormula(LU, LUIdx, Base);
 }
 
 namespace {
@@ -4356,8 +4420,10 @@ LSRInstance::GenerateAllReuseFormulae() {
   }
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
     LSRUse &LU = Uses[LUIdx];
-    for (size_t i = 0, f = LU.Formulae.size(); i != f; ++i)
+    for (size_t i = 0, f = LU.Formulae.size(); i != f; ++i) {
       GenerateTruncates(LU, LUIdx, LU.Formulae[i]);
+      GenerateZExts(LU, LUIdx, LU.Formulae[i]);
+    }
   }
 
   GenerateCrossUseConstantOffsets();
@@ -5260,7 +5326,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
   // This is the type that the user actually needs.
   Type *OpTy = LF.OperandValToReplace->getType();
   // This will be the type that we'll initially expand to.
-  Type *Ty = F.getType();
+  Type *Ty = F.Ty;
   if (!Ty)
     // No type known; just expand directly to the ultimate type.
     Ty = OpTy;
@@ -5279,7 +5345,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 
     // If we're expanding for a post-inc user, make the post-inc adjustment.
     Reg = denormalizeForPostIncUse(Reg, LF.PostIncLoops, SE);
-    Ops.push_back(SE.getUnknown(Rewriter.expandCodeFor(Reg, nullptr)));
+    Ops.push_back(SE.getNoopOrZeroExtend(SE.getUnknown(Rewriter.expandCodeFor(Reg, nullptr)), IntTy));
   }
 
   // Expand the ScaledReg portion.
@@ -5294,8 +5360,9 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
     if (LU.Kind == LSRUse::ICmpZero) {
       // Expand ScaleReg as if it was part of the base regs.
       if (F.Scale == 1)
-        Ops.push_back(
-            SE.getUnknown(Rewriter.expandCodeFor(ScaledS, nullptr)));
+        Ops.push_back(SE.getNoopOrZeroExtend(SE.getUnknown(
+                          Rewriter.expandCodeFor(ScaledS, nullptr)),
+                      IntTy));
       else {
         // An interesting way of "folding" with an icmp is to use a negated
         // scale, which we'll implement by inserting it into the other operand
@@ -5316,7 +5383,8 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
         Ops.clear();
         Ops.push_back(SE.getUnknown(FullV));
       }
-      ScaledS = SE.getUnknown(Rewriter.expandCodeFor(ScaledS, nullptr));
+      ScaledS = SE.getNoopOrZeroExtend(
+          SE.getUnknown(Rewriter.expandCodeFor(ScaledS, nullptr)), IntTy);
       if (F.Scale != 1)
         ScaledS =
             SE.getMulExpr(ScaledS, SE.getConstant(ScaledS->getType(), F.Scale));
@@ -5352,7 +5420,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
       if (!ICmpScaledV)
         ICmpScaledV = ConstantInt::get(IntTy, -(uint64_t)Offset);
       else {
-        Ops.push_back(SE.getUnknown(ICmpScaledV));
+        Ops.push_back(SE.getNoopOrZeroExtend(SE.getUnknown(ICmpScaledV), IntTy));
         ICmpScaledV = ConstantInt::get(IntTy, Offset);
       }
     } else {
