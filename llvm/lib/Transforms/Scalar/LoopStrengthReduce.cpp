@@ -3829,16 +3829,26 @@ void LSRInstance::GenerateSymbolicOffsetsImpl(LSRUse &LU, unsigned LUIdx,
                                               bool IsScaledReg) {
   const SCEV *G = IsScaledReg ? Base.ScaledReg : Base.BaseRegs[Idx];
   GlobalValue *GV = ExtractSymbol(G, SE);
-  if (G->isZero() || !GV)
+  if (!GV)
     return;
+  if (G->isZero())
+    G = nullptr;
   Formula F = Base;
   F.BaseGV = GV;
-  if (IsScaledReg)
+  if (IsScaledReg) {
     F.ScaledReg = G;
-  else
-    F.BaseRegs[Idx] = G;
-  if (isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F))
+    if (!G)
+      F.Scale = 0;
+  } else {
+    if (G)
+      F.BaseRegs[Idx] = G;
+    else
+      F.BaseRegs.erase(F.BaseRegs.begin() + Idx);
+  }
+  F.canonicalize(*L);
+  if (isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F)) {
     (void)InsertFormula(LU, LUIdx, F);
+  }
 }
 
 /// Generate reuse formulae using symbolic offsets.
@@ -3865,6 +3875,11 @@ void LSRInstance::GenerateConstantOffsetsImpl(
 
     // Add the offset to the base register.
     const SCEV *NewG = SE.getAddExpr(SE.getConstant(G->getType(), Offset), G);
+    if (SE.getTypeSizeInBits(G->getType()) < SE.getTypeSizeInBits(F.Ty)) {
+      // LLVM-MOS: Todo.
+      return;
+    }
+
     // If it cancelled out, drop the base register, otherwise update it.
     if (NewG->isZero()) {
       if (IsScaledReg) {
@@ -3909,6 +3924,11 @@ void LSRInstance::GenerateConstantOffsetsImpl(
   }
   for (int64_t Offset : Worklist)
     GenerateOffset(G, Offset);
+
+  if (SE.getTypeSizeInBits(G->getType()) < SE.getTypeSizeInBits(Base.Ty)) {
+    // LLVM-MOS: Todo.
+    return;
+  }
 
   int64_t Imm = ExtractImmediate(G, SE);
   if (G->isZero() || Imm == 0)
@@ -4001,10 +4021,10 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
     // Compensate for the use having MinOffset built into it.
     F.BaseOffset = (uint64_t)F.BaseOffset + Offset - LU.MinOffset;
 
-    const SCEV *FactorS = SE.getConstant(IntTy, Factor);
 
     // Check that multiplying with each base register doesn't overflow.
     for (size_t i = 0, e = F.BaseRegs.size(); i != e; ++i) {
+      const SCEV *FactorS = SE.getConstant(F.BaseRegs[i]->getType(), Factor);
       F.BaseRegs[i] = SE.getMulExpr(F.BaseRegs[i], FactorS);
       if (getExactSDiv(F.BaseRegs[i], FactorS, SE) != Base.BaseRegs[i])
         goto next;
@@ -4012,6 +4032,7 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
 
     // Check that multiplying with the scaled register doesn't overflow.
     if (F.ScaledReg) {
+      const SCEV *FactorS = SE.getConstant(F.ScaledReg->getType(), Factor);
       F.ScaledReg = SE.getMulExpr(F.ScaledReg, FactorS);
       if (getExactSDiv(F.ScaledReg, FactorS, SE) != Base.ScaledReg)
         continue;
@@ -4078,7 +4099,7 @@ void LSRInstance::GenerateScales(LSRUse &LU, unsigned LUIdx, Formula Base) {
     for (size_t i = 0, e = Base.BaseRegs.size(); i != e; ++i) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Base.BaseRegs[i]);
       if (AR && (AR->getLoop() == L || LU.AllFixupsOutsideLoop)) {
-        const SCEV *FactorS = SE.getConstant(IntTy, Factor);
+        const SCEV *FactorS = SE.getConstant(Base.BaseRegs[i]->getType(), Factor);
         if (FactorS->isZero())
           continue;
         // Divide out the factor, ignoring high bits, since we'll be
@@ -4351,6 +4372,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
     // TODO: Use a more targeted data structure.
     for (size_t L = 0, LE = LU.Formulae.size(); L != LE; ++L) {
       Formula F = LU.Formulae[L];
+
       // FIXME: The code for the scaled and unscaled registers looks
       // very similar but slightly different. Investigate if they
       // could be merged. That way, we would not have to unscale the
@@ -4365,6 +4387,12 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           continue;
         Formula NewF = F;
         NewF.BaseOffset = Offset;
+
+        if (SE.getTypeSizeInBits(NewF.ScaledReg->getType()) <
+            SE.getTypeSizeInBits(F.Ty)) {
+          // LLVM-MOS: TODO
+          continue;
+        }
         NewF.ScaledReg = SE.getAddExpr(NegImmS, NewF.ScaledReg);
 
         // If the new scale is a constant in a register, and adding the constant
@@ -4379,7 +4407,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
         // OK, looks good.
         NewF.canonicalize(*this->L);
         if (isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy,
-                        NewF))
+                       NewF))
           (void)InsertFormula(LU, LUIdx, NewF);
       } else {
         // Use the immediate in a base register.
@@ -4398,6 +4426,11 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
               continue;
             NewF = F;
             NewF.UnfoldedOffset = (uint64_t)NewF.UnfoldedOffset + Imm;
+          }
+          if (SE.getTypeSizeInBits(BaseReg->getType()) <
+              SE.getTypeSizeInBits(F.Ty)) {
+            // LLVM-MOS: TODO
+            continue;
           }
           NewF.BaseRegs[N] = SE.getAddExpr(NegImmS, BaseReg);
 
@@ -4435,6 +4468,8 @@ LSRInstance::GenerateAllReuseFormulae() {
       GenerateReassociations(LU, LUIdx, LU.Formulae[i]);
     for (size_t i = 0, f = LU.Formulae.size(); i != f; ++i)
       GenerateCombinations(LU, LUIdx, LU.Formulae[i]);
+    for (size_t i = 0, f = LU.Formulae.size(); i != f; ++i)
+      GenerateZExts(LU, LUIdx, LU.Formulae[i]);
   }
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
     LSRUse &LU = Uses[LUIdx];
@@ -4449,10 +4484,8 @@ LSRInstance::GenerateAllReuseFormulae() {
   }
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
     LSRUse &LU = Uses[LUIdx];
-    for (size_t i = 0, f = LU.Formulae.size(); i != f; ++i) {
+    for (size_t i = 0, f = LU.Formulae.size(); i != f; ++i)
       GenerateTruncates(LU, LUIdx, LU.Formulae[i]);
-      GenerateZExts(LU, LUIdx, LU.Formulae[i]);
-    }
   }
 
   GenerateCrossUseConstantOffsets();
