@@ -507,85 +507,76 @@ body: |
     RTS implicit %0
 ...
 ---
-name: ldimm_16
+name: load_absolute_const
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: ldimm_16
-    ; 6502: [[LDImm:%[0-9]+]]:gpr = LDImm -46
-    ; 6502-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm 4
-    ; 6502-NEXT: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDImm]], %subreg.sublo, [[LDImm1]], %subreg.subhi
-    ; 6502-NEXT: RTS implicit [[REG_SEQUENCE]]
-    ; 65C02-LABEL: name: ldimm_16
-    ; 65C02: [[LDImm:%[0-9]+]]:gpr = LDImm -46
-    ; 65C02-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm 4
-    ; 65C02-NEXT: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDImm]], %subreg.sublo, [[LDImm1]], %subreg.subhi
-    ; 65C02-NEXT: RTS implicit [[REG_SEQUENCE]]
-    %0:any(s16) = G_CONSTANT i16 1234
+    ; 6502-LABEL: name: load_absolute_const
+    ; 6502: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[LDAbs]]
+    ; 65C02-LABEL: name: load_absolute_const
+    ; 65C02: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[LDAbs]]
+    %0:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     RTS implicit %0
 ...
 ---
-name: load
+name: store
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: load
-    ; 6502: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; 6502-NEXT: [[LDImm:%[0-9]+]]:yc = LDImm 0
-    ; 6502-NEXT: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load (s8))
-    ; 6502-NEXT: RTS implicit [[LDYIndir]]
-    ; 65C02-LABEL: name: load
-    ; 65C02: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; 65C02-NEXT: [[LDImm:%[0-9]+]]:yc = LDImm 0
-    ; 65C02-NEXT: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load (s8))
-    ; 65C02-NEXT: RTS implicit [[LDYIndir]]
-    %0:imag16(p0) = COPY $rs1
-    %1:any(s8) = G_LOAD %0:imag16(p0) :: (load 1)
+    ; 6502-LABEL: name: store
+    ; 6502: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 6502-NEXT: STAbs [[COPY]], i16 1234 :: (store (s8))
+    ; 6502-NEXT: RTS
+    ; 65C02-LABEL: name: store
+    ; 65C02: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 65C02-NEXT: STAbs [[COPY]], i16 1234 :: (store (s8))
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    G_STORE_ABS %0, i16 1234 :: (store (s8))
+    RTS
+...
+---
+name: load_absolute_indexed
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: load_absolute_indexed
+    ; 6502: [[COPY:%[0-9]+]]:xy = COPY $x
+    ; 6502-NEXT: [[LDIdx:%[0-9]+]]:gpr = LDIdx i16 1234, [[COPY]] :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[LDIdx]]
+    ; 65C02-LABEL: name: load_absolute_indexed
+    ; 65C02: [[COPY:%[0-9]+]]:xy = COPY $x
+    ; 65C02-NEXT: [[LDIdx:%[0-9]+]]:gpr = LDIdx i16 1234, [[COPY]] :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[LDIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
     RTS implicit %1
 ...
 ---
-name: load_indexed_indir_0
+name: load_indirect_indexed
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: load_indexed_indir_0
-    ; 6502: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; 6502-NEXT: [[LDImm:%[0-9]+]]:yc = LDImm 0
-    ; 6502-NEXT: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load (s8))
-    ; 6502-NEXT: RTS implicit [[LDYIndir]]
-    ; 65C02-LABEL: name: load_indexed_indir_0
-    ; 65C02: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
-    ; 65C02-NEXT: [[LDImm:%[0-9]+]]:yc = LDImm 0
-    ; 65C02-NEXT: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load (s8))
-    ; 65C02-NEXT: RTS implicit [[LDYIndir]]
-    %0:any(p0) = COPY $rs1
-    %1:any(s8) = G_LOAD %0 :: (load 1)
-    RTS implicit %1
-...
----
-name: load_indexed_indir_offset
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; 6502-LABEL: name: load_indexed_indir_offset
+    ; 6502-LABEL: name: load_indirect_indexed
     ; 6502: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
     ; 6502-NEXT: [[LDImm:%[0-9]+]]:yc = LDImm -1
     ; 6502-NEXT: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load (s8))
     ; 6502-NEXT: RTS implicit [[LDYIndir]]
-    ; 65C02-LABEL: name: load_indexed_indir_offset
+    ; 65C02-LABEL: name: load_indirect_indexed
     ; 65C02: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
     ; 65C02-NEXT: [[LDImm:%[0-9]+]]:yc = LDImm -1
     ; 65C02-NEXT: [[LDYIndir:%[0-9]+]]:ac = LDYIndir [[COPY]], [[LDImm]] :: (load (s8))
     ; 65C02-NEXT: RTS implicit [[LDYIndir]]
     %0:any(p0) = COPY $rs1
     %1:any(s8) = G_CONSTANT i8 -1
-    %2:any(p0) = G_INDEX %0, %1
-    %3:any(s8) = G_LOAD %2 :: (load 1)
-    RTS implicit %3
+    %2:any(s8) = G_LOAD_INDIR_IDX %0, %1 :: (load (s8))
+    RTS implicit %2
 ...
 ---
 name: lsr
@@ -668,29 +659,6 @@ body: |
     %1:any(s1) = COPY $v
     %2:any(s8), %3:any(s1) = G_LSHRE %0, %1
     RTS implicit %2, implicit %3
-...
----
-name: store
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; 6502-LABEL: name: store
-    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
-    ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag16 = COPY $rs1
-    ; 6502-NEXT: [[LDImm:%[0-9]+]]:yc = LDImm 0
-    ; 6502-NEXT: STYIndir [[COPY]], [[COPY1]], [[LDImm]] :: (store (s8))
-    ; 6502-NEXT: RTS
-    ; 65C02-LABEL: name: store
-    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
-    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag16 = COPY $rs1
-    ; 65C02-NEXT: [[LDImm:%[0-9]+]]:yc = LDImm 0
-    ; 65C02-NEXT: STYIndir [[COPY]], [[COPY1]], [[LDImm]] :: (store (s8))
-    ; 65C02-NEXT: RTS
-    %0:any(s8) = COPY $x
-    %1:any(p0) = COPY $rs1
-    G_STORE %0, %1 :: (store 1)
-    RTS
 ...
 ---
 name: trunc_8_1

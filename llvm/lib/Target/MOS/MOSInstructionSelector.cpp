@@ -71,10 +71,9 @@ private:
 
   bool selectBrCondImm(MachineInstr &MI);
   bool selectSbc(MachineInstr &MI);
-  bool selectConstant(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
   bool selectGlobalValue(MachineInstr &MI);
-  bool selectLoadStore(MachineInstr &MI);
+  bool selectStore(MachineInstr &MI);
   bool selectLshrShlE(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
@@ -158,17 +157,15 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return false;
   case MOS::G_BRCOND_IMM:
     return selectBrCondImm(MI);
-  case MOS::G_CONSTANT:
-    return selectConstant(MI);
   case MOS::G_SBC:
     return selectSbc(MI);
   case MOS::G_FRAME_INDEX:
     return selectFrameIndex(MI);
   case MOS::G_GLOBAL_VALUE:
     return selectGlobalValue(MI);
-  case MOS::G_LOAD:
-  case MOS::G_STORE:
-    return selectLoadStore(MI);
+  case MOS::G_STORE_ABS:
+  case MOS::G_STORE_ABS_IDX:
+    return selectStore(MI);
   case MOS::G_LSHRE:
   case MOS::G_SHLE:
     return selectLshrShlE(MI);
@@ -184,9 +181,13 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
 
   case MOS::G_IMPLICIT_DEF:
   case MOS::G_INTTOPTR:
+  case MOS::G_LOAD_ABS:
+  case MOS::G_LOAD_ABS_IDX:
+  case MOS::G_LOAD_INDIR_IDX:
   case MOS::G_FREEZE:
   case MOS::G_PHI:
   case MOS::G_PTRTOINT:
+  case MOS::G_STORE_INDIR_IDX:
     return selectGeneric(MI);
   }
 }
@@ -406,25 +407,6 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectConstant(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-  LLT S8 = LLT::scalar(8);
-
-  Register Dst = MI.getOperand(0).getReg();
-  uint64_t Imm = MI.getOperand(1).getCImm()->getZExtValue();
-
-  LLT DstTy = Builder.getMRI()->getType(Dst);
-  assert(DstTy.getSizeInBits() == 16);
-
-  MachineInstrSpan MIS(MI, MI.getParent());
-  auto Lo = Builder.buildConstant(S8, Imm & 0xFF);
-  auto Hi = Builder.buildConstant(S8, Imm >> 8);
-  Builder.buildMerge(MI.getOperand(0), {Lo, Hi});
-  MI.eraseFromParent();
-  selectAll(MIS);
-  return true;
-}
-
 bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
 
@@ -488,156 +470,29 @@ bool MOSInstructionSelector::selectGlobalValue(MachineInstr &MI) {
   return true;
 }
 
-// Determines if the memory address referenced by a load/store instruction
-// is based on a constant value. Absolute or zero page addressing modes can
-// be used under this condition.
-static bool matchConstantAddr(Register Addr, MachineOperand &BaseOut,
-                              const MachineRegisterInfo &MRI) {
-  // Handle GlobalValues (including those with offsets for element access).
-  if (MachineInstr *GV = getOpcodeDef(MOS::G_GLOBAL_VALUE, Addr, MRI)) {
-    BaseOut = GV->getOperand(1);
-    return true;
-  }
-
-  // Handle registers that can be resolved to constant values (e.g. IntToPtr).
-  if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
-    BaseOut.ChangeToImmediate(ConstAddr->Value.getZExtValue());
-    return true;
-  }
-
-  return false;
-}
-
-// Determines whether Addr can be referenced using the X/Y indexed addressing
-// mode. If so, sets BaseOut to the base operand and OffsetOut to the value that
-// should be in X/Y.
-static bool matchIndexed(Register Addr, MachineOperand &BaseOut,
-                         MachineOperand &OffsetOut,
-                         const MachineRegisterInfo &MRI) {
-  MachineInstr *SumAddr = getOpcodeDef(MOS::G_INDEX, Addr, MRI);
-  if (!SumAddr)
-    return false;
-
-  Register Base = SumAddr->getOperand(1).getReg();
-  Register Offset = SumAddr->getOperand(2).getReg();
-
-  if (!matchConstantAddr(Base, BaseOut, MRI))
-    return false;
-
-  // Constant offsets should already have been folded into the base.
-  OffsetOut.ChangeToRegister(Offset, /*isDef=*/false);
-  return true;
-}
-
-// Determines whether Addr can be referenced using the indirect-indexed (addr),Y
-// addressing mode. If so, sets BaseOut to the base operand and Offset to the
-// value that should be in Y.
-static void matchIndirectIndexed(Register Addr, MachineOperand &BaseOut,
-                                 MachineOperand &OffsetOut,
-                                 const MachineRegisterInfo &MRI) {
-  MachineInstr *DefMI = getDefIgnoringCopies(Addr, MRI);
-  if (DefMI->getOpcode() == MOS::G_INDEX) {
-    Register Base = DefMI->getOperand(1).getReg();
-    Register Offset = DefMI->getOperand(2).getReg();
-
-    BaseOut.ChangeToRegister(Base, /*isDef=*/false);
-    OffsetOut.ChangeToRegister(Offset, /*isDef=*/false);
-    return;
-  }
-
-  // Any address can be accessed via (Addr),0.
-  BaseOut.ChangeToRegister(Addr, /*isDef=*/false);
-  OffsetOut.ChangeToImmediate(0);
-}
-
-bool MOSInstructionSelector::selectLoadStore(MachineInstr &MI) {
+bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
-  MachineRegisterInfo &MRI = *Builder.getMRI();
 
-  Register SrcDst = MI.getOperand(0).getReg();
-  Register Addr = MI.getOperand(1).getReg();
-  assert(MI.hasOneMemOperand());
-  const MachineMemOperand &MMO = **MI.memoperands_begin();
+  if (!STI.has65C02() ||
+      !isOperandImmEqual(MI.getOperand(0), 0, *Builder.getMRI()))
+    return selectGeneric(MI);
 
-  MachineOperand SrcDstOp = MachineOperand::CreateReg(SrcDst, /*isDef=*/false);
-
-  unsigned AbsOpcode;
-  unsigned IdxOpcode;
-  unsigned YIndirOpcode;
-  unique_function<MachineInstrBuilder(unsigned)> BuildAbsIdxInstr =
-      [&Builder, &SrcDstOp](unsigned Opcode) {
-        return Builder.buildInstr(Opcode).add(SrcDstOp);
-      };
-
+  unsigned Opcode;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode.");
-  case MOS::G_LOAD:
-    SrcDstOp.setIsDef();
-    AbsOpcode = MOS::LDAbs;
-    IdxOpcode = MOS::LDIdx;
-    YIndirOpcode = MOS::LDYIndir;
+  case MOS::G_STORE_ABS:
+    Opcode = MOS::STZAbs;
     break;
-  case MOS::G_STORE:
-    AbsOpcode = MOS::STAbs;
-    IdxOpcode = MOS::STIdx;
-    YIndirOpcode = MOS::STYIndir;
-    // STZ
-    if (STI.has65C02() && isOperandImmEqual(SrcDstOp, 0, MRI)) {
-      AbsOpcode = MOS::STZAbs;
-      IdxOpcode = MOS::STZIdx;
-      BuildAbsIdxInstr = [&Builder](unsigned Opcode) {
-        return Builder.buildInstr(Opcode);
-      };
-    }
+  case MOS::G_STORE_ABS_IDX:
+    Opcode = MOS::STZIdx;
     break;
   }
 
-  MachineOperand Base = MachineOperand::CreateImm(0);
-  MachineOperand Offset = MachineOperand::CreateImm(0);
-
-  if (matchConstantAddr(Addr, Base, MRI)) {
-    auto Instr = BuildAbsIdxInstr(AbsOpcode).add(Base).cloneMemRefs(MI);
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      return false;
-    MI.eraseFromParent();
-    return true;
-  }
-
-  if (MMO.isVolatile()) {
-    // Always perform volatile accesses with zero index to prevent 6502 page
-    // crossing bugs from generating spurious reads to I/O registers.
-    Base.ChangeToRegister(Addr, /*isDef=*/false);
-    Offset.ChangeToImmediate(0);
-  } else {
-    if (matchIndexed(Addr, Base, Offset, MRI)) {
-      auto Instr =
-          BuildAbsIdxInstr(IdxOpcode).add(Base).add(Offset).cloneMemRefs(MI);
-      if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-        return false;
-      MI.eraseFromParent();
-      return true;
-    }
-
-    matchIndirectIndexed(Addr, Base, Offset, MRI);
-  }
-
-  Register OffsetReg;
-  if (Offset.isImm()) {
-    OffsetReg =
-        Builder.buildInstr(MOS::LDImm, {LLT::scalar(8)}, {Offset.getImm()})
-            .getReg(0);
-  } else
-    OffsetReg = Offset.getReg();
-
-  auto Instr = Builder.buildInstr(YIndirOpcode)
-                   .add(SrcDstOp)
-                   .add(Base)
-                   .addUse(OffsetReg)
-                   .cloneMemRefs(MI);
-  if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+  MI.setDesc(TII.get(Opcode));
+  MI.RemoveOperand(0);
+  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
     return false;
-  MI.eraseFromParent();
   return true;
 }
 
@@ -771,8 +626,26 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   case MOS::G_IMPLICIT_DEF:
     Opcode = MOS::IMPLICIT_DEF;
     break;
+  case MOS::G_LOAD_ABS:
+    Opcode = MOS::LDAbs;
+    break;
+  case MOS::G_LOAD_ABS_IDX:
+    Opcode = MOS::LDIdx;
+    break;
+  case MOS::G_LOAD_INDIR_IDX:
+    Opcode = MOS::LDYIndir;
+    break;
   case MOS::G_PHI:
     Opcode = MOS::PHI;
+    break;
+  case MOS::G_STORE_ABS:
+    Opcode = MOS::STAbs;
+    break;
+  case MOS::G_STORE_ABS_IDX:
+    Opcode = MOS::STIdx;
+    break;
+  case MOS::G_STORE_INDIR_IDX:
+    Opcode = MOS::STYIndir;
     break;
   }
   MI.setDesc(TII.get(Opcode));

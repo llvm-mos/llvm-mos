@@ -13,8 +13,6 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda mos8(__rc31)
 ; NMOS-NEXT:    pha
-; NMOS-NEXT:    lda mos8(__rc32)
-; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda #mos16lo(__char_stats_sstk)
 ; NMOS-NEXT:    ldx #mos16hi(__char_stats_sstk)
 ; NMOS-NEXT:    sta mos8(__rc30)
@@ -26,16 +24,15 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    ldx #0
 ; NMOS-NEXT:    lda #2
 ; NMOS-NEXT:    sta mos8(__rc4)
-; NMOS-NEXT:    lda #0
+; NMOS-NEXT:    txa
 ; NMOS-NEXT:    jsr __memset
+; NMOS-NEXT:  .LBB0_1: ; %entry
+; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NMOS-NEXT:    jsr next_char
 ; NMOS-NEXT:    cmp #0
 ; NMOS-NEXT:    beq .LBB0_5
-; NMOS-NEXT:  ; %bb.1: ; %while.body.preheader
-; NMOS-NEXT:    ldx #1
-; NMOS-NEXT:    stx mos8(__rc32)
-; NMOS-NEXT:  .LBB0_2: ; %while.body
-; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
+; NMOS-NEXT:  ; %bb.2: ; %while.body
+; NMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; NMOS-NEXT:    sta mos8(__rc2)
 ; NMOS-NEXT:    asl mos8(__rc2)
 ; NMOS-NEXT:    lda #0
@@ -49,43 +46,33 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    adc mos8(__rc3)
 ; NMOS-NEXT:    sta mos8(__rc3)
 ; NMOS-NEXT:    ldy #0
-; NMOS-NEXT:    ldx #0
 ; NMOS-NEXT:    lda (mos8(__rc2)),y
 ; NMOS-NEXT:    clc
 ; NMOS-NEXT:    adc #1
-; NMOS-NEXT:    sta mos8(__rc5)
-; NMOS-NEXT:    ldy mos8(__rc32)
-; NMOS-NEXT:    lda (mos8(__rc2)),y
 ; NMOS-NEXT:    sta mos8(__rc4)
-; NMOS-NEXT:    lda mos8(__rc5)
+; NMOS-NEXT:    ldy #1
+; NMOS-NEXT:    lda (mos8(__rc2)),y
+; NMOS-NEXT:    tax
+; NMOS-NEXT:    lda mos8(__rc4)
+; NMOS-NEXT:    ldy #0
 ; NMOS-NEXT:    cmp #0
 ; NMOS-NEXT:    bne .LBB0_4
 ; NMOS-NEXT:  ; %bb.3: ; %while.body
-; NMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; NMOS-NEXT:    inc mos8(__rc4)
+; NMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; NMOS-NEXT:    inx
 ; NMOS-NEXT:  .LBB0_4: ; %while.body
-; NMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; NMOS-NEXT:    pha
-; NMOS-NEXT:    txa
-; NMOS-NEXT:    tay
-; NMOS-NEXT:    pla
+; NMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; NMOS-NEXT:    sta (mos8(__rc2)),y
 ; NMOS-NEXT:    ldy #1
-; NMOS-NEXT:    lda #1
-; NMOS-NEXT:    sta mos8(__rc32)
-; NMOS-NEXT:    lda mos8(__rc4)
+; NMOS-NEXT:    txa
 ; NMOS-NEXT:    sta (mos8(__rc2)),y
-; NMOS-NEXT:    jsr next_char
-; NMOS-NEXT:    cmp #0
-; NMOS-NEXT:    bne .LBB0_2
+; NMOS-NEXT:    jmp .LBB0_1
 ; NMOS-NEXT:  .LBB0_5: ; %while.end
 ; NMOS-NEXT:    lda mos8(__rc30)
 ; NMOS-NEXT:    sta mos8(__rc2)
 ; NMOS-NEXT:    lda mos8(__rc31)
 ; NMOS-NEXT:    sta mos8(__rc3)
 ; NMOS-NEXT:    jsr report_counts
-; NMOS-NEXT:    pla
-; NMOS-NEXT:    sta mos8(__rc32)
 ; NMOS-NEXT:    pla
 ; NMOS-NEXT:    sta mos8(__rc31)
 ; NMOS-NEXT:    pla
@@ -98,8 +85,6 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    pha
 ; CMOS-NEXT:    lda mos8(__rc31)
 ; CMOS-NEXT:    pha
-; CMOS-NEXT:    lda mos8(__rc32)
-; CMOS-NEXT:    pha
 ; CMOS-NEXT:    lda #mos16lo(__char_stats_sstk)
 ; CMOS-NEXT:    ldx #mos16hi(__char_stats_sstk)
 ; CMOS-NEXT:    sta mos8(__rc30)
@@ -111,16 +96,15 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    ldx #0
 ; CMOS-NEXT:    lda #2
 ; CMOS-NEXT:    sta mos8(__rc4)
-; CMOS-NEXT:    lda #0
+; CMOS-NEXT:    txa
 ; CMOS-NEXT:    jsr __memset
+; CMOS-NEXT:  .LBB0_1: ; %entry
+; CMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CMOS-NEXT:    jsr next_char
 ; CMOS-NEXT:    cmp #0
 ; CMOS-NEXT:    beq .LBB0_5
-; CMOS-NEXT:  ; %bb.1: ; %while.body.preheader
-; CMOS-NEXT:    ldx #1
-; CMOS-NEXT:    stx mos8(__rc32)
-; CMOS-NEXT:  .LBB0_2: ; %while.body
-; CMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CMOS-NEXT:  ; %bb.2: ; %while.body
+; CMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CMOS-NEXT:    sta mos8(__rc2)
 ; CMOS-NEXT:    asl mos8(__rc2)
 ; CMOS-NEXT:    lda #0
@@ -134,43 +118,33 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    adc mos8(__rc3)
 ; CMOS-NEXT:    sta mos8(__rc3)
 ; CMOS-NEXT:    ldy #0
-; CMOS-NEXT:    ldx #0
 ; CMOS-NEXT:    lda (mos8(__rc2)),y
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    adc #1
-; CMOS-NEXT:    sta mos8(__rc5)
-; CMOS-NEXT:    ldy mos8(__rc32)
-; CMOS-NEXT:    lda (mos8(__rc2)),y
 ; CMOS-NEXT:    sta mos8(__rc4)
-; CMOS-NEXT:    lda mos8(__rc5)
+; CMOS-NEXT:    ldy #1
+; CMOS-NEXT:    lda (mos8(__rc2)),y
+; CMOS-NEXT:    tax
+; CMOS-NEXT:    lda mos8(__rc4)
+; CMOS-NEXT:    ldy #0
 ; CMOS-NEXT:    cmp #0
 ; CMOS-NEXT:    bne .LBB0_4
 ; CMOS-NEXT:  ; %bb.3: ; %while.body
-; CMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CMOS-NEXT:    inc mos8(__rc4)
+; CMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CMOS-NEXT:    inx
 ; CMOS-NEXT:  .LBB0_4: ; %while.body
-; CMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CMOS-NEXT:    pha
-; CMOS-NEXT:    txa
-; CMOS-NEXT:    tay
-; CMOS-NEXT:    pla
+; CMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CMOS-NEXT:    sta (mos8(__rc2)),y
 ; CMOS-NEXT:    ldy #1
-; CMOS-NEXT:    lda #1
-; CMOS-NEXT:    sta mos8(__rc32)
-; CMOS-NEXT:    lda mos8(__rc4)
+; CMOS-NEXT:    txa
 ; CMOS-NEXT:    sta (mos8(__rc2)),y
-; CMOS-NEXT:    jsr next_char
-; CMOS-NEXT:    cmp #0
-; CMOS-NEXT:    bne .LBB0_2
+; CMOS-NEXT:    bra .LBB0_1
 ; CMOS-NEXT:  .LBB0_5: ; %while.end
 ; CMOS-NEXT:    lda mos8(__rc30)
 ; CMOS-NEXT:    sta mos8(__rc2)
 ; CMOS-NEXT:    lda mos8(__rc31)
 ; CMOS-NEXT:    sta mos8(__rc3)
 ; CMOS-NEXT:    jsr report_counts
-; CMOS-NEXT:    pla
-; CMOS-NEXT:    sta mos8(__rc32)
 ; CMOS-NEXT:    pla
 ; CMOS-NEXT:    sta mos8(__rc31)
 ; CMOS-NEXT:    pla

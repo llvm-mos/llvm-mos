@@ -28,6 +28,10 @@ public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
 
 private:
+  // Constants
+  bool legalizeConstant(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                        MachineInstr &MI) const;
+
   // Integer Extension and Truncation
   bool legalizeSExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
@@ -67,6 +71,16 @@ private:
                     MachineInstr &MI) const;
   bool legalizeStore(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;
+  bool selectAddressingMode(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                            MachineInstr &MI) const;
+  bool tryAbsoluteAddressing(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                             MachineInstr &MI) const;
+  bool tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const;
+  bool selectIndirectIndexedAddressing(LegalizerHelper &Helper,
+                                       MachineRegisterInfo &MRI,
+                                       MachineInstr &MI) const;
 
   // Control Flow
   bool legalizePhi(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

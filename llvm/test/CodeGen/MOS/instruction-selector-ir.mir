@@ -22,10 +22,6 @@
     entry:
       ret void
   }
-  define void @load_absolute_const() {
-    entry:
-      ret void
-  }
   define void @load_absolute_gv() {
     entry:
       ret void
@@ -118,20 +114,6 @@ body: |
     RTS implicit %0
 ...
 ---
-name: load_absolute_const
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; CHECK-LABEL: name: load_absolute_const
-    ; CHECK: [[LDAbs:%[0-9]+]]:gpr = LDAbs 1234 :: (load (s8))
-    ; CHECK-NEXT: RTS implicit [[LDAbs]]
-    %0:any(s16) = G_CONSTANT i16 1234
-    %1:any(p0) = G_INTTOPTR %0
-    %2:any(s8) = G_LOAD %1 :: (load 1)
-    RTS implicit %2
-...
----
 name: load_absolute_gv
 legalized: true
 regBankSelected: true
@@ -140,9 +122,8 @@ body: |
     ; CHECK-LABEL: name: load_absolute_gv
     ; CHECK: [[LDAbs:%[0-9]+]]:gpr = LDAbs @.str :: (load (s8))
     ; CHECK-NEXT: RTS implicit [[LDAbs]]
-    %0:any(p0) = G_GLOBAL_VALUE @.str
-    %1:any(s8) = G_LOAD %0 :: (load 1)
-    RTS implicit %1
+    %0:any(s8) = G_LOAD_ABS @.str :: (load (s8))
+    RTS implicit %0
 ...
 ---
 name: load_indexed
@@ -154,11 +135,9 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:xy = COPY $a
     ; CHECK-NEXT: [[LDIdx:%[0-9]+]]:gpr = LDIdx @.str, [[COPY]] :: (load (s8))
     ; CHECK-NEXT: RTS implicit [[LDIdx]]
-    %0:any(p0) = G_GLOBAL_VALUE @.str
-    %1:any(s8) = COPY $a
-    %2:any(p0) = G_INDEX %0, %1
-    %3:any(s8) = G_LOAD %2 :: (load 1)
-    RTS implicit %3
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_LOAD_ABS_IDX @.str, %0 :: (load (s8))
+    RTS implicit %1
 ...
 ---
 name: store_indexed
@@ -172,9 +151,7 @@ body: |
     ; CHECK-NEXT: STIdx [[COPY]], @.str, [[COPY1]] :: (store (s8))
     ; CHECK-NEXT: RTS
     %0:any(s8) = COPY $x
-    %1:any(p0) = G_GLOBAL_VALUE @.str
-    %2:any(s8) = COPY $a
-    %3:any(p0) = G_INDEX %1, %2
-    G_STORE %0, %3 :: (store 1)
+    %1:any(s8) = COPY $a
+    G_STORE_ABS_IDX %0, @.str, %1 :: (store (s8))
     RTS
 ...

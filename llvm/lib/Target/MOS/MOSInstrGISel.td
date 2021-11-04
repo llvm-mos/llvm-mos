@@ -49,12 +49,61 @@ def G_SBC : MOSGenericInstruction {
   let InOperandList = (ins type0:$l, type0:$r, type1:$cin);
 }
 
-// Return the result of adding a pointer value and an unsigned 8-bit offset.
-// Fragement with other opcodes to construct the indexed addressing modes on the
-// 6502.
-def G_INDEX : MOSGenericInstruction {
-  let OutOperandList = (outs type0:$ptr);
-  let InOperandList = (ins type0:$base, type1:$offset);
+// Generalized 8-bit load using the absolute addressing mode. The address
+// argument isn't a pointer; it's either a global value or a 16-bit immediate.
+// Additionally expects a MachineMemOperand.
+def G_LOAD_ABS : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$addr);
+  let mayLoad = true;
+}
+
+// Generalized 8-bit load using the absolute indexed addressing mode. The base
+// argument isn't a pointer; it's either a global value or a 16-bit immediate.
+// The index argument is an 8-bit scalar. Additionally expects a
+// MachineMemOperand.
+def G_LOAD_ABS_IDX : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$base, type1:$index);
+  let mayLoad = true;
+}
+
+// Generalized 8-bit load using the indirect indexed addressing mode. The index
+// argument is an 8-bit scalar. Additionally expects a MachineMemOperand.
+def G_LOAD_INDIR_IDX : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$base, type1:$index);
+  let mayLoad = true;
+}
+
+// Generalized 8-bit store using the absolute addressing mode. The address
+// argument isn't a pointer; it's either a global value or a 16-bit immediate.
+// Additionally expects a MachineMemOperand.
+def G_STORE_ABS : MOSGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src, unknown:$addr);
+  let hasSideEffects = false;
+  let mayStore = true;
+}
+
+// Generalized 8-bit store using the absolute indexed addressing mode. The base
+// argument isn't a pointer; it's either a global value or a 16-bit immediate.
+// The index argument is an 8-bit scalar. Additionally expects a
+// MachineMemOperand.
+def G_STORE_ABS_IDX : MOSGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src, unknown:$base, type1:$index);
+  let hasSideEffects = false;
+  let mayStore = true;
+}
+
+// Generalized 8-bit store using the indirect indexed addressing mode. The index
+// argument is an 8-bit scalar. Additionally expects a MachineMemOperand.
+def G_STORE_INDIR_IDX : MOSGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src, ptype1:$base, type1:$index);
+  let hasSideEffects = false;
+  let mayStore = true;
 }
 
 // Shift an 8-bit value left one bit, placing $carry_in in the LSB and placing
