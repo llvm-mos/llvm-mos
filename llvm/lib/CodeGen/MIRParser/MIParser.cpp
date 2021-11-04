@@ -2020,6 +2020,8 @@ bool MIParser::parseStackObjectOperand(MachineOperand &Dest) {
   if (parseStackFrameIndex(FI))
     return true;
   Dest = MachineOperand::CreateFI(FI);
+  if (parseOperandsOffset(Dest))
+    return true;
   return false;
 }
 
@@ -2042,6 +2044,8 @@ bool MIParser::parseFixedStackObjectOperand(MachineOperand &Dest) {
   if (parseFixedStackFrameIndex(FI))
     return true;
   Dest = MachineOperand::CreateFI(FI);
+  if (parseOperandsOffset(Dest))
+    return true;
   return false;
 }
 

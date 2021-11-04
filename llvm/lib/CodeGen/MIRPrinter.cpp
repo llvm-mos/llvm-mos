@@ -909,6 +909,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
   }
   case MachineOperand::MO_FrameIndex:
     printStackObjectReference(Op.getIndex());
+    Op.printOperandOffset(OS, Op.getOffset());
     break;
   case MachineOperand::MO_RegisterMask: {
     auto RegMaskInfo = RegisterMaskIds.find(Op.getRegMask());

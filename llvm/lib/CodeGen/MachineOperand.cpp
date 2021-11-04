@@ -211,7 +211,7 @@ void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags) {
   setTargetFlags(TargetFlags);
 }
 
-void MachineOperand::ChangeToFrameIndex(int Idx, unsigned TargetFlags) {
+void MachineOperand::ChangeToFrameIndex(int Idx, int64_t Offset, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into a FrameIndex");
 
@@ -219,6 +219,7 @@ void MachineOperand::ChangeToFrameIndex(int Idx, unsigned TargetFlags) {
 
   OpKind = MO_FrameIndex;
   setIndex(Idx);
+  setOffset(Offset);
   setTargetFlags(TargetFlags);
 }
 
@@ -836,6 +837,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (const MachineFunction *MF = getMFIfAvailable(*this))
       MFI = &MF->getFrameInfo();
     printFrameIndex(OS, FrameIndex, IsFixed, MFI);
+    printOperandOffset(OS, getOffset());
     break;
   }
   case MachineOperand::MO_ConstantPoolIndex:
