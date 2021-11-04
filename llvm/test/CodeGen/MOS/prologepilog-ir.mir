@@ -92,8 +92,8 @@ body:             |
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 0, $c
     ; 65C02-NEXT: $rc1 = COPY killed $a
     ; 65C02-NEXT: RTS
-    STAbsOffset $a, %stack.0, 0 :: (store 1 into %stack.0)
-    $a = LDAbsOffset %stack.1, 0 :: (load 1 from %stack.1)
+    STAbs $a, %stack.0 :: (store 1 into %stack.0)
+    $a = LDAbs %stack.1 :: (load 1 from %stack.1)
     ADJCALLSTACKDOWN 1, 0, implicit-def $rs0, implicit $rs0
     ADJCALLSTACKUP 1, 0, implicit-def $rs0, implicit $rs0
     ADJCALLSTACKDOWN 2, 0, implicit-def $rs0, implicit $rs0
@@ -134,7 +134,7 @@ body: |
     ; 65C02-NEXT: $a = frame-destroy PL
     ; 65C02-NEXT: $rc30 = frame-destroy COPY killed $a
     ; 65C02-NEXT: RTS implicit $rc30, implicit $rc31
-    $a = LDAbsOffset %stack.2, 1 :: (load 1 from %stack.2 + 1)
+    $a = LDAbs %stack.2 + 1 :: (load 1 from %stack.2 + 1)
     RTS
 ...
 ---

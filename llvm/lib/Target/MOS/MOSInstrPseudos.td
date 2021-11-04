@@ -145,27 +145,6 @@ def STStk : MOSPseudo {
   let mayStore = true;
 }
 
-// Loads from an absolute location plus an absolute offset. The first operand
-// will always be a frame index referring to to a statically allocated stack
-// frame. This will be lowered to a regular LDAbs upon FEI.
-def LDAbsOffset : MOSPseudo {
-  dag OutOperandList = (outs GPR:$dst);
-  dag InOperandList = (ins i16imm:$addr, i16imm:$offset);
-
-  let isReMaterializable = true;
-  let mayLoad = true;
-}
-
-// Stores to an absolute location plus an absolute offset. The first operand
-// will always be a frame index referring to a statically allocated stack frame.
-// This will be lowered to a regular STAbs upon FEI.
-def STAbsOffset : MOSPseudo {
-  dag OutOperandList = (outs);
-  dag InOperandList = (ins GPR:$src, i16imm:$addr, i16imm:$offset);
-
-  let mayStore = true;
-}
-
 // Pseudos for setting individual bytes of the stack pointer.  The ordering of
 // these pseudos is ensured by their implicit arguments: both claim to read and
 // write the entire stack pointer. This is true after a fashion; since the

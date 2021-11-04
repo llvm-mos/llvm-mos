@@ -208,7 +208,6 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                           RegScavenger *RS) const {
   MachineFunction &MF = *MI->getMF();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   assert(!SPAdj);
 
@@ -217,6 +216,8 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   if (FIOperandNum + 1 < MI->getNumOperands() &&
       MI->getOperand(FIOperandNum + 1).isImm())
     Offset += MI->getOperand(FIOperandNum + 1).getImm();
+  else
+    Offset += MI->getOperand(FIOperandNum).getOffset();
 
   if (MFI.getStackID(Idx) == TargetStackID::Default) {
     // All offsets are relative to the incoming SP
@@ -249,11 +250,10 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         .ChangeToRegister(getFrameRegister(MF), /*isDef=*/false);
     MI->getOperand(FIOperandNum + 1).setImm(Offset);
     break;
-  case MOS::LDAbsOffset:
-  case MOS::STAbsOffset:
+  case MOS::LDAbs:
+  case MOS::STAbs:
     MI->getOperand(FIOperandNum)
         .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset);
-    MI->RemoveOperand(FIOperandNum + 1);
     break;
   case MOS::LDImm:
     MI->getOperand(FIOperandNum)
@@ -270,12 +270,6 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     break;
   case MOS::AddrHistk:
     expandAddrHistk(MI);
-    break;
-  case MOS::LDAbsOffset:
-    MI->setDesc(TII.get(MOS::LDAbs));
-    break;
-  case MOS::STAbsOffset:
-    MI->setDesc(TII.get(MOS::STAbs));
     break;
   case MOS::LDStk:
   case MOS::STStk:

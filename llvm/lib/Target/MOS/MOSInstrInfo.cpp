@@ -50,7 +50,9 @@ unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return 0;
-  case MOS::LDAbsOffset:
+  case MOS::LDAbs:
+    if (!MI.getOperand(0).isFI())
+      return 0;
     FrameIndex = MI.getOperand(1).getIndex();
     return MI.getOperand(0).getReg();
   case MOS::LDStk:
@@ -64,7 +66,9 @@ unsigned MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return 0;
-  case MOS::STAbsOffset:
+  case MOS::STAbs:
+    if (!MI.getOperand(0).isFI())
+      return 0;
     FrameIndex = MI.getOperand(1).getIndex();
     return MI.getOperand(0).getReg();
   case MOS::STStk:
@@ -550,10 +554,9 @@ static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
       (Reg.isVirtual() &&
        MRI.getRegClass(Reg)->hasSuperClassEq(&MOS::GPRRegClass) &&
        !MO.getSubReg())) {
-    Builder.buildInstr(MO.isDef() ? MOS::LDAbsOffset : MOS::STAbsOffset)
+    Builder.buildInstr(MO.isDef() ? MOS::LDAbs : MOS::STAbs)
         .add(MO)
-        .addFrameIndex(FrameIndex)
-        .addImm(Offset)
+        .addFrameIndex(FrameIndex, Offset)
         .addMemOperand(MMO);
     return;
   }
