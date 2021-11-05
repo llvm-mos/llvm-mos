@@ -18,6 +18,14 @@
     entry:
       ret void
   }
+  define void @load_frame_index_offset() norecurse {
+    entry:
+      ret void
+  }
+  define void @load_frame_index_zext() norecurse {
+    entry:
+      ret void
+  }
 ---
 name: ptradd_global_offset
 body: |
@@ -67,6 +75,40 @@ body: |
     %2:_(s16) = G_ZEXT %1
     %3:_(p0) = G_PTR_ADD %0, %2
     %4:_(s16) = G_CONSTANT i16 34
+    %5:_(p0) = G_PTR_ADD %3, %4
+    %6:_(s8) = G_LOAD %5 :: (load (s8))
+    RTS implicit %6
+...
+---
+name: load_frame_index_offset
+stack:
+  - { id: 0, size: 256 }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: load_frame_index_offset
+    ; CHECK: [[LOAD_ABS:%[0-9]+]]:_(s8) = G_LOAD_ABS %stack.0 + 1234 :: (load (s8))
+    ; CHECK-NEXT: RTS implicit [[LOAD_ABS]](s8)
+    %0:_(p0) = G_FRAME_INDEX %stack.0
+    %1:_(s16) = G_CONSTANT i16 1234
+    %2:_(p0) = G_PTR_ADD %0, %1
+    %3:_(s8) = G_LOAD %2 :: (load (s8))
+    RTS implicit %3
+...
+---
+name: load_frame_index_zext
+stack:
+  - { id: 0, size: 256 }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: load_frame_index_zext
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX %stack.0 + 1234, [[COPY]](s8) :: (load (s8))
+    ; CHECK-NEXT: RTS implicit [[LOAD_ABS_IDX]](s8)
+    %0:_(p0) = G_FRAME_INDEX %stack.0
+    %1:_(s8) = COPY $x
+    %2:_(s16) = G_ZEXT %1
+    %3:_(p0) = G_PTR_ADD %0, %2
+    %4:_(s16) = G_CONSTANT i16 1234
     %5:_(p0) = G_PTR_ADD %3, %4
     %6:_(s8) = G_LOAD %5 :: (load (s8))
     RTS implicit %6

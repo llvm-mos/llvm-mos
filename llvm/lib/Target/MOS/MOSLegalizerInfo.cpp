@@ -1137,6 +1137,14 @@ bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
   return true;
 }
 
+static bool willBeStaticallyAllocated(const MachineOperand &MO) {
+  assert(MO.isFI());
+  if (!MO.getParent()->getMF()->getFunction().doesNotRecurse())
+    return false;
+  return !MO.getParent()->getMF()->getFrameInfo().isFixedObjectIndex(
+      MO.getIndex());
+}
+
 bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
                                             MachineRegisterInfo &MRI,
                                             MachineInstr &MI) const {
@@ -1175,6 +1183,16 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
       MI.getOperand(1).ChangeToGA(GV.getGlobal(), GV.getOffset() + Offset);
       Helper.Observer.changedInstr(MI);
       return true;
+    }
+    if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
+      const MachineOperand &FI = FIAddr->getOperand(1);
+      if (willBeStaticallyAllocated(FI)) {
+        Helper.Observer.changingInstr(MI);
+        MI.setDesc(Builder.getTII().get(Opcode));
+        MI.getOperand(1).ChangeToFrameIndex(FI.getIndex(), FI.getOffset() + Offset);
+        Helper.Observer.changedInstr(MI);
+        return true;
+      }
     }
     if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
       Register Base = PtrAddAddr->getOperand(1).getReg();
@@ -1230,6 +1248,19 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
           .addMemOperand(*MI.memoperands_begin());
       MI.eraseFromParent();
       return true;
+    }
+    if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
+      const MachineOperand &FI = FIAddr->getOperand(1);
+      if (willBeStaticallyAllocated(FI)) {
+        assert(Index); // Otherwise, Absolute addressing would have been selected.
+        Builder.buildInstr(Opcode)
+            .add(MI.getOperand(0))
+            .addFrameIndex(FI.getIndex(), FI.getOffset() + Offset)
+            .addUse(Index)
+            .addMemOperand(*MI.memoperands_begin());
+        MI.eraseFromParent();
+        return true;
+      }
     }
     if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
       Register Base = PtrAddAddr->getOperand(1).getReg();

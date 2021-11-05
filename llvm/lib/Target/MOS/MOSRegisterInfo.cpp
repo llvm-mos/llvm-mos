@@ -241,7 +241,10 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   switch (MI->getOpcode()) {
   default:
-    llvm_unreachable("Unexpected opcode.");
+    MI->getOperand(FIOperandNum)
+        .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset,
+                             MI->getOperand(FIOperandNum).getTargetFlags());
+    break;
   case MOS::AddrLostk:
   case MOS::AddrHistk:
   case MOS::LDStk:
@@ -249,16 +252,6 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     MI->getOperand(FIOperandNum)
         .ChangeToRegister(getFrameRegister(MF), /*isDef=*/false);
     MI->getOperand(FIOperandNum + 1).setImm(Offset);
-    break;
-  case MOS::LDAbs:
-  case MOS::STAbs:
-    MI->getOperand(FIOperandNum)
-        .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset);
-    break;
-  case MOS::LDImm:
-    MI->getOperand(FIOperandNum)
-        .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset,
-                             MI->getOperand(FIOperandNum).getTargetFlags());
     break;
   }
 
