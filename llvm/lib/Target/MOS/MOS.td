@@ -19,12 +19,12 @@ include "llvm/Target/GlobalISel/Combine.td"
 // MOS Device Definitions
 //===---------------------------------------------------------------------===//
 
-include "MOSCombine.td"
 include "MOSDevices.td"
 include "MOSFeatures.td"
 include "MOSRegisterInfo.td"
 include "MOSRegisterBanks.td"
 include "MOSInstrInfo.td"
+include "MOSCombine.td"
 
 def MOSInstrInfo : InstrInfo {
   let guessInstructionProperties = 0;

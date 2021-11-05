@@ -15,6 +15,7 @@
 
 #include "MOSCombiner.h"
 
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
@@ -75,6 +76,49 @@ applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MatchInfo.first->getTargetFlags());
   MI.RemoveOperand(2);
   Observer.changedInstr(MI);
+  return true;
+}
+
+static bool matchSBCEqual(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == MOS::G_SBC);
+  Register LHS = MI.getOperand(5).getReg();
+  Register RHS = MI.getOperand(6).getReg();
+  Register CarryIn = MI.getOperand(7).getReg();
+
+  auto ConstCarryIn = getIConstantVRegValWithLookThrough(CarryIn, MRI);
+  if (!ConstCarryIn)
+    return false;
+  if (!ConstCarryIn->Value.isAllOnesValue())
+    return false;
+
+  if (LHS == RHS)
+    return true;
+
+  auto ConstLHS = getIConstantVRegValWithLookThrough(LHS, MRI);
+  auto ConstRHS = getIConstantVRegValWithLookThrough(RHS, MRI);
+  if (!ConstLHS || !ConstRHS)
+    return false;
+
+  return ConstLHS->Value == ConstRHS->Value;
+}
+
+static bool applySBCEqual(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B, GISelChangeObserver &Observer) {
+  LLT S1 = LLT::scalar(1);
+
+  B.setInsertPt(*MI.getParent(), MI);
+  B.buildCopy(MI.getOperand(0), B.buildConstant(LLT::scalar(8), 0));
+
+  auto S1Zero = B.buildConstant(S1, 0);
+  // C
+  B.buildCopy(MI.getOperand(1), S1Zero);
+  // N
+  B.buildCopy(MI.getOperand(2), S1Zero);
+  // V
+  B.buildCopy(MI.getOperand(3), S1Zero);
+  // Z
+  B.buildCopy(MI.getOperand(4), B.buildConstant(S1, -1));
+  MI.eraseFromParent();
   return true;
 }
 

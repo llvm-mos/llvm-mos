@@ -18,8 +18,14 @@ def fold_global_offset : GICombineRule<
           [{ return matchFoldGlobalOffset(*${root}, MRI, ${matchinfo}); }]),
   (apply [{  return applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])>;
 
+def sbc_equal : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SBC):$root,
+          [{ return matchSBCEqual(*${root}, MRI); }]),
+  (apply [{  return applySBCEqual(*${root}, MRI, B, Observer);}])>;
+
 def MOSCombinerHelper: GICombinerHelper<
-  "MOSGenCombinerHelper", [all_combines, fold_global_offset]> {
+  "MOSGenCombinerHelper", [all_combines, fold_global_offset, sbc_equal]> {
   let DisableRuleOption = "moscombiner-disable-rule";
   let StateClass = "MOSCombinerHelperState";
   let AdditionalArguments = [];
