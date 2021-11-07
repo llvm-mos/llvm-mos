@@ -4240,6 +4240,10 @@ void LSRInstance::GenerateZExts(LSRUse &LU, unsigned LUIdx, Formula Base) {
   if (!Changed)
     return;
 
+  if (!Base.BaseGV && !Base.BaseOffset && !Base.UnfoldedOffset &&
+      Base.getNumRegs() == 1)
+    Base.Ty = Base.BaseRegs[0]->getType();
+
   Base.canonicalize(*L);
   (void)InsertFormula(LU, LUIdx, Base);
 }
@@ -5533,7 +5537,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
       assert((F.Scale == 0 || F.Scale == 1) &&
              "ICmp does not support folding a global value and "
              "a scale at the same time!");
-      Constant *C = ConstantInt::getSigned(SE.getEffectiveSCEVType(OpTy),
+      Constant *C = ConstantInt::getSigned(SE.getEffectiveSCEVType(IntTy),
                                            -(uint64_t)Offset);
       if (C->getType() != OpTy)
         C = ConstantExpr::getCast(CastInst::getCastOpcode(C, false,
