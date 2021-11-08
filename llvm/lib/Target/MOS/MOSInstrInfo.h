@@ -133,6 +133,7 @@ enum TOF {
   MO_NO_FLAGS = 0,
   MO_LO,
   MO_HI,
+  MO_HI_JT,
 };
 
 } // namespace MOS

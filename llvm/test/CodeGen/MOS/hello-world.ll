@@ -19,7 +19,7 @@ define i16 @main() local_unnamed_addr #0 {
 ; NMOS-NEXT:    ;APP
 ; NMOS-NEXT:    jsr 65490
 ; NMOS-NEXT:    ;NO_APP
-; NMOS-NEXT:    lda .str,x
+; NMOS-NEXT:    lda .L.str,x
 ; NMOS-NEXT:    inx
 ; NMOS-NEXT:    cpx #15
 ; NMOS-NEXT:    bne .LBB0_1
@@ -37,7 +37,7 @@ define i16 @main() local_unnamed_addr #0 {
 ; CMOS-NEXT:    ;APP
 ; CMOS-NEXT:    jsr 65490
 ; CMOS-NEXT:    ;NO_APP
-; CMOS-NEXT:    lda .str,x
+; CMOS-NEXT:    lda .L.str,x
 ; CMOS-NEXT:    inx
 ; CMOS-NEXT:    cpx #15
 ; CMOS-NEXT:    bne .LBB0_1

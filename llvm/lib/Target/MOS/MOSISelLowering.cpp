@@ -48,6 +48,8 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
 
   // Used in legalizer (etc.) to refer to the stack pointer.
   setStackPointerRegisterToSaveRestore(MOS::RS0);
+
+  setMaximumJumpTableSize(std::min(256u, getMaximumJumpTableSize()));
 }
 
 MVT MOSTargetLowering::getRegisterTypeForCallingConv(

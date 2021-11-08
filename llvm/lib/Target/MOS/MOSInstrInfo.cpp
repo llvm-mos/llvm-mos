@@ -950,7 +950,7 @@ MOSInstrInfo::getSerializableTargetIndices() const {
 
 ArrayRef<std::pair<unsigned, const char *>>
 MOSInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
-  static const std::pair<unsigned, const char *> Flags[] = {{MOS::MO_LO, "lo"},
-                                                            {MOS::MO_HI, "hi"}};
+  static const std::pair<unsigned, const char *> Flags[] = {
+      {MOS::MO_LO, "lo"}, {MOS::MO_HI, "hi"}, {MOS::MO_HI_JT, "hi-jt"}};
   return Flags;
 }

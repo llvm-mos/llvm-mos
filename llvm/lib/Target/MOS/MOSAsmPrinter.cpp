@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSMCInstLower.h"
 #include "MOSRegisterInfo.h"
@@ -20,12 +21,14 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/MOSFlags.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 
 using namespace llvm;
 
@@ -57,6 +60,8 @@ public:
                              const char *ExtraCode, raw_ostream &OS) override;
 
   void emitStartOfAsmFile(Module &M) override;
+
+  void emitJumpTableInfo() override;
 };
 
 // Simple pseudo-instructions have their lowering (with expansion to real
@@ -145,6 +150,69 @@ void MOSAsmPrinter::emitStartOfAsmFile(Module &M) {
   OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
   if (Assembler)
     Assembler->setELFHeaderEFlags(ModuleEFlags);
+}
+
+void MOSAsmPrinter::emitJumpTableInfo() {
+  const DataLayout &DL = MF->getDataLayout();
+  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
+  if (!MJTI)
+    return;
+  assert(MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress);
+  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
+  if (JT.empty())
+    return;
+
+  // Pick the directive to use to print the jump table entries, and switch to
+  // the appropriate section.
+  const Function &F = MF->getFunction();
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+  bool JTInDiffSection = !TLOF.shouldPutJumpTableInFunctionSection(
+      /*UsesLabelDifference*/ false, F);
+  if (JTInDiffSection) {
+    // Drop it in the readonly section.
+    MCSection *ReadOnlySection = TLOF.getSectionForJumpTable(F, TM);
+    OutStreamer->SwitchSection(ReadOnlySection);
+  }
+
+  emitAlignment(Align(MJTI->getEntryAlignment(DL)));
+
+  // Jump tables in code sections are marked with a data_region directive
+  // where that's supported.
+  if (!JTInDiffSection)
+    OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
+
+  for (unsigned JTI = 0, JTIE = JT.size(); JTI != JTIE; ++JTI) {
+    const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
+
+    // If this jump table was deleted, ignore it.
+    if (JTBBs.empty())
+      continue;
+
+    MCSymbol *JTISymbol = GetJTISymbol(JTI);
+    OutStreamer->emitLabel(JTISymbol);
+
+    // Emit an array of the low bytes of the target addresses.
+    for (unsigned II = 0, EE = JTBBs.size(); II != EE; ++II) {
+      OutStreamer->emitValue(
+          MOSMCExpr::create(
+              MOSMCExpr::VK_MOS_ADDR16_LO,
+              MCSymbolRefExpr::create(JTBBs[II]->getSymbol(), OutContext),
+              /*isNegated=*/false, OutContext),
+          1);
+    }
+
+    // Emit an array of the high bytes of the target addresses.
+    for (unsigned II = 0, EE = JTBBs.size(); II != EE; ++II) {
+      OutStreamer->emitValue(
+          MOSMCExpr::create(
+              MOSMCExpr::VK_MOS_ADDR16_HI,
+              MCSymbolRefExpr::create(JTBBs[II]->getSymbol(), OutContext),
+              /*isNegated=*/false, OutContext),
+          1);
+    }
+  }
+  if (!JTInDiffSection)
+    OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
 
 } // namespace

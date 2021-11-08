@@ -17,7 +17,7 @@ using namespace clang::targets;
 MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
     : TargetInfo(Triple) {
   static const char Layout[] =
-      "e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
+      "e-m:e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
   resetDataLayout(Layout);
 
   PointerWidth = 16;

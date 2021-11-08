@@ -37,6 +37,10 @@ public:
   // which is extraordinarily more expensive.
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override { return true; }
 
+  bool areJTsAllowed(const Function *Fn) const override {
+    return !Fn->getFnAttribute("no-jump-tables").getValueAsBool();
+  }
+
   unsigned getNumRegistersForInlineAsm(LLVMContext &Context,
                                        EVT VT) const override;
 

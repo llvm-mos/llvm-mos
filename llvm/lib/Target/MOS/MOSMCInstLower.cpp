@@ -16,6 +16,7 @@
 #include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -364,14 +365,20 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
   case MachineOperand::MO_RegisterMask:
     return false;
   case MachineOperand::MO_BlockAddress:
-    MCOp = lowerSymbolOperand(MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()));
+    MCOp =
+        lowerSymbolOperand(MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()));
     break;
   case MachineOperand::MO_ExternalSymbol:
-    MCOp = lowerSymbolOperand(MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()));
+    MCOp =
+        lowerSymbolOperand(MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()));
     break;
   case MachineOperand::MO_GlobalAddress:
     MCOp = lowerSymbolOperand(MO, AP.getSymbol(MO.getGlobal()));
     break;
+  case MachineOperand::MO_JumpTableIndex: {
+    MCOp = lowerSymbolOperand(MO, AP.GetJTISymbol(MO.getIndex()));
+    break;
+  }
   case MachineOperand::MO_Immediate:
     MCOp = MCOperand::createImm(MO.getImm());
     break;
@@ -397,27 +404,38 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
   return true;
 }
 
-MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO, const MCSymbol *Sym) {
-    const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
-    if (MO.getOffset() != 0)
-      Expr = MCBinaryExpr::createAdd(
-          Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
-    Expr = applyTargetFlags(MO.getTargetFlags(), Expr);
-    return MCOperand::createExpr(Expr);
-}
-
-const MCExpr *MOSMCInstLower::applyTargetFlags(unsigned Flags,
-                                               const MCExpr *Expr) {
-  switch (Flags) {
+MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
+                                             const MCSymbol *Sym) {
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+  if (!MO.isJTI() && MO.getOffset() != 0)
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+  switch (MO.getTargetFlags()) {
   default:
     llvm_unreachable("Invalid target operand flags.");
   case MOS::MO_NO_FLAGS:
-    return Expr;
+    break;
   case MOS::MO_LO:
-    return MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR16_LO, Expr,
+    Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR16_LO, Expr,
                              /*isNegated=*/false, Ctx);
+    break;
   case MOS::MO_HI:
-    return MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR16_HI, Expr,
+    Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR16_HI, Expr,
                              /*isNegated=*/false, Ctx);
+    break;
+  case MOS::MO_HI_JT: {
+    // Jump tables are partitioned in two arrays: first all the low bytes, then
+    // all the high bytes. This index referes to the high byte array, so offset
+    // the appropriate amount into the overall array.
+    assert(MO.isJTI());
+    const MachineJumpTableInfo *JTI =
+        MO.getParent()->getMF()->getJumpTableInfo();
+    const auto &Table = JTI->getJumpTables()[MO.getIndex()];
+    assert(Table.MBBs.size() < 256);
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(Table.MBBs.size(), Ctx), Ctx);
+    break;
   }
+  }
+  return MCOperand::createExpr(Expr);
 }

@@ -18,6 +18,7 @@
 #include "MOSLegalizerInfo.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOSInstrInfo.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 
@@ -274,6 +275,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({P});
 
+  getActionDefinitionsBuilder(G_BRJT).customFor({P});
+  getActionDefinitionsBuilder(G_JUMP_TABLE).unsupported();
+
   // Variadic Arguments
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG}).custom();
@@ -368,6 +372,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizePhi(Helper, MRI, MI);
   case G_BRCOND:
     return legalizeBrCond(Helper, MRI, MI);
+  case G_BRJT:
+    return legalizeBrJt(Helper, MRI, MI);
 
   // Variadic Arguments
   case G_VAARG:
@@ -1394,6 +1400,40 @@ bool MOSLegalizerInfo::legalizeBrCond(LegalizerHelper &Helper,
   return true;
 }
 
+bool MOSLegalizerInfo::legalizeBrJt(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+
+  const MachineInstr *Base =
+      getOpcodeDef(G_JUMP_TABLE, MI.getOperand(0).getReg(), MRI);
+  assert(Base && "Invalid first argument to G_BRJT; expected G_JUMP_TABLE.");
+
+  assert(MI.getOperand(1).isJTI());
+  assert(MI.getOperand(1).getIndex() == Base->getOperand(1).getIndex() &&
+         "Expected G_JUMP_TABLE to have same index.");
+
+  // Note: Jump table size is hard-limited to 256 entries.
+  Register Offset = Builder.buildTrunc(S8, MI.getOperand(2)).getReg(0);
+
+  Register LoAddr = MRI.createGenericVirtualRegister(S8);
+  Builder.buildInstr(MOS::G_LOAD_ABS_IDX)
+      .addDef(LoAddr)
+      .add(MI.getOperand(1))
+      .addUse(Offset);
+  Register HiAddr = MRI.createGenericVirtualRegister(S8);
+  Builder.buildInstr(MOS::G_LOAD_ABS_IDX)
+      .addDef(HiAddr)
+      .addJumpTableIndex(MI.getOperand(1).getIndex(), MOS::MO_HI_JT)
+      .addUse(Offset);
+  Builder.buildBrIndirect(
+      Builder.buildMerge(LLT::pointer(0, 16), {LoAddr, HiAddr}).getReg(0));
+
+  MI.eraseFromParent();
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Variadic Arguments
 //===----------------------------------------------------------------------===//
@@ -1483,10 +1523,10 @@ bool MOSLegalizerInfo::legalizeDynStackAlloc(LegalizerHelper &Helper,
   // interrupt handler might observe a temporarily increased stack pointer,
   // which would cause it to overwrite the interrupted function's stack.
 
-  // The ordering of these pseudos is ensured by their implicit arguments: both
-  // claim to read and write the entire stack pointer. This is true after a
-  // fashion; since the 16-bit operation is not atomic, the intermediate 16-bit
-  // values are important too.
+  // The ordering of these pseudos is ensured by their implicit arguments:
+  // both claim to read and write the entire stack pointer. This is true after
+  // a fashion; since the 16-bit operation is not atomic, the intermediate
+  // 16-bit values are important too.
   auto Unmerge = Builder.buildUnmerge(LLT::scalar(8), SPTmp);
   Register Lo = Unmerge.getReg(0);
   Register Hi = Unmerge.getReg(1);

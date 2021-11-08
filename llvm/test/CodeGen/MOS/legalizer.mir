@@ -1310,6 +1310,26 @@ body: |
     G_BRCOND %2, %bb.0
 ...
 ---
+name: brjt
+jumpTable:
+  kind: block-address
+  entries:
+    - id: 0
+      blocks: ['%bb.0']
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: brjt
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX %jump-table.0, [[COPY]](s8)
+    ; CHECK-NEXT: [[LOAD_ABS_IDX1:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX target-flags(hi-jt) %jump-table.0, [[COPY]](s8)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[LOAD_ABS_IDX]](s8), [[LOAD_ABS_IDX1]](s8)
+    ; CHECK-NEXT: G_BRINDIRECT [[MV]](p0)
+    %0:_(p0) = G_JUMP_TABLE %jump-table.0
+    %1:_(s8) = COPY $a
+    %2:_(s16) = G_ZEXT %1
+    G_BRJT %0, %jump-table.0, %2
+...
+---
 name: vaarg
 body: |
   bb.0.entry:

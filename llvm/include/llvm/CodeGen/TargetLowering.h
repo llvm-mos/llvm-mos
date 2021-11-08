@@ -1189,6 +1189,11 @@ public:
   bool isSuitableForBitTests(unsigned NumDests, unsigned NumCmps,
                              const APInt &Low, const APInt &High,
                              const DataLayout &DL) const {
+    // If target does not have legal shift left, do not emit bit tests at all.
+    EVT PTy = getPointerTy(DL);
+    if (!isOperationLegal(ISD::SHL, PTy))
+      return false;
+
     // FIXME: I don't think NumCmps is the correct metric: a single case and a
     // range of cases both require only one branch to lower. Just looking at the
     // number of clusters and destinations should be enough to decide whether to
