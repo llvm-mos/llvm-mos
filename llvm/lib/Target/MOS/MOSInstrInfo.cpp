@@ -224,6 +224,8 @@ MOSInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case MOS::BRA:
   case MOS::JMP:
     return MI.getOperand(0).getMBB();
+  case MOS::JMPIndir:
+    return nullptr;
   }
 }
 
@@ -252,6 +254,8 @@ bool MOSInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     return true;
   // First branch always forms true edge, whether conditional or unconditional.
   TBB = getBranchDestBlock(*FirstBR);
+  if (!TBB)
+    return true;
   if (FirstBR->isConditionalBranch()) {
     Cond.push_back(FirstBR->getOperand(1));
     Cond.push_back(FirstBR->getOperand(2));
@@ -279,6 +283,8 @@ bool MOSInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   // Second unconditional branch forms false edge.
   FBB = getBranchDestBlock(*SecondBR);
+  if (!FBB)
+    return true;
   return false;
 }
 

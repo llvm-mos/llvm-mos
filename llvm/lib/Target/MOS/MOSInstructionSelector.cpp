@@ -72,7 +72,7 @@ private:
   bool selectBrCondImm(MachineInstr &MI);
   bool selectSbc(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
-  bool selectGlobalValue(MachineInstr &MI);
+  bool selectAddr(MachineInstr &MI);
   bool selectStore(MachineInstr &MI);
   bool selectLshrShlE(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
@@ -161,8 +161,9 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectSbc(MI);
   case MOS::G_FRAME_INDEX:
     return selectFrameIndex(MI);
+  case MOS::G_BLOCK_ADDR:
   case MOS::G_GLOBAL_VALUE:
-    return selectGlobalValue(MI);
+    return selectAddr(MI);
   case MOS::G_STORE_ABS:
   case MOS::G_STORE_ABS_IDX:
     return selectStore(MI);
@@ -179,6 +180,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
 
+  case MOS::G_BRINDIRECT:
   case MOS::G_IMPLICIT_DEF:
   case MOS::G_INTTOPTR:
   case MOS::G_LOAD_ABS:
@@ -420,28 +422,22 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
 
   bool IsLocal = !MI.getMF()->getFrameInfo().isFixedObjectIndex(
       MI.getOperand(1).getIndex());
-  if (MI.getMF()->getFunction().doesNotRecurse() && IsLocal) {
-    // Non-recursive functions use static stack for their locals, so their frame
-    // addresses are link-time constants that can be loaded as immediates.
-    LoAddr = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
-    LoAddr->getOperand(1).setTargetFlags(MOS::MO_LO);
-    HiAddr = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
-    HiAddr->getOperand(1).setTargetFlags(MOS::MO_HI);
-  } else {
-    // Otherwise a soft stack needs to be used, so frame addresses are offsets
-    // from the stack/frame pointer. Record this as a pseudo, since the best
-    // code to emit depends heavily on the actual offset, which isn't known
-    // until FEI.
-    LoAddr = Builder.buildInstr(MOS::AddrLostk, {S8, S1, S1}, {})
-                 .add(MI.getOperand(1))
-                 .addImm(0);
-    Register Carry = LoAddr.getReg(1);
+  if (MI.getMF()->getFunction().doesNotRecurse() && IsLocal)
+    return selectAddr(MI);
 
-    HiAddr = Builder.buildInstr(MOS::AddrHistk, {S8, S1, S1}, {})
-                 .add(MI.getOperand(1))
-                 .addImm(0)
-                 .addUse(Carry);
-  }
+  // Otherwise a soft stack needs to be used, so frame addresses are offsets
+  // from the stack/frame pointer. Record this as a pseudo, since the best
+  // code to emit depends heavily on the actual offset, which isn't known
+  // until FEI.
+  LoAddr = Builder.buildInstr(MOS::AddrLostk, {S8, S1, S1}, {})
+                .add(MI.getOperand(1))
+                .addImm(0);
+  Register Carry = LoAddr.getReg(1);
+
+  HiAddr = Builder.buildInstr(MOS::AddrHistk, {S8, S1, S1}, {})
+                .add(MI.getOperand(1))
+                .addImm(0)
+                .addUse(Carry);
 
   if (!constrainSelectedInstRegOperands(*LoAddr, TII, TRI, RBI))
     return false;
@@ -452,9 +448,7 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
   return true;
 }
 
-bool MOSInstructionSelector::selectGlobalValue(MachineInstr &MI) {
-  Register Dst = MI.getOperand(0).getReg();
-
+bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   LLT S8 = LLT::scalar(8);
   auto LoImm = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
@@ -465,10 +459,11 @@ bool MOSInstructionSelector::selectGlobalValue(MachineInstr &MI) {
   HiImm->getOperand(1).setTargetFlags(MOS::MO_HI);
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     return false;
-  composePtr(Builder, Dst, LoImm.getReg(0), HiImm.getReg(0));
+  composePtr(Builder, MI.getOperand(0).getReg(), LoImm.getReg(0), HiImm.getReg(0));
   MI.eraseFromParent();
   return true;
 }
+
 
 bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
@@ -618,6 +613,9 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode.");
+  case MOS::G_BRINDIRECT:
+    Opcode = MOS::JMPIndir;
+    break;
   case MOS::G_FREEZE:
   case MOS::G_INTTOPTR:
   case MOS::G_PTRTOINT:

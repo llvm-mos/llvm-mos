@@ -68,7 +68,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .clampScalar(0, S8, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE})
+  getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE, G_BLOCK_ADDR})
       .legalFor({P})
       .unsupported();
 
@@ -271,6 +271,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .unsupported();
 
   getActionDefinitionsBuilder(G_BRCOND).customFor({S1}).unsupported();
+
+  getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({P});
 
   // Variadic Arguments
 
@@ -1189,7 +1191,8 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
       if (willBeStaticallyAllocated(FI)) {
         Helper.Observer.changingInstr(MI);
         MI.setDesc(Builder.getTII().get(Opcode));
-        MI.getOperand(1).ChangeToFrameIndex(FI.getIndex(), FI.getOffset() + Offset);
+        MI.getOperand(1).ChangeToFrameIndex(FI.getIndex(),
+                                            FI.getOffset() + Offset);
         Helper.Observer.changedInstr(MI);
         return true;
       }
@@ -1252,7 +1255,8 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
     if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
       const MachineOperand &FI = FIAddr->getOperand(1);
       if (willBeStaticallyAllocated(FI)) {
-        assert(Index); // Otherwise, Absolute addressing would have been selected.
+        assert(
+            Index); // Otherwise, Absolute addressing would have been selected.
         Builder.buildInstr(Opcode)
             .add(MI.getOperand(0))
             .addFrameIndex(FI.getIndex(), FI.getOffset() + Offset)

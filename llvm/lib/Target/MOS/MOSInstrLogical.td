@@ -166,23 +166,34 @@ def BITAbs : MOSLogicalInstr, PseudoInstExpansion<(BIT_Absolute addr16:$r)> {
 // Control Flow Instructions
 //===---------------------------------------------------------------------===//
 
-// Covers all branch instructions. Branches to $tgt if $flag = $val.
-def BR : MOSLogicalInstr {
-  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
-
+class MOSBranch : MOSLogicalInstr {
   let isBranch = true;
   let isTerminator = true;
 }
 
-let InOperandList = (ins label:$tgt),
-    Pattern = [(br bb:$tgt)],
-    isBarrier = true,
-    isBranch = true,
-    isTerminator = true in {
-  def BRA : MOSLogicalInstr, PseudoInstExpansion<(BRA_Relative pcrel8:$tgt)> {
-    let Predicates = [Has65C02];
-  }
-  def JMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)>;
+// Covers all branch instructions. Branches to $tgt if $flag = $val.
+def BR : MOSBranch {
+  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$val);
+}
+
+class MOSUnconditionalBranch : MOSBranch {
+  let isBarrier = true;
+}
+
+def BRA : MOSUnconditionalBranch, PseudoInstExpansion<(BRA_Relative pcrel8:$tgt)> {
+  let Predicates = [Has65C02];
+
+  let InOperandList = (ins label:$tgt);
+  let Pattern = [(br bb:$tgt)];
+}
+def JMP : MOSUnconditionalBranch, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
+  let InOperandList = (ins label:$tgt);
+  let Pattern = [(br bb:$tgt)];
+}
+
+def JMPIndir : MOSUnconditionalBranch, PseudoInstExpansion<(JMP_Indirect addr16:$tgt)> {
+  let InOperandList = (ins Imag16:$tgt);
+  let isIndirectBranch = true;
 }
 
 def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
@@ -191,14 +202,14 @@ def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
   let isCall = true;
 }
 
-class Return<Instruction Opcode> : MOSLogicalInstr, PseudoInstExpansion<(Opcode)> {
+class MOSReturn<Instruction Opcode> : MOSLogicalInstr, PseudoInstExpansion<(Opcode)> {
   let isBarrier = true;
   let isReturn = true;
   let isTerminator = true;
 }
 
-def RTS : Return<RTS_Implied>;
-def RTI : Return<RTI_Implied>;
+def RTS : MOSReturn<RTS_Implied>;
+def RTI : MOSReturn<RTI_Implied>;
 
 //===---------------------------------------------------------------------===//
 // Immediate Load Instructions

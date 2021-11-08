@@ -23,6 +23,7 @@ public:
 
   void lower(const MachineInstr *MI, MCInst &OutMI);
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
+  MCOperand lowerSymbolOperand(const MachineOperand &MO, const MCSymbol *Sym);
 
 private:
   const MCExpr *applyTargetFlags(unsigned Flags, const MCExpr *Expr);

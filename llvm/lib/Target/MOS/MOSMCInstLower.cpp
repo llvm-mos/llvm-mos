@@ -363,19 +363,15 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     report_fatal_error("Operand type not implemented.");
   case MachineOperand::MO_RegisterMask:
     return false;
-  case MachineOperand::MO_ExternalSymbol:
-  case MachineOperand::MO_GlobalAddress: {
-    const MCSymbol *Symbol = MO.getType() == MachineOperand::MO_ExternalSymbol
-                                 ? Ctx.getOrCreateSymbol(MO.getSymbolName())
-                                 : AP.getSymbol(MO.getGlobal());
-    const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Ctx);
-    if (MO.getOffset() != 0)
-      Expr = MCBinaryExpr::createAdd(
-          Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
-    Expr = applyTargetFlags(MO.getTargetFlags(), Expr);
-    MCOp = MCOperand::createExpr(Expr);
+  case MachineOperand::MO_BlockAddress:
+    MCOp = lowerSymbolOperand(MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()));
     break;
-  }
+  case MachineOperand::MO_ExternalSymbol:
+    MCOp = lowerSymbolOperand(MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()));
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    MCOp = lowerSymbolOperand(MO, AP.getSymbol(MO.getGlobal()));
+    break;
   case MachineOperand::MO_Immediate:
     MCOp = MCOperand::createImm(MO.getImm());
     break;
@@ -399,6 +395,15 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     break;
   }
   return true;
+}
+
+MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO, const MCSymbol *Sym) {
+    const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+    if (MO.getOffset() != 0)
+      Expr = MCBinaryExpr::createAdd(
+          Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+    Expr = applyTargetFlags(MO.getTargetFlags(), Expr);
+    return MCOperand::createExpr(Expr);
 }
 
 const MCExpr *MOSMCInstLower::applyTargetFlags(unsigned Flags,
