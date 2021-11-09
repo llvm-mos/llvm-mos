@@ -4,6 +4,36 @@ This directory and its sub-directories contain source code for LLVM-MOS,
 an experiment to support the MOS 65xx series of microprocessors as first-class
 targets within the LLVM architecture.
 
+```C
+#include <stdio.h>
+
+void main(void) {
+  printf("HELLO, 6502!\n");
+}
+```
+
+```
+main:
+	ldx	#1
+	lda	#72
+.LBB0_1:
+	;APP
+	jsr	65490
+	;NO_APP
+	lda	.Lstr,x
+	inx
+	cpx	#13
+	bne	.LBB0_1
+	lda	#10
+	;APP
+	jsr	65490
+	;NO_APP
+	rts
+
+.Lstr:
+	.asciz	"HELLO, 6502!"
+```
+
 Status:
 The LLVM SingleSource end-to-end test cases pass on a simulated 6502. This is true at
 -O0, -O3, -Os, and -Oz. The compiler is believed to be C99 compatible, but the quality
