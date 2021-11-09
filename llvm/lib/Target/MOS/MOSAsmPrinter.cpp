@@ -193,22 +193,18 @@ void MOSAsmPrinter::emitJumpTableInfo() {
 
     // Emit an array of the low bytes of the target addresses.
     for (unsigned II = 0, EE = JTBBs.size(); II != EE; ++II) {
-      OutStreamer->emitValue(
-          MOSMCExpr::create(
-              MOSMCExpr::VK_MOS_ADDR16_LO,
-              MCSymbolRefExpr::create(JTBBs[II]->getSymbol(), OutContext),
-              /*isNegated=*/false, OutContext),
-          1);
+      OutStreamer->emitValue(MCSymbolRefExpr::create(
+                                 JTBBs[II]->getSymbol(),
+                                 MCSymbolRefExpr::VK_MOS_ADDR16_LO, OutContext),
+                             1);
     }
 
     // Emit an array of the high bytes of the target addresses.
     for (unsigned II = 0, EE = JTBBs.size(); II != EE; ++II) {
-      OutStreamer->emitValue(
-          MOSMCExpr::create(
-              MOSMCExpr::VK_MOS_ADDR16_HI,
-              MCSymbolRefExpr::create(JTBBs[II]->getSymbol(), OutContext),
-              /*isNegated=*/false, OutContext),
-          1);
+      OutStreamer->emitValue(MCSymbolRefExpr::create(
+                                 JTBBs[II]->getSymbol(),
+                                 MCSymbolRefExpr::VK_MOS_ADDR16_HI, OutContext),
+                             1);
     }
   }
   if (!JTInDiffSection)

@@ -30,10 +30,6 @@ public:
                       std::move(Emitter)),
         MCII(createMOSMCInstrInfo()) {}
 
-  void emitValueForModiferKind(
-      const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc = SMLoc(),
-      MOSMCExpr::VariantKind ModifierKind = MOSMCExpr::VK_MOS_NONE);
-
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
 };
 

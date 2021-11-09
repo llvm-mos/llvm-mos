@@ -26,26 +26,50 @@ class MOSELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   explicit MOSELFObjectWriter(uint8_t OSABI);
 
-  unsigned getRelocType(MCContext &Ctx,
-                        const MCValue &Target,
-                        const MCFixup &Fixup,
-                        bool IsPCRel) const override;
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override;
 };
 
 MOSELFObjectWriter::MOSELFObjectWriter(uint8_t OSABI)
     : MCELFObjectTargetWriter(false, OSABI, ELF::EM_MOS, true) {}
 
-unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx,
-                                          const MCValue &Target,
+unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
-  switch ((unsigned) Fixup.getKind()) {
+  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
+  switch ((unsigned)Fixup.getKind()) {
+  case FK_Data_1:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+    case MCSymbolRefExpr::VK_MOS_ADDR8:
+      return ELF::R_MOS_ADDR8;
+    case MCSymbolRefExpr::VK_MOS_ADDR16_LO:
+      return ELF::R_MOS_ADDR16_LO;
+    case MCSymbolRefExpr::VK_MOS_ADDR16_HI:
+      return ELF::R_MOS_ADDR16_HI;
+    case MCSymbolRefExpr::VK_MOS_ADDR24_BANK:
+      return ELF::R_MOS_ADDR24_BANK;
+    case MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT_LO:
+      return ELF::R_MOS_ADDR24_SEGMENT_LO;
+    case MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT_HI:
+      return ELF::R_MOS_ADDR24_SEGMENT_HI;
+    }
+  case FK_Data_2:
+    switch (Modifier) {
+    default:
+      llvm_unreachable("Unsupported Modifier");
+    case MCSymbolRefExpr::VK_None:
+      return ELF::R_MOS_ADDR16;
+    case MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT:
+      return ELF::R_MOS_ADDR24_SEGMENT;
+    }
+
   case MOS::Imm8:
     return ELF::R_MOS_IMM8;
   case MOS::Addr8:
-  case FK_Data_1:
     return ELF::R_MOS_ADDR8;
-  case FK_Data_2:
   case MOS::Addr16:
     return ELF::R_MOS_ADDR16;
   case MOS::Addr16_Low:
@@ -79,4 +103,3 @@ std::unique_ptr<MCObjectTargetWriter> createMOSELFObjectWriter(uint8_t OSABI) {
 }
 
 } // end of namespace llvm
-
