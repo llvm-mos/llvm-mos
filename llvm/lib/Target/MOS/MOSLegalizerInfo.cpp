@@ -201,8 +201,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX}).lower();
 
-  // FIXME: The default narrowing of G_ABS is terrible.
-  getActionDefinitionsBuilder(G_ABS).lower();
+  getActionDefinitionsBuilder(G_ABS).custom();
 
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
   getActionDefinitionsBuilder({G_UADDO, G_SADDO, G_USUBO, G_SSUBO})
@@ -223,7 +222,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .unsupported();
   getActionDefinitionsBuilder({G_UMULH, G_SMULH}).lower();
 
-  // FIXME: The default lowering of funnel shifts is terrible.
+  // WARNING: The default lowering of funnel shifts is terrible. Luckily, they
+  // appear to mostly be rotations, which are combined away and handled
+  // separately.
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   getActionDefinitionsBuilder(
@@ -348,6 +349,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeICmp(Helper, MRI, MI);
   case G_SELECT:
     return legalizeSelect(Helper, MRI, MI);
+  case G_ABS:
+    return legalizeAbs(Helper, MRI, MI);
   case G_PTR_ADD:
     return legalizePtrAdd(Helper, MRI, MI);
   case G_UADDO:
@@ -991,6 +994,22 @@ bool MOSLegalizerInfo::legalizeSelect(LegalizerHelper &Helper,
 
   Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
   Builder.buildIntToPtr(Dst, Tmp);
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeAbs(LegalizerHelper &Helper,
+                                   MachineRegisterInfo &MRI,
+                                   MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+
+  Register Arg = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(Arg);
+  assert(MRI.getType(MI.getOperand(0).getReg()) == Ty);
+
+  auto IsNeg = Builder.buildICmp(CmpInst::ICMP_SLT, LLT::scalar(1), Arg,
+                                 Builder.buildConstant(Ty, 0));
+  Builder.buildSelect(MI.getOperand(0), IsNeg, Builder.buildNeg(Ty, Arg), Arg);
+  MI.eraseFromParent();
   return true;
 }
 
