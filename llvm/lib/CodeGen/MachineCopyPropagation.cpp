@@ -426,16 +426,14 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   // UseDst may create additional cross register copies when expanding the copy
   // instruction in later passes.
   if (CopySrcRC != CrossCopyRC) {
-    const TargetRegisterClass *CopyDstRC =
-        TRI->getMinimalPhysRegClass(Copy.getOperand(0).getReg());
-
     // Check if UseDstRC matches the necessary register class to copy from
     // CopySrc's register class. If so then forwarding the copy will not
-    // introduce any cross-class copys. Else if CopyDstRC matches then keep the
-    // copy and do not forward. If neither UseDstRC or CopyDstRC matches then
+    // introduce any cross-class copys. Else if CopyDst matches then keep the
+    // copy and do not forward. If neither UseDstRC or CopyDs matches then
     // we may need a cross register copy later but we do not worry about it
     // here.
-    if (UseDstRC != CrossCopyRC && CopyDstRC == CrossCopyRC)
+    if (UseDstRC != CrossCopyRC &&
+        CrossCopyRC->contains(Copy.getOperand(0).getReg()))
       return false;
   }
 

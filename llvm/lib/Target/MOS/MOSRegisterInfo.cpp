@@ -106,6 +106,15 @@ MOSRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
   return RC;
 }
 
+const TargetRegisterClass *
+MOSRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
+  if (RC == &MOS::Imag8RegClass)
+    return &MOS::GPRRegClass;
+  if (RC == &MOS::YcRegClass || RC == &MOS::XYRegClass)
+    return &MOS::AImag8RegClass;
+  return RC;
+}
+
 static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
                              MachineBasicBlock::iterator End) {
   int64_t PushCount = 0;

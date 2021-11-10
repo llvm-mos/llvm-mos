@@ -38,6 +38,9 @@ public:
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &) const override;
 
+  const TargetRegisterClass *
+  getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
+
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     // Saving/restoring to stack may require temporary registers.
     return true;
