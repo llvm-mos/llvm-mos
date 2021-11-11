@@ -39,6 +39,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace TargetOpcode;
@@ -152,8 +153,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .lower();
 
   getActionDefinitionsBuilder({G_LSHR, G_SHL})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S64)
+      .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(1, S8)
       .custom();
 
@@ -656,7 +656,7 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
 
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
-  Register Amt = MI.getOperand(2).getReg();
+  Register AmtReg = MI.getOperand(2).getReg();
 
   LLT Ty = MRI.getType(Dst);
   assert(Ty == MRI.getType(Src));
@@ -666,48 +666,77 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
   LLT S8 = LLT::scalar(8);
 
   // Presently, only left shifts by one bit are supported.
-  auto ConstantAmt = getIConstantVRegValWithLookThrough(Amt, MRI);
-  if (!ConstantAmt)
+  auto ConstantAmt = getIConstantVRegValWithLookThrough(AmtReg, MRI);
+  if (!ConstantAmt) {
+    if (!isPowerOf2_32(Ty.getSizeInBits()))
+      return Helper.widenScalar(MI, 0,
+                                LLT::scalar(NextPowerOf2(Ty.getSizeInBits())));
+    if (Ty.getSizeInBits() > 64)
+      return Helper.narrowScalar(MI, 0, LLT::scalar(64));
     return shiftLibcall(Helper, MRI, MI);
-
-  if (Ty != S8 && ConstantAmt->Value.getZExtValue() % 8 == 0)
-    return Helper.narrowScalarShiftByConstant(
-               MI, ConstantAmt->Value,
-               LLT::scalar(MRI.getType(Src).getSizeInBits() / 2),
-               MRI.getType(Amt)) == LegalizerHelper::Legalized;
-  if (ConstantAmt->Value.getZExtValue() != 1)
-    return shiftLibcall(Helper, MRI, MI);
-
-  Register Carry = Builder.buildConstant(S1, 0).getReg(0);
-  unsigned Opcode = MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE;
-
-  if (Ty == S8) {
-    Builder.buildInstr(Opcode, {Dst, S1}, {Src, Carry});
-  } else {
-    auto Unmerge = Builder.buildUnmerge(S8, Src);
-    SmallVector<Register> Parts;
-
-    SmallVector<Register> Defs;
-    for (MachineOperand &SrcPart : Unmerge->defs())
-      Defs.push_back(SrcPart.getReg());
-
-    if (MI.getOpcode() == MOS::G_LSHR)
-      std::reverse(Defs.begin(), Defs.end());
-
-    for (Register &SrcPart : Defs) {
-      Parts.push_back(MRI.createGenericVirtualRegister(S8));
-      Register NewCarry = MRI.createGenericVirtualRegister(S1);
-      Builder.buildInstr(Opcode, {Parts.back(), NewCarry}, {SrcPart, Carry});
-      Carry = NewCarry;
-    }
-
-    if (MI.getOpcode() == MOS::G_LSHR)
-      std::reverse(Parts.begin(), Parts.end());
-
-    Builder.buildMerge(Dst, Parts);
   }
 
-  MI.eraseFromParent();
+  int64_t Amt = ConstantAmt->Value.getZExtValue();
+
+  if (Amt == 0) {
+    Builder.buildCopy(Dst, Src);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  Register Shifted;
+  Register NewAmt;
+  if (Amt >= 8) {
+    auto Unmerge = Builder.buildUnmerge(S8, Src);
+    SmallVector<Register> DstBytes;
+    for (unsigned I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
+      DstBytes.push_back(Unmerge->getOperand(I).getReg());
+    Register Zero = Builder.buildConstant(S8, 0).getReg(0);
+    if (MI.getOpcode() == G_LSHR) {
+      DstBytes.erase(DstBytes.begin());
+      DstBytes.push_back(Zero);
+    } else {
+      assert(MI.getOpcode() == MOS::G_SHL);
+      DstBytes.pop_back();
+      DstBytes.insert(DstBytes.begin(), Zero);
+    }
+    Shifted = Builder.buildMerge(Ty, DstBytes).getReg(0);
+    NewAmt = Builder.buildConstant(S8, Amt - 8).getReg(0);
+  } else {
+    Register Carry = Builder.buildConstant(S1, 0).getReg(0);
+    unsigned Opcode = MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE;
+    if (Ty == S8) {
+      Shifted = Builder.buildInstr(Opcode, {S8, S1}, {Src, Carry}).getReg(0);
+    } else {
+      auto Unmerge = Builder.buildUnmerge(S8, Src);
+      SmallVector<Register> Parts;
+
+      SmallVector<Register> Defs;
+      for (MachineOperand &SrcPart : Unmerge->defs())
+        Defs.push_back(SrcPart.getReg());
+
+      if (MI.getOpcode() == MOS::G_LSHR)
+        std::reverse(Defs.begin(), Defs.end());
+
+      for (Register &SrcPart : Defs) {
+        Parts.push_back(MRI.createGenericVirtualRegister(S8));
+        Register NewCarry = MRI.createGenericVirtualRegister(S1);
+        Builder.buildInstr(Opcode, {Parts.back(), NewCarry}, {SrcPart, Carry});
+        Carry = NewCarry;
+      }
+
+      if (MI.getOpcode() == MOS::G_LSHR)
+        std::reverse(Parts.begin(), Parts.end());
+
+      Shifted = Builder.buildMerge(Ty, Parts).getReg(0);
+    }
+    NewAmt = Builder.buildConstant(S8, Amt - 1).getReg(0);
+  }
+
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(1).setReg(Shifted);
+  MI.getOperand(2).setReg(NewAmt);
+  Helper.Observer.changedInstr(MI);
   return true;
 }
 
