@@ -59,14 +59,14 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({S1, S8})
       .customFor({P})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
       .legalFor({S1, S8, P})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
 
   getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE, G_BLOCK_ADDR})
@@ -95,12 +95,10 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({{P, S16}})
-      .widenScalarToNextPow2(1)
       .clampScalar(1, S16, S16)
       .unsupported();
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{S16, P}})
-      .widenScalarToNextPow2(0)
       .clampScalar(0, S16, S16)
       .unsupported();
 
@@ -118,7 +116,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_BSWAP)
       .customFor({S8})
       .unsupportedIf(scalarNarrowerThan(0, 8))
-      .widenScalarToNextPow2(0)
+      .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8);
 
   getActionDefinitionsBuilder(G_BITREVERSE).lower();
@@ -127,28 +125,20 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder({G_ADD, G_SUB})
       .legalFor({S8})
-      .widenScalarIf(
-          [](const LegalityQuery &Query) {
-            assert(Query.Types[0].isScalar());
-            return !Query.Types[0].isByteSized();
-          },
-          [](const LegalityQuery &Query) {
-            return std::make_pair(
-                0, LLT::scalar(Query.Types[0].getSizeInBytes() * 8));
-          })
+      .widenScalarToNextMultipleOf(0, 8)
       .custom();
 
   getActionDefinitionsBuilder({G_AND, G_OR})
       .legalFor({S8})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
 
   getActionDefinitionsBuilder(G_XOR)
       .legalFor({S8})
       .customFor({S1})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
 
   getActionDefinitionsBuilder({G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM})
@@ -178,23 +168,14 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_ICMP)
       .customFor({{S1, P}, {S1, S8}})
-      .minScalar(1, S8)
-      .widenScalarIf(
-          [](const LegalityQuery &Query) {
-            assert(Query.Types[1].isScalar());
-            return !Query.Types[1].isByteSized();
-          },
-          [](const LegalityQuery &Query) {
-            return std::make_pair(
-                1, LLT::scalar(Query.Types[1].getSizeInBytes() * 8));
-          })
+      .widenScalarToNextMultipleOf(1, 8)
       .custom();
 
   getActionDefinitionsBuilder(G_SELECT)
       .customFor({P})
       .legalFor({S1, S8})
       .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .maxScalar(0, S8)
       .unsupported();
 
   getActionDefinitionsBuilder(G_PTR_ADD).customFor({{P, S16}}).unsupported();
@@ -206,19 +187,19 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // Odd operations are handled via even ones: 6502 has only ADC/SBC.
   getActionDefinitionsBuilder({G_UADDO, G_SADDO, G_USUBO, G_SSUBO})
       .customFor({S8})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
   getActionDefinitionsBuilder({G_SMULO, G_UMULO}).lower();
   getActionDefinitionsBuilder({G_UADDE, G_SADDE})
       .legalFor({S8})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
   getActionDefinitionsBuilder({G_USUBE, G_SSUBE})
       .customFor({S8})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
   getActionDefinitionsBuilder({G_UMULH, G_SMULH}).lower();
 
@@ -256,7 +237,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       // 8 bits. Once 8-bit, select an addressing mode to replace the generic
       // G_LOAD and G_STORE.
       .customFor({{S8, P}, {P, P}})
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
 
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).custom();
@@ -268,8 +250,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_PHI)
       .customFor({P})
       .legalFor({S1, S8})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, S8, S8)
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
       .unsupported();
 
   getActionDefinitionsBuilder(G_BRCOND).customFor({S1}).unsupported();
