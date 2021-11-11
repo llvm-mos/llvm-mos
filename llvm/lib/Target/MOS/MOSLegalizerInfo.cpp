@@ -649,6 +649,17 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
   return true;
 }
 
+// Whether or not it's worth shifting by 8 in a type one byte wider and shifting
+// in the opposite direction by 8-n.
+static bool shouldOverShift(uint64_t Amt, LLT Ty) {
+  assert(Amt < 8);
+
+  // We assume that the initial shift by 8 is free, as it's just a relabeling of
+  // the inputs. The choice is thus between emitting Amt shifts at width Ty, or
+  // emitting 8 - Amt shifts (in the opposite direction) at width Ty + 8.
+  return Amt * Ty.getSizeInBytes() > (8 - Amt) * (Ty.getSizeInBytes() + 1);
+}
+
 bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
                                        MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const {
@@ -676,8 +687,9 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
     return shiftLibcall(Helper, MRI, MI);
   }
 
-  int64_t Amt = ConstantAmt->Value.getZExtValue();
+  uint64_t Amt = ConstantAmt->Value.getZExtValue();
 
+  // This forms the base case for the problem decompositions below.
   if (Amt == 0) {
     Builder.buildCopy(Dst, Src);
     MI.eraseFromParent();
@@ -686,6 +698,7 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
 
   Register Shifted;
   Register NewAmt;
+  // Shift by one byte, then shift the remainder.
   if (Amt >= 8) {
     auto Unmerge = Builder.buildUnmerge(S8, Src);
     SmallVector<Register> DstBytes;
@@ -702,7 +715,26 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
     }
     Shifted = Builder.buildMerge(Ty, DstBytes).getReg(0);
     NewAmt = Builder.buildConstant(S8, Amt - 8).getReg(0);
+  } else if (shouldOverShift(Amt, Ty)) {
+    LLT WideTy = LLT::scalar(Ty.getSizeInBits() + 8);
+    Register WideSrc, LeftAmt, RightAmt;
+    if (MI.getOpcode() == G_SHL) {
+      WideSrc = Builder.buildAnyExt(WideTy, Src).getReg(0);
+      LeftAmt = Builder.buildConstant(S8, 8).getReg(0);
+      RightAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
+    } else {
+      assert(MI.getOpcode() == G_LSHR);
+      WideSrc = Builder.buildZExt(WideTy, Src).getReg(0);
+      LeftAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
+      RightAmt = Builder.buildConstant(S8, 8).getReg(0);
+    }
+    auto Left = Builder.buildShl(WideTy, WideSrc, LeftAmt);
+    auto Right = Builder.buildLShr(WideTy, Left, RightAmt).getReg(0);
+    Builder.buildTrunc(Dst, Right);
+    MI.eraseFromParent();
+    return true;
   } else {
+    // Shift by one, then shift the remainder.
     Register Carry = Builder.buildConstant(S1, 0).getReg(0);
     unsigned Opcode = MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE;
     if (Ty == S8) {
