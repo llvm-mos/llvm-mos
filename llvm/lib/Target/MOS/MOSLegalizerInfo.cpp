@@ -173,7 +173,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder(G_SELECT)
       .customFor({P})
       .legalFor({S1, S8})
-      .widenScalarToNextPow2(0)
+      .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
 
@@ -413,17 +413,12 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
     auto Zero = Builder.buildConstant(DstTy, 0);
     Builder.buildSelect(Dst, Src, NegOne, Zero);
   } else {
-    // Note: We can't use ICMP_SLT 0 here, since that may in turn require SEXT.
-    // FIXME: Once the ICMP_SLT lowering is better, use that instead.
-    auto SignMask = APInt::getSignMask(SrcTy.getSizeInBits());
-    auto Sign =
-        Builder.buildAnd(SrcTy, Src, Builder.buildConstant(SrcTy, SignMask));
-    auto Pos = Builder.buildICmp(CmpInst::ICMP_EQ, S1, Sign,
+    auto Neg = Builder.buildICmp(CmpInst::ICMP_SLT, S1, Src,
                                  Builder.buildConstant(SrcTy, 0));
     auto NegOne = Builder.buildConstant(S8, -1);
     auto Zero = Builder.buildConstant(S8, 0);
 
-    Register Fill = Builder.buildSelect(S8, Pos, Zero, NegOne).getReg(0);
+    Register Fill = Builder.buildSelect(S8, Neg, NegOne, Zero).getReg(0);
 
     SmallVector<Register> Parts;
     unsigned Bits;
@@ -1001,8 +996,20 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
       return true;
     }
 
-    // Perform multibyte signed comparisons by a multibyte subtraction.
     auto LHSUnmerge = Builder.buildUnmerge(S8, LHS);
+
+    // Determining whether the LHS is negative only requires looking at the
+    // highest byte (bit, really).
+    if (RHSIsZero) {
+      Helper.Observer.changingInstr(MI);
+      MI.getOperand(2).setReg(
+          LHSUnmerge->getOperand(LHSUnmerge->getNumOperands() - 2).getReg());
+      MI.getOperand(3).setReg(Builder.buildConstant(S8, 0).getReg(0));
+      Helper.Observer.changedInstr(MI);
+      return true;
+    }
+
+    // Perform multibyte signed comparisons by a multibyte subtraction.
     auto RHSUnmerge = Builder.buildUnmerge(S8, RHS);
     assert(LHSUnmerge->getNumOperands() == RHSUnmerge->getNumOperands());
     CIn = Builder.buildConstant(S1, 1).getReg(0);
