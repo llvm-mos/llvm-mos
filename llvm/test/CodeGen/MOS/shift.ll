@@ -236,9 +236,16 @@ entry:
 define i16 @ashr_2(i16 %a) {
 ; CHECK-LABEL: ashr_2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldy #2
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    jsr __ashrhi3
+; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 2
@@ -247,9 +254,22 @@ entry:
 define i16 @ashr_4(i16 %a) {
 ; CHECK-LABEL: ashr_4:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldy #4
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    jsr __ashrhi3
+; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 4
@@ -258,9 +278,25 @@ entry:
 define i16 @ashr_5(i16 %a) {
 ; CHECK-LABEL: ashr_5:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldy #5
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    jsr __ashrhi3
+; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 5
@@ -269,9 +305,31 @@ entry:
 define i16 @ashr_7(i16 %a) {
 ; CHECK-LABEL: ashr_7:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldy #7
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    jsr __ashrhi3
+; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 7
@@ -280,9 +338,14 @@ entry:
 define i16 @ashr_8(i16 %a) {
 ; CHECK-LABEL: ashr_8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldy #8
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    jsr __ashrhi3
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    bpl .LBB19_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    rts
+; CHECK-NEXT:  .LBB19_2: ; %entry
+; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 8
@@ -291,9 +354,38 @@ entry:
 define i16 @ashr_15(i16 %a) {
 ; CHECK-LABEL: ashr_15:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldy #15
-; CHECK-NEXT:    sty mos8(__rc2)
-; CHECK-NEXT:    jsr __ashrhi3
+; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    bpl .LBB20_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    lda #-1
+; CHECK-NEXT:    jmp .LBB20_3
+; CHECK-NEXT:  .LBB20_2: ; %entry
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB20_3: ; %entry
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 15
