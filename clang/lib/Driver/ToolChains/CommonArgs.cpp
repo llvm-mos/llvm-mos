@@ -1601,6 +1601,11 @@ void tools::addMOSCodeGenArgs(llvm::opt::ArgStringList &CmdArgs) {
   CmdArgs.push_back("-force-precise-rotation-cost");
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-jump-inst-cost=6");
+  // Keeping all the blocks of a loop contiguous doesn't matter as much on the
+  // 6502, since there's no instruction cache. It still matters a bit; near
+  // branches are faster.
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-force-loop-cold-block");
 
   // Never fold control flow into selects; control flow is already the most
   // efficient way to implement select.

@@ -14,25 +14,23 @@ void main(void) {
 
 ```
 main:
-	ldx	#1
-	lda	#72
+        ldx     #1
+        lda     #72
 .LBB0_1:
-	cmp	#10
-	beq	.LBB0_3
+        cmp     #10
+        beq     .LBB0_4
 .LBB0_2:
-	jsr	65490
-	lda	.Lstr,x
-	inx
-	cpx	#13
-	bne	.LBB0_1
-	jmp	.LBB0_4
-.LBB0_3:
-	lda	#13
-	jmp	.LBB0_2
+        jsr     65490
+        lda     .Lstr,x
+        inx
+        cpx     #13
+        bne     .LBB0_1
+        lda     #13
+        jsr     65490
+        rts
 .LBB0_4:
-	lda	#13
-	jsr	65490
-	rts
+        lda     #13
+        jmp     .LBB0_2
 
 .Lstr:
 	.asciz	"HELLO, 6502!"
