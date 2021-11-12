@@ -15,18 +15,21 @@ void main(void) {
 ```
 main:
 	ldx	#1
-	ldy	#72
+	lda	#72
 .LBB0_1:
-	lda	#13
-	cpy	#10
+	cmp	#10
 	beq	.LBB0_3
-	tya
-.LBB0_3:
+.LBB0_2:
 	jsr	65490
-	ldy	.Lstr,x
+	lda	.Lstr,x
 	inx
 	cpx	#13
 	bne	.LBB0_1
+	jmp	.LBB0_4
+.LBB0_3:
+	lda	#13
+	jmp	.LBB0_2
+.LBB0_4:
 	lda	#13
 	jsr	65490
 	rts
