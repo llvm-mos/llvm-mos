@@ -760,7 +760,7 @@ bool MOSLegalizerInfo::legalizeAshr(LegalizerHelper &Helper,
   assert(Ty == MRI.getType(Src));
   assert(Ty.isByteSized());
   auto ConstantAmt = getIConstantVRegValWithLookThrough(AmtReg, MRI);
-  if (!ConstantAmt) {
+  if (!ConstantAmt || !ConstantAmt->Value.isOne()) {
     if (!isPowerOf2_32(Ty.getSizeInBits()))
       return Helper.widenScalar(MI, 0,
                                 LLT::scalar(NextPowerOf2(Ty.getSizeInBits())));
@@ -768,56 +768,19 @@ bool MOSLegalizerInfo::legalizeAshr(LegalizerHelper &Helper,
       return Helper.narrowScalar(MI, 0, LLT::scalar(64));
     return shiftLibcall(Helper, MRI, MI);
   }
-
-  uint64_t Amt = ConstantAmt->Value.getZExtValue();
-
-  // This forms the base case for the problem decompositions below.
-  if (Amt == 0) {
-    Builder.buildCopy(Dst, Src);
-    MI.eraseFromParent();
-    return true;
-  }
-
   Register HighByte =
       (Ty == S8)
           ? Src
           : Builder.buildUnmerge(S8, Src).getReg(Ty.getSizeInBytes() - 1);
-  Register Shifted;
-  Register NewAmt;
-  // Shift by one byte, then shift the remainder.
-  if (Amt >= 8) {
-    Register Sign = Builder
-                        .buildICmp(ICmpInst::ICMP_SLT, S1, Src,
-                                   Builder.buildConstant(Ty, 0))
-                        .getReg(0);
-
-    auto Unmerge = Builder.buildUnmerge(S8, Src);
-    SmallVector<Register> DstBytes;
-    for (unsigned I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
-      DstBytes.push_back(Unmerge->getOperand(I).getReg());
-    DstBytes.erase(DstBytes.begin());
-    DstBytes.push_back(Builder.buildSExt(S8, Sign).getReg(0));
-    Shifted = Builder.buildMerge(Ty, DstBytes).getReg(0);
-    NewAmt = Builder.buildConstant(S8, Amt - 8).getReg(0);
-  } else {
-    // Once selected, this places the sign bit in the carry flag.
-    Register CarryIn = Builder
-                           .buildICmp(ICmpInst::ICMP_UGE, S1, HighByte,
-                                      Builder.buildConstant(S8, 0x80))
-                           .getReg(0);
-
-    // Shift by one, then shift the remainder.
-    auto Lshre = Builder.buildInstr(MOS::G_LSHRE, {Dst, S1}, {Src, CarryIn});
-    Shifted = Lshre.getReg(0);
-    if (!legalizeLshrEShlE(Helper, MRI, *Lshre))
-      return false;
-    NewAmt = Builder.buildConstant(S8, Amt - 1).getReg(0);
-  }
-
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(1).setReg(Shifted);
-  MI.getOperand(2).setReg(NewAmt);
-  Helper.Observer.changedInstr(MI);
+  // Once selected, this places the high bit in the carry flag.
+  Register CarryIn = Builder
+                         .buildICmp(ICmpInst::ICMP_UGE, S1, HighByte,
+                                    Builder.buildConstant(S8, 0x80))
+                         .getReg(0);
+  auto Lshre = Builder.buildInstr(MOS::G_LSHRE, {Dst, S1}, {Src, CarryIn});
+  if (!legalizeLshrEShlE(Helper, MRI, *Lshre))
+    return false;
+  MI.eraseFromParent();
   return true;
 }
 
