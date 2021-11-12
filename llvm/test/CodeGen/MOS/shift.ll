@@ -391,3 +391,23 @@ entry:
   %0 = ashr i16 %a, 15
   ret i16 %0
 }
+define i32 @ashr_16(i32 %a) {
+; CHECK-LABEL: ashr_16:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    ldx mos8(__rc3)
+; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    bpl .LBB21_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    ldy #-1
+; CHECK-NEXT:    jmp .LBB21_3
+; CHECK-NEXT:  .LBB21_2: ; %entry
+; CHECK-NEXT:    ldy #0
+; CHECK-NEXT:  .LBB21_3: ; %entry
+; CHECK-NEXT:    sty mos8(__rc2)
+; CHECK-NEXT:    sty mos8(__rc3)
+; CHECK-NEXT:    rts
+entry:
+  %0 = ashr i32 %a, 16
+  ret i32 %0
+}

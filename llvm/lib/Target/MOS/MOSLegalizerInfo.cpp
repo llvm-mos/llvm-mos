@@ -790,15 +790,19 @@ bool MOSLegalizerInfo::legalizeAshr(LegalizerHelper &Helper,
                         .buildICmp(ICmpInst::ICMP_SLT, S1, Src,
                                    Builder.buildConstant(Ty, 0))
                         .getReg(0);
-
+    Register Fill = Builder.buildSExt(S8, Sign).getReg(0);
     auto Unmerge = Builder.buildUnmerge(S8, Src);
     SmallVector<Register> DstBytes;
     for (unsigned I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
       DstBytes.push_back(Unmerge->getOperand(I).getReg());
-    DstBytes.erase(DstBytes.begin());
-    DstBytes.push_back(Builder.buildSExt(S8, Sign).getReg(0));
+    while (Amt >= 8) {
+      DstBytes.erase(DstBytes.begin());
+      DstBytes.push_back(Fill);
+      Amt -= 8;
+    }
+    assert(Amt < 8);
     Shifted = Builder.buildMerge(Ty, DstBytes).getReg(0);
-    NewAmt = Builder.buildConstant(S8, Amt - 8).getReg(0);
+    NewAmt = Builder.buildConstant(S8, Amt).getReg(0);
   } else {
     // Once selected, this places the sign bit in the carry flag.
     Register CarryIn = Builder
