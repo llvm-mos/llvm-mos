@@ -319,9 +319,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeXor(Helper, MRI, MI);
   case G_LSHR:
   case G_SHL:
-    return legalizeLshrShl(Helper, MRI, MI);
   case G_ASHR:
-    return legalizeAshr(Helper, MRI, MI);
+    return legalizeShift(Helper, MRI, MI);
   case G_ROTL:
     return legalizeRotl(Helper, MRI, MI);
   case G_ROTR:
@@ -653,9 +652,9 @@ static bool shouldOverShift(uint64_t Amt, LLT Ty) {
   return Amt * Ty.getSizeInBytes() > (8 - Amt) * (Ty.getSizeInBytes() + 1);
 }
 
-bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
-                                       MachineRegisterInfo &MRI,
-                                       MachineInstr &MI) const {
+bool MOSLegalizerInfo::legalizeShift(LegalizerHelper &Helper,
+                                     MachineRegisterInfo &MRI,
+                                     MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   Register Dst = MI.getOperand(0).getReg();
@@ -691,23 +690,37 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
 
   Register Shifted;
   Register NewAmt;
-  // Shift by one byte, then shift the remainder.
+  // Shift by one multiples of one byte.
   if (Amt >= 8) {
     auto Unmerge = Builder.buildUnmerge(S8, Src);
     SmallVector<Register> DstBytes;
     for (unsigned I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
       DstBytes.push_back(Unmerge->getOperand(I).getReg());
-    Register Zero = Builder.buildConstant(S8, 0).getReg(0);
-    if (MI.getOpcode() == G_LSHR) {
-      DstBytes.erase(DstBytes.begin());
-      DstBytes.push_back(Zero);
+    Register Fill;
+    if (MI.getOpcode() == MOS::G_ASHR) {
+      Register Sign = Builder
+                          .buildICmp(ICmpInst::ICMP_SLT, S1, Src,
+                                     Builder.buildConstant(Ty, 0))
+                          .getReg(0);
+      Fill = Builder.buildSExt(S8, Sign).getReg(0);
     } else {
-      assert(MI.getOpcode() == MOS::G_SHL);
-      DstBytes.pop_back();
-      DstBytes.insert(DstBytes.begin(), Zero);
+      Fill = Builder.buildConstant(S8, 0).getReg(0);
     }
+    // Instead of decomposing the problem recursively byte-by-byte, looping here
+    // ensures that Fill is reused for G_ASHR.
+    while (Amt >= 8) {
+      if (MI.getOpcode() == G_SHL) {
+        DstBytes.pop_back();
+        DstBytes.insert(DstBytes.begin(), Fill);
+      } else {
+        DstBytes.erase(DstBytes.begin());
+        DstBytes.push_back(Fill);
+      }
+      Amt -= 8;
+    }
+    assert(Amt < 8);
     Shifted = Builder.buildMerge(Ty, DstBytes).getReg(0);
-    NewAmt = Builder.buildConstant(S8, Amt - 8).getReg(0);
+    NewAmt = Builder.buildConstant(S8, Amt).getReg(0);
   } else if (shouldOverShift(Amt, Ty)) {
     LLT WideTy = LLT::scalar(Ty.getSizeInBits() + 8);
     Register WideSrc, LeftAmt, RightAmt;
@@ -716,8 +729,10 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
       LeftAmt = Builder.buildConstant(S8, 8).getReg(0);
       RightAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
     } else {
-      assert(MI.getOpcode() == G_LSHR);
-      WideSrc = Builder.buildZExt(WideTy, Src).getReg(0);
+      if (MI.getOpcode() == G_ASHR)
+        WideSrc = Builder.buildSExt(WideTy, Src).getReg(0);
+      else
+        WideSrc = Builder.buildZExt(WideTy, Src).getReg(0);
       LeftAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
       RightAmt = Builder.buildConstant(S8, 8).getReg(0);
     }
@@ -728,101 +743,24 @@ bool MOSLegalizerInfo::legalizeLshrShl(LegalizerHelper &Helper,
     return true;
   } else {
     // Shift by one, then shift the remainder.
-    auto Even = Builder.buildInstr(
-        MI.getOpcode() == G_LSHR ? MOS::G_LSHRE : MOS::G_SHLE, {Ty, S1},
-        {Src, Builder.buildConstant(S1, 0)});
+    Register CarryIn;
+    if (MI.getOpcode() == G_ASHR) {
+      // Once selected, this places the sign bit in the carry flag.
+      Register HighByte =
+          (Ty == S8)
+              ? Src
+              : Builder.buildUnmerge(S8, Src).getReg(Ty.getSizeInBytes() - 1);
+      CarryIn = Builder
+                    .buildICmp(ICmpInst::ICMP_UGE, S1, HighByte,
+                               Builder.buildConstant(S8, 0x80))
+                    .getReg(0);
+    } else
+      CarryIn = Builder.buildConstant(S1, 0).getReg(0);
+    auto Even =
+        Builder.buildInstr(MI.getOpcode() == G_SHL ? MOS::G_SHLE : MOS::G_LSHRE,
+                           {Ty, S1}, {Src, CarryIn});
     Shifted = Even.getReg(0);
     if (!legalizeLshrEShlE(Helper, MRI, *Even))
-      return false;
-    NewAmt = Builder.buildConstant(S8, Amt - 1).getReg(0);
-  }
-
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(1).setReg(Shifted);
-  MI.getOperand(2).setReg(NewAmt);
-  Helper.Observer.changedInstr(MI);
-  return true;
-}
-
-bool MOSLegalizerInfo::legalizeAshr(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  Register AmtReg = MI.getOperand(2).getReg();
-
-  LLT Ty = MRI.getType(Dst);
-  assert(Ty == MRI.getType(Src));
-  assert(Ty.isByteSized());
-  auto ConstantAmt = getIConstantVRegValWithLookThrough(AmtReg, MRI);
-  if (!ConstantAmt) {
-    if (!isPowerOf2_32(Ty.getSizeInBits()))
-      return Helper.widenScalar(MI, 0,
-                                LLT::scalar(NextPowerOf2(Ty.getSizeInBits())));
-    if (Ty.getSizeInBits() > 64)
-      return Helper.narrowScalar(MI, 0, LLT::scalar(64));
-    return shiftLibcall(Helper, MRI, MI);
-  }
-
-  uint64_t Amt = ConstantAmt->Value.getZExtValue();
-
-  // This forms the base case for the problem decompositions below.
-  if (Amt == 0) {
-    Builder.buildCopy(Dst, Src);
-    MI.eraseFromParent();
-    return true;
-  }
-
-  Register HighByte =
-      (Ty == S8)
-          ? Src
-          : Builder.buildUnmerge(S8, Src).getReg(Ty.getSizeInBytes() - 1);
-  Register Shifted;
-  Register NewAmt;
-  // Shift by one byte, then shift the remainder.
-  if (Amt >= 8) {
-    Register Sign = Builder
-                        .buildICmp(ICmpInst::ICMP_SLT, S1, Src,
-                                   Builder.buildConstant(Ty, 0))
-                        .getReg(0);
-    Register Fill = Builder.buildSExt(S8, Sign).getReg(0);
-    auto Unmerge = Builder.buildUnmerge(S8, Src);
-    SmallVector<Register> DstBytes;
-    for (unsigned I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
-      DstBytes.push_back(Unmerge->getOperand(I).getReg());
-    while (Amt >= 8) {
-      DstBytes.erase(DstBytes.begin());
-      DstBytes.push_back(Fill);
-      Amt -= 8;
-    }
-    assert(Amt < 8);
-    Shifted = Builder.buildMerge(Ty, DstBytes).getReg(0);
-    NewAmt = Builder.buildConstant(S8, Amt).getReg(0);
-  } else if (shouldOverShift(Amt, Ty)) {
-    LLT WideTy = LLT::scalar(Ty.getSizeInBits() + 8);
-    Register WideSrc = Builder.buildSExt(WideTy, Src).getReg(0);
-    Register LeftAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
-    Register RightAmt = Builder.buildConstant(S8, 8).getReg(0);
-    auto Left = Builder.buildShl(WideTy, WideSrc, LeftAmt);
-    auto Right = Builder.buildAShr(WideTy, Left, RightAmt).getReg(0);
-    Builder.buildTrunc(Dst, Right);
-    MI.eraseFromParent();
-    return true;
-  } else {
-    // Once selected, this places the sign bit in the carry flag.
-    Register CarryIn = Builder
-                           .buildICmp(ICmpInst::ICMP_UGE, S1, HighByte,
-                                      Builder.buildConstant(S8, 0x80))
-                           .getReg(0);
-
-    // Shift by one, then shift the remainder.
-    auto Lshre = Builder.buildInstr(MOS::G_LSHRE, {Ty, S1}, {Src, CarryIn});
-    Shifted = Lshre.getReg(0);
-    if (!legalizeLshrEShlE(Helper, MRI, *Lshre))
       return false;
     NewAmt = Builder.buildConstant(S8, Amt - 1).getReg(0);
   }

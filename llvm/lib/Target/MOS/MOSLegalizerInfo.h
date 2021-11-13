@@ -47,10 +47,8 @@ private:
                       MachineInstr &MI) const;
   bool legalizeXor(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
-  bool legalizeLshrShl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+  bool legalizeShift(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
-  bool legalizeAshr(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
   bool legalizeLshrEShlE(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                          MachineInstr &MI) const;
   bool shiftLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
