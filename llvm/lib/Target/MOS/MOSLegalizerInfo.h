@@ -47,15 +47,11 @@ private:
                       MachineInstr &MI) const;
   bool legalizeXor(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
-  bool legalizeShift(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                       MachineInstr &MI) const;
+  bool legalizeShiftRotate(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                           MachineInstr &MI) const;
   bool legalizeLshrEShlE(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                          MachineInstr &MI) const;
   bool shiftLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
-  bool legalizeRotl(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
-  bool legalizeRotr(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;

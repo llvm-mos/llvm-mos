@@ -403,25 +403,13 @@ entry:
 define i16 @rol_1(i16 %a) {
 ; CHECK-LABEL: rol_1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    asl
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda mos8(__rc3)
 ; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    rol mos8(__rc2)
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    rol mos8(__rc3)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    sta mos8(__rc4)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    ora mos8(__rc2)
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
 ; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 1)
@@ -430,33 +418,16 @@ entry:
 define i16 @rol_2(i16 %a) {
 ; CHECK-LABEL: rol_2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    stx mos8(__rc2)
-; CHECK-NEXT:    asl
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    ldx mos8(__rc3)
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    rol mos8(__rc3)
-; CHECK-NEXT:    asl mos8(__rc2)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    asl mos8(__rc2)
-; CHECK-NEXT:    rol mos8(__rc4)
-; CHECK-NEXT:    rol
 ; CHECK-NEXT:    sta mos8(__rc2)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc4)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    ora mos8(__rc3)
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
 ; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 2)
@@ -465,37 +436,22 @@ entry:
 define i16 @rol_4(i16 %a) {
 ; CHECK-LABEL: rol_4:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    stx mos8(__rc2)
-; CHECK-NEXT:    asl
+; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
 ; CHECK-NEXT:    tax
 ; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    ldx mos8(__rc3)
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    rol mos8(__rc3)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 4)
@@ -504,35 +460,23 @@ entry:
 define i16 @rol_5(i16 %a) {
 ; CHECK-LABEL: rol_5:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    lsr mos8(__rc5)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    ror mos8(__rc3)
 ; CHECK-NEXT:    ror
-; CHECK-NEXT:    lsr mos8(__rc5)
 ; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc3)
 ; CHECK-NEXT:    ror
-; CHECK-NEXT:    lsr mos8(__rc5)
 ; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc3)
 ; CHECK-NEXT:    ror
+; CHECK-NEXT:    ror mos8(__rc2)
 ; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 5)
@@ -543,23 +487,11 @@ define i16 @rol_7(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    lsr mos8(__rc3)
-; CHECK-NEXT:    sta mos8(__rc3)
 ; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    ror
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    sta mos8(__rc4)
 ; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    ora mos8(__rc3)
 ; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 7)
@@ -582,33 +514,12 @@ entry:
 define i16 @rol_15(i16 %a) {
 ; CHECK-LABEL: rol_15:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ldx #1
-; CHECK-NEXT:    bcs .LBB28_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:  .LBB28_2: ; %entry
-; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    tya
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    lsr mos8(__rc4)
-; CHECK-NEXT:    ror mos8(__rc2)
 ; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    ldy mos8(__rc5)
-; CHECK-NEXT:    cpy #1
+; CHECK-NEXT:    ror mos8(__rc2)
 ; CHECK-NEXT:    ror
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 15)
@@ -618,166 +529,93 @@ entry:
 define i16 @ror_1(i16 %a) {
 ; CHECK-LABEL: ror_1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    asl
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda mos8(__rc3)
-; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    rol mos8(__rc2)
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    rol mos8(__rc3)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    ror mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 1)
+  %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 1)
   ret i16 %0
 }
 define i16 @ror_2(i16 %a) {
 ; CHECK-LABEL: ror_2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx mos8(__rc2)
-; CHECK-NEXT:    asl
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    ldx mos8(__rc3)
 ; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    rol mos8(__rc3)
-; CHECK-NEXT:    asl mos8(__rc2)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    asl mos8(__rc2)
-; CHECK-NEXT:    rol mos8(__rc4)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc4)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    ror mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    sta mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 2)
+  %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 2)
   ret i16 %0
 }
 define i16 @ror_4(i16 %a) {
 ; CHECK-LABEL: ror_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx mos8(__rc2)
-; CHECK-NEXT:    asl
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    rol
-; CHECK-NEXT:    asl mos8(__rc3)
-; CHECK-NEXT:    ldx mos8(__rc3)
 ; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    rol mos8(__rc3)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    lsr
+; CHECK-NEXT:    ror mos8(__rc3)
 ; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    lsr
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    sta mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc3)
 ; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    lsr
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    sta mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc3)
 ; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    sta mos8(__rc4)
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    sta mos8(__rc3)
+; CHECK-NEXT:    ror mos8(__rc3)
 ; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    ror
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 4)
+  %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 4)
   ret i16 %0
 }
 define i16 @ror_5(i16 %a) {
 ; CHECK-LABEL: ror_5:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    lsr mos8(__rc5)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    lsr mos8(__rc5)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    lsr mos8(__rc5)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    ror mos8(__rc3)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 5)
+  %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 5)
   ret i16 %0
 }
 define i16 @ror_7(i16 %a) {
 ; CHECK-LABEL: ror_7:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    stx mos8(__rc2)
-; CHECK-NEXT:    stx mos8(__rc3)
-; CHECK-NEXT:    lsr mos8(__rc3)
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    ror mos8(__rc2)
+; CHECK-NEXT:    sta mos8(__rc2)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 7)
+  %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 7)
   ret i16 %0
 }
 define i16 @ror_8(i16 %a) {
@@ -791,41 +629,19 @@ define i16 @ror_8(i16 %a) {
 ; CHECK-NEXT:    tya
 ; CHECK-NEXT:    rts
 entry:
-  %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 8)
+  %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 8)
   ret i16 %0
 }
 define i16 @ror_15(i16 %a) {
 ; CHECK-LABEL: ror_15:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    lsr
-; CHECK-NEXT:    ldx #1
-; CHECK-NEXT:    bcs .LBB35_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:  .LBB35_2: ; %entry
-; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    tya
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    lsr mos8(__rc4)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    ldy mos8(__rc5)
-; CHECK-NEXT:    cpy #1
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ora mos8(__rc3)
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    ora mos8(__rc2)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 15)
+  %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 15)
   ret i16 %0
 }

@@ -152,18 +152,17 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       {G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT, G_SSHLSAT, G_USHLSAT})
       .lower();
 
-  getActionDefinitionsBuilder({G_LSHR, G_SHL})
+  getActionDefinitionsBuilder({G_LSHR, G_SHL, G_ASHR})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(1, S8)
       .custom();
 
-  getActionDefinitionsBuilder(G_ASHR)
-      .widenScalarToNextMultipleOf(0, 8)
-      .maxScalar(1, S8)
+  getActionDefinitionsBuilder({G_ROTL, G_ROTR})
+      .lowerIf([](const LegalityQuery &Query) {
+        assert(Query.Types[0].isScalar());
+        return !Query.Types[0].isByteSized();
+      })
       .custom();
-
-  getActionDefinitionsBuilder(G_ROTL).customFor({S8}).lower();
-  getActionDefinitionsBuilder(G_ROTR).customFor({S8}).lower();
 
   getActionDefinitionsBuilder(G_ICMP)
       .customFor({{S1, P}, {S1, S8}})
@@ -320,11 +319,9 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_LSHR:
   case G_SHL:
   case G_ASHR:
-    return legalizeShift(Helper, MRI, MI);
   case G_ROTL:
-    return legalizeRotl(Helper, MRI, MI);
   case G_ROTR:
-    return legalizeRotr(Helper, MRI, MI);
+    return legalizeShiftRotate(Helper, MRI, MI);
   case G_ICMP:
     return legalizeICmp(Helper, MRI, MI);
   case G_SELECT:
@@ -642,24 +639,29 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
   return true;
 }
 
-// Whether or not it's worth shifting by 8 in a type one byte wider and shifting
-// in the opposite direction by 8-n.
-static bool shouldOverShift(uint64_t Amt, LLT Ty) {
+// Whether or not it's worth shifting/rotating by 8 (in a type one byte wider
+// for shifts) and shifting/rotating in the opposite direction by 8-n.
+static bool shouldOverCorrect(uint64_t Amt, LLT Ty, bool IsRotate) {
   assert(Amt < 8);
 
-  // The choice is thus between emitting Amt shifts at width Ty, or emitting 8 -
-  // Amt shifts (in the opposite direction) at width Ty + 8.
+  if (IsRotate)
+    return Amt > 4;
+
+  // The choice is between emitting Amt operations at width Ty, or emitting 8 -
+  // Amt operations (in the opposite direction) at width Ty + 8.
   return Amt * Ty.getSizeInBytes() > (8 - Amt) * (Ty.getSizeInBytes() + 1);
 }
 
-bool MOSLegalizerInfo::legalizeShift(LegalizerHelper &Helper,
-                                     MachineRegisterInfo &MRI,
-                                     MachineInstr &MI) const {
+bool MOSLegalizerInfo::legalizeShiftRotate(LegalizerHelper &Helper,
+                                           MachineRegisterInfo &MRI,
+                                           MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   Register AmtReg = MI.getOperand(2).getReg();
+
+  bool IsRotate = MI.getOpcode() == G_ROTL || MI.getOpcode() == G_ROTR;
 
   LLT Ty = MRI.getType(Dst);
   assert(Ty == MRI.getType(Src));
@@ -671,6 +673,8 @@ bool MOSLegalizerInfo::legalizeShift(LegalizerHelper &Helper,
   // Presently, only left shifts by one bit are supported.
   auto ConstantAmt = getIConstantVRegValWithLookThrough(AmtReg, MRI);
   if (!ConstantAmt) {
+    if (IsRotate)
+      return Helper.lowerRotate(MI);
     if (!isPowerOf2_32(Ty.getSizeInBits()))
       return Helper.widenScalar(MI, 0,
                                 LLT::scalar(NextPowerOf2(Ty.getSizeInBits())));
@@ -688,7 +692,7 @@ bool MOSLegalizerInfo::legalizeShift(LegalizerHelper &Helper,
     return true;
   }
 
-  Register Shifted;
+  Register Partial;
   Register NewAmt;
   // Shift by one multiples of one byte.
   if (Amt >= 8) {
@@ -697,55 +701,133 @@ bool MOSLegalizerInfo::legalizeShift(LegalizerHelper &Helper,
     for (unsigned I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
       DstBytes.push_back(Unmerge->getOperand(I).getReg());
     Register Fill;
-    if (MI.getOpcode() == MOS::G_ASHR) {
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Invalid opcode.");
+    case MOS::G_ROTL:
+    case MOS::G_ROTR:
+      break;
+    case MOS::G_ASHR: {
       Register Sign = Builder
                           .buildICmp(ICmpInst::ICMP_SLT, S1, Src,
                                      Builder.buildConstant(Ty, 0))
                           .getReg(0);
       Fill = Builder.buildSExt(S8, Sign).getReg(0);
-    } else {
+      break;
+    }
+    case MOS::G_LSHR:
+    case MOS::G_SHL:
       Fill = Builder.buildConstant(S8, 0).getReg(0);
+      break;
     }
     // Instead of decomposing the problem recursively byte-by-byte, looping here
     // ensures that Fill is reused for G_ASHR.
     while (Amt >= 8) {
-      if (MI.getOpcode() == G_SHL) {
-        DstBytes.pop_back();
-        DstBytes.insert(DstBytes.begin(), Fill);
-      } else {
+      switch (MI.getOpcode()) {
+      default:
+        llvm_unreachable("Invalid opcode.");
+      case MOS::G_LSHR:
+      case MOS::G_ASHR:
+      case MOS::G_SHL:
+        break;
+      case MOS::G_ROTR:
+        Fill = DstBytes.front();
+        break;
+      case MOS::G_ROTL:
+        Fill = DstBytes.back();
+        break;
+      }
+      switch (MI.getOpcode()) {
+      default:
+        llvm_unreachable("Invalid opcode.");
+      case MOS::G_LSHR:
+      case MOS::G_ASHR:
+      case MOS::G_ROTR:
         DstBytes.erase(DstBytes.begin());
         DstBytes.push_back(Fill);
+        break;
+      case MOS::G_SHL:
+      case MOS::G_ROTL:
+        DstBytes.pop_back();
+        DstBytes.insert(DstBytes.begin(), Fill);
+        break;
       }
       Amt -= 8;
     }
     assert(Amt < 8);
-    Shifted = Builder.buildMerge(Ty, DstBytes).getReg(0);
+    Partial = Builder.buildMerge(Ty, DstBytes).getReg(0);
     NewAmt = Builder.buildConstant(S8, Amt).getReg(0);
-  } else if (shouldOverShift(Amt, Ty)) {
-    LLT WideTy = LLT::scalar(Ty.getSizeInBits() + 8);
-    Register WideSrc, LeftAmt, RightAmt;
-    if (MI.getOpcode() == G_SHL) {
-      WideSrc = Builder.buildAnyExt(WideTy, Src).getReg(0);
-      LeftAmt = Builder.buildConstant(S8, 8).getReg(0);
-      RightAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
-    } else {
-      if (MI.getOpcode() == G_ASHR)
-        WideSrc = Builder.buildSExt(WideTy, Src).getReg(0);
+  } else if (shouldOverCorrect(Amt, Ty, IsRotate)) {
+    Register LeftAmt, RightAmt;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Invalid opcode.");
+    case G_SHL:
+    case G_ROTL:
+      if (Ty == S8 && MI.getOpcode() == G_ROTL)
+        LeftAmt = Builder.buildConstant(S8, 0).getReg(0);
       else
-        WideSrc = Builder.buildZExt(WideTy, Src).getReg(0);
+        LeftAmt = Builder.buildConstant(S8, 8).getReg(0);
+      RightAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
+      break;
+    case G_LSHR:
+    case G_ASHR:
+    case G_ROTR:
       LeftAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
-      RightAmt = Builder.buildConstant(S8, 8).getReg(0);
+      if (Ty == S8 && MI.getOpcode() == G_ROTR)
+        RightAmt = Builder.buildConstant(S8, 0).getReg(0);
+      else
+        RightAmt = Builder.buildConstant(S8, 8).getReg(0);
     }
-    auto Left = Builder.buildShl(WideTy, WideSrc, LeftAmt);
-    auto Right = Builder.buildLShr(WideTy, Left, RightAmt).getReg(0);
-    Builder.buildTrunc(Dst, Right);
+    if (IsRotate) {
+      auto Left = Builder.buildRotateLeft(Ty, Src, LeftAmt);
+      Builder.buildRotateRight(Dst, Left, RightAmt);
+    } else {
+      LLT WideTy = LLT::scalar(Ty.getSizeInBits() + 8);
+      Register WideSrc;
+      switch (MI.getOpcode()) {
+      default:
+        llvm_unreachable("Invalid opcode.");
+      case G_SHL:
+        WideSrc = Builder.buildAnyExt(WideTy, Src).getReg(0);
+        break;
+      case G_LSHR:
+        WideSrc = Builder.buildZExt(WideTy, Src).getReg(0);
+        break;
+      case G_ASHR:
+        WideSrc = Builder.buildSExt(WideTy, Src).getReg(0);
+        break;
+      }
+      auto Left = Builder.buildShl(WideTy, WideSrc, LeftAmt);
+      auto Right = Builder.buildLShr(WideTy, Left, RightAmt).getReg(0);
+      Builder.buildTrunc(Dst, Right);
+    }
     MI.eraseFromParent();
     return true;
   } else {
     // Shift by one, then shift the remainder.
+
     Register CarryIn;
-    if (MI.getOpcode() == G_ASHR) {
-      // Once selected, this places the sign bit in the carry flag.
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Invalid opcode.");
+    case G_SHL:
+    case G_LSHR:
+      CarryIn = Builder.buildConstant(S1, 0).getReg(0);
+      break;
+    case G_ROTR: {
+      // Once selected, this places the low bit in the carry flag.
+      Register LowByte =
+          (Ty == S8) ? Src : Builder.buildUnmerge(S8, Src).getReg(0);
+      CarryIn = Builder
+                    .buildInstr(MOS::G_LSHRE, {S8, S1},
+                                {LowByte, Builder.buildUndef(S1)})
+                    .getReg(1);
+      break;
+    }
+    case G_ASHR:
+    case G_ROTL: {
+      // Once selected, this places the high bit in the carry flag.
       Register HighByte =
           (Ty == S8)
               ? Src
@@ -754,19 +836,33 @@ bool MOSLegalizerInfo::legalizeShift(LegalizerHelper &Helper,
                     .buildICmp(ICmpInst::ICMP_UGE, S1, HighByte,
                                Builder.buildConstant(S8, 0x80))
                     .getReg(0);
-    } else
-      CarryIn = Builder.buildConstant(S1, 0).getReg(0);
-    auto Even =
-        Builder.buildInstr(MI.getOpcode() == G_SHL ? MOS::G_SHLE : MOS::G_LSHRE,
-                           {Ty, S1}, {Src, CarryIn});
-    Shifted = Even.getReg(0);
+      break;
+    }
+    }
+
+    unsigned Opcode;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Invalid opcode.");
+    case G_SHL:
+    case G_ROTL:
+      Opcode = MOS::G_SHLE;
+      break;
+    case G_LSHR:
+    case G_ASHR:
+    case G_ROTR:
+      Opcode = MOS::G_LSHRE;
+      break;
+    }
+    auto Even = Builder.buildInstr(Opcode, {Ty, S1}, {Src, CarryIn});
+    Partial = Even.getReg(0);
     if (!legalizeLshrEShlE(Helper, MRI, *Even))
       return false;
     NewAmt = Builder.buildConstant(S8, Amt - 1).getReg(0);
   }
 
   Helper.Observer.changingInstr(MI);
-  MI.getOperand(1).setReg(Shifted);
+  MI.getOperand(1).setReg(Partial);
   MI.getOperand(2).setReg(NewAmt);
   Helper.Observer.changedInstr(MI);
   return true;
@@ -834,46 +930,6 @@ bool MOSLegalizerInfo::shiftLibcall(LegalizerHelper &Helper,
                      {MI.getOperand(0).getReg(), HLTy, 0}, Args))
     return false;
 
-  MI.eraseFromParent();
-  return true;
-}
-
-bool MOSLegalizerInfo::legalizeRotl(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  LLT S8 = LLT::scalar(8);
-
-  Register RotateAmt = MI.getOperand(2).getReg();
-  if (!mi_match(RotateAmt, MRI, m_SpecificICst(7)))
-    return Helper.lowerRotate(MI) == LegalizerHelper::Legalized;
-
-  Register One = Builder.buildConstant(S8, 1).getReg(0);
-  Helper.Observer.changingInstr(MI);
-  MI.setDesc(Builder.getTII().get(G_ROTR));
-  MI.getOperand(2).setReg(One);
-  Helper.Observer.changedInstr(MI);
-  return true;
-}
-
-bool MOSLegalizerInfo::legalizeRotr(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-  LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  Register RotateAmt = MI.getOperand(2).getReg();
-
-  if (!mi_match(RotateAmt, MRI, m_SpecificICst(1)))
-    return Helper.lowerRotate(MI) == LegalizerHelper::Legalized;
-
-  Register LSB =
-      Builder.buildInstr(MOS::G_LSHRE, {S8, S1}, {Src, Builder.buildUndef(S1)})
-          .getReg(1);
-  Builder.buildInstr(MOS::G_LSHRE, {Dst, S1}, {Src, LSB});
   MI.eraseFromParent();
   return true;
 }
