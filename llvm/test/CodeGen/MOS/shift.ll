@@ -280,23 +280,25 @@ define i16 @ashr_5(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    cpx #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    bpl .LBB17_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    jmp .LBB17_3
+; CHECK-NEXT:  .LBB17_2: ; %entry
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:  .LBB17_3: ; %entry
+; CHECK-NEXT:    asl mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    rol mos8(__rc3)
+; CHECK-NEXT:    asl mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    rol mos8(__rc3)
+; CHECK-NEXT:    asl mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    rol mos8(__rc3)
+; CHECK-NEXT:    ldx mos8(__rc3)
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 5
@@ -307,29 +309,19 @@ define i16 @ashr_7(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    cpx #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    bpl .LBB18_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    jmp .LBB18_3
+; CHECK-NEXT:  .LBB18_2: ; %entry
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:  .LBB18_3: ; %entry
+; CHECK-NEXT:    asl mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 7
@@ -354,38 +346,31 @@ entry:
 define i16 @ashr_15(i16 %a) {
 ; CHECK-LABEL: ashr_15:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    tay
 ; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bpl .LBB20_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    lda #-1
+; CHECK-NEXT:    ldx #-1
 ; CHECK-NEXT:    jmp .LBB20_3
 ; CHECK-NEXT:  .LBB20_2: ; %entry
-; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:  .LBB20_3: ; %entry
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    cmp #128
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    bpl .LBB20_5
+; CHECK-NEXT:  ; %bb.4: ; %entry
+; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    jmp .LBB20_6
+; CHECK-NEXT:  .LBB20_5: ; %entry
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:  .LBB20_6: ; %entry
+; CHECK-NEXT:    sty mos8(__rc2)
+; CHECK-NEXT:    asl mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = ashr i16 %a, 15

@@ -648,9 +648,8 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
 static bool shouldOverShift(uint64_t Amt, LLT Ty) {
   assert(Amt < 8);
 
-  // We assume that the initial shift by 8 is free, as it's just a relabeling of
-  // the inputs. The choice is thus between emitting Amt shifts at width Ty, or
-  // emitting 8 - Amt shifts (in the opposite direction) at width Ty + 8.
+  // The choice is thus between emitting Amt shifts at width Ty, or emitting 8 -
+  // Amt shifts (in the opposite direction) at width Ty + 8.
   return Amt * Ty.getSizeInBytes() > (8 - Amt) * (Ty.getSizeInBytes() + 1);
 }
 
@@ -803,6 +802,16 @@ bool MOSLegalizerInfo::legalizeAshr(LegalizerHelper &Helper,
     assert(Amt < 8);
     Shifted = Builder.buildMerge(Ty, DstBytes).getReg(0);
     NewAmt = Builder.buildConstant(S8, Amt).getReg(0);
+  } else if (shouldOverShift(Amt, Ty)) {
+    LLT WideTy = LLT::scalar(Ty.getSizeInBits() + 8);
+    Register WideSrc = Builder.buildSExt(WideTy, Src).getReg(0);
+    Register LeftAmt = Builder.buildConstant(S8, 8 - Amt).getReg(0);
+    Register RightAmt = Builder.buildConstant(S8, 8).getReg(0);
+    auto Left = Builder.buildShl(WideTy, WideSrc, LeftAmt);
+    auto Right = Builder.buildAShr(WideTy, Left, RightAmt).getReg(0);
+    Builder.buildTrunc(Dst, Right);
+    MI.eraseFromParent();
+    return true;
   } else {
     // Once selected, this places the sign bit in the carry flag.
     Register CarryIn = Builder
