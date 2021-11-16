@@ -14,7 +14,7 @@
 // additional points worth mentioning:
 //
 // - A, X, Y, C, N, V, Z, and RS1-RS12 are caller-saved. PC, S, D, I, RS0, and
-//   RS8-RS15 are callee-saved.
+//   RS9-RS15 are callee-saved.
 //
 // - Aggregate types (structs, arrays, etc.) are passed by pointer. The pointer
 //   is managed entirely by the caller, and may or may not be on the soft stack.
@@ -86,7 +86,7 @@ def CC_MOS_VarArgs : CallingConv<[
 ]>;
 }
 
-// RS8-RS15 are callee-saved. These are represented implicitly by their
+// RS9-RS15 are callee-saved. These are represented implicitly by their
 // subregisters, since the subregisters are what must be saved and restored.
 def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 18, 31)>;
 
