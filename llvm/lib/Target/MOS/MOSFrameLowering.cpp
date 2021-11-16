@@ -44,13 +44,14 @@ bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     std::vector<CalleeSavedInfo> &CSI) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  for (CalleeSavedInfo &I : CSI) {
+  for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
+    auto &Info = CSI[I];
     // We place the first four CSRs on the hard stack, which we don't explicitly
     // model in PEI.
-    if (I.getReg().id() < MOS::RC30 + 4)
-      I.setTargetSpilled();
+    if (I < 4)
+      Info.setTargetSpilled();
     else
-      I.setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
+      Info.setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
   }
 
   return true;
@@ -180,10 +181,10 @@ void MOSFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   if (isISR(MF)) {
-    // Accesses to RS14 can occur through the register scavenger, which occurs
+    // Accesses to RS8 can occur through the register scavenger, which occurs
     // after PEI. Conservatively assume these are used.
-    SavedRegs.set(MOS::RC28);
-    SavedRegs.set(MOS::RC29);
+    SavedRegs.set(MOS::RC16);
+    SavedRegs.set(MOS::RC17);
 
     // We need A to save anything else. This may require in turn saving A.
     // Normally, this could be done with __save_A, but for ISRs, that location
@@ -195,14 +196,7 @@ void MOSFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
     // We need Y to save anything to the soft stack. Similar reasoning applies
     // to Y.
-    const auto MustSaveY = [&]() {
-      for (Register R = MOS::RC34; R <= MOS::RC255; R = R + 1) {
-        if (SavedRegs.test(R))
-          return true;
-      }
-      return false;
-    };
-    if (MustSaveY())
+    if (SavedRegs.size() > 4)
       SavedRegs.set(MOS::Y);
   }
 }

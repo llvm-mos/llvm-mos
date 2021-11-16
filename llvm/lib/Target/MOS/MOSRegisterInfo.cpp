@@ -33,12 +33,6 @@
 
 using namespace llvm;
 
-cl::opt<int>
-    NumImagPtrs("num-imag-ptrs", cl::init(127), cl::ZeroOrMore,
-                cl::desc("Number of imaginary (Imag8) pointer registers "
-                         "available for compiler use."),
-                cl::value_desc("imaginary pointer registers"));
-
 MOSRegisterInfo::MOSRegisterInfo()
     : MOSGenRegisterInfo(/*RA=*/0, /*DwarfFlavor=*/0, /*EHFlavor=*/0,
                          /*PC=*/0, /*HwMode=*/0),
@@ -57,23 +51,15 @@ MOSRegisterInfo::MOSRegisterInfo()
     std::transform(Str.begin(), Str.end(), Str.begin(), ::tolower);
   }
 
-  // Set somewhat arbitrarily at 16.
-  // FIXME: Once optimization work is more stable, find the real minimum.
-  if (NumImagPtrs < 16)
-    report_fatal_error("At least 16 imaginary pointers must be available.");
-  if (NumImagPtrs > 128)
-    report_fatal_error("More than 128 imaginary pointers cannot be available: "
-                       "only 128 exist.");
-
   // Reserve all imaginary registers beyond the number allowed to the compiler.
-  for (Register Ptr = MOS::RS0 + NumImagPtrs; Ptr <= MOS::RS127; Ptr = Ptr + 1)
+  for (Register Ptr = MOS::RS16; Ptr <= MOS::RS127; Ptr = Ptr + 1)
     reserveAllSubregs(&Reserved, Ptr);
 
   // Reserve stack pointers.
   reserveAllSubregs(&Reserved, MOS::RS0);
 
   // Reserve one temporary register for use by register scavenger.
-  reserveAllSubregs(&Reserved, MOS::RS14);
+  reserveAllSubregs(&Reserved, MOS::RS8);
 }
 
 const MCPhysReg *
@@ -159,9 +145,9 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     report_fatal_error("Scavenger spill for register not yet implemented.");
   case MOS::A:
   case MOS::Y: {
-    // RS14 is reserved to save A and Y if necessary, but pushing is still
+    // RS8 is reserved to save A and Y if necessary, but pushing is still
     // preferred.
-    Register Save = Reg == MOS::A ? MOS::RC28 : MOS::RC29;
+    Register Save = Reg == MOS::A ? MOS::RC16 : MOS::RC17;
     bool UseHardStack =
         (Reg == MOS::A || STI.has65C02()) && pushPullBalanced(I, UseMI);
 

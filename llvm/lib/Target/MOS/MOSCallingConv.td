@@ -13,8 +13,8 @@
 // The C calling convention is mostly described inline. There are a few
 // additional points worth mentioning:
 //
-// - A, X, Y, RS1-RS14, and the flags are caller-saved. All other registers and
-//   imaginary locations are callee-saved.
+// - A, X, Y, C, N, V, Z, and RS1-RS12 are caller-saved. PC, S, D, I, RS0, and
+//   RS8-RS15 are callee-saved.
 //
 // - Aggregate types (structs, arrays, etc.) are passed by pointer. The pointer
 //   is managed entirely by the caller, and may or may not be on the soft stack.
@@ -60,7 +60,7 @@ def CC_MOS : CallingConv<[
   // addressing modes work without additional copying.
   //
   // RS0 is skipped since it's the stack pointer. Only caller-saved registers
-  // are used.
+  // are used, but RS8 is reserved for compiler use.
   CCIfPtr<CCAssignToReg<[RS1, RS2, RS3, RS4, RS5, RS6, RS7]>>,
 
   // 8-bit values are assigned to A, then X, then the caller-saved 8-bit
@@ -86,13 +86,12 @@ def CC_MOS_VarArgs : CallingConv<[
 ]>;
 }
 
-// All registers are callee saved past RS14. These are represented implicitly by
-// their subregisters, since the subregisters are what must be saved and
-// restored.
-def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 30, 255)>;
+// RS8-RS15 are callee-saved. These are represented implicitly by their
+// subregisters, since the subregisters are what must be saved and restored.
+def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 18, 31)>;
 
 // Interrupts save all registers except the stack pointers (which are restored
 // upon return by any function) and the flags (which are implicitly saved by the
 // interrupt).
 def MOS_Interrupt_CSR :
-  CalleeSavedRegs<(add A, X, Y, (sequence "RC%u", 2, 255))>;
+  CalleeSavedRegs<(add A, X, Y, (sequence "RC%u", 2, 31))>;

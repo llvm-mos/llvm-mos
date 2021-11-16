@@ -142,47 +142,93 @@ name: interrupt_axy
 body: |
   bb.0.entry:
     ; 6502-LABEL: name: interrupt_axy
-    ; 6502: frame-setup PH $a
+    ; 6502: $c = LDCImm 0
+    ; 6502-NEXT: PH $a
+    ; 6502-NEXT: $a = COPY $rc0
+    ; 6502-NEXT: $a, $c, $v = ADCImm $a, 255, $c
+    ; 6502-NEXT: PH killed $a
+    ; 6502-NEXT: $a = COPY $rc1
+    ; 6502-NEXT: $a, $c, $v = ADCImm $a, 255, $c
+    ; 6502-NEXT: $rc1 = COPY killed $a
+    ; 6502-NEXT: $a = PL
+    ; 6502-NEXT: $rc0 = COPY killed $a
+    ; 6502-NEXT: $a = PL
+    ; 6502-NEXT: KILL killed $p
+    ; 6502-NEXT: frame-setup PH $a
     ; 6502-NEXT: $a = frame-setup COPY $x
     ; 6502-NEXT: frame-setup PH killed $a
     ; 6502-NEXT: $a = frame-setup COPY $y
     ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc28
+    ; 6502-NEXT: $a = frame-setup COPY $rc16
     ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc29
-    ; 6502-NEXT: frame-setup PH killed $a
+    ; 6502-NEXT: $a = COPY $rc17
+    ; 6502-NEXT: $y = LDImm 0
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
     ; 6502-NEXT: $x = LDImm 42
     ; 6502-NEXT: $a = LDImm 43
     ; 6502-NEXT: $y = LDImm 44
+    ; 6502-NEXT: $y = LDImm 0
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
+    ; 6502-NEXT: $rc17 = COPY killed $a
     ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc29 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc28 = frame-destroy COPY killed $a
+    ; 6502-NEXT: $rc16 = frame-destroy COPY killed $a
     ; 6502-NEXT: $a = frame-destroy PL
     ; 6502-NEXT: $y = frame-destroy COPY killed $a
     ; 6502-NEXT: $a = frame-destroy PL
     ; 6502-NEXT: $x = frame-destroy COPY killed $a
     ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc28, implicit $rc29
+    ; 6502-NEXT: PH $a
+    ; 6502-NEXT: $c = LDCImm 0
+    ; 6502-NEXT: $a = COPY $rc0
+    ; 6502-NEXT: $a, $c, $v = ADCImm $a, 1, $c
+    ; 6502-NEXT: $rc0 = COPY killed $a
+    ; 6502-NEXT: $a = COPY $rc1
+    ; 6502-NEXT: $a, $c, $v = ADCImm $a, 0, $c
+    ; 6502-NEXT: $rc1 = COPY killed $a
+    ; 6502-NEXT: $a = PL
+    ; 6502-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
     ; 65C02-LABEL: name: interrupt_axy
-    ; 65C02: frame-setup PH $a
+    ; 65C02: $c = LDCImm 0
+    ; 65C02-NEXT: PH $a
+    ; 65C02-NEXT: $a = COPY $rc0
+    ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 255, $c
+    ; 65C02-NEXT: PH killed $a
+    ; 65C02-NEXT: $a = COPY $rc1
+    ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 255, $c
+    ; 65C02-NEXT: $rc1 = COPY killed $a
+    ; 65C02-NEXT: $a = PL
+    ; 65C02-NEXT: $rc0 = COPY killed $a
+    ; 65C02-NEXT: $a = PL
+    ; 65C02-NEXT: KILL killed $p
+    ; 65C02-NEXT: frame-setup PH $a
     ; 65C02-NEXT: frame-setup PH $x
     ; 65C02-NEXT: frame-setup PH $y
-    ; 65C02-NEXT: $a = frame-setup COPY $rc28
+    ; 65C02-NEXT: $a = frame-setup COPY $rc16
     ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc29
-    ; 65C02-NEXT: frame-setup PH killed $a
+    ; 65C02-NEXT: $a = COPY $rc17
+    ; 65C02-NEXT: $y = LDImm 0
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
     ; 65C02-NEXT: $x = LDImm 42
     ; 65C02-NEXT: $a = LDImm 43
     ; 65C02-NEXT: $y = LDImm 44
+    ; 65C02-NEXT: $y = LDImm 0
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
+    ; 65C02-NEXT: $rc17 = COPY killed $a
     ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc29 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc28 = frame-destroy COPY killed $a
+    ; 65C02-NEXT: $rc16 = frame-destroy COPY killed $a
     ; 65C02-NEXT: $y = frame-destroy PL
     ; 65C02-NEXT: $x = frame-destroy PL
     ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc28, implicit $rc29
+    ; 65C02-NEXT: PH $a
+    ; 65C02-NEXT: $c = LDCImm 0
+    ; 65C02-NEXT: $a = COPY $rc0
+    ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 1, $c
+    ; 65C02-NEXT: $rc0 = COPY killed $a
+    ; 65C02-NEXT: $a = COPY $rc1
+    ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 0, $c
+    ; 65C02-NEXT: $rc1 = COPY killed $a
+    ; 65C02-NEXT: $a = PL
+    ; 65C02-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
     $x = LDImm 42
     $a = LDImm 43
     $y = LDImm 44
@@ -195,47 +241,99 @@ body: |
   ; 6502-LABEL: name: interrupt_x
   ; 6502: bb.0.entry:
   ; 6502-NEXT:   successors: %bb.1(0x80000000)
-  ; 6502-NEXT:   liveins: $a, $x
+  ; 6502-NEXT:   liveins: $a, $x, $y
   ; 6502-NEXT: {{  $}}
+  ; 6502-NEXT:   $c = LDCImm 0
+  ; 6502-NEXT:   PH $a
+  ; 6502-NEXT:   $a = COPY $rc0
+  ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 255, $c
+  ; 6502-NEXT:   PH killed $a
+  ; 6502-NEXT:   $a = COPY $rc1
+  ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 255, $c
+  ; 6502-NEXT:   $rc1 = COPY killed $a
+  ; 6502-NEXT:   $a = PL
+  ; 6502-NEXT:   $rc0 = COPY killed $a
+  ; 6502-NEXT:   $a = PL
+  ; 6502-NEXT:   KILL killed $p
   ; 6502-NEXT:   frame-setup PH $a
   ; 6502-NEXT:   $a = frame-setup COPY $x
   ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc28
+  ; 6502-NEXT:   $a = frame-setup COPY $y
   ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc29
+  ; 6502-NEXT:   $a = frame-setup COPY $rc16
   ; 6502-NEXT:   frame-setup PH killed $a
+  ; 6502-NEXT:   $a = COPY $rc17
+  ; 6502-NEXT:   $y = LDImm 0
+  ; 6502-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
   ; 6502-NEXT: {{  $}}
   ; 6502-NEXT: bb.1.entry:
   ; 6502-NEXT:   $x = LDImm 42
+  ; 6502-NEXT:   $y = LDImm 0
+  ; 6502-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
+  ; 6502-NEXT:   $rc17 = COPY killed $a
   ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc29 = frame-destroy COPY killed $a
+  ; 6502-NEXT:   $rc16 = frame-destroy COPY killed $a
   ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc28 = frame-destroy COPY killed $a
+  ; 6502-NEXT:   $y = frame-destroy COPY killed $a
   ; 6502-NEXT:   $a = frame-destroy PL
   ; 6502-NEXT:   $x = frame-destroy COPY killed $a
   ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   RTI implicit $a, implicit $x, implicit $rc28, implicit $rc29
+  ; 6502-NEXT:   PH $a
+  ; 6502-NEXT:   $c = LDCImm 0
+  ; 6502-NEXT:   $a = COPY $rc0
+  ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 1, $c
+  ; 6502-NEXT:   $rc0 = COPY killed $a
+  ; 6502-NEXT:   $a = COPY $rc1
+  ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 0, $c
+  ; 6502-NEXT:   $rc1 = COPY killed $a
+  ; 6502-NEXT:   $a = PL
+  ; 6502-NEXT:   RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
   ; 65C02-LABEL: name: interrupt_x
   ; 65C02: bb.0.entry:
   ; 65C02-NEXT:   successors: %bb.1(0x80000000)
-  ; 65C02-NEXT:   liveins: $a, $x
+  ; 65C02-NEXT:   liveins: $a, $x, $y
   ; 65C02-NEXT: {{  $}}
+  ; 65C02-NEXT:   $c = LDCImm 0
+  ; 65C02-NEXT:   PH $a
+  ; 65C02-NEXT:   $a = COPY $rc0
+  ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 255, $c
+  ; 65C02-NEXT:   PH killed $a
+  ; 65C02-NEXT:   $a = COPY $rc1
+  ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 255, $c
+  ; 65C02-NEXT:   $rc1 = COPY killed $a
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   $rc0 = COPY killed $a
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   KILL killed $p
   ; 65C02-NEXT:   frame-setup PH $a
   ; 65C02-NEXT:   frame-setup PH $x
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc28
+  ; 65C02-NEXT:   frame-setup PH $y
+  ; 65C02-NEXT:   $a = frame-setup COPY $rc16
   ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc29
-  ; 65C02-NEXT:   frame-setup PH killed $a
+  ; 65C02-NEXT:   $a = COPY $rc17
+  ; 65C02-NEXT:   $y = LDImm 0
+  ; 65C02-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
   ; 65C02-NEXT: {{  $}}
   ; 65C02-NEXT: bb.1.entry:
   ; 65C02-NEXT:   $x = LDImm 42
+  ; 65C02-NEXT:   $y = LDImm 0
+  ; 65C02-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
+  ; 65C02-NEXT:   $rc17 = COPY killed $a
   ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc29 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc28 = frame-destroy COPY killed $a
+  ; 65C02-NEXT:   $rc16 = frame-destroy COPY killed $a
+  ; 65C02-NEXT:   $y = frame-destroy PL
   ; 65C02-NEXT:   $x = frame-destroy PL
   ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   RTI implicit $a, implicit $x, implicit $rc28, implicit $rc29
+  ; 65C02-NEXT:   PH $a
+  ; 65C02-NEXT:   $c = LDCImm 0
+  ; 65C02-NEXT:   $a = COPY $rc0
+  ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 1, $c
+  ; 65C02-NEXT:   $rc0 = COPY killed $a
+  ; 65C02-NEXT:   $a = COPY $rc1
+  ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 0, $c
+  ; 65C02-NEXT:   $rc1 = COPY killed $a
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
   bb.0.entry:
   bb.1.entry:
     $x = LDImm 42
@@ -248,70 +346,7 @@ body: |
   ; 6502-LABEL: name: interrupt_csr
   ; 6502: bb.0.entry:
   ; 6502-NEXT:   successors: %bb.1(0x80000000)
-  ; 6502-NEXT:   liveins: $a, $rc30, $rc31
-  ; 6502-NEXT: {{  $}}
-  ; 6502-NEXT:   frame-setup PH $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc28
-  ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc29
-  ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc30
-  ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc31
-  ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT: {{  $}}
-  ; 6502-NEXT: bb.1.entry:
-  ; 6502-NEXT:   $rs15 = IMPLICIT_DEF
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc31 = frame-destroy COPY killed $a
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc30 = frame-destroy COPY killed $a
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc29 = frame-destroy COPY killed $a
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc28 = frame-destroy COPY killed $a
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   RTI implicit $a, implicit $rc28, implicit $rc29, implicit $rc30, implicit $rc31
-  ; 65C02-LABEL: name: interrupt_csr
-  ; 65C02: bb.0.entry:
-  ; 65C02-NEXT:   successors: %bb.1(0x80000000)
-  ; 65C02-NEXT:   liveins: $a, $rc30, $rc31
-  ; 65C02-NEXT: {{  $}}
-  ; 65C02-NEXT:   frame-setup PH $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc28
-  ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc29
-  ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc30
-  ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc31
-  ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT: {{  $}}
-  ; 65C02-NEXT: bb.1.entry:
-  ; 65C02-NEXT:   $rs15 = IMPLICIT_DEF
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc31 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc30 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc29 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc28 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   RTI implicit $a, implicit $rc28, implicit $rc29, implicit $rc30, implicit $rc31
-  bb.0.entry:
-  bb.1.entry:
-    $rs15 = IMPLICIT_DEF
-    RTI
-...
----
-name: interrupt_csrs_save_y
-tracksRegLiveness: true
-body: |
-  ; 6502-LABEL: name: interrupt_csrs_save_y
-  ; 6502: bb.0.entry:
-  ; 6502-NEXT:   successors: %bb.1(0x80000000)
-  ; 6502-NEXT:   liveins: $a, $y, $rc30, $rc31, $rc32, $rc33, $rc34, $rc35
+  ; 6502-NEXT:   liveins: $a, $y, $rc30, $rc31
   ; 6502-NEXT: {{  $}}
   ; 6502-NEXT:   $c = LDCImm 0
   ; 6502-NEXT:   PH $a
@@ -328,47 +363,29 @@ body: |
   ; 6502-NEXT:   frame-setup PH $a
   ; 6502-NEXT:   $a = frame-setup COPY $y
   ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc28
+  ; 6502-NEXT:   $a = frame-setup COPY $rc16
   ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc29
+  ; 6502-NEXT:   $a = frame-setup COPY $rc17
   ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc30
-  ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc31
-  ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc32
-  ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = frame-setup COPY $rc33
-  ; 6502-NEXT:   frame-setup PH killed $a
-  ; 6502-NEXT:   $a = COPY $rc34
+  ; 6502-NEXT:   $a = COPY $rc30
   ; 6502-NEXT:   $y = LDImm 1
   ; 6502-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
-  ; 6502-NEXT:   $a = COPY $rc35
+  ; 6502-NEXT:   $a = COPY $rc31
   ; 6502-NEXT:   $y = LDImm 0
   ; 6502-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.1)
   ; 6502-NEXT: {{  $}}
   ; 6502-NEXT: bb.1.entry:
   ; 6502-NEXT:   $rs15 = IMPLICIT_DEF
-  ; 6502-NEXT:   $rs16 = IMPLICIT_DEF
-  ; 6502-NEXT:   $rs17 = IMPLICIT_DEF
   ; 6502-NEXT:   $y = LDImm 0
   ; 6502-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.1)
-  ; 6502-NEXT:   $rc35 = COPY killed $a
+  ; 6502-NEXT:   $rc31 = COPY killed $a
   ; 6502-NEXT:   $y = LDImm 1
   ; 6502-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
-  ; 6502-NEXT:   $rc34 = COPY killed $a
+  ; 6502-NEXT:   $rc30 = COPY killed $a
   ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc33 = frame-destroy COPY killed $a
+  ; 6502-NEXT:   $rc17 = frame-destroy COPY killed $a
   ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc32 = frame-destroy COPY killed $a
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc31 = frame-destroy COPY killed $a
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc30 = frame-destroy COPY killed $a
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc29 = frame-destroy COPY killed $a
-  ; 6502-NEXT:   $a = frame-destroy PL
-  ; 6502-NEXT:   $rc28 = frame-destroy COPY killed $a
+  ; 6502-NEXT:   $rc16 = frame-destroy COPY killed $a
   ; 6502-NEXT:   $a = frame-destroy PL
   ; 6502-NEXT:   $y = frame-destroy COPY killed $a
   ; 6502-NEXT:   $a = frame-destroy PL
@@ -381,11 +398,11 @@ body: |
   ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 0, $c
   ; 6502-NEXT:   $rc1 = COPY killed $a
   ; 6502-NEXT:   $a = PL
-  ; 6502-NEXT:   RTI implicit $a, implicit $y, implicit $rc28, implicit $rc29, implicit $rc30, implicit $rc31, implicit $rc32, implicit $rc33, implicit $rc34, implicit $rc35
-  ; 65C02-LABEL: name: interrupt_csrs_save_y
+  ; 6502-NEXT:   RTI implicit $a, implicit $y, implicit $rc16, implicit $rc17, implicit $rc30, implicit $rc31
+  ; 65C02-LABEL: name: interrupt_csr
   ; 65C02: bb.0.entry:
   ; 65C02-NEXT:   successors: %bb.1(0x80000000)
-  ; 65C02-NEXT:   liveins: $a, $y, $rc30, $rc31, $rc32, $rc33, $rc34, $rc35
+  ; 65C02-NEXT:   liveins: $a, $y, $rc30, $rc31
   ; 65C02-NEXT: {{  $}}
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   PH $a
@@ -401,47 +418,29 @@ body: |
   ; 65C02-NEXT:   KILL killed $p
   ; 65C02-NEXT:   frame-setup PH $a
   ; 65C02-NEXT:   frame-setup PH $y
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc28
+  ; 65C02-NEXT:   $a = frame-setup COPY $rc16
   ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc29
+  ; 65C02-NEXT:   $a = frame-setup COPY $rc17
   ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc30
-  ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc31
-  ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc32
-  ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = frame-setup COPY $rc33
-  ; 65C02-NEXT:   frame-setup PH killed $a
-  ; 65C02-NEXT:   $a = COPY $rc34
+  ; 65C02-NEXT:   $a = COPY $rc30
   ; 65C02-NEXT:   $y = LDImm 1
   ; 65C02-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
-  ; 65C02-NEXT:   $a = COPY $rc35
+  ; 65C02-NEXT:   $a = COPY $rc31
   ; 65C02-NEXT:   $y = LDImm 0
   ; 65C02-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.1)
   ; 65C02-NEXT: {{  $}}
   ; 65C02-NEXT: bb.1.entry:
   ; 65C02-NEXT:   $rs15 = IMPLICIT_DEF
-  ; 65C02-NEXT:   $rs16 = IMPLICIT_DEF
-  ; 65C02-NEXT:   $rs17 = IMPLICIT_DEF
   ; 65C02-NEXT:   $y = LDImm 0
   ; 65C02-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.1)
-  ; 65C02-NEXT:   $rc35 = COPY killed $a
+  ; 65C02-NEXT:   $rc31 = COPY killed $a
   ; 65C02-NEXT:   $y = LDImm 1
   ; 65C02-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
-  ; 65C02-NEXT:   $rc34 = COPY killed $a
+  ; 65C02-NEXT:   $rc30 = COPY killed $a
   ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc33 = frame-destroy COPY killed $a
+  ; 65C02-NEXT:   $rc17 = frame-destroy COPY killed $a
   ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc32 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc31 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc30 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc29 = frame-destroy COPY killed $a
-  ; 65C02-NEXT:   $a = frame-destroy PL
-  ; 65C02-NEXT:   $rc28 = frame-destroy COPY killed $a
+  ; 65C02-NEXT:   $rc16 = frame-destroy COPY killed $a
   ; 65C02-NEXT:   $y = frame-destroy PL
   ; 65C02-NEXT:   $a = frame-destroy PL
   ; 65C02-NEXT:   PH $a
@@ -453,7 +452,130 @@ body: |
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 0, $c
   ; 65C02-NEXT:   $rc1 = COPY killed $a
   ; 65C02-NEXT:   $a = PL
-  ; 65C02-NEXT:   RTI implicit $a, implicit $y, implicit $rc28, implicit $rc29, implicit $rc30, implicit $rc31, implicit $rc32, implicit $rc33, implicit $rc34, implicit $rc35
+  ; 65C02-NEXT:   RTI implicit $a, implicit $y, implicit $rc16, implicit $rc17, implicit $rc30, implicit $rc31
+  bb.0.entry:
+  bb.1.entry:
+    $rs15 = IMPLICIT_DEF
+    RTI
+...
+---
+name: interrupt_csrs_save_y
+tracksRegLiveness: true
+body: |
+  ; 6502-LABEL: name: interrupt_csrs_save_y
+  ; 6502: bb.0.entry:
+  ; 6502-NEXT:   successors: %bb.1(0x80000000)
+  ; 6502-NEXT:   liveins: $a, $y, $rc30, $rc31
+  ; 6502-NEXT: {{  $}}
+  ; 6502-NEXT:   $c = LDCImm 0
+  ; 6502-NEXT:   PH $a
+  ; 6502-NEXT:   $a = COPY $rc0
+  ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 254, $c
+  ; 6502-NEXT:   PH killed $a
+  ; 6502-NEXT:   $a = COPY $rc1
+  ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 255, $c
+  ; 6502-NEXT:   $rc1 = COPY killed $a
+  ; 6502-NEXT:   $a = PL
+  ; 6502-NEXT:   $rc0 = COPY killed $a
+  ; 6502-NEXT:   $a = PL
+  ; 6502-NEXT:   KILL killed $p
+  ; 6502-NEXT:   frame-setup PH $a
+  ; 6502-NEXT:   $a = frame-setup COPY $y
+  ; 6502-NEXT:   frame-setup PH killed $a
+  ; 6502-NEXT:   $a = frame-setup COPY $rc16
+  ; 6502-NEXT:   frame-setup PH killed $a
+  ; 6502-NEXT:   $a = frame-setup COPY $rc17
+  ; 6502-NEXT:   frame-setup PH killed $a
+  ; 6502-NEXT:   $a = COPY $rc30
+  ; 6502-NEXT:   $y = LDImm 1
+  ; 6502-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
+  ; 6502-NEXT:   $a = COPY $rc31
+  ; 6502-NEXT:   $y = LDImm 0
+  ; 6502-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.1)
+  ; 6502-NEXT: {{  $}}
+  ; 6502-NEXT: bb.1.entry:
+  ; 6502-NEXT:   $rs15 = IMPLICIT_DEF
+  ; 6502-NEXT:   $rs16 = IMPLICIT_DEF
+  ; 6502-NEXT:   $rs17 = IMPLICIT_DEF
+  ; 6502-NEXT:   $y = LDImm 0
+  ; 6502-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.1)
+  ; 6502-NEXT:   $rc31 = COPY killed $a
+  ; 6502-NEXT:   $y = LDImm 1
+  ; 6502-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
+  ; 6502-NEXT:   $rc30 = COPY killed $a
+  ; 6502-NEXT:   $a = frame-destroy PL
+  ; 6502-NEXT:   $rc17 = frame-destroy COPY killed $a
+  ; 6502-NEXT:   $a = frame-destroy PL
+  ; 6502-NEXT:   $rc16 = frame-destroy COPY killed $a
+  ; 6502-NEXT:   $a = frame-destroy PL
+  ; 6502-NEXT:   $y = frame-destroy COPY killed $a
+  ; 6502-NEXT:   $a = frame-destroy PL
+  ; 6502-NEXT:   PH $a
+  ; 6502-NEXT:   $c = LDCImm 0
+  ; 6502-NEXT:   $a = COPY $rc0
+  ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 2, $c
+  ; 6502-NEXT:   $rc0 = COPY killed $a
+  ; 6502-NEXT:   $a = COPY $rc1
+  ; 6502-NEXT:   $a, $c, $v = ADCImm $a, 0, $c
+  ; 6502-NEXT:   $rc1 = COPY killed $a
+  ; 6502-NEXT:   $a = PL
+  ; 6502-NEXT:   RTI implicit $a, implicit $y, implicit $rc16, implicit $rc17, implicit $rc30, implicit $rc31
+  ; 65C02-LABEL: name: interrupt_csrs_save_y
+  ; 65C02: bb.0.entry:
+  ; 65C02-NEXT:   successors: %bb.1(0x80000000)
+  ; 65C02-NEXT:   liveins: $a, $y, $rc30, $rc31
+  ; 65C02-NEXT: {{  $}}
+  ; 65C02-NEXT:   $c = LDCImm 0
+  ; 65C02-NEXT:   PH $a
+  ; 65C02-NEXT:   $a = COPY $rc0
+  ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 254, $c
+  ; 65C02-NEXT:   PH killed $a
+  ; 65C02-NEXT:   $a = COPY $rc1
+  ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 255, $c
+  ; 65C02-NEXT:   $rc1 = COPY killed $a
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   $rc0 = COPY killed $a
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   KILL killed $p
+  ; 65C02-NEXT:   frame-setup PH $a
+  ; 65C02-NEXT:   frame-setup PH $y
+  ; 65C02-NEXT:   $a = frame-setup COPY $rc16
+  ; 65C02-NEXT:   frame-setup PH killed $a
+  ; 65C02-NEXT:   $a = frame-setup COPY $rc17
+  ; 65C02-NEXT:   frame-setup PH killed $a
+  ; 65C02-NEXT:   $a = COPY $rc30
+  ; 65C02-NEXT:   $y = LDImm 1
+  ; 65C02-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
+  ; 65C02-NEXT:   $a = COPY $rc31
+  ; 65C02-NEXT:   $y = LDImm 0
+  ; 65C02-NEXT:   STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.1)
+  ; 65C02-NEXT: {{  $}}
+  ; 65C02-NEXT: bb.1.entry:
+  ; 65C02-NEXT:   $rs15 = IMPLICIT_DEF
+  ; 65C02-NEXT:   $rs16 = IMPLICIT_DEF
+  ; 65C02-NEXT:   $rs17 = IMPLICIT_DEF
+  ; 65C02-NEXT:   $y = LDImm 0
+  ; 65C02-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.1)
+  ; 65C02-NEXT:   $rc31 = COPY killed $a
+  ; 65C02-NEXT:   $y = LDImm 1
+  ; 65C02-NEXT:   $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
+  ; 65C02-NEXT:   $rc30 = COPY killed $a
+  ; 65C02-NEXT:   $a = frame-destroy PL
+  ; 65C02-NEXT:   $rc17 = frame-destroy COPY killed $a
+  ; 65C02-NEXT:   $a = frame-destroy PL
+  ; 65C02-NEXT:   $rc16 = frame-destroy COPY killed $a
+  ; 65C02-NEXT:   $y = frame-destroy PL
+  ; 65C02-NEXT:   $a = frame-destroy PL
+  ; 65C02-NEXT:   PH $a
+  ; 65C02-NEXT:   $c = LDCImm 0
+  ; 65C02-NEXT:   $a = COPY $rc0
+  ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 2, $c
+  ; 65C02-NEXT:   $rc0 = COPY killed $a
+  ; 65C02-NEXT:   $a = COPY $rc1
+  ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 0, $c
+  ; 65C02-NEXT:   $rc1 = COPY killed $a
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   RTI implicit $a, implicit $y, implicit $rc16, implicit $rc17, implicit $rc30, implicit $rc31
   bb.0.entry:
   bb.1.entry:
     $rs15 = IMPLICIT_DEF
@@ -466,122 +588,116 @@ name: interrupt_caller
 body: |
   bb.0.entry:
     ; 6502-LABEL: name: interrupt_caller
-    ; 6502: frame-setup PH $a
+    ; 6502: $c = LDCImm 0
+    ; 6502-NEXT: PH $a
+    ; 6502-NEXT: $a = COPY $rc0
+    ; 6502-NEXT: $a, $c, $v = ADCImm $a, 241, $c
+    ; 6502-NEXT: PH killed $a
+    ; 6502-NEXT: $a = COPY $rc1
+    ; 6502-NEXT: $a, $c, $v = ADCImm $a, 255, $c
+    ; 6502-NEXT: $rc1 = COPY killed $a
+    ; 6502-NEXT: $a = PL
+    ; 6502-NEXT: $rc0 = COPY killed $a
+    ; 6502-NEXT: $a = PL
+    ; 6502-NEXT: KILL killed $p
+    ; 6502-NEXT: frame-setup PH $a
     ; 6502-NEXT: $a = frame-setup COPY $x
     ; 6502-NEXT: frame-setup PH killed $a
     ; 6502-NEXT: $a = frame-setup COPY $y
     ; 6502-NEXT: frame-setup PH killed $a
     ; 6502-NEXT: $a = frame-setup COPY $rc2
     ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc3
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc4
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc5
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc6
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc7
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc8
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc9
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc10
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc11
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc12
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc13
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc14
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc15
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc16
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc17
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc18
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc19
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc20
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc21
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc22
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc23
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc24
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc25
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc26
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc27
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc28
-    ; 6502-NEXT: frame-setup PH killed $a
-    ; 6502-NEXT: $a = frame-setup COPY $rc29
-    ; 6502-NEXT: frame-setup PH killed $a
+    ; 6502-NEXT: $a = COPY $rc3
+    ; 6502-NEXT: $y = LDImm 14
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
+    ; 6502-NEXT: $a = COPY $rc4
+    ; 6502-NEXT: $y = LDImm 13
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.1)
+    ; 6502-NEXT: $a = COPY $rc5
+    ; 6502-NEXT: $y = LDImm 12
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.2)
+    ; 6502-NEXT: $a = COPY $rc6
+    ; 6502-NEXT: $y = LDImm 11
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.3)
+    ; 6502-NEXT: $a = COPY $rc7
+    ; 6502-NEXT: $y = LDImm 10
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.4)
+    ; 6502-NEXT: $a = COPY $rc8
+    ; 6502-NEXT: $y = LDImm 9
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.5)
+    ; 6502-NEXT: $a = COPY $rc9
+    ; 6502-NEXT: $y = LDImm 8
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.6)
+    ; 6502-NEXT: $a = COPY $rc10
+    ; 6502-NEXT: $y = LDImm 7
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.7)
+    ; 6502-NEXT: $a = COPY $rc11
+    ; 6502-NEXT: $y = LDImm 6
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.8)
+    ; 6502-NEXT: $a = COPY $rc12
+    ; 6502-NEXT: $y = LDImm 5
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.9)
+    ; 6502-NEXT: $a = COPY $rc13
+    ; 6502-NEXT: $y = LDImm 4
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.10)
+    ; 6502-NEXT: $a = COPY $rc14
+    ; 6502-NEXT: $y = LDImm 3
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.11)
+    ; 6502-NEXT: $a = COPY $rc15
+    ; 6502-NEXT: $y = LDImm 2
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.12)
+    ; 6502-NEXT: $a = COPY $rc16
+    ; 6502-NEXT: $y = LDImm 1
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.13)
+    ; 6502-NEXT: $a = COPY $rc17
+    ; 6502-NEXT: $y = LDImm 0
+    ; 6502-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.14)
     ; 6502-NEXT: JSR &fn, mos_csr
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc29 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc28 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc27 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc26 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc25 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc24 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc23 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc22 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc21 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc20 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc19 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc18 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc17 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc16 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc15 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc14 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc13 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc12 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc11 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc10 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc9 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc8 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc7 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc6 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc5 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc4 = frame-destroy COPY killed $a
-    ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: $rc3 = frame-destroy COPY killed $a
+    ; 6502-NEXT: $y = LDImm 0
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.14)
+    ; 6502-NEXT: $rc17 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 1
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.13)
+    ; 6502-NEXT: $rc16 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 2
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.12)
+    ; 6502-NEXT: $rc15 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 3
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.11)
+    ; 6502-NEXT: $rc14 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 4
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.10)
+    ; 6502-NEXT: $rc13 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 5
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.9)
+    ; 6502-NEXT: $rc12 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 6
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.8)
+    ; 6502-NEXT: $rc11 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 7
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.7)
+    ; 6502-NEXT: $rc10 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 8
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.6)
+    ; 6502-NEXT: $rc9 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 9
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.5)
+    ; 6502-NEXT: $rc8 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 10
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.4)
+    ; 6502-NEXT: $rc7 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 11
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.3)
+    ; 6502-NEXT: $rc6 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 12
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.2)
+    ; 6502-NEXT: $rc5 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 13
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.1)
+    ; 6502-NEXT: $rc4 = COPY killed $a
+    ; 6502-NEXT: $y = LDImm 14
+    ; 6502-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
+    ; 6502-NEXT: $rc3 = COPY killed $a
     ; 6502-NEXT: $a = frame-destroy PL
     ; 6502-NEXT: $rc2 = frame-destroy COPY killed $a
     ; 6502-NEXT: $a = frame-destroy PL
@@ -589,128 +705,140 @@ body: |
     ; 6502-NEXT: $a = frame-destroy PL
     ; 6502-NEXT: $x = frame-destroy COPY killed $a
     ; 6502-NEXT: $a = frame-destroy PL
-    ; 6502-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit $rc16, implicit $rc17, implicit $rc18, implicit $rc19, implicit $rc20, implicit $rc21, implicit $rc22, implicit $rc23, implicit $rc24, implicit $rc25, implicit $rc26, implicit $rc27, implicit $rc28, implicit $rc29
+    ; 6502-NEXT: PH $a
+    ; 6502-NEXT: $c = LDCImm 0
+    ; 6502-NEXT: $a = COPY $rc0
+    ; 6502-NEXT: $a, $c, $v = ADCImm $a, 15, $c
+    ; 6502-NEXT: $rc0 = COPY killed $a
+    ; 6502-NEXT: $a = COPY $rc1
+    ; 6502-NEXT: $a, $c, $v = ADCImm $a, 0, $c
+    ; 6502-NEXT: $rc1 = COPY killed $a
+    ; 6502-NEXT: $a = PL
+    ; 6502-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit $rc16, implicit $rc17
     ; 65C02-LABEL: name: interrupt_caller
-    ; 65C02: frame-setup PH $a
+    ; 65C02: $c = LDCImm 0
+    ; 65C02-NEXT: PH $a
+    ; 65C02-NEXT: $a = COPY $rc0
+    ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 241, $c
+    ; 65C02-NEXT: PH killed $a
+    ; 65C02-NEXT: $a = COPY $rc1
+    ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 255, $c
+    ; 65C02-NEXT: $rc1 = COPY killed $a
+    ; 65C02-NEXT: $a = PL
+    ; 65C02-NEXT: $rc0 = COPY killed $a
+    ; 65C02-NEXT: $a = PL
+    ; 65C02-NEXT: KILL killed $p
+    ; 65C02-NEXT: frame-setup PH $a
     ; 65C02-NEXT: frame-setup PH $x
     ; 65C02-NEXT: frame-setup PH $y
     ; 65C02-NEXT: $a = frame-setup COPY $rc2
     ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc3
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc4
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc5
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc6
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc7
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc8
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc9
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc10
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc11
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc12
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc13
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc14
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc15
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc16
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc17
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc18
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc19
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc20
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc21
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc22
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc23
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc24
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc25
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc26
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc27
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc28
-    ; 65C02-NEXT: frame-setup PH killed $a
-    ; 65C02-NEXT: $a = frame-setup COPY $rc29
-    ; 65C02-NEXT: frame-setup PH killed $a
+    ; 65C02-NEXT: $a = COPY $rc3
+    ; 65C02-NEXT: $y = LDImm 14
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
+    ; 65C02-NEXT: $a = COPY $rc4
+    ; 65C02-NEXT: $y = LDImm 13
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.1)
+    ; 65C02-NEXT: $a = COPY $rc5
+    ; 65C02-NEXT: $y = LDImm 12
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.2)
+    ; 65C02-NEXT: $a = COPY $rc6
+    ; 65C02-NEXT: $y = LDImm 11
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.3)
+    ; 65C02-NEXT: $a = COPY $rc7
+    ; 65C02-NEXT: $y = LDImm 10
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.4)
+    ; 65C02-NEXT: $a = COPY $rc8
+    ; 65C02-NEXT: $y = LDImm 9
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.5)
+    ; 65C02-NEXT: $a = COPY $rc9
+    ; 65C02-NEXT: $y = LDImm 8
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.6)
+    ; 65C02-NEXT: $a = COPY $rc10
+    ; 65C02-NEXT: $y = LDImm 7
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.7)
+    ; 65C02-NEXT: $a = COPY $rc11
+    ; 65C02-NEXT: $y = LDImm 6
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.8)
+    ; 65C02-NEXT: $a = COPY $rc12
+    ; 65C02-NEXT: $y = LDImm 5
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.9)
+    ; 65C02-NEXT: $a = COPY $rc13
+    ; 65C02-NEXT: $y = LDImm 4
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.10)
+    ; 65C02-NEXT: $a = COPY $rc14
+    ; 65C02-NEXT: $y = LDImm 3
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.11)
+    ; 65C02-NEXT: $a = COPY $rc15
+    ; 65C02-NEXT: $y = LDImm 2
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.12)
+    ; 65C02-NEXT: $a = COPY $rc16
+    ; 65C02-NEXT: $y = LDImm 1
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.13)
+    ; 65C02-NEXT: $a = COPY $rc17
+    ; 65C02-NEXT: $y = LDImm 0
+    ; 65C02-NEXT: STYIndir killed $a, $rs0, killed $y :: (store (s8) into %stack.14)
     ; 65C02-NEXT: JSR &fn, mos_csr
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc29 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc28 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc27 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc26 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc25 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc24 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc23 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc22 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc21 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc20 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc19 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc18 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc17 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc16 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc15 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc14 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc13 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc12 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc11 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc10 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc9 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc8 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc7 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc6 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc5 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc4 = frame-destroy COPY killed $a
-    ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: $rc3 = frame-destroy COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 0
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.14)
+    ; 65C02-NEXT: $rc17 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 1
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.13)
+    ; 65C02-NEXT: $rc16 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 2
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.12)
+    ; 65C02-NEXT: $rc15 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 3
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.11)
+    ; 65C02-NEXT: $rc14 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 4
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.10)
+    ; 65C02-NEXT: $rc13 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 5
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.9)
+    ; 65C02-NEXT: $rc12 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 6
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.8)
+    ; 65C02-NEXT: $rc11 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 7
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.7)
+    ; 65C02-NEXT: $rc10 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 8
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.6)
+    ; 65C02-NEXT: $rc9 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 9
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.5)
+    ; 65C02-NEXT: $rc8 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 10
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.4)
+    ; 65C02-NEXT: $rc7 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 11
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.3)
+    ; 65C02-NEXT: $rc6 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 12
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.2)
+    ; 65C02-NEXT: $rc5 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 13
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.1)
+    ; 65C02-NEXT: $rc4 = COPY killed $a
+    ; 65C02-NEXT: $y = LDImm 14
+    ; 65C02-NEXT: $a = LDYIndir $rs0, killed $y :: (load (s8) from %stack.0)
+    ; 65C02-NEXT: $rc3 = COPY killed $a
     ; 65C02-NEXT: $a = frame-destroy PL
     ; 65C02-NEXT: $rc2 = frame-destroy COPY killed $a
     ; 65C02-NEXT: $y = frame-destroy PL
     ; 65C02-NEXT: $x = frame-destroy PL
     ; 65C02-NEXT: $a = frame-destroy PL
-    ; 65C02-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit $rc16, implicit $rc17, implicit $rc18, implicit $rc19, implicit $rc20, implicit $rc21, implicit $rc22, implicit $rc23, implicit $rc24, implicit $rc25, implicit $rc26, implicit $rc27, implicit $rc28, implicit $rc29
+    ; 65C02-NEXT: PH $a
+    ; 65C02-NEXT: $c = LDCImm 0
+    ; 65C02-NEXT: $a = COPY $rc0
+    ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 15, $c
+    ; 65C02-NEXT: $rc0 = COPY killed $a
+    ; 65C02-NEXT: $a = COPY $rc1
+    ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 0, $c
+    ; 65C02-NEXT: $rc1 = COPY killed $a
+    ; 65C02-NEXT: $a = PL
+    ; 65C02-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit $rc16, implicit $rc17
     ADJCALLSTACKDOWN 0, 0, implicit $rs0, implicit-def $rs0
     JSR &fn, mos_csr
     ADJCALLSTACKUP 0, 0, implicit $rs0, implicit-def $rs0

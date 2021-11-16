@@ -438,57 +438,20 @@ stack:
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: save_restore_csr
-    ; CHECK: $c = LDCImm 0
-    ; CHECK-NEXT: $a = COPY $rc0
-    ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 254, $c
-    ; CHECK-NEXT: PH killed $a
-    ; CHECK-NEXT: $a = COPY $rc1
-    ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
-    ; CHECK-NEXT: $rc1 = COPY killed $a
-    ; CHECK-NEXT: $a = PL
-    ; CHECK-NEXT: $rc0 = COPY killed $a
-    ; CHECK-NEXT: KILL killed $p
-    ; CHECK-NEXT: $a = frame-setup COPY $rc30
+    ; CHECK: $a = frame-setup COPY $rc30
     ; CHECK-NEXT: frame-setup PH killed $a
     ; CHECK-NEXT: $a = frame-setup COPY $rc31
     ; CHECK-NEXT: frame-setup PH killed $a
-    ; CHECK-NEXT: $a = frame-setup COPY $rc32
-    ; CHECK-NEXT: frame-setup PH killed $a
-    ; CHECK-NEXT: $a = frame-setup COPY $rc33
-    ; CHECK-NEXT: frame-setup PH killed $a
     ; CHECK-NEXT: $rs15 = COPY $rs0
-    ; CHECK-NEXT: $a = COPY $rc34
-    ; CHECK-NEXT: $y = LDImm 1
-    ; CHECK-NEXT: STYIndir killed $a, $rs15, killed $y :: (store (s8) into %stack.1)
-    ; CHECK-NEXT: $a = COPY $rc35
-    ; CHECK-NEXT: $y = LDImm 0
-    ; CHECK-NEXT: STYIndir killed $a, $rs15, killed $y :: (store (s8) into %stack.2)
     ; CHECK-NEXT: $rs15 = IMPLICIT_DEF
     ; CHECK-NEXT: $rs16 = IMPLICIT_DEF
     ; CHECK-NEXT: $rs17 = IMPLICIT_DEF
-    ; CHECK-NEXT: $y = LDImm 0
-    ; CHECK-NEXT: $a = LDYIndir $rs15, killed $y :: (load (s8) from %stack.2)
-    ; CHECK-NEXT: $rc35 = COPY killed $a
-    ; CHECK-NEXT: $y = LDImm 1
-    ; CHECK-NEXT: $a = LDYIndir $rs15, killed $y :: (load (s8) from %stack.1)
-    ; CHECK-NEXT: $rc34 = COPY killed $a
     ; CHECK-NEXT: $rs0 = COPY $rs15
-    ; CHECK-NEXT: $a = frame-destroy PL
-    ; CHECK-NEXT: $rc33 = frame-destroy COPY killed $a
-    ; CHECK-NEXT: $a = frame-destroy PL
-    ; CHECK-NEXT: $rc32 = frame-destroy COPY killed $a
     ; CHECK-NEXT: $a = frame-destroy PL
     ; CHECK-NEXT: $rc31 = frame-destroy COPY killed $a
     ; CHECK-NEXT: $a = frame-destroy PL
     ; CHECK-NEXT: $rc30 = frame-destroy COPY killed $a
-    ; CHECK-NEXT: $c = LDCImm 0
-    ; CHECK-NEXT: $a = COPY $rc0
-    ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 2, $c
-    ; CHECK-NEXT: $rc0 = COPY killed $a
-    ; CHECK-NEXT: $a = COPY $rc1
-    ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 0, $c
-    ; CHECK-NEXT: $rc1 = COPY killed $a
-    ; CHECK-NEXT: RTS implicit $rc30, implicit $rc31, implicit $rc32, implicit $rc33, implicit $rc34, implicit $rc35
+    ; CHECK-NEXT: RTS implicit $rc30, implicit $rc31
     $rs15 = IMPLICIT_DEF
     $rs16 = IMPLICIT_DEF
     $rs17 = IMPLICIT_DEF
