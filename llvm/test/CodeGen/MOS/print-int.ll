@@ -13,27 +13,27 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; NMOS-NEXT:    bcc .LBB0_2
 ; NMOS-NEXT:  ; %bb.1: ; %if.end.preheader
 ; NMOS-NEXT:    sta mos8(__rc16)
-; NMOS-NEXT:    lda mos8(__rc18)
+; NMOS-NEXT:    lda mos8(__rc20)
 ; NMOS-NEXT:    pha
-; NMOS-NEXT:    lda mos8(__rc19)
+; NMOS-NEXT:    lda mos8(__rc21)
 ; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda mos8(__rc16)
 ; NMOS-NEXT:    ldx #10
-; NMOS-NEXT:    sta mos8(__rc19)
+; NMOS-NEXT:    sta mos8(__rc21)
 ; NMOS-NEXT:    jsr __udivqi3
-; NMOS-NEXT:    sta mos8(__rc18)
+; NMOS-NEXT:    sta mos8(__rc20)
 ; NMOS-NEXT:    ldx #10
-; NMOS-NEXT:    lda mos8(__rc19)
+; NMOS-NEXT:    lda mos8(__rc21)
 ; NMOS-NEXT:    jsr __umodqi3
-; NMOS-NEXT:    sta mos8(__rc19)
-; NMOS-NEXT:    lda mos8(__rc18)
+; NMOS-NEXT:    sta mos8(__rc21)
+; NMOS-NEXT:    lda mos8(__rc20)
 ; NMOS-NEXT:    jsr print_int
-; NMOS-NEXT:    lda mos8(__rc19)
+; NMOS-NEXT:    lda mos8(__rc21)
 ; NMOS-NEXT:    sta mos8(__rc16)
 ; NMOS-NEXT:    pla
-; NMOS-NEXT:    sta mos8(__rc19)
+; NMOS-NEXT:    sta mos8(__rc21)
 ; NMOS-NEXT:    pla
-; NMOS-NEXT:    sta mos8(__rc18)
+; NMOS-NEXT:    sta mos8(__rc20)
 ; NMOS-NEXT:    lda mos8(__rc16)
 ; NMOS-NEXT:  .LBB0_2: ; %if.then
 ; NMOS-NEXT:    clc
@@ -48,25 +48,25 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; CMOS-NEXT:    cmp #10
 ; CMOS-NEXT:    bcc .LBB0_2
 ; CMOS-NEXT:  ; %bb.1: ; %if.end.preheader
-; CMOS-NEXT:    ldx mos8(__rc18)
+; CMOS-NEXT:    ldx mos8(__rc20)
 ; CMOS-NEXT:    phx
-; CMOS-NEXT:    ldx mos8(__rc19)
+; CMOS-NEXT:    ldx mos8(__rc21)
 ; CMOS-NEXT:    phx
 ; CMOS-NEXT:    ldx #10
-; CMOS-NEXT:    sta mos8(__rc19)
+; CMOS-NEXT:    sta mos8(__rc21)
 ; CMOS-NEXT:    jsr __udivqi3
-; CMOS-NEXT:    sta mos8(__rc18)
+; CMOS-NEXT:    sta mos8(__rc20)
 ; CMOS-NEXT:    ldx #10
-; CMOS-NEXT:    lda mos8(__rc19)
+; CMOS-NEXT:    lda mos8(__rc21)
 ; CMOS-NEXT:    jsr __umodqi3
-; CMOS-NEXT:    sta mos8(__rc19)
-; CMOS-NEXT:    lda mos8(__rc18)
+; CMOS-NEXT:    sta mos8(__rc21)
+; CMOS-NEXT:    lda mos8(__rc20)
 ; CMOS-NEXT:    jsr print_int
-; CMOS-NEXT:    lda mos8(__rc19)
+; CMOS-NEXT:    lda mos8(__rc21)
 ; CMOS-NEXT:    plx
-; CMOS-NEXT:    stx mos8(__rc19)
+; CMOS-NEXT:    stx mos8(__rc21)
 ; CMOS-NEXT:    plx
-; CMOS-NEXT:    stx mos8(__rc18)
+; CMOS-NEXT:    stx mos8(__rc20)
 ; CMOS-NEXT:  .LBB0_2: ; %if.then
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    adc #48

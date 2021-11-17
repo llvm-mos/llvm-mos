@@ -13,8 +13,8 @@
 // The C calling convention is mostly described inline. There are a few
 // additional points worth mentioning:
 //
-// - A, X, Y, C, N, V, Z, and RS1-RS12 are caller-saved. PC, S, D, I, RS0, and
-//   RS9-RS15 are callee-saved.
+// - A, X, Y, C, N, V, Z, and RS1-RS9 are caller-saved. PC, S, D, I, RS0, and
+//   RS10-RS15 are callee-saved.
 //
 // - Aggregate types (structs, arrays, etc.) are passed by pointer. The pointer
 //   is managed entirely by the caller, and may or may not be on the soft stack.
@@ -59,16 +59,10 @@ def CC_MOS : CallingConv<[
   // Pointers are preferentially assigned to imaginary registers so indirect
   // addressing modes work without additional copying.
   //
-  // RS0 is skipped since it's the stack pointer. Only caller-saved registers
-  // are used, but RS8 is reserved for compiler use.
+  // RS0 is skipped since it's the stack pointer.
   CCIfPtr<CCAssignToReg<[RS1, RS2, RS3, RS4, RS5, RS6, RS7]>>,
 
-  // 8-bit values are assigned to A, then X, then the caller-saved 8-bit
-  // imaginary registers. Y is not used for arguments (but is still
-  // caller-save); it's reserved to help the compiler shuffle values into and
-  // out of the appropriate registers.
-  //
-  // RC0 and RC1 are skipped since they're the stack pointer.
+  // 8-bit values are assigned to A, then X, then the argument imaginary registers.
   CCIfType<[i8], CCAssignToReg<[
     A, X, RC2, RC3, RC4, RC5, RC6, RC7, RC8, RC9, RC10, RC11, RC12, RC13, RC14,
     RC15
@@ -86,9 +80,9 @@ def CC_MOS_VarArgs : CallingConv<[
 ]>;
 }
 
-// RS9-RS15 are callee-saved. These are represented implicitly by their
+// RS10-RS15 are callee-saved. These are represented implicitly by their
 // subregisters, since the subregisters are what must be saved and restored.
-def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 18, 31)>;
+def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 20, 31)>;
 
 // Interrupts save all registers except the stack pointers (which are restored
 // upon return by any function) and the flags (which are implicitly saved by the

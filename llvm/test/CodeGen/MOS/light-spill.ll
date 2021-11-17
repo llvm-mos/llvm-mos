@@ -16,14 +16,14 @@ define void @light_spill(i8 zeroext %sel) {
 ; CHECK-LABEL: light_spill:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc16)
-; CHECK-NEXT:    lda mos8(__rc18)
+; CHECK-NEXT:    lda mos8(__rc20)
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    lda mos8(__rc16)
-; CHECK-NEXT:    sta mos8(__rc18)
+; CHECK-NEXT:    sta mos8(__rc20)
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    lda #2
 ; CHECK-NEXT:    jsr _Znwt
-; CHECK-NEXT:    ldx mos8(__rc18)
+; CHECK-NEXT:    ldx mos8(__rc20)
 ; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    beq .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %select.false
@@ -53,15 +53,11 @@ define void @light_spill(i8 zeroext %sel) {
 ; CHECK-NEXT:    lda #mos16lo(_ZN4SubB2fnEv)
 ; CHECK-NEXT:    ldx #mos16hi(_ZN4SubB2fnEv)
 ; CHECK-NEXT:  .LBB0_6: ; %select.end1
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    lda mos8(__rc4)
-; CHECK-NEXT:    sta mos8(__rc16)
-; CHECK-NEXT:    lda mos8(__rc5)
-; CHECK-NEXT:    sta mos8(__rc17)
+; CHECK-NEXT:    sta mos8(__rc18)
+; CHECK-NEXT:    stx mos8(__rc19)
 ; CHECK-NEXT:    jsr __call_indir
 ; CHECK-NEXT:    pla
-; CHECK-NEXT:    sta mos8(__rc18)
+; CHECK-NEXT:    sta mos8(__rc20)
 ; CHECK-NEXT:    rts
 entry:
   %tobool.not = icmp eq i8 %sel, 0
