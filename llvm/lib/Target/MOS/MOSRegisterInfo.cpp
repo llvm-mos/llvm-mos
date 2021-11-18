@@ -477,19 +477,6 @@ Register MOSRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? MOS::RS15 : MOS::RS0;
 }
 
-bool MOSRegisterInfo::shouldCoalesce(
-    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
-    const TargetRegisterClass *DstRC, unsigned DstSubReg,
-    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
-  // Don't coalesce Imag8 and AImag8 registers together, since this may cause
-  // expensive ASL zp's to be used when ASL A would have sufficed. It's better
-  // to do arithmetic in A and then copy it out.
-  if (NewRC == &MOS::Imag8RegClass &&
-      (SrcRC == &MOS::AImag8RegClass || DstRC == &MOS::AImag8RegClass))
-    return false;
-  return true;
-}
-
 void MOSRegisterInfo::reserveAllSubregs(BitVector *Reserved,
                                         Register Reg) const {
   for (Register R : subregs_inclusive(Reg))
