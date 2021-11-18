@@ -32,6 +32,7 @@
 #include "MOS.h"
 #include "MOSCombiner.h"
 #include "MOSIndexIV.h"
+#include "MOSInsertCopies.h"
 #include "MOSLateOptimization.h"
 #include "MOSLowerSelect.h"
 #include "MOSMachineScheduler.h"
@@ -50,6 +51,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeMOSCombinerPass(PR);
+  initializeMOSInsertCopiesPass(PR);
   initializeMOSLateOptimizationPass(PR);
   initializeMOSLowerSelectPass(PR);
   initializeMOSNoRecursePass(PR);
@@ -164,6 +166,8 @@ public:
   // scheduling.
   bool alwaysRequiresMachineScheduler() const override { return true; }
 
+  void addMachineSSAOptimization() override;
+
   // Register pressure is too high to work without optimized register
   // allocation.
   void addFastRegAlloc() override { addOptimizedRegAlloc(); }
@@ -224,6 +228,11 @@ void MOSPassConfig::addPreGlobalInstructionSelect() {
 bool MOSPassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
+}
+
+void MOSPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+  addPass(createMOSInsertCopiesPass());
 }
 
 void MOSPassConfig::addPreSched2() {

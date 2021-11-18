@@ -477,6 +477,38 @@ Register MOSRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? MOS::RS15 : MOS::RS0;
 }
 
+bool referencedByShiftOrRotate(Register Reg, const MachineRegisterInfo &MRI) {
+  for (MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
+    switch (MI.getOpcode()) {
+    default:
+      break;
+    case MOS::ASL:
+    case MOS::LSR:
+    case MOS::ROL:
+    case MOS::ROR:
+      return true;
+    }
+  }
+  return false;
+}
+
+bool MOSRegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  // Don't coalesce Imag8 and AImag8 registers together when used by shifts or
+  // rotates.  This may cause expensive ASL zp's to be used when ASL A would
+  // have sufficed. It's better to do arithmetic in A and then copy it out.
+  if (NewRC == &MOS::Imag8RegClass) {
+    const auto &MRI = MI->getMF()->getRegInfo();
+    if (DstRC == &MOS::AImag8RegClass)
+      return !referencedByShiftOrRotate(MI->getOperand(0).getReg(), MRI);
+    if (SrcRC == &MOS::AImag8RegClass)
+      return !referencedByShiftOrRotate(MI->getOperand(1).getReg(), MRI);
+  }
+  return true;
+}
+
 void MOSRegisterInfo::reserveAllSubregs(BitVector *Reserved,
                                         Register Reg) const {
   for (Register R : subregs_inclusive(Reg))
