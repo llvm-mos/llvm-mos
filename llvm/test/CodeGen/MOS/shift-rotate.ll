@@ -384,7 +384,6 @@ define i32 @ashr_16(i32 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    ldx mos8(__rc3)
-; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bpl .LBB21_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldy #-1

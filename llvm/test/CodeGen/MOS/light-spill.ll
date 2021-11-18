@@ -24,7 +24,6 @@ define void @light_spill(i8 zeroext %sel) {
 ; CHECK-NEXT:    lda #2
 ; CHECK-NEXT:    jsr _Znwt
 ; CHECK-NEXT:    ldx mos8(__rc20)
-; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    beq .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %select.false
 ; CHECK-NEXT:    lda #46

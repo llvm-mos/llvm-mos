@@ -20,7 +20,6 @@ define i16 @inc_i16(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #1
-; CHECK-NEXT:    cmp #0
 ; CHECK-NEXT:    bne .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    inx
@@ -37,15 +36,12 @@ define i32 @inc_i32(i32 %a) {
 ; CHECK-NEXT:    ldy mos8(__rc2)
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #1
-; CHECK-NEXT:    cmp #0
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    inx
-; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:  ; %bb.2: ; %entry
 ; CHECK-NEXT:    iny
-; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    inc mos8(__rc3)
@@ -63,7 +59,6 @@ define i8* @inc_ptr(i8* %a) {
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #1
-; CHECK-NEXT:    cmp #0
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    inc mos8(__rc3)

@@ -32,6 +32,7 @@
 #include "MOS.h"
 #include "MOSCombiner.h"
 #include "MOSIndexIV.h"
+#include "MOSLateOptimization.h"
 #include "MOSLowerSelect.h"
 #include "MOSMachineScheduler.h"
 #include "MOSNoRecurse.h"
@@ -49,6 +50,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeMOSCombinerPass(PR);
+  initializeMOSLateOptimizationPass(PR);
   initializeMOSLowerSelectPass(PR);
   initializeMOSNoRecursePass(PR);
   initializeMOSPostRAScavengingPass(PR);
@@ -230,6 +232,7 @@ void MOSPassConfig::addPreSched2() {
   addPass(&FinalizeISelID);
   // Lower pseudos produced by control flow pseudos.
   addPass(&ExpandPostRAPseudosID);
+  addPass(createMOSLateOptimizationPass());
   addPass(createMOSStaticStackAllocPass());
 }
 
