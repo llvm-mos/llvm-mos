@@ -78,3 +78,63 @@ body: |
     dead $c = CMPImm $a, 0, implicit-def $nz
     RTS implicit $n
 ...
+---
+name: ldxyimm_to_inxydexy
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldxyimm_to_inxydexy
+    ; CHECK: $x = LDImm 0
+    ; CHECK-NEXT: $y = LDImm 5
+    ; CHECK-NEXT: $x = IN $x
+    ; CHECK-NEXT: $y = IN $y
+    ; CHECK-NEXT: $x = DE killed $x
+    ; CHECK-NEXT: $y = DE killed $y
+    ; CHECK-NEXT: RTS implicit $x, implicit $y
+    dead $x = LDImm 0
+    dead $y = LDImm 5
+    $x = LDImm 1
+    $y = LDImm 6
+    $x = LDImm 0
+    $y = LDImm 5
+    RTS implicit $x, implicit $y
+...
+---
+name: ldxyimm_clobbered
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldxyimm_clobbered
+    ; CHECK: dead $x = LDImm 0
+    ; CHECK-NEXT: dead $x = LDImag8 $rc0
+    ; CHECK-NEXT: $x = LDImm 1
+    ; CHECK-NEXT: RTS implicit $x
+    dead $x = LDImm 0
+    dead $x = LDImag8 $rc0
+    $x = LDImm 1
+    RTS implicit $x
+...
+---
+name: ldxyimm_target_index
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldxyimm_target_index
+    ; CHECK: dead $x = LDImm target-flags(lo) target-index(mos-static-stack)
+    ; CHECK-NEXT: $x = LDImm 1
+    ; CHECK-NEXT: RTS implicit $x
+    dead $x = LDImm target-flags(lo) target-index(mos-static-stack)
+    $x = LDImm 1
+    RTS implicit $x
+...
+---
+name: ldxyimm_clear_killed
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldxyimm_clear_killed
+    ; CHECK: $x = LDImm 0
+    ; CHECK-NEXT: $rc0 = STImag8 $x
+    ; CHECK-NEXT: $x = IN killed $x
+    ; CHECK-NEXT: RTS implicit $x
+    $x = LDImm 0
+    $rc0 = STImag8 killed $x
+    $x = LDImm 1
+    RTS implicit $x
+...

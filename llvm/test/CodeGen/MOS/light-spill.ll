@@ -39,7 +39,7 @@ define void @light_spill(i8 zeroext %sel) {
 ; CHECK-NEXT:    ldy #0
 ; CHECK-NEXT:    lda mos8(__rc4)
 ; CHECK-NEXT:    sta (mos8(__rc2)),y
-; CHECK-NEXT:    ldy #1
+; CHECK-NEXT:    iny
 ; CHECK-NEXT:    lda mos8(__rc5)
 ; CHECK-NEXT:    sta (mos8(__rc2)),y
 ; CHECK-NEXT:    cpx #0

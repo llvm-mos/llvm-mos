@@ -64,11 +64,11 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    clc
 ; NMOS-NEXT:    adc #1
 ; NMOS-NEXT:    sta mos8(__rc4)
-; NMOS-NEXT:    ldy #1
+; NMOS-NEXT:    iny
 ; NMOS-NEXT:    lda (mos8(__rc2)),y
 ; NMOS-NEXT:    tax
 ; NMOS-NEXT:    lda mos8(__rc4)
-; NMOS-NEXT:    ldy #0
+; NMOS-NEXT:    dey
 ; NMOS-NEXT:    cmp #0
 ; NMOS-NEXT:    bne .LBB0_1
 ; NMOS-NEXT:  ; %bb.4: ; %while.body
@@ -148,11 +148,11 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    adc #1
 ; CMOS-NEXT:    sta mos8(__rc4)
-; CMOS-NEXT:    ldy #1
+; CMOS-NEXT:    iny
 ; CMOS-NEXT:    lda (mos8(__rc2)),y
 ; CMOS-NEXT:    tax
 ; CMOS-NEXT:    lda mos8(__rc4)
-; CMOS-NEXT:    ldy #0
+; CMOS-NEXT:    dey
 ; CMOS-NEXT:    cmp #0
 ; CMOS-NEXT:    bne .LBB0_1
 ; CMOS-NEXT:  ; %bb.4: ; %while.body
