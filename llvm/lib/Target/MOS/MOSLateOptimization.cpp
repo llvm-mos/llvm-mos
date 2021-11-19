@@ -105,7 +105,7 @@ bool MOSLateOptimization::ldImmToInxyDexy(MachineBasicBlock &MBB) const {
   bool Changed = false;
 
   struct ImmLoad {
-    MachineInstr *MI;
+    MachineInstr *MI = nullptr;
     int64_t Val;
   } ConstX, ConstY;
 
