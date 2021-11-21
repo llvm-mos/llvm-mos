@@ -213,6 +213,36 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: stz_absolute
+# CHECK-LABEL: stz_absolute
+body: |
+  bb.0.entry:
+    STZAbs 1234
+    ; CHECK: stz 1234
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: stz_absolutex
+# CHECK-LABEL: stz_absolutex
+body: |
+  bb.0.entry:
+    STZIdx 1234, $x
+    ; CHECK: stz 1234,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: stz_zeropage
+# CHECK-LABEL: stz_zeropage
+body: |
+  bb.0.entry:
+    $rc0 = STZImag8
+    ; CHECK: stz mos8(__rc0)
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: txa_implied
 # CHECK-LABEL: txa_implied
 body: |

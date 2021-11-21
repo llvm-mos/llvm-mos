@@ -377,6 +377,10 @@ let Predicates = [Has65C02] in {
   def STZIdx : MOSStore, PseudoInstExpansion<(STZ_AbsoluteX addr16:$addr)> {
     dag InOperandList = (ins i16imm:$addr, Xc:$idx);
   }
+  // STZ zp
+  def STZImag8 : MOSStore, PseudoInstExpansion<(STZ_ZeroPage addr8:$addr)> {
+    dag OutOperandList = (outs Imag8:$addr);
+  }
 }
 
 //===---------------------------------------------------------------------===//

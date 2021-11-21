@@ -110,6 +110,7 @@ private:
   // Post RA pseudos
   void expandLDIdx(MachineIRBuilder &Builder) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;
+  void expandLDZ(MachineIRBuilder &Builder) const;
   void expandIncDec(MachineIRBuilder &Builder) const;
 
   // Soft stack pseudos

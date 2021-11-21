@@ -703,6 +703,9 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::LDImm1:
     expandLDImm1(Builder);
     break;
+  case MOS::LDZ:
+    expandLDZ(Builder);
+    break;
 
   // Soft stack
   case MOS::SetSPLo:
@@ -804,6 +807,20 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   }
 
   MI.setDesc(Builder.getTII().get(Opcode));
+}
+
+void MOSInstrInfo::expandLDZ(MachineIRBuilder &Builder) const {
+  auto &MI = *Builder.getInsertPt();
+  Register DestReg = MI.getOperand(0).getReg();
+
+  if (MOS::Imag8RegClass.contains(DestReg)) {
+    MI.setDesc(Builder.getTII().get(MOS::STZImag8));
+  } else if (MOS::GPRRegClass.contains(DestReg)) {
+    MI.setDesc(Builder.getTII().get(MOS::LDImm));
+    MI.addOperand(MachineOperand::CreateImm(0));
+  } else {
+    llvm_unreachable("Unexpected register class for LDZ.");
+  }
 }
 
 void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
