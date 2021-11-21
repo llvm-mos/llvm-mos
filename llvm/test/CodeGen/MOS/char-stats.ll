@@ -131,8 +131,7 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CMOS-NEXT:    asl
 ; CMOS-NEXT:    sta mos8(__rc2)
-; CMOS-NEXT:    lda #0
-; CMOS-NEXT:    sta mos8(__rc3)
+; CMOS-NEXT:    stz mos8(__rc3)
 ; CMOS-NEXT:    rol mos8(__rc3)
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    lda mos8(__rc0)
