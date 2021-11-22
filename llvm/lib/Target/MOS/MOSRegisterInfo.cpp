@@ -477,7 +477,7 @@ Register MOSRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? MOS::RS15 : MOS::RS0;
 }
 
-bool referencedByShiftOrRotate(Register Reg, const MachineRegisterInfo &MRI) {
+bool referencedByShiftRotate(Register Reg, const MachineRegisterInfo &MRI) {
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
     switch (MI.getOpcode()) {
     default:
@@ -492,6 +492,19 @@ bool referencedByShiftOrRotate(Register Reg, const MachineRegisterInfo &MRI) {
   return false;
 }
 
+bool referencedByIncDec(Register Reg, const MachineRegisterInfo &MRI) {
+  for (MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
+    switch (MI.getOpcode()) {
+    default:
+      break;
+    case MOS::INC:
+    case MOS::DEC:
+      return true;
+    }
+  }
+  return false;
+}
+
 bool MOSRegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
@@ -499,12 +512,21 @@ bool MOSRegisterInfo::shouldCoalesce(
   // Don't coalesce Imag8 and AImag8 registers together when used by shifts or
   // rotates.  This may cause expensive ASL zp's to be used when ASL A would
   // have sufficed. It's better to do arithmetic in A and then copy it out.
-  if (NewRC == &MOS::Imag8RegClass) {
+  // Same concerns apply to INC and DEC.
+  if (NewRC == &MOS::Imag8RegClass || NewRC == &MOS::Imag16RegClass) {
     const auto &MRI = MI->getMF()->getRegInfo();
-    if (DstRC == &MOS::AImag8RegClass)
-      return !referencedByShiftOrRotate(MI->getOperand(0).getReg(), MRI);
-    if (SrcRC == &MOS::AImag8RegClass)
-      return !referencedByShiftOrRotate(MI->getOperand(1).getReg(), MRI);
+    if (DstRC == &MOS::AImag8RegClass &&
+        referencedByShiftRotate(MI->getOperand(0).getReg(), MRI))
+      return false;
+    if (SrcRC == &MOS::AImag8RegClass &&
+        referencedByShiftRotate(MI->getOperand(1).getReg(), MRI))
+      return false;
+    if (DstRC == &MOS::Anyi8RegClass &&
+        referencedByIncDec(MI->getOperand(0).getReg(), MRI))
+      return false;
+    if (SrcRC == &MOS::Anyi8RegClass &&
+        referencedByIncDec(MI->getOperand(1).getReg(), MRI))
+      return false;
   }
   return true;
 }

@@ -61,7 +61,9 @@ define i8* @inc_ptr(i8* %a) {
 ; CHECK-NEXT:    adc #1
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    inc mos8(__rc3)
+; CHECK-NEXT:    ldx mos8(__rc3)
+; CHECK-NEXT:    inx
+; CHECK-NEXT:    stx mos8(__rc3)
 ; CHECK-NEXT:  .LBB3_2: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
 ; CHECK-NEXT:    rts
@@ -132,7 +134,9 @@ define i8* @dec_ptr(i8* %a) {
 ; CHECK-NEXT:    cmp #255
 ; CHECK-NEXT:    bne .LBB7_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    dec mos8(__rc3)
+; CHECK-NEXT:    ldx mos8(__rc3)
+; CHECK-NEXT:    dex
+; CHECK-NEXT:    stx mos8(__rc3)
 ; CHECK-NEXT:  .LBB7_2: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
 ; CHECK-NEXT:    rts

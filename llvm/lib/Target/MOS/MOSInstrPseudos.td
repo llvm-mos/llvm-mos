@@ -61,8 +61,8 @@ def LDImm1 : MOSPseudo {
 // Expands to LDImm 0 for GPR or STZImag8 for Imag8.
 def LDZ : MOSPseudo {
   let Predicates = [Has65C02];
-  dag OutOperandList = (outs GPRImag8:$dst);
-  let Pattern = [(set GPRImag8:$dst, 0)];
+  dag OutOperandList = (outs Anyi8:$dst);
+  let Pattern = [(set Anyi8:$dst, 0)];
 
   let isAsCheapAsAMove = true;
   let isMoveImm = true;
@@ -70,20 +70,20 @@ def LDZ : MOSPseudo {
 }
 
 def INC : MOSPseudo {
-  dag OutOperandList = (outs GPRImag8:$dst);
-  dag InOperandList = (ins GPRImag8:$src);
+  dag OutOperandList = (outs Anyi8:$dst);
+  dag InOperandList = (ins Anyi8:$src);
 
   let Constraints = "$dst = $src";
-  let Pattern = [(set GPRImag8:$dst, (add GPRImag8:$src, 1))];
+  let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, 1))];
   let isAdd = true;
 }
 
 def DEC : MOSPseudo {
-  dag OutOperandList = (outs GPRImag8:$dst);
-  dag InOperandList = (ins GPRImag8:$src);
+  dag OutOperandList = (outs Anyi8:$dst);
+  dag InOperandList = (ins Anyi8:$src);
 
   let Constraints = "$dst = $src";
-  let Pattern = [(set GPRImag8:$dst, (sub GPRImag8:$src, 1))];
+  let Pattern = [(set Anyi8:$dst, (sub Anyi8:$src, 1))];
 }
 
 //===---------------------------------------------------------------------===//

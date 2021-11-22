@@ -48,28 +48,52 @@ public:
 };
 
 bool MOSInsertCopies::runOnMachineFunction(MachineFunction &MF) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator Next;
     for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
       Next = std::next(I);
+      const TargetRegisterClass *WideRC;
+      MachineOperand *SrcOp;
       switch (I->getOpcode()) {
-        default:
-          continue;
-        case MOS::ASL:
-        case MOS::LSR:
-        case MOS::ROL:
-        case MOS::ROR:
-          break;
+      default:
+        continue;
+      case MOS::ASL:
+      case MOS::LSR:
+      case MOS::ROL:
+      case MOS::ROR:
+        WideRC = &MOS::AImag8RegClass;
+        SrcOp = &I->getOperand(2);
+        break;
+      case MOS::INC:
+      case MOS::DEC:
+        WideRC = &MOS::Anyi8RegClass;
+        SrcOp = &I->getOperand(1);
       }
-      Changed = true;
-      MachineIRBuilder Builder(MBB, I);
-      Register NewSrc = Builder.buildCopy(&MOS::AImag8RegClass, I->getOperand(2)).getReg(0);
-      Register NewDst = Builder.getMRI()->createVirtualRegister(&MOS::AImag8RegClass);
-      Builder.setInsertPt(MBB, Next);
-      Builder.buildCopy(I->getOperand(0), NewDst);
-      I->getOperand(0).setReg(NewDst);
-      I->getOperand(2).setReg(NewSrc);
+
+      const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcOp->getReg());
+      const TargetRegisterClass *DstRC =
+          MRI.getRegClass(I->getOperand(0).getReg());
+
+      // Avoid copying to and from Imag8 just to make the regclass wider. This
+      // could produce LDA ASL STA patterns, when it'd be better to just ASL.
+      if (SrcRC == &MOS::Imag8RegClass && DstRC == &MOS::Imag8RegClass)
+        continue;
+
+      if (SrcRC != WideRC) {
+        Changed = true;
+        MachineIRBuilder Builder(MBB, I);
+        SrcOp->setReg(Builder.buildCopy(WideRC, *SrcOp).getReg(0));
+      }
+      if (DstRC != WideRC) {
+        Changed = true;
+        Register NewDst = MRI.createVirtualRegister(WideRC);
+        MachineIRBuilder Builder(MBB, Next);
+        Builder.buildCopy(I->getOperand(0), NewDst);
+        I->getOperand(0).setReg(NewDst);
+      }
     }
   }
   return Changed;
