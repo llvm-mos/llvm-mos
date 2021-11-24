@@ -531,6 +531,38 @@ bool MOSRegisterInfo::shouldCoalesce(
   return true;
 }
 
+bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
+                                            ArrayRef<MCPhysReg> Order,
+                                            SmallVectorImpl<MCPhysReg> &Hints,
+                                            const MachineFunction &MF,
+                                            const VirtRegMap *VRM,
+                                            const LiveRegMatrix *Matrix) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
+      VirtReg, Order, Hints, MF, VRM, Matrix);
+  SmallSet<Register, 32> HintedRegs;
+  for (Register Reg : Hints)
+    HintedRegs.insert(Reg);
+  bool IsIncDec = false;
+  for (MachineInstr &UseMI : MRI.use_nodbg_instructions(VirtReg)) {
+    switch (UseMI.getOpcode()) {
+    default:
+      continue;
+    case MOS::INC:
+    case MOS::DEC:
+      IsIncDec = true;
+      break;
+    }
+  }
+  if (IsIncDec) {
+    if (!HintedRegs.contains(MOS::X) && is_contained(Order, MOS::X))
+      Hints.push_back(MOS::X);
+    if (!HintedRegs.contains(MOS::Y) && is_contained(Order, MOS::Y))
+      Hints.push_back(MOS::Y);
+  }
+  return BaseImplRetVal;
+}
+
 void MOSRegisterInfo::reserveAllSubregs(BitVector *Reserved,
                                         Register Reg) const {
   for (Register R : subregs_inclusive(Reg))

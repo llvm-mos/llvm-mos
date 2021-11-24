@@ -74,6 +74,13 @@ public:
                       unsigned DstSubReg, const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 
+  bool
+  getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                        SmallVectorImpl<MCPhysReg> &Hints,
+                        const MachineFunction &MF,
+                        const VirtRegMap *VRM = nullptr,
+                        const LiveRegMatrix *Matrix = nullptr) const override;
+
   const char *getImag8SymbolName(Register Reg) const {
     return Imag8SymbolNames[Reg].c_str();
   }
