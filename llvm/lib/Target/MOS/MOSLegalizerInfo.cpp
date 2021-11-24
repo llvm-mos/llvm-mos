@@ -549,8 +549,7 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
 
   auto RHSConst =
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
-  if (!RHSConst || (RHSConst->Value.getZExtValue() != 1 &&
-                    RHSConst->Value.getSExtValue() != -1))
+  if (!RHSConst || std::abs(RHSConst->Value.getSExtValue()) != 1)
     return Helper.narrowScalarAddSub(MI, 0, S8) !=
            LegalizerHelper::UnableToLegalize;
 
@@ -563,18 +562,18 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
   SmallVector<Register> DstParts;
 
   assert(MI.getOpcode() == MOS::G_ADD || MI.getOpcode() == MOS::G_SUB);
-  bool IsAdd =
-      (MI.getOpcode() == MOS::G_ADD) ^ (RHSConst->Value.getSExtValue() == -1);
+  int64_t Amt = RHSConst->Value.getSExtValue();
+  if (MI.getOpcode() == MOS::G_SUB)
+    Amt = -Amt;
 
-  auto OneLow = Builder.buildConstant(S8, 1);
-  Register DstLow = IsAdd ? Builder.buildAdd(S8, Low, OneLow).getReg(0)
-                          : Builder.buildSub(S8, Low, OneLow).getReg(0);
-  auto CarryBorrow = Builder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), DstLow,
-                                       IsAdd ? Builder.buildConstant(S8, 0)
-                                             : Builder.buildConstant(S8, 255));
-  auto OneRest = Builder.buildConstant(RestTy, 1);
-  auto RestIncDec = IsAdd ? Builder.buildAdd(RestTy, Rest, OneRest)
-                          : Builder.buildSub(RestTy, Rest, OneRest);
+  auto AmtLow = Builder.buildConstant(S8, Amt);
+  Register DstLow = Builder.buildAdd(S8, Low, AmtLow).getReg(0);
+  auto CarryBorrow =
+      Builder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), DstLow,
+                        (Amt == 1) ? Builder.buildConstant(S8, 0)
+                                   : Builder.buildConstant(S8, 255));
+  auto AmtRest = Builder.buildConstant(RestTy, Amt);
+  auto RestIncDec = Builder.buildAdd(RestTy, Rest, AmtRest);
   Register DstRest =
       Builder.buildSelect(RestTy, CarryBorrow, RestIncDec, Rest).getReg(0);
 

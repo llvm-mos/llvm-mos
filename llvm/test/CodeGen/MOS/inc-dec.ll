@@ -76,7 +76,7 @@ define i8 @dec_i8(i8 %a) {
 ; CHECK-NEXT:    adc #255
 ; CHECK-NEXT:    rts
 entry:
-  %0 = sub i8 %a, 1
+  %0 = add i8 %a, -1
   ret i8 %0
 }
 
@@ -92,7 +92,7 @@ define i16 @dec_i16(i16 %a) {
 ; CHECK-NEXT:  .LBB5_2: ; %entry
 ; CHECK-NEXT:    rts
 entry:
-  %0 = sub i16 %a, 1
+  %0 = add i16 %a, -1
   ret i16 %0
 }
 
@@ -118,7 +118,7 @@ define i32 @dec_i32(i32 %a) {
 ; CHECK-NEXT:    sty mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
-  %0 = sub i32 %a, 1
+  %0 = add i32 %a, -1
   ret i32 %0
 }
 

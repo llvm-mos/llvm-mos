@@ -83,7 +83,7 @@ def DEC : MOSPseudo {
   dag InOperandList = (ins Anyi8:$src);
 
   let Constraints = "$dst = $src";
-  let Pattern = [(set Anyi8:$dst, (sub Anyi8:$src, 1))];
+  let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, -1))];
 }
 
 //===---------------------------------------------------------------------===//
