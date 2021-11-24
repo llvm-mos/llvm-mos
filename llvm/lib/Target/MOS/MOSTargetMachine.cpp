@@ -171,6 +171,7 @@ public:
   // Register pressure is too high to work without optimized register
   // allocation.
   void addFastRegAlloc() override { addOptimizedRegAlloc(); }
+  void addOptimizedRegAlloc() override;
 
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -233,6 +234,12 @@ bool MOSPassConfig::addGlobalInstructionSelect() {
 void MOSPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
   addPass(createMOSInsertCopiesPass());
+}
+
+void MOSPassConfig::addOptimizedRegAlloc() {
+  // Run the coalescer twice to coalesce RMW patterns revealed by the first coalesce.
+  insertPass(&llvm::TwoAddressInstructionPassID, &llvm::RegisterCoalescerID);
+  TargetPassConfig::addOptimizedRegAlloc();
 }
 
 void MOSPassConfig::addPreSched2() {

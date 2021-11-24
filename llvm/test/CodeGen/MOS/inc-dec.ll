@@ -56,13 +56,13 @@ entry:
 define i8* @inc_ptr(i8* %a) {
 ; CHECK-LABEL: inc_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    inc mos8(__rc2)
-; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    inx
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    inc mos8(__rc3)
 ; CHECK-NEXT:  .LBB3_2: ; %entry
-; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = getelementptr i8, i8* %a, i32 1
@@ -125,14 +125,14 @@ entry:
 define i8* @dec_ptr(i8* %a) {
 ; CHECK-LABEL: dec_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    dec mos8(__rc2)
-; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    cmp #255
+; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    dex
+; CHECK-NEXT:    cpx #255
 ; CHECK-NEXT:    bne .LBB7_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dec mos8(__rc3)
 ; CHECK-NEXT:  .LBB7_2: ; %entry
-; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = getelementptr i8, i8* %a, i32 -1

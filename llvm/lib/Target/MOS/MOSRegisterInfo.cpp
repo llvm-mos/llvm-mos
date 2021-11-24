@@ -505,6 +505,82 @@ bool referencedByIncDec(Register Reg, const MachineRegisterInfo &MRI) {
   return false;
 }
 
+// Returns whether there's exactly one RMW operation, and all of the other
+// references are to the poorer regclass. In that case, it's better to do the
+// operation in the poorer regclass then to copy into a better one then copy
+// back out.
+bool isRmwPattern(Register Reg, const MachineRegisterInfo &MRI) {
+  SmallVector<const MachineInstr *> RMW;
+  const MachineInstr *Rmw = nullptr;
+  for (MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
+    switch (MI.getOpcode()) {
+    default:
+      break;
+    case MOS::ASL:
+    case MOS::LSR:
+    case MOS::ROL:
+    case MOS::ROR:
+    case MOS::INC:
+    case MOS::DEC:
+      if (Rmw && Rmw != &MI)
+        return false;
+      Rmw = &MI;
+      continue;
+    }
+
+    if (!MI.isCopy())
+      return false;
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+
+    Register Other = Reg == Dst ? Src : Dst;
+    assert(Other != Reg);
+
+    if (Other.isPhysical()) {
+      if (!MOS::Imag8RegClass.contains(Other))
+        return false;
+      continue;
+    }
+
+    const auto *OtherRC = MRI.getRegClass(Other);
+    if (OtherRC != &MOS::Imag8RegClass && OtherRC != &MOS::Imag16RegClass)
+      return false;
+  }
+  assert(Rmw);
+  return true;
+}
+
+bool MOSRegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  // Don't coalesce Imag8 and AImag8 registers together when used by shifts or
+  // rotates.  This may cause expensive ASL zp's to be used when ASL A would
+  // have sufficed. It's better to do arithmetic in A and then copy it out.
+  // Same concerns apply to INC and DEC.
+  if (NewRC == &MOS::Imag8RegClass || NewRC == &MOS::Imag16RegClass) {
+    const auto &MRI = MI->getMF()->getRegInfo();
+    if (DstRC == &MOS::AImag8RegClass &&
+        referencedByShiftRotate(MI->getOperand(0).getReg(), MRI) &&
+        !isRmwPattern(MI->getOperand(0).getReg(), MRI))
+      return false;
+    if (SrcRC == &MOS::AImag8RegClass &&
+        referencedByShiftRotate(MI->getOperand(1).getReg(), MRI) &&
+        !isRmwPattern(MI->getOperand(1).getReg(), MRI))
+      return false;
+    if (DstRC == &MOS::Anyi8RegClass &&
+        referencedByIncDec(MI->getOperand(0).getReg(), MRI) &&
+        !isRmwPattern(MI->getOperand(0).getReg(), MRI))
+      return false;
+    if (SrcRC == &MOS::Anyi8RegClass &&
+        referencedByIncDec(MI->getOperand(1).getReg(), MRI) &&
+        !isRmwPattern(MI->getOperand(1).getReg(), MRI))
+      return false;
+  }
+  return true;
+}
+
 bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
                                             ArrayRef<MCPhysReg> Order,
                                             SmallVectorImpl<MCPhysReg> &Hints,
