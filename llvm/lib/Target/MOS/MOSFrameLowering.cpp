@@ -245,9 +245,17 @@ void MOSFrameLowering::emitPrologue(MachineFunction &MF,
   const TargetRegisterInfo &TRI = *MF.getRegInfo().getTargetRegisterInfo();
   MachineIRBuilder Builder(MBB, MBB.begin());
 
-  // If soft stack is used, decrease the soft stack pointer SP.
-  if (MFI.getStackSize())
-    offsetSP(Builder, -MFI.getStackSize());
+  int64_t StackSize = MFI.getStackSize();
+  // If the interrupted routine is in the middle of decrementing its stack
+  // pointer, this routine may observe a stack pointer up to 255 bytes higher
+  // than its atomic value.  Accordingly, summarily decrement the SP by a page.
+  // Interrupts are rarer than the the routines they interrupt, so they pay the
+  // cost of dealing with this atomicity problem.
+  if (isISR(MF))
+    StackSize += 256;
+
+  if (StackSize)
+    offsetSP(Builder, -StackSize);
 
   if (!hasFP(MF))
     return;
@@ -284,9 +292,14 @@ void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
     Builder.setInsertPt(MBB, MBB.getFirstTerminator());
   }
 
+  int64_t StackSize = MFI.getStackSize();
+
+  if (isISR(MF))
+    StackSize += 256;
+
   // If soft stack is used, increase the soft stack pointer SP.
-  if (MFI.getStackSize())
-    offsetSP(Builder, MFI.getStackSize());
+  if (StackSize)
+    offsetSP(Builder, StackSize);
 }
 
 bool MOSFrameLowering::hasFP(const MachineFunction &MF) const {
@@ -323,17 +336,7 @@ void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
     Add->getOperand(1).setSubReg(MOS::subcarry);
     Add->getOperand(2).setSubReg(MOS::subv);
     Add->getOperand(5).setSubReg(MOS::subcarry);
-
-    // If decreasing SP with the low byte first, an interrupt handler may see a
-    // temporarily increased SP if the low byte borrows. The handler would then
-    // clobber the interrupted function's stack. We can avoid this by saving the
-    // low byte temporarily and setting the high byte first. SP increases would
-    // have the inverse problem, but this is solved by setting them in the
-    // natural lo-high ordering.
-    if (Offset < 0)
-      Builder.buildInstr(MOS::PH, {}, {A});
-    else
-      Builder.buildCopy(MOS::RC0, A);
+    Builder.buildCopy(MOS::RC0, A);
     // Without this, A would have two definitions; the register scavenger does
     // not allow this.
     A = Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass);
@@ -345,15 +348,6 @@ void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
   Add->getOperand(2).setSubReg(MOS::subv);
   Add->getOperand(5).setSubReg(MOS::subcarry);
   Builder.buildCopy(MOS::RC1, A);
-
-  // Finally save the deferred low byte, if any.
-  if (LoBytes && Offset < 0) {
-    A = Builder.buildInstr(MOS::PL, {&MOS::AcRegClass}, {}).getReg(0);
-    Builder.buildCopy(MOS::RC0, A);
-    // Extend the live range of P to here; otherwise the scavenger will attempt
-    // to push and pop P around the push of the low byte and fail.
-    Builder.buildInstr(MOS::KILL, {}, {P});
-  }
 }
 
 bool MOSFrameLowering::isISR(const MachineFunction &MF) const {

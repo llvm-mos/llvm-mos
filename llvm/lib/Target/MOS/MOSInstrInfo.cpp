@@ -706,13 +706,6 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::LDZ:
     expandLDZ(Builder);
     break;
-
-  // Soft stack
-  case MOS::SetSPLo:
-  case MOS::SetSPHi:
-    expandSetSP(Builder);
-    break;
-
   // NZ
   case MOS::SBCNZImag8:
     expandSBCNZImag8(Builder);
@@ -856,23 +849,6 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
     MI.setDesc(TII.get(IsInc ? MOS::INCImag8 : MOS::DECImag8));
     break;
   }
-}
-
-//===---------------------------------------------------------------------===//
-// Soft stack pseudos
-//===---------------------------------------------------------------------===//
-
-void MOSInstrInfo::expandSetSP(MachineIRBuilder &Builder) const {
-  auto &MI = *Builder.getInsertPt();
-  Register Src = MI.getOperand(0).getReg();
-
-  if (MI.getOpcode() == MOS::SetSPLo) {
-    copyPhysRegImpl(Builder, MOS::RC0, Src);
-  } else {
-    assert(MI.getOpcode() == MOS::SetSPHi);
-    copyPhysRegImpl(Builder, MOS::RC1, Src);
-  }
-  MI.eraseFromParent();
 }
 
 //===---------------------------------------------------------------------===//

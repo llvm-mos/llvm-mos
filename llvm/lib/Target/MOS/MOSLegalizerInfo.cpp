@@ -1692,24 +1692,7 @@ bool MOSLegalizerInfo::legalizeDynStackAlloc(LegalizerHelper &Helper,
   }
 
   SPTmp = Builder.buildCast(PtrTy, Alloc);
-
-  // Always set the high byte first. If the low byte were set first, an
-  // interrupt handler might observe a temporarily increased stack pointer,
-  // which would cause it to overwrite the interrupted function's stack.
-
-  // The ordering of these pseudos is ensured by their implicit arguments:
-  // both claim to read and write the entire stack pointer. This is true after
-  // a fashion; since the 16-bit operation is not atomic, the intermediate
-  // 16-bit values are important too.
-  auto Unmerge = Builder.buildUnmerge(LLT::scalar(8), SPTmp);
-  Register Lo = Unmerge.getReg(0);
-  Register Hi = Unmerge.getReg(1);
-  MRI.setRegClass(Lo, &MOS::GPRRegClass);
-  MRI.setRegClass(Hi, &MOS::GPRRegClass);
-
-  Builder.buildInstr(MOS::SetSPHi, {}, {Hi});
-  Builder.buildInstr(MOS::SetSPLo, {}, {Lo});
-
+  Builder.buildCopy(MOS::RS0, SPTmp);
   Builder.buildCopy(Dst, SPTmp);
 
   MI.eraseFromParent();

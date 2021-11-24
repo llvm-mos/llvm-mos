@@ -156,22 +156,6 @@ def STStk : MOSPseudo {
   let mayStore = true;
 }
 
-// Pseudos for setting individual bytes of the stack pointer.  The ordering of
-// these pseudos is ensured by their implicit arguments: both claim to read and
-// write the entire stack pointer. This is true after a fashion; since the
-// 16-bit operation is not atomic, the intermediate 16-bit values are important
-// too. This allows setting the SP bytes in a specific order to ensure that an
-// incorrect SP can never be observed by an interrupt handler.
-class MOSSetSPPseudo : MOSPseudo {
-  dag OutOperandList = (outs);
-  dag InOperandList = (ins GPR:$val);
-  let Defs = [RS0];
-  let Uses = [RS0];
-}
-
-def SetSPLo : MOSSetSPPseudo;
-def SetSPHi : MOSSetSPPseudo;
-
 //===---------------------------------------------------------------------===//
 // NZ
 //===---------------------------------------------------------------------===//

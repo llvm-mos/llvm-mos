@@ -113,9 +113,6 @@ private:
   void expandLDZ(MachineIRBuilder &Builder) const;
   void expandIncDec(MachineIRBuilder &Builder) const;
 
-  // Soft stack pseudos
-  void expandSetSP(MachineIRBuilder &Builder) const;
-
   // NZ pseudos
   void expandSBCNZImag8(MachineIRBuilder &Builder) const;
   void expandCMPTerm(MachineIRBuilder &Builder) const;

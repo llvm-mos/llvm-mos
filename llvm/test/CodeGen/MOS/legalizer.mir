@@ -1536,9 +1536,7 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[SBC5]](s8)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[COPY1]](s8), [[COPY3]](s8)
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:gpr(s8), [[UV3:%[0-9]+]]:gpr(s8) = G_UNMERGE_VALUES [[INTTOPTR]](p0)
-    ; CHECK-NEXT: SetSPHi [[UV3]](s8), implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: SetSPLo [[UV2]](s8), implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $rs0 = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: RTS implicit [[COPY4]](p0)
     %0:_(s16) = G_CONSTANT i16 2
@@ -1591,9 +1589,7 @@ body: |
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s8) = G_AND [[COPY4]], [[C3]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[AND]](s8), [[AND1]](s8)
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:gpr(s8), [[UV5:%[0-9]+]]:gpr(s8) = G_UNMERGE_VALUES [[INTTOPTR]](p0)
-    ; CHECK-NEXT: SetSPHi [[UV5]](s8), implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: SetSPLo [[UV4]](s8), implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $rs0 = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(p0) = COPY [[INTTOPTR]](p0)
     ; CHECK-NEXT: RTS implicit [[COPY5]](p0)
     %0:_(s16) = COPY $rs1
