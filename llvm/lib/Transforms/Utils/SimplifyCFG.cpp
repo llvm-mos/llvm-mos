@@ -6726,7 +6726,7 @@ bool SimplifyCFGOpt::simplifyOnceImpl(BasicBlock *BB) {
 
   IRBuilder<> Builder(BB);
 
-  if (Options.FoldTwoEntryPHINode) {
+  if (Options.FoldTwoEntryPHINode && TwoEntryPHINodeFoldingThreshold) {
     // If there is a trivial two-entry PHI node in this basic block, and we can
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
