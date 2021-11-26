@@ -272,6 +272,8 @@ bool MOSCSEConfigFull::shouldCSEOpc(unsigned Opc) {
   default:
     return CSEConfigFull::shouldCSEOpc(Opc);
   case MOS::G_SBC:
+  case MOS::G_SHLE:
+  case MOS::G_LSHRE:
     return true;
   }
 }
