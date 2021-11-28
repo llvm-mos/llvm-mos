@@ -101,6 +101,8 @@ private:
   // Other Operations
   bool legalizeDynStackAlloc(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                              MachineInstr &MI) const;
+  bool legalizeFreeze(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
 };
 
 } // namespace llvm

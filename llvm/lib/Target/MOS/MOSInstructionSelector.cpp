@@ -186,7 +186,6 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_LOAD_ABS:
   case MOS::G_LOAD_ABS_IDX:
   case MOS::G_LOAD_INDIR_IDX:
-  case MOS::G_FREEZE:
   case MOS::G_PHI:
   case MOS::G_PTRTOINT:
   case MOS::G_STORE_INDIR_IDX:
@@ -616,7 +615,6 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   case MOS::G_BRINDIRECT:
     Opcode = MOS::JMPIndir;
     break;
-  case MOS::G_FREEZE:
   case MOS::G_INTTOPTR:
   case MOS::G_PTRTOINT:
     Opcode = MOS::COPY;

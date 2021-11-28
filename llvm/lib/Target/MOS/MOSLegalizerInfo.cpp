@@ -64,7 +64,7 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .maxScalar(0, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalFor({S1, S8, P})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
@@ -266,6 +266,12 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   // Other Operations
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
+
+  getActionDefinitionsBuilder(G_FREEZE)
+      .customFor({S1, S8, P})
+      .widenScalarToNextMultipleOf(0, 8)
+      .maxScalar(0, S8)
+      .unsupported();
 }
 
 bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
@@ -364,6 +370,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   // Other Operations
   case G_DYN_STACKALLOC:
     return legalizeDynStackAlloc(Helper, MRI, MI);
+  case G_FREEZE:
+    return legalizeFreeze(Helper, MRI, MI);
   }
 }
 
@@ -1695,5 +1703,16 @@ bool MOSLegalizerInfo::legalizeDynStackAlloc(LegalizerHelper &Helper,
   Builder.buildCopy(Dst, SPTmp);
 
   MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeFreeze(LegalizerHelper &Helper,
+                                      MachineRegisterInfo &MRI,
+                                      MachineInstr &MI) const {
+  // G_FREEZE is lowered to COPY here to ensure getDefSrcRegIgnoringCopies
+  // will work across the entire function during instruction selection.
+  Helper.Observer.changingInstr(MI);
+  MI.setDesc(Helper.MIRBuilder.getTII().get(COPY));
+  Helper.Observer.changedInstr(MI);
   return true;
 }
