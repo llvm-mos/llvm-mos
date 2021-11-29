@@ -145,11 +145,33 @@ MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (!CommutedMI)
     return nullptr;
 
+  // PHI nodes keep the register classes of all their arguments. By the time the
+  // two address instruction pass occurs, these phis have already been lowered
+  // to copies. Changing register classes here can make those register classes
+  // mismatch the new ones; to avoid this, we recompute the register classes for
+  // any vregs copied into or out of a commuted vreg.
+  const auto RecomputeCopyRC = [&](Register Reg) {
+    for (MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
+      if (!MI.isCopy())
+        continue;
+      Register Other = MI.getOperand(0).getReg() == Reg
+                           ? MI.getOperand(1).getReg()
+                           : MI.getOperand(0).getReg();
+      if (!Other.isVirtual())
+        continue;
+      MRI.recomputeRegClass(Other);
+    }
+  };
+
   // Use the new register classes computed above, if any.
-  if (Reg1Class)
+  if (Reg1Class) {
     MRI.setRegClass(Reg1, Reg1Class);
-  if (Reg2Class)
+    RecomputeCopyRC(Reg1);
+  }
+  if (Reg2Class) {
     MRI.setRegClass(Reg2, Reg2Class);
+    RecomputeCopyRC(Reg2);
+  }
   return CommutedMI;
 }
 
