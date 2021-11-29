@@ -409,3 +409,44 @@ body: |
     $rs17 = IMPLICIT_DEF
     RTS
 ...
+---
+name: save_restore_csr_restorepoint
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: variable-sized }
+frameInfo:
+  savePoint:       '%bb.0'
+  restorePoint:    '%bb.1'
+body: |
+  ; CHECK-LABEL: name: save_restore_csr_restorepoint
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $a = frame-setup COPY $rc30
+  ; CHECK-NEXT:   frame-setup PH killed $a
+  ; CHECK-NEXT:   $a = frame-setup COPY $rc31
+  ; CHECK-NEXT:   frame-setup PH killed $a
+  ; CHECK-NEXT:   $rs15 = COPY $rs0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $rs15 = IMPLICIT_DEF
+  ; CHECK-NEXT:   $rs16 = IMPLICIT_DEF
+  ; CHECK-NEXT:   $rs17 = IMPLICIT_DEF
+  ; CHECK-NEXT:   $rs0 = COPY $rs15
+  ; CHECK-NEXT:   $a = frame-destroy PL
+  ; CHECK-NEXT:   $rc31 = frame-destroy COPY killed $a
+  ; CHECK-NEXT:   $a = frame-destroy PL
+  ; CHECK-NEXT:   $rc30 = frame-destroy COPY killed $a
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RTS implicit $rc30, implicit $rc31
+  bb.0.entry:
+  bb.1:
+    $rs15 = IMPLICIT_DEF
+    $rs16 = IMPLICIT_DEF
+    $rs17 = IMPLICIT_DEF
+  bb.2:
+    RTS
+...

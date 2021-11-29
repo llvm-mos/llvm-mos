@@ -116,6 +116,25 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   return true;
 }
 
+template <typename F>
+static void visitReturnBlocks(MachineBasicBlock *MBB, const F &Func,
+                              DenseSet<MachineBasicBlock *> &VisitedBBs) {
+  if (!VisitedBBs.insert(MBB).second)
+    return;
+  if (MBB->isReturnBlock())
+    Func(*MBB);
+
+  // Follow branches in BB and look for returns
+  for (MachineBasicBlock *Succ : MBB->successors())
+    visitReturnBlocks(Succ, Func, VisitedBBs);
+}
+
+template <typename F>
+static void visitReturnBlocks(MachineBasicBlock *MBB, const F &Func) {
+  DenseSet<MachineBasicBlock *> VisitedBBs;
+  visitReturnBlocks(MBB, Func, VisitedBBs);
+}
+
 bool MOSFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
@@ -152,14 +171,13 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
 
   // Mark the CSRs as used by the return to ensure Machine Copy Propagation
   // doesn't remove the copies that set them.
-  if (MBB.succ_empty()) {
+  visitReturnBlocks(&MBB, [&CSI](MachineBasicBlock &MBB) {
     assert(MBB.rbegin()->isReturn());
     for (const CalleeSavedInfo &CI : CSI) {
-      MBB.rbegin()->addOperand(
-          *MBB.getParent(), MachineOperand::CreateReg(
-                                CI.getReg(), /*isDef=*/false, /*isImp=*/true));
+      MBB.rbegin()->addOperand(MachineOperand::CreateReg(
+          CI.getReg(), /*isDef=*/false, /*isImp=*/true));
     }
-  }
+  });
 
   // Record that the frame pointer is killed by these instructions.
   for (auto MI = MIS.begin(), MIE = MIS.getInitial(); MI != MIE; ++MI)
