@@ -24,8 +24,15 @@ def sbc_equal : GICombineRule<
           [{ return matchSBCEqual(*${root}, MRI); }]),
   (apply [{  return applySBCEqual(*${root}, MRI, B, Observer);}])>;
 
+def extract_low_bit_matchdata : GIDefMatchData<"MachineInstr*">;
+def extract_low_bit : GICombineRule<
+  (defs root:$root, extract_low_bit_matchdata:$matchinfo),
+  (match (wip_match_opcode G_TRUNC, G_ICMP):$root,
+          [{ return matchExtractLowBit(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{  return applyExtractLowBit(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+
 def MOSCombinerHelper: GICombinerHelper<
-  "MOSGenCombinerHelper", [all_combines, fold_global_offset, sbc_equal]> {
+  "MOSGenCombinerHelper", [all_combines, fold_global_offset, sbc_equal, extract_low_bit]> {
   let DisableRuleOption = "moscombiner-disable-rule";
   let StateClass = "MOSCombinerHelperState";
   let AdditionalArguments = [];
