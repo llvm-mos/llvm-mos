@@ -229,8 +229,8 @@ bool MOSCombinerHelperState::applyExtractLowBit(MachineInstr &MI,
     B.buildCopy(MI.getOperand(0).getReg(), EvenShift.getReg(1));
   MOSLegalizerInfo Legalizer;
   LegalizerHelper LegalizerHelper(B.getMF(), Legalizer, Observer, B);
-  if (!Legalizer.legalizeLshrEShlE(LegalizerHelper, MRI, *EvenShift))
-    return false;
+  B.setInsertPt(B.getMBB(), *EvenShift);
+  assert(Legalizer.legalizeLshrEShlE(LegalizerHelper, MRI, *EvenShift));
   Shift->eraseFromParent();
   MI.eraseFromParent();
   return true;
