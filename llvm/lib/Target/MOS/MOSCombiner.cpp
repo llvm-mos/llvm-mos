@@ -230,7 +230,8 @@ bool MOSCombinerHelperState::applyExtractLowBit(MachineInstr &MI,
   MOSLegalizerInfo Legalizer;
   LegalizerHelper LegalizerHelper(B.getMF(), Legalizer, Observer, B);
   B.setInsertPt(B.getMBB(), *EvenShift);
-  assert(Legalizer.legalizeLshrEShlE(LegalizerHelper, MRI, *EvenShift));
+  if (!Legalizer.legalizeLshrEShlE(LegalizerHelper, MRI, *EvenShift))
+    llvm_unreachable("Failed to legalize shift.");
   Shift->eraseFromParent();
   MI.eraseFromParent();
   return true;
