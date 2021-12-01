@@ -958,6 +958,43 @@ static void negateInverseComparison(LegalizerHelper &Helper, MachineInstr &MI) {
   Builder.buildNot(Dst, Not);
 }
 
+// Adjust the constant RHS to swap strictness of the predicate. This keeps the
+// RHS constant, as opposed to swapping the arguments, which forces a load of
+// the RHS into a GPR.
+static bool adjustConstRHS(LegalizerHelper &Helper, MachineInstr &MI) {
+  auto &Builder = Helper.MIRBuilder;
+  const auto &MRI = *Builder.getMRI();
+
+  Register RHS = MI.getOperand(3).getReg();
+  auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+
+  auto ConstRHS = getIConstantVRegValWithLookThrough(RHS, MRI);
+  if (!ConstRHS)
+    return false;
+
+  switch (Pred) {
+  default:
+    llvm_unreachable("Unexpected predicate.");
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_UGT:
+    if (ConstRHS->Value.isMaxValue())
+      return false;
+    break;
+  case CmpInst::ICMP_SLE:
+  case CmpInst::ICMP_SGT:
+    if (ConstRHS->Value.isMaxSignedValue())
+      return false;
+    break;
+  }
+
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(1).setPredicate(CmpInst::getFlippedStrictnessPredicate(Pred));
+  MI.getOperand(3).setReg(
+      Builder.buildConstant(MRI.getType(RHS), ConstRHS->Value + 1).getReg(0));
+  Helper.Observer.changedInstr(MI);
+  return true;
+}
+
 // Lowers a comparison to the swapped comparison on swapped operands. For
 // example, G_ICMP intpred(ult), A, B would become "G_ICMP intpred(ugt) B, A".
 static void swapComparison(LegalizerHelper &Helper, MachineInstr &MI) {
@@ -995,6 +1032,8 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_SLE:
   case CmpInst::ICMP_SGT:
+    if (adjustConstRHS(Helper, MI))
+      return true;
     swapComparison(Helper, MI);
     return true;
   default:
