@@ -975,8 +975,6 @@ static void swapComparison(LegalizerHelper &Helper, MachineInstr &MI) {
 bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
-  LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   Register Dst = MI.getOperand(0).getReg();
@@ -985,28 +983,7 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
 
-  bool RHSIsZero = mi_match(RHS, MRI, m_SpecificICst(0));
-
-  Register LowBitVal;
-  if (RHSIsZero &&
-      mi_match(LHS, MRI, m_GAnd(m_Reg(LowBitVal), m_SpecificICst(1)))) {
-    if (Pred == CmpInst::ICMP_EQ) {
-      negateInverseComparison(Helper, MI);
-      return true;
-    }
-    if (Pred == CmpInst::ICMP_NE) {
-      Register LowByte = LowBitVal;
-      if (MRI.getType(LowBitVal) != S8) {
-        auto Unmerge = Builder.buildUnmerge(S8, LowBitVal);
-        LowByte = Unmerge->getOperand(0).getReg();
-      }
-      Builder.buildInstr(MOS::G_LSHRE, {S8, Dst},
-                         {LowByte, Builder.buildConstant(S1, 0)});
-      MI.eraseFromParent();
-      return true;
-    }
-  }
-
+  // Implement most comparisons in terms of EQ, UGE, and SLT, as these can be
   // implemented directly via 6502 flags.
   switch (Pred) {
   case CmpInst::ICMP_NE:
@@ -1038,7 +1015,12 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     return true;
   }
 
+  LLT S1 = LLT::scalar(1);
+  LLT S8 = LLT::scalar(8);
+
+  bool RHSIsZero = mi_match(RHS, MRI, m_SpecificICst(0));
   Register CIn;
+
   if (Type != S8) {
     if (Pred != CmpInst::ICMP_SLT) {
       Register LHSHigh, LHSRest;
