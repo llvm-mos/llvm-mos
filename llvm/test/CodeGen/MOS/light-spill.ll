@@ -23,26 +23,22 @@ define void @light_spill(i8 zeroext %sel) {
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    lda #2
 ; CHECK-NEXT:    jsr _Znwt
-; CHECK-NEXT:    ldx mos8(__rc20)
+; CHECK-NEXT:    lda mos8(__rc20)
 ; CHECK-NEXT:    beq .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %select.false
 ; CHECK-NEXT:    lda #46
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    lda #22
+; CHECK-NEXT:    ldx #22
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    lda #-46
-; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    lda #4
+; CHECK-NEXT:    ldx #4
 ; CHECK-NEXT:  .LBB0_3: ; %select.end
-; CHECK-NEXT:    sta mos8(__rc5)
 ; CHECK-NEXT:    ldy #0
-; CHECK-NEXT:    lda mos8(__rc4)
 ; CHECK-NEXT:    sta (mos8(__rc2)),y
 ; CHECK-NEXT:    iny
-; CHECK-NEXT:    lda mos8(__rc5)
+; CHECK-NEXT:    txa
 ; CHECK-NEXT:    sta (mos8(__rc2)),y
-; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    lda mos8(__rc20)
 ; CHECK-NEXT:    beq .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %select.false2
 ; CHECK-NEXT:    lda #mos16lo(_ZN4SubA2fnEv)

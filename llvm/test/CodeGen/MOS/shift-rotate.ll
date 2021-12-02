@@ -364,9 +364,8 @@ entry:
 define i16 @ashr_15(i16 %a) {
 ; CHECK-LABEL: ashr_15:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bpl .LBB21_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldx #-1
@@ -383,7 +382,6 @@ define i16 @ashr_15(i16 %a) {
 ; CHECK-NEXT:  .LBB21_5: ; %entry
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:  .LBB21_6: ; %entry
-; CHECK-NEXT:    sty mos8(__rc2)
 ; CHECK-NEXT:    asl mos8(__rc2)
 ; CHECK-NEXT:    rol
 ; CHECK-NEXT:    stx mos8(__rc2)
@@ -399,6 +397,7 @@ define i32 @ashr_16(i32 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    ldx mos8(__rc3)
+; CHECK-NEXT:    ldy mos8(__rc3)
 ; CHECK-NEXT:    bpl .LBB22_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldy #-1

@@ -194,6 +194,16 @@ def CMPImag8Term : MOSPseudo {
   let isTerminator = true;
 }
 
+def CMPZTerm : MOSPseudo {
+  dag OutOperandList = (outs Cc:$carry);
+  dag InOperandList = (ins Anyi8:$val);
+
+  let Defs = [NZ];
+
+  let isCompare = true;
+  let isTerminator = true;
+}
+
 //===---------------------------------------------------------------------===//
 // Control flow
 //===---------------------------------------------------------------------===//

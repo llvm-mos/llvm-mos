@@ -203,6 +203,41 @@ static Register getSbcFlagForRegister(const MachineInstr &Sbc, Register Reg) {
   llvm_unreachable("Could not find register in G_SBC outputs.");
 }
 
+struct CmpZTerm_match {
+  Register &LHS;
+  Register &Flag;
+
+  CmpZTerm_match(Register &LHS, Register &Flag) : LHS(LHS), Flag(Flag) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register CondReg) {
+    auto DefSrcReg = getDefSrcRegIgnoringCopies(CondReg, MRI);
+    MachineInstr &CondMI = *DefSrcReg->MI;
+    if (CondMI.getOpcode() != MOS::G_SBC)
+      return false;
+
+    auto RHSConst =
+        getIConstantVRegValWithLookThrough(CondMI.getOperand(6).getReg(), MRI);
+    if (!RHSConst)
+      return false;
+    if (!RHSConst->Value.isZero())
+      return false;
+
+    auto CInConst =
+        getIConstantVRegValWithLookThrough(CondMI.getOperand(7).getReg(), MRI);
+    if (!CInConst || CInConst->Value.isNullValue())
+      return false;
+
+    LHS = CondMI.getOperand(5).getReg();
+    Flag = getSbcFlagForRegister(CondMI, DefSrcReg->Reg);
+
+    return Flag == MOS::N || Flag == MOS::Z;
+  }
+};
+
+inline CmpZTerm_match m_CmpZTerm(Register &LHS, Register &Flag) {
+  return {LHS, Flag};
+}
+
 struct CmpImmTerm_match {
   Register &LHS;
   int64_t &RHS;
@@ -295,8 +330,10 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
 
   Register LHS;
+  if (!Compare && mi_match(CondReg, MRI, m_CmpZTerm(LHS, Flag)))
+    Compare = Builder.buildInstr(MOS::CMPZTerm, {S1}, {LHS});
   int64_t RHSConst;
-  if (mi_match(CondReg, MRI, m_CmpImmTerm(LHS, RHSConst, Flag)))
+  if (!Compare && mi_match(CondReg, MRI, m_CmpImmTerm(LHS, RHSConst, Flag)))
     Compare = Builder.buildInstr(MOS::CMPImmTerm, {S1}, {LHS, RHSConst});
   Register RHS;
   if (!Compare && mi_match(CondReg, MRI, m_CmpImag8Term(LHS, RHS, Flag)))
@@ -419,14 +456,14 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
   // code to emit depends heavily on the actual offset, which isn't known
   // until FEI.
   LoAddr = Builder.buildInstr(MOS::AddrLostk, {S8, S1, S1}, {})
-                .add(MI.getOperand(1))
-                .addImm(0);
+               .add(MI.getOperand(1))
+               .addImm(0);
   Register Carry = LoAddr.getReg(1);
 
   HiAddr = Builder.buildInstr(MOS::AddrHistk, {S8, S1, S1}, {})
-                .add(MI.getOperand(1))
-                .addImm(0)
-                .addUse(Carry);
+               .add(MI.getOperand(1))
+               .addImm(0)
+               .addUse(Carry);
 
   if (!constrainSelectedInstRegOperands(*LoAddr, TII, TRI, RBI))
     return false;
@@ -448,11 +485,11 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
   HiImm->getOperand(1).setTargetFlags(MOS::MO_HI);
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     return false;
-  composePtr(Builder, MI.getOperand(0).getReg(), LoImm.getReg(0), HiImm.getReg(0));
+  composePtr(Builder, MI.getOperand(0).getReg(), LoImm.getReg(0),
+             HiImm.getReg(0));
   MI.eraseFromParent();
   return true;
 }
-
 
 bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);

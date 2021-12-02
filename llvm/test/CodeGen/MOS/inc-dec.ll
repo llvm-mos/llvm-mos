@@ -33,7 +33,6 @@ entry:
 define i32 @inc_i32(i32 %a) {
 ; CHECK-LABEL: inc_i32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldy mos8(__rc2)
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #1
 ; CHECK-NEXT:    bne .LBB2_4
@@ -41,12 +40,11 @@ define i32 @inc_i32(i32 %a) {
 ; CHECK-NEXT:    inx
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    iny
+; CHECK-NEXT:    inc mos8(__rc2)
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    inc mos8(__rc3)
 ; CHECK-NEXT:  .LBB2_4: ; %entry
-; CHECK-NEXT:    sty mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = add i32 %a, 1

@@ -151,7 +151,7 @@ define zeroext i1 @sle(i16 %a, i16 %b) {
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    eor #-128
 ; CHECK-NEXT:  .LBB6_2: ; %entry
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    tax
 ; CHECK-NEXT:    bpl .LBB6_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    lda #0
@@ -175,7 +175,7 @@ define zeroext i1 @slt(i16 %a, i16 %b) {
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    eor #-128
 ; CHECK-NEXT:  .LBB7_2: ; %entry
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    tax
 ; CHECK-NEXT:    bpl .LBB7_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    lda #1
@@ -199,7 +199,7 @@ define zeroext i1 @sge(i16 %a, i16 %b) {
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    eor #-128
 ; CHECK-NEXT:  .LBB8_2: ; %entry
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    tax
 ; CHECK-NEXT:    bpl .LBB8_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    lda #0
@@ -225,7 +225,7 @@ define zeroext i1 @sgt(i16 %a, i16 %b) {
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    eor #-128
 ; CHECK-NEXT:  .LBB9_2: ; %entry
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    tax
 ; CHECK-NEXT:    bpl .LBB9_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    lda #1

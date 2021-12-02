@@ -41,7 +41,7 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:  .LBB0_2: ; %entry
 ; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NMOS-NEXT:    jsr next_char
-; NMOS-NEXT:    cmp #0
+; NMOS-NEXT:    tax
 ; NMOS-NEXT:    beq .LBB0_5
 ; NMOS-NEXT:  ; %bb.3: ; %while.body
 ; NMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -125,7 +125,7 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:  .LBB0_2: ; %entry
 ; CMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CMOS-NEXT:    jsr next_char
-; CMOS-NEXT:    cmp #0
+; CMOS-NEXT:    tax
 ; CMOS-NEXT:    beq .LBB0_5
 ; CMOS-NEXT:  ; %bb.3: ; %while.body
 ; CMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
