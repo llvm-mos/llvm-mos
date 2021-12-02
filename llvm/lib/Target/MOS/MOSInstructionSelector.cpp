@@ -289,33 +289,23 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
 
   LLT S1 = LLT::scalar(1);
 
+  MachineInstr *Compare = nullptr;
+  Register Flag;
+
   MachineIRBuilder Builder(MI);
 
   Register LHS;
   int64_t RHSConst;
-  Register Flag;
-  if (mi_match(CondReg, MRI, m_CmpImmTerm(LHS, RHSConst, Flag))) {
-    auto Compare = Builder.buildInstr(MOS::CMPImmTerm, {S1}, {LHS, RHSConst});
-    if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
-      return false;
-
-    if (Flag == MOS::C)
-      Flag = Compare.getReg(0);
-
-    Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(Flag).addImm(FlagVal);
-    MI.eraseFromParent();
-    return true;
-  }
-
+  if (mi_match(CondReg, MRI, m_CmpImmTerm(LHS, RHSConst, Flag)))
+    Compare = Builder.buildInstr(MOS::CMPImmTerm, {S1}, {LHS, RHSConst});
   Register RHS;
-  if (mi_match(CondReg, MRI, m_CmpImag8Term(LHS, RHS, Flag))) {
-    auto Compare = Builder.buildInstr(MOS::CMPImag8Term, {S1}, {LHS, RHS});
+  if (!Compare && mi_match(CondReg, MRI, m_CmpImag8Term(LHS, RHS, Flag)))
+    Compare = Builder.buildInstr(MOS::CMPImag8Term, {S1}, {LHS, RHS});
+
+  if (Compare) {
     if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
       return false;
-
-    if (Flag == MOS::C)
-      Flag = Compare.getReg(0);
-
+    assert(Flag != MOS::C);
     Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(Flag).addImm(FlagVal);
     MI.eraseFromParent();
     return true;
