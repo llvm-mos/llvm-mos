@@ -667,12 +667,14 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; 6502-LABEL: name: trunc_8_1
-    ; 6502: [[COPY:%[0-9]+]]:anyi8 = COPY $a
-    ; 6502-NEXT: [[COPY1:%[0-9]+]]:anyi1 = COPY [[COPY]].sublsb
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 6502-NEXT: [[ANDImm:%[0-9]+]]:ac = ANDImm [[COPY]], 1
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:gpr_lsb = COPY [[ANDImm]].sublsb
     ; 6502-NEXT: RTS implicit [[COPY1]]
     ; 65C02-LABEL: name: trunc_8_1
-    ; 65C02: [[COPY:%[0-9]+]]:anyi8 = COPY $a
-    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:anyi1 = COPY [[COPY]].sublsb
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 65C02-NEXT: [[ANDImm:%[0-9]+]]:ac = ANDImm [[COPY]], 1
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:gpr_lsb = COPY [[ANDImm]].sublsb
     ; 65C02-NEXT: RTS implicit [[COPY1]]
     %0:any(s8) = COPY $a
     %1:any(s1) = G_TRUNC %0
@@ -705,13 +707,17 @@ body: |
     ; 6502-LABEL: name: trunc_16_1
     ; 6502: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY [[COPY]].sublo
-    ; 6502-NEXT: [[COPY2:%[0-9]+]]:anyi1 = COPY [[COPY1]].sublsb
-    ; 6502-NEXT: RTS implicit [[COPY2]]
+    ; 6502-NEXT: [[COPY2:%[0-9]+]]:ac = COPY [[COPY1]]
+    ; 6502-NEXT: [[ANDImm:%[0-9]+]]:ac = ANDImm [[COPY2]], 1
+    ; 6502-NEXT: [[COPY3:%[0-9]+]]:gpr_lsb = COPY [[ANDImm]].sublsb
+    ; 6502-NEXT: RTS implicit [[COPY3]]
     ; 65C02-LABEL: name: trunc_16_1
     ; 65C02: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY [[COPY]].sublo
-    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:anyi1 = COPY [[COPY1]].sublsb
-    ; 65C02-NEXT: RTS implicit [[COPY2]]
+    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:ac = COPY [[COPY1]]
+    ; 65C02-NEXT: [[ANDImm:%[0-9]+]]:ac = ANDImm [[COPY2]], 1
+    ; 65C02-NEXT: [[COPY3:%[0-9]+]]:gpr_lsb = COPY [[ANDImm]].sublsb
+    ; 65C02-NEXT: RTS implicit [[COPY3]]
     %0:any(s16) = COPY $rs1
     %1:any(s1) = G_TRUNC %0
     RTS implicit %1
