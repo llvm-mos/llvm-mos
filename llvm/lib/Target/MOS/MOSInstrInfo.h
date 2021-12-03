@@ -103,6 +103,8 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
+  bool shouldOverlapInterval(const MachineInstr &MI) const override;
+
 private:
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                        Register SrcReg) const;

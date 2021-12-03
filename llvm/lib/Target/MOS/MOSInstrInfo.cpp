@@ -420,6 +420,10 @@ static Register createVReg(MachineIRBuilder &Builder,
   return Builder.getMRI()->createVirtualRegister(&RC);
 }
 
+bool MOSInstrInfo::shouldOverlapInterval(const MachineInstr &MI) const {
+  return MI.getOpcode() != MOS::CMPZTerm;
+}
+
 void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                                    Register SrcReg) const {
   if (DestReg == SrcReg)

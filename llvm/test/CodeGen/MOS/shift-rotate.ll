@@ -298,7 +298,6 @@ define i16 @ashr_5(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bpl .LBB18_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldx #-1
@@ -327,7 +326,6 @@ define i16 @ashr_7(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc2)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bpl .LBB19_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldx #-1
@@ -349,7 +347,6 @@ define i16 @ashr_8(i16 %a) {
 ; CHECK-LABEL: ashr_8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bpl .LBB20_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldx #-1
@@ -366,22 +363,21 @@ define i16 @ashr_15(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    bpl .LBB21_2
+; CHECK-NEXT:    bpl .LBB21_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldx #-1
-; CHECK-NEXT:    jmp .LBB21_3
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    bmi .LBB21_4
 ; CHECK-NEXT:  .LBB21_2: ; %entry
 ; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:    jmp .LBB21_5
 ; CHECK-NEXT:  .LBB21_3: ; %entry
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    cpx #0
-; CHECK-NEXT:    bpl .LBB21_5
-; CHECK-NEXT:  ; %bb.4: ; %entry
-; CHECK-NEXT:    ldx #-1
-; CHECK-NEXT:    jmp .LBB21_6
-; CHECK-NEXT:  .LBB21_5: ; %entry
 ; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:  .LBB21_6: ; %entry
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    bpl .LBB21_2
+; CHECK-NEXT:  .LBB21_4: ; %entry
+; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:  .LBB21_5: ; %entry
 ; CHECK-NEXT:    asl mos8(__rc2)
 ; CHECK-NEXT:    rol
 ; CHECK-NEXT:    stx mos8(__rc2)
@@ -397,7 +393,6 @@ define i32 @ashr_16(i32 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    ldx mos8(__rc3)
-; CHECK-NEXT:    ldy mos8(__rc3)
 ; CHECK-NEXT:    bpl .LBB22_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    ldy #-1
@@ -513,12 +508,9 @@ entry:
 define i16 @rol_8(i16 %a) {
 ; CHECK-LABEL: rol_8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    pha
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    pla
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshl.i16(i16 %a, i16 %a, i16 8)
@@ -634,12 +626,9 @@ entry:
 define i16 @ror_8(i16 %a) {
 ; CHECK-LABEL: ror_8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    pha
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    pla
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    tax
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 8)

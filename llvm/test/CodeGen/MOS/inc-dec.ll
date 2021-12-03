@@ -54,13 +54,11 @@ entry:
 define i8* @inc_ptr(i8* %a) {
 ; CHECK-LABEL: inc_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx mos8(__rc2)
-; CHECK-NEXT:    inx
+; CHECK-NEXT:    inc mos8(__rc2)
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    inc mos8(__rc3)
 ; CHECK-NEXT:  .LBB3_2: ; %entry
-; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = getelementptr i8, i8* %a, i32 1

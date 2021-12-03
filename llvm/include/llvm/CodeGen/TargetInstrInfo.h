@@ -1997,6 +1997,10 @@ public:
     return MI.getOperand(0);
   }
 
+  virtual bool shouldOverlapInterval(const MachineInstr &MI) const {
+    return true;
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
