@@ -1,4 +1,6 @@
 // Test that `-ffuchsia-api-level` is propagated to cc1.
+
+// REQUIRES: x86-registered-target
 // RUN: %clang -target x86_64-unknown-fuchsia -ffuchsia-api-level=16 -c %s -### 2>&1| FileCheck %s
 
 // It should also be exposed to non-fuchsia platforms. This is desireable when

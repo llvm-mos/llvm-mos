@@ -159,8 +159,7 @@ public:
   void dump() const;
 
 protected:
-  bool AddUsersImpl(Instruction *I, SmallPtrSetImpl<Loop *> &SimpleLoopNests,
-                    bool AllowNonNative);
+  bool AddUsersImpl(Instruction *I, bool AllowNonNative);
 };
 
 Pass *createIVUsersPass();

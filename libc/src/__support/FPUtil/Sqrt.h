@@ -12,7 +12,7 @@
 #include "FPBits.h"
 #include "PlatformDefs.h"
 
-#include "utils/CPP/TypeTraits.h"
+#include "src/__support/CPP/TypeTraits.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -186,7 +186,7 @@ static inline T sqrt(T x) {
 } // namespace __llvm_libc
 
 #ifdef SPECIAL_X86_LONG_DOUBLE
-#include "SqrtLongDoubleX86.h"
+#include "x86_64/SqrtLongDouble.h"
 #endif // SPECIAL_X86_LONG_DOUBLE
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_SQRT_H

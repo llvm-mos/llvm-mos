@@ -213,29 +213,30 @@ bool TailDuplicator::tailDuplicateAndUpdate(
         SSAUpdate.AddAvailableValue(SrcBB, SrcReg);
       }
 
+      SmallVector<MachineOperand *> DebugUses;
       // Rewrite uses that are outside of the original def's block.
       MachineRegisterInfo::use_iterator UI = MRI->use_begin(VReg);
-      // Only remove instructions after loop, as DBG_VALUE_LISTs with multiple
-      // uses of VReg may invalidate the use iterator when erased.
-      SmallPtrSet<MachineInstr *, 4> InstrsToRemove;
       while (UI != MRI->use_end()) {
         MachineOperand &UseMO = *UI;
         MachineInstr *UseMI = UseMO.getParent();
         ++UI;
+        // Rewrite debug uses last so that they can take advantage of any
+        // register mappings introduced by other users in its BB, since we
+        // cannot create new register definitions specifically for the debug
+        // instruction (as debug instructions should not affect CodeGen).
         if (UseMI->isDebugValue()) {
-          // SSAUpdate can replace the use with an undef. That creates
-          // a debug instruction that is a kill.
-          // FIXME: Should it SSAUpdate job to delete debug instructions
-          // instead of replacing the use with undef?
-          InstrsToRemove.insert(UseMI);
+          DebugUses.push_back(&UseMO);
           continue;
         }
         if (UseMI->getParent() == DefBB && !UseMI->isPHI())
           continue;
         SSAUpdate.RewriteUse(UseMO);
       }
-      for (auto *MI : InstrsToRemove)
-        MI->eraseFromParent();
+      for (auto *UseMO : DebugUses) {
+        MachineInstr *UseMI = UseMO->getParent();
+        UseMO->setReg(
+            SSAUpdate.GetValueInMiddleOfBlock(UseMI->getParent(), true));
+      }
     }
 
     SSAUpdateVRs.clear();
@@ -872,18 +873,15 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     // Clone the contents of TailBB into PredBB.
     DenseMap<Register, RegSubRegPair> LocalVRMap;
     SmallVector<std::pair<Register, RegSubRegPair>, 4> CopyInfos;
-    for (MachineBasicBlock::iterator I = TailBB->begin(), E = TailBB->end();
-         I != E; /* empty */) {
-      MachineInstr *MI = &*I;
-      ++I;
-      if (MI->isPHI()) {
+    for (MachineInstr &MI : llvm::make_early_inc_range(*TailBB)) {
+      if (MI.isPHI()) {
         // Replace the uses of the def of the PHI with the register coming
         // from PredBB.
-        processPHI(MI, TailBB, PredBB, LocalVRMap, CopyInfos, UsedByPhi, true);
+        processPHI(&MI, TailBB, PredBB, LocalVRMap, CopyInfos, UsedByPhi, true);
       } else {
         // Replace def of virtual registers with new registers, and update
         // uses with PHI source register or the new registers.
-        duplicateInstruction(MI, TailBB, PredBB, LocalVRMap, UsedByPhi);
+        duplicateInstruction(&MI, TailBB, PredBB, LocalVRMap, UsedByPhi);
       }
     }
     appendCopies(PredBB, CopyInfos, Copies);
@@ -928,44 +926,56 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     // There may be a branch to the layout successor. This is unlikely but it
     // happens. The correct thing to do is to remove the branch before
     // duplicating the instructions in all cases.
-    TII->removeBranch(*PrevBB);
-    if (PreRegAlloc) {
-      DenseMap<Register, RegSubRegPair> LocalVRMap;
-      SmallVector<std::pair<Register, RegSubRegPair>, 4> CopyInfos;
-      MachineBasicBlock::iterator I = TailBB->begin();
-      // Process PHI instructions first.
-      while (I != TailBB->end() && I->isPHI()) {
-        // Replace the uses of the def of the PHI with the register coming
-        // from PredBB.
-        MachineInstr *MI = &*I++;
-        processPHI(MI, TailBB, PrevBB, LocalVRMap, CopyInfos, UsedByPhi, true);
-      }
+    bool RemovedBranches = TII->removeBranch(*PrevBB) != 0;
 
-      // Now copy the non-PHI instructions.
-      while (I != TailBB->end()) {
-        // Replace def of virtual registers with new registers, and update
-        // uses with PHI source register or the new registers.
-        MachineInstr *MI = &*I++;
-        assert(!MI->isBundle() && "Not expecting bundles before regalloc!");
-        duplicateInstruction(MI, TailBB, PrevBB, LocalVRMap, UsedByPhi);
-        MI->eraseFromParent();
+    // If there are still tail instructions, abort the merge
+    if (PrevBB->getFirstTerminator() == PrevBB->end()) {
+      if (PreRegAlloc) {
+        DenseMap<Register, RegSubRegPair> LocalVRMap;
+        SmallVector<std::pair<Register, RegSubRegPair>, 4> CopyInfos;
+        MachineBasicBlock::iterator I = TailBB->begin();
+        // Process PHI instructions first.
+        while (I != TailBB->end() && I->isPHI()) {
+          // Replace the uses of the def of the PHI with the register coming
+          // from PredBB.
+          MachineInstr *MI = &*I++;
+          processPHI(MI, TailBB, PrevBB, LocalVRMap, CopyInfos, UsedByPhi,
+                     true);
+        }
+
+        // Now copy the non-PHI instructions.
+        while (I != TailBB->end()) {
+          // Replace def of virtual registers with new registers, and update
+          // uses with PHI source register or the new registers.
+          MachineInstr *MI = &*I++;
+          assert(!MI->isBundle() && "Not expecting bundles before regalloc!");
+          duplicateInstruction(MI, TailBB, PrevBB, LocalVRMap, UsedByPhi);
+          MI->eraseFromParent();
+        }
+        appendCopies(PrevBB, CopyInfos, Copies);
+      } else {
+        TII->removeBranch(*PrevBB);
+        // No PHIs to worry about, just splice the instructions over.
+        PrevBB->splice(PrevBB->end(), TailBB, TailBB->begin(), TailBB->end());
       }
-      appendCopies(PrevBB, CopyInfos, Copies);
+      PrevBB->removeSuccessor(PrevBB->succ_begin());
+      assert(PrevBB->succ_empty());
+      PrevBB->transferSuccessors(TailBB);
+
+      // Update branches in PrevBB based on Tail's layout successor.
+      if (ShouldUpdateTerminators)
+        PrevBB->updateTerminator(TailBB->getNextNode());
+
+      TDBBs.push_back(PrevBB);
+      Changed = true;
     } else {
-      TII->removeBranch(*PrevBB);
-      // No PHIs to worry about, just splice the instructions over.
-      PrevBB->splice(PrevBB->end(), TailBB, TailBB->begin(), TailBB->end());
+      LLVM_DEBUG(dbgs() << "Abort merging blocks, the predecessor still "
+                           "contains terminator instructions");
+      // Return early if no changes were made
+      if (!Changed)
+        return RemovedBranches;
     }
-    PrevBB->removeSuccessor(PrevBB->succ_begin());
-    assert(PrevBB->succ_empty());
-    PrevBB->transferSuccessors(TailBB);
-
-    // Update branches in PrevBB based on Tail's layout successor.
-    if (ShouldUpdateTerminators)
-      PrevBB->updateTerminator(TailBB->getNextNode());
-
-    TDBBs.push_back(PrevBB);
-    Changed = true;
+    Changed |= RemovedBranches;
   }
 
   // If this is after register allocation, there are no phis to fix.

@@ -367,6 +367,28 @@ bool ARMTargetInfo::setABI(const std::string &Name) {
   return false;
 }
 
+bool ARMTargetInfo::validateBranchProtection(StringRef Spec,
+                                             BranchProtectionInfo &BPI,
+                                             StringRef &Err) const {
+  llvm::ARM::ParsedBranchProtection PBP;
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+    return false;
+
+  BPI.SignReturnAddr =
+      llvm::StringSwitch<LangOptions::SignReturnAddressScopeKind>(PBP.Scope)
+          .Case("non-leaf", LangOptions::SignReturnAddressScopeKind::NonLeaf)
+          .Case("all", LangOptions::SignReturnAddressScopeKind::All)
+          .Default(LangOptions::SignReturnAddressScopeKind::None);
+
+  // Don't care for the sign key, beyond issuing a warning.
+  if (PBP.Key == "b_key")
+    Err = "b-key";
+  BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
+
+  BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  return true;
+}
+
 // FIXME: This should be based on Arch attributes, not CPU names.
 bool ARMTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
@@ -446,6 +468,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasFloat16 = true;
   ARMCDECoprocMask = 0;
   HasBFloat16 = false;
+  FPRegsDisabled = false;
 
   // This does not diagnose illegal cases like having both
   // "+vfpv2" and "+vfpv3" or having "+neon" and "-fp64".
@@ -522,6 +545,8 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ARMCDECoprocMask |= (1U << Coproc);
     } else if (Feature == "+bf16") {
       HasBFloat16 = true;
+    } else if (Feature == "-fpregs") {
+      FPRegsDisabled = true;
     }
   }
 
@@ -871,6 +896,16 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_BF16_FORMAT_ALTERNATIVE", "1");
   }
 
+  if (Opts.BranchTargetEnforcement)
+    Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
+
+  if (Opts.hasSignReturnAddress()) {
+    unsigned Value = Opts.isSignReturnAddressWithAKey() ? 1 : 2;
+    if (Opts.isSignReturnAddressScopeAll())
+      Value |= 1 << 2;
+    Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", Twine(Value));
+  }
+
   switch (ArchKind) {
   default:
     break;
@@ -978,6 +1013,8 @@ bool ARMTargetInfo::validateAsmConstraint(
   case 't': // s0-s31, d0-d31, or q0-q15
   case 'w': // s0-s15, d0-d7, or q0-q3
   case 'x': // s0-s31, d0-d15, or q0-q7
+    if (FPRegsDisabled)
+      return false;
     Info.setAllowsRegister();
     return true;
   case 'j': // An immediate integer between 0 and 65535 (valid for MOVW)

@@ -242,6 +242,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
         T->isObjCQualifiedIdType() || T->isObjCQualifiedClassType();
       break;
 
+    case Type::VariableArray:
     case Type::DependentSizedArray:
       NeedARCStrongQualifier = true;
       LLVM_FALLTHROUGH;
@@ -251,9 +252,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
       return canPrefixQualifiers(
           cast<ArrayType>(UnderlyingType)->getElementType().getTypePtr(),
           NeedARCStrongQualifier);
-    case Type::VariableArray:
-      NeedARCStrongQualifier = true;
-      LLVM_FALLTHROUGH;
 
     case Type::Adjusted:
     case Type::Decayed:
@@ -505,7 +503,6 @@ void TypePrinter::printMemberPointerAfter(const MemberPointerType *T,
 void TypePrinter::printConstantArrayBefore(const ConstantArrayType *T,
                                            raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
-  SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
   printBefore(T->getElementType(), OS);
 }
 
@@ -528,7 +525,6 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
 void TypePrinter::printIncompleteArrayBefore(const IncompleteArrayType *T,
                                              raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
-  SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
   printBefore(T->getElementType(), OS);
 }
 
@@ -541,7 +537,6 @@ void TypePrinter::printIncompleteArrayAfter(const IncompleteArrayType *T,
 void TypePrinter::printVariableArrayBefore(const VariableArrayType *T,
                                            raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
-  SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
   printBefore(T->getElementType(), OS);
 }
 
@@ -588,7 +583,6 @@ void TypePrinter::printDependentSizedArrayBefore(
                                                const DependentSizedArrayType *T,
                                                raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
-  SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
   printBefore(T->getElementType(), OS);
 }
 
@@ -1752,6 +1746,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
     break;
+  case attr::BTFTypeTag:
+    OS << "btf_type_tag";
+    break;
   }
   OS << "))";
 }
@@ -2045,9 +2042,9 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
       if (!FirstArg)
         OS << Comma;
       // Tries to print the argument with location info if exists.
-      printArgument(
-          Arg, Policy, ArgOS,
-          TemplateParameterList::shouldIncludeTypeForArgument(TPL, ParmIndex));
+      printArgument(Arg, Policy, ArgOS,
+                    TemplateParameterList::shouldIncludeTypeForArgument(
+                        Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 

@@ -83,16 +83,16 @@ the most recent binaries for your platform:
 These binaries are built from the main branch of the LLVM-MOS project,
 using [Github's actions functionality](https://github.com/features/actions).
 
-## Or, build the LLVM-MOS tools 
+## Or, build the LLVM-MOS tools
 
-However, if you're allergic to precompiled binaries, or your platform is not
-listed above, then you'll need to compile LLVM-MOS for your own platform.
+If your platform isn't listed above or you wish to modify the compiler, then
+you'll need to compile LLVM-MOS from source.
 
 Generally, compiling LLVM-MOS follows the same convention as compiling LLVM.
 First, please review the [hardware and software requirements](https://llvm.org/docs/GettingStarted.html#requirements)
 for building LLVM.
 
-Once you meet those requirements, you may use the following formula within your 
+Once you meet those requirements, you may use the following formula within your
 build environment:
 
 ### Clone the LLVM-MOS repository

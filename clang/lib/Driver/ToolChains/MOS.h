@@ -29,7 +29,9 @@ protected:
 
 public:
   bool isPICDefault() const override { return false; }
-  bool isPIEDefault() const override { return false; }
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return false;
+  }
   bool isPICDefaultForced() const override { return true; }
 
   bool HasNativeLLVMSupport() const override { return true; }

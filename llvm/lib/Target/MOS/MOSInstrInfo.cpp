@@ -387,11 +387,11 @@ unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return NumAdded;
 }
 
-unsigned MOSInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
-                                            MachineBasicBlock &NewDestBB,
-                                            const DebugLoc &DL,
-                                            int64_t BrOffset,
-                                            RegScavenger *RS) const {
+void MOSInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                        MachineBasicBlock &NewDestBB,
+                                        MachineBasicBlock &RestoreBB,
+                                        const DebugLoc &DL, int64_t BrOffset,
+                                        RegScavenger *RS) const {
   // This method inserts a *direct* branch (JMP), despite its name.
   // LLVM calls this method to fixup unconditional branches; it never calls
   // insertBranch or some hypothetical "insertDirectBranch".
@@ -401,8 +401,7 @@ unsigned MOSInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   MachineIRBuilder Builder(MBB, MBB.end());
   Builder.setDebugLoc(DL);
 
-  auto JMP = Builder.buildInstr(MOS::JMP).addMBB(&NewDestBB);
-  return getInstSizeInBytes(*JMP);
+  Builder.buildInstr(MOS::JMP).addMBB(&NewDestBB);
 }
 
 void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,

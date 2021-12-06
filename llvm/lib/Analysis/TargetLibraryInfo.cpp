@@ -204,8 +204,8 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     return;
   }
 
-  // memset_pattern16 is only available on iOS 3.0 and Mac OS X 10.5 and later.
-  // All versions of watchOS support it.
+  // memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X 10.5 and
+  // later. All versions of watchOS support it.
   if (T.isMacOSX()) {
     // available IO unlocked variants on Mac OS X
     TLI.setAvailable(LibFunc_getc_unlocked);
@@ -213,12 +213,20 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_putc_unlocked);
     TLI.setAvailable(LibFunc_putchar_unlocked);
 
-    if (T.isMacOSXVersionLT(10, 5))
+    if (T.isMacOSXVersionLT(10, 5)) {
+      TLI.setUnavailable(LibFunc_memset_pattern4);
+      TLI.setUnavailable(LibFunc_memset_pattern8);
       TLI.setUnavailable(LibFunc_memset_pattern16);
+    }
   } else if (T.isiOS()) {
-    if (T.isOSVersionLT(3, 0))
+    if (T.isOSVersionLT(3, 0)) {
+      TLI.setUnavailable(LibFunc_memset_pattern4);
+      TLI.setUnavailable(LibFunc_memset_pattern8);
       TLI.setUnavailable(LibFunc_memset_pattern16);
+    }
   } else if (!T.isWatchOS()) {
+    TLI.setUnavailable(LibFunc_memset_pattern4);
+    TLI.setUnavailable(LibFunc_memset_pattern8);
     TLI.setUnavailable(LibFunc_memset_pattern16);
   }
 
@@ -722,7 +730,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_strcat_chk);
     TLI.setUnavailable(LibFunc_strcpy_chk);
     TLI.setUnavailable(LibFunc_strlcat_chk);
-    TLI.setUnavailable(LibFunc_strlcat_chk);
     TLI.setUnavailable(LibFunc_strlcpy_chk);
     TLI.setUnavailable(LibFunc_strlen_chk);
     TLI.setUnavailable(LibFunc_strncat_chk);
@@ -921,7 +928,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
 static StringRef sanitizeFunctionName(StringRef funcName) {
   // Filter out empty names and names containing null bytes, those can't be in
   // our table.
-  if (funcName.empty() || funcName.find('\0') != StringRef::npos)
+  if (funcName.empty() || funcName.contains('\0'))
     return StringRef();
 
   // Check for \01 prefix that is used to mangle __asm declarations and
@@ -1561,6 +1568,8 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getParamType(2)->isPointerTy() &&
             FTy.getParamType(3)->isIntegerTy());
 
+  case LibFunc_memset_pattern4:
+  case LibFunc_memset_pattern8:
   case LibFunc_memset_pattern16:
     return (!FTy.isVarArg() && NumParams == 3 &&
             FTy.getParamType(0)->isPointerTy() &&

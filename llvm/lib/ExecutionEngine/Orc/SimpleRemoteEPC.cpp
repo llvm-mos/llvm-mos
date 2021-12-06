@@ -92,6 +92,7 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 
 Error SimpleRemoteEPC::disconnect() {
   T->disconnect();
+  D->shutdown();
   std::unique_lock<std::mutex> Lock(SimpleRemoteEPCMutex);
   DisconnectCV.wait(Lock, [this] { return Disconnected; });
   return std::move(DisconnectErr);
@@ -179,9 +180,9 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-SimpleRemoteEPC::createMemoryManager() {
+SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
   EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  if (auto Err = getBootstrapSymbols(
+  if (auto Err = SREPC.getBootstrapSymbols(
           {{SAs.Allocator, rt::SimpleExecutorMemoryManagerInstanceName},
            {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
            {SAs.Finalize, rt::SimpleExecutorMemoryManagerFinalizeWrapperName},
@@ -189,12 +190,11 @@ SimpleRemoteEPC::createMemoryManager() {
             rt::SimpleExecutorMemoryManagerDeallocateWrapperName}}))
     return std::move(Err);
 
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(*this, SAs);
+  return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
 }
 
 Expected<std::unique_ptr<ExecutorProcessControl::MemoryAccess>>
-SimpleRemoteEPC::createMemoryAccess() {
-
+SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
   return nullptr;
 }
 
@@ -259,7 +259,7 @@ Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
   return Error::success();
 }
 
-Error SimpleRemoteEPC::setup() {
+Error SimpleRemoteEPC::setup(Setup S) {
   using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
 
   std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> EIP;
@@ -321,13 +321,21 @@ Error SimpleRemoteEPC::setup() {
   else
     return DM.takeError();
 
-  if (auto MemMgr = createMemoryManager()) {
+  // Set a default CreateMemoryManager if none is specified.
+  if (!S.CreateMemoryManager)
+    S.CreateMemoryManager = createDefaultMemoryManager;
+
+  if (auto MemMgr = S.CreateMemoryManager(*this)) {
     OwnedMemMgr = std::move(*MemMgr);
     this->MemMgr = OwnedMemMgr.get();
   } else
     return MemMgr.takeError();
 
-  if (auto MemAccess = createMemoryAccess()) {
+  // Set a default CreateMemoryAccess if none is specified.
+  if (!S.CreateMemoryAccess)
+    S.CreateMemoryAccess = createDefaultMemoryAccess;
+
+  if (auto MemAccess = S.CreateMemoryAccess(*this)) {
     OwnedMemAccess = std::move(*MemAccess);
     this->MemAccess = OwnedMemAccess.get();
   } else
@@ -366,13 +374,18 @@ void SimpleRemoteEPC::handleCallWrapper(
     uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
     SimpleRemoteEPCArgBytesVector ArgBytes) {
   assert(ES && "No ExecutionSession attached");
-  ES->runJITDispatchHandler(
-      [this, RemoteSeqNo](shared::WrapperFunctionResult WFR) {
-        if (auto Err = sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                                   ExecutorAddr(), {WFR.data(), WFR.size()}))
-          getExecutionSession().reportError(std::move(Err));
+  D->dispatch(makeGenericNamedTask(
+      [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() {
+        ES->runJITDispatchHandler(
+            [this, RemoteSeqNo](shared::WrapperFunctionResult WFR) {
+              if (auto Err =
+                      sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
+                                  ExecutorAddr(), {WFR.data(), WFR.size()}))
+                getExecutionSession().reportError(std::move(Err));
+            },
+            TagAddr.getValue(), ArgBytes);
       },
-      TagAddr.getValue(), ArgBytes);
+      "callWrapper task"));
 }
 
 Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {

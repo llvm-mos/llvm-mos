@@ -19,9 +19,17 @@ class AffineDialect;
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
+namespace arith {
+class ArithmeticDialect;
+} // end namespace arith
+
 namespace memref {
 class MemRefDialect;
 } // end namespace memref
+
+namespace bufferization {
+class BufferizationDialect;
+} // namespace bufferization
 
 #define GEN_PASS_CLASSES
 #include "mlir/Transforms/Passes.h.inc"

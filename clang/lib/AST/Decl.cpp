@@ -1663,8 +1663,7 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
     NameInScope = ND->getDeclName();
   }
 
-  for (unsigned I = Contexts.size(); I != 0; --I) {
-    const DeclContext *DC = Contexts[I - 1];
+  for (const DeclContext *DC : llvm::reverse(Contexts)) {
     if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
       OS << Spec->getName();
       const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
@@ -3272,6 +3271,8 @@ MultiVersionKind FunctionDecl::getMultiVersionKind() const {
     return MultiVersionKind::CPUDispatch;
   if (hasAttr<CPUSpecificAttr>())
     return MultiVersionKind::CPUSpecific;
+  if (hasAttr<TargetClonesAttr>())
+    return MultiVersionKind::TargetClones;
   return MultiVersionKind::None;
 }
 
@@ -3285,6 +3286,10 @@ bool FunctionDecl::isCPUSpecificMultiVersion() const {
 
 bool FunctionDecl::isTargetMultiVersion() const {
   return isMultiVersion() && hasAttr<TargetAttr>();
+}
+
+bool FunctionDecl::isTargetClonesMultiVersion() const {
+  return isMultiVersion() && hasAttr<TargetClonesAttr>();
 }
 
 void
@@ -4522,6 +4527,17 @@ unsigned EnumDecl::getODRHash() {
   setHasODRHash(true);
   ODRHash = Hash.CalculateHash();
   return ODRHash;
+}
+
+SourceRange EnumDecl::getSourceRange() const {
+  auto Res = TagDecl::getSourceRange();
+  // Set end-point to enum-base, e.g. enum foo : ^bar
+  if (auto *TSI = getIntegerTypeSourceInfo()) {
+    // TagDecl doesn't know about the enum base.
+    if (!getBraceRange().getEnd().isValid())
+      Res.setEnd(TSI->getTypeLoc().getEndLoc());
+  }
+  return Res;
 }
 
 //===----------------------------------------------------------------------===//

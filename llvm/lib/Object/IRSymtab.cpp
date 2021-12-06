@@ -42,12 +42,17 @@
 using namespace llvm;
 using namespace irsymtab;
 
-static const char *LibcallRoutineNames[] = {
+static const char *PreservedSymbols[] = {
 #define HANDLE_LIBCALL(code, name) name,
 #include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
-  // Needed by MOS target.
-  "__memset",
+    // Needed by MOS target.
+    "__memset",
+    // There are global variables, so put it here instead of in
+    // RuntimeLibcalls.def.
+    // TODO: Are there similar such variables?
+    "__ssp_canary_word",
+    "__stack_chk_guard",
 };
 
 namespace {
@@ -264,9 +269,9 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
 
   setStr(Sym.IRName, GV->getName());
 
-  bool IsBuiltinFunc = llvm::is_contained(LibcallRoutineNames, GV->getName());
+  bool IsPreservedSymbol = llvm::is_contained(PreservedSymbols, GV->getName());
 
-  if (Used.count(GV) || IsBuiltinFunc)
+  if (Used.count(GV) || IsPreservedSymbol)
     Sym.Flags |= 1 << storage::Symbol::FB_used;
   if (GV->isThreadLocal())
     Sym.Flags |= 1 << storage::Symbol::FB_tls;

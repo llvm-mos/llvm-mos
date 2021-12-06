@@ -231,6 +231,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_GOTREL: return "GOTREL";
   case VK_PCREL: return "PCREL";
   case VK_GOTPCREL: return "GOTPCREL";
+  case VK_GOTPCREL_NORELAX: return "GOTPCREL_NORELAX";
   case VK_GOTTPOFF: return "GOTTPOFF";
   case VK_INDNTPOFF: return "INDNTPOFF";
   case VK_NTPOFF: return "NTPOFF";
@@ -402,6 +403,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("gotrel", VK_GOTREL)
     .Case("pcrel", VK_PCREL)
     .Case("gotpcrel", VK_GOTPCREL)
+    .Case("gotpcrel_norelax", VK_GOTPCREL_NORELAX)
     .Case("gottpoff", VK_GOTTPOFF)
     .Case("indntpoff", VK_INDNTPOFF)
     .Case("ntpoff", VK_NTPOFF)

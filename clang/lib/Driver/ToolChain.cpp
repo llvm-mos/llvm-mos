@@ -110,14 +110,11 @@ bool ToolChain::useRelaxRelocations() const {
   return ENABLE_X86_RELAX_RELOCATIONS;
 }
 
-bool ToolChain::isNoExecStackDefault() const {
-    return false;
-}
-
-const SanitizerArgs& ToolChain::getSanitizerArgs() const {
-  if (!SanitizerArguments.get())
-    SanitizerArguments.reset(new SanitizerArgs(*this, Args));
-  return *SanitizerArguments.get();
+SanitizerArgs
+ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
+  SanitizerArgs SanArgs(*this, JobArgs, !SanitizerArgsChecked);
+  SanitizerArgsChecked = true;
+  return SanArgs;
 }
 
 const XRayArgs& ToolChain::getXRayArgs() const {
@@ -169,10 +166,11 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
 /// present and lower-casing the string on Windows.
 static std::string normalizeProgramName(llvm::StringRef Argv0) {
   std::string ProgName = std::string(llvm::sys::path::stem(Argv0));
-#ifdef _WIN32
-  // Transform to lowercase for case insensitive file systems.
-  std::transform(ProgName.begin(), ProgName.end(), ProgName.begin(), ::tolower);
-#endif
+  if (is_style_windows(llvm::sys::path::Style::native)) {
+    // Transform to lowercase for case insensitive file systems.
+    std::transform(ProgName.begin(), ProgName.end(), ProgName.begin(),
+                   ::tolower);
+  }
   return ProgName;
 }
 
@@ -543,12 +541,9 @@ std::string ToolChain::GetProgramPath(const char *Name) const {
   return D.GetProgramPath(Name, *this);
 }
 
-std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD,
-                                     bool *LinkerIsLLDDarwinNew) const {
+std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   if (LinkerIsLLD)
     *LinkerIsLLD = false;
-  if (LinkerIsLLDDarwinNew)
-    *LinkerIsLLDDarwinNew = false;
 
   // Get -fuse-ld= first to prevent -Wunused-command-line-argument. -fuse-ld= is
   // considered as the linker flavor, e.g. "bfd", "gold", or "lld".
@@ -583,7 +578,7 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD,
   // for the linker flavor is brittle. In addition, prepending "ld." or "ld64."
   // to a relative path is surprising. This is more complex due to priorities
   // among -B, COMPILER_PATH and PATH. --ld-path= should be used instead.
-  if (UseLinker.find('/') != StringRef::npos)
+  if (UseLinker.contains('/'))
     getDriver().Diag(diag::warn_drv_fuse_ld_path);
 
   if (llvm::sys::path::is_absolute(UseLinker)) {
@@ -601,11 +596,8 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD,
 
     std::string LinkerPath(GetProgramPath(LinkerName.c_str()));
     if (llvm::sys::fs::can_execute(LinkerPath)) {
-      // FIXME: Remove LinkerIsLLDDarwinNew once there's only one MachO lld.
       if (LinkerIsLLD)
-        *LinkerIsLLD = UseLinker == "lld" || UseLinker == "lld.darwinold";
-      if (LinkerIsLLDDarwinNew)
-        *LinkerIsLLDDarwinNew = UseLinker == "lld";
+        *LinkerIsLLD = UseLinker == "lld";
       return LinkerPath;
     }
   }

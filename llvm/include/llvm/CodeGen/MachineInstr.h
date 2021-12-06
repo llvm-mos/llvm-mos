@@ -1173,12 +1173,6 @@ public:
   /// eraseFromBundle() to erase individual bundled instructions.
   void eraseFromParent();
 
-  /// Unlink 'this' from the containing basic block and delete it.
-  ///
-  /// For all definitions mark their uses in DBG_VALUE nodes
-  /// as undefined. Otherwise like eraseFromParent().
-  void eraseFromParentAndMarkDBGValuesForRemoval();
-
   /// Unlink 'this' form its basic block and delete it.
   ///
   /// If the instruction is part of a bundle, the other instructions in the
@@ -1331,6 +1325,7 @@ public:
     case TargetOpcode::LIFETIME_START:
     case TargetOpcode::LIFETIME_END:
     case TargetOpcode::PSEUDO_PROBE:
+    case TargetOpcode::ARITH_FENCE:
       return true;
     }
   }

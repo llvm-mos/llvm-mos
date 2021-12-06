@@ -475,7 +475,6 @@ exit:
 
 
 ; Same as test_01a, but non-negativity of %b is known without context.
-; FIXME: We can remove 2nd check in loop.
 define i32 @test_05a(i32 %a, i32* %bp) {
 ; CHECK-LABEL: @test_05a(
 ; CHECK-NEXT:  entry:
@@ -484,15 +483,13 @@ define i32 @test_05a(i32 %a, i32* %bp) {
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
@@ -541,7 +538,6 @@ exit:
 }
 
 ; Similar to test_05a, but inverted 2nd condition.
-; FIXME: We can remove 2nd check in loop.
 define i32 @test_05b(i32 %a, i32* %bp) {
 ; CHECK-LABEL: @test_05b(
 ; CHECK-NEXT:  entry:
@@ -550,15 +546,13 @@ define i32 @test_05b(i32 %a, i32* %bp) {
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
@@ -607,7 +601,6 @@ exit:
 }
 
 ; We should prove implication: iv <s b, b <s 0 => iv <u b.
-; FIXME: Can remove 2nd check
 define i32 @test_05c(i32 %a, i32* %bp) {
 ; CHECK-LABEL: @test_05c(
 ; CHECK-NEXT:  entry:
@@ -616,15 +609,13 @@ define i32 @test_05c(i32 %a, i32* %bp) {
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
@@ -673,7 +664,6 @@ exit:
 }
 
 ; Same as test_05c, but 2nd condition reversed.
-; FIXME: Can remove 2nd check
 define i32 @test_05d(i32 %a, i32* %bp) {
 ; CHECK-LABEL: @test_05d(
 ; CHECK-NEXT:  entry:
@@ -682,15 +672,13 @@ define i32 @test_05d(i32 %a, i32* %bp) {
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
@@ -740,7 +728,6 @@ exit:
 
 
 ; Same as test_05a, but 1st condition inverted.
-; FIXME: We can remove 2nd check in loop.
 define i32 @test_05e(i32 %a, i32* %bp) {
 ; CHECK-LABEL: @test_05e(
 ; CHECK-NEXT:  entry:
@@ -749,15 +736,13 @@ define i32 @test_05e(i32 %a, i32* %bp) {
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
@@ -806,7 +791,6 @@ exit:
 }
 
 ; Same as test_05b, but 1st condition inverted.
-; FIXME: We can remove 2nd check in loop.
 define i32 @test_05f(i32 %a, i32* %bp) {
 ; CHECK-LABEL: @test_05f(
 ; CHECK-NEXT:  entry:
@@ -815,15 +799,13 @@ define i32 @test_05f(i32 %a, i32* %bp) {
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
@@ -872,7 +854,6 @@ exit:
 }
 
 ; Same as test_05c, but 1st condition inverted.
-; FIXME: We can remove 2nd check in loop.
 define i32 @test_05g(i32 %a, i32* %bp) {
 ; CHECK-LABEL: @test_05g(
 ; CHECK-NEXT:  entry:
@@ -881,15 +862,13 @@ define i32 @test_05g(i32 %a, i32* %bp) {
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()
@@ -938,7 +917,6 @@ exit:
 }
 
 ; Same as test_05d, but 1st condition inverted.
-; FIXME: We can remove 2nd check in loop.
 define i32 @test_05h(i32 %a, i32* %bp) {
 ; CHECK-LABEL: @test_05h(
 ; CHECK-NEXT:  entry:
@@ -947,15 +925,13 @@ define i32 @test_05h(i32 %a, i32* %bp) {
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[OUTER_IV]], i32 [[B]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[OUTER_IV]], i32 [[B]])
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[OUTER_IV]], [[OUTER]] ], [ [[IV_NEXT:%.*]], [[INNER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[SMAX]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_1:%.*]], label [[SIDE_EXIT:%.*]]
 ; CHECK:       inner.1:
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
+; CHECK-NEXT:    br i1 true, label [[INNER_BACKEDGE]], label [[SIDE_EXIT]]
 ; CHECK:       inner.backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[INNER_LOOP_COND:%.*]] = call i1 @cond()

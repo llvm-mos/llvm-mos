@@ -787,7 +787,7 @@ bool MOSInstructionSelector::selectAll(MachineInstrSpan MIS) {
     // We could have folded this instruction away already, making it dead.
     // If so, erase it.
     if (isTriviallyDead(MI, MRI)) {
-      MI.eraseFromParentAndMarkDBGValuesForRemoval();
+      MI.eraseFromParent();
       continue;
     }
 

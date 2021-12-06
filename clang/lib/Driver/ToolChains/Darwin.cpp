@@ -94,6 +94,8 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfoList &Inputs,
                                      const ArgList &Args,
                                      const char *LinkingOutput) const {
+  const llvm::Triple &T(getToolChain().getTriple());
+
   ArgStringList CmdArgs;
 
   assert(Inputs.size() == 1 && "Unexpected number of inputs.");
@@ -112,7 +114,6 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // FIXME: at run-time detect assembler capabilities or rely on version
   // information forwarded by -target-assembler-version.
   if (Args.hasArg(options::OPT_fno_integrated_as)) {
-    const llvm::Triple &T(getToolChain().getTriple());
     if (!(T.isMacOSX() && T.isMacOSXVersionLT(10, 7)))
       CmdArgs.push_back("-Q");
   }
@@ -130,8 +131,7 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   AddMachOArch(Args, CmdArgs);
 
   // Use -force_cpusubtype_ALL on x86 by default.
-  if (getToolChain().getTriple().isX86() ||
-      Args.hasArg(options::OPT_force__cpusubtype__ALL))
+  if (T.isX86() || Args.hasArg(options::OPT_force__cpusubtype__ALL))
     CmdArgs.push_back("-force_cpusubtype_ALL");
 
   if (getToolChain().getArch() != llvm::Triple::x86_64 &&
@@ -209,8 +209,7 @@ static bool shouldLinkerNotDedup(bool IsLinkerOnlyAction, const ArgList &Args) {
 void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                                  ArgStringList &CmdArgs,
                                  const InputInfoList &Inputs,
-                                 unsigned Version[5], bool LinkerIsLLD,
-                                 bool LinkerIsLLDDarwinNew) const {
+                                 unsigned Version[5], bool LinkerIsLLD) const {
   const Driver &D = getToolChain().getDriver();
   const toolchains::MachO &MachOTC = getMachOToolChain();
 
@@ -343,7 +342,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_init);
 
   // Add the deployment target.
-  if (Version[0] >= 520 || LinkerIsLLDDarwinNew)
+  if (Version[0] >= 520 || LinkerIsLLD)
     MachOTC.addPlatformVersionArgs(Args, CmdArgs);
   else
     MachOTC.addMinVersionArgs(Args, CmdArgs);
@@ -556,14 +555,13 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getAsString(Args);
   }
 
-  bool LinkerIsLLD, LinkerIsLLDDarwinNew;
-  const char *Exec = Args.MakeArgString(
-      getToolChain().GetLinkerPath(&LinkerIsLLD, &LinkerIsLLDDarwinNew));
+  bool LinkerIsLLD;
+  const char *Exec =
+      Args.MakeArgString(getToolChain().GetLinkerPath(&LinkerIsLLD));
 
   // I'm not sure why this particular decomposition exists in gcc, but
   // we follow suite for ease of comparison.
-  AddLinkArgs(C, Args, CmdArgs, Inputs, Version, LinkerIsLLD,
-              LinkerIsLLDDarwinNew);
+  AddLinkArgs(C, Args, CmdArgs, Inputs, Version, LinkerIsLLD);
 
   if (willEmitRemarks(Args) &&
       checkRemarksOptions(getToolChain().getDriver(), Args,
@@ -715,7 +713,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   ResponseFileSupport ResponseSupport;
-  if (Version[0] >= 705 || LinkerIsLLDDarwinNew) {
+  if (Version[0] >= 705 || LinkerIsLLD) {
     ResponseSupport = ResponseFileSupport::AtFileUTF8();
   } else {
     // For older versions of the linker, use the legacy filelist method instead.
@@ -1357,7 +1355,7 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     return;
   }
 
-  const SanitizerArgs &Sanitize = getSanitizerArgs();
+  const SanitizerArgs &Sanitize = getSanitizerArgs(Args);
   if (Sanitize.needsAsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "asan");
   if (Sanitize.needsLsanRt())
@@ -1820,7 +1818,12 @@ std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
           << Triple.getOSName();
     break;
   case llvm::Triple::IOS:
-    Triple.getiOSVersion(Major, Minor, Micro);
+    if (Triple.isMacCatalystEnvironment() && !Triple.getOSMajorVersion()) {
+      Major = 13;
+      Minor = 1;
+      Micro = 0;
+    } else
+      Triple.getiOSVersion(Major, Minor, Micro);
     break;
   case llvm::Triple::TvOS:
     Triple.getOSVersion(Major, Minor, Micro);
@@ -2778,7 +2781,7 @@ bool Darwin::SupportsEmbeddedBitcode() const {
 
 bool MachO::isPICDefault() const { return true; }
 
-bool MachO::isPIEDefault() const { return false; }
+bool MachO::isPIEDefault(const llvm::opt::ArgList &Args) const { return false; }
 
 bool MachO::isPICDefaultForced() const {
   return (getArch() == llvm::Triple::x86_64 ||

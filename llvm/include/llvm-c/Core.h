@@ -1580,10 +1580,10 @@ LLVMTypeRef LLVMX86AMXType(void);
       macro(ConstantVector)                 \
       macro(GlobalValue)                    \
         macro(GlobalAlias)                  \
-        macro(GlobalIFunc)                  \
         macro(GlobalObject)                 \
           macro(Function)                   \
           macro(GlobalVariable)             \
+          macro(GlobalIFunc)                \
       macro(UndefValue)                     \
       macro(PoisonValue)                    \
     macro(Instruction)                      \
@@ -2377,8 +2377,19 @@ void LLVMSetExternallyInitialized(LLVMValueRef GlobalVar, LLVMBool IsExtInit);
  *
  * @{
  */
+
+/** Deprecated: Use LLVMAddAlias2 instead. */
 LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
                           const char *Name);
+
+/**
+ * Add a GlobalAlias with the given value type, address space and aliasee.
+ *
+ * @see llvm::GlobalAlias::create()
+ */
+LLVMValueRef LLVMAddAlias2(LLVMModuleRef M, LLVMTypeRef ValueTy,
+                           unsigned AddrSpace, LLVMValueRef Aliasee,
+                           const char *Name);
 
 /**
  * Obtain a GlobalAlias value from a Module by its name.
@@ -3496,6 +3507,11 @@ LLVMBool LLVMIsInBounds(LLVMValueRef GEP);
 void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds);
 
 /**
+ * Get the source element type of the given GEP instruction.
+ */
+LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP);
+
+/**
  * @}
  */
 
@@ -3611,9 +3627,19 @@ void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc);
  * current debug location for the given builder.  If the builder has no current
  * debug location, this function is a no-op.
  *
+ * @deprecated LLVMSetInstDebugLocation is deprecated in favor of the more general
+ *             LLVMAddMetadataToInst.
+ *
  * @see llvm::IRBuilder::SetInstDebugLocation()
  */
 void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst);
+
+/**
+ * Adds the metadata registered with the given builder to the given instruction.
+ *
+ * @see llvm::IRBuilder::AddMetadataToInst()
+ */
+void LLVMAddMetadataToInst(LLVMBuilderRef Builder, LLVMValueRef Inst);
 
 /**
  * Get the dafult floating-point math metadata for a given builder.
@@ -4081,6 +4107,7 @@ void LLVMDisposeMemoryBuffer(LLVMMemoryBufferRef MemBuf);
 
 /**
  * @defgroup LLVMCCorePassRegistry Pass Registry
+ * @ingroup LLVMCCore
  *
  * @{
  */
@@ -4095,6 +4122,7 @@ LLVMPassRegistryRef LLVMGetGlobalPassRegistry(void);
 
 /**
  * @defgroup LLVMCCorePassManagers Pass Managers
+ * @ingroup LLVMCCore
  *
  * @{
  */
