@@ -221,13 +221,13 @@ body: |
     ; 6502-LABEL: name: br_imm
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
-    ; 6502-NEXT: [[COPY:%[0-9]+]]:anyi1 = COPY $c
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:cv_gpr_lsb = COPY $c
     ; 6502-NEXT: GBR %bb.0, [[COPY]], 0, implicit-def $c
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: br_imm
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
-    ; 65C02-NEXT: [[COPY:%[0-9]+]]:anyi1 = COPY $c
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:cv_gpr_lsb = COPY $c
     ; 65C02-NEXT: GBR %bb.0, [[COPY]], 0, implicit-def $c
     ; 65C02-NEXT: RTS
     %0:any(s1) = COPY $c
