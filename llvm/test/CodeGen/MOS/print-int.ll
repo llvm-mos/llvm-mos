@@ -10,30 +10,52 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; NMOS-LABEL: print_int:
 ; NMOS:       ; %bb.0: ; %entry
 ; NMOS-NEXT:    cmp #10
-; NMOS-NEXT:    bcc .LBB0_2
-; NMOS-NEXT:  ; %bb.1: ; %if.end.preheader
+; NMOS-NEXT:    bcs .LBB0_1
+; NMOS-NEXT:    jmp .LBB0_2
+; NMOS-NEXT:  .LBB0_1: ; %if.end.preheader
 ; NMOS-NEXT:    sta mos8(__rc16)
+; NMOS-NEXT:    clc
+; NMOS-NEXT:    lda mos8(__rc0)
+; NMOS-NEXT:    adc #255
+; NMOS-NEXT:    sta mos8(__rc0)
+; NMOS-NEXT:    lda mos8(__rc1)
+; NMOS-NEXT:    adc #255
+; NMOS-NEXT:    sta mos8(__rc1)
 ; NMOS-NEXT:    lda mos8(__rc20)
 ; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda mos8(__rc21)
 ; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda mos8(__rc16)
+; NMOS-NEXT:    clc
+; NMOS-NEXT:    ldx mos8(__rc0)
+; NMOS-NEXT:    stx mos8(__rc20)
+; NMOS-NEXT:    ldx mos8(__rc1)
+; NMOS-NEXT:    stx mos8(__rc21)
+; NMOS-NEXT:    ldx mos8(__rc20)
+; NMOS-NEXT:    stx mos8(__rc2)
+; NMOS-NEXT:    ldx mos8(__rc21)
+; NMOS-NEXT:    stx mos8(__rc3)
 ; NMOS-NEXT:    ldx #10
-; NMOS-NEXT:    sta mos8(__rc21)
-; NMOS-NEXT:    jsr __udivqi3
+; NMOS-NEXT:    jsr __udivmodqi4
+; NMOS-NEXT:    tax
+; NMOS-NEXT:    ldy #0
+; NMOS-NEXT:    lda (mos8(__rc20)),y
 ; NMOS-NEXT:    sta mos8(__rc20)
-; NMOS-NEXT:    ldx #10
-; NMOS-NEXT:    lda mos8(__rc21)
-; NMOS-NEXT:    jsr __umodqi3
-; NMOS-NEXT:    sta mos8(__rc21)
-; NMOS-NEXT:    lda mos8(__rc20)
+; NMOS-NEXT:    txa
 ; NMOS-NEXT:    jsr print_int
-; NMOS-NEXT:    lda mos8(__rc21)
+; NMOS-NEXT:    lda mos8(__rc20)
 ; NMOS-NEXT:    sta mos8(__rc16)
 ; NMOS-NEXT:    pla
 ; NMOS-NEXT:    sta mos8(__rc21)
 ; NMOS-NEXT:    pla
 ; NMOS-NEXT:    sta mos8(__rc20)
+; NMOS-NEXT:    clc
+; NMOS-NEXT:    lda mos8(__rc0)
+; NMOS-NEXT:    adc #1
+; NMOS-NEXT:    sta mos8(__rc0)
+; NMOS-NEXT:    lda mos8(__rc1)
+; NMOS-NEXT:    adc #0
+; NMOS-NEXT:    sta mos8(__rc1)
 ; NMOS-NEXT:    lda mos8(__rc16)
 ; NMOS-NEXT:  .LBB0_2: ; %if.then
 ; NMOS-NEXT:    clc
@@ -46,27 +68,54 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; CMOS-LABEL: print_int:
 ; CMOS:       ; %bb.0: ; %entry
 ; CMOS-NEXT:    cmp #10
-; CMOS-NEXT:    bcc .LBB0_2
-; CMOS-NEXT:  ; %bb.1: ; %if.end.preheader
+; CMOS-NEXT:    bcs .LBB0_1
+; CMOS-NEXT:  ; %bb.3: ; %entry
+; CMOS-NEXT:    jmp .LBB0_2
+; CMOS-NEXT:  .LBB0_1: ; %if.end.preheader
+; CMOS-NEXT:    pha
+; CMOS-NEXT:    clc
+; CMOS-NEXT:    lda mos8(__rc0)
+; CMOS-NEXT:    adc #255
+; CMOS-NEXT:    sta mos8(__rc0)
+; CMOS-NEXT:    lda mos8(__rc1)
+; CMOS-NEXT:    adc #255
+; CMOS-NEXT:    sta mos8(__rc1)
+; CMOS-NEXT:    pla
 ; CMOS-NEXT:    ldx mos8(__rc20)
 ; CMOS-NEXT:    phx
 ; CMOS-NEXT:    ldx mos8(__rc21)
 ; CMOS-NEXT:    phx
-; CMOS-NEXT:    ldx #10
-; CMOS-NEXT:    sta mos8(__rc21)
-; CMOS-NEXT:    jsr __udivqi3
-; CMOS-NEXT:    sta mos8(__rc20)
-; CMOS-NEXT:    ldx #10
-; CMOS-NEXT:    lda mos8(__rc21)
-; CMOS-NEXT:    jsr __umodqi3
-; CMOS-NEXT:    sta mos8(__rc21)
-; CMOS-NEXT:    lda mos8(__rc20)
-; CMOS-NEXT:    jsr print_int
-; CMOS-NEXT:    lda mos8(__rc21)
-; CMOS-NEXT:    plx
-; CMOS-NEXT:    stx mos8(__rc21)
-; CMOS-NEXT:    plx
+; CMOS-NEXT:    clc
+; CMOS-NEXT:    ldx mos8(__rc0)
 ; CMOS-NEXT:    stx mos8(__rc20)
+; CMOS-NEXT:    ldx mos8(__rc1)
+; CMOS-NEXT:    stx mos8(__rc21)
+; CMOS-NEXT:    ldx mos8(__rc20)
+; CMOS-NEXT:    stx mos8(__rc2)
+; CMOS-NEXT:    ldx mos8(__rc21)
+; CMOS-NEXT:    stx mos8(__rc3)
+; CMOS-NEXT:    ldx #10
+; CMOS-NEXT:    jsr __udivmodqi4
+; CMOS-NEXT:    tax
+; CMOS-NEXT:    ldy #0
+; CMOS-NEXT:    lda (mos8(__rc20)),y
+; CMOS-NEXT:    sta mos8(__rc20)
+; CMOS-NEXT:    txa
+; CMOS-NEXT:    jsr print_int
+; CMOS-NEXT:    lda mos8(__rc20)
+; CMOS-NEXT:    sta mos8(__rc16)
+; CMOS-NEXT:    pla
+; CMOS-NEXT:    sta mos8(__rc21)
+; CMOS-NEXT:    pla
+; CMOS-NEXT:    sta mos8(__rc20)
+; CMOS-NEXT:    clc
+; CMOS-NEXT:    lda mos8(__rc0)
+; CMOS-NEXT:    adc #1
+; CMOS-NEXT:    sta mos8(__rc0)
+; CMOS-NEXT:    lda mos8(__rc1)
+; CMOS-NEXT:    adc #0
+; CMOS-NEXT:    sta mos8(__rc1)
+; CMOS-NEXT:    lda mos8(__rc16)
 ; CMOS-NEXT:  .LBB0_2: ; %if.then
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    adc #48

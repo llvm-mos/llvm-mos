@@ -14,6 +14,52 @@ body: |
     RTS implicit %0
 ...
 ---
+name: udivrem
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: udivrem
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY1]](s8)
+    ; CHECK-NEXT: $rs1 = COPY [[FRAME_INDEX]](p0)
+    ; CHECK-NEXT: JSR &__udivmodqi4, mos_csr, implicit $a, implicit $x, implicit $rs1, implicit-def $a
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C]] :: (dereferenceable load (s8) from %stack.0)
+    ; CHECK-NEXT: RTS implicit [[COPY2]](s8), implicit [[LOAD_INDIR_IDX]](s8)
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s8), %3:_(s8) = G_UDIVREM %0, %1
+    RTS implicit %2, implicit %3
+...
+---
+name: sdivrem
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: sdivrem
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
+    ; CHECK-NEXT: $x = COPY [[COPY1]](s8)
+    ; CHECK-NEXT: $rs1 = COPY [[FRAME_INDEX]](p0)
+    ; CHECK-NEXT: JSR &__divmodqi4, mos_csr, implicit $a, implicit $x, implicit $rs1, implicit-def $a
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C]] :: (dereferenceable load (s8) from %stack.0)
+    ; CHECK-NEXT: RTS implicit [[COPY2]](s8), implicit [[LOAD_INDIR_IDX]](s8)
+    %0:_(s8) = COPY $a
+    %1:_(s8) = COPY $x
+    %2:_(s8), %3:_(s8) = G_SDIVREM %0, %1
+    RTS implicit %2, implicit %3
+...
+---
 name: sext_1
 body: |
   bb.0.entry:

@@ -53,6 +53,8 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
   LLT S16 = LLT::scalar(16);
+  LLT S32 = LLT::scalar(32);
+  LLT S64 = LLT::scalar(64);
   LLT P = LLT::pointer(0, 16);
 
   // Constants
@@ -145,8 +147,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
   getActionDefinitionsBuilder({G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM})
       .libcall();
 
-  // FIXME: Make this a libcall.
-  getActionDefinitionsBuilder({G_SDIVREM, G_UDIVREM}).lower();
+  getActionDefinitionsBuilder({G_SDIVREM, G_UDIVREM})
+      .customFor({S8, S16, S32, S64})
+      .lower();
 
   getActionDefinitionsBuilder(
       {G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT, G_SSHLSAT, G_USHLSAT})
@@ -322,6 +325,9 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeAddSub(Helper, MRI, MI);
   case G_XOR:
     return legalizeXor(Helper, MRI, MI);
+  case G_SDIVREM:
+  case G_UDIVREM:
+    return legalizeDivRem(Helper, MRI, MI);
   case G_LSHR:
   case G_SHL:
   case G_ASHR:
@@ -643,6 +649,43 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
   else
     Helper.widenScalar(MI, 0, LLT::scalar(8));
 
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeDivRem(LegalizerHelper &Helper,
+                                      MachineRegisterInfo &MRI,
+                                      MachineInstr &MI) const {
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  auto &Ctx = MI.getMF()->getFunction().getContext();
+
+  auto Libcall = getRTLibDesc(MI.getOpcode(), Ty.getSizeInBits());
+
+  Type *HLTy = IntegerType::get(Ctx, Ty.getSizeInBits());
+
+  SmallVector<CallLowering::ArgInfo, 3> Args;
+  Args.push_back({MI.getOperand(2).getReg(), HLTy, 0});
+  Args.push_back({MI.getOperand(3).getReg(), HLTy, 1});
+
+  // Pass a pointer to receive the remainder.
+  MachinePointerInfo PtrInfo;
+  auto FI = Helper.createStackTemporary(TypeSize::Fixed(Ty.getSizeInBytes()),
+                                        Align(), PtrInfo);
+
+  Type *PtrTy = PointerType::get(HLTy, 0);
+  Args.push_back({FI->getOperand(0).getReg(), PtrTy, 2});
+
+  if (!createLibcall(Helper.MIRBuilder, Libcall,
+                     {MI.getOperand(0).getReg(), HLTy, 0}, Args))
+    return false;
+
+  Helper.MIRBuilder.buildLoad(MI.getOperand(1), FI,
+                              *Helper.MIRBuilder.getMF().getMachineMemOperand(
+                                  PtrInfo,
+                                  MachineMemOperand::MOLoad |
+                                      MachineMemOperand::MODereferenceable,
+                                  Ty.getSizeInBytes(), Align()));
+
+  MI.eraseFromParent();
   return true;
 }
 

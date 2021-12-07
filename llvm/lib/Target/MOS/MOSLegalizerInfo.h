@@ -48,6 +48,8 @@ private:
   // Integer Operations
   bool legalizeAddSub(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
+  bool legalizeDivRem(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
   bool legalizeXor(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
   bool legalizeShiftRotate(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

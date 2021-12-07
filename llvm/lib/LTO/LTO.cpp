@@ -1152,6 +1152,14 @@ static const char *libcallRoutineNames[] = {
 #undef HANDLE_LIBCALL
   // Needed by MOS target.
   "__memset",
+  "__udivmodqi4",
+  "__udivmodhi4",
+  "__udivmodsi4",
+  "__udivmoddi4",
+  "__divmodqi4",
+  "__divmodhi4",
+  "__divmodsi4",
+  "__divmoddi4",
 };
 
 ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {

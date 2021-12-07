@@ -436,6 +436,10 @@ RTLIB::Libcall llvm::getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE_INT(SREM_I);
   case TargetOpcode::G_UREM:
     RTLIBCASE_INT(UREM_I);
+  case TargetOpcode::G_SDIVREM:
+    RTLIBCASE_INT(SDIVREM_I);
+  case TargetOpcode::G_UDIVREM:
+    RTLIBCASE_INT(UDIVREM_I);
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
     RTLIBCASE_INT(CTLZ_I);
   case TargetOpcode::G_LSHR:
