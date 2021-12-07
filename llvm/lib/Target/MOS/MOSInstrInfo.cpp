@@ -926,18 +926,20 @@ void MOSInstrInfo::expandGBR(MachineIRBuilder &Builder) const {
 
   Register Tst = MI.getOperand(1).getReg();
   switch (Tst) {
+  default:
+    llvm_unreachable("Unexpected operand.");
   case MOS::C:
   case MOS::V:
     return;
   case MOS::ALSB:
-    Builder.buildInstr(MOS::ORAImm, {MOS::A}, {Register(MOS::A), UINT64_C(0)})
-        .addDef(MOS::NZ, RegState::Implicit);
-    break;
   case MOS::XLSB:
   case MOS::YLSB: {
-    Register R = Tst == MOS::XLSB ? MOS::X : MOS::Y;
-    Builder.buildInstr(MOS::DE, {R}, {R});
-    Builder.buildInstr(MOS::IN, {R}, {R}).addDef(MOS::NZ, RegState::Implicit);
+    Register TstReg =
+        Builder.getMF().getSubtarget().getRegisterInfo()->getMatchingSuperReg(
+            Tst, MOS::sublsb, &MOS::GPRRegClass);
+    Builder.buildInstr(MOS::CMPZTerm, {MOS::C}, {TstReg})
+        ->getOperand(0)
+        .setIsDead();
   }
   }
   // Branch on zero flag, which is now the inverse of the test.

@@ -213,6 +213,9 @@ def CMPZTerm : MOSPseudo {
 def GBR : MOSPseudo {
   dag InOperandList = (ins label:$tgt, CV_GPR_LSB:$tst, i1imm:$val);
 
+  // This may need to lower to a CMPZTerm, which clobbers C.
+  let Defs = [C];
+
   let isBranch = true;
   let isTerminator = true;
 }

@@ -221,14 +221,14 @@ body: |
     ; 6502-LABEL: name: br_imm
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
-    ; 6502-NEXT: [[COPY:%[0-9]+]]:cv_gpr_lsb = COPY $c
-    ; 6502-NEXT: GBR %bb.0, [[COPY]], 0
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:anyi1 = COPY $c
+    ; 6502-NEXT: GBR %bb.0, [[COPY]], 0, implicit-def $c
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: br_imm
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
-    ; 65C02-NEXT: [[COPY:%[0-9]+]]:cv_gpr_lsb = COPY $c
-    ; 65C02-NEXT: GBR %bb.0, [[COPY]], 0
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:anyi1 = COPY $c
+    ; 65C02-NEXT: GBR %bb.0, [[COPY]], 0, implicit-def $c
     ; 65C02-NEXT: RTS
     %0:any(s1) = COPY $c
     G_BRCOND_IMM %0, %bb.0, 0
@@ -299,14 +299,14 @@ body: |
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 6502-NEXT: [[CMPImm:%[0-9]+]]:cc = CMPImm [[COPY]], 42
-    ; 6502-NEXT: GBR %bb.0, [[CMPImm]], 1
+    ; 6502-NEXT: GBR %bb.0, [[CMPImm]], 1, implicit-def $c
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpimm_brc
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 65C02-NEXT: [[CMPImm:%[0-9]+]]:cc = CMPImm [[COPY]], 42
-    ; 65C02-NEXT: GBR %bb.0, [[CMPImm]], 1
+    ; 65C02-NEXT: GBR %bb.0, [[CMPImm]], 1, implicit-def $c
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
     %1:any(s8) = G_CONSTANT i8 42
@@ -381,7 +381,7 @@ body: |
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
     ; 6502-NEXT: [[CMPImag8_:%[0-9]+]]:cc = CMPImag8 [[COPY]], [[COPY1]]
-    ; 6502-NEXT: GBR %bb.0, [[CMPImag8_]], 1
+    ; 6502-NEXT: GBR %bb.0, [[CMPImag8_]], 1, implicit-def $c
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpimag8_brc
     ; 65C02: successors: %bb.0(0x80000000)
@@ -389,7 +389,7 @@ body: |
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
     ; 65C02-NEXT: [[CMPImag8_:%[0-9]+]]:cc = CMPImag8 [[COPY]], [[COPY1]]
-    ; 65C02-NEXT: GBR %bb.0, [[CMPImag8_]], 1
+    ; 65C02-NEXT: GBR %bb.0, [[CMPImag8_]], 1, implicit-def $c
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
     %1:any(s8) = COPY $x

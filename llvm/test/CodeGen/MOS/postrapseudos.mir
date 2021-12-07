@@ -6,7 +6,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: inc_a
     ; CHECK: undef %0.subcarry:pc = LDCImm 0
-    ; CHECK: $a, dead %0.subcarry:pc, dead %0.subv:pc = ADCImm killed $a, 1, %0.subcarry
+    ; CHECK-NEXT: $a, dead %0.subcarry:pc, dead %0.subv:pc = ADCImm killed $a, 1, %0.subcarry
     $a = INC $a
 ...
 ---
@@ -15,7 +15,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: inc_xy
     ; CHECK: $x = IN $x
-    ; CHECK: $y = IN $y
+    ; CHECK-NEXT: $y = IN $y
     $x = INC $x
     $y = INC $y
 ...
@@ -33,7 +33,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: dec_a
     ; CHECK: undef %0.subcarry:pc = LDCImm 0
-    ; CHECK: $a, dead %0.subcarry:pc, dead %0.subv:pc = ADCImm killed $a, 255, %0.subcarry
+    ; CHECK-NEXT: $a, dead %0.subcarry:pc, dead %0.subv:pc = ADCImm killed $a, 255, %0.subcarry
     $a = DEC $a
 ...
 ---
@@ -42,7 +42,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: dec_xy
     ; CHECK: $x = DE $x
-    ; CHECK: $y = DE $y
+    ; CHECK-NEXT: $y = DE $y
     $x = DEC $x
     $y = DEC $y
 ...
@@ -70,7 +70,7 @@ body: |
     liveins: $rc2, $c
     ; CHECK-LABEL: name: sbcnzimag8_n
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
-    ; CHECK: $xlsb = SelectImm $n, -1, 0
+    ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
     $a, $c, $xlsb, $v, $noreg = SBCNZImag8 $a, $rc2, $c, implicit-def $nz
 ...
 ---
@@ -80,7 +80,7 @@ body: |
     liveins: $rc2, $c
     ; CHECK-LABEL: name: sbcnzimag8_z
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
-    ; CHECK: $ylsb = SelectImm $z, -1, 0
+    ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
     $a, $c, $noreg, $v, $ylsb = SBCNZImag8 $a, $rc2, $c, implicit-def $nz
 ...
 ---
@@ -90,9 +90,10 @@ body: |
     liveins: $c
     ; CHECK-LABEL: name: br_c
     ; CHECK: successors: %bb.0(0x80000000)
-    ; CHECK: BR %bb.0, $c, 1
-    ; CHECK: RTS
-    GBR %bb.0.entry, $c, 1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: BR %bb.0, $c, 1, implicit-def $c
+    ; CHECK-NEXT: RTS
+    GBR %bb.0.entry, $c, 1, implicit-def $c
     RTS
 ...
 ---
@@ -102,9 +103,10 @@ body: |
     liveins: $v
     ; CHECK-LABEL: name: br_v
     ; CHECK: successors: %bb.0(0x80000000)
-    ; CHECK: BR %bb.0, $v, 1
-    ; CHECK: RTS
-    GBR %bb.0.entry, $v, 1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: BR %bb.0, $v, 1, implicit-def $c
+    ; CHECK-NEXT: RTS
+    GBR %bb.0.entry, $v, 1, implicit-def $c
     RTS
 ...
 ---
@@ -114,10 +116,11 @@ body: |
     liveins: $alsb
     ; CHECK-LABEL: name: br_alsb_0
     ; CHECK: successors: %bb.0(0x80000000)
-    ; CHECK: $a = ORAImm $a, 0, implicit-def $nz
-    ; CHECK: BR %bb.0, $z, 1
-    ; CHECK: RTS
-    GBR %bb.0.entry, $alsb, 0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $c = CMPZTerm $a, implicit-def $nz
+    ; CHECK-NEXT: BR %bb.0, $z, 1, implicit-def $c
+    ; CHECK-NEXT: RTS
+    GBR %bb.0.entry, $alsb, 0, implicit-def $c
     RTS
 ...
 ---
@@ -127,10 +130,11 @@ body: |
     liveins: $alsb
     ; CHECK-LABEL: name: br_alsb_1
     ; CHECK: successors: %bb.0(0x80000000)
-    ; CHECK: $a = ORAImm $a, 0, implicit-def $nz
-    ; CHECK: BR %bb.0, $z, 0
-    ; CHECK: RTS
-    GBR %bb.0.entry, $alsb, 1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $c = CMPZTerm $a, implicit-def $nz
+    ; CHECK-NEXT: BR %bb.0, $z, 0, implicit-def $c
+    ; CHECK-NEXT: RTS
+    GBR %bb.0.entry, $alsb, 1, implicit-def $c
     RTS
 ...
 ---
@@ -140,11 +144,11 @@ body: |
     liveins: $xlsb
     ; CHECK-LABEL: name: br_xlsb
     ; CHECK: successors: %bb.0(0x80000000)
-    ; CHECK: $x = DE $x
-    ; CHECK: $x = IN $x, implicit-def $nz
-    ; CHECK: BR %bb.0, $z, 0
-    ; CHECK: RTS
-    GBR %bb.0.entry, $xlsb, 1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $c = CMPZTerm $x, implicit-def $nz
+    ; CHECK-NEXT: BR %bb.0, $z, 0, implicit-def $c
+    ; CHECK-NEXT: RTS
+    GBR %bb.0.entry, $xlsb, 1, implicit-def $c
     RTS
 ...
 ---
@@ -154,11 +158,11 @@ body: |
     liveins: $ylsb
     ; CHECK-LABEL: name: br_ylsb
     ; CHECK: successors: %bb.0(0x80000000)
-    ; CHECK: $y = DE $y
-    ; CHECK: $y = IN $y, implicit-def $nz
-    ; CHECK: BR %bb.0, $z, 0
-    ; CHECK: RTS
-    GBR %bb.0.entry, $ylsb, 1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $c = CMPZTerm $y, implicit-def $nz
+    ; CHECK-NEXT: BR %bb.0, $z, 0, implicit-def $c
+    ; CHECK-NEXT: RTS
+    GBR %bb.0.entry, $ylsb, 1, implicit-def $c
     RTS
 ...
 ---
@@ -186,8 +190,8 @@ body: |
     liveins: $x
     ; CHECK-LABEL: name: ldxidx_x
     ; CHECK: [[LDAIdx:%[0-9]+]]:ac = LDAIdx 1234, $x
-    ; CHECK: $x = TA [[LDAIdx]]
-    ; CHECK: $c = CMPImm $a, 0
+    ; CHECK-NEXT: $x = TA [[LDAIdx]]
+    ; CHECK-NEXT: $c = CMPImm $a, 0
     $x = LDIdx 1234, $x
     $c = CMPImm $a, 0
 ...
