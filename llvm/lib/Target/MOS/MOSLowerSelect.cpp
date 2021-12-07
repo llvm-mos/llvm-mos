@@ -47,6 +47,7 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+  void sinkSelectsToBranchUses(MachineFunction &MF);
   MachineFunction::reverse_iterator lowerSelect(MachineInstr &MI);
   void moveAwayFromCalls(MachineFunction &MF);
 };
@@ -54,6 +55,7 @@ public:
 bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "\n\nHandling G_SELECTs in: " << MF.getName() << "\n\n");
   moveAwayFromCalls(MF);
+  sinkSelectsToBranchUses(MF);
 
   bool Changed = false;
   for (auto I = MF.rbegin(), E = MF.rend(); I != E; ++I) {
@@ -388,6 +390,28 @@ void MOSLowerSelect::moveAwayFromCalls(MachineFunction &MF) {
       for (auto J = std::next(I); J->getOpcode() != MOS::ADJCALLSTACKUP; ++J)
         assert(J->getOpcode() != MOS::G_SELECT);
 #endif
+    }
+  }
+}
+
+void MOSLowerSelect::sinkSelectsToBranchUses(MachineFunction &MF) {
+  const auto &MRI = MF.getRegInfo();
+  for (MachineBasicBlock &MBB : MF) {
+    MachineBasicBlock::reverse_iterator NextI;
+    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; I = NextI) {
+      NextI = std::next(I);
+      if (I->getOpcode() != MOS::G_SELECT)
+        continue;
+      Register Dst = I->getOperand(0).getReg();
+      if (!MRI.hasOneNonDBGUse(Dst))
+        continue;
+      auto &UseMI = *MRI.use_instr_nodbg_begin(Dst);
+      if (UseMI.getOpcode() != MOS::G_BRCOND_IMM)
+        continue;
+      if (UseMI.getParent() != &MBB)
+        continue;
+      I->removeFromParent();
+      MBB.insert(UseMI, &*I);
     }
   }
 }
