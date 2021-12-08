@@ -208,10 +208,9 @@ def CMPZTerm : MOSPseudo {
 // Control flow
 //===---------------------------------------------------------------------===//
 
-// Generic BR that can branch on register LSB, C, or V. Branches to $tgt if
-// $tst = $val.
+// Generic BR that can branch on Anyi1. Branches to $tgt if $tst = $val.
 def GBR : MOSPseudo {
-  dag InOperandList = (ins label:$tgt, CV_GPR_LSB:$tst, i1imm:$val);
+  dag InOperandList = (ins label:$tgt, Anyi1:$tst, i1imm:$val);
 
   // This may need to lower to a CMPZTerm, which clobbers C.
   let Defs = [C];

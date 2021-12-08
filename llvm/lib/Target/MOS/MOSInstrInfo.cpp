@@ -926,17 +926,13 @@ void MOSInstrInfo::expandGBR(MachineIRBuilder &Builder) const {
 
   Register Tst = MI.getOperand(1).getReg();
   switch (Tst) {
-  default:
-    llvm_unreachable("Unexpected operand.");
   case MOS::C:
   case MOS::V:
     return;
-  case MOS::ALSB:
-  case MOS::XLSB:
-  case MOS::YLSB: {
+  default: {
     Register TstReg =
         Builder.getMF().getSubtarget().getRegisterInfo()->getMatchingSuperReg(
-            Tst, MOS::sublsb, &MOS::GPRRegClass);
+            Tst, MOS::sublsb, &MOS::Anyi8RegClass);
     Builder.buildInstr(MOS::CMPZTerm, {MOS::C}, {TstReg})
         ->getOperand(0)
         .setIsDead();
