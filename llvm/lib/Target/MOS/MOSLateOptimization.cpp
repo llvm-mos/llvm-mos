@@ -165,12 +165,6 @@ void MOSLateOptimization::lowerCMPZTerm(MachineInstr &MI) const {
           return;
         }
 
-        // The only way to set an imaginary register is by STImag8 and
-        // operations that set NZ. The latter case is handled by wholly eliding
-        // the comparison, so we only need to worry about the former. In the
-        // former case, we're guaranteed that there are no modifications of Val
-        // after the first STImag8 we find, so there's no need to do any sort of
-        // liveness tracking on Val.
         if (J->getOpcode() == MOS::STImag8 &&
             J->getOperand(0).getReg() == Val &&
             !Defined.contains(J->getOperand(1).getReg())) {
@@ -179,6 +173,11 @@ void MOSLateOptimization::lowerCMPZTerm(MachineInstr &MI) const {
           lowerCMPZTerm(MI);
           return;
         }
+
+        // If Val was changed, then earlier GPRs couldn't have its new value.
+        if (J->modifiesRegister(Val, TRI))
+          break;
+
         if (J->modifiesRegister(MOS::A, TRI))
           Defined.insert(MOS::A);
         if (J->modifiesRegister(MOS::X, TRI))

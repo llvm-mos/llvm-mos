@@ -280,6 +280,24 @@ body: |
     RTS implicit $n, implicit $a, implicit $x, implicit $y
 ...
 ---
+name: cmpzterm_imag8_no_gpr_free_lda_but_val_changed
+body: |
+  bb.0.entry:
+    liveins: $rc2, $a, $x, $y
+    ; CHECK-LABEL: name: cmpzterm_imag8_no_gpr_free_lda_but_val_changed
+    ; CHECK: $a = LDImag8 $rc2
+    ; CHECK-NEXT: $rc2 = INCImag8 $rc2
+    ; CHECK-NEXT: $x = IN $x
+    ; CHECK-NEXT: $rc2 = INCImag8 $rc2
+    ; CHECK-NEXT: dead $rc2 = DECImag8 $rc2, implicit-def $nz
+    ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
+    $a = LDImag8 $rc2
+    $rc2 = INCImag8 $rc2
+    $x = IN $x
+    dead $c = CMPZTerm $rc2, implicit-def $nz
+    RTS implicit $n, implicit $a, implicit $x, implicit $y
+...
+---
 name: cmpzterm_imag8_no_gpr_free_sta_clobbered
 body: |
   bb.0.entry:
