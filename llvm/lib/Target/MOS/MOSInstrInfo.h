@@ -117,7 +117,7 @@ private:
   void expandIncDec(MachineIRBuilder &Builder) const;
 
   // NZ pseudos
-  void expandSBCNZImag8(MachineIRBuilder &Builder) const;
+  void expandNZ(MachineIRBuilder &Builder) const;
   void expandCMPTerm(MachineIRBuilder &Builder) const;
 
   // Control flow pseudos

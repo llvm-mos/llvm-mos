@@ -395,25 +395,48 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     return selectAll(MIS);
   }
 
-  if (!N && !Z) {
-    auto RConst = getIConstantVRegValWithLookThrough(R, *Builder.getMRI());
-    MachineInstrBuilder Instr;
-    if (!A && !V && CInSet) {
-      if (RConst) {
-        assert(RConst->Value.getBitWidth() == 8);
+  auto RConst = getIConstantVRegValWithLookThrough(R, *Builder.getMRI());
+  MachineInstrBuilder Instr;
+  if (!A && !V && CInSet) {
+    if (RConst) {
+      assert(RConst->Value.getBitWidth() == 8);
+      if (N || Z) {
+        Instr = Builder.buildInstr(
+            MOS::CMPNZImm, {MI.getOperand(1), N, Z},
+            {MI.getOperand(5), RConst->Value.getZExtValue()});
+      } else {
         Instr = Builder.buildInstr(
             MOS::CMPImm, {MI.getOperand(1)},
             {MI.getOperand(5), RConst->Value.getZExtValue()});
+      }
+    } else {
+      if (N || Z) {
+        Instr = Builder.buildInstr(MOS::CMPNZImag8, {MI.getOperand(1), N, Z},
+                                   {MI.getOperand(5), MI.getOperand(6)});
       } else {
         Instr = Builder.buildInstr(MOS::CMPImag8, {MI.getOperand(1)},
                                    {MI.getOperand(5), MI.getOperand(6)});
       }
-    } else {
-      if (RConst) {
-        assert(RConst->Value.getBitWidth() == 8);
+    }
+  } else {
+    if (RConst) {
+      assert(RConst->Value.getBitWidth() == 8);
+      if (N || Z) {
+        Instr = Builder.buildInstr(
+            MOS::SBCNZImm,
+            {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
+            {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
+      } else {
         Instr = Builder.buildInstr(
             MOS::SBCImm, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
             {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
+      }
+    } else {
+      if (N || Z) {
+        Instr = Builder.buildInstr(
+            MOS::SBCNZImag8,
+            {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
+            {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
       } else {
         Instr = Builder.buildInstr(
             MOS::SBCImag8,
@@ -421,17 +444,10 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
             {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
       }
     }
-    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      return false;
-    MI.eraseFromParent();
-    return true;
   }
-
-  MI.setDesc(Builder.getTII().get(MOS::SBCNZImag8));
-  MI.getOperand(2).setReg(N);
-  MI.getOperand(4).setReg(Z);
-  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
+  if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
+  MI.eraseFromParent();
   return true;
 }
 

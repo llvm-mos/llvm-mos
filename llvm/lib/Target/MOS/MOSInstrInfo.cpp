@@ -732,8 +732,11 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandLDZ(Builder);
     break;
   // NZ
+  case MOS::CMPNZImm:
+  case MOS::CMPNZImag8:
+  case MOS::SBCNZImm:
   case MOS::SBCNZImag8:
-    expandSBCNZImag8(Builder);
+    expandNZ(Builder);
     break;
   case MOS::CMPImmTerm:
   case MOS::CMPImag8Term:
@@ -880,24 +883,59 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
 // NZ pseudos
 //===---------------------------------------------------------------------===//
 
-void MOSInstrInfo::expandSBCNZImag8(MachineIRBuilder &Builder) const {
+void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
   MachineInstr &MI = *Builder.getInsertPt();
-  auto SBC = Builder.buildInstr(
-      MOS::SBCImag8, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
-      {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
-  Register NZOut = MI.getOperand(2).getReg();
-  Register NZIn = MOS::N;
-  if (NZOut == MOS::NoRegister) {
-    NZOut = MI.getOperand(4).getReg();
-    NZIn = MOS::Z;
-  } else
-    assert(MI.getOperand(4).getReg() == MOS::NoRegister &&
-           "At most one of N and Z can be set in SBCNZImag8");
-  if (NZOut != MOS::NoRegister) {
-    SBC.addDef(MOS::NZ, RegState::Implicit);
-    Builder.buildInstr(MOS::SelectImm, {NZOut},
-                       {NZIn, INT64_C(-1), INT64_C(0)});
+  Register N;
+  Register Z;
+  switch (MI.getOpcode()) {
+  case MOS::CMPNZImm:
+  case MOS::CMPNZImag8:
+    N = MI.getOperand(1).getReg();
+    Z = MI.getOperand(2).getReg();
+    break;
+  case MOS::SBCNZImm:
+  case MOS::SBCNZImag8:
+    N = MI.getOperand(2).getReg();
+    Z = MI.getOperand(4).getReg();
+    break;
   }
+
+  Register NZOut;
+  Register NZIn;
+  if (N) {
+    assert(!Z);
+    NZOut = N;
+    NZIn = MOS::N;
+  } else {
+    assert(Z);
+    NZOut = Z;
+    NZIn = MOS::Z;
+  }
+
+  MachineInstrBuilder Op;
+  switch (MI.getOpcode()) {
+  case MOS::CMPNZImm:
+    Op = Builder.buildInstr(MOS::CMPImm, {MI.getOperand(0)},
+                            {MI.getOperand(3), MI.getOperand(4).getImm()});
+    break;
+  case MOS::CMPNZImag8:
+    Op = Builder.buildInstr(MOS::CMPImag8, {MI.getOperand(0)},
+                            {MI.getOperand(3), MI.getOperand(4)});
+    break;
+  case MOS::SBCNZImm:
+    Op = Builder.buildInstr(
+        MOS::SBCImm, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+        {MI.getOperand(5), MI.getOperand(6).getImm(), MI.getOperand(7)});
+    break;
+  case MOS::SBCNZImag8:
+    Op = Builder.buildInstr(
+        MOS::SBCImag8, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+        {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
+    break;
+  }
+
+  Op.addDef(MOS::NZ, RegState::Implicit);
+  Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(-1), INT64_C(0)});
   MI.eraseFromParent();
 }
 
