@@ -173,15 +173,15 @@ let isPressureFineGrained = true in {
 
 // "General purpose" register classes.
 let isPressureFineGrained = true in {
-  def GPR : MOSReg8Class<(add A, X, Y)>;
-  def GPR_LSB : MOSReg1Class<(add ALSB, XLSB, YLSB)>;
+  def GPR : MOSReg8Class<(add X, Y, A)>;
+  def GPR_LSB : MOSReg1Class<(add XLSB, YLSB, ALSB)>;
   def CV_GPR_LSB : MOSReg1Class<(add Cc, GPR_LSB, Vc)>;
 }
 def Imag8 : MOSReg8Class<(sequence "RC%u", 0, !add(MaxImag8Regs, -1))>;
 def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 
 // Instruction-specific register classes.
-def AImag8 : MOSReg8Class<(add A, Imag8)>;
+def AImag8 : MOSReg8Class<(add Imag8, A)>;
 let isPressureFineGrained = true in {
   def XY : MOSReg8Class<(add X, Y)>;
 }
@@ -201,9 +201,5 @@ def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 
 // Sum types of all available storage locations for a size.
 
-// NOTE: The V register is particularly difficult to copy into and out of, so it
-// should only be used with instructions that directly involve it, or perhaps to
-// avoid using a CSR.
-def Anyi1 : MOSReg1Class<(add Cc, ALSB, XLSB, YLSB,
-                         (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)), Vc)>;
-def Anyi8 : MOSReg8Class<(add GPR, Imag8)>;
+def Anyi1 : MOSReg1Class<(add (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)), CV_GPR_LSB)>;
+def Anyi8 : MOSReg8Class<(add Imag8, GPR)>;
