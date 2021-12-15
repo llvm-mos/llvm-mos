@@ -17,9 +17,9 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_a
-    ; CHECK: PH $a
-    ; CHECK-NEXT: dead $a = LDImm 42
-    ; CHECK-NEXT: $a = PL
+    ; CHECK: $rc17 = STImag8 $y
+    ; CHECK-NEXT: dead $y = LDImm 42
+    ; CHECK-NEXT: $y = LDImag8 $rc17
     ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $y
     %0:gpr = LDImm 42
     RTS implicit $a, implicit $x, implicit $y

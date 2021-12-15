@@ -46,19 +46,19 @@ define zeroext i1 @ule(i16 %a, i16 %b) {
 ; CHECK-LABEL: ule:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    ldx mos8(__rc3)
-; CHECK-NEXT:    cpx mos8(__rc5)
+; CHECK-NEXT:    ldy mos8(__rc3)
+; CHECK-NEXT:    cpy mos8(__rc5)
 ; CHECK-NEXT:    bne .LBB2_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    cmp mos8(__rc4)
+; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    cpx mos8(__rc4)
 ; CHECK-NEXT:    bcc .LBB2_4
 ; CHECK-NEXT:  .LBB2_2: ; %entry
 ; CHECK-NEXT:    lda #1
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB2_3: ; %entry
-; CHECK-NEXT:    cpx mos8(__rc5)
+; CHECK-NEXT:    cpy mos8(__rc5)
 ; CHECK-NEXT:    bcs .LBB2_2
 ; CHECK-NEXT:  .LBB2_4: ; %entry
 ; CHECK-NEXT:    lda #0
@@ -116,19 +116,19 @@ define zeroext i1 @ugt(i16 %a, i16 %b) {
 ; CHECK-LABEL: ugt:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx mos8(__rc5)
-; CHECK-NEXT:    ldx mos8(__rc3)
-; CHECK-NEXT:    cpx mos8(__rc5)
+; CHECK-NEXT:    ldy mos8(__rc3)
+; CHECK-NEXT:    cpy mos8(__rc5)
 ; CHECK-NEXT:    bne .LBB5_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    sta mos8(__rc4)
-; CHECK-NEXT:    lda mos8(__rc2)
-; CHECK-NEXT:    cmp mos8(__rc4)
+; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    cpx mos8(__rc4)
 ; CHECK-NEXT:    bcc .LBB5_4
 ; CHECK-NEXT:  .LBB5_2: ; %entry
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB5_3: ; %entry
-; CHECK-NEXT:    cpx mos8(__rc5)
+; CHECK-NEXT:    cpy mos8(__rc5)
 ; CHECK-NEXT:    bcs .LBB5_2
 ; CHECK-NEXT:  .LBB5_4: ; %entry
 ; CHECK-NEXT:    lda #1

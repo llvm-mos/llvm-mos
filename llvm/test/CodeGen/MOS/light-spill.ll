@@ -41,15 +41,15 @@ define void @light_spill(i8 zeroext %sel) {
 ; CHECK-NEXT:    lda mos8(__rc20)
 ; CHECK-NEXT:    beq .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %select.false2
-; CHECK-NEXT:    lda #mos16lo(_ZN4SubA2fnEv)
-; CHECK-NEXT:    ldx #mos16hi(_ZN4SubA2fnEv)
+; CHECK-NEXT:    ldx #mos16lo(_ZN4SubA2fnEv)
+; CHECK-NEXT:    ldy #mos16hi(_ZN4SubA2fnEv)
 ; CHECK-NEXT:    jmp .LBB0_6
 ; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    lda #mos16lo(_ZN4SubB2fnEv)
-; CHECK-NEXT:    ldx #mos16hi(_ZN4SubB2fnEv)
+; CHECK-NEXT:    ldx #mos16lo(_ZN4SubB2fnEv)
+; CHECK-NEXT:    ldy #mos16hi(_ZN4SubB2fnEv)
 ; CHECK-NEXT:  .LBB0_6: ; %select.end1
-; CHECK-NEXT:    sta mos8(__rc18)
-; CHECK-NEXT:    stx mos8(__rc19)
+; CHECK-NEXT:    stx mos8(__rc18)
+; CHECK-NEXT:    sty mos8(__rc19)
 ; CHECK-NEXT:    jsr __call_indir
 ; CHECK-NEXT:    pla
 ; CHECK-NEXT:    sta mos8(__rc20)

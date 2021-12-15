@@ -104,10 +104,10 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; CMOS-NEXT:    jsr print_int
 ; CMOS-NEXT:    lda mos8(__rc20)
 ; CMOS-NEXT:    sta mos8(__rc16)
-; CMOS-NEXT:    pla
-; CMOS-NEXT:    sta mos8(__rc21)
-; CMOS-NEXT:    pla
-; CMOS-NEXT:    sta mos8(__rc20)
+; CMOS-NEXT:    plx
+; CMOS-NEXT:    stx mos8(__rc21)
+; CMOS-NEXT:    plx
+; CMOS-NEXT:    stx mos8(__rc20)
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    lda mos8(__rc0)
 ; CMOS-NEXT:    adc #1
