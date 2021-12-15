@@ -644,11 +644,11 @@ int copyCost(Register DestReg, Register SrcReg, const MOSSubtarget &STI) {
           STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
 
       if (StackRegClass.contains(SrcReg)) {
-        // PHA PLA Select
-        return 17;
+        // PHA; PLA; BNE; BIT setv; JMP; CLV
+        return 30;
       }
-      // PHA COPY Select PLA
-      return 17 + copyCost(MOS::A, SrcReg, STI);
+      // [PHA]; COPY; BNE; BIT setv; JMP; CLV; [PLA]
+      return 23 + copyCost(MOS::A, SrcReg, STI);
     }
     if (DestReg8) {
       DestReg = DestReg8;
@@ -656,14 +656,14 @@ int copyCost(Register DestReg, Register SrcReg, const MOSSubtarget &STI) {
       Register Tmp = DestReg;
       if (!MOS::GPRRegClass.contains(Tmp))
         Tmp = MOS::A;
-      // Select and set
-      int Cost = 10;
+      // LDImm; BNE; LDImm;
+      int Cost = 13;
       if (Tmp != DestReg)
         Cost += copyCost(DestReg, Tmp, STI);
       return Cost;
     }
-    // Select and set
-    return 10;
+    // BIT setv; BR; CLV;
+    return 15;
   }
 
   llvm_unreachable("Unexpected physical register copy.");
