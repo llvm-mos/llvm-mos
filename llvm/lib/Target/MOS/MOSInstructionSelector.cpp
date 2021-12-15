@@ -69,6 +69,11 @@ private:
   const MOSRegisterInfo &TRI;
   const MOSRegisterBankInfo &RBI;
 
+  // Pre-tablegen selection functions. If these return false, fall through to
+  // tablegen.
+  bool selectAdd(MachineInstr &MI);
+
+  // Post-tablegen selection functions. If these return false, it is an error.
   bool selectBrCondImm(MachineInstr &MI);
   bool selectSbc(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
@@ -149,6 +154,13 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     constrainGenericOp(MI);
     return true;
   }
+
+  switch (MI.getOpcode()) {
+  case MOS::G_ADD:
+    if (selectAdd(MI))
+      return true;
+  }
+
   if (selectImpl(MI, *CoverageInfo))
     return true;
 
@@ -191,6 +203,88 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_STORE_INDIR_IDX:
     return selectGeneric(MI);
   }
+}
+
+static bool shouldFoldMemAccess(const MachineInstr &Dst,
+                                const MachineInstr &Src) {
+  assert(Src.mayLoadOrStore());
+  if (Dst.getParent() != Src.getParent())
+    return false;
+  for (MachineBasicBlock::const_iterator
+           I = std::next(MachineBasicBlock::const_iterator(Src)),
+           E = Dst;
+       I != E; ++I) {
+    if (I->mayLoadOrStore() || I->isCall() || I->hasUnmodeledSideEffects())
+      return false;
+  }
+  const auto &MRI = Dst.getMF()->getRegInfo();
+  for (MachineInstr &UseMI :
+       MRI.use_nodbg_instructions(Src.getOperand(0).getReg())) {
+    switch (UseMI.getOpcode()) {
+    default:
+      return false;
+    case MOS::G_ADD:
+    case MOS::G_UADDE:
+    case MOS::G_SADDE:
+      break;
+    }
+  }
+  return true;
+}
+
+struct FoldedLdAbs_match {
+  const MachineInstr &Tgt;
+  MachineOperand &Addr;
+
+  FoldedLdAbs_match(const MachineInstr &Tgt, MachineOperand &Addr)
+      : Tgt(Tgt), Addr(Addr) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    const MachineInstr *LdAbs = getOpcodeDef(MOS::G_LOAD_ABS, Reg, MRI);
+    if (!LdAbs || !shouldFoldMemAccess(Tgt, *LdAbs))
+      return false;
+    Addr = LdAbs->getOperand(1);
+    return true;
+  }
+};
+
+inline FoldedLdAbs_match m_FoldedLdAbs(const MachineInstr &Tgt,
+                                       MachineOperand &Addr) {
+  return {Tgt, Addr};
+}
+
+bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
+  assert(MI.getOpcode() == MOS::G_ADD);
+
+  MachineIRBuilder Builder(MI);
+  auto &MRI = *Builder.getMRI();
+
+  LLT S1 = LLT::scalar(1);
+
+  if (auto RHSConst =
+          getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
+    // Don't inhibit generation of INC/DEC.
+    if (RHSConst->Value.abs().isOne())
+      return false;
+  }
+
+  Register LHS;
+  MachineOperand Addr = MachineOperand::CreateReg(0, false);
+  if (!mi_match(MI.getOperand(0).getReg(), MRI,
+                m_GAdd(m_Reg(LHS), m_FoldedLdAbs(MI, Addr))))
+    return false;
+  Register CIn = Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
+  auto Adc = Builder.buildInstr(MOS::ADCAbs)
+                 .addDef(MI.getOperand(0).getReg())
+                 .addDef(MRI.createGenericVirtualRegister(S1))
+                 .addDef(MRI.createGenericVirtualRegister(S1))
+                 .addUse(LHS)
+                 .add(Addr)
+                 .addUse(CIn);
+  if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
+    llvm_unreachable("Could not constrain ADCAbs");
+  MI.eraseFromParent();
+  return true;
 }
 
 // Given a G_SBC instruction Sbc and one of its flag output virtual registers,
@@ -607,19 +701,31 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
   Register CarryIn = MI.getOperand(4).getReg();
 
   MachineIRBuilder Builder(MI);
+  auto &MRI = *Builder.getMRI();
 
   LLT S1 = LLT::scalar(1);
 
-  auto RConst = getIConstantVRegValWithLookThrough(R, *Builder.getMRI());
-  MachineInstrBuilder Instr;
-  if (RConst) {
-    assert(RConst->Value.getBitWidth() == 8);
-    Instr = Builder.buildInstr(MOS::ADCImm, {Result, CarryOut, S1},
-                               {L, RConst->Value.getZExtValue(), CarryIn});
-  } else {
-    Instr = Builder.buildInstr(MOS::ADCImag8, {Result, CarryOut, S1},
-                               {L, R, CarryIn});
-  }
+  MachineInstrBuilder Instr = [&]() {
+    if (auto RConst = getIConstantVRegValWithLookThrough(R, MRI)) {
+      assert(RConst->Value.getBitWidth() == 8);
+      return Builder.buildInstr(MOS::ADCImm, {Result, CarryOut, S1},
+                                {L, RConst->Value.getZExtValue(), CarryIn});
+    }
+    MachineOperand Addr = MachineOperand::CreateReg(0, false);
+    if (mi_match(L, MRI, m_FoldedLdAbs(MI, Addr)))
+      std::swap(L, R);
+    if (mi_match(R, MRI, m_FoldedLdAbs(MI, Addr))) {
+      return Builder.buildInstr(MOS::ADCAbs)
+          .addDef(Result)
+          .addDef(CarryOut)
+          .addDef(MRI.createGenericVirtualRegister(S1))
+          .addUse(L)
+          .add(Addr)
+          .addUse(CarryIn);
+    }
+    return Builder.buildInstr(MOS::ADCImag8, {Result, CarryOut, S1},
+                              {L, R, CarryIn});
+  }();
   if (MI.getOpcode() == MOS::G_SADDE) {
     Register Tmp = Instr.getReg(1);
     Instr->getOperand(1).setReg(Instr.getReg(2));

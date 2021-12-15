@@ -90,6 +90,8 @@ let isAdd = true in {
     let Constraints = "$dst = $l";
     let isCommutable = true;
   }
+  def ADCAbs :
+    MOSAddSubOp<i16imm>, PseudoInstExpansion<(ADC_Absolute addr16:$r)>;
 }
 
 def SBCImm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(SBC_Immediate imm8:$r)>;
