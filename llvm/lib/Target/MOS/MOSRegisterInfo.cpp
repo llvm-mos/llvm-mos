@@ -680,6 +680,10 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   DenseMap<Register, int> RegScores;
 
+  DenseMap<Register, int> OriginalIndex;
+  for (int I = 0, E = Order.size(); I != E; ++I)
+    OriginalIndex[Order[I]] = I;
+
   SmallSet<const MachineInstr*, 32> Visited;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
     if (Visited.contains(&MI))
@@ -760,13 +764,13 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   SmallVector<std::pair<Register, int>> RegsAndScores;
   for (const auto &KV : RegScores)
     RegsAndScores.push_back(KV);
-  sort(RegsAndScores, [](const std::pair<Register, int> &A,
+  sort(RegsAndScores, [&](const std::pair<Register, int> &A,
                          const std::pair<Register, int> &B) {
     if (A.second > B.second)
       return true;
     if (A.second < B.second)
       return false;
-    return A.first < B.first;
+    return OriginalIndex[A.first] < OriginalIndex[B.first];
   });
   for (const auto &KV : RegsAndScores)
     Hints.push_back(KV.first);
