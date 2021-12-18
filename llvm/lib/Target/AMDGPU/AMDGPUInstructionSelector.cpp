@@ -64,10 +64,11 @@ const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                         CodeGenCoverage &CoverageInfo,
                                         ProfileSummaryInfo *PSI,
-                                        BlockFrequencyInfo *BFI) {
+                                        BlockFrequencyInfo *BFI,
+                                        AAResults *AA) {
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
-  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI, AA);
 }
 
 bool AMDGPUInstructionSelector::isVCC(Register Reg,

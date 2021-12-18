@@ -13,6 +13,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -72,6 +73,7 @@ InstructionSelect::InstructionSelect()
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   if (OptLevel != CodeGenOpt::None) {
+    AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<GISelKnownBitsAnalysis>();
     AU.addPreserved<GISelKnownBitsAnalysis>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
@@ -98,16 +100,18 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                                            : MF.getTarget().getOptLevel();
 
   GISelKnownBits *KB = nullptr;
+  AAResults *AA = nullptr;
   if (OptLevel != CodeGenOpt::None) {
     KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     if (PSI && PSI->hasProfileSummary())
       BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
+    AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   }
 
   CodeGenCoverage CoverageInfo;
   assert(ISel && "Cannot work without InstructionSelector");
-  ISel->setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  ISel->setupMF(MF, KB, CoverageInfo, PSI, BFI, AA);
 
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);

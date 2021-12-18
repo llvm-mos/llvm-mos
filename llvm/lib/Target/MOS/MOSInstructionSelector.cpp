@@ -19,6 +19,7 @@
 #include "MOSSubtarget.h"
 
 #include "llvm/ADT/APFloat.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -206,7 +207,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
 }
 
 static bool shouldFoldMemAccess(const MachineInstr &Dst,
-                                const MachineInstr &Src) {
+                                const MachineInstr &Src, AAResults *AA) {
   assert(Src.mayLoadOrStore());
   if (Dst.getParent() != Src.getParent())
     return false;
@@ -214,8 +215,14 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
            I = std::next(MachineBasicBlock::const_iterator(Src)),
            E = Dst;
        I != E; ++I) {
-    if (I->mayLoadOrStore() || I->isCall() || I->hasUnmodeledSideEffects())
+    if (I->isCall() || I->hasUnmodeledSideEffects())
       return false;
+    if (I->mayLoadOrStore()) {
+      if (Src.hasOrderedMemoryRef() || I->hasOrderedMemoryRef())
+        return false;
+      if (I->mayAlias(AA, Src, /*UseTBAA=*/true))
+        return false;
+    }
   }
   const auto &MRI = Dst.getMF()->getRegInfo();
   for (MachineInstr &UseMI :
@@ -235,13 +242,15 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
 struct FoldedLdAbs_match {
   const MachineInstr &Tgt;
   MachineOperand &Addr;
+  AAResults *AA;
 
-  FoldedLdAbs_match(const MachineInstr &Tgt, MachineOperand &Addr)
-      : Tgt(Tgt), Addr(Addr) {}
+  FoldedLdAbs_match(const MachineInstr &Tgt, MachineOperand &Addr,
+                    AAResults *AA)
+      : Tgt(Tgt), Addr(Addr), AA(AA) {}
 
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     const MachineInstr *LdAbs = getOpcodeDef(MOS::G_LOAD_ABS, Reg, MRI);
-    if (!LdAbs || !shouldFoldMemAccess(Tgt, *LdAbs))
+    if (!LdAbs || !shouldFoldMemAccess(Tgt, *LdAbs, AA))
       return false;
     Addr = LdAbs->getOperand(1);
     return true;
@@ -249,8 +258,8 @@ struct FoldedLdAbs_match {
 };
 
 inline FoldedLdAbs_match m_FoldedLdAbs(const MachineInstr &Tgt,
-                                       MachineOperand &Addr) {
-  return {Tgt, Addr};
+                                       MachineOperand &Addr, AAResults *AA) {
+  return {Tgt, Addr, AA};
 }
 
 bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
@@ -271,7 +280,7 @@ bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
   Register LHS;
   MachineOperand Addr = MachineOperand::CreateReg(0, false);
   if (!mi_match(MI.getOperand(0).getReg(), MRI,
-                m_GAdd(m_Reg(LHS), m_FoldedLdAbs(MI, Addr))))
+                m_GAdd(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA))))
     return false;
   Register CIn = Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
   auto Adc = Builder.buildInstr(MOS::ADCAbs)
@@ -712,9 +721,9 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
                                 {L, RConst->Value.getZExtValue(), CarryIn});
     }
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
-    if (mi_match(L, MRI, m_FoldedLdAbs(MI, Addr)))
+    if (mi_match(L, MRI, m_FoldedLdAbs(MI, Addr, AA)))
       std::swap(L, R);
-    if (mi_match(R, MRI, m_FoldedLdAbs(MI, Addr))) {
+    if (mi_match(R, MRI, m_FoldedLdAbs(MI, Addr, AA))) {
       return Builder.buildInstr(MOS::ADCAbs)
           .addDef(Result)
           .addDef(CarryOut)
