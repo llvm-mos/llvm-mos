@@ -222,6 +222,10 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
         return false;
       if (I->mayAlias(AA, Src, /*UseTBAA=*/true))
         return false;
+      // Note: Dst may be a store, indicating that the whole sequence is a RMW
+      // operation.
+      if (I->mayAlias(AA, Dst, /*UseTBAA=*/true))
+        return false;
     }
   }
   const auto &MRI = Dst.getMF()->getRegInfo();
@@ -612,6 +616,19 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
+  const auto &MRI = *Builder.getMRI();
+
+  if (MI.getOpcode() == MOS::G_STORE_ABS) {
+    MachineOperand Addr = MachineOperand::CreateReg(0, false);
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GAdd(m_FoldedLdAbs(MI, Addr, AA), m_SpecificICst(1)))) {
+      if (Addr.isIdenticalTo(MI.getOperand(1))) {
+        Builder.buildInstr(MOS::INCAbs).add(Addr);
+        MI.eraseFromParent();
+        return true;
+      }
+    }
+  }
 
   if (!STI.has65C02() ||
       !isOperandImmEqual(MI.getOperand(0), 0, *Builder.getMRI()))

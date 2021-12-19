@@ -271,6 +271,10 @@ multiclass MOSIncDec {
     dag InOperandList = (ins Imag8:$src);
     let Constraints = "$src = $dst";
   }
+
+  def CAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_Absolute) addr16:$addr)> {
+    dag InOperandList = (ins i16imm:$addr);
+  }
 }
 
 // DEX, DEY, DEC
