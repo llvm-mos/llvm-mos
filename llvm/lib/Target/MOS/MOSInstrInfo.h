@@ -75,9 +75,7 @@ public:
                            const TargetRegisterInfo *TRI) const override;
 
   const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
-                                         unsigned FoldIdx) const override {
-    return nullptr;
-  }
+                                         unsigned FoldIdx) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, Register DestReg,

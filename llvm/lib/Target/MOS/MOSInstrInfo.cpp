@@ -540,6 +540,23 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
     llvm_unreachable("Unexpected physical register copy.");
 }
 
+const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
+                                                     unsigned FoldIdx) const {
+  if (!MI.getMF()->getFunction().doesNotRecurse())
+    return TargetInstrInfo::canFoldCopy(MI, FoldIdx);
+
+  Register FoldReg = MI.getOperand(FoldIdx).getReg();
+  if (MOS::GPRRegClass.contains(FoldReg) ||
+      MOS::GPR_LSBRegClass.contains(FoldReg))
+    return TargetInstrInfo::canFoldCopy(MI, FoldIdx);
+  if (FoldReg.isVirtual()) {
+    const auto *RC = MI.getMF()->getRegInfo().getRegClass(FoldReg);
+    if (RC == &MOS::GPRRegClass || RC == &MOS::GPR_LSBRegClass)
+      return TargetInstrInfo::canFoldCopy(MI, FoldIdx);
+  }
+  return nullptr;
+}
+
 void MOSInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MI,
                                        Register SrcReg, bool isKill,
