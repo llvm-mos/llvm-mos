@@ -277,6 +277,13 @@ multiclass MOSIncDec {
 
   def CAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_Absolute) addr16:$addr)> {
     dag InOperandList = (ins i16imm:$addr);
+    let mayLoad = true;
+    let mayStore = true;
+  }
+  def CIdx : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_AbsoluteX) addr16:$addr)> {
+    dag InOperandList = (ins i16imm:$addr, Xc:$idx);
+    let mayLoad = true;
+    let mayStore = true;
   }
 }
 

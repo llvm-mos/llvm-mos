@@ -676,6 +676,20 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
         return true;
       }
     }
+  } else if (MI.getOpcode() == MOS::G_STORE_ABS_IDX) {
+    MachineOperand Addr = MachineOperand::CreateReg(0, false);
+    Register Idx;
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GAdd(m_FoldedLdIdx(MI, Addr, Idx, AA), m_SpecificICst(1)))) {
+      if (Addr.isIdenticalTo(MI.getOperand(1)) &&
+          Idx == MI.getOperand(2).getReg()) {
+        auto Inc = Builder.buildInstr(MOS::INCIdx).add(Addr).addUse(Idx);
+        if (!constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI))
+           return false;
+        MI.eraseFromParent();
+        return true;
+      }
+    }
   }
 
   if (!STI.has65C02() ||
