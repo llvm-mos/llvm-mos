@@ -266,6 +266,32 @@ inline FoldedLdAbs_match m_FoldedLdAbs(const MachineInstr &Tgt,
   return {Tgt, Addr, AA};
 }
 
+struct FoldedLdIdx_match {
+  const MachineInstr &Tgt;
+  MachineOperand &Addr;
+  Register &Idx;
+  AAResults *AA;
+
+  FoldedLdIdx_match(const MachineInstr &Tgt, MachineOperand &Addr,
+                    Register &Idx, AAResults *AA)
+      : Tgt(Tgt), Addr(Addr), Idx(Idx), AA(AA) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    const MachineInstr *LdIdx = getOpcodeDef(MOS::G_LOAD_ABS_IDX, Reg, MRI);
+    if (!LdIdx || !shouldFoldMemAccess(Tgt, *LdIdx, AA))
+      return false;
+    Addr = LdIdx->getOperand(1);
+    Idx = LdIdx->getOperand(2).getReg();
+    return true;
+  }
+};
+
+inline FoldedLdIdx_match m_FoldedLdIdx(const MachineInstr &Tgt,
+                                       MachineOperand &Addr, Register &Idx,
+                                       AAResults *AA) {
+  return {Tgt, Addr, Idx, AA};
+}
+
 bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_ADD);
 
@@ -283,21 +309,43 @@ bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
 
   Register LHS;
   MachineOperand Addr = MachineOperand::CreateReg(0, false);
-  if (!mi_match(MI.getOperand(0).getReg(), MRI,
-                m_GAdd(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA))))
-    return false;
-  Register CIn = Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
-  auto Adc = Builder.buildInstr(MOS::ADCAbs)
-                 .addDef(MI.getOperand(0).getReg())
-                 .addDef(MRI.createGenericVirtualRegister(S1))
-                 .addDef(MRI.createGenericVirtualRegister(S1))
-                 .addUse(LHS)
-                 .add(Addr)
-                 .addUse(CIn);
-  if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
-    llvm_unreachable("Could not constrain ADCAbs");
-  MI.eraseFromParent();
-  return true;
+  if (mi_match(MI.getOperand(0).getReg(), MRI,
+               m_GAdd(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA)))) {
+    Register CIn =
+        Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
+    auto Adc = Builder.buildInstr(MOS::ADCAbs)
+                   .addDef(MI.getOperand(0).getReg())
+                   .addDef(MRI.createGenericVirtualRegister(S1))
+                   .addDef(MRI.createGenericVirtualRegister(S1))
+                   .addUse(LHS)
+                   .add(Addr)
+                   .addUse(CIn);
+    if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
+      llvm_unreachable("Could not constrain ADCAbs");
+    MI.eraseFromParent();
+    return true;
+  }
+
+  Register Idx;
+  if (mi_match(MI.getOperand(0).getReg(), MRI,
+               m_GAdd(m_Reg(LHS), m_FoldedLdIdx(MI, Addr, Idx, AA)))) {
+    Register CIn =
+        Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
+    auto Adc = Builder.buildInstr(MOS::ADCIdx)
+                   .addDef(MI.getOperand(0).getReg())
+                   .addDef(MRI.createGenericVirtualRegister(S1))
+                   .addDef(MRI.createGenericVirtualRegister(S1))
+                   .addUse(LHS)
+                   .add(Addr)
+                   .addUse(Idx)
+                   .addUse(CIn);
+    if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
+      llvm_unreachable("Could not constrain ADCIdx");
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 // Given a G_SBC instruction Sbc and one of its flag output virtual registers,
@@ -747,6 +795,19 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
           .addDef(MRI.createGenericVirtualRegister(S1))
           .addUse(L)
           .add(Addr)
+          .addUse(CarryIn);
+    }
+    Register Idx;
+    if (mi_match(L, MRI, m_FoldedLdIdx(MI, Addr, Idx, AA)))
+      std::swap(L, R);
+    if (mi_match(R, MRI, m_FoldedLdIdx(MI, Addr, Idx, AA))) {
+      return Builder.buildInstr(MOS::ADCIdx)
+          .addDef(Result)
+          .addDef(CarryOut)
+          .addDef(MRI.createGenericVirtualRegister(S1))
+          .addUse(L)
+          .add(Addr)
+          .addUse(Idx)
           .addUse(CarryIn);
     }
     return Builder.buildInstr(MOS::ADCImag8, {Result, CarryOut, S1},

@@ -158,6 +158,29 @@ body: |
     RTS implicit %2
 ...
 ---
+name: add_abs_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: add_abs_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 6502-NEXT: [[ADCIdx:%[0-9]+]]:ac, [[ADCIdx1:%[0-9]+]]:cc, [[ADCIdx2:%[0-9]+]]:vc = ADCIdx [[COPY]], i16 1234, [[COPY1]], [[LDCImm]]
+    ; 6502-NEXT: RTS implicit [[ADCIdx]]
+    ; 65C02-LABEL: name: add_abs_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 65C02-NEXT: [[ADCIdx:%[0-9]+]]:ac, [[ADCIdx1:%[0-9]+]]:cc, [[ADCIdx2:%[0-9]+]]:vc = ADCIdx [[COPY]], i16 1234, [[COPY1]], [[LDCImm]]
+    ; 65C02-NEXT: RTS implicit [[ADCIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
+    %2:any(s8) = G_ADD %0, %1
+    RTS implicit %2
+...
+---
 name: inc_abs
 legalized: true
 regBankSelected: true
@@ -1115,6 +1138,30 @@ body: |
     %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     %2:any(s1) = COPY $v
     %3:any(s8), %4:any(s1) = G_UADDE %1:any(s8), %0:any(s8), %2:any(s1)
+    RTS implicit %3, implicit %4
+...
+---
+name: uadde_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: uadde_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:cc = COPY $v
+    ; 6502-NEXT: [[COPY2:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 6502-NEXT: [[ADCIdx:%[0-9]+]]:ac, [[ADCIdx1:%[0-9]+]]:cc, [[ADCIdx2:%[0-9]+]]:vc = ADCIdx [[COPY]], i16 1234, [[COPY2]], [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[ADCIdx]], implicit [[ADCIdx1]]
+    ; 65C02-LABEL: name: uadde_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:cc = COPY $v
+    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 65C02-NEXT: [[ADCIdx:%[0-9]+]]:ac, [[ADCIdx1:%[0-9]+]]:cc, [[ADCIdx2:%[0-9]+]]:vc = ADCIdx [[COPY]], i16 1234, [[COPY2]], [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[ADCIdx]], implicit [[ADCIdx1]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
+    %2:any(s1) = COPY $v
+    %3:any(s8), %4:any(s1) = G_UADDE %0:any(s8), %1:any(s8), %2:any(s1)
     RTS implicit %3, implicit %4
 ...
 ---

@@ -92,6 +92,9 @@ let isAdd = true in {
   }
   def ADCAbs :
     MOSAddSubOp<i16imm>, PseudoInstExpansion<(ADC_Absolute addr16:$r)>;
+  def ADCIdx : MOSAddSub {
+    dag InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx, Cc:$carryin);
+  }
 }
 
 def SBCImm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(SBC_Immediate imm8:$r)>;

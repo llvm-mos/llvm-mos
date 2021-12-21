@@ -30,6 +30,23 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   default:
     OutMI.setOpcode(MI->getOpcode());
     break;
+  case MOS::ADCIdx: {
+    switch (MI->getOperand(5).getReg()) {
+    default:
+      llvm_unreachable("Unexpected register.");
+    case MOS::X:
+      OutMI.setOpcode(MOS::ADC_AbsoluteX);
+      break;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::ADC_AbsoluteY);
+      break;
+    }
+    MCOperand Addr;
+    if (!lowerOperand(MI->getOperand(4), Addr))
+      llvm_unreachable("Failed to lower operand");
+    OutMI.addOperand(Addr);
+    return;
+  }
   case MOS::ASL:
   case MOS::LSR:
   case MOS::ROL:

@@ -1,5 +1,25 @@
 # RUN: llc -mtriple=mos -mcpu=mos65c02 -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
 ---
+name: adc_absolute_x
+# CHECK-LABEL: adc_absolute_x
+body: |
+  bb.0.entry:
+    $a, $c, $v = ADCIdx $a, 1234, $x, $c
+    ; CHECK: adc 1234,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: adc_absolute_y
+# CHECK-LABEL: adc_absolute_y
+body: |
+  bb.0.entry:
+    $a, $c, $v = ADCIdx $a, 1234, $y, $c
+    ; CHECK: adc 1234,y
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: asl_zeropage
 # CHECK-LABEL: asl_zeropage
 body: |
