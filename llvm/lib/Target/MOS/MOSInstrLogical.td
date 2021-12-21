@@ -90,10 +90,12 @@ let isAdd = true in {
     let Constraints = "$dst = $l";
     let isCommutable = true;
   }
-  def ADCAbs :
-    MOSAddSubOp<i16imm>, PseudoInstExpansion<(ADC_Absolute addr16:$r)>;
-  def ADCIdx : MOSAddSub {
-    dag InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx, Cc:$carryin);
+  let mayLoad = true in {
+    def ADCAbs :
+      MOSAddSubOp<i16imm>, PseudoInstExpansion<(ADC_Absolute addr16:$r)>;
+    def ADCIdx : MOSAddSub {
+      dag InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx, Cc:$carryin);
+    }
   }
 }
 
@@ -275,15 +277,13 @@ multiclass MOSIncDec {
     let Constraints = "$src = $dst";
   }
 
-  def CAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_Absolute) addr16:$addr)> {
-    dag InOperandList = (ins i16imm:$addr);
-    let mayLoad = true;
-    let mayStore = true;
-  }
-  def CIdx : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_AbsoluteX) addr16:$addr)> {
-    dag InOperandList = (ins i16imm:$addr, Xc:$idx);
-    let mayLoad = true;
-    let mayStore = true;
+  let mayLoad = true, mayStore = true in {
+    def CAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_Absolute) addr16:$addr)> {
+      dag InOperandList = (ins i16imm:$addr);
+    }
+    def CIdx : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_AbsoluteX) addr16:$addr)> {
+      dag InOperandList = (ins i16imm:$addr, Xc:$idx);
+    }
   }
 }
 
