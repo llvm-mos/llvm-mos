@@ -184,6 +184,126 @@ body: |
     RTS implicit %2
 ...
 ---
+name: and_abs
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: and_abs
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[ANDAbs:%[0-9]+]]:ac = ANDAbs [[COPY]], i16 1234
+    ; 6502-NEXT: RTS implicit [[ANDAbs]]
+    ; 65C02-LABEL: name: and_abs
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[ANDAbs:%[0-9]+]]:ac = ANDAbs [[COPY]], i16 1234
+    ; 65C02-NEXT: RTS implicit [[ANDAbs]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s8) = G_AND %0, %1
+    RTS implicit %2
+...
+---
+name: and_abs_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: and_abs_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 6502-NEXT: [[ANDIdx:%[0-9]+]]:ac = ANDIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[ANDIdx]]
+    ; 65C02-LABEL: name: and_abs_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 65C02-NEXT: [[ANDIdx:%[0-9]+]]:ac = ANDIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[ANDIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
+    %2:any(s8) = G_AND %0, %1
+    RTS implicit %2
+...
+---
+name: eor_abs
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: eor_abs
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[EORAbs:%[0-9]+]]:ac = EORAbs [[COPY]], i16 1234
+    ; 6502-NEXT: RTS implicit [[EORAbs]]
+    ; 65C02-LABEL: name: eor_abs
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[EORAbs:%[0-9]+]]:ac = EORAbs [[COPY]], i16 1234
+    ; 65C02-NEXT: RTS implicit [[EORAbs]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s8) = G_XOR %0, %1
+    RTS implicit %2
+...
+---
+name: eor_abs_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: eor_abs_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 6502-NEXT: [[EORIdx:%[0-9]+]]:ac = EORIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[EORIdx]]
+    ; 65C02-LABEL: name: eor_abs_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 65C02-NEXT: [[EORIdx:%[0-9]+]]:ac = EORIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[EORIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
+    %2:any(s8) = G_XOR %0, %1
+    RTS implicit %2
+...
+---
+name: ora_abs
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: ora_abs
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[ORAAbs:%[0-9]+]]:ac = ORAAbs [[COPY]], i16 1234
+    ; 6502-NEXT: RTS implicit [[ORAAbs]]
+    ; 65C02-LABEL: name: ora_abs
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[ORAAbs:%[0-9]+]]:ac = ORAAbs [[COPY]], i16 1234
+    ; 65C02-NEXT: RTS implicit [[ORAAbs]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s8) = G_OR %0, %1
+    RTS implicit %2
+...
+---
+name: ora_abs_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: ora_abs_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 6502-NEXT: [[ORAIdx:%[0-9]+]]:ac = ORAIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[ORAIdx]]
+    ; 65C02-LABEL: name: ora_abs_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
+    ; 65C02-NEXT: [[ORAIdx:%[0-9]+]]:ac = ORAIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[ORAIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
+    %2:any(s8) = G_OR %0, %1
+    RTS implicit %2
+...
+---
 name: inc_abs
 legalized: true
 regBankSelected: true

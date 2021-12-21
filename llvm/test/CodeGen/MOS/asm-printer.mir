@@ -20,6 +20,66 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: and_absolute_x
+# CHECK-LABEL: and_absolute_x
+body: |
+  bb.0.entry:
+    $a = ANDIdx $a, 1234, $x
+    ; CHECK: and 1234,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: and_absolute_y
+# CHECK-LABEL: and_absolute_y
+body: |
+  bb.0.entry:
+    $a = ANDIdx $a, 1234, $y
+    ; CHECK: and 1234,y
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: eor_absolute_x
+# CHECK-LABEL: eor_absolute_x
+body: |
+  bb.0.entry:
+    $a = EORIdx $a, 1234, $x
+    ; CHECK: eor 1234,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: eor_absolute_y
+# CHECK-LABEL: eor_absolute_y
+body: |
+  bb.0.entry:
+    $a = EORIdx $a, 1234, $y
+    ; CHECK: eor 1234,y
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: ora_absolute_x
+# CHECK-LABEL: ora_absolute_x
+body: |
+  bb.0.entry:
+    $a = ORAIdx $a, 1234, $x
+    ; CHECK: ora 1234,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: ora_absolute_y
+# CHECK-LABEL: ora_absolute_y
+body: |
+  bb.0.entry:
+    $a = ORAIdx $a, 1234, $y
+    ; CHECK: ora 1234,y
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: asl_zeropage
 # CHECK-LABEL: asl_zeropage
 body: |

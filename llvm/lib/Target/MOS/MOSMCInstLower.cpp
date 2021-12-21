@@ -47,6 +47,53 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Addr);
     return;
   }
+  case MOS::ANDIdx:
+  case MOS::EORIdx:
+  case MOS::ORAIdx: {
+    switch (MI->getOpcode()) {
+    case MOS::ANDIdx:
+      switch (MI->getOperand(3).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::X:
+        OutMI.setOpcode(MOS::AND_AbsoluteX);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::AND_AbsoluteY);
+        break;
+      }
+      break;
+    case MOS::EORIdx:
+      switch (MI->getOperand(3).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::X:
+        OutMI.setOpcode(MOS::EOR_AbsoluteX);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::EOR_AbsoluteY);
+        break;
+      }
+      break;
+    case MOS::ORAIdx:
+      switch (MI->getOperand(3).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::X:
+        OutMI.setOpcode(MOS::ORA_AbsoluteX);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::ORA_AbsoluteY);
+        break;
+      }
+      break;
+    }
+    MCOperand Addr;
+    if (!lowerOperand(MI->getOperand(2), Addr))
+      llvm_unreachable("Failed to lower operand");
+    OutMI.addOperand(Addr);
+    return;
+  }
   case MOS::ASL:
   case MOS::LSR:
   case MOS::ROL:
@@ -441,9 +488,9 @@ MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
                              /*isNegated=*/false, Ctx);
     break;
   case MOS::MO_HI_JT: {
-    // Jump tables are partitioned in two arrays: first all the low bytes, then
-    // all the high bytes. This index referes to the high byte array, so offset
-    // the appropriate amount into the overall array.
+    // Jump tables are partitioned in two arrays: first all the low bytes,
+    // then all the high bytes. This index referes to the high byte array, so
+    // offset the appropriate amount into the overall array.
     assert(MO.isJTI());
     const MachineJumpTableInfo *JTI =
         MO.getParent()->getMF()->getJumpTableInfo();

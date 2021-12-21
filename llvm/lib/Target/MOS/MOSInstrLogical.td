@@ -106,27 +106,41 @@ def SBCImag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
 // Bitwise instructions
 //===---------------------------------------------------------------------===//
 
+class MOSBitwiseBase : MOSLogicalInstr {
+  let OutOperandList = (outs Ac:$dst);
+  let Constraints = "$dst = $l";
+}
+
 multiclass MOSBitwiseInstr<SDNode node> {
   def Imm :
-      MOSLogicalInstr,
+      MOSBitwiseBase,
       PseudoInstExpansion<(!cast<Instruction>(NAME#"_Immediate") imm8:$r)> {
     let OutOperandList = (outs Ac:$dst);
     let InOperandList = (ins Ac:$l, i8imm:$r);
-    let Constraints = "$dst = $l";
 
     let Pattern = [(set Ac:$dst, (node Ac:$l, imm:$r))];
   }
 
   def Imag8 :
-      MOSLogicalInstr,
+      MOSBitwiseBase,
       PseudoInstExpansion<(!cast<Instruction>(NAME#"_ZeroPage") addr8:$r)> {
-    let OutOperandList = (outs Ac:$dst);
     let InOperandList = (ins Ac:$l, Imag8:$r);
-    let Constraints = "$dst = $l";
 
     let Pattern = [(set Ac:$dst, (node Ac:$l, Imag8:$r))];
 
     let isCommutable = true;
+  }
+
+  let mayLoad = true in {
+    def Abs :
+        MOSBitwiseBase,
+        PseudoInstExpansion<(!cast<Instruction>(NAME#"_Absolute") addr16:$r)> {
+      let InOperandList = (ins Ac:$l, addr16:$r);
+    }
+
+    def Idx : MOSBitwiseBase {
+      let InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx);
+    }
   }
 }
 

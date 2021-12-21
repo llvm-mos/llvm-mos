@@ -73,6 +73,7 @@ private:
   // Pre-tablegen selection functions. If these return false, fall through to
   // tablegen.
   bool selectAdd(MachineInstr &MI);
+  bool selectLogical(MachineInstr &MI);
 
   // Post-tablegen selection functions. If these return false, it is an error.
   bool selectBrCondImm(MachineInstr &MI);
@@ -160,6 +161,13 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_ADD:
     if (selectAdd(MI))
       return true;
+    break;
+  case MOS::G_AND:
+  case MOS::G_OR:
+  case MOS::G_XOR:
+    if (selectLogical(MI))
+      return true;
+    break;
   }
 
   if (selectImpl(MI, *CoverageInfo))
@@ -342,6 +350,77 @@ bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
   return false;
 }
 
+bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
+  MachineIRBuilder Builder(MI);
+  auto &MRI = *Builder.getMRI();
+
+  Register LHS;
+  MachineOperand Addr = MachineOperand::CreateReg(0, false);
+
+  bool Success;
+  Register Opcode;
+  switch (MI.getOpcode()) {
+  case MOS::G_AND:
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GAnd(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA)));
+    Opcode = MOS::ANDAbs;
+    break;
+  case MOS::G_XOR:
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GXor(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA)));
+    Opcode = MOS::EORAbs;
+    break;
+  case MOS::G_OR:
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GOr(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA)));
+    Opcode = MOS::ORAAbs;
+    break;
+  }
+  if (Success) {
+    auto Instr = Builder.buildInstr(Opcode)
+                     .addDef(MI.getOperand(0).getReg())
+                     .addUse(LHS)
+                     .add(Addr);
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+      llvm_unreachable("Could not constrain absolute logical instruction.");
+    MI.eraseFromParent();
+    return true;
+  }
+
+  Register Idx;
+  switch (MI.getOpcode()) {
+  case MOS::G_AND:
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GAnd(m_Reg(LHS), m_FoldedLdIdx(MI, Addr, Idx, AA)));
+    Opcode = MOS::ANDIdx;
+    break;
+  case MOS::G_XOR:
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GXor(m_Reg(LHS), m_FoldedLdIdx(MI, Addr, Idx, AA)));
+    Opcode = MOS::EORIdx;
+    break;
+  case MOS::G_OR:
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GOr(m_Reg(LHS), m_FoldedLdIdx(MI, Addr, Idx, AA)));
+    Opcode = MOS::ORAIdx;
+    break;
+  }
+  if (Success) {
+    auto Instr = Builder.buildInstr(Opcode)
+                     .addDef(MI.getOperand(0).getReg())
+                     .addUse(LHS)
+                     .add(Addr)
+                     .addUse(Idx);
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+      llvm_unreachable(
+          "Could not constrain absolute indexed logical instruction.");
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 // Given a G_SBC instruction Sbc and one of its flag output virtual registers,
 // returns the flag that corresponds to the register.
 static Register getSbcFlagForRegister(const MachineInstr &Sbc, Register Reg) {
@@ -421,8 +500,8 @@ struct CmpImmTerm_match {
 
 // Match one of the outputs of a G_SBC to a CMPImmTerm operation. LHS and RHS
 // are the left and right hand side of the comparison, while Flag is the
-// physical (N or Z) register corresponding to the output by which the G_SBC was
-// reached.
+// physical (N or Z) register corresponding to the output by which the G_SBC
+// was reached.
 inline CmpImmTerm_match m_CmpImmTerm(Register &LHS, int64_t &RHS,
                                      Register &Flag) {
   return {LHS, RHS, Flag};
@@ -455,10 +534,10 @@ struct CmpImag8Term_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPImag8Term operation. LHS and RHS
-// are the left and right hand side of the comparison, while Flag is the
-// physical (N or Z) register corresponding to the output by which the G_SBC was
-// reached.
+// Match one of the outputs of a G_SBC to a CMPImag8Term operation. LHS and
+// RHS are the left and right hand side of the comparison, while Flag is the
+// physical (N or Z) register corresponding to the output by which the G_SBC
+// was reached.
 inline CmpImag8Term_match m_CmpImag8Term(Register &LHS, Register &RHS,
                                          Register &Flag) {
   return {LHS, RHS, Flag};
@@ -679,7 +758,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
           Idx == MI.getOperand(2).getReg()) {
         auto Inc = Builder.buildInstr(MOS::INCIdx).add(Addr).addUse(Idx);
         if (!constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI))
-           return false;
+          return false;
         MI.eraseFromParent();
         return true;
       }
@@ -909,10 +988,10 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
                     .addImm(MOS::subhi);
   constrainGenericOp(*RegSeq);
 
-  // Rewrite uses of subregisters of the dst to Lo and Hi. Hopefully, this will
-  // make the use of the REG_SEQUENCE dead. 16-bit pointer registers are hard to
-  // come by in constrained zero pages. Unless their live ranges are limited,
-  // register allocation may not be able to find a solution.
+  // Rewrite uses of subregisters of the dst to Lo and Hi. Hopefully, this
+  // will make the use of the REG_SEQUENCE dead. 16-bit pointer registers are
+  // hard to come by in constrained zero pages. Unless their live ranges are
+  // limited, register allocation may not be able to find a solution.
   std::vector<Register> Worklist = {Dst};
   std::vector<MachineOperand *> MOs;
   while (!Worklist.empty()) {
@@ -932,9 +1011,9 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
     }
   }
 
-  // Machine operands cannot be directly modified in the above loop, since doing
-  // so would upset use_nodbg_instructions. (The set of use instructions would
-  // change.)
+  // Machine operands cannot be directly modified in the above loop, since
+  // doing so would upset use_nodbg_instructions. (The set of use instructions
+  // would change.)
   for (MachineOperand *MO : MOs) {
     if (MO->getSubReg() == MOS::sublo) {
       MO->setReg(Lo);
@@ -951,8 +1030,8 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
 // Ensures that any virtual registers defined by this operation are given a
 // register class. Otherwise, it's possible for chains of generic operations
 // (PHI, COPY, etc.) to circularly define virtual registers in such a way that
-// they never actually receive a register class. Since every virtual register is
-// defined exactly once, making sure definitions are constrained suffices.
+// they never actually receive a register class. Since every virtual register
+// is defined exactly once, making sure definitions are constrained suffices.
 void MOSInstructionSelector::constrainGenericOp(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   for (MachineOperand &Op : MI.operands()) {
