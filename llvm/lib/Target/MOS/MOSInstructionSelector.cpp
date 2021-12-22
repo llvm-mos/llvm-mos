@@ -231,14 +231,8 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
   const auto &MRI = Dst.getMF()->getRegInfo();
   for (MachineInstr &UseMI :
        MRI.use_nodbg_instructions(Src.getOperand(0).getReg())) {
-    switch (UseMI.getOpcode()) {
-    default:
+    if (UseMI.isCopy())
       return false;
-    case MOS::G_ADD:
-    case MOS::G_UADDE:
-    case MOS::G_SADDE:
-      break;
-    }
   }
   return true;
 }
