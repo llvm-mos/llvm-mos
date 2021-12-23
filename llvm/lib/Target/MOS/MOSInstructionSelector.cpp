@@ -294,6 +294,33 @@ inline FoldedLdIdx_match m_FoldedLdIdx(const MachineInstr &Tgt,
   return {Tgt, Addr, Idx, AA};
 }
 
+struct FoldedLdIndirIdx_match {
+  const MachineInstr &Tgt;
+  Register &Addr;
+  Register &Idx;
+  AAResults *AA;
+
+  FoldedLdIndirIdx_match(const MachineInstr &Tgt, Register &Addr, Register &Idx,
+                         AAResults *AA)
+      : Tgt(Tgt), Addr(Addr), Idx(Idx), AA(AA) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    const MachineInstr *LdIndirIdx =
+        getOpcodeDef(MOS::G_LOAD_INDIR_IDX, Reg, MRI);
+    if (!LdIndirIdx || !shouldFoldMemAccess(Tgt, *LdIndirIdx, AA))
+      return false;
+    Addr = LdIndirIdx->getOperand(1).getReg();
+    Idx = LdIndirIdx->getOperand(2).getReg();
+    return true;
+  }
+};
+
+inline FoldedLdIndirIdx_match m_FoldedLdIndirIdx(const MachineInstr &Tgt,
+                                                 Register &Addr, Register &Idx,
+                                                 AAResults *AA) {
+  return {Tgt, Addr, Idx, AA};
+}
+
 bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_ADD);
 
@@ -343,6 +370,26 @@ bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
                    .addUse(CIn);
     if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
       llvm_unreachable("Could not constrain ADCIdx");
+    MI.eraseFromParent();
+    return true;
+  }
+
+  Register IndirAddr;
+  if (mi_match(
+          MI.getOperand(0).getReg(), MRI,
+          m_GAdd(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)))) {
+    Register CIn =
+        Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
+    auto Adc = Builder.buildInstr(MOS::ADCYIndir)
+                   .addDef(MI.getOperand(0).getReg())
+                   .addDef(MRI.createGenericVirtualRegister(S1))
+                   .addDef(MRI.createGenericVirtualRegister(S1))
+                   .addUse(LHS)
+                   .addUse(IndirAddr)
+                   .addUse(Idx)
+                   .addUse(CIn);
+    if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
+      llvm_unreachable("Could not constrain ADCYIndir");
     MI.eraseFromParent();
     return true;
   }
@@ -894,6 +941,19 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
           .addDef(MRI.createGenericVirtualRegister(S1))
           .addUse(L)
           .add(Addr)
+          .addUse(Idx)
+          .addUse(CarryIn);
+    }
+    Register IndirAddr;
+    if (mi_match(L, MRI, m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)))
+      std::swap(L, R);
+    if (mi_match(R, MRI, m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA))) {
+      return Builder.buildInstr(MOS::ADCYIndir)
+          .addDef(Result)
+          .addDef(CarryOut)
+          .addDef(MRI.createGenericVirtualRegister(S1))
+          .addUse(L)
+          .addUse(IndirAddr)
           .addUse(Idx)
           .addUse(CarryIn);
     }

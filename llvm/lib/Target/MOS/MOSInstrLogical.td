@@ -96,6 +96,10 @@ let isAdd = true in {
     def ADCIdx : MOSAddSub {
       dag InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx, Cc:$carryin);
     }
+    def ADCYIndir :
+        MOSAddSub, PseudoInstExpansion<(ADC_IndirectIndexed addr8:$addr)> {
+      dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx, Cc:$carryin);
+    }
   }
 }
 
