@@ -25,6 +25,7 @@
 
 #include "MOS.h"
 #include "MOSFrameLowering.h"
+#include "MOSMachineFunctionInfo.h"
 #include "MOSSubtarget.h"
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -86,6 +87,9 @@ bool MOSStaticStackAlloc::runOnModule(Module &M) {
         Twine("__") + Twine(F.getName()) + "_sstk");
     LLVM_DEBUG(dbgs() << "Allocated: " << *Stack << "\n");
     Changed = true;
+
+    MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
+    MFI.setStaticStackVariable(Stack);
 
     for (MachineBasicBlock &MBB : *MF) {
       for (MachineInstr &MI : MBB) {

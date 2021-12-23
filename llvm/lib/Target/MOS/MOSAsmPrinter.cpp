@@ -14,6 +14,7 @@
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSMCInstLower.h"
+#include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "TargetInfo/MOSTargetInfo.h"
@@ -62,6 +63,8 @@ public:
   void emitStartOfAsmFile(Module &M) override;
 
   void emitJumpTableInfo() override;
+
+  const MCSymbol *getFunctionFrameSymbol(int FI) const override;
 };
 
 // Simple pseudo-instructions have their lowering (with expansion to real
@@ -209,6 +212,14 @@ void MOSAsmPrinter::emitJumpTableInfo() {
   }
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
+}
+
+const MCSymbol *MOSAsmPrinter::getFunctionFrameSymbol(int FI) const {
+  if (MF->getFrameInfo().getStackID(FI) == TargetStackID::NoAlloc) {
+    MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
+    return getSymbol(MFI.getStaticStackVariable());
+  }
+  return AsmPrinter::getFunctionFrameSymbol(FI);
 }
 
 } // namespace

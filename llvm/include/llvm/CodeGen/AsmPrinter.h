@@ -241,7 +241,9 @@ public:
 
   /// Return symbol for the function pseudo stack if the stack frame is not a
   /// register based.
-  virtual const MCSymbol *getFunctionFrameSymbol() const { return nullptr; }
+  virtual const MCSymbol *getFunctionFrameSymbol(int FI) const {
+    return nullptr;
+  }
 
   MCSymbol *getFunctionBegin() const { return CurrentFnBegin; }
   MCSymbol *getFunctionEnd() const { return CurrentFnEnd; }

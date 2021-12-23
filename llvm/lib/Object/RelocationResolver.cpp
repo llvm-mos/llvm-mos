@@ -137,6 +137,43 @@ static uint64_t resolveMips64(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+static bool supportsMOS(uint64_t Type) {
+  switch (Type) {
+  case ELF::R_MOS_ADDR8:
+  case ELF::R_MOS_ADDR16:
+  case ELF::R_MOS_ADDR16_LO:
+  case ELF::R_MOS_ADDR16_HI:
+  case ELF::R_MOS_PCREL_8:
+  case ELF::R_MOS_FK_DATA_4:
+  case ELF::R_MOS_FK_DATA_8:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static uint64_t resolveMOS(uint64_t Type, uint64_t Offset, uint64_t S,
+                           uint64_t /*LocData*/, int64_t Addend) {
+  switch (Type) {
+  case ELF::R_MOS_ADDR8:
+    return (S + Addend) & 0xFF;
+  case ELF::R_MOS_ADDR16:
+    return (S + Addend) & 0xFFFF;
+  case ELF::R_MOS_ADDR16_LO:
+    return (S + Addend) & 0xFF;
+  case ELF::R_MOS_ADDR16_HI:
+    return ((S + Addend) >> 8) & 0xFF;
+  case ELF::R_MOS_PCREL_8:
+    return (S + Addend - Offset) & 0xFF;
+  case ELF::R_MOS_FK_DATA_4:
+    return (S + Addend) & 0xFFFFFFFF;
+  case ELF::R_MOS_FK_DATA_8:
+    return S + Addend;
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsMSP430(uint64_t Type) {
   switch (Type) {
   case ELF::R_MSP430_32:
@@ -707,6 +744,8 @@ getRelocationResolver(const ObjectFile &Obj) {
     case Triple::mipsel:
     case Triple::mips:
       return {supportsMips32, resolveMips32};
+    case Triple::mos:
+      return {supportsMOS, resolveMOS};
     case Triple::msp430:
       return {supportsMSP430, resolveMSP430};
     case Triple::sparc:
