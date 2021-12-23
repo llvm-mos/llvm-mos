@@ -13,9 +13,10 @@
 #include "MOSFrameLowering.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
-
 #include "MOSSubtarget.h"
+
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"

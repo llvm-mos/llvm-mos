@@ -23,6 +23,7 @@ MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   CommentString = ";";
   DollarIsHexPrefix = true;
   MaxInstLength = 3;
+  SupportsDebugInformation = true;
 }
 
 } //  namespace llvm
