@@ -465,6 +465,40 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
     return true;
   }
 
+  Register IndirAddr;
+  switch (MI.getOpcode()) {
+  case MOS::G_AND:
+    Success = mi_match(
+        MI.getOperand(0).getReg(), MRI,
+        m_GAnd(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)));
+    Opcode = MOS::ANDYIndir;
+    break;
+  case MOS::G_XOR:
+    Success = mi_match(
+        MI.getOperand(0).getReg(), MRI,
+        m_GXor(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)));
+    Opcode = MOS::EORYIndir;
+    break;
+  case MOS::G_OR:
+    Success =
+        mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GOr(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)));
+    Opcode = MOS::ORAYIndir;
+    break;
+  }
+  if (Success) {
+    auto Instr = Builder.buildInstr(Opcode)
+                     .addDef(MI.getOperand(0).getReg())
+                     .addUse(LHS)
+                     .addUse(IndirAddr)
+                     .addUse(Idx);
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+      llvm_unreachable(
+          "Could not constrain absolute indexed logical instruction.");
+    MI.eraseFromParent();
+    return true;
+  }
+
   return false;
 }
 

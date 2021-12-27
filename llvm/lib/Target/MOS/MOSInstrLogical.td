@@ -145,6 +145,13 @@ multiclass MOSBitwiseInstr<SDNode node> {
     def Idx : MOSBitwiseBase {
       let InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx);
     }
+
+    def YIndir :
+       MOSBitwiseBase,
+       PseudoInstExpansion<
+           (!cast<Instruction>(NAME#"_IndirectIndexed") addr8:$addr)> {
+      let InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
+    }
   }
 }
 
