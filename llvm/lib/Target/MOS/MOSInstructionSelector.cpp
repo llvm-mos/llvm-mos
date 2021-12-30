@@ -667,6 +667,8 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   return true;
 }
 
+// Although some G_SBC instructions can be folded in to their (branch) uses,
+// others need to be selected directly.
 bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
@@ -679,6 +681,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   Register Z = MI.getOperand(4).getReg();
   Register R = MI.getOperand(6).getReg();
 
+  // Outputs that are unused may not need to be generated.
   if (Builder.getMRI()->use_nodbg_empty(A))
     A = MOS::NoRegister;
   if (Builder.getMRI()->use_nodbg_empty(N))
@@ -706,52 +709,30 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
 
   auto RConst = getIConstantVRegValWithLookThrough(R, *Builder.getMRI());
   MachineInstrBuilder Instr;
+  // A CMP instruction can be used if we don't need the result, the overflow,
+  // and the carry in is known to be set.
   if (!A && !V && CInSet) {
     if (RConst) {
       assert(RConst->Value.getBitWidth() == 8);
-      if (N || Z) {
-        Instr = Builder.buildInstr(
-            MOS::CMPNZImm, {MI.getOperand(1), N, Z},
-            {MI.getOperand(5), RConst->Value.getZExtValue()});
-      } else {
-        Instr = Builder.buildInstr(
-            MOS::CMPImm, {MI.getOperand(1)},
-            {MI.getOperand(5), RConst->Value.getZExtValue()});
-      }
+      Instr =
+          Builder.buildInstr(MOS::CMPNZImm, {MI.getOperand(1), N, Z},
+                             {MI.getOperand(5), RConst->Value.getZExtValue()});
     } else {
-      if (N || Z) {
-        Instr = Builder.buildInstr(MOS::CMPNZImag8, {MI.getOperand(1), N, Z},
-                                   {MI.getOperand(5), MI.getOperand(6)});
-      } else {
-        Instr = Builder.buildInstr(MOS::CMPImag8, {MI.getOperand(1)},
-                                   {MI.getOperand(5), MI.getOperand(6)});
-      }
+      Instr = Builder.buildInstr(MOS::CMPNZImag8, {MI.getOperand(1), N, Z},
+                                 {MI.getOperand(5), MI.getOperand(6)});
     }
   } else {
     if (RConst) {
       assert(RConst->Value.getBitWidth() == 8);
-      if (N || Z) {
-        Instr = Builder.buildInstr(
-            MOS::SBCNZImm,
-            {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
-            {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
-      } else {
-        Instr = Builder.buildInstr(
-            MOS::SBCImm, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
-            {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
-      }
+      Instr = Builder.buildInstr(
+          MOS::SBCNZImm,
+          {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
+          {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
     } else {
-      if (N || Z) {
-        Instr = Builder.buildInstr(
-            MOS::SBCNZImag8,
-            {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
-            {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
-      } else {
-        Instr = Builder.buildInstr(
-            MOS::SBCImag8,
-            {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
-            {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
-      }
+      Instr = Builder.buildInstr(
+          MOS::SBCNZImag8,
+          {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
+          {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
     }
   }
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))

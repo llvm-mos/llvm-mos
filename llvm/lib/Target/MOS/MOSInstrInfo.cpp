@@ -900,6 +900,8 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
 // NZ pseudos
 //===---------------------------------------------------------------------===//
 
+// Lower the NZ versions CMP and SBC instructions down to their basic versions,
+// possibly adding a select to copy out N or Z as appropriate.
 void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
   MachineInstr &MI = *Builder.getInsertPt();
   Register N;
@@ -917,14 +919,15 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
     break;
   }
 
-  Register NZOut;
-  Register NZIn;
+  // The NZ location to which to copy.
+  Register NZOut = MOS::NoRegister;
+  // Which of N or Z to copy.
+  Register NZIn = MOS::NoRegister;
   if (N) {
     assert(!Z);
     NZOut = N;
     NZIn = MOS::N;
-  } else {
-    assert(Z);
+  } else if (Z) {
     NZOut = Z;
     NZIn = MOS::Z;
   }
@@ -951,8 +954,12 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
     break;
   }
 
-  Op.addDef(MOS::NZ, RegState::Implicit);
-  Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(-1), INT64_C(0)});
+  // Copy out N or Z to a Anyi1 location if requested.
+  if (NZOut) {
+    assert(NZIn);
+    Op.addDef(MOS::NZ, RegState::Implicit);
+    Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(-1), INT64_C(0)});
+  }
   MI.eraseFromParent();
 }
 

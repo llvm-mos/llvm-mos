@@ -163,12 +163,13 @@ def STStk : MOSPseudo {
 // These pseudoinstructions bundle the definition and use of N and Z together to
 // maintain the invariant that neither can be live across pseudoinstructions. At
 // most one of N or Z can be set (the other must be $noreg), since copying N out
-// clobbers Z, and vice versa.
+// clobbers Z, and vice versa. If neither is set, then this represents a regular
+// SBC or CMP.
 
 // Version of CMPImm that copies the N and Z flags out to virtual registers.
 def CMPNZImm : MOSPseudo {
   dag OutOperandList = (outs Cc:$carryout, GPR_LSB:$nout, GPR_LSB:$zout);
-  dag InOperandList = (ins Ac:$l, i8imm:$r);
+  dag InOperandList = (ins GPR:$l, i8imm:$r);
 
   let isCompare = true;
 }
@@ -176,7 +177,7 @@ def CMPNZImm : MOSPseudo {
 // Version of CMPImag8 that copies the N and Z flags out to virtual registers.
 def CMPNZImag8 : MOSPseudo {
   dag OutOperandList = (outs Cc:$carryout, GPR_LSB:$nout, GPR_LSB:$zout);
-  dag InOperandList = (ins Ac:$l, Imag8:$r);
+  dag InOperandList = (ins GPR:$l, Imag8:$r);
 
   let isCompare = true;
 }
