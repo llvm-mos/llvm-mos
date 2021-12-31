@@ -84,3 +84,17 @@ set(LLVM_MOS_TOOLCHAIN_TOOLS
 )
 set(LLVM_TOOLCHAIN_TOOLS ${LLVM_MOS_TOOLCHAIN_TOOLS} 
     CACHE STRING "LLVM toolchain tools")
+
+# Add clang symlinks prefixed with mos-* which will implicitly add --target=mos when executed.
+set(CLANG_LINKS_TO_CREATE
+    clang++
+    clang-cpp
+    mos-clang
+    mos-clang++
+    mos-clang-cpp
+)
+set(CLANG_LINKS_TO_CREATE ${CLANG_LINKS_TO_CREATE}
+    CACHE STRING "Clang symlinks to create during install.")
+
+# Disable bindings since they can be problematic for the install pattern used along with llvm-mos-sdk.
+set(LLVM_ENABLE_BINDINGS OFF CACHE BOOL "Build bindings.")
