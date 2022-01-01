@@ -54,6 +54,7 @@ class ELFObjectFileBase : public ObjectFile {
   SubtargetFeatures getMIPSFeatures() const;
   SubtargetFeatures getARMFeatures() const;
   SubtargetFeatures getRISCVFeatures() const;
+  SubtargetFeatures getMOSFeatures() const;
 
   StringRef getAMDGPUCPUName() const;
 
