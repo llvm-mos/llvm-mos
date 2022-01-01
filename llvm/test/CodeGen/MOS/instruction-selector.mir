@@ -822,6 +822,145 @@ body: |
     RTS
 ...
 ---
+name: cmpimag8_brn
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpimag8_brn
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
+    ; 6502-NEXT: [[CMPImag8Term:%[0-9]+]]:cc = CMPImag8Term [[COPY]], [[COPY1]], implicit-def $nz
+    ; 6502-NEXT: BR %bb.0, $n, 1
+    ; 6502-NEXT: RTS
+    ; 65C02-LABEL: name: cmpimag8_brn
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
+    ; 65C02-NEXT: [[CMPImag8Term:%[0-9]+]]:cc = CMPImag8Term [[COPY]], [[COPY1]], implicit-def $nz
+    ; 65C02-NEXT: BR %bb.0, $n, 1
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = COPY $x
+    %2:any(s1) = G_CONSTANT i1 -1
+    %3:any(s8), %4:any(s1), %5:any(s1), %6:any(s1), %7:any(s1) = G_SBC %0, %1, %2
+    G_BRCOND_IMM %5, %bb.0, 1
+    RTS
+...
+---
+name: cmpimag8_brz
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpimag8_brz
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
+    ; 6502-NEXT: [[CMPImag8Term:%[0-9]+]]:cc = CMPImag8Term [[COPY]], [[COPY1]], implicit-def $nz
+    ; 6502-NEXT: BR %bb.0, $z, 1
+    ; 6502-NEXT: RTS
+    ; 65C02-LABEL: name: cmpimag8_brz
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
+    ; 65C02-NEXT: [[CMPImag8Term:%[0-9]+]]:cc = CMPImag8Term [[COPY]], [[COPY1]], implicit-def $nz
+    ; 65C02-NEXT: BR %bb.0, $z, 1
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = COPY $x
+    %2:any(s1) = G_CONSTANT i1 -1
+    %3:any(s8), %4:any(s1), %5:any(s1), %6:any(s1), %7:any(s1) = G_SBC %0, %1, %2
+    G_BRCOND_IMM %7, %bb.0, 1
+    RTS
+...
+---
+name: cmpabs_brc
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpabs_brc
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 6502-NEXT: %4:cc, $noreg, $noreg = CMPNZAbs [[COPY]], i16 1234
+    ; 6502-NEXT: GBR %bb.0, %4, 1, implicit-def $c
+    ; 6502-NEXT: RTS
+    ; 65C02-LABEL: name: cmpabs_brc
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 65C02-NEXT: %4:cc, $noreg, $noreg = CMPNZAbs [[COPY]], i16 1234
+    ; 65C02-NEXT: GBR %bb.0, %4, 1, implicit-def $c
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s1) = G_CONSTANT i1 -1
+    %3:any(s8), %4:any(s1), %5:any(s1), %6:any(s1), %7:any(s1) = G_SBC %0, %1, %2
+    G_BRCOND_IMM %4, %bb.0, 1
+    RTS
+...
+---
+name: cmpabs_brn
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpabs_brn
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 6502-NEXT: [[CMPAbsTerm:%[0-9]+]]:cc = CMPAbsTerm [[COPY]], i16 1234, implicit-def $nz
+    ; 6502-NEXT: BR %bb.0, $n, 1
+    ; 6502-NEXT: RTS
+    ; 65C02-LABEL: name: cmpabs_brn
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 65C02-NEXT: [[CMPAbsTerm:%[0-9]+]]:cc = CMPAbsTerm [[COPY]], i16 1234, implicit-def $nz
+    ; 65C02-NEXT: BR %bb.0, $n, 1
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s1) = G_CONSTANT i1 -1
+    %3:any(s8), %4:any(s1), %5:any(s1), %6:any(s1), %7:any(s1) = G_SBC %0, %1, %2
+    G_BRCOND_IMM %5, %bb.0, 1
+    RTS
+...
+---
+name: cmpabs_brz
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpabs_brz
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 6502-NEXT: [[CMPAbsTerm:%[0-9]+]]:cc = CMPAbsTerm [[COPY]], i16 1234, implicit-def $nz
+    ; 6502-NEXT: BR %bb.0, $z, 1
+    ; 6502-NEXT: RTS
+    ; 65C02-LABEL: name: cmpabs_brz
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 65C02-NEXT: [[CMPAbsTerm:%[0-9]+]]:cc = CMPAbsTerm [[COPY]], i16 1234, implicit-def $nz
+    ; 65C02-NEXT: BR %bb.0, $z, 1
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s1) = G_CONSTANT i1 -1
+    %3:any(s8), %4:any(s1), %5:any(s1), %6:any(s1), %7:any(s1) = G_SBC %0, %1, %2
+    G_BRCOND_IMM %7, %bb.0, 1
+    RTS
+...
+---
 name: cmpimm_n
 legalized: true
 regBankSelected: true
@@ -923,6 +1062,46 @@ body: |
     ; 65C02-NEXT: RTS implicit %7
     %0:any(s8) = COPY $a
     %1:any(s8) = COPY $x
+    %2:any(s1) = G_CONSTANT i1 -1
+    %3:any(s8), %4:any(s1), %5:any(s1), %6:any(s1), %7:any(s1) = G_SBC %0, %1, %2
+    RTS implicit %7
+...
+---
+name: cmpabs_n
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpabs_n
+    ; 6502: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 6502-NEXT: %4:cc, %5:gpr_lsb, $noreg = CMPNZAbs [[COPY]], i16 1234
+    ; 6502-NEXT: RTS implicit %5
+    ; 65C02-LABEL: name: cmpabs_n
+    ; 65C02: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 65C02-NEXT: %4:cc, %5:gpr_lsb, $noreg = CMPNZAbs [[COPY]], i16 1234
+    ; 65C02-NEXT: RTS implicit %5
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s1) = G_CONSTANT i1 -1
+    %3:any(s8), %4:any(s1), %5:any(s1), %6:any(s1), %7:any(s1) = G_SBC %0, %1, %2
+    RTS implicit %5
+...
+---
+name: cmpabs_z
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpabs_z
+    ; 6502: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 6502-NEXT: %4:cc, $noreg, %7:gpr_lsb = CMPNZAbs [[COPY]], i16 1234
+    ; 6502-NEXT: RTS implicit %7
+    ; 65C02-LABEL: name: cmpabs_z
+    ; 65C02: [[COPY:%[0-9]+]]:gpr = COPY $a
+    ; 65C02-NEXT: %4:cc, $noreg, %7:gpr_lsb = CMPNZAbs [[COPY]], i16 1234
+    ; 65C02-NEXT: RTS implicit %7
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     %2:any(s1) = G_CONSTANT i1 -1
     %3:any(s8), %4:any(s1), %5:any(s1), %6:any(s1), %7:any(s1) = G_SBC %0, %1, %2
     RTS implicit %7

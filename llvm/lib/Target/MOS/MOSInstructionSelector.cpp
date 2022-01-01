@@ -624,6 +624,46 @@ inline CmpImag8Term_match m_CmpImag8Term(Register &LHS, Register &RHS,
   return {LHS, RHS, Flag};
 }
 
+struct CmpAbsTerm_match {
+  Register &LHS;
+  MachineOperand &Addr;
+  Register &Flag;
+  AAResults *AA;
+
+  CmpAbsTerm_match(Register &LHS, MachineOperand &Addr, Register &Flag,
+                   AAResults *AA)
+      : LHS(LHS), Addr(Addr), Flag(Flag), AA(AA) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register CondReg) {
+    auto DefSrcReg = getDefSrcRegIgnoringCopies(CondReg, MRI);
+    MachineInstr &CondMI = *DefSrcReg->MI;
+    if (CondMI.getOpcode() != MOS::G_SBC)
+      return false;
+
+    auto CInConst =
+        getIConstantVRegValWithLookThrough(CondMI.getOperand(7).getReg(), MRI);
+    if (!CInConst || CInConst->Value.isNullValue())
+      return false;
+
+    if (!mi_match(CondMI.getOperand(6).getReg(), MRI,
+                  m_FoldedLdAbs(CondMI, Addr, AA)))
+      return false;
+
+    LHS = CondMI.getOperand(5).getReg();
+    Flag = getSbcFlagForRegister(CondMI, DefSrcReg->Reg);
+
+    return Flag == MOS::N || Flag == MOS::Z;
+  }
+};
+
+// Match one of the outputs of a G_SBC to a CMPAbsTerm operation. Flag is the
+// physical (N or Z) register corresponding to the output by which the G_SBC
+// was reached.
+inline CmpAbsTerm_match m_CmpAbsTerm(Register &LHS, MachineOperand &Addr,
+                                     Register &Flag, AAResults *AA) {
+  return {LHS, Addr, Flag, AA};
+}
+
 bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
@@ -644,6 +684,10 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   int64_t RHSConst;
   if (!Compare && mi_match(CondReg, MRI, m_CmpImmTerm(LHS, RHSConst, Flag)))
     Compare = Builder.buildInstr(MOS::CMPImmTerm, {S1}, {LHS, RHSConst});
+  MachineOperand Addr =
+      MachineOperand::CreateReg(MOS::NoRegister, /*isDef=*/false);
+  if (!Compare && mi_match(CondReg, MRI, m_CmpAbsTerm(LHS, Addr, Flag, AA)))
+    Compare = Builder.buildInstr(MOS::CMPAbsTerm, {S1}, {LHS}).add(Addr);
   Register RHS;
   if (!Compare && mi_match(CondReg, MRI, m_CmpImag8Term(LHS, RHS, Flag)))
     Compare = Builder.buildInstr(MOS::CMPImag8Term, {S1}, {LHS, RHS});
@@ -674,6 +718,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   LLT S8 = LLT::scalar(8);
 
   MachineIRBuilder Builder(MI);
+  const auto &MRI = *Builder.getMRI();
 
   Register A = MI.getOperand(0).getReg();
   Register N = MI.getOperand(2).getReg();
@@ -691,8 +736,8 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   if (Builder.getMRI()->use_nodbg_empty(Z))
     Z = MOS::NoRegister;
 
-  auto CInConst = getIConstantVRegValWithLookThrough(MI.getOperand(7).getReg(),
-                                                     *Builder.getMRI());
+  auto CInConst =
+      getIConstantVRegValWithLookThrough(MI.getOperand(7).getReg(), MRI);
   bool CInSet = CInConst && !CInConst->Value.isNullValue();
 
   // We can only extract one of N or Z at a time, so if both are needed,
@@ -712,12 +757,22 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   // A CMP instruction can be used if we don't need the result, the overflow,
   // and the carry in is known to be set.
   if (!A && !V && CInSet) {
-    if (RConst) {
+    if (!Instr && RConst) {
       assert(RConst->Value.getBitWidth() == 8);
       Instr =
           Builder.buildInstr(MOS::CMPNZImm, {MI.getOperand(1), N, Z},
                              {MI.getOperand(5), RConst->Value.getZExtValue()});
-    } else {
+    }
+    MachineOperand Addr =
+        MachineOperand::CreateReg(MOS::NoRegister, /*isDef=*/false);
+    if (!Instr &&
+        mi_match(MI.getOperand(6).getReg(), MRI, m_FoldedLdAbs(MI, Addr, AA))) {
+      Instr = Builder
+                  .buildInstr(MOS::CMPNZAbs, {MI.getOperand(1), N, Z},
+                              {MI.getOperand(5)})
+                  .add(Addr);
+    }
+    if (!Instr) {
       Instr = Builder.buildInstr(MOS::CMPNZImag8, {MI.getOperand(1), N, Z},
                                  {MI.getOperand(5), MI.getOperand(6)});
     }

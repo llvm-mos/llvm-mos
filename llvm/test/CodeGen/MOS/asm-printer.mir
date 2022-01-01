@@ -133,12 +133,82 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: cpx_immediate
+# CHECK-LABEL: cpx_immediate
+body: |
+  bb.0.entry:
+    $c = CMPImm $x, 42
+    ; CHECK: cpx #42
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: cpy_immediate
+# CHECK-LABEL: cpy_immediate
+body: |
+  bb.0.entry:
+    $c = CMPImm $y, 42
+    ; CHECK: cpy #42
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: cmp_zeropage
 # CHECK-LABEL: cmp_zeropage
 body: |
   bb.0.entry:
     $c = CMPImag8 $a, $rc0
     ; CHECK: cmp mos8(__rc0)
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: cpx_zeropage
+# CHECK-LABEL: cpx_zeropage
+body: |
+  bb.0.entry:
+    $c = CMPImag8 $x, $rc0
+    ; CHECK: cpx mos8(__rc0)
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: cpy_zeropage
+# CHECK-LABEL: cpy_zeropage
+body: |
+  bb.0.entry:
+    $c = CMPImag8 $y, $rc0
+    ; CHECK: cpy mos8(__rc0)
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: cmp_absolute
+# CHECK-LABEL: cmp_absolute
+body: |
+  bb.0.entry:
+    $c = CMPAbs $a, 1234
+    ; CHECK: cmp 1234
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: cpx_absolute
+# CHECK-LABEL: cpx_absolute
+body: |
+  bb.0.entry:
+    $c = CMPAbs $x, 1234
+    ; CHECK: cpx 1234
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: cpy_absolute
+# CHECK-LABEL: cpy_absolute
+body: |
+  bb.0.entry:
+    $c = CMPAbs $y, 1234
+    ; CHECK: cpy 1234
     RTS
     ; CHECK-NEXT: rts
 ...

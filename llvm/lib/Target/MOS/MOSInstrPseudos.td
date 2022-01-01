@@ -166,30 +166,21 @@ def STStk : MOSPseudo {
 // clobbers Z, and vice versa. If neither is set, then this represents a regular
 // SBC or CMP.
 
-// Version of CMPImm that copies the N and Z flags out to virtual registers.
-def CMPNZImm : MOSPseudo {
+class MOSCMPNZ : MOSPseudo {
   dag OutOperandList = (outs Cc:$carryout, GPR_LSB:$nout, GPR_LSB:$zout);
-  dag InOperandList = (ins GPR:$l, i8imm:$r);
-
   let isCompare = true;
 }
 
-// Version of CMPImag8 that copies the N and Z flags out to virtual registers.
-def CMPNZImag8 : MOSPseudo {
-  dag OutOperandList = (outs Cc:$carryout, GPR_LSB:$nout, GPR_LSB:$zout);
-  dag InOperandList = (ins GPR:$l, Imag8:$r);
+def CMPNZImm : MOSCMPNZ { dag InOperandList = (ins GPR:$l, i8imm:$r); }
+def CMPNZImag8 : MOSCMPNZ { dag InOperandList = (ins GPR:$l, Imag8:$r); }
+def CMPNZAbs : MOSCMPNZ { dag InOperandList = (ins GPR:$l, i16imm:$r); }
 
-  let isCompare = true;
-}
-
-// Version of SBCImm that copies the N and Z flags out to virtual registers.
 def SBCNZImm : MOSPseudo {
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
   dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   let Constraints = "$dst = $l, $carryout = $carryin";
 }
 
-// Version of SBCImag8 that copies the N and Z flags out to virtual registers.
 def SBCNZImag8 : MOSPseudo {
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
   dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
@@ -212,6 +203,16 @@ def CMPImmTerm : MOSPseudo {
 def CMPImag8Term : MOSPseudo {
   dag OutOperandList = (outs Cc:$carry);
   dag InOperandList = (ins GPR:$l, Imag8:$r);
+
+  let Defs = [NZ];
+
+  let isCompare = true;
+  let isTerminator = true;
+}
+
+def CMPAbsTerm : MOSPseudo {
+  dag OutOperandList = (outs Cc:$carry);
+  dag InOperandList = (ins GPR:$l, i16imm:$addr);
 
   let Defs = [NZ];
 

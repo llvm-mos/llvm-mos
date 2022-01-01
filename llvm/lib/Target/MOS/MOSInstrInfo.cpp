@@ -751,12 +751,14 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   // NZ
   case MOS::CMPNZImm:
   case MOS::CMPNZImag8:
+  case MOS::CMPNZAbs:
   case MOS::SBCNZImm:
   case MOS::SBCNZImag8:
     expandNZ(Builder);
     break;
   case MOS::CMPImmTerm:
   case MOS::CMPImag8Term:
+  case MOS::CMPAbsTerm:
     expandCMPTerm(Builder);
     break;
 
@@ -900,8 +902,6 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
 // NZ pseudos
 //===---------------------------------------------------------------------===//
 
-// Lower the NZ versions CMP and SBC instructions down to their basic versions,
-// possibly adding a select to copy out N or Z as appropriate.
 void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
   MachineInstr &MI = *Builder.getInsertPt();
   Register N;
@@ -909,6 +909,7 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
   switch (MI.getOpcode()) {
   case MOS::CMPNZImm:
   case MOS::CMPNZImag8:
+  case MOS::CMPNZAbs:
     N = MI.getOperand(1).getReg();
     Z = MI.getOperand(2).getReg();
     break;
@@ -935,13 +936,24 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
   MachineInstrBuilder Op;
   switch (MI.getOpcode()) {
   case MOS::CMPNZImm:
-    Op = Builder.buildInstr(MOS::CMPImm, {MI.getOperand(0)},
-                            {MI.getOperand(3), MI.getOperand(4).getImm()});
-    break;
   case MOS::CMPNZImag8:
-    Op = Builder.buildInstr(MOS::CMPImag8, {MI.getOperand(0)},
-                            {MI.getOperand(3), MI.getOperand(4)});
+  case MOS::CMPNZAbs: {
+    unsigned Opcode;
+    switch (MI.getOpcode()) {
+    case MOS::CMPNZImm:
+      Opcode = MOS::CMPImm;
+      break;
+    case MOS::CMPNZImag8:
+      Opcode = MOS::CMPImag8;
+      break;
+    case MOS::CMPNZAbs:
+      Opcode = MOS::CMPAbs;
+      break;
+    }
+    Op = Builder.buildInstr(Opcode, {MI.getOperand(0)}, {MI.getOperand(3)})
+             .add(MI.getOperand(4));
     break;
+  }
   case MOS::SBCNZImm:
     Op = Builder.buildInstr(
         MOS::SBCImm, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
@@ -958,7 +970,8 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
   if (NZOut) {
     assert(NZIn);
     Op.addDef(MOS::NZ, RegState::Implicit);
-    Builder.buildInstr(MOS::SelectImm, {NZOut}, {NZIn, INT64_C(-1), INT64_C(0)});
+    Builder.buildInstr(MOS::SelectImm, {NZOut},
+                       {NZIn, INT64_C(-1), INT64_C(0)});
   }
   MI.eraseFromParent();
 }
@@ -971,6 +984,9 @@ void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
     break;
   case MOS::CMPImag8Term:
     MI.setDesc(Builder.getTII().get(MOS::CMPImag8));
+    break;
+  case MOS::CMPAbsTerm:
+    MI.setDesc(Builder.getTII().get(MOS::CMPAbs));
     break;
   }
   MI.addOperand(

@@ -164,38 +164,54 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Tgt);
     return;
   }
-  case MOS::CMPImm: {
-    switch (MI->getOperand(1).getReg()) {
-    default:
-      llvm_unreachable("Unexpected register.");
-    case MOS::A:
-      OutMI.setOpcode(MOS::CMP_Immediate);
+  case MOS::CMPImm:
+  case MOS::CMPImag8:
+  case MOS::CMPAbs: {
+    switch (MI->getOpcode()) {
+    case MOS::CMPImm:
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::A:
+        OutMI.setOpcode(MOS::CMP_Immediate);
+        break;
+      case MOS::X:
+        OutMI.setOpcode(MOS::CPX_Immediate);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::CPY_Immediate);
+        break;
+      }
       break;
-    case MOS::X:
-      OutMI.setOpcode(MOS::CPX_Immediate);
+    case MOS::CMPImag8:
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::A:
+        OutMI.setOpcode(MOS::CMP_ZeroPage);
+        break;
+      case MOS::X:
+        OutMI.setOpcode(MOS::CPX_ZeroPage);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::CPY_ZeroPage);
+        break;
+      }
       break;
-    case MOS::Y:
-      OutMI.setOpcode(MOS::CPY_Immediate);
-      break;
-    }
-    MCOperand Val;
-    if (!lowerOperand(MI->getOperand(2), Val))
-      llvm_unreachable("Failed to lower operand");
-    OutMI.addOperand(Val);
-    return;
-  }
-  case MOS::CMPImag8: {
-    switch (MI->getOperand(1).getReg()) {
-    default:
-      llvm_unreachable("Unexpected register.");
-    case MOS::A:
-      OutMI.setOpcode(MOS::CMP_ZeroPage);
-      break;
-    case MOS::X:
-      OutMI.setOpcode(MOS::CPX_ZeroPage);
-      break;
-    case MOS::Y:
-      OutMI.setOpcode(MOS::CPY_ZeroPage);
+    case MOS::CMPAbs:
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::A:
+        OutMI.setOpcode(MOS::CMP_Absolute);
+        break;
+      case MOS::X:
+        OutMI.setOpcode(MOS::CPX_Absolute);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::CPY_Absolute);
+        break;
+      }
       break;
     }
     MCOperand Val;
