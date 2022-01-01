@@ -13,7 +13,7 @@ def Feature6502
                        "The original documented 6502 instruction set">;
 
 def Feature6502BCD
-    : SubtargetFeature<"mos-insns-6502-bcd", "Has6502BCDInsns", "true",
+    : SubtargetFeature<"mos-insns-6502bcd", "Has6502BCDInsns", "true",
                        "BCD instruction support, including SED and CLD (most "
                        "6502 series CPUs support this)">;
 
