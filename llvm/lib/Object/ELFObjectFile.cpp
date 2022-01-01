@@ -13,6 +13,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MOSFlags.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -343,6 +344,22 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
   return Features;
 }
 
+SubtargetFeatures ELFObjectFileBase::getMOSFeatures() const {
+  SubtargetFeatures Features;
+  const unsigned PlatformFlags = getPlatformFlags();
+
+  // mos-insns-* features can be directly translated from e_flags.
+  for (const EnumEntry<unsigned> &FlagEntry : MOS::ElfHeaderMOSFlags) {
+    if (PlatformFlags & FlagEntry.Value) {
+      SmallString<32> Str("mos-insns-");
+      Str.append(FlagEntry.AltName.substr(3));
+      Features.AddFeature(Str);
+    }
+  }
+
+  return Features;
+}
+
 SubtargetFeatures ELFObjectFileBase::getFeatures() const {
   switch (getEMachine()) {
   case ELF::EM_MIPS:
@@ -351,6 +368,8 @@ SubtargetFeatures ELFObjectFileBase::getFeatures() const {
     return getARMFeatures();
   case ELF::EM_RISCV:
     return getRISCVFeatures();
+  case ELF::EM_MOS:
+    return getMOSFeatures();
   default:
     return SubtargetFeatures();
   }
