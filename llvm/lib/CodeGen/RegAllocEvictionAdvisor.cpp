@@ -114,6 +114,7 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(
     VirtRegMap *VRM, const RegisterClassInfo &RegClassInfo,
     ExtraRegInfo *ExtraInfo)
     : MF(MF), Matrix(Matrix), LIS(LIS), VRM(VRM), MRI(&VRM->getRegInfo()),
+      TII(MF.getSubtarget().getInstrInfo()),
       TRI(MF.getSubtarget().getRegisterInfo()), RegClassInfo(RegClassInfo),
       RegCosts(TRI->getRegisterCosts(MF)), ExtraInfo(ExtraInfo),
       EnableLocalReassign(EnableLocalReassignment ||

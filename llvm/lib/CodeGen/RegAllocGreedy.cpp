@@ -2445,7 +2445,7 @@ unsigned RAGreedy::trySplit(LiveInterval &VirtReg, AllocationOrder &Order,
     return tryInstructionSplit(VirtReg, Order, NewVRegs, false);
   }
 
-  if (getStage(VirtReg) == RS_LightSpill) {
+  if (ExtraInfo->getStage(VirtReg) == RS_LightSpill) {
     NamedRegionTimer T("light_spill", "Light Spilling", TimerGroupName,
                        TimerGroupDescription, TimePassesIsEnabled);
     SA->analyze(&VirtReg);

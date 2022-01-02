@@ -432,16 +432,13 @@ body:             |
     ; CHECK-LABEL: name: test_unmerge_values_s16_of_anyext_v4s64_concat_vectors_v2s32_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UV]](s32)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV2]], [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV3]](s32)
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV3]], [[C]](s32)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s16), implicit [[TRUNC1]](s16), implicit [[TRUNC2]](s16), implicit [[TRUNC3]](s16)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY [[DEF]](s16)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s16), implicit [[TRUNC1]](s16), implicit [[DEF]](s16), implicit [[COPY1]](s16)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %2:_(<4 x s32>) = G_CONCAT_VECTORS %0, %1
@@ -949,8 +946,9 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[COPY2]](s64)
     ; CHECK-NEXT: $vgpr2_vgpr3 = COPY [[DEF]](s64)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1

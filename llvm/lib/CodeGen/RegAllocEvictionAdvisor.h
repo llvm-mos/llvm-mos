@@ -209,6 +209,7 @@ protected:
   LiveIntervals *const LIS;
   VirtRegMap *const VRM;
   MachineRegisterInfo *const MRI;
+  const TargetInstrInfo *const TII;
   const TargetRegisterInfo *const TRI;
   const RegisterClassInfo &RegClassInfo;
   const ArrayRef<uint8_t> RegCosts;
