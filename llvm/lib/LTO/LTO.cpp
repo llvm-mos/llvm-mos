@@ -1107,7 +1107,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   if (Conf.PreOptModuleHook &&
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
-    return Error::success();
+    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
   if (!Conf.CodeGenOnly) {
     for (const auto &R : GlobalResolutions) {
@@ -1133,7 +1133,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
     if (Conf.PostInternalizeModuleHook &&
         !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
-      return Error::success();
+      return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
   if (!RegularLTO.EmptyCombinedModule || Conf.AlwaysEmitRegularLTOObj) {

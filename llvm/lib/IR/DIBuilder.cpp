@@ -671,11 +671,11 @@ DIBuilder::getOrCreateMacroArray(ArrayRef<Metadata *> Elements) {
 
 DITypeRefArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
   SmallVector<llvm::Metadata *, 16> Elts;
-  for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
-    if (Elements[i] && isa<MDNode>(Elements[i]))
-      Elts.push_back(cast<DIType>(Elements[i]));
+  for (Metadata *E : Elements) {
+    if (isa_and_nonnull<MDNode>(E))
+      Elts.push_back(cast<DIType>(E));
     else
-      Elts.push_back(Elements[i]);
+      Elts.push_back(E);
   }
   return DITypeRefArray(MDNode::get(VMContext, Elts));
 }
@@ -819,12 +819,6 @@ DILabel *DIBuilder::createLabel(DIScope *Scope, StringRef Name, DIFile *File,
 
 DIExpression *DIBuilder::createExpression(ArrayRef<uint64_t> Addr) {
   return DIExpression::get(VMContext, Addr);
-}
-
-DIExpression *DIBuilder::createExpression(ArrayRef<int64_t> Signed) {
-  // TODO: Remove the callers of this signed version and delete.
-  SmallVector<uint64_t, 8> Addr(Signed.begin(), Signed.end());
-  return createExpression(Addr);
 }
 
 template <class... Ts>

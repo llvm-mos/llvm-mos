@@ -1395,10 +1395,22 @@ class LLVM_BinarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b);
 }
 
+class LLVM_BinaryIntrinsicOp<string func, list<OpTrait> traits = []> :
+    LLVM_OneResultIntrOp<func, [], [0,1],
+           !listconcat([NoSideEffect], traits)> {
+  let arguments = (ins LLVM_Type:$a, LLVM_Type:$b);
+}
+
 class LLVM_TernarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([NoSideEffect, SameOperandsAndResultType], traits)> {
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b, LLVM_Type:$c);
+}
+
+class LLVM_CountZerosIntrinsicOp<string func, list<OpTrait> traits = []> :
+    LLVM_OneResultIntrOp<func, [], [0],
+           !listconcat([NoSideEffect], traits)> {
+  let arguments = (ins LLVM_Type:$in, I<1>:$zero_undefined);
 }
 
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
@@ -1420,7 +1432,10 @@ def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0]> {
 def LLVM_SinOp : LLVM_UnaryIntrinsicOp<"sin">;
 def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrinsicOp<"pow">;
+def LLVM_PowIOp : LLVM_BinaryIntrinsicOp<"powi">;
 def LLVM_BitReverseOp : LLVM_UnaryIntrinsicOp<"bitreverse">;
+def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrinsicOp<"ctlz">;
+def LLVM_CountTrailingZerosOp : LLVM_CountZerosIntrinsicOp<"cttz">;
 def LLVM_CtPopOp : LLVM_UnaryIntrinsicOp<"ctpop">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrinsicOp<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrinsicOp<"minnum">;
@@ -1428,12 +1443,18 @@ def LLVM_MaximumOp : LLVM_BinarySameArgsIntrinsicOp<"maximum">;
 def LLVM_MinimumOp : LLVM_BinarySameArgsIntrinsicOp<"minimum">;
 def LLVM_SMaxOp : LLVM_BinarySameArgsIntrinsicOp<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrinsicOp<"smin">;
+def LLVM_UMaxOp : LLVM_BinarySameArgsIntrinsicOp<"umax">;
+def LLVM_UMinOp : LLVM_BinarySameArgsIntrinsicOp<"umin">;
 
 def LLVM_MemcpyOp : LLVM_ZeroResultIntrOp<"memcpy", [0, 1, 2]> {
   let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
                    LLVM_Type:$isVolatile);
 }
 def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]> {
+  let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
+                   LLVM_Type:$isVolatile);
+}
+def LLVM_MemmoveOp : LLVM_ZeroResultIntrOp<"memmove", [0, 1, 2]> {
   let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
                    LLVM_Type:$isVolatile);
 }
@@ -1726,7 +1747,9 @@ def LLVM_masked_compressstore
   let arguments = (ins LLVM_Type, LLVM_Type, LLVM_Type);
 }
 
-//
+/// Create a call to vscale intrinsic.
+def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
+
 // Atomic operations.
 //
 

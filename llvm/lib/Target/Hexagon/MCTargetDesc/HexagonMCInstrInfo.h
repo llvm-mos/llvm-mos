@@ -41,7 +41,8 @@ public:
 
 namespace Hexagon {
 
-class PacketIterator {
+class PacketIterator : public std::iterator<std::forward_iterator_tag,
+    PacketIterator> {
   MCInstrInfo const &MCII;
   MCInst::const_iterator BundleCurrent;
   MCInst::const_iterator BundleEnd;
@@ -94,6 +95,8 @@ bool canonicalizePacket(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
                         MCContext &Context, MCInst &MCB,
                         HexagonMCChecker *Checker,
                         bool AttemptCompatibility = false);
+bool IsABranchingInst(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
+                      MCInst const &I);
 
 // Create a duplex instruction given the two subinsts
 MCInst *deriveDuplex(MCContext &Context, unsigned iClass, MCInst const &inst0,
@@ -188,6 +191,7 @@ bool hasImmExt(MCInst const &MCI);
 bool hasNewValue(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasNewValue2(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI);
+bool hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
 unsigned iClassOfDuplexPair(unsigned Ga, unsigned Gb);
 
 int64_t minConstant(MCInst const &MCI, size_t Index);

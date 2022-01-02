@@ -611,8 +611,8 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
 void CodeViewDebug::beginModule(Module *M) {
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
-  if (!M->getNamedMetadata("llvm.dbg.cu") ||
-      !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+  NamedMDNode *CUs = M->getNamedMetadata("llvm.dbg.cu");
+  if (!CUs || !Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
     return;
   }
@@ -622,7 +622,6 @@ void CodeViewDebug::beginModule(Module *M) {
   TheCPU = mapArchToCVCPUType(Triple(M->getTargetTriple()).getArch());
 
   // Get the current source language.
-  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   const MDNode *Node = *CUs->operands().begin();
   const auto *CU = cast<DICompileUnit>(Node);
 
@@ -650,6 +649,7 @@ void CodeViewDebug::endModule() {
   switchToDebugSectionForSymbol(nullptr);
 
   MCSymbol *CompilerInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
+  emitObjName();
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
 
@@ -785,6 +785,29 @@ void CodeViewDebug::emitTypeGlobalHashes() {
   }
 }
 
+void CodeViewDebug::emitObjName() {
+  MCSymbol *CompilerEnd = beginSymbolRecord(SymbolKind::S_OBJNAME);
+
+  StringRef PathRef(Asm->TM.Options.ObjectFilenameForDebug);
+  llvm::SmallString<256> PathStore(PathRef);
+
+  if (PathRef.empty() || PathRef == "-") {
+    // Don't emit the filename if we're writing to stdout or to /dev/null.
+    PathRef = {};
+  } else {
+    llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
+    PathRef = PathStore;
+  }
+
+  OS.AddComment("Signature");
+  OS.emitIntValue(0, 4);
+
+  OS.AddComment("Object name");
+  emitNullTerminatedSymbolName(OS, PathRef);
+
+  endSymbolRecord(CompilerEnd);
+}
+
 namespace {
 struct Version {
   int Part[4];
@@ -834,8 +857,10 @@ void CodeViewDebug::emitCompilerInformation() {
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
-  for (int N : FrontVer.Part)
+  for (int N : FrontVer.Part) {
+    N = std::min<int>(N, std::numeric_limits<uint16_t>::max());
     OS.emitInt16(N);
+  }
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that

@@ -1248,8 +1248,8 @@ AliasResult BasicAAResult::aliasGEP(
     else
       GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
-    ConstantRange CR =
-        computeConstantRange(Index.Val.V, true, &AC, Index.CxtI);
+    ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
+                                            true, &AC, Index.CxtI);
     KnownBits Known =
         computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT);
     CR = CR.intersectWith(
@@ -1699,6 +1699,7 @@ AliasResult BasicAAResult::aliasCheckRecursive(
       return Result;
   } else if (const GEPOperator *GV2 = dyn_cast<GEPOperator>(V2)) {
     AliasResult Result = aliasGEP(GV2, V2Size, V1, V1Size, O2, O1, AAQI);
+    Result.swap();
     if (Result != AliasResult::MayAlias)
       return Result;
   }
@@ -1709,6 +1710,7 @@ AliasResult BasicAAResult::aliasCheckRecursive(
       return Result;
   } else if (const PHINode *PN = dyn_cast<PHINode>(V2)) {
     AliasResult Result = aliasPHI(PN, V2Size, V1, V1Size, AAQI);
+    Result.swap();
     if (Result != AliasResult::MayAlias)
       return Result;
   }
@@ -1719,6 +1721,7 @@ AliasResult BasicAAResult::aliasCheckRecursive(
       return Result;
   } else if (const SelectInst *S2 = dyn_cast<SelectInst>(V2)) {
     AliasResult Result = aliasSelect(S2, V2Size, V1, V1Size, AAQI);
+    Result.swap();
     if (Result != AliasResult::MayAlias)
       return Result;
   }

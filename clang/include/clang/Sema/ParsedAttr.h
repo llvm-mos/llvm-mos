@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SEMA_ATTRIBUTELIST_H
-#define LLVM_CLANG_SEMA_ATTRIBUTELIST_H
+#ifndef LLVM_CLANG_SEMA_PARSEDATTR_H
+#define LLVM_CLANG_SEMA_PARSEDATTR_H
 
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/AttributeCommonInfo.h"
@@ -1097,6 +1097,7 @@ enum AttributeArgumentNType {
   AANT_ArgumentString,
   AANT_ArgumentIdentifier,
   AANT_ArgumentConstantExpr,
+  AANT_ArgumentBuiltinFunction,
 };
 
 /// These constants match the enumerated choices of
@@ -1158,4 +1159,4 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 
 } // namespace clang
 
-#endif // LLVM_CLANG_SEMA_ATTRIBUTELIST_H
+#endif // LLVM_CLANG_SEMA_PARSEDATTR_H

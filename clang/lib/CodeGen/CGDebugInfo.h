@@ -177,7 +177,7 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const BuiltinType *Ty);
   llvm::DIType *CreateType(const ComplexType *Ty);
   llvm::DIType *CreateType(const AutoType *Ty);
-  llvm::DIType *CreateType(const ExtIntType *Ty);
+  llvm::DIType *CreateType(const BitIntType *Ty);
   llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg,
                                     TypeLoc TL = TypeLoc());
   llvm::DIType *CreateQualifiedType(const FunctionProtoType *Ty,
@@ -363,7 +363,7 @@ class CGDebugInfo {
   /// Extended dereferencing mechanism is has the following format:
   ///     DW_OP_constu <DWARF Address Space> DW_OP_swap DW_OP_xderef
   void AppendAddressSpaceXDeref(unsigned AddressSpace,
-                                SmallVectorImpl<int64_t> &Expr) const;
+                                SmallVectorImpl<uint64_t> &Expr) const;
 
   /// A helper function to collect debug info for the default elements of a
   /// block.

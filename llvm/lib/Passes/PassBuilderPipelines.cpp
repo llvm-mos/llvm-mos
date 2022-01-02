@@ -311,6 +311,8 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   if (EnableLoopInterchange)
     LPM2.addPass(LoopInterchangePass());
+  if (EnableLoopFlatten)
+    LPM2.addPass(LoopFlattenPass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
@@ -335,8 +337,6 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
                                               /*UseBlockFrequencyInfo=*/true));
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
-  if (EnableLoopFlatten)
-    FPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
   // The loop passes in LPM2 (LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2),
@@ -485,6 +485,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   if (EnableLoopInterchange)
     LPM2.addPass(LoopInterchangePass());
+  if (EnableLoopFlatten)
+    LPM2.addPass(LoopFlattenPass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
@@ -509,8 +511,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                                               /*UseBlockFrequencyInfo=*/true));
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
-  if (EnableLoopFlatten)
-    FPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
   // The loop passes in LPM2 (LoopIdiomRecognizePass, IndVarSimplifyPass,
   // LoopDeletionPass and LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
@@ -995,26 +995,28 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
 
   if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
+    ExtraVectorPassManager ExtraPasses;
     // At higher optimization levels, try to clean up any runtime overlap and
     // alignment checks inserted by the vectorizer. We want to track correlated
     // runtime checks for two inner loops in the same outer loop, fold any
     // common computations, hoist loop-invariant aspects out of any outer loop,
     // and unswitch the runtime checks if possible. Once hoisted, we may have
     // dead (or speculatable) control flows or more combining opportunities.
-    FPM.addPass(EarlyCSEPass());
-    FPM.addPass(CorrelatedValuePropagationPass());
-    FPM.addPass(InstCombinePass());
+    ExtraPasses.addPass(EarlyCSEPass());
+    ExtraPasses.addPass(CorrelatedValuePropagationPass());
+    ExtraPasses.addPass(InstCombinePass());
     LoopPassManager LPM;
     LPM.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap));
     LPM.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ Level ==
                                        OptimizationLevel::O3));
-    FPM.addPass(
+    ExtraPasses.addPass(
         RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
-    FPM.addPass(
+    ExtraPasses.addPass(
         createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true,
                                         /*UseBlockFrequencyInfo=*/true));
-    FPM.addPass(SimplifyCFGPass());
-    FPM.addPass(InstCombinePass());
+    ExtraPasses.addPass(SimplifyCFGPass());
+    ExtraPasses.addPass(InstCombinePass());
+    FPM.addPass(std::move(ExtraPasses));
   }
 
   // Now that we've formed fast to execute loop structures, we do further
@@ -1164,8 +1166,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Disable header duplication at -Oz.
   LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz, LTOPreLink));
   // Some loops may have become dead by now. Try to delete them.
-  // FIXME: see disscussion in https://reviews.llvm.org/D112851
-  //        this may need to be revisited once GVN is more powerful.
+  // FIXME: see discussion in https://reviews.llvm.org/D112851,
+  //        this may need to be revisited once we run GVN before loop deletion
+  //        in the simplification pipeline.
   LPM.addPass(LoopDeletionPass());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
@@ -1620,9 +1623,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MainFPM.addPass(DSEPass());
   MainFPM.addPass(MergedLoadStoreMotionPass());
 
-  // More loops are countable; try to optimize them.
-  if (EnableLoopFlatten && Level.getSpeedupLevel() > 1)
-    MainFPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
 
   if (EnableConstraintElimination)
     MainFPM.addPass(ConstraintEliminationPass());
@@ -1634,6 +1634,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     C(LPM, Level);
 
   LPM.addPass(LoopDeletionPass());
+  if (EnableLoopFlatten && Level.getSpeedupLevel() > 1)
+    LPM.addPass(LoopFlattenPass());
   // FIXME: Add loop interchange.
 
   // Unroll small loops and perform peeling.

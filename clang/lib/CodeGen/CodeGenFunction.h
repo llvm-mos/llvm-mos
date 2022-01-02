@@ -183,6 +183,7 @@ template <> struct DominatingValue<Address> {
 
   struct saved_type {
     DominatingLLVMValue::saved_type SavedValue;
+    llvm::Type *ElementType;
     CharUnits Alignment;
   };
 
@@ -191,11 +192,11 @@ template <> struct DominatingValue<Address> {
   }
   static saved_type save(CodeGenFunction &CGF, type value) {
     return { DominatingLLVMValue::save(CGF, value.getPointer()),
-             value.getAlignment() };
+             value.getElementType(), value.getAlignment() };
   }
   static type restore(CodeGenFunction &CGF, saved_type value) {
     return Address(DominatingLLVMValue::restore(CGF, value.SavedValue),
-                   value.Alignment);
+                   value.ElementType, value.Alignment);
   }
 };
 
@@ -459,6 +460,11 @@ public:
 
     /// Get the name of the capture helper.
     virtual StringRef getHelperName() const { return "__captured_stmt"; }
+
+    /// Get the CaptureFields
+    llvm::SmallDenseMap<const VarDecl *, FieldDecl *> getCaptureFields() {
+      return CaptureFields;
+    }
 
   private:
     /// The kind of captured statement being generated.
@@ -2498,14 +2504,16 @@ public:
 
   LValue MakeAddrLValue(llvm::Value *V, QualType T, CharUnits Alignment,
                         AlignmentSource Source = AlignmentSource::Type) {
-    return LValue::MakeAddr(Address(V, Alignment), T, getContext(),
-                            LValueBaseInfo(Source), CGM.getTBAAAccessInfo(T));
+    Address Addr(V, ConvertTypeForMem(T), Alignment);
+    return LValue::MakeAddr(Addr, T, getContext(), LValueBaseInfo(Source),
+                            CGM.getTBAAAccessInfo(T));
   }
 
-  LValue MakeAddrLValue(llvm::Value *V, QualType T, CharUnits Alignment,
-                        LValueBaseInfo BaseInfo, TBAAAccessInfo TBAAInfo) {
-    return LValue::MakeAddr(Address(V, Alignment), T, getContext(),
-                            BaseInfo, TBAAInfo);
+  LValue
+  MakeAddrLValueWithoutTBAA(Address Addr, QualType T,
+                            AlignmentSource Source = AlignmentSource::Type) {
+    return LValue::MakeAddr(Addr, T, getContext(), LValueBaseInfo(Source),
+                            TBAAAccessInfo());
   }
 
   LValue MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T);
@@ -3132,15 +3140,18 @@ public:
 
   class ParamValue {
     llvm::Value *Value;
+    llvm::Type *ElementType;
     unsigned Alignment;
-    ParamValue(llvm::Value *V, unsigned A) : Value(V), Alignment(A) {}
+    ParamValue(llvm::Value *V, llvm::Type *T, unsigned A)
+        : Value(V), ElementType(T), Alignment(A) {}
   public:
     static ParamValue forDirect(llvm::Value *value) {
-      return ParamValue(value, 0);
+      return ParamValue(value, nullptr, 0);
     }
     static ParamValue forIndirect(Address addr) {
       assert(!addr.getAlignment().isZero());
-      return ParamValue(addr.getPointer(), addr.getAlignment().getQuantity());
+      return ParamValue(addr.getPointer(), addr.getElementType(),
+                        addr.getAlignment().getQuantity());
     }
 
     bool isIndirect() const { return Alignment != 0; }
@@ -3153,7 +3164,7 @@ public:
 
     Address getIndirectAddress() const {
       assert(isIndirect());
-      return Address(Value, CharUnits::fromQuantity(Alignment));
+      return Address(Value, ElementType, CharUnits::fromQuantity(Alignment));
     }
   };
 
@@ -4409,7 +4420,7 @@ public:
 
   /// EmitCXXGlobalVarDeclInit - Create the initializer for a C++
   /// variable with global storage.
-  void EmitCXXGlobalVarDeclInit(const VarDecl &D, llvm::Constant *DeclPtr,
+  void EmitCXXGlobalVarDeclInit(const VarDecl &D, llvm::GlobalVariable *GV,
                                 bool PerformInit);
 
   llvm::Function *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
@@ -4560,7 +4571,7 @@ public:
   /// \p SignedIndices indicates whether any of the GEP indices are signed.
   /// \p IsSubtraction indicates whether the expression used to form the GEP
   /// is a subtraction.
-  llvm::Value *EmitCheckedInBoundsGEP(llvm::Value *Ptr,
+  llvm::Value *EmitCheckedInBoundsGEP(llvm::Type *ElemTy, llvm::Value *Ptr,
                                       ArrayRef<llvm::Value *> IdxList,
                                       bool SignedIndices,
                                       bool IsSubtraction,

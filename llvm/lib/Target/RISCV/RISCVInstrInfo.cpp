@@ -35,6 +35,7 @@ using namespace llvm;
 #include "RISCVGenCompressInstEmitter.inc"
 
 #define GET_INSTRINFO_CTOR_DTOR
+#define GET_INSTRINFO_NAMED_OPS
 #include "RISCVGenInstrInfo.inc"
 
 static cl::opt<bool> PreferWholeRegisterMove(
@@ -200,8 +201,9 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
       if (MBBI->modifiesRegister(RISCV::VL))
         return false;
 
-      // Go through all defined operands, including implicit defines.
-      for (const MachineOperand &MO : MBBI->operands()) {
+      // Only converting whole register copies to vmv.v.v when the defining
+      // value appears in the explicit operands.
+      for (const MachineOperand &MO : MBBI->explicit_operands()) {
         if (!MO.isReg() || !MO.isDef())
           continue;
         if (!FoundDef && TRI->isSubRegisterEq(MO.getReg(), SrcReg)) {
@@ -1059,6 +1061,7 @@ bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     break;
   case RISCV::FSGNJ_D:
   case RISCV::FSGNJ_S:
+  case RISCV::FSGNJ_H:
     // The canonical floating-point move is fsgnj rd, rs, rs.
     return MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
            MI.getOperand(1).getReg() == MI.getOperand(2).getReg();
@@ -1087,6 +1090,7 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     break;
   case RISCV::FSGNJ_D:
   case RISCV::FSGNJ_S:
+  case RISCV::FSGNJ_H:
     // The canonical floating-point move is fsgnj rd, rs, rs.
     if (MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
         MI.getOperand(1).getReg() == MI.getOperand(2).getReg())
@@ -1254,7 +1258,7 @@ bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
 bool RISCVInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                                             unsigned &Flags) const {
   // More accurate safety checking is done in getOutliningCandidateInfo.
-  return true;
+  return TargetInstrInfo::isMBBSafeToOutlineFrom(MBB, Flags);
 }
 
 // Enum values indicating how an outlined call should be constructed.

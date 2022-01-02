@@ -22,6 +22,32 @@ func @cmpi_equal_operands(%arg0: i64)
       : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }
 
+// Test case: Folding of comparisons with equal vector operands.
+// CHECK-LABEL: @cmpi_equal_vector_operands
+//   CHECK-DAG:   %[[T:.*]] = arith.constant dense<true>
+//   CHECK-DAG:   %[[F:.*]] = arith.constant dense<false>
+//       CHECK:   return %[[T]], %[[T]], %[[T]], %[[T]], %[[T]],
+//  CHECK-SAME:          %[[F]], %[[F]], %[[F]], %[[F]], %[[F]]
+func @cmpi_equal_vector_operands(%arg0: vector<1x8xi64>)
+    -> (vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>,
+        vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>,
+	vector<1x8xi1>, vector<1x8xi1>) {
+  %0 = arith.cmpi eq, %arg0, %arg0 : vector<1x8xi64>
+  %1 = arith.cmpi sle, %arg0, %arg0 : vector<1x8xi64>
+  %2 = arith.cmpi sge, %arg0, %arg0 : vector<1x8xi64>
+  %3 = arith.cmpi ule, %arg0, %arg0 : vector<1x8xi64>
+  %4 = arith.cmpi uge, %arg0, %arg0 : vector<1x8xi64>
+  %5 = arith.cmpi ne, %arg0, %arg0 : vector<1x8xi64>
+  %6 = arith.cmpi slt, %arg0, %arg0 : vector<1x8xi64>
+  %7 = arith.cmpi sgt, %arg0, %arg0 : vector<1x8xi64>
+  %8 = arith.cmpi ult, %arg0, %arg0 : vector<1x8xi64>
+  %9 = arith.cmpi ugt, %arg0, %arg0 : vector<1x8xi64>
+  return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9
+      : vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>,
+        vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>, vector<1x8xi1>,
+	vector<1x8xi1>, vector<1x8xi1>
+}
+
 // -----
 
 // CHECK-LABEL: @indexCastOfSignExtend
@@ -457,4 +483,66 @@ func @test_minui(%arg0 : i8) -> (i8, i8, i8, i8) {
   %2 = arith.minui %arg0, %minIntCst : i8
   %3 = arith.minui %arg0, %c0 : i8
   return %0, %1, %2, %3: i8, i8, i8, i8
+}
+
+// -----
+
+// CHECK-LABEL: @constant_FPtoUI(
+func @constant_FPtoUI() -> i32 {
+  // CHECK: %[[C0:.+]] = arith.constant 2 : i32
+  // CHECK: return %[[C0]]
+  %c0 = arith.constant 2.0 : f32
+  %res = arith.fptoui %c0 : f32 to i32
+  return %res : i32
+}
+
+// -----
+// CHECK-LABEL: @invalid_constant_FPtoUI(
+func @invalid_constant_FPtoUI() -> i32 {
+  // CHECK: %[[C0:.+]] = arith.constant -2.000000e+00 : f32
+  // CHECK: %[[C1:.+]] = arith.fptoui %[[C0]] : f32 to i32
+  // CHECK: return %[[C1]]
+  %c0 = arith.constant -2.0 : f32
+  %res = arith.fptoui %c0 : f32 to i32
+  return %res : i32
+}
+
+// -----
+// CHECK-LABEL: @constant_FPtoSI(
+func @constant_FPtoSI() -> i32 {
+  // CHECK: %[[C0:.+]] = arith.constant -2 : i32
+  // CHECK: return %[[C0]]
+  %c0 = arith.constant -2.0 : f32
+  %res = arith.fptosi %c0 : f32 to i32
+  return %res : i32
+}
+
+// -----
+// CHECK-LABEL: @invalid_constant_FPtoSI(
+func @invalid_constant_FPtoSI() -> i8 {
+  // CHECK: %[[C0:.+]] = arith.constant 2.000000e+10 : f32
+  // CHECK: %[[C1:.+]] = arith.fptosi %[[C0]] : f32 to i8
+  // CHECK: return %[[C1]]
+  %c0 = arith.constant 2.0e10 : f32
+  %res = arith.fptosi %c0 : f32 to i8
+  return %res : i8
+}
+
+// CHECK-LABEL: @constant_SItoFP(
+func @constant_SItoFP() -> f32 {
+  // CHECK: %[[C0:.+]] = arith.constant -2.000000e+00 : f32
+  // CHECK: return %[[C0]]
+  %c0 = arith.constant -2 : i32
+  %res = arith.sitofp %c0 : i32 to f32
+  return %res : f32
+}
+
+// -----
+// CHECK-LABEL: @constant_UItoFP(
+func @constant_UItoFP() -> f32 {
+  // CHECK: %[[C0:.+]] = arith.constant 2.000000e+00 : f32
+  // CHECK: return %[[C0]]
+  %c0 = arith.constant 2 : i32
+  %res = arith.sitofp %c0 : i32 to f32
+  return %res : f32
 }

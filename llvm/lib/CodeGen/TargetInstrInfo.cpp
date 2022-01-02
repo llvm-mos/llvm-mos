@@ -437,7 +437,7 @@ MachineInstr &TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
     MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) const {
   assert(!Orig.isNotDuplicable() && "Instruction cannot be duplicated");
   MachineFunction &MF = *MBB.getParent();
-  return MF.CloneMachineInstrBundle(MBB, InsertBefore, Orig);
+  return MF.cloneMachineInstrBundle(MBB, InsertBefore, Orig);
 }
 
 const TargetRegisterClass *
@@ -1416,4 +1416,17 @@ void TargetInstrInfo::mergeOutliningCandidateAttributes(
         return C.getMF()->getFunction().hasFnAttribute(Attribute::NoUnwind);
       }))
     F.addFnAttr(Attribute::NoUnwind);
+}
+
+bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                                             unsigned &Flags) const {
+  // Some instrumentations create special TargetOpcode at the start which
+  // expands to special code sequences which must be present.
+  auto First = MBB.getFirstNonDebugInstr();
+  if (First != MBB.end() &&
+      (First->getOpcode() == TargetOpcode::FENTRY_CALL ||
+       First->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER))
+    return false;
+
+  return true;
 }

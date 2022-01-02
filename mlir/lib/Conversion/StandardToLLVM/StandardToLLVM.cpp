@@ -566,28 +566,6 @@ struct UnrealizedConversionCastOpLowering
   }
 };
 
-struct RankOpLowering : public ConvertOpToLLVMPattern<RankOp> {
-  using ConvertOpToLLVMPattern<RankOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(RankOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    Type operandType = op.getMemrefOrTensor().getType();
-    if (auto unrankedMemRefType = operandType.dyn_cast<UnrankedMemRefType>()) {
-      UnrankedMemRefDescriptor desc(adaptor.getMemrefOrTensor());
-      rewriter.replaceOp(op, {desc.rank(rewriter, loc)});
-      return success();
-    }
-    if (auto rankedMemRefType = operandType.dyn_cast<MemRefType>()) {
-      rewriter.replaceOp(
-          op, {createIndexConstant(rewriter, loc, rankedMemRefType.getRank())});
-      return success();
-    }
-    return failure();
-  }
-};
-
 // Common base for load and store operations on MemRefs.  Restricts the match
 // to supported MemRef types. Provides functionality to emit code accessing a
 // specific element of the underlying data buffer.
@@ -814,6 +792,10 @@ static Optional<LLVM::AtomicBinOp> matchSimpleAtomicOp(AtomicRMWOp atomicOp) {
     return LLVM::AtomicBinOp::min;
   case AtomicRMWKind::minu:
     return LLVM::AtomicBinOp::umin;
+  case AtomicRMWKind::ori:
+    return LLVM::AtomicBinOp::_or;
+  case AtomicRMWKind::andi:
+    return LLVM::AtomicBinOp::_and;
   default:
     return llvm::None;
   }
@@ -987,7 +969,6 @@ void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
       CondBranchOpLowering,
       ConstantOpLowering,
       GenericAtomicRMWOpLowering,
-      RankOpLowering,
       ReturnOpLowering,
       SelectOpLowering,
       SplatOpLowering,
@@ -1052,7 +1033,7 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
                StringAttr::get(m.getContext(), this->dataLayout));
   }
 };
-} // end namespace
+} // namespace
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createLowerToLLVMPass() {
   return std::make_unique<LLVMLoweringPass>();

@@ -620,6 +620,10 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   if (Constant *C = foldOrCommuteConstant(Instruction::Add, Op0, Op1, Q))
     return C;
 
+  // X + poison -> poison
+  if (isa<PoisonValue>(Op1))
+    return Op1;
+
   // X + undef -> undef
   if (Q.isUndefValue(Op1))
     return Op1;
@@ -2173,6 +2177,15 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     }
   }
 
+  // ((X | Y) ^ X ) & ((X | Y) ^ Y) --> 0
+  // ((X | Y) ^ Y ) & ((X | Y) ^ X) --> 0
+  BinaryOperator *Or;
+  if (match(Op0, m_c_Xor(m_Value(X),
+                         m_CombineAnd(m_BinOp(Or),
+                                      m_c_Or(m_Deferred(X), m_Value(Y))))) &&
+      match(Op1, m_c_Xor(m_Specific(Or), m_Specific(Y))))
+    return Constant::getNullValue(Op0->getType());
+
   return nullptr;
 }
 
@@ -2244,6 +2257,14 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
                     m_Value(B))) &&
       match(Y, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
     return NotA;
+
+  // ~(A ^ B) | (A & B) --> ~(A & B)
+  // ~(A ^ B) | (B & A) --> ~(A & B)
+  Value *NotAB;
+  if (match(X, m_CombineAnd(m_NotForbidUndef(m_Xor(m_Value(A), m_Value(B))),
+                            m_Value(NotAB))) &&
+      match(Y, m_c_And(m_Specific(A), m_Specific(B))))
+    return NotAB;
 
   return nullptr;
 }
@@ -2695,15 +2716,30 @@ static Value *simplifyICmpOfBools(CmpInst::Predicate Pred, Value *LHS,
   if (!OpTy->isIntOrIntVectorTy(1))
     return nullptr;
 
-  // A boolean compared to true/false can be simplified in 14 out of the 20
-  // (10 predicates * 2 constants) possible combinations. Cases not handled here
-  // require a 'not' of the LHS, so those must be transformed in InstCombine.
+  // A boolean compared to true/false can be reduced in 14 out of the 20
+  // (10 predicates * 2 constants) possible combinations. The other
+  // 6 cases require a 'not' of the LHS.
+
+  auto ExtractNotLHS = [](Value *V) -> Value * {
+    Value *X;
+    if (match(V, m_Not(m_Value(X))))
+      return X;
+    return nullptr;
+  };
+
   if (match(RHS, m_Zero())) {
     switch (Pred) {
     case CmpInst::ICMP_NE:  // X !=  0 -> X
     case CmpInst::ICMP_UGT: // X >u  0 -> X
     case CmpInst::ICMP_SLT: // X <s  0 -> X
       return LHS;
+
+    case CmpInst::ICMP_EQ:  // not(X) ==  0 -> X != 0 -> X
+    case CmpInst::ICMP_ULE: // not(X) <=u 0 -> X >u 0 -> X
+    case CmpInst::ICMP_SGE: // not(X) >=s 0 -> X <s 0 -> X
+      if (Value *X = ExtractNotLHS(LHS))
+        return X;
+      break;
 
     case CmpInst::ICMP_ULT: // X <u  0 -> false
     case CmpInst::ICMP_SGT: // X >s  0 -> false
@@ -2721,6 +2757,13 @@ static Value *simplifyICmpOfBools(CmpInst::Predicate Pred, Value *LHS,
     case CmpInst::ICMP_UGE: // X >=u  1 -> X
     case CmpInst::ICMP_SLE: // X <=s -1 -> X
       return LHS;
+
+    case CmpInst::ICMP_NE:  // not(X) !=  1 -> X ==   1 -> X
+    case CmpInst::ICMP_ULT: // not(X) <=u 1 -> X >=u  1 -> X
+    case CmpInst::ICMP_SGT: // not(X) >s  1 -> X <=s -1 -> X
+      if (Value *X = ExtractNotLHS(LHS))
+        return X;
+      break;
 
     case CmpInst::ICMP_UGT: // X >u   1 -> false
     case CmpInst::ICMP_SLT: // X <s  -1 -> false
@@ -2851,7 +2894,8 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   if (RHS_CR.isFullSet())
     return ConstantInt::getTrue(ITy);
 
-  ConstantRange LHS_CR = computeConstantRange(LHS, IIQ.UseInstrInfo);
+  ConstantRange LHS_CR =
+      computeConstantRange(LHS, CmpInst::isSigned(Pred), IIQ.UseInstrInfo);
   if (!LHS_CR.isFullSet()) {
     if (RHS_CR.contains(LHS_CR))
       return ConstantInt::getTrue(ITy);
@@ -5886,9 +5930,9 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
       auto Attr = Call->getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (!Attr.isValid())
         return nullptr;
-      unsigned VScaleMin, VScaleMax;
-      std::tie(VScaleMin, VScaleMax) = Attr.getVScaleRangeArgs();
-      if (VScaleMin == VScaleMax && VScaleMax != 0)
+      unsigned VScaleMin = Attr.getVScaleRangeMin();
+      Optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
+      if (VScaleMax && VScaleMin == VScaleMax)
         return ConstantInt::get(F->getReturnType(), VScaleMin);
       return nullptr;
     }
