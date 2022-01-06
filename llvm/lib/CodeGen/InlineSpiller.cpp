@@ -489,6 +489,8 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
         LLVM_DEBUG(dbgs() << "Redundant spill " << Idx << '\t' << MI);
         // eliminateDeadDefs won't normally remove stores, so switch opcode.
         MI.setDesc(TII.get(TargetOpcode::KILL));
+        for (MachineOperand &MO : MI.defs())
+          MO.setIsDead();
         DeadDefs.push_back(&MI);
         ++NumSpillsRemoved;
         if (HSpiller.rmFromMergeableSpills(MI, StackSlot))
