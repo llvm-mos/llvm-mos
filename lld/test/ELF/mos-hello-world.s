@@ -1,4 +1,5 @@
-; RUN: llvm-mc -g -triple mos --filetype=obj -I %S/Inputs -o=%t.obj %s 
+; REQUIRES: mos
+; RUN: llvm-mc -g -triple mos --filetype=obj -I %S/Inputs -o=%t.obj %s
 ; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.obj 
 ; RUN: llvm-readelf --all %t.obj
 ; RUN: lld -flavor gnu %t.obj -o %t.elf -L %S/Inputs %S/Inputs/mos-c64.ld
