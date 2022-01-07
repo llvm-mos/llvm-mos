@@ -31,7 +31,6 @@
 namespace llvm {
 // Forward declarations.
 class LegalizerInfo;
-class Legalizer;
 class MachineRegisterInfo;
 class GISelChangeObserver;
 class LostDebugLocObserver;

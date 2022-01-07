@@ -1,4 +1,4 @@
-//===- DialectLinalg.cpp - 'sparse_tensor' dialect submodule --------------===//
+//===- DialectSparseTensor.cpp - 'sparse_tensor' dialect submodule --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ using namespace mlir;
 using namespace mlir::python::adaptors;
 
 void mlir::python::populateDialectSparseTensorSubmodule(
-    py::module m, const py::module &irModule) {
+    const py::module &m, const py::module &irModule) {
   auto attributeClass = irModule.attr("Attribute");
 
   py::enum_<MlirSparseTensorDimLevelType>(m, "DimLevelType", py::module_local())

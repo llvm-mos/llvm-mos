@@ -91,6 +91,16 @@ HexagonTargetLowering::initializeHVXLowering() {
 
   if (Subtarget.useHVX128BOps() && Subtarget.useHVXV68Ops() &&
       Subtarget.useHVXFloatingPoint()) {
+    setOperationAction(ISD::FMINNUM, MVT::v64f16, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::v64f16, Legal);
+    setOperationAction(ISD::FADD,    MVT::v64f16, Legal);
+    setOperationAction(ISD::FSUB,    MVT::v64f16, Legal);
+    setOperationAction(ISD::FMUL,    MVT::v64f16, Legal);
+    setOperationAction(ISD::FADD,    MVT::v32f32, Legal);
+    setOperationAction(ISD::FSUB,    MVT::v32f32, Legal);
+    setOperationAction(ISD::FMUL,    MVT::v32f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::v32f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::v32f32, Legal);
     setOperationAction(ISD::INSERT_SUBVECTOR,  MVT::v64f16, Custom);
     setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v64f16, Custom);
     setOperationAction(ISD::INSERT_SUBVECTOR,  MVT::v32f32, Custom);
@@ -122,6 +132,20 @@ HexagonTargetLowering::initializeHVXLowering() {
 
     setOperationAction(ISD::LOAD,    MVT::v64f32, Custom);
     setOperationAction(ISD::STORE,   MVT::v64f32, Custom);
+    setOperationAction(ISD::FADD,    MVT::v64f32, Custom);
+    setOperationAction(ISD::FSUB,    MVT::v64f32, Custom);
+    setOperationAction(ISD::FMUL,    MVT::v64f32, Custom);
+    setOperationAction(ISD::FMINNUM, MVT::v64f32, Custom);
+    setOperationAction(ISD::FMAXNUM, MVT::v64f32, Custom);
+    setOperationAction(ISD::VSELECT, MVT::v64f32, Custom);
+
+    if (Subtarget.useHVXQFloatOps()) {
+      setOperationAction(ISD::FP_EXTEND, MVT::v64f32, Custom);
+      setOperationAction(ISD::FP_ROUND, MVT::v64f16, Legal);
+    } else if (Subtarget.useHVXIEEEFPOps()) {
+      setOperationAction(ISD::FP_EXTEND, MVT::v64f32, Legal);
+      setOperationAction(ISD::FP_ROUND, MVT::v64f16, Legal);
+    }
 
     setOperationAction(ISD::MLOAD, MVT::v32f32, Custom);
     setOperationAction(ISD::MSTORE, MVT::v32f32, Custom);
@@ -185,6 +209,18 @@ HexagonTargetLowering::initializeHVXLowering() {
       setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteV);
     }
 
+    if (Subtarget.useHVXQFloatOps()) {
+      setOperationAction(ISD::SINT_TO_FP, T, Expand);
+      setOperationAction(ISD::UINT_TO_FP, T, Expand);
+      setOperationAction(ISD::FP_TO_SINT, T, Expand);
+      setOperationAction(ISD::FP_TO_UINT, T, Expand);
+    } else if (Subtarget.useHVXIEEEFPOps()) {
+      setOperationAction(ISD::SINT_TO_FP, T, Custom);
+      setOperationAction(ISD::UINT_TO_FP, T, Custom);
+      setOperationAction(ISD::FP_TO_SINT, T, Custom);
+      setOperationAction(ISD::FP_TO_UINT, T, Custom);
+    }
+
     setCondCodeAction(ISD::SETNE,  T, Expand);
     setCondCodeAction(ISD::SETLE,  T, Expand);
     setCondCodeAction(ISD::SETGE,  T, Expand);
@@ -246,7 +282,38 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::UMIN,   T, Custom);
       setOperationAction(ISD::UMAX,   T, Custom);
     }
+
+    setOperationAction(ISD::SINT_TO_FP, T, Custom);
+    setOperationAction(ISD::UINT_TO_FP, T, Custom);
+    setOperationAction(ISD::FP_TO_SINT, T, Custom);
+    setOperationAction(ISD::FP_TO_UINT, T, Custom);
   }
+
+  setCondCodeAction(ISD::SETNE,  MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETLE,  MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETGE,  MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETLT,  MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETONE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETOLE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETOGE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETOLT, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETUNE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETULE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETUGE, MVT::v64f16, Expand);
+  setCondCodeAction(ISD::SETULT, MVT::v64f16, Expand);
+
+  setCondCodeAction(ISD::SETNE,  MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETLE,  MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETGE,  MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETLT,  MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETONE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETOLE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETOGE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETOLT, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETUNE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETULE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETUGE, MVT::v32f32, Expand);
+  setCondCodeAction(ISD::SETULT, MVT::v32f32, Expand);
 
   // Boolean vectors.
 
@@ -1950,6 +2017,81 @@ HexagonTargetLowering::LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, {StoreLo, StoreHi});
 }
 
+SDValue HexagonTargetLowering::LowerHvxFpExtend(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  // This conversion only applies to QFloat.
+  assert(Subtarget.useHVXQFloatOps());
+
+  unsigned Opc = Op->getOpcode();
+  assert(Opc == ISD::FP_EXTEND);
+
+  MVT VecTy = ty(Op);
+  MVT ArgTy = ty(Op.getOperand(0));
+  const SDLoc &dl(Op);
+  assert(VecTy == MVT::v64f32 && ArgTy == MVT::v64f16);
+
+  SDValue F16Vec = Op.getOperand(0);
+
+  APFloat FloatVal = APFloat(1.0f);
+  bool Ignored;
+  FloatVal.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
+  SDValue Fp16Ones = DAG.getConstantFP(FloatVal, dl, ArgTy);
+  SDValue VmpyVec =
+      getInstr(Hexagon::V6_vmpy_qf32_hf, dl, VecTy, {F16Vec, Fp16Ones}, DAG);
+
+  MVT HalfTy = typeSplit(VecTy).first;
+  VectorPair Pair = opSplit(VmpyVec, dl, DAG);
+  SDValue LoVec =
+      getInstr(Hexagon::V6_vconv_sf_qf32, dl, HalfTy, {Pair.first}, DAG);
+  SDValue HiVec =
+      getInstr(Hexagon::V6_vconv_sf_qf32, dl, HalfTy, {Pair.second}, DAG);
+
+  SDValue ShuffVec =
+      getInstr(Hexagon::V6_vshuffvdd, dl, VecTy,
+               {HiVec, LoVec, DAG.getConstant(-4, dl, MVT::i32)}, DAG);
+
+  return ShuffVec;
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxConvertFpInt(SDValue Op, SelectionDAG &DAG)
+    const {
+  // This conversion only applies to IEEE.
+  assert(Subtarget.useHVXIEEEFPOps());
+
+  unsigned Opc = Op.getOpcode();
+  // Catch invalid conversion ops (just in case).
+  assert(Opc == ISD::FP_TO_SINT || Opc == ISD::FP_TO_UINT ||
+         Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP);
+  MVT ResTy = ty(Op);
+
+  if (Opc == ISD::FP_TO_SINT || Opc == ISD::FP_TO_UINT) {
+    MVT FpTy = ty(Op.getOperand(0)).getVectorElementType();
+    // There are only conversions of f16.
+    if (FpTy != MVT::f16)
+      return SDValue();
+
+    MVT IntTy = ResTy.getVectorElementType();
+    // Other int types aren't legal in HVX, so we shouldn't see them here.
+    assert(IntTy == MVT::i8 || IntTy == MVT::i16 || IntTy == MVT::i32);
+    // Conversions to i8 and i16 are legal.
+    if (IntTy == MVT::i8 || IntTy == MVT::i16)
+      return Op;
+  } else {
+    // Converting int -> fp.
+    if (ResTy.getVectorElementType() != MVT::f16)
+      return SDValue();
+    MVT IntTy = ty(Op.getOperand(0)).getVectorElementType();
+    // Other int types aren't legal in HVX, so we shouldn't see them here.
+    assert(IntTy == MVT::i8 || IntTy == MVT::i16 || IntTy == MVT::i32);
+    // i8, i16 -> f16 is legal.
+    if (IntTy == MVT::i8 || IntTy == MVT::i16)
+      return Op;
+  }
+
+  return SDValue();
+}
+
 SDValue
 HexagonTargetLowering::SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const {
   assert(!Op.isMachineOpcode());
@@ -2254,10 +2396,22 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::MLOAD:
       case ISD::MSTORE:
         return SplitHvxMemOp(Op, DAG);
+      case ISD::SINT_TO_FP:
+      case ISD::UINT_TO_FP:
+      case ISD::FP_TO_SINT:
+      case ISD::FP_TO_UINT:
+        if (ty(Op).getSizeInBits() == ty(Op.getOperand(0)).getSizeInBits())
+          return SplitHvxPairOp(Op, DAG);
+        break;
       case ISD::CTPOP:
       case ISD::CTLZ:
       case ISD::CTTZ:
       case ISD::MUL:
+      case ISD::FADD:
+      case ISD::FSUB:
+      case ISD::FMUL:
+      case ISD::FMINNUM:
+      case ISD::FMAXNUM:
       case ISD::MULHS:
       case ISD::MULHU:
       case ISD::AND:
@@ -2309,6 +2463,11 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::MSTORE:                  return LowerHvxMaskedOp(Op, DAG);
     // Unaligned loads will be handled by the default lowering.
     case ISD::LOAD:                    return SDValue();
+    case ISD::FP_EXTEND:               return LowerHvxFpExtend(Op, DAG);
+    case ISD::FP_TO_SINT:
+    case ISD::FP_TO_UINT:
+    case ISD::SINT_TO_FP:
+    case ISD::UINT_TO_FP:              return LowerHvxConvertFpInt(Op, DAG);
   }
 #ifndef NDEBUG
   Op.dumpr(&DAG);
