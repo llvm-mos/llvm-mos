@@ -78,18 +78,6 @@ legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: br_imm
-    ; 6502: successors: %bb.0(0x80000000)
-    ; 6502-NEXT: {{  $}}
-    ; 6502-NEXT: [[COPY:%[0-9]+]]:cv_gpr_lsb = COPY $c
-    ; 6502-NEXT: GBR %bb.0, [[COPY]], 0
-    ; 6502-NEXT: RTS
-    ; 65C02-LABEL: name: br_imm
-    ; 65C02: successors: %bb.0(0x80000000)
-    ; 65C02-NEXT: {{  $}}
-    ; 65C02-NEXT: [[COPY:%[0-9]+]]:cv_gpr_lsb = COPY $c
-    ; 65C02-NEXT: GBR %bb.0, [[COPY]], 0
-    ; 65C02-NEXT: RTS
     ; CHECK-LABEL: name: br_indirect
     ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm target-flags(lo) blockaddress(@br_indirect, %ir-block.entry)
     ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm target-flags(hi) blockaddress(@br_indirect, %ir-block.entry)
