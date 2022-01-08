@@ -213,6 +213,26 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: cmp_absolute_x
+# CHECK-LABEL: cmp_absolute_x
+body: |
+  bb.0.entry:
+    $c = CMPIdx $a, 1234, $x
+    ; CHECK: cmp 1234,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: cmp_absolute_y
+# CHECK-LABEL: cmp_absolute_y
+body: |
+  bb.0.entry:
+    $c = CMPIdx $a, 1234, $y
+    ; CHECK: cmp 1234,y
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |

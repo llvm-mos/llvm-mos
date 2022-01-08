@@ -166,7 +166,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
   case MOS::CMPImm:
   case MOS::CMPImag8:
-  case MOS::CMPAbs: {
+  case MOS::CMPAbs:
+  case MOS::CMPIdx: {
     switch (MI->getOpcode()) {
     case MOS::CMPImm:
       switch (MI->getOperand(1).getReg()) {
@@ -210,6 +211,18 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::CPY_Absolute);
+        break;
+      }
+      break;
+    case MOS::CMPIdx:
+      switch (MI->getOperand(3).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::X:
+        OutMI.setOpcode(MOS::CMP_AbsoluteX);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::CMP_AbsoluteY);
         break;
       }
       break;

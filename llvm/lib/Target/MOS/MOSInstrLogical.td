@@ -269,29 +269,15 @@ def LDImm : MOSImmediateLoad<GPR, i8imm>;
 // Comparison Instructions
 //===---------------------------------------------------------------------===//
 
-// CMP imm, CPX imm, CPY imm
-def CMPImm : MOSLogicalInstr {
+class MOSCMP : MOSLogicalInstr {
   dag OutOperandList = (outs Cc:$carry);
-  dag InOperandList = (ins GPR:$l, i8imm:$r);
-
   let isCompare = true;
 }
 
-// CMP imag8, CPX imag8, CPY imag8
-def CMPImag8 : MOSLogicalInstr {
-  dag OutOperandList = (outs Cc:$carry);
-  dag InOperandList = (ins GPR:$l, Imag8:$r);
-
-  let isCompare = true;
-}
-
-// CMP abs, CPX abs, CPY abs
-def CMPAbs : MOSLogicalInstr {
-  dag OutOperandList = (outs Cc:$carry);
-  dag InOperandList = (ins GPR:$l, i16imm:$r);
-
-  let isCompare = true;
-}
+def CMPImm : MOSCMP { dag InOperandList = (ins GPR:$l, i8imm:$r); }
+def CMPImag8 : MOSCMP { dag InOperandList = (ins GPR:$l, Imag8:$r); }
+def CMPAbs : MOSCMP { dag InOperandList = (ins GPR:$l, i16imm:$addr); }
+def CMPIdx : MOSCMP { dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx); }
 
 //===---------------------------------------------------------------------===//
 // Increment/Decrement Instructions

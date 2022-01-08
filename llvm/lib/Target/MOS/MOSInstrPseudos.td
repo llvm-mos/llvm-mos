@@ -171,9 +171,18 @@ class MOSCMPNZ : MOSPseudo {
   let isCompare = true;
 }
 
-def CMPNZImm : MOSCMPNZ { dag InOperandList = (ins GPR:$l, i8imm:$r); }
-def CMPNZImag8 : MOSCMPNZ { dag InOperandList = (ins GPR:$l, Imag8:$r); }
-def CMPNZAbs : MOSCMPNZ { dag InOperandList = (ins GPR:$l, i16imm:$r); }
+def CMPNZImm : MOSCMPNZ {
+  dag InOperandList = (ins GPR:$l, i8imm:$r);
+}
+def CMPNZImag8 : MOSCMPNZ {
+  dag InOperandList = (ins GPR:$l, Imag8:$r);
+}
+def CMPNZAbs : MOSCMPNZ {
+  dag InOperandList = (ins GPR:$l, i16imm:$addr);
+}
+def CMPNZIdx : MOSCMPNZ {
+  dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
+}
 
 def SBCNZImm : MOSPseudo {
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
@@ -189,45 +198,29 @@ def SBCNZImag8 : MOSPseudo {
 
 // Terminator versions of CMP. Each of these instructions is ensured to stay
 // adjacent to the branch that consumes its N or Z value.
-
-def CMPImmTerm : MOSPseudo {
+class MOSCMPTerm : MOSPseudo {
   dag OutOperandList = (outs Cc:$carry);
+
+  let Defs = [NZ];
+
+  let isCompare = true;
+  let isTerminator = true;
+}
+
+def CMPImmTerm : MOSCMPTerm {
   dag InOperandList = (ins GPR:$l, i8imm:$r);
-
-  let Defs = [NZ];
-
-  let isCompare = true;
-  let isTerminator = true;
 }
-
-def CMPImag8Term : MOSPseudo {
-  dag OutOperandList = (outs Cc:$carry);
+def CMPImag8Term : MOSCMPTerm {
   dag InOperandList = (ins GPR:$l, Imag8:$r);
-
-  let Defs = [NZ];
-
-  let isCompare = true;
-  let isTerminator = true;
 }
-
-def CMPAbsTerm : MOSPseudo {
-  dag OutOperandList = (outs Cc:$carry);
+def CMPAbsTerm : MOSCMPTerm {
   dag InOperandList = (ins GPR:$l, i16imm:$addr);
-
-  let Defs = [NZ];
-
-  let isCompare = true;
-  let isTerminator = true;
 }
-
-def CMPZTerm : MOSPseudo {
-  dag OutOperandList = (outs Cc:$carry);
+def CMPIdxTerm : MOSCMPTerm {
+  dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
+}
+def CMPZTerm : MOSCMPTerm {
   dag InOperandList = (ins Anyi8:$val);
-
-  let Defs = [NZ];
-
-  let isCompare = true;
-  let isTerminator = true;
 }
 
 //===---------------------------------------------------------------------===//
