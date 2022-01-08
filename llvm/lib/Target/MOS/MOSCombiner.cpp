@@ -18,6 +18,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSLegalizerInfo.h"
+#include "MOSSubtarget.h"
 
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -227,7 +228,7 @@ bool MOSCombinerHelperState::applyExtractLowBit(MachineInstr &MI,
     B.buildNot(MI.getOperand(0).getReg(), EvenShift.getReg(1));
   else
     B.buildCopy(MI.getOperand(0).getReg(), EvenShift.getReg(1));
-  MOSLegalizerInfo Legalizer;
+  MOSLegalizerInfo Legalizer(B.getMF().getSubtarget<MOSSubtarget>());
   LegalizerHelper LegalizerHelper(B.getMF(), Legalizer, Observer, B);
   B.setInsertPt(B.getMBB(), *EvenShift);
   if (!Legalizer.legalizeLshrEShlE(LegalizerHelper, MRI, *EvenShift))

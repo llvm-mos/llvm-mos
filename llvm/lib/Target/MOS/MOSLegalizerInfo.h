@@ -18,9 +18,11 @@
 
 namespace llvm {
 
+class MOSSubtarget;
+
 class MOSLegalizerInfo : public LegalizerInfo {
 public:
-  MOSLegalizerInfo();
+  MOSLegalizerInfo(const MOSSubtarget &STI);
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
