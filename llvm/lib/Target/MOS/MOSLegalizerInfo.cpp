@@ -21,6 +21,7 @@
 #include "MOSInstrInfo.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
+#include "MOSSubtarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
@@ -46,7 +47,7 @@ using namespace llvm;
 using namespace TargetOpcode;
 using namespace MIPatternMatch;
 
-MOSLegalizerInfo::MOSLegalizerInfo() {
+MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   using namespace LegalityPredicates;
   using namespace LegalizeMutations;
 
@@ -259,7 +260,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
 
   getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({P});
 
-  getActionDefinitionsBuilder(G_BRJT).customFor({P});
+  getActionDefinitionsBuilder(G_BRJT).customIf(
+      all(typeIs(0, P), scalarWiderThan(1, 8)));
+
   getActionDefinitionsBuilder(G_JUMP_TABLE).unsupported();
 
   // Variadic Arguments
@@ -275,6 +278,9 @@ MOSLegalizerInfo::MOSLegalizerInfo() {
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
+
+  getLegacyLegalizerInfo().computeTables();
+  verify(*STI.getInstrInfo());
 }
 
 bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,

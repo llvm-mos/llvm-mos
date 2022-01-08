@@ -39,7 +39,7 @@ MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
     : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), InstrInfo(),
       RegInfo(), FrameLowering(),
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)),
-      CallLoweringInfo(&TLInfo),
+      CallLoweringInfo(&TLInfo), Legalizer(*this),
       InstSelector(createMOSInstructionSelector(TM, *this, RegBankInfo)),
       InlineAsmLoweringInfo(&TLInfo) {}
 
