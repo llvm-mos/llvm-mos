@@ -282,6 +282,15 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   LLT P = LLT::pointer(0, 16);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   switch (MI.getIntrinsicID()) {
+    case Intrinsic::trap: {
+      auto &Ctx = MI.getMF()->getFunction().getContext();
+      auto *RetTy = Type::getVoidTy(Ctx);
+      if(!createLibcall(Builder, "abort", {{}, RetTy, 0}, {}, CallingConv::C)) {
+        return false;
+      }
+      MI.eraseFromParent();
+      return true;
+    }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
     auto Tmp =
