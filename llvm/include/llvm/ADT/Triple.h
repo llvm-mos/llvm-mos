@@ -815,6 +815,11 @@ public:
     return Env == Triple::GNUX32 || Env == Triple::MuslX32;
   }
 
+  /// Tests whether the target is MOS.
+  bool isMOS() const {
+    return getArch() == Triple::mos;
+  }
+
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
     return !(isOSBinFormatMachO() || isOSBinFormatXCOFF());
