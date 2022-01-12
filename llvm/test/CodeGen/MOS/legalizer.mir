@@ -1762,6 +1762,16 @@ body: |
     RTS implicit %1
 ...
 ---
+name: trap
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: trap
+    ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: JSR &abort, mos_csr
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+...
+---
 name: dyn_stackalloc
 body: |
   bb.0.entry:
