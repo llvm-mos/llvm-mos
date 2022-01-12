@@ -217,8 +217,41 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
 static bool shouldFoldMemAccess(const MachineInstr &Dst,
                                 const MachineInstr &Src, AAResults *AA) {
   assert(Src.mayLoadOrStore());
+
+  // For now, don't attempt to fold across basic block boundaries.
   if (Dst.getParent() != Src.getParent())
     return false;
+
+  // Does it pay off to fold the access? Depends on the number of users.
+  const auto &MRI = Dst.getMF()->getRegInfo();
+  const auto Users = MRI.use_nodbg_instructions(Src.getOperand(0).getReg());
+  const auto NumUsers = std::distance(Users.begin(), Users.end());
+
+  // Looking at this pessimistically, if we don't fold the access, all
+  // references may refer to an Imag8 reg that needs to be copied to/from a GPR.
+  // This costs 2 bytes and 3 cycles. We also need to do the actual load/store.
+  // If we do fold the access, then we get rid of both that and the load/store.
+  // This makes the first reference free; as it's not any more expensive than
+  // the load/store. However, for each reference past the first, we pay an
+  // overhead for using the addressing over the imaginary addressing mode. This
+  // cost is: Absolute: 1 byte, 1 cycle Absolute Indexed: 1 byte, 1.5 cycles
+  // Indirect Indexed: 2.5 cycles
+  // So, it pays off to fold k references of each addressing mode if:
+  // Absolute: k*(1+1) < (2+3) = 5; 2k < 5; k < 2.5; k <= 2
+  // Absolute Indexed: k*(1+1.5) < 5; 2.5k < 5; k <= 1
+  // Indirect Indexed: k*(0+2.5) < 5; 2.5k < 5; k <= 1
+  int MaxNumUsers;
+  switch (Src.getOpcode()) {
+  default:
+    MaxNumUsers = 1;
+    break;
+  case MOS::G_LOAD_ABS:
+    MaxNumUsers = 2;
+  }
+  if (NumUsers > MaxNumUsers)
+    return false;
+
+  // Look for intervening instructions that cannot be folded across.
   for (MachineBasicBlock::const_iterator
            I = std::next(MachineBasicBlock::const_iterator(Src)),
            E = Dst;
@@ -236,12 +269,7 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
         return false;
     }
   }
-  const auto &MRI = Dst.getMF()->getRegInfo();
-  for (MachineInstr &UseMI :
-       MRI.use_nodbg_instructions(Src.getOperand(0).getReg())) {
-    if (UseMI.isCopy())
-      return false;
-  }
+
   return true;
 }
 

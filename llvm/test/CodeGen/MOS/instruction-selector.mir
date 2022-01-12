@@ -88,30 +88,59 @@ body: |
     RTS implicit %2
 ...
 ---
-name: add_abs_copy
+name: add_abs_2_uses
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: add_abs_copy
-    ; 6502: [[COPY:%[0-9]+]]:imag8 = COPY $x
-    ; 6502-NEXT: [[LDAbs:%[0-9]+]]:ac = LDAbs i16 1234 :: (load (s8))
+    ; 6502-LABEL: name: add_abs_2_uses
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
     ; 6502-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
-    ; 6502-NEXT: %2:ac, dead %5:cc, dead %4:vc = ADCImag8 [[LDAbs]], [[COPY]], [[LDCImm]]
+    ; 6502-NEXT: [[ADCAbs:%[0-9]+]]:ac, [[ADCAbs1:%[0-9]+]]:cc, [[ADCAbs2:%[0-9]+]]:vc = ADCAbs [[COPY]], i16 1234, [[LDCImm]]
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[LDAbs]]
-    ; 6502-NEXT: RTS implicit %2, implicit [[COPY1]]
-    ; 65C02-LABEL: name: add_abs_copy
-    ; 65C02: [[COPY:%[0-9]+]]:imag8 = COPY $x
-    ; 65C02-NEXT: [[LDAbs:%[0-9]+]]:ac = LDAbs i16 1234 :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[ADCAbs]], implicit [[COPY1]]
+    ; 65C02-LABEL: name: add_abs_2_uses
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
     ; 65C02-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
-    ; 65C02-NEXT: %2:ac, dead %5:cc, dead %4:vc = ADCImag8 [[LDAbs]], [[COPY]], [[LDCImm]]
+    ; 65C02-NEXT: [[ADCAbs:%[0-9]+]]:ac, [[ADCAbs1:%[0-9]+]]:cc, [[ADCAbs2:%[0-9]+]]:vc = ADCAbs [[COPY]], i16 1234, [[LDCImm]]
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[LDAbs]]
-    ; 65C02-NEXT: RTS implicit %2, implicit [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[ADCAbs]], implicit [[COPY1]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     %2:any(s8) = G_ADD %1, %0
     %3:any(s8) = COPY %1
     RTS implicit %2, implicit %3
+...
+---
+name: add_abs_3_uses
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: add_abs_3_uses
+    ; 6502: [[COPY:%[0-9]+]]:imag8 = COPY $x
+    ; 6502-NEXT: [[LDAbs:%[0-9]+]]:ac = LDAbs i16 1234 :: (load (s8))
+    ; 6502-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
+    ; 6502-NEXT: %2:ac, dead %6:cc, dead %5:vc = ADCImag8 [[LDAbs]], [[COPY]], [[LDCImm]]
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[LDAbs]]
+    ; 6502-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY [[LDAbs]]
+    ; 6502-NEXT: RTS implicit %2, implicit [[COPY1]], implicit [[COPY2]]
+    ; 65C02-LABEL: name: add_abs_3_uses
+    ; 65C02: [[COPY:%[0-9]+]]:imag8 = COPY $x
+    ; 65C02-NEXT: [[LDAbs:%[0-9]+]]:ac = LDAbs i16 1234 :: (load (s8))
+    ; 65C02-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
+    ; 65C02-NEXT: %2:ac, dead %6:cc, dead %5:vc = ADCImag8 [[LDAbs]], [[COPY]], [[LDCImm]]
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[LDAbs]]
+    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY [[LDAbs]]
+    ; 65C02-NEXT: RTS implicit %2, implicit [[COPY1]], implicit [[COPY2]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s8) = G_ADD %1, %0
+    %3:any(s8) = COPY %1
+    %4:any(s8) = COPY %1
+    RTS implicit %2, implicit %3, implicit %4
 ...
 ---
 name: add_abs_across_store
