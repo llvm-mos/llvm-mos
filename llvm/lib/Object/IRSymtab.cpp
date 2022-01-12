@@ -56,6 +56,7 @@ static const char *PreservedSymbols[] = {
     "__divmodhi4",
     "__divmodsi4",
     "__divmoddi4",
+    "abort",
     // There are global variables, so put it here instead of in
     // RuntimeLibcalls.def.
     // TODO: Are there similar such variables?

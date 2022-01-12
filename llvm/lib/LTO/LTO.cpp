@@ -1160,6 +1160,7 @@ static const char *libcallRoutineNames[] = {
   "__divmodhi4",
   "__divmodsi4",
   "__divmoddi4",
+  "abort",
 };
 
 ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
