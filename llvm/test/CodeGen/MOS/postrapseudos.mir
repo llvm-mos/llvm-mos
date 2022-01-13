@@ -59,41 +59,45 @@ name: cmpimmterm
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: cmpimmterm
-    ; CHECK: $c = CMPImm $a, 42, implicit-def $nz, implicit-def $nz
+    ; CHECK: $c = CMPImm $a, 42, implicit-def $nz
     $c = CMPImmTerm $a, 42, implicit-def $nz
 ...
 ---
 name: cmpimag8term
 body: |
   bb.0.entry:
-    liveins: $rc2
     ; CHECK-LABEL: name: cmpimag8term
-    ; CHECK: $c = CMPImag8 $a, $rc2, implicit-def $nz, implicit-def $nz
+    ; CHECK: $c = CMPImag8 $a, $rc2, implicit-def $nz
     $c = CMPImag8Term $a, $rc2, implicit-def $nz
 ...
 ---
 name: cmpabsterm
 body: |
   bb.0.entry:
-    liveins: $rc2
     ; CHECK-LABEL: name: cmpabsterm
-    ; CHECK: $c = CMPAbs $a, 1234, implicit-def $nz, implicit-def $nz
+    ; CHECK: $c = CMPAbs $a, 1234, implicit-def $nz
     $c = CMPAbsTerm $a, 1234, implicit-def $nz
 ...
 ---
 name: cmpidxterm
 body: |
   bb.0.entry:
-    liveins: $rc2, $x
     ; CHECK-LABEL: name: cmpidxterm
-    ; CHECK: $c = CMPIdx $a, 1234, $x, implicit-def $nz, implicit-def $nz
+    ; CHECK: $c = CMPIdx $a, 1234, $x, implicit-def $nz
     $c = CMPIdxTerm $a, 1234, $x, implicit-def $nz
+...
+---
+name: cmpindirterm
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: cmpindirterm
+    ; CHECK: $c = CMPIndir $a, $rs1, $y, implicit-def $nz
+    $c = CMPIndirTerm $a, $rs1, $y, implicit-def $nz
 ...
 ---
 name: cmpnzimm_n
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzimm_n
     ; CHECK: $c = CMPImm $a, 42, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
@@ -103,7 +107,6 @@ body: |
 name: cmpnzimm_z
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzimm_z
     ; CHECK: $c = CMPImm $a, 42, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
@@ -113,7 +116,6 @@ body: |
 name: cmpnzimm_no_n_no_z
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzimm_no_n_no_z
     ; CHECK: $c = CMPImm $a, 42
     $c, $noreg, $noreg = CMPNZImm $a, 42
@@ -122,7 +124,6 @@ body: |
 name: cmpnzimag8_n
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzimag8_n
     ; CHECK: $c = CMPImag8 $a, $rc2, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
@@ -132,7 +133,6 @@ body: |
 name: cmpnzimag8_z
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzimag8_z
     ; CHECK: $c = CMPImag8 $a, $rc2, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
@@ -142,7 +142,6 @@ body: |
 name: cmpnzabs_n
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzabs_n
     ; CHECK: $c = CMPAbs $a, 1234, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
@@ -152,7 +151,6 @@ body: |
 name: cmpnzabs_z
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzabs_z
     ; CHECK: $c = CMPAbs $a, 1234, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
@@ -162,7 +160,6 @@ body: |
 name: cmpnzidx_n
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzidx_n
     ; CHECK: $c = CMPIdx $a, 1234, $y, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
@@ -172,17 +169,33 @@ body: |
 name: cmpnzidx_z
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: cmpnzidx_z
     ; CHECK: $c = CMPIdx $a, 1234, $y, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
     $c, $noreg, $ylsb = CMPNZIdx $a, 1234, $y
 ...
 ---
+name: cmpnzindir_n
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: cmpnzindir_n
+    ; CHECK: $c = CMPIndir $a, $rs1, $y, implicit-def $nz
+    ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
+    $c, $xlsb, $noreg = CMPNZIndir $a, $rs1, $y
+...
+---
+name: cmpnzindir_z
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: cmpnzindir_z
+    ; CHECK: $c = CMPIndir $a, $rs1, $y, implicit-def $nz
+    ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
+    $c, $noreg, $ylsb = CMPNZIndir $a, $rs1, $y
+...
+---
 name: sbcnzimm_n
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: sbcnzimm_n
     ; CHECK: $a, $c, $v = SBCImm $a, 42, $c, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
@@ -192,7 +205,6 @@ body: |
 name: sbcnzimm_z
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: sbcnzimm_z
     ; CHECK: $a, $c, $v = SBCImm $a, 42, $c, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
@@ -202,7 +214,6 @@ body: |
 name: sbcnzimag8_n
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: sbcnzimag8_n
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
@@ -212,7 +223,6 @@ body: |
 name: sbcnzimag8_z
 body: |
   bb.0.entry:
-    liveins: $rc2, $c
     ; CHECK-LABEL: name: sbcnzimag8_z
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
@@ -222,7 +232,6 @@ body: |
 name: br_c
 body: |
   bb.0.entry:
-    liveins: $c
     ; CHECK-LABEL: name: br_c
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
@@ -235,7 +244,6 @@ body: |
 name: br_v
 body: |
   bb.0.entry:
-    liveins: $v
     ; CHECK-LABEL: name: br_v
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
@@ -248,7 +256,6 @@ body: |
 name: br_alsb_0
 body: |
   bb.0.entry:
-    liveins: $alsb
     ; CHECK-LABEL: name: br_alsb_0
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
@@ -262,7 +269,6 @@ body: |
 name: br_alsb_1
 body: |
   bb.0.entry:
-    liveins: $alsb
     ; CHECK-LABEL: name: br_alsb_1
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
@@ -276,7 +282,6 @@ body: |
 name: br_xlsb
 body: |
   bb.0.entry:
-    liveins: $xlsb
     ; CHECK-LABEL: name: br_xlsb
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
@@ -290,7 +295,6 @@ body: |
 name: br_ylsb
 body: |
   bb.0.entry:
-    liveins: $ylsb
     ; CHECK-LABEL: name: br_ylsb
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
@@ -304,7 +308,6 @@ body: |
 name: ldaidx
 body: |
   bb.0.entry:
-    liveins: $x
     ; CHECK-LABEL: name: ldaidx
     ; CHECK: $a = LDAIdx 1234, $x
     $a = LDIdx 1234, $x
@@ -313,7 +316,6 @@ body: |
 name: ldxidx_y
 body: |
   bb.0.entry:
-    liveins: $y
     ; CHECK-LABEL: name: ldxidx_y
     ; CHECK: $x = LDXIdx 1234, $y
     $x = LDIdx 1234, $y
@@ -322,7 +324,6 @@ body: |
 name: ldxidx_x
 body: |
   bb.0.entry:
-    liveins: $x
     ; CHECK-LABEL: name: ldxidx_x
     ; CHECK: [[LDAIdx:%[0-9]+]]:ac = LDAIdx 1234, $x
     ; CHECK-NEXT: $x = TA [[LDAIdx]]
@@ -334,7 +335,6 @@ body: |
 name: ldyidx_x
 body: |
   bb.0.entry:
-    liveins: $x
     ; CHECK-LABEL: name: ldyidx_x
     ; CHECK: $y = LDYIdx 1234, $x
     $y = LDIdx 1234, $x

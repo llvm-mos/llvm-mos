@@ -686,6 +686,32 @@ inline CmpIdxTerm_match m_CmpIdxTerm(Register &LHS, MachineOperand &Addr,
   return {LHS, Addr, Idx, Flag, AA};
 }
 
+struct CmpIndirTerm_match : public Cmp_match {
+  Register &Addr;
+  Register &Idx;
+  AAResults *AA;
+
+  CmpIndirTerm_match(Register &LHS, Register &Addr, Register &Idx,
+                     Register &Flag, AAResults *AA)
+      : Cmp_match(LHS, Flag), Addr(Addr), Idx(Idx), AA(AA) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register CondReg) {
+    if (!Cmp_match::match(MRI, CondReg))
+      return false;
+    return mi_match(CondMI->getOperand(6).getReg(), MRI,
+                    m_FoldedLdIndirIdx(*CondMI, Addr, Idx, AA));
+  }
+};
+
+// Match one of the outputs of a G_SBC to a CMPIndirTerm operation. Flag is the
+// physical (N or Z) register corresponding to the output by which the G_SBC
+// was reached.
+inline CmpIndirTerm_match m_CmpIndirTerm(Register &LHS, Register &Addr,
+                                         Register &Idx, Register &Flag,
+                                         AAResults *AA) {
+  return {LHS, Addr, Idx, Flag, AA};
+}
+
 bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
@@ -715,6 +741,11 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
       mi_match(CondReg, MRI, m_CmpIdxTerm(LHS, Addr, Idx, Flag, AA))) {
     Compare =
         Builder.buildInstr(MOS::CMPIdxTerm, {S1}, {LHS}).add(Addr).addUse(Idx);
+  }
+  Register RegAddr;
+  if (!Compare &&
+      mi_match(CondReg, MRI, m_CmpIndirTerm(LHS, RegAddr, Idx, Flag, AA))) {
+    Compare = Builder.buildInstr(MOS::CMPIndirTerm, {S1}, {LHS, RegAddr, Idx});
   }
   Register RHS;
   if (!Compare && mi_match(CondReg, MRI, m_CmpImag8Term(LHS, RHS, Flag)))
@@ -808,6 +839,12 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
                               {MI.getOperand(5)})
                   .add(Addr)
                   .addUse(Idx);
+    }
+    Register RegAddr;
+    if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
+                           m_FoldedLdIndirIdx(MI, RegAddr, Idx, AA))) {
+      Instr = Builder.buildInstr(MOS::CMPNZIndir, {MI.getOperand(1), N, Z},
+                                 {MI.getOperand(5), RegAddr, Idx});
     }
     if (!Instr) {
       Instr = Builder.buildInstr(MOS::CMPNZImag8, {MI.getOperand(1), N, Z},

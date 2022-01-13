@@ -748,11 +748,11 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::LDZ:
     expandLDZ(Builder);
     break;
-  // NZ
   case MOS::CMPNZImm:
   case MOS::CMPNZImag8:
   case MOS::CMPNZAbs:
   case MOS::CMPNZIdx:
+  case MOS::CMPNZIndir:
   case MOS::SBCNZImm:
   case MOS::SBCNZImag8:
     expandNZ(Builder);
@@ -760,6 +760,7 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::CMPImmTerm:
   case MOS::CMPImag8Term:
   case MOS::CMPAbsTerm:
+  case MOS::CMPIndirTerm:
   case MOS::CMPIdxTerm:
     expandCMPTerm(Builder);
     break;
@@ -913,6 +914,7 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
   case MOS::CMPNZImag8:
   case MOS::CMPNZAbs:
   case MOS::CMPNZIdx:
+  case MOS::CMPNZIndir:
     N = MI.getOperand(1).getReg();
     Z = MI.getOperand(2).getReg();
     break;
@@ -941,7 +943,8 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
   case MOS::CMPNZImm:
   case MOS::CMPNZImag8:
   case MOS::CMPNZAbs:
-  case MOS::CMPNZIdx: {
+  case MOS::CMPNZIdx:
+  case MOS::CMPNZIndir: {
     unsigned Opcode;
     switch (MI.getOpcode()) {
     case MOS::CMPNZImm:
@@ -955,6 +958,9 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
       break;
     case MOS::CMPNZIdx:
       Opcode = MOS::CMPIdx;
+      break;
+    case MOS::CMPNZIndir:
+      Opcode = MOS::CMPIndir;
       break;
     }
     Op = Builder.buildInstr(Opcode, {MI.getOperand(0)}, {});
@@ -999,9 +1005,10 @@ void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
   case MOS::CMPIdxTerm:
     MI.setDesc(Builder.getTII().get(MOS::CMPIdx));
     break;
+  case MOS::CMPIndirTerm:
+    MI.setDesc(Builder.getTII().get(MOS::CMPIndir));
+    break;
   }
-  MI.addOperand(
-      MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true, /*isImp=*/true));
 }
 
 //===---------------------------------------------------------------------===//

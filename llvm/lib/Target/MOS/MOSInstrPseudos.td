@@ -183,6 +183,9 @@ def CMPNZAbs : MOSCMPNZ {
 def CMPNZIdx : MOSCMPNZ {
   dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
 }
+def CMPNZIndir : MOSCMPNZ {
+  dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
+}
 
 def SBCNZImm : MOSPseudo {
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
@@ -218,6 +221,9 @@ def CMPAbsTerm : MOSCMPTerm {
 }
 def CMPIdxTerm : MOSCMPTerm {
   dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
+}
+def CMPIndirTerm : MOSCMPTerm {
+  dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
 }
 def CMPZTerm : MOSCMPTerm {
   dag InOperandList = (ins Anyi8:$val);
