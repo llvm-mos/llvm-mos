@@ -453,7 +453,7 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
   Register Y =
       Builder.buildInstr(MOS::LDImm, {&MOS::YcRegClass}, {Offset}).getReg(0);
 
-  Builder.buildInstr(IsLoad ? MOS::LDYIndir : MOS::STYIndir)
+  Builder.buildInstr(IsLoad ? MOS::LDIndirIdx : MOS::STIndirIdx)
       .addReg(A, getDefRegState(IsLoad))
       .add(MI->getOperand(2))
       .addUse(Y)

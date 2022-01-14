@@ -96,7 +96,7 @@ let isAdd = true in {
     def ADCAbsIdx : MOSAddSub {
       dag InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx, Cc:$carryin);
     }
-    def ADCYIndir :
+    def ADCIndirIdx :
         MOSAddSub, PseudoInstExpansion<(ADC_IndirectIndexed addr8:$addr)> {
       dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx, Cc:$carryin);
     }
@@ -146,7 +146,7 @@ multiclass MOSBitwiseInstr<SDNode node> {
       let InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx);
     }
 
-    def YIndir :
+    def IndirIdx :
        MOSBitwiseBase,
        PseudoInstExpansion<
            (!cast<Instruction>(NAME#"_IndirectIndexed") addr8:$addr)> {
@@ -385,7 +385,7 @@ def LDYAbsIdx : MOSLoadIndexed<Yc, Xc>,
              PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)>;
 
 // LDA (zp),y
-def LDYIndir : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
+def LDIndirIdx : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
   dag OutOperandList = (outs Ac:$dst);
   dag InOperandList = (ins Imag16:$addr, Yc:$offset);
 }
@@ -402,7 +402,7 @@ def STAbsIdx : MOSStore {
   dag InOperandList = (ins Ac:$src, i16imm:$addr, XY:$idx);
 }
 // STA (zp),y
-def STYIndir : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
+def STIndirIdx : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)> {
   dag InOperandList = (ins Ac:$src, Imag16:$addr, Yc:$offset);
 }
 

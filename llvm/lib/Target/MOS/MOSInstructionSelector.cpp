@@ -408,7 +408,7 @@ bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
           m_GAdd(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)))) {
     Register CIn =
         Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
-    auto Adc = Builder.buildInstr(MOS::ADCYIndir)
+    auto Adc = Builder.buildInstr(MOS::ADCIndirIdx)
                    .addDef(MI.getOperand(0).getReg())
                    .addDef(MRI.createGenericVirtualRegister(S1))
                    .addDef(MRI.createGenericVirtualRegister(S1))
@@ -417,7 +417,7 @@ bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
                    .addUse(Idx)
                    .addUse(CIn);
     if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain ADCYIndir");
+      llvm_unreachable("Could not constrain ADCIndirIdx");
     MI.eraseFromParent();
     return true;
   }
@@ -499,19 +499,19 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
     Success = mi_match(
         MI.getOperand(0).getReg(), MRI,
         m_GAnd(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)));
-    Opcode = MOS::ANDYIndir;
+    Opcode = MOS::ANDIndirIdx;
     break;
   case MOS::G_XOR:
     Success = mi_match(
         MI.getOperand(0).getReg(), MRI,
         m_GXor(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)));
-    Opcode = MOS::EORYIndir;
+    Opcode = MOS::EORIndirIdx;
     break;
   case MOS::G_OR:
     Success =
         mi_match(MI.getOperand(0).getReg(), MRI,
                  m_GOr(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)));
-    Opcode = MOS::ORAYIndir;
+    Opcode = MOS::ORAIndirIdx;
     break;
   }
   if (Success) {
@@ -1092,7 +1092,7 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
     if (mi_match(L, MRI, m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)))
       std::swap(L, R);
     if (mi_match(R, MRI, m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA))) {
-      return Builder.buildInstr(MOS::ADCYIndir)
+      return Builder.buildInstr(MOS::ADCIndirIdx)
           .addDef(Result)
           .addDef(CarryOut)
           .addDef(MRI.createGenericVirtualRegister(S1))
@@ -1156,7 +1156,7 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
     Opcode = MOS::LDIdx;
     break;
   case MOS::G_LOAD_INDIR_IDX:
-    Opcode = MOS::LDYIndir;
+    Opcode = MOS::LDIndirIdx;
     break;
   case MOS::G_PHI:
     Opcode = MOS::PHI;
@@ -1168,7 +1168,7 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
     Opcode = MOS::STAbsIdx;
     break;
   case MOS::G_STORE_INDIR_IDX:
-    Opcode = MOS::STYIndir;
+    Opcode = MOS::STIndirIdx;
     break;
   }
   MI.setDesc(TII.get(Opcode));
