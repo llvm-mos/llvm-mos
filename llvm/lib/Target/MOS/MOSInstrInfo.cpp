@@ -786,7 +786,7 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
   // instead, then transfer to the real destination.
   if (MI.getOperand(0).getReg() == MI.getOperand(2).getReg()) {
     Register Tmp = createVReg(Builder, MOS::AcRegClass);
-    Builder.buildInstr(MOS::LDAIdx)
+    Builder.buildInstr(MOS::LDAAbsIdx)
         .addDef(Tmp)
         .add(MI.getOperand(1))
         .add(MI.getOperand(2));
@@ -800,13 +800,13 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
   default:
     llvm_unreachable("Bad destination for LDIdx.");
   case MOS::A:
-    Opcode = MOS::LDAIdx;
+    Opcode = MOS::LDAAbsIdx;
     break;
   case MOS::X:
-    Opcode = MOS::LDXIdx;
+    Opcode = MOS::LDXAbsIdx;
     break;
   case MOS::Y:
-    Opcode = MOS::LDYIdx;
+    Opcode = MOS::LDYAbsIdx;
     break;
   }
 
@@ -957,7 +957,7 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
       Opcode = MOS::CMPAbs;
       break;
     case MOS::CMPNZIdx:
-      Opcode = MOS::CMPIdx;
+      Opcode = MOS::CMPAbsIdx;
       break;
     case MOS::CMPNZIndir:
       Opcode = MOS::CMPIndir;
@@ -1003,7 +1003,7 @@ void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
     MI.setDesc(Builder.getTII().get(MOS::CMPAbs));
     break;
   case MOS::CMPTermIdx:
-    MI.setDesc(Builder.getTII().get(MOS::CMPIdx));
+    MI.setDesc(Builder.getTII().get(MOS::CMPAbsIdx));
     break;
   case MOS::CMPTermIndir:
     MI.setDesc(Builder.getTII().get(MOS::CMPIndir));

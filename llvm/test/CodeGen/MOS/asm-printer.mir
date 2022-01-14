@@ -4,7 +4,7 @@ name: adc_absolute_x
 # CHECK-LABEL: adc_absolute_x
 body: |
   bb.0.entry:
-    $a, $c, $v = ADCIdx $a, 1234, $x, $c
+    $a, $c, $v = ADCAbsIdx $a, 1234, $x, $c
     ; CHECK: adc 1234,x
     RTS
     ; CHECK-NEXT: rts
@@ -14,7 +14,7 @@ name: adc_absolute_y
 # CHECK-LABEL: adc_absolute_y
 body: |
   bb.0.entry:
-    $a, $c, $v = ADCIdx $a, 1234, $y, $c
+    $a, $c, $v = ADCAbsIdx $a, 1234, $y, $c
     ; CHECK: adc 1234,y
     RTS
     ; CHECK-NEXT: rts
@@ -24,7 +24,7 @@ name: and_absolute_x
 # CHECK-LABEL: and_absolute_x
 body: |
   bb.0.entry:
-    $a = ANDIdx $a, 1234, $x
+    $a = ANDAbsIdx $a, 1234, $x
     ; CHECK: and 1234,x
     RTS
     ; CHECK-NEXT: rts
@@ -34,7 +34,7 @@ name: and_absolute_y
 # CHECK-LABEL: and_absolute_y
 body: |
   bb.0.entry:
-    $a = ANDIdx $a, 1234, $y
+    $a = ANDAbsIdx $a, 1234, $y
     ; CHECK: and 1234,y
     RTS
     ; CHECK-NEXT: rts
@@ -44,7 +44,7 @@ name: eor_absolute_x
 # CHECK-LABEL: eor_absolute_x
 body: |
   bb.0.entry:
-    $a = EORIdx $a, 1234, $x
+    $a = EORAbsIdx $a, 1234, $x
     ; CHECK: eor 1234,x
     RTS
     ; CHECK-NEXT: rts
@@ -54,7 +54,7 @@ name: eor_absolute_y
 # CHECK-LABEL: eor_absolute_y
 body: |
   bb.0.entry:
-    $a = EORIdx $a, 1234, $y
+    $a = EORAbsIdx $a, 1234, $y
     ; CHECK: eor 1234,y
     RTS
     ; CHECK-NEXT: rts
@@ -64,7 +64,7 @@ name: ora_absolute_x
 # CHECK-LABEL: ora_absolute_x
 body: |
   bb.0.entry:
-    $a = ORAIdx $a, 1234, $x
+    $a = ORAAbsIdx $a, 1234, $x
     ; CHECK: ora 1234,x
     RTS
     ; CHECK-NEXT: rts
@@ -74,7 +74,7 @@ name: ora_absolute_y
 # CHECK-LABEL: ora_absolute_y
 body: |
   bb.0.entry:
-    $a = ORAIdx $a, 1234, $y
+    $a = ORAAbsIdx $a, 1234, $y
     ; CHECK: ora 1234,y
     RTS
     ; CHECK-NEXT: rts
@@ -217,7 +217,7 @@ name: cmp_absolute_x
 # CHECK-LABEL: cmp_absolute_x
 body: |
   bb.0.entry:
-    $c = CMPIdx $a, 1234, $x
+    $c = CMPAbsIdx $a, 1234, $x
     ; CHECK: cmp 1234,x
     RTS
     ; CHECK-NEXT: rts
@@ -227,7 +227,7 @@ name: cmp_absolute_y
 # CHECK-LABEL: cmp_absolute_y
 body: |
   bb.0.entry:
-    $c = CMPIdx $a, 1234, $y
+    $c = CMPAbsIdx $a, 1234, $y
     ; CHECK: cmp 1234,y
     RTS
     ; CHECK-NEXT: rts
@@ -247,7 +247,7 @@ name: lda_absolutex
 # CHECK-LABEL: lda_absolutex
 body: |
   bb.0.entry:
-    $a = LDAIdx 1234, $x
+    $a = LDAAbsIdx 1234, $x
     ; CHECK: lda 1234,x
     RTS
     ; CHECK-NEXT: rts
@@ -357,7 +357,7 @@ name: sta_absolutex
 # CHECK-LABEL: sta_absolutex
 body: |
   bb.0.entry:
-    STIdx $a, 1234, $x
+    STAbsIdx $a, 1234, $x
     ; CHECK: sta 1234,x
     RTS
     ; CHECK-NEXT: rts
@@ -397,7 +397,7 @@ name: stz_absolutex
 # CHECK-LABEL: stz_absolutex
 body: |
   bb.0.entry:
-    STZIdx 1234, $x
+    STZAbsIdx 1234, $x
     ; CHECK: stz 1234,x
     RTS
     ; CHECK-NEXT: rts

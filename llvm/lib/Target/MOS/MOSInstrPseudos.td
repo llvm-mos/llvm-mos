@@ -37,7 +37,7 @@ class MOSPseudo : Instruction {
 // registers before and after the pseudo.
 //===---------------------------------------------------------------------===//
 
-// Abstracts LDAIdx, LDXIdx, and LDYIdx. This is almost a logical instruction,
+// Abstracts LDAAbsIdx, LDXAbsIdx, and LDYAbsIdx. This is almost a logical instruction,
 // but the "LDX 1234,X" and "LDY 1234,Y" cases aren't natively supported, and
 // more than one instruction is required to emit them.
 def LDIdx : MOSPseudo {

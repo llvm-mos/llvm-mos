@@ -168,7 +168,7 @@ body: |
     ; CHECK-LABEL: name: store_indexed
     ; CHECK: [[COPY:%[0-9]+]]:ac = COPY $x
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $a
-    ; CHECK-NEXT: STIdx [[COPY]], @.str, [[COPY1]] :: (store (s8))
+    ; CHECK-NEXT: STAbsIdx [[COPY]], @.str, [[COPY1]] :: (store (s8))
     ; CHECK-NEXT: RTS
     %0:any(s8) = COPY $x
     %1:any(s8) = COPY $a

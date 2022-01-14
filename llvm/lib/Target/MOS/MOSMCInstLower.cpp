@@ -30,7 +30,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   default:
     OutMI.setOpcode(MI->getOpcode());
     break;
-  case MOS::ADCIdx: {
+  case MOS::ADCAbsIdx: {
     switch (MI->getOperand(5).getReg()) {
     default:
       llvm_unreachable("Unexpected register.");
@@ -47,11 +47,11 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Addr);
     return;
   }
-  case MOS::ANDIdx:
-  case MOS::EORIdx:
-  case MOS::ORAIdx: {
+  case MOS::ANDAbsIdx:
+  case MOS::EORAbsIdx:
+  case MOS::ORAAbsIdx: {
     switch (MI->getOpcode()) {
-    case MOS::ANDIdx:
+    case MOS::ANDAbsIdx:
       switch (MI->getOperand(3).getReg()) {
       default:
         llvm_unreachable("Unexpected register.");
@@ -63,7 +63,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       }
       break;
-    case MOS::EORIdx:
+    case MOS::EORAbsIdx:
       switch (MI->getOperand(3).getReg()) {
       default:
         llvm_unreachable("Unexpected register.");
@@ -75,7 +75,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       }
       break;
-    case MOS::ORAIdx:
+    case MOS::ORAAbsIdx:
       switch (MI->getOperand(3).getReg()) {
       default:
         llvm_unreachable("Unexpected register.");
@@ -167,7 +167,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::CMPImm:
   case MOS::CMPImag8:
   case MOS::CMPAbs:
-  case MOS::CMPIdx: {
+  case MOS::CMPAbsIdx: {
     switch (MI->getOpcode()) {
     case MOS::CMPImm:
       switch (MI->getOperand(1).getReg()) {
@@ -214,7 +214,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       }
       break;
-    case MOS::CMPIdx:
+    case MOS::CMPAbsIdx:
       switch (MI->getOperand(3).getReg()) {
       default:
         llvm_unreachable("Unexpected register.");
@@ -296,10 +296,10 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
-  case MOS::LDAIdx: {
+  case MOS::LDAAbsIdx: {
     switch (MI->getOperand(2).getReg()) {
     default:
-      llvm_unreachable("Unexpected LDAIdx register.");
+      llvm_unreachable("Unexpected LDAAbsIdx register.");
     case MOS::X:
       OutMI.setOpcode(MOS::LDA_AbsoluteX);
       break;
@@ -383,7 +383,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       return;
     }
   }
-  case MOS::STIdx: {
+  case MOS::STAbsIdx: {
     switch (MI->getOperand(2).getReg()) {
     default:
       llvm_unreachable("Unexpected register.");

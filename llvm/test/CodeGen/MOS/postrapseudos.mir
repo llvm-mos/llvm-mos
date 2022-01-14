@@ -83,7 +83,7 @@ name: cmptermidx
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: cmptermidx
-    ; CHECK: $c = CMPIdx $a, 1234, $x, implicit-def $nz
+    ; CHECK: $c = CMPAbsIdx $a, 1234, $x, implicit-def $nz
     $c = CMPTermIdx $a, 1234, $x, implicit-def $nz
 ...
 ---
@@ -161,7 +161,7 @@ name: cmpnzidx_n
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: cmpnzidx_n
-    ; CHECK: $c = CMPIdx $a, 1234, $y, implicit-def $nz
+    ; CHECK: $c = CMPAbsIdx $a, 1234, $y, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
     $c, $xlsb, $noreg = CMPNZIdx $a, 1234, $y
 ...
@@ -170,7 +170,7 @@ name: cmpnzidx_z
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: cmpnzidx_z
-    ; CHECK: $c = CMPIdx $a, 1234, $y, implicit-def $nz
+    ; CHECK: $c = CMPAbsIdx $a, 1234, $y, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
     $c, $noreg, $ylsb = CMPNZIdx $a, 1234, $y
 ...
@@ -305,38 +305,38 @@ body: |
     RTS
 ...
 ---
-name: ldaidx
+name: ldaabsidx
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: ldaidx
-    ; CHECK: $a = LDAIdx 1234, $x
+    ; CHECK-LABEL: name: ldaabsidx
+    ; CHECK: $a = LDAAbsIdx 1234, $x
     $a = LDIdx 1234, $x
 ...
 ---
-name: ldxidx_y
+name: ldxabsidx_y
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: ldxidx_y
-    ; CHECK: $x = LDXIdx 1234, $y
+    ; CHECK-LABEL: name: ldxabsidx_y
+    ; CHECK: $x = LDXAbsIdx 1234, $y
     $x = LDIdx 1234, $y
 ...
 ---
-name: ldxidx_x
+name: ldxabsidx_x
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: ldxidx_x
-    ; CHECK: [[LDAIdx:%[0-9]+]]:ac = LDAIdx 1234, $x
-    ; CHECK-NEXT: $x = TA [[LDAIdx]]
+    ; CHECK-LABEL: name: ldxabsidx_x
+    ; CHECK: [[LDAAbsIdx:%[0-9]+]]:ac = LDAAbsIdx 1234, $x
+    ; CHECK-NEXT: $x = TA [[LDAAbsIdx]]
     ; CHECK-NEXT: $c = CMPImm $a, 0
     $x = LDIdx 1234, $x
     $c = CMPImm $a, 0
 ...
 ---
-name: ldyidx_x
+name: ldyabsidx_x
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: ldyidx_x
-    ; CHECK: $y = LDYIdx 1234, $x
+    ; CHECK-LABEL: name: ldyabsidx_x
+    ; CHECK: $y = LDYAbsIdx 1234, $x
     $y = LDIdx 1234, $x
 ...
 ---

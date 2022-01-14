@@ -199,14 +199,14 @@ body: |
     ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 6502-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 6502-NEXT: [[ADCIdx:%[0-9]+]]:ac, [[ADCIdx1:%[0-9]+]]:cc, [[ADCIdx2:%[0-9]+]]:vc = ADCIdx [[COPY]], i16 1234, [[COPY1]], [[LDCImm]]
-    ; 6502-NEXT: RTS implicit [[ADCIdx]]
+    ; 6502-NEXT: [[ADCAbsIdx:%[0-9]+]]:ac, [[ADCAbsIdx1:%[0-9]+]]:cc, [[ADCAbsIdx2:%[0-9]+]]:vc = ADCAbsIdx [[COPY]], i16 1234, [[COPY1]], [[LDCImm]]
+    ; 6502-NEXT: RTS implicit [[ADCAbsIdx]]
     ; 65C02-LABEL: name: add_abs_idx
     ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 65C02-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 65C02-NEXT: [[ADCIdx:%[0-9]+]]:ac, [[ADCIdx1:%[0-9]+]]:cc, [[ADCIdx2:%[0-9]+]]:vc = ADCIdx [[COPY]], i16 1234, [[COPY1]], [[LDCImm]]
-    ; 65C02-NEXT: RTS implicit [[ADCIdx]]
+    ; 65C02-NEXT: [[ADCAbsIdx:%[0-9]+]]:ac, [[ADCAbsIdx1:%[0-9]+]]:cc, [[ADCAbsIdx2:%[0-9]+]]:vc = ADCAbsIdx [[COPY]], i16 1234, [[COPY1]], [[LDCImm]]
+    ; 65C02-NEXT: RTS implicit [[ADCAbsIdx]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
     %2:any(s8) = G_ADD %0, %1
@@ -266,13 +266,13 @@ body: |
     ; 6502-LABEL: name: and_abs_idx
     ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 6502-NEXT: [[ANDIdx:%[0-9]+]]:ac = ANDIdx [[COPY]], i16 1234, [[COPY1]]
-    ; 6502-NEXT: RTS implicit [[ANDIdx]]
+    ; 6502-NEXT: [[ANDAbsIdx:%[0-9]+]]:ac = ANDAbsIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[ANDAbsIdx]]
     ; 65C02-LABEL: name: and_abs_idx
     ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 65C02-NEXT: [[ANDIdx:%[0-9]+]]:ac = ANDIdx [[COPY]], i16 1234, [[COPY1]]
-    ; 65C02-NEXT: RTS implicit [[ANDIdx]]
+    ; 65C02-NEXT: [[ANDAbsIdx:%[0-9]+]]:ac = ANDAbsIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[ANDAbsIdx]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
     %2:any(s8) = G_AND %0, %1
@@ -330,13 +330,13 @@ body: |
     ; 6502-LABEL: name: eor_abs_idx
     ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 6502-NEXT: [[EORIdx:%[0-9]+]]:ac = EORIdx [[COPY]], i16 1234, [[COPY1]]
-    ; 6502-NEXT: RTS implicit [[EORIdx]]
+    ; 6502-NEXT: [[EORAbsIdx:%[0-9]+]]:ac = EORAbsIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[EORAbsIdx]]
     ; 65C02-LABEL: name: eor_abs_idx
     ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 65C02-NEXT: [[EORIdx:%[0-9]+]]:ac = EORIdx [[COPY]], i16 1234, [[COPY1]]
-    ; 65C02-NEXT: RTS implicit [[EORIdx]]
+    ; 65C02-NEXT: [[EORAbsIdx:%[0-9]+]]:ac = EORAbsIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[EORAbsIdx]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
     %2:any(s8) = G_XOR %0, %1
@@ -394,13 +394,13 @@ body: |
     ; 6502-LABEL: name: ora_abs_idx
     ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 6502-NEXT: [[ORAIdx:%[0-9]+]]:ac = ORAIdx [[COPY]], i16 1234, [[COPY1]]
-    ; 6502-NEXT: RTS implicit [[ORAIdx]]
+    ; 6502-NEXT: [[ORAAbsIdx:%[0-9]+]]:ac = ORAAbsIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[ORAAbsIdx]]
     ; 65C02-LABEL: name: ora_abs_idx
     ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 65C02-NEXT: [[ORAIdx:%[0-9]+]]:ac = ORAIdx [[COPY]], i16 1234, [[COPY1]]
-    ; 65C02-NEXT: RTS implicit [[ORAIdx]]
+    ; 65C02-NEXT: [[ORAAbsIdx:%[0-9]+]]:ac = ORAAbsIdx [[COPY]], i16 1234, [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[ORAAbsIdx]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
     %2:any(s8) = G_OR %0, %1
@@ -484,11 +484,11 @@ body: |
     liveins: $x
     ; 6502-LABEL: name: inc_idx
     ; 6502: [[COPY:%[0-9]+]]:xc = COPY $x
-    ; 6502-NEXT: INCIdx i16 1234, [[COPY]]
+    ; 6502-NEXT: INCAbsIdx i16 1234, [[COPY]]
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: inc_idx
     ; 65C02: [[COPY:%[0-9]+]]:xc = COPY $x
-    ; 65C02-NEXT: INCIdx i16 1234, [[COPY]]
+    ; 65C02-NEXT: INCAbsIdx i16 1234, [[COPY]]
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
@@ -990,12 +990,12 @@ body: |
     RTS
 ...
 ---
-name: cmpidx_brc
+name: cmpabsidx_brc
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: cmpidx_brc
+    ; 6502-LABEL: name: cmpabsidx_brc
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
@@ -1003,7 +1003,7 @@ body: |
     ; 6502-NEXT: %5:cc, $noreg, $noreg = CMPNZIdx [[COPY]], i16 1234, [[COPY1]]
     ; 6502-NEXT: GBR %bb.0, %5, 1, implicit-def $c
     ; 6502-NEXT: RTS
-    ; 65C02-LABEL: name: cmpidx_brc
+    ; 65C02-LABEL: name: cmpabsidx_brc
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
@@ -1020,12 +1020,12 @@ body: |
     RTS
 ...
 ---
-name: cmpidx_brn
+name: cmpabsidx_brn
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: cmpidx_brn
+    ; 6502-LABEL: name: cmpabsidx_brn
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
@@ -1033,7 +1033,7 @@ body: |
     ; 6502-NEXT: [[CMPTermIdx:%[0-9]+]]:cc = CMPTermIdx [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $n, 1
     ; 6502-NEXT: RTS
-    ; 65C02-LABEL: name: cmpidx_brn
+    ; 65C02-LABEL: name: cmpabsidx_brn
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
@@ -1050,12 +1050,12 @@ body: |
     RTS
 ...
 ---
-name: cmpidx_brz
+name: cmpabsidx_brz
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: cmpidx_brz
+    ; 6502-LABEL: name: cmpabsidx_brz
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
@@ -1063,7 +1063,7 @@ body: |
     ; 6502-NEXT: [[CMPTermIdx:%[0-9]+]]:cc = CMPTermIdx [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $z, 1
     ; 6502-NEXT: RTS
-    ; 65C02-LABEL: name: cmpidx_brz
+    ; 65C02-LABEL: name: cmpabsidx_brz
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
@@ -1325,17 +1325,17 @@ body: |
     RTS implicit %7
 ...
 ---
-name: cmpidx_n
+name: cmpabsidx_n
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: cmpidx_n
+    ; 6502-LABEL: name: cmpabsidx_n
     ; 6502: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $x
     ; 6502-NEXT: %5:cc, %6:gpr_lsb, $noreg = CMPNZIdx [[COPY]], i16 1234, [[COPY1]]
     ; 6502-NEXT: RTS implicit %6
-    ; 65C02-LABEL: name: cmpidx_n
+    ; 65C02-LABEL: name: cmpabsidx_n
     ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $x
     ; 65C02-NEXT: %5:cc, %6:gpr_lsb, $noreg = CMPNZIdx [[COPY]], i16 1234, [[COPY1]]
@@ -1348,17 +1348,17 @@ body: |
     RTS implicit %6
 ...
 ---
-name: cmpidx_z
+name: cmpabsidx_z
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: cmpidx_z
+    ; 6502-LABEL: name: cmpabsidx_z
     ; 6502: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $x
     ; 6502-NEXT: %5:cc, $noreg, %8:gpr_lsb = CMPNZIdx [[COPY]], i16 1234, [[COPY1]]
     ; 6502-NEXT: RTS implicit %8
-    ; 65C02-LABEL: name: cmpidx_z
+    ; 65C02-LABEL: name: cmpabsidx_z
     ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $x
     ; 65C02-NEXT: %5:cc, $noreg, %8:gpr_lsb = CMPNZIdx [[COPY]], i16 1234, [[COPY1]]
@@ -1888,14 +1888,14 @@ body: |
     ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:cc = COPY $v
     ; 6502-NEXT: [[COPY2:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 6502-NEXT: [[ADCIdx:%[0-9]+]]:ac, [[ADCIdx1:%[0-9]+]]:cc, [[ADCIdx2:%[0-9]+]]:vc = ADCIdx [[COPY]], i16 1234, [[COPY2]], [[COPY1]]
-    ; 6502-NEXT: RTS implicit [[ADCIdx]], implicit [[ADCIdx1]]
+    ; 6502-NEXT: [[ADCAbsIdx:%[0-9]+]]:ac, [[ADCAbsIdx1:%[0-9]+]]:cc, [[ADCAbsIdx2:%[0-9]+]]:vc = ADCAbsIdx [[COPY]], i16 1234, [[COPY2]], [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[ADCAbsIdx]], implicit [[ADCAbsIdx1]]
     ; 65C02-LABEL: name: uadde_idx
     ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:cc = COPY $v
     ; 65C02-NEXT: [[COPY2:%[0-9]+]]:xy = COPY [[COPY]]
-    ; 65C02-NEXT: [[ADCIdx:%[0-9]+]]:ac, [[ADCIdx1:%[0-9]+]]:cc, [[ADCIdx2:%[0-9]+]]:vc = ADCIdx [[COPY]], i16 1234, [[COPY2]], [[COPY1]]
-    ; 65C02-NEXT: RTS implicit [[ADCIdx]], implicit [[ADCIdx1]]
+    ; 65C02-NEXT: [[ADCAbsIdx:%[0-9]+]]:ac, [[ADCAbsIdx1:%[0-9]+]]:cc, [[ADCAbsIdx2:%[0-9]+]]:vc = ADCAbsIdx [[COPY]], i16 1234, [[COPY2]], [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[ADCAbsIdx]], implicit [[ADCAbsIdx1]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
     %2:any(s1) = COPY $v
