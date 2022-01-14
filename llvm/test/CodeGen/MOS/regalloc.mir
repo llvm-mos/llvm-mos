@@ -75,7 +75,7 @@ body: |
     ; CHECK-NEXT: dead [[COPY6]]:ac, dead [[LDCImm1]]:cc, $noreg, dead %15:vc, undef %22.sublsb:gpr = SBCNZImag8 [[COPY6]], [[COPY3]], [[LDCImm1]], implicit-def dead $nz
     ; CHECK-NEXT: [[COPY7:%[0-9]+]]:ac = COPY %22
     ; CHECK-NEXT: [[ORAImag8_2:%[0-9]+]]:ac = ORAImag8 [[ORAImag8_2]], %14
-    ; CHECK-NEXT: dead %17:cc = CMPImmTerm [[ORAImag8_2]], 0, implicit-def dead $nz, implicit-def $z
+    ; CHECK-NEXT: dead %17:cc = CMPTermImm [[ORAImag8_2]], 0, implicit-def dead $nz, implicit-def $z
     ; CHECK-NEXT: RTS implicit $z
     %1:imag8 = COPY $a
     %2:imag8 = COPY $x
@@ -98,6 +98,6 @@ body: |
     undef %65.sublsb:imag8 = COPY %6
     dead %29:ac, dead %33:cc, $noreg, dead %35:vc, undef %60.sublsb:ac = SBCNZImag8 %29, %32, %33, implicit-def dead $nz
     %60:ac = ORAImag8 %60, %65
-    dead %58:cc = CMPImmTerm %60, 0, implicit-def dead $nz, implicit-def $z
+    dead %58:cc = CMPTermImm %60, 0, implicit-def dead $nz, implicit-def $z
     RTS implicit $z
 ...

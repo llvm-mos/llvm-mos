@@ -567,8 +567,8 @@ struct Cmp_match {
   }
 };
 
-struct CmpZTerm_match : public Cmp_match {
-  CmpZTerm_match(Register &LHS, Register &Flag) : Cmp_match(LHS, Flag) {}
+struct CMPTermZ_match : public Cmp_match {
+  CMPTermZ_match(Register &LHS, Register &Flag) : Cmp_match(LHS, Flag) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
     if (!Cmp_match::match(MRI, CondReg))
@@ -580,14 +580,14 @@ struct CmpZTerm_match : public Cmp_match {
   }
 };
 
-inline CmpZTerm_match m_CmpZTerm(Register &LHS, Register &Flag) {
+inline CMPTermZ_match m_CMPTermZ(Register &LHS, Register &Flag) {
   return {LHS, Flag};
 }
 
-struct CmpImmTerm_match : public Cmp_match {
+struct CMPTermImm_match : public Cmp_match {
   int64_t &RHS;
 
-  CmpImmTerm_match(Register &LHS, int64_t &RHS, Register &Flag)
+  CMPTermImm_match(Register &LHS, int64_t &RHS, Register &Flag)
       : Cmp_match(LHS, Flag), RHS(RHS) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
@@ -604,19 +604,19 @@ struct CmpImmTerm_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPImmTerm operation. LHS and RHS
+// Match one of the outputs of a G_SBC to a CMPTermImm operation. LHS and RHS
 // are the left and right hand side of the comparison, while Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CmpImmTerm_match m_CmpImmTerm(Register &LHS, int64_t &RHS,
+inline CMPTermImm_match m_CMPTermImm(Register &LHS, int64_t &RHS,
                                      Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
-struct CmpImag8Term_match : public Cmp_match {
+struct CMPTermImag8_match : public Cmp_match {
   Register &RHS;
 
-  CmpImag8Term_match(Register &LHS, Register &RHS, Register &Flag)
+  CMPTermImag8_match(Register &LHS, Register &RHS, Register &Flag)
       : Cmp_match(LHS, Flag), RHS(RHS) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
@@ -627,20 +627,20 @@ struct CmpImag8Term_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPImag8Term operation. LHS and
+// Match one of the outputs of a G_SBC to a CMPTermImag8 operation. LHS and
 // RHS are the left and right hand side of the comparison, while Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CmpImag8Term_match m_CmpImag8Term(Register &LHS, Register &RHS,
+inline CMPTermImag8_match m_CMPTermImag8(Register &LHS, Register &RHS,
                                          Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
-struct CmpAbsTerm_match : public Cmp_match {
+struct CMPTermAbs_match : public Cmp_match {
   MachineOperand &Addr;
   AAResults *AA;
 
-  CmpAbsTerm_match(Register &LHS, MachineOperand &Addr, Register &Flag,
+  CMPTermAbs_match(Register &LHS, MachineOperand &Addr, Register &Flag,
                    AAResults *AA)
       : Cmp_match(LHS, Flag), Addr(Addr), AA(AA) {}
 
@@ -652,20 +652,20 @@ struct CmpAbsTerm_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPAbsTerm operation. Flag is the
+// Match one of the outputs of a G_SBC to a CMPTermAbs operation. Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CmpAbsTerm_match m_CmpAbsTerm(Register &LHS, MachineOperand &Addr,
+inline CMPTermAbs_match m_CMPTermAbs(Register &LHS, MachineOperand &Addr,
                                      Register &Flag, AAResults *AA) {
   return {LHS, Addr, Flag, AA};
 }
 
-struct CmpIdxTerm_match : public Cmp_match {
+struct CMPTermIdx_match : public Cmp_match {
   MachineOperand &Addr;
   Register &Idx;
   AAResults *AA;
 
-  CmpIdxTerm_match(Register &LHS, MachineOperand &Addr, Register &Idx,
+  CMPTermIdx_match(Register &LHS, MachineOperand &Addr, Register &Idx,
                    Register &Flag, AAResults *AA)
       : Cmp_match(LHS, Flag), Addr(Addr), Idx(Idx), AA(AA) {}
 
@@ -677,21 +677,21 @@ struct CmpIdxTerm_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPIdxTerm operation. Flag is the
+// Match one of the outputs of a G_SBC to a CMPTermIdx operation. Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CmpIdxTerm_match m_CmpIdxTerm(Register &LHS, MachineOperand &Addr,
+inline CMPTermIdx_match m_CMPTermIdx(Register &LHS, MachineOperand &Addr,
                                      Register &Idx, Register &Flag,
                                      AAResults *AA) {
   return {LHS, Addr, Idx, Flag, AA};
 }
 
-struct CmpIndirTerm_match : public Cmp_match {
+struct CMPTermIndir_match : public Cmp_match {
   Register &Addr;
   Register &Idx;
   AAResults *AA;
 
-  CmpIndirTerm_match(Register &LHS, Register &Addr, Register &Idx,
+  CMPTermIndir_match(Register &LHS, Register &Addr, Register &Idx,
                      Register &Flag, AAResults *AA)
       : Cmp_match(LHS, Flag), Addr(Addr), Idx(Idx), AA(AA) {}
 
@@ -703,10 +703,10 @@ struct CmpIndirTerm_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPIndirTerm operation. Flag is the
+// Match one of the outputs of a G_SBC to a CMPTermIndir operation. Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CmpIndirTerm_match m_CmpIndirTerm(Register &LHS, Register &Addr,
+inline CMPTermIndir_match m_CMPTermIndir(Register &LHS, Register &Addr,
                                          Register &Idx, Register &Flag,
                                          AAResults *AA) {
   return {LHS, Addr, Idx, Flag, AA};
@@ -727,29 +727,29 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
 
   Register LHS;
-  if (!Compare && mi_match(CondReg, MRI, m_CmpZTerm(LHS, Flag)))
-    Compare = Builder.buildInstr(MOS::CMPZTerm, {S1}, {LHS});
+  if (!Compare && mi_match(CondReg, MRI, m_CMPTermZ(LHS, Flag)))
+    Compare = Builder.buildInstr(MOS::CMPTermZ, {S1}, {LHS});
   int64_t RHSConst;
-  if (!Compare && mi_match(CondReg, MRI, m_CmpImmTerm(LHS, RHSConst, Flag)))
-    Compare = Builder.buildInstr(MOS::CMPImmTerm, {S1}, {LHS, RHSConst});
+  if (!Compare && mi_match(CondReg, MRI, m_CMPTermImm(LHS, RHSConst, Flag)))
+    Compare = Builder.buildInstr(MOS::CMPTermImm, {S1}, {LHS, RHSConst});
   MachineOperand Addr =
       MachineOperand::CreateReg(MOS::NoRegister, /*isDef=*/false);
-  if (!Compare && mi_match(CondReg, MRI, m_CmpAbsTerm(LHS, Addr, Flag, AA)))
-    Compare = Builder.buildInstr(MOS::CMPAbsTerm, {S1}, {LHS}).add(Addr);
+  if (!Compare && mi_match(CondReg, MRI, m_CMPTermAbs(LHS, Addr, Flag, AA)))
+    Compare = Builder.buildInstr(MOS::CMPTermAbs, {S1}, {LHS}).add(Addr);
   Register Idx;
   if (!Compare &&
-      mi_match(CondReg, MRI, m_CmpIdxTerm(LHS, Addr, Idx, Flag, AA))) {
+      mi_match(CondReg, MRI, m_CMPTermIdx(LHS, Addr, Idx, Flag, AA))) {
     Compare =
-        Builder.buildInstr(MOS::CMPIdxTerm, {S1}, {LHS}).add(Addr).addUse(Idx);
+        Builder.buildInstr(MOS::CMPTermIdx, {S1}, {LHS}).add(Addr).addUse(Idx);
   }
   Register RegAddr;
   if (!Compare &&
-      mi_match(CondReg, MRI, m_CmpIndirTerm(LHS, RegAddr, Idx, Flag, AA))) {
-    Compare = Builder.buildInstr(MOS::CMPIndirTerm, {S1}, {LHS, RegAddr, Idx});
+      mi_match(CondReg, MRI, m_CMPTermIndir(LHS, RegAddr, Idx, Flag, AA))) {
+    Compare = Builder.buildInstr(MOS::CMPTermIndir, {S1}, {LHS, RegAddr, Idx});
   }
   Register RHS;
-  if (!Compare && mi_match(CondReg, MRI, m_CmpImag8Term(LHS, RHS, Flag)))
-    Compare = Builder.buildInstr(MOS::CMPImag8Term, {S1}, {LHS, RHS});
+  if (!Compare && mi_match(CondReg, MRI, m_CMPTermImag8(LHS, RHS, Flag)))
+    Compare = Builder.buildInstr(MOS::CMPTermImag8, {S1}, {LHS, RHS});
 
   if (Compare) {
     if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))

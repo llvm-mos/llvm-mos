@@ -42,15 +42,15 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool lowerCMPZTerms(MachineBasicBlock &MBB) const;
-  void lowerCMPZTerm(MachineInstr &MI) const;
+  bool lowerCMPTermZs(MachineBasicBlock &MBB) const;
+  void lowerCMPTermZ(MachineInstr &MI) const;
   bool ldImmToInxyDexy(MachineBasicBlock &MBB) const;
 };
 
 bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
-    Changed |= lowerCMPZTerms(MBB);
+    Changed |= lowerCMPTermZs(MBB);
     Changed |= ldImmToInxyDexy(MBB);
   }
   return Changed;
@@ -71,7 +71,7 @@ static bool definesNZ(const MachineInstr &MI, Register Val) {
   }
 }
 
-bool MOSLateOptimization::lowerCMPZTerms(MachineBasicBlock &MBB) const {
+bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
   const auto &MRI = MBB.getParent()->getRegInfo();
   const auto *TRI = MRI.getTargetRegisterInfo();
   bool Changed = false;
@@ -79,7 +79,7 @@ bool MOSLateOptimization::lowerCMPZTerms(MachineBasicBlock &MBB) const {
   for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; I = Next) {
     Next = std::next(I);
 
-    if (I->getOpcode() != MOS::CMPZTerm)
+    if (I->getOpcode() != MOS::CMPTermZ)
       continue;
     assert(I->getOperand(0).isDead());
 
@@ -116,12 +116,12 @@ bool MOSLateOptimization::lowerCMPZTerms(MachineBasicBlock &MBB) const {
       continue;
 
     Changed = true;
-    lowerCMPZTerm(*I);
+    lowerCMPTermZ(*I);
   }
   return Changed;
 }
 
-void MOSLateOptimization::lowerCMPZTerm(MachineInstr &MI) const {
+void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
   auto &MBB = *MI.getParent();
   const auto &MRI = MBB.getParent()->getRegInfo();
   const auto *TRI = MRI.getTargetRegisterInfo();
@@ -161,7 +161,7 @@ void MOSLateOptimization::lowerCMPZTerm(MachineInstr &MI) const {
             !Defined.contains(J->getOperand(0).getReg())) {
           Register GPR = J->getOperand(0).getReg();
           MI.getOperand(1).setReg(GPR);
-          lowerCMPZTerm(MI);
+          lowerCMPTermZ(MI);
           return;
         }
 
@@ -170,7 +170,7 @@ void MOSLateOptimization::lowerCMPZTerm(MachineInstr &MI) const {
             !Defined.contains(J->getOperand(1).getReg())) {
           Register GPR = J->getOperand(1).getReg();
           MI.getOperand(1).setReg(GPR);
-          lowerCMPZTerm(MI);
+          lowerCMPTermZ(MI);
           return;
         }
 

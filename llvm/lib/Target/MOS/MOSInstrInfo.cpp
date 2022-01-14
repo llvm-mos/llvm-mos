@@ -420,7 +420,7 @@ static Register createVReg(MachineIRBuilder &Builder,
 }
 
 bool MOSInstrInfo::shouldOverlapInterval(const MachineInstr &MI) const {
-  return MI.getOpcode() != MOS::CMPZTerm;
+  return MI.getOpcode() != MOS::CMPTermZ;
 }
 
 void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
@@ -757,11 +757,11 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::SBCNZImag8:
     expandNZ(Builder);
     break;
-  case MOS::CMPImmTerm:
-  case MOS::CMPImag8Term:
-  case MOS::CMPAbsTerm:
-  case MOS::CMPIndirTerm:
-  case MOS::CMPIdxTerm:
+  case MOS::CMPTermImm:
+  case MOS::CMPTermImag8:
+  case MOS::CMPTermAbs:
+  case MOS::CMPTermIndir:
+  case MOS::CMPTermIdx:
     expandCMPTerm(Builder);
     break;
 
@@ -993,19 +993,19 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
 void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
   MachineInstr &MI = *Builder.getInsertPt();
   switch (MI.getOpcode()) {
-  case MOS::CMPImmTerm:
+  case MOS::CMPTermImm:
     MI.setDesc(Builder.getTII().get(MOS::CMPImm));
     break;
-  case MOS::CMPImag8Term:
+  case MOS::CMPTermImag8:
     MI.setDesc(Builder.getTII().get(MOS::CMPImag8));
     break;
-  case MOS::CMPAbsTerm:
+  case MOS::CMPTermAbs:
     MI.setDesc(Builder.getTII().get(MOS::CMPAbs));
     break;
-  case MOS::CMPIdxTerm:
+  case MOS::CMPTermIdx:
     MI.setDesc(Builder.getTII().get(MOS::CMPIdx));
     break;
-  case MOS::CMPIndirTerm:
+  case MOS::CMPTermIndir:
     MI.setDesc(Builder.getTII().get(MOS::CMPIndir));
     break;
   }
@@ -1029,7 +1029,7 @@ void MOSInstrInfo::expandGBR(MachineIRBuilder &Builder) const {
     Register TstReg =
         Builder.getMF().getSubtarget().getRegisterInfo()->getMatchingSuperReg(
             Tst, MOS::sublsb, &MOS::Anyi8RegClass);
-    Builder.buildInstr(MOS::CMPZTerm, {MOS::C}, {TstReg})
+    Builder.buildInstr(MOS::CMPTermZ, {MOS::C}, {TstReg})
         ->getOperand(0)
         .setIsDead();
   }

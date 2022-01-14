@@ -210,22 +210,22 @@ class MOSCMPTerm : MOSPseudo {
   let isTerminator = true;
 }
 
-def CMPImmTerm : MOSCMPTerm {
+def CMPTermImm : MOSCMPTerm {
   dag InOperandList = (ins GPR:$l, i8imm:$r);
 }
-def CMPImag8Term : MOSCMPTerm {
+def CMPTermImag8 : MOSCMPTerm {
   dag InOperandList = (ins GPR:$l, Imag8:$r);
 }
-def CMPAbsTerm : MOSCMPTerm {
+def CMPTermAbs : MOSCMPTerm {
   dag InOperandList = (ins GPR:$l, i16imm:$addr);
 }
-def CMPIdxTerm : MOSCMPTerm {
+def CMPTermIdx : MOSCMPTerm {
   dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
 }
-def CMPIndirTerm : MOSCMPTerm {
+def CMPTermIndir : MOSCMPTerm {
   dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
 }
-def CMPZTerm : MOSCMPTerm {
+def CMPTermZ : MOSCMPTerm {
   dag InOperandList = (ins Anyi8:$val);
 }
 
@@ -237,7 +237,7 @@ def CMPZTerm : MOSCMPTerm {
 def GBR : MOSPseudo {
   dag InOperandList = (ins label:$tgt, Anyi1:$tst, i1imm:$val);
 
-  // This may need to lower to a CMPZTerm, which clobbers C.
+  // This may need to lower to a CMPTermZ, which clobbers C.
   let Defs = [C];
 
   let isBranch = true;

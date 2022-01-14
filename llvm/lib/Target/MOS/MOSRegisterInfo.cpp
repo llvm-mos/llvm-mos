@@ -734,12 +734,12 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
         RegScores[MOS::A] += 4;
       break;
 
-    case MOS::CMPZTerm:
-      // CMPZTerm GPR best case: 0 (TAX)
-      // CMPZTerm GPR worst case: 4 (CMP #0)
+    case MOS::CMPTermZ:
+      // CMPTermZ GPR best case: 0 (TAX)
+      // CMPTermZ GPR worst case: 4 (CMP #0)
       // Splitting the difference: 2
-      // CMPZTerm ZP best case: 0 (elided)
-      // CMPZTerm ZP worst case: 14 (INC DEC)
+      // CMPTermZ ZP best case: 0 (elided)
+      // CMPTermZ ZP worst case: 14 (INC DEC)
       // Splitting the difference: 7
       if (is_contained(Order, MOS::A))
         RegScores[MOS::A] += 5;

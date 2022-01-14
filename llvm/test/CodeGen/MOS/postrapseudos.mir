@@ -55,44 +55,44 @@ body: |
     $rc0 = DEC $rc0
 ...
 ---
-name: cmpimmterm
+name: cmptermimm
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpimmterm
+    ; CHECK-LABEL: name: cmptermimm
     ; CHECK: $c = CMPImm $a, 42, implicit-def $nz
-    $c = CMPImmTerm $a, 42, implicit-def $nz
+    $c = CMPTermImm $a, 42, implicit-def $nz
 ...
 ---
-name: cmpimag8term
+name: cmptermimag8
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpimag8term
+    ; CHECK-LABEL: name: cmptermimag8
     ; CHECK: $c = CMPImag8 $a, $rc2, implicit-def $nz
-    $c = CMPImag8Term $a, $rc2, implicit-def $nz
+    $c = CMPTermImag8 $a, $rc2, implicit-def $nz
 ...
 ---
-name: cmpabsterm
+name: cmptermabs
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpabsterm
+    ; CHECK-LABEL: name: cmptermabs
     ; CHECK: $c = CMPAbs $a, 1234, implicit-def $nz
-    $c = CMPAbsTerm $a, 1234, implicit-def $nz
+    $c = CMPTermAbs $a, 1234, implicit-def $nz
 ...
 ---
-name: cmpidxterm
+name: cmptermidx
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpidxterm
+    ; CHECK-LABEL: name: cmptermidx
     ; CHECK: $c = CMPIdx $a, 1234, $x, implicit-def $nz
-    $c = CMPIdxTerm $a, 1234, $x, implicit-def $nz
+    $c = CMPTermIdx $a, 1234, $x, implicit-def $nz
 ...
 ---
-name: cmpindirterm
+name: cmptermindir
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpindirterm
+    ; CHECK-LABEL: name: cmptermindir
     ; CHECK: $c = CMPIndir $a, $rs1, $y, implicit-def $nz
-    $c = CMPIndirTerm $a, $rs1, $y, implicit-def $nz
+    $c = CMPTermIndir $a, $rs1, $y, implicit-def $nz
 ...
 ---
 name: cmpnzimm_n
@@ -259,7 +259,7 @@ body: |
     ; CHECK-LABEL: name: br_alsb_0
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead $c = CMPZTerm $a, implicit-def $nz
+    ; CHECK-NEXT: dead $c = CMPTermZ $a, implicit-def $nz
     ; CHECK-NEXT: BR %bb.0, $z, 1, implicit-def $c
     ; CHECK-NEXT: RTS
     GBR %bb.0.entry, $alsb, 0, implicit-def $c
@@ -272,7 +272,7 @@ body: |
     ; CHECK-LABEL: name: br_alsb_1
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead $c = CMPZTerm $a, implicit-def $nz
+    ; CHECK-NEXT: dead $c = CMPTermZ $a, implicit-def $nz
     ; CHECK-NEXT: BR %bb.0, $z, 0, implicit-def $c
     ; CHECK-NEXT: RTS
     GBR %bb.0.entry, $alsb, 1, implicit-def $c
@@ -285,7 +285,7 @@ body: |
     ; CHECK-LABEL: name: br_xlsb
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead $c = CMPZTerm $x, implicit-def $nz
+    ; CHECK-NEXT: dead $c = CMPTermZ $x, implicit-def $nz
     ; CHECK-NEXT: BR %bb.0, $z, 0, implicit-def $c
     ; CHECK-NEXT: RTS
     GBR %bb.0.entry, $xlsb, 1, implicit-def $c
@@ -298,7 +298,7 @@ body: |
     ; CHECK-LABEL: name: br_ylsb
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead $c = CMPZTerm $y, implicit-def $nz
+    ; CHECK-NEXT: dead $c = CMPTermZ $y, implicit-def $nz
     ; CHECK-NEXT: BR %bb.0, $z, 0, implicit-def $c
     ; CHECK-NEXT: RTS
     GBR %bb.0.entry, $ylsb, 1, implicit-def $c

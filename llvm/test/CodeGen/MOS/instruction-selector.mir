@@ -696,14 +696,14 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY $a
-    ; 6502-NEXT: [[CMPZTerm:%[0-9]+]]:cc = CMPZTerm [[COPY]], implicit-def $nz
+    ; 6502-NEXT: [[CMPTermZ:%[0-9]+]]:cc = CMPTermZ [[COPY]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $n, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpz_brn
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY $a
-    ; 65C02-NEXT: [[CMPZTerm:%[0-9]+]]:cc = CMPZTerm [[COPY]], implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermZ:%[0-9]+]]:cc = CMPTermZ [[COPY]], implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $n, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -723,14 +723,14 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY $a
-    ; 6502-NEXT: [[CMPZTerm:%[0-9]+]]:cc = CMPZTerm [[COPY]], implicit-def $nz
+    ; 6502-NEXT: [[CMPTermZ:%[0-9]+]]:cc = CMPTermZ [[COPY]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $z, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpz_brz
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY $a
-    ; 65C02-NEXT: [[CMPZTerm:%[0-9]+]]:cc = CMPZTerm [[COPY]], implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermZ:%[0-9]+]]:cc = CMPTermZ [[COPY]], implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $z, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -777,14 +777,14 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 6502-NEXT: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[COPY]], 42, implicit-def $nz
+    ; 6502-NEXT: [[CMPTermImm:%[0-9]+]]:cc = CMPTermImm [[COPY]], 42, implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $n, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpimm_brn
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 65C02-NEXT: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[COPY]], 42, implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermImm:%[0-9]+]]:cc = CMPTermImm [[COPY]], 42, implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $n, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -804,14 +804,14 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 6502-NEXT: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[COPY]], 42, implicit-def $nz
+    ; 6502-NEXT: [[CMPTermImm:%[0-9]+]]:cc = CMPTermImm [[COPY]], 42, implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $z, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpimm_brz
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 65C02-NEXT: [[CMPImmTerm:%[0-9]+]]:cc = CMPImmTerm [[COPY]], 42, implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermImm:%[0-9]+]]:cc = CMPTermImm [[COPY]], 42, implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $z, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -861,7 +861,7 @@ body: |
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
-    ; 6502-NEXT: [[CMPImag8Term:%[0-9]+]]:cc = CMPImag8Term [[COPY]], [[COPY1]], implicit-def $nz
+    ; 6502-NEXT: [[CMPTermImag8:%[0-9]+]]:cc = CMPTermImag8 [[COPY]], [[COPY1]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $n, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpimag8_brn
@@ -869,7 +869,7 @@ body: |
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
-    ; 65C02-NEXT: [[CMPImag8Term:%[0-9]+]]:cc = CMPImag8Term [[COPY]], [[COPY1]], implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermImag8:%[0-9]+]]:cc = CMPTermImag8 [[COPY]], [[COPY1]], implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $n, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -890,7 +890,7 @@ body: |
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
-    ; 6502-NEXT: [[CMPImag8Term:%[0-9]+]]:cc = CMPImag8Term [[COPY]], [[COPY1]], implicit-def $nz
+    ; 6502-NEXT: [[CMPTermImag8:%[0-9]+]]:cc = CMPTermImag8 [[COPY]], [[COPY1]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $z, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpimag8_brz
@@ -898,7 +898,7 @@ body: |
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
-    ; 65C02-NEXT: [[CMPImag8Term:%[0-9]+]]:cc = CMPImag8Term [[COPY]], [[COPY1]], implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermImag8:%[0-9]+]]:cc = CMPTermImag8 [[COPY]], [[COPY1]], implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $z, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -945,14 +945,14 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 6502-NEXT: [[CMPAbsTerm:%[0-9]+]]:cc = CMPAbsTerm [[COPY]], i16 1234, implicit-def $nz
+    ; 6502-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $n, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpabs_brn
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 65C02-NEXT: [[CMPAbsTerm:%[0-9]+]]:cc = CMPAbsTerm [[COPY]], i16 1234, implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $n, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -972,14 +972,14 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 6502-NEXT: [[CMPAbsTerm:%[0-9]+]]:cc = CMPAbsTerm [[COPY]], i16 1234, implicit-def $nz
+    ; 6502-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $z, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpabs_brz
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 65C02-NEXT: [[CMPAbsTerm:%[0-9]+]]:cc = CMPAbsTerm [[COPY]], i16 1234, implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $z, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -1030,7 +1030,7 @@ body: |
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $x
-    ; 6502-NEXT: [[CMPIdxTerm:%[0-9]+]]:cc = CMPIdxTerm [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
+    ; 6502-NEXT: [[CMPTermIdx:%[0-9]+]]:cc = CMPTermIdx [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $n, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpidx_brn
@@ -1038,7 +1038,7 @@ body: |
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $x
-    ; 65C02-NEXT: [[CMPIdxTerm:%[0-9]+]]:cc = CMPIdxTerm [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermIdx:%[0-9]+]]:cc = CMPTermIdx [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $n, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -1060,7 +1060,7 @@ body: |
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $x
-    ; 6502-NEXT: [[CMPIdxTerm:%[0-9]+]]:cc = CMPIdxTerm [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
+    ; 6502-NEXT: [[CMPTermIdx:%[0-9]+]]:cc = CMPTermIdx [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $z, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpidx_brz
@@ -1068,7 +1068,7 @@ body: |
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xy = COPY $x
-    ; 65C02-NEXT: [[CMPIdxTerm:%[0-9]+]]:cc = CMPIdxTerm [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermIdx:%[0-9]+]]:cc = CMPTermIdx [[COPY]], i16 1234, [[COPY1]], implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $z, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -1124,7 +1124,7 @@ body: |
     ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag16 = COPY $rs1
     ; 6502-NEXT: [[COPY2:%[0-9]+]]:yc = COPY $y
-    ; 6502-NEXT: [[CMPIndirTerm:%[0-9]+]]:cc = CMPIndirTerm [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
+    ; 6502-NEXT: [[CMPTermIndir:%[0-9]+]]:cc = CMPTermIndir [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $n, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpindir_brn
@@ -1133,7 +1133,7 @@ body: |
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag16 = COPY $rs1
     ; 65C02-NEXT: [[COPY2:%[0-9]+]]:yc = COPY $y
-    ; 65C02-NEXT: [[CMPIndirTerm:%[0-9]+]]:cc = CMPIndirTerm [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermIndir:%[0-9]+]]:cc = CMPTermIndir [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $n, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -1157,7 +1157,7 @@ body: |
     ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 6502-NEXT: [[COPY1:%[0-9]+]]:imag16 = COPY $rs1
     ; 6502-NEXT: [[COPY2:%[0-9]+]]:yc = COPY $y
-    ; 6502-NEXT: [[CMPIndirTerm:%[0-9]+]]:cc = CMPIndirTerm [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
+    ; 6502-NEXT: [[CMPTermIndir:%[0-9]+]]:cc = CMPTermIndir [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
     ; 6502-NEXT: BR %bb.0, $z, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpindir_brz
@@ -1166,7 +1166,7 @@ body: |
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
     ; 65C02-NEXT: [[COPY1:%[0-9]+]]:imag16 = COPY $rs1
     ; 65C02-NEXT: [[COPY2:%[0-9]+]]:yc = COPY $y
-    ; 65C02-NEXT: [[CMPIndirTerm:%[0-9]+]]:cc = CMPIndirTerm [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermIndir:%[0-9]+]]:cc = CMPTermIndir [[COPY]], [[COPY1]], [[COPY2]], implicit-def $nz
     ; 65C02-NEXT: BR %bb.0, $z, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
