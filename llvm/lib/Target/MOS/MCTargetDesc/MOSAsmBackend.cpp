@@ -47,9 +47,6 @@ struct ZeroPageInstructionRelaxationEntry {
   unsigned From;
   unsigned To;
 };
-struct MOSZeroPageSectionEntry {
-  const char *Name;
-};
 
 #define GET_MOSZeroPageInstructionRelaxationTable_DECL
 #define GET_MOSZeroPageInstructionRelaxationTable_IMPL
@@ -272,17 +269,16 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
       /// If the section of the symbol is one of the prenamed zero page
       /// sections, then this is an 8 bit instruction and it doesn't need
       /// relaxation.
-      for (const auto &ZeroPageSectionEntry : MOS::MOSZeroPageSectionTable) {
-        const StringRef ZeroPageName(ZeroPageSectionEntry.Name);
-        if (ZeroPageName.equals(ELFSectionName)) {
-          /// This symbol goes in zero page.  No relaxation is needed.
-          return false;
-        }
-      }
+      if (isZeroPageSectionName(ELFSectionName))
+        return false;
     }
   }
   // we have no convincing reason not to do the relaxation
   return true;
+}
+
+bool MOSAsmBackend::isZeroPageSectionName(StringRef Name) {
+  return is_contained(MOS::MOSZeroPageSectionTable, Name);
 }
 
 MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
@@ -297,7 +293,7 @@ unsigned MOSAsmBackend::getNumFixupKinds() const {
   return MOS::Fixups::NumTargetFixupKinds;
 }
 
-unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst) const {
+unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst) {
   const auto *ZPIRE =
       MOS::getZeroPageInstructionRelaxationEntry(Inst.getOpcode());
   if (ZPIRE == nullptr) {
@@ -306,10 +302,10 @@ unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst) const {
   return ZPIRE->To;
 }
 
-bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                                      const MCSubtargetInfo &STI) const {
-  unsigned relaxTo = relaxInstructionTo(Inst);
-  if (relaxTo == 0) {
+template <typename Fn>
+static bool visitRelaxableOperand(const MCInst &Inst, Fn Visit) {
+  unsigned RelaxTo = MOSAsmBackend::relaxInstructionTo(Inst);
+  if (RelaxTo == 0) {
     // If the instruction can't be relaxed, then it doesn't need relaxation.
     return false;
   }
@@ -318,25 +314,41 @@ bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
     // need relaxation.
     return false;
   }
-  const auto &Operand = Inst.getOperand(0);
-  if (Operand.isExpr() == false) {
-    // If the instruction isn't an expression, then it doesn't need relaxation.
-    return false;
-  }
-  int64_t Imm;
-  if (Operand.evaluateAsConstantImm(Imm) && Imm >= 0 && Imm <= UCHAR_MAX) {
-    // If the expression evaluates cleanly to an 8-bit value, then it doesn't
-    // need relaxation.
-    return false;
-  }
-  // okay you got us, it MAY need relaxation, if the instruction CAN be
-  // relaxed.
-  return true;
+  return Visit(Inst.getOperand(0), RelaxTo);
+}
+
+void MOSAsmBackend::relaxForImmediate(MCInst &Inst) {
+  visitRelaxableOperand(Inst, [&Inst](const MCOperand &Operand,
+                                      unsigned RelaxTo) {
+    int64_t Imm;
+    if (!Operand.evaluateAsConstantImm(Imm) || (Imm >= 0 && Imm <= UCHAR_MAX)) {
+      // If the expression evaluates cleanly to an 8-bit value, then it doesn't
+      // need relaxation.
+      return false;
+    }
+    // This instruction can be relaxed, do it now.
+    Inst.setOpcode(RelaxTo);
+    return true;
+  });
+}
+
+bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                                      const MCSubtargetInfo &STI) const {
+  return visitRelaxableOperand(Inst,
+                               [](const MCOperand &Operand, unsigned RelaxTo) {
+                                 if (!Operand.isExpr()) {
+                                   // If the instruction isn't an expression,
+                                   // then it doesn't need relaxation.
+                                   return false;
+                                 }
+                                 // okay you got us, it MAY need relaxation, if
+                                 // the instruction CAN be relaxed.
+                                 return true;
+                               });
 }
 
 void MOSAsmBackend::relaxInstruction(MCInst &Inst,
                                      const MCSubtargetInfo &STI) const {
-
   unsigned Opcode = relaxInstructionTo(Inst);
   if (Opcode != 0) {
     Inst.setOpcode(Opcode);

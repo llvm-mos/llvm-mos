@@ -17,10 +17,9 @@ include "llvm/TableGen/SearchableTable.td"
 /// instructions that access zero page, to 16 bit equivalents, if the 
 /// target addresses do not necessarily reside in 8 bit memory.
 class ZeroPageInstructionRelaxationEntry< InstAddressMode from, 
-                                          InstAddressMode to>
-{
-	InstAddressMode From = from;
-	InstAddressMode To = to;
+                                          InstAddressMode to> {
+  InstAddressMode From = from;
+  InstAddressMode To = to;
 }
 
 class ZPIRE< InstAddressMode from, InstAddressMode to> :
@@ -97,16 +96,10 @@ def MOSZeroPageInstructionRelaxationTable : GenericTable {
   let PrimaryKeyName = "getZeroPageInstructionRelaxationEntry";
 }
 
-def MOSZeroPageInstructionLoweringIndex : SearchIndex {
-  let Table = MOSZeroPageInstructionRelaxationTable;
-  let Key = ["From"];
-}
-
 /// Zero page section entry.  If a symbol exists in one of these sections,
 /// it belongs in zero page.
-class MOSZeroPageSectionEntry< string name >
-{
-	string Name = name;
+class MOSZeroPageSectionEntry< string name > {
+  string Name = name;
 }
 
 class ZPSE< string name > : MOSZeroPageSectionEntry< name >;
@@ -116,6 +109,7 @@ def : ZPSE<".zeropage">;
 def : ZPSE<".directpage">;
 
 def MOSZeroPageSectionTable : GenericTable {
-	let FilterClass = "MOSZeroPageSectionEntry";
-	let Fields = ["Name"];
+  let FilterClass = "MOSZeroPageSectionEntry";
+  let CppTypeName = "StringRef";
+  let Fields = ["Name"];
 }

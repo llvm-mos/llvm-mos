@@ -92,7 +92,7 @@ let isAdd = true in {
   }
   let mayLoad = true in {
     def ADCAbs :
-      MOSAddSubOp<i16imm>, PseudoInstExpansion<(ADC_Absolute addr16:$r)>;
+      MOSAddSubOp<i16imm>, PseudoInstExpansion<(ADC_ZeroPage addr8:$r)>;
     def ADCAbsIdx : MOSAddSub {
       dag InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx, Cc:$carryin);
     }
@@ -138,7 +138,7 @@ multiclass MOSBitwiseInstr<SDNode node> {
   let mayLoad = true in {
     def Abs :
         MOSBitwiseBase,
-        PseudoInstExpansion<(!cast<Instruction>(NAME#"_Absolute") addr16:$r)> {
+        PseudoInstExpansion<(!cast<Instruction>(NAME#"_ZeroPage") addr8:$r)> {
       let InOperandList = (ins Ac:$l, addr16:$r);
     }
 
@@ -189,7 +189,7 @@ def ROR : MOSRotate;
 // Ever the odd duck.
 //===---------------------------------------------------------------------===//
 
-def BITAbs : MOSLogicalInstr, PseudoInstExpansion<(BIT_Absolute addr16:$r)> {
+def BITAbs : MOSLogicalInstr, PseudoInstExpansion<(BIT_ZeroPage addr8:$r)> {
   dag OutOperandList = (outs Vc:$v);
   dag InOperandList = (ins Ac:$l, i16imm:$r);
 }
@@ -300,10 +300,10 @@ multiclass MOSIncDec {
   }
 
   let mayLoad = true, mayStore = true in {
-    def CAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_Absolute) addr16:$addr)> {
+    def CAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPage) addr8:$addr)> {
       dag InOperandList = (ins i16imm:$addr);
     }
-    def CAbsIdx : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_AbsoluteX) addr16:$addr)> {
+    def CAbsIdx : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPageX) addr8:$addr)> {
       dag InOperandList = (ins i16imm:$addr, Xc:$idx);
     }
   }
@@ -379,10 +379,10 @@ class MOSLoadIndexed<RegisterClass dst, RegisterClass idx> : MOSLoad {
 def LDAAbsIdx : MOSLoadIndexed<Ac, XY>;
 // LDX abs,y
 def LDXAbsIdx : MOSLoadIndexed<Xc, Yc>,
-             PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)>;
+             PseudoInstExpansion<(LDX_ZeroPageY addr8:$addr)>;
 // LDY abs,x
 def LDYAbsIdx : MOSLoadIndexed<Yc, Xc>,
-             PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)>;
+             PseudoInstExpansion<(LDY_ZeroPageX addr8:$addr)>;
 
 // LDA (zp),y
 def LDIndirIdx : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
@@ -408,11 +408,11 @@ def STIndirIdx : MOSStore, PseudoInstExpansion<(STA_IndirectIndexed addr8:$addr)
 
 let Predicates = [Has65C02] in {
   // STZ abs
-  def STZAbs : MOSStore, PseudoInstExpansion<(STZ_Absolute addr16:$addr)> {
+  def STZAbs : MOSStore, PseudoInstExpansion<(STZ_ZeroPage addr8:$addr)> {
     dag InOperandList = (ins i16imm:$addr);
   }
   // STZ abs,x
-  def STZAbsIdx : MOSStore, PseudoInstExpansion<(STZ_AbsoluteX addr16:$addr)> {
+  def STZAbsIdx : MOSStore, PseudoInstExpansion<(STZ_ZeroPageX addr8:$addr)> {
     dag InOperandList = (ins i16imm:$addr, Xc:$idx);
   }
   // STZ zp
