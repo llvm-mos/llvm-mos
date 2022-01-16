@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MCTargetDesc/MOSAsmBackend.h"
 #include "MOSMCInstLower.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
@@ -52,6 +53,8 @@ public:
   // Wrapper needed for tblgenned pseudo lowering.
   void lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
+  void EmitToStreamer(MCStreamer &S, MCInst &Inst);
+
   void emitInstruction(const MachineInstr *MI) override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -70,6 +73,13 @@ public:
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "MOSGenMCPseudoLowering.inc"
+
+void MOSAsmPrinter::EmitToStreamer(MCStreamer &S, MCInst &Inst) {
+  // If this instruction contains an out-of-range immediate address, perform an
+  // early relax.
+  MOSAsmBackend::relaxForImmediate(Inst);
+  AsmPrinter::EmitToStreamer(S, Inst);
+}
 
 void MOSAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // Do any auto-generated pseudo lowerings.

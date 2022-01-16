@@ -91,6 +91,8 @@ public:
                                     const MCRelaxableFragment *DF,
                                     const MCAsmLayout &Layout,
                                     const bool WasForced) const override;
+  /// Determine if section name indicates zero-page placement by linker.
+  static bool isZeroPageSectionName(StringRef Name);
   unsigned getNumFixupKinds() const override;
   MCFixupKindInfo const &getFixupKindInfo(MCFixupKind Kind) const override;
   /// Check whether the given instruction may need relaxation.
@@ -113,7 +115,13 @@ public:
   /// If the instruction can be relaxed, return the opcode of the instruction
   /// that this instruction can be relaxed to.  If the instruction cannot
   /// be relaxed, return zero.
-  unsigned relaxInstructionTo(const MCInst &Inst) const;
+  static unsigned relaxInstructionTo(const MCInst &Inst);
+
+  /// If the provided instruction contains an out-of-range immediate in a
+  /// relaxable opcode, perform the relaxation now. MOSAsmPrinter calls this at
+  /// the end of lowering so it does not have to deal with the relaxation
+  /// itself.
+  static void relaxForImmediate(MCInst &Inst);
 
   /// Write an (optimal) nop sequence of Count bytes to the given output. If the
   /// target cannot generate such a sequence, it should return an error.

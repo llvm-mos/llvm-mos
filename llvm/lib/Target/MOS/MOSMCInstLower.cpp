@@ -13,6 +13,7 @@
 #include "MOSMCInstLower.h"
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MCTargetDesc/MOSAsmBackend.h"
 #include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
@@ -35,7 +36,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     default:
       llvm_unreachable("Unexpected register.");
     case MOS::X:
-      OutMI.setOpcode(MOS::ADC_AbsoluteX);
+      OutMI.setOpcode(MOS::ADC_ZeroPageX);
       break;
     case MOS::Y:
       OutMI.setOpcode(MOS::ADC_AbsoluteY);
@@ -56,7 +57,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::AND_AbsoluteX);
+        OutMI.setOpcode(MOS::AND_ZeroPageX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::AND_AbsoluteY);
@@ -68,7 +69,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::EOR_AbsoluteX);
+        OutMI.setOpcode(MOS::EOR_ZeroPageX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::EOR_AbsoluteY);
@@ -80,7 +81,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::ORA_AbsoluteX);
+        OutMI.setOpcode(MOS::ORA_ZeroPageX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::ORA_AbsoluteY);
@@ -185,6 +186,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       }
       break;
     case MOS::CMPImag8:
+    case MOS::CMPAbs:
       switch (MI->getOperand(1).getReg()) {
       default:
         llvm_unreachable("Unexpected register.");
@@ -199,27 +201,12 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       }
       break;
-    case MOS::CMPAbs:
-      switch (MI->getOperand(1).getReg()) {
-      default:
-        llvm_unreachable("Unexpected register.");
-      case MOS::A:
-        OutMI.setOpcode(MOS::CMP_Absolute);
-        break;
-      case MOS::X:
-        OutMI.setOpcode(MOS::CPX_Absolute);
-        break;
-      case MOS::Y:
-        OutMI.setOpcode(MOS::CPY_Absolute);
-        break;
-      }
-      break;
     case MOS::CMPAbsIdx:
       switch (MI->getOperand(3).getReg()) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::CMP_AbsoluteX);
+        OutMI.setOpcode(MOS::CMP_ZeroPageX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::CMP_AbsoluteY);
@@ -246,13 +233,11 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         OutMI.setOpcode(MOS::LDA_Immediate);
         break;
       case MOS::LDAbs:
-        OutMI.setOpcode(MOS::LDA_Absolute);
-        break;
       case MOS::LDImag8:
         OutMI.setOpcode(MOS::LDA_ZeroPage);
         break;
       case MOS::STAbs:
-        OutMI.setOpcode(MOS::STA_Absolute);
+        OutMI.setOpcode(MOS::STA_ZeroPage);
         break;
       }
       break;
@@ -262,13 +247,11 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         OutMI.setOpcode(MOS::LDX_Immediate);
         break;
       case MOS::LDAbs:
-        OutMI.setOpcode(MOS::LDX_Absolute);
-        break;
       case MOS::LDImag8:
         OutMI.setOpcode(MOS::LDX_ZeroPage);
         break;
       case MOS::STAbs:
-        OutMI.setOpcode(MOS::STX_Absolute);
+        OutMI.setOpcode(MOS::STX_ZeroPage);
         break;
       }
       break;
@@ -278,13 +261,11 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         OutMI.setOpcode(MOS::LDY_Immediate);
         break;
       case MOS::LDAbs:
-        OutMI.setOpcode(MOS::LDY_Absolute);
-        break;
       case MOS::LDImag8:
         OutMI.setOpcode(MOS::LDY_ZeroPage);
         break;
       case MOS::STAbs:
-        OutMI.setOpcode(MOS::STY_Absolute);
+        OutMI.setOpcode(MOS::STY_ZeroPage);
         break;
       }
       break;
@@ -301,7 +282,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     default:
       llvm_unreachable("Unexpected LDAAbsIdx register.");
     case MOS::X:
-      OutMI.setOpcode(MOS::LDA_AbsoluteX);
+      OutMI.setOpcode(MOS::LDA_ZeroPageX);
       break;
     case MOS::Y:
       OutMI.setOpcode(MOS::LDA_AbsoluteY);
@@ -388,7 +369,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     default:
       llvm_unreachable("Unexpected register.");
     case MOS::X:
-      OutMI.setOpcode(MOS::STA_AbsoluteX);
+      OutMI.setOpcode(MOS::STA_ZeroPageX);
       break;
     case MOS::Y:
       OutMI.setOpcode(MOS::STA_AbsoluteY);
@@ -465,9 +446,20 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     MCOp =
         lowerSymbolOperand(MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()));
     break;
-  case MachineOperand::MO_GlobalAddress:
-    MCOp = lowerSymbolOperand(MO, AP.getSymbol(MO.getGlobal()));
+  case MachineOperand::MO_GlobalAddress: {
+    const GlobalValue *GV = MO.getGlobal();
+    MCOp = lowerSymbolOperand(MO, AP.getSymbol(GV));
+    // This is the last chance to catch values that are attributed a zero-page
+    // section. It is the user's responsibility to ensure the linker will locate
+    // the symbol completely within the zero-page.
+    if (MOSAsmBackend::isZeroPageSectionName(GV->getSection())) {
+      const MOSMCExpr *Expr =
+          MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, MCOp.getExpr(),
+                            /*isNegated=*/false, Ctx);
+      MCOp = MCOperand::createExpr(Expr);
+    }
     break;
+  }
   case MachineOperand::MO_JumpTableIndex: {
     MCOp = lowerSymbolOperand(MO, AP.GetJTISymbol(MO.getIndex()));
     break;
