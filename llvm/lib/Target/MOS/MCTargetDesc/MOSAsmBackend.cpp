@@ -126,8 +126,19 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved,
                                const MCSubtargetInfo *STI) const {
-  unsigned int Bytes = 0;
   unsigned int Kind = Fixup.getKind();
+  uint32_t Offset = Fixup.getOffset();
+
+  if (Kind == MOS::AddrAsciz) {
+    std::string ValueStr = utostr(Value);
+    assert(((ValueStr.size() + 1 + Offset) <= Data.size()) &&
+           "Invalid offset within MOS instruction for modifier!");
+    std::copy(ValueStr.begin(), ValueStr.end(), Data.begin() + Offset);
+    Data[Offset + ValueStr.size()] = '\0';
+    return;
+  }
+
+  unsigned int Bytes = 0;
   switch (Kind) {
   case MOS::Imm8:
   case MOS::Addr8:
@@ -158,7 +169,6 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     llvm_unreachable("unknown fixup kind");
     return;
   }
-  auto Offset = Fixup.getOffset();
   assert(((Bytes + Offset) <= Data.size()) &&
          "Invalid offset within MOS instruction for modifier!");
   for (unsigned int T = Offset; T < (Bytes + Offset); T++) {

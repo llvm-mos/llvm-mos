@@ -1,4 +1,4 @@
-//===----- MOSELFStreamer.h - MOS Target Streamer --------------*- C++ -*--===//
+//===----- MOSTargetELFStreamer.h - MOS Target ELF Streamer ----*- C++ -*--===//
 //
 // Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MOS_ELF_STREAMER_H
-#define LLVM_MOS_ELF_STREAMER_H
+#ifndef LLVM_MOS_TARGET_ELF_STREAMER_H
+#define LLVM_MOS_TARGET_ELF_STREAMER_H
 
 #include "MOSTargetStreamer.h"
 
 namespace llvm {
 
 /// A target streamer for an MOS ELF object file.
-class MOSELFStreamer : public MOSTargetStreamer {
+class MOSTargetELFStreamer : public MOSTargetStreamer {
 public:
-  MOSELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
-
-  MCELFStreamer &getStreamer() {
-    return static_cast<MCELFStreamer &>(Streamer);
-  }
+  MOSTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 };
 
 } // end namespace llvm

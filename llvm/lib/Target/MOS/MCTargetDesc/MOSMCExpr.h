@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-/// A expression in AVR machine code.
+/// A expression in MOS machine code.
 class MOSMCExpr : public MCTargetExpr {
 public:
   /// Specifies the type of an expression.
@@ -26,11 +26,12 @@ public:
     VK_MOS_ADDR24_BANK,
     VK_MOS_ADDR24_SEGMENT,
     VK_MOS_ADDR24_SEGMENT_LO,
-    VK_MOS_ADDR24_SEGMENT_HI
+    VK_MOS_ADDR24_SEGMENT_HI,
+    VK_MOS_ADDR_ASCIZ
   };
 
 
-  /// Creates an AVR machine code expression.
+  /// Creates an MOS machine code expression.
   static const MOSMCExpr *create(VariantKind Kind, const MCExpr *Expr,
                                  bool isNegated, MCContext &Ctx);
 

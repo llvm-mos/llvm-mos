@@ -31,13 +31,19 @@ public:
         MCII(createMOSMCInstrInfo()) {}
 
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+
+  void emitValueImpl(const MCExpr *Value, unsigned Size,
+                     SMLoc Loc = SMLoc()) override;
+
+  void emitMosAddrAsciz(const MCExpr *Value, unsigned Size,
+                        SMLoc Loc = SMLoc());
 };
 
 MCStreamer *createMOSMCELFStreamer(const Triple &T, MCContext &Ctx,
-                                 std::unique_ptr<MCAsmBackend> &&TAB,
-                                 std::unique_ptr<MCObjectWriter> &&OW,
-                                 std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                 bool RelaxAll);
+                                   std::unique_ptr<MCAsmBackend> &&TAB,
+                                   std::unique_ptr<MCObjectWriter> &&OW,
+                                   std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                   bool RelaxAll);
 
 } // end namespace llvm
 

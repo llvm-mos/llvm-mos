@@ -54,10 +54,10 @@ void MOSMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 bool MOSMCExpr::evaluateAsConstant(int64_t &Result) const {
   MCValue Value;
 
-  bool isRelocatable =
+  bool IsRelocatable =
       getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr);
 
-  if (!isRelocatable) {
+  if (!IsRelocatable) {
     return false;
   }
 
@@ -73,9 +73,9 @@ bool MOSMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
                                           const MCAsmLayout *Layout,
                                           const MCFixup *Fixup) const {
   MCValue Value;
-  bool isRelocatable = SubExpr->evaluateAsRelocatable(Value, Layout, Fixup);
+  bool IsRelocatable = SubExpr->evaluateAsRelocatable(Value, Layout, Fixup);
 
-  if (!isRelocatable)
+  if (!IsRelocatable)
     return false;
 
   if (Value.isAbsolute()) {
@@ -123,6 +123,9 @@ int64_t MOSMCExpr::evaluateAsInt64(int64_t Value) const {
     Value &= 0xffff;
     break;
 
+  case MOSMCExpr::VK_MOS_ADDR_ASCIZ:
+    llvm_unreachable("Unable to evaluate VK_MOS_ADDR_ASCIZ as int64.");
+
   case MOSMCExpr::VK_MOS_NONE:
     llvm_unreachable("Uninitialized expression.");
   }
@@ -153,6 +156,9 @@ MOS::Fixups MOSMCExpr::getFixupKind() const {
     break;
   case VK_MOS_ADDR24_SEGMENT_LO:
     Kind = MOS::Addr24_Segment_Low;
+    break;
+  case VK_MOS_ADDR_ASCIZ:
+    Kind = MOS::AddrAsciz;
     break;
   case VK_MOS_NONE:
     llvm_unreachable("Uninitialized expression");

@@ -35,6 +35,30 @@ void MOSMCELFStreamer::initSections(bool NoExecStack,
     SwitchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
 }
 
+void MOSMCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
+                                     SMLoc Loc) {
+  if (const auto *MME = dyn_cast<MOSMCExpr>(Value)) {
+    if (MME->getKind() == MOSMCExpr::VK_MOS_ADDR_ASCIZ) {
+      emitMosAddrAsciz(MME->getSubExpr(), Size, Loc);
+      return;
+    }
+  }
+  MCELFStreamer::emitValueImpl(Value, Size, Loc);
+}
+
+void MOSMCELFStreamer::emitMosAddrAsciz(const MCExpr *Value, unsigned Size,
+                                        SMLoc Loc) {
+  visitUsedExpr(*Value);
+  MCDwarfLineEntry::make(this, getCurrentSectionOnly());
+  MCDataFragment *DF = getOrCreateDataFragment();
+  flushPendingLabels(DF, DF->getContents().size());
+
+  DF->getFixups().push_back(
+      MCFixup::create(DF->getContents().size(), Value,
+                      (MCFixupKind)MOS::AddrAsciz, Loc));
+  DF->getContents().resize(DF->getContents().size() + Size, 0);
+}
+
 MCStreamer *createMOSMCELFStreamer(const Triple & /*T*/, MCContext &Ctx,
                                    std::unique_ptr<MCAsmBackend> &&TAB,
                                    std::unique_ptr<MCObjectWriter> &&OW,
