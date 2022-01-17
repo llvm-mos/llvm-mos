@@ -72,7 +72,7 @@ private:
 
   // Pre-tablegen selection functions. If these return false, fall through to
   // tablegen.
-  bool selectAdd(MachineInstr &MI);
+  bool selectAddSub(MachineInstr &MI);
   bool selectLogical(MachineInstr &MI);
 
   // Post-tablegen selection functions. If these return false, it is an error.
@@ -159,7 +159,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
 
   switch (MI.getOpcode()) {
   case MOS::G_ADD:
-    if (selectAdd(MI))
+  case MOS::G_SUB:
+    if (selectAddSub(MI))
       return true;
     break;
   case MOS::G_AND:
@@ -349,8 +350,8 @@ inline FoldedLdIndirIdx_match m_FoldedLdIndirIdx(const MachineInstr &Tgt,
   return {Tgt, Addr, Idx, AA};
 }
 
-bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
-  assert(MI.getOpcode() == MOS::G_ADD);
+bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
+  assert(MI.getOpcode() == MOS::G_ADD || MI.getOpcode() == MOS::G_SUB);
 
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();
@@ -364,60 +365,91 @@ bool MOSInstructionSelector::selectAdd(MachineInstr &MI) {
       return false;
   }
 
+  int64_t CarryInVal = MI.getOpcode() == MOS::G_ADD ? 0 : -1;
+
+  bool Success;
+
   Register LHS;
   MachineOperand Addr = MachineOperand::CreateReg(0, false);
-  if (mi_match(MI.getOperand(0).getReg(), MRI,
-               m_GAdd(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA)))) {
+  unsigned Opcode;
+  if (MI.getOpcode() == MOS::G_ADD) {
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GAdd(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA)));
+    Opcode = MOS::ADCAbs;
+  } else {
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GSub(m_Reg(LHS), m_FoldedLdAbs(MI, Addr, AA)));
+    Opcode = MOS::SBCAbs;
+  }
+
+  if (Success) {
     Register CIn =
-        Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
-    auto Adc = Builder.buildInstr(MOS::ADCAbs)
-                   .addDef(MI.getOperand(0).getReg())
-                   .addDef(MRI.createGenericVirtualRegister(S1))
-                   .addDef(MRI.createGenericVirtualRegister(S1))
-                   .addUse(LHS)
-                   .add(Addr)
-                   .addUse(CIn);
-    if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain ADCAbs");
+        Builder.buildInstr(MOS::LDCImm, {S1}, {CarryInVal}).getReg(0);
+    auto Instr = Builder.buildInstr(Opcode)
+                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(MRI.createGenericVirtualRegister(S1))
+                     .addDef(MRI.createGenericVirtualRegister(S1))
+                     .addUse(LHS)
+                     .add(Addr)
+                     .addUse(CIn);
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+      llvm_unreachable("Could not constrain absolute instruction.");
     MI.eraseFromParent();
     return true;
   }
 
   Register Idx;
-  if (mi_match(MI.getOperand(0).getReg(), MRI,
-               m_GAdd(m_Reg(LHS), m_FoldedLdIdx(MI, Addr, Idx, AA)))) {
+  if (MI.getOpcode() == MOS::G_ADD) {
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GAdd(m_Reg(LHS), m_FoldedLdIdx(MI, Addr, Idx, AA)));
+    Opcode = MOS::ADCAbsIdx;
+  } else {
+    Success = mi_match(MI.getOperand(0).getReg(), MRI,
+                       m_GSub(m_Reg(LHS), m_FoldedLdIdx(MI, Addr, Idx, AA)));
+    Opcode = MOS::SBCAbsIdx;
+  }
+  if (Success) {
     Register CIn =
-        Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
-    auto Adc = Builder.buildInstr(MOS::ADCAbsIdx)
-                   .addDef(MI.getOperand(0).getReg())
-                   .addDef(MRI.createGenericVirtualRegister(S1))
-                   .addDef(MRI.createGenericVirtualRegister(S1))
-                   .addUse(LHS)
-                   .add(Addr)
-                   .addUse(Idx)
-                   .addUse(CIn);
-    if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain ADCAbsIdx");
+        Builder.buildInstr(MOS::LDCImm, {S1}, {CarryInVal}).getReg(0);
+    auto Instr = Builder.buildInstr(Opcode)
+                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(MRI.createGenericVirtualRegister(S1))
+                     .addDef(MRI.createGenericVirtualRegister(S1))
+                     .addUse(LHS)
+                     .add(Addr)
+                     .addUse(Idx)
+                     .addUse(CIn);
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+      llvm_unreachable("Could not constrain absolute indexed instruction.");
     MI.eraseFromParent();
     return true;
   }
 
   Register IndirAddr;
-  if (mi_match(
-          MI.getOperand(0).getReg(), MRI,
-          m_GAdd(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)))) {
+  if (MI.getOpcode() == MOS::G_ADD) {
+    Success = mi_match(
+        MI.getOperand(0).getReg(), MRI,
+        m_GAdd(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)));
+    Opcode = MOS::ADCIndirIdx;
+  } else {
+    Success = mi_match(
+        MI.getOperand(0).getReg(), MRI,
+        m_GSub(m_Reg(LHS), m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA)));
+    Opcode = MOS::SBCIndirIdx;
+  }
+  if (Success) {
     Register CIn =
-        Builder.buildInstr(MOS::LDCImm, {S1}, {INT64_C(0)}).getReg(0);
-    auto Adc = Builder.buildInstr(MOS::ADCIndirIdx)
-                   .addDef(MI.getOperand(0).getReg())
-                   .addDef(MRI.createGenericVirtualRegister(S1))
-                   .addDef(MRI.createGenericVirtualRegister(S1))
-                   .addUse(LHS)
-                   .addUse(IndirAddr)
-                   .addUse(Idx)
-                   .addUse(CIn);
-    if (!constrainSelectedInstRegOperands(*Adc, TII, TRI, RBI))
-      llvm_unreachable("Could not constrain ADCIndirIdx");
+        Builder.buildInstr(MOS::LDCImm, {S1}, {CarryInVal}).getReg(0);
+    auto Instr = Builder.buildInstr(Opcode)
+                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(MRI.createGenericVirtualRegister(S1))
+                     .addDef(MRI.createGenericVirtualRegister(S1))
+                     .addUse(LHS)
+                     .addUse(IndirAddr)
+                     .addUse(Idx)
+                     .addUse(CIn);
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+      llvm_unreachable("Could not constrain indirect indexed instruction.");
     MI.eraseFromParent();
     return true;
   }
@@ -835,7 +867,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
                            m_FoldedLdIdx(MI, Addr, Idx, AA))) {
       Instr = Builder
-                  .buildInstr(MOS::CMPNZIdx, {MI.getOperand(1), N, Z},
+                  .buildInstr(MOS::CMPNZAbsIdx, {MI.getOperand(1), N, Z},
                               {MI.getOperand(5)})
                   .add(Addr)
                   .addUse(Idx);
@@ -843,7 +875,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     Register RegAddr;
     if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
                            m_FoldedLdIndirIdx(MI, RegAddr, Idx, AA))) {
-      Instr = Builder.buildInstr(MOS::CMPNZIndir, {MI.getOperand(1), N, Z},
+      Instr = Builder.buildInstr(MOS::CMPNZIndirIdx, {MI.getOperand(1), N, Z},
                                  {MI.getOperand(5), RegAddr, Idx});
     }
     if (!Instr) {
@@ -851,13 +883,46 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
                                  {MI.getOperand(5), MI.getOperand(6)});
     }
   } else {
-    if (RConst) {
+    if (!Instr && RConst) {
       assert(RConst->Value.getBitWidth() == 8);
       Instr = Builder.buildInstr(
           MOS::SBCNZImm,
           {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
           {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
-    } else {
+    }
+    MachineOperand Addr =
+        MachineOperand::CreateReg(MOS::NoRegister, /*isDef=*/false);
+    if (!Instr &&
+        mi_match(MI.getOperand(6).getReg(), MRI, m_FoldedLdAbs(MI, Addr, AA))) {
+      Instr = Builder
+                  .buildInstr(MOS::SBCNZAbs,
+                              {MI.getOperand(0), MI.getOperand(1), N,
+                               MI.getOperand(3), Z},
+                              {MI.getOperand(5)})
+                  .add(Addr)
+                  .add(MI.getOperand(7));
+    }
+    Register Idx;
+    if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
+                           m_FoldedLdIdx(MI, Addr, Idx, AA))) {
+      Instr = Builder
+                  .buildInstr(MOS::SBCNZAbsIdx,
+                              {MI.getOperand(0), MI.getOperand(1), N,
+                               MI.getOperand(3), Z},
+                              {MI.getOperand(5)})
+                  .add(Addr)
+                  .addUse(Idx)
+                  .add(MI.getOperand(7));
+    }
+    Register RegAddr;
+    if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
+                           m_FoldedLdIndirIdx(MI, RegAddr, Idx, AA))) {
+      Instr = Builder.buildInstr(
+          MOS::SBCNZIndirIdx,
+          {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
+          {MI.getOperand(5), RegAddr, Idx, MI.getOperand(7)});
+    }
+    if (!Instr) {
       Instr = Builder.buildInstr(
           MOS::SBCNZImag8,
           {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},

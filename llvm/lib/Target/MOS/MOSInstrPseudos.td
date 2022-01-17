@@ -181,24 +181,37 @@ let mayLoad = true in {
   def CMPNZAbs : MOSCMPNZ {
     dag InOperandList = (ins GPR:$l, i16imm:$addr);
   }
-  def CMPNZIdx : MOSCMPNZ {
+  def CMPNZAbsIdx : MOSCMPNZ {
     dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
   }
-  def CMPNZIndir : MOSCMPNZ {
+  def CMPNZIndirIdx : MOSCMPNZ {
     dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
   }
 }
 
-def SBCNZImm : MOSPseudo {
+class MOSSBCNZ : MOSPseudo {
   dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
-  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
   let Constraints = "$dst = $l, $carryout = $carryin";
+  let isCompare = true;
 }
 
-def SBCNZImag8 : MOSPseudo {
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
+def SBCNZImm : MOSSBCNZ {
+  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
+}
+def SBCNZImag8 : MOSSBCNZ {
   dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
-  let Constraints = "$dst = $l, $carryout = $carryin";
+}
+
+let mayLoad = true in {
+  def SBCNZAbs : MOSSBCNZ {
+    dag InOperandList = (ins GPR:$l, i16imm:$addr, Cc:$carryin);
+  }
+  def SBCNZAbsIdx : MOSSBCNZ {
+    dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx, Cc:$carryin);
+  }
+  def SBCNZIndirIdx : MOSSBCNZ {
+    dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx, Cc:$carryin);
+  }
 }
 
 // Terminator versions of CMP. Each of these instructions is ensured to stay

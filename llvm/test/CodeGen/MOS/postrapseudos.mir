@@ -91,7 +91,7 @@ name: cmptermindir
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: cmptermindir
-    ; CHECK: $c = CMPIndir $a, $rs1, $y, implicit-def $nz
+    ; CHECK: $c = CMPIndirIdx $a, $rs1, $y, implicit-def $nz
     $c = CMPTermIndir $a, $rs1, $y, implicit-def $nz
 ...
 ---
@@ -157,40 +157,40 @@ body: |
     $c, $noreg, $ylsb = CMPNZAbs $a, 1234
 ...
 ---
-name: cmpnzidx_n
+name: CMPNZAbsIdx_n
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpnzidx_n
+    ; CHECK-LABEL: name: CMPNZAbsIdx_n
     ; CHECK: $c = CMPAbsIdx $a, 1234, $y, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
-    $c, $xlsb, $noreg = CMPNZIdx $a, 1234, $y
+    $c, $xlsb, $noreg = CMPNZAbsIdx $a, 1234, $y
 ...
 ---
-name: cmpnzidx_z
+name: CMPNZAbsIdx_z
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpnzidx_z
+    ; CHECK-LABEL: name: CMPNZAbsIdx_z
     ; CHECK: $c = CMPAbsIdx $a, 1234, $y, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
-    $c, $noreg, $ylsb = CMPNZIdx $a, 1234, $y
+    $c, $noreg, $ylsb = CMPNZAbsIdx $a, 1234, $y
 ...
 ---
-name: cmpnzindir_n
+name: cmpnzindiridx_n
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpnzindir_n
-    ; CHECK: $c = CMPIndir $a, $rs1, $y, implicit-def $nz
+    ; CHECK-LABEL: name: cmpnzindiridx_n
+    ; CHECK: $c = CMPIndirIdx $a, $rs1, $y, implicit-def $nz
     ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
-    $c, $xlsb, $noreg = CMPNZIndir $a, $rs1, $y
+    $c, $xlsb, $noreg = CMPNZIndirIdx $a, $rs1, $y
 ...
 ---
-name: cmpnzindir_z
+name: cmpnzindiridx_z
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmpnzindir_z
-    ; CHECK: $c = CMPIndir $a, $rs1, $y, implicit-def $nz
+    ; CHECK-LABEL: name: cmpnzindiridx_z
+    ; CHECK: $c = CMPIndirIdx $a, $rs1, $y, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
-    $c, $noreg, $ylsb = CMPNZIndir $a, $rs1, $y
+    $c, $noreg, $ylsb = CMPNZIndirIdx $a, $rs1, $y
 ...
 ---
 name: sbcnzimm_n
@@ -227,6 +227,60 @@ body: |
     ; CHECK: $a, $c, $v = SBCImag8 $a, $rc2, $c, implicit-def $nz
     ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
     $a, $c, $noreg, $v, $ylsb = SBCNZImag8 $a, $rc2, $c
+...
+---
+name: sbcnzabs_n
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: sbcnzabs_n
+    ; CHECK: $a, $c, $v = SBCAbs $a, 1234, $c, implicit-def $nz
+    ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
+    $a, $c, $xlsb, $v, $noreg = SBCNZAbs $a, 1234, $c
+...
+---
+name: sbcnzabs_z
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: sbcnzabs_z
+    ; CHECK: $a, $c, $v = SBCAbs $a, 1234, $c, implicit-def $nz
+    ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
+    $a, $c, $noreg, $v, $ylsb = SBCNZAbs $a, 1234, $c
+...
+---
+name: sbcnzabsidx_n
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: sbcnzabsidx_n
+    ; CHECK: $a, $c, $v = SBCAbsIdx $a, 1234, $x, $c, implicit-def $nz
+    ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
+    $a, $c, $xlsb, $v, $noreg = SBCNZAbsIdx $a, 1234, $x, $c
+...
+---
+name: sbcnzabsidx_z
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: sbcnzabsidx_z
+    ; CHECK: $a, $c, $v = SBCAbsIdx $a, 1234, $y, $c, implicit-def $nz
+    ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
+    $a, $c, $noreg, $v, $ylsb = SBCNZAbsIdx $a, 1234, $y, $c
+...
+---
+name: sbcnzindiridx_n
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: sbcnzindiridx_n
+    ; CHECK: $a, $c, $v = SBCIndirIdx $a, $rs1, $y, $c, implicit-def $nz
+    ; CHECK-NEXT: $xlsb = SelectImm $n, -1, 0
+    $a, $c, $xlsb, $v, $noreg = SBCNZIndirIdx $a, $rs1, $y, $c
+...
+---
+name: sbcnzindiridx_z
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: sbcnzindiridx_z
+    ; CHECK: $a, $c, $v = SBCIndirIdx $a, $rs2, $y, $c, implicit-def $nz
+    ; CHECK-NEXT: $ylsb = SelectImm $z, -1, 0
+    $a, $c, $noreg, $v, $ylsb = SBCNZIndirIdx $a, $rs2, $y, $c
 ...
 ---
 name: br_c

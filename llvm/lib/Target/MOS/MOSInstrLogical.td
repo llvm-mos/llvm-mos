@@ -105,6 +105,17 @@ let isAdd = true in {
 
 def SBCImm : MOSAddSubOp<i8imm>, PseudoInstExpansion<(SBC_Immediate imm8:$r)>;
 def SBCImag8 : MOSAddSubRC<Imag8>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
+let mayLoad = true in {
+  def SBCAbs :
+      MOSAddSubOp<i16imm>, PseudoInstExpansion<(SBC_ZeroPage addr8:$r)>;
+  def SBCAbsIdx : MOSAddSub {
+    dag InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx, Cc:$carryin);
+  }
+  def SBCIndirIdx :
+      MOSAddSub, PseudoInstExpansion<(SBC_IndirectIndexed addr8:$addr)> {
+    dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx, Cc:$carryin);
+  }
+}
 
 //===---------------------------------------------------------------------===//
 // Bitwise instructions
@@ -281,7 +292,7 @@ def CMPImag8 : MOSCMP { dag InOperandList = (ins GPR:$l, Imag8:$r); }
 let mayLoad = true in {
   def CMPAbs : MOSCMP { dag InOperandList = (ins GPR:$l, i16imm:$addr); }
   def CMPAbsIdx : MOSCMP { dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx); }
-  def CMPIndir : MOSCMP, PseudoInstExpansion<(CMP_IndirectIndexed addr8:$addr)> {
+  def CMPIndirIdx : MOSCMP, PseudoInstExpansion<(CMP_IndirectIndexed addr8:$addr)> {
     dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
   }
 }

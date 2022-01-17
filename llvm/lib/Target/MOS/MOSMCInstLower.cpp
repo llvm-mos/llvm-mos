@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "MOSMCInstLower.h"
+#include "MCTargetDesc/MOSAsmBackend.h"
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
-#include "MCTargetDesc/MOSAsmBackend.h"
 #include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
@@ -31,15 +31,32 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   default:
     OutMI.setOpcode(MI->getOpcode());
     break;
-  case MOS::ADCAbsIdx: {
-    switch (MI->getOperand(5).getReg()) {
-    default:
-      llvm_unreachable("Unexpected register.");
-    case MOS::X:
-      OutMI.setOpcode(MOS::ADC_ZeroPageX);
+  case MOS::ADCAbsIdx:
+  case MOS::SBCAbsIdx: {
+    switch (MI->getOpcode()) {
+    case MOS::ADCAbsIdx:
+      switch (MI->getOperand(5).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::X:
+        OutMI.setOpcode(MOS::ADC_ZeroPageX);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::ADC_AbsoluteY);
+        break;
+      }
       break;
-    case MOS::Y:
-      OutMI.setOpcode(MOS::ADC_AbsoluteY);
+    case MOS::SBCAbsIdx:
+      switch (MI->getOperand(5).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::X:
+        OutMI.setOpcode(MOS::SBC_ZeroPageX);
+        break;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::SBC_AbsoluteY);
+        break;
+      }
       break;
     }
     MCOperand Addr;
@@ -450,8 +467,8 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     const GlobalValue *GV = MO.getGlobal();
     MCOp = lowerSymbolOperand(MO, AP.getSymbol(GV));
     // This is the last chance to catch values that are attributed a zero-page
-    // section. It is the user's responsibility to ensure the linker will locate
-    // the symbol completely within the zero-page.
+    // section. It is the user's responsibility to ensure the linker will
+    // locate the symbol completely within the zero-page.
     if (MOSAsmBackend::isZeroPageSectionName(GV->getSection())) {
       const MOSMCExpr *Expr =
           MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, MCOp.getExpr(),
