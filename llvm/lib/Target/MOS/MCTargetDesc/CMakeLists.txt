@@ -1,7 +1,7 @@
 add_llvm_component_library(LLVMMOSDesc
   MOSAsmBackend.cpp
   MOSELFObjectWriter.cpp
-  MOSELFStreamer.cpp
+  MOSTargetELFStreamer.cpp
   MOSFixupKinds.cpp
   MOSInstPrinter.cpp
   MOSMCAsmInfo.cpp

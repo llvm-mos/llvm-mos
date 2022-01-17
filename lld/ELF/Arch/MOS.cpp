@@ -95,6 +95,13 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_MOS_FK_DATA_8:
     write64le(loc, static_cast<unsigned long long>(val));
     break;
+  case R_MOS_ADDR_ASCIZ: {
+    std::string valueStr = utostr(val);
+    assert(valueStr.size() <= 8 && "R_MOS_ADDR_ASCIZ string too big!");
+    std::copy(valueStr.begin(), valueStr.end(), loc);
+    loc[valueStr.size()] = '\0';
+    break;
+  }
   default:
     error(getErrorLocation(loc) + "unrecognized relocation " +
           toString(rel.type));

@@ -56,3 +56,6 @@ ELF_RELOC(R_MOS_ADDR24_SEGMENT_HI,       11)
 // Relocations for DWARF.
 ELF_RELOC(R_MOS_FK_DATA_4,               12)
 ELF_RELOC(R_MOS_FK_DATA_8,               13)
+
+// Decimal ASCII address encoding.
+ELF_RELOC(R_MOS_ADDR_ASCIZ,              14)

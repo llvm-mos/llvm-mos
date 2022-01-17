@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSMCTargetDesc.h"
-#include "MOSELFStreamer.h"
+#include "MOSTargetELFStreamer.h"
 #include "MOSInstPrinter.h"
 #include "MOSMCAsmInfo.h"
 #include "MOSMCELFStreamer.h"
@@ -112,7 +112,7 @@ static MCInstPrinter *createMOSMCInstPrinter(const Triple &T,
 
 static MCTargetStreamer *
 createMOSObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  return new MOSELFStreamer(S, STI);
+  return new MOSTargetELFStreamer(S, STI);
 }
 
 static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
