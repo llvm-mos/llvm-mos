@@ -40,7 +40,7 @@ class MOSPseudo : Instruction {
 // Abstracts LDAAbsIdx, LDXAbsIdx, and LDYAbsIdx. This is almost a logical instruction,
 // but the "LDX 1234,X" and "LDY 1234,Y" cases aren't natively supported, and
 // more than one instruction is required to emit them.
-def LDIdx : MOSPseudo {
+def LDAbsIdx : MOSPseudo {
   dag OutOperandList = (outs GPR:$dst);
   dag InOperandList = (ins i16imm:$addr, XY:$idx);
 

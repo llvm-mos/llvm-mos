@@ -310,7 +310,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldaabsidx
     ; CHECK: $a = LDAAbsIdx 1234, $x
-    $a = LDIdx 1234, $x
+    $a = LDAbsIdx 1234, $x
 ...
 ---
 name: ldxabsidx_y
@@ -318,7 +318,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldxabsidx_y
     ; CHECK: $x = LDXAbsIdx 1234, $y
-    $x = LDIdx 1234, $y
+    $x = LDAbsIdx 1234, $y
 ...
 ---
 name: ldxabsidx_x
@@ -328,7 +328,7 @@ body: |
     ; CHECK: [[LDAAbsIdx:%[0-9]+]]:ac = LDAAbsIdx 1234, $x
     ; CHECK-NEXT: $x = TA [[LDAAbsIdx]]
     ; CHECK-NEXT: $c = CMPImm $a, 0
-    $x = LDIdx 1234, $x
+    $x = LDAbsIdx 1234, $x
     $c = CMPImm $a, 0
 ...
 ---
@@ -337,7 +337,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldyabsidx_x
     ; CHECK: $y = LDYAbsIdx 1234, $x
-    $y = LDIdx 1234, $x
+    $y = LDAbsIdx 1234, $x
 ...
 ---
 name: ldimm1_lsb

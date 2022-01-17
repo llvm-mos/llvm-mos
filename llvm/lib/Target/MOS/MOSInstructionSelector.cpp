@@ -307,11 +307,11 @@ struct FoldedLdIdx_match {
       : Tgt(Tgt), Addr(Addr), Idx(Idx), AA(AA) {}
 
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    const MachineInstr *LdIdx = getOpcodeDef(MOS::G_LOAD_ABS_IDX, Reg, MRI);
-    if (!LdIdx || !shouldFoldMemAccess(Tgt, *LdIdx, AA))
+    const MachineInstr *LDAbsIdx = getOpcodeDef(MOS::G_LOAD_ABS_IDX, Reg, MRI);
+    if (!LDAbsIdx || !shouldFoldMemAccess(Tgt, *LDAbsIdx, AA))
       return false;
-    Addr = LdIdx->getOperand(1);
-    Idx = LdIdx->getOperand(2).getReg();
+    Addr = LDAbsIdx->getOperand(1);
+    Idx = LDAbsIdx->getOperand(2).getReg();
     return true;
   }
 };
@@ -1153,7 +1153,7 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
     Opcode = MOS::LDAbs;
     break;
   case MOS::G_LOAD_ABS_IDX:
-    Opcode = MOS::LDIdx;
+    Opcode = MOS::LDAbsIdx;
     break;
   case MOS::G_LOAD_INDIR_IDX:
     Opcode = MOS::LDIndirIdx;

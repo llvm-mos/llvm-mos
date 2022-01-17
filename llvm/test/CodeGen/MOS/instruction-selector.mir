@@ -1637,12 +1637,12 @@ body: |
   bb.0.entry:
     ; 6502-LABEL: name: load_absolute_indexed
     ; 6502: [[COPY:%[0-9]+]]:xy = COPY $x
-    ; 6502-NEXT: [[LDIdx:%[0-9]+]]:gpr = LDIdx i16 1234, [[COPY]] :: (load (s8))
-    ; 6502-NEXT: RTS implicit [[LDIdx]]
+    ; 6502-NEXT: [[LDAbsIdx:%[0-9]+]]:gpr = LDAbsIdx i16 1234, [[COPY]] :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[LDAbsIdx]]
     ; 65C02-LABEL: name: load_absolute_indexed
     ; 65C02: [[COPY:%[0-9]+]]:xy = COPY $x
-    ; 65C02-NEXT: [[LDIdx:%[0-9]+]]:gpr = LDIdx i16 1234, [[COPY]] :: (load (s8))
-    ; 65C02-NEXT: RTS implicit [[LDIdx]]
+    ; 65C02-NEXT: [[LDAbsIdx:%[0-9]+]]:gpr = LDAbsIdx i16 1234, [[COPY]] :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[LDAbsIdx]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
     RTS implicit %1

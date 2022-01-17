@@ -739,7 +739,7 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::DEC:
     expandIncDec(Builder);
     break;
-  case MOS::LDIdx:
+  case MOS::LDAbsIdx:
     expandLDIdx(Builder);
     break;
   case MOS::LDImm1:
@@ -798,7 +798,7 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
   unsigned Opcode;
   switch (MI.getOperand(0).getReg()) {
   default:
-    llvm_unreachable("Bad destination for LDIdx.");
+    llvm_unreachable("Bad destination for LDAbsIdx.");
   case MOS::A:
     Opcode = MOS::LDAAbsIdx;
     break;
