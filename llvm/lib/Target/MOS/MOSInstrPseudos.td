@@ -177,14 +177,16 @@ def CMPNZImm : MOSCMPNZ {
 def CMPNZImag8 : MOSCMPNZ {
   dag InOperandList = (ins GPR:$l, Imag8:$r);
 }
-def CMPNZAbs : MOSCMPNZ {
-  dag InOperandList = (ins GPR:$l, i16imm:$addr);
-}
-def CMPNZIdx : MOSCMPNZ {
-  dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
-}
-def CMPNZIndir : MOSCMPNZ {
-  dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
+let mayLoad = true in {
+  def CMPNZAbs : MOSCMPNZ {
+    dag InOperandList = (ins GPR:$l, i16imm:$addr);
+  }
+  def CMPNZIdx : MOSCMPNZ {
+    dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
+  }
+  def CMPNZIndir : MOSCMPNZ {
+    dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
+  }
 }
 
 def SBCNZImm : MOSPseudo {
@@ -216,17 +218,19 @@ def CMPTermImm : MOSCMPTerm {
 def CMPTermImag8 : MOSCMPTerm {
   dag InOperandList = (ins GPR:$l, Imag8:$r);
 }
-def CMPTermAbs : MOSCMPTerm {
-  dag InOperandList = (ins GPR:$l, i16imm:$addr);
-}
-def CMPTermIdx : MOSCMPTerm {
-  dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
-}
-def CMPTermIndir : MOSCMPTerm {
-  dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
-}
 def CMPTermZ : MOSCMPTerm {
   dag InOperandList = (ins Anyi8:$val);
+}
+let mayLoad = true in {
+  def CMPTermAbs : MOSCMPTerm {
+    dag InOperandList = (ins GPR:$l, i16imm:$addr);
+  }
+  def CMPTermIdx : MOSCMPTerm {
+    dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
+  }
+  def CMPTermIndir : MOSCMPTerm {
+    dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
+  }
 }
 
 //===---------------------------------------------------------------------===//

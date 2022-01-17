@@ -192,6 +192,7 @@ def ROR : MOSRotate;
 def BITAbs : MOSLogicalInstr, PseudoInstExpansion<(BIT_ZeroPage addr8:$r)> {
   dag OutOperandList = (outs Vc:$v);
   dag InOperandList = (ins Ac:$l, i16imm:$r);
+  let mayLoad = true;
 }
 
 //===---------------------------------------------------------------------===//
@@ -276,10 +277,13 @@ class MOSCMP : MOSLogicalInstr {
 
 def CMPImm : MOSCMP { dag InOperandList = (ins GPR:$l, i8imm:$r); }
 def CMPImag8 : MOSCMP { dag InOperandList = (ins GPR:$l, Imag8:$r); }
-def CMPAbs : MOSCMP { dag InOperandList = (ins GPR:$l, i16imm:$addr); }
-def CMPAbsIdx : MOSCMP { dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx); }
-def CMPIndir : MOSCMP, PseudoInstExpansion<(CMP_IndirectIndexed addr8:$addr)> {
-  dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
+
+let mayLoad = true in {
+  def CMPAbs : MOSCMP { dag InOperandList = (ins GPR:$l, i16imm:$addr); }
+  def CMPAbsIdx : MOSCMP { dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx); }
+  def CMPIndir : MOSCMP, PseudoInstExpansion<(CMP_IndirectIndexed addr8:$addr)> {
+    dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
+  }
 }
 
 //===---------------------------------------------------------------------===//
