@@ -991,33 +991,101 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
   return true;
 }
 
+template <typename ADDR_P, typename CARRYIN_P> struct GShlE_match {
+  Register &CarryOut;
+  ADDR_P Addr;
+  CARRYIN_P CarryIn;
+
+  GShlE_match(Register &CarryOut, const ADDR_P &Addr, const CARRYIN_P &CarryIn)
+      : CarryOut(CarryOut), Addr(Addr), CarryIn(CarryIn) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    const MachineInstr *GShlE = getOpcodeDef(MOS::G_SHLE, Reg, MRI);
+    if (!GShlE)
+      return false;
+    CarryOut = GShlE->getOperand(1).getReg();
+    return Addr.match(MRI, GShlE->getOperand(2).getReg()) &&
+           CarryIn.match(MRI, GShlE->getOperand(3).getReg());
+  }
+};
+
+template <typename ADDR_P, typename CARRYIN_P>
+GShlE_match<ADDR_P, CARRYIN_P> m_GShlE(Register &CarryOut, const ADDR_P &Addr,
+                                       const CARRYIN_P &CarryIn) {
+  return {CarryOut, Addr, CarryIn};
+}
+
+// Replace all uses of a given virtual register after a given instruction with a
+// new one. The given machine instruction must dominate all references outside
+// the containing basic block. This allows folding a multi-def machine
+// instruction into a later one in the same block by rewriting all later
+// references to use new vregs.
+static void replaceUsesAfter(MachineInstr &MI, Register From, Register To,
+                             const MachineRegisterInfo &MRI) {
+  for (auto I = MachineBasicBlock::iterator(&MI), E = MI.getParent()->end();
+       I != E; ++I) {
+    for (MachineOperand &Op : I->uses())
+      if (Op.isReg() && Op.getReg() == From)
+        Op.setReg(To);
+  }
+  for (MachineOperand &MO : MRI.use_nodbg_operands(From))
+    if (MO.getParent()->getParent() != MI.getParent())
+      MO.setReg(To);
+}
+
 bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
-  const auto &MRI = *Builder.getMRI();
+  auto &MRI = *Builder.getMRI();
 
   if (MI.getOpcode() == MOS::G_STORE_ABS) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
     if (mi_match(MI.getOperand(0).getReg(), MRI,
-                 m_GAdd(m_FoldedLdAbs(MI, Addr, AA), m_SpecificICst(1)))) {
-      if (Addr.isIdenticalTo(MI.getOperand(1))) {
-        Builder.buildInstr(MOS::INCAbs).add(Addr);
-        MI.eraseFromParent();
-        return true;
-      }
+                 m_GAdd(m_FoldedLdAbs(MI, Addr, AA), m_SpecificICst(1))) &&
+        Addr.isIdenticalTo(MI.getOperand(1))) {
+      Builder.buildInstr(MOS::INCAbs).add(Addr);
+      MI.eraseFromParent();
+      return true;
+    }
+    Register CarryOut;
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GShlE(CarryOut, m_FoldedLdAbs(MI, Addr, AA),
+                         m_SpecificICst(0))) &&
+        Addr.isIdenticalTo(MI.getOperand(1))) {
+      auto Asl =
+          Builder.buildInstr(MOS::ASLAbs, {&MOS::CcRegClass}, {}).add(Addr);
+      replaceUsesAfter(*Asl, CarryOut, Asl.getReg(0), MRI);
+      if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
     }
   } else if (MI.getOpcode() == MOS::G_STORE_ABS_IDX) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
     Register Idx;
     if (mi_match(MI.getOperand(0).getReg(), MRI,
-                 m_GAdd(m_FoldedLdIdx(MI, Addr, Idx, AA), m_SpecificICst(1)))) {
-      if (Addr.isIdenticalTo(MI.getOperand(1)) &&
-          Idx == MI.getOperand(2).getReg()) {
-        auto Inc = Builder.buildInstr(MOS::INCAbsIdx).add(Addr).addUse(Idx);
-        if (!constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI))
-          return false;
-        MI.eraseFromParent();
-        return true;
-      }
+                 m_GAdd(m_FoldedLdIdx(MI, Addr, Idx, AA), m_SpecificICst(1))) &&
+        Addr.isIdenticalTo(MI.getOperand(1)) &&
+        Idx == MI.getOperand(2).getReg()) {
+      auto Inc = Builder.buildInstr(MOS::INCAbsIdx).add(Addr).addUse(Idx);
+      if (!constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
+    Register CarryOut;
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GShlE(CarryOut, m_FoldedLdIdx(MI, Addr, Idx, AA),
+                         m_SpecificICst(0))) &&
+        Addr.isIdenticalTo(MI.getOperand(1)) &&
+        Idx == MI.getOperand(2).getReg()) {
+      auto Asl = Builder.buildInstr(MOS::ASLAbsIdx, {&MOS::CcRegClass}, {})
+                     .add(Addr)
+                     .addUse(Idx);
+      replaceUsesAfter(*Asl, CarryOut, Asl.getReg(0), MRI);
+      if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
     }
   }
 
