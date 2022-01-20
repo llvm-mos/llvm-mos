@@ -1046,6 +1046,13 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GAdd(m_FoldedLdAbs(MI, Addr, AA), m_SpecificICst(-1))) &&
+        Addr.isIdenticalTo(MI.getOperand(1))) {
+      Builder.buildInstr(MOS::DECAbs).add(Addr);
+      MI.eraseFromParent();
+      return true;
+    }
     Register CarryOut;
     if (mi_match(MI.getOperand(0).getReg(), MRI,
                  m_GShlE(CarryOut, m_FoldedLdAbs(MI, Addr, AA),
@@ -1067,6 +1074,17 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
         Addr.isIdenticalTo(MI.getOperand(1)) &&
         Idx == MI.getOperand(2).getReg()) {
       auto Inc = Builder.buildInstr(MOS::INCAbsIdx).add(Addr).addUse(Idx);
+      if (!constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
+    if (mi_match(
+            MI.getOperand(0).getReg(), MRI,
+            m_GAdd(m_FoldedLdIdx(MI, Addr, Idx, AA), m_SpecificICst(-1))) &&
+        Addr.isIdenticalTo(MI.getOperand(1)) &&
+        Idx == MI.getOperand(2).getReg()) {
+      auto Inc = Builder.buildInstr(MOS::DECAbsIdx).add(Addr).addUse(Idx);
       if (!constrainSelectedInstRegOperands(*Inc, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
