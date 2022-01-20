@@ -1015,6 +1015,30 @@ GShlE_match<ADDR_P, CARRYIN_P> m_GShlE(Register &CarryOut, const ADDR_P &Addr,
   return {CarryOut, Addr, CarryIn};
 }
 
+template <typename ADDR_P, typename CARRYIN_P> struct GLshrE_match {
+  Register &CarryOut;
+  ADDR_P Addr;
+  CARRYIN_P CarryIn;
+
+  GLshrE_match(Register &CarryOut, const ADDR_P &Addr, const CARRYIN_P &CarryIn)
+      : CarryOut(CarryOut), Addr(Addr), CarryIn(CarryIn) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    const MachineInstr *GLshrE = getOpcodeDef(MOS::G_LSHRE, Reg, MRI);
+    if (!GLshrE)
+      return false;
+    CarryOut = GLshrE->getOperand(1).getReg();
+    return Addr.match(MRI, GLshrE->getOperand(2).getReg()) &&
+           CarryIn.match(MRI, GLshrE->getOperand(3).getReg());
+  }
+};
+
+template <typename ADDR_P, typename CARRYIN_P>
+GLshrE_match<ADDR_P, CARRYIN_P> m_GLshrE(Register &CarryOut, const ADDR_P &Addr,
+                                         const CARRYIN_P &CarryIn) {
+  return {CarryOut, Addr, CarryIn};
+}
+
 // Replace all uses of a given virtual register after a given instruction with a
 // new one. The given machine instruction must dominate all references outside
 // the containing basic block. This allows folding a multi-def machine
@@ -1037,6 +1061,8 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();
 
+  // Read-modify-write instruction patterns are rooted at store instructions, so
+  // select one if possible. This can make an entire instruction sequence dead.
   if (MI.getOpcode() == MOS::G_STORE_ABS) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
     if (mi_match(MI.getOperand(0).getReg(), MRI,
@@ -1062,6 +1088,18 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
           Builder.buildInstr(MOS::ASLAbs, {&MOS::CcRegClass}, {}).add(Addr);
       replaceUsesAfter(*Asl, CarryOut, Asl.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GLshrE(CarryOut, m_FoldedLdAbs(MI, Addr, AA),
+                          m_SpecificICst(0))) &&
+        Addr.isIdenticalTo(MI.getOperand(1))) {
+      auto Lsr =
+          Builder.buildInstr(MOS::LSRAbs, {&MOS::CcRegClass}, {}).add(Addr);
+      replaceUsesAfter(*Lsr, CarryOut, Lsr.getReg(0), MRI);
+      if (!constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
       return true;
@@ -1105,11 +1143,28 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GLshrE(CarryOut, m_FoldedLdIdx(MI, Addr, Idx, AA),
+                          m_SpecificICst(0))) &&
+        Addr.isIdenticalTo(MI.getOperand(1)) &&
+        Idx == MI.getOperand(2).getReg()) {
+      auto Lsr = Builder.buildInstr(MOS::LSRAbsIdx, {&MOS::CcRegClass}, {})
+                     .add(Addr)
+                     .addUse(Idx);
+      replaceUsesAfter(*Lsr, CarryOut, Lsr.getReg(0), MRI);
+      if (!constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
   }
 
+  // If this isn't a STZ, emit a store pseudo.
   if (!STI.has65C02() ||
       !isOperandImmEqual(MI.getOperand(0), 0, *Builder.getMRI()))
     return selectGeneric(MI);
+
+  // STZ
 
   unsigned Opcode;
   switch (MI.getOpcode()) {

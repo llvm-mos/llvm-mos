@@ -191,16 +191,22 @@ class MOSRotate : MOSShiftRotate {
 def ASL : MOSShift;
 def LSR : MOSShift;
 
-class MOSASLRMW : MOSLogicalInstr {
+class MOSShiftRMW : MOSLogicalInstr {
   dag OutOperandList = (outs Cc:$carryout);
   let mayLoad = true;
   let mayStore = true;
 }
 
-def ASLAbs : MOSASLRMW, PseudoInstExpansion<(ASL_ZeroPage addr8:$addr)> {
+def ASLAbs : MOSShiftRMW, PseudoInstExpansion<(ASL_ZeroPage addr8:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
 }
-def ASLAbsIdx : MOSASLRMW, PseudoInstExpansion<(ASL_ZeroPageX addr8:$addr)> {
+def ASLAbsIdx : MOSShiftRMW, PseudoInstExpansion<(ASL_ZeroPageX addr8:$addr)> {
+  dag InOperandList = (ins i16imm:$addr, Xc:$idx);
+}
+def LSRAbs : MOSShiftRMW, PseudoInstExpansion<(LSR_ZeroPage addr8:$addr)> {
+  dag InOperandList = (ins i16imm:$addr);
+}
+def LSRAbsIdx : MOSShiftRMW, PseudoInstExpansion<(LSR_ZeroPageX addr8:$addr)> {
   dag InOperandList = (ins i16imm:$addr, Xc:$idx);
 }
 
