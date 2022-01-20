@@ -182,20 +182,24 @@ class MOSShift : MOSShiftRotate {
   dag InOperandList = (ins AImag8:$src);
   let Constraints = "$dst = $src";
 }
-
 class MOSRotate : MOSShiftRotate {
   dag InOperandList = (ins AImag8:$src, Cc:$carryin);
   let Constraints = "$dst = $src, $carryout = $carryin";
 }
 
-def ASL : MOSShift;
-def LSR : MOSShift;
-
-class MOSShiftRMW : MOSLogicalInstr {
+class MOSShiftRotateRMW : MOSLogicalInstr {
   dag OutOperandList = (outs Cc:$carryout);
   let mayLoad = true;
   let mayStore = true;
 }
+
+class MOSShiftRMW : MOSShiftRotateRMW {}
+class MOSRotateRMW : MOSShiftRotateRMW {
+  let Constraints = "$carryout = $carryin";
+}
+
+def ASL : MOSShift;
+def LSR : MOSShift;
 
 def ASLAbs : MOSShiftRMW, PseudoInstExpansion<(ASL_ZeroPage addr8:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
@@ -212,6 +216,19 @@ def LSRAbsIdx : MOSShiftRMW, PseudoInstExpansion<(LSR_ZeroPageX addr8:$addr)> {
 
 def ROL : MOSRotate;
 def ROR : MOSRotate;
+
+def ROLAbs : MOSRotateRMW, PseudoInstExpansion<(ROL_ZeroPage addr8:$addr)> {
+  dag InOperandList = (ins i16imm:$addr, Cc:$carryin);
+}
+def ROLAbsIdx : MOSRotateRMW, PseudoInstExpansion<(ROL_ZeroPageX addr8:$addr)> {
+  dag InOperandList = (ins i16imm:$addr, Xc:$idx, Cc:$carryin);
+}
+def RORAbs : MOSRotateRMW, PseudoInstExpansion<(ROR_ZeroPage addr8:$addr)> {
+  dag InOperandList = (ins i16imm:$addr, Cc:$carryin);
+}
+def RORAbsIdx : MOSRotateRMW, PseudoInstExpansion<(ROR_ZeroPageX addr8:$addr)> {
+  dag InOperandList = (ins i16imm:$addr, Xc:$idx, Cc:$carryin);
+}
 
 //===---------------------------------------------------------------------===//
 // BIT Instructions

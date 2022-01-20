@@ -1104,6 +1104,33 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
+    Register CarryIn;
+    if (mi_match(
+            MI.getOperand(0).getReg(), MRI,
+            m_GShlE(CarryOut, m_FoldedLdAbs(MI, Addr, AA), m_Reg(CarryIn))) &&
+        Addr.isIdenticalTo(MI.getOperand(1))) {
+      auto Rol = Builder.buildInstr(MOS::ROLAbs, {&MOS::CcRegClass}, {})
+                     .add(Addr)
+                     .addUse(CarryIn);
+      replaceUsesAfter(*Rol, CarryOut, Rol.getReg(0), MRI);
+      if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
+    if (mi_match(
+            MI.getOperand(0).getReg(), MRI,
+            m_GLshrE(CarryOut, m_FoldedLdAbs(MI, Addr, AA), m_Reg(CarryIn))) &&
+        Addr.isIdenticalTo(MI.getOperand(1))) {
+      auto Ror = Builder.buildInstr(MOS::RORAbs, {&MOS::CcRegClass}, {})
+                     .add(Addr)
+                     .addUse(CarryIn);
+      replaceUsesAfter(*Ror, CarryOut, Ror.getReg(0), MRI);
+      if (!constrainSelectedInstRegOperands(*Ror, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
   } else if (MI.getOpcode() == MOS::G_STORE_ABS_IDX) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
     Register Idx;
@@ -1153,6 +1180,37 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
                      .addUse(Idx);
       replaceUsesAfter(*Lsr, CarryOut, Lsr.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
+    Register CarryIn;
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GShlE(CarryOut, m_FoldedLdIdx(MI, Addr, Idx, AA),
+                         m_Reg(CarryIn))) &&
+        Addr.isIdenticalTo(MI.getOperand(1)) &&
+        Idx == MI.getOperand(2).getReg()) {
+      auto Rol = Builder.buildInstr(MOS::ROLAbsIdx, {&MOS::CcRegClass}, {})
+                     .add(Addr)
+                     .addUse(Idx)
+                     .addUse(CarryIn);
+      replaceUsesAfter(*Rol, CarryOut, Rol.getReg(0), MRI);
+      if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
+        return false;
+      MI.eraseFromParent();
+      return true;
+    }
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_GLshrE(CarryOut, m_FoldedLdIdx(MI, Addr, Idx, AA),
+                          m_Reg(CarryIn))) &&
+        Addr.isIdenticalTo(MI.getOperand(1)) &&
+        Idx == MI.getOperand(2).getReg()) {
+      auto Ror = Builder.buildInstr(MOS::RORAbsIdx, {&MOS::CcRegClass}, {})
+                     .add(Addr)
+                     .addUse(Idx)
+                     .addUse(CarryIn);
+      replaceUsesAfter(*Ror, CarryOut, Ror.getReg(0), MRI);
+      if (!constrainSelectedInstRegOperands(*Ror, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
       return true;

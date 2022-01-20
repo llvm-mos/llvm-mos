@@ -643,6 +643,94 @@ body: |
     RTS implicit %4
 ...
 ---
+name: rol_abs
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: rol_abs
+    ; 6502: [[COPY:%[0-9]+]]:cc = COPY $v
+    ; 6502-NEXT: [[ROLAbs:%[0-9]+]]:cc = ROLAbs i16 1234, [[COPY]]
+    ; 6502-NEXT: RTS implicit [[ROLAbs]]
+    ; 65C02-LABEL: name: rol_abs
+    ; 65C02: [[COPY:%[0-9]+]]:cc = COPY $v
+    ; 65C02-NEXT: [[ROLAbs:%[0-9]+]]:cc = ROLAbs i16 1234, [[COPY]]
+    ; 65C02-NEXT: RTS implicit [[ROLAbs]]
+    %0:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %1:any(s1) = COPY $v
+    %2:any(s8), %3:any(s1) = G_SHLE %0, %1
+    G_STORE_ABS %2, i16 1234 :: (store (s8))
+    RTS implicit %3
+...
+---
+name: rol_absidx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    liveins: $x
+    ; 6502-LABEL: name: rol_absidx
+    ; 6502: [[COPY:%[0-9]+]]:xc = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:cc = COPY $v
+    ; 6502-NEXT: [[ROLAbsIdx:%[0-9]+]]:cc = ROLAbsIdx i16 1234, [[COPY]], [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[ROLAbsIdx]]
+    ; 65C02-LABEL: name: rol_absidx
+    ; 65C02: [[COPY:%[0-9]+]]:xc = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:cc = COPY $v
+    ; 65C02-NEXT: [[ROLAbsIdx:%[0-9]+]]:cc = ROLAbsIdx i16 1234, [[COPY]], [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[ROLAbsIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
+    %2:any(s1) = COPY $v
+    %3:any(s8), %4:any(s1) = G_SHLE %1, %2
+    G_STORE_ABS_IDX %3, i16 1234, %0 :: (store (s8))
+    RTS implicit %4
+...
+---
+name: ror_abs
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: ror_abs
+    ; 6502: [[COPY:%[0-9]+]]:cc = COPY $v
+    ; 6502-NEXT: [[RORAbs:%[0-9]+]]:cc = RORAbs i16 1234, [[COPY]]
+    ; 6502-NEXT: RTS implicit [[RORAbs]]
+    ; 65C02-LABEL: name: ror_abs
+    ; 65C02: [[COPY:%[0-9]+]]:cc = COPY $v
+    ; 65C02-NEXT: [[RORAbs:%[0-9]+]]:cc = RORAbs i16 1234, [[COPY]]
+    ; 65C02-NEXT: RTS implicit [[RORAbs]]
+    %0:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %1:any(s1) = COPY $v
+    %2:any(s8), %3:any(s1) = G_LSHRE %0, %1
+    G_STORE_ABS %2, i16 1234 :: (store (s8))
+    RTS implicit %3
+...
+---
+name: ror_absidx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    liveins: $x
+    ; 6502-LABEL: name: ror_absidx
+    ; 6502: [[COPY:%[0-9]+]]:xc = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:cc = COPY $v
+    ; 6502-NEXT: [[RORAbsIdx:%[0-9]+]]:cc = RORAbsIdx i16 1234, [[COPY]], [[COPY1]]
+    ; 6502-NEXT: RTS implicit [[RORAbsIdx]]
+    ; 65C02-LABEL: name: ror_absidx
+    ; 65C02: [[COPY:%[0-9]+]]:xc = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:cc = COPY $v
+    ; 65C02-NEXT: [[RORAbsIdx:%[0-9]+]]:cc = RORAbsIdx i16 1234, [[COPY]], [[COPY1]]
+    ; 65C02-NEXT: RTS implicit [[RORAbsIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ABS_IDX i16 1234, %0 :: (load (s8))
+    %2:any(s1) = COPY $v
+    %3:any(s8), %4:any(s1) = G_LSHRE %1, %2
+    G_STORE_ABS_IDX %3, i16 1234, %0 :: (store (s8))
+    RTS implicit %4
+...
+---
 name: sub
 legalized: true
 regBankSelected: true
