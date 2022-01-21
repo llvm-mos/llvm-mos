@@ -303,7 +303,7 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
   case MachineOperand::MO_MachineBasicBlock:
     return getMBB() == Other.getMBB();
   case MachineOperand::MO_FrameIndex:
-    return getIndex() == Other.getIndex();
+    return getIndex() == Other.getIndex() && getOffset() == Other.getOffset();
   case MachineOperand::MO_ConstantPoolIndex:
   case MachineOperand::MO_TargetIndex:
     return getIndex() == Other.getIndex() && getOffset() == Other.getOffset();
