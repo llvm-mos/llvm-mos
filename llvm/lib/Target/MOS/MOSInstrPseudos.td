@@ -58,6 +58,35 @@ def LDImm1 : MOSPseudo {
   let isReMaterializable = true;
 }
 
+// Loads a 16-bit value into an imaginary pointer pair. This is generally more
+// constrained than loading two 8-bit values using a REG_SEQUENCE, but bundling
+// this functionality into a single pseudo-instruction allows thee register
+// allocator to rematerialize the load at point of use. This is particularly
+// important for immediate loads, since GlobalISel places these at the beginning
+// of basic blocks, which maximizes the chance that they'll be live across
+// calls. Without rematerialization, all these loads would be placed in CSRs,
+// for massive spill/reload overhead.
+def LDImm16 : MOSPseudo {
+  dag OutOperandList = (outs Imag16:$dst, GPR:$scratch);
+  dag InOperandList = (ins i16imm:$val);
+
+  let isAsCheapAsAMove = true;
+  let isMoveImm = true;
+  let isReMaterializable = true;
+}
+
+// Version of LDImm16 that doesn't use a scratch register, to satisfy the
+// requirements for rematerialization. Instead, the register scavenger locates a
+// scratch register at expansion time.
+def LDImm16Remat : MOSPseudo {
+  dag OutOperandList = (outs Imag16:$dst);
+  dag InOperandList = (ins i16imm:$val);
+
+  let isAsCheapAsAMove = true;
+  let isMoveImm = true;
+  let isReMaterializable = true;
+}
+
 // Expands to LDImm 0 for GPR or STZImag8 for Imag8.
 def LDZ : MOSPseudo {
   let Predicates = [Has65C02];

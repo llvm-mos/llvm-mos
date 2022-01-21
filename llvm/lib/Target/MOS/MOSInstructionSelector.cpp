@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -36,6 +37,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -61,6 +63,10 @@ public:
   MOSInstructionSelector(const MOSTargetMachine &TM, MOSSubtarget &STI,
                          MOSRegisterBankInfo &RBI);
 
+  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+               CodeGenCoverage &CovInfo, ProfileSummaryInfo *PSI,
+               BlockFrequencyInfo *BFI, AAResults *AA) override;
+
   bool select(MachineInstr &MI) override;
   static const char *getName() { return DEBUG_TYPE; }
 
@@ -79,7 +85,9 @@ private:
   bool selectBrCondImm(MachineInstr &MI);
   bool selectSbc(MachineInstr &MI);
   bool selectFrameIndex(MachineInstr &MI);
+  std::pair<Register, Register> selectFrameIndexLoHi(MachineInstr &MI);
   bool selectAddr(MachineInstr &MI);
+  std::pair<Register, Register> selectAddrLoHi(MachineInstr &MI);
   bool selectStore(MachineInstr &MI);
   bool selectLshrShlE(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
@@ -132,6 +140,30 @@ MOSInstructionSelector::MOSInstructionSelector(const MOSTargetMachine &TM,
 #include "MOSGenGlobalISel.inc"
 #undef GET_GLOBALISEL_TEMPORARIES_INIT
 {
+}
+
+void MOSInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
+                                     CodeGenCoverage &CovInfo,
+                                     ProfileSummaryInfo *PSI,
+                                     BlockFrequencyInfo *BFI, AAResults *AA) {
+  InstructionSelector::setupMF(MF, KB, CovInfo, PSI, BFI, AA);
+
+  // The machine verifier doesn't allow COPY instructions to have differing
+  // types, but the various GlobalISel utilities used in the instruction
+  // selector really need to be able to look through G_PTRTOINT and G_INTTOPTR
+  // as if they were copies. To avoid maintaining separate versions of these, we
+  // temporarily lower these to technically-illegal COPY instructions, but only
+  // for the duration of this one pass.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      switch (MI.getOpcode()) {
+      case MOS::G_PTRTOINT:
+      case MOS::G_INTTOPTR:
+        MI.setDesc(TII.get(MOS::COPY));
+        break;
+      }
+    }
+  }
 }
 
 // Returns the widest register class that can contain values of a given type.
@@ -204,12 +236,10 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
 
   case MOS::G_BRINDIRECT:
   case MOS::G_IMPLICIT_DEF:
-  case MOS::G_INTTOPTR:
   case MOS::G_LOAD_ABS:
   case MOS::G_LOAD_ABS_IDX:
   case MOS::G_LOAD_INDIR_IDX:
   case MOS::G_PHI:
-  case MOS::G_PTRTOINT:
   case MOS::G_STORE_INDIR_IDX:
     return selectGeneric(MI);
   }
@@ -936,9 +966,19 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
-  MachineIRBuilder Builder(MI);
-
   Register Dst = MI.getOperand(0).getReg();
+
+  std::pair<Register, Register> LoHi = selectFrameIndexLoHi(MI);
+
+  MachineIRBuilder Builder(MI);
+  composePtr(Builder, Dst, LoHi.first, LoHi.second);
+  MI.eraseFromParent();
+  return true;
+}
+
+std::pair<Register, Register>
+MOSInstructionSelector::selectFrameIndexLoHi(MachineInstr &MI) {
+  MachineIRBuilder Builder(MI);
 
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
@@ -949,7 +989,7 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
   bool IsLocal = !MI.getMF()->getFrameInfo().isFixedObjectIndex(
       MI.getOperand(1).getIndex());
   if (MI.getMF()->getFunction().doesNotRecurse() && IsLocal)
-    return selectAddr(MI);
+    return selectAddrLoHi(MI);
 
   // Otherwise a soft stack needs to be used, so frame addresses are offsets
   // from the stack/frame pointer. Record this as a pseudo, since the best
@@ -966,29 +1006,39 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
                .addUse(Carry);
 
   if (!constrainSelectedInstRegOperands(*LoAddr, TII, TRI, RBI))
-    return false;
+    llvm_unreachable("Cannot constrain instruction.");
   if (!constrainSelectedInstRegOperands(*HiAddr, TII, TRI, RBI))
+    llvm_unreachable("Cannot constrain instruction.");
+
+  return {LoAddr.getReg(0), HiAddr.getReg(0)};
+}
+
+bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
+  MachineIRBuilder Builder(MI);
+  auto Instr =
+      Builder
+          .buildInstr(MOS::LDImm16, {MI.getOperand(0), &MOS::GPRRegClass}, {})
+          .add(MI.getOperand(1));
+  if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
-  composePtr(Builder, Dst, LoAddr.getReg(0), HiAddr.getReg(0));
   MI.eraseFromParent();
   return true;
 }
 
-bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
+std::pair<Register, Register>
+MOSInstructionSelector::selectAddrLoHi(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   LLT S8 = LLT::scalar(8);
   auto LoImm = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
   LoImm->getOperand(1).setTargetFlags(MOS::MO_LO);
   if (!constrainSelectedInstRegOperands(*LoImm, TII, TRI, RBI))
-    return false;
+    llvm_unreachable("Cannot constrain instruction.");
   auto HiImm = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
   HiImm->getOperand(1).setTargetFlags(MOS::MO_HI);
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
-    return false;
-  composePtr(Builder, MI.getOperand(0).getReg(), LoImm.getReg(0),
-             HiImm.getReg(0));
-  MI.eraseFromParent();
-  return true;
+    llvm_unreachable("Cannot constrain instruction.");
+
+  return {LoImm.getReg(0), HiImm.getReg(0)};
 }
 
 template <typename ADDR_P, typename CARRYIN_P> struct GShlE_match {
@@ -1244,11 +1294,26 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
+  MachineIRBuilder Builder(MI);
+  const MachineRegisterInfo &MRI = *Builder.getMRI();
+
   Register Dst = MI.getOperand(0).getReg();
   Register Lo = MI.getOperand(1).getReg();
   Register Hi = MI.getOperand(2).getReg();
 
-  MachineIRBuilder Builder(MI);
+  auto LoConst = getIConstantVRegValWithLookThrough(Lo, MRI);
+  auto HiConst = getIConstantVRegValWithLookThrough(Hi, MRI);
+  if (LoConst && HiConst) {
+    uint64_t Val =
+        HiConst->Value.getZExtValue() << 8 | LoConst->Value.getZExtValue();
+    auto Instr =
+        Builder.buildInstr(MOS::LDImm16, {Dst, &MOS::GPRRegClass}, {Val});
+    if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
+  }
+
   composePtr(Builder, Dst, Lo, Hi);
   MI.eraseFromParent();
   return true;
@@ -1388,11 +1453,29 @@ bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
 
   MachineIRBuilder Builder(MI);
 
-  auto LoCopy = Builder.buildCopy(Lo, Src);
-  LoCopy->getOperand(1).setSubReg(MOS::sublo);
+  MachineInstr *SrcMI = getDefIgnoringCopies(Src, *Builder.getMRI());
+  Optional<std::pair<Register, Register>> LoHi;
+  switch (SrcMI->getOpcode()) {
+  case MOS::G_FRAME_INDEX:
+    LoHi = selectFrameIndexLoHi(*SrcMI);
+    break;
+  case MOS::G_BLOCK_ADDR:
+  case MOS::G_GLOBAL_VALUE:
+    LoHi = selectAddrLoHi(*SrcMI);
+    break;
+  }
+  MachineInstrBuilder LoCopy;
+  MachineInstrBuilder HiCopy;
+  if (LoHi) {
+    LoCopy = Builder.buildCopy(Lo, LoHi->first);
+    HiCopy = Builder.buildCopy(Hi, LoHi->second);
+  } else {
+    LoCopy = Builder.buildCopy(Lo, Src);
+    LoCopy->getOperand(1).setSubReg(MOS::sublo);
+    HiCopy = Builder.buildCopy(Hi, Src);
+    HiCopy->getOperand(1).setSubReg(MOS::subhi);
+  }
   constrainGenericOp(*LoCopy);
-  auto HiCopy = Builder.buildCopy(Hi, Src);
-  HiCopy->getOperand(1).setSubReg(MOS::subhi);
   constrainGenericOp(*HiCopy);
   MI.eraseFromParent();
   return true;
@@ -1405,10 +1488,6 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
     llvm_unreachable("Unexpected opcode.");
   case MOS::G_BRINDIRECT:
     Opcode = MOS::JMPIndir;
-    break;
-  case MOS::G_INTTOPTR:
-  case MOS::G_PTRTOINT:
-    Opcode = MOS::COPY;
     break;
   case MOS::G_IMPLICIT_DEF:
     Opcode = MOS::IMPLICIT_DEF;
@@ -1455,44 +1534,6 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
                     .addUse(Hi)
                     .addImm(MOS::subhi);
   constrainGenericOp(*RegSeq);
-
-  // Rewrite uses of subregisters of the dst to Lo and Hi. Hopefully, this
-  // will make the use of the REG_SEQUENCE dead. 16-bit pointer registers are
-  // hard to come by in constrained zero pages. Unless their live ranges are
-  // limited, register allocation may not be able to find a solution.
-  std::vector<Register> Worklist = {Dst};
-  std::vector<MachineOperand *> MOs;
-  while (!Worklist.empty()) {
-    Register Reg = Worklist.back();
-    Worklist.pop_back();
-    for (MachineInstr &MI : Builder.getMRI()->use_nodbg_instructions(Reg)) {
-      if (MI.isCopy() && MI.getOperand(1).getReg().isVirtual() &&
-          !MI.getOperand(1).getSubReg()) {
-        Worklist.push_back(MI.getOperand(0).getReg());
-        continue;
-      }
-      for (int Idx = 0, IdxEnd = MI.getNumOperands(); Idx != IdxEnd; Idx++) {
-        MachineOperand &MO = MI.getOperand(Idx);
-        if (MO.isReg() && MO.getReg() == Reg && MO.isUse() && MO.getSubReg())
-          MOs.push_back(&MO);
-      }
-    }
-  }
-
-  // Machine operands cannot be directly modified in the above loop, since
-  // doing so would upset use_nodbg_instructions. (The set of use instructions
-  // would change.)
-  for (MachineOperand *MO : MOs) {
-    if (MO->getSubReg() == MOS::sublo) {
-      MO->setReg(Lo);
-      MO->setSubReg(0);
-    } else {
-      assert(MO->getSubReg() == MOS::subhi);
-
-      MO->setReg(Hi);
-      MO->setSubReg(0);
-    }
-  }
 }
 
 // Ensures that any virtual registers defined by this operation are given a

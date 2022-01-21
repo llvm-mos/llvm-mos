@@ -25,11 +25,19 @@ class MOSInstrInfo : public MOSGenInstrInfo {
 public:
   MOSInstrInfo();
 
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
+                                         AAResults *AA) const override;
+
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
 
   unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+
+  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                     Register DestReg, unsigned SubIdx,
+                     const MachineInstr &Orig,
+                     const TargetRegisterInfo &TRI) const override;
 
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
@@ -111,6 +119,8 @@ private:
   // Post RA pseudos
   void expandLDIdx(MachineIRBuilder &Builder) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;
+  void expandLDImm16(MachineIRBuilder &Builder) const;
+  void expandLDImm16Remat(MachineIRBuilder &Builder) const;
   void expandLDZ(MachineIRBuilder &Builder) const;
   void expandIncDec(MachineIRBuilder &Builder) const;
 

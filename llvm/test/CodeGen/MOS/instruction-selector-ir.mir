@@ -14,7 +14,15 @@
     entry:
       ret void
   }
+  define void @unmerge_blockaddr() {
+    entry:
+      ret void
+  }
   define void @ldimm_local() norecurse {
+    entry:
+      ret void
+  }
+  define void @unmerge_local() norecurse {
     entry:
       ret void
   }
@@ -23,6 +31,10 @@
       ret void
   }
   define void @ldimm_global_offset() {
+    entry:
+      ret void
+  }
+  define void @unmerge_global() {
     entry:
       ret void
   }
@@ -79,14 +91,28 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: br_indirect
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm target-flags(lo) blockaddress(@br_indirect, %ir-block.entry)
-    ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm target-flags(hi) blockaddress(@br_indirect, %ir-block.entry)
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDImm]], %subreg.sublo, [[LDImm1]], %subreg.subhi
-    ; CHECK-NEXT: JMPIndir [[REG_SEQUENCE]]
+    ; CHECK: [[LDImm16_:%[0-9]+]]:imag16, [[LDImm16_1:%[0-9]+]]:gpr = LDImm16 blockaddress(@br_indirect, %ir-block.entry)
+    ; CHECK-NEXT: JMPIndir [[LDImm16_]]
     ; CHECK-NEXT: RTS
     %0:any(p0) = G_BLOCK_ADDR blockaddress(@br_indirect, %ir-block.entry)
     G_BRINDIRECT %0
     RTS
+...
+---
+name: unmerge_blockaddr
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: unmerge_blockaddr
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm target-flags(lo) blockaddress(@unmerge_blockaddr, %ir-block.entry)
+    ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm target-flags(hi) blockaddress(@unmerge_blockaddr, %ir-block.entry)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY [[LDImm]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[LDImm1]]
+    ; CHECK-NEXT: RTS implicit [[COPY]], implicit [[COPY1]]
+    %0:any(p0) = G_BLOCK_ADDR blockaddress(@unmerge_blockaddr, %ir-block.entry)
+    %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0
+    RTS implicit %1, implicit %2
 ...
 ---
 name: ldimm_local
@@ -106,16 +132,33 @@ body: |
 # Note: The HI and LO target operands are present on the frame index, but LLVM doesn't print them.
 ...
 ---
+name: unmerge_local
+legalized: true
+regBankSelected: true
+stack:
+  - { id: 0, size: 1 }
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: unmerge_local
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm %stack.0
+    ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm %stack.0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY [[LDImm]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[LDImm1]]
+    ; CHECK-NEXT: RTS implicit [[COPY]], implicit [[COPY1]]
+    %0:any(p0) = G_FRAME_INDEX %stack.0
+    %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0
+    RTS implicit %1, implicit %2
+# Note: The HI and LO target operands are present on the frame index, but LLVM doesn't print them.
+...
+---
 name: ldimm_global
 legalized: true
 regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_global
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm target-flags(lo) @.str
-    ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm target-flags(hi) @.str
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDImm]], %subreg.sublo, [[LDImm1]], %subreg.subhi
-    ; CHECK-NEXT: RTS implicit [[REG_SEQUENCE]]
+    ; CHECK: [[LDImm16_:%[0-9]+]]:imag16, [[LDImm16_1:%[0-9]+]]:gpr = LDImm16 @.str
+    ; CHECK-NEXT: RTS implicit [[LDImm16_]]
     %0:any(p0) = G_GLOBAL_VALUE @.str
     RTS implicit %0
 ...
@@ -126,12 +169,26 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_global_offset
-    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm target-flags(lo) @.str + 1234
-    ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm target-flags(hi) @.str + 1234
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:imag16 = REG_SEQUENCE [[LDImm]], %subreg.sublo, [[LDImm1]], %subreg.subhi
-    ; CHECK-NEXT: RTS implicit [[REG_SEQUENCE]]
+    ; CHECK: [[LDImm16_:%[0-9]+]]:imag16, [[LDImm16_1:%[0-9]+]]:gpr = LDImm16 @.str + 1234
+    ; CHECK-NEXT: RTS implicit [[LDImm16_]]
     %0:any(p0) = G_GLOBAL_VALUE @.str + 1234
     RTS implicit %0
+...
+---
+name: unmerge_global
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: unmerge_global
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm target-flags(lo) @.str
+    ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm target-flags(hi) @.str
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY [[LDImm]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[LDImm1]]
+    ; CHECK-NEXT: RTS implicit [[COPY]], implicit [[COPY1]]
+    %0:any(p0) = G_GLOBAL_VALUE @.str
+    %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0
+    RTS implicit %1, implicit %2
 ...
 ---
 name: load_absolute_gv

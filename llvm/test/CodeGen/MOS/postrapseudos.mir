@@ -426,6 +426,28 @@ body: |
     $v = LDImm1 0
 ...
 ---
+name: ldimm16
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm16
+    ; CHECK: $a = LDImm 210
+    ; CHECK-NEXT: $rc2 = STImag8 $a
+    ; CHECK-NEXT: $a = LDImm 4
+    ; CHECK-NEXT: $rc3 = STImag8 $a
+    $rs1, $a = LDImm16 1234
+...
+---
+name: ldimm16remat
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm16remat
+    ; CHECK: [[LDImm:%[0-9]+]]:gpr = LDImm 210
+    ; CHECK-NEXT: $rc2 = STImag8 [[LDImm]]
+    ; CHECK-NEXT: [[LDImm1:%[0-9]+]]:gpr = LDImm 4, implicit [[LDImm1]]
+    ; CHECK-NEXT: $rc3 = STImag8 [[LDImm1]]
+    $rs1 = LDImm16Remat 1234
+...
+---
 name: ldzimag8
 body: |
   bb.0.entry:

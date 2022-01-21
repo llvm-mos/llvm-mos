@@ -45,6 +45,16 @@ MOSInstrInfo::MOSInstrInfo()
     : MOSGenInstrInfo(/*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
                       /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP) {}
 
+bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
+                                                     AAResults *AA) const {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case MOS::LDImm16:
+    return true;
+  }
+}
+
 unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
@@ -74,6 +84,22 @@ unsigned MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case MOS::STStk:
     FrameIndex = MI.getOperand(2).getIndex();
     return MI.getOperand(1).getReg();
+  }
+}
+
+void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator I,
+                                 Register DestReg, unsigned SubIdx,
+                                 const MachineInstr &Orig,
+                                 const TargetRegisterInfo &TRI) const {
+  if (Orig.getOpcode() == MOS::LDImm16) {
+    MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
+    MI->RemoveOperand(1);
+    MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
+    MI->setDesc(get(MOS::LDImm16Remat));
+    MBB.insert(I, MI);
+  } else {
+    TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, TRI);
   }
 }
 
@@ -745,6 +771,12 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::LDImm1:
     expandLDImm1(Builder);
     break;
+  case MOS::LDImm16:
+    expandLDImm16(Builder);
+    break;
+  case MOS::LDImm16Remat:
+    expandLDImm16Remat(Builder);
+    break;
   case MOS::LDZ:
     expandLDZ(Builder);
     break;
@@ -853,6 +885,49 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   }
 
   MI.setDesc(Builder.getTII().get(Opcode));
+}
+
+void MOSInstrInfo::expandLDImm16(MachineIRBuilder &Builder) const {
+  auto &MI = *Builder.getInsertPt();
+  const TargetRegisterInfo &TRI =
+      *Builder.getMF().getSubtarget().getRegisterInfo();
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Tmp = MI.getOperand(1).getReg();
+  MachineOperand Src = MI.getOperand(2);
+
+  auto Lo = Builder.buildInstr(MOS::LDImm, {Tmp}, {});
+  if (Src.isImm()) {
+    Lo.addImm(Src.getImm() & 0xff);
+  } else {
+    Lo.add(Src);
+    Lo->getOperand(1).setTargetFlags(MOS::MO_LO);
+  }
+  copyPhysRegImpl(Builder, TRI.getSubReg(Dst, MOS::sublo), Tmp);
+
+  auto Hi = Builder.buildInstr(MOS::LDImm, {Tmp}, {});
+  if (Src.isImm()) {
+    Hi.addImm(Src.getImm() >> 8);
+  } else {
+    Hi.add(Src);
+    Hi->getOperand(1).setTargetFlags(MOS::MO_HI);
+  }
+  // Appease the register scavenger by making this appear to be a redefinition.
+  if (Tmp.isVirtual())
+    Hi.addUse(Tmp, RegState::Implicit);
+  copyPhysRegImpl(Builder, TRI.getSubReg(Dst, MOS::subhi), Tmp);
+
+  MI.eraseFromParent();
+}
+
+void MOSInstrInfo::expandLDImm16Remat(MachineIRBuilder &Builder) const {
+  MachineInstr &MI = *Builder.getInsertPt();
+  Register Scratch = createVReg(Builder, MOS::GPRRegClass);
+  auto Ld = Builder.buildInstr(MOS::LDImm16, {MI.getOperand(0), Scratch}, {})
+                .add(MI.getOperand(1));
+  MI.eraseFromParent();
+  Builder.setInsertPt(*Ld->getParent(), &*Ld);
+  expandLDImm16(Builder);
 }
 
 void MOSInstrInfo::expandLDZ(MachineIRBuilder &Builder) const {
