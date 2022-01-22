@@ -41,6 +41,8 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
+
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     // Saving/restoring to stack may require temporary registers.
     return true;

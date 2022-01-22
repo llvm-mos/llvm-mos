@@ -2447,7 +2447,7 @@ void RAGreedy::initializeCSRCost() {
   // We use the larger one out of the command-line option and the value report
   // by TRI.
   CSRCost = BlockFrequency(
-      std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost()));
+      std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost(*MF)));
   if (!CSRCost.getFrequency())
     return;
 

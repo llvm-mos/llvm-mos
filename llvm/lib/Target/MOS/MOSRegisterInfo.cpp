@@ -102,6 +102,18 @@ MOSRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   return RC;
 }
 
+// These values were chosen empirically based on the desired behavior of llc
+// test cases. These values will likely need to be retuned as more examples come
+// up.  Unfortunately, the way the register allocator actually uses this is very
+// heuristic, and if tuning these params doesn't suffice, we'll need to build a
+// more sophisticated analysis into the register allocator.
+unsigned MOSRegisterInfo::getCSRFirstUseCost(const MachineFunction &MF) const {
+  if (MF.getFunction().doesNotRecurse()) {
+    return 15 * 16384 / 10;
+  }
+  return 5 * 16384 / 10;
+}
+
 static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
                              MachineBasicBlock::iterator End) {
   int64_t PushCount = 0;
@@ -684,7 +696,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   for (int I = 0, E = Order.size(); I != E; ++I)
     OriginalIndex[Order[I]] = I;
 
-  SmallSet<const MachineInstr*, 32> Visited;
+  SmallSet<const MachineInstr *, 32> Visited;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
     if (Visited.contains(&MI))
       continue;
@@ -694,8 +706,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
       continue;
     case MOS::COPY: {
       const MachineOperand &Self = MI.getOperand(0).getReg() == VirtReg
-                                        ? MI.getOperand(0)
-                                        : MI.getOperand(1);
+                                       ? MI.getOperand(0)
+                                       : MI.getOperand(1);
       const MachineOperand &Other = MI.getOperand(0).getReg() == VirtReg
                                         ? MI.getOperand(1)
                                         : MI.getOperand(0);
@@ -765,7 +777,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   for (const auto &KV : RegScores)
     RegsAndScores.push_back(KV);
   sort(RegsAndScores, [&](const std::pair<Register, int> &A,
-                         const std::pair<Register, int> &B) {
+                          const std::pair<Register, int> &B) {
     if (A.second > B.second)
       return true;
     if (A.second < B.second)
