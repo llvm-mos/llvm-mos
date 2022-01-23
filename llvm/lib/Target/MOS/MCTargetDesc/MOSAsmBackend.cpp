@@ -171,8 +171,9 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
   assert(((Bytes + Offset) <= Data.size()) &&
          "Invalid offset within MOS instruction for modifier!");
-  for (unsigned int T = Offset; T < (Bytes + Offset); T++) {
-    Data[T] = Value & 0xff;
+  for (char &Out :
+       make_range(Data.begin() + Offset, Data.begin() + Bytes + Offset)) {
+    Out = Value & 0xff;
     Value = Value >> 8;
   }
 }

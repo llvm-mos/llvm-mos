@@ -12,6 +12,7 @@
 
 #include "MOSRegisterInfo.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOS.h"
 #include "MOSFrameLowering.h"
 #include "MOSInstrInfo.h"
 #include "MOSSubtarget.h"
@@ -38,7 +39,7 @@ MOSRegisterInfo::MOSRegisterInfo()
     : MOSGenRegisterInfo(/*RA=*/0, /*DwarfFlavor=*/0, /*EHFlavor=*/0,
                          /*PC=*/0, /*HwMode=*/0),
       Imag8SymbolNames(new std::string[getNumRegs()]), Reserved(getNumRegs()) {
-  for (unsigned Reg = 0; Reg < getNumRegs(); ++Reg) {
+  for (unsigned Reg : seq(0u, getNumRegs())) {
     // Pointers are referred to by their low byte in the addressing modes that
     // use them.
     unsigned R = Reg;
@@ -53,7 +54,7 @@ MOSRegisterInfo::MOSRegisterInfo()
   }
 
   // Reserve all imaginary registers beyond the number allowed to the compiler.
-  for (Register Ptr = MOS::RS16; Ptr <= MOS::RS127; Ptr = Ptr + 1)
+  for (Register Ptr : enum_seq_inclusive(MOS::RS16, MOS::RS127))
     reserveAllSubregs(&Reserved, Ptr);
 
   // Reserve stack pointers.
@@ -117,8 +118,8 @@ unsigned MOSRegisterInfo::getCSRFirstUseCost(const MachineFunction &MF) const {
 static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
                              MachineBasicBlock::iterator End) {
   int64_t PushCount = 0;
-  for (auto MI = Begin; MI != End; ++MI) {
-    switch (MI->getOpcode()) {
+  for (const MachineInstr &MI : make_range(Begin, End)) {
+    switch (MI.getOpcode()) {
     case MOS::PH:
       ++PushCount;
       break;
@@ -181,8 +182,8 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     LiveRegUnits LiveUnits(TRI);
     LiveUnits.addLiveOuts(MBB);
     if (UseMI != MBB.end()) {
-      for (auto J = std::prev(MBB.end()); J != UseMI; --J)
-        LiveUnits.stepBackward(*J);
+      for (MachineInstr &J : mbb_reverse(std::next(UseMI), MBB.end()))
+        LiveUnits.stepBackward(J);
       LiveUnits.stepBackward(*UseMI);
     }
 
@@ -693,14 +694,13 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   DenseMap<Register, int> RegScores;
 
   DenseMap<Register, int> OriginalIndex;
-  for (int I = 0, E = Order.size(); I != E; ++I)
-    OriginalIndex[Order[I]] = I;
+  for (const auto &R : enumerate(Order))
+    OriginalIndex[R.value()] = R.index();
 
   SmallSet<const MachineInstr *, 32> Visited;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
-    if (Visited.contains(&MI))
+    if (!Visited.insert(&MI).second)
       continue;
-    Visited.insert(&MI);
     switch (MI.getOpcode()) {
     default:
       continue;
@@ -773,9 +773,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
   }
 
-  SmallVector<std::pair<Register, int>> RegsAndScores;
-  for (const auto &KV : RegScores)
-    RegsAndScores.push_back(KV);
+  SmallVector<std::pair<Register, int>> RegsAndScores(RegScores.begin(),
+                                                      RegScores.end());
   sort(RegsAndScores, [&](const std::pair<Register, int> &A,
                           const std::pair<Register, int> &B) {
     if (A.second > B.second)
@@ -784,8 +783,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
       return false;
     return OriginalIndex[A.first] < OriginalIndex[B.first];
   });
-  for (const auto &KV : RegsAndScores)
-    Hints.push_back(KV.first);
+  append_range(Hints, make_first_range(RegsAndScores));
   return false;
 }
 

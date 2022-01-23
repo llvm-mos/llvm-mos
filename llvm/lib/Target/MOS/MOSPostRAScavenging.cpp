@@ -70,10 +70,10 @@ bool MOSPostRAScavenging::runOnMachineFunction(MachineFunction &MF) {
   // Once all virtual registers are scavenged, nothing else in the pipeline can
   // be inserted between NZ defs and uses.
   for (MachineBasicBlock &MBB : MF)
-    for (auto MI = MBB.instr_begin(), ME = MBB.instr_end(); MI != ME; ++MI)
-      if (MI->isBundledWithPred()) {
-        MI->unbundleFromPred();
-        for (MachineOperand &MO : MI->operands())
+    for (MachineInstr &MI : MBB.instrs())
+      if (MI.isBundledWithPred()) {
+        MI.unbundleFromPred();
+        for (MachineOperand &MO : MI.operands())
           if (MO.isReg() && MO.isInternalRead())
             MO.setIsInternalRead(false);
       }

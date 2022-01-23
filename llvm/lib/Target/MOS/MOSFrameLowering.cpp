@@ -13,6 +13,7 @@
 #include "MOSFrameLowering.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOS.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
@@ -45,14 +46,13 @@ bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     std::vector<CalleeSavedInfo> &CSI) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-    auto &Info = CSI[I];
+  for (const auto &Info : enumerate(CSI)) {
     // We place the first four CSRs on the hard stack, which we don't explicitly
     // model in PEI.
-    if (I < 4)
-      Info.setTargetSpilled();
+    if (Info.index() < 4)
+      Info.value().setTargetSpilled();
     else
-      Info.setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
+      Info.value().setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
   }
 
   return true;
@@ -97,8 +97,8 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   }
 
   // Record that the frame pointer is killed by these instructions.
-  for (auto MI = MIS.begin(), MIE = MIS.getInitial(); MI != MIE; ++MI)
-    MI->setFlag(MachineInstr::FrameSetup);
+  for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
+    MI.setFlag(MachineInstr::FrameSetup);
 
   // The frame pointer will be generated after the last frame setup instruction.
 
@@ -117,9 +117,9 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   return true;
 }
 
-template <typename F>
+template <typename F, typename VisitSet>
 static void visitReturnBlocks(MachineBasicBlock *MBB, const F &Func,
-                              DenseSet<MachineBasicBlock *> &VisitedBBs) {
+                              VisitSet &VisitedBBs) {
   if (!VisitedBBs.insert(MBB).second)
     return;
   if (MBB->isReturnBlock())
@@ -132,7 +132,7 @@ static void visitReturnBlocks(MachineBasicBlock *MBB, const F &Func,
 
 template <typename F>
 static void visitReturnBlocks(MachineBasicBlock *MBB, const F &Func) {
-  DenseSet<MachineBasicBlock *> VisitedBBs;
+  SmallSet<MachineBasicBlock *, 32> VisitedBBs;
   visitReturnBlocks(MBB, Func, VisitedBBs);
 }
 
@@ -181,8 +181,8 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   });
 
   // Record that the frame pointer is killed by these instructions.
-  for (auto MI = MIS.begin(), MIE = MIS.getInitial(); MI != MIE; ++MI)
-    MI->setFlag(MachineInstr::FrameDestroy);
+  for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
+    MI.setFlag(MachineInstr::FrameDestroy);
 
   return true;
 }
@@ -227,7 +227,7 @@ void MOSFrameLowering::processFunctionBeforeFrameFinalized(
   // Assign all locals to static stack in non-recursive functions.
   if (MF.getFunction().doesNotRecurse()) {
     int64_t Offset = 0;
-    for (int Idx = 0, End = MFI.getObjectIndexEnd(); Idx < End; ++Idx) {
+    for (int Idx : seq(0, MFI.getObjectIndexEnd())) {
       if (MFI.isDeadObjectIndex(Idx) || MFI.isVariableSizedObjectIndex(Idx))
         continue;
 
@@ -280,10 +280,10 @@ void MOSFrameLowering::emitPrologue(MachineFunction &MF,
     return;
 
   // Skip the callee-saved push instructions.
-  MachineBasicBlock::iterator MBBI, MBBE;
-  for (MBBI = Builder.getInsertPt(), MBBE = MBB.end();
-       MBBI != MBBE && MBBI->getFlag(MachineInstr::FrameSetup); ++MBBI)
-    ;
+  auto MBBI = std::find_if_not(Builder.getInsertPt(), MBB.end(),
+                               [](const MachineInstr &MI) {
+                                 return MI.getFlag(MachineInstr::FrameSetup);
+                               });
 
   // Set the frame pointer to the stack pointer.
   Builder.setInsertPt(MBB, MBBI);
@@ -299,12 +299,11 @@ void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
   // Restore the stack pointer from the frame pointer.
   if (hasFP(MF)) {
     // Skip the callee-saved push instructions.
-    MachineBasicBlock::iterator MBBI = Builder.getInsertPt();
-    for (MachineBasicBlock::iterator MBBE = MBB.begin();
-         MBBI != MBBE && std::prev(MBBI)->getFlag(MachineInstr::FrameDestroy);
-         --MBBI)
-      ;
-    Builder.setInsertPt(MBB, MBBI);
+    auto MBBI = find_if_not(mbb_reverse(MBB.begin(), Builder.getInsertPt()),
+                            [](const MachineInstr &MI) {
+                              return MI.getFlag(MachineInstr::FrameDestroy);
+                            });
+    Builder.setInsertPt(MBB, MachineBasicBlock::iterator(MBBI));
 
     // Set the stack pointer to the frame pointer.
     Builder.buildCopy(MOS::RS0, TRI.getFrameRegister(MF));
@@ -328,7 +327,7 @@ bool MOSFrameLowering::hasFP(const MachineFunction &MF) const {
 
 uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
   uint64_t Size = 0;
-  for (int Idx = 0, End = MFI.getObjectIndexEnd(); Idx < End; ++Idx)
+  for (int Idx : seq(0, MFI.getObjectIndexEnd()))
     if (MFI.getStackID(Idx) == TargetStackID::NoAlloc)
       Size += MFI.getObjectSize(Idx);
   return Size;

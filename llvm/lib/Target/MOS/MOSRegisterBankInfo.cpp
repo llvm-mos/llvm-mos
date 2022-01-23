@@ -40,17 +40,17 @@ MOSRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   unsigned NumOperands = MI.getNumOperands();
 
   SmallVector<const ValueMapping *, 8> ValMappings(NumOperands);
-  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
-    const auto &Operand = MI.getOperand(Idx);
-    if (!Operand.isReg())
+  for (const auto &I : enumerate(MI.operands())) {
+    if (!I.value().isReg())
       continue;
     // Only the destination is expected for PHIs.
-    if (MI.isPHI() && Idx == 1) {
+    if (MI.isPHI() && I.index() == 1) {
       NumOperands = 1;
       break;
     }
-    LLT Ty = MRI.getType(Operand.getReg());
-    ValMappings[Idx] = &getValueMapping(0, Ty.getSizeInBits(), MOS::AnyRegBank);
+    LLT Ty = MRI.getType(I.value().getReg());
+    ValMappings[I.index()] =
+        &getValueMapping(0, Ty.getSizeInBits(), MOS::AnyRegBank);
   }
   return getInstructionMapping(/*ID=*/1, /*Cost=*/1,
                                getOperandsMapping(ValMappings), NumOperands);
