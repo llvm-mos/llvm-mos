@@ -15,6 +15,7 @@
 #include <set>
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOS.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
@@ -283,20 +284,19 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
     return false;
 
   // Look for intervening instructions that cannot be folded across.
-  for (MachineBasicBlock::const_iterator
-           I = std::next(MachineBasicBlock::const_iterator(Src)),
-           E = Dst;
-       I != E; ++I) {
-    if (I->isCall() || I->hasUnmodeledSideEffects())
+  for (const MachineInstr &I :
+       make_range(std::next(MachineBasicBlock::const_iterator(Src)),
+                  MachineBasicBlock::const_iterator(Dst))) {
+    if (I.isCall() || I.hasUnmodeledSideEffects())
       return false;
-    if (I->mayLoadOrStore()) {
-      if (Src.hasOrderedMemoryRef() || I->hasOrderedMemoryRef())
+    if (I.mayLoadOrStore()) {
+      if (Src.hasOrderedMemoryRef() || I.hasOrderedMemoryRef())
         return false;
-      if (I->mayAlias(AA, Src, /*UseTBAA=*/true))
+      if (I.mayAlias(AA, Src, /*UseTBAA=*/true))
         return false;
       // Note: Dst may be a store, indicating that the whole sequence is a RMW
       // operation.
-      if (I->mayAlias(AA, Dst, /*UseTBAA=*/true))
+      if (I.mayAlias(AA, Dst, /*UseTBAA=*/true))
         return false;
     }
   }
@@ -635,10 +635,11 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
 // Given a G_SBC instruction Sbc and one of its flag output virtual registers,
 // returns the flag that corresponds to the register.
 static Register getSbcFlagForRegister(const MachineInstr &Sbc, Register Reg) {
-  static Register Flags[] = {MOS::C, MOS::N, MOS::V, MOS::Z};
-  for (int Idx = 0; Idx < 4; ++Idx)
-    if (Sbc.getOperand(Idx + 1).getReg() == Reg)
-      return Flags[Idx];
+  static const Register Flags[] = {MOS::C, MOS::N, MOS::V, MOS::Z};
+  // TODO: C++17 structured bindings
+  for (const auto &I : zip(Flags, seq(1, 5)))
+    if (Sbc.getOperand(std::get<1>(I)).getReg() == Reg)
+      return std::get<0>(I);
   llvm_unreachable("Could not find register in G_SBC outputs.");
 }
 
@@ -744,7 +745,7 @@ struct CMPTermAbs_match : public Cmp_match {
   AAResults *AA;
 
   CMPTermAbs_match(Register &LHS, MachineOperand &Addr, Register &Flag,
-                   MachineInstr *Load, AAResults *AA)
+                   MachineInstr *&Load, AAResults *AA)
       : Cmp_match(LHS, Flag), Addr(Addr), Load(Load), AA(AA) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
@@ -1166,16 +1167,15 @@ GLshrE_match<ADDR_P, CARRYIN_P> m_GLshrE(Register &CarryOut, const ADDR_P &Addr,
 // the containing basic block. This allows folding a multi-def machine
 // instruction into a later one in the same block by rewriting all later
 // references to use new vregs.
-static void replaceUsesAfter(MachineInstr &MI, Register From, Register To,
-                             const MachineRegisterInfo &MRI) {
-  for (auto I = MachineBasicBlock::iterator(&MI), E = MI.getParent()->end();
-       I != E; ++I) {
-    for (MachineOperand &Op : I->uses())
+static void replaceUsesAfter(MachineBasicBlock::iterator MI, Register From,
+                             Register To, const MachineRegisterInfo &MRI) {
+  for (MachineInstr &I : make_range(MI, MI->getParent()->end())) {
+    for (MachineOperand &Op : I.uses())
       if (Op.isReg() && Op.getReg() == From)
         Op.setReg(To);
   }
   for (MachineOperand &MO : MRI.use_nodbg_operands(From))
-    if (MO.getParent()->getParent() != MI.getParent())
+    if (MO.getParent()->getParent() != MI->getParent())
       MO.setReg(To);
 }
 
@@ -1214,7 +1214,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       auto Asl = Builder.buildInstr(MOS::ASLAbs, {&MOS::CcRegClass}, {})
                      .add(Addr)
                      .cloneMergedMemRefs({&MI, Load});
-      replaceUsesAfter(*Asl, CarryOut, Asl.getReg(0), MRI);
+      replaceUsesAfter(Asl, CarryOut, Asl.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
@@ -1228,7 +1228,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       auto Lsr = Builder.buildInstr(MOS::LSRAbs, {&MOS::CcRegClass}, {})
                      .add(Addr)
                      .cloneMergedMemRefs({&MI, Load});
-      replaceUsesAfter(*Lsr, CarryOut, Lsr.getReg(0), MRI);
+      replaceUsesAfter(Lsr, CarryOut, Lsr.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
@@ -1244,7 +1244,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
                      .add(Addr)
                      .addUse(CarryIn)
                      .cloneMergedMemRefs({&MI, Load});
-      replaceUsesAfter(*Rol, CarryOut, Rol.getReg(0), MRI);
+      replaceUsesAfter(Rol, CarryOut, Rol.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
@@ -1259,7 +1259,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
                      .add(Addr)
                      .addUse(CarryIn)
                      .cloneMergedMemRefs({&MI, Load});
-      replaceUsesAfter(*Ror, CarryOut, Ror.getReg(0), MRI);
+      replaceUsesAfter(Ror, CarryOut, Ror.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Ror, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
@@ -1310,7 +1310,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
                      .add(Addr)
                      .addUse(Idx)
                      .cloneMergedMemRefs({&MI, Load});
-      replaceUsesAfter(*Asl, CarryOut, Asl.getReg(0), MRI);
+      replaceUsesAfter(Asl, CarryOut, Asl.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Asl, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
@@ -1327,7 +1327,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
                      .add(Addr)
                      .addUse(Idx)
                      .cloneMergedMemRefs({&MI, Load});
-      replaceUsesAfter(*Lsr, CarryOut, Lsr.getReg(0), MRI);
+      replaceUsesAfter(Lsr, CarryOut, Lsr.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Lsr, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
@@ -1346,7 +1346,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
                      .addUse(Idx)
                      .addUse(CarryIn)
                      .cloneMergedMemRefs({&MI, Load});
-      replaceUsesAfter(*Rol, CarryOut, Rol.getReg(0), MRI);
+      replaceUsesAfter(Rol, CarryOut, Rol.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Rol, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
@@ -1364,7 +1364,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
                      .addUse(Idx)
                      .addUse(CarryIn)
                      .cloneMergedMemRefs({&MI, Load});
-      replaceUsesAfter(*Ror, CarryOut, Ror.getReg(0), MRI);
+      replaceUsesAfter(Ror, CarryOut, Ror.getReg(0), MRI);
       if (!constrainSelectedInstRegOperands(*Ror, TII, TRI, RBI))
         return false;
       MI.eraseFromParent();
@@ -1681,19 +1681,8 @@ bool MOSInstructionSelector::selectAll(MachineInstrSpan MIS) {
       MRI.setRegBank(Reg, MOS::AnyRegBank);
     }
 
-  // Select instructions in reverse block order. We permit erasing so have
-  // to resort to manually iterating and recognizing the begin (rend) case.
-  bool ReachedBegin = false;
-  for (auto MII = std::prev(MIS.end()), Begin = MIS.begin(); !ReachedBegin;) {
-    // Select this instruction.
-    MachineInstr &MI = *MII;
-
-    // And have our iterator point to the next instruction, if there is one.
-    if (MII == Begin)
-      ReachedBegin = true;
-    else
-      --MII;
-
+  // Select instructions in reverse block order.
+  for (MachineInstr &MI : make_early_inc_range(mbb_reverse(MIS))) {
     // We could have folded this instruction away already, making it dead.
     // If so, erase it.
     if (isTriviallyDead(MI, MRI)) {

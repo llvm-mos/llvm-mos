@@ -352,8 +352,8 @@ unsigned MOSInstrInfo::removeBranch(MachineBasicBlock &MBB,
   unsigned NumRemoved = std::distance(Begin, End);
   if (BytesRemoved) {
     *BytesRemoved = 0;
-    for (auto I = Begin; I != End; ++I)
-      *BytesRemoved += getInstSizeInBytes(*I);
+    for (const auto &I : make_range(Begin, End))
+      *BytesRemoved += getInstSizeInBytes(I);
   }
   MBB.erase(Begin, End);
   return NumRemoved;
@@ -747,8 +747,8 @@ void MOSInstrInfo::loadStoreRegStackSlot(
 
   LLVM_DEBUG({
     dbgs() << "Inserted stack slot load/store:\n";
-    for (auto MI = MIS.begin(), End = MIS.getInitial(); MI != End; ++MI)
-      dbgs() << *MI;
+    for (const auto &MI : make_range(MIS.begin(), MIS.getInitial()))
+      dbgs() << MI;
   });
 }
 
@@ -1045,7 +1045,7 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
       break;
     }
     Op = Builder.buildInstr(Opcode, {MI.getOperand(0)}, {});
-    for (int Idx = 3, End = MI.getNumOperands(); Idx != End; ++Idx)
+    for (int Idx : seq(3u, MI.getNumOperands()))
       Op.add(MI.getOperand(Idx));
     break;
   }
@@ -1074,7 +1074,7 @@ void MOSInstrInfo::expandNZ(MachineIRBuilder &Builder) const {
     }
     Op = Builder.buildInstr(
         Opcode, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)}, {});
-    for (int Idx = 5, End = MI.getNumOperands(); Idx != End; ++Idx)
+    for (int Idx : seq(5u, MI.getNumOperands()))
       Op.add(MI.getOperand(Idx));
     break;
   }

@@ -62,8 +62,7 @@ struct MOSValueAssigner : CallLowering::ValueAssigner {
     for (Register R : Reserved.set_bits())
       State.AllocateReg(R);
 
-    if (getAssignFn(!Info.IsFixed)(ValNo, ValVT, LocVT, LocInfo, Flags,
-          State))
+    if (getAssignFn(!Info.IsFixed)(ValNo, ValVT, LocVT, LocInfo, Flags, State))
       return true;
     StackOffset = State.getNextStackOffset();
     return false;
@@ -309,10 +308,11 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     // Copy flags from the instruction definition over to the return value
     // description for TableGen compatibility layer.
     SmallVector<ArgInfo> Args;
-    for (size_t Idx = 0; Idx < VRegs.size(); ++Idx) {
-      Args.emplace_back(VRegs[Idx], ValueVTs[Idx].getTypeForEVT(Ctx), 0);
+    // TODO: C++17 structured bindings
+    for (const auto &I : zip(VRegs, ValueVTs, ValueLLTs)) {
+      Args.emplace_back(std::get<0>(I), std::get<1>(I).getTypeForEVT(Ctx), 0);
       setArgFlags(Args.back(), AttributeList::ReturnIndex, DL, F);
-      adjustArgFlags(Args.back(), ValueLLTs[Idx]);
+      adjustArgFlags(Args.back(), std::get<2>(I));
     }
 
     // Invoke TableGen compatibility layer. This will generate copies and stores
@@ -458,11 +458,12 @@ void MOSCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
                                         const DataLayout &DL) const {
   size_t OldSize = SplitArgs.size();
   CallLowering::splitToValueTypes(OrigArg, SplitArgs, DL, CallingConv::C);
+  auto NewArgs = make_range(SplitArgs.begin() + OldSize, SplitArgs.end());
 
   // Transfer is-pointer information from LLTs to argument flags.
   SmallVector<LLT> SplitLLTs;
   computeValueLLTs(DL, *OrigArg.Ty, SplitLLTs);
-  assert(SplitArgs.size() - OldSize == SplitLLTs.size());
-  for (unsigned Idx = 0, End = SplitLLTs.size(); Idx < End; ++Idx)
-    adjustArgFlags(SplitArgs[OldSize + Idx], SplitLLTs[Idx]);
+  assert((size_t)size(NewArgs) == SplitLLTs.size());
+  for (const auto &I : zip(NewArgs, SplitLLTs))
+    apply_tuple(adjustArgFlags, I);
 }

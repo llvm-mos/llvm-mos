@@ -59,12 +59,11 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   for (auto I = MF.rbegin(), E = MF.rend(); I != E; ++I) {
-    MachineBasicBlock &MBB = *I;
-    for (auto MBBI = MBB.rbegin(), MBBE = MBB.rend(); MBBI != MBBE; ++MBBI) {
-      if (MBBI->getOpcode() == MOS::G_SELECT) {
-        LLVM_DEBUG(dbgs() << "Lowering: " << *MBBI);
+    for (MachineInstr &MBBI : mbb_reverse(*I)) {
+      if (MBBI.getOpcode() == MOS::G_SELECT) {
+        LLVM_DEBUG(dbgs() << "Lowering: " << MBBI);
         Changed = true;
-        I = lowerSelect(*MBBI);
+        I = lowerSelect(MBBI);
         break;
       }
     }
@@ -121,24 +120,22 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   // Collect G_SELECT instructions in the same basic block with the same test
   // and merge them into this one.
   SmallSet<Register, 8> UsedRegs;
-  for (const auto &MO : MI.operands())
+  for (const MachineOperand &MO : MI.operands())
     if (MO.isReg() && MO.isUse())
       UsedRegs.insert(MO.getReg());
-  for (auto MBBI = std::next(MachineBasicBlock::reverse_iterator(MI)),
-            MBBE = MBB.rend();
-       MBBI != MBBE; ++MBBI) {
-    for (const auto &MO : MBBI->operands())
+  for (MachineInstr &MBBI : mbb_reverse(MBB.begin(), MI)) {
+    for (const MachineOperand &MO : MBBI.operands())
       if (MO.isReg() && MO.isUse())
         UsedRegs.insert(MO.getReg());
 
-    if (MBBI->getOpcode() == MOS::G_SELECT &&
-        MBBI->getOperand(1).getReg() == Tst &&
-        !UsedRegs.contains(MBBI->getOperand(0).getReg())) {
-      LLVM_DEBUG(dbgs() << "Absorbing select with same test: " << *MBBI);
-      Dsts.push_back(MBBI->getOperand(0).getReg());
-      TrueValues.push_back(MBBI->getOperand(2).getReg());
-      FalseValues.push_back(MBBI->getOperand(3).getReg());
-      SelectsToRemove.push_back(*MBBI);
+    if (MBBI.getOpcode() == MOS::G_SELECT &&
+        MBBI.getOperand(1).getReg() == Tst &&
+        !UsedRegs.contains(MBBI.getOperand(0).getReg())) {
+      LLVM_DEBUG(dbgs() << "Absorbing select with same test: " << MBBI);
+      Dsts.push_back(MBBI.getOperand(0).getReg());
+      TrueValues.push_back(MBBI.getOperand(2).getReg());
+      FalseValues.push_back(MBBI.getOperand(3).getReg());
+      SelectsToRemove.push_back(MBBI);
     }
   }
   assert(Dsts.size() == TrueValues.size());
@@ -202,41 +199,41 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
       return;
     LLVM_DEBUG(dbgs() << "Sinking value: " << DefMI);
 
-    auto SrcMI =
-        MachineBasicBlock::reverse_iterator(MachineBasicBlock::iterator(DefMI));
-    auto SrcEnd = DefMI.getParent()->rend();
+    auto SrcRange =
+        make_range(std::next(MachineBasicBlock::reverse_iterator(DefMI)),
+                   DefMI.getParent()->rend());
     DefMI.removeFromParent();
     MBB->insert(MBB->begin(), &DefMI);
 
-    for (; SrcMI != SrcEnd; ++SrcMI) {
+    for (auto &SrcMI : make_early_inc_range(SrcRange)) {
       SawStore = true;
-      if (!SrcMI->isSafeToMove(nullptr, SawStore))
+      if (!SrcMI.isSafeToMove(nullptr, SawStore))
         continue;
 
-      LLVM_DEBUG(dbgs() << "Considering sinking: " << *SrcMI);
+      LLVM_DEBUG(dbgs() << "Considering sinking: " << SrcMI);
 
       // Can't sink SrcMI if any defined operand is used outside of the
       // conditional MBB.
-      for (const MachineOperand &MO : SrcMI->operands()) {
-        if (!MO.isReg())
-          continue;
-        if (MO.getReg().isPhysical())
-          goto cont;
-        if (!MO.isDef())
-          continue;
-        for (const MachineInstr &UseMI :
-             MRI.use_nodbg_instructions(MO.getReg()))
-          if (UseMI.getParent() != MBB)
-            goto cont;
+      const auto CanSink = [&]() {
+        for (const MachineOperand &MO : SrcMI.operands()) {
+          if (!MO.isReg())
+            continue;
+          if (MO.getReg().isPhysical())
+            return false;
+          if (!MO.isDef())
+            continue;
+          for (const MachineInstr &UseMI :
+               MRI.use_nodbg_instructions(MO.getReg()))
+            if (UseMI.getParent() != MBB)
+              return false;
+        }
+        return true;
+      };
+      if (CanSink()) {
+        LLVM_DEBUG(dbgs() << "Sinking value: " << SrcMI);
+        SrcMI.removeFromParent();
+        MBB->insert(MBB->begin(), &SrcMI);
       }
-      {
-        MachineInstr *MIToSink = &*SrcMI;
-        LLVM_DEBUG(dbgs() << "Sinking value: " << *MIToSink);
-        --SrcMI; // To be incremented on loop.
-        MIToSink->removeFromParent();
-        MBB->insert(MBB->begin(), MIToSink);
-      }
-    cont:;
     }
   };
   for (Register TrueValue : TrueValues)
@@ -317,10 +314,11 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
     //  ...
     Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
-    for (unsigned Idx = 0, End = Dsts.size(); Idx != End; ++Idx) {
-      Register Dst = Dsts[Idx];
-      Register TrueValue = TrueValues[Idx];
-      Register FalseValue = FalseValues[Idx];
+    // TODO: C++17 structured bindings
+    for (const auto &I : zip(Dsts, TrueValues, FalseValues)) {
+      Register Dst = std::get<0>(I);
+      Register TrueValue = std::get<1>(I);
+      Register FalseValue = std::get<2>(I);
       Builder.buildInstr(MOS::G_PHI)
           .addDef(Dst)
           .addUse(TrueValue)
@@ -397,12 +395,10 @@ void MOSLowerSelect::moveAwayFromCalls(MachineFunction &MF) {
 void MOSLowerSelect::sinkSelectsToBranchUses(MachineFunction &MF) {
   const auto &MRI = MF.getRegInfo();
   for (MachineBasicBlock &MBB : MF) {
-    MachineBasicBlock::reverse_iterator NextI;
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; I = NextI) {
-      NextI = std::next(I);
-      if (I->getOpcode() != MOS::G_SELECT)
+    for (MachineInstr &MI : make_early_inc_range(mbb_reverse(MBB))) {
+      if (MI.getOpcode() != MOS::G_SELECT)
         continue;
-      Register Dst = I->getOperand(0).getReg();
+      Register Dst = MI.getOperand(0).getReg();
       if (!MRI.hasOneNonDBGUse(Dst))
         continue;
       auto &UseMI = *MRI.use_instr_nodbg_begin(Dst);
@@ -410,8 +406,8 @@ void MOSLowerSelect::sinkSelectsToBranchUses(MachineFunction &MF) {
         continue;
       if (UseMI.getParent() != &MBB)
         continue;
-      I->removeFromParent();
-      MBB.insert(UseMI, &*I);
+      MI.removeFromParent();
+      MBB.insert(UseMI, &MI);
     }
   }
 }

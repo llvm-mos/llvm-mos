@@ -194,30 +194,30 @@ void MOSAsmPrinter::emitJumpTableInfo() {
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
 
-  for (unsigned JTI = 0, JTIE = JT.size(); JTI != JTIE; ++JTI) {
-    const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
+  for (const auto &JTI : enumerate(JT)) {
+    const std::vector<MachineBasicBlock *> &JTBBs = JTI.value().MBBs;
 
     // If this jump table was deleted, ignore it.
     if (JTBBs.empty())
       continue;
 
-    MCSymbol *JTISymbol = GetJTISymbol(JTI);
+    MCSymbol *JTISymbol = GetJTISymbol(JTI.index());
     OutStreamer->emitLabel(JTISymbol);
 
     // Emit an array of the low bytes of the target addresses.
-    for (unsigned II = 0, EE = JTBBs.size(); II != EE; ++II) {
-      OutStreamer->emitValue(MCSymbolRefExpr::create(
-                                 JTBBs[II]->getSymbol(),
-                                 MCSymbolRefExpr::VK_MOS_ADDR16_LO, OutContext),
-                             1);
+    for (const MachineBasicBlock *JTBB : JTBBs) {
+      OutStreamer->emitValue(
+          MCSymbolRefExpr::create(
+              JTBB->getSymbol(), MCSymbolRefExpr::VK_MOS_ADDR16_LO, OutContext),
+          1);
     }
 
     // Emit an array of the high bytes of the target addresses.
-    for (unsigned II = 0, EE = JTBBs.size(); II != EE; ++II) {
-      OutStreamer->emitValue(MCSymbolRefExpr::create(
-                                 JTBBs[II]->getSymbol(),
-                                 MCSymbolRefExpr::VK_MOS_ADDR16_HI, OutContext),
-                             1);
+    for (const MachineBasicBlock *JTBB : JTBBs) {
+      OutStreamer->emitValue(
+          MCSymbolRefExpr::create(
+              JTBB->getSymbol(), MCSymbolRefExpr::VK_MOS_ADDR16_HI, OutContext),
+          1);
     }
   }
   if (!JTInDiffSection)

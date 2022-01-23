@@ -288,15 +288,15 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   LLT P = LLT::pointer(0, 16);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   switch (MI.getIntrinsicID()) {
-    case Intrinsic::trap: {
-      auto &Ctx = MI.getMF()->getFunction().getContext();
-      auto *RetTy = Type::getVoidTy(Ctx);
-      if(!createLibcall(Builder, "abort", {{}, RetTy, 0}, {}, CallingConv::C)) {
-        return false;
-      }
-      MI.eraseFromParent();
-      return true;
+  case Intrinsic::trap: {
+    auto &Ctx = MI.getMF()->getFunction().getContext();
+    auto *RetTy = Type::getVoidTy(Ctx);
+    if (!createLibcall(Builder, "abort", {{}, RetTy, 0}, {}, CallingConv::C)) {
+      return false;
     }
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
     auto Tmp =
@@ -420,6 +420,26 @@ bool MOSLegalizerInfo::legalizeConstant(LegalizerHelper &Helper,
 // Integer Extension and Truncation
 //===----------------------------------------------------------------------===//
 
+static auto unmergeDefs(MachineInstr *MI) {
+  assert(MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+  return make_range(MI->operands_begin(), MI->operands_end() - 1);
+}
+
+static auto unmergeHighDefs(MachineInstr *MI) {
+  assert(MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+  return make_range(MI->operands_begin() + 1, MI->operands_end() - 1);
+}
+
+static auto unmergeDefsSplitHigh(MachineInstr *MI) {
+  assert(MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+  struct LowsAndHigh {
+    iterator_range<MachineInstr::mop_iterator> Lows;
+    MachineOperand &High;
+  };
+  return LowsAndHigh{make_range(MI->operands_begin(), MI->operands_end() - 2),
+                     MI->getOperand(MI->getNumOperands() - 2)};
+}
+
 bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
@@ -453,9 +473,8 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
     } else {
       auto Unmerge = Builder.buildUnmerge(S8, Src);
       Bits = 0;
-      for (unsigned Idx = 0, End = Unmerge->getNumOperands() - 1; Idx < End;
-           Idx++) {
-        Parts.push_back(Unmerge->getOperand(Idx).getReg());
+      for (MachineOperand &Op : unmergeDefs(Unmerge)) {
+        Parts.push_back(Op.getReg());
         Bits += 8;
       }
     }
@@ -516,9 +535,8 @@ static std::pair<Register, Register> splitLowRest(Register Reg,
   Register Low = Unmerge.getReg(0);
 
   SmallVector<Register> RestParts;
-  for (unsigned Idx = 1, IdxEnd = Unmerge->getNumOperands() - 1; Idx < IdxEnd;
-       ++Idx)
-    RestParts.push_back(Unmerge.getReg(Idx));
+  for (MachineOperand &Op : unmergeHighDefs(Unmerge))
+    RestParts.push_back(Op.getReg());
   Register Rest =
       (RestParts.size() > 1)
           ? Builder.buildMerge(LLT::scalar(RestParts.size() * 8), RestParts)
@@ -539,9 +557,8 @@ static void mergeLowRest(Register Dst, Register Low, Register Rest,
     DstParts.push_back(Rest);
   else {
     auto Unmerge = Builder.buildUnmerge(S8, Rest);
-    for (unsigned Idx = 0, IdxEnd = Unmerge->getNumOperands() - 1; Idx < IdxEnd;
-         ++Idx)
-      DstParts.push_back(Unmerge.getReg(Idx));
+    for (MachineOperand &Op : unmergeDefs(Unmerge))
+      DstParts.push_back(Op.getReg());
   }
   Builder.buildMerge(Dst, DstParts);
 }
@@ -551,19 +568,18 @@ static std::pair<Register, Register> splitHighRest(Register Reg,
   LLT S8 = LLT::scalar(8);
 
   auto Unmerge = Builder.buildUnmerge(S8, Reg);
-  Register High = Unmerge.getReg(Unmerge->getNumOperands() - 2);
+  auto UnmergeDefs = unmergeDefsSplitHigh(Unmerge);
 
   SmallVector<Register> RestParts;
-  for (unsigned Idx = 0, IdxEnd = Unmerge->getNumOperands() - 2; Idx < IdxEnd;
-       ++Idx)
-    RestParts.push_back(Unmerge.getReg(Idx));
+  for (MachineOperand &Op : UnmergeDefs.Lows)
+    RestParts.push_back(Op.getReg());
   Register Rest =
       (RestParts.size() > 1)
           ? Builder.buildMerge(LLT::scalar(RestParts.size() * 8), RestParts)
                 .getReg(0)
           : RestParts[0];
 
-  return {High, Rest};
+  return {UnmergeDefs.High.getReg(), Rest};
 }
 
 bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
@@ -693,12 +709,12 @@ bool MOSLegalizerInfo::legalizeDivRem(LegalizerHelper &Helper,
                      {MI.getOperand(0).getReg(), HLTy, 0}, Args))
     return false;
 
-  Helper.MIRBuilder.buildLoad(MI.getOperand(1), FI,
-                              *Helper.MIRBuilder.getMF().getMachineMemOperand(
-                                  PtrInfo,
-                                  MachineMemOperand::MOLoad |
-                                      MachineMemOperand::MODereferenceable,
-                                  Ty.getSizeInBytes(), Align()));
+  Helper.MIRBuilder.buildLoad(
+      MI.getOperand(1), FI,
+      *Helper.MIRBuilder.getMF().getMachineMemOperand(
+          PtrInfo,
+          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable,
+          Ty.getSizeInBytes(), Align()));
 
   MI.eraseFromParent();
   return true;
@@ -763,8 +779,8 @@ bool MOSLegalizerInfo::legalizeShiftRotate(LegalizerHelper &Helper,
   if (Amt >= 8) {
     auto Unmerge = Builder.buildUnmerge(S8, Src);
     SmallVector<Register> DstBytes;
-    for (unsigned I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
-      DstBytes.push_back(Unmerge->getOperand(I).getReg());
+    for (MachineOperand &Op : unmergeDefs(Unmerge))
+      DstBytes.push_back(Op.getReg());
     Register Fill;
     switch (MI.getOpcode()) {
     default:
@@ -953,19 +969,20 @@ bool MOSLegalizerInfo::legalizeLshrEShlE(LegalizerHelper &Helper,
   SmallVector<Register> Parts;
 
   SmallVector<Register> Defs;
-  for (MachineOperand &SrcPart : Unmerge->defs())
+  for (MachineOperand &SrcPart : unmergeDefs(Unmerge))
     Defs.push_back(SrcPart.getReg());
 
   if (MI.getOpcode() == MOS::G_LSHRE)
     std::reverse(Defs.begin(), Defs.end());
 
   Register Carry = CarryIn;
-  for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
+  for (const auto &I : enumerate(Defs)) {
     Parts.push_back(MRI.createGenericVirtualRegister(S8));
-    Register NewCarry =
-        I == E - 1 ? CarryOut : MRI.createGenericVirtualRegister(S1);
+    Register NewCarry = I.index() == Defs.size() - 1
+                            ? CarryOut
+                            : MRI.createGenericVirtualRegister(S1);
     Builder.buildInstr(MI.getOpcode(), {Parts.back(), NewCarry},
-                       {Defs[I], Carry});
+                       {I.value(), Carry});
     Carry = NewCarry;
   }
 
@@ -1145,13 +1162,13 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     }
 
     auto LHSUnmerge = Builder.buildUnmerge(S8, LHS);
+    auto LHSUnmergeDefs = unmergeDefsSplitHigh(LHSUnmerge);
 
     // Determining whether the LHS is negative only requires looking at the
     // highest byte (bit, really).
     if (RHSIsZero) {
       Helper.Observer.changingInstr(MI);
-      MI.getOperand(2).setReg(
-          LHSUnmerge->getOperand(LHSUnmerge->getNumOperands() - 2).getReg());
+      MI.getOperand(2).setReg(LHSUnmergeDefs.High.getReg());
       MI.getOperand(3).setReg(Builder.buildConstant(S8, 0).getReg(0));
       Helper.Observer.changedInstr(MI);
       return true;
@@ -1159,18 +1176,18 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
 
     // Perform multibyte signed comparisons by a multibyte subtraction.
     auto RHSUnmerge = Builder.buildUnmerge(S8, RHS);
+    auto RHSUnmergeDefs = unmergeDefsSplitHigh(RHSUnmerge);
     assert(LHSUnmerge->getNumOperands() == RHSUnmerge->getNumOperands());
     CIn = Builder.buildConstant(S1, 1).getReg(0);
-    for (unsigned Idx = 0, End = LHSUnmerge->getNumOperands() - 2; Idx != End;
-         ++Idx) {
-      auto Sbc = Builder.buildInstr(
-          MOS::G_SBC, {S8, S1, S1, S1, S1},
-          {LHSUnmerge->getOperand(Idx), RHSUnmerge->getOperand(Idx), CIn});
+    // TODO: C++17 structured bindings
+    for (const auto &I : zip(LHSUnmergeDefs.Lows, RHSUnmergeDefs.Lows)) {
+      auto Sbc = Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1},
+                                    {std::get<0>(I), std::get<1>(I), CIn});
       CIn = Sbc.getReg(1);
     }
     Type = S8;
-    LHS = LHSUnmerge->getOperand(LHSUnmerge->getNumOperands() - 2).getReg();
-    RHS = RHSUnmerge->getOperand(LHSUnmerge->getNumOperands() - 2).getReg();
+    LHS = LHSUnmergeDefs.High.getReg();
+    RHS = RHSUnmergeDefs.High.getReg();
     // Fall through to produce the final SBC that determines the comparison
     // result.
   } else {

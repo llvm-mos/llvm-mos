@@ -75,33 +75,30 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
   const auto &MRI = MBB.getParent()->getRegInfo();
   const auto *TRI = MRI.getTargetRegisterInfo();
   bool Changed = false;
-  MachineBasicBlock::reverse_iterator Next;
-  for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; I = Next) {
-    Next = std::next(I);
-
-    if (I->getOpcode() != MOS::CMPTermZ)
+  for (MachineInstr &MI : make_early_inc_range(mbb_reverse(MBB))) {
+    if (MI.getOpcode() != MOS::CMPTermZ)
       continue;
-    assert(I->getOperand(0).isDead());
+    assert(MI.getOperand(0).isDead());
 
-    Register Val = I->getOperand(1).getReg();
+    Register Val = MI.getOperand(1).getReg();
 
-    for (auto J = Next; J != E; ++J) {
-      if (J->isCall())
+    for (auto &J : mbb_reverse(MBB.begin(), MI)) {
+      if (J.isCall())
         break;
-      if (definesNZ(*J, Val)) {
+      if (definesNZ(J, Val)) {
         Changed = true;
-        J->addOperand(MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true,
-                                                /*isImp=*/true));
-        I->eraseFromParent();
+        J.addOperand(MachineOperand::CreateReg(MOS::NZ, /*isDef=*/true,
+                                               /*isImp=*/true));
+        MI.eraseFromParent();
         break;
       }
-      if (J->modifiesRegister(MOS::NZ, TRI))
+      if (J.modifiesRegister(MOS::NZ, TRI))
         break;
       bool ClobbersNZ = true;
-      if (J->isBranch() || J->mayStore())
+      if (J.isBranch() || J.mayStore())
         ClobbersNZ = false;
       else
-        switch (J->getOpcode()) {
+        switch (J.getOpcode()) {
         case MOS::CLV:
         case MOS::LDCImm:
         case MOS::STImag8:
@@ -116,7 +113,7 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
       continue;
 
     Changed = true;
-    lowerCMPTermZ(*I);
+    lowerCMPTermZ(MI);
   }
   return Changed;
 }
@@ -130,8 +127,9 @@ void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
   LivePhysRegs PhysRegs;
   PhysRegs.init(*TRI);
   PhysRegs.addLiveOuts(MBB);
-  for (auto J = MBB.rbegin(); J != MI; ++J)
-    PhysRegs.stepBackward(*J);
+  for (auto &J :
+       make_range(MBB.rbegin(), MachineBasicBlock::reverse_iterator(MI)))
+    PhysRegs.stepBackward(J);
 
   MachineIRBuilder Builder(MBB, MI);
   switch (Val) {
@@ -153,36 +151,32 @@ void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
       // At this point, unless we can find a GPR with the value, it'll take 4
       // bytes and 10 cycles for an INC ZP DEC ZP. So look really hard for the
       // value in a GPR.
-      for (auto J = std::next(MachineBasicBlock::reverse_iterator(MI)),
-                E = MBB.rend();
-           J != E; ++J) {
-        if (J->getOpcode() == MOS::LDImag8 &&
-            J->getOperand(1).getReg() == Val &&
-            !Defined.contains(J->getOperand(0).getReg())) {
-          Register GPR = J->getOperand(0).getReg();
+      for (auto &J : mbb_reverse(MBB.begin(), MI)) {
+        if (J.getOpcode() == MOS::LDImag8 && J.getOperand(1).getReg() == Val &&
+            !Defined.contains(J.getOperand(0).getReg())) {
+          Register GPR = J.getOperand(0).getReg();
           MI.getOperand(1).setReg(GPR);
           lowerCMPTermZ(MI);
           return;
         }
 
-        if (J->getOpcode() == MOS::STImag8 &&
-            J->getOperand(0).getReg() == Val &&
-            !Defined.contains(J->getOperand(1).getReg())) {
-          Register GPR = J->getOperand(1).getReg();
+        if (J.getOpcode() == MOS::STImag8 && J.getOperand(0).getReg() == Val &&
+            !Defined.contains(J.getOperand(1).getReg())) {
+          Register GPR = J.getOperand(1).getReg();
           MI.getOperand(1).setReg(GPR);
           lowerCMPTermZ(MI);
           return;
         }
 
         // If Val was changed, then earlier GPRs couldn't have its new value.
-        if (J->modifiesRegister(Val, TRI))
+        if (J.modifiesRegister(Val, TRI))
           break;
 
-        if (J->modifiesRegister(MOS::A, TRI))
+        if (J.modifiesRegister(MOS::A, TRI))
           Defined.insert(MOS::A);
-        if (J->modifiesRegister(MOS::X, TRI))
+        if (J.modifiesRegister(MOS::X, TRI))
           Defined.insert(MOS::X);
-        if (J->modifiesRegister(MOS::Y, TRI))
+        if (J.modifiesRegister(MOS::Y, TRI))
           Defined.insert(MOS::Y);
         if (Defined.size() == 3)
           break;
@@ -270,8 +264,9 @@ bool MOSLateOptimization::ldImmToInxyDexy(MachineBasicBlock &MBB) const {
       if (Reduced) {
         Changed = true;
         Load->MI->getOperand(0).setIsDead(false);
-        for (MachineBasicBlock::iterator J = Load->MI, JE = MI; J != JE; ++J)
-          J->clearRegisterKills(Dst, TRI);
+        for (MachineInstr &J : make_range(MachineBasicBlock::iterator(Load->MI),
+                                          MachineBasicBlock::iterator(MI)))
+          J.clearRegisterKills(Dst, TRI);
         MI.getOperand(1).ChangeToRegister(Dst, /*isDef=*/false, /*isImp=*/false,
                                           /*isKill=*/true);
         MI.tieOperands(0, 1);

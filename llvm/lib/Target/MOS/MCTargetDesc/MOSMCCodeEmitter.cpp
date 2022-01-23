@@ -40,7 +40,7 @@ namespace llvm {
 void MOSMCCodeEmitter::emitInstruction(uint64_t Val, unsigned Size,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) const {
-  for (int64_t i = 0; i < Size; ++i) {
+  for (int64_t I = 0; I < Size; ++I) {
     OS << (char)(Val & 0xff);
     Val = Val >> 8;
   }

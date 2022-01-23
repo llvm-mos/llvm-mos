@@ -73,13 +73,13 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              uint64_t Address,
                                              raw_ostream &CStream) const {
   Size = 0;
-  for (size_t InsnSize = 1; InsnSize <= 3; InsnSize++) {
+  for (size_t InsnSize : seq_inclusive(1, 3)) {
     uint32_t Insn = 0;
     DecodeStatus Result;
     if (Bytes.size() < InsnSize) {
       return MCDisassembler::Fail;
     }
-    for (size_t Byte = 0; Byte < InsnSize; Byte++) {
+    for (size_t Byte : seq((size_t)0, InsnSize)) {
       Insn |= Bytes[Byte] << (8 * Byte);
     }
     Result = decodeInstruction(getDecoderTable(InsnSize), Instr, Insn, Address,

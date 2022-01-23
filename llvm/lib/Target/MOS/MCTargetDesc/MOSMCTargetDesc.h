@@ -13,6 +13,7 @@
 #ifndef LLVM_MOS_MCTARGET_DESC_H
 #define LLVM_MOS_MCTARGET_DESC_H
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/DataTypes.h"
 
 #include <memory>
@@ -65,5 +66,11 @@ unsigned makeEFlags(const FeatureBitset &Features);
 
 #define GET_SUBTARGETINFO_ENUM
 #include "MOSGenSubtargetInfo.inc"
+
+namespace llvm {
+template <> struct enum_iteration_traits<decltype(MOS::NoRegister)> {
+  static constexpr bool is_iterable = true;
+};
+} // namespace llvm
 
 #endif // LLVM_MOS_MCTARGET_DESC_H
