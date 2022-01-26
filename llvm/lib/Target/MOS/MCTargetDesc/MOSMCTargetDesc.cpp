@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSMCTargetDesc.h"
-#include "MOSTargetELFStreamer.h"
 #include "MOSInstPrinter.h"
 #include "MOSMCAsmInfo.h"
 #include "MOSMCELFStreamer.h"

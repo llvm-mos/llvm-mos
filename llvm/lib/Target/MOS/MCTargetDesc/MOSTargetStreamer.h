@@ -20,12 +20,42 @@ public:
   explicit MOSTargetStreamer(MCStreamer &S);
 
   void finish() override;
+
+protected:
+  virtual bool hasInitArray() = 0;
+  virtual bool hasFiniArray() = 0;
+
+  virtual void stronglyReference(MCSymbol *Sym) = 0;
 };
 
 /// A target streamer for textual MOS assembly code.
-class MOSTargetAsmStreamer : public MOSTargetStreamer {
+class MOSTargetAsmStreamer final : public MOSTargetStreamer {
 public:
   explicit MOSTargetAsmStreamer(MCStreamer &S);
+
+private:
+  void changeSection(const MCSection *CurSection, MCSection *Section,
+                     const MCExpr *SubSection, raw_ostream &OS) override;
+
+  bool hasInitArray() override { return HasInitArray; }
+  bool hasFiniArray() override { return HasFiniArray; }
+
+  void stronglyReference(MCSymbol *Sym) override;
+
+  bool HasInitArray = false;
+  bool HasFiniArray = false;
+};
+
+/// A target streamer for an MOS ELF object file.
+class MOSTargetELFStreamer final : public MOSTargetStreamer {
+public:
+  MOSTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
+
+private:
+  bool hasInitArray() override;
+  bool hasFiniArray() override;
+
+  void stronglyReference(MCSymbol *Sym) override;
 };
 
 } // end namespace llvm

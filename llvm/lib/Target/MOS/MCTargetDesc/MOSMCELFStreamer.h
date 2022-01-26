@@ -31,12 +31,20 @@ public:
         MCII(createMOSMCInstrInfo()) {}
 
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
 
   void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
 
   void emitMosAddrAsciz(const MCExpr *Value, unsigned Size,
                         SMLoc Loc = SMLoc());
+
+  bool hasInitArray() const { return HasInitArray; }
+  bool hasFiniArray() const { return HasFiniArray; }
+
+private:
+  bool HasInitArray = false;
+  bool HasFiniArray = false;
 };
 
 MCStreamer *createMOSMCELFStreamer(const Triple &T, MCContext &Ctx,

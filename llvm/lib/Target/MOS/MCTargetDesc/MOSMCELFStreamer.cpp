@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCELFStreamer.h"
 #define DEBUG_TYPE "mosmcelfstreamer"
 
 #include "MCTargetDesc/MOSMCELFStreamer.h"
@@ -33,6 +34,12 @@ void MOSMCELFStreamer::initSections(bool NoExecStack,
 
   if (NoExecStack)
     SwitchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+}
+
+void MOSMCELFStreamer::changeSection(MCSection *Section, const MCExpr *Subsection) {
+  MCELFStreamer::changeSection(Section, Subsection);
+  HasInitArray |= Section->getName().startswith(".init_array");
+  HasFiniArray |= Section->getName().startswith(".fini_array");
 }
 
 void MOSMCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
