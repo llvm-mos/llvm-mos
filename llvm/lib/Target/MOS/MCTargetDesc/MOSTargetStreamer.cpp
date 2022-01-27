@@ -27,14 +27,14 @@ void MOSTargetStreamer::finish() {
   MCContext &Context = OS.getContext();
 
   if (hasInitArray()) {
-    MCSymbol *Init = Context.getOrCreateSymbol("_init");
+    MCSymbol *Init = Context.getOrCreateSymbol("__do_init_array");
     OS.emitRawComment("Declaring this symbol tells the CRT that there are");
     OS.emitRawComment("initialization routines to be run in .init_array");
     stronglyReference(Init);
   }
 
   if (hasFiniArray()) {
-    MCSymbol *Fini = Context.getOrCreateSymbol("_fini");
+    MCSymbol *Fini = Context.getOrCreateSymbol("__do_fini_array");
 
     OS.emitRawComment("Declaring this symbol tells the CRT that there are");
     OS.emitRawComment("finalization routines to be run in .fini_array");
