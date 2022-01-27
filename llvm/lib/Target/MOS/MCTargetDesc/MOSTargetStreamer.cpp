@@ -49,6 +49,7 @@ void MOSTargetAsmStreamer::changeSection(const MCSection *CurSection,
                                          MCSection *Section,
                                          const MCExpr *SubSection,
                                          raw_ostream &OS) {
+  MCTargetStreamer::changeSection(CurSection, Section, SubSection, OS);
   HasInitArray |= Section->getName().startswith(".init_array");
   HasFiniArray |= Section->getName().startswith(".fini_array");
 }
