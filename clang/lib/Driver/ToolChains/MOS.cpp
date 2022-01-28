@@ -72,8 +72,12 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib)) {
     // Prefixing a colon causes GNU LD-like linkers to search for this filename
-    // as-is.
+    // as-is. This contains the minimum necessary startup library.
     CmdArgs.push_back("-l:crt0.o");
+
+    // libstart.a contains optional startup objects that are only pulled in if
+    // referenced.
+    CmdArgs.push_back("-lstart");
   }
 
   if (!Args.hasArg(options::OPT_nodefaultlibs, options::OPT_nostdlib))
