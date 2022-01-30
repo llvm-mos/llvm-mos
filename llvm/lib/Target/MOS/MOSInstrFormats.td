@@ -10,6 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// Predicates. Useful for limiting instructions to particular hardware modes
+/// or particular hardware implementations.
+def Has6502 : Predicate<"Subtarget->has6502()">,
+              AssemblerPredicate<(all_of Feature6502), "Feature6502"> {
+  let PredicateName = "Feature6502";
+}
+
+def Has65C02 : Predicate<"Subtarget->has65C02()">,
+               AssemblerPredicate<(all_of Feature65C02), "Feature65C02"> {
+  let PredicateName = "Feature65C02";
+}
+
+def HasW65816 : Predicate<"Subtarget->hasW65816()">,
+                AssemblerPredicate<(all_of FeatureW65816), "FeatureW65816"> {
+  let PredicateName = "FeatureW65816";
+}
+
 /// These instruction format definitions exist, thanks to Neil Parker's
 /// analysis of the 65xx instruction set, at:
 /// http://nparker.llx.com/a2/opcodes.html
@@ -59,6 +76,9 @@ class Addr8Operand<string name> : MOSAsmOperand<name>;
 /// A 16-bit address.
 class Addr16Operand<string name> : MOSAsmOperand<name>;
 
+/// A 24-bit address.
+class Addr24Operand<string name> : MOSAsmOperand<name>;
+
 /// This operand will only match a value from 0 to 255 inclusive.
 def imm8 : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8">;
@@ -78,6 +98,12 @@ def pcrel8 : Operand<i32> {
   let EncoderMethod = "encodeImm<MOS::PCRel8, 1>";
 }
 
+/// An 16-bit pc-relative reference, for 65816 BRL instruction.
+def pcrel16 : Operand<i32> {
+  let ParserMatchClass = PCRelativeOperand<"PCRel16">;
+  let EncoderMethod = "encodeImm<MOS::PCRel16, 1>";
+}
+
 def addr8 : Operand<i32> {
   let ParserMatchClass = Addr8Operand<"Addr8">;
   let EncoderMethod = "encodeImm<MOS::Addr8, 1>";
@@ -88,10 +114,21 @@ def addr16 : Operand<i32> {
   let EncoderMethod = "encodeImm<MOS::Addr16, 1>";
 }
 
+def addr24 : Operand<i32> {
+  let ParserMatchClass = Addr24Operand<"Addr24">;
+  let EncoderMethod = "encodeImm<MOS::Addr24, 1>";
+}
+
 /// This operand will only match a value from 256 to 65536 inclusive.
 def imm8to16 : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8To16">;
   let EncoderMethod = "encodeImm<MOS::Addr16, 1>";
+}
+
+/// This operand will only match a value from 65536 to 16777216 inclusive.
+def imm16To24 : Operand<i32> {
+  let ParserMatchClass = ImmediateAsmOperand<"Imm16To24">;
+  let EncoderMethod = "encodeImm<MOS::Addr24, 1>";
 }
 
 /// All non-virtual MOS opcodes are 8 bits long.
@@ -149,6 +186,11 @@ def Immediate : AddressingMode {
   let InOperandList = (ins imm8:$param);
 }
 
+def Immediate16 : AddressingMode {
+  let OperandsStr = "#$param";
+  let InOperandList = (ins imm16:$param);
+}
+
 def ZeroPage : AddressingMode {
   let OperandsStr = "$param";
   let InOperandList = (ins addr8:$param);
@@ -169,14 +211,29 @@ def Relative : AddressingMode {
   let InOperandList = (ins pcrel8:$param);
 }
 
+def Relative16 : AddressingMode {
+  let OperandsStr = "$param";
+  let InOperandList = (ins pcrel16:$param);
+}
+
 def Absolute : AddressingMode {
   let OperandsStr = "$param";
   let InOperandList = (ins addr16:$param);
 }
 
+def AbsoluteLong : AddressingMode {
+  let OperandsStr = "$param";
+  let InOperandList = (ins addr24:$param);
+}
+
 def AbsoluteX : AddressingMode {
   let OperandsStr = "$param , x";
   let InOperandList = (ins addr16:$param);
+}
+
+def AbsoluteXLong : AddressingMode {
+  let OperandsStr = "$param , x";
+  let InOperandList = (ins addr24:$param);
 }
 
 def AbsoluteY : AddressingMode {
@@ -186,7 +243,22 @@ def AbsoluteY : AddressingMode {
 
 def Indirect : AddressingMode {
   let OperandsStr = "( $param )";
+  let InOperandList = (ins addr8:$param);
+}
+
+def Indirect16 : AddressingMode {
+  let OperandsStr = "( $param )";
   let InOperandList = (ins addr16:$param);
+}
+
+def IndexedIndirect16 : AddressingMode {
+  let OperandsStr = "( $param , x )";
+  let InOperandList = (ins addr16:$param);
+}
+
+def IndirectLong : AddressingMode {
+  let OperandsStr = "[ $param ]";
+  let InOperandList = (ins addr8:$param);
 }
 
 def IndexedIndirect : AddressingMode {
@@ -196,6 +268,11 @@ def IndexedIndirect : AddressingMode {
 
 def IndirectIndexed : AddressingMode {
   let OperandsStr = "( $param ) , y";
+  let InOperandList = (ins addr8:$param);
+}
+
+def IndirectIndexedLong : AddressingMode {
+  let OperandsStr = "[ $param ] , y";
   let InOperandList = (ins addr8:$param);
 }
 
@@ -243,6 +320,19 @@ class Inst24<string opcodestr, Opcode op = DefaultOpcode,
   let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
+/// A 32 bit real 65816 instruction. Always an 8 bit opcode and a 24 bit
+/// operand.
+class Inst32<string opcodestr, Opcode op = DefaultOpcode,
+             AddressingMode mode = Implicit> :
+    InstAddressMode<opcodestr, op, mode> {
+  let Size = 4;
+  bits<24> param;
+  bits<32> Inst;
+  let Inst{7-0} = opcode.op;
+  let Inst{31-8} = param;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
+}
+
 /// Some one-byte opcodes tend to have fixed lower 4 bits, and vary in the
 /// higher four bits.
 class InstNybble<string asmstr, bits<4> low = 0, bits<4> high = 0> :
@@ -264,8 +354,7 @@ class InstLowA<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0xa, high>;
 /// OpcodeC1 class instructions
 /// "Because the cc = 01 instructions are relatively regular, we sketch them
 /// out first."
-multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop">
-{
+multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop"> {
 /// For cc = 01, then the meaning of bbb is:
 /// 000	(zero page,X)
 /// 001	zero page
@@ -299,6 +388,30 @@ multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop">
 
   def _AbsoluteX :
     Inst24<OpcodeStr, OpcodeC1<aaa, 0b111>, AbsoluteX>;
+
+/// For cc = 10 on 65816, then the meaning of bbb is:
+/// 100	(zero page)
+/// For cc = 11 on 65816, then the meaning of bbb is:
+/// 001	[zero page]
+/// 011	absolute long
+/// 101	[zero page],Y
+/// 111	absolute long,X
+  let Predicates = [HasW65816] in {
+    def _Indirect :
+      Inst16<OpcodeStr, OpcodeC2<aaa, 0b100>, Indirect>;
+
+    def _IndirectLong :
+      Inst16<OpcodeStr, OpcodeC3<aaa, 0b001>, IndirectLong>;
+
+    def _AbsoluteLong :
+      Inst32<OpcodeStr, OpcodeC3<aaa, 0b011>, AbsoluteLong>;
+
+    def _IndirectIndexedLong :
+      Inst16<OpcodeStr, OpcodeC3<aaa, 0b101>, IndirectIndexedLong>;
+
+    def _AbsoluteXLong :
+      Inst32<OpcodeStr, OpcodeC3<aaa, 0b111>, AbsoluteXLong>;
+  }
 }
 
 /// All cc=01 instruction types, for the majority of opcodes where cc == 01.
@@ -307,6 +420,12 @@ multiclass CC1_All<bits<3> aaa, string OpcodeStr = "nop"> :
   // handle immediate CC1 instruction types here for opcodes that fit the
   // CC1 pattern
   def _Immediate : Inst16<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate>;
+
+  // 16-bit immediate operand on 65816 when M flag is low.
+  def _Immediate16 : Inst24<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate16> {
+    let Predicates = [HasW65816];
+    let DecoderNamespace = "MOSMLow";
+  }
 }
 
 /// "Next we consider the cc = 10 instructions. These have a completely
@@ -400,6 +519,12 @@ multiclass CC2_NonShift<bits<3> aaa, string OpcodeStr = "nop"> {
 multiclass CC0_Regular< bits<3> aaa, string OpcodeStr = "nop"> {
   def _Immediate : Inst16<OpcodeStr, OpcodeC0<aaa, 0b000>, Immediate>;
 
+  // 16-bit immediate operand on 65816 when X flag is low.
+  def _Immediate16 : Inst24<OpcodeStr, OpcodeC0<aaa, 0b000>, Immediate16> {
+    let Predicates = [HasW65816];
+    let DecoderNamespace = "MOSXLow";
+  }
+
   def _ZeroPage : Inst16<OpcodeStr, OpcodeC0<aaa, 0b001>, ZeroPage>;
 
   def _Absolute : Inst24<OpcodeStr, OpcodeC0<aaa, 0b011>, Absolute>;
@@ -423,16 +548,4 @@ class ConditionalBranch<string opcodestr, bits<2> flagType, bits<1> value> :
    let a{2-1} = flagType;
    let a{0} = value;
    let opcode = OpcodeABC<a, 0b100, 0b00>;
-}
-
-/// Predicates. Useful for limiting instructions to particular hardware modes
-/// or particular hardware implementations.
-def Has6502 : Predicate<"Subtarget->has6502()">,
-              AssemblerPredicate<(all_of Feature6502), "Feature6502"> {
-  let PredicateName = "Feature6502";
-}
-
-def Has65C02 : Predicate<"Subtarget->has65C02()">,
-               AssemblerPredicate<(all_of Feature65C02), "Feature65C02"> {
-  let PredicateName = "Feature65C02";
 }

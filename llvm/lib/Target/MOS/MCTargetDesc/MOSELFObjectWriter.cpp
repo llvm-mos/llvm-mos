@@ -88,6 +88,8 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     return ELF::R_MOS_ADDR24_SEGMENT_HI;
   case MOS::PCRel8:
     return ELF::R_MOS_PCREL_8;
+  case MOS::PCRel16:
+    return ELF::R_MOS_PCREL_16;
   case MCFixupKind::FK_Data_4:
     return ELF::R_MOS_FK_DATA_4;
   case MCFixupKind::FK_Data_8:

@@ -20,6 +20,7 @@ public:
   /// Specifies the type of an expression.
   enum VariantKind {
     VK_MOS_NONE,
+    VK_MOS_IMM16,
     VK_MOS_ADDR8,
     VK_MOS_ADDR16_HI,
     VK_MOS_ADDR16_LO,
@@ -33,7 +34,7 @@ public:
 
   /// Creates an MOS machine code expression.
   static const MOSMCExpr *create(VariantKind Kind, const MCExpr *Expr,
-                                 bool isNegated, MCContext &Ctx);
+                                 bool IsNegated, MCContext &Ctx);
 
   /// Gets the type of the expression.
   VariantKind getKind() const { return Kind; }
@@ -46,13 +47,13 @@ public:
   bool evaluateAsConstant(int64_t &Result) const;
 
   bool isNegated() const { return Negated; }
-  void setNegated(bool negated = true) { Negated = negated; }
+  void setNegated(bool NegatedIn = true) { Negated = NegatedIn; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
                                  const MCFixup *Fixup) const override;
 
-  void visitUsedExpr(MCStreamer &streamer) const override;
+  void visitUsedExpr(MCStreamer &Streamer) const override;
 
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
