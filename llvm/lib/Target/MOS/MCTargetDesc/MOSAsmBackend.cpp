@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -43,15 +44,17 @@
 
 namespace llvm {
 namespace MOS {
-struct ZeroPageInstructionRelaxationEntry {
+struct InstructionRelaxationEntry {
   unsigned From;
   unsigned To;
 };
 
-#define GET_MOSZeroPageInstructionRelaxationTable_DECL
-#define GET_MOSZeroPageInstructionRelaxationTable_IMPL
-#define GET_MOSZeroPageSectionTable_DECL
-#define GET_MOSZeroPageSectionTable_IMPL
+#define GET_ZeroPageInstructionRelaxation_DECL
+#define GET_ZeroPageInstructionRelaxation_IMPL
+#define GET_ZeroBankInstructionRelaxation_DECL
+#define GET_ZeroBankInstructionRelaxation_IMPL
+#define GET_ZeroPageSectionTable_DECL
+#define GET_ZeroPageSectionTable_IMPL
 #include "MOSGenSearchableTables.inc"
 } // namespace MOS
 
@@ -59,66 +62,6 @@ MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                   const MCRegisterInfo &MRI,
                                   const llvm::MCTargetOptions &TO) {
   return new MOSAsmBackend(STI.getTargetTriple().getOS());
-}
-
-void MOSAsmBackend::adjustFixupValue(const MCFixup &Fixup,
-                                     const MCValue &Target, uint64_t &Value,
-                                     MCContext *Ctx) const {
-  unsigned Kind = Fixup.getKind();
-
-  // Parsed LLVM-generated temporary labels are already
-  // adjusted for instruction size, but normal labels aren't.
-  //
-  // To handle both cases, we simply un-adjust the temporary label
-  // case so it acts like all other labels.
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    if (A->getSymbol().isTemporary()) {
-      switch (Kind) {
-      case FK_Data_1:
-      case FK_Data_2:
-      case FK_Data_4:
-      case FK_Data_8:
-        // Don't shift value for absolute addresses.
-        break;
-      default:
-        Value += 2;
-      }
-    }
-  }
-
-  switch (Kind) {
-  case MOS::PCRel8:
-    /* MOS pc-relative instructions are counted from the end of the instruction,
-     * not the middle of it.
-     */
-    Value = (Value - 1) & 0xff;
-    break;
-  case MOS::Addr16_Low:
-  case MOS::Addr24_Segment_Low:
-    Value = Value & 0xff;
-    break;
-  case MOS::Addr16_High:
-  case MOS::Addr24_Segment_High:
-    Value = (Value >> 8) & 0xff;
-    break;
-  case MOS::Addr24_Segment:
-    Value = Value & 0xffff;
-    break;
-  case MOS::Addr24_Bank:
-    Value = (Value >> 16) & 0xff;
-    break;
-
-  // Fixups which do not require adjustments.
-  case FK_Data_1:
-  case FK_Data_2:
-  case FK_Data_4:
-  case FK_Data_8:
-    break;
-
-  default:
-    llvm_unreachable("don't know how to adjust this fixup");
-    break;
-  }
 }
 
 void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
@@ -152,8 +95,10 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     Bytes = 1;
     break;
   case FK_Data_2:
+  case MOS::Imm16:
   case MOS::Addr16:
   case MOS::Addr24_Segment:
+  case MOS::PCRel16:
     Bytes = 2;
     break;
   case MOS::Addr24:
@@ -184,14 +129,20 @@ bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
   return true;
 }
 
+static cl::opt<bool> ForcePCRelReloc(
+    "mos-force-pcrel-reloc",
+    cl::desc("Force relocation entries to be emitted for PCREL fixups."),
+    cl::init(false), cl::Hidden);
+
 bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
                                         const MCAsmLayout &Layout,
                                         const MCFixup &Fixup,
                                         const MCFragment *DF,
                                         const MCValue &Target, uint64_t &Value,
                                         bool &WasForced) {
-  assert(Fixup.getKind() == (MCFixupKind)MOS::PCRel8 &&
-         "unexpected target fixup kind");
+  const bool IsPCRel8 = Fixup.getKind() == (MCFixupKind)MOS::PCRel8;
+  const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
+  assert((IsPCRel8 || IsPCRel16) && "unexpected target fixup kind");
   Value = Target.getConstant();
   if (const MCSymbolRefExpr *A = Target.getSymA()) {
     const MCSymbol &Sym = A->getSymbol();
@@ -205,12 +156,22 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   }
   uint32_t Offset = Layout.getFragmentOffset(DF) + Fixup.getOffset();
   Value -= Offset;
-  // MOS's PC relative addressing is off by one from the standard LLVM
+  // MOS's PC relative addressing is off by one or two from the standard LLVM
   // PC relative convention.
-  --Value;
-  // If this result fits safely into 8 bits, we're done
+  Value -= IsPCRel16 ? 2 : 1;
+
+  // Command line option to force reloc emit. This is primarily for testing
+  // R_MOS_PCREL_*.
+  if (ForcePCRelReloc) {
+    WasForced = true;
+    return false;
+  }
+
+  // If this result fits safely into 8 or 16 bits, we're done.
   int64_t SignedValue = Value;
-  return (INT8_MIN <= SignedValue && SignedValue <= INT8_MAX);
+  int64_t MinValue = IsPCRel16 ? INT16_MIN : INT8_MIN;
+  int64_t MaxValue = IsPCRel16 ? INT16_MAX : INT8_MAX;
+  return (MinValue <= SignedValue && SignedValue <= MaxValue);
 }
 
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -218,16 +179,23 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  const MCRelaxableFragment *DF,
                                                  const MCAsmLayout &Layout,
                                                  const bool WasForced) const {
+  // On 65816, it is possible to zero-bank relax from Addr16 to Addr24. The
+  // assembler relaxes in a loop until instructions cannot be relaxed further,
+  // so this is able to follow zero-page relaxation.
+  bool BankRelax = false;
+  MOSAsmBackend::relaxInstructionTo(DF->getInst(), *DF->getSubtargetInfo(),
+                                    BankRelax);
+
   auto Info = getFixupKindInfo(Fixup.getKind());
   const auto *MME = dyn_cast<MOSMCExpr>(Fixup.getValue());
   // If this is a target-specific relaxation, e.g. a modifier, then the Info
   // field already knows the exact width of the answer, so decide now.
   if (MME != nullptr) {
-    return (Info.TargetSize > 8);
+    return (Info.TargetSize > (BankRelax ? 16 : 8));
   }
   // Now the fixup kind is not target-specific.  Yet, if it requires more than
-  // 8 bits, then relaxation is needed.
-  if (Info.TargetSize > 8) {
+  // 8 (or 16) bits, then relaxation is needed.
+  if (Info.TargetSize > (BankRelax ? 16 : 8)) {
     return true;
   }
   // In order to resolve an eight to sixteen bit possible relaxation, we need to
@@ -250,7 +218,7 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
       continue;
     }
     Finished = true;
-  } while (Finished == false);
+  } while (!Finished);
   StringRef FixupName(FixupNameStart, FixupLength);
   // The list of symbols is maintained by the assembler, and since that list
   // is not maintained in alpha order, it seems that we need to iterate across
@@ -289,7 +257,7 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
 }
 
 bool MOSAsmBackend::isZeroPageSectionName(StringRef Name) {
-  return is_contained(MOS::MOSZeroPageSectionTable, Name);
+  return is_contained(MOS::ZeroPageSectionTable, Name);
 }
 
 MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
@@ -304,18 +272,32 @@ unsigned MOSAsmBackend::getNumFixupKinds() const {
   return MOS::Fixups::NumTargetFixupKinds;
 }
 
-unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst) {
+unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst,
+                                           const MCSubtargetInfo &STI,
+                                           bool &BankRelax) {
   const auto *ZPIRE =
       MOS::getZeroPageInstructionRelaxationEntry(Inst.getOpcode());
-  if (ZPIRE == nullptr) {
-    return 0;
+  if (ZPIRE)
+    return ZPIRE->To;
+
+  if (STI.hasFeature(MOS::FeatureW65816)) {
+    // Attempt zero-bank relaxation on 65816.
+    const auto *ZBIRE =
+        MOS::getZeroBankInstructionRelaxationEntry(Inst.getOpcode());
+    if (ZBIRE) {
+      BankRelax = true;
+      return ZBIRE->To;
+    }
   }
-  return ZPIRE->To;
+
+  return 0;
 }
 
 template <typename Fn>
-static bool visitRelaxableOperand(const MCInst &Inst, Fn Visit) {
-  unsigned RelaxTo = MOSAsmBackend::relaxInstructionTo(Inst);
+static bool visitRelaxableOperand(const MCInst &Inst,
+                                  const MCSubtargetInfo &STI, Fn Visit) {
+  bool BankRelax = false;
+  unsigned RelaxTo = MOSAsmBackend::relaxInstructionTo(Inst, STI, BankRelax);
   if (RelaxTo == 0) {
     // If the instruction can't be relaxed, then it doesn't need relaxation.
     return false;
@@ -325,42 +307,48 @@ static bool visitRelaxableOperand(const MCInst &Inst, Fn Visit) {
     // need relaxation.
     return false;
   }
-  return Visit(Inst.getOperand(0), RelaxTo);
+  return Visit(Inst.getOperand(0), RelaxTo, BankRelax);
 }
 
-void MOSAsmBackend::relaxForImmediate(MCInst &Inst) {
-  visitRelaxableOperand(Inst, [&Inst](const MCOperand &Operand,
-                                      unsigned RelaxTo) {
-    int64_t Imm;
-    if (!Operand.evaluateAsConstantImm(Imm) || (Imm >= 0 && Imm <= UCHAR_MAX)) {
-      // If the expression evaluates cleanly to an 8-bit value, then it doesn't
-      // need relaxation.
-      return false;
-    }
-    // This instruction can be relaxed, do it now.
-    Inst.setOpcode(RelaxTo);
-    return true;
-  });
+void MOSAsmBackend::relaxForImmediate(MCInst &Inst,
+                                      const MCSubtargetInfo &STI) {
+  // Two steps are required for zero-bank relaxation on 65816.
+  while (visitRelaxableOperand(
+      Inst, STI,
+      [&Inst](const MCOperand &Operand, unsigned RelaxTo, bool BankRelax) {
+        int64_t Imm;
+        if (!Operand.evaluateAsConstantImm(Imm) ||
+            (Imm >= 0 && Imm <= (BankRelax ? UINT16_MAX : UCHAR_MAX))) {
+          // If the expression evaluates cleanly to an 8-bit value
+          // (or 16-bit for bank relaxation), then it doesn't need relaxation.
+          return false;
+        }
+        // This instruction can be relaxed, do it now.
+        Inst.setOpcode(RelaxTo);
+        return true;
+      }))
+    ;
 }
 
 bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
-  return visitRelaxableOperand(Inst,
-                               [](const MCOperand &Operand, unsigned RelaxTo) {
-                                 if (!Operand.isExpr()) {
-                                   // If the instruction isn't an expression,
-                                   // then it doesn't need relaxation.
-                                   return false;
-                                 }
-                                 // okay you got us, it MAY need relaxation, if
-                                 // the instruction CAN be relaxed.
-                                 return true;
-                               });
+  return visitRelaxableOperand(
+      Inst, STI,
+      [](const MCOperand &Operand, unsigned RelaxTo, bool BankRelax) {
+        if (!Operand.isExpr()) {
+          // If the instruction isn't an expression,
+          // then it doesn't need relaxation.
+          return false;
+        }
+        // okay you got us, it MAY need relaxation, if
+        // the instruction CAN be relaxed.
+        return true;
+      });
 }
 
 void MOSAsmBackend::relaxInstruction(MCInst &Inst,
                                      const MCSubtargetInfo &STI) const {
-  unsigned Opcode = relaxInstructionTo(Inst);
+  unsigned Opcode = relaxInstructionTo(Inst, STI);
   if (Opcode != 0) {
     Inst.setOpcode(Opcode);
   }

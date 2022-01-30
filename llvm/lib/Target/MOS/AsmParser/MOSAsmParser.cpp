@@ -77,6 +77,9 @@ public:
     const auto *MME = dyn_cast<MOSMCExpr>(getImm());
     if (MME) {
       const MOS::Fixups Kind = MME->getFixupKind();
+      // Imm16 modifier enforces a lower bound which rejects Imm8.
+      if (Kind == MOS::Imm16 && High < 0x10000 - 1)
+        return false;
       const MCFixupKindInfo &Info =
           MOSFixupKinds::getFixupKindInfo(Kind, nullptr);
       int64_t MaxValue = (1 << Info.TargetSize) - 1;
@@ -104,7 +107,7 @@ public:
     return Value >= Low && Value <= High;
   }
 
-  virtual bool is(KindTy K) const { return (Kind == K); }
+  bool is(KindTy K) const { return (Kind == K); }
   bool isToken() const override { return is(k_Token); }
   bool isImm() const override { return is(k_Immediate); }
   bool isReg() const override { return is(k_Register); }
@@ -127,12 +130,16 @@ public:
     return Reg;
   }
 
-  virtual bool isImm8() const { return isImmediate<0, 0x100 - 1>(); }
-  virtual bool isImm16() const { return isImmediate<0, 0x10000 - 1>(); }
-  virtual bool isImm8To16() const { return (!isImm8() && isImm16()); }
-  virtual bool isPCRel8() const { return isImm8(); }
-  virtual bool isAddr8() const { return isImm8(); }
-  virtual bool isAddr16() const { return isImm16(); }
+  bool isImm8() const { return isImmediate<0, 0x100 - 1>(); }
+  bool isImm16() const { return isImmediate<0, 0x10000 - 1>(); }
+  bool isImm24() const { return isImmediate<0, 0x1000000 - 1>(); }
+  bool isImm8To16() const { return (!isImm8() && isImm16()); }
+  bool isImm16To24() const { return (!isImm16() && isImm24()); }
+  bool isPCRel8() const { return isImm8(); }
+  bool isPCRel16() const { return isImm16(); }
+  bool isAddr8() const { return isImm8(); }
+  bool isAddr16() const { return isImm16(); }
+  bool isAddr24() const { return isImm24(); }
 
   static void addExpr(MCInst &Inst, const MCExpr *Expr) {
     if (const auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
@@ -158,11 +165,19 @@ public:
     addImmOperands(Inst, N);
   }
 
+  void addPCRel16Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+
   void addAddr8Operands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
 
   void addAddr16Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+
+  void addAddr24Operands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
 
@@ -358,7 +373,7 @@ public:
     return false;
   }
 
-  virtual signed char hexToChar(const signed char Letter) {
+  signed char hexToChar(const signed char Letter) {
     if (Letter >= '0' && Letter <= '9') {
       return static_cast<signed char>(Letter - '0');
     }
@@ -371,7 +386,7 @@ public:
   // Converts what could be a hex string to an integer value.
   // Result must fit into 32 bits.  More than that is an error.
   // Like everything else in this particular API, it returns false on success.
-  virtual bool tokenToHex(uint64_t &Res, const AsmToken &Tok) {
+  bool tokenToHex(uint64_t &Res, const AsmToken &Tok) {
     Res = 0;
     std::string Text = Tok.getString().str();
     if (Text.size() > 8) {
@@ -589,6 +604,15 @@ public:
         eatThatToken(Operands);
         if (!tryParseExpr(Operands,
                           "expression expected after left parenthesis")) {
+          FirstTime = false;
+          continue;
+        }
+      }
+      if (STI.hasFeature(MOS::FeatureW65816) &&
+          getLexer().is(AsmToken::LBrac)) {
+        eatThatToken(Operands);
+        if (!tryParseExpr(Operands,
+                          "expression expected after left bracket")) {
           FirstTime = false;
           continue;
         }

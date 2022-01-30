@@ -77,7 +77,7 @@ public:
 void MOSAsmPrinter::EmitToStreamer(MCStreamer &S, MCInst &Inst) {
   // If this instruction contains an out-of-range immediate address, perform an
   // early relax.
-  MOSAsmBackend::relaxForImmediate(Inst);
+  MOSAsmBackend::relaxForImmediate(Inst, MF->getSubtarget<MOSSubtarget>());
   AsmPrinter::EmitToStreamer(S, Inst);
 }
 

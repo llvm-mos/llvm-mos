@@ -138,8 +138,8 @@ def BIT_Absolute :
 	Inst24<"bit", OpcodeC0<0b001, 0b011>, Absolute>;
 def JMP_Absolute :
 	Inst24<"jmp", OpcodeC0<0b010, 0b011>, Absolute>;
-def JMP_Indirect :
-	Inst24<"jmp", OpcodeC0<0b011, 0b011>, Indirect>;
+def JMP_Indirect16 :
+	Inst24<"jmp", OpcodeC0<0b011, 0b011>, Indirect16>;
 def STY_ZeroPage :
 	Inst16<"sty", OpcodeC0<0b100, 0b001>, ZeroPage>;
 def STY_Absolute :
@@ -248,6 +248,58 @@ def STZ_ZeroPageX : Inst16<"stz", OpcodeC0<0b011, 0b101>, ZeroPageX>;
 def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
 
 } // Predicates = [Has65C02]
+
+let Predicates = [HasW65816] in {
+
+/// Direct P flag set/reset with mask immediate
+/// SEP REP
+/// E2  C2
+
+def SEP_Immediate : Inst16<"sep", OpcodeC2<0b111, 0b000>, Immediate>;
+def REP_Immediate : Inst16<"rep", OpcodeC2<0b110, 0b000>, Immediate>;
+
+/// 16-bit immediate load
+/// LDX
+/// A2
+
+def LDX_Immediate16 : Inst24<"ldx", OpcodeC2<0b101, 0b000>, Immediate16> {
+  let DecoderNamespace = "MOSXLow";
+}
+
+/// Unconditional relative branch instruction
+/// BRL
+/// 82
+
+def BRL_Relative16 : Inst24<"brl", OpcodeC2<0b100, 0b000>, Relative16>;
+
+/// 24-bit long-jumps
+/// JMP JSL
+/// 5C  22
+
+def JMP_AbsoluteLong : Inst32<"jmp", OpcodeC0<0b010, 0b111>, AbsoluteLong>;
+def JSL_AbsoluteLong : Inst32<"jsl", OpcodeC2<0b001, 0b000>, AbsoluteLong>;
+
+/// Return from long-jump subroutine
+/// RTL
+/// 6B
+
+def RTL_Implied : Inst8<"rtl", OpcodeC3<0b011, 0b010>>;
+
+/// 16-bit indirect long-jump
+/// JML
+/// DC
+def JML_Indirect16 : Inst24<"jml", OpcodeC0<0b110, 0b111>, Indirect16>;
+
+/// 16-bit indexed-indirect jumps
+/// JMP JSR
+/// 7C  FC
+
+def JMP_IndexedIndirect16 :
+  Inst24<"jmp", OpcodeC0<0b011, 0b111>, IndexedIndirect16>;
+def JSR_IndexedIndirect16 :
+  Inst24<"jsr", OpcodeC0<0b111, 0b111>, IndexedIndirect16>;
+
+} // Predicates = [HasW65816]
 
 // Operand type for basic block and function labels.
 def label : Operand<OtherVT>;

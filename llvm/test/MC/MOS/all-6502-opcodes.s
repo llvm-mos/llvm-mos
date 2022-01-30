@@ -139,7 +139,7 @@
  	inc	$ea                     ; CHECK: encoding: [0xe6,0xea]
  	inx                         ; CHECK: encoding: [0xe8]
  	sbc	#$ea                    ; CHECK: encoding: [0xe9,0xea]
-	nop                         ; CHECK: encoding: [0xea]
+ 	nop                         ; CHECK: encoding: [0xea]
  	cpx	$eaea                   ; CHECK: encoding: [0xec,0xea,0xea]
  	sbc	$eaea                   ; CHECK: encoding: [0xed,0xea,0xea]
  	inc	$eaea                   ; CHECK: encoding: [0xee,0xea,0xea]

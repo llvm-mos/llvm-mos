@@ -271,7 +271,7 @@ def JMP : MOSUnconditionalBranch, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)
   let Pattern = [(br bb:$tgt)];
 }
 
-def JMPIndir : MOSUnconditionalBranch, PseudoInstExpansion<(JMP_Indirect addr16:$tgt)> {
+def JMPIndir : MOSUnconditionalBranch, PseudoInstExpansion<(JMP_Indirect16 addr16:$tgt)> {
   let InOperandList = (ins Imag16:$tgt);
   let isIndirectBranch = true;
 }
