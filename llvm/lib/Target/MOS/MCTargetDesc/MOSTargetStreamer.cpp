@@ -26,21 +26,31 @@ void MOSTargetStreamer::finish() {
   MCStreamer &OS = getStreamer();
   MCContext &Context = OS.getContext();
 
-  if (hasInitArray()) {
-    MCSymbol *Init = Context.getOrCreateSymbol("__do_init_array");
-    OS.emitRawComment("Declaring this symbol tells the CRT that there are");
-    OS.emitRawComment("initialization routines to be run in .init_array");
-    stronglyReference(Init);
-  }
+  if (hasInitArray())
+    stronglyReference("__do_init_array",
+                      "Declaring this symbol tells the CRT that there are "
+                      "initialization routines to be run in .init_array");
 
-  if (hasFiniArray()) {
-    MCSymbol *Fini = Context.getOrCreateSymbol("__do_fini_array");
+  if (hasFiniArray())
+    stronglyReference("__do_fini_array",
+                      "Declaring this symbol tells the CRT that there are "
+                      "finalization routines to be run in .fini_array");
 
-    OS.emitRawComment("Declaring this symbol tells the CRT that there are");
-    OS.emitRawComment("finalization routines to be run in .fini_array");
-    stronglyReference(Fini);
-    OS.emitSymbolAttribute(Fini, MCSA_Global);
+  for (const auto &TableEntry : Context.getSymbols()) {
+    if (TableEntry.getKey() != "__rc0" && TableEntry.getKey() != "__rc1")
+      continue;
+    stronglyReference("__do_init_stack",
+                      "Declaring this symbol tells the CRT that the stack "
+                      "pointer needs to be initialized.");
   }
+}
+
+void MOSTargetStreamer::stronglyReference(StringRef Name, StringRef Comment) {
+  MCStreamer &OS = getStreamer();
+  MCContext &Context = OS.getContext();
+  MCSymbol *InitStack = Context.getOrCreateSymbol(Name);
+  OS.emitRawComment(Comment);
+  stronglyReference(InitStack);
 }
 
 MOSTargetAsmStreamer::MOSTargetAsmStreamer(MCStreamer &S)

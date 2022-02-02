@@ -25,6 +25,7 @@ protected:
   virtual bool hasInitArray() = 0;
   virtual bool hasFiniArray() = 0;
 
+  void stronglyReference(StringRef Name, StringRef Comment);
   virtual void stronglyReference(MCSymbol *Sym) = 0;
 };
 
