@@ -39,10 +39,12 @@ public:
   void emitMosAddrAsciz(const MCExpr *Value, unsigned Size,
                         SMLoc Loc = SMLoc());
 
+  bool hasBSS() const { return HasBSS; }
   bool hasInitArray() const { return HasInitArray; }
   bool hasFiniArray() const { return HasFiniArray; }
 
 private:
+  bool HasBSS = false;
   bool HasInitArray = false;
   bool HasFiniArray = false;
 };

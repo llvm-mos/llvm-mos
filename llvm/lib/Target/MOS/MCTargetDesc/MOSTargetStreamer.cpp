@@ -26,6 +26,11 @@ void MOSTargetStreamer::finish() {
   MCStreamer &OS = getStreamer();
   MCContext &Context = OS.getContext();
 
+  if (hasBSS())
+    stronglyReference("__do_zero_bss",
+                      "Declaring this symbol tells the CRT that there is "
+                      "something in BSS, so it may need to be zeroed.");
+
   if (hasInitArray())
     stronglyReference("__do_init_array",
                       "Declaring this symbol tells the CRT that there are "
@@ -60,6 +65,7 @@ void MOSTargetAsmStreamer::changeSection(const MCSection *CurSection,
                                          const MCExpr *SubSection,
                                          raw_ostream &OS) {
   MCTargetStreamer::changeSection(CurSection, Section, SubSection, OS);
+  HasBSS |= Section->getName().startswith(".bss");
   HasInitArray |= Section->getName().startswith(".init_array");
   HasFiniArray |= Section->getName().startswith(".fini_array");
 }
@@ -72,6 +78,9 @@ MOSTargetELFStreamer::MOSTargetELFStreamer(MCStreamer &S,
                                            const MCSubtargetInfo &STI)
     : MOSTargetStreamer(S) {}
 
+bool MOSTargetELFStreamer::hasBSS() {
+  return static_cast<MOSMCELFStreamer &>(getStreamer()).hasBSS();
+}
 bool MOSTargetELFStreamer::hasInitArray() {
   return static_cast<MOSMCELFStreamer &>(getStreamer()).hasInitArray();
 }

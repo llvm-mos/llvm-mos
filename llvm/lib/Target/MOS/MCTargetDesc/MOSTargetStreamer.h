@@ -22,6 +22,7 @@ public:
   void finish() override;
 
 protected:
+  virtual bool hasBSS() = 0;
   virtual bool hasInitArray() = 0;
   virtual bool hasFiniArray() = 0;
 
@@ -38,11 +39,13 @@ private:
   void changeSection(const MCSection *CurSection, MCSection *Section,
                      const MCExpr *SubSection, raw_ostream &OS) override;
 
+  bool hasBSS() override { return HasBSS; }
   bool hasInitArray() override { return HasInitArray; }
   bool hasFiniArray() override { return HasFiniArray; }
 
   void stronglyReference(MCSymbol *Sym) override;
 
+  bool HasBSS = false;
   bool HasInitArray = false;
   bool HasFiniArray = false;
 };
@@ -53,6 +56,7 @@ public:
   MOSTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
 private:
+  bool hasBSS() override;
   bool hasInitArray() override;
   bool hasFiniArray() override;
 

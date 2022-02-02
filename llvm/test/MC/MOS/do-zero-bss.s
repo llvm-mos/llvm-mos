@@ -1,0 +1,5 @@
+; RUN: llvm-mc -triple mos < %s | FileCheck %s
+.section .bss.foo
+  .fill 1
+; CHECK: Declaring this symbol
+; CHECK: __do_zero_bss
