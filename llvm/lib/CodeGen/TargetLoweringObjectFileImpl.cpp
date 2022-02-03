@@ -499,7 +499,7 @@ static unsigned getELFSectionType(StringRef Name, SectionKind K) {
   if (hasPrefix(Name, ".preinit_array"))
     return ELF::SHT_PREINIT_ARRAY;
 
-  if (K.isBSS() || K.isThreadBSS())
+  if (K.isBSS() || K.isNoInit() || K.isThreadBSS())
     return ELF::SHT_NOBITS;
 
   return ELF::SHT_PROGBITS;
@@ -597,6 +597,8 @@ static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
     return ".rodata";
   if (Kind.isBSS())
     return ".bss";
+  if (Kind.isNoInit())
+    return ".noinit";
   if (Kind.isThreadData())
     return ".tdata";
   if (Kind.isThreadBSS())

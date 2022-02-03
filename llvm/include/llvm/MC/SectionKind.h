@@ -98,6 +98,8 @@ class SectionKind {
                /// BSSExtern - This is BSS data with normal external linkage.
                BSSExtern,
 
+           NoInit,
+
            /// Common - Data with common linkage.  These represent tentative
            /// definitions, which always have a zero initializer and are never
            /// marked 'constant'.
@@ -157,12 +159,15 @@ public:
   bool isThreadBSSLocal() const { return K == ThreadBSSLocal; }
 
   bool isGlobalWriteableData() const {
-    return isBSS() || isCommon() || isData() || isReadOnlyWithRel();
+    return isBSS() || isNoInit() || isCommon() || isData() ||
+           isReadOnlyWithRel();
   }
 
   bool isBSS() const { return K == BSS || K == BSSLocal || K == BSSExtern; }
   bool isBSSLocal() const { return K == BSSLocal; }
   bool isBSSExtern() const { return K == BSSExtern; }
+
+  bool isNoInit() const { return K == NoInit; }
 
   bool isCommon() const { return K == Common; }
 
@@ -202,6 +207,7 @@ public:
   static SectionKind getBSS() { return get(BSS); }
   static SectionKind getBSSLocal() { return get(BSSLocal); }
   static SectionKind getBSSExtern() { return get(BSSExtern); }
+  static SectionKind getNoInit() { return get(NoInit); }
   static SectionKind getCommon() { return get(Common); }
   static SectionKind getData() { return get(Data); }
   static SectionKind getReadOnlyWithRel() { return get(ReadOnlyWithRel); }

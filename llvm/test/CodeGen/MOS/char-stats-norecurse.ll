@@ -13,8 +13,8 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    pha
 ; NMOS-NEXT:    lda mos8(__rc21)
 ; NMOS-NEXT:    pha
-; NMOS-NEXT:    ldx #mos16lo(.L__char_stats_sstk)
-; NMOS-NEXT:    ldy #mos16hi(.L__char_stats_sstk)
+; NMOS-NEXT:    ldx #mos16lo(.Lchar_stats_sstk)
+; NMOS-NEXT:    ldy #mos16hi(.Lchar_stats_sstk)
 ; NMOS-NEXT:    stx mos8(__rc20)
 ; NMOS-NEXT:    sty mos8(__rc21)
 ; NMOS-NEXT:    ldx mos8(__rc20)
@@ -38,11 +38,11 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    lda #0
 ; NMOS-NEXT:    rol
 ; NMOS-NEXT:    sta mos8(__rc3)
-; NMOS-NEXT:    lda #mos16lo(.L__char_stats_sstk)
+; NMOS-NEXT:    lda #mos16lo(.Lchar_stats_sstk)
 ; NMOS-NEXT:    clc
 ; NMOS-NEXT:    adc mos8(__rc2)
 ; NMOS-NEXT:    sta mos8(__rc2)
-; NMOS-NEXT:    lda #mos16hi(.L__char_stats_sstk)
+; NMOS-NEXT:    lda #mos16hi(.Lchar_stats_sstk)
 ; NMOS-NEXT:    adc mos8(__rc3)
 ; NMOS-NEXT:    sta mos8(__rc3)
 ; NMOS-NEXT:    ldy #0
@@ -85,8 +85,8 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    phx
 ; CMOS-NEXT:    ldx mos8(__rc21)
 ; CMOS-NEXT:    phx
-; CMOS-NEXT:    ldx #mos16lo(.L__char_stats_sstk)
-; CMOS-NEXT:    ldy #mos16hi(.L__char_stats_sstk)
+; CMOS-NEXT:    ldx #mos16lo(.Lchar_stats_sstk)
+; CMOS-NEXT:    ldy #mos16hi(.Lchar_stats_sstk)
 ; CMOS-NEXT:    stx mos8(__rc20)
 ; CMOS-NEXT:    sty mos8(__rc21)
 ; CMOS-NEXT:    ldx mos8(__rc20)
@@ -110,11 +110,11 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    lda #0
 ; CMOS-NEXT:    rol
 ; CMOS-NEXT:    sta mos8(__rc3)
-; CMOS-NEXT:    lda #mos16lo(.L__char_stats_sstk)
+; CMOS-NEXT:    lda #mos16lo(.Lchar_stats_sstk)
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    adc mos8(__rc2)
 ; CMOS-NEXT:    sta mos8(__rc2)
-; CMOS-NEXT:    lda #mos16hi(.L__char_stats_sstk)
+; CMOS-NEXT:    lda #mos16hi(.Lchar_stats_sstk)
 ; CMOS-NEXT:    adc mos8(__rc3)
 ; CMOS-NEXT:    sta mos8(__rc3)
 ; CMOS-NEXT:    ldy #0

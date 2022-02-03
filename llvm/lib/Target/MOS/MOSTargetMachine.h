@@ -40,6 +40,10 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
+  bool hasNoInitSection() const override {
+    return true;
+  }
+
   void registerPassBuilderCallbacks(PassBuilder &) override;
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

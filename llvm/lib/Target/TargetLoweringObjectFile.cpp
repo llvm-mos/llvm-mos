@@ -99,6 +99,33 @@ static bool isSuitableForBSS(const GlobalVariable *GV) {
   return true;
 }
 
+static bool isUndef(const Constant *C) {
+  if (isa<UndefValue>(C))
+    return true;
+  if (!isa<ConstantAggregate>(C))
+    return false;
+  for (auto Operand : C->operand_values()) {
+    if (!isUndef(cast<Constant>(Operand)))
+      return false;
+  }
+  return true;
+}
+
+static bool isSuitableForNoInit(const GlobalVariable *GV) {
+  const Constant *C = GV->getInitializer();
+
+  // Must have an undef initializer.
+  if (!isUndef(C))
+    return false;
+
+  // If the global has an explicit section specified, don't put it in BSS.
+  if (GV->hasSection())
+    return false;
+
+  // Otherwise, put it in NoInit!
+  return true;
+}
+
 /// IsNullTerminatedString - Return true if the specified constant (which is
 /// known to have a type that is an array of 1/2/4 byte elements) ends with a
 /// nul value and contains no other nuls in it.  Note that this is more general
@@ -231,6 +258,9 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
   // Variables with common linkage always get classified as common.
   if (GVar->hasCommonLinkage())
     return SectionKind::getCommon();
+
+  if (isSuitableForNoInit(GVar) && TM.hasNoInitSection())
+    return SectionKind::getNoInit();
 
   // Most non-mergeable zero data can be put in the BSS section unless otherwise
   // specified.

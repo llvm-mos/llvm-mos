@@ -82,9 +82,9 @@ bool MOSStaticStackAlloc::runOnModule(Module &M) {
     LLVM_DEBUG(dbgs() << "Size " << Size << "\n");
 
     Type *Typ = ArrayType::get(Type::getInt8Ty(M.getContext()), Size);
-    GlobalVariable *Stack = new GlobalVariable(
-        M, Typ, false, GlobalValue::PrivateLinkage, UndefValue::get(Typ),
-        Twine("__") + Twine(F.getName()) + "_sstk");
+    GlobalVariable *Stack =
+        new GlobalVariable(M, Typ, false, GlobalValue::PrivateLinkage,
+                           UndefValue::get(Typ), Twine(F.getName()) + "_sstk");
     LLVM_DEBUG(dbgs() << "Allocated: " << *Stack << "\n");
     Changed = true;
 
