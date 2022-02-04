@@ -39,7 +39,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::ADC_ZeroPageX);
+        OutMI.setOpcode(MOS::ADC_AbsoluteX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::ADC_AbsoluteY);
@@ -51,7 +51,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::SBC_ZeroPageX);
+        OutMI.setOpcode(MOS::SBC_AbsoluteX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::SBC_AbsoluteY);
@@ -74,7 +74,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::AND_ZeroPageX);
+        OutMI.setOpcode(MOS::AND_AbsoluteX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::AND_AbsoluteY);
@@ -86,7 +86,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::EOR_ZeroPageX);
+        OutMI.setOpcode(MOS::EOR_AbsoluteX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::EOR_AbsoluteY);
@@ -98,7 +98,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::ORA_ZeroPageX);
+        OutMI.setOpcode(MOS::ORA_AbsoluteX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::ORA_AbsoluteY);
@@ -223,7 +223,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Unexpected register.");
       case MOS::X:
-        OutMI.setOpcode(MOS::CMP_ZeroPageX);
+        OutMI.setOpcode(MOS::CMP_AbsoluteX);
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::CMP_AbsoluteY);
@@ -299,7 +299,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     default:
       llvm_unreachable("Unexpected LDAAbsIdx register.");
     case MOS::X:
-      OutMI.setOpcode(MOS::LDA_ZeroPageX);
+      OutMI.setOpcode(MOS::LDA_AbsoluteX);
       break;
     case MOS::Y:
       OutMI.setOpcode(MOS::LDA_AbsoluteY);
@@ -386,7 +386,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     default:
       llvm_unreachable("Unexpected register.");
     case MOS::X:
-      OutMI.setOpcode(MOS::STA_ZeroPageX);
+      OutMI.setOpcode(MOS::STA_AbsoluteX);
       break;
     case MOS::Y:
       OutMI.setOpcode(MOS::STA_AbsoluteY);
