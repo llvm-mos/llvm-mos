@@ -16,22 +16,22 @@
 
 ; ASM-LABEL: f
 
-; ASM:  sta     .L__f_sstk
-; ASM:  stx     .L__f_sstk+1
+; ASM:  sta     .Lf_sstk
+; ASM:  stx     .Lf_sstk+1
 
 ; ASM-LABEL: .Ldebug_info_start0
 
 ; ASM:  .byte   3                               ; Abbrev [3] 0x{{.*}}:0x{{.*}} DW_TAG_formal_parameter
 ; ASM:  .byte   3                               ; DW_AT_location
-; (DW_OP_addr .L__f_sstk)
+; (DW_OP_addr .Lf_sstk)
 ; ASM:  .byte   3
-; ASM:  .short  .L__f_sstk
+; ASM:  .short  .Lf_sstk
 
 ; ASM:  .byte   3                               ; Abbrev [3] 0x{{.*}}:0x{{.*}} DW_TAG_formal_parameter
 ; ASM:  .byte   5                               ; DW_AT_location
-; (DW_OP_addr .L__f_sstk, DW_OP_plus_uconst 0x1)
+; (DW_OP_addr .Lf_sstk, DW_OP_plus_uconst 0x1)
 ; ASM:  .byte   3
-; ASM:  .short  .L__f_sstk
+; ASM:  .short  .Lf_sstk
 ; ASM:  .byte   35
 ; ASM:  .byte   1
 
