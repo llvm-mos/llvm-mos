@@ -52,7 +52,7 @@
 #define LONG_MIN  (-__LONG_MAX__ -1L)
 
 #define UCHAR_MAX (__SCHAR_MAX__*2  +1)
-#define USHRT_MAX (__SHRT_MAX__ *2  +1)
+#define USHRT_MAX (__SHRT_MAX__ *2U +1U)
 #define UINT_MAX  (__INT_MAX__  *2U +1U)
 #define ULONG_MAX (__LONG_MAX__ *2UL+1UL)
 
