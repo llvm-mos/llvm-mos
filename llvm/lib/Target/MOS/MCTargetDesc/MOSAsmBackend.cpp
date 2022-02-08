@@ -213,6 +213,21 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   return (INT8_MIN <= SignedValue && SignedValue <= INT8_MAX);
 }
 
+bool MOSAsmBackend::isSymbolChar(const char C) const {
+	return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z')
+			|| (C >= '0' && C <= '9') || (C == '$') || (C == '_');
+}
+
+size_t MOSAsmBackend::getFixupLength(const char *FixupNameStart) const {
+	size_t i;
+
+	for (i = 0; isSymbolChar(FixupNameStart[i]);
+			i++)
+		;
+
+	return i;
+}
+
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  bool Resolved, uint64_t Value,
                                                  const MCRelaxableFragment *DF,
@@ -236,22 +251,13 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   // the instruction to 16 bits.
   const char *FixupNameStart = Fixup.getValue()->getLoc().getPointer();
   // If there's no symbol name, and if the fixup does not have a known size,
-  // then  we can't assume it lives in zero page.
+  // then we can't assume it lives in zero page.
   if (FixupNameStart == nullptr) {
     return true;
   }
-  size_t FixupLength = 0;
-  bool Finished = false;
-  do {
-    const char C = FixupNameStart[FixupLength];
-    if ((C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z') ||
-        (C >= '0' && C <= '9') || (C == '$') || (C == '_')) {
-      ++FixupLength;
-      continue;
-    }
-    Finished = true;
-  } while (Finished == false);
-  StringRef FixupName(FixupNameStart, FixupLength);
+
+  StringRef FixupName(FixupNameStart, getFixupLength(FixupNameStart));
+
   // The list of symbols is maintained by the assembler, and since that list
   // is not maintained in alpha order, it seems that we need to iterate across
   // it to find the symbol in question... is there a non-O(n) way to do this?
@@ -276,11 +282,10 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
       if ((ELFSection->getFlags() & ELF::SHF_MOS_ZEROPAGE) != 0) {
         return false;
       }
-      const auto &ELFSectionName = ELFSection->getName();
       /// If the section of the symbol is one of the prenamed zero page
       /// sections, then this is an 8 bit instruction and it doesn't need
       /// relaxation.
-      if (isZeroPageSectionName(ELFSectionName))
+      if (isZeroPageSectionName(ELFSection->getName()))
         return false;
     }
   }

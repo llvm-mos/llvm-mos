@@ -132,6 +132,9 @@ public:
 
 private:
   Triple::OSType OSType;
+
+  bool isSymbolChar(const char C) const;
+  size_t getFixupLength(const char *FixupNameStart) const;
 };
 
 } // end namespace llvm
