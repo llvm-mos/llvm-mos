@@ -347,14 +347,7 @@ bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
   return visitRelaxableOperand(Inst,
                                [](const MCOperand &Operand, unsigned RelaxTo) {
-                                 if (!Operand.isExpr()) {
-                                   // If the instruction isn't an expression,
-                                   // then it doesn't need relaxation.
-                                   return false;
-                                 }
-                                 // okay you got us, it MAY need relaxation, if
-                                 // the instruction CAN be relaxed.
-                                 return true;
+                                 return Operand.isExpr();
                                });
 }
 
