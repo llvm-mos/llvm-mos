@@ -241,8 +241,7 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   if (MME != nullptr) {
     return requiresMoreThan8Bits;
   }
-  // Now the fixup kind is not target-specific.  Yet, if it requires more than
-  // 8 bits, then relaxation is needed.
+  // Now the fixup kind is not target-specific, but relaxation is needed.
   if (requiresMoreThan8Bits) {
     return true;
   }
