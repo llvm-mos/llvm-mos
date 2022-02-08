@@ -84,12 +84,12 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     }
     Result = decodeInstruction(getDecoderTable(InsnSize), Instr, Insn, Address,
                                this, STI);
-    if (Result != MCDisassembler::Fail)
-    {
+    if (Result != MCDisassembler::Fail) {
       Size = InsnSize;
       return Result;
     }
   }
+
   return MCDisassembler::Fail;
 }
 
