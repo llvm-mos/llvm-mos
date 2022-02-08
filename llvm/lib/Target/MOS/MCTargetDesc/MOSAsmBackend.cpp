@@ -234,15 +234,16 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  const MCAsmLayout &Layout,
                                                  const bool WasForced) const {
   auto Info = getFixupKindInfo(Fixup.getKind());
+  auto requiresMoreThan8Bits = Info.TargetSize > 8;
   const auto *MME = dyn_cast<MOSMCExpr>(Fixup.getValue());
   // If this is a target-specific relaxation, e.g. a modifier, then the Info
   // field already knows the exact width of the answer, so decide now.
   if (MME != nullptr) {
-    return (Info.TargetSize > 8);
+    return requiresMoreThan8Bits;
   }
   // Now the fixup kind is not target-specific.  Yet, if it requires more than
   // 8 bits, then relaxation is needed.
-  if (Info.TargetSize > 8) {
+  if (requiresMoreThan8Bits) {
     return true;
   }
   // In order to resolve an eight to sixteen bit possible relaxation, we need to
