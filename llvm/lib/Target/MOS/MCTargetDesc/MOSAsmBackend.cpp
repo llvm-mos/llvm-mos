@@ -221,9 +221,7 @@ bool MOSAsmBackend::isSymbolChar(const char C) const {
 size_t MOSAsmBackend::getFixupLength(const char *FixupNameStart) const {
 	size_t i;
 
-	for (i = 0; isSymbolChar(FixupNameStart[i]);
-			i++)
-		;
+	for (i = 0; isSymbolChar(FixupNameStart[i]); i++);
 
 	return i;
 }
