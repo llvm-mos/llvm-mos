@@ -114,10 +114,12 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     llvm_unreachable("unknown fixup kind");
     return;
   }
+
   assert(((Bytes + Offset) <= Data.size()) &&
          "Invalid offset within MOS instruction for modifier!");
-  for (char &Out :
-       make_range(Data.begin() + Offset, Data.begin() + Bytes + Offset)) {
+  auto RangeStart = Data.begin() + Offset;
+
+  for (char &Out : make_range(RangeStart, RangeStart + Bytes)) {
     Out = Value & 0xff;
     Value = Value >> 8;
   }
