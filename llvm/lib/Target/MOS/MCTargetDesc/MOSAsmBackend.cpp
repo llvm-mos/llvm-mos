@@ -134,47 +134,67 @@ static cl::opt<bool> ForcePCRelReloc(
     cl::desc("Force relocation entries to be emitted for PCREL fixups."),
     cl::init(false), cl::Hidden);
 
+static void assertFixupKind(const MCFixup &Fixup, const bool IsPCRel16) {
+  assert(
+	  (IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8)
+	      && "unexpected target fixup kind");
+}
+
+static auto getSymbolOffset(const MCSymbolRefExpr *SymRefExpr) {
+  if (!SymRefExpr) {
+      return 0;
+  }
+
+  const MCSymbol &Sym = SymX->getSymbol();
+
+  return Sym.isDefined() ? Layout.getSymbolOffset(Sym) : 0;
+}
+
+static auto getCumulativeSymbolOffset(const MCValue &Target) {
+  return getSymbolOffset(Target.getSymB()) - getSymbolOffset(Target.getSymA());
+}
+
+static auto getRelativeMOSPCCorrection(const bool IsPCRel16) {
+  // MOS's PC relative addressing is off by one or two from the standard LLVM
+  // PC relative convention.
+  return IsPCRel16 ? 2 : 1;
+}
+
+static bool fitsInto8or16Bits(const int64_t SignedValue) {
+  int64_t MinValue = IsPCRel16 ? INT16_MIN : INT8_MIN;
+  if (SignedValue < Minvalue) {
+      return false;
+  }
+
+  int64_t MaxValue = IsPCRel16 ? INT16_MAX : INT8_MAX;
+
+  return SignedValue <= MaxValue;
+}
+
+static auto getFixupValue(const MCAsmLayout &Layout, const MCFixup &Fixup,
+			  const MCFragment *DF, const MCValue &Target) {
+  const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
+  assertFixupKind(Fixup, IsPCRel16);
+
+  return Target.getConstant()
+    - getCumulativeSymbolOffset(Target)
+    - Layout.getFragmentOffset(DF)
+    - Fixup.getOffset()
+    - getRelativeMOSPCCorrection(IsPCRel16);
+}
+
 bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
                                         const MCAsmLayout &Layout,
                                         const MCFixup &Fixup,
                                         const MCFragment *DF,
                                         const MCValue &Target, uint64_t &Value,
                                         bool &WasForced) {
-  const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
+  Value = getFixupValue(Layout, Fixup, DF, Target);
 
-    assert(
-	(Fixup.getKind() == (MCFixupKind)MOS::PCRel8 || IsPCRel16)
-	    && "unexpected target fixup kind");
-
-  Value = Target.getConstant();
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    const MCSymbol &Sym = A->getSymbol();
-    if (Sym.isDefined())
-      Value += Layout.getSymbolOffset(Sym);
-  }
-  if (const MCSymbolRefExpr *B = Target.getSymB()) {
-    const MCSymbol &Sym = B->getSymbol();
-    if (Sym.isDefined())
-      Value -= Layout.getSymbolOffset(Sym);
-  }
-  uint32_t Offset = Layout.getFragmentOffset(DF) + Fixup.getOffset();
-  Value -= Offset;
-  // MOS's PC relative addressing is off by one or two from the standard LLVM
-  // PC relative convention.
-  Value -= IsPCRel16 ? 2 : 1;
-
-  // Command line option to force reloc emit. This is primarily for testing
+  // ForcePCRelReloc is a CLI option to force relocation emit, primarily for testing
   // R_MOS_PCREL_*.
-  if (ForcePCRelReloc) {
-    WasForced = true;
-    return false;
-  }
 
-  // If this result fits safely into 8 or 16 bits, we're done.
-  int64_t SignedValue = Value;
-  int64_t MinValue = IsPCRel16 ? INT16_MIN : INT8_MIN;
-  int64_t MaxValue = IsPCRel16 ? INT16_MAX : INT8_MAX;
-  return (MinValue <= SignedValue && SignedValue <= MaxValue);
+  return (!(WasForced = ForcePCRelReloc)) && fitsInto8or16Bits(Value);
 }
 
 static bool isSymbolChar(const char C) {
