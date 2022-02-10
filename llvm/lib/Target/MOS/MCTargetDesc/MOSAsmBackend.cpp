@@ -198,16 +198,16 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
 }
 
 static bool isSymbolChar(const char C) {
-	return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z')
-			|| (C >= '0' && C <= '9') || (C == '$') || (C == '_');
+  return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z')
+      || (C >= '0' && C <= '9') || (C == '$') || (C == '_');
 }
 
 static size_t getFixupLength(const char *FixupNameStart) {
-	size_t i;
+  size_t i;
 
-	for (i = 0; isSymbolChar(FixupNameStart[i]); i++);
+  for (i = 0; isSymbolChar(FixupNameStart[i]); i++);
 
-	return i;
+  return i;
 }
 
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
