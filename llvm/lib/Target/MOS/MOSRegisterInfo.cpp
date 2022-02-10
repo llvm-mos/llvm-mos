@@ -151,7 +151,6 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
 
   MachineIRBuilder Builder(MBB, I);
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   switch (Reg) {
   default:
@@ -176,31 +175,6 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
       Builder.buildInstr(MOS::PL, {Reg}, {});
     else
       Builder.buildInstr(MOS::LDImag8, {Reg}, {Save});
-    break;
-  }
-  case MOS::P: {
-    LiveRegUnits LiveUnits(TRI);
-    LiveUnits.addLiveOuts(MBB);
-    if (UseMI != MBB.end()) {
-      for (MachineInstr &J : mbb_reverse(std::next(UseMI), MBB.end()))
-        LiveUnits.stepBackward(J);
-      LiveUnits.stepBackward(*UseMI);
-    }
-
-    assert(pushPullBalanced(I, UseMI));
-    const bool CLive = !LiveUnits.available(MOS::C);
-    const bool VLive = !LiveUnits.available(MOS::V);
-    assert(CLive || VLive);
-    auto Save = Builder.buildInstr(MOS::PH, {}, {Register(MOS::P)});
-    Builder.setInsertPt(MBB, UseMI);
-    Builder.buildInstr(MOS::PL, {MOS::P}, {});
-    if (CLive && !VLive) {
-      Save->getOperand(0).setIsUndef();
-      Save.addUse(MOS::C, RegState::Implicit);
-    } else if (!CLive && VLive) {
-      Save->getOperand(0).setIsUndef();
-      Save.addUse(MOS::V, RegState::Implicit);
-    }
     break;
   }
   }
@@ -763,6 +737,12 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 
     case MOS::INC:
     case MOS::DEC:
+    case MOS::IncMB:
+    case MOS::DecMB:
+      // The first operand to DecMB is scratch.
+      if (MI.getOpcode() == MOS::DecMB && MI.getOperand(0).getReg() == VirtReg)
+        break;
+
       // INC zp = (2 bytes + 5 cycles)
       // INXY = (1 bytes + 2 cycles)
       if (is_contained(Order, MOS::X))

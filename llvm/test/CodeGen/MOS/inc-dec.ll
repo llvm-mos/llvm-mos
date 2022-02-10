@@ -35,16 +35,18 @@ define i32 @inc_i32(i32 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #1
-; CHECK-NEXT:    bne .LBB2_4
+; CHECK-NEXT:    bne .LBB2_6
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    inx
-; CHECK-NEXT:    bne .LBB2_4
+; CHECK-NEXT:    bne .LBB2_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
 ; CHECK-NEXT:    inc mos8(__rc2)
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    inc mos8(__rc3)
 ; CHECK-NEXT:  .LBB2_4: ; %entry
+; CHECK-NEXT:  .LBB2_5: ; %entry
+; CHECK-NEXT:  .LBB2_6: ; %entry
 ; CHECK-NEXT:    rts
 entry:
   %0 = add i32 %a, 1
@@ -79,13 +81,15 @@ entry:
 define i16 @dec_i16(i16 %a) {
 ; CHECK-LABEL: dec_i16:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    clc
-; CHECK-NEXT:    adc #255
-; CHECK-NEXT:    cmp #255
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    tya
+; CHECK-NEXT:    dey
+; CHECK-NEXT:    cmp #0
 ; CHECK-NEXT:    bne .LBB5_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dex
 ; CHECK-NEXT:  .LBB5_2: ; %entry
+; CHECK-NEXT:    tya
 ; CHECK-NEXT:    rts
 entry:
   %0 = add i16 %a, -1
@@ -95,23 +99,27 @@ entry:
 define i32 @dec_i32(i32 %a) {
 ; CHECK-LABEL: dec_i32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldy mos8(__rc2)
-; CHECK-NEXT:    clc
-; CHECK-NEXT:    adc #255
-; CHECK-NEXT:    cmp #255
-; CHECK-NEXT:    bne .LBB6_4
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    dex
-; CHECK-NEXT:    cpx #255
-; CHECK-NEXT:    bne .LBB6_4
-; CHECK-NEXT:  ; %bb.2: ; %entry
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    tya
 ; CHECK-NEXT:    dey
-; CHECK-NEXT:    cpy #255
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bne .LBB6_6
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    dex
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bne .LBB6_5
+; CHECK-NEXT:  ; %bb.2: ; %entry
+; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    dec mos8(__rc2)
+; CHECK-NEXT:    cmp #0
 ; CHECK-NEXT:    bne .LBB6_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    dec mos8(__rc3)
 ; CHECK-NEXT:  .LBB6_4: ; %entry
-; CHECK-NEXT:    sty mos8(__rc2)
+; CHECK-NEXT:  .LBB6_5: ; %entry
+; CHECK-NEXT:  .LBB6_6: ; %entry
+; CHECK-NEXT:    tya
 ; CHECK-NEXT:    rts
 entry:
   %0 = add i32 %a, -1
@@ -121,14 +129,13 @@ entry:
 define i8* @dec_ptr(i8* %a) {
 ; CHECK-LABEL: dec_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx mos8(__rc2)
-; CHECK-NEXT:    dex
-; CHECK-NEXT:    cpx #255
+; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    dec mos8(__rc2)
+; CHECK-NEXT:    cmp #0
 ; CHECK-NEXT:    bne .LBB7_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dec mos8(__rc3)
 ; CHECK-NEXT:  .LBB7_2: ; %entry
-; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = getelementptr i8, i8* %a, i32 -1

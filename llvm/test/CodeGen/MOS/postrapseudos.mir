@@ -5,54 +5,63 @@ name: inc_a
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: inc_a
-    ; CHECK: undef %0.subcarry:pc = LDCImm 0
-    ; CHECK-NEXT: $a, dead %0.subcarry:pc, dead %0.subv:pc = ADCImm killed $a, 1, %0.subcarry
-    $a = INC $a
+    ; CHECK: $c = LDCImm 0
+    ; CHECK-NEXT: $a, $c, $v = ADCImm killed $a, 1, $c
+    $a = INC $a, implicit-def $c, implicit-def $v
+...
+---
+name: inc_a_z
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: inc_a_z
+    ; CHECK: $c = LDCImm 0
+    ; CHECK-NEXT: $a, $c, $v = ADCImm killed $a, 1, $c, implicit-def $nz
+    $a = INC $a, implicit-def $c, implicit-def $v, implicit-def $z
 ...
 ---
 name: inc_xy
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: inc_xy
-    ; CHECK: $x = IN $x
-    ; CHECK-NEXT: $y = IN $y
-    $x = INC $x
-    $y = INC $y
+    ; CHECK: $x = IN $x, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $y = IN $y, implicit-def $c, implicit-def $v
+    $x = INC $x, implicit-def $c, implicit-def $v
+    $y = INC $y, implicit-def $c, implicit-def $v
 ...
 ---
 name: inc_imag8
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: inc_imag8
-    ; CHECK: $rc0 = INCImag8 $rc0
-    $rc0 = INC $rc0
+    ; CHECK: $rc0 = INCImag8 $rc0, implicit-def $c, implicit-def $v
+    $rc0 = INC $rc0, implicit-def $c, implicit-def $v
 ...
 ---
 name: dec_a
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: dec_a
-    ; CHECK: undef %0.subcarry:pc = LDCImm 0
-    ; CHECK-NEXT: $a, dead %0.subcarry:pc, dead %0.subv:pc = ADCImm killed $a, 255, %0.subcarry
-    $a = DEC $a
+    ; CHECK: $c = LDCImm 0
+    ; CHECK-NEXT: $a, $c, $v = ADCImm killed $a, 255, $c
+    $a = DEC $a, implicit-def $c, implicit-def $v
 ...
 ---
 name: dec_xy
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: dec_xy
-    ; CHECK: $x = DE $x
-    ; CHECK-NEXT: $y = DE $y
-    $x = DEC $x
-    $y = DEC $y
+    ; CHECK: $x = DE $x, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $y = DE $y, implicit-def $c, implicit-def $v
+    $x = DEC $x, implicit-def $c, implicit-def $v
+    $y = DEC $y, implicit-def $c, implicit-def $v
 ...
 ---
 name: dec_imag8
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: dec_imag8
-    ; CHECK: $rc0 = DECImag8 $rc0
-    $rc0 = DEC $rc0
+    ; CHECK: $rc0 = DECImag8 $rc0, implicit-def $c, implicit-def $v
+    $rc0 = DEC $rc0, implicit-def $c, implicit-def $v
 ...
 ---
 name: cmptermimm

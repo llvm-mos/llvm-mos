@@ -425,11 +425,6 @@ static auto unmergeDefs(MachineInstr *MI) {
   return make_range(MI->operands_begin(), MI->operands_end() - 1);
 }
 
-static auto unmergeHighDefs(MachineInstr *MI) {
-  assert(MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
-  return make_range(MI->operands_begin() + 1, MI->operands_end() - 1);
-}
-
 static auto unmergeDefsSplitHigh(MachineInstr *MI) {
   assert(MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
   struct LowsAndHigh {
@@ -527,61 +522,6 @@ bool MOSLegalizerInfo::legalizeBSwap(LegalizerHelper &Helper,
 // Integer Operations
 //===----------------------------------------------------------------------===//
 
-static std::pair<Register, Register> splitLowRest(Register Reg,
-                                                  MachineIRBuilder &Builder) {
-  LLT S8 = LLT::scalar(8);
-
-  auto Unmerge = Builder.buildUnmerge(S8, Reg);
-  Register Low = Unmerge.getReg(0);
-
-  SmallVector<Register> RestParts;
-  for (MachineOperand &Op : unmergeHighDefs(Unmerge))
-    RestParts.push_back(Op.getReg());
-  Register Rest =
-      (RestParts.size() > 1)
-          ? Builder.buildMerge(LLT::scalar(RestParts.size() * 8), RestParts)
-                .getReg(0)
-          : RestParts[0];
-
-  return {Low, Rest};
-}
-
-static void mergeLowRest(Register Dst, Register Low, Register Rest,
-                         MachineIRBuilder &Builder) {
-  LLT S8 = LLT::scalar(8);
-  const auto &MRI = *Builder.getMRI();
-  LLT RestTy = MRI.getType(Rest);
-
-  SmallVector<Register> DstParts = {Low};
-  if (RestTy == S8)
-    DstParts.push_back(Rest);
-  else {
-    auto Unmerge = Builder.buildUnmerge(S8, Rest);
-    for (MachineOperand &Op : unmergeDefs(Unmerge))
-      DstParts.push_back(Op.getReg());
-  }
-  Builder.buildMerge(Dst, DstParts);
-}
-
-static std::pair<Register, Register> splitHighRest(Register Reg,
-                                                   MachineIRBuilder &Builder) {
-  LLT S8 = LLT::scalar(8);
-
-  auto Unmerge = Builder.buildUnmerge(S8, Reg);
-  auto UnmergeDefs = unmergeDefsSplitHigh(Unmerge);
-
-  SmallVector<Register> RestParts;
-  for (MachineOperand &Op : UnmergeDefs.Lows)
-    RestParts.push_back(Op.getReg());
-  Register Rest =
-      (RestParts.size() > 1)
-          ? Builder.buildMerge(LLT::scalar(RestParts.size() * 8), RestParts)
-                .getReg(0)
-          : RestParts[0];
-
-  return {UnmergeDefs.High.getReg(), Rest};
-}
-
 bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
                                       MachineInstr &MI) const {
@@ -591,6 +531,7 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
   assert(DstTy.isByteSized());
+  Register Src = MI.getOperand(1).getReg();
 
   auto RHSConst =
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
@@ -600,29 +541,23 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
 
   // Handle multi-byte increments and decrements.
 
-  Register Low, Rest;
-  std::tie(Low, Rest) = splitLowRest(MI.getOperand(1).getReg(), Builder);
-  LLT RestTy = MRI.getType(Rest);
-
-  SmallVector<Register> DstParts;
-
   assert(MI.getOpcode() == MOS::G_ADD || MI.getOpcode() == MOS::G_SUB);
   int64_t Amt = RHSConst->Value.getSExtValue();
   if (MI.getOpcode() == MOS::G_SUB)
     Amt = -Amt;
 
-  auto AmtLow = Builder.buildConstant(S8, Amt);
-  Register DstLow = Builder.buildAdd(S8, Low, AmtLow).getReg(0);
-  auto CarryBorrow =
-      Builder.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), DstLow,
-                        (Amt == 1) ? Builder.buildConstant(S8, 0)
-                                   : Builder.buildConstant(S8, 255));
-  auto AmtRest = Builder.buildConstant(RestTy, Amt);
-  auto RestIncDec = Builder.buildAdd(RestTy, Rest, AmtRest);
-  Register DstRest =
-      Builder.buildSelect(RestTy, CarryBorrow, RestIncDec, Rest).getReg(0);
-
-  mergeLowRest(Dst, DstLow, DstRest, Builder);
+  auto Unmerge = Builder.buildUnmerge(S8, Src);
+  size_t NumParts = llvm::size(unmergeDefs(Unmerge));
+  auto IncDec = Builder.buildInstr(Amt == 1 ? MOS::G_INC : MOS::G_DEC);
+  SmallVector<Register> DstParts;
+  for (size_t Idx = 0; Idx < NumParts; ++Idx) {
+    Register R = MRI.createGenericVirtualRegister(S8);
+    IncDec.addDef(R);
+    DstParts.push_back(R);
+  }
+  for (MachineOperand &MO : unmergeDefs(Unmerge))
+    IncDec.addUse(MO.getReg());
+  Builder.buildMerge(Dst, DstParts);
   MI.eraseFromParent();
   return true;
 }
@@ -1082,6 +1017,25 @@ static void swapComparison(LegalizerHelper &Helper, MachineInstr &MI) {
   MI.getOperand(2).setReg(RHS);
   MI.getOperand(3).setReg(LHS);
   Helper.Observer.changedInstr(MI);
+}
+
+static std::pair<Register, Register> splitHighRest(Register Reg,
+                                                   MachineIRBuilder &Builder) {
+  LLT S8 = LLT::scalar(8);
+
+  auto Unmerge = Builder.buildUnmerge(S8, Reg);
+  auto UnmergeDefs = unmergeDefsSplitHigh(Unmerge);
+
+  SmallVector<Register> RestParts;
+  for (MachineOperand &Op : UnmergeDefs.Lows)
+    RestParts.push_back(Op.getReg());
+  Register Rest =
+      (RestParts.size() > 1)
+          ? Builder.buildMerge(LLT::scalar(RestParts.size() * 8), RestParts)
+                .getReg(0)
+          : RestParts[0];
+
+  return {UnmergeDefs.High.getReg(), Rest};
 }
 
 bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,

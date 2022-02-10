@@ -954,17 +954,17 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
 
   switch (R) {
   case MOS::A: {
-    Register P = createVReg(Builder, MOS::PcRegClass);
-    Builder.buildInstr(MOS::LDCImm)
-        .addDef(P, RegState::Undef, MOS::subcarry)
-        .addImm(0);
-    Builder.buildInstr(MOS::ADCImm)
-        .addDef(MOS::A)
-        .addDef(P, RegState::Dead, MOS::subcarry)
-        .addDef(P, RegState::Dead, MOS::subv)
-        .addUse(MOS::A, RegState::Kill)
-        .addImm(IsInc ? 1 : 255)
-        .addUse(P, 0, MOS::subcarry);
+    Builder.buildInstr(MOS::LDCImm).addDef(MOS::C).addImm(0);
+    auto Instr = Builder.buildInstr(MOS::ADCImm)
+                     .addDef(MOS::A)
+                     .addDef(MOS::C)
+                     .addDef(MOS::V)
+                     .addUse(MOS::A, RegState::Kill)
+                     .addImm(IsInc ? 1 : 255)
+                     .addUse(MOS::C);
+    if (MI.modifiesRegister(MOS::NZ, Builder.getMRI()->getTargetRegisterInfo()))
+      Instr.addDef(MOS::NZ, RegState::Implicit);
+
     MI.eraseFromParent();
     break;
   }

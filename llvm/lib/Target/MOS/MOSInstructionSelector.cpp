@@ -94,6 +94,7 @@ private:
   bool selectMergeValues(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
   bool selectAddE(MachineInstr &MI);
+  bool selectIncDecMB(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
 
   // Select instructions that correspond 1:1 to a target instruction.
@@ -232,6 +233,9 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_UADDE:
   case MOS::G_SADDE:
     return selectAddE(MI);
+  case MOS::G_INC:
+  case MOS::G_DEC:
+    return selectIncDecMB(MI);
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
 
@@ -1547,6 +1551,38 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
 
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
+  unsigned Opcode;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Bad opcode");
+  case MOS::G_INC:
+    Opcode = MOS::IncMB;
+    break;
+  case MOS::G_DEC:
+    Opcode = MOS::DecMB;
+    break;
+  }
+
+  MachineIRBuilder Builder(MI);
+  auto Instr = Builder.buildInstr(Opcode);
+  if (Opcode == MOS::DecMB)
+    Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass));
+  for (MachineOperand &MO : MI.operands())
+    Instr.add(MO);
+  for (MachineOperand &MO : Instr->explicit_operands())
+    constrainOperandRegClass(MO, MOS::Anyi8RegClass);
+
+  unsigned NumDefs = MI.getNumExplicitDefs();
+  unsigned Begin = 0, End = NumDefs;
+  if (Opcode == MOS::DecMB)
+    Begin++, End++;
+  for (unsigned I = Begin; I != End; ++I)
+    Instr->tieOperands(I, I + NumDefs);
   MI.eraseFromParent();
   return true;
 }

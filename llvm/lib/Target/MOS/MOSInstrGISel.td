@@ -82,7 +82,6 @@ def G_LOAD_INDIR_IDX : MOSGenericInstruction {
 def G_STORE_ABS : MOSGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$src, unknown:$addr);
-  let hasSideEffects = false;
   let mayStore = true;
 }
 
@@ -93,7 +92,6 @@ def G_STORE_ABS : MOSGenericInstruction {
 def G_STORE_ABS_IDX : MOSGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$src, unknown:$base, type1:$index);
-  let hasSideEffects = false;
   let mayStore = true;
 }
 
@@ -102,7 +100,6 @@ def G_STORE_ABS_IDX : MOSGenericInstruction {
 def G_STORE_INDIR_IDX : MOSGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$src, ptype1:$base, type1:$index);
-  let hasSideEffects = false;
   let mayStore = true;
 }
 
@@ -120,4 +117,14 @@ def G_SHLE : MOSGenericInstruction {
 def G_LSHRE : MOSGenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src, type1:$carry_in);
+}
+
+def G_INC : MOSGenericInstruction {
+  let OutOperandList = (outs variable_ops);
+  let InOperandList = (ins variable_ops);
+}
+
+def G_DEC : MOSGenericInstruction {
+  let OutOperandList = (outs variable_ops);
+  let InOperandList = (ins variable_ops);
 }
