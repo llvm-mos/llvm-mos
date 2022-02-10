@@ -140,9 +140,12 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
                                         const MCFragment *DF,
                                         const MCValue &Target, uint64_t &Value,
                                         bool &WasForced) {
-  const bool IsPCRel8 = Fixup.getKind() == (MCFixupKind)MOS::PCRel8;
   const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
-  assert((IsPCRel8 || IsPCRel16) && "unexpected target fixup kind");
+
+    assert(
+	(Fixup.getKind () == (MCFixupKind )MOS::PCRel8 || IsPCRel16)
+	    && "unexpected target fixup kind");
+
   Value = Target.getConstant();
   if (const MCSymbolRefExpr *A = Target.getSymA()) {
     const MCSymbol &Sym = A->getSymbol();
