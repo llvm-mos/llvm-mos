@@ -213,12 +213,12 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   return (INT8_MIN <= SignedValue && SignedValue <= INT8_MAX);
 }
 
-bool MOSAsmBackend::isSymbolChar(const char C) const {
+static bool isSymbolChar(const char C) const {
 	return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z')
 			|| (C >= '0' && C <= '9') || (C == '$') || (C == '_');
 }
 
-size_t MOSAsmBackend::getFixupLength(const char *FixupNameStart) const {
+static size_t getFixupLength(const char *FixupNameStart) const {
 	size_t i;
 
 	for (i = 0; isSymbolChar(FixupNameStart[i]); i++);
