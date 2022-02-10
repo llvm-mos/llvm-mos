@@ -161,14 +161,8 @@ static auto getRelativeMOSPCCorrection(const bool IsPCRel16) {
 }
 
 static bool fitsInto8or16Bits(const int64_t SignedValue) {
-  int64_t MinValue = IsPCRel16 ? INT16_MIN : INT8_MIN;
-  if (SignedValue < Minvalue) {
-      return false;
-  }
-
-  int64_t MaxValue = IsPCRel16 ? INT16_MAX : INT8_MAX;
-
-  return SignedValue <= MaxValue;
+  return SignedValue >= (IsPCRel16 ? INT16_MIN : INT8_MIN)
+    && SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
 }
 
 static auto getFixupValue(const MCAsmLayout &Layout, const MCFixup &Fixup,
@@ -324,16 +318,9 @@ static bool visitRelaxableOperand(const MCInst &Inst,
                                   const MCSubtargetInfo &STI, Fn Visit) {
   bool BankRelax = false;
   unsigned RelaxTo = MOSAsmBackend::relaxInstructionTo(Inst, STI, BankRelax);
-  if (RelaxTo == 0) {
-    // If the instruction can't be relaxed, then it doesn't need relaxation.
-    return false;
-  }
-  if (Inst.getNumOperands() != 1) {
-    // If the instruction doesn't have exactly one operand, then it doesn't
-    // need relaxation.
-    return false;
-  }
-  return Visit(Inst.getOperand(0), RelaxTo, BankRelax);
+
+  return RelaxTo && Inst.getNumOperands() == 1 && Visit(Inst.getOperand(0),
+							RelaxTo, BankRelax);
 }
 
 void MOSAsmBackend::relaxForImmediate(MCInst &Inst,
