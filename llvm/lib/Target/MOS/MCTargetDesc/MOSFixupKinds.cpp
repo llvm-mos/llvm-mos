@@ -23,8 +23,9 @@ MOSFixupKinds::getFixupKindInfo(const MOS::Fixups Kind,
       // MOSFixupKinds.h.
       //
       // name, offset, bits, flags
-      {"Imm8", 0, 8, 0},            // An 8 bit immediate value.
-      {"Addr8", 0, 8, 0},           // An 8 bit zero page address.
+      {"Imm8", 0, 8, 0},            // An 8-bit immediate value.
+      {"Imm16", 0, 16, 0},          // An 16-bit immediate value.
+      {"Addr8", 0, 8, 0},           // An 8-bit zero page address.
       {"Addr16", 0, 16, 0},         // A 16-bit address.
       {"Addr16_Low", 0, 8, 0},      // The low byte of a 16-bit address.
       {"Addr16_High", 0, 8, 0},     // The high byte of a 16-bit address.
@@ -35,8 +36,10 @@ MOSFixupKinds::getFixupKindInfo(const MOS::Fixups Kind,
        0}, // The low byte of the segment of a 24-bit addr
       {"Addr24_Segment_High", 0, 8,
        0}, // The high byte of the segment of a 24-bit addr
-      // PCRel8 is pc-relative and requires target specific handling
+      // PCRel* is pc-relative and requires target specific handling
       {"PCRel8", 0, 8,
+       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
+      {"PCRel16", 0, 16,
        MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget}};
   if (Kind < static_cast<MOS::Fixups>(FirstTargetFixupKind)) {
     assert(Alternative &&

@@ -66,7 +66,13 @@ uint32_t MOS::calcEFlags() const {
 
 RelExpr MOS::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
-  return R_ABS;
+  switch (type) {
+  default:
+    return R_ABS;
+  case R_MOS_PCREL_8:
+  case R_MOS_PCREL_16:
+    return R_PC;
+  }
 }
 
 void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -74,9 +80,13 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_MOS_IMM8:
   case R_MOS_ADDR8:
   case R_MOS_ADDR16_LO:
-  case R_MOS_PCREL_8:
   case R_MOS_ADDR24_SEGMENT_LO:
     *loc = static_cast<unsigned char>(val);
+    break;
+  case R_MOS_PCREL_8:
+    // MOS's PC relative addressing is off by one from the standard LLVM PC
+    // relative convention.
+    *loc = static_cast<unsigned char>(val - 1);
     break;
   case R_MOS_ADDR16_HI:
   case R_MOS_ADDR24_SEGMENT_HI:
@@ -88,6 +98,15 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_MOS_ADDR16:
   case R_MOS_ADDR24_SEGMENT:
     write16le(loc, static_cast<unsigned short>(val));
+    break;
+  case R_MOS_PCREL_16:
+    // MOS's PC relative addressing is off by two from the standard LLVM PC
+    // relative convention.
+    write16le(loc, static_cast<unsigned short>(val - 2));
+    break;
+  case R_MOS_ADDR24:
+    checkInt(loc, val, 24, rel);
+    write32le(loc, (read32le(loc) & ~0x00ffffff) | (val & 0x00ffffff));
     break;
   case R_MOS_FK_DATA_4:
     write32le(loc, static_cast<unsigned long>(val));

@@ -144,6 +144,7 @@ static bool supportsMOS(uint64_t Type) {
   case ELF::R_MOS_ADDR16_LO:
   case ELF::R_MOS_ADDR16_HI:
   case ELF::R_MOS_PCREL_8:
+  case ELF::R_MOS_PCREL_16:
   case ELF::R_MOS_FK_DATA_4:
   case ELF::R_MOS_FK_DATA_8:
     return true;
@@ -164,7 +165,9 @@ static uint64_t resolveMOS(uint64_t Type, uint64_t Offset, uint64_t S,
   case ELF::R_MOS_ADDR16_HI:
     return ((S + Addend) >> 8) & 0xFF;
   case ELF::R_MOS_PCREL_8:
-    return (S + Addend - Offset) & 0xFF;
+    return (S + Addend - Offset - 1) & 0xFF;
+  case ELF::R_MOS_PCREL_16:
+    return (S + Addend - Offset - 2) & 0xFFFF;
   case ELF::R_MOS_FK_DATA_4:
     return (S + Addend) & 0xFFFFFFFF;
   case ELF::R_MOS_FK_DATA_8:

@@ -13,6 +13,7 @@
 #include "MOSInstPrinter.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOSMCExpr.h"
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -63,6 +64,15 @@ void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     O << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
+    // Format mos16 immediates using formatImm.
+    if (const auto *MME = dyn_cast<MOSMCExpr>(Op.getExpr())) {
+      int64_t Value = 0;
+      if (MME->getKind() == MOSMCExpr::VK_MOS_IMM16 &&
+          MME->getSubExpr()->evaluateAsAbsolute(Value)) {
+        O << "mos16(" << formatImm(Value) << ')';
+        return;
+      }
+    }
     O << *Op.getExpr();
   }
 }

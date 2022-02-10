@@ -60,9 +60,6 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  void adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
-                        uint64_t &Value, MCContext *Ctx = nullptr) const;
-
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
@@ -113,15 +110,22 @@ public:
                         const MCSubtargetInfo &STI) const override;
 
   /// If the instruction can be relaxed, return the opcode of the instruction
-  /// that this instruction can be relaxed to.  If the instruction cannot
-  /// be relaxed, return zero.
-  static unsigned relaxInstructionTo(const MCInst &Inst);
+  /// that this instruction can be relaxed to. If the instruction cannot be
+  /// relaxed, return zero. When 65816 subtarget is active and the instruction
+  /// is relaxed to Addr24, BankRelax is set to true.
+  static unsigned relaxInstructionTo(const MCInst &Inst,
+                                     const MCSubtargetInfo &STI, bool &BankRelax);
+  static unsigned relaxInstructionTo(const MCInst &Inst,
+                                     const MCSubtargetInfo &STI) {
+    bool BankRelax = false;
+    return relaxInstructionTo(Inst, STI, BankRelax);
+  }
 
   /// If the provided instruction contains an out-of-range immediate in a
   /// relaxable opcode, perform the relaxation now. MOSAsmPrinter calls this at
   /// the end of lowering so it does not have to deal with the relaxation
   /// itself.
-  static void relaxForImmediate(MCInst &Inst);
+  static void relaxForImmediate(MCInst &Inst, const MCSubtargetInfo &STI);
 
   /// Write an (optimal) nop sequence of Count bytes to the given output. If the
   /// target cannot generate such a sequence, it should return an error.

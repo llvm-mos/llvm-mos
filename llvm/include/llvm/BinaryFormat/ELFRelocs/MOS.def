@@ -48,14 +48,17 @@ ELF_RELOC(R_MOS_ADDR24_BANK,           8)
 ELF_RELOC(R_MOS_ADDR24_SEGMENT,        9)
 
 // The low byte from the segment value in a 24-bit address.
-ELF_RELOC(R_MOS_ADDR24_SEGMENT_LO,       10)
+ELF_RELOC(R_MOS_ADDR24_SEGMENT_LO,     10)
 
 // The high byte from the segment value in a 24-bit address.
-ELF_RELOC(R_MOS_ADDR24_SEGMENT_HI,       11)
+ELF_RELOC(R_MOS_ADDR24_SEGMENT_HI,     11)
+
+// A 16-bit PC-relative jump value.  Used for the BRL instruction.
+ELF_RELOC(R_MOS_PCREL_16,              12)
 
 // Relocations for DWARF.
-ELF_RELOC(R_MOS_FK_DATA_4,               12)
-ELF_RELOC(R_MOS_FK_DATA_8,               13)
+ELF_RELOC(R_MOS_FK_DATA_4,             13)
+ELF_RELOC(R_MOS_FK_DATA_8,             14)
 
 // Decimal ASCII address encoding.
-ELF_RELOC(R_MOS_ADDR_ASCIZ,              14)
+ELF_RELOC(R_MOS_ADDR_ASCIZ,            15)
