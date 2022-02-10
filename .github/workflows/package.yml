@@ -19,7 +19,7 @@ jobs:
         run: choco install ninja zip
       - name: Add Windows development tools to path
         if: startsWith(matrix.os, 'windows')
-        uses: ilammy/msvc-dev-cmd@v1.5.1
+        uses: ilammy/msvc-dev-cmd@v1.4.1
       - name: Install MacOS tools
         if: startsWith(matrix.os, 'macos')
         run: |
