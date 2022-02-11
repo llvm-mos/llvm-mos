@@ -141,8 +141,8 @@ static void assertFixupKind(const MCFixup &Fixup, const bool IsPCRel16) {
          "unexpected target fixup kind");
 }
 
-static auto getSymbolOffset(const MCSymbolRefExpr *SymX, const MCAsmLayout &Layout) {
-  if (!SymRefExpr) {
+static uint64_t getSymbolOffset(const MCSymbolRefExpr *SymX, const MCAsmLayout &Layout) {
+  if (!SymX) {
       return 0;
   }
 
