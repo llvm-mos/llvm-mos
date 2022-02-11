@@ -133,11 +133,11 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:imag8 = COPY $a
     ; CHECK-NEXT: $a, $c, $v = ADCImag8 $a, [[COPY]], $c
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]]
-    ; CHECK-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[COPY1]]
+    ; CHECK-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[COPY1]], implicit-def $c, implicit-def $v
     ; CHECK-NEXT: RTS implicit [[INC]]
     %0:imag8 = COPY $a
     $a, $c, $v = ADCImag8 $a, %0, $c
-    %1:anyi8 = INC %0
+    %1:anyi8 = INC %0, implicit-def $c, implicit-def $v
     RTS implicit %1
 ...
 ---
@@ -149,10 +149,10 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:imag8 = COPY $a
     ; CHECK-NEXT: $a, $c, $v = ADCImag8 $a, [[COPY]], $c
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]]
-    ; CHECK-NEXT: [[DEC:%[0-9]+]]:anyi8 = DEC [[COPY1]]
+    ; CHECK-NEXT: [[DEC:%[0-9]+]]:anyi8 = DEC [[COPY1]], implicit-def $c, implicit-def $v
     ; CHECK-NEXT: RTS implicit [[DEC]]
     %0:imag8 = COPY $a
     $a, $c, $v = ADCImag8 $a, %0, $c
-    %1:anyi8 = DEC %0
+    %1:anyi8 = DEC %0, implicit-def $c, implicit-def $v
     RTS implicit %1
 ...

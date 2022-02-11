@@ -191,9 +191,27 @@ bool MOSTargetLowering::isZExtFree(Type *SrcTy, Type *DstTy) const {
   return SrcTy->getPrimitiveSizeInBits() < DstTy->getPrimitiveSizeInBits();
 }
 
+static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
+                                        MachineBasicBlock *MBB);
+static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
+                                       MachineBasicBlock *MBB);
+
 MachineBasicBlock *
 MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Bad opcode.");
+  case MOS::SelectImm:
+    return emitSelectImm(MI, MBB);
+  case MOS::IncMB:
+  case MOS::DecMB:
+    return emitIncDecMB(MI, MBB);
+  }
+}
+
+static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
+                                        MachineBasicBlock *MBB) {
   // To "insert" Select* instructions, we actually have to insert the triangle
   // control-flow pattern.  The incoming instructions know the destination reg
   // to set, the flag to branch on, and the true/false values to select between.
@@ -300,4 +318,75 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MI.eraseFromParent();
 
   return TailMBB;
+}
+
+static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
+                                       MachineBasicBlock *MBB) {
+  if (!MBB->getParent()->getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoVRegs))
+    return MBB;
+
+  MachineIRBuilder Builder(MI);
+  bool IsDec = MI.getOpcode() == MOS::DecMB;
+  assert(IsDec || MI.getOpcode() == MOS::IncMB);
+  unsigned NumBytes = MI.getNumExplicitDefs();
+  if (IsDec)
+    --NumBytes;
+  unsigned FirstDefIdx = 0;
+  unsigned FirstUseIdx = NumBytes;
+  if (IsDec) {
+    ++FirstDefIdx;
+    ++FirstUseIdx;
+  }
+  if (IsDec && NumBytes != 1)
+    Builder.buildCopy(MI.getOperand(0), MI.getOperand(FirstUseIdx));
+  auto First = Builder.buildInstr(IsDec ? MOS::DEC : MOS::INC)
+                   .add(MI.getOperand(FirstDefIdx))
+                   .add(MI.getOperand(FirstUseIdx));
+  if (NumBytes == 1) {
+    MI.eraseFromParent();
+    return MBB;
+  }
+
+  if (IsDec)
+    Builder.buildInstr(MOS::CMPImm)
+        .addDef(MOS::C)
+        .addUse(MI.getOperand(0).getReg())
+        .addImm(INT64_C(0))
+        .addDef(MOS::Z, RegState::Implicit);
+  else
+    First.addDef(MOS::Z, RegState::Implicit);
+
+  MachineBasicBlock *TailMBB = MBB->splitAt(MI);
+  // If MI is the last instruction, splitAt won't insert a new block. In that
+  // case, the block must fall through, since there's no branch. Thus the tail
+  // MBB is just the next MBB.
+  if (TailMBB == MBB)
+    TailMBB = &*std::next(MBB->getIterator());
+
+  MachineFunction *F = MBB->getParent();
+  MachineBasicBlock *RestMBB = F->CreateMachineBasicBlock(MBB->getBasicBlock());
+  F->insert(TailMBB->getIterator(), RestMBB);
+  for (const auto &LiveIn : TailMBB->liveins())
+    RestMBB->addLiveIn(LiveIn);
+
+  Builder.buildInstr(MOS::BR).addMBB(RestMBB).addUse(MOS::Z).addImm(
+      INT64_C(-1));
+  Builder.buildInstr(MOS::JMP).addMBB(TailMBB);
+  MBB->addSuccessor(RestMBB);
+
+  Builder.setInsertPt(*RestMBB, RestMBB->end());
+  auto Rest = Builder.buildInstr(MI.getOpcode());
+  if (IsDec)
+    Rest.addDef(MOS::A);
+  for (unsigned I = FirstDefIdx + 1, E = MI.getNumExplicitOperands(); I != E;
+       ++I)
+    if (I != FirstUseIdx)
+      Rest.add(MI.getOperand(I));
+  Builder.buildInstr(MOS::JMP).addMBB(TailMBB);
+  RestMBB->addSuccessor(TailMBB);
+
+  MI.eraseFromParent();
+
+  return RestMBB;
 }

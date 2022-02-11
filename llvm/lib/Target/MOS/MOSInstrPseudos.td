@@ -102,6 +102,8 @@ def INC : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi8:$src);
 
+  let Defs = [C, V];
+
   let Constraints = "$dst = $src";
   let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, 1))];
   let isAdd = true;
@@ -110,6 +112,8 @@ def INC : MOSPseudo {
 def DEC : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi8:$src);
+
+  let Defs = [C, V];
 
   let Constraints = "$dst = $src";
   let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, -1))];
@@ -288,6 +292,29 @@ def GBR : MOSPseudo {
 
   let isBranch = true;
   let isTerminator = true;
+}
+
+// It's difficult for the code generator to keep N and Z free for the usual
+// multi-byte increments and decrements, so these pseudos bundle arbitrary-width
+// increments and decrements into single instructions. There must be the same
+// number of uses and defs (excluding the scratch def for DecMB), and
+// corresponding uses and defs must be tied together. This instruction doesn't
+// automatically constrain the register classes, so they must be constrained
+// manually to Anyi8.
+def IncMB : MOSPseudo {
+  dag OutOperandList = (outs variable_ops);
+  dag InOperandList = (ins variable_ops);
+  let Defs = [C];
+
+  let usesCustomInserter = true;
+}
+def DecMB : MOSPseudo {
+  dag OutOperandList = (outs GPR:$scratch, variable_ops);
+  dag InOperandList = (ins variable_ops);
+  let Constraints = "@earlyclobber $scratch";
+  let Defs = [C];
+
+  let usesCustomInserter = true;
 }
 
 // Use the diamond control flow pattern to load one of two immediates based on

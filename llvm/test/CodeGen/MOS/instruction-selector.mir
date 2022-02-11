@@ -1250,14 +1250,14 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 6502-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz
+    ; 6502-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz :: (load (s8))
     ; 6502-NEXT: BR %bb.0, $n, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpabs_brn
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 65C02-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz :: (load (s8))
     ; 65C02-NEXT: BR %bb.0, $n, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -1277,14 +1277,14 @@ body: |
     ; 6502: successors: %bb.0(0x80000000)
     ; 6502-NEXT: {{  $}}
     ; 6502-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 6502-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz
+    ; 6502-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz :: (load (s8))
     ; 6502-NEXT: BR %bb.0, $z, 1
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: cmpabs_brz
     ; 65C02: successors: %bb.0(0x80000000)
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $a
-    ; 65C02-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz
+    ; 65C02-NEXT: [[CMPTermAbs:%[0-9]+]]:cc = CMPTermAbs [[COPY]], i16 1234, implicit-def $nz :: (load (s8))
     ; 65C02-NEXT: BR %bb.0, $z, 1
     ; 65C02-NEXT: RTS
     %0:any(s8) = COPY $a
@@ -2453,6 +2453,60 @@ body: |
     %2:any(s1) = COPY $v
     %3:any(s8), %4:any(s1) = G_SADDE %0:any(s8), %1:any(s8), %2:any(s1)
     RTS implicit %3, implicit %4
+...
+---
+name: inc_mb
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: inc_mb
+    ; 6502: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $x
+    ; 6502-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $y
+    ; 6502-NEXT: [[COPY3:%[0-9]+]]:anyi8 = COPY $rc2
+    ; 6502-NEXT: [[IncMB:%[0-9]+]]:anyi8, [[IncMB1:%[0-9]+]]:anyi8, [[IncMB2:%[0-9]+]]:anyi8, [[IncMB3:%[0-9]+]]:anyi8 = IncMB [[COPY]](tied-def 0), [[COPY1]](tied-def 1), [[COPY2]](tied-def 2), [[COPY3]](tied-def 3), implicit-def $c
+    ; 6502-NEXT: RTS implicit [[IncMB]], implicit [[IncMB1]], implicit [[IncMB2]], implicit [[IncMB3]]
+    ; 65C02-LABEL: name: inc_mb
+    ; 65C02: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $x
+    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $y
+    ; 65C02-NEXT: [[COPY3:%[0-9]+]]:anyi8 = COPY $rc2
+    ; 65C02-NEXT: [[IncMB:%[0-9]+]]:anyi8, [[IncMB1:%[0-9]+]]:anyi8, [[IncMB2:%[0-9]+]]:anyi8, [[IncMB3:%[0-9]+]]:anyi8 = IncMB [[COPY]](tied-def 0), [[COPY1]](tied-def 1), [[COPY2]](tied-def 2), [[COPY3]](tied-def 3), implicit-def $c
+    ; 65C02-NEXT: RTS implicit [[IncMB]], implicit [[IncMB1]], implicit [[IncMB2]], implicit [[IncMB3]]
+    %0:any(s8) = COPY $a
+    %1:any(s8) = COPY $x
+    %2:any(s8) = COPY $y
+    %3:any(s8) = COPY $rc2
+    %4:any(s8), %5:any(s8), %6:any(s8), %7:any(s8) = G_INC %0, %1, %2, %3
+    RTS implicit %4, implicit %5, implicit %6, implicit %7
+...
+---
+name: dec_mb
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: dec_mb
+    ; 6502: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $x
+    ; 6502-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $y
+    ; 6502-NEXT: [[COPY3:%[0-9]+]]:anyi8 = COPY $rc2
+    ; 6502-NEXT: early-clobber %8:ac, %4:anyi8, %5:anyi8, %6:anyi8, %7:anyi8 = DecMB [[COPY]](tied-def 1), [[COPY1]](tied-def 2), [[COPY2]](tied-def 3), [[COPY3]](tied-def 4), implicit-def $c
+    ; 6502-NEXT: RTS implicit %4, implicit %5, implicit %6, implicit %7
+    ; 65C02-LABEL: name: dec_mb
+    ; 65C02: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $x
+    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $y
+    ; 65C02-NEXT: [[COPY3:%[0-9]+]]:anyi8 = COPY $rc2
+    ; 65C02-NEXT: early-clobber %8:ac, %4:anyi8, %5:anyi8, %6:anyi8, %7:anyi8 = DecMB [[COPY]](tied-def 1), [[COPY1]](tied-def 2), [[COPY2]](tied-def 3), [[COPY3]](tied-def 4), implicit-def $c
+    ; 65C02-NEXT: RTS implicit %4, implicit %5, implicit %6, implicit %7
+    %0:any(s8) = COPY $a
+    %1:any(s8) = COPY $x
+    %2:any(s8) = COPY $y
+    %3:any(s8) = COPY $rc2
+    %4:any(s8), %5:any(s8), %6:any(s8), %7:any(s8) = G_DEC %0, %1, %2, %3
+    RTS implicit %4, implicit %5, implicit %6, implicit %7
 ...
 ---
 name: sbc_imm_c
