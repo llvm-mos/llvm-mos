@@ -137,9 +137,8 @@ static cl::opt<bool> ForcePCRelReloc(
     cl::init(false), cl::Hidden);
 
 static void assertFixupKind(const MCFixup &Fixup, const bool IsPCRel16) {
-  assert(
-	  (IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8)
-	      && "unexpected target fixup kind");
+  assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
+         "unexpected target fixup kind");
 }
 
 static auto getSymbolOffset(const MCSymbolRefExpr *SymX, const MCAsmLayout &Layout) {
