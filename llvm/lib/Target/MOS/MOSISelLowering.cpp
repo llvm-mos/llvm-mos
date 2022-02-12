@@ -381,10 +381,13 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
     Rest.addDef(MOS::A);
   for (unsigned I = FirstDefIdx + 1, E = MI.getNumExplicitOperands(); I != E;
        ++I)
-    if (I != FirstUseIdx)
+    if (I != FirstUseIdx) {
       Rest.add(MI.getOperand(I));
+      RestMBB->addLiveIn(MI.getOperand(I).getReg());
+    }
   Builder.buildInstr(MOS::JMP).addMBB(TailMBB);
   RestMBB->addSuccessor(TailMBB);
+  RestMBB->sortUniqueLiveIns();
 
   MI.eraseFromParent();
 

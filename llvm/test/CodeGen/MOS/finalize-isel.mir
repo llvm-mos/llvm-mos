@@ -155,6 +155,62 @@ body: |
     RTS implicit $a, implicit $x, implicit $y, implicit $rc2
 ...
 ---
+name: inc_mb_dead
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $a, $x, $y, $rc2
+    ; CHECK-LABEL: name: inc_mb_dead
+    ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = INC $a, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: BR %bb.2, $z, -1
+    ; CHECK-NEXT: JMP %bb.1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2.entry:
+    ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    ; CHECK-NEXT: liveins: $x, $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x = INC $x, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: BR %bb.4, $z, -1
+    ; CHECK-NEXT: JMP %bb.3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .4.entry:
+    ; CHECK-NEXT: successors: %bb.5(0x40000000), %bb.6(0x40000000)
+    ; CHECK-NEXT: liveins: $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $y = INC $y, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: BR %bb.6, $z, -1
+    ; CHECK-NEXT: JMP %bb.5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .6.entry:
+    ; CHECK-NEXT: successors: %bb.5(0x80000000)
+    ; CHECK-NEXT: liveins: $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc2 = INC $rc2, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: JMP %bb.5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .5.entry:
+    ; CHECK-NEXT: successors: %bb.3(0x80000000)
+    ; CHECK-NEXT: liveins: $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: JMP %bb.3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .3.entry:
+    ; CHECK-NEXT: successors: %bb.1(0x80000000)
+    ; CHECK-NEXT: liveins: $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: JMP %bb.1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .1.entry:
+    ; CHECK-NEXT: liveins: $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: RTS implicit $rc2
+    $a, $x, $y, $rc2 = IncMB $a, $x, $y, $rc2, implicit-def $c
+    RTS implicit $rc2
+...
+---
 name: dec_mb
 tracksRegLiveness: true
 body: |
