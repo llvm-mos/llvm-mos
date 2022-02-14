@@ -190,8 +190,7 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
 }
 
 static bool isSymbolChar(const char C) {
-  return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z')
-      || (C >= '0' && C <= '9') || (C == '$') || (C == '_');
+  return isalnum(C) || (C == '$') || (C == '_');
 }
 
 static size_t getFixupLength(const char *FixupNameStart) {
