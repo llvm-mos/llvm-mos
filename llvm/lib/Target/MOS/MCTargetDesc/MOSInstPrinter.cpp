@@ -56,14 +56,16 @@ std::string MOSInstPrinter::getAiryOperands(const MCInst *MI,
 void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
                                raw_ostream &OS) {
-  size_t SpacesSeen = 0;
   std::string CorrectOperands;
+  size_t SpacesSeen = 0;
+
   for (char &Letter : getAiryOperands(MI, Address)) {
     char *Operand = getOperand(SpacesSeen, Letter);
     if (Operand) {
       CorrectOperands += *Operand;
     }
   }
+
   OS << CorrectOperands;
 }
 
