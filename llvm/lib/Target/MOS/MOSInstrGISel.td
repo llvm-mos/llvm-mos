@@ -119,12 +119,21 @@ def G_LSHRE : MOSGenericInstruction {
   let InOperandList = (ins type0:$src, type1:$carry_in);
 }
 
-def G_INC : MOSGenericInstruction {
+// These opcodes represent multi-byte increment and decrement operations. Each
+// use operand is one byte; either a register or an absolute address. The def
+// operands correspond to only the register use operands, and they must be tied
+// accordingly. Arguments are little-endian.
+class MOSGIncDec : MOSGenericInstruction {
   let OutOperandList = (outs variable_ops);
   let InOperandList = (ins variable_ops);
 }
 
-def G_DEC : MOSGenericInstruction {
-  let OutOperandList = (outs variable_ops);
-  let InOperandList = (ins variable_ops);
+def G_INC : MOSGIncDec;
+def G_DEC : MOSGIncDec;
+
+// These provide a way for the instruction selector to temporarily mark a G_INC
+// in progress as mayLoad/mayStore once it obtains an addressing mode argument.
+let mayLoad = true, mayStore = true in {
+  def G_INC_TMP : MOSGIncDec;
+  def G_DEC_TMP : MOSGIncDec;
 }

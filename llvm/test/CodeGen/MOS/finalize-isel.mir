@@ -272,3 +272,121 @@ body: |
     early-clobber $a, $x, $y, $rc2, $rc3 = DecMB $x, $y, $rc2, $rc3, implicit-def $c
     RTS implicit $x, implicit $y, implicit $rc2, implicit $rc3
 ...
+---
+name: inc_mb_abs
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $a, $x, $y, $rc2
+    ; CHECK-LABEL: name: inc_mb_abs
+    ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = INC $a, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: BR %bb.2, $z, -1
+    ; CHECK-NEXT: JMP %bb.1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2.entry:
+    ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    ; CHECK-NEXT: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: INCAbs i16 1234, implicit-def $z
+    ; CHECK-NEXT: BR %bb.4, $z, -1
+    ; CHECK-NEXT: JMP %bb.3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .4.entry:
+    ; CHECK-NEXT: successors: %bb.5(0x40000000), %bb.6(0x40000000)
+    ; CHECK-NEXT: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $y = INC $y, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: BR %bb.6, $z, -1
+    ; CHECK-NEXT: JMP %bb.5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .6.entry:
+    ; CHECK-NEXT: successors: %bb.5(0x80000000)
+    ; CHECK-NEXT: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: INCAbs i16 5678
+    ; CHECK-NEXT: JMP %bb.5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .5.entry:
+    ; CHECK-NEXT: successors: %bb.3(0x80000000)
+    ; CHECK-NEXT: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: JMP %bb.3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .3.entry:
+    ; CHECK-NEXT: successors: %bb.1(0x80000000)
+    ; CHECK-NEXT: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: JMP %bb.1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .1.entry:
+    ; CHECK-NEXT: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: RTS implicit $a, implicit $y
+    $a, $y = IncMB $a, i16 1234, $y, i16 5678, implicit-def $c
+    RTS implicit $a, implicit $y
+...
+---
+name: dec_mb_abs
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x, $y, $rc2, $rc3
+    ; CHECK-LABEL: name: dec_mb_abs
+    ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = COPY $y
+    ; CHECK-NEXT: $y = DEC $y, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: BR %bb.2, $z, -1
+    ; CHECK-NEXT: JMP %bb.1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2.entry:
+    ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
+    ; CHECK-NEXT: liveins: $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = LDAbs i16 1234
+    ; CHECK-NEXT: DECAbs i16 1234
+    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: BR %bb.4, $z, -1
+    ; CHECK-NEXT: JMP %bb.3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .4.entry:
+    ; CHECK-NEXT: successors: %bb.5(0x40000000), %bb.6(0x40000000)
+    ; CHECK-NEXT: liveins: $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = COPY $rc2
+    ; CHECK-NEXT: $rc2 = DEC $rc2, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: BR %bb.6, $z, -1
+    ; CHECK-NEXT: JMP %bb.5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .6.entry:
+    ; CHECK-NEXT: successors: %bb.5(0x80000000)
+    ; CHECK-NEXT: liveins: $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: DECAbs i16 5678
+    ; CHECK-NEXT: JMP %bb.5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .5.entry:
+    ; CHECK-NEXT: successors: %bb.3(0x80000000)
+    ; CHECK-NEXT: liveins: $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: JMP %bb.3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .3.entry:
+    ; CHECK-NEXT: successors: %bb.1(0x80000000)
+    ; CHECK-NEXT: liveins: $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: JMP %bb.1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .1.entry:
+    ; CHECK-NEXT: liveins: $y, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: RTS implicit $y, implicit $rc2
+    early-clobber $a, $y, $rc2 = DecMB $y, i16 1234, $rc2, i16 5678, implicit-def $c
+    RTS implicit $y, implicit $rc2
+...

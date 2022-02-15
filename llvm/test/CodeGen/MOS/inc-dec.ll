@@ -4,6 +4,8 @@
 target datalayout = "e-m:e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8"
 target triple = "mos"
 
+@g = global i16 0
+
 define i8 @inc_i8(i8 %a) {
 ; CHECK-LABEL: inc_i8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -67,6 +69,22 @@ entry:
   ret i8* %0
 }
 
+define void @inc_global() {
+; CHECK-LABEL: inc_global:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    inc g
+; CHECK-NEXT:    bne .LBB4_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    inc g+1
+; CHECK-NEXT:  .LBB4_2: ; %entry
+; CHECK-NEXT:    rts
+entry:
+  %0 = load i16, i16* @g
+  %1 = add i16 %0, 1
+  store i16 %1, i16* @g
+  ret void
+}
+
 define i8 @dec_i8(i8 %a) {
 ; CHECK-LABEL: dec_i8:
 ; CHECK:       ; %bb.0: ; %entry
@@ -85,10 +103,10 @@ define i16 @dec_i16(i16 %a) {
 ; CHECK-NEXT:    tya
 ; CHECK-NEXT:    dey
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    bne .LBB5_2
+; CHECK-NEXT:    bne .LBB6_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dex
-; CHECK-NEXT:  .LBB5_2: ; %entry
+; CHECK-NEXT:  .LBB6_2: ; %entry
 ; CHECK-NEXT:    tya
 ; CHECK-NEXT:    rts
 entry:
@@ -103,22 +121,22 @@ define i32 @dec_i32(i32 %a) {
 ; CHECK-NEXT:    tya
 ; CHECK-NEXT:    dey
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    bne .LBB6_6
+; CHECK-NEXT:    bne .LBB7_6
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    dex
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    bne .LBB6_5
+; CHECK-NEXT:    bne .LBB7_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    dec mos8(__rc2)
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    bne .LBB6_4
+; CHECK-NEXT:    bne .LBB7_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    dec mos8(__rc3)
-; CHECK-NEXT:  .LBB6_4: ; %entry
-; CHECK-NEXT:  .LBB6_5: ; %entry
-; CHECK-NEXT:  .LBB6_6: ; %entry
+; CHECK-NEXT:  .LBB7_4: ; %entry
+; CHECK-NEXT:  .LBB7_5: ; %entry
+; CHECK-NEXT:  .LBB7_6: ; %entry
 ; CHECK-NEXT:    tya
 ; CHECK-NEXT:    rts
 entry:
@@ -132,12 +150,30 @@ define i8* @dec_ptr(i8* %a) {
 ; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    dec mos8(__rc2)
 ; CHECK-NEXT:    cmp #0
-; CHECK-NEXT:    bne .LBB7_2
+; CHECK-NEXT:    bne .LBB8_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dec mos8(__rc3)
-; CHECK-NEXT:  .LBB7_2: ; %entry
+; CHECK-NEXT:  .LBB8_2: ; %entry
 ; CHECK-NEXT:    rts
 entry:
   %0 = getelementptr i8, i8* %a, i32 -1
   ret i8* %0
+}
+
+define void @dec_global() {
+; CHECK-LABEL: dec_global:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    lda g
+; CHECK-NEXT:    dec g
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bne .LBB9_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    dec g+1
+; CHECK-NEXT:  .LBB9_2: ; %entry
+; CHECK-NEXT:    rts
+entry:
+  %0 = load i16, i16* @g
+  %1 = add i16 %0, -1
+  store i16 %1, i16* @g
+  ret void
 }

@@ -329,21 +329,28 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   MachineIRBuilder Builder(MI);
   bool IsDec = MI.getOpcode() == MOS::DecMB;
   assert(IsDec || MI.getOpcode() == MOS::IncMB);
-  unsigned NumBytes = MI.getNumExplicitDefs();
-  if (IsDec)
-    --NumBytes;
-  unsigned FirstDefIdx = 0;
-  unsigned FirstUseIdx = NumBytes;
-  if (IsDec) {
-    ++FirstDefIdx;
-    ++FirstUseIdx;
+  unsigned FirstUseIdx = MI.getNumExplicitDefs();
+  unsigned FirstDefIdx = IsDec ? 1 : 0;
+  if (IsDec && FirstUseIdx < MI.getNumExplicitOperands() - 1) {
+    if (MI.getOperand(FirstUseIdx).isReg()) {
+      Builder.buildCopy(MI.getOperand(0), MI.getOperand(FirstUseIdx));
+    } else {
+      Builder.buildInstr(MOS::LDAbs)
+          .addDef(MI.getOperand(0).getReg())
+          .add(MI.getOperand(FirstUseIdx));
+    }
   }
-  if (IsDec && NumBytes != 1)
-    Builder.buildCopy(MI.getOperand(0), MI.getOperand(FirstUseIdx));
-  auto First = Builder.buildInstr(IsDec ? MOS::DEC : MOS::INC)
-                   .add(MI.getOperand(FirstDefIdx))
-                   .add(MI.getOperand(FirstUseIdx));
-  if (NumBytes == 1) {
+  MachineInstrBuilder First;
+  if (MI.getOperand(FirstUseIdx).isReg()) {
+    First = Builder.buildInstr(IsDec ? MOS::DEC : MOS::INC)
+                .add(MI.getOperand(FirstDefIdx))
+                .add(MI.getOperand(FirstUseIdx));
+    ++FirstDefIdx;
+  } else {
+    First = Builder.buildInstr(IsDec ? MOS::DECAbs : MOS::INCAbs)
+                .add(MI.getOperand(FirstUseIdx));
+  }
+  if (FirstUseIdx == MI.getNumExplicitOperands() - 1) {
     MI.eraseFromParent();
     return MBB;
   }
@@ -379,12 +386,13 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   auto Rest = Builder.buildInstr(MI.getOpcode());
   if (IsDec)
     Rest.addDef(MOS::A);
-  for (unsigned I = FirstDefIdx + 1, E = MI.getNumExplicitOperands(); I != E;
-       ++I)
-    if (I != FirstUseIdx) {
-      Rest.add(MI.getOperand(I));
+  for (unsigned I = FirstDefIdx, E = MI.getNumExplicitOperands(); I != E; ++I) {
+    if (I == FirstUseIdx)
+      continue;
+    Rest.add(MI.getOperand(I));
+    if (MI.getOperand(I).isReg())
       RestMBB->addLiveIn(MI.getOperand(I).getReg());
-    }
+  }
   Builder.buildInstr(MOS::JMP).addMBB(TailMBB);
   RestMBB->addSuccessor(TailMBB);
   RestMBB->sortUniqueLiveIns();

@@ -296,25 +296,24 @@ def GBR : MOSPseudo {
 
 // It's difficult for the code generator to keep N and Z free for the usual
 // multi-byte increments and decrements, so these pseudos bundle arbitrary-width
-// increments and decrements into single instructions. There must be the same
-// number of uses and defs (excluding the scratch def for DecMB), and
-// corresponding uses and defs must be tied together. This instruction doesn't
-// automatically constrain the register classes, so they must be constrained
-// manually to Anyi8.
-def IncMB : MOSPseudo {
-  dag OutOperandList = (outs variable_ops);
+// increments and decrements into single instructions. Each use corresponds to
+// one byte in little-endian order. Bytes may either be registers or absolute
+// addresses. For each register, there must be one tied def. Register operands
+// must be constrained to Anyi8.
+class MOSIncDecMB : MOSPseudo {
   dag InOperandList = (ins variable_ops);
   let Defs = [C];
 
   let usesCustomInserter = true;
+  let mayLoad = true;
+  let mayStore = true;
 }
-def DecMB : MOSPseudo {
+def IncMB : MOSIncDecMB {
+  dag OutOperandList = (outs variable_ops);
+}
+def DecMB : MOSIncDecMB {
   dag OutOperandList = (outs GPR:$scratch, variable_ops);
-  dag InOperandList = (ins variable_ops);
   let Constraints = "@earlyclobber $scratch";
-  let Defs = [C];
-
-  let usesCustomInserter = true;
 }
 
 // Use the diamond control flow pattern to load one of two immediates based on

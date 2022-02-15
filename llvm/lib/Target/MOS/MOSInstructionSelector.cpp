@@ -235,6 +235,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectAddE(MI);
   case MOS::G_INC:
   case MOS::G_DEC:
+  case MOS::G_INC_TMP:
+  case MOS::G_DEC_TMP:
     return selectIncDecMB(MI);
   case MOS::G_UNMERGE_VALUES:
     return selectUnMergeValues(MI);
@@ -1183,6 +1185,46 @@ static void replaceUsesAfter(MachineBasicBlock::iterator MI, Register From,
       MO.setReg(To);
 }
 
+struct IncDecMBAbs_match {
+  MachineInstr *&IncDec;
+  MachineOperand &Addr;
+  MachineInstr *&Load;
+  AAResults *AA;
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    // Addressing modes destroy the vreg def for IncMB and DecMB.
+    if (!MRI.hasOneNonDBGUse(Reg))
+      return false;
+    MachineInstr &StoreMI = *MRI.use_instr_nodbg_begin(Reg);
+
+    IncDec = getDefIgnoringCopies(Reg, MRI);
+    switch (IncDec->getOpcode()) {
+    case MOS::G_INC:
+    case MOS::G_DEC:
+    case MOS::G_INC_TMP:
+    case MOS::G_DEC_TMP:
+      break;
+    default:
+      return false;
+    }
+    unsigned DstIdx = 0;
+    unsigned SrcIdx = IncDec->getNumExplicitDefs();
+    while (IncDec->getOperand(DstIdx).getReg() != Reg) {
+      if (IncDec->getOperand(SrcIdx).isReg())
+        ++DstIdx;
+      ++SrcIdx;
+    }
+    if (!mi_match(IncDec->getOperand(SrcIdx).getReg(), MRI,
+                  m_all_of(m_MInstr(Load), m_FoldedLdAbs(StoreMI, Addr, AA))))
+      return false;
+    return Addr.isIdenticalTo(StoreMI.getOperand(1));
+  }
+};
+IncDecMBAbs_match m_IncDecMBAbs(MachineInstr *&IncDec, MachineOperand &Addr,
+                                MachineInstr *&Load, AAResults *AA) {
+  return {IncDec, Addr, Load, AA};
+}
+
 bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();
@@ -1209,6 +1251,30 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
+
+    MachineInstr *IncDec;
+    if (mi_match(MI.getOperand(0).getReg(), MRI,
+                 m_IncDecMBAbs(IncDec, Addr, Load, AA))) {
+      unsigned NumBytes = IncDec->getNumDefs();
+      for (unsigned I = 0; I < NumBytes; ++I) {
+        if (IncDec->getOperand(I).getReg() == MI.getOperand(0).getReg()) {
+          MachineOperand NewAddr(Addr);
+          // Remove the operand from use lists.
+          IncDec->getOperand(I + NumBytes).ChangeToGA(nullptr, 0);
+          IncDec->getOperand(I + NumBytes) = NewAddr;
+          IncDec->RemoveOperand(I);
+          IncDec->setDesc(TII.get(IncDec->getOpcode() == MOS::G_INC ||
+                                          IncDec->getOpcode() == MOS::G_INC_TMP
+                                      ? MOS::G_INC_TMP
+                                      : MOS::G_DEC_TMP));
+          IncDec->cloneMergedMemRefs(*MF, {&MI, Load});
+          break;
+        }
+      }
+      MI.eraseFromParent();
+      return true;
+    }
+
     Register CarryOut;
     if (mi_match(MI.getOperand(0).getReg(), MRI,
                  m_GShlE(CarryOut,
@@ -1561,9 +1627,11 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
   default:
     llvm_unreachable("Bad opcode");
   case MOS::G_INC:
+  case MOS::G_INC_TMP:
     Opcode = MOS::IncMB;
     break;
   case MOS::G_DEC:
+  case MOS::G_DEC_TMP:
     Opcode = MOS::DecMB;
     break;
   }
@@ -1575,14 +1643,18 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
   for (MachineOperand &MO : MI.operands())
     Instr.add(MO);
   for (MachineOperand &MO : Instr->explicit_operands())
-    constrainOperandRegClass(MO, MOS::Anyi8RegClass);
+    if (MO.isReg())
+      constrainOperandRegClass(MO, MOS::Anyi8RegClass);
 
-  unsigned NumDefs = MI.getNumExplicitDefs();
-  unsigned Begin = 0, End = NumDefs;
-  if (Opcode == MOS::DecMB)
-    Begin++, End++;
-  for (unsigned I = Begin; I != End; ++I)
-    Instr->tieOperands(I, I + NumDefs);
+  unsigned DstIdx = Opcode == MOS::DecMB ? 1 : 0;
+  unsigned SrcIdx = Instr->getNumExplicitDefs();
+  while (SrcIdx != Instr->getNumExplicitOperands()) {
+    if (Instr->getOperand(SrcIdx).isReg()) {
+      Instr->tieOperands(DstIdx, SrcIdx);
+      ++DstIdx;
+    }
+    ++SrcIdx;
+  }
   MI.eraseFromParent();
   return true;
 }

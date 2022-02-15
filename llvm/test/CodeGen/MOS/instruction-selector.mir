@@ -178,11 +178,11 @@ body: |
   bb.0.entry:
     ; 6502-LABEL: name: add_abs_one
     ; 6502: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
-    ; 6502-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[LDAbs]]
+    ; 6502-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[LDAbs]], implicit-def $c, implicit-def $v
     ; 6502-NEXT: RTS implicit [[INC]]
     ; 65C02-LABEL: name: add_abs_one
     ; 65C02: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
-    ; 65C02-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[LDAbs]]
+    ; 65C02-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[LDAbs]], implicit-def $c, implicit-def $v
     ; 65C02-NEXT: RTS implicit [[INC]]
     %0:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     %1:any(s8) = G_CONSTANT i8 1
@@ -522,14 +522,14 @@ body: |
     ; 6502-LABEL: name: inc_abs_across_store
     ; 6502: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
     ; 6502-NEXT: [[LDImm:%[0-9]+]]:gpr = LDImm 1
-    ; 6502-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]]
+    ; 6502-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]], implicit-def $c, implicit-def $v
     ; 6502-NEXT: STAbs [[LDImm]], i16 1234 :: (store (s8))
     ; 6502-NEXT: STAbs [[INC]], i16 1234 :: (store (s8))
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: inc_abs_across_store
     ; 65C02: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
     ; 65C02-NEXT: [[LDImm:%[0-9]+]]:gpr = LDImm 1
-    ; 65C02-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]]
+    ; 65C02-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]], implicit-def $c, implicit-def $v
     ; 65C02-NEXT: STAbs [[LDImm]], i16 1234 :: (store (s8))
     ; 65C02-NEXT: STAbs [[INC]], i16 1234 :: (store (s8))
     ; 65C02-NEXT: RTS
@@ -2507,6 +2507,58 @@ body: |
     %3:any(s8) = COPY $rc2
     %4:any(s8), %5:any(s8), %6:any(s8), %7:any(s8) = G_DEC %0, %1, %2, %3
     RTS implicit %4, implicit %5, implicit %6, implicit %7
+...
+---
+name: inc_abs_mb
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: inc_abs_mb
+    ; 6502: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $y
+    ; 6502-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $x
+    ; 6502-NEXT: [[IncMB:%[0-9]+]]:anyi8, [[IncMB1:%[0-9]+]]:anyi8, [[IncMB2:%[0-9]+]]:anyi8 = IncMB [[COPY]](tied-def 0), i16 1234, [[COPY1]](tied-def 1), [[COPY2]](tied-def 2), implicit-def $c
+    ; 6502-NEXT: RTS implicit [[IncMB]], implicit [[IncMB1]], implicit [[IncMB2]]
+    ; 65C02-LABEL: name: inc_abs_mb
+    ; 65C02: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $y
+    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $x
+    ; 65C02-NEXT: [[IncMB:%[0-9]+]]:anyi8, [[IncMB1:%[0-9]+]]:anyi8, [[IncMB2:%[0-9]+]]:anyi8 = IncMB [[COPY]](tied-def 0), i16 1234, [[COPY1]](tied-def 1), [[COPY2]](tied-def 2), implicit-def $c
+    ; 65C02-NEXT: RTS implicit [[IncMB]], implicit [[IncMB1]], implicit [[IncMB2]]
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s8) = COPY $y
+    %3:any(s8) = COPY $x
+    %4:any(s8), %5:any(s8), %6:any(s8), %7:any(s8) = G_INC %0, %1, %2, %3
+    G_STORE_ABS %5, i16 1234 :: (store (s8))
+    RTS implicit %4, implicit %6, implicit %7
+...
+---
+name: dec_abs_mb
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: dec_abs_mb
+    ; 6502: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $y
+    ; 6502-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $x
+    ; 6502-NEXT: early-clobber %8:ac, %4:anyi8, %6:anyi8, %7:anyi8 = DecMB [[COPY]](tied-def 1), i16 1234, [[COPY1]](tied-def 2), [[COPY2]](tied-def 3), implicit-def $c
+    ; 6502-NEXT: RTS implicit %4, implicit %6, implicit %7
+    ; 65C02-LABEL: name: dec_abs_mb
+    ; 65C02: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $y
+    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $x
+    ; 65C02-NEXT: early-clobber %8:ac, %4:anyi8, %6:anyi8, %7:anyi8 = DecMB [[COPY]](tied-def 1), i16 1234, [[COPY1]](tied-def 2), [[COPY2]](tied-def 3), implicit-def $c
+    ; 65C02-NEXT: RTS implicit %4, implicit %6, implicit %7
+    %0:any(s8) = COPY $a
+    %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s8) = COPY $y
+    %3:any(s8) = COPY $x
+    %4:any(s8), %5:any(s8), %6:any(s8), %7:any(s8) = G_DEC %0, %1, %2, %3
+    G_STORE_ABS %5, i16 1234 :: (store (s8))
+    RTS implicit %4, implicit %6, implicit %7
 ...
 ---
 name: sbc_imm_c
