@@ -85,11 +85,7 @@ format_object<int64_t> MOSInstPrinter::formatHex(int64_t Value) const {
   switch (PrintHexStyle) {
   case HexStyle::C:
   case HexStyle::Asm:
-    if (Value < 0) {
-      return format("-$%" PRIx64, abs(Value));
-    } else {
-      return format("$%" PRIx64, Value);
-    }
+    return format(Value < 0 ? "-$%" : "$%" PRIx64, abs(Value));
   }
   llvm_unreachable("unsupported print style");
 }
