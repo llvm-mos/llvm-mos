@@ -29,6 +29,15 @@
 
 #define DEBUG_TYPE "asm-printer"
 
+char TAB ='\t';
+
+char* getOperand(size_t &SpacesSeen, char &Letter) {
+  if (!isspace(Letter))
+    return &Letter;
+
+  return ++SpacesSeen <= 2 ? &TAB : nullptr;
+}
+
 namespace llvm {
 
 void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -42,13 +51,10 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   AiryOperands = AiryOperandStream.str();
   size_t SpacesSeen = 0;
   std::string CorrectOperands;
-  for (const char &Letter : AiryOperands) {
-    if (isspace(Letter) != 0) {
-      if (++SpacesSeen <= 2) {
-        CorrectOperands += '\t';
-      }
-    } else {
-      CorrectOperands += Letter;
+  for (char &Letter : AiryOperands) {
+    char *Operand = getOperand(SpacesSeen, Letter);
+    if (Operand) {
+      CorrectOperands += *Operand;
     }
   }
   OS << CorrectOperands;
