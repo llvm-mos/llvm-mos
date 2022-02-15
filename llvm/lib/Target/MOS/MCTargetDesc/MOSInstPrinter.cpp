@@ -42,7 +42,7 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   AiryOperands = AiryOperandStream.str();
   size_t SpacesSeen = 0;
   std::string CorrectOperands;
-  for (const auto &Letter : AiryOperands) {
+  for (const char &Letter : AiryOperands) {
     if (isspace(Letter) != 0) {
       if (++SpacesSeen <= 2) {
         CorrectOperands += '\t';
