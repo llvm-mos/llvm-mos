@@ -40,18 +40,25 @@ char* getOperand(size_t &SpacesSeen, char &Letter) {
   return ++SpacesSeen <= 2 ? &TAB : nullptr;
 }
 
+std::string MOSInstPrinter::getAiryOperands(const MCInst *MI,
+                                            uint64_t Address) {
+  std::string AiryOperands;
+  raw_string_ostream AiryOperandStream(AiryOperands);
+
+  auto MnemonicInfo = getMnemonic(MI);
+  assert(MnemonicInfo.second && "Missing opcode for instruction.");
+
+  printInstruction(MI, Address, AiryOperandStream);
+
+  return AiryOperandStream.str();
+}
+
 void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
                                raw_ostream &OS) {
-  std::string AiryOperands;
-  raw_string_ostream AiryOperandStream(AiryOperands);
-  auto MnemonicInfo = getMnemonic(MI);
-  assert(MnemonicInfo.second && "Missing opcode for instruction.");
-  printInstruction(MI, Address, AiryOperandStream);
-  AiryOperands = AiryOperandStream.str();
   size_t SpacesSeen = 0;
   std::string CorrectOperands;
-  for (char &Letter : AiryOperands) {
+  for (char &Letter : getAiryOperands(MI, Address)) {
     char *Operand = getOperand(SpacesSeen, Letter);
     if (Operand) {
       CorrectOperands += *Operand;
