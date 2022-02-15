@@ -29,6 +29,8 @@
 
 #define DEBUG_TYPE "asm-printer"
 
+namespace llvm {
+
 char TAB ='\t';
 
 char* getOperand(size_t &SpacesSeen, char &Letter) {
@@ -37,8 +39,6 @@ char* getOperand(size_t &SpacesSeen, char &Letter) {
 
   return ++SpacesSeen <= 2 ? &TAB : nullptr;
 }
-
-namespace llvm {
 
 void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
