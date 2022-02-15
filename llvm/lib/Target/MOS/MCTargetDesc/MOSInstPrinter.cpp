@@ -53,9 +53,9 @@ std::string MOSInstPrinter::getAiryOperands(const MCInst *MI,
   return AiryOperandStream.str();
 }
 
-void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
-                               StringRef Annot, const MCSubtargetInfo &STI,
-                               raw_ostream &OS) {
+std::string MOSInstPrinter::getCorrectOperands(const MCInst *MI,
+                                               uint64_t Address,
+                                               const MCSubtargetInfo &STI) {
   std::string CorrectOperands;
   size_t SpacesSeen = 0;
 
@@ -66,7 +66,13 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     }
   }
 
-  OS << CorrectOperands;
+  return CorrectOperands;
+}
+
+void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                               StringRef Annot, const MCSubtargetInfo &STI,
+                               raw_ostream &OS) {
+  OS << getCorrectOperands(MI, Address, STI);
 }
 
 void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,

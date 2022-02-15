@@ -51,6 +51,8 @@ public:
 
 private:
   std::string getAiryOperands(const MCInst *MI, uint64_t Address);
+  std::string getCorrectOperands(const MCInst *MI, uint64_t Address,
+                                 const MCSubtargetInfo &STI);
 };
 
 class MOSInstPrinterCA65 : public MOSInstPrinter {
