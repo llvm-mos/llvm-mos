@@ -84,11 +84,6 @@ void MOSInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
 format_object<int64_t> MOSInstPrinter::formatHex(int64_t Value) const {
   switch (PrintHexStyle) {
   case HexStyle::C:
-    if (Value < 0) {
-      return format("-$%" PRIx64, -Value);
-    } else {
-      return format("$%" PRIx64, Value);
-    }
   case HexStyle::Asm:
     if (Value < 0) {
       return format("-$%" PRIx64, -Value);
