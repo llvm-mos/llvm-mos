@@ -97,7 +97,6 @@ format_object<int64_t> MOSInstPrinter::formatHex(int64_t Value) const {
 format_object<uint64_t> MOSInstPrinter::formatHex(uint64_t Value) const {
   switch (PrintHexStyle) {
   case HexStyle::C:
-    return format("$%" PRIx64, Value);
   case HexStyle::Asm:
     return format("$%" PRIx64, Value);
   }
