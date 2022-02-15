@@ -84,10 +84,10 @@ void MOSInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
 template <typename T>
 format_object<T> formatHexValue(HexStyle::Style PrintHexStyle, T Value) {
   switch (PrintHexStyle) {
-    case HexStyle::C:
-    case HexStyle::Asm:
-      return format(Value < 0 ? "-$%" : "$%" PRIx64,
-                    Value < 0 ? -Value : Value);
+  case HexStyle::C:
+  case HexStyle::Asm:
+    return format(Value < 0 ? "-$%" : "$%" PRIx64,
+                  Value < 0 ? -Value : Value);
   }
 
   llvm_unreachable("unsupported print style");
