@@ -47,9 +47,9 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       if (++SpacesSeen <= 2) {
         CorrectOperands += '\t';
       }
-      continue;
+    } else {
+      CorrectOperands += Letter;
     }
-    CorrectOperands += Letter;
   }
   OS << CorrectOperands;
 }
