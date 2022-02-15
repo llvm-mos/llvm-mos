@@ -81,22 +81,23 @@ void MOSInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
   O << getRegisterName(RegNo);
 }
 
-format_object<int64_t> MOSInstPrinter::formatHex(int64_t Value) const {
+template <typename T>
+format_object<T> formatHexValue(HexStyle::Style PrintHexStyle, T Value) {
   switch (PrintHexStyle) {
-  case HexStyle::C:
-  case HexStyle::Asm:
-    return format(Value < 0 ? "-$%" : "$%" PRIx64, abs(Value));
+    case HexStyle::C:
+    case HexStyle::Asm:
+      return format(Value < 0 ? "-$%" : "$%" PRIx64, Value < 0 ? -Value : Value);
   }
+
   llvm_unreachable("unsupported print style");
 }
 
+format_object<int64_t> MOSInstPrinter::formatHex(int64_t Value) const {
+  return formatHexValue<int64_t>(PrintHexStyle, Value);
+}
+
 format_object<uint64_t> MOSInstPrinter::formatHex(uint64_t Value) const {
-  switch (PrintHexStyle) {
-  case HexStyle::C:
-  case HexStyle::Asm:
-    return format("$%" PRIx64, Value);
-  }
-  llvm_unreachable("unsupported print style");
+  return formatHexValue<uint64_t>(PrintHexStyle, Value);
 }
 
 // Include the auto-generated portion of the assembly writer.
