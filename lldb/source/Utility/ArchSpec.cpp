@@ -236,6 +236,8 @@ static const CoreDefinition g_core_definitions[] = {
 
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
+    {eByteOrderLittle, 2, 1, 3, llvm::Triple::mos, ArchSpec::eCore_mos,
+     "mos"},
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you
@@ -418,6 +420,7 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_loongarch64, llvm::ELF::EM_LOONGARCH,
      ArchSpec::eLoongArchSubType_loongarch64, 0xFFFFFFFFu,
      0xFFFFFFFFu}, // loongarch64
+    {ArchSpec::eCore_mos, llvm::ELF::EM_MOS, LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu },
 };
 
 static const ArchDefinition g_elf_arch_def = {
