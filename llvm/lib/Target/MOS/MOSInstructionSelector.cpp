@@ -315,10 +315,6 @@ struct FoldedLdAbs_match {
   MachineOperand &Addr;
   AAResults *AA;
 
-  FoldedLdAbs_match(const MachineInstr &Tgt, MachineOperand &Addr,
-                    AAResults *AA)
-      : Tgt(Tgt), Addr(Addr), AA(AA) {}
-
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     const MachineInstr *LdAbs = getOpcodeDef(MOS::G_LOAD_ABS, Reg, MRI);
     if (!LdAbs || !shouldFoldMemAccess(Tgt, *LdAbs, AA))
@@ -327,7 +323,6 @@ struct FoldedLdAbs_match {
     return true;
   }
 };
-
 inline FoldedLdAbs_match m_FoldedLdAbs(const MachineInstr &Tgt,
                                        MachineOperand &Addr, AAResults *AA) {
   return {Tgt, Addr, AA};
@@ -339,10 +334,6 @@ struct FoldedLdIdx_match {
   Register &Idx;
   AAResults *AA;
 
-  FoldedLdIdx_match(const MachineInstr &Tgt, MachineOperand &Addr,
-                    Register &Idx, AAResults *AA)
-      : Tgt(Tgt), Addr(Addr), Idx(Idx), AA(AA) {}
-
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     const MachineInstr *LDAbsIdx = getOpcodeDef(MOS::G_LOAD_ABS_IDX, Reg, MRI);
     if (!LDAbsIdx || !shouldFoldMemAccess(Tgt, *LDAbsIdx, AA))
@@ -352,7 +343,6 @@ struct FoldedLdIdx_match {
     return true;
   }
 };
-
 inline FoldedLdIdx_match m_FoldedLdIdx(const MachineInstr &Tgt,
                                        MachineOperand &Addr, Register &Idx,
                                        AAResults *AA) {
@@ -365,10 +355,6 @@ struct FoldedLdIndirIdx_match {
   Register &Idx;
   AAResults *AA;
 
-  FoldedLdIndirIdx_match(const MachineInstr &Tgt, Register &Addr, Register &Idx,
-                         AAResults *AA)
-      : Tgt(Tgt), Addr(Addr), Idx(Idx), AA(AA) {}
-
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     const MachineInstr *LdIndirIdx =
         getOpcodeDef(MOS::G_LOAD_INDIR_IDX, Reg, MRI);
@@ -379,7 +365,6 @@ struct FoldedLdIndirIdx_match {
     return true;
   }
 };
-
 inline FoldedLdIndirIdx_match m_FoldedLdIndirIdx(const MachineInstr &Tgt,
                                                  Register &Addr, Register &Idx,
                                                  AAResults *AA) {
@@ -1125,9 +1110,6 @@ template <typename ADDR_P, typename CARRYIN_P> struct GShlE_match {
   ADDR_P Addr;
   CARRYIN_P CarryIn;
 
-  GShlE_match(Register &CarryOut, const ADDR_P &Addr, const CARRYIN_P &CarryIn)
-      : CarryOut(CarryOut), Addr(Addr), CarryIn(CarryIn) {}
-
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     const MachineInstr *GShlE = getOpcodeDef(MOS::G_SHLE, Reg, MRI);
     if (!GShlE)
@@ -1137,7 +1119,6 @@ template <typename ADDR_P, typename CARRYIN_P> struct GShlE_match {
            CarryIn.match(MRI, GShlE->getOperand(3).getReg());
   }
 };
-
 template <typename ADDR_P, typename CARRYIN_P>
 GShlE_match<ADDR_P, CARRYIN_P> m_GShlE(Register &CarryOut, const ADDR_P &Addr,
                                        const CARRYIN_P &CarryIn) {
@@ -1149,9 +1130,6 @@ template <typename ADDR_P, typename CARRYIN_P> struct GLshrE_match {
   ADDR_P Addr;
   CARRYIN_P CarryIn;
 
-  GLshrE_match(Register &CarryOut, const ADDR_P &Addr, const CARRYIN_P &CarryIn)
-      : CarryOut(CarryOut), Addr(Addr), CarryIn(CarryIn) {}
-
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     const MachineInstr *GLshrE = getOpcodeDef(MOS::G_LSHRE, Reg, MRI);
     if (!GLshrE)
@@ -1161,7 +1139,6 @@ template <typename ADDR_P, typename CARRYIN_P> struct GLshrE_match {
            CarryIn.match(MRI, GLshrE->getOperand(3).getReg());
   }
 };
-
 template <typename ADDR_P, typename CARRYIN_P>
 GLshrE_match<ADDR_P, CARRYIN_P> m_GLshrE(Register &CarryOut, const ADDR_P &Addr,
                                          const CARRYIN_P &CarryIn) {
