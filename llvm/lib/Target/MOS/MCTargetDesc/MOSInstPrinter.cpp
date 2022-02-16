@@ -42,15 +42,15 @@ char* getOperand(size_t &SpacesSeen, char &Letter) {
 
 std::string MOSInstPrinter::getAiryOperands(const MCInst *MI,
                                             uint64_t Address) {
-  std::string AiryOperands;
-  raw_string_ostream AiryOperandStream(AiryOperands);
+  std::string Str;
+  raw_string_ostream StrStream(Str);
 
   auto MnemonicInfo = getMnemonic(MI);
   assert(MnemonicInfo.second && "Missing opcode for instruction.");
 
-  printInstruction(MI, Address, AiryOperandStream);
+  printInstruction(MI, Address, StrStream);
 
-  return AiryOperandStream.str();
+  return StrStream.str();
 }
 
 std::string MOSInstPrinter::getCorrectOperands(const MCInst *MI,
