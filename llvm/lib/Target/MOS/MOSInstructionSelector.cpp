@@ -377,6 +377,8 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();
 
+  Register Dst = MI.getOperand(0).getReg();
+
   LLT S1 = LLT::scalar(1);
 
   if (auto RHSConst =
@@ -397,13 +399,13 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   unsigned Opcode;
   if (MI.getOpcode() == MOS::G_ADD) {
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GAdd(m_Reg(LHS),
                         m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA))));
     Opcode = MOS::ADCAbs;
   } else {
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GSub(m_Reg(LHS),
                         m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA))));
     Opcode = MOS::SBCAbs;
@@ -413,7 +415,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
     Register CIn =
         Builder.buildInstr(MOS::LDCImm, {S1}, {CarryInVal}).getReg(0);
     auto Instr = Builder.buildInstr(Opcode)
-                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(Dst)
                      .addDef(MRI.createGenericVirtualRegister(S1))
                      .addDef(MRI.createGenericVirtualRegister(S1))
                      .addUse(LHS)
@@ -429,13 +431,13 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   Register Idx;
   if (MI.getOpcode() == MOS::G_ADD) {
     Success = mi_match(
-        MI.getOperand(0).getReg(), MRI,
+        Dst, MRI,
         m_GAdd(m_Reg(LHS),
                m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA))));
     Opcode = MOS::ADCAbsIdx;
   } else {
     Success = mi_match(
-        MI.getOperand(0).getReg(), MRI,
+        Dst, MRI,
         m_GSub(m_Reg(LHS),
                m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA))));
     Opcode = MOS::SBCAbsIdx;
@@ -444,7 +446,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
     Register CIn =
         Builder.buildInstr(MOS::LDCImm, {S1}, {CarryInVal}).getReg(0);
     auto Instr = Builder.buildInstr(Opcode)
-                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(Dst)
                      .addDef(MRI.createGenericVirtualRegister(S1))
                      .addDef(MRI.createGenericVirtualRegister(S1))
                      .addUse(LHS)
@@ -461,14 +463,14 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   Register IndirAddr;
   if (MI.getOpcode() == MOS::G_ADD) {
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GAdd(m_Reg(LHS),
                         m_all_of(m_MInstr(Load),
                                  m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA))));
     Opcode = MOS::ADCIndirIdx;
   } else {
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GSub(m_Reg(LHS),
                         m_all_of(m_MInstr(Load),
                                  m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA))));
@@ -478,7 +480,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
     Register CIn =
         Builder.buildInstr(MOS::LDCImm, {S1}, {CarryInVal}).getReg(0);
     auto Instr = Builder.buildInstr(Opcode)
-                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(Dst)
                      .addDef(MRI.createGenericVirtualRegister(S1))
                      .addDef(MRI.createGenericVirtualRegister(S1))
                      .addUse(LHS)
@@ -499,6 +501,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();
 
+  Register Dst = MI.getOperand(0).getReg();
   Register LHS;
   MachineOperand Addr = MachineOperand::CreateReg(0, false);
 
@@ -509,21 +512,21 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case MOS::G_AND:
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GAnd(m_Reg(LHS),
                         m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA))));
     Opcode = MOS::ANDAbs;
     break;
   case MOS::G_XOR:
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GXor(m_Reg(LHS),
                         m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA))));
     Opcode = MOS::EORAbs;
     break;
   case MOS::G_OR:
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GOr(m_Reg(LHS),
                        m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA))));
     Opcode = MOS::ORAAbs;
@@ -531,7 +534,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   }
   if (Success) {
     auto Instr = Builder.buildInstr(Opcode)
-                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(Dst)
                      .addUse(LHS)
                      .add(Addr)
                      .cloneMemRefs(*Load);
@@ -545,21 +548,21 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case MOS::G_AND:
     Success = mi_match(
-        MI.getOperand(0).getReg(), MRI,
+        Dst, MRI,
         m_GAnd(m_Reg(LHS),
                m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA))));
     Opcode = MOS::ANDAbsIdx;
     break;
   case MOS::G_XOR:
     Success = mi_match(
-        MI.getOperand(0).getReg(), MRI,
+        Dst, MRI,
         m_GXor(m_Reg(LHS),
                m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA))));
     Opcode = MOS::EORAbsIdx;
     break;
   case MOS::G_OR:
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GOr(m_Reg(LHS), m_all_of(m_MInstr(Load),
                                             m_FoldedLdIdx(MI, Addr, Idx, AA))));
     Opcode = MOS::ORAAbsIdx;
@@ -567,7 +570,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   }
   if (Success) {
     auto Instr = Builder.buildInstr(Opcode)
-                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(Dst)
                      .addUse(LHS)
                      .add(Addr)
                      .addUse(Idx)
@@ -583,7 +586,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case MOS::G_AND:
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GAnd(m_Reg(LHS),
                         m_all_of(m_MInstr(Load),
                                  m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA))));
@@ -591,7 +594,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
     break;
   case MOS::G_XOR:
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GXor(m_Reg(LHS),
                         m_all_of(m_MInstr(Load),
                                  m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA))));
@@ -599,7 +602,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
     break;
   case MOS::G_OR:
     Success =
-        mi_match(MI.getOperand(0).getReg(), MRI,
+        mi_match(Dst, MRI,
                  m_GOr(m_Reg(LHS),
                        m_all_of(m_MInstr(Load),
                                 m_FoldedLdIndirIdx(MI, IndirAddr, Idx, AA))));
@@ -608,7 +611,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   }
   if (Success) {
     auto Instr = Builder.buildInstr(Opcode)
-                     .addDef(MI.getOperand(0).getReg())
+                     .addDef(Dst)
                      .addUse(LHS)
                      .addUse(IndirAddr)
                      .addUse(Idx)
@@ -1206,13 +1209,14 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();
 
+  Register Val = MI.getOperand(0).getReg();
   MachineInstr *Load;
 
   // Read-modify-write instruction patterns are rooted at store instructions, so
   // select one if possible. This can make an entire instruction sequence dead.
   if (MI.getOpcode() == MOS::G_STORE_ABS) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
-    if (mi_match(MI.getOperand(0).getReg(), MRI,
+    if (mi_match(Val, MRI,
                  m_GAdd(m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA)),
                         m_SpecificICst(1))) &&
         Addr.isIdenticalTo(MI.getOperand(1))) {
@@ -1220,7 +1224,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
-    if (mi_match(MI.getOperand(0).getReg(), MRI,
+    if (mi_match(Val, MRI,
                  m_GAdd(m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA)),
                         m_SpecificICst(-1))) &&
         Addr.isIdenticalTo(MI.getOperand(1))) {
@@ -1230,11 +1234,11 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
     }
 
     MachineInstr *IncDec;
-    if (mi_match(MI.getOperand(0).getReg(), MRI,
+    if (mi_match(Val, MRI,
                  m_IncDecMBAbs(IncDec, Addr, Load, AA))) {
       unsigned NumBytes = IncDec->getNumDefs();
       for (unsigned I = 0; I < NumBytes; ++I) {
-        if (IncDec->getOperand(I).getReg() == MI.getOperand(0).getReg()) {
+        if (IncDec->getOperand(I).getReg() == Val) {
           MachineOperand NewAddr(Addr);
           // Remove the operand from use lists.
           IncDec->getOperand(I + NumBytes).ChangeToGA(nullptr, 0);
@@ -1253,7 +1257,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
     }
 
     Register CarryOut;
-    if (mi_match(MI.getOperand(0).getReg(), MRI,
+    if (mi_match(Val, MRI,
                  m_GShlE(CarryOut,
                          m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA)),
                          m_SpecificICst(0))) &&
@@ -1267,7 +1271,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
-    if (mi_match(MI.getOperand(0).getReg(), MRI,
+    if (mi_match(Val, MRI,
                  m_GLshrE(CarryOut,
                           m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA)),
                           m_SpecificICst(0))) &&
@@ -1282,7 +1286,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       return true;
     }
     Register CarryIn;
-    if (mi_match(MI.getOperand(0).getReg(), MRI,
+    if (mi_match(Val, MRI,
                  m_GShlE(CarryOut,
                          m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA)),
                          m_Reg(CarryIn))) &&
@@ -1297,7 +1301,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
-    if (mi_match(MI.getOperand(0).getReg(), MRI,
+    if (mi_match(Val, MRI,
                  m_GLshrE(CarryOut,
                           m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA)),
                           m_Reg(CarryIn))) &&
@@ -1316,7 +1320,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
     Register Idx;
     if (mi_match(
-            MI.getOperand(0).getReg(), MRI,
+            Val, MRI,
             m_GAdd(m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA)),
                    m_SpecificICst(1))) &&
         Addr.isIdenticalTo(MI.getOperand(1)) &&
@@ -1331,7 +1335,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       return true;
     }
     if (mi_match(
-            MI.getOperand(0).getReg(), MRI,
+            Val, MRI,
             m_GAdd(m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA)),
                    m_SpecificICst(-1))) &&
         Addr.isIdenticalTo(MI.getOperand(1)) &&
@@ -1347,7 +1351,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
     }
     Register CarryOut;
     if (mi_match(
-            MI.getOperand(0).getReg(), MRI,
+            Val, MRI,
             m_GShlE(CarryOut,
                     m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA)),
                     m_SpecificICst(0))) &&
@@ -1364,7 +1368,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       return true;
     }
     if (mi_match(
-            MI.getOperand(0).getReg(), MRI,
+            Val, MRI,
             m_GLshrE(CarryOut,
                      m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA)),
                      m_SpecificICst(0))) &&
@@ -1382,7 +1386,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
     }
     Register CarryIn;
     if (mi_match(
-            MI.getOperand(0).getReg(), MRI,
+            Val, MRI,
             m_GShlE(CarryOut,
                     m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA)),
                     m_Reg(CarryIn))) &&
@@ -1400,7 +1404,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       return true;
     }
     if (mi_match(
-            MI.getOperand(0).getReg(), MRI,
+            Val, MRI,
             m_GLshrE(CarryOut,
                      m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA)),
                      m_Reg(CarryIn))) &&
