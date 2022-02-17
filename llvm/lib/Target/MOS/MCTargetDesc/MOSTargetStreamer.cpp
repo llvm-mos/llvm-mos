@@ -14,9 +14,11 @@
 
 #include "MOSMCELFStreamer.h"
 
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 
 namespace llvm {
 

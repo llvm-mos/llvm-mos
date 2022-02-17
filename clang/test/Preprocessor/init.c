@@ -2604,6 +2604,8 @@
 // MOS: #define __ATOMIC_RELEASE 3
 // MOS: #define __ATOMIC_SEQ_CST 5
 // MOS: #define __BIGGEST_ALIGNMENT__ 1
+// MOS: #define __BITINT_MAXWIDTH__ 128
+// MOS: #define __BOOL_WIDTH__ 8
 // MOS: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // MOS: #define __CHAR16_TYPE__ unsigned short
 // MOS: #define __CHAR32_TYPE__ long unsigned int
@@ -2639,7 +2641,6 @@
 // MOS: #define __FLT_DENORM_MIN__ 1.40129846e-45F
 // MOS: #define __FLT_DIG__ 6
 // MOS: #define __FLT_EPSILON__ 1.19209290e-7F
-// MOS: #define __FLT_EVAL_METHOD__ 0
 // MOS: #define __FLT_HAS_DENORM__ 1
 // MOS: #define __FLT_HAS_INFINITY__ 1
 // MOS: #define __FLT_HAS_QUIET_NAN__ 1
@@ -2686,35 +2687,44 @@
 // MOS: #define __INT_FAST16_FMTi__ "hi"
 // MOS: #define __INT_FAST16_MAX__ 32767
 // MOS: #define __INT_FAST16_TYPE__ short
+// MOS: #define __INT_FAST16_WIDTH__ 16
 // MOS: #define __INT_FAST32_FMTd__ "ld"
 // MOS: #define __INT_FAST32_FMTi__ "li"
 // MOS: #define __INT_FAST32_MAX__ 2147483647L
 // MOS: #define __INT_FAST32_TYPE__ long int
+// MOS: #define __INT_FAST32_WIDTH__ 32
 // MOS: #define __INT_FAST64_FMTd__ "lld"
 // MOS: #define __INT_FAST64_FMTi__ "lli"
 // MOS: #define __INT_FAST64_MAX__ 9223372036854775807LL
 // MOS: #define __INT_FAST64_TYPE__ long long int
+// MOS: #define __INT_FAST64_WIDTH__ 64
 // MOS: #define __INT_FAST8_FMTd__ "hhd"
 // MOS: #define __INT_FAST8_FMTi__ "hhi"
 // MOS: #define __INT_FAST8_MAX__ 127
 // MOS: #define __INT_FAST8_TYPE__ signed char
+// MOS: #define __INT_FAST8_WIDTH__ 8
 // MOS: #define __INT_LEAST16_FMTd__ "hd"
 // MOS: #define __INT_LEAST16_FMTi__ "hi"
 // MOS: #define __INT_LEAST16_MAX__ 32767
 // MOS: #define __INT_LEAST16_TYPE__ short
+// MOS: #define __INT_LEAST16_WIDTH__ 16
 // MOS: #define __INT_LEAST32_FMTd__ "ld"
 // MOS: #define __INT_LEAST32_FMTi__ "li"
 // MOS: #define __INT_LEAST32_MAX__ 2147483647L
 // MOS: #define __INT_LEAST32_TYPE__ long int
+// MOS: #define __INT_LEAST32_WIDTH__ 32
 // MOS: #define __INT_LEAST64_FMTd__ "lld"
 // MOS: #define __INT_LEAST64_FMTi__ "lli"
 // MOS: #define __INT_LEAST64_MAX__ 9223372036854775807LL
 // MOS: #define __INT_LEAST64_TYPE__ long long int
+// MOS: #define __INT_LEAST64_WIDTH__ 64
 // MOS: #define __INT_LEAST8_FMTd__ "hhd"
 // MOS: #define __INT_LEAST8_FMTi__ "hhi"
 // MOS: #define __INT_LEAST8_MAX__ 127
 // MOS: #define __INT_LEAST8_TYPE__ signed char
+// MOS: #define __INT_LEAST8_WIDTH__ 8
 // MOS: #define __INT_MAX__ 32767
+// MOS: #define __INT_WIDTH__ 16
 // MOS: #define __LDBL_DECIMAL_DIG__ 17
 // MOS: #define __LDBL_DENORM_MIN__ 4.9406564584124654e-324L
 // MOS: #define __LDBL_DIG__ 15
@@ -2730,15 +2740,21 @@
 // MOS: #define __LDBL_MIN_EXP__ (-1021)
 // MOS: #define __LDBL_MIN__ 2.2250738585072014e-308L
 // MOS: #define __LITTLE_ENDIAN__ 1
+// MOS: #define __LLONG_WIDTH__ 64
 // MOS: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // MOS: #define __LONG_MAX__ 2147483647L
+// MOS: #define __LONG_WIDTH__ 32
 // MOS: #define __NO_INLINE__ 1
+// MOS: #define __NO_MATH_ERRNO__ 1
 // MOS: #define __OBJC_BOOL_IS_BOOL 0
 // MOS: #define __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES 3
 // MOS: #define __OPENCL_MEMORY_SCOPE_DEVICE 2
 // MOS: #define __OPENCL_MEMORY_SCOPE_SUB_GROUP 4
 // MOS: #define __OPENCL_MEMORY_SCOPE_WORK_GROUP 1
 // MOS: #define __OPENCL_MEMORY_SCOPE_WORK_ITEM 0
+// MOS: #define __ORDER_BIG_ENDIAN__ 4321
+// MOS: #define __ORDER_LITTLE_ENDIAN__ 1234
+// MOS: #define __ORDER_PDP_ENDIAN__ 3412
 // MOS: #define __POINTER_WIDTH__ 16
 // MOS: #define __PRAGMA_REDEFINE_EXTNAME 1
 // MOS: #define __PTRDIFF_FMTd__ "hd"
@@ -2748,6 +2764,7 @@
 // MOS: #define __PTRDIFF_WIDTH__ 16
 // MOS: #define __SCHAR_MAX__ 127
 // MOS: #define __SHRT_MAX__ 32767
+// MOS: #define __SHRT_WIDTH__ 16
 // MOS: #define __SIG_ATOMIC_MAX__ 255
 // MOS: #define __SIG_ATOMIC_WIDTH__ 8
 // MOS: #define __SIZEOF_DOUBLE__ 8
@@ -2866,6 +2883,7 @@
 // MOS: #define __UINT_LEAST8_MAX__ 255
 // MOS: #define __UINT_LEAST8_TYPE__ unsigned char
 // MOS: #define __USER_LABEL_PREFIX__
+// MOS: #define __VERSION__ "{{.*}}Clang{{.*}}
 // MOS: #define __WCHAR_MAX__ 4294967295UL
 // MOS: #define __WCHAR_TYPE__ long unsigned int
 // MOS: #define __WCHAR_UNSIGNED__ 1

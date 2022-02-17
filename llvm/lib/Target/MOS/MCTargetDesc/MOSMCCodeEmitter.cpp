@@ -140,9 +140,7 @@ unsigned MOSMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return 0;
 }
 
-MCCodeEmitter *createMOSMCCodeEmitter(const MCInstrInfo &MCII,
-                                      const MCRegisterInfo &MRI,
-                                      MCContext &Ctx) {
+MCCodeEmitter *createMOSMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx) {
   return new MOSMCCodeEmitter(MCII, Ctx);
 }
 

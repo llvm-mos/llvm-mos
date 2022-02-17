@@ -39,9 +39,7 @@ Target &getTheMOSTarget();
 MCInstrInfo *createMOSMCInstrInfo();
 
 /// Creates a machine code emitter for MOS.
-MCCodeEmitter *createMOSMCCodeEmitter(const MCInstrInfo &MCII,
-                                      const MCRegisterInfo &MRI,
-                                      MCContext &Ctx);
+MCCodeEmitter *createMOSMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 
 /// Creates an assembly backend for MOS.
 MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
