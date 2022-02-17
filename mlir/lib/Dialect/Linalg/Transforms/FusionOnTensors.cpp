@@ -283,10 +283,14 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
                           tileInterchange.begin(), tileInterchange.end()))
                       .setTileSizes(tileSizes)
                       .setLoopType(LinalgTilingLoopType::Loops);
-  Optional<TiledLinalgOp> tiledRootOp = tileLinalgOp(b, rootOp, tilingOptions);
+
+  // TODO: Propagate RewriterBase everywhere.
+  IRRewriter rewriter(b);
+  FailureOr<TiledLinalgOp> tiledRootOp =
+      tileLinalgOp(rewriter, rootOp, tilingOptions);
 
   // Exit if tiling the root operation fails.
-  if (!tiledRootOp.hasValue())
+  if (failed(tiledRootOp))
     return failure();
 
   // Replace all uses of the root operation if it has been tiled before. All
@@ -453,6 +457,10 @@ mlir::linalg::tileConsumerAndFuseProducers(OpBuilder &b, LinalgOp consumerOp,
   if (failed(tileLoopNest.tileRootOp(b, innerTileSizes, tileInterchange)))
     return failure();
   fuseProducersGreedily(tileLoopNest.getRootOp().getInputOperands());
+
+  // Exit if the tile loop nest is empty since all tile sizes are zero.
+  if (tileLoopNest.isEmpty())
+    return failure();
 
   return tileLoopNest;
 }

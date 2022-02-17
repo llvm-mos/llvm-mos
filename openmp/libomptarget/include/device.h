@@ -57,7 +57,8 @@ private:
 
   struct StatesTy {
     StatesTy(uint64_t DRC, uint64_t HRC)
-        : DynRefCount(DRC), HoldRefCount(HRC) {}
+        : DynRefCount(DRC), HoldRefCount(HRC),
+          MayContainAttachedPointers(false) {}
     /// The dynamic reference count is the standard reference count as of OpenMP
     /// 4.5.  The hold reference count is an OpenMP extension for the sake of
     /// OpenACC support.
@@ -75,6 +76,11 @@ private:
     ///
     uint64_t DynRefCount;
     uint64_t HoldRefCount;
+
+    /// Boolean flag to remember if any subpart of the mapped region might be
+    /// an attached pointer.
+    bool MayContainAttachedPointers;
+
     /// This mutex will be locked when data movement is issued. For targets that
     /// doesn't support async data movement, this mutex can guarantee that after
     /// it is released, memory region on the target is update to date. For
@@ -82,6 +88,14 @@ private:
     /// movement has been issued. This mutex *must* be locked right before
     /// releasing the mapping table lock.
     std::mutex UpdateMtx;
+    /// Pointer to the event corresponding to the data update of this map.
+    /// Note: At present this event is created when the first data transfer from
+    /// host to device is issued, and only being used for H2D. It is not used
+    /// for data transfer in another direction (device to host). It is still
+    /// unclear whether we need it for D2H. If in the future we need similar
+    /// mechanism for D2H, and if the event cannot be shared between them, Event
+    /// should be written as <tt>void *Event[2]</tt>.
+    void *Event = nullptr;
   };
   // When HostDataToTargetTy is used by std::set, std::set::iterator is const
   // use unique_ptr to make States mutable.
@@ -114,6 +128,16 @@ public:
 
   /// Get the hold reference count.
   uint64_t getHoldRefCount() const { return States->HoldRefCount; }
+
+  /// Get the event bound to this data map.
+  void *getEvent() const { return States->Event; }
+
+  /// Add a new event, if necessary.
+  /// Returns OFFLOAD_FAIL if something went wrong, OFFLOAD_SUCCESS otherwise.
+  int addEventIfNecessary(DeviceTy &Device, AsyncInfoTy &AsyncInfo) const;
+
+  /// Set the event bound to this data map.
+  void setEvent(void *Event) const { States->Event = Event; }
 
   /// Reset the specified reference count unless it's infinity.  Reset to 1
   /// (even if currently 0) so it can be followed by a decrement.
@@ -178,6 +202,25 @@ public:
     return ThisRefCount == 1;
   }
 
+  void setMayContainAttachedPointers() const {
+    States->MayContainAttachedPointers = true;
+  }
+  bool getMayContainAttachedPointers() const {
+    return States->MayContainAttachedPointers;
+  }
+
+  /// Helper to make sure the entry is locked in a scope.
+  /// TODO: We should generalize this and use it for all our objects that use
+  /// lock/unlock methods.
+  struct LockGuard {
+    const HostDataToTargetTy &Entry;
+
+  public:
+    LockGuard(const HostDataToTargetTy &Entry) : Entry(Entry) { Entry.lock(); }
+    ~LockGuard() { Entry.unlock(); }
+  };
+
+private:
   void lock() const { States->UpdateMtx.lock(); }
 
   void unlock() const { States->UpdateMtx.unlock(); }
@@ -290,10 +333,11 @@ struct DeviceTy {
                    bool HasCloseModifier, bool HasPresentModifier,
                    bool HasHoldModifier, AsyncInfoTy &AsyncInfo);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
-  void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
-                       bool UpdateRefCount, bool UseHoldRefCount,
-                       bool &IsHostPtr, bool MustContain = false,
-                       bool ForceDelete = false);
+  TargetPointerResultTy getTgtPtrBegin(void *HstPtrBegin, int64_t Size,
+                                       bool &IsLast, bool UpdateRefCount,
+                                       bool UseHoldRefCount, bool &IsHostPtr,
+                                       bool MustContain = false,
+                                       bool ForceDelete = false);
   /// For the map entry for \p HstPtrBegin, decrement the reference count
   /// specified by \p HasHoldModifier and, if the the total reference count is
   /// then zero, deallocate the corresponding device storage and remove the map
@@ -382,6 +426,9 @@ extern bool device_is_ready(int device_num);
 
 /// Struct for the data required to handle plugins
 struct PluginManager {
+  PluginManager(bool UseEventsForAtomicTransfers)
+      : UseEventsForAtomicTransfers(UseEventsForAtomicTransfers) {}
+
   /// RTLs identified on the host
   RTLsTy RTLs;
 
@@ -402,6 +449,10 @@ struct PluginManager {
   // Store target policy (disabled, mandatory, default)
   kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
   std::mutex TargetOffloadMtx; ///< For TargetOffloadPolicy
+
+  /// Flag to indicate if we use events to ensure the atomicity of
+  /// map clauses or not. Can be modified with an environment variable.
+  const bool UseEventsForAtomicTransfers;
 };
 
 extern PluginManager *PM;

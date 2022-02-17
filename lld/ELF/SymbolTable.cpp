@@ -15,9 +15,7 @@
 
 #include "SymbolTable.h"
 #include "Config.h"
-#include "LinkerScript.h"
 #include "Symbols.h"
-#include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
@@ -40,8 +38,6 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   idx2 = idx1;
   idx1 = idx3;
 
-  if (real->exportDynamic)
-    sym->exportDynamic = true;
   if (!real->isUsedInRegularObj && sym->isUndefined())
     sym->isUsedInRegularObj = false;
 
@@ -86,18 +82,17 @@ Symbol *SymbolTable::insert(StringRef name) {
   // when it is a placeholder must be initialized here.
   sym->setName(name);
   sym->symbolKind = Symbol::PlaceholderKind;
-  sym->versionId = VER_NDX_GLOBAL;
+  sym->partition = 1;
   sym->visibility = STV_DEFAULT;
   sym->isUsedInRegularObj = false;
   sym->exportDynamic = false;
   sym->inDynamicList = false;
-  sym->canInline = true;
   sym->referenced = false;
   sym->traced = false;
   sym->scriptDefined = false;
+  sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
-  sym->partition = 1;
   return sym;
 }
 
@@ -143,12 +138,13 @@ StringMap<SmallVector<Symbol *, 0>> &SymbolTable::getDemangledSyms() {
         StringRef name = sym->getName();
         size_t pos = name.find('@');
         if (pos == std::string::npos)
-          demangled = demangleItanium(name);
+          demangled = demangle(name, config->demangle);
         else if (pos + 1 == name.size() || name[pos + 1] == '@')
-          demangled = demangleItanium(name.substr(0, pos));
+          demangled = demangle(name.substr(0, pos), config->demangle);
         else
-          demangled =
-              (demangleItanium(name.substr(0, pos)) + name.substr(pos)).str();
+          demangled = (demangle(name.substr(0, pos), config->demangle) +
+                       name.substr(pos))
+                          .str();
         (*demangledSyms)[demangled].push_back(sym);
       }
   }

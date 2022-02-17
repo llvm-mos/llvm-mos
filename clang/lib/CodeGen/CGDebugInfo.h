@@ -40,7 +40,6 @@ class ClassTemplateSpecializationDecl;
 class GlobalDecl;
 class ModuleMap;
 class ObjCInterfaceDecl;
-class ObjCIvarDecl;
 class UsingDecl;
 class VarDecl;
 enum class DynamicInitKind : unsigned;
@@ -580,6 +579,14 @@ private:
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
   llvm::DILocalVariable *EmitDeclare(const VarDecl *decl, llvm::Value *AI,
+                                     llvm::Optional<unsigned> ArgNo,
+                                     CGBuilderTy &Builder,
+                                     const bool UsePointerValue = false);
+
+  /// Emit call to llvm.dbg.declare for a binding declaration.
+  /// Returns a pointer to the DILocalVariable associated with the
+  /// llvm.dbg.declare, or nullptr otherwise.
+  llvm::DILocalVariable *EmitDeclare(const BindingDecl *decl, llvm::Value *AI,
                                      llvm::Optional<unsigned> ArgNo,
                                      CGBuilderTy &Builder,
                                      const bool UsePointerValue = false);

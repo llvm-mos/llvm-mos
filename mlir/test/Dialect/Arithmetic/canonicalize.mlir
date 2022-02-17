@@ -172,6 +172,15 @@ func @truncConstant(%arg0: i8) -> i16 {
   return %tr : i16
 }
 
+// CHECK-LABEL: @truncTrunc
+//       CHECK:   %[[cres:.+]] = arith.trunci %arg0 : i64 to i8
+//       CHECK:   return %[[cres]]
+func @truncTrunc(%arg0: i64) -> i8 {
+  %tr1 = arith.trunci %arg0 : i64 to i32
+  %tr2 = arith.trunci %tr1 : i32 to i8
+  return %tr2 : i8
+}
+
 // CHECK-LABEL: @truncFPConstant
 //       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
 //       CHECK:   return %[[cres]]
@@ -427,6 +436,18 @@ func @notCmpUGE(%arg0: i8, %arg1: i8) -> i1 {
 
 // -----
 
+// CHECK-LABEL: @xorxor(
+//       CHECK-NOT: xori
+//       CHECK:   return %arg0
+func @xorxor(%cmp : i1) -> i1 {
+  %true = arith.constant true
+  %ncmp = arith.xori %cmp, %true : i1
+  %nncmp = arith.xori %ncmp, %true : i1
+  return %nncmp : i1
+}
+
+// -----
+
 // CHECK-LABEL: @bitcastSameType(
 // CHECK-SAME: %[[ARG:[a-zA-Z0-9_]*]]
 func @bitcastSameType(%arg : f32) -> f32 {
@@ -594,6 +615,116 @@ func @test_minui(%arg0 : i8) -> (i8, i8, i8, i8) {
   %2 = arith.minui %arg0, %minIntCst : i8
   %3 = arith.minui %arg0, %c0 : i8
   return %0, %1, %2, %3: i8, i8, i8, i8
+}
+
+// -----
+
+// CHECK-LABEL: @test_minf(
+func @test_minf(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.minf %arg0, %[[C0]]
+  // CHECK-NEXT:  return %[[X]], %arg0, %arg0
+  %c0 = arith.constant 0.0 : f32
+  %inf = arith.constant 0x7F800000 : f32
+  %0 = arith.minf %c0, %arg0 : f32
+  %1 = arith.minf %arg0, %arg0 : f32
+  %2 = arith.minf %inf, %arg0 : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_maxf(
+func @test_maxf(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant
+  // CHECK-NEXT:  %[[X:.+]] = arith.maxf %arg0, %[[C0]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %arg0
+  %c0 = arith.constant 0.0 : f32
+  %-inf = arith.constant 0xFF800000 : f32
+  %0 = arith.maxf %c0, %arg0 : f32
+  %1 = arith.maxf %arg0, %arg0 : f32
+  %2 = arith.maxf %-inf, %arg0 : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_addf(
+func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:   %[[C2:.+]] = arith.constant 2.0
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.addf %arg0, %[[C0]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %arg0, %[[C2]]
+  %c0 = arith.constant 0.0 : f32
+  %c-0 = arith.constant -0.0 : f32
+  %c1 = arith.constant 1.0 : f32
+  %0 = arith.addf %c0, %arg0 : f32
+  %1 = arith.addf %arg0, %c-0 : f32
+  %2 = arith.addf %c-0, %arg0 : f32
+  %3 = arith.addf %c1, %c1 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_subf(
+func @test_subf(%arg0 : f16) -> (f16, f16, f16) {
+  // CHECK-DAG:   %[[C1:.+]] = arith.constant -1.0
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant -0.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.subf %arg0, %[[C0]]
+  // CHECK-NEXT:   return %arg0, %[[X]], %[[C1]]
+  %c0 = arith.constant 0.0 : f16
+  %c-0 = arith.constant -0.0 : f16
+  %c1 = arith.constant 1.0 : f16
+  %0 = arith.subf %arg0, %c0 : f16
+  %1 = arith.subf %arg0, %c-0 : f16
+  %2 = arith.subf %c0, %c1 : f16
+  return %0, %1, %2 : f16, f16, f16
+}
+
+// -----
+
+// CHECK-LABEL: @test_mulf(
+func @test_mulf(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:   %[[C2:.+]] = arith.constant 2.0
+  // CHECK-DAG:   %[[C4:.+]] = arith.constant 4.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.mulf %arg0, %[[C2]]
+  // CHECK-NEXT:  return %[[X]], %arg0, %arg0, %[[C4]]
+  %c1 = arith.constant 1.0 : f32
+  %c2 = arith.constant 2.0 : f32
+  %0 = arith.mulf %c2, %arg0 : f32
+  %1 = arith.mulf %arg0, %c1 : f32
+  %2 = arith.mulf %c1, %arg0 : f32
+  %3 = arith.mulf %c2, %c2 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_divf(
+func @test_divf(%arg0 : f64) -> (f64, f64) {
+  // CHECK-NEXT:  %[[C5:.+]] = arith.constant 5.000000e-01
+  // CHECK-NEXT:   return %arg0, %[[C5]]
+  %c1 = arith.constant 1.0 : f64
+  %c2 = arith.constant 2.0 : f64
+  %0 = arith.divf %arg0, %c1 : f64
+  %1 = arith.divf %c1, %c2 : f64
+  return %0, %1 : f64, f64
+}
+
+// -----
+
+// CHECK-LABEL: @test_cmpf(
+func @test_cmpf(%arg0 : f32) -> (i1, i1, i1, i1) {
+//   CHECK-DAG:   %[[T:.*]] = arith.constant true
+//   CHECK-DAG:   %[[F:.*]] = arith.constant false
+//       CHECK:   return %[[F]], %[[F]], %[[T]], %[[T]]
+  %nan = arith.constant 0x7fffffff : f32
+  %0 = arith.cmpf olt, %nan, %arg0 : f32
+  %1 = arith.cmpf olt, %arg0, %nan : f32
+  %2 = arith.cmpf ugt, %nan, %arg0 : f32
+  %3 = arith.cmpf ugt, %arg0, %nan : f32
+  return %0, %1, %2, %3 : i1, i1, i1, i1
 }
 
 // -----

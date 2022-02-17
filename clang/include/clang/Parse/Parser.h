@@ -184,6 +184,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> PCSectionHandler;
   std::unique_ptr<PragmaHandler> MSCommentHandler;
   std::unique_ptr<PragmaHandler> MSDetectMismatchHandler;
+  std::unique_ptr<PragmaHandler> FPEvalMethodHandler;
   std::unique_ptr<PragmaHandler> FloatControlHandler;
   std::unique_ptr<PragmaHandler> MSPointersToMembers;
   std::unique_ptr<PragmaHandler> MSVtorDisp;
@@ -1475,8 +1476,7 @@ private:
   /// information that has been parsed prior to parsing declaration
   /// specifiers.
   struct ParsedTemplateInfo {
-    ParsedTemplateInfo()
-      : Kind(NonTemplate), TemplateParams(nullptr), TemplateLoc() { }
+    ParsedTemplateInfo() : Kind(NonTemplate), TemplateParams(nullptr) {}
 
     ParsedTemplateInfo(TemplateParameterLists *TemplateParams,
                        bool isSpecialization,
@@ -1815,7 +1815,9 @@ private:
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            SmallVectorImpl<SourceLocation> &CommaLocs,
                            llvm::function_ref<void()> ExpressionStarts =
-                               llvm::function_ref<void()>());
+                               llvm::function_ref<void()>(),
+                           bool FailImmediatelyOnInvalidExpr = false,
+                           bool EarlyTypoCorrection = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -1976,6 +1978,7 @@ private:
   Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
                                           SourceLocation Loc,
                                           Sema::ConditionKind CK,
+                                          bool MissingOK,
                                           ForRangeInfo *FRI = nullptr,
                                           bool EnterForConditionScope = false);
   DeclGroupPtrTy
@@ -2080,8 +2083,8 @@ private:
   bool ParseParenExprOrCondition(StmtResult *InitStmt,
                                  Sema::ConditionResult &CondResult,
                                  SourceLocation Loc, Sema::ConditionKind CK,
-                                 SourceLocation *LParenLoc = nullptr,
-                                 SourceLocation *RParenLoc = nullptr);
+                                 bool MissingOK, SourceLocation *LParenLoc,
+                                 SourceLocation *RParenLoc);
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
@@ -3289,8 +3292,10 @@ private:
   /// Parses declarative or executable directive.
   ///
   /// \param StmtCtx The context in which we're parsing the directive.
-  StmtResult
-  ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx);
+  /// \param ReadDirectiveWithinMetadirective true if directive is within a
+  /// metadirective and therefore ends on the closing paren.
+  StmtResult ParseOpenMPDeclarativeOrExecutableDirective(
+      ParsedStmtContext StmtCtx, bool ReadDirectiveWithinMetadirective = false);
   /// Parses clause of kind \a CKind for directive of a kind \a Kind.
   ///
   /// \param DKind Kind of current directive.
@@ -3315,6 +3320,11 @@ private:
   /// nullptr.
   ///
   OMPClause *ParseOpenMPSimpleClause(OpenMPClauseKind Kind, bool ParseOnly);
+  /// Parses indirect clause
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  // false;
+  bool ParseOpenMPIndirectClause(Sema::DeclareTargetContextInfo &DTCI,
+                                 bool ParseOnly);
   /// Parses clause with a single expression and an additional argument
   /// of a kind \a Kind.
   ///

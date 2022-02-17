@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstdint>
@@ -101,6 +102,7 @@ std::ostream &operator<<(std::ostream &OS, const ValueLattice &L) {
   case ValueLattice::ValueState::Defined:
     return OS << "Any";
   }
+  llvm_unreachable("unknown ValueState!");
 }
 
 using ConstantPropagationLattice = VarMapLattice<ValueLattice>;
@@ -131,8 +133,8 @@ public:
     return ConstantPropagationLattice::bottom();
   }
 
-  ConstantPropagationLattice
-  transfer(const Stmt *S, ConstantPropagationLattice Vars, Environment &Env) {
+  void transfer(const Stmt *S, ConstantPropagationLattice &Vars,
+                Environment &Env) {
     auto matcher =
         stmt(anyOf(declStmt(hasSingleDecl(
                        varDecl(decl().bind(kVar), hasType(isInteger()),
@@ -147,7 +149,7 @@ public:
     ASTContext &Context = getASTContext();
     auto Results = match(matcher, *S, Context);
     if (Results.empty())
-      return Vars;
+      return;
     const BoundNodes &Nodes = Results[0];
 
     const auto *Var = Nodes.getNodeAs<clang::VarDecl>(kVar);
@@ -164,10 +166,7 @@ public:
         // is (it is implementation defined), so we set it to top.
         Vars[Var] = ValueLattice::top();
       }
-      return Vars;
-    }
-
-    if (Nodes.getNodeAs<clang::Expr>(kJustAssignment)) {
+    } else if (Nodes.getNodeAs<clang::Expr>(kJustAssignment)) {
       const auto *E = Nodes.getNodeAs<clang::Expr>(kRHS);
       assert(E != nullptr);
 
@@ -175,18 +174,12 @@ public:
       Vars[Var] = (E->EvaluateAsInt(R, Context) && R.Val.isInt())
                       ? ValueLattice(R.Val.getInt().getExtValue())
                       : ValueLattice::top();
-      return Vars;
-    }
-
-    // Any assignment involving the expression itself resets the variable to
-    // "unknown". A more advanced analysis could try to evaluate the compound
-    // assignment. For example, `x += 0` need not invalidate `x`.
-    if (Nodes.getNodeAs<clang::Expr>(kAssignment)) {
+    } else if (Nodes.getNodeAs<clang::Expr>(kAssignment)) {
+      // Any assignment involving the expression itself resets the variable to
+      // "unknown". A more advanced analysis could try to evaluate the compound
+      // assignment. For example, `x += 0` need not invalidate `x`.
       Vars[Var] = ValueLattice::top();
-      return Vars;
     }
-
-    llvm_unreachable("expected at least one bound identifier");
   }
 };
 
@@ -219,18 +212,20 @@ class MultiVarConstantPropagationTest : public ::testing::Test {
 protected:
   template <typename Matcher>
   void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
-    test::checkDataflow<ConstantPropagationAnalysis>(
-        Code, "fun",
-        [](ASTContext &C, Environment &) {
-          return ConstantPropagationAnalysis(C);
-        },
-        [&Expectations](
-            llvm::ArrayRef<std::pair<
-                std::string,
-                DataflowAnalysisState<ConstantPropagationAnalysis::Lattice>>>
-                Results,
-            ASTContext &) { EXPECT_THAT(Results, Expectations); },
-        {"-fsyntax-only", "-std=c++17"});
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<ConstantPropagationAnalysis>(
+            Code, "fun",
+            [](ASTContext &C, Environment &) {
+              return ConstantPropagationAnalysis(C);
+            },
+            [&Expectations](
+                llvm::ArrayRef<std::pair<
+                    std::string, DataflowAnalysisState<
+                                     ConstantPropagationAnalysis::Lattice>>>
+                    Results,
+                ASTContext &) { EXPECT_THAT(Results, Expectations); },
+            {"-fsyntax-only", "-std=c++17"}),
+        llvm::Succeeded());
   }
 };
 

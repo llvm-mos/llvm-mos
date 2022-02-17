@@ -135,7 +135,7 @@ Constant *Evaluator::MutableValue::read(Type *Ty, APInt Offset,
   while (const auto *Agg = V->Val.dyn_cast<MutableAggregate *>()) {
     Type *AggTy = Agg->Ty;
     Optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
-    if (!Index || Index->ugt(Agg->Elements.size()) ||
+    if (!Index || Index->uge(Agg->Elements.size()) ||
         !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
       return nullptr;
 
@@ -179,7 +179,7 @@ bool Evaluator::MutableValue::write(Constant *V, APInt Offset,
     MutableAggregate *Agg = MV->Val.get<MutableAggregate *>();
     Type *AggTy = Agg->Ty;
     Optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
-    if (!Index || Index->ugt(Agg->Elements.size()) ||
+    if (!Index || Index->uge(Agg->Elements.size()) ||
         !TypeSize::isKnownLE(TySize, DL.getTypeStoreSize(AggTy)))
       return false;
 
@@ -192,8 +192,10 @@ bool Evaluator::MutableValue::write(Constant *V, APInt Offset,
     MV->Val = ConstantExpr::getIntToPtr(V, MVType);
   else if (Ty->isPointerTy() && MVType->isIntegerTy())
     MV->Val = ConstantExpr::getPtrToInt(V, MVType);
-  else
+  else if (Ty != MVType)
     MV->Val = ConstantExpr::getBitCast(V, MVType);
+  else
+    MV->Val = V;
   return true;
 }
 
@@ -243,17 +245,10 @@ static Function *getFunction(Constant *C) {
 Function *
 Evaluator::getCalleeWithFormalArgs(CallBase &CB,
                                    SmallVectorImpl<Constant *> &Formals) {
-  auto *V = CB.getCalledOperand();
+  auto *V = CB.getCalledOperand()->stripPointerCasts();
   if (auto *Fn = getFunction(getVal(V)))
     return getFormalParams(CB, Fn, Formals) ? Fn : nullptr;
-
-  auto *CE = dyn_cast<ConstantExpr>(V);
-  if (!CE || CE->getOpcode() != Instruction::BitCast ||
-      !getFormalParams(CB, getFunction(CE->getOperand(0)), Formals))
-    return nullptr;
-
-  return dyn_cast<Function>(
-      ConstantFoldLoadThroughBitcast(CE, CE->getOperand(0)->getType(), DL));
+  return nullptr;
 }
 
 bool Evaluator::getFormalParams(CallBase &CB, Function *F,
@@ -282,17 +277,13 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
 
 /// If call expression contains bitcast then we may need to cast
 /// evaluated return value to a type of the call expression.
-Constant *Evaluator::castCallResultIfNeeded(Value *CallExpr, Constant *RV) {
-  ConstantExpr *CE = dyn_cast<ConstantExpr>(CallExpr);
-  if (!RV || !CE || CE->getOpcode() != Instruction::BitCast)
+Constant *Evaluator::castCallResultIfNeeded(Type *ReturnType, Constant *RV) {
+  if (!RV || RV->getType() == ReturnType)
     return RV;
 
-  if (auto *FT =
-          dyn_cast<FunctionType>(CE->getType()->getPointerElementType())) {
-    RV = ConstantFoldLoadThroughBitcast(RV, FT->getReturnType(), DL);
-    if (!RV)
-      LLVM_DEBUG(dbgs() << "Failed to fold bitcast call expr\n");
-  }
+  RV = ConstantFoldLoadThroughBitcast(RV, ReturnType, DL);
+  if (!RV)
+    LLVM_DEBUG(dbgs() << "Failed to fold bitcast call expr\n");
   return RV;
 }
 
@@ -538,7 +529,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
         if (Callee->isDeclaration()) {
           // If this is a function we can constant fold, do it.
           if (Constant *C = ConstantFoldCall(&CB, Callee, Formals, TLI)) {
-            InstResult = castCallResultIfNeeded(CB.getCalledOperand(), C);
+            InstResult = castCallResultIfNeeded(CB.getType(), C);
             if (!InstResult)
               return false;
             LLVM_DEBUG(dbgs() << "Constant folded function call. Result: "
@@ -562,7 +553,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
             return false;
           }
           ValueStack.pop_back();
-          InstResult = castCallResultIfNeeded(CB.getCalledOperand(), RetVal);
+          InstResult = castCallResultIfNeeded(CB.getType(), RetVal);
           if (RetVal && !InstResult)
             return false;
 

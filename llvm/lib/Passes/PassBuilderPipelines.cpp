@@ -259,14 +259,16 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
 
   // Hoisting of scalars and load expressions.
-  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
 
   FPM.addPass(LibCallsShrinkWrapPass());
 
   invokePeepholeEPCallbacks(FPM, Level);
 
-  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 
   // Form canonically associated expression trees, and simplify the trees using
   // basic mathematical properties. For example, this will form (nearly)
@@ -300,6 +302,8 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap));
   LPM1.addPass(SimpleLoopUnswitchPass());
+  if (EnableLoopFlatten)
+    LPM1.addPass(LoopFlattenPass());
 
   LPM2.addPass(LoopIdiomRecognizePass());
   LPM2.addPass(IndVarSimplifyPass());
@@ -311,8 +315,6 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   if (EnableLoopInterchange)
     LPM2.addPass(LoopInterchangePass());
-  if (EnableLoopFlatten)
-    LPM2.addPass(LoopFlattenPass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
@@ -335,7 +337,8 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1),
                                               /*UseMemorySSA=*/true,
                                               /*UseBlockFrequencyInfo=*/true));
-  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
   // The loop passes in LPM2 (LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
@@ -373,7 +376,8 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   // the simplifications and basic cleanup after all the simplifications.
   // TODO: Investigate if this is too expensive.
   FPM.addPass(ADCEPass());
-  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
@@ -408,7 +412,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // Global value numbering based sinking.
   if (EnableGVNSink) {
     FPM.addPass(GVNSinkPass());
-    FPM.addPass(SimplifyCFGPass());
+    FPM.addPass(
+        SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   }
 
   if (EnableConstraintElimination)
@@ -421,7 +426,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
 
-  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
   if (Level == OptimizationLevel::O3)
     FPM.addPass(AggressiveInstCombinePass());
@@ -438,7 +444,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
     FPM.addPass(PGOMemOPSizeOpt());
 
   FPM.addPass(TailCallElimPass());
-  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 
   // Form canonically associated expression trees, and simplify the trees using
   // basic mathematical properties. For example, this will form (nearly)
@@ -475,6 +482,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM1.addPass(
       SimpleLoopUnswitchPass(/* NonTrivial */ Level == OptimizationLevel::O3 &&
                              EnableO3NonTrivialUnswitching));
+  if (EnableLoopFlatten)
+    LPM1.addPass(LoopFlattenPass());
+
   LPM2.addPass(LoopIdiomRecognizePass());
   LPM2.addPass(IndVarSimplifyPass());
 
@@ -485,8 +495,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   if (EnableLoopInterchange)
     LPM2.addPass(LoopInterchangePass());
-  if (EnableLoopFlatten)
-    LPM2.addPass(LoopFlattenPass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
@@ -509,7 +517,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1),
                                               /*UseMemorySSA=*/true,
                                               /*UseBlockFrequencyInfo=*/true));
-  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   FPM.addPass(InstCombinePass());
   // The loop passes in LPM2 (LoopIdiomRecognizePass, IndVarSimplifyPass,
   // LoopDeletionPass and LoopFullUnrollPass) do not preserve MemorySSA.
@@ -574,8 +583,10 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
 
-  FPM.addPass(SimplifyCFGPass(
-      SimplifyCFGOptions().hoistCommonInsts(true).sinkCommonInsts(true)));
+  FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                  .convertSwitchRangeToICmp(true)
+                                  .hoistCommonInsts(true)
+                                  .sinkCommonInsts(true)));
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
@@ -613,7 +624,8 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
     FunctionPassManager FPM;
     FPM.addPass(SROAPass());
     FPM.addPass(EarlyCSEPass());    // Catch trivial redundancies.
-    FPM.addPass(SimplifyCFGPass()); // Merge & remove basic blocks.
+    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
+        true)));                    // Merge & remove basic blocks.
     FPM.addPass(InstCombinePass()); // Combine silly sequences.
     invokePeepholeEPCallbacks(FPM, Level);
 
@@ -927,7 +939,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   GlobalCleanupPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(GlobalCleanupPM, Level);
 
-  GlobalCleanupPM.addPass(SimplifyCFGPass());
+  GlobalCleanupPM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(GlobalCleanupPM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
@@ -1014,7 +1027,8 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     ExtraPasses.addPass(
         createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true,
                                         /*UseBlockFrequencyInfo=*/true));
-    ExtraPasses.addPass(SimplifyCFGPass());
+    ExtraPasses.addPass(
+        SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
     ExtraPasses.addPass(InstCombinePass());
     FPM.addPass(std::move(ExtraPasses));
   }
@@ -1030,6 +1044,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   // before SLP vectorization.
   FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
                                   .forwardSwitchCondToPhi(true)
+                                  .convertSwitchRangeToICmp(true)
                                   .convertSwitchToLookupTable(true)
                                   .needCanonicalLoops(false)
                                   .hoistCommonInsts(true)
@@ -1201,7 +1216,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
-  OptimizePM.addPass(SimplifyCFGPass());
+  OptimizePM.addPass(
+      SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 
   OptimizePM.addPass(CoroCleanupPass());
 
@@ -1453,6 +1469,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
   }
 
+  // Try to run OpenMP optimizations, quick no-op if no OpenMP metadata present.
+  MPM.addPass(OpenMPOptPass());
+
   // Remove unused virtual tables to improve the quality of code generated by
   // whole-program devirtualization and bitset lowering.
   MPM.addPass(GlobalDCEPass());
@@ -1628,14 +1647,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MainFPM.addPass(ConstraintEliminationPass());
 
   LoopPassManager LPM;
-  LPM.addPass(IndVarSimplifyPass());
-
-  for (auto &C : LateLoopOptimizationsEPCallbacks)
-    C(LPM, Level);
-
-  LPM.addPass(LoopDeletionPass());
   if (EnableLoopFlatten && Level.getSpeedupLevel() > 1)
     LPM.addPass(LoopFlattenPass());
+  LPM.addPass(IndVarSimplifyPass());
+  for (auto &C : LateLoopOptimizationsEPCallbacks)
+    C(LPM, Level);
+  LPM.addPass(LoopDeletionPass());
   // FIXME: Add loop interchange.
 
   // Unroll small loops and perform peeling.
@@ -1650,6 +1667,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MainFPM.addPass(LoopDistributePass());
 
   addVectorPasses(Level, MainFPM, /* IsFullLTO */ true);
+
+  // Run the OpenMPOpt CGSCC pass again late.
+  MPM.addPass(
+      createModuleToPostOrderCGSCCPassAdaptor(OpenMPOptCGSCCPass()));
 
   invokePeepholeEPCallbacks(MainFPM, Level);
   MainFPM.addPass(JumpThreadingPass(/*InsertFreezeWhenUnfoldingSelect*/ true));
@@ -1672,8 +1693,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // Add late LTO optimization passes.
   // Delete basic blocks, which optimization passes may have killed.
-  MPM.addPass(createModuleToFunctionPassAdaptor(
-      SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true))));
+  MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass(
+      SimplifyCFGOptions().convertSwitchRangeToICmp(true).hoistCommonInsts(
+          true))));
 
   // Drop bodies of available eternally objects to improve GlobalDCE.
   MPM.addPass(EliminateAvailableExternallyPass());

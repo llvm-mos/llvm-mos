@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_Clang_H
-#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_Clang_H
+#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CLANG_H
+#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CLANG_H
 
 #include "MSVC.h"
 #include "clang/Basic/DebugInfoOptions.h"
@@ -165,6 +164,21 @@ class LLVM_LIBRARY_VISIBILITY OffloadWrapper final : public Tool {
 public:
   OffloadWrapper(const ToolChain &TC)
       : Tool("offload wrapper", "clang-offload-wrapper", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
+/// Linker wrapper tool.
+class LLVM_LIBRARY_VISIBILITY LinkerWrapper final : public Tool {
+  const Tool *Linker;
+
+public:
+  LinkerWrapper(const ToolChain &TC, const Tool *Linker)
+      : Tool("Offload::Linker", "linker", TC), Linker(Linker) {}
 
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,

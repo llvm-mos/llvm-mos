@@ -11,7 +11,7 @@ endif()
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 14)
+  set(LLVM_VERSION_MAJOR 15)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -28,7 +28,12 @@ if (NOT PACKAGE_VERSION)
     "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}")
 endif()
 
-if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (CMAKE_GENERATOR_TOOLSET STREQUAL ""))
+if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
+  # "Symbol version prefix for libLLVM.so"
+  set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}")
+endif()
+
+if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (MSVC_TOOLSET_VERSION LESS 142) AND (CMAKE_GENERATOR_TOOLSET STREQUAL ""))
   message(WARNING "Visual Studio generators use the x86 host compiler by "
                   "default, even for 64-bit targets. This can result in linker "
                   "instability and out of memory errors. To use the 64-bit "
@@ -44,6 +49,9 @@ endif()
 project(LLVM
   VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
   LANGUAGES C CXX ASM)
+
+# Must go after project(..)
+include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
@@ -64,7 +72,7 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;mlir;openmp;polly;pstl")
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;mlir;openmp;polly;pstl")
 # The flang project is not yet part of "all" projects (see C++ requirements)
 set(LLVM_EXTRA_PROJECTS "flang")
 # List of all known projects in the mono repo
@@ -176,6 +184,10 @@ if(LLVM_CCACHE_BUILD)
   endif()
 endif()
 
+set(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS "" CACHE STRING
+  "Optional arguments for the native tool used in CMake --build invocations for external projects.")
+mark_as_advanced(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS)
+
 option(LLVM_DEPENDENCY_DEBUGGING "Dependency debugging mode to verify correctly expressed library dependencies (Darwin only)" OFF)
 
 # Some features of the LLVM build may be disallowed when dependency debugging is
@@ -196,11 +208,13 @@ if(LLVM_ENABLE_GISEL_COV)
   set(LLVM_GISEL_COV_PREFIX "${CMAKE_BINARY_DIR}/gisel-coverage-" CACHE STRING "Provide a filename prefix to collect the GlobalISel rule coverage")
 endif()
 
+set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+
 # Add path for custom modules
-set(CMAKE_MODULE_PATH
-  ${CMAKE_MODULE_PATH}
+list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
 # Generate a CompilationDatabase (compile_commands.json file) for our build,
@@ -234,7 +248,7 @@ option(LLVM_APPEND_VC_REV
 
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-set(PACKAGE_BUGREPORT "https://bugs.llvm.org/")
+set(PACKAGE_BUGREPORT "https://github.com/llvm/llvm-project/issues/")
 
 set(BUG_REPORT_URL "${PACKAGE_BUGREPORT}" CACHE STRING
   "Default URL where bug reports are to be submitted.")
@@ -283,12 +297,17 @@ endif()
 
 set(LLVM_LIBDIR_SUFFIX "" CACHE STRING "Define suffix of library directory name (32/64)" )
 
-set(LLVM_TOOLS_INSTALL_DIR "bin" CACHE STRING "Path for binary subdirectory (defaults to 'bin')")
+set(LLVM_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
+    "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
 mark_as_advanced(LLVM_TOOLS_INSTALL_DIR)
 
 set(LLVM_UTILS_INSTALL_DIR "${LLVM_TOOLS_INSTALL_DIR}" CACHE STRING
     "Path to install LLVM utilities (enabled by LLVM_INSTALL_UTILS=ON) (defaults to LLVM_TOOLS_INSTALL_DIR)")
 mark_as_advanced(LLVM_UTILS_INSTALL_DIR)
+
+set(LLVM_EXAMPLES_INSTALL_DIR "examples" CACHE STRING
+    "Path for examples subdirectory (enabled by LLVM_BUILD_EXAMPLES=ON) (defaults to 'examples')")
+mark_as_advanced(LLVM_EXAMPLES_INSTALL_DIR)
 
 # They are used as destination of target generators.
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
@@ -308,7 +327,6 @@ set(LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/include ) # --includedir
 set(LLVM_BINARY_DIR       ${CMAKE_CURRENT_BINARY_DIR}  ) # --prefix
 
 set(LLVM_THIRD_PARTY_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/../third-party)
-set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
 # Note: LLVM_CMAKE_DIR does not include generated files
 set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
@@ -593,7 +611,7 @@ endif(LLVM_BUILD_EXAMPLES)
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_TESTS "Generate build targets for the LLVM unit tests." ON)
-option(LLVM_INCLUDE_GO_TESTS "Include the Go bindings tests in test build targets." ON)
+option(LLVM_INCLUDE_GO_TESTS "Include the Go bindings tests in test build targets." OFF)
 
 option(LLVM_BUILD_BENCHMARKS "Add LLVM benchmark targets to the list of default
 targets. If OFF, benchmarks still could be built using Benchmarks target." OFF)
@@ -606,9 +624,9 @@ option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 
-set(LLVM_INSTALL_DOXYGEN_HTML_DIR "share/doc/llvm/doxygen-html"
+set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
-set(LLVM_INSTALL_OCAMLDOC_HTML_DIR "share/doc/llvm/ocaml-html"
+set(LLVM_INSTALL_OCAMLDOC_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/ocaml-html"
     CACHE STRING "OCamldoc-generated HTML documentation install directory")
 
 option (LLVM_BUILD_EXTERNAL_COMPILER_RT
@@ -714,8 +732,15 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 include(config-ix)
 
 # By default, we target the host, but this can be overridden at CMake
-# invocation time.
-set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
+# invocation time. Except on 64-bit AIX, where the system toolchain
+# expect 32-bit objects by default.
+if("${LLVM_HOST_TRIPLE}" MATCHES "^powerpc64-ibm-aix")
+  string(REGEX REPLACE "^powerpc64" "powerpc" LLVM_DEFAULT_TARGET_TRIPLE_default "${LLVM_HOST_TRIPLE}")
+else()
+  set(LLVM_DEFAULT_TARGET_TRIPLE_default "${LLVM_HOST_TRIPLE}")
+endif()
+
+set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE_default}" CACHE STRING
   "Default target for which LLVM will generate code." )
 set(TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 message(STATUS "LLVM host triple: ${LLVM_HOST_TRIPLE}")
@@ -879,12 +904,23 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
     ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT tf_xla_runtime)
   set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS tf_xla_runtime)
   # Once we add more modules, we should handle this more automatically.
-  if (NOT DEFINED LLVM_INLINER_MODEL_PATH
+  if (DEFINED LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL)
+    set(LLVM_INLINER_MODEL_PATH "none")
+  elseif(NOT DEFINED LLVM_INLINER_MODEL_PATH
       OR "${LLVM_INLINER_MODEL_PATH}" STREQUAL ""
       OR "${LLVM_INLINER_MODEL_PATH}" STREQUAL "autogenerate")
     set(LLVM_INLINER_MODEL_PATH "autogenerate")
     set(LLVM_INLINER_MODEL_AUTOGENERATED 1)
   endif()
+  if (DEFINED LLVM_OVERRIDE_MODEL_HEADER_REGALLOCEVICTMODEL)
+    set(LLVM_RAEVICT_MODEL_PATH "none")
+  elseif(NOT DEFINED LLVM_RAEVICT_MODEL_PATH
+      OR "${LLVM_RAEVICT_MODEL_PATH}" STREQUAL ""
+      OR "${LLVM_RAEVICT_MODEL_PATH}" STREQUAL "autogenerate")
+    set(LLVM_RAEVICT_MODEL_PATH "autogenerate")
+    set(LLVM_RAEVICT_MODEL_AUTOGENERATED 1)
+  endif()
+
 endif()
 
 # Configure the three LLVM configuration header files.
@@ -1123,7 +1159,7 @@ endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/llvm include/llvm-c
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT llvm-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -1134,7 +1170,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm ${LLVM_INCLUDE_DIR}/llvm-c
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT llvm-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -1148,13 +1184,13 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   if (LLVM_INSTALL_MODULEMAPS)
     install(DIRECTORY include/llvm include/llvm-c
-            DESTINATION include
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
             COMPONENT llvm-headers
             FILES_MATCHING
             PATTERN "module.modulemap"
             )
     install(FILES include/llvm/module.install.modulemap
-            DESTINATION include/llvm
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm"
             COMPONENT llvm-headers
             RENAME "module.extern.modulemap"
             )

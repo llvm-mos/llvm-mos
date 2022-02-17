@@ -386,7 +386,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
         cast<OMPTargetTeamsDistributeSimdDirective>(*S));
     break;
   case Stmt::OMPInteropDirectiveClass:
-    llvm_unreachable("Interop directive not supported yet.");
+    EmitOMPInteropDirective(cast<OMPInteropDirective>(*S));
     break;
   case Stmt::OMPDispatchDirectiveClass:
     llvm_unreachable("Dispatch directive not supported yet.");
@@ -2120,42 +2120,34 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
   return (EarlyClobber ? "&{" : "{") + Register.str() + "}";
 }
 
-llvm::Value*
-CodeGenFunction::EmitAsmInputLValue(const TargetInfo::ConstraintInfo &Info,
-                                    LValue InputValue, QualType InputType,
-                                    std::string &ConstraintStr,
-                                    SourceLocation Loc) {
-  llvm::Value *Arg;
+std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
+    const TargetInfo::ConstraintInfo &Info, LValue InputValue,
+    QualType InputType, std::string &ConstraintStr, SourceLocation Loc) {
   if (Info.allowsRegister() || !Info.allowsMemory()) {
-    if (CodeGenFunction::hasScalarEvaluationKind(InputType)) {
-      Arg = EmitLoadOfLValue(InputValue, Loc).getScalarVal();
-    } else {
-      llvm::Type *Ty = ConvertType(InputType);
-      uint64_t Size = CGM.getDataLayout().getTypeSizeInBits(Ty);
-      if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
-          getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
-        Ty = llvm::IntegerType::get(getLLVMContext(), Size);
-        Ty = llvm::PointerType::getUnqual(Ty);
+    if (CodeGenFunction::hasScalarEvaluationKind(InputType))
+      return {EmitLoadOfLValue(InputValue, Loc).getScalarVal(), nullptr};
 
-        Arg = Builder.CreateLoad(
-            Builder.CreateBitCast(InputValue.getAddress(*this), Ty));
-      } else {
-        Arg = InputValue.getPointer(*this);
-        ConstraintStr += '*';
-      }
+    llvm::Type *Ty = ConvertType(InputType);
+    uint64_t Size = CGM.getDataLayout().getTypeSizeInBits(Ty);
+    if ((Size <= 64 && llvm::isPowerOf2_64(Size)) ||
+        getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
+      Ty = llvm::IntegerType::get(getLLVMContext(), Size);
+
+      return {Builder.CreateLoad(Builder.CreateElementBitCast(
+                  InputValue.getAddress(*this), Ty)),
+              nullptr};
     }
-  } else {
-    Arg = InputValue.getPointer(*this);
-    ConstraintStr += '*';
   }
 
-  return Arg;
+  Address Addr = InputValue.getAddress(*this);
+  ConstraintStr += '*';
+  return {Addr.getPointer(), Addr.getElementType()};
 }
 
-llvm::Value* CodeGenFunction::EmitAsmInput(
-                                         const TargetInfo::ConstraintInfo &Info,
-                                           const Expr *InputExpr,
-                                           std::string &ConstraintStr) {
+std::pair<llvm::Value *, llvm::Type *>
+CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
+                              const Expr *InputExpr,
+                              std::string &ConstraintStr) {
   // If this can't be a register or memory, i.e., has to be a constant
   // (immediate or symbolic), try to emit it as such.
   if (!Info.allowsRegister() && !Info.allowsMemory()) {
@@ -2166,19 +2158,20 @@ llvm::Value* CodeGenFunction::EmitAsmInput(
       llvm::APSInt IntResult;
       if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
                                           getContext()))
-        return llvm::ConstantInt::get(getLLVMContext(), IntResult);
+        return {llvm::ConstantInt::get(getLLVMContext(), IntResult), nullptr};
     }
 
     Expr::EvalResult Result;
     if (InputExpr->EvaluateAsInt(Result, getContext()))
-      return llvm::ConstantInt::get(getLLVMContext(), Result.Val.getInt());
+      return {llvm::ConstantInt::get(getLLVMContext(), Result.Val.getInt()),
+              nullptr};
   }
 
   if (Info.allowsRegister() || !Info.allowsMemory())
     if (CodeGenFunction::hasScalarEvaluationKind(InputExpr->getType()))
-      return EmitScalarExpr(InputExpr);
+      return {EmitScalarExpr(InputExpr), nullptr};
   if (InputExpr->getStmtClass() == Expr::CXXThisExprClass)
-    return EmitScalarExpr(InputExpr);
+    return {EmitScalarExpr(InputExpr), nullptr};
   InputExpr = InputExpr->IgnoreParenNoopCasts(getContext());
   LValue Dest = EmitLValue(InputExpr);
   return EmitAsmInputLValue(Info, Dest, InputExpr->getType(), ConstraintStr,
@@ -2221,6 +2214,7 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
                               bool ReadNone, bool NoMerge, bool Leaf,
                               const AsmStmt &S,
                               const std::vector<llvm::Type *> &ResultRegTypes,
+                              const std::vector<llvm::Type *> &ArgElemTypes,
                               CodeGenFunction &CGF,
                               std::vector<llvm::Value *> &RegResults) {
   if (!HasUnwindClobber)
@@ -2236,6 +2230,15 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
       Result.addFnAttr(llvm::Attribute::ReadNone);
     else if (ReadOnly)
       Result.addFnAttr(llvm::Attribute::ReadOnly);
+  }
+
+  // Add elementtype attribute for indirect constraints.
+  for (auto Pair : llvm::enumerate(ArgElemTypes)) {
+    if (Pair.value()) {
+      auto Attr = llvm::Attribute::get(
+          CGF.getLLVMContext(), llvm::Attribute::ElementType, Pair.value());
+      Result.addParamAttr(Pair.index(), Attr);
+    }
   }
 
   // Slap the source location of the inline asm into a !srcloc metadata on the
@@ -2305,6 +2308,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Type *> ResultRegTypes;
   std::vector<llvm::Type *> ResultTruncRegTypes;
   std::vector<llvm::Type *> ArgTypes;
+  std::vector<llvm::Type *> ArgElemTypes;
   std::vector<llvm::Value*> Args;
   llvm::BitVector ResultTypeRequiresCast;
 
@@ -2312,6 +2316,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::string InOutConstraints;
   std::vector<llvm::Value*> InOutArgs;
   std::vector<llvm::Type*> InOutArgTypes;
+  std::vector<llvm::Type*> InOutArgElemTypes;
 
   // Keep track of out constraints for tied input operand.
   std::vector<std::string> OutputConstraints;
@@ -2413,21 +2418,19 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
             std::max((uint64_t)LargestVectorWidth,
                      VT->getPrimitiveSizeInBits().getKnownMinSize());
     } else {
-      llvm::Type *DestAddrTy = Dest.getAddress(*this).getType();
-      llvm::Value *DestPtr = Dest.getPointer(*this);
+      Address DestAddr = Dest.getAddress(*this);
       // Matrix types in memory are represented by arrays, but accessed through
       // vector pointers, with the alignment specified on the access operation.
       // For inline assembly, update pointer arguments to use vector pointers.
       // Otherwise there will be a mis-match if the matrix is also an
       // input-argument which is represented as vector.
-      if (isa<MatrixType>(OutExpr->getType().getCanonicalType())) {
-        DestAddrTy = llvm::PointerType::get(
-            ConvertType(OutExpr->getType()),
-            cast<llvm::PointerType>(DestAddrTy)->getAddressSpace());
-        DestPtr = Builder.CreateBitCast(DestPtr, DestAddrTy);
-      }
-      ArgTypes.push_back(DestAddrTy);
-      Args.push_back(DestPtr);
+      if (isa<MatrixType>(OutExpr->getType().getCanonicalType()))
+        DestAddr = Builder.CreateElementBitCast(
+            DestAddr, ConvertType(OutExpr->getType()));
+
+      ArgTypes.push_back(DestAddr.getType());
+      ArgElemTypes.push_back(DestAddr.getElementType());
+      Args.push_back(DestAddr.getPointer());
       Constraints += "=*";
       Constraints += OutputConstraint;
       ReadOnly = ReadNone = false;
@@ -2437,9 +2440,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       InOutConstraints += ',';
 
       const Expr *InputExpr = S.getOutputExpr(i);
-      llvm::Value *Arg = EmitAsmInputLValue(Info, Dest, InputExpr->getType(),
-                                            InOutConstraints,
-                                            InputExpr->getExprLoc());
+      llvm::Value *Arg;
+      llvm::Type *ArgElemType;
+      std::tie(Arg, ArgElemType) = EmitAsmInputLValue(
+          Info, Dest, InputExpr->getType(), InOutConstraints,
+          InputExpr->getExprLoc());
 
       if (llvm::Type* AdjTy =
           getTargetHooks().adjustInlineAsmType(*this, OutputConstraint,
@@ -2458,6 +2463,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         InOutConstraints += OutputConstraint;
 
       InOutArgTypes.push_back(Arg->getType());
+      InOutArgElemTypes.push_back(ArgElemType);
       InOutArgs.push_back(Arg);
     }
   }
@@ -2497,7 +2503,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         getTarget(), CGM, S, false /* No EarlyClobber */);
 
     std::string ReplaceConstraint (InputConstraint);
-    llvm::Value *Arg = EmitAsmInput(Info, InputExpr, Constraints);
+    llvm::Value *Arg;
+    llvm::Type *ArgElemType;
+    std::tie(Arg, ArgElemType) = EmitAsmInput(Info, InputExpr, Constraints);
 
     // If this input argument is tied to a larger output result, extend the
     // input to be the same size as the output.  The LLVM backend wants to see
@@ -2542,9 +2550,18 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                    VT->getPrimitiveSizeInBits().getKnownMinSize());
 
     ArgTypes.push_back(Arg->getType());
+    ArgElemTypes.push_back(ArgElemType);
     Args.push_back(Arg);
     Constraints += InputConstraint;
   }
+
+  // Append the "input" part of inout constraints.
+  for (unsigned i = 0, e = InOutArgs.size(); i != e; i++) {
+    ArgTypes.push_back(InOutArgTypes[i]);
+    ArgElemTypes.push_back(InOutArgElemTypes[i]);
+    Args.push_back(InOutArgs[i]);
+  }
+  Constraints += InOutConstraints;
 
   // Labels
   SmallVector<llvm::BasicBlock *, 16> Transfer;
@@ -2560,20 +2577,14 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
             llvm::BlockAddress::get(CurFn, Dest.getBlock());
         Args.push_back(BA);
         ArgTypes.push_back(BA->getType());
+        ArgElemTypes.push_back(nullptr);
         if (!Constraints.empty())
           Constraints += ',';
-        Constraints += 'X';
+        Constraints += 'i';
       }
       Fallthrough = createBasicBlock("asm.fallthrough");
     }
   }
-
-  // Append the "input" part of inout constraints last.
-  for (unsigned i = 0, e = InOutArgs.size(); i != e; i++) {
-    ArgTypes.push_back(InOutArgTypes[i]);
-    Args.push_back(InOutArgs[i]);
-  }
-  Constraints += InOutConstraints;
 
   bool HasUnwindClobber = false;
 
@@ -2661,20 +2672,20 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     EmitBlock(Fallthrough);
     UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, false,
                       ReadOnly, ReadNone, InNoMergeAttributedStmt,
-                      InLeafAttributedStmt, S, ResultRegTypes, *this,
-                      RegResults);
+                      InLeafAttributedStmt, S, ResultRegTypes, ArgElemTypes,
+                      *this, RegResults);
   } else if (HasUnwindClobber) {
     llvm::CallBase *Result = EmitCallOrInvoke(IA, Args, "");
     UpdateAsmCallInst(*Result, HasSideEffect, true, ReadOnly, ReadNone,
                       InNoMergeAttributedStmt, InLeafAttributedStmt, S,
-                      ResultRegTypes, *this, RegResults);
+                      ResultRegTypes, ArgElemTypes, *this, RegResults);
   } else {
     llvm::CallInst *Result =
         Builder.CreateCall(IA, Args, getBundlesForFunclet(IA));
     UpdateAsmCallInst(cast<llvm::CallBase>(*Result), HasSideEffect, false,
                       ReadOnly, ReadNone, InNoMergeAttributedStmt,
-                      InLeafAttributedStmt, S, ResultRegTypes, *this,
-                      RegResults);
+                      InLeafAttributedStmt, S, ResultRegTypes, ArgElemTypes,
+                      *this, RegResults);
   }
 
   assert(RegResults.size() == ResultRegTypes.size());
@@ -2717,8 +2728,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     // ResultTypeRequiresCast.size() elements of RegResults.
     if ((i < ResultTypeRequiresCast.size()) && ResultTypeRequiresCast[i]) {
       unsigned Size = getContext().getTypeSize(ResultRegQualTys[i]);
-      Address A = Builder.CreateBitCast(Dest.getAddress(*this),
-                                        ResultRegTypes[i]->getPointerTo());
+      Address A = Builder.CreateElementBitCast(Dest.getAddress(*this),
+                                               ResultRegTypes[i]);
       if (getTargetHooks().isScalarizableAsmOperand(*this, TruncTy)) {
         Builder.CreateStore(Tmp, A);
         continue;

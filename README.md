@@ -132,9 +132,8 @@ use them; however, it's recommended to install [Ninja](https://ninja-build.org/)
 and pass Ninja as the parameter to the -G command.
 
 - ``-DLLVM_ENABLE_PROJECTS=...`` --- semicolon-separated list of the LLVM
-sub-projects you'd like to additionally build. Can include any of: clang,
-clang-tools-extra, libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld,
-polly, or debuginfo-tests.
+  sub-projects you'd like to additionally build. Can include any of: clang,
+  clang-tools-extra, lldb, or lld.
 
 - ``-DCMAKE_INSTALL_PREFIX=directory`` --- Specify for *directory* the full
 path name of where you want the LLVM tools and libraries to be installed

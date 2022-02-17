@@ -108,8 +108,7 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 //                                  ELF
 //===----------------------------------------------------------------------===//
 
-TargetLoweringObjectFileELF::TargetLoweringObjectFileELF()
-    : TargetLoweringObjectFile() {
+TargetLoweringObjectFileELF::TargetLoweringObjectFileELF() {
   SupportDSOLocalEquivalentLowering = true;
 }
 
@@ -1146,8 +1145,7 @@ TargetLoweringObjectFileELF::InitializeELF(bool UseInitArray_) {
 //                                 MachO
 //===----------------------------------------------------------------------===//
 
-TargetLoweringObjectFileMachO::TargetLoweringObjectFileMachO()
-  : TargetLoweringObjectFile() {
+TargetLoweringObjectFileMachO::TargetLoweringObjectFileMachO() {
   SupportIndirectSymViaGOTPCRel = true;
 }
 
@@ -1192,6 +1190,7 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   StringRef SectionVal;
 
   GetObjCImageInfo(M, VersionVal, ImageInfoFlags, SectionVal);
+  emitCGProfileMetadata(Streamer, M);
 
   // The section is mandatory. If we don't have it, then we don't have GC info.
   if (SectionVal.empty())
@@ -2550,8 +2549,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
 //===----------------------------------------------------------------------===//
 //                                  GOFF
 //===----------------------------------------------------------------------===//
-TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF()
-    : TargetLoweringObjectFile() {}
+TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
