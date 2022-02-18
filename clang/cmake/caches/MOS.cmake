@@ -55,48 +55,24 @@ endif() # LLVM_MOS_USE_COMPILER_CACHE
 
 # Ship the release with these tools
 set(LLVM_MOS_TOOLCHAIN_TOOLS
-    bugpoint
-    dsymutil
-    llc
     llvm-addr2line
     llvm-ar
-    llvm-as
-    llvm-cat
-    llvm-config
-    llvm-cov
-    llvm-diff
+    llvm-cxxfilt
     llvm-dwarfdump
-    llvm-profdata
-    llvm-lib
-    llvm-link
     llvm-mc
-    llvm-mca
-    llvm-mt
     llvm-nm
     llvm-objcopy
     llvm-objdump
-    llvm-profdata
     llvm-ranlib
     llvm-readelf
     llvm-readobj
     llvm-size
     llvm-strings
     llvm-strip
-    opt
+    llvm-symbolizer
 )
 set(LLVM_TOOLCHAIN_TOOLS ${LLVM_MOS_TOOLCHAIN_TOOLS}
     CACHE STRING "LLVM toolchain tools")
-
-# Add clang symlinks prefixed with mos-* which will implicitly add --target=mos when executed.
-set(CLANG_LINKS_TO_CREATE
-    clang++
-    clang-cpp
-    mos-clang
-    mos-clang++
-    mos-clang-cpp
-)
-set(CLANG_LINKS_TO_CREATE ${CLANG_LINKS_TO_CREATE}
-    CACHE STRING "Clang symlinks to create during install.")
 
 # Disable bindings since they can be problematic for the install pattern used along with llvm-mos-sdk.
 set(LLVM_ENABLE_BINDINGS OFF CACHE BOOL "Build bindings.")
