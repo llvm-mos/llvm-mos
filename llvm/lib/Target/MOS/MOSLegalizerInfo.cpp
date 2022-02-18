@@ -1472,10 +1472,6 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                                     MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  // Page crossing 6502 bug may generate spurious access to hardware registers.
-  if ((*MI.memoperands_begin())->isVolatile())
-    return false;
-
   bool IsLoad = MI.getOpcode() == G_LOAD;
   assert(IsLoad || MI.getOpcode() == G_STORE);
 
@@ -1564,31 +1560,27 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
 
   unsigned Opcode = IsLoad ? MOS::G_LOAD_INDIR_IDX : MOS::G_STORE_INDIR_IDX;
 
-  // Page crossing 6502 bug may generate spurious access to hardware registers.
-  if (!(*MI.memoperands_begin())->isVolatile()) {
-    if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
-      Register Base = PtrAddAddr->getOperand(1).getReg();
-      Register NewOffset = PtrAddAddr->getOperand(2).getReg();
-      if (auto ConstOffset =
-              getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
-        if (ConstOffset->Value.getActiveBits() <= 8) {
-          Index = Builder
-                      .buildConstant(LLT::scalar(8),
-                                     ConstOffset->Value.getSExtValue())
-                      .getReg(0);
-          Addr = Base;
-        }
-      } else if (MachineInstr *ZExtOffset =
-                     getOpcodeDef(G_ZEXT, NewOffset, MRI)) {
-        Register Src = ZExtOffset->getOperand(1).getReg();
-        LLT SrcTy = MRI.getType(Src);
-        if (SrcTy.getSizeInBits() <= 8) {
-          if (SrcTy.getSizeInBits() < 8)
-            Src = Builder.buildZExt(LLT::scalar(8), Src).getReg(0);
-          assert(MRI.getType(Src) == LLT::scalar(8));
-          Index = Src;
-          Addr = Base;
-        }
+  if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
+    Register Base = PtrAddAddr->getOperand(1).getReg();
+    Register NewOffset = PtrAddAddr->getOperand(2).getReg();
+    if (auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
+      if (ConstOffset->Value.getActiveBits() <= 8) {
+        Index = Builder
+                    .buildConstant(LLT::scalar(8),
+                                   ConstOffset->Value.getSExtValue())
+                    .getReg(0);
+        Addr = Base;
+      }
+    } else if (MachineInstr *ZExtOffset =
+                   getOpcodeDef(G_ZEXT, NewOffset, MRI)) {
+      Register Src = ZExtOffset->getOperand(1).getReg();
+      LLT SrcTy = MRI.getType(Src);
+      if (SrcTy.getSizeInBits() <= 8) {
+        if (SrcTy.getSizeInBits() < 8)
+          Src = Builder.buildZExt(LLT::scalar(8), Src).getReg(0);
+        assert(MRI.getType(Src) == LLT::scalar(8));
+        Index = Src;
+        Addr = Base;
       }
     }
   }

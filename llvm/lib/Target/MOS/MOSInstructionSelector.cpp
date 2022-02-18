@@ -90,6 +90,7 @@ private:
   bool selectAddr(MachineInstr &MI);
   std::pair<Register, Register> selectAddrLoHi(MachineInstr &MI);
   bool selectStore(MachineInstr &MI);
+  bool selectRMW(MachineInstr &MI);
   bool selectLshrShlE(MachineInstr &MI);
   bool selectMergeValues(MachineInstr &MI);
   bool selectTrunc(MachineInstr &MI);
@@ -258,6 +259,9 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
 
   // For now, don't attempt to fold across basic block boundaries.
   if (Dst.getParent() != Src.getParent())
+    return false;
+
+  if ((*Src.memoperands_begin())->isVolatile())
     return false;
 
   // Does it pay off to fold the access? Depends on the number of users.
@@ -1207,13 +1211,46 @@ IncDecMBAbs_match m_IncDecMBAbs(MachineInstr *&IncDec, MachineOperand &Addr,
 
 bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
+
+  // Read-modify-write instruction patterns are rooted at store instructions, so
+  // select one if possible. This can make an entire instruction sequence dead.
+  if (!(*MI.memoperands_begin())->isVolatile())
+    if (selectRMW(MI))
+      return true;
+
+  // If this isn't a STZ, emit a store pseudo.
+  if (!STI.has65C02() ||
+      !isOperandImmEqual(MI.getOperand(0), 0, *Builder.getMRI()))
+    return selectGeneric(MI);
+
+  // STZ
+
+  unsigned Opcode;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode.");
+  case MOS::G_STORE_ABS:
+    Opcode = MOS::STZAbs;
+    break;
+  case MOS::G_STORE_ABS_IDX:
+    Opcode = MOS::STZAbsIdx;
+    break;
+  }
+
+  MI.setDesc(TII.get(Opcode));
+  MI.RemoveOperand(0);
+  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
+    return false;
+  return true;
+}
+
+bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
+  MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();
 
   Register Val = MI.getOperand(0).getReg();
   MachineInstr *Load;
 
-  // Read-modify-write instruction patterns are rooted at store instructions, so
-  // select one if possible. This can make an entire instruction sequence dead.
   if (MI.getOpcode() == MOS::G_STORE_ABS) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
     if (mi_match(Val, MRI,
@@ -1234,8 +1271,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
     }
 
     MachineInstr *IncDec;
-    if (mi_match(Val, MRI,
-                 m_IncDecMBAbs(IncDec, Addr, Load, AA))) {
+    if (mi_match(Val, MRI, m_IncDecMBAbs(IncDec, Addr, Load, AA))) {
       unsigned NumBytes = IncDec->getNumDefs();
       for (unsigned I = 0; I < NumBytes; ++I) {
         if (IncDec->getOperand(I).getReg() == Val) {
@@ -1422,31 +1458,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
       return true;
     }
   }
-
-  // If this isn't a STZ, emit a store pseudo.
-  if (!STI.has65C02() ||
-      !isOperandImmEqual(MI.getOperand(0), 0, *Builder.getMRI()))
-    return selectGeneric(MI);
-
-  // STZ
-
-  unsigned Opcode;
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode.");
-  case MOS::G_STORE_ABS:
-    Opcode = MOS::STZAbs;
-    break;
-  case MOS::G_STORE_ABS_IDX:
-    Opcode = MOS::STZAbsIdx;
-    break;
-  }
-
-  MI.setDesc(TII.get(Opcode));
-  MI.RemoveOperand(0);
-  if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
-    return false;
-  return true;
+  return false;
 }
 
 bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
