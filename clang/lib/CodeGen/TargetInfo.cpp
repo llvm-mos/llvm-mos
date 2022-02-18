@@ -324,10 +324,10 @@ static Address emitVoidPtrDirectVAArg(CodeGenFunction &CGF,
   // If the CC aligns values higher than the slot size, do so if needed.
   Address Addr = Address::invalid();
   if (AllowHigherAlign && DirectAlign > SlotSize) {
-    Addr = Address::deprecated(
-        emitRoundPointerUpToAlignment(CGF, Ptr, DirectAlign), DirectAlign);
+    Addr = Address(emitRoundPointerUpToAlignment(CGF, Ptr, DirectAlign),
+                   CGF.Int8Ty, DirectAlign);
   } else {
-    Addr = Address::deprecated(Ptr, SlotSize);
+    Addr = Address(Ptr, CGF.Int8Ty, SlotSize);
   }
 
   // Advance the pointer past the argument, then store that back.
@@ -10321,10 +10321,10 @@ void CommonSPIRABIInfo::setCCs() {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().CUDAIsDevice) {
+  if (getContext().getLangOpts().HIP) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for HIPSPV/CUDASPV. When the language mode is HIP/CUDA, the
-    // SPIRTargetInfo maps cuda_device to SPIR-V's CrossWorkGroup address space.
+    // pointers for HIPSPV. When the language mode is HIP, the SPIRTargetInfo
+    // maps cuda_device to SPIR-V's CrossWorkGroup address space.
     llvm::Type *LTy = CGT.ConvertType(Ty);
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
     auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);

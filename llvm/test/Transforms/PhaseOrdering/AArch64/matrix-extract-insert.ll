@@ -88,10 +88,10 @@ entry:
 define void @matrix_extract_insert_loop(i32 %i, [225 x double]* nonnull align 8 dereferenceable(1800) %A, [225 x double]* nonnull align 8 dereferenceable(1800) %B) {
 ; CHECK-LABEL: @matrix_extract_insert_loop(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP212_NOT:%.*]] = icmp eq i32 [[I:%.*]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [225 x double]* [[A:%.*]] to <225 x double>*
-; CHECK-NEXT:    [[CONV6:%.*]] = zext i32 [[I:%.*]] to i64
+; CHECK-NEXT:    [[CONV6:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast [225 x double]* [[B:%.*]] to <225 x double>*
-; CHECK-NEXT:    [[CMP212_NOT:%.*]] = icmp eq i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[CMP212_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_US:%.*]]
 ; CHECK:       for.cond1.preheader.us:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[I]], 225
