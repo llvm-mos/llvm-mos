@@ -286,7 +286,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // location, emit it with addBReg and offset 0, because we should emit a DWARF
   // expression representing a value, rather than a location.
   if ((!isParameterValue() && !isMemoryLocation() && !HasComplexExpression) ||
-      isEntryValue()) {
+      isEntryValue() || true) {
     auto FragmentInfo = ExprCursor.getFragmentInfo();
     unsigned RegSize = 0;
     for (auto &Reg : DwarfRegs) {

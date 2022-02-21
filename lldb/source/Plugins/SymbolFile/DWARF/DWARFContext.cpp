@@ -24,6 +24,7 @@ static DWARFDataExtractor LoadSection(SectionList *section_list,
 
   DWARFDataExtractor data;
   section_sp->GetSectionData(data);
+  data.SetAddressByteSize(2);
   return data;
 }
 
