@@ -4052,6 +4052,11 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
       F.BaseRegs[i] = SE.getMulExpr(F.BaseRegs[i], FactorS);
       if (getExactSDiv(F.BaseRegs[i], FactorS, SE) != Base.BaseRegs[i])
         goto next;
+      // Only implicit zero-extension from smaller types is supported.
+      if (SE.getTypeSizeInBits(F.BaseRegs[i]->getType()) <
+              SE.getTypeSizeInBits(F.Ty) &&
+          !SE.isKnownNonNegative(F.BaseRegs[i]))
+        goto next;
     }
 
     // Check that multiplying with the scaled register doesn't overflow.
@@ -4059,6 +4064,12 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
       const SCEV *FactorS = SE.getConstant(F.ScaledReg->getType(), Factor);
       F.ScaledReg = SE.getMulExpr(F.ScaledReg, FactorS);
       if (getExactSDiv(F.ScaledReg, FactorS, SE) != Base.ScaledReg)
+        continue;
+
+      // Only implicit zero-extension from smaller types is supported.
+      if (SE.getTypeSizeInBits(F.ScaledReg->getType()) <
+              SE.getTypeSizeInBits(F.Ty) &&
+          !SE.isKnownNonNegative(F.ScaledReg))
         continue;
     }
 
@@ -4129,10 +4140,17 @@ void LSRInstance::GenerateScales(LSRUse &LU, unsigned LUIdx, Formula Base) {
         // Divide out the factor, ignoring high bits, since we'll be
         // scaling the value back up in the end.
         if (const SCEV *Quotient = getExactSDiv(AR, FactorS, SE, true)) {
+          // We can only implicitly zero-extend.
+          if (SE.getTypeSizeInBits(Quotient->getType()) <
+                  SE.getTypeSizeInBits(Base.Ty) &&
+              !SE.isKnownNonNegative(Quotient))
+            continue;
+
           // TODO: This could be optimized to avoid all the copying.
           Formula F = Base;
           F.ScaledReg = Quotient;
           F.deleteBaseReg(F.BaseRegs[i]);
+
           // The canonical representation of 1*reg is reg, which is already in
           // Base. In that case, do not try to insert the formula, it will be
           // rejected anyway.
