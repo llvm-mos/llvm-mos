@@ -59,11 +59,3 @@ jobs:
           repository: llvm-mos/llvm-mos-sdk
           event-type: on-llvm-update
           client-payload: '{"head_commit": ${{ toJSON(github.event.head_commit) }}}'
-      - name: Dispatch Test Suite
-        if: startsWith(matrix.os, 'ubuntu')
-        uses: llvm-mos/repository-dispatch@v1
-        with:
-          token: ${{ secrets.TEST_SUITE_ACCESS_TOKEN }}
-          repository: llvm-mos/llvm-test-suite
-          event-type: on-llvm-update
-          client-payload: '{"head_commit": ${{ toJSON(github.event.head_commit) }}}'
