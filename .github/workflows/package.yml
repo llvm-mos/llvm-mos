@@ -51,6 +51,9 @@ jobs:
         run: |
           cd build
           cmake --build . --target ship --verbose
+  dispatch-sdk:
+    needs: package
+    steps:
       - name: Dispatch SDK Packaging
         if: startsWith(matrix.os, 'ubuntu')
         uses: llvm-mos/repository-dispatch@v1
