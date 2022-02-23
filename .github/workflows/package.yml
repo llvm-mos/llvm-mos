@@ -53,6 +53,7 @@ jobs:
           cmake --build . --target ship --verbose
   dispatch-sdk:
     needs: package
+    runs-on: ubuntu-latest
     steps:
       - name: Dispatch SDK Packaging
         if: startsWith(matrix.os, 'ubuntu')
