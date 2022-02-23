@@ -1,4 +1,5 @@
 name: Packaging
+concurrency: compiler-package
 on:
   push:
     branches: [main]
