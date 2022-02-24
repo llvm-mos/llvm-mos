@@ -56,7 +56,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Dispatch SDK Packaging
-        if: startsWith(matrix.os, 'ubuntu')
         uses: llvm-mos/repository-dispatch@v1
         with:
           token: ${{ secrets.SDK_ACCESS_TOKEN }}
