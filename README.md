@@ -36,57 +36,24 @@ main:
 	.asciz	"HELLO, 6502!"
 ```
 
-Status:
-The LLVM SingleSource end-to-end test cases pass on a simulated 6502. This is true at
--O0, -O3, -Os, and -Oz. The compiler is believed to be C99 compatible, but the quality
-of generated code is not yet at even a v0.1 level.
-
-**WARNING!** While we're now in the process of optimizing the code generator's output,
-it's still early days. Code quality is rapidly improving, but it's still not nearly
-good enough for even a v0.1. Because of this, please don't publicly review, compare,
-or benchmark this compiler against other compilers at this time. Output generated
-now will only vaguely resemble output in even six month's time.
-
-To keep this project a clean fork of LLVM, no target-specific source code or
-libraries are part of this project. These are contained in the related
-[llvm-mos-sdk](http://github.com/llvm-mos/llvm-mos-sdk). The default mos
-target will only use compiler built-in include and library paths (e.g.,
-stdint.h), so the compiler can technically be used without the SDK; however, 
-this means that you will have to provide your own libc and your own
-run-time initialization.  If you don't understand what this means, then you
-should use llvm-mos in conjunction with the llvm-mos-sdk.
-
 For more information about this project, please see
-[llvm-mos.org](https://www.llvm-mos.org). 
-
-For information about the current status of this project, please see 
-[Current status](https://llvm-mos.org/wiki/Current_status).
-
-To learn why this project exists, please see
-[Rationale](https://llvm-mos.org/wiki/Rationale).
+[llvm-mos.org](https://www.llvm-mos.org).
 
 ## Notice
 The llvm-mos project is not officially affiliated with or endorsed by the LLVM Foundation or LLVM project. Our project is a fork of LLVM that provides a new backend/target; our project is based on LLVM, not a part of LLVM. Our use of LLVM or other related trademarks does not imply affiliation or endorsement.
 
 # Getting started
 
-## Download the LLVM-MOS tools
+This repository only contains the core llvm-mos utilities, and it doesn't form a
+complete toolchain. Accordingly, there are no official binary releases for this repository; it's for internal development only.
 
-If you want to play with the current state of the LLVM-MOS toolchain, you
-may not have to build LLVM-MOS from source code yourself.  Instead, just download
-the most recent binaries for your platform:
+Please [see our SDK](https://github.com/llvm-mos/llvm-mos-sdk#getting-started)
+to get started.
 
-- [MacOS](https://github.com/llvm-mos/llvm-mos/releases/tag/llvm-mos-darwin-main)
-- [Linux](https://github.com/llvm-mos/llvm-mos/releases/tag/llvm-mos-linux-main)
-- [Windows](https://github.com/llvm-mos/llvm-mos/releases/tag/llvm-mos-windows-main)
+# Building LLVM-MOS
 
-These binaries are built from the main branch of the LLVM-MOS project,
-using [Github's actions functionality](https://github.com/features/actions).
-
-## Or, build the LLVM-MOS tools
-
-If your platform isn't listed above or you wish to modify the compiler, then
-you'll need to compile LLVM-MOS from source.
+If you wish to modify the compiler, then you'll need to compile LLVM-MOS from
+source.
 
 Generally, compiling LLVM-MOS follows the same convention as compiling LLVM.
 First, please review the [hardware and software requirements](https://llvm.org/docs/GettingStarted.html#requirements)
@@ -95,7 +62,7 @@ for building LLVM.
 Once you meet those requirements, you may use the following formula within your
 build environment:
 
-### Clone the LLVM-MOS repository
+## Clone the LLVM-MOS repository
 
 On Linux and MacOS:
 
@@ -112,7 +79,7 @@ git clone --config core.autocrlf=false https://github.com/llvm-mos/llvm-mos.git
 If you fail to use the --config flag as above, then verification tests will fail
 on Windows.
 
-### Configure the LLVM-MOS project
+## Configure the LLVM-MOS project
 
 ```
 cd llvm-mos
@@ -146,7 +113,7 @@ are using the MOS.cmake cache file.
 - ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
 (default is Yes for Debug builds, No for all other build types).
 
-### Build the LLVM-MOS project
+## Build the LLVM-MOS project
 
 ```
 cmake --build build [-- [options] <target>]
