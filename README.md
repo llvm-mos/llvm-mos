@@ -1,8 +1,6 @@
 # LLVM-MOS
 
-This directory and its sub-directories contain source code for LLVM-MOS,
-an experiment to support the MOS 65xx series of microprocessors as first-class
-targets within the LLVM architecture.
+LLVM-MOS is a LLVM fork supporting the MOS 65xx series of microprocessors.
 
 ```C
 #include <stdio.h>
