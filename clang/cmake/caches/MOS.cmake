@@ -14,7 +14,7 @@ set(LIBXML2_LIBRARIES "IGNORE"
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON
     CACHE BOOL "LLVM install toolchain only")
 
-set(LLVM_DEFAULT_TARGET_TRIPLE "mos" CACHE STRING "")
+set(LLVM_DEFAULT_TARGET_TRIPLE "mos-unknown-unknown" CACHE STRING "")
 
 # The following options are principally to reduce space on Github action
 # runner builds. They make smaller, and possibly slower, releases; but the
