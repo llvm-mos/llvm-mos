@@ -11257,9 +11257,7 @@ public:
   }
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override {
-    return EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty));
-  }
+                    QualType Ty) const override;
 };
 
 class MOSTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -11291,6 +11289,15 @@ ABIArgInfo MOSABIInfo::classifyArgumentType(QualType Ty) const {
   if (Info.isIndirect())
     Info.setIndirectByVal(false);
   return Info;
+}
+
+Address MOSABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                              QualType Ty) const {
+  ABIArgInfo ArgInfo = classifyArgumentType(Ty);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, ArgInfo.isIndirect(),
+                          getContext().getTypeInfoInChars(Ty),
+                          /*SlotSize=*/CharUnits::One(),
+                          /*AllowHigherAlign=*/true);
 }
 
 } // end anonymous namespace
