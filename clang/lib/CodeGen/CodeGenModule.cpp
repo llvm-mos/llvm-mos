@@ -117,10 +117,18 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
   FloatTy = llvm::Type::getFloatTy(LLVMContext);
   DoubleTy = llvm::Type::getDoubleTy(LLVMContext);
   PointerWidthInBits = C.getTargetInfo().getPointerWidth(0);
+  PointerSizeInBytes =
+    C.toCharUnitsFromBits(C.getTargetInfo().getPointerWidth(0)).getQuantity();
   PointerAlignInBytes =
     C.toCharUnitsFromBits(C.getTargetInfo().getPointerAlign(0)).getQuantity();
-  SizeSizeInBytes =
-    C.toCharUnitsFromBits(C.getTargetInfo().getMaxPointerWidth()).getQuantity();
+  SizeSizeInBytes = C.toCharUnitsFromBits(C.getTargetInfo().getTypeWidth(
+                                              C.getTargetInfo().getSizeType()))
+                        .getQuantity();
+  SizeAlignInBytes = C.toCharUnitsFromBits(C.getTargetInfo().getTypeAlign(
+                                               C.getTargetInfo().getSizeType()))
+                         .getQuantity();
+  IntSizeInBytes =
+    C.toCharUnitsFromBits(C.getTargetInfo().getIntWidth()).getQuantity();
   IntAlignInBytes =
     C.toCharUnitsFromBits(C.getTargetInfo().getIntAlign()).getQuantity();
   CharTy =
