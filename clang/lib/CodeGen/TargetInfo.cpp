@@ -11247,7 +11247,8 @@ class MOSABIInfo : public DefaultABIInfo {
 public:
   MOSABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
 
-  ABIArgInfo classifyArgumentType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
     if (!getCXXABI().classifyReturnType(FI))
@@ -11283,12 +11284,27 @@ public:
 };
 
 ABIArgInfo MOSABIInfo::classifyArgumentType(QualType Ty) const {
-  ABIArgInfo Info = DefaultABIInfo::classifyArgumentType(Ty);
-  // Byval is not supported; they must be passed by pointer to a copy made by
-  // the caller in the frontend.
-  if (Info.isIndirect())
-    Info.setIndirectByVal(false);
-  return Info;
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  if (isAggregateTypeForABI(Ty)) {
+    // Large records or those with non-trivial destructors/copy-constructors
+    // should not be passed by value.
+    if (getRecordArgABI(Ty, getCXXABI()) == CGCXXABI::RAA_DirectInMemory ||
+        getContext().getTypeSize(Ty) > 32)
+      return getNaturalAlignIndirect(Ty, false);
+    return ABIArgInfo::getDirect();
+  }
+  return DefaultABIInfo::classifyArgumentType(Ty);
+}
+
+ABIArgInfo MOSABIInfo::classifyReturnType(QualType RetTy) const {
+  // Large records should not be passed by value.
+  if (isAggregateTypeForABI(RetTy)) {
+    return getContext().getTypeSize(RetTy) > 32
+               ? getNaturalAlignIndirect(RetTy, false)
+               : ABIArgInfo::getDirect();
+  }
+  return DefaultABIInfo::classifyReturnType(RetTy);
 }
 
 Address MOSABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
