@@ -31,6 +31,7 @@ enum class FileFormat {
   ELF,
   Binary,
   IHex,
+  Raw,
 };
 
 // This type keeps track of the machine info for various architectures. This

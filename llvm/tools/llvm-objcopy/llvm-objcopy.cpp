@@ -120,6 +120,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   // GNU objcopy. See https://bugs.llvm.org/show_bug.cgi?id=42171 for details.
   case FileFormat::Binary:
   case FileFormat::IHex:
+  case FileFormat::Raw:
   case FileFormat::Unspecified:
     Expected<const ELFConfig &> ELFConfig = ConfigMgr.getELFConfig();
     if (!ELFConfig)

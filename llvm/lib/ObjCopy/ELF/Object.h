@@ -172,6 +172,7 @@ public:
   friend class SectionWriter;                                                  \
   friend class IHexSectionWriterBase;                                          \
   friend class IHexSectionWriter;                                              \
+  friend class RawSectionWriter;                                               \
   template <class ELFT> friend class ELFSectionWriter;                         \
   template <class ELFT> friend class ELFSectionSizer;
 
@@ -304,6 +305,26 @@ public:
   Error visit(const StringTableSection &Sec) override;
 };
 
+class RawSectionWriter : public SectionVisitor {
+  raw_ostream &Out;
+
+public:
+  virtual ~RawSectionWriter() {}
+  Error visit(const Section &Sec) override;
+  Error visit(const OwnedDataSection &Sec) override;
+  Error visit(const StringTableSection &Sec) override;
+  Error visit(const SymbolTableSection &Sec) override;
+  Error visit(const RelocationSection &Sec) override;
+  Error visit(const DynamicRelocationSection &Sec) override;
+  Error visit(const GnuDebugLinkSection &Sec) override;
+  Error visit(const GroupSection &Sec) override;
+  Error visit(const SectionIndexSection &Sec) override;
+  Error visit(const CompressedSection &Sec) override;
+  Error visit(const DecompressedSection &Sec) override;
+
+  explicit RawSectionWriter(raw_ostream &Out) : Out(Out) {}
+};
+
 class Writer {
 protected:
   Object &Obj;
@@ -385,6 +406,16 @@ public:
   Error finalize() override;
   Error write() override;
   IHexWriter(Object &Obj, raw_ostream &Out) : Writer(Obj, Out) {}
+};
+
+class RawWriter : public Writer {
+  std::unique_ptr<RawSectionWriter> SecWriter;
+
+public:
+  ~RawWriter() {}
+  Error finalize() override;
+  Error write() override;
+  RawWriter(Object &Obj, raw_ostream &Out) : Writer(Obj, Out) {}
 };
 
 class SectionBase {

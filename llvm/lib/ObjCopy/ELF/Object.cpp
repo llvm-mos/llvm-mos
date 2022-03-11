@@ -421,6 +421,46 @@ Error IHexSectionWriter::visit(const StringTableSection &Sec) {
   return Error::success();
 }
 
+Error RawSectionWriter::visit(const Section &Sec) {
+  if (Sec.Type == ELF::SHT_PROGBITS)
+    Out.write(reinterpret_cast<const char *>(Sec.Contents.data()),
+              Sec.Contents.size());
+  return Error::success();
+}
+Error RawSectionWriter::visit(const OwnedDataSection &Sec) {
+  if (Sec.Type == ELF::SHT_PROGBITS)
+    Out.write(reinterpret_cast<const char *>(Sec.Data.data()),
+              Sec.Data.size());
+  return Error::success();
+}
+Error RawSectionWriter::visit(const StringTableSection &Sec) {
+  return Error::success();
+}
+Error RawSectionWriter::visit(const SymbolTableSection &Sec) {
+  return Error::success();
+}
+Error RawSectionWriter::visit(const RelocationSection &Sec) {
+  return Error::success();
+}
+Error RawSectionWriter::visit(const DynamicRelocationSection &Sec) {
+  return Error::success();
+}
+Error RawSectionWriter::visit(const GnuDebugLinkSection &Sec) {
+  return Error::success();
+}
+Error RawSectionWriter::visit(const GroupSection &Sec) {
+  return Error::success();
+}
+Error RawSectionWriter::visit(const SectionIndexSection &Sec) {
+  return Error::success();
+}
+Error RawSectionWriter::visit(const CompressedSection &Sec) {
+  return Error::success();
+}
+Error RawSectionWriter::visit(const DecompressedSection &Sec) {
+  return Error::success();
+}
+
 Error Section::accept(SectionVisitor &Visitor) const {
   return Visitor.visit(*this);
 }
@@ -2806,6 +2846,19 @@ Error IHexWriter::finalize() {
 
   return Error::success();
 }
+
+Error RawWriter::write() {
+  for (const SectionBase &Sec : Obj.sections())
+    if (Error Err = Sec.accept(*SecWriter))
+      return Err;
+  return Error::success();
+}
+
+Error RawWriter::finalize() {
+  SecWriter = std::make_unique<RawSectionWriter>(Out);
+  return Error::success();
+}
+
 
 namespace llvm {
 namespace objcopy {
