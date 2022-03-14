@@ -86,7 +86,5 @@ set(CLANG_LINKS_TO_CREATE
 set(CLANG_LINKS_TO_CREATE ${CLANG_LINKS_TO_CREATE}
     CACHE STRING "Clang symlinks to create during install.")
 
-set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
-
 # Disable bindings since they can be problematic for the install pattern used along with llvm-mos-sdk.
 set(LLVM_ENABLE_BINDINGS OFF CACHE BOOL "Build bindings.")

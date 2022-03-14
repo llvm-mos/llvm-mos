@@ -10,7 +10,6 @@
 
 #include "CommonArgs.h"
 
-#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -89,28 +88,11 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lc");
 
   CmdArgs.push_back("-o");
-
-  const char *ELFFilename =
-      Args.MakeArgString(Twine(Output.getFilename()) + ".elf");
-  InputInfo ELFII(types::TY_Object, Output.getFilename(), Output.getFilename());
-
-  CmdArgs.push_back(ELFFilename);
+  CmdArgs.push_back(Output.getFilename());
 
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Args.MakeArgString(TC.GetLinkerPath()),
-                                         CmdArgs, Inputs, ELFII));
-
-  const char *Exec =
-      Args.MakeArgString(TC.GetProgramPath(CLANG_DEFAULT_OBJCOPY));
-
-  ArgStringList ObjCopyArgs;
-  ObjCopyArgs.push_back("--output-target=raw");
-  ObjCopyArgs.push_back(ELFFilename);
-  ObjCopyArgs.push_back(Output.getFilename());
-
-  C.addCommand(std::make_unique<Command>(JA, *this,
-                                         ResponseFileSupport::AtFileCurCP(),
-                                         Exec, ObjCopyArgs, ELFII, Output));
+                                         CmdArgs, Inputs, Output));
 }
 
 void mos::Linker::AddLTOOptions(const toolchains::MOS &TC, const ArgList &Args,
