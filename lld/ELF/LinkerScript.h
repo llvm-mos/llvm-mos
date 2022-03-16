@@ -75,7 +75,8 @@ enum SectionsCommandKind {
   AssignmentKind, // . = expr or <sym> = expr
   OutputSectionKind,
   InputSectionKind,
-  ByteKind    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  ByteKind,    // BYTE(expr), SHORT(expr), LONG(expr) or QUAD(expr)
+  MemoryRegionKind,
 };
 
 struct SectionCommand {
@@ -239,6 +240,22 @@ struct ByteCommand : SectionCommand {
   unsigned size;
 };
 
+// Include a LMA memory region in a custom output format.
+struct MemoryRegionCommand : SectionCommand {
+  MemoryRegionCommand(MemoryRegion *memRegion, bool full)
+      : SectionCommand(MemoryRegionKind), memRegion(memRegion), full(full) {}
+
+  static bool classof(const SectionCommand *c) {
+    return c->kind == MemoryRegionKind;
+  }
+
+  MemoryRegion *memRegion;
+
+  // Whether the entire memory region or only the portion up to the last byte
+  // covered by an output LMA should be inserted.
+  bool full;
+};
+
 struct InsertCommand {
   SmallVector<StringRef, 0> names;
   bool isAfter;
@@ -361,6 +378,8 @@ public:
 
   // Sections that will be warned/errored by --orphan-handling.
   SmallVector<const InputSectionBase *, 0> orphanSections;
+
+  SmallVector<SectionCommand *, 0> outputFormat;
 };
 
 extern std::unique_ptr<LinkerScript> script;

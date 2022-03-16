@@ -77,6 +77,7 @@ private:
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
+  void readCustomOutputFormat();
   void readOverwriteSections();
   void readPhdrs();
   void readRegionAlias();
@@ -88,6 +89,7 @@ private:
 
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
+  MemoryRegionCommand *readMemoryRegionCommand(StringRef tok);
   std::array<uint8_t, 4> readFill();
   bool readSectionDirective(OutputSection *cmd, StringRef tok1, StringRef tok2);
   void readSectionAddressType(OutputSection *cmd);
@@ -440,6 +442,11 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
 // big if -EB is specified, little if -EL is specified, or default if neither is
 // specified.
 void ScriptParser::readOutputFormat() {
+  if (peek() == "{") {
+    readCustomOutputFormat();
+    return;
+  }
+
   expect("(");
 
   StringRef s;
@@ -1217,6 +1224,23 @@ ByteCommand *ScriptParser::readByteCommand(StringRef tok) {
   return make<ByteCommand>(e, size, commandString);
 }
 
+MemoryRegionCommand *ScriptParser::readMemoryRegionCommand(StringRef tok) {
+  int isFull =
+      StringSwitch<int>(tok).Case("FULL", 1).Case("TRIM", 0).Default(-1);
+  if (isFull == -1)
+    return nullptr;
+
+  expect("(");
+  StringRef name = next();
+  expect(")");
+  auto iter = script->memoryRegions.find(name);
+  if (iter == script->memoryRegions.end()) {
+    setError("memory region '" + name + "' is not defined");
+    return nullptr;
+  }
+  return make<MemoryRegionCommand>(iter->second, isFull);
+}
+
 static llvm::Optional<uint64_t> parseFlag(StringRef tok) {
   if (llvm::Optional<uint64_t> asInt = parseInt(tok))
     return asInt;
@@ -1603,6 +1627,19 @@ ScriptParser::readSymbols() {
     expect(";");
   }
   return {locals, globals};
+}
+
+void ScriptParser::readCustomOutputFormat() {
+  expect("{");
+  while (!errorCount() && !consume("}")) {
+    StringRef tok = next();
+    if (ByteCommand *data = readByteCommand(tok))
+      script->outputFormat.push_back(data);
+    else if (MemoryRegionCommand *region = readMemoryRegionCommand(tok))
+      script->outputFormat.push_back(region);
+    else
+      setError("custom output format command expected, but got " + tok);
+  }
 }
 
 // Reads an "extern C++" directive, e.g.,
