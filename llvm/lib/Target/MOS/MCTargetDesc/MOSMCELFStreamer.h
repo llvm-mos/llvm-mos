@@ -40,11 +40,13 @@ public:
                         SMLoc Loc = SMLoc());
 
   bool hasBSS() const { return HasBSS; }
+  bool hasData() const { return HasData; }
   bool hasInitArray() const { return HasInitArray; }
   bool hasFiniArray() const { return HasFiniArray; }
 
 private:
   bool HasBSS = false;
+  bool HasData = false;
   bool HasInitArray = false;
   bool HasFiniArray = false;
 };
