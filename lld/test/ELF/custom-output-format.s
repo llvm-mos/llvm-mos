@@ -1,4 +1,5 @@
-# RUN: llvm-mc -filetype=obj %s -o %t
+# REQUIRES: mos
+# RUN: llvm-mc -filetype=obj -triple=mos %s -o %t
 
 # RUN: echo "OUTPUT_FORMAT { BYTE(0x11) SHORT(0x2233) LONG(0x44556677) QUAD(0x8899aabbccddeeff)}" > %t.script
 # RUN: ld.lld -o %t2.out --script %t.script %t
