@@ -50,8 +50,8 @@ relnext:
 # RELOCS-NEXT: 00000001 R_MOS_PCREL_8            .R_MOS_PCREL_8+0x4
 # RELOCS-NEXT: 00000003 R_MOS_PCREL_8            .R_MOS_PCREL_8
 # CHECK-LABEL: section .R_MOS_PCREL_8:
-# CHECK: bpl $2
-# CHECK: bpl $fc
+# CHECK: bpl $100c5
+# CHECK: bpl $100c1
 
 .section .R_MOS_FK_DATA_4,"a",@progbits
   .long data32

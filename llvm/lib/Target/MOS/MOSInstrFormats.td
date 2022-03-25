@@ -96,6 +96,8 @@ def imm16 : Operand<i32> {
 def pcrel8 : Operand<i32> {
   let ParserMatchClass = PCRelativeOperand<"PCRel8">;
   let EncoderMethod = "encodeImm<MOS::PCRel8, 1>";
+  let PrintMethod = "printBranchOperand";
+  let OperandType = "OPERAND_PCREL";
 }
 
 /// An 16-bit pc-relative reference, for 65816 BRL instruction.
