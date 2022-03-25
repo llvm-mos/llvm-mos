@@ -1286,6 +1286,8 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
   if (!instr_printer_up)
     return Instance();
 
+  instr_printer_up -> setPrintBranchImmAsAddress(true);
+
   return Instance(
       new MCDisasmInstance(std::move(instr_info_up), std::move(reg_info_up),
                            std::move(subtarget_info_up), std::move(asm_info_up),
