@@ -59,7 +59,7 @@ public:
   uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
                      lldb::addr_t pc, llvm::MCInst &mc_inst) const;
   void PrintMCInst(llvm::MCInst &mc_inst, std::string &inst_string,
-                   std::string &comments_string);
+                   std::string &comments_string, lldb::addr_t pc);
   void SetStyle(bool use_hex_immed, HexImmediateStyle hex_style);
   bool CanBranch(llvm::MCInst &mc_inst) const;
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
@@ -603,7 +603,7 @@ public:
 
         if (inst_size > 0) {
           mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
-          mc_disasm_ptr->PrintMCInst(inst, out_string, comment_string);
+          mc_disasm_ptr->PrintMCInst(inst, out_string, comment_string, pc);
 
           if (!comment_string.empty()) {
             AppendComment(comment_string);
@@ -1330,12 +1330,12 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
 
 void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
     llvm::MCInst &mc_inst, std::string &inst_string,
-    std::string &comments_string) {
+    std::string &comments_string, lldb::addr_t pc) {
   llvm::raw_string_ostream inst_stream(inst_string);
   llvm::raw_string_ostream comments_stream(comments_string);
 
   m_instr_printer_up->setCommentStream(comments_stream);
-  m_instr_printer_up->printInst(&mc_inst, 0, llvm::StringRef(),
+  m_instr_printer_up->printInst(&mc_inst, pc, llvm::StringRef(),
                                 *m_subtarget_info_up, inst_stream);
   m_instr_printer_up->setCommentStream(llvm::nulls());
   comments_stream.flush();
