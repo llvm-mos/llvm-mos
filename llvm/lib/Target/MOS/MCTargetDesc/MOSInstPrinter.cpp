@@ -78,6 +78,16 @@ void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
+void MOSInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
+                                          unsigned OpNo,
+                                          raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (!Op.isImm())
+    return printOperand(MI, OpNo, O);
+  uint64_t Target = Op.getImm();
+  O << formatImm(PrintBranchImmAsAddress ? (int8_t)Target + Address + 2: Target);
+}
+
 void MOSInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
   O << getRegisterName(RegNo);
 }
