@@ -224,7 +224,7 @@ Error DWARFDebugLoc::visitLocationList(
     // address selection entry.
     if (Value0 == 0 && Value1 == 0) {
       E.Kind = dwarf::DW_LLE_end_of_list;
-    } else if (Value0 == (Data.getAddressSize() == 4 ? -1U : -1ULL)) {
+    } else if (Value0 + 1 == 1ULL << Data.getAddressSize() * 8) {
       E.Kind = dwarf::DW_LLE_base_address;
       E.Value0 = Value1;
       E.SectionIndex = SectionIndex;
