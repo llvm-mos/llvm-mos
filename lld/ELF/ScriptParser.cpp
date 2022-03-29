@@ -1633,7 +1633,9 @@ void ScriptParser::readCustomOutputFormat() {
   expect("{");
   while (!errorCount() && !consume("}")) {
     StringRef tok = next();
-    if (ByteCommand *data = readByteCommand(tok))
+    if (tok == "INCLUDE")
+      readInclude();
+    else if (ByteCommand *data = readByteCommand(tok))
       script->outputFormat.push_back(data);
     else if (MemoryRegionCommand *region = readMemoryRegionCommand(tok))
       script->outputFormat.push_back(region);
