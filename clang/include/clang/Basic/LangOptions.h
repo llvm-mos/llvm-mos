@@ -53,6 +53,26 @@ protected:
 /// members used to implement virtual inheritance.
 enum class MSVtorDispMode { Never, ForVBaseOverride, ForVFTable };
 
+/// Shader programs run in specific pipeline stages.
+enum class ShaderStage {
+  Pixel = 0,
+  Vertex,
+  Geometry,
+  Hull,
+  Domain,
+  Compute,
+  Library,
+  RayGeneration,
+  Intersection,
+  AnyHit,
+  ClosestHit,
+  Miss,
+  Callable,
+  Mesh,
+  Amplification,
+  Invalid,
+};
+
 /// Keeps track of the various options that can be
 /// enabled, which controls the dialect of C or C++ that is accepted.
 class LangOptions : public LangOptionsBase {
@@ -89,6 +109,9 @@ public:
 
     /// Compiling a module from a list of header files.
     CMK_HeaderModule,
+
+    /// Compiling a module header unit.
+    CMK_HeaderUnit,
 
     /// Compiling a C++ modules TS module interface unit.
     CMK_ModuleInterface,
@@ -135,6 +158,16 @@ public:
     // The "default" SYCL version to be used when none is specified on the
     // frontend command line.
     SYCL_Default = SYCL_2020
+  };
+
+  enum HLSLLangStd {
+    HLSL_Unset = 0,
+    HLSL_2015 = 2015,
+    HLSL_2016 = 2016,
+    HLSL_2017 = 2017,
+    HLSL_2018 = 2018,
+    HLSL_2021 = 2021,
+    HLSL_202x = 2029,
   };
 
   /// Clang versions with different platform ABI conformance.
@@ -309,6 +342,13 @@ public:
     ExtendTo64
   };
 
+  enum class GPUDefaultStreamKind {
+    /// Legacy default stream
+    Legacy,
+    /// Per-thread default stream
+    PerThread,
+  };
+
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -402,7 +442,27 @@ public:
   /// input is a header file (i.e. -x c-header).
   bool IsHeaderFile = false;
 
+  /// The default stream kind used for HIP kernel launching.
+  GPUDefaultStreamKind GPUDefaultStream;
+
+  /// The seed used by the randomize structure layout feature.
+  std::string RandstructSeed;
+
   LangOptions();
+
+  /// Set language defaults for the given input language and
+  /// language standard in the given LangOptions object.
+  ///
+  /// \param Opts - The LangOptions object to set up.
+  /// \param Lang - The input language.
+  /// \param T - The target triple.
+  /// \param Includes - If the language requires extra headers to be implicitly
+  ///                   included, they will be appended to this list.
+  /// \param LangStd - The input language standard.
+  static void
+  setLangDefaults(LangOptions &Opts, Language Lang, const llvm::Triple &T,
+                  std::vector<std::string> &Includes,
+                  LangStandard::Kind LangStd = LangStandard::lang_unspecified);
 
   // Define accessors/mutators for language options of enumeration type.
 #define LANGOPT(Name, Bits, Default, Description)

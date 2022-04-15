@@ -168,16 +168,17 @@ bool skipRelocationProcessX86(uint64_t Type, uint64_t Contents) {
 bool skipRelocationProcessAArch64(uint64_t Type, uint64_t Contents) {
   auto IsMov = [](uint64_t Contents) -> bool {
     // The bits 28-23 are 0b100101
-    if ((Contents & 0x1f800000) == 0x12800000)
-      return true;
-    return false;
+    return (Contents & 0x1f800000) == 0x12800000;
   };
 
   auto IsB = [](uint64_t Contents) -> bool {
     // The bits 31-26 are 0b000101
-    if ((Contents & 0xfc000000) == 0x14000000)
-      return true;
-    return false;
+    return (Contents & 0xfc000000) == 0x14000000;
+  };
+
+  auto IsAdr = [](uint64_t Contents) -> bool {
+    // The bits 31-24 are 0b0xx10000
+    return (Contents & 0x9f000000) == 0x10000000;
   };
 
   auto IsNop = [](uint64_t Contents) -> bool { return Contents == 0xd503201f; };
@@ -205,7 +206,7 @@ bool skipRelocationProcessAArch64(uint64_t Type, uint64_t Contents) {
   }
   }
 
-  // The ld might replace load/store instruction with jump and
+  // The linker might replace load/store instruction with jump and
   // veneer due to errata 843419
   // https://documentation-service.arm.com/static/5fa29fddb209f547eebd361d
   // Thus load/store relocations for these instructions must be ignored
@@ -221,6 +222,18 @@ bool skipRelocationProcessAArch64(uint64_t Type, uint64_t Contents) {
     if (IsB(Contents))
       return true;
   }
+  }
+
+  // The linker might relax ADRP+ADD or ADRP+LDR sequences to the ADR+NOP
+  switch (Type) {
+  default:
+    break;
+  case ELF::R_AARCH64_ADR_PREL_PG_HI21:
+  case ELF::R_AARCH64_ADD_ABS_LO12_NC:
+  case ELF::R_AARCH64_ADR_GOT_PAGE:
+  case ELF::R_AARCH64_LD64_GOT_LO12_NC:
+    if (IsAdr(Contents))
+      return true;
   }
 
   return false;
@@ -254,7 +267,9 @@ uint64_t adjustValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
 
 uint64_t extractValueX86(uint64_t Type, uint64_t Contents, uint64_t PC) {
   if (Type == ELF::R_X86_64_32S)
-    return SignExtend64<32>(Contents & 0xffffffff);
+    return SignExtend64<32>(Contents);
+  if (Relocation::isPCRelative(Type))
+    return SignExtend64(Contents, 8 * Relocation::getSizeForType(Type));
   return Contents;
 }
 
@@ -442,6 +457,8 @@ bool isPCRelativeX86(uint64_t Type) {
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_GOTPCREL:
   case ELF::R_X86_64_PLT32:
+  case ELF::R_X86_64_GOTOFF64:
+  case ELF::R_X86_64_GOTPC32:
   case ELF::R_X86_64_GOTTPOFF:
   case ELF::R_X86_64_GOTPCRELX:
   case ELF::R_X86_64_REX_GOTPCRELX:

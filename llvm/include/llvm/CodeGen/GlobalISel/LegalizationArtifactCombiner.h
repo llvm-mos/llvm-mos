@@ -26,10 +26,10 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "legalizer"
-using namespace llvm::MIPatternMatch;
 
 namespace llvm {
 class LegalizationArtifactCombiner {
@@ -58,6 +58,7 @@ public:
                         SmallVectorImpl<MachineInstr *> &DeadInsts,
                         SmallVectorImpl<Register> &UpdatedDefs,
                         GISelObserverWrapper &Observer) {
+    using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_ANYEXT);
 
     Builder.setInstrAndDebugLoc(MI);
@@ -111,6 +112,7 @@ public:
                       SmallVectorImpl<MachineInstr *> &DeadInsts,
                       SmallVectorImpl<Register> &UpdatedDefs,
                       GISelObserverWrapper &Observer) {
+    using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_ZEXT);
 
     Builder.setInstrAndDebugLoc(MI);
@@ -172,6 +174,7 @@ public:
   bool tryCombineSExt(MachineInstr &MI,
                       SmallVectorImpl<MachineInstr *> &DeadInsts,
                       SmallVectorImpl<Register> &UpdatedDefs) {
+    using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_SEXT);
 
     Builder.setInstrAndDebugLoc(MI);
@@ -229,6 +232,7 @@ public:
                        SmallVectorImpl<MachineInstr *> &DeadInsts,
                        SmallVectorImpl<Register> &UpdatedDefs,
                        GISelObserverWrapper &Observer) {
+    using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_TRUNC);
 
     Builder.setInstr(MI);
@@ -1361,6 +1365,8 @@ private:
   /// Looks through copy instructions and returns the actual
   /// source register.
   Register lookThroughCopyInstrs(Register Reg) {
+    using namespace llvm::MIPatternMatch;
+
     Register TmpReg;
     while (mi_match(Reg, MRI, m_Copy(m_Reg(TmpReg)))) {
       if (MRI.getType(TmpReg).isValid())

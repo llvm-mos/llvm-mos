@@ -16,10 +16,11 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_PWMAFUNCTION_H
 #define MLIR_ANALYSIS_PRESBURGER_PWMAFUNCTION_H
 
-#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
-#include "mlir/Analysis/Presburger/PresburgerSet.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 
 namespace mlir {
+namespace presburger {
 
 /// This class represents a multi-affine function whose domain is given by an
 /// IntegerPolyhedron. This can be thought of as an IntegerPolyhedron with a
@@ -40,8 +41,7 @@ namespace mlir {
 /// each id, and an extra column at the end for the constant term.
 ///
 /// Checking equality of two such functions is supported, as well as finding the
-/// value of the function at a specified point. Note that local ids in the
-/// domain are not yet supported for finding the value at a point.
+/// value of the function at a specified point.
 class MultiAffineFunction : protected IntegerPolyhedron {
 public:
   /// We use protected inheritance to avoid inheriting the whole public
@@ -52,17 +52,17 @@ public:
   using IntegerPolyhedron::getNumIds;
   using IntegerPolyhedron::getNumLocalIds;
   using IntegerPolyhedron::getNumSymbolIds;
+  using IntegerPolyhedron::getSpace;
 
   MultiAffineFunction(const IntegerPolyhedron &domain, const Matrix &output)
       : IntegerPolyhedron(domain), output(output) {}
-  MultiAffineFunction(const Matrix &output, unsigned numDims,
-                      unsigned numSymbols = 0, unsigned numLocals = 0)
-      : IntegerPolyhedron(numDims, numSymbols, numLocals), output(output) {}
+  MultiAffineFunction(const Matrix &output, const PresburgerSpace &space)
+      : IntegerPolyhedron(space), output(output) {}
 
   ~MultiAffineFunction() override = default;
   Kind getKind() const override { return Kind::MultiAffineFunction; }
-  bool classof(const IntegerPolyhedron *poly) const {
-    return poly->getKind() == Kind::MultiAffineFunction;
+  bool classof(const IntegerRelation *rel) const {
+    return rel->getKind() == Kind::MultiAffineFunction;
   }
 
   unsigned getNumInputs() const { return getNumDimAndSymbolIds(); }
@@ -71,8 +71,6 @@ public:
     return output.getNumColumns() == getNumIds() + 1;
   }
   const IntegerPolyhedron &getDomain() const { return *this; }
-
-  bool hasCompatibleDimensions(const MultiAffineFunction &f) const;
 
   /// Insert `num` identifiers of the specified kind at position `pos`.
   /// Positions are relative to the kind of identifier. The coefficient columns
@@ -85,7 +83,8 @@ public:
   void swapId(unsigned posA, unsigned posB) override;
 
   /// Remove the specified range of ids.
-  void removeIdRange(unsigned idStart, unsigned idLimit) override;
+  void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit) override;
+  using IntegerRelation::removeIdRange;
 
   /// Eliminate the `posB^th` local identifier, replacing every instance of it
   /// with the `posA^th` local identifier. This should be used when the two
@@ -104,12 +103,14 @@ public:
 
   /// Get the value of the function at the specified point. If the point lies
   /// outside the domain, an empty optional is returned.
-  ///
-  /// Note: domains with local ids are not yet supported, and will assert-fail.
   Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
 
-  void print(raw_ostream &os) const;
+  /// Truncate the output dimensions to the first `count` dimensions.
+  ///
+  /// TODO: refactor so that this can be accomplished through removeIdRange.
+  void truncateOutput(unsigned count);
 
+  void print(raw_ostream &os) const;
   void dump() const;
 
 private:
@@ -136,14 +137,19 @@ private:
 /// symbolic ids.
 ///
 /// Support is provided to compare equality of two such functions as well as
-/// finding the value of the function at a point. Note that local ids in the
-/// piece are not supported for the latter.
-class PWMAFunction : PresburgerSpace {
+/// finding the value of the function at a point.
+class PWMAFunction {
 public:
-  PWMAFunction(unsigned numDims, unsigned numSymbols, unsigned numOutputs)
-      : PresburgerSpace(numDims, numSymbols), numOutputs(numOutputs) {
+  PWMAFunction(const PresburgerSpace &space, unsigned numOutputs)
+      : space(space), numOutputs(numOutputs) {
+    assert(space.getNumDomainIds() == 0 &&
+           "Set type space should have zero domain ids.");
+    assert(space.getNumLocalIds() == 0 &&
+           "PWMAFunction cannot have local ids.");
     assert(numOutputs >= 1 && "The function must output something!");
   }
+
+  const PresburgerSpace &getSpace() const { return space; }
 
   void addPiece(const MultiAffineFunction &piece);
   void addPiece(const IntegerPolyhedron &domain, const Matrix &output);
@@ -151,23 +157,15 @@ public:
   const MultiAffineFunction &getPiece(unsigned i) const { return pieces[i]; }
   unsigned getNumPieces() const { return pieces.size(); }
   unsigned getNumOutputs() const { return numOutputs; }
-  unsigned getNumInputs() const { return getNumIds(); }
+  unsigned getNumInputs() const { return space.getNumIds(); }
   MultiAffineFunction &getPiece(unsigned i) { return pieces[i]; }
 
   /// Return the domain of this piece-wise MultiAffineFunction. This is the
   /// union of the domains of all the pieces.
   PresburgerSet getDomain() const;
 
-  /// Check whether the `this` and the given function have compatible
-  /// dimensions, i.e., the same number of dimension inputs, symbol inputs, and
-  /// outputs.
-  bool hasCompatibleDimensions(const MultiAffineFunction &f) const;
-  bool hasCompatibleDimensions(const PWMAFunction &f) const;
-
   /// Return the value at the specified point and an empty optional if the
   /// point does not lie in the domain.
-  ///
-  /// Note: domains with local ids are not yet supported, and will assert-fail.
   Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
 
   /// Return whether `this` and `other` are equal as PWMAFunctions, i.e. whether
@@ -175,10 +173,17 @@ public:
   /// value at every point in the domain.
   bool isEqual(const PWMAFunction &other) const;
 
+  /// Truncate the output dimensions to the first `count` dimensions.
+  ///
+  /// TODO: refactor so that this can be accomplished through removeIdRange.
+  void truncateOutput(unsigned count);
+
   void print(raw_ostream &os) const;
   void dump() const;
 
 private:
+  PresburgerSpace space;
+
   /// The list of pieces in this piece-wise MultiAffineFunction.
   SmallVector<MultiAffineFunction, 4> pieces;
 
@@ -186,6 +191,7 @@ private:
   unsigned numOutputs;
 };
 
+} // namespace presburger
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_PRESBURGER_PWMAFUNCTION_H

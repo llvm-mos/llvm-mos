@@ -104,7 +104,7 @@ func @extract_element(%arg0: vector<4x4xf32>) {
 // -----
 
 func @extract_vector_type(%arg0: index) {
-  // expected-error@+1 {{expected vector type}}
+  // expected-error@+1 {{invalid kind of type specified}}
   %1 = vector.extract %arg0[] : index
 }
 
@@ -944,6 +944,13 @@ func @constant_mask_with_zero_mask_dim_size() {
 
 // -----
 
+func @constant_mask_scalable_non_zero_dim_size() {
+  // expected-error@+1 {{expected mask dim sizes for scalable masks to be 0}}
+  %0 = vector.constant_mask [2] : vector<[8]xi1>
+}
+
+// -----
+
 func @print_no_result(%arg0 : f32) -> i32 {
   // expected-error@+1 {{cannot name an operation with no results}}
   %0 = vector.print %arg0 : f32
@@ -1133,6 +1140,13 @@ func @reduce_unsupported_type(%arg0: vector<16xf32>) -> f32 {
 func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
   // expected-error@+1 {{'vector.reduction' op unsupported reduction rank: 2}}
   %0 = vector.reduction <add>, %arg0 : vector<4x16xf32> into f32
+}
+
+// -----
+
+func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>) -> f32 {
+  // expected-error@+1 {{'vector.multi_reduction' op inferred type(s) 'vector<4xf32>' are incompatible with return type(s) of operation 'vector<16xf32>'}}
+  %0 = vector.multi_reduction <mul>, %arg0 [1] : vector<4x16xf32> to vector<16xf32>
 }
 
 // -----
@@ -1512,5 +1526,80 @@ func @scan_incompatible_shapes(%arg0: vector<2x3xi32>, %arg1: vector<5xi32>) -> 
 func @invalid_splat(%v : f32) {
   // expected-error@+1 {{invalid kind of type specified}}
   vector.splat %v : memref<8xf32>
+  return
+}
+
+// -----
+
+func @warp_wrong_num_outputs(%laneid: index) {
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected same number of yield operands and return values.}}
+  %2 = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
+  }
+  return
+}
+
+// -----
+
+func @warp_wrong_num_inputs(%laneid: index) {
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected same number op arguments and block arguments.}}
+  vector.warp_execute_on_lane_0(%laneid)[64] {
+  ^bb0(%arg0 : vector<128xi32>) :
+  }
+  return
+}
+
+// -----
+
+func @warp_wrong_return_distribution(%laneid: index) {
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
+  %2 = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    vector.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+
+// -----
+
+func @warp_wrong_arg_distribution(%laneid: index, %v0 : vector<4xi32>) {
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
+  vector.warp_execute_on_lane_0(%laneid)[64]
+  args(%v0 : vector<4xi32>) {
+   ^bb0(%arg0 : vector<128xi32>) :
+  }
+  return
+}
+
+// -----
+
+func @warp_2_distributed_dims(%laneid: index) {
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected only one dimension to be distributed from 'vector<128x128xi32>' to 'vector<4x4xi32>'}}
+  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
+    %0 = arith.constant dense<2>: vector<128x128xi32>
+    vector.yield %0 : vector<128x128xi32>
+  }
+  return
+}
+
+// -----
+
+func @warp_mismatch_rank(%laneid: index) {
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected distributed vectors to have same rank and element type.}}
+  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    vector.yield %0 : vector<128xi32>
+  }
+  return
+}
+
+// -----
+
+func @warp_mismatch_rank(%laneid: index) {
+  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected vector type for distributed operands.}}
+  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (i32) {
+    %0 = arith.constant dense<2>: vector<128xi32>
+    vector.yield %0 : vector<128xi32>
+  }
   return
 }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Pass/AnalysisManager.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
@@ -19,12 +20,18 @@ using namespace mlir::detail;
 namespace {
 /// Minimal class definitions for two analyses.
 struct MyAnalysis {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(MyAnalysis)
+
   MyAnalysis(Operation *) {}
 };
 struct OtherAnalysis {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OtherAnalysis)
+
   OtherAnalysis(Operation *) {}
 };
 struct OpSpecificAnalysis {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpSpecificAnalysis)
+
   OpSpecificAnalysis(ModuleOp) {}
 };
 
@@ -51,6 +58,7 @@ TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
 
 TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
   MLIRContext context;
+  context.loadDialect<func::FuncDialect>();
   Builder builder(&context);
 
   // Create a function and a module.
@@ -81,6 +89,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
 
 TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
   MLIRContext context;
+  context.loadDialect<func::FuncDialect>();
   Builder builder(&context);
 
   // Create a function and a module.
@@ -113,9 +122,13 @@ TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
 }
 
 /// Test analyses with custom invalidation logic.
-struct TestAnalysisSet {};
+struct TestAnalysisSet {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAnalysisSet)
+};
 
 struct CustomInvalidatingAnalysis {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomInvalidatingAnalysis)
+
   CustomInvalidatingAnalysis(Operation *) {}
 
   bool isInvalidated(const AnalysisManager::PreservedAnalyses &pa) {
@@ -160,6 +173,8 @@ TEST(AnalysisManagerTest, OpSpecificAnalysis) {
 }
 
 struct AnalysisWithDependency {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AnalysisWithDependency)
+
   AnalysisWithDependency(Operation *, AnalysisManager &am) {
     am.getAnalysis<MyAnalysis>();
   }
@@ -191,6 +206,8 @@ TEST(AnalysisManagerTest, DependentAnalysis) {
 }
 
 struct AnalysisWithNestedDependency {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AnalysisWithNestedDependency)
+
   AnalysisWithNestedDependency(Operation *, AnalysisManager &am) {
     am.getAnalysis<AnalysisWithDependency>();
   }
@@ -225,6 +242,8 @@ TEST(AnalysisManagerTest, NestedDependentAnalysis) {
 }
 
 struct AnalysisWith2Ctors {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AnalysisWith2Ctors)
+
   AnalysisWith2Ctors(Operation *) { ctor1called = true; }
 
   AnalysisWith2Ctors(Operation *, AnalysisManager &) { ctor2called = true; }

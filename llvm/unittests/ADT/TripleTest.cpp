@@ -140,6 +140,11 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::SCEI, T.getVendor());
   EXPECT_EQ(Triple::PS4, T.getOS());
 
+  T = Triple("x86_64-sie-ps5");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::SCEI, T.getVendor());
+  EXPECT_EQ(Triple::PS5, T.getOS());
+
   T = Triple("powerpc-ibm-aix");
   EXPECT_EQ(Triple::ppc, T.getArch());
   EXPECT_EQ(Triple::IBM, T.getVendor());
@@ -620,6 +625,97 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
   EXPECT_TRUE(T.isArch32Bit());
 
+  T = Triple("dxil-unknown-shadermodel-pixel");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Pixel, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-vertex");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Vertex, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-geometry");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Geometry, T.getEnvironment());
+
+
+  T = Triple("dxil-unknown-shadermodel-hull");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Hull, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-domain");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Domain, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-compute");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Compute, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-library");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Library, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-raygeneration");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::RayGeneration, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-intersection");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Intersection, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-anyhit");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::AnyHit, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-closesthit");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::ClosestHit, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-miss");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Miss, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-callable");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Callable, T.getEnvironment());
+  
+  T = Triple("dxil-unknown-shadermodel-mesh");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Mesh, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-amplification");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Amplification, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }
@@ -973,6 +1069,12 @@ TEST(TripleTest, BitWidthPredicates) {
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
   EXPECT_TRUE(T.isLoongArch());
+
+  T.setArch(Triple::dxil);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_TRUE(T.isArch32Bit());
+  EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_TRUE(T.isDXIL());
 }
 
 TEST(TripleTest, BitWidthArchVariants) {
@@ -1163,6 +1265,10 @@ TEST(TripleTest, BitWidthArchVariants) {
   T.setArch(Triple::xcore);
   EXPECT_EQ(Triple::xcore, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::UnknownArch, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::dxil);
+  EXPECT_EQ(Triple::dxil, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::UnknownArch, T.get64BitArchVariant().getArch());
 }
 
 TEST(TripleTest, EndianArchVariants) {
@@ -1311,6 +1417,11 @@ TEST(TripleTest, EndianArchVariants) {
   EXPECT_TRUE(T.isLittleEndian());
   EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
   EXPECT_EQ(Triple::loongarch64, T.getLittleEndianArchVariant().getArch());
+
+  T.setArch(Triple::dxil);
+  EXPECT_TRUE(T.isLittleEndian());
+  EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
+  EXPECT_EQ(Triple::dxil, T.getLittleEndianArchVariant().getArch());
 }
 
 TEST(TripleTest, getOSVersion) {
@@ -1434,6 +1545,39 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_TRUE(T.getEnvironment() == Triple::MacABI);
   EXPECT_TRUE(T.isMacCatalystEnvironment());
   EXPECT_FALSE(T.isSimulatorEnvironment());
+
+  T = Triple("x86_64-apple-driverkit20.1.0");
+  EXPECT_TRUE(T.isDriverKit());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(20, 1), Version);
+
+  T = Triple("x86_64-apple-driverkit20");
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(20, 0), Version);
+
+  // DriverKit version should default to 19.0.
+  T = Triple("x86_64-apple-driverkit");
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(19, 0), Version);
+
+  T = Triple("dxil-unknown-shadermodel6.6-pixel");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(6, 6), Version);
+  EXPECT_EQ(Triple::Pixel, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel6.0-pixel");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(6, 0), Version);
+  EXPECT_EQ(Triple::Pixel, T.getEnvironment());
 }
 
 TEST(TripleTest, getEnvironmentVersion) {
@@ -1542,6 +1686,9 @@ TEST(TripleTest, FileFormat) {
 
   Triple CygwinNormalized(Triple::normalize("i686-pc-cygwin-elf"));
   EXPECT_EQ(Triple::ELF, CygwinNormalized.getObjectFormat());
+
+  EXPECT_EQ(Triple::DXContainer,
+            Triple("dxil-unknown-shadermodel").getObjectFormat());
 
   Triple T = Triple("");
   T.setObjectFormat(Triple::ELF);

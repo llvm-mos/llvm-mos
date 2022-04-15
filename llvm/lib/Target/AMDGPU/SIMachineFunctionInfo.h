@@ -421,7 +421,6 @@ private:
   // Pointer to where the ABI inserts special kernel arguments separate from the
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
-  bool HostcallPtr : 1;
 
   bool MayNeedAGPRs : 1;
 
@@ -494,6 +493,16 @@ private:
   // frame, so save it here and add it to the RegScavenger later.
   Optional<int> ScavengeFI;
 
+private:
+  Register VGPRForAGPRCopy;
+
+public:
+  Register getVGPRForAGPRCopy() const {
+    assert(VGPRForAGPRCopy &&
+           "Valid VGPR for AGPR copy must have been identified by now");
+    return VGPRForAGPRCopy;
+  }
+
 public: // FIXME
   /// If this is set, an SGPR used for save/restore of the register used for the
   /// frame pointer.
@@ -526,13 +535,6 @@ public:
   }
 
   ArrayRef<SGPRSpillVGPR> getSGPRSpillVGPRs() const { return SpillVGPRs; }
-
-  void setSGPRSpillVGPRs(Register NewVGPR, Optional<int> newFI, int Index) {
-    SpillVGPRs[Index].VGPR = NewVGPR;
-    SpillVGPRs[Index].FI = newFI;
-  }
-
-  bool removeVGPRForSGPRSpill(Register ReservedVGPR, MachineFunction &MF);
 
   ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
     return SpillAGPR;
@@ -695,10 +697,6 @@ public:
 
   bool hasImplicitArgPtr() const {
     return ImplicitArgPtr;
-  }
-
-  bool hasHostcallPtr() const {
-    return HostcallPtr;
   }
 
   bool hasImplicitBufferPtr() const {

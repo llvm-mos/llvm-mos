@@ -526,7 +526,8 @@ InFlightDiagnostic Operation::emitOpError(const Twine &message) {
 /// Create a deep copy of this operation but keep the operation regions empty.
 /// Operands are remapped using `mapper` (if present), and `mapper` is updated
 /// to contain the results.
-Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
+Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper,
+                                          bool mapResults) {
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
 
@@ -545,8 +546,10 @@ Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
                        successors, getNumRegions());
 
   // Remember the mapping of any results.
-  for (unsigned i = 0, e = getNumResults(); i != e; ++i)
-    mapper.map(getResult(i), newOp->getResult(i));
+  if (mapResults) {
+    for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+      mapper.map(getResult(i), newOp->getResult(i));
+  }
 
   return newOp;
 }
@@ -562,11 +565,14 @@ Operation *Operation::cloneWithoutRegions() {
 /// sub-operations to the corresponding operation that is copied, and adds
 /// those mappings to the map.
 Operation *Operation::clone(BlockAndValueMapping &mapper) {
-  auto *newOp = cloneWithoutRegions(mapper);
+  auto *newOp = cloneWithoutRegions(mapper, /*mapResults=*/false);
 
   // Clone the regions.
   for (unsigned i = 0; i != numRegions; ++i)
     getRegion(i).cloneInto(&newOp->getRegion(i), mapper);
+
+  for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+    mapper.map(getResult(i), newOp->getResult(i));
 
   return newOp;
 }
@@ -608,8 +614,8 @@ void OpState::printOpName(Operation *op, OpAsmPrinter &p,
     name = name.drop_front(defaultDialect.size() + 1);
   // TODO: remove this special case (and update test/IR/parser.mlir)
   else if ((defaultDialect.empty() || defaultDialect == "builtin") &&
-           name.startswith("std."))
-    name = name.drop_front(4);
+           name.startswith("func."))
+    name = name.drop_front(5);
   p.getStream() << name;
 }
 
@@ -1088,15 +1094,11 @@ LogicalResult OpTrait::impl::verifyIsIsolatedFromAbove(Operation *isolatedOp) {
     while (!pendingRegions.empty()) {
       for (Operation &op : pendingRegions.pop_back_val()->getOps()) {
         for (Value operand : op.getOperands()) {
-          // operand should be non-null here if the IR is well-formed. But
-          // we don't assert here as this function is called from the verifier
-          // and so could be called on invalid IR.
-          if (!operand)
-            return op.emitOpError("operation's operand is null");
-
           // Check that any value that is used by an operation is defined in the
           // same region as either an operation result.
           auto *operandRegion = operand.getParentRegion();
+          if (!operandRegion)
+            return op.emitError("operation's operand is unlinked");
           if (!region.isAncestor(operandRegion)) {
             return op.emitOpError("using value defined outside the region")
                        .attachNote(isolatedOp->getLoc())

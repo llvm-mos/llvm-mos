@@ -82,14 +82,13 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 */
 
-#include <__assert>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__mutex_base>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
 #include <__threading_support>
 #include <__utility/forward.h>
-#include <chrono>
 #include <cstddef>
 #include <functional>
 #include <iosfwd>

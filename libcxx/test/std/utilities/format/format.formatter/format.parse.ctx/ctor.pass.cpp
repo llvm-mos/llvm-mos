@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 
 // <format>
@@ -47,8 +46,8 @@ constexpr void test(const CharT* fmt) {
 
   {
     std::basic_format_parse_context<CharT> context(fmt);
-    assert(context.begin() == &fmt[0]);
-    assert(context.end() == &fmt[3]);
+    assert(std::to_address(context.begin()) == &fmt[0]);
+    assert(std::to_address(context.end()) == &fmt[3]);
   }
   {
     std::basic_string_view view{fmt};

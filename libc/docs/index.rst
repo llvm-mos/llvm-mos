@@ -77,8 +77,9 @@ Other Interesting Documentation
     ground_truth_specification
     header_generation
     implementation_standard
-    integration_test
+    api_test
     layering
     mechanics_of_public_api
     redirectors
     source_layout
+    strings

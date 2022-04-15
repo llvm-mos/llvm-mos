@@ -3,18 +3,18 @@
 
 import ctypes
 import os
+import sys
 import tempfile
 
-import mlir.all_passes_registration
-
-from mlir import execution_engine
 from mlir import ir
-from mlir import passmanager
 from mlir import runtime as rt
 
 from mlir.dialects import builtin
 from mlir.dialects import sparse_tensor as st
 
+_SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(_SCRIPT_PATH)
+from tools import sparse_compiler
 
 # TODO: move more into actual IR building.
 def boilerplate(attr: st.EncodingAttr):
@@ -48,13 +48,10 @@ def expected():
 """
 
 
-def build_compile_and_run_output(attr: st.EncodingAttr, support_lib: str,
-                                 compiler):
+def build_compile_and_run_output(attr: st.EncodingAttr, compiler):
   # Build and Compile.
   module = ir.Module.parse(boilerplate(attr))
-  compiler(module)
-  engine = execution_engine.ExecutionEngine(
-      module, opt_level=0, shared_libs=[support_lib])
+  engine = compiler.compile_and_jit(module)
 
   # Invoke the kernel and compare output.
   with tempfile.TemporaryDirectory() as test_dir:
@@ -66,18 +63,6 @@ def build_compile_and_run_output(attr: st.EncodingAttr, support_lib: str,
     actual = open(out).read()
     if actual != expected():
       quit('FAILURE')
-
-
-class SparseCompiler:
-  """Sparse compiler passes."""
-
-  def __init__(self):
-    pipeline = (
-        f'sparse-compiler{{reassociate-fp-reductions=1 enable-index-optimizations=1}}')
-    self.pipeline = pipeline
-
-  def __call__(self, module: ir.Module):
-    passmanager.PassManager.parse(self.pipeline).run(module)
 
 
 def main():
@@ -99,12 +84,13 @@ def main():
         ir.AffineMap.get_permutation([1, 0])
     ]
     bitwidths = [8, 16, 32, 64]
+    compiler = sparse_compiler.SparseCompiler(
+        options='', opt_level=2, shared_libs=[support_lib])
     for level in levels:
       for ordering in orderings:
         for bwidth in bitwidths:
           attr = st.EncodingAttr.get(level, ordering, bwidth, bwidth)
-          compiler = SparseCompiler()
-          build_compile_and_run_output(attr, support_lib, compiler)
+          build_compile_and_run_output(attr, compiler)
           count = count + 1
 
   # CHECK: Passed 16 tests

@@ -10,6 +10,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Config/config.h"
+#include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -17,104 +18,6 @@
 
 namespace llvm {
 namespace jitlink {
-
-EHFrameSplitter::EHFrameSplitter(StringRef EHFrameSectionName)
-    : EHFrameSectionName(EHFrameSectionName) {}
-
-Error EHFrameSplitter::operator()(LinkGraph &G) {
-  auto *EHFrame = G.findSectionByName(EHFrameSectionName);
-
-  if (!EHFrame) {
-    LLVM_DEBUG({
-      dbgs() << "EHFrameSplitter: No " << EHFrameSectionName
-             << " section. Nothing to do\n";
-    });
-    return Error::success();
-  }
-
-  LLVM_DEBUG({
-    dbgs() << "EHFrameSplitter: Processing " << EHFrameSectionName << "...\n";
-  });
-
-  DenseMap<Block *, LinkGraph::SplitBlockCache> Caches;
-
-  {
-    // Pre-build the split caches.
-    for (auto *B : EHFrame->blocks())
-      Caches[B] = LinkGraph::SplitBlockCache::value_type();
-    for (auto *Sym : EHFrame->symbols())
-      Caches[&Sym->getBlock()]->push_back(Sym);
-    for (auto *B : EHFrame->blocks())
-      llvm::sort(*Caches[B], [](const Symbol *LHS, const Symbol *RHS) {
-        return LHS->getOffset() > RHS->getOffset();
-      });
-  }
-
-  // Iterate over blocks (we do this by iterating over Caches entries rather
-  // than EHFrame->blocks() as we will be inserting new blocks along the way,
-  // which would invalidate iterators in the latter sequence.
-  for (auto &KV : Caches) {
-    auto &B = *KV.first;
-    auto &BCache = KV.second;
-    if (auto Err = processBlock(G, B, BCache))
-      return Err;
-  }
-
-  return Error::success();
-}
-
-Error EHFrameSplitter::processBlock(LinkGraph &G, Block &B,
-                                    LinkGraph::SplitBlockCache &Cache) {
-  LLVM_DEBUG(dbgs() << "  Processing block at " << B.getAddress() << "\n");
-
-  // eh-frame should not contain zero-fill blocks.
-  if (B.isZeroFill())
-    return make_error<JITLinkError>("Unexpected zero-fill block in " +
-                                    EHFrameSectionName + " section");
-
-  if (B.getSize() == 0) {
-    LLVM_DEBUG(dbgs() << "    Block is empty. Skipping.\n");
-    return Error::success();
-  }
-
-  BinaryStreamReader BlockReader(
-      StringRef(B.getContent().data(), B.getContent().size()),
-      G.getEndianness());
-
-  while (true) {
-    uint64_t RecordStartOffset = BlockReader.getOffset();
-
-    LLVM_DEBUG({
-      dbgs() << "    Processing CFI record at "
-             << formatv("{0:x16}", B.getAddress()) << "\n";
-    });
-
-    uint32_t Length;
-    if (auto Err = BlockReader.readInteger(Length))
-      return Err;
-    if (Length != 0xffffffff) {
-      if (auto Err = BlockReader.skip(Length))
-        return Err;
-    } else {
-      uint64_t ExtendedLength;
-      if (auto Err = BlockReader.readInteger(ExtendedLength))
-        return Err;
-      if (auto Err = BlockReader.skip(ExtendedLength))
-        return Err;
-    }
-
-    // If this was the last block then there's nothing to split
-    if (BlockReader.empty()) {
-      LLVM_DEBUG(dbgs() << "      Extracted " << B << "\n");
-      return Error::success();
-    }
-
-    uint64_t BlockSize = BlockReader.getOffset() - RecordStartOffset;
-    auto &NewBlock = G.splitBlock(B, BlockSize);
-    (void)NewBlock;
-    LLVM_DEBUG(dbgs() << "      Extracted " << NewBlock << "\n");
-  }
-}
 
 EHFrameEdgeFixer::EHFrameEdgeFixer(StringRef EHFrameSectionName,
                                    unsigned PointerSize, Edge::Kind Delta64,
@@ -147,7 +50,16 @@ Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
   // Build a map of all blocks and symbols in the text sections. We will use
   // these for finding / building edge targets when processing FDEs.
   for (auto &Sec : G.sections()) {
-    PC.AddrToSyms.addSymbols(Sec.symbols());
+    // Just record the most-canonical symbol (for eh-frame purposes) at each
+    // address.
+    for (auto *Sym : Sec.symbols()) {
+      auto &CurSym = PC.AddrToSym[Sym->getAddress()];
+      if (!CurSym || (std::make_tuple(Sym->getLinkage(), Sym->getScope(),
+                                      !Sym->hasName(), Sym->getName()) <
+                      std::make_tuple(CurSym->getLinkage(), CurSym->getScope(),
+                                      !CurSym->hasName(), CurSym->getName())))
+        CurSym = Sym;
+    }
     if (auto Err = PC.AddrToBlock.addBlocks(Sec.blocks(),
                                             BlockAddressMap::includeNonNull))
       return Err;
@@ -706,23 +618,10 @@ EHFrameEdgeFixer::readEncodedPointer(uint8_t PointerEncoding,
 
 Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
                                                        orc::ExecutorAddr Addr) {
-  Symbol *CanonicalSym = nullptr;
-
-  auto UpdateCanonicalSym = [&](Symbol *Sym) {
-    if (!CanonicalSym || Sym->getLinkage() < CanonicalSym->getLinkage() ||
-        Sym->getScope() < CanonicalSym->getScope() ||
-        (Sym->hasName() && !CanonicalSym->hasName()) ||
-        Sym->getName() < CanonicalSym->getName())
-      CanonicalSym = Sym;
-  };
-
-  if (auto *SymbolsAtAddr = PC.AddrToSyms.getSymbolsAt(Addr))
-    for (auto *Sym : *SymbolsAtAddr)
-      UpdateCanonicalSym(Sym);
-
-  // If we found an existing symbol at the given address then use it.
-  if (CanonicalSym)
-    return *CanonicalSym;
+  // See whether we have a canonical symbol for the given address already.
+  auto CanonicalSymI = PC.AddrToSym.find(Addr);
+  if (CanonicalSymI != PC.AddrToSym.end())
+    return *CanonicalSymI->second;
 
   // Otherwise search for a block covering the address and create a new symbol.
   auto *B = PC.AddrToBlock.getBlockCovering(Addr);
@@ -730,7 +629,10 @@ Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
     return make_error<JITLinkError>("No symbol or block covering address " +
                                     formatv("{0:x16}", Addr));
 
-  return PC.G.addAnonymousSymbol(*B, Addr - B->getAddress(), 0, false, false);
+  auto &S =
+      PC.G.addAnonymousSymbol(*B, Addr - B->getAddress(), 0, false, false);
+  PC.AddrToSym[S.getAddress()] = &S;
+  return S;
 }
 
 char EHFrameNullTerminator::NullTerminatorBlockContent[4] = {0, 0, 0, 0};

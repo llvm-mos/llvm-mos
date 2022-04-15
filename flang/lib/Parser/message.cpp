@@ -155,14 +155,27 @@ bool Message::SortBefore(const Message &that) const {
       location_, that.location_);
 }
 
-bool Message::IsFatal() const {
+bool Message::IsFatal() const { return severity() == Severity::Error; }
+
+Severity Message::severity() const {
   return std::visit(
       common::visitors{
-          [](const MessageExpectedText &) { return true; },
-          [](const MessageFixedText &x) { return x.isFatal(); },
-          [](const MessageFormattedText &x) { return x.isFatal(); },
+          [](const MessageExpectedText &) { return Severity::Error; },
+          [](const MessageFixedText &x) { return x.severity(); },
+          [](const MessageFormattedText &x) { return x.severity(); },
       },
       text_);
+}
+
+Message &Message::set_severity(Severity severity) {
+  std::visit(
+      common::visitors{
+          [](const MessageExpectedText &) {},
+          [severity](MessageFixedText &x) { x.set_severity(severity); },
+          [severity](MessageFormattedText &x) { x.set_severity(severity); },
+      },
+      text_);
+  return *this;
 }
 
 std::string Message::ToString() const {
@@ -199,48 +212,59 @@ std::optional<ProvenanceRange> Message::GetProvenanceRange(
       location_);
 }
 
+static std::string Prefix(Severity severity) {
+  switch (severity) {
+  case Severity::Error:
+    return "error: ";
+  case Severity::Warning:
+    return "warning: ";
+  case Severity::Portability:
+    return "portability: ";
+  case Severity::Because:
+    return "because: ";
+  case Severity::Context:
+    return "in the context: ";
+  case Severity::None:
+    break;
+  }
+  return "";
+}
+
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLine) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
-  std::string text;
-  if (IsFatal()) {
-    text += "error: ";
-  }
-  text += ToString();
   const AllSources &sources{allCooked.allSources()};
-  sources.EmitMessage(o, provenanceRange, text, echoSourceLine);
+  sources.EmitMessage(
+      o, provenanceRange, Prefix(severity()) + ToString(), echoSourceLine);
   bool isContext{attachmentIsContext_};
   for (const Message *attachment{attachment_.get()}; attachment;
        attachment = attachment->attachment_.get()) {
-    text.clear();
-    if (isContext) {
-      text = "in the context: ";
-    }
-    text += attachment->ToString();
-    sources.EmitMessage(
-        o, attachment->GetProvenanceRange(allCooked), text, echoSourceLine);
-    isContext = attachment->attachmentIsContext_;
+    sources.EmitMessage(o, attachment->GetProvenanceRange(allCooked),
+        Prefix(isContext ? Severity::Context : attachment->severity()) +
+            attachment->ToString(),
+        echoSourceLine);
   }
 }
 
 // Messages are equal if they're for the same location and text, and the user
 // visible aspects of their attachments are the same
 bool Message::operator==(const Message &that) const {
-  if (!AtSameLocation(that) || ToString() != that.ToString()) {
+  if (!AtSameLocation(that) || ToString() != that.ToString() ||
+      severity() != that.severity() ||
+      attachmentIsContext_ != that.attachmentIsContext_) {
     return false;
   }
   const Message *thatAttachment{that.attachment_.get()};
   for (const Message *attachment{attachment_.get()}; attachment;
        attachment = attachment->attachment_.get()) {
-    if (!thatAttachment ||
-        attachment->attachmentIsContext_ !=
-            thatAttachment->attachmentIsContext_ ||
-        *attachment != *thatAttachment) {
+    if (!thatAttachment || !attachment->AtSameLocation(*thatAttachment) ||
+        attachment->ToString() != thatAttachment->ToString() ||
+        attachment->severity() != thatAttachment->severity()) {
       return false;
     }
     thatAttachment = thatAttachment->attachment_.get();
   }
-  return true;
+  return !thatAttachment;
 }
 
 bool Message::Merge(const Message &that) {
@@ -348,9 +372,13 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   }
 }
 
-void Messages::AttachTo(Message &msg) {
+void Messages::AttachTo(Message &msg, std::optional<Severity> severity) {
   for (Message &m : messages_) {
-    msg.Attach(std::move(m));
+    Message m2{std::move(m)};
+    if (severity) {
+      m2.set_severity(*severity);
+    }
+    msg.Attach(std::move(m2));
   }
   messages_.clear();
 }

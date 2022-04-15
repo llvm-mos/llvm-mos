@@ -2093,9 +2093,9 @@ Emit OpenMP code only for SIMD-based constructs.
 
 Enable debugging in the OpenMP offloading device RTL
 
-.. option:: -fopenmp-target-new-runtime, -fno-openmp-target-new-runtime
+.. option:: -fopenmp-offload-mandatory
 
-Use the new bitcode library for OpenMP offloading
+Indicate that offloading to the device is mandatory and do not generate host-fallback code.
 
 .. option:: -fopenmp-version=<arg>
 
@@ -3325,7 +3325,7 @@ Work around VLLDM erratum CVE-2021-35465 (ARM only)
 
 .. option:: -mno-bti-at-return-twice
 
-Do not add a BTI instruction after a setjmp or other return-twice construct (Arm only)
+Do not add a BTI instruction after a setjmp or other return-twice construct (AArch32/AArch64 only)
 
 .. option:: -mno-movt
 
@@ -3624,6 +3624,8 @@ WebAssembly
 .. option:: -msimd128, -mno-simd128
 
 .. option:: -mtail-call, -mno-tail-call
+
+.. option:: -mextended-const, -mno-extended-const
 
 WebAssembly Driver
 ------------------

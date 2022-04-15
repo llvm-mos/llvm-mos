@@ -101,6 +101,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
       MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)) {
   Relocation::Arch = this->TheTriple->getArch();
+  RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
 }
 
@@ -154,12 +155,17 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
   // Set up disassembler.
-  std::unique_ptr<const MCAsmInfo> AsmInfo(
+  std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
   if (!AsmInfo)
     return createStringError(
         make_error_code(std::errc::not_supported),
         Twine("BOLT-ERROR: no assembly info for target ", TripleName));
+  // BOLT creates "func@PLT" symbols for PLT entries. In function assembly dump
+  // we want to emit such names as using @PLT without double quotes to convey
+  // variant kind to the assembler. BOLT doesn't rely on the linker so we can
+  // override the default AsmInfo behavior to emit names the way we want.
+  AsmInfo->setAllowAtInName(true);
 
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, "", FeaturesStr));
@@ -1528,6 +1534,9 @@ void BinaryContext::preprocessDebugInfo() {
 }
 
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
+  if (Function.isPseudo())
+    return false;
+
   if (opts::processAllFunctions())
     return true;
 
@@ -1679,6 +1688,22 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
     Instruction.dump_pretty(OS, InstPrinter.get());
     OS << "\n";
   }
+}
+
+Optional<uint64_t>
+BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
+                                        uint64_t FileOffset) const {
+  // Find a segment with a matching file offset.
+  for (auto &KV : SegmentMapInfo) {
+    const SegmentInfo &SegInfo = KV.second;
+    if (alignDown(SegInfo.FileOffset, SegInfo.Alignment) == FileOffset) {
+      // Use segment's aligned memory offset to calculate the base address.
+      const uint64_t MemOffset = alignDown(SegInfo.Address, SegInfo.Alignment);
+      return MMapAddress - MemOffset;
+    }
+  }
+
+  return NoneType();
 }
 
 ErrorOr<BinarySection &> BinaryContext::getSectionForAddress(uint64_t Address) {

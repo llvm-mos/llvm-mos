@@ -1,4 +1,27 @@
-// RUN: %clang_cc1 -E -dM %s -o - | FileCheck %s -strict-whitespace
+// RUN: %clang_cc1 -E -dM -triple=x86_64-none-none  %s -o - \
+// RUN:   | FileCheck %s -strict-whitespace
+
+// RUN: %clang_cc1 -E -dM -triple=x86_64-none-none -target-feature -sse \
+// RUN:   %s -o - | FileCheck %s -check-prefix=EXT -strict-whitespace
+
+// RUN: %clang_cc1 -E -dM -triple=arm64e-apple-ios -target-feature -sse \
+// RUN:   %s -o - | FileCheck %s  -strict-whitespace
+
+// RUN: %clang_cc1 -E -dM -triple=arm64e-apple-ios -target-feature +sse \
+// RUN:   %s -o - | FileCheck %s  -strict-whitespace
+
+// RUN: %clang_cc1 -E -dM -triple=arm64_32-apple-ios  %s -o - \
+// RUN:   | FileCheck %s  -strict-whitespace
+
+// RUN: %clang_cc1 -E -dM -triple=arm64_32-apple-ios -target-feature -sse \
+// RUN:   %s -o - | FileCheck %s  -strict-whitespace
+
+// RUN: %clang_cc1 -E -dM -triple i386-pc-windows -target-cpu pentium4 %s -o - \
+// RUN:   | FileCheck %s  -strict-whitespace
+
+// RUN: %clang_cc1 -E -dM -triple i386-pc-windows -target-cpu pentium4 \
+// RUN:   -target-feature -sse %s -o - | FileCheck -check-prefix=EXT %s \
+// RUN:   -strict-whitespace
 
 #ifdef __FLT_EVAL_METHOD__
 #if __FLT_EVAL_METHOD__ == 3
@@ -17,7 +40,7 @@
 #elif __GLIBC_FLT_EVAL_METHOD == 1
 #define Name "Two"
 #elif __GLIBC_FLT_EVAL_METHOD == 2
-#define Name "Unset on command line"
+#define Name "Three"
 #elif __GLIBC_FLT_EVAL_METHOD == 32
 #define Name "Four"
 #elif __GLIBC_FLT_EVAL_METHOD == 33
@@ -35,25 +58,25 @@
 #endif
 
 int foo() {
-  // CHECK: #define Name "Unset on command line"
+  // CHECK: #define Name "One"
+  // EXT: #define Name "Three"
   return Name;
 }
 
-#if __FLT_EVAL_METHOD__ == 3
-#define Val "val0"
-#endif
-
 #pragma fp eval_method(double)
 
-#if __FLT_EVAL_METHOD__ == 0
-#define Val "val1"
+#if __FLT_EVAL_METHOD__ == 3
+#define Val "Unset"
+#elif __FLT_EVAL_METHOD__ == 0
+#define Val "val0"
 #elif __FLT_EVAL_METHOD__ == 1
-#define Val "val2"
+#define Val "val1"
 #elif __FLT_EVAL_METHOD__ == 2
-#define Val "val3"
+#define Val "val2"
 #endif
 
 int goo() {
   // CHECK: #define Val "val0"
-  return Name;
+  // EXT: #define Val "val2"
+  return Val;
 }

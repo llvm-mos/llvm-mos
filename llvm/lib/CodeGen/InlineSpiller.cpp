@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervalCalc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/LiveStacks.h"
@@ -967,7 +966,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       if (!MO.isReg() || !MO.isImplicit())
         break;
       if (MO.getReg() == ImpReg)
-        FoldMI->RemoveOperand(i - 1);
+        FoldMI->removeOperand(i - 1);
     }
 
   LLVM_DEBUG(dumpMachineInstrRangeWithSlotIndex(MIS.begin(), MIS.end(), LIS,
@@ -1614,7 +1613,7 @@ void HoistSpillHelper::hoistAllSpills() {
       for (unsigned i = RMEnt->getNumOperands(); i; --i) {
         MachineOperand &MO = RMEnt->getOperand(i - 1);
         if (MO.isReg() && MO.isImplicit() && MO.isDef() && !MO.isDead())
-          RMEnt->RemoveOperand(i - 1);
+          RMEnt->removeOperand(i - 1);
       }
     }
     Edit.eliminateDeadDefs(SpillsToRm, None, AA);

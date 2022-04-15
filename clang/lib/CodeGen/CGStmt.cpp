@@ -397,6 +397,18 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPGenericLoopDirectiveClass:
     EmitOMPGenericLoopDirective(cast<OMPGenericLoopDirective>(*S));
     break;
+  case Stmt::OMPTeamsGenericLoopDirectiveClass:
+    llvm_unreachable("teams loop directive not supported yet.");
+    break;
+  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+    llvm_unreachable("target teams loop directive not supported yet.");
+    break;
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+    llvm_unreachable("parallel loop directive not supported yet.");
+    break;
+  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+    llvm_unreachable("target parallel loop directive not supported yet.");
+    break;
   }
 }
 
@@ -667,6 +679,8 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool nomerge = false;
+  bool noinline = false;
+  bool alwaysinline = false;
   const CallExpr *musttail = nullptr;
   bool leaf = false;
 
@@ -676,6 +690,12 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       break;
     case attr::NoMerge:
       nomerge = true;
+      break;
+    case attr::NoInline:
+      noinline = true;
+      break;
+    case attr::AlwaysInline:
+      alwaysinline = true;
       break;
     case attr::MustTail: {
       const Stmt *Sub = S.getSubStmt();
@@ -689,6 +709,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     }
   }
   SaveAndRestore<bool> save_nomerge(InNoMergeAttributedStmt, nomerge);
+  SaveAndRestore<bool> save_noinline(InNoInlineAttributedStmt, noinline);
+  SaveAndRestore<bool> save_alwaysinline(InAlwaysInlineAttributedStmt,
+                                         alwaysinline);
   SaveAndRestore<const CallExpr *> save_musttail(MustTailCall, musttail);
   SaveAndRestore<bool> save_leaf(InLeafAttributedStmt, leaf);
   EmitStmt(S.getSubStmt(), S.getAttrs());
@@ -2527,10 +2550,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
           Arg = Builder.CreateZExt(Arg, OutputTy);
         else if (isa<llvm::PointerType>(OutputTy))
           Arg = Builder.CreateZExt(Arg, IntPtrTy);
-        else {
-          assert(OutputTy->isFloatingPointTy() && "Unexpected output type");
+        else if (OutputTy->isFloatingPointTy())
           Arg = Builder.CreateFPExt(Arg, OutputTy);
-        }
       }
       // Deal with the tied operands' constraint code in adjustInlineAsmType.
       ReplaceConstraint = OutputConstraints[Output];
@@ -2738,9 +2759,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       QualType Ty = getContext().getIntTypeForBitwidth(Size, /*Signed*/ false);
       if (Ty.isNull()) {
         const Expr *OutExpr = S.getOutputExpr(i);
-        CGM.Error(
-            OutExpr->getExprLoc(),
-            "impossible constraint in asm: can't store value into a register");
+        CGM.getDiags().Report(OutExpr->getExprLoc(),
+                              diag::err_store_value_to_reg);
         return;
       }
       Dest = MakeAddrLValue(A, Ty);

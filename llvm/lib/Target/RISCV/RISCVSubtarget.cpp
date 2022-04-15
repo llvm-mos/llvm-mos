@@ -46,11 +46,6 @@ static cl::opt<unsigned> RVVVectorLMULMax(
              "Fractional LMUL values are not supported."),
     cl::init(8), cl::Hidden);
 
-static cl::opt<unsigned> RVVVectorELENMax(
-    "riscv-v-fixed-length-vector-elen-max",
-    cl::desc("The maximum ELEN value to use for fixed length vectors."),
-    cl::init(64), cl::Hidden);
-
 static cl::opt<bool> RISCVDisableUsingConstantPoolForLargeInts(
     "riscv-disable-using-constant-pool-for-large-ints",
     cl::desc("Disable using constant pool for large integers."),
@@ -69,11 +64,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
                                                 StringRef ABIName) {
   // Determine default and user-specified characteristics
   bool Is64Bit = TT.isArch64Bit();
-  if (CPU.empty())
+  if (CPU.empty() || CPU == "generic")
     CPU = Is64Bit ? "generic-rv64" : "generic-rv32";
-  if (CPU == "generic")
-    report_fatal_error(Twine("CPU 'generic' is not supported. Use ") +
-                       (Is64Bit ? "generic-rv64" : "generic-rv32"));
 
   if (TuneCPU.empty())
     TuneCPU = CPU;
@@ -193,17 +185,6 @@ unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
          "V extension requires a LMUL to be at most 8 and a power of 2!");
   return PowerOf2Floor(
       std::max<unsigned>(std::min<unsigned>(RVVVectorLMULMax, 8), 1));
-}
-
-unsigned RISCVSubtarget::getMaxELENForFixedLengthVectors() const {
-  assert(hasVInstructions() &&
-         "Tried to get maximum ELEN without Zve or V extension support!");
-  assert(RVVVectorELENMax <= 64 && RVVVectorELENMax >= 8 &&
-         isPowerOf2_32(RVVVectorELENMax) &&
-         "V extension requires a ELEN to be a power of 2 between 8 and 64!");
-  unsigned ELEN = hasVInstructionsI64() ? 64 : 32;
-  return PowerOf2Floor(
-      std::max<unsigned>(std::min<unsigned>(RVVVectorELENMax, ELEN), 8));
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {

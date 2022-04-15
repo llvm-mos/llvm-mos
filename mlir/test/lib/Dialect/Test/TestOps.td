@@ -14,6 +14,7 @@ include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/PatternBase.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -190,17 +191,6 @@ def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
-def StrCaseA: StrEnumAttrCase<"A">;
-def StrCaseB: StrEnumAttrCase<"B">;
-
-def SomeStrEnum: StrEnumAttr<
-  "SomeStrEnum", "", [StrCaseA, StrCaseB]>;
-
-def StrEnumAttrOp : TEST_Op<"str_enum_attr"> {
-  let arguments = (ins SomeStrEnum:$attr);
-  let results = (outs I32:$val);
-}
-
 def I32Case5:  I32EnumAttrCase<"case5", 5>;
 def I32Case10: I32EnumAttrCase<"case10", 10>;
 
@@ -346,6 +336,22 @@ def SizedRegionOp : TEST_Op<"sized_region_op", []> {
   let regions = (region SizedRegion<2>:$my_region, SizedRegion<1>);
 }
 
+def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
+                                            [InferTypeOpInterface]> {
+  let regions = (region VariadicRegion<AnyRegion>:$bodies);
+  let results = (outs Variadic<AnyType>);
+
+  let extraClassDeclaration = [{
+    static mlir::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
+          llvm::Optional<::mlir::Location> location, mlir::ValueRange operands,
+          mlir::DictionaryAttr attributes, mlir::RegionRange regions,
+          llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
+      inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
+      return mlir::success();
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
@@ -373,6 +379,14 @@ def VariadicNoTerminatorOp : TEST_Op<"variadic_no_terminator_op",
 //===----------------------------------------------------------------------===//
 // Test Call Interfaces
 //===----------------------------------------------------------------------===//
+
+def TestCallOp : TEST_Op<"call", [DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>);
+  let assemblyFormat = [{
+    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+  }];
+}
 
 def ConversionCallOp : TEST_Op<"conversion_call_op",
     [CallOpInterface]> {
@@ -608,6 +622,26 @@ def TestBranchOp : TEST_Op<"br",
   let successors = (successor AnySuccessor:$target);
 }
 
+def TestProducingBranchOp : TEST_Op<"producing_br",
+    [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator,
+     AttrSizedOperandSegments]> {
+  let arguments = (ins Variadic<AnyType>:$firstOperands,
+                       Variadic<AnyType>:$secondOperands);
+  let results = (outs I32:$dummy);
+  let successors = (successor AnySuccessor:$first,AnySuccessor:$second);
+}
+
+// Produces an error value on the error path
+def TestInternalBranchOp : TEST_Op<"internal_br",
+	[DeclareOpInterfaceMethods<BranchOpInterface>, Terminator,
+	 AttrSizedOperandSegments]> {
+
+  let arguments = (ins Variadic<AnyType>:$successOperands,
+                       Variadic<AnyType>:$errorOperands);
+
+  let successors = (successor AnySuccessor:$successPath, AnySuccessor:$errorPath);
+}
+
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
                                  [AttrSizedOperandSegments]> {
   let arguments = (ins
@@ -638,9 +672,12 @@ def CustomFormatFallbackOp : TEST_Op<"dialect_custom_format_fallback">;
 
 // Ops related to OIList primitive
 def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
+  let arguments = (ins UnitAttr:$keyword, UnitAttr:$otherKeyword,
+                       UnitAttr:$diffNameUnitAttrKeyword);
   let assemblyFormat = [{
-    oilist( `keyword`
-          | `otherKeyword`) attr-dict
+    oilist( `keyword` $keyword
+          | `otherKeyword` $otherKeyword
+          | `thirdKeyword` $diffNameUnitAttrKeyword) attr-dict
   }];
 }
 
@@ -672,8 +709,8 @@ def OIListCustom : TEST_Op<"oilist_custom", [AttrSizedOperandSegments]> {
                        UnitAttr:$nowait);
   let assemblyFormat = [{
     oilist( `private` `(` $arg0 `:` type($arg0) `)`
-          | `nowait`
           | `reduction` custom<CustomOptionalOperand>($optOperand)
+          | `nowait` $nowait
     ) attr-dict
   }];
 }
@@ -1068,6 +1105,11 @@ def TestCommutativeOp : TEST_Op<"op_commutative", [Commutative]> {
   let results = (outs I32);
 }
 
+def TestCommutative2Op : TEST_Op<"op_commutative2", [Commutative]> {
+  let arguments = (ins I32:$op1, I32:$op2);
+  let results = (outs I32);
+}
+
 def TestIdempotentTraitOp
  : TEST_Op<"op_idempotent_trait",
            [SameOperandsAndResultType, NoSideEffect, Idempotent]> {
@@ -1207,8 +1249,6 @@ def : Pat<(OpAttrMatch3 $attr), (OpAttrMatch4 ConstUnitAttr, $attr)>;
 def OpC : TEST_Op<"op_c">, Arguments<(ins I32)>, Results<(outs I32)>;
 def : Pat<(OpC $input), (OpB $input, ConstantAttr<I32Attr, "17">:$attr)>;
 
-// Test string enum attribute in rewrites.
-def : Pat<(StrEnumAttrOp StrCaseA), (StrEnumAttrOp StrCaseB)>;
 // Test integer enum attribute in rewrites.
 def : Pat<(I32EnumAttrOp I32Case5), (I32EnumAttrOp I32Case10)>;
 def : Pat<(I64EnumAttrOp I64Case5), (I64EnumAttrOp I64Case10)>;
@@ -1515,11 +1555,8 @@ def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "66">:$attr),
 // Test Legalization
 //===----------------------------------------------------------------------===//
 
-def Test_LegalizerEnum_Success : StrEnumAttrCase<"Success">;
-def Test_LegalizerEnum_Failure : StrEnumAttrCase<"Failure">;
-
-def Test_LegalizerEnum : StrEnumAttr<"Success", "Failure",
-  [Test_LegalizerEnum_Success, Test_LegalizerEnum_Failure]>;
+def Test_LegalizerEnum_Success : ConstantStrAttr<StrAttr, "Success">;
+def Test_LegalizerEnum_Failure : ConstantStrAttr<StrAttr, "Failure">;
 
 def ILLegalOpA : TEST_Op<"illegal_op_a">, Results<(outs I32)>;
 def ILLegalOpB : TEST_Op<"illegal_op_b">, Results<(outs I32)>;
@@ -1529,7 +1566,7 @@ def ILLegalOpE : TEST_Op<"illegal_op_e">, Results<(outs I32)>;
 def ILLegalOpF : TEST_Op<"illegal_op_f">, Results<(outs I32)>;
 def ILLegalOpG : TEST_Op<"illegal_op_g">, Results<(outs I32)>;
 def LegalOpA : TEST_Op<"legal_op_a">,
-  Arguments<(ins Test_LegalizerEnum:$status)>, Results<(outs I32)>;
+  Arguments<(ins StrAttr:$status)>, Results<(outs I32)>;
 def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
@@ -1961,6 +1998,12 @@ def FormatOptionalResultBOp : FormatOptionalResultOpBase<"b", [{
 def FormatOptionalResultCOp : FormatOptionalResultOpBase<"c", [{
   (`:` functional-type($optional, $variadic)^)? attr-dict
 }]>;
+
+def FormatOptionalResultDOp
+  : TEST_Op<"format_optional_result_d_op" > {
+  let results = (outs Optional<F80>:$optional);
+  let assemblyFormat = "(`:` type($optional)^)? attr-dict";
+}
 
 def FormatTwoVariadicOperandsNoBuildableTypeOp
     : TEST_Op<"format_two_variadic_operands_no_buildable_type_op",
@@ -2635,6 +2678,64 @@ def TestLinalgConvOp :
 }
 
 //===----------------------------------------------------------------------===//
+// Test LinalgFillOpInterface.
+//===----------------------------------------------------------------------===//
+
+def TestLinalgFillOpNotLinalgOp : TEST_Op<"fill_op_not_linalg_op", [
+    LinalgFillOpInterface]> {
+  let arguments = (ins
+    AnyType:$value, AnyType:$output);
+  let results = (outs AnyRankedTensor:$result);
+}
+
+def TestLinalgFillOp :
+  TEST_Op<"linalg_fill_op", [AttrSizedOperandSegments, SingleBlock,
+      LinalgStructuredInterface, LinalgFillOpInterface]> {
+
+  let arguments = (ins Variadic<AnyType>:$inputs,
+    Variadic<AnyType>:$outputs);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    attr-dict (`ins` `(` $inputs^ `:` type($inputs) `)`)?
+    `outs` `(` $outputs `:` type($outputs) `)`
+    $region (`->` type($results)^)?
+  }];
+
+  let extraClassDeclaration = [{
+    bool hasIndexSemantics() { return false; }
+
+    static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
+                              mlir::ArrayRef<mlir::NamedAttribute> attrs) {
+      b.create<mlir::linalg::YieldOp>(block.getArguments().back());
+    }
+
+    static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                              mlir::ArrayRef<mlir::NamedAttribute>)>
+    getRegionBuilder() {
+      return &regionBuilder;
+    }
+
+    mlir::ArrayAttr iterator_types() {
+      return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+    }
+
+    mlir::ArrayAttr indexing_maps() {
+      return getOperation()->getAttrOfType<mlir::ArrayAttr>("indexing_maps");
+    }
+
+    std::string getLibraryCallName() {
+      return "";
+    }
+
+    // To conform with interface requirement on operand naming.
+    mlir::ValueRange inputs() { return getInputs(); }
+    mlir::ValueRange outputs() { return getOutputs(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Test Ops with Default-Valued String Attributes
 //===----------------------------------------------------------------------===//
 
@@ -2670,5 +2771,25 @@ def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
 
 def TestEffectsOpB : TEST_Op<"op_with_effects_b",
     [MemoryEffects<[MemWrite<TestResource>]>]>;
+
+def TestEffectsRead : TEST_Op<"op_with_memread",
+    [MemoryEffects<[MemRead]>]> {
+  let results = (outs AnyInteger);
+}
+
+def TestEffectsWrite : TEST_Op<"op_with_memwrite",
+    [MemoryEffects<[MemWrite]>]>;
+
+//===----------------------------------------------------------------------===//
+// Test Ops with verifiers
+//===----------------------------------------------------------------------===//
+
+def TestVerifiersOp : TEST_Op<"verifiers",
+                              [SingleBlock, NoTerminator, IsolatedFromAbove]> {
+  let arguments = (ins I32:$input);
+  let regions = (region SizedRegion<1>:$region);
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+}
 
 #endif // TEST_OPS

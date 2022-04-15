@@ -145,6 +145,7 @@ struct VSCode {
   bool sent_terminated_event;
   bool stop_at_entry;
   bool is_attach;
+  bool configuration_done_sent;
   uint32_t reverse_request_seq;
   std::map<std::string, RequestCallback> request_handlers;
   bool waiting_for_run_in_terminal;
@@ -245,10 +246,18 @@ struct VSCode {
 
   /// Poll the process to wait for it to reach the eStateStopped state.
   ///
-  /// We need to ensure the process is stopped and ready to resume before we
-  /// continue with the launch or attach. This is needed since we no longer play
-  /// with the synchronous mode in the debugger for launching (with or without
-  /// "launchCommands") or attaching (with or without "attachCommands").
+  /// Wait for the process hit a stopped state. When running a launch with
+  /// "launchCommands", or attach with  "attachCommands", the calls might take
+  /// some time to stop at the entry point since the command is asynchronous. We
+  /// need to sync up with the process and make sure it is stopped before we
+  /// proceed to do anything else as we will soon be asked to set breakpoints
+  /// and other things that require the process to be stopped. We must use
+  /// polling because "attachCommands" or "launchCommands" may or may not send
+  /// process state change events depending on if the user modifies the async
+  /// setting in the debugger. Since both "attachCommands" and "launchCommands"
+  /// could end up using any combination of LLDB commands, we must ensure we can
+  /// also catch when the process stops, so we must poll the process to make
+  /// sure we handle all cases.
   ///
   /// \param[in] seconds
   ///   The number of seconds to poll the process to wait until it is stopped.

@@ -10,6 +10,7 @@
 #define LLD_ELF_INPUT_FILES_H
 
 #include "Config.h"
+#include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"
@@ -273,6 +274,9 @@ public:
   // Get cached DWARF information.
   DWARFCache *getDwarf();
 
+  void initializeLocalSymbols();
+  void postParse();
+
 private:
   void initializeSections(bool ignoreComdats,
                           const llvm::object::ELFFile<ELFT> &obj);
@@ -300,6 +304,9 @@ private:
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
 
+  // Storage for local symbols.
+  std::unique_ptr<SymbolUnion[]> localSymStorage;
+
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a
   // single object file, so we cache debugging information in order to
@@ -315,7 +322,9 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   template <class ELFT> void parse();
   void parseLazy();
+  void postParse();
   std::unique_ptr<llvm::lto::InputFile> obj;
+  std::vector<bool> keptComdats;
 };
 
 // .so file.

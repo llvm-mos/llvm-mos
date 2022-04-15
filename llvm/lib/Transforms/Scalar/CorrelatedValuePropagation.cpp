@@ -41,8 +41,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
@@ -245,10 +243,19 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // value can never be that constant. In that case replace the incoming
   // value with the other value of the select. This often allows us to
   // remove the select later.
+
+  // The "false" case
   if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
     if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
         LazyValueInfo::False)
       return SI->getTrueValue();
+
+  // The "true" case,
+  // similar to the select "false" case, but try the select "true" value
+  if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
+    if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
+        LazyValueInfo::False)
+      return SI->getFalseValue();
 
   return nullptr;
 }

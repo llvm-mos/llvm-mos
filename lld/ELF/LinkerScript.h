@@ -32,6 +32,7 @@ class InputSectionBase;
 class OutputSection;
 class SectionBase;
 class ThunkSection;
+struct OutputDesc;
 
 // This represents an r-value in the linker script.
 struct ExprValue {
@@ -284,8 +285,7 @@ class LinkerScript final {
     uint64_t tbssAddr = 0;
   };
 
-  llvm::DenseMap<llvm::CachedHashStringRef, OutputSection *>
-      nameToOutputSection;
+  llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
   void addSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
@@ -321,8 +321,8 @@ class LinkerScript final {
   uint64_t dot;
 
 public:
-  OutputSection *createOutputSection(StringRef name, StringRef location);
-  OutputSection *getOrCreateOutputSection(StringRef name);
+  OutputDesc *createOutputSection(StringRef name, StringRef location);
+  OutputDesc *getOrCreateOutputSection(StringRef name);
 
   bool hasPhdrsCommands() { return !phdrsCommands.empty(); }
   uint64_t getDot() { return dot; }
@@ -374,7 +374,7 @@ public:
   SmallVector<InsertCommand, 0> insertCommands;
 
   // OutputSections specified by OVERWRITE_SECTIONS.
-  SmallVector<OutputSection *, 0> overwriteSections;
+  SmallVector<OutputDesc *, 0> overwriteSections;
 
   // Sections that will be warned/errored by --orphan-handling.
   SmallVector<const InputSectionBase *, 0> orphanSections;

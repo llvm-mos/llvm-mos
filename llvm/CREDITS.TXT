@@ -52,7 +52,7 @@ E: neil@daikokuya.co.uk
 D: APFloat implementation.
 
 N: Alex Bradbury
-E: asb@lowrisc.org
+E: asb@igalia.com
 D: RISC-V backend
 
 N: Misha Brukman
@@ -463,6 +463,10 @@ D: Type legalizer rewrite
 N: Ruchira Sasanka
 E: sasanka@uiuc.edu
 D: Graph coloring register allocator for the Sparc64 backend
+
+N: Alina Sbirlea
+E: alina.sbirlea@gmail.com
+D: MemorySSA, BatchAA, misc loop and new pass manager work.
 
 N: Arnold Schwaighofer
 E: arnold.schwaighofer@gmail.com

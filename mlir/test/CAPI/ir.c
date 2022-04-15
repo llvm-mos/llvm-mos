@@ -16,7 +16,7 @@
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
-#include "mlir-c/Dialect/Standard.h"
+#include "mlir-c/Dialect/Func.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/Support.h"
@@ -95,13 +95,14 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("\"add\""));
   MlirNamedAttribute funcAttrs[] = {
       mlirNamedAttributeGet(
-          mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("type")),
+          mlirIdentifierGet(ctx,
+                            mlirStringRefCreateFromCString("function_type")),
           funcTypeAttr),
       mlirNamedAttributeGet(
           mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("sym_name")),
           funcNameAttr)};
   MlirOperationState funcState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("builtin.func"), location);
+      mlirStringRefCreateFromCString("func.func"), location);
   mlirOperationStateAddAttributes(&funcState, 2, funcAttrs);
   mlirOperationStateAddOwnedRegions(&funcState, 1, &funcBodyRegion);
   MlirOperation func = mlirOperationCreate(&funcState);
@@ -161,7 +162,7 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   populateLoopBody(ctx, loopBody, location, funcBody);
 
   MlirOperationState retState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("std.return"), location);
+      mlirStringRefCreateFromCString("func.return"), location);
   MlirOperation ret = mlirOperationCreate(&retState);
   mlirBlockAppendOwnedOperation(funcBody, ret);
 
@@ -509,15 +510,18 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   MlirType i2 = mlirIntegerTypeGet(ctx, 2);
   MlirType i3 = mlirIntegerTypeGet(ctx, 3);
   MlirType i4 = mlirIntegerTypeGet(ctx, 4);
+  MlirType i5 = mlirIntegerTypeGet(ctx, 5);
   MlirBlock block1 = mlirBlockCreate(1, &i1, &loc);
   MlirBlock block2 = mlirBlockCreate(1, &i2, &loc);
   MlirBlock block3 = mlirBlockCreate(1, &i3, &loc);
   MlirBlock block4 = mlirBlockCreate(1, &i4, &loc);
+  MlirBlock block5 = mlirBlockCreate(1, &i5, &loc);
   // Insert blocks so as to obtain the 1-2-3-4 order,
   mlirRegionInsertOwnedBlockBefore(region, nullBlock, block3);
   mlirRegionInsertOwnedBlockBefore(region, block3, block2);
   mlirRegionInsertOwnedBlockAfter(region, nullBlock, block1);
   mlirRegionInsertOwnedBlockAfter(region, block3, block4);
+  mlirRegionInsertOwnedBlockBefore(region, block3, block5);
 
   MlirOperationState op1State =
       mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op1"), loc);
@@ -533,6 +537,8 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
       mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op6"), loc);
   MlirOperationState op7State =
       mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op7"), loc);
+  MlirOperationState op8State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op8"), loc);
   MlirOperation op1 = mlirOperationCreate(&op1State);
   MlirOperation op2 = mlirOperationCreate(&op2State);
   MlirOperation op3 = mlirOperationCreate(&op3State);
@@ -540,6 +546,7 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   MlirOperation op5 = mlirOperationCreate(&op5State);
   MlirOperation op6 = mlirOperationCreate(&op6State);
   MlirOperation op7 = mlirOperationCreate(&op7State);
+  MlirOperation op8 = mlirOperationCreate(&op8State);
 
   // Insert operations in the first block so as to obtain the 1-2-3-4 order.
   MlirOperation nullOperation = mlirBlockGetFirstOperation(block1);
@@ -554,6 +561,11 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   mlirBlockAppendOwnedOperation(block2, op5);
   mlirBlockAppendOwnedOperation(block3, op6);
   mlirBlockAppendOwnedOperation(block4, op7);
+  mlirBlockAppendOwnedOperation(block5, op8);
+
+  // Remove block5.
+  mlirBlockDetach(block5);
+  mlirBlockDestroy(block5);
 
   mlirOperationDump(op);
   mlirOperationDestroy(op);
@@ -567,6 +579,8 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   // CHECK-NEXT:   "dummy.op4"
   // CHECK:      ^{{.*}}(%{{.*}}: i2
   // CHECK:        "dummy.op5"
+  // CHECK-NOT:  ^{{.*}}(%{{.*}}: i5
+  // CHECK-NOT:    "dummy.op8"
   // CHECK:      ^{{.*}}(%{{.*}}: i3
   // CHECK:        "dummy.op6"
   // CHECK:      ^{{.*}}(%{{.*}}: i4
@@ -813,11 +827,21 @@ int printBuiltinAttributes(MlirContext ctx) {
   // CHECK: f64
 
   MlirAttribute integer = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 32), 42);
+  MlirAttribute signedInteger =
+      mlirIntegerAttrGet(mlirIntegerTypeSignedGet(ctx, 8), -1);
+  MlirAttribute unsignedInteger =
+      mlirIntegerAttrGet(mlirIntegerTypeUnsignedGet(ctx, 8), 255);
   if (!mlirAttributeIsAInteger(integer) ||
-      mlirIntegerAttrGetValueInt(integer) != 42)
+      mlirIntegerAttrGetValueInt(integer) != 42 ||
+      mlirIntegerAttrGetValueSInt(signedInteger) != -1 ||
+      mlirIntegerAttrGetValueUInt(unsignedInteger) != 255)
     return 2;
   mlirAttributeDump(integer);
+  mlirAttributeDump(signedInteger);
+  mlirAttributeDump(unsignedInteger);
   // CHECK: 42 : i32
+  // CHECK: -1 : si8
+  // CHECK: 255 : ui8
 
   MlirAttribute boolean = mlirBoolAttrGet(ctx, 1);
   if (!mlirAttributeIsABool(boolean) || !mlirBoolAttrGetValue(boolean))
@@ -827,10 +851,10 @@ int printBuiltinAttributes(MlirContext ctx) {
 
   const char data[] = "abcdefghijklmnopqestuvwxyz";
   MlirAttribute opaque =
-      mlirOpaqueAttrGet(ctx, mlirStringRefCreateFromCString("std"), 3, data,
+      mlirOpaqueAttrGet(ctx, mlirStringRefCreateFromCString("func"), 3, data,
                         mlirNoneTypeGet(ctx));
   if (!mlirAttributeIsAOpaque(opaque) ||
-      !stringIsEqual("std", mlirOpaqueAttrGetDialectNamespace(opaque)))
+      !stringIsEqual("func", mlirOpaqueAttrGetDialectNamespace(opaque)))
     return 4;
 
   MlirStringRef opaqueData = mlirOpaqueAttrGetData(opaque);
@@ -838,7 +862,7 @@ int printBuiltinAttributes(MlirContext ctx) {
       strncmp(data, opaqueData.data, opaqueData.length))
     return 5;
   mlirAttributeDump(opaque);
-  // CHECK: #std.abc
+  // CHECK: #func.abc
 
   MlirAttribute string =
       mlirStringAttrGet(ctx, mlirStringRefCreate(data + 3, 2));
@@ -1504,7 +1528,7 @@ int registerOnlyStd() {
   if (mlirContextGetNumLoadedDialects(ctx) != 1)
     return 1;
 
-  MlirDialectHandle stdHandle = mlirGetDialectHandle__std__();
+  MlirDialectHandle stdHandle = mlirGetDialectHandle__func__();
 
   MlirDialect std = mlirContextGetOrLoadDialect(
       ctx, mlirDialectHandleGetNamespace(stdHandle));
@@ -1536,10 +1560,10 @@ int registerOnlyStd() {
           mlirContextIsRegisteredOperation(
               ctx, mlirStringRefCreateFromCString("cf.cond_br")));
 
-  // CHECK: std.not_existing_op is_registered: 0
-  fprintf(stderr, "std.not_existing_op is_registered: %d\n",
+  // CHECK: func.not_existing_op is_registered: 0
+  fprintf(stderr, "func.not_existing_op is_registered: %d\n",
           mlirContextIsRegisteredOperation(
-              ctx, mlirStringRefCreateFromCString("std.not_existing_op")));
+              ctx, mlirStringRefCreateFromCString("func.not_existing_op")));
 
   // CHECK: not_existing_dialect.not_existing_op is_registered: 0
   fprintf(stderr, "not_existing_dialect.not_existing_op is_registered: %d\n",
@@ -1664,7 +1688,7 @@ int testClone() {
 
   MlirContext ctx = mlirContextCreate();
   mlirRegisterAllDialects(ctx);
-  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("std"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   MlirType indexType = mlirIndexTypeGet(ctx);
   MlirStringRef valueStringRef = mlirStringRefCreateFromCString("value");
@@ -1742,15 +1766,13 @@ int testTypeID(MlirContext ctx) {
     return 2;
   }
 
-  if (mlirTypeIDEqual(i32ID, f32ID) ||
-      mlirTypeIDHashValue(i32ID) == mlirTypeIDHashValue(f32ID)) {
+  if (mlirTypeIDEqual(i32ID, f32ID)) {
     fprintf(stderr,
             "ERROR: Expected integer type id to not equal float type id\n");
     return 3;
   }
 
-  if (mlirTypeIDEqual(i32ID, i32AttrID) ||
-      mlirTypeIDHashValue(i32ID) == mlirTypeIDHashValue(i32AttrID)) {
+  if (mlirTypeIDEqual(i32ID, i32AttrID)) {
     fprintf(stderr, "ERROR: Expected integer type id to not equal integer "
                     "attribute type id\n");
     return 4;
@@ -1913,7 +1935,7 @@ int testDialectRegistry() {
     return 1;
   }
 
-  MlirDialectHandle stdHandle = mlirGetDialectHandle__std__();
+  MlirDialectHandle stdHandle = mlirGetDialectHandle__func__();
   mlirDialectHandleInsertDialect(stdHandle, registry);
 
   MlirContext ctx = mlirContextCreate();

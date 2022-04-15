@@ -34,13 +34,13 @@ VSCode::VSCode()
       exception_breakpoints(
           {{"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus},
            {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus},
-           {"objc_catch", "Objective C Catch", lldb::eLanguageTypeObjC},
-           {"objc_throw", "Objective C Throw", lldb::eLanguageTypeObjC},
+           {"objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC},
+           {"objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC},
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false), is_attach(false), reverse_request_seq(0),
-      waiting_for_run_in_terminal(false),
+      stop_at_entry(false), is_attach(false), configuration_done_sent(false),
+      reverse_request_seq(0), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
@@ -58,7 +58,7 @@ VSCode::VSCode()
     log.reset(new std::ofstream(log_file_path));
 }
 
-VSCode::~VSCode() {}
+VSCode::~VSCode() = default;
 
 int64_t VSCode::GetLineForPC(int64_t sourceReference, lldb::addr_t pc) const {
   auto pos = source_map.find(sourceReference);
@@ -529,18 +529,6 @@ void VSCode::RegisterRequestCallback(std::string request,
 }
 
 lldb::SBError VSCode::WaitForProcessToStop(uint32_t seconds) {
-  // Wait for the process hit a stopped state. When running a launch (with or
-  // without "launchCommands") or attach (with or without)= "attachCommands"),
-  // the calls might take some time to stop at the entry point since the command
-  // is asynchronous. So we need to sync up with the process and make sure it is
-  // stopped before we proceed to do anything else as we will soon be asked to
-  // set breakpoints and other things that require the process to be stopped.
-  // We must use polling because attach doesn't send a process state change
-  // event for the first stop, while launching does. Since both "attachCommands"
-  // and "launchCommands" could end up using any combination of LLDB commands,
-  // we must ensure we can also catch when the process stops, so we must poll
-  // the process to make sure we handle all cases.
-
   lldb::SBError error;
   lldb::SBProcess process = target.GetProcess();
   if (!process.IsValid()) {
@@ -548,8 +536,8 @@ lldb::SBError VSCode::WaitForProcessToStop(uint32_t seconds) {
     return error;
   }
   auto timeout_time =
-      std::chrono::high_resolution_clock::now() + std::chrono::seconds(seconds);
-  while (std::chrono::high_resolution_clock::now() < timeout_time) {
+      std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+  while (std::chrono::steady_clock::now() < timeout_time) {
     const auto state = process.GetState();
     switch (state) {
       case lldb::eStateAttaching:

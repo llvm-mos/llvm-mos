@@ -42,18 +42,26 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
-
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
-
 * ...
+
+Update on required toolchains to build LLVM
+-------------------------------------------
+
+With LLVM 15.x we will raise the version requirements of the toolchain used
+to build LLVM. The new requirements are as follows:
+
+* GCC >= 7.1
+* Clang >= 5.0
+* Apple Clang >= 9.3
+* Visual Studio 2019 >= 16.7
+
+In LLVM 15.x these requirements will be "soft" requirements and the version
+check can be skipped by passing -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON
+to CMake.
+
+With the release of LLVM 16.x these requirements will be hard and LLVM developers
+can start using C++17 features, making it impossible to build with older
+versions of these toolchains.
 
 Changes to the LLVM IR
 ----------------------
@@ -67,6 +75,11 @@ Changes to TableGen
 Changes to the AArch64 Backend
 ------------------------------
 
+Changes to the AMDGPU Backend
+-----------------------------
+
+* ...
+
 Changes to the ARM Backend
 --------------------------
 
@@ -79,40 +92,40 @@ Changes to the ARM Backend
   Previously it was on by default for Armv8 and off for all other architecture
   versions.
 
-Changes to the MIPS Target
+Changes to the AVR Backend
 --------------------------
-
-During this release ...
-
-Changes to the Hexagon Target
------------------------------
 
 * ...
 
-Changes to the PowerPC Target
+Changes to the Hexagon Backend
+------------------------------
+
+* ...
+
+Changes to the MIPS Backend
+---------------------------
+
+* ...
+
+Changes to the PowerPC Backend
+------------------------------
+
+* ...
+
+Changes to the RISC-V Backend
 -----------------------------
 
-During this release ...
+* The Zvfh extension was added.
 
-Changes to the X86 Target
--------------------------
+Changes to the WebAssembly Backend
+----------------------------------
 
-During this release ...
+* ...
 
-Changes to the AMDGPU Target
------------------------------
+Changes to the X86 Backend
+--------------------------
 
-During this release ...
-
-Changes to the AVR Target
------------------------------
-
-During this release ...
-
-Changes to the WebAssembly Target
----------------------------------
-
-During this release ...
+* ...
 
 Changes to the OCaml bindings
 -----------------------------

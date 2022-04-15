@@ -22,6 +22,7 @@
 #include "CoroInstr.h"
 #include "CoroInternal.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -870,11 +871,16 @@ void CoroCloner::create() {
                                   OrigF.getParent()->end(), ActiveSuspend);
   }
 
-  // Replace all args with undefs. The buildCoroutineFrame algorithm already
-  // rewritten access to the args that occurs after suspend points with loads
-  // and stores to/from the coroutine frame.
-  for (Argument &A : OrigF.args())
-    VMap[&A] = UndefValue::get(A.getType());
+  // Replace all args with dummy instructions. If an argument is the old frame
+  // pointer, the dummy will be replaced by the new frame pointer once it is
+  // computed below. Uses of all other arguments should have already been
+  // rewritten by buildCoroutineFrame() to use loads/stores on the coroutine
+  // frame.
+  SmallVector<Instruction *> DummyArgs;
+  for (Argument &A : OrigF.args()) {
+    DummyArgs.push_back(new FreezeInst(UndefValue::get(A.getType())));
+    VMap[&A] = DummyArgs.back();
+  }
 
   SmallVector<ReturnInst *, 4> Returns;
 
@@ -933,7 +939,8 @@ void CoroCloner::create() {
   case coro::ABI::Switch:
     // Bootstrap attributes by copying function attributes from the
     // original function.  This should include optimization settings and so on.
-    NewAttrs = NewAttrs.addFnAttributes(Context, AttrBuilder(Context, OrigAttrs.getFnAttrs()));
+    NewAttrs = NewAttrs.addFnAttributes(
+        Context, AttrBuilder(Context, OrigAttrs.getFnAttrs()));
 
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
@@ -1014,7 +1021,15 @@ void CoroCloner::create() {
   auto *NewVFrame = Builder.CreateBitCast(
       NewFramePtr, Type::getInt8PtrTy(Builder.getContext()), "vFrame");
   Value *OldVFrame = cast<Value>(VMap[Shape.CoroBegin]);
-  OldVFrame->replaceAllUsesWith(NewVFrame);
+  if (OldVFrame != NewVFrame)
+    OldVFrame->replaceAllUsesWith(NewVFrame);
+
+  // All uses of the arguments should have been resolved by this point,
+  // so we can safely remove the dummy values.
+  for (Instruction *DummyArg : DummyArgs) {
+    DummyArg->replaceAllUsesWith(UndefValue::get(DummyArg->getType()));
+    DummyArg->deleteValue();
+  }
 
   switch (Shape.ABI) {
   case coro::ABI::Switch:
@@ -1151,7 +1166,8 @@ static void updateCoroFrame(coro::Shape &Shape, Function *ResumeFn,
                             Function *DestroyFn, Function *CleanupFn) {
   assert(Shape.ABI == coro::ABI::Switch);
 
-  IRBuilder<> Builder(Shape.FramePtr->getNextNode());
+  IRBuilder<> Builder(Shape.getInsertPtAfterFramePtr());
+
   auto *ResumeAddr = Builder.CreateStructGEP(
       Shape.FrameTy, Shape.FramePtr, coro::Shape::SwitchFieldIndex::Resume,
       "resume.addr");
@@ -1662,7 +1678,7 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   // Map all uses of llvm.coro.begin to the allocated frame pointer.
   {
     // Make sure we don't invalidate Shape.FramePtr.
-    TrackingVH<Instruction> Handle(Shape.FramePtr);
+    TrackingVH<Value> Handle(Shape.FramePtr);
     Shape.CoroBegin->replaceAllUsesWith(FramePtr);
     Shape.FramePtr = Handle.getValPtr();
   }
@@ -1774,7 +1790,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
   // Map all uses of llvm.coro.begin to the allocated frame pointer.
   {
     // Make sure we don't invalidate Shape.FramePtr.
-    TrackingVH<Instruction> Handle(Shape.FramePtr);
+    TrackingVH<Value> Handle(Shape.FramePtr);
     Shape.CoroBegin->replaceAllUsesWith(RawFramePtr);
     Shape.FramePtr = Handle.getValPtr();
   }
@@ -1917,6 +1933,26 @@ static coro::Shape splitCoroutine(Function &F,
   // Replace all the swifterror operations in the original function.
   // This invalidates SwiftErrorOps in the Shape.
   replaceSwiftErrorOps(F, Shape, nullptr);
+
+  // Finally, salvage the llvm.dbg.{declare,addr} in our original function that
+  // point into the coroutine frame. We only do this for the current function
+  // since the Cloner salvaged debug info for us in the new coroutine funclets.
+  SmallVector<DbgVariableIntrinsic *, 8> Worklist;
+  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      if (auto *DDI = dyn_cast<DbgDeclareInst>(&I)) {
+        Worklist.push_back(DDI);
+        continue;
+      }
+      if (auto *DDI = dyn_cast<DbgAddrIntrinsic>(&I)) {
+        Worklist.push_back(DDI);
+        continue;
+      }
+    }
+  }
+  for (auto *DDI : Worklist)
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.OptimizeFrame);
 
   return Shape;
 }
@@ -2186,16 +2222,13 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   auto &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-  if (!declaresCoroSplitIntrinsics(M))
-    return PreservedAnalyses::all();
-
   // Check for uses of llvm.coro.prepare.retcon/async.
   SmallVector<Function *, 2> PrepareFns;
   addPrepareFunction(M, PrepareFns, "llvm.coro.prepare.retcon");
   addPrepareFunction(M, PrepareFns, "llvm.coro.prepare.async");
 
   // Find coroutines for processing.
-  SmallVector<LazyCallGraph::Node *, 4> Coroutines;
+  SmallVector<LazyCallGraph::Node *> Coroutines;
   for (LazyCallGraph::Node &N : C)
     if (N.getFunction().hasFnAttribute(CORO_PRESPLIT_ATTR))
       Coroutines.push_back(&N);

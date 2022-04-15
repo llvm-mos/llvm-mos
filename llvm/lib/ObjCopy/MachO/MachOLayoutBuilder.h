@@ -9,7 +9,7 @@
 #ifndef LLVM_LIB_OBJCOPY_MACHO_MACHOLAYOUTBUILDER_H
 #define LLVM_LIB_OBJCOPY_MACHO_MACHOLAYOUTBUILDER_H
 
-#include "Object.h"
+#include "MachOObject.h"
 #include "llvm/ObjCopy/MachO/MachOObjcopy.h"
 
 namespace llvm {
@@ -87,7 +87,7 @@ public:
 
   StringTableBuilder &getStringTableBuilder() { return StrTableBuilder; }
 
-  const CodeSignatureInfo &getCodeSignature() { return CodeSignature; }
+  const CodeSignatureInfo &getCodeSignature() const { return CodeSignature; }
 };
 
 } // end namespace macho

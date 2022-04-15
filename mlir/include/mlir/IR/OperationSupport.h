@@ -73,6 +73,8 @@ public:
       llvm::unique_function<void(Operation *, OpAsmPrinter &, StringRef) const>;
   using VerifyInvariantsFn =
       llvm::unique_function<LogicalResult(Operation *) const>;
+  using VerifyRegionInvariantsFn =
+      llvm::unique_function<LogicalResult(Operation *) const>;
 
 protected:
   /// This class represents a type erased version of an operation. It contains
@@ -112,6 +114,7 @@ protected:
     ParseAssemblyFn parseAssemblyFn;
     PrintAssemblyFn printAssemblyFn;
     VerifyInvariantsFn verifyInvariantsFn;
+    VerifyRegionInvariantsFn verifyRegionInvariantsFn;
 
     /// A list of attribute names registered to this operation in StringAttr
     /// form. This allows for operation classes to use StringAttr for attribute
@@ -238,16 +241,18 @@ public:
   static void insert(Dialect &dialect) {
     insert(T::getOperationName(), dialect, TypeID::get<T>(),
            T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
-           T::getVerifyInvariantsFn(), T::getFoldHookFn(),
-           T::getGetCanonicalizationPatternsFn(), T::getInterfaceMap(),
-           T::getHasTraitFn(), T::getAttributeNames());
+           T::getVerifyInvariantsFn(), T::getVerifyRegionInvariantsFn(),
+           T::getFoldHookFn(), T::getGetCanonicalizationPatternsFn(),
+           T::getInterfaceMap(), T::getHasTraitFn(), T::getAttributeNames());
   }
   /// The use of this method is in general discouraged in favor of
   /// 'insert<CustomOp>(dialect)'.
   static void
   insert(StringRef name, Dialect &dialect, TypeID typeID,
          ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
-         VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
+         VerifyInvariantsFn &&verifyInvariants,
+         VerifyRegionInvariantsFn &&verifyRegionInvariants,
+         FoldHookFn &&foldHook,
          GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
          detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
          ArrayRef<StringRef> attrNames);
@@ -272,11 +277,14 @@ public:
     return impl->printAssemblyFn(op, p, defaultDialect);
   }
 
-  /// This hook implements the verifier for this operation.  It should emits an
-  /// error message and returns failure if a problem is detected, or returns
+  /// These hooks implement the verifiers for this operation.  It should emits
+  /// an error message and returns failure if a problem is detected, or returns
   /// success if everything is ok.
   LogicalResult verifyInvariants(Operation *op) const {
     return impl->verifyInvariantsFn(op);
+  }
+  LogicalResult verifyRegionInvariants(Operation *op) const {
+    return impl->verifyRegionInvariantsFn(op);
   }
 
   /// This hook implements a generalized folder for this operation.  Operations
@@ -420,6 +428,23 @@ std::pair<IteratorT, bool> findAttrSorted(IteratorT first, IteratorT last,
   return findAttrUnsorted(first, last, name);
 }
 
+/// Get an attribute from a sorted range of named attributes. Returns null if
+/// the attribute was not found.
+template <typename IteratorT, typename NameT>
+Attribute getAttrFromSortedRange(IteratorT first, IteratorT last, NameT name) {
+  std::pair<IteratorT, bool> result = findAttrSorted(first, last, name);
+  return result.second ? result.first->getValue() : Attribute();
+}
+
+/// Get an attribute from a sorted range of named attributes. Returns None if
+/// the attribute was not found.
+template <typename IteratorT, typename NameT>
+Optional<NamedAttribute>
+getNamedAttrFromSortedRange(IteratorT first, IteratorT last, NameT name) {
+  std::pair<IteratorT, bool> result = findAttrSorted(first, last, name);
+  return result.second ? *result.first : Optional<NamedAttribute>();
+}
+
 } // namespace impl
 
 //===----------------------------------------------------------------------===//
@@ -439,7 +464,7 @@ public:
   NamedAttrList() : dictionarySorted({}, true) {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
-  NamedAttrList(const_iterator in_start, const_iterator in_end);
+  NamedAttrList(const_iterator inStart, const_iterator inEnd);
 
   bool operator!=(const NamedAttrList &other) const {
     return !(*this == other);
@@ -470,15 +495,15 @@ public:
             typename = std::enable_if_t<std::is_convertible<
                 typename std::iterator_traits<IteratorT>::iterator_category,
                 std::input_iterator_tag>::value>>
-  void append(IteratorT in_start, IteratorT in_end) {
+  void append(IteratorT inStart, IteratorT inEnd) {
     // TODO: expand to handle case where values appended are in order & after
     // end of current list.
     dictionarySorted.setPointerAndInt(nullptr, false);
-    attrs.append(in_start, in_end);
+    attrs.append(inStart, inEnd);
   }
 
   /// Replaces the attributes with new list of attributes.
-  void assign(const_iterator in_start, const_iterator in_end);
+  void assign(const_iterator inStart, const_iterator inEnd);
 
   /// Replaces the attributes with new list of attributes.
   void assign(ArrayRef<NamedAttribute> range) {
@@ -718,6 +743,9 @@ public:
   /// Always print operations in the generic form.
   OpPrintingFlags &printGenericOpForm();
 
+  /// Do not verify the operation when using custom operation printers.
+  OpPrintingFlags &assumeVerified();
+
   /// Use local scope when printing the operation. This allows for using the
   /// printer in a more localized and thread-safe setting, but may not
   /// necessarily be identical to what the IR will look like when dumping
@@ -739,6 +767,9 @@ public:
   /// Return if operations should be printed in the generic form.
   bool shouldPrintGenericOpForm() const;
 
+  /// Return if operation verification should be skipped.
+  bool shouldAssumeVerified() const;
+
   /// Return if the printer should use local scope when dumping the IR.
   bool shouldUseLocalScope() const;
 
@@ -753,6 +784,9 @@ private:
 
   /// Print operations in the generic form.
   bool printGenericOpFormFlag : 1;
+
+  /// Skip operation verification.
+  bool assumeVerifiedFlag : 1;
 
   /// Print operations with numberings local to the current operation.
   bool printLocalScope : 1;
@@ -889,6 +923,11 @@ public:
   /// Split this range into a set of contiguous subranges using the given
   /// elements attribute, which contains the sizes of the sub ranges.
   MutableOperandRangeRange split(NamedAttribute segmentSizes) const;
+
+  /// Returns the value at the given index.
+  Value operator[](unsigned index) const {
+    return operator OperandRange()[index];
+  }
 
 private:
   /// Update the length of this range to the one provided.

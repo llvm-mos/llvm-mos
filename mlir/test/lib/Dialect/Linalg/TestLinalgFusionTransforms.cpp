@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Transforms.h"
@@ -113,9 +114,11 @@ template <LinalgTilingLoopType LoopType>
 struct TestLinalgFusionTransforms
     : public PassWrapper<TestLinalgFusionTransforms<LoopType>,
                          OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgFusionTransforms)
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
-                    scf::SCFDialect, StandardOpsDialect>();
+                    scf::SCFDialect>();
   }
   TestLinalgFusionTransforms() = default;
   TestLinalgFusionTransforms(const TestLinalgFusionTransforms &pass) {}
@@ -134,6 +137,9 @@ struct TestLinalgFusionTransforms
 
 struct TestLinalgFusionTransformsParallelLoops
     : public TestLinalgFusionTransforms<LinalgTilingLoopType::ParallelLoops> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestLinalgFusionTransformsParallelLoops)
+
   StringRef getArgument() const final {
     return "test-linalg-fusion-transform-patterns";
   }
@@ -145,6 +151,8 @@ struct TestLinalgFusionTransformsParallelLoops
 
 struct TestLinalgFusionTransformsLoops
     : public TestLinalgFusionTransforms<LinalgTilingLoopType::Loops> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgFusionTransformsLoops)
+
   StringRef getArgument() const final {
     return "test-linalg-tensor-fusion-transform-patterns";
   }
@@ -156,6 +164,9 @@ struct TestLinalgFusionTransformsLoops
 
 struct TestLinalgFusionTransformsTiledLoops
     : public TestLinalgFusionTransforms<LinalgTilingLoopType::TiledLoops> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestLinalgFusionTransformsTiledLoops)
+
   StringRef getArgument() const final {
     return "test-linalg-tiled-loop-fusion-transform-patterns";
   }
@@ -227,6 +238,8 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
 namespace {
 struct TestLinalgGreedyFusion
     : public PassWrapper<TestLinalgGreedyFusion, OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgGreedyFusion)
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
                     scf::SCFDialect>();
@@ -260,6 +273,9 @@ struct TestLinalgGreedyFusion
 struct TestLinalgTileAndFuseSequencePass
     : public PassWrapper<TestLinalgTileAndFuseSequencePass,
                          OperationPass<FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestLinalgTileAndFuseSequencePass)
+
   StringRef getArgument() const final { return "test-linalg-tile-and-fuse"; }
   StringRef getDescription() const final {
     return "Test Linalg tiling and fusion of a sequence of Linalg operations.";
@@ -269,9 +285,9 @@ struct TestLinalgTileAndFuseSequencePass
       const TestLinalgTileAndFuseSequencePass &pass)
       : PassWrapper(pass){};
 
-  ListOption<int64_t> tileSizes{
-      *this, "tile-sizes", llvm::cl::desc("Tile sizes to use for ops"),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> tileSizes{*this, "tile-sizes",
+                                llvm::cl::desc("Tile sizes to use for ops"),
+                                llvm::cl::ZeroOrMore};
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,

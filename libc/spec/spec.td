@@ -50,8 +50,14 @@ def CharType : NamedType<"char">;
 
 // Common types
 def VoidPtr : PtrType<VoidType>;
+def VoidPtrPtr : PtrType<VoidPtr>;
+def RestrictedVoidPtrPtr : RestrictedPtrType<VoidPtr>;
 def ConstVoidPtr : ConstType<VoidPtr>;
+
 def SizeTType : NamedType<"size_t">;
+def SizeTPtr : PtrType<SizeTType>;
+def RestrictedSizeTPtr : RestrictedPtrType<SizeTType>;
+
 def LongDoublePtr : PtrType<LongDoubleType>;
 
 def IntMaxTType : NamedType<"intmax_t">;
@@ -84,6 +90,7 @@ def ThrdTType : NamedType<"thrd_t">;
 def ThrdTTypePtr : PtrType<ThrdTType>;
 
 def IntPtr : PtrType<IntType>;
+def RestrictedIntPtr : RestrictedPtrType<IntType>;
 def FloatPtr : PtrType<FloatType>;
 def DoublePtr : PtrType<DoubleType>;
 

@@ -338,3 +338,45 @@ body: |
     %extract:_(s64) = G_EXTRACT %val, 0
     $x0 = COPY %extract
     RET_ReallyLR implicit $x0
+...
+---
+name:            s16_from_s144
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0
+    ; CHECK-LABEL: name: s16_from_s144
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %h0:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES %h0(s16), %h0(s16), %h0(s16), %h0(s16)
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s16) = G_EXTRACT [[MV]](s64), 1
+    ; CHECK-NEXT: %extract:_(s16) = COPY [[EXTRACT]](s16)
+    ; CHECK-NEXT: $h0 = COPY %extract(s16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
+    %h0:_(s16) = COPY $h0
+    %val:_(s144) = G_MERGE_VALUES %h0, %h0, %h0, %h0, %h0, %h0, %h0, %h0, %h0
+    %extract:_(s16) = G_EXTRACT %val, 1
+    $h0 = COPY %extract
+    RET_ReallyLR implicit $h0
+...
+---
+name:            s32_from_s144
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $h0, $w0
+    ; CHECK-LABEL: name: s32_from_s144
+    ; CHECK: liveins: $h0, $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %h0:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES %h0(s16), %h0(s16), %h0(s16), %h0(s16)
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[MV]](s64), 1
+    ; CHECK-NEXT: %extract:_(s32) = COPY [[EXTRACT]](s32)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %h0:_(s16) = COPY $h0
+    %val:_(s144) = G_MERGE_VALUES %h0, %h0, %h0, %h0, %h0, %h0, %h0, %h0, %h0
+    %extract:_(s32) = G_EXTRACT %val, 1
+    $w0 = COPY %extract
+    RET_ReallyLR implicit $w0

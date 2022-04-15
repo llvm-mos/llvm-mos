@@ -3,10 +3,12 @@ set(LLVM_LINK_COMPONENTS
   BOLTRewrite
   DebugInfoDWARF
   Object
+  MC
   ${LLVM_TARGETS_TO_BUILD}
   )
 
 add_bolt_unittest(CoreTests
+  BinaryContext.cpp
   MCPlusBuilder.cpp
   )
 

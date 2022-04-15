@@ -143,23 +143,23 @@ def HasSMEF64        : Predicate<"Subtarget->hasSMEF64()">,
 def HasSMEI64        : Predicate<"Subtarget->hasSMEI64()">,
                                  AssemblerPredicate<(all_of FeatureSMEI64), "sme-i64">;
 def HasStreamingSVE  : Predicate<"Subtarget->hasStreamingSVE()">,
-                                 AssemblerPredicate<(all_of FeatureStreamingSVE), "streaming-sve">;
+                                 AssemblerPredicate<(all_of FeatureStreamingSVE), "sme">;
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorStreamingSVE
     : Predicate<"Subtarget->hasSVE() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureSVE, FeatureStreamingSVE),
-                "streaming-sve or sve">;
+                "sve or sme">;
 def HasSVE2orStreamingSVE
     : Predicate<"Subtarget->hasSVE2() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureSVE2, FeatureStreamingSVE),
-                "streaming-sve or sve2">;
+                "sve2 or sme">;
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasNEONorStreamingSVE
     : Predicate<"Subtarget->hasNEON() || Subtarget->hasStreamingSVE()">,
                 AssemblerPredicate<(any_of FeatureNEON, FeatureStreamingSVE),
-                "streaming-sve or neon">;
+                "neon or sme">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicate<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
@@ -469,6 +469,11 @@ def AArch64callseq_end   : SDNode<"ISD::CALLSEQ_END",
                                                SDTCisVT<1, i32> ]>,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def AArch64call          : SDNode<"AArch64ISD::CALL",
+                                SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+                                [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                 SDNPVariadic]>;
+
+def AArch64call_bti      : SDNode<"AArch64ISD::CALL_BTI",
                                 SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                  SDNPVariadic]>;
@@ -1023,6 +1028,15 @@ def : EOR3_pattern<v16i8>;
 def : EOR3_pattern<v8i16>;
 def : EOR3_pattern<v4i32>;
 def : EOR3_pattern<v2i64>;
+
+class BCAX_pattern<ValueType VecTy>
+  : Pat<(xor (VecTy V128:$Vn), (and (VecTy V128:$Vm), (vnot (VecTy V128:$Va)))),
+        (BCAX (VecTy V128:$Vn), (VecTy V128:$Vm), (VecTy V128:$Va))>;
+
+def : BCAX_pattern<v16i8>;
+def : BCAX_pattern<v8i16>;
+def : BCAX_pattern<v4i32>;
+def : BCAX_pattern<v2i64>;
 
 def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v16i8>;
 def : SHA3_pattern<BCAX, int_aarch64_crypto_bcaxu, v8i16>;
@@ -2072,6 +2086,10 @@ def : Pat<(bswap (rotr GPR64:$Rn, (i64 32))), (REV32Xr GPR64:$Rn)>;
 def : Pat<(srl (bswap top16Zero:$Rn), (i64 16)), (REV16Wr GPR32:$Rn)>;
 def : Pat<(srl (bswap top32Zero:$Rn), (i64 32)), (REV32Xr GPR64:$Rn)>;
 
+def : Pat<(or (and (srl GPR64:$Rn, (i64 8)), (i64 0x00ff00ff00ff00ff)),
+              (and (shl GPR64:$Rn, (i64 8)), (i64 0xff00ff00ff00ff00))),
+          (REV16Xr GPR64:$Rn)>;
+
 //===----------------------------------------------------------------------===//
 // Bitfield immediate extraction instruction.
 //===----------------------------------------------------------------------===//
@@ -2319,6 +2337,8 @@ let isCall = 1, Defs = [LR], Uses = [SP] in {
                 PseudoInstExpansion<(BLR GPR64:$Rn)>;
   def BLR_RVMARKER : Pseudo<(outs), (ins variable_ops), []>,
                      Sched<[WriteBrReg]>;
+  def BLR_BTI : Pseudo<(outs), (ins variable_ops), []>,
+                Sched<[WriteBrReg]>;
 } // isCall
 
 def : Pat<(AArch64call GPR64:$Rn),
@@ -2330,6 +2350,10 @@ def : Pat<(AArch64call GPR64noip:$Rn),
 
 def : Pat<(AArch64call_rvmarker (i64 tglobaladdr:$rvfunc), GPR64:$Rn),
           (BLR_RVMARKER tglobaladdr:$rvfunc, GPR64:$Rn)>,
+      Requires<[NoSLSBLRMitigation]>;
+
+def : Pat<(AArch64call_bti GPR64:$Rn),
+          (BLR_BTI GPR64:$Rn)>,
       Requires<[NoSLSBLRMitigation]>;
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
@@ -3948,9 +3972,9 @@ defm FCVT : FPConversion<"fcvt">;
 // Floating point single operand instructions.
 //===----------------------------------------------------------------------===//
 
-defm FABS   : SingleOperandFPData<0b0001, "fabs", fabs>;
-defm FMOV   : SingleOperandFPData<0b0000, "fmov">;
-defm FNEG   : SingleOperandFPData<0b0010, "fneg", fneg>;
+defm FABS   : SingleOperandFPDataNoException<0b0001, "fabs", fabs>;
+defm FMOV   : SingleOperandFPDataNoException<0b0000, "fmov">;
+defm FNEG   : SingleOperandFPDataNoException<0b0010, "fneg", fneg>;
 defm FRINTA : SingleOperandFPData<0b1100, "frinta", any_fround>;
 defm FRINTI : SingleOperandFPData<0b1111, "frinti", any_fnearbyint>;
 defm FRINTM : SingleOperandFPData<0b1010, "frintm", any_ffloor>;
@@ -4192,7 +4216,7 @@ defm CMGT   : SIMDCmpTwoVector<0, 0b01000, "cmgt", AArch64cmgtz>;
 defm CMLE   : SIMDCmpTwoVector<1, 0b01001, "cmle", AArch64cmlez>;
 defm CMLT   : SIMDCmpTwoVector<0, 0b01010, "cmlt", AArch64cmltz>;
 defm CNT    : SIMDTwoVectorB<0, 0b00, 0b00101, "cnt", ctpop>;
-defm FABS   : SIMDTwoVectorFP<0, 1, 0b01111, "fabs", fabs>;
+defm FABS   : SIMDTwoVectorFPNoException<0, 1, 0b01111, "fabs", fabs>;
 
 def : Pat<(v8i8 (AArch64vashr (v8i8 V64:$Rn), (i32 7))),
           (CMLTv8i8rz V64:$Rn)>;
@@ -4275,7 +4299,7 @@ def : Pat<(v2i32 (int_aarch64_neon_fcvtzu v2f32:$Rn)), (FCVTZUv2f32 $Rn)>;
 def : Pat<(v4i32 (int_aarch64_neon_fcvtzu v4f32:$Rn)), (FCVTZUv4f32 $Rn)>;
 def : Pat<(v2i64 (int_aarch64_neon_fcvtzu v2f64:$Rn)), (FCVTZUv2f64 $Rn)>;
 
-defm FNEG   : SIMDTwoVectorFP<1, 1, 0b01111, "fneg", fneg>;
+defm FNEG   : SIMDTwoVectorFPNoException<1, 1, 0b01111, "fneg", fneg>;
 defm FRECPE : SIMDTwoVectorFP<0, 1, 0b11101, "frecpe", int_aarch64_neon_frecpe>;
 defm FRINTA : SIMDTwoVectorFP<1, 0, 0b11000, "frinta", any_fround>;
 defm FRINTI : SIMDTwoVectorFP<1, 1, 0b11001, "frinti", any_fnearbyint>;
@@ -4756,11 +4780,13 @@ defm CMTST    : SIMDThreeScalarD<0, 0b10001, "cmtst", AArch64cmtst>;
 defm FABD     : SIMDFPThreeScalar<1, 1, 0b010, "fabd", int_aarch64_sisd_fabd>;
 def : Pat<(v1f64 (int_aarch64_neon_fabd (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FABD64 FPR64:$Rn, FPR64:$Rm)>;
-let Predicates = [HasFullFP16] in {
+let Predicates = [HasNEON, HasFullFP16] in {
 def : Pat<(fabs (fsub f16:$Rn, f16:$Rm)), (FABD16 f16:$Rn, f16:$Rm)>;
 }
+let Predicates = [HasNEON] in {
 def : Pat<(fabs (fsub f32:$Rn, f32:$Rm)), (FABD32 f32:$Rn, f32:$Rm)>;
 def : Pat<(fabs (fsub f64:$Rn, f64:$Rm)), (FABD64 f64:$Rn, f64:$Rm)>;
+}
 defm FACGE    : SIMDThreeScalarFPCmp<1, 0, 0b101, "facge",
                                      int_aarch64_neon_facge>;
 defm FACGT    : SIMDThreeScalarFPCmp<1, 1, 0b101, "facgt",
@@ -5105,10 +5131,10 @@ defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
                  BinOpFrag<(add node:$LHS, (sext node:$RHS))>>;
 defm SMLAL   : SIMDLongThreeVectorTiedBHS<0, 0b1000, "smlal",
-    TriOpFrag<(add node:$LHS, (int_aarch64_neon_smull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL   : SIMDLongThreeVectorTiedBHS<0, 0b1010, "smlsl",
-    TriOpFrag<(sub node:$LHS, (int_aarch64_neon_smull node:$MHS, node:$RHS))>>;
-defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", int_aarch64_neon_smull>;
+    TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", AArch64smull>;
 defm SQDMLAL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1001, "sqdmlal",
                                                int_aarch64_neon_sqadd>;
 defm SQDMLSL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1011, "sqdmlsl",
@@ -5126,10 +5152,10 @@ defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
                  BinOpFrag<(add node:$LHS, (zanyext node:$RHS))>>;
 defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
-    TriOpFrag<(add node:$LHS, (int_aarch64_neon_umull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
-    TriOpFrag<(sub node:$LHS, (int_aarch64_neon_umull node:$MHS, node:$RHS))>>;
-defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", int_aarch64_neon_umull>;
+    TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
 defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
                  BinOpFrag<(sub (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm USUBW   : SIMDWideThreeVectorBHS<   1, 0b0011, "usubw",
@@ -5164,73 +5190,14 @@ multiclass Neon_mul_acc_widen_patterns<SDPatternOperator opnode, SDPatternOperat
                                      V64:$Rn, V64:$Rm)), dsub)>;
 }
 
-defm : Neon_mul_acc_widen_patterns<add, int_aarch64_neon_umull,
+defm : Neon_mul_acc_widen_patterns<add, AArch64umull,
      UMLALv8i8_v8i16, UMLALv4i16_v4i32, UMLALv2i32_v2i64>;
-defm : Neon_mul_acc_widen_patterns<add, int_aarch64_neon_smull,
+defm : Neon_mul_acc_widen_patterns<add, AArch64smull,
      SMLALv8i8_v8i16, SMLALv4i16_v4i32, SMLALv2i32_v2i64>;
-defm : Neon_mul_acc_widen_patterns<sub, int_aarch64_neon_umull,
+defm : Neon_mul_acc_widen_patterns<sub, AArch64umull,
      UMLSLv8i8_v8i16, UMLSLv4i16_v4i32, UMLSLv2i32_v2i64>;
-defm : Neon_mul_acc_widen_patterns<sub, int_aarch64_neon_smull,
+defm : Neon_mul_acc_widen_patterns<sub, AArch64smull,
      SMLSLv8i8_v8i16, SMLSLv4i16_v4i32, SMLSLv2i32_v2i64>;
-
-// Additional patterns for SMULL and UMULL
-multiclass Neon_mul_widen_patterns<SDPatternOperator opnode,
-  Instruction INST8B, Instruction INST4H, Instruction INST2S> {
-  def : Pat<(v8i16 (opnode (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
-            (INST8B V64:$Rn, V64:$Rm)>;
-  def : Pat<(v4i32 (opnode (v4i16 V64:$Rn), (v4i16 V64:$Rm))),
-            (INST4H V64:$Rn, V64:$Rm)>;
-  def : Pat<(v2i64 (opnode (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
-            (INST2S V64:$Rn, V64:$Rm)>;
-}
-
-defm : Neon_mul_widen_patterns<AArch64smull, SMULLv8i8_v8i16,
-  SMULLv4i16_v4i32, SMULLv2i32_v2i64>;
-defm : Neon_mul_widen_patterns<AArch64umull, UMULLv8i8_v8i16,
-  UMULLv4i16_v4i32, UMULLv2i32_v2i64>;
-
-// Patterns for smull2/umull2.
-multiclass Neon_mul_high_patterns<SDPatternOperator opnode,
-  Instruction INST8B, Instruction INST4H, Instruction INST2S> {
-  def : Pat<(v8i16 (opnode (extract_high_v16i8 V128:$Rn),
-                           (extract_high_v16i8 V128:$Rm))),
-             (INST8B V128:$Rn, V128:$Rm)>;
-  def : Pat<(v4i32 (opnode (extract_high_v8i16 V128:$Rn),
-                           (extract_high_v8i16 V128:$Rm))),
-             (INST4H V128:$Rn, V128:$Rm)>;
-  def : Pat<(v2i64 (opnode (extract_high_v4i32 V128:$Rn),
-                           (extract_high_v4i32 V128:$Rm))),
-             (INST2S V128:$Rn, V128:$Rm)>;
-}
-
-defm : Neon_mul_high_patterns<AArch64smull, SMULLv16i8_v8i16,
-  SMULLv8i16_v4i32, SMULLv4i32_v2i64>;
-defm : Neon_mul_high_patterns<AArch64umull, UMULLv16i8_v8i16,
-  UMULLv8i16_v4i32, UMULLv4i32_v2i64>;
-
-// Additional patterns for SMLAL/SMLSL and UMLAL/UMLSL
-multiclass Neon_mulacc_widen_patterns<SDPatternOperator opnode,
-  Instruction INST8B, Instruction INST4H, Instruction INST2S> {
-  def : Pat<(v8i16 (opnode (v8i16 V128:$Rd), (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
-            (INST8B V128:$Rd, V64:$Rn, V64:$Rm)>;
-  def : Pat<(v4i32 (opnode (v4i32 V128:$Rd), (v4i16 V64:$Rn), (v4i16 V64:$Rm))),
-            (INST4H V128:$Rd, V64:$Rn, V64:$Rm)>;
-  def : Pat<(v2i64 (opnode (v2i64 V128:$Rd), (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
-            (INST2S  V128:$Rd, V64:$Rn, V64:$Rm)>;
-}
-
-defm : Neon_mulacc_widen_patterns<
-  TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>,
-  SMLALv8i8_v8i16, SMLALv4i16_v4i32, SMLALv2i32_v2i64>;
-defm : Neon_mulacc_widen_patterns<
-  TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>,
-  UMLALv8i8_v8i16, UMLALv4i16_v4i32, UMLALv2i32_v2i64>;
-defm : Neon_mulacc_widen_patterns<
-  TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>,
-  SMLSLv8i8_v8i16, SMLSLv4i16_v4i32, SMLSLv2i32_v2i64>;
-defm : Neon_mulacc_widen_patterns<
-  TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>,
-  UMLSLv8i8_v8i16, UMLSLv4i16_v4i32, UMLSLv2i32_v2i64>;
 
 // Patterns for 64-bit pmull
 def : Pat<(int_aarch64_neon_pmull64 V64:$Rn, V64:$Rm),
@@ -5395,19 +5362,22 @@ defm FMAXP   : SIMDFPPairwiseScalar<0, 0b01111, "fmaxp">;
 defm FMINNMP : SIMDFPPairwiseScalar<1, 0b01100, "fminnmp">;
 defm FMINP   : SIMDFPPairwiseScalar<1, 0b01111, "fminp">;
 
+// Only the lower half of the result of the inner FADDP is used in the patterns
+// below, so the second operand does not matter. Re-use the first input
+// operand, so no additional dependencies need to be introduced.
 let Predicates = [HasFullFP16] in {
 def : Pat<(f16 (vecreduce_fadd (v8f16 V128:$Rn))),
             (FADDPv2i16p
               (EXTRACT_SUBREG
-                 (FADDPv8f16 (FADDPv8f16 V128:$Rn, (v8f16 (IMPLICIT_DEF))), (v8f16 (IMPLICIT_DEF))),
+                 (FADDPv8f16 (FADDPv8f16 V128:$Rn, V128:$Rn), V128:$Rn),
                dsub))>;
 def : Pat<(f16 (vecreduce_fadd (v4f16 V64:$Rn))),
-          (FADDPv2i16p (FADDPv4f16 V64:$Rn, (v4f16 (IMPLICIT_DEF))))>;
+          (FADDPv2i16p (FADDPv4f16 V64:$Rn, V64:$Rn))>;
 }
 def : Pat<(f32 (vecreduce_fadd (v4f32 V128:$Rn))),
           (FADDPv2i32p
             (EXTRACT_SUBREG
-              (FADDPv4f32 V128:$Rn, (v4f32 (IMPLICIT_DEF))),
+              (FADDPv4f32 V128:$Rn, V128:$Rn),
              dsub))>;
 def : Pat<(f32 (vecreduce_fadd (v2f32 V64:$Rn))),
           (FADDPv2i32p V64:$Rn)>;
@@ -6192,6 +6162,14 @@ def : Pat<(v8i8  immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm MOVI      : SIMDModifiedImmVectorShift<0, 0b10, 0b00, "movi">;
 
+let Predicates = [HasNEON] in {
+  // Using the MOVI to materialize fp constants.
+  def : Pat<(f32 fpimm32SIMDModImmType4:$in),
+            (EXTRACT_SUBREG (MOVIv2i32 (fpimm32SIMDModImmType4XForm f32:$in),
+                                       (i32 24)),
+                            ssub)>;
+}
+
 def : InstAlias<"movi $Vd.4h, $imm", (MOVIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi $Vd.8h, $imm", (MOVIv8i16 V128:$Vd, imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi $Vd.2s, $imm", (MOVIv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;
@@ -6404,11 +6382,10 @@ defm MLS   : SIMDVectorIndexedHSTied<1, 0b0100, "mls", null_frag>;
 
 defm MUL   : SIMDVectorIndexedHS<0, 0b1000, "mul", mul>;
 defm SMLAL : SIMDVectorIndexedLongSDTied<0, 0b0010, "smlal",
-    TriOpFrag<(add node:$LHS, (int_aarch64_neon_smull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL : SIMDVectorIndexedLongSDTied<0, 0b0110, "smlsl",
-    TriOpFrag<(sub node:$LHS, (int_aarch64_neon_smull node:$MHS, node:$RHS))>>;
-defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull",
-                int_aarch64_neon_smull>;
+    TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", AArch64smull>;
 defm SQDMLAL : SIMDIndexedLongSQDMLXSDTied<0, 0b0011, "sqdmlal",
                                            int_aarch64_neon_sqadd>;
 defm SQDMLSL : SIMDIndexedLongSQDMLXSDTied<0, 0b0111, "sqdmlsl",
@@ -6419,11 +6396,10 @@ defm SQRDMLSH : SIMDIndexedSQRDMLxHSDTied<1, 0b1111, "sqrdmlsh",
                                           int_aarch64_neon_sqrdmlsh>;
 defm SQDMULL : SIMDIndexedLongSD<0, 0b1011, "sqdmull", int_aarch64_neon_sqdmull>;
 defm UMLAL   : SIMDVectorIndexedLongSDTied<1, 0b0010, "umlal",
-    TriOpFrag<(add node:$LHS, (int_aarch64_neon_umull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDVectorIndexedLongSDTied<1, 0b0110, "umlsl",
-    TriOpFrag<(sub node:$LHS, (int_aarch64_neon_umull node:$MHS, node:$RHS))>>;
-defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull",
-                int_aarch64_neon_umull>;
+    TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", AArch64umull>;
 
 // A scalar sqdmull with the second operand being a vector lane can be
 // handled directly with the indexed instruction encoding.
@@ -7401,6 +7377,7 @@ def : Pat<(v4bf16 (AArch64NvCast (v2i32 FPR64:$src))), (v4bf16 FPR64:$src)>;
 def : Pat<(v2i32 (AArch64NvCast (v2i32 FPR64:$src))), (v2i32 FPR64:$src)>;
 def : Pat<(v2f32 (AArch64NvCast (v2i32 FPR64:$src))), (v2f32 FPR64:$src)>;
 def : Pat<(v1i64 (AArch64NvCast (v2i32 FPR64:$src))), (v1i64 FPR64:$src)>;
+def : Pat<(v1f64 (AArch64NvCast (v2i32 FPR64:$src))), (v1f64 FPR64:$src)>;
 
 def : Pat<(v8i8 (AArch64NvCast (v4i16 FPR64:$src))), (v8i8 FPR64:$src)>;
 def : Pat<(v4i16 (AArch64NvCast (v4i16 FPR64:$src))), (v4i16 FPR64:$src)>;
@@ -7408,6 +7385,7 @@ def : Pat<(v4f16 (AArch64NvCast (v4i16 FPR64:$src))), (v4f16 FPR64:$src)>;
 def : Pat<(v4bf16 (AArch64NvCast (v4i16 FPR64:$src))), (v4bf16 FPR64:$src)>;
 def : Pat<(v2i32 (AArch64NvCast (v4i16 FPR64:$src))), (v2i32 FPR64:$src)>;
 def : Pat<(v1i64 (AArch64NvCast (v4i16 FPR64:$src))), (v1i64 FPR64:$src)>;
+def : Pat<(v1f64 (AArch64NvCast (v4i16 FPR64:$src))), (v1f64 FPR64:$src)>;
 
 def : Pat<(v8i8 (AArch64NvCast (v8i8 FPR64:$src))), (v8i8 FPR64:$src)>;
 def : Pat<(v4i16 (AArch64NvCast (v8i8 FPR64:$src))), (v4i16 FPR64:$src)>;
@@ -7416,6 +7394,7 @@ def : Pat<(v4bf16 (AArch64NvCast (v8i8 FPR64:$src))), (v4bf16 FPR64:$src)>;
 def : Pat<(v2i32 (AArch64NvCast (v8i8 FPR64:$src))), (v2i32 FPR64:$src)>;
 def : Pat<(v2f32 (AArch64NvCast (v8i8 FPR64:$src))), (v2f32 FPR64:$src)>;
 def : Pat<(v1i64 (AArch64NvCast (v8i8 FPR64:$src))), (v1i64 FPR64:$src)>;
+def : Pat<(v1f64 (AArch64NvCast (v4i16 FPR64:$src))), (v1f64 FPR64:$src)>;
 
 def : Pat<(v8i8 (AArch64NvCast (f64 FPR64:$src))), (v8i8 FPR64:$src)>;
 def : Pat<(v4i16 (AArch64NvCast (f64 FPR64:$src))), (v4i16 FPR64:$src)>;
@@ -7425,6 +7404,15 @@ def : Pat<(v2i32 (AArch64NvCast (f64 FPR64:$src))), (v2i32 FPR64:$src)>;
 def : Pat<(v2f32 (AArch64NvCast (f64 FPR64:$src))), (v2f32 FPR64:$src)>;
 def : Pat<(v1i64 (AArch64NvCast (f64 FPR64:$src))), (v1i64 FPR64:$src)>;
 def : Pat<(v1f64 (AArch64NvCast (f64 FPR64:$src))), (v1f64 FPR64:$src)>;
+
+def : Pat<(v8i8 (AArch64NvCast (v1f64 FPR64:$src))), (v8i8 FPR64:$src)>;
+def : Pat<(v4i16 (AArch64NvCast (v1f64 FPR64:$src))), (v4i16 FPR64:$src)>;
+def : Pat<(v4f16 (AArch64NvCast (v1f64 FPR64:$src))), (v4f16 FPR64:$src)>;
+def : Pat<(v4bf16 (AArch64NvCast (v1f64 FPR64:$src))), (v4bf16 FPR64:$src)>;
+def : Pat<(v2i32 (AArch64NvCast (v1f64 FPR64:$src))), (v2i32 FPR64:$src)>;
+def : Pat<(v2f32 (AArch64NvCast (v1f64 FPR64:$src))), (v2f32 FPR64:$src)>;
+def : Pat<(v1i64 (AArch64NvCast (v1f64 FPR64:$src))), (v1i64 FPR64:$src)>;
+def : Pat<(f64 (AArch64NvCast (v1f64 FPR64:$src))), (f64 FPR64:$src)>;
 
 def : Pat<(v8i8 (AArch64NvCast (v2f32 FPR64:$src))), (v8i8 FPR64:$src)>;
 def : Pat<(v4i16 (AArch64NvCast (v2f32 FPR64:$src))), (v4i16 FPR64:$src)>;

@@ -21,22 +21,16 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OperandTraits.h"
-#include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -46,6 +40,10 @@
 #include <vector>
 
 namespace llvm {
+
+class StringRef;
+class Type;
+class Value;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -1615,12 +1613,18 @@ public:
 
   /// Get the attribute of a given kind for the function.
   Attribute getFnAttr(StringRef Kind) const {
-    return getAttributes().getFnAttr(Kind);
+    Attribute Attr = getAttributes().getFnAttr(Kind);
+    if (Attr.isValid())
+      return Attr;
+    return getFnAttrOnCalledFunction(Kind);
   }
 
   /// Get the attribute of a given kind for the function.
   Attribute getFnAttr(Attribute::AttrKind Kind) const {
-    return getAttributes().getFnAttr(Kind);
+    Attribute A = getAttributes().getFnAttr(Kind);
+    if (A.isValid())
+      return A;
+    return getFnAttrOnCalledFunction(Kind);
   }
 
   /// Get the attribute of a given kind from a given arg
@@ -1822,7 +1826,13 @@ public:
 
   /// If one of the arguments has the 'returned' attribute, returns its
   /// operand value. Otherwise, return nullptr.
-  Value *getReturnedArgOperand() const;
+  Value *getReturnedArgOperand() const {
+    return getArgOperandWithAttribute(Attribute::Returned);
+  }
+
+  /// If one of the arguments has the specified attribute, returns its
+  /// operand value. Otherwise, return nullptr.
+  Value *getArgOperandWithAttribute(Attribute::AttrKind Kind) const;
 
   /// Return true if the call should not be treated as a call to a
   /// builtin.
@@ -2313,6 +2323,7 @@ private:
 
     return hasFnAttrOnCalledFunction(Kind);
   }
+  template <typename AK> Attribute getFnAttrOnCalledFunction(AK Kind) const;
 
   /// A specialized version of hasFnAttrImpl for when the caller wants to
   /// know if an attribute's semantics are implied, not whether the attribute

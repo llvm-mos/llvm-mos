@@ -76,10 +76,11 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
         if (symbol.Rank() == rank) {
           lowerBoundsAreOne = false;
           if (dim) {
-            return Fold(context,
-                ConvertToType<T>(GetLowerBound(context, *named, *dim)));
+            if (auto lb{GetLBOUND(context, *named, *dim)}) {
+              return Fold(context, ConvertToType<T>(std::move(*lb)));
+            }
           } else if (auto extents{
-                         AsExtentArrayExpr(GetLowerBounds(context, *named))}) {
+                         AsExtentArrayExpr(GetLBOUNDs(context, *named))}) {
             return Fold(context,
                 ConvertToType<T>(Expr<ExtentType>{std::move(*extents)}));
           }
@@ -139,11 +140,11 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
                                      "rank-%d assumed-size array"_err_en_US,
                   rank, rank);
               return MakeInvalidIntrinsic<T>(std::move(funcRef));
-            } else if (auto ub{GetUpperBound(context, *named, *dim)}) {
+            } else if (auto ub{GetUBOUND(context, *named, *dim)}) {
               return Fold(context, ConvertToType<T>(std::move(*ub)));
             }
           } else {
-            Shape ubounds{GetUpperBounds(context, *named)};
+            Shape ubounds{GetUBOUNDs(context, *named)};
             if (semantics::IsAssumedSizeArray(symbol)) {
               CHECK(!ubounds.back());
               ubounds.back() = ExtentExpr{-1};
@@ -284,11 +285,12 @@ public:
           }
         }
         resultIndices.emplace_back(hit);
-        at[zbDim] = dimLength;
+        at[zbDim] = std::max<ConstantSubscript>(dimLength, 1);
         array->IncrementSubscripts(at);
         at[zbDim] = 1;
         if (mask) {
-          maskAt[zbDim] = mask->lbounds()[zbDim] + dimLength - 1;
+          maskAt[zbDim] = mask->lbounds()[zbDim] +
+              std::max<ConstantSubscript>(dimLength, 1) - 1;
           mask->IncrementSubscripts(maskAt);
           maskAt[zbDim] = mask->lbounds()[zbDim];
         }
@@ -329,14 +331,12 @@ private:
       if constexpr (T::category == TypeCategory::Logical) {
         // array(at) .EQV. value?
         static_assert(WHICH == WhichLocation::Findloc);
-        cmp.emplace(
-            ConvertToType<LogicalResult>(Expr<T>{LogicalOperation<T::kind>{
-                LogicalOperator::Eqv, Expr<T>{Constant<T>{std::move(element)}},
-                Expr<T>{Constant<T>{*value}}}}));
+        cmp.emplace(ConvertToType<LogicalResult>(
+            Expr<T>{LogicalOperation<T::kind>{LogicalOperator::Eqv,
+                Expr<T>{Constant<T>{element}}, Expr<T>{Constant<T>{*value}}}}));
       } else { // compare array(at) to value
-        cmp.emplace(
-            PackageRelation(relation, Expr<T>{Constant<T>{std::move(element)}},
-                Expr<T>{Constant<T>{*value}}));
+        cmp.emplace(PackageRelation(relation, Expr<T>{Constant<T>{element}},
+            Expr<T>{Constant<T>{*value}}));
       }
       Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
       result = GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
@@ -419,7 +419,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           typename Scalar<T>::ValueWithOverflow j{i.ABS()};
           if (j.overflow) {
             context.messages().Say(
-                "abs(integer(kind=%d)) folding overflowed"_en_US, KIND);
+                "abs(integer(kind=%d)) folding overflowed"_warn_en_US, KIND);
           }
           return j.value;
         }));
@@ -439,7 +439,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                   auto y{x.template ToInteger<Scalar<T>>(mode)};
                   if (y.flags.test(RealFlag::Overflow)) {
                     context.messages().Say(
-                        "%s intrinsic folding overflow"_en_US, name);
+                        "%s intrinsic folding overflow"_warn_en_US, name);
                   }
                   return y.value;
                 }));
@@ -505,7 +505,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       if (len.value() != 1) {
         // Do not die, this was not checked before
         context.messages().Say(
-            "Character in intrinsic function %s must have length one"_en_US,
+            "Character in intrinsic function %s must have length one"_warn_en_US,
             name);
       } else {
         return std::visit(
@@ -561,6 +561,28 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 posVal, i.bits);
           }
           return std::invoke(fptr, i, posVal);
+        }));
+  } else if (name == "ibits") {
+    return FoldElementalIntrinsic<T, T, Int4, Int4>(context, std::move(funcRef),
+        ScalarFunc<T, T, Int4, Int4>([&](const Scalar<T> &i,
+                                         const Scalar<Int4> &pos,
+                                         const Scalar<Int4> &len) -> Scalar<T> {
+          auto posVal{static_cast<int>(pos.ToInt64())};
+          auto lenVal{static_cast<int>(len.ToInt64())};
+          if (posVal < 0) {
+            context.messages().Say(
+                "bit position for IBITS(POS=%d,LEN=%d) is negative"_err_en_US,
+                posVal, lenVal);
+          } else if (lenVal < 0) {
+            context.messages().Say(
+                "bit length for IBITS(POS=%d,LEN=%d) is negative"_err_en_US,
+                posVal, lenVal);
+          } else if (posVal + lenVal > i.bits) {
+            context.messages().Say(
+                "IBITS(POS=%d,LEN=%d) must have POS+LEN no greater than %d"_err_en_US,
+                posVal + lenVal, i.bits);
+          }
+          return i.IBITS(posVal, lenVal);
         }));
   } else if (name == "index" || name == "scan" || name == "verify") {
     if (auto *charExpr{UnwrapExpr<Expr<SomeCharacter>>(args[0])}) {
@@ -760,9 +782,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 const Scalar<T> &y) -> Scalar<T> {
               auto quotRem{x.DivideSigned(y)};
               if (quotRem.divisionByZero) {
-                context.messages().Say("mod() by zero"_en_US);
+                context.messages().Say("mod() by zero"_warn_en_US);
               } else if (quotRem.overflow) {
-                context.messages().Say("mod() folding overflowed"_en_US);
+                context.messages().Say("mod() folding overflowed"_warn_en_US);
               }
               return quotRem.remainder;
             }));
@@ -773,7 +795,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 const Scalar<T> &y) -> Scalar<T> {
               auto result{x.MODULO(y)};
               if (result.overflow) {
-                context.messages().Say("modulo() folding overflowed"_en_US);
+                context.messages().Say(
+                    "modulo() folding overflowed"_warn_en_US);
               }
               return result.value;
             }));
@@ -893,7 +916,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               typename Scalar<T>::ValueWithOverflow result{j.SIGN(k)};
               if (result.overflow) {
                 context.messages().Say(
-                    "sign(integer(kind=%d)) folding overflowed"_en_US, KIND);
+                    "sign(integer(kind=%d)) folding overflowed"_warn_en_US,
+                    KIND);
               }
               return result.value;
             }));
@@ -914,7 +938,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             }
           } else {
             context.messages().Say(
-                "size(array,dim=%jd) dimension is out of range for rank-%d array"_en_US,
+                "size(array,dim=%jd) dimension is out of range for rank-%d array"_warn_en_US,
                 *dim, rank);
           }
         }
@@ -947,7 +971,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }
-  // TODO: dot_product, ibits, ishftc, matmul, sign, transfer
+  // TODO: dot_product, ishftc, matmul, sign, transfer
   return Expr<T>{std::move(funcRef)};
 }
 

@@ -486,8 +486,11 @@ void DebugInfoBinaryPatcher::addLE32Patch(uint64_t Offset, uint32_t NewValue,
   std::lock_guard<std::mutex> Lock(WriterMutex);
   if (OldValueSize == 4)
     DebugPatches.emplace_back(new DebugPatch32(Offset, NewValue));
-  else
+  else if (OldValueSize == 8)
     DebugPatches.emplace_back(new DebugPatch64to32(Offset, NewValue));
+  else
+    DebugPatches.emplace_back(
+        new DebugPatch32GenericSize(Offset, NewValue, OldValueSize));
 }
 
 void SimpleBinaryPatcher::addBinaryPatch(uint64_t Offset,
@@ -576,6 +579,12 @@ CUOffsetMap DebugInfoBinaryPatcher::computeNewOffsets(DWARFContext &DWCtx,
       continue;
     case DebugPatchKind::PatchValue64to32: {
       PreviousChangeInSize -= 4;
+      break;
+    }
+    case DebugPatchKind::PatchValue32GenericSize: {
+      DebugPatch32GenericSize *DPVS =
+          reinterpret_cast<DebugPatch32GenericSize *>(P);
+      PreviousChangeInSize += 4 - DPVS->OldValueSize;
       break;
     }
     case DebugPatchKind::PatchValueVariable: {
@@ -691,6 +700,14 @@ std::string DebugInfoBinaryPatcher::patchBinary(StringRef BinaryContents) {
       ByteSequence = encodeLE(4, P64to32->Value);
       break;
     }
+    case DebugPatchKind::PatchValue32GenericSize: {
+      DebugPatch32GenericSize *DPVS =
+          reinterpret_cast<DebugPatch32GenericSize *>(P);
+      Offset = DPVS->Offset;
+      OldValueSize = DPVS->OldValueSize;
+      ByteSequence = encodeLE(4, DPVS->Value);
+      break;
+    }
     case DebugPatchKind::PatchValueVariable: {
       DebugPatchVariableSize *PV =
           reinterpret_cast<DebugPatchVariableSize *>(P);
@@ -803,7 +820,8 @@ void DebugAbbrevWriter::addUnitAbbreviations(DWARFUnit &Unit) {
   auto hashAndAddAbbrev = [&](StringRef AbbrevData) -> bool {
     llvm::SHA1 Hasher;
     Hasher.update(AbbrevData);
-    StringRef Key = Hasher.final();
+    std::array<uint8_t, 20> Hash = Hasher.final();
+    StringRef Key((const char *)Hash.data(), Hash.size());
     auto Iter = AbbrevDataCache.find(Key);
     if (Iter != AbbrevDataCache.end()) {
       UnitsAbbrevData[&Unit] = Iter->second.get();

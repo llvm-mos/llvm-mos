@@ -65,11 +65,6 @@
 #define PATH_MAX MAX_PATH
 #endif
 typedef int socklen_t;
-constexpr const char *dev_null_path = "nul";
-
-#else
-constexpr const char *dev_null_path = "/dev/null";
-
 #endif
 
 using namespace lldb_vscode;
@@ -449,13 +444,13 @@ void EventThreadFunction() {
           case lldb::eStateSuspended:
             break;
           case lldb::eStateStopped:
-            // Now that we don't mess with the async setting in the debugger
-            // when launching or attaching we will get the first process stop
-            // event which we do not want to send an event for. This is because
-            // we either manually deliver the event in by calling the
-            // SendThreadStoppedEvent() from request_configuarationDone() if we
-            // want to stop on entry, or we resume from that function.
-            if (process.GetStopID() > 1) {
+            // We launch and attach in synchronous mode then the first stop
+            // event will not be delivered. If we use "launchCommands" during a
+            // launch or "attachCommands" during an attach we might some process
+            // stop events which we do not want to send an event for. We will
+            // manually send a stopped event in request_configurationDone(...)
+            // so don't send any before then.
+            if (g_vsc.configuration_done_sent) {
               // Only report a stopped event if the process was not restarted.
               if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
                 SendStdOutStdErr(process);
@@ -649,10 +644,15 @@ void request_attach(const llvm::json::Object &request) {
   }
   if (attachCommands.empty()) {
     // No "attachCommands", just attach normally.
+    // Disable async events so the attach will be successful when we return from
+    // the launch call and the launch will happen synchronously
+    g_vsc.debugger.SetAsync(false);
     if (core_file.empty())
       g_vsc.target.Attach(attach_info, error);
     else
       g_vsc.target.LoadCore(core_file.data(), error);
+    // Reenable async events
+    g_vsc.debugger.SetAsync(true);
   } else {
     // We have "attachCommands" that are a set of commands that are expected
     // to execute the commands after which a process should be created. If there
@@ -661,10 +661,11 @@ void request_attach(const llvm::json::Object &request) {
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
-  }
-  // Make sure the process is attached and stopped before proceeding.
-  if (error.Success())
+
+    // Make sure the process is attached and stopped before proceeding as the
+    // the launch commands are not run using the synchronous mode.
     error = g_vsc.WaitForProcessToStop(timeout_seconds);
+  }
 
   if (error.Success() && core_file.empty()) {
     auto attached_pid = g_vsc.target.GetProcess().GetProcessID();
@@ -794,6 +795,7 @@ void request_configurationDone(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+  g_vsc.configuration_done_sent = true;
   if (g_vsc.stop_at_entry)
     SendThreadStoppedEvent();
   else
@@ -1439,22 +1441,12 @@ void request_modules(const llvm::json::Object &request) {
 //   }]
 // }
 void request_initialize(const llvm::json::Object &request) {
-  g_vsc.debugger = lldb::SBDebugger::Create(true /*source_init_files*/);
+  auto log_cb = [](const char *buf, void *baton) -> void {
+    g_vsc.SendOutput(OutputType::Console, llvm::StringRef{buf});
+  };
+  g_vsc.debugger =
+      lldb::SBDebugger::Create(true /*source_init_files*/, log_cb, nullptr);
   g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
-
-  // Create an empty target right away since we might get breakpoint requests
-  // before we are given an executable to launch in a "launch" request, or a
-  // executable when attaching to a process by process ID in a "attach"
-  // request.
-  FILE *out = llvm::sys::RetryAfterSignal(nullptr, fopen, dev_null_path, "w");
-  if (out) {
-    // Set the output and error file handles to redirect into nothing otherwise
-    // if any code in LLDB prints to the debugger file handles, the output and
-    // error file handles are initialized to STDOUT and STDERR and any output
-    // will kill our debug session.
-    g_vsc.debugger.SetOutputFileHandle(out, true);
-    g_vsc.debugger.SetErrorFileHandle(out, false);
-  }
 
   // Start our event thread so we can receive events from the debugger, target,
   // process and more.
@@ -1724,17 +1716,21 @@ void request_launch(const llvm::json::Object &request) {
     if (llvm::Error err = request_runInTerminal(request))
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
   } else if (launchCommands.empty()) {
+    // Disable async events so the launch will be successful when we return from
+    // the launch call and the launch will happen synchronously
+    g_vsc.debugger.SetAsync(false);
     g_vsc.target.Launch(launch_info, error);
+    g_vsc.debugger.SetAsync(true);
   } else {
     g_vsc.RunLLDBCommands("Running launchCommands:", launchCommands);
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
-  }
-  // Make sure the process is launched and stopped at the entry point before
-  // proceeding.
-  if (error.Success())
+    // Make sure the process is launched and stopped at the entry point before
+    // proceeding as the the launch commands are not run using the synchronous
+    // mode.
     error = g_vsc.WaitForProcessToStop(timeout_seconds);
+  }
 
   if (error.Fail()) {
     response["success"] = llvm::json::Value(false);
@@ -3136,18 +3132,25 @@ void redirection_test() {
 /// \return
 ///     A fd pointing to the original stdout.
 int SetupStdoutStderrRedirection() {
-  int new_stdout_fd = dup(fileno(stdout));
-  auto stdout_err_redirector_callback = [&](llvm::StringRef data) {
-    g_vsc.SendOutput(OutputType::Console, data);
+  int stdoutfd = fileno(stdout);
+  int new_stdout_fd = dup(stdoutfd);
+  auto output_callback_stderr = [](llvm::StringRef data) {
+    g_vsc.SendOutput(OutputType::Stderr, data);
   };
-
-  for (int fd : {fileno(stdout), fileno(stderr)}) {
-    if (llvm::Error err = RedirectFd(fd, stdout_err_redirector_callback)) {
-      std::string error_message = llvm::toString(std::move(err));
-      if (g_vsc.log)
-        *g_vsc.log << error_message << std::endl;
-      stdout_err_redirector_callback(error_message);
-    }
+  auto output_callback_stdout = [](llvm::StringRef data) {
+    g_vsc.SendOutput(OutputType::Stdout, data);
+  };
+  if (llvm::Error err = RedirectFd(stdoutfd, output_callback_stdout)) {
+    std::string error_message = llvm::toString(std::move(err));
+    if (g_vsc.log)
+      *g_vsc.log << error_message << std::endl;
+    output_callback_stderr(error_message);
+  }
+  if (llvm::Error err = RedirectFd(fileno(stderr), output_callback_stderr)) {
+    std::string error_message = llvm::toString(std::move(err));
+    if (g_vsc.log)
+      *g_vsc.log << error_message << std::endl;
+    output_callback_stderr(error_message);
   }
 
   /// used only by TestVSCode_redirection_to_console.py
@@ -3235,7 +3238,6 @@ int main(int argc, char *argv[]) {
     g_vsc.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
   }
 
-  uint32_t packet_idx = 0;
   while (!g_vsc.sent_terminated_event) {
     llvm::json::Object object;
     lldb_vscode::PacketStatus status = g_vsc.GetNextObject(object);
@@ -3246,7 +3248,6 @@ int main(int argc, char *argv[]) {
 
     if (!g_vsc.HandleObject(object))
       return 1;
-    ++packet_idx;
   }
 
   return EXIT_SUCCESS;

@@ -152,18 +152,55 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortFunctionStyle> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::AlignConsecutiveStyle> {
-  static void enumeration(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::ACS_None);
-    IO.enumCase(Value, "Consecutive", FormatStyle::ACS_Consecutive);
-    IO.enumCase(Value, "AcrossEmptyLines", FormatStyle::ACS_AcrossEmptyLines);
-    IO.enumCase(Value, "AcrossComments", FormatStyle::ACS_AcrossComments);
+template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
+  static void enumInput(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
+    IO.enumCase(Value, "None",
+                FormatStyle::AlignConsecutiveStyle(
+                    {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,
+                     /*PadOperators=*/true}));
+    IO.enumCase(Value, "Consecutive",
+                FormatStyle::AlignConsecutiveStyle(
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,
+                     /*PadOperators=*/true}));
+    IO.enumCase(Value, "AcrossEmptyLines",
+                FormatStyle::AlignConsecutiveStyle(
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/true,
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,
+                     /*PadOperators=*/true}));
+    IO.enumCase(Value, "AcrossComments",
+                FormatStyle::AlignConsecutiveStyle({/*Enabled=*/true,
+                                                    /*AcrossEmptyLines=*/false,
+                                                    /*AcrossComments=*/true,
+                                                    /*AlignCompound=*/false,
+                                                    /*PadOperators=*/true}));
     IO.enumCase(Value, "AcrossEmptyLinesAndComments",
-                FormatStyle::ACS_AcrossEmptyLinesAndComments);
+                FormatStyle::AlignConsecutiveStyle({/*Enabled=*/true,
+                                                    /*AcrossEmptyLines=*/true,
+                                                    /*AcrossComments=*/true,
+                                                    /*AlignCompound=*/false,
+                                                    /*PadOperators=*/true}));
 
     // For backward compatibility.
-    IO.enumCase(Value, "true", FormatStyle::ACS_Consecutive);
-    IO.enumCase(Value, "false", FormatStyle::ACS_None);
+    IO.enumCase(Value, "true",
+                FormatStyle::AlignConsecutiveStyle(
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,
+                     /*PadOperators=*/true}));
+    IO.enumCase(Value, "false",
+                FormatStyle::AlignConsecutiveStyle(
+                    {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,
+                     /*PadOperators=*/true}));
+  }
+
+  static void mapping(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
+    IO.mapOptional("Enabled", Value.Enabled);
+    IO.mapOptional("AcrossEmptyLines", Value.AcrossEmptyLines);
+    IO.mapOptional("AcrossComments", Value.AcrossComments);
+    IO.mapOptional("AlignCompound", Value.AlignCompound);
+    IO.mapOptional("PadOperators", Value.PadOperators);
   }
 };
 
@@ -600,13 +637,13 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AccessModifierOffset", Style.AccessModifierOffset);
     IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
     IO.mapOptional("AlignArrayOfStructures", Style.AlignArrayOfStructures);
-    IO.mapOptional("AlignConsecutiveMacros", Style.AlignConsecutiveMacros);
     IO.mapOptional("AlignConsecutiveAssignments",
                    Style.AlignConsecutiveAssignments);
     IO.mapOptional("AlignConsecutiveBitFields",
                    Style.AlignConsecutiveBitFields);
     IO.mapOptional("AlignConsecutiveDeclarations",
                    Style.AlignConsecutiveDeclarations);
+    IO.mapOptional("AlignConsecutiveMacros", Style.AlignConsecutiveMacros);
     IO.mapOptional("AlignEscapedNewlines", Style.AlignEscapedNewlines);
     IO.mapOptional("AlignOperands", Style.AlignOperands);
     IO.mapOptional("AlignTrailingComments", Style.AlignTrailingComments);
@@ -768,6 +805,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
                    Style.IndentWrappedFunctionNames);
+    IO.mapOptional("InsertBraces", Style.InsertBraces);
     IO.mapOptional("InsertTrailingCommas", Style.InsertTrailingCommas);
     IO.mapOptional("JavaImportGroups", Style.JavaImportGroups);
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
@@ -990,11 +1028,11 @@ std::string ParseErrorCategory::message(int EV) const {
   case ParseError::InvalidQualifierSpecified:
     return "Invalid qualifier specified in QualifierOrder";
   case ParseError::DuplicateQualifierSpecified:
-    return "Duplicate qualifier specified in QualfierOrder";
+    return "Duplicate qualifier specified in QualifierOrder";
   case ParseError::MissingQualifierType:
-    return "Missing type in QualfierOrder";
+    return "Missing type in QualifierOrder";
   case ParseError::MissingQualifierOrder:
-    return "Missing QualfierOrder";
+    return "Missing QualifierOrder";
   }
   llvm_unreachable("unexpected parse error");
 }
@@ -1140,10 +1178,15 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
   LLVMStyle.AlignOperands = FormatStyle::OAS_Align;
   LLVMStyle.AlignTrailingComments = true;
-  LLVMStyle.AlignConsecutiveAssignments = FormatStyle::ACS_None;
-  LLVMStyle.AlignConsecutiveBitFields = FormatStyle::ACS_None;
-  LLVMStyle.AlignConsecutiveDeclarations = FormatStyle::ACS_None;
-  LLVMStyle.AlignConsecutiveMacros = FormatStyle::ACS_None;
+  LLVMStyle.AlignConsecutiveAssignments = {};
+  LLVMStyle.AlignConsecutiveAssignments.Enabled = false;
+  LLVMStyle.AlignConsecutiveAssignments.AcrossEmptyLines = false;
+  LLVMStyle.AlignConsecutiveAssignments.AcrossComments = false;
+  LLVMStyle.AlignConsecutiveAssignments.AlignCompound = false;
+  LLVMStyle.AlignConsecutiveAssignments.PadOperators = true;
+  LLVMStyle.AlignConsecutiveBitFields = {};
+  LLVMStyle.AlignConsecutiveDeclarations = {};
+  LLVMStyle.AlignConsecutiveMacros = {};
   LLVMStyle.AllowAllArgumentsOnNextLine = true;
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
@@ -1223,6 +1266,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
   LLVMStyle.PPIndentWidth = -1;
+  LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
@@ -1650,7 +1694,8 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
     if (token == tok::identifier)
       return ParseError::InvalidQualifierSpecified;
   }
-  // Ensure the list is unqiue (no duplicates).
+
+  // Ensure the list is unique (no duplicates).
   std::set<std::string> UniqueQualifiers(Style->QualifierOrder.begin(),
                                          Style->QualifierOrder.end());
   if (Style->QualifierOrder.size() != UniqueQualifiers.size()) {
@@ -1660,10 +1705,12 @@ ParseError validateQualifierOrder(FormatStyle *Style) {
     return ParseError::DuplicateQualifierSpecified;
   }
 
+  // Ensure the list has 'type' in it.
   auto type = std::find(Style->QualifierOrder.begin(),
                         Style->QualifierOrder.end(), "type");
   if (type == Style->QualifierOrder.end())
     return ParseError::MissingQualifierType;
+
   return ParseError::Success;
 }
 
@@ -1675,7 +1722,7 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   FormatStyle::LanguageKind Language = Style->Language;
   assert(Language != FormatStyle::LK_None);
   if (Config.getBuffer().trim().empty())
-    return make_error_code(ParseError::Error);
+    return make_error_code(ParseError::Success);
   Style->StyleSet.Clear();
   std::vector<FormatStyle> Styles;
   llvm::yaml::Input Input(Config, /*Ctxt=*/nullptr, DiagHandler,
@@ -1779,6 +1826,48 @@ FormatStyle::GetLanguageStyle(FormatStyle::LanguageKind Language) const {
 
 namespace {
 
+class BracesInserter : public TokenAnalyzer {
+public:
+  BracesInserter(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style) {}
+
+  std::pair<tooling::Replacements, unsigned>
+  analyze(TokenAnnotator &Annotator,
+          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+          FormatTokenLexer &Tokens) override {
+    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+    tooling::Replacements Result;
+    insertBraces(AnnotatedLines, Result);
+    return {Result, 0};
+  }
+
+private:
+  void insertBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
+                    tooling::Replacements &Result) {
+    const auto &SourceMgr = Env.getSourceManager();
+    for (AnnotatedLine *Line : Lines) {
+      insertBraces(Line->Children, Result);
+      if (!Line->Affected)
+        continue;
+      for (FormatToken *Token = Line->First; Token && !Token->Finalized;
+           Token = Token->Next) {
+        if (Token->BraceCount == 0)
+          continue;
+        std::string Brace;
+        if (Token->BraceCount < 0) {
+          assert(Token->BraceCount == -1);
+          Brace = '{';
+        } else {
+          Brace = '\n' + std::string(Token->BraceCount, '}');
+        }
+        Token->BraceCount = 0;
+        const auto Start = Token->Tok.getEndLoc();
+        cantFail(Result.add(tooling::Replacement(SourceMgr, Start, 0, Brace)));
+      }
+    }
+  }
+};
+
 class BracesRemover : public TokenAnalyzer {
 public:
   BracesRemover(const Environment &Env, const FormatStyle &Style)
@@ -1795,7 +1884,6 @@ public:
   }
 
 private:
-  // Remove optional braces.
   void removeBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
@@ -1803,13 +1891,17 @@ private:
       removeBraces(Line->Children, Result);
       if (!Line->Affected)
         continue;
-      for (FormatToken *Token = Line->First; Token; Token = Token->Next) {
+      for (FormatToken *Token = Line->First; Token && !Token->Finalized;
+           Token = Token->Next) {
         if (!Token->Optional)
           continue;
         assert(Token->isOneOf(tok::l_brace, tok::r_brace));
-        const auto Start = Token == Line->Last
-                               ? Token->WhitespaceRange.getBegin()
-                               : Token->Tok.getLocation();
+        assert(Token->Next || Token == Line->Last);
+        const auto Start =
+            Token == Line->Last || (Token->Next->is(tok::kw_else) &&
+                                    Token->Next->NewlinesBefore > 0)
+                ? Token->WhitespaceRange.getBegin()
+                : Token->Tok.getLocation();
         const auto Range =
             CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
         cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
@@ -3119,23 +3211,28 @@ reformat(const FormatStyle &Style, StringRef Code,
   typedef std::function<std::pair<tooling::Replacements, unsigned>(
       const Environment &)>
       AnalyzerPass;
-  SmallVector<AnalyzerPass, 4> Passes;
+  SmallVector<AnalyzerPass, 8> Passes;
 
-  if (Style.isCpp() && Style.QualifierAlignment != FormatStyle::QAS_Leave) {
-    Passes.emplace_back([&](const Environment &Env) {
-      return QualifierAlignmentFixer(Env, Expanded, Code, Ranges,
-                                     FirstStartColumn, NextStartColumn,
-                                     LastStartColumn, FileName)
-          .process();
-    });
-  }
+  if (Style.isCpp()) {
+    if (Style.QualifierAlignment != FormatStyle::QAS_Leave) {
+      Passes.emplace_back([&](const Environment &Env) {
+        return QualifierAlignmentFixer(Env, Expanded, Code, Ranges,
+                                       FirstStartColumn, NextStartColumn,
+                                       LastStartColumn, FileName)
+            .process();
+      });
+    }
 
-  if (Style.isCpp() && Style.RemoveBracesLLVM)
-    Passes.emplace_back([&](const Environment &Env) {
-      return BracesRemover(Env, Expanded).process();
-    });
+    if (Style.InsertBraces)
+      Passes.emplace_back([&](const Environment &Env) {
+        return BracesInserter(Env, Expanded).process();
+      });
 
-  if (Style.Language == FormatStyle::LK_Cpp) {
+    if (Style.RemoveBracesLLVM)
+      Passes.emplace_back([&](const Environment &Env) {
+        return BracesRemover(Env, Expanded).process();
+      });
+
     if (Style.FixNamespaceComments)
       Passes.emplace_back([&](const Environment &Env) {
         return NamespaceEndCommentsFixer(Env, Expanded).process();

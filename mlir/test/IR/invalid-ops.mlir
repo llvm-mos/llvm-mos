@@ -37,8 +37,8 @@ func @unknown_custom_op() {
 // -----
 
 func @unknown_std_op() {
-  // expected-error@+1 {{unregistered operation 'std.foo_bar_op' found in dialect ('std') that does not allow unknown operations}}
-  %0 = "std.foo_bar_op"() : () -> index
+  // expected-error@+1 {{unregistered operation 'func.foo_bar_op' found in dialect ('func') that does not allow unknown operations}}
+  %0 = "func.foo_bar_op"() : () -> index
   return
 }
 
@@ -98,7 +98,7 @@ func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
 
 func @return_not_in_function() {
   "foo.region"() ({
-    // expected-error@+1 {{'std.return' op expects parent op 'builtin.func'}}
+    // expected-error@+1 {{'func.return' op expects parent op 'func.func'}}
     return
   }): () -> ()
   return
@@ -111,3 +111,10 @@ func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
   // expected-error@-1 {{expects different type than prior uses}}
   return
 }
+
+// -----
+
+// Case that resulted in leak previously.
+
+// expected-error@+1 {{expected ':' after block name}}
+"g"()({^a:^b })

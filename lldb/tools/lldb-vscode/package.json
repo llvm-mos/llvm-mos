@@ -235,7 +235,7 @@
 							},
 							"timeout": {
 								"type": "string",
-								"description": "The time in seconds to wait for a program to stop at entry point when launching. Defaults to 30 seconds."
+								"description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."
 							}
 						}
 					},
@@ -314,7 +314,7 @@
 							},
 							"timeout": {
 								"type": "string",
-								"description": "The time in seconds to wait for a program to stop when attaching. Defaults to 30 seconds."
+								"description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
 							}
 						}
 					}

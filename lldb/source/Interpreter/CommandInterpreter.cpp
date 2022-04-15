@@ -84,6 +84,10 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ScopedPrinter.h"
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -236,6 +240,12 @@ bool CommandInterpreter::GetSpaceReplPrompts() const {
 
 bool CommandInterpreter::GetRepeatPreviousCommand() const {
   const uint32_t idx = ePropertyRepeatPreviousCommand;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
+bool CommandInterpreter::GetRequireCommandOverwrite() const {
+  const uint32_t idx = ePropertyRequireCommandOverwrite;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
@@ -434,7 +444,7 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp) {
     alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 #if defined(__APPLE__)
-#if defined(TARGET_OS_IPHONE)
+#if TARGET_OS_IPHONE
     AddAlias("r", cmd_obj_sp, "--");
     AddAlias("run", cmd_obj_sp, "--");
 #else
@@ -1435,7 +1445,7 @@ void CommandInterpreter::GetHelp(CommandReturnObject &result,
     result.AppendMessage("Current user-defined container commands:");
     result.AppendMessage("");
     max_len = FindLongestCommandWord(m_user_mw_dict);
-    for (pos = m_user_dict.begin(); pos != m_user_mw_dict.end(); ++pos) {
+    for (pos = m_user_mw_dict.begin(); pos != m_user_mw_dict.end(); ++pos) {
       OutputFormattedHelpText(result.GetOutputStream(), pos->first, "--",
                               pos->second->GetHelp(), max_len);
     }
@@ -2380,6 +2390,21 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
   SourceInitFile(FileSpec(init_file.str()), result);
 }
 
+void CommandInterpreter::SourceInitFileGlobal(CommandReturnObject &result) {
+#ifdef LLDB_GLOBAL_INIT_DIRECTORY
+  if (!m_skip_lldbinit_files) {
+    FileSpec init_file(LLDB_GLOBAL_INIT_DIRECTORY);
+    if (init_file)
+      init_file.MakeAbsolute(HostInfo::GetShlibDir());
+
+    init_file.AppendPathComponent("lldbinit");
+    SourceInitFile(init_file, result);
+    return;
+  }
+#endif
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
+}
+
 const char *CommandInterpreter::GetCommandPrefix() {
   const char *prefix = GetDebugger().GetIOHandlerCommandPrefix();
   return prefix == nullptr ? "" : prefix;
@@ -2956,28 +2981,31 @@ bool CommandInterpreter::WasInterrupted() const {
   return was_interrupted;
 }
 
-void CommandInterpreter::PrintCommandOutput(Stream &stream,
-                                            llvm::StringRef str) {
+void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
+                                            llvm::StringRef str,
+                                            bool is_stdout) {
+
+  lldb::StreamFileSP stream = is_stdout ? io_handler.GetOutputStreamFileSP()
+                                        : io_handler.GetErrorStreamFileSP();
   // Split the output into lines and poll for interrupt requests
-  const char *data = str.data();
   size_t size = str.size();
   while (size > 0 && !WasInterrupted()) {
-    size_t chunk_size = 0;
-    for (; chunk_size < size; ++chunk_size) {
-      lldbassert(data[chunk_size] != '\0');
-      if (data[chunk_size] == '\n') {
-        ++chunk_size;
-        break;
-      }
+    llvm::StringRef line;
+    size_t written = 0;
+    std::tie(line, str) = str.split('\n');
+    {
+      std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
+      written += stream->Write(line.data(), line.size());
+      written += stream->Write("\n", 1);
     }
-    chunk_size = stream.Write(data, chunk_size);
-    lldbassert(size >= chunk_size);
-    data += chunk_size;
-    size -= chunk_size;
+    lldbassert(size >= written);
+    size -= written;
   }
-  if (size > 0) {
-    stream.Printf("\n... Interrupted.\n");
-  }
+
+  std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
+  if (size > 0)
+    stream->Printf("\n... Interrupted.\n");
+  stream->Flush();
 }
 
 bool CommandInterpreter::EchoCommandNonInteractive(
@@ -3013,9 +3041,11 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
     // When using a non-interactive file handle (like when sourcing commands
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
-    if (EchoCommandNonInteractive(line, io_handler.GetFlags()))
+    if (EchoCommandNonInteractive(line, io_handler.GetFlags())) {
+      std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
       io_handler.GetOutputStreamFileSP()->Printf(
           "%s%s\n", io_handler.GetPrompt(), line.c_str());
+    }
   }
 
   StartHandlingCommand();
@@ -3037,13 +3067,13 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
     if (!result.GetImmediateOutputStream()) {
       llvm::StringRef output = result.GetOutputData();
-      PrintCommandOutput(*io_handler.GetOutputStreamFileSP(), output);
+      PrintCommandOutput(io_handler, output, true);
     }
 
     // Now emit the command error text from the command we just executed
     if (!result.GetImmediateErrorStream()) {
       llvm::StringRef error = result.GetErrorData();
-      PrintCommandOutput(*io_handler.GetErrorStreamFileSP(), error);
+      PrintCommandOutput(io_handler, error, false);
     }
   }
 

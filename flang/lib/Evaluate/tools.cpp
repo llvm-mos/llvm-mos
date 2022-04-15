@@ -767,7 +767,7 @@ bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
     return false;
   } else if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
     return IsVariable(*funcRef);
-  } else if (const Symbol * symbol{GetLastSymbol(expr)}) {
+  } else if (const Symbol * symbol{UnwrapWholeSymbolOrComponentDataRef(expr)}) {
     return IsPointer(symbol->GetUltimate());
   } else {
     return false;
@@ -1094,6 +1094,15 @@ bool IsAllocatableOrPointerObject(
       evaluate::IsObjectPointer(expr, context);
 }
 
+bool IsAllocatableDesignator(const Expr<SomeType> &expr) {
+  // Allocatable sub-objects are not themselves allocatable (9.5.3.1 NOTE 2).
+  if (const semantics::Symbol *
+      sym{UnwrapWholeSymbolOrComponentOrCoarrayRef(expr)}) {
+    return semantics::IsAllocatable(*sym);
+  }
+  return false;
+}
+
 bool MayBePassedAsAbsentOptional(
     const Expr<SomeType> &expr, FoldingContext &context) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
@@ -1324,12 +1333,14 @@ bool IsSaved(const Symbol &original) {
     // BLOCK DATA entities must all be in COMMON,
     // which was checked above.
     return true;
-  } else if (scope.kind() == Scope::Kind::Subprogram &&
-      scope.context().languageFeatures().IsEnabled(
-          common::LanguageFeature::DefaultSave) &&
-      !(scope.symbol() && scope.symbol()->attrs().test(Attr::RECURSIVE))) {
-    // -fno-automatic/-save/-Msave option applies to objects in
-    // executable subprograms unless they are explicitly RECURSIVE.
+  } else if (scope.context().languageFeatures().IsEnabled(
+                 common::LanguageFeature::DefaultSave) &&
+      (scopeKind == Scope::Kind::MainProgram ||
+          (scope.kind() == Scope::Kind::Subprogram &&
+              !(scope.symbol() &&
+                  scope.symbol()->attrs().test(Attr::RECURSIVE))))) {
+    // -fno-automatic/-save/-Msave option applies to all objects in executable
+    // main programs and subprograms unless they are explicitly RECURSIVE.
     return true;
   } else if (symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
