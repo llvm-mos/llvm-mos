@@ -110,7 +110,7 @@ MOSTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 TargetTransformInfo
-MOSTargetMachine::getTargetTransformInfo(const Function &F) {
+MOSTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(MOSTTIImpl(this, F));
 }
 

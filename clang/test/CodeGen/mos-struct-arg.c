@@ -16,10 +16,8 @@ struct Small test_small_struct_param(struct Small s) {
 
 // CHECK-LABEL: @test_large_struct_param(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.Large* [[S:%.*]] to i64*
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast %struct.Large* [[AGG_RESULT:%.*]] to i64*
-// CHECK-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]], align 1
-// CHECK-NEXT:    store i64 [[TMP2]], i64* [[TMP1]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[S:%.*]], align 1
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[AGG_RESULT:%.*]], align 1
 // CHECK-NEXT:    ret void
 //
 struct Large test_large_struct_param(struct Large s) {
@@ -28,19 +26,16 @@ struct Large test_large_struct_param(struct Large s) {
 
 // CHECK-LABEL: @test_small_struct_vaarg(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[LIST:%.*]] = alloca i8*, align 1
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8** [[LIST]] to i8*
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull [[TMP0]]) #[[ATTR5:[0-9]+]]
-// CHECK-NEXT:    call void @llvm.va_start(i8* nonnull [[TMP0]])
-// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load i8*, i8** [[LIST]], align 1
-// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i16 4
-// CHECK-NEXT:    store i8* [[ARGP_NEXT]], i8** [[LIST]], align 1
-// CHECK-NEXT:    [[RETVAL_SROA_0_0__SROA_IDX:%.*]] = bitcast i8* [[ARGP_CUR]] to i16*
-// CHECK-NEXT:    [[RETVAL_SROA_0_0_COPYLOAD:%.*]] = load i16, i16* [[RETVAL_SROA_0_0__SROA_IDX]], align 1, !tbaa.struct !2
-// CHECK-NEXT:    [[RETVAL_SROA_2_0__SROA_IDX2:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i16 2
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[RETVAL_SROA_2_0__SROA_IDX2]] to i16*
-// CHECK-NEXT:    [[RETVAL_SROA_2_0_COPYLOAD:%.*]] = load i16, i16* [[TMP1]], align 1, !tbaa.struct !7
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull [[TMP0]]) #[[ATTR5]]
+// CHECK-NEXT:    [[LIST:%.*]] = alloca ptr, align 1
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR5:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[LIST]])
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[LIST]], align 1
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST]], align 1
+// CHECK-NEXT:    [[RETVAL_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[ARGP_CUR]], align 1, !tbaa.struct !2
+// CHECK-NEXT:    [[RETVAL_SROA_2_0_ARGP_CUR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 2
+// CHECK-NEXT:    [[RETVAL_SROA_2_0_COPYLOAD:%.*]] = load i16, ptr [[RETVAL_SROA_2_0_ARGP_CUR_SROA_IDX]], align 1, !tbaa.struct !7
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR5]]
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[STRUCT_SMALL:%.*]] poison, i16 [[RETVAL_SROA_0_0_COPYLOAD]], 0
 // CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [[STRUCT_SMALL]] [[DOTFCA_0_INSERT]], i16 [[RETVAL_SROA_2_0_COPYLOAD]], 1
 // CHECK-NEXT:    ret [[STRUCT_SMALL]] [[DOTFCA_1_INSERT]]
@@ -53,19 +48,16 @@ struct Small test_small_struct_vaarg(int x, ...) {
 
 // CHECK-LABEL: @test_large_struct_vaarg(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[LIST:%.*]] = alloca i8*, align 1
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8** [[LIST]] to i8*
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull [[TMP0]]) #[[ATTR5]]
-// CHECK-NEXT:    call void @llvm.va_start(i8* nonnull [[TMP0]])
-// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load i8*, i8** [[LIST]], align 1
-// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i16 2
-// CHECK-NEXT:    store i8* [[ARGP_NEXT]], i8** [[LIST]], align 1
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[ARGP_CUR]] to i64**
-// CHECK-NEXT:    [[TMP2:%.*]] = load i64*, i64** [[TMP1]], align 1
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast %struct.Large* [[AGG_RESULT:%.*]] to i64*
-// CHECK-NEXT:    [[TMP4:%.*]] = load i64, i64* [[TMP2]], align 1
-// CHECK-NEXT:    store i64 [[TMP4]], i64* [[TMP3]], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull [[TMP0]]) #[[ATTR5]]
+// CHECK-NEXT:    [[LIST:%.*]] = alloca ptr, align 1
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[LIST]])
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[LIST]], align 1
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 2
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGP_CUR]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 1
+// CHECK-NEXT:    store i64 [[TMP1]], ptr [[AGG_RESULT:%.*]], align 1
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 struct Large test_large_struct_vaarg(int x, ...) {

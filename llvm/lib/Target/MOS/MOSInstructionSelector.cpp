@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -33,6 +32,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -1238,7 +1238,7 @@ bool MOSInstructionSelector::selectStore(MachineInstr &MI) {
   }
 
   MI.setDesc(TII.get(Opcode));
-  MI.RemoveOperand(0);
+  MI.removeOperand(0);
   if (!constrainSelectedInstRegOperands(MI, TII, TRI, RBI))
     return false;
   return true;
@@ -1279,7 +1279,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
           // Remove the operand from use lists.
           IncDec->getOperand(I + NumBytes).ChangeToGA(nullptr, 0);
           IncDec->getOperand(I + NumBytes) = NewAddr;
-          IncDec->RemoveOperand(I);
+          IncDec->removeOperand(I);
           IncDec->setDesc(TII.get(IncDec->getOpcode() == MOS::G_INC ||
                                           IncDec->getOpcode() == MOS::G_INC_TMP
                                       ? MOS::G_INC_TMP

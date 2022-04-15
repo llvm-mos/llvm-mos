@@ -38,11 +38,9 @@ public:
     return this->TLOF.get();
   }
 
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  bool hasNoInitSection() const override {
-    return true;
-  }
+  bool hasNoInitSection() const override { return true; }
 
   void registerPassBuilderCallbacks(PassBuilder &) override;
 

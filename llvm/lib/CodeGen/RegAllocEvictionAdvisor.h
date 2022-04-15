@@ -27,6 +27,7 @@ class MachineFunction;
 class MachineRegisterInfo;
 class RegisterClassInfo;
 class TargetRegisterInfo;
+class TargetInstrInfo;
 class VirtRegMap;
 
 using SmallVirtRegSet = SmallSet<Register, 16>;

@@ -93,8 +93,8 @@ void removePredecessorFromPhis(MachineBasicBlock *MBB,
   for (MachineInstr &Phi : MBB->phis())
     for (unsigned Idx = 1; Idx < Phi.getNumOperands();)
       if (Phi.getOperand(Idx + 1).getMBB() == PredMBB) {
-        Phi.RemoveOperand(Idx);
-        Phi.RemoveOperand(Idx);
+        Phi.removeOperand(Idx);
+        Phi.removeOperand(Idx);
       } else
         Idx += 2;
 }
@@ -269,8 +269,8 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
           LLVM_DEBUG(dbgs()
                      << "User branch is always taken. Making unconditional.\n");
           UseMI->setDesc(Builder.getTII().get(MOS::G_BR));
-          UseMI->RemoveOperand(2);
-          UseMI->RemoveOperand(0);
+          UseMI->removeOperand(2);
+          UseMI->removeOperand(0);
         } else
           UseMI->getOperand(0).setReg(Value);
         MBB->insert(MBB->end(), UseMI);

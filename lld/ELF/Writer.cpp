@@ -27,6 +27,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
@@ -2864,7 +2865,7 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
   llvm::TimeTraceScope timeScope("Write custom output file");
 
   std::error_code ec;
-  raw_fd_ostream os(config->outputFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os(config->outputFile, ec);
   if (ec) {
     error("cannot open " + config->outputFile + ": " + ec.message());
     return;

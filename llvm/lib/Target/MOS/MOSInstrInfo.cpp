@@ -94,7 +94,7 @@ void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                  const TargetRegisterInfo &TRI) const {
   if (Orig.getOpcode() == MOS::LDImm16) {
     MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
-    MI->RemoveOperand(1);
+    MI->removeOperand(1);
     MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, TRI);
     MI->setDesc(get(MOS::LDImm16Remat));
     MBB.insert(I, MI);
@@ -880,7 +880,7 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
     }
     Opcode = MOS::CLV;
     // Remove imm.
-    MI.RemoveOperand(1);
+    MI.removeOperand(1);
     break;
   }
 

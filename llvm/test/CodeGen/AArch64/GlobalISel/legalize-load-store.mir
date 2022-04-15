@@ -658,7 +658,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64))
-    ; CHECK-NEXT: G_STORE [[LOAD]](s64), %ptr(p0) :: (store (s64))
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY [[LOAD]](s64)
+    ; CHECK-NEXT: G_STORE [[COPY]](s64), %ptr(p0) :: (store (s64))
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:_(p0) = COPY $x0
     %load:_(s88) = G_LOAD %ptr(p0) :: (load (s64))

@@ -28,11 +28,12 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -591,8 +592,8 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
                  mi_match(UseMI.getOperand(3).getReg(), MRI, m_AllOnesInt())) {
         Helper.Observer.changingInstr(UseMI);
         UseMI.getOperand(1).setReg(Not);
-        UseMI.RemoveOperand(3);
-        UseMI.RemoveOperand(2);
+        UseMI.removeOperand(3);
+        UseMI.removeOperand(2);
         UseMI.setDesc(Helper.MIRBuilder.getTII().get(MOS::COPY));
         Helper.Observer.changedInstr(UseMI);
       }
