@@ -5563,7 +5563,8 @@ bool CombinerHelper::matchSelectToLogical(MachineInstr &MI,
   // select Cond, Cond, F --> or Cond, F
   // select Cond, 1, F    --> or Cond, F
   auto MaybeCstTrue = isConstantOrConstantSplatVector(*TrueDef, MRI);
-  if (Cond == TrueReg || (MaybeCstTrue && MaybeCstTrue->isOne())) {
+  if ((Cond == TrueReg || (MaybeCstTrue && MaybeCstTrue->isOne())) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_OR, {OpTy}})) {
     MatchInfo = [=](MachineIRBuilder &MIB) {
       MIB.buildOr(DstReg, Cond, FalseReg);
     };
@@ -5573,7 +5574,8 @@ bool CombinerHelper::matchSelectToLogical(MachineInstr &MI,
   // select Cond, T, Cond --> and Cond, T
   // select Cond, T, 0    --> and Cond, T
   auto MaybeCstFalse = isConstantOrConstantSplatVector(*FalseDef, MRI);
-  if (Cond == FalseReg || (MaybeCstFalse && MaybeCstFalse->isZero())) {
+  if ((Cond == FalseReg || (MaybeCstFalse && MaybeCstFalse->isZero())) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {OpTy}})) {
     MatchInfo = [=](MachineIRBuilder &MIB) {
       MIB.buildAnd(DstReg, Cond, TrueReg);
     };
@@ -5581,7 +5583,9 @@ bool CombinerHelper::matchSelectToLogical(MachineInstr &MI,
   }
 
  // select Cond, T, 1 --> or (not Cond), T
-  if (MaybeCstFalse && MaybeCstFalse->isOne()) {
+  if (MaybeCstFalse && MaybeCstFalse->isOne() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_OR, {OpTy}}) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_XOR, {OpTy}})) {
     MatchInfo = [=](MachineIRBuilder &MIB) {
       MIB.buildOr(DstReg, MIB.buildNot(OpTy, Cond), TrueReg);
     };
@@ -5589,7 +5593,9 @@ bool CombinerHelper::matchSelectToLogical(MachineInstr &MI,
   }
 
   // select Cond, 0, F --> and (not Cond), F
-  if (MaybeCstTrue && MaybeCstTrue->isZero()) {
+  if (MaybeCstTrue && MaybeCstTrue->isZero() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_AND, {OpTy}}) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_XOR, {OpTy}})) {
     MatchInfo = [=](MachineIRBuilder &MIB) {
       MIB.buildAnd(DstReg, MIB.buildNot(OpTy, Cond), FalseReg);
     };
