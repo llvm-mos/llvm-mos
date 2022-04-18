@@ -125,34 +125,34 @@ body: |
     RTS implicit %0
 ...
 ---
-name: inc
+name: incmb
 body: |
   bb.0.entry:
     liveins: $a
-    ; CHECK-LABEL: name: inc
+    ; CHECK-LABEL: name: incmb
     ; CHECK: [[COPY:%[0-9]+]]:imag8 = COPY $a
     ; CHECK-NEXT: $a, $c, $v = ADCImag8 $a, [[COPY]], $c
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]]
-    ; CHECK-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[COPY1]], implicit-def $c, implicit-def $v
-    ; CHECK-NEXT: RTS implicit [[INC]]
+    ; CHECK-NEXT: [[IncMB:%[0-9]+]]:anyi8 = IncMB [[COPY1]](tied-def 0), implicit-def $c
+    ; CHECK-NEXT: RTS implicit [[IncMB]]
     %0:imag8 = COPY $a
     $a, $c, $v = ADCImag8 $a, %0, $c
-    %1:anyi8 = INC %0, implicit-def $c, implicit-def $v
+    %1:anyi8 = IncMB %0(tied-def 0), implicit-def $c
     RTS implicit %1
 ...
 ---
-name: dec
+name: decmb
 body: |
   bb.0.entry:
     liveins: $a
-    ; CHECK-LABEL: name: dec
+    ; CHECK-LABEL: name: decmb
     ; CHECK: [[COPY:%[0-9]+]]:imag8 = COPY $a
     ; CHECK-NEXT: $a, $c, $v = ADCImag8 $a, [[COPY]], $c
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY [[COPY]]
-    ; CHECK-NEXT: [[DEC:%[0-9]+]]:anyi8 = DEC [[COPY1]], implicit-def $c, implicit-def $v
-    ; CHECK-NEXT: RTS implicit [[DEC]]
+    ; CHECK-NEXT: early-clobber $a, %1:anyi8 = DecMB [[COPY1]](tied-def 1), implicit-def $c
+    ; CHECK-NEXT: RTS implicit %1
     %0:imag8 = COPY $a
     $a, $c, $v = ADCImag8 $a, %0, $c
-    %1:anyi8 = DEC %0, implicit-def $c, implicit-def $v
+    early-clobber $a, %1:anyi8 = DecMB %0(tied-def 1), implicit-def $c
     RTS implicit %1
 ...

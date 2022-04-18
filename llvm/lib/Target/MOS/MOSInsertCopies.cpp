@@ -56,7 +56,6 @@ bool MOSInsertCopies::runOnMachineFunction(MachineFunction &MF) {
     for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
       Next = std::next(I);
       const TargetRegisterClass *WideRC;
-      MachineOperand *SrcOp;
       switch (I->getOpcode()) {
       default:
         continue;
@@ -65,34 +64,43 @@ bool MOSInsertCopies::runOnMachineFunction(MachineFunction &MF) {
       case MOS::ROL:
       case MOS::ROR:
         WideRC = &MOS::AImag8RegClass;
-        SrcOp = &I->getOperand(2);
         break;
-      case MOS::INC:
-      case MOS::DEC:
+      case MOS::IncMB:
+      case MOS::DecMB:
         WideRC = &MOS::Anyi8RegClass;
-        SrcOp = &I->getOperand(1);
+        break;
       }
 
-      const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcOp->getReg());
-      const TargetRegisterClass *DstRC =
-          MRI.getRegClass(I->getOperand(0).getReg());
+      for (unsigned Idx = 0, EndIdx = I->getNumExplicitDefs(); Idx != EndIdx; ++Idx) {
+        MachineOperand &DstOp = I->getOperand(Idx);
+        if (!DstOp.isReg() || !DstOp.isTied() || !DstOp.getReg().isVirtual())
+          continue;
+        MachineOperand &SrcOp = I->getOperand(I->findTiedOperandIdx(Idx));
 
-      // Avoid copying to and from Imag8 just to make the regclass wider. This
-      // could produce LDA ASL STA patterns, when it'd be better to just ASL.
-      if (SrcRC == &MOS::Imag8RegClass && DstRC == &MOS::Imag8RegClass)
-        continue;
+        const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcOp.getReg());
+        const TargetRegisterClass *DstRC = MRI.getRegClass(DstOp.getReg());
 
-      if (SrcRC != WideRC) {
-        Changed = true;
-        MachineIRBuilder Builder(MBB, I);
-        SrcOp->setReg(Builder.buildCopy(WideRC, *SrcOp).getReg(0));
-      }
-      if (DstRC != WideRC) {
-        Changed = true;
-        Register NewDst = MRI.createVirtualRegister(WideRC);
-        MachineIRBuilder Builder(MBB, Next);
-        Builder.buildCopy(I->getOperand(0), NewDst);
-        I->getOperand(0).setReg(NewDst);
+        // This may be an unrelated tied register; if so, ignore.
+        if (!SrcRC->hasSuperClassEq(WideRC) || !DstRC->hasSuperClassEq(WideRC))
+          continue;
+
+        // Avoid copying to and from Imag8 just to make the regclass wider. This
+        // could produce LDA ASL STA patterns, when it'd be better to just ASL.
+        if (SrcRC == &MOS::Imag8RegClass && DstRC == &MOS::Imag8RegClass)
+          continue;
+
+        if (SrcRC != WideRC) {
+          Changed = true;
+          MachineIRBuilder Builder(MBB, I);
+          SrcOp.setReg(Builder.buildCopy(WideRC, SrcOp).getReg(0));
+        }
+        if (DstRC != WideRC) {
+          Changed = true;
+          Register NewDst = MRI.createVirtualRegister(WideRC);
+          MachineIRBuilder Builder(MBB, Next);
+          Builder.buildCopy(DstOp, NewDst);
+          DstOp.setReg(NewDst);
+        }
       }
     }
   }

@@ -486,8 +486,8 @@ bool referencedByIncDec(Register Reg, const MachineRegisterInfo &MRI) {
     switch (MI.getOpcode()) {
     default:
       break;
-    case MOS::INC:
-    case MOS::DEC:
+    case MOS::IncMB:
+    case MOS::DecMB:
       return true;
     }
   }
@@ -509,8 +509,8 @@ bool isRmwPattern(Register Reg, const MachineRegisterInfo &MRI) {
     case MOS::LSR:
     case MOS::ROL:
     case MOS::ROR:
-    case MOS::INC:
-    case MOS::DEC:
+    case MOS::IncMB:
+    case MOS::DecMB:
       if (Rmw && Rmw != &MI)
         return false;
       Rmw = &MI;
@@ -544,12 +544,13 @@ bool MOSRegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  const auto &MRI = MI->getMF()->getRegInfo();
+
   // Don't coalesce Imag8 and AImag8 registers together when used by shifts or
   // rotates.  This may cause expensive ASL zp's to be used when ASL A would
   // have sufficed. It's better to do arithmetic in A and then copy it out.
   // Same concerns apply to INC and DEC.
   if (NewRC == &MOS::Imag8RegClass || NewRC == &MOS::Imag16RegClass) {
-    const auto &MRI = MI->getMF()->getRegInfo();
     if (DstRC == &MOS::AImag8RegClass &&
         referencedByShiftRotate(MI->getOperand(0).getReg(), MRI) &&
         !isRmwPattern(MI->getOperand(0).getReg(), MRI))
@@ -565,6 +566,16 @@ bool MOSRegisterInfo::shouldCoalesce(
     if (SrcRC == &MOS::Anyi8RegClass &&
         referencedByIncDec(MI->getOperand(1).getReg(), MRI) &&
         !isRmwPattern(MI->getOperand(1).getReg(), MRI))
+      return false;
+  }
+  // Don't coalesce GPR and Anyi8 registers together when used by IncMB and
+  // DecMB; this can make them impossible to allocate.
+  if (NewRC == &MOS::GPRRegClass) {
+    if (DstRC == &MOS::Anyi8RegClass &&
+        referencedByIncDec(MI->getOperand(0).getReg(), MRI))
+      return false;
+    if (SrcRC == &MOS::Anyi8RegClass &&
+        referencedByIncDec(MI->getOperand(1).getReg(), MRI))
       return false;
   }
   return true;
