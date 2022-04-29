@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple mos --filetype=obj -o=%t.obj %s 
+; RUN: llvm-mc -triple mos --filetype=obj -o=%t.obj %s
 ; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.obj | FileCheck %s
 
 ; Test all the modifiers for the MOS assembler.
@@ -8,21 +8,24 @@ val16 = 0x0202
 val24 = 0x030303
 
 . = 0x01
-addr8: 
+addr8:
 .ds.b 0
 
 . = 0x0202
-addr16: 
+addr16:
 .ds.b 0
 .ds.b 0
 
 . = 0x0303
-addr24: 
+addr24:
 .ds.b 0
 .ds.b 0
 .ds.b 0
 
 _start:
+    .byte addr16@mos16hi        ; CHECK: 00
+                                ; CHECK: R_MOS_ADDR16_HI	.text+0x202
+
     lda mos16lo(addr8)          ; CHECK: a5 00
                                 ; CHECK: R_MOS_ADDR16_LO	.text+0x1
     lda mos16lo(addr16)         ; CHECK: a5 00
@@ -73,7 +76,7 @@ _start:
                                 ; CHECK: R_MOS_ADDR24_SEGMENT	.text+0x202
     lda mos24segment(addr24)    ; CHECK: ad 00 00
                                 ; CHECK: R_MOS_ADDR24_SEGMENT	.text+0x303
-    
+
     lda mos24segmentlo(addr8)   ; CHECK: a5 00
                                 ; CHECK: R_MOS_ADDR24_SEGMENT_LO	.text+0x1
     lda mos24segmentlo(addr16)  ; CHECK: a5 00

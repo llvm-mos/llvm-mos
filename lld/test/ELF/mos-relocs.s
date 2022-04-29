@@ -3,7 +3,7 @@
 # RUN: llvm-objdump -r %t.o | FileCheck %s --check-prefix=RELOCS
 # RUN: ld.lld %t.o --defsym=adr16=0x1234 --defsym=data32=0x12345678 -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s
-# RUN: llvm-readelf -x .R_MOS_FK_DATA_4 %t | FileCheck %s --check-prefix=DATA
+# RUN: llvm-readelf -x .R_MOS_DATA %t | FileCheck %s --check-prefix=DATA
 
 .section .zp,"",@nobits
 adrzp: .ds.b 1
@@ -50,13 +50,15 @@ relnext:
 # RELOCS-NEXT: 00000001 R_MOS_PCREL_8            .R_MOS_PCREL_8+0x4
 # RELOCS-NEXT: 00000003 R_MOS_PCREL_8            .R_MOS_PCREL_8
 # CHECK-LABEL: section .R_MOS_PCREL_8:
-# CHECK: bpl $100c5
-# CHECK: bpl $100c1
+# CHECK: bpl $100c6
+# CHECK: bpl $100c2
 
-.section .R_MOS_FK_DATA_4,"a",@progbits
+.section .R_MOS_DATA,"a",@progbits
   .long data32
-# RELOCS-LABEL: RELOCATION RECORDS FOR [.R_MOS_FK_DATA_4]:
+  .byte adr16@mos16hi
+# RELOCS-LABEL: RELOCATION RECORDS FOR [.R_MOS_DATA]:
 # RELOCS-NEXT: OFFSET   TYPE                     VALUE
 # RELOCS-NEXT: 00000000 R_MOS_FK_DATA_4          data32
-# DATA-LABEL: section '.R_MOS_FK_DATA_4':
-# DATA-NEXT: 0x{{[0-9a-f]+}} 78563412
+# RELOCS-NEXT: 00000004 R_MOS_ADDR16_HI          adr16
+# DATA-LABEL: section '.R_MOS_DATA':
+# DATA-NEXT: 0x{{[0-9a-f]+}} 78563412 12
