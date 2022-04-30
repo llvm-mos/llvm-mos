@@ -112,8 +112,8 @@ define void @matrix_extract_insert_loop(i32 %i, [225 x double]* nonnull align 8 
 ; CHECK-NEXT:    [[SUB_US:%.*]] = fsub double [[MATRIXEXT11_US]], [[MUL_US]]
 ; CHECK-NEXT:    store double [[SUB_US]], double* [[TMP6]], align 8
 ; CHECK-NEXT:    [[INC_US]] = add nuw nsw i32 [[K_013_US]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_US]], [[I]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]], label [[FOR_BODY4_US]]
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ult i32 [[INC_US]], [[I]]
+; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY4_US]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]]
 ; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[CONV6]], 15
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[I]], 210
@@ -135,8 +135,8 @@ define void @matrix_extract_insert_loop(i32 %i, [225 x double]* nonnull align 8 
 ; CHECK-NEXT:    [[SUB_US_1:%.*]] = fsub double [[MATRIXEXT11_US_1]], [[MUL_US_1]]
 ; CHECK-NEXT:    store double [[SUB_US_1]], double* [[TMP13]], align 8
 ; CHECK-NEXT:    [[INC_US_1]] = add nuw nsw i32 [[K_013_US_1]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT_1:%.*]] = icmp eq i32 [[INC_US_1]], [[I]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_1]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_1:%.*]], label [[FOR_BODY4_US_1]]
+; CHECK-NEXT:    [[CMP2_US_1:%.*]] = icmp ult i32 [[INC_US_1]], [[I]]
+; CHECK-NEXT:    br i1 [[CMP2_US_1]], label [[FOR_BODY4_US_1]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_1:%.*]]
 ; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us.1:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw i64 [[CONV6]], 30
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[I]], 195
@@ -158,8 +158,8 @@ define void @matrix_extract_insert_loop(i32 %i, [225 x double]* nonnull align 8 
 ; CHECK-NEXT:    [[SUB_US_2:%.*]] = fsub double [[MATRIXEXT11_US_2]], [[MUL_US_2]]
 ; CHECK-NEXT:    store double [[SUB_US_2]], double* [[TMP20]], align 8
 ; CHECK-NEXT:    [[INC_US_2]] = add nuw nsw i32 [[K_013_US_2]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT_2:%.*]] = icmp eq i32 [[INC_US_2]], [[I]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_2]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_2:%.*]], label [[FOR_BODY4_US_2]]
+; CHECK-NEXT:    [[CMP2_US_2:%.*]] = icmp ult i32 [[INC_US_2]], [[I]]
+; CHECK-NEXT:    br i1 [[CMP2_US_2]], label [[FOR_BODY4_US_2]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US_2:%.*]]
 ; CHECK:       for.cond1.for.cond.cleanup3_crit_edge.us.2:
 ; CHECK-NEXT:    [[TMP21:%.*]] = add nuw nsw i64 [[CONV6]], 45
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ult i32 [[I]], 180
@@ -181,8 +181,8 @@ define void @matrix_extract_insert_loop(i32 %i, [225 x double]* nonnull align 8 
 ; CHECK-NEXT:    [[SUB_US_3:%.*]] = fsub double [[MATRIXEXT11_US_3]], [[MUL_US_3]]
 ; CHECK-NEXT:    store double [[SUB_US_3]], double* [[TMP27]], align 8
 ; CHECK-NEXT:    [[INC_US_3]] = add nuw nsw i32 [[K_013_US_3]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT_3:%.*]] = icmp eq i32 [[INC_US_3]], [[I]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_3]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY4_US_3]]
+; CHECK-NEXT:    [[CMP2_US_3:%.*]] = icmp ult i32 [[INC_US_3]], [[I]]
+; CHECK-NEXT:    br i1 [[CMP2_US_3]], label [[FOR_BODY4_US_3]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;

@@ -7,13 +7,12 @@ define i32 @test.signed.add.0(i32* %array, i32 %length, i32 %init) {
 ; CHECK-NEXT:    [[UPPER:%.*]] = icmp slt i32 [[INIT:%.*]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    br i1 [[UPPER]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[CIV:%.*]] = phi i32 [ [[CIV_INC:%.*]], [[LATCH:%.*]] ], [ [[INIT]], [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[CIV_INC]] = add nsw i32 [[CIV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[CIV]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[BREAK:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CIV_INC]], [[LENGTH]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LATCH]], label [[BREAK:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    store i32 0, i32* [[ARRAY:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[BREAK]]
@@ -104,8 +103,8 @@ define i32 @test.unsigned.add.0(i32* %array, i32 %length, i32 %init) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LATCH]], label [[BREAK:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    store i32 0, i32* [[ARRAY:%.*]], align 4
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[CIV_INC]], [[LENGTH]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[BREAK]]
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ult i32 [[CIV_INC]], [[LENGTH]]
+; CHECK-NEXT:    br i1 [[CHECK]], label [[LOOP]], label [[BREAK]]
 ; CHECK:       break:
 ; CHECK-NEXT:    [[CIV_INC_LCSSA:%.*]] = phi i32 [ [[CIV_INC]], [[LATCH]] ], [ [[CIV_INC]], [[LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[CIV_INC_LCSSA]]

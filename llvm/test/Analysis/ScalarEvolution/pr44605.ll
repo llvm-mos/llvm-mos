@@ -8,9 +8,9 @@ define i32 @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
-; CHECK-NEXT:    [[LOCAL_6_6:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[LOCAL_6_6:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ [[TMP5:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[LOCAL_4_5:%.*]] = phi i32 [ 56587, [[ENTRY]] ], [ 0, [[LATCH]] ]
-; CHECK-NEXT:    [[LOCAL_3_4:%.*]] = phi i32 [ 2, [[ENTRY]] ], [ [[TMP4]], [[LATCH]] ]
+; CHECK-NEXT:    [[LOCAL_3_4:%.*]] = phi i32 [ 2, [[ENTRY]] ], [ [[TMP5]], [[LATCH]] ]
 ; CHECK-NEXT:    [[DOTUDIV:%.*]] = udiv i32 [[LOCAL_6_6]], 8361
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
@@ -21,13 +21,13 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[LOCAL_3_4]]
 ; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[LOCAL_3_31]]
 ; CHECK-NEXT:    [[TMP3]] = add nuw nsw i32 [[LOCAL_7_3]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP3]], 6
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[INNER]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LOCAL_7_3]], 4
+; CHECK-NEXT:    br i1 [[TMP4]], label [[LATCH]], label [[INNER]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP2]], [[INNER]] ]
-; CHECK-NEXT:    [[TMP4]] = add nuw nsw i32 [[LOCAL_6_6]], 1
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp eq i32 [[TMP4]], 278
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[RETURN:%.*]], label [[OUTER]]
+; CHECK-NEXT:    [[TMP5]] = add nuw nsw i32 [[LOCAL_6_6]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[LOCAL_6_6]], 276
+; CHECK-NEXT:    br i1 [[TMP6]], label [[RETURN:%.*]], label [[OUTER]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[DOTLCSSA_LCSSA:%.*]] = phi i32 [ [[DOTLCSSA]], [[LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[DOTLCSSA_LCSSA]]

@@ -51,8 +51,8 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    [[ADD21_3:%.*]] = add nsw i32 [[MUL16_3]], [[ADD21_2]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_3]], i32* [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
-; CHECK-A55-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
-; CHECK-A55-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-A55-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
+; CHECK-A55-NEXT:    br i1 [[NITER_NCMP_3_NOT]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-A55:       for.end.loopexit.unr-lcssa:
 ; CHECK-A55-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
 ; CHECK-A55-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_END]], label [[FOR_BODY6_EPIL:%.*]]
@@ -111,8 +111,8 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-GENERIC-NEXT:    [[ADD21:%.*]] = add nsw i32 [[MUL16]], [[TMP2]]
 ; CHECK-GENERIC-NEXT:    store i32 [[ADD21]], i32* [[ARRAYIDX20]], align 4
 ; CHECK-GENERIC-NEXT:    [[INC]] = add nuw i32 [[K_03]], 1
-; CHECK-GENERIC-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[ARG_0]]
-; CHECK-GENERIC-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-GENERIC-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[INC]], [[ARG_0]]
+; CHECK-GENERIC-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6]], label [[FOR_END]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-GENERIC:       for.end:
 ; CHECK-GENERIC-NEXT:    ret void
 ;

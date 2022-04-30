@@ -360,15 +360,14 @@ define void @test5(i8* %header, i32 %conv, i8 %n) {
 ; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[WHILE_COND_PREHEADER:%.*]]
 ; CHECK:       while.cond.preheader:
 ; CHECK-NEXT:    [[ADD85_LCSSA:%.*]] = phi i32 [ [[ADD85]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[CONV:%.*]], 2
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[ADD85_LCSSA]], i32 [[TMP0]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV:%.*]], 2
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[POS_8:%.*]] = phi i32 [ [[INC114:%.*]], [[WHILE_BODY:%.*]] ], [ [[ADD85_LCSSA]], [[WHILE_COND_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[POS_8]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[WHILE_BODY]], label [[CLEANUP122:%.*]]
+; CHECK-NEXT:    [[CMP112:%.*]] = icmp ult i32 [[POS_8]], [[SHL]]
+; CHECK-NEXT:    br i1 [[CMP112]], label [[WHILE_BODY]], label [[CLEANUP122:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[INC114]] = add i32 [[POS_8]], 1
+; CHECK-NEXT:    [[INC114]] = add nuw i32 [[POS_8]], 1
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_1]], label [[WHILE_COND]], label [[CLEANUP122]]
 ; CHECK:       cleanup122:

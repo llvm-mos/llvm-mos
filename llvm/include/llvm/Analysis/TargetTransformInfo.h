@@ -1483,6 +1483,8 @@ public:
   VPLegalization getVPLegalizationStrategy(const VPIntrinsic &PI) const;
   /// @}
 
+  bool allowIllegalIntegerIV() const;
+
   /// @}
 
 private:
@@ -1833,6 +1835,7 @@ public:
   virtual InstructionCost getInstructionLatency(const Instruction *I) = 0;
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
+  virtual bool allowIllegalIntegerIV() const = 0;
 };
 
 template <typename T>
@@ -2476,6 +2479,9 @@ public:
   VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const override {
     return Impl.getVPLegalizationStrategy(PI);
+  }
+  bool allowIllegalIntegerIV() const override {
+    return Impl.allowIllegalIntegerIV();
   }
 };
 

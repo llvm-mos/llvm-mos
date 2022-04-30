@@ -40,6 +40,8 @@ public:
   // All div, rem, and divrem ops are libcalls, so any possible combination
   // exists.
   bool hasDivRemOp(Type *DataType, bool IsSigned) { return true; }
+
+  bool allowIllegalIntegerIV() const { return true; }
 };
 
 } // end namespace llvm

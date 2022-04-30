@@ -41,6 +41,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -886,15 +887,16 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
 /// valid count without scaling the address stride, so it remains a pointer
 /// expression as far as SCEV is concerned.
 static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
-                                const SCEV *BECount,
-                                ScalarEvolution *SE, DominatorTree *DT) {
+                                const SCEV *BECount, ScalarEvolution *SE,
+                                DominatorTree *DT,
+                                const TargetTransformInfo *TTI) {
   uint64_t BCWidth = SE->getTypeSizeInBits(BECount->getType());
 
   Value *Cond = cast<BranchInst>(ExitingBB->getTerminator())->getCondition();
 
   // Loop over all of the PHI nodes, looking for a simple counter.
   PHINode *BestPhi = nullptr;
-  uint64_t BestPhiWidth;
+  bool BestPhiLegal = false;
   const SCEV *BestInit = nullptr;
   BasicBlock *LatchBlock = L->getLoopLatch();
   assert(LatchBlock && "Must be in simplified form");
@@ -918,9 +920,11 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
     if (PhiWidth < BCWidth)
       continue;
 
-    // Don't use an illegal integer if a legal integer can be used.
-    if (BestPhi && DL.isLegalInteger(BestPhiWidth) &&
-        !DL.isLegalInteger(PhiWidth))
+    bool Legal = DL.isLegalInteger(PhiWidth);
+
+    // Don't use an illegal integer if a legal integer can be used or if
+    // disallowed.
+    if (!Legal && (!TTI->allowIllegalIntegerIV() || BestPhiLegal))
       continue;
 
     // Avoid reusing a potentially undef value to compute other values that may
@@ -967,7 +971,7 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
         continue;
     }
     BestPhi = Phi;
-    BestPhiWidth = PhiWidth;
+    BestPhiLegal = Legal;
     BestInit = Init;
   }
   return BestPhi;
@@ -1973,7 +1977,7 @@ bool IndVarSimplify::run(Loop *L) {
       if (ExitCount->isZero())
         continue;
 
-      PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
+      PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT, TTI);
       if (!IndVar)
         continue;
 

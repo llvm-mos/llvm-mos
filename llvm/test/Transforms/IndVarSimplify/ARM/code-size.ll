@@ -141,7 +141,7 @@ define i32 @test1(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8M:       loop:
 ; CHECK-V8M-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8M-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8M:       deopt:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -151,8 +151,8 @@ define i32 @test1(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8M-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-V8M-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8M-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8M-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8M-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8M-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8M:       exit:
 ; CHECK-V8M-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
 ; CHECK-V8M-NEXT:    ret i32 [[RESULT]]
@@ -167,7 +167,7 @@ define i32 @test1(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8A:       loop:
 ; CHECK-V8A-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8A-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8A:       deopt:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -177,8 +177,8 @@ define i32 @test1(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8A-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-V8A-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8A-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8A-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8A-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8A-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8A:       exit:
 ; CHECK-V8A-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
 ; CHECK-V8A-NEXT:    ret i32 [[RESULT]]
@@ -222,7 +222,7 @@ define i32 @test2(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8M:       loop:
 ; CHECK-V8M-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8M-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8M:       deopt:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -247,7 +247,7 @@ define i32 @test2(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8A:       loop:
 ; CHECK-V8A-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8A-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8A:       deopt:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -303,7 +303,7 @@ define i32 @two_range_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %l
 ; CHECK-V8M:       loop:
 ; CHECK-V8M-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8M-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8M:       deopt:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -316,8 +316,8 @@ define i32 @two_range_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %l
 ; CHECK-V8M-NEXT:    [[ARRAY_2_I:%.*]] = load i32, i32* [[ARRAY_2_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_1]], [[ARRAY_2_I]]
 ; CHECK-V8M-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8M-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8M-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8M-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8M-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8M:       exit:
 ; CHECK-V8M-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
 ; CHECK-V8M-NEXT:    ret i32 [[RESULT]]
@@ -334,7 +334,7 @@ define i32 @two_range_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %l
 ; CHECK-V8A:       loop:
 ; CHECK-V8A-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8A-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8A:       deopt:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -347,8 +347,8 @@ define i32 @two_range_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %l
 ; CHECK-V8A-NEXT:    [[ARRAY_2_I:%.*]] = load i32, i32* [[ARRAY_2_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_1]], [[ARRAY_2_I]]
 ; CHECK-V8A-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8A-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8A-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8A-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8A-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8A:       exit:
 ; CHECK-V8A-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
 ; CHECK-V8A-NEXT:    ret i32 [[RESULT]]
@@ -400,7 +400,7 @@ define i32 @three_range_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 
 ; CHECK-V8M:       loop:
 ; CHECK-V8M-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8M-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8M:       deopt:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -416,8 +416,8 @@ define i32 @three_range_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 
 ; CHECK-V8M-NEXT:    [[ARRAY_3_I:%.*]] = load i32, i32* [[ARRAY_3_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_2]], [[ARRAY_3_I]]
 ; CHECK-V8M-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8M-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8M-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8M-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8M-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8M:       exit:
 ; CHECK-V8M-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
 ; CHECK-V8M-NEXT:    ret i32 [[RESULT]]
@@ -436,7 +436,7 @@ define i32 @three_range_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 
 ; CHECK-V8A:       loop:
 ; CHECK-V8A-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8A-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8A:       deopt:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -452,8 +452,8 @@ define i32 @three_range_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 
 ; CHECK-V8A-NEXT:    [[ARRAY_3_I:%.*]] = load i32, i32* [[ARRAY_3_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_2]], [[ARRAY_3_I]]
 ; CHECK-V8A-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8A-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8A-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8A-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8A-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8A:       exit:
 ; CHECK-V8A-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
 ; CHECK-V8A-NEXT:    ret i32 [[RESULT]]
@@ -509,7 +509,7 @@ define i32 @distinct_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %le
 ; CHECK-V8M:       loop:
 ; CHECK-V8M-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED1:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8M-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED1]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8M:       deopt:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -518,7 +518,7 @@ define i32 @distinct_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %le
 ; CHECK-V8M-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
 ; CHECK-V8M-NEXT:    [[ARRAY_1_I:%.*]] = load i32, i32* [[ARRAY_1_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_1:%.*]] = add i32 [[LOOP_ACC]], [[ARRAY_1_I]]
-; CHECK-V8M-NEXT:    br i1 [[TMP2]], label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
+; CHECK-V8M-NEXT:    br i1 [[TMP2]], label [[GUARDED1]], label [[DEOPT2:%.*]], !prof !0
 ; CHECK-V8M:       deopt2:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -527,8 +527,8 @@ define i32 @distinct_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %le
 ; CHECK-V8M-NEXT:    [[ARRAY_3_I:%.*]] = load i32, i32* [[ARRAY_3_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_1]], [[ARRAY_3_I]]
 ; CHECK-V8M-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8M-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8M-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8M-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8M-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8M:       exit:
 ; CHECK-V8M-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED1]] ]
 ; CHECK-V8M-NEXT:    ret i32 [[RESULT]]
@@ -545,7 +545,7 @@ define i32 @distinct_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %le
 ; CHECK-V8A:       loop:
 ; CHECK-V8A-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED1:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8A-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED1]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8A:       deopt:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -554,7 +554,7 @@ define i32 @distinct_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %le
 ; CHECK-V8A-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
 ; CHECK-V8A-NEXT:    [[ARRAY_1_I:%.*]] = load i32, i32* [[ARRAY_1_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_1:%.*]] = add i32 [[LOOP_ACC]], [[ARRAY_1_I]]
-; CHECK-V8A-NEXT:    br i1 [[TMP2]], label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
+; CHECK-V8A-NEXT:    br i1 [[TMP2]], label [[GUARDED1]], label [[DEOPT2:%.*]], !prof !0
 ; CHECK-V8A:       deopt2:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -563,8 +563,8 @@ define i32 @distinct_checks(i32* %array.1, i32 %length.1, i32* %array.2, i32 %le
 ; CHECK-V8A-NEXT:    [[ARRAY_3_I:%.*]] = load i32, i32* [[ARRAY_3_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_1]], [[ARRAY_3_I]]
 ; CHECK-V8A-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8A-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8A-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8A-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8A-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8A:       exit:
 ; CHECK-V8A-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED1]] ]
 ; CHECK-V8A-NEXT:    ret i32 [[RESULT]]
@@ -618,7 +618,7 @@ define i32 @duplicate_checks(i32* %array.1, i32* %array.2, i32* %array.3, i32 %l
 ; CHECK-V8M:       loop:
 ; CHECK-V8M-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED1:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8M-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED1]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8M-NEXT:    br i1 [[TMP1]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8M:       deopt:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -627,7 +627,7 @@ define i32 @duplicate_checks(i32* %array.1, i32* %array.2, i32* %array.3, i32 %l
 ; CHECK-V8M-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
 ; CHECK-V8M-NEXT:    [[ARRAY_1_I:%.*]] = load i32, i32* [[ARRAY_1_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_1:%.*]] = add i32 [[LOOP_ACC]], [[ARRAY_1_I]]
-; CHECK-V8M-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
+; CHECK-V8M-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof !0
 ; CHECK-V8M:       deopt2:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -636,8 +636,8 @@ define i32 @duplicate_checks(i32* %array.1, i32* %array.2, i32* %array.3, i32 %l
 ; CHECK-V8M-NEXT:    [[ARRAY_3_I:%.*]] = load i32, i32* [[ARRAY_3_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_1]], [[ARRAY_3_I]]
 ; CHECK-V8M-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8M-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8M-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8M-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8M-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8M:       exit:
 ; CHECK-V8M-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED1]] ]
 ; CHECK-V8M-NEXT:    ret i32 [[RESULT]]
@@ -652,7 +652,7 @@ define i32 @duplicate_checks(i32* %array.1, i32* %array.2, i32* %array.3, i32 %l
 ; CHECK-V8A:       loop:
 ; CHECK-V8A-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED1:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8A-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED1]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8A-NEXT:    br i1 [[TMP1]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8A:       deopt:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -661,7 +661,7 @@ define i32 @duplicate_checks(i32* %array.1, i32* %array.2, i32* %array.3, i32 %l
 ; CHECK-V8A-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
 ; CHECK-V8A-NEXT:    [[ARRAY_1_I:%.*]] = load i32, i32* [[ARRAY_1_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_1:%.*]] = add i32 [[LOOP_ACC]], [[ARRAY_1_I]]
-; CHECK-V8A-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof [[PROF0]]
+; CHECK-V8A-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof !0
 ; CHECK-V8A:       deopt2:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -670,8 +670,8 @@ define i32 @duplicate_checks(i32* %array.1, i32* %array.2, i32* %array.3, i32 %l
 ; CHECK-V8A-NEXT:    [[ARRAY_3_I:%.*]] = load i32, i32* [[ARRAY_3_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC_1]], [[ARRAY_3_I]]
 ; CHECK-V8A-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-V8A-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], [[UMAX]]
-; CHECK-V8A-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8A-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-V8A-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8A:       exit:
 ; CHECK-V8A-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED1]] ]
 ; CHECK-V8A-NEXT:    ret i32 [[RESULT]]
@@ -731,7 +731,7 @@ define i32 @different_ivs(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8M:       loop:
 ; CHECK-V8M-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8M-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8M-NEXT:    br i1 [[TMP3]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8M-NEXT:    br i1 [[TMP3]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8M:       deopt:
 ; CHECK-V8M-NEXT:    call void @prevent_merging()
 ; CHECK-V8M-NEXT:    ret i32 -1
@@ -740,8 +740,8 @@ define i32 @different_ivs(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8M-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-V8M-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-V8M-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[I_NEXT]], [[UMAX]]
-; CHECK-V8M-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8M-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[I_NEXT]], [[N64]]
+; CHECK-V8M-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8M:       exit:
 ; CHECK-V8M-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
 ; CHECK-V8M-NEXT:    ret i32 [[RESULT]]
@@ -759,7 +759,7 @@ define i32 @different_ivs(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8A:       loop:
 ; CHECK-V8A-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-V8A-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-V8A-NEXT:    br i1 [[TMP3]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0]]
+; CHECK-V8A-NEXT:    br i1 [[TMP3]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK-V8A:       deopt:
 ; CHECK-V8A-NEXT:    call void @prevent_merging()
 ; CHECK-V8A-NEXT:    ret i32 -1
@@ -768,8 +768,8 @@ define i32 @different_ivs(i32* %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8A-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-V8A-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-V8A-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[I_NEXT]], [[UMAX]]
-; CHECK-V8A-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-V8A-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[I_NEXT]], [[N64]]
+; CHECK-V8A-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8A:       exit:
 ; CHECK-V8A-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
 ; CHECK-V8A-NEXT:    ret i32 [[RESULT]]
