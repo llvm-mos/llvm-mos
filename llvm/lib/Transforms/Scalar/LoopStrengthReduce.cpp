@@ -1400,12 +1400,13 @@ void Cost::RateFormula(const Formula &F,
 
   // Determine how many (unfolded) adds we'll need inside the loop.
   size_t NumBaseParts = F.getNumRegs();
+  size_t NumBaseAdds = 0;
   if (NumBaseParts > 1)
     // Do not count the base and a possible second register if the target
     // allows to fold 2 registers.
-    C.NumBaseAdds +=
+    NumBaseAdds +=
         NumBaseParts - (1 + (F.Scale && isAMCompletelyFolded(*TTI, LU, F)));
-  C.NumBaseAdds += (F.UnfoldedOffset != 0);
+  NumBaseAdds += (F.UnfoldedOffset != 0);
 
   // Accumulate non-free scaling amounts.
   C.ScaleCost += *getScalingFactorCost(*TTI, LU, F, *L).getValue();
@@ -1426,8 +1427,13 @@ void Cost::RateFormula(const Formula &F,
         !isAMCompletelyFolded(*TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
                               Offset, F.HasBaseReg, F.baseType(), F.Scale,
                               F.scaleType(), Fixup.UserInst))
-      C.NumBaseAdds++;
+      NumBaseAdds++;
   }
+
+  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  if (DL.isIllegalInteger(SE->getTypeSizeInBits(F.Ty)))
+    NumBaseAdds *= 2;
+  C.NumBaseAdds += NumBaseAdds;
 
   // If we don't count instruction cost exit here.
   if (!InsnsCost) {
