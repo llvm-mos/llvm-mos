@@ -31,8 +31,15 @@ def extract_low_bit : GICombineRule<
           [{ return matchExtractLowBit(*${root}, MRI, ${matchinfo}); }]),
   (apply [{  return applyExtractLowBit(*${root}, MRI, B, Observer, ${matchinfo});}])>;
 
+def uaddo_1 : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_UADDO):$root,
+          [{ return matchUAddO1(*${root}, MRI); }]),
+  (apply [{  return applyUAddO1(*${root}, MRI, B, Observer);}])>;
+
 def MOSCombinerHelper: GICombinerHelper<
-  "MOSGenCombinerHelper", [all_combines, fold_global_offset, sbc_equal, extract_low_bit]> {
+    "MOSGenCombinerHelper",
+    [all_combines, fold_global_offset, sbc_equal, extract_low_bit, uaddo_1]> {
   let DisableRuleOption = "moscombiner-disable-rule";
   let StateClass = "MOSCombinerHelperState";
   let AdditionalArguments = [];

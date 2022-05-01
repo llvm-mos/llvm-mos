@@ -73,6 +73,10 @@ public:
   bool applyExtractLowBit(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &B, GISelChangeObserver &Observer,
                           MachineInstr *&Shift) const;
+
+  bool matchUAddO1(MachineInstr &MI, MachineRegisterInfo &MRI) const;
+  bool applyUAddO1(MachineInstr &MI, MachineRegisterInfo &MRI,
+                   MachineIRBuilder &B, GISelChangeObserver &Observer) const;
 };
 
 // G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
@@ -235,6 +239,33 @@ bool MOSCombinerHelperState::applyExtractLowBit(MachineInstr &MI,
   if (!Legalizer.legalizeLshrEShlE(LegalizerHelper, MRI, *EvenShift))
     llvm_unreachable("Failed to legalize shift.");
   Shift->eraseFromParent();
+  MI.eraseFromParent();
+  return true;
+}
+
+// Use of the overflow flag from an increment is better done on the 6502 by
+// comparing the result to zero, since this allows increment and decrement
+// operators instead of just ADC.
+bool MOSCombinerHelperState::matchUAddO1(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI) const {
+  if (MI.getOpcode() != MOS::G_UADDO)
+    return false;
+  Optional<ValueAndVReg> Val =
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  if (!Val || !Val->Value.isOne())
+    return false;
+  return true;
+}
+
+bool MOSCombinerHelperState::applyUAddO1(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B,
+                                         GISelChangeObserver &Observer) const {
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  B.setInsertPt(*MI.getParent(), MI);
+  B.buildAdd(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+  B.buildICmp(CmpInst::ICMP_EQ, MI.getOperand(1), MI.getOperand(0),
+              B.buildConstant(Ty, 0));
   MI.eraseFromParent();
   return true;
 }
