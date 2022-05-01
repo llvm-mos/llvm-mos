@@ -486,6 +486,21 @@ bool referencedByIncDec(Register Reg, const MachineRegisterInfo &MRI) {
     switch (MI.getOpcode()) {
     default:
       break;
+    case MOS::INC:
+    case MOS::DEC:
+    case MOS::IncMB:
+    case MOS::DecMB:
+      return true;
+    }
+  }
+  return false;
+}
+
+bool referencedByIncDecMB(Register Reg, const MachineRegisterInfo &MRI) {
+  for (MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
+    switch (MI.getOpcode()) {
+    default:
+      break;
     case MOS::IncMB:
     case MOS::DecMB:
       return true;
@@ -572,10 +587,10 @@ bool MOSRegisterInfo::shouldCoalesce(
   // DecMB; this can make them impossible to allocate.
   if (NewRC == &MOS::GPRRegClass) {
     if (DstRC == &MOS::Anyi8RegClass &&
-        referencedByIncDec(MI->getOperand(0).getReg(), MRI))
+        referencedByIncDecMB(MI->getOperand(0).getReg(), MRI))
       return false;
     if (SrcRC == &MOS::Anyi8RegClass &&
-        referencedByIncDec(MI->getOperand(1).getReg(), MRI))
+        referencedByIncDecMB(MI->getOperand(1).getReg(), MRI))
       return false;
   }
   return true;
