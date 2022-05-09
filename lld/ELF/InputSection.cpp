@@ -152,11 +152,8 @@ template <class ELFT> RelsOrRelas<ELFT> InputSectionBase::relsOrRelas() const {
 
 uint64_t SectionBase::getOffset(uint64_t offset) const {
   switch (kind()) {
-  case Output: {
-    auto *os = cast<OutputSection>(this);
-    // For output sections we treat offset -1 as the end of the section.
-    return offset == uint64_t(-1) ? os->size : offset;
-  }
+  case Output:
+    return offset;
   case Regular:
   case Synthetic:
     return cast<InputSection>(this)->outSecOff + offset;
