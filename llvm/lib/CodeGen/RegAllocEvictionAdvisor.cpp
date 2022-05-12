@@ -284,6 +284,17 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
         return false;
       if (Urgent)
         continue;
+
+      // If there's only one option for this assigment, and if splitting and
+      // spilling won't help widen it, then at least one interference will
+      // necessarily be evicted. In such cases, it's better to preemptively
+      // evict the interferences, so long as there's something available to
+      // reassign them to.
+      if (MRI->getRegClass(VirtReg.reg())->getNumRegs() == 1 &&
+          !canWiden(MRI, TII, TRI, VirtReg.reg()) &&
+          canReassign(*Intf, PhysReg))
+        continue;
+
       // Apply the eviction policy for non-urgent evictions.
       if (!shouldEvict(VirtReg, IsHint, *Intf, BreaksHint))
         return false;
