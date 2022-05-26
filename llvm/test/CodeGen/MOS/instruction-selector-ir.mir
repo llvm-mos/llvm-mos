@@ -91,8 +91,8 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: br_indirect
-    ; CHECK: [[LDImm16_:%[0-9]+]]:imag16, [[LDImm16_1:%[0-9]+]]:gpr = LDImm16 blockaddress(@br_indirect, %ir-block.entry)
-    ; CHECK-NEXT: JMPIndir [[LDImm16_]]
+    ; CHECK: %0:imag16, early-clobber %1:gpr = LDImm16 blockaddress(@br_indirect, %ir-block.entry)
+    ; CHECK-NEXT: JMPIndir %0
     ; CHECK-NEXT: RTS
     %0:any(p0) = G_BLOCK_ADDR blockaddress(@br_indirect, %ir-block.entry)
     G_BRINDIRECT %0
@@ -157,8 +157,8 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_global
-    ; CHECK: [[LDImm16_:%[0-9]+]]:imag16, [[LDImm16_1:%[0-9]+]]:gpr = LDImm16 @.str
-    ; CHECK-NEXT: RTS implicit [[LDImm16_]]
+    ; CHECK: %0:imag16, early-clobber %1:gpr = LDImm16 @.str
+    ; CHECK-NEXT: RTS implicit %0
     %0:any(p0) = G_GLOBAL_VALUE @.str
     RTS implicit %0
 ...
@@ -169,8 +169,8 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_global_offset
-    ; CHECK: [[LDImm16_:%[0-9]+]]:imag16, [[LDImm16_1:%[0-9]+]]:gpr = LDImm16 @.str + 1234
-    ; CHECK-NEXT: RTS implicit [[LDImm16_]]
+    ; CHECK: %0:imag16, early-clobber %1:gpr = LDImm16 @.str + 1234
+    ; CHECK-NEXT: RTS implicit %0
     %0:any(p0) = G_GLOBAL_VALUE @.str + 1234
     RTS implicit %0
 ...

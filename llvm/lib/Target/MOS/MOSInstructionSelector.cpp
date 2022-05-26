@@ -219,6 +219,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_FRAME_INDEX:
     return selectFrameIndex(MI);
   case MOS::G_BLOCK_ADDR:
+  case MOS::G_CONSTANT:
   case MOS::G_GLOBAL_VALUE:
     return selectAddr(MI);
   case MOS::G_STORE_ABS:
@@ -836,6 +837,15 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineInstr *Load;
 
   Register LHS;
+  if (!Compare) {
+    if (MachineInstr *CMPZ = getOpcodeDef(MOS::G_CMPZ, CondReg, MRI)) {
+      auto Cmp = Builder.buildInstr(MOS::CMPTermZMB, {S1}, {});
+      for (const MachineOperand &MO : CMPZ->uses())
+        Cmp.addUse(MO.getReg());
+      Compare = Cmp;
+      Flag = MOS::Z;
+    }
+  }
   if (!Compare && mi_match(CondReg, MRI, m_CMPTermZ(LHS, Flag)))
     Compare = Builder.buildInstr(MOS::CMPTermZ, {S1}, {LHS});
   int64_t RHSConst;
@@ -1086,10 +1096,13 @@ MOSInstructionSelector::selectFrameIndexLoHi(MachineInstr &MI) {
 
 bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
+  MachineOperand Op = MI.getOperand(1);
+  if (Op.isCImm())
+    Op.ChangeToImmediate(Op.getCImm()->getSExtValue());
   auto Instr =
       Builder
           .buildInstr(MOS::LDImm16, {MI.getOperand(0), &MOS::GPRRegClass}, {})
-          .add(MI.getOperand(1));
+          .add(Op);
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
   MI.eraseFromParent();
@@ -1630,6 +1643,20 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
   }
 
   MachineIRBuilder Builder(MI);
+  if (MI.getOperand(0).isReg() &&
+      Builder.getMRI()->getType(MI.getOperand(0).getReg()) ==
+          LLT::pointer(0, 16)) {
+    assert(MI.getOpcode() == MOS::G_INC || MI.getOpcode() == MOS::G_DEC);
+    assert(MI.getNumDefs() == 1);
+    auto Op = Builder.buildInstr(MI.getOpcode() == MOS::G_INC ? MOS::IncPtr
+                                                              : MOS::DecPtr);
+    if (MI.getOpcode() == MOS::G_DEC)
+      Op.addDef(Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass));
+    Op.addDef(MI.getOperand(0).getReg()).addUse(MI.getOperand(1).getReg());
+    MI.eraseFromParent();
+    return constrainSelectedInstRegOperands(*Op, TII, TRI, RBI);
+  }
+
   auto Instr = Builder.buildInstr(Opcode);
   if (Opcode == MOS::DecMB)
     Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass));

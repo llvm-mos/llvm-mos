@@ -62,8 +62,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   // Constants
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({S1, S8})
-      .customFor({P})
+      .legalFor({S1, S8, P})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
@@ -251,8 +250,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   // Control Flow
 
   getActionDefinitionsBuilder(G_PHI)
-      .customFor({P})
-      .legalFor({S1, S8})
+      .legalFor({S1, S8, P})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
@@ -321,10 +319,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
-  // Constants
-  case G_CONSTANT:
-    return legalizeConstant(Helper, MRI, MI);
-
   // Integer Extension and Truncation
   case G_SEXT:
     return legalizeSExt(Helper, MRI, MI);
@@ -376,8 +370,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeStore(Helper, MRI, MI);
 
   // Control Flow
-  case G_PHI:
-    return legalizePhi(Helper, MRI, MI);
   case G_BRCOND:
     return legalizeBrCond(Helper, MRI, MI);
   case G_BRJT:
@@ -395,26 +387,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_FREEZE:
     return legalizeFreeze(Helper, MRI, MI);
   }
-}
-
-//===----------------------------------------------------------------------===//
-// Constants
-//===----------------------------------------------------------------------===//
-
-bool MOSLegalizerInfo::legalizeConstant(LegalizerHelper &Helper,
-                                        MachineRegisterInfo &MRI,
-                                        MachineInstr &MI) const {
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-
-  Register Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
-  Register Dst = MI.getOperand(0).getReg();
-
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(0).setReg(Tmp);
-  Helper.Observer.changedInstr(MI);
-  Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-  Builder.buildIntToPtr(Dst, Tmp);
-  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1091,6 +1063,18 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   Register CIn;
 
   if (Type != S8) {
+    if (RHSIsZero && Pred == CmpInst::ICMP_EQ &&
+        all_of(MRI.use_instructions(Dst), [](const MachineInstr &MI) {
+          return MI.getOpcode() == MOS::G_BRCOND_IMM;
+        })) {
+      auto Unmerge = Builder.buildUnmerge(S8, LHS);
+      auto Cmp = Builder.buildInstr(MOS::G_CMPZ, {Dst}, {});
+      for (const MachineOperand &MO : unmergeDefs(Unmerge))
+        Cmp.addUse(MO.getReg());
+      MI.eraseFromParent();
+      return true;
+    }
+
     if (Pred != CmpInst::ICMP_SLT) {
       Register LHSHigh, LHSRest;
       Register RHSHigh, RHSRest;
@@ -1263,6 +1247,13 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
         .addDef(Result)
         .addGlobalAddress(Op.getGlobal(),
                           Op.getOffset() + ConstOffset->Value.getSExtValue());
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (ConstOffset && ConstOffset->Value.abs().isOne()) {
+    Builder.buildInstr(ConstOffset->Value.isOne() ? MOS::G_INC : MOS::G_DEC,
+                       {Result}, {Base});
     MI.eraseFromParent();
     return true;
   }
@@ -1600,27 +1591,6 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
 //===----------------------------------------------------------------------===//
 // Control Flow
 //===----------------------------------------------------------------------===//
-
-bool MOSLegalizerInfo::legalizePhi(LegalizerHelper &Helper,
-                                   MachineRegisterInfo &MRI,
-                                   MachineInstr &MI) const {
-  LLT S16 = LLT::scalar(16);
-  MachineIRBuilder &Builder = Helper.MIRBuilder;
-
-  Helper.Observer.changingInstr(MI);
-  for (unsigned I = 1, IE = MI.getNumOperands(); I < IE; I += 2) {
-    Register Reg = MI.getOperand(I).getReg();
-    MachineBasicBlock *Block = MI.getOperand(I + 1).getMBB();
-    Builder.setInsertPt(*Block, Block->getFirstTerminator());
-    MI.getOperand(I).setReg(Builder.buildPtrToInt(S16, Reg).getReg(0));
-  }
-  Register Tmp = MRI.createGenericVirtualRegister(S16);
-  Builder.setInsertPt(*MI.getParent(), MI.getParent()->getFirstNonPHI());
-  Builder.buildIntToPtr(MI.getOperand(0).getReg(), Tmp);
-  MI.getOperand(0).setReg(Tmp);
-  Helper.Observer.changedInstr(MI);
-  return true;
-}
 
 bool MOSLegalizerInfo::legalizeBrCond(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,

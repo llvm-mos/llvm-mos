@@ -368,6 +368,26 @@ body: |
     RTS
 ...
 ---
+name: incptr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: incptr
+    ; CHECK: $rc2, $rc3 = IncMB $rc2(tied-def 0), $rc3(tied-def 1), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: RTS
+    $rs1 = IncPtr $rs1, implicit-def $c, implicit-def $v
+    RTS
+...
+---
+name: decptr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: decptr
+    ; CHECK: early-clobber $a, $rc2, $rc3 = DecMB $rc2(tied-def 1), $rc3(tied-def 2), implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: RTS
+    $a, $rs1 = DecPtr $rs1, implicit-def $c, implicit-def $v
+    RTS
+...
+---
 name: ldaabsidx
 body: |
   bb.0.entry:

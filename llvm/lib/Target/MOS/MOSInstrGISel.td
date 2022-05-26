@@ -137,3 +137,8 @@ let mayLoad = true, mayStore = true in {
   def G_INC_TMP : MOSGIncDec;
   def G_DEC_TMP : MOSGIncDec;
 }
+
+def G_CMPZ : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$z);
+  let InOperandList = (ins variable_ops);
+}

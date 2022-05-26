@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -289,8 +290,12 @@ bool MOSInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     ++I;
 
   // If no terminators, falls through.
-  if (I == MBB.end())
+  if (I == MBB.end()) {
+    TBB = nullptr;
+    FBB = nullptr;
+    Cond.clear();
     return false;
+  }
 
   // Non-branch terminators cannot be analyzed.
   if (!I->isBranch())
@@ -310,8 +315,10 @@ bool MOSInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   }
 
   // If there's no second branch, done.
-  if (I == MBB.end())
+  if (I == MBB.end()) {
+    FBB = nullptr;
     return false;
+  }
 
   // Cannot analyze branch followed by non-branch.
   if (!I->isBranch())
@@ -765,6 +772,10 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::DEC:
     expandIncDec(Builder);
     break;
+  case MOS::IncPtr:
+  case MOS::DecPtr:
+    expandIncDecPtr(Builder);
+    break;
   case MOS::LDAbsIdx:
     expandLDIdx(Builder);
     break;
@@ -977,6 +988,28 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
     MI.setDesc(TII.get(IsInc ? MOS::INCImag8 : MOS::DECImag8));
     break;
   }
+}
+
+void MOSInstrInfo::expandIncDecPtr(MachineIRBuilder &Builder) const {
+  MachineInstr &MI = *Builder.getInsertPt();
+  const TargetRegisterInfo &TRI = *Builder.getMRI()->getTargetRegisterInfo();
+  Register Reg = MI.getOperand(MI.getOpcode() == MOS::IncPtr ? 0 : 1).getReg();
+  Register Lo = TRI.getSubReg(Reg, MOS::sublo);
+  Register Hi = TRI.getSubReg(Reg, MOS::subhi);
+  auto Op = Builder.buildInstr(MI.getOpcode() == MOS::IncPtr ? MOS::IncMB
+                                                             : MOS::DecMB);
+  if (MI.getOpcode() == MOS::DecPtr)
+    Op.addDef(MI.getOperand(0).getReg());
+  Op.addDef(Lo).addDef(Hi).addUse(Lo).addUse(Hi);
+
+  if (MI.getOpcode() == MOS::IncPtr) {
+    Op->tieOperands(0, 2);
+    Op->tieOperands(1, 3);
+  } else {
+    Op->tieOperands(1, 3);
+    Op->tieOperands(2, 4);
+  }
+  MI.eraseFromParent();
 }
 
 //===---------------------------------------------------------------------===//

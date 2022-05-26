@@ -33,10 +33,6 @@ public:
                          MachineInstr &MI) const;
 
 private:
-  // Constants
-  bool legalizeConstant(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                        MachineInstr &MI) const;
-
   // Integer Extension and Truncation
   bool legalizeSExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
@@ -88,9 +84,6 @@ private:
                                        MachineInstr &MI) const;
 
   // Control Flow
-  bool legalizePhi(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                   MachineInstr &MI) const;
-
   bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
 

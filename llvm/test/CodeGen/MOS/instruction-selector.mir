@@ -1090,6 +1090,40 @@ body: |
     RTS
 ...
 ---
+name: cmpzmb_brz
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpzmb_brz
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $x
+    ; 6502-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $y
+    ; 6502-NEXT: [[COPY3:%[0-9]+]]:anyi8 = COPY $rc2
+    ; 6502-NEXT: [[CMPTermZMB:%[0-9]+]]:cc = CMPTermZMB [[COPY]], [[COPY1]], [[COPY2]], [[COPY3]], implicit-def $nz
+    ; 6502-NEXT: BR %bb.0, $z, 1
+    ; 6502-NEXT: RTS
+    ; 65C02-LABEL: name: cmpzmb_brz
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:anyi8 = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:anyi8 = COPY $x
+    ; 65C02-NEXT: [[COPY2:%[0-9]+]]:anyi8 = COPY $y
+    ; 65C02-NEXT: [[COPY3:%[0-9]+]]:anyi8 = COPY $rc2
+    ; 65C02-NEXT: [[CMPTermZMB:%[0-9]+]]:cc = CMPTermZMB [[COPY]], [[COPY1]], [[COPY2]], [[COPY3]], implicit-def $nz
+    ; 65C02-NEXT: BR %bb.0, $z, 1
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = COPY $x
+    %2:any(s8) = COPY $y
+    %3:any(s8) = COPY $rc2
+    %4:any(s8) = G_CMPZ %0, %1, %2, %3
+    G_BRCOND_IMM %4, %bb.0, 1
+    RTS
+...
+---
 name: cmpimm_brc
 legalized: true
 regBankSelected: true
@@ -2096,6 +2130,21 @@ body: |
     RTS implicit %0
 ...
 ---
+name: ldimm16
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: ldimm16
+    ; 6502: %0:imag16, early-clobber %1:gpr = LDImm16 1234
+    ; 6502-NEXT: RTS implicit %0
+    ; 65C02-LABEL: name: ldimm16
+    ; 65C02: %0:imag16, early-clobber %1:gpr = LDImm16 1234
+    ; 65C02-NEXT: RTS implicit %0
+    %0:any(p0) = G_CONSTANT i16 1234
+    RTS implicit %0
+...
+---
 name: load_absolute_const
 legalized: true
 regBankSelected: true
@@ -2605,6 +2654,42 @@ body: |
     RTS implicit %4, implicit %6, implicit %7
 ...
 ---
+name: inc_ptr
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: inc_ptr
+    ; 6502: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
+    ; 6502-NEXT: [[IncPtr:%[0-9]+]]:imag16 = IncPtr [[COPY]]
+    ; 6502-NEXT: RTS implicit [[IncPtr]]
+    ; 65C02-LABEL: name: inc_ptr
+    ; 65C02: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
+    ; 65C02-NEXT: [[IncPtr:%[0-9]+]]:imag16 = IncPtr [[COPY]]
+    ; 65C02-NEXT: RTS implicit [[IncPtr]]
+    %0:any(p0) = COPY $rs1
+    %1:any(p0) = G_INC %0
+    RTS implicit %1
+...
+---
+name: dec_ptr
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: dec_ptr
+    ; 6502: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
+    ; 6502-NEXT: early-clobber %2:gpr, %1:imag16 = DecPtr [[COPY]]
+    ; 6502-NEXT: RTS implicit %1
+    ; 65C02-LABEL: name: dec_ptr
+    ; 65C02: [[COPY:%[0-9]+]]:imag16 = COPY $rs1
+    ; 65C02-NEXT: early-clobber %2:gpr, %1:imag16 = DecPtr [[COPY]]
+    ; 65C02-NEXT: RTS implicit %1
+    %0:any(p0) = COPY $rs1
+    %1:any(p0) = G_DEC %0
+    RTS implicit %1
+...
+---
 name: sbc_imm_c
 legalized: true
 regBankSelected: true
@@ -2703,11 +2788,11 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; 6502-LABEL: name: merge_constants_to_ptr
-    ; 6502: [[LDImm16_:%[0-9]+]]:imag16, [[LDImm16_1:%[0-9]+]]:gpr = LDImm16 8716
-    ; 6502-NEXT: RTS implicit [[LDImm16_]]
+    ; 6502: %2:imag16, early-clobber %4:gpr = LDImm16 8716
+    ; 6502-NEXT: RTS implicit %2
     ; 65C02-LABEL: name: merge_constants_to_ptr
-    ; 65C02: [[LDImm16_:%[0-9]+]]:imag16, [[LDImm16_1:%[0-9]+]]:gpr = LDImm16 8716
-    ; 65C02-NEXT: RTS implicit [[LDImm16_]]
+    ; 65C02: %2:imag16, early-clobber %4:gpr = LDImm16 8716
+    ; 65C02-NEXT: RTS implicit %2
     %0:any(s8) = G_CONSTANT i8 12
     %1:any(s8) = G_CONSTANT i8 34
     %2:any(s16) = G_MERGE_VALUES %0, %1

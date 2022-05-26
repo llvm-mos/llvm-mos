@@ -69,6 +69,7 @@ def LDImm1 : MOSPseudo {
 def LDImm16 : MOSPseudo {
   dag OutOperandList = (outs Imag16:$dst, GPR:$scratch);
   dag InOperandList = (ins i16imm:$val);
+  let Constraints = "@earlyclobber $scratch";
 
   let isAsCheapAsAMove = true;
   let isMoveImm = true;
@@ -117,6 +118,22 @@ def DEC : MOSPseudo {
 
   let Constraints = "$dst = $src";
   let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, -1))];
+}
+
+class MOSIncDecPtr : MOSPseudo {
+  dag InOperandList = (ins Imag16:$src);
+  let Defs = [C, V];
+  let Constraints = "$dst = $src";
+}
+
+def IncPtr : MOSIncDecPtr {
+  dag OutOperandList = (outs Imag16:$dst);
+  let isAdd = true;
+}
+
+def DecPtr : MOSIncDecPtr {
+  dag OutOperandList = (outs GPR:$scratch, Imag16:$dst);
+  let Constraints = "$dst = $src,@earlyclobber $scratch";
 }
 
 //===---------------------------------------------------------------------===//
@@ -267,6 +284,11 @@ def CMPTermImag8 : MOSCMPTerm {
 def CMPTermZ : MOSCMPTerm {
   dag InOperandList = (ins Anyi8:$val);
 }
+def CMPTermZMB : MOSCMPTerm {
+  dag InOperandList = (ins variable_ops);
+  let usesCustomInserter = true;
+}
+
 let mayLoad = true in {
   def CMPTermAbs : MOSCMPTerm {
     dag InOperandList = (ins GPR:$l, i16imm:$addr);
@@ -302,7 +324,7 @@ def GBR : MOSPseudo {
 // must be constrained to Anyi8.
 class MOSIncDecMB : MOSPseudo {
   dag InOperandList = (ins variable_ops);
-  let Defs = [C];
+  let Defs = [C, V];
 
   let usesCustomInserter = true;
   let mayLoad = true;

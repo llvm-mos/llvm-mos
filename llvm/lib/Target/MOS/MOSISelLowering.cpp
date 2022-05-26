@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -195,6 +196,8 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
                                         MachineBasicBlock *MBB);
 static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
                                        MachineBasicBlock *MBB);
+static MachineBasicBlock *emitCMPTermZMB(MachineInstr &MI,
+                                         MachineBasicBlock *MBB);
 
 MachineBasicBlock *
 MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -207,6 +210,8 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case MOS::IncMB:
   case MOS::DecMB:
     return emitIncDecMB(MI, MBB);
+  case MOS::CMPTermZMB:
+    return emitCMPTermZMB(MI, MBB);
   }
 }
 
@@ -320,11 +325,45 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
   return TailMBB;
 }
 
+static MachineInstr *findCmpTermZMBInc(MachineInstr &MI) {
+  const TargetRegisterInfo *TRI = MI.getMF()->getSubtarget().getRegisterInfo();
+  for (auto I = MachineBasicBlock::reverse_iterator(MI.getIterator()),
+            E = MI.getParent()->rend();
+       I != E; ++I) {
+    bool ReferencesCmpReg = false;
+    for (const MachineOperand &MO : MI.explicit_uses()) {
+      if (I->readsRegister(MO.getReg(), TRI) ||
+          I->definesRegister(MO.getReg(), TRI)) {
+        ReferencesCmpReg = true;
+        break;
+      }
+    }
+    if (!ReferencesCmpReg)
+      continue;
+    if (I->getOpcode() != MOS::IncMB)
+      return nullptr;
+    for (auto IdxMO : enumerate(MI.explicit_uses()))
+      if (I->getOperand(IdxMO.index()).getReg() != IdxMO.value().getReg())
+        return nullptr;
+    return &*I;
+  }
+  return nullptr;
+}
+
 static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
                                        MachineBasicBlock *MBB) {
   if (!MBB->getParent()->getProperties().hasProperty(
           MachineFunctionProperties::Property::NoVRegs))
     return MBB;
+
+  // If this instruction will be folded into a later CMPTermZMB, then defer
+  // expanding it.
+  if (MI.getOpcode() == MOS::IncMB && MI.getNumExplicitDefs() > 1) {
+    auto Term = MBB->getFirstTerminator();
+    if (Term != MBB->end() && Term->getOpcode() == MOS::CMPTermZMB &&
+        findCmpTermZMBInc(*Term) == &MI)
+      return MBB;
+  }
 
   MachineIRBuilder Builder(MI);
   bool IsDec = MI.getOpcode() == MOS::DecMB;
@@ -400,4 +439,85 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   MI.eraseFromParent();
 
   return RestMBB;
+}
+
+static MachineBasicBlock *emitCMPTermZMB(MachineInstr &MI,
+                                         MachineBasicBlock *MBB) {
+  if (!MBB->getParent()->getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoVRegs))
+    return MBB;
+  const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
+
+  if (MI.getNumExplicitOperands() - 1 == 1) {
+    MI.setDesc(TII.get(MOS::CMPTermZ));
+    return MBB;
+  }
+
+  MachineInstr *Inc = findCmpTermZMBInc(MI);
+
+  SmallVector<MachineBasicBlock::RegisterMaskPair> LiveOuts;
+  for (const MachineBasicBlock::RegisterMaskPair &P : MBB->liveouts())
+    LiveOuts.push_back(P);
+
+  MachineBasicBlock *TBB;
+  MachineBasicBlock *FBB;
+  SmallVector<MachineOperand> Cond;
+  if (TII.analyzeBranch(*MBB, TBB, FBB, Cond))
+    llvm_unreachable("Could not analyze branch.");
+  assert(TBB && Cond.size() == 2 && "Expected conditional branch.");
+  assert(Cond[0].getReg() == MOS::Z && "Must branch on Z.");
+  if (Cond[1].getImm()) {
+    TII.reverseBranchCondition(Cond);
+    std::swap(TBB, FBB);
+  }
+  assert(!Cond[1].getImm());
+  if (!TBB)
+    TBB = MBB->getFallThrough();
+  TII.removeBranch(*MBB);
+
+  Register Reg;
+  if (Inc) {
+    Reg = MI.getOperand(1).getReg();
+    MI.removeOperand(1);
+  } else {
+    Reg = MI.getOperand(MI.getNumExplicitOperands() - 1).getReg();
+    MI.removeOperand(MI.getNumExplicitOperands() - 1);
+  }
+  MI.removeFromParent();
+
+  MachineFunction &MF = *MBB->getParent();
+
+  const BasicBlock *BB = MBB->getBasicBlock();
+  auto MBBI = std::next(MBB->getIterator());
+  MachineBasicBlock *NextMBB = MF.CreateMachineBasicBlock(BB);
+  MF.insert(MBBI, NextMBB);
+  NextMBB->transferSuccessors(MBB);
+  for (const auto &P : LiveOuts)
+    NextMBB->addLiveIn(P.PhysReg, P.LaneMask);
+  for (MachineOperand &MO : MI.explicit_uses())
+    NextMBB->addLiveIn(MO.getReg());
+  NextMBB->sortUniqueLiveIns();
+
+  MachineIRBuilder Builder(*MBB, MBB->end());
+  if (Inc)
+    Builder.buildInstr(MOS::INC, {Reg}, {Reg});
+  auto Cmp = Builder.buildInstr(MOS::CMPTermZ, {MOS::C}, {Reg});
+  Cmp->getOperand(0).setIsDead();
+  TII.insertBranch(*MBB, TBB, nullptr, Cond, Builder.getDL());
+  MBB->addSuccessor(TBB);
+  MBB->addSuccessor(NextMBB);
+
+  if (Inc) {
+    Builder.setInsertPt(*NextMBB, NextMBB->end());
+    auto NewInc = Builder.buildInstr(MOS::IncMB);
+    for (unsigned I = 1, E = Inc->getNumExplicitDefs(); I != E; ++I)
+      NewInc.addDef(Inc->getOperand(I).getReg());
+    for (unsigned I = 1, E = Inc->getNumExplicitDefs(); I != E; ++I)
+      NewInc.addUse(Inc->getOperand(I).getReg());
+    Inc->eraseFromParent();
+  }
+  NextMBB->insert(NextMBB->end(), &MI);
+  TII.insertBranch(*NextMBB, TBB, FBB, Cond, Builder.getDL());
+
+  return NextMBB;
 }

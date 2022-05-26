@@ -147,9 +147,9 @@ entry:
 define i8* @dec_ptr(i8* %a) {
 ; CHECK-LABEL: dec_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    ldx mos8(__rc2)
 ; CHECK-NEXT:    dec mos8(__rc2)
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bne .LBB8_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dec mos8(__rc3)

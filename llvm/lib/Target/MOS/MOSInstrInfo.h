@@ -123,6 +123,7 @@ private:
   void expandLDImm16Remat(MachineIRBuilder &Builder) const;
   void expandLDZ(MachineIRBuilder &Builder) const;
   void expandIncDec(MachineIRBuilder &Builder) const;
+  void expandIncDecPtr(MachineIRBuilder &Builder) const;
 
   // NZ pseudos
   void expandNZ(MachineIRBuilder &Builder) const;
