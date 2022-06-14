@@ -424,7 +424,7 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   Builder.setInsertPt(*RestMBB, RestMBB->end());
   auto Rest = Builder.buildInstr(MI.getOpcode());
   if (IsDec)
-    Rest.addDef(MOS::A);
+    Rest.addDef(MI.getOperand(0).getReg());
   for (unsigned I = FirstDefIdx, E = MI.getNumExplicitOperands(); I != E; ++I) {
     if (I == FirstUseIdx)
       continue;

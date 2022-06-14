@@ -100,14 +100,13 @@ define i16 @dec_i16(i16 %a) {
 ; CHECK-LABEL: dec_i16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    tay
-; CHECK-NEXT:    tya
-; CHECK-NEXT:    dey
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    adc #255
+; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB6_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dex
 ; CHECK-NEXT:  .LBB6_2: ; %entry
-; CHECK-NEXT:    tya
 ; CHECK-NEXT:    rts
 entry:
   %0 = add i16 %a, -1
@@ -118,26 +117,28 @@ define i32 @dec_i32(i32 %a) {
 ; CHECK-LABEL: dec_i32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    tay
-; CHECK-NEXT:    tya
-; CHECK-NEXT:    dey
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    adc #255
+; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_6
 ; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    pha
 ; CHECK-NEXT:    txa
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    pla
 ; CHECK-NEXT:    dex
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    ldy mos8(__rc2)
 ; CHECK-NEXT:    dec mos8(__rc2)
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    dec mos8(__rc3)
 ; CHECK-NEXT:  .LBB7_4: ; %entry
 ; CHECK-NEXT:  .LBB7_5: ; %entry
 ; CHECK-NEXT:  .LBB7_6: ; %entry
-; CHECK-NEXT:    tya
 ; CHECK-NEXT:    rts
 entry:
   %0 = add i32 %a, -1
@@ -163,9 +164,9 @@ entry:
 define void @dec_global() {
 ; CHECK-LABEL: dec_global:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    lda g
+; CHECK-NEXT:    ldx g
 ; CHECK-NEXT:    dec g
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bne .LBB9_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dec g+1

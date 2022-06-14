@@ -193,9 +193,7 @@ void MOSPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 }
 
-bool MOSPassConfig::addPreISel() {
-  return false;
-}
+bool MOSPassConfig::addPreISel() { return false; }
 
 bool MOSPassConfig::addIRTranslator() {
   addPass(new IRTranslator(getOptLevel()));
@@ -237,7 +235,8 @@ void MOSPassConfig::addMachineSSAOptimization() {
 }
 
 void MOSPassConfig::addOptimizedRegAlloc() {
-  // Run the coalescer twice to coalesce RMW patterns revealed by the first coalesce.
+  // Run the coalescer twice to coalesce RMW patterns revealed by the first
+  // coalesce.
   insertPass(&llvm::TwoAddressInstructionPassID, &llvm::RegisterCoalescerID);
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -248,6 +247,8 @@ void MOSPassConfig::addPreSched2() {
   addPass(&FinalizeISelID);
   // Lower pseudos produced by control flow pseudos.
   addPass(&ExpandPostRAPseudosID);
+  addPass(createMOSPostRAScavengingPass());
+
   addPass(createMOSLateOptimizationPass());
   addPass(createMOSStaticStackAllocPass());
 }

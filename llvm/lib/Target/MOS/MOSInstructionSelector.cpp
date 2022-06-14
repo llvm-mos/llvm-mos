@@ -1659,7 +1659,7 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
 
   auto Instr = Builder.buildInstr(Opcode);
   if (Opcode == MOS::DecMB)
-    Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass));
+    Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass));
   for (MachineOperand &MO : MI.operands())
     Instr.add(MO);
   for (MachineOperand &MO : Instr->explicit_operands())
