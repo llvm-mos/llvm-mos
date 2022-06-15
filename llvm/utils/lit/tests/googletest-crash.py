@@ -1,5 +1,7 @@
 # Check GoogleTest shard test crashes are handled.
 
+# XFAIL: *
+
 # RUN: not %{lit} -v %{inputs}/googletest-crash | FileCheck %s
 
 # CHECK: -- Testing:
