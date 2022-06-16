@@ -69,53 +69,50 @@ class Family<string name, string desc, list<SubtargetFeature> i>
   : FeatureSet<name, desc, i>;
 
 
-def Family6502 
+def Family6502
     : Family<
       "mos6502",
       "Generic MOS 6502, with support for BCD instructions",
-      [Feature6502, Feature6502BCD]>;
+      [Feature6502, Feature6502BCD, FeatureStaticStack]>;
 
 def Family6502X
-    : Family<"mos6502x", 
-      "NMOS 6502, with illegal opcode support", 
-      [Feature6502, Feature6502BCD, Feature6502X]>;
+    : Family<"mos6502x",
+      "NMOS 6502, with illegal opcode support",
+      Family6502.Implies#[Feature6502X]>;
 
 def Family65C02
-    : Family<"mos65c02",  
+    : Family<"mos65c02",
       "Generic MOS 65C02",
-      [Feature6502, Feature6502BCD, Feature65C02]>;
+      Family6502.Implies#[Feature65C02]>;
 
 def FamilyR65C02
-    : Family<"mosr65c02",  
+    : Family<"mosr65c02",
       "Rockwell 65C02",
-      [Feature6502, Feature65C02, FeatureR65C02]>;
+      Family65C02.Implies#[FeatureR65C02]>;
 
 def FamilyW65C02
-    : Family<"mosw65c02",  
+    : Family<"mosw65c02",
       "WDC 65C02",
-      [Feature6502, Feature65C02, FeatureR65C02, FeatureW65C02]>;
+      FamilyR65C02.Implies#[FeatureW65C02]>;
 
 def FamilyW65816
-    : Family<"mosw65816",  
+    : Family<"mosw65816",
       "WDC 65816",
-      [Feature6502, Feature65C02, FeatureR65C02, FeatureW65C02,
-      FeatureW65816]>;
+      FamilyW65C02.Implies#[FeatureW65816]>;
 
 def Family65EL02
-    : Family<"mos65el02",  
+    : Family<"mos65el02",
       "65EL02 virtual machine",
-      [Feature6502, Feature65C02, FeatureR65C02, FeatureW65C02,
-      Feature65EL02]>;
+      FamilyW65C02.Implies#[Feature65EL02]>;
 
 def Family65CE02
-    : Family<"mos65ce02",  
+    : Family<"mos65ce02",
       "Commodore 65CE02",
-      [Feature6502, Feature65C02, FeatureR65C02, FeatureW65C02,
-      Feature65CE02]>;
+      FamilyW65C02.Implies#[Feature65CE02]>;
 
 def FamilySWEET16
     : Family<"mossweet16",
-      "MOS 6502 compatible with SWEET16 virtual machine support", 
+      "MOS 6502 compatible with SWEET16 virtual machine support",
       [FeatureSWEET16]>;
 
 //===---------------------------------------------------------------------===//

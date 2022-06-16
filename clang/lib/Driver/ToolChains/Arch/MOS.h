@@ -19,6 +19,9 @@ namespace mos {
 
 std::string getMOSTargetCPU(const llvm::opt::ArgList &Args);
 
+void getMOSTargetFeatures(const llvm::opt::ArgList &Args,
+                          std::vector<llvm::StringRef> &Features);
+
 } // end namespace mos
 } // end namespace tools
 } // end namespace driver

@@ -18,6 +18,7 @@
 #include "MOSLegalizerInfo.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOSFrameLowering.h"
 #include "MOSInstrInfo.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
@@ -1387,11 +1388,13 @@ bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
 }
 
 static bool willBeStaticallyAllocated(const MachineOperand &MO) {
+  const MachineFunction &MF = *MO.getParent()->getMF();
+  const MOSFrameLowering &TFL =
+      *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
   assert(MO.isFI());
-  if (!MO.getParent()->getMF()->getFunction().doesNotRecurse())
+  if (!TFL.usesStaticStack(MF))
     return false;
-  return !MO.getParent()->getMF()->getFrameInfo().isFixedObjectIndex(
-      MO.getIndex());
+  return !MF.getFrameInfo().isFixedObjectIndex(MO.getIndex());
 }
 
 bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,

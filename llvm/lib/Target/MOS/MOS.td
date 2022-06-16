@@ -19,8 +19,8 @@ include "llvm/Target/GlobalISel/Combine.td"
 // MOS Device Definitions
 //===---------------------------------------------------------------------===//
 
-include "MOSDevices.td"
 include "MOSFeatures.td"
+include "MOSDevices.td"
 include "MOSRegisterInfo.td"
 include "MOSRegisterBanks.td"
 include "MOSInstrInfo.td"

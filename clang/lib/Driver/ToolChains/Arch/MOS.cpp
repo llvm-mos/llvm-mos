@@ -35,3 +35,14 @@ std::string mos::getMOSTargetCPU(const ArgList &Args) {
 
   return "";
 }
+
+void mos::getMOSTargetFeatures(const ArgList &Args,
+                               std::vector<StringRef> &Features) {
+  if (Arg *A = Args.getLastArg(options::OPT_fstatic_stack,
+                               options::OPT_fno_static_stack)) {
+    if (A->getOption().matches(options::OPT_fstatic_stack))
+      Features.push_back("+static-stack");
+    else
+      Features.push_back("-static-stack");
+  }
+}

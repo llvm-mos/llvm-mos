@@ -2349,6 +2349,10 @@ defm operator_names : BoolFOption<"operator-names",
 def fdiagnostics_absolute_paths : Flag<["-"], "fdiagnostics-absolute-paths">, Group<f_Group>,
   Flags<[CC1Option, CoreOption]>, HelpText<"Print absolute paths in diagnostics">,
   MarshallingInfoFlag<DiagnosticOpts<"AbsolutePath">>;
+def fstatic_stack : Flag<["-"], "fstatic-stack">, Group<f_Group>,
+  HelpText<"Statically allocates stack frames whenever possible.">;
+def fno_static_stack : Flag<["-"], "fno-static-stack">, Group<f_Group>,
+  HelpText<"Always use a dynamic stack pointer.">;
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,
   HelpText<"Disable the use of stack protectors">;
 def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,

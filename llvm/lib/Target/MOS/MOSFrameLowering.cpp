@@ -41,6 +41,11 @@ MOSFrameLowering::MOSFrameLowering()
     : TargetFrameLowering(StackGrowsDown, /*StackAlignment=*/Align(1),
                           /*LocalAreaOffset=*/0) {}
 
+bool MOSFrameLowering::usesStaticStack(const MachineFunction &MF) const {
+  return MF.getSubtarget<MOSSubtarget>().staticStack() &&
+         MF.getFunction().doesNotRecurse();
+}
+
 bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
@@ -225,7 +230,7 @@ void MOSFrameLowering::processFunctionBeforeFrameFinalized(
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Assign all locals to static stack in non-recursive functions.
-  if (MF.getFunction().doesNotRecurse()) {
+  if (usesStaticStack(MF)) {
     int64_t Offset = 0;
     for (int Idx : seq(0, MFI.getObjectIndexEnd())) {
       if (MFI.isDeadObjectIndex(Idx) || MFI.isVariableSizedObjectIndex(Idx))

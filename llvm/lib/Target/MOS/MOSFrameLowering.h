@@ -22,6 +22,8 @@ class MOSFrameLowering : public TargetFrameLowering {
 public:
   MOSFrameLowering();
 
+  bool usesStaticStack(const MachineFunction &MF) const;
+
   bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,

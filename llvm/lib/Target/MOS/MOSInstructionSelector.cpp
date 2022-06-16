@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSFrameLowering.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
@@ -1059,6 +1060,9 @@ bool MOSInstructionSelector::selectFrameIndex(MachineInstr &MI) {
 
 std::pair<Register, Register>
 MOSInstructionSelector::selectFrameIndexLoHi(MachineInstr &MI) {
+  const MachineFunction &MF = *MI.getMF();
+  const MOSFrameLowering &TFL =
+      *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
   MachineIRBuilder Builder(MI);
 
   LLT S1 = LLT::scalar(1);
@@ -1067,9 +1071,9 @@ MOSInstructionSelector::selectFrameIndexLoHi(MachineInstr &MI) {
   MachineInstrBuilder LoAddr;
   MachineInstrBuilder HiAddr;
 
-  bool IsLocal = !MI.getMF()->getFrameInfo().isFixedObjectIndex(
-      MI.getOperand(1).getIndex());
-  if (MI.getMF()->getFunction().doesNotRecurse() && IsLocal)
+  bool IsLocal =
+      !MF.getFrameInfo().isFixedObjectIndex(MI.getOperand(1).getIndex());
+  if (TFL.usesStaticStack(MF) && IsLocal)
     return selectAddrLoHi(MI);
 
   // Otherwise a soft stack needs to be used, so frame addresses are offsets

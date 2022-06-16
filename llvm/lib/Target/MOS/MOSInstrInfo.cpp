@@ -13,6 +13,7 @@
 #include "MOSInstrInfo.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOSFrameLowering.h"
 #include "MOSRegisterInfo.h"
 
 #include "MOSSubtarget.h"
@@ -575,7 +576,9 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
 
 const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
                                                      unsigned FoldIdx) const {
-  if (!MI.getMF()->getFunction().doesNotRecurse())
+  const MachineFunction &MF = *MI.getMF();
+  const MOSFrameLowering &TFL = *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
+  if (!TFL.usesStaticStack(MF))
     return TargetInstrInfo::canFoldCopy(MI, FoldIdx);
 
   Register FoldReg = MI.getOperand(FoldIdx).getReg();
@@ -681,6 +684,7 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const MOSFrameLowering &TFL = *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
 
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(MF, FrameIndex);
@@ -694,7 +698,7 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   // If we're using the soft stack, since the offset is not yet known, it may be
   // either 8 or 16 bits. Emit a 16-bit pseudo to be lowered during frame index
   // elimination.
-  if (!MF.getFunction().doesNotRecurse()) {
+  if (!TFL.usesStaticStack(MF)) {
     Register Ptr = MRI.createVirtualRegister(&MOS::Imag16RegClass);
     auto Instr = Builder.buildInstr(IsLoad ? MOS::LDStk : MOS::STStk);
     if (!IsLoad)
