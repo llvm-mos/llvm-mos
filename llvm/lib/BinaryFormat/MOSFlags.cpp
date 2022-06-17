@@ -39,11 +39,9 @@ std::string makeEFlagsString(unsigned EFlags) {
 
 bool checkEFlagsCompatibility(unsigned EFlags, unsigned ModuleEFlags) {
   const unsigned Flags = EFlags | ModuleEFlags;
-  // Mixing sweet16 with native or R65C02 with BCD is prohibited
+  // Mixing sweet16 with native is prohibited
   return (!(Flags & ELF::EF_MOS_ARCH_SWEET16) ||
-          !(Flags & ~ELF::EF_MOS_ARCH_SWEET16)) &&
-         (!(Flags & ELF::EF_MOS_ARCH_6502_BCD) ||
-          !(Flags & ELF::EF_MOS_ARCH_R65C02));
+          !(Flags & ~ELF::EF_MOS_ARCH_SWEET16));
 }
 
 } // namespace MOS
