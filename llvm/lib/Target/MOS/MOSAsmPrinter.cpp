@@ -228,7 +228,7 @@ void MOSAsmPrinter::emitJumpTableInfo() {
 const MCSymbol *MOSAsmPrinter::getFunctionFrameSymbol(int FI) const {
   if (MF->getFrameInfo().getStackID(FI) == TargetStackID::NoAlloc) {
     MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
-    return getSymbol(MFI.getStaticStackVariable());
+    return getSymbol(MFI.getStaticStackValue());
   }
   return AsmPrinter::getFunctionFrameSymbol(FI);
 }

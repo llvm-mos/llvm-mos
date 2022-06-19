@@ -19,28 +19,24 @@ namespace llvm {
 
 class MOSFunctionInfo : public MachineFunctionInfo {
   int VarArgsStackIndex = -1;
-  const GlobalVariable *StaticStackVariable = nullptr;
+  const GlobalValue *StaticStackValue = nullptr;
 
 public:
-  MOSFunctionInfo(MachineFunction& MF) {}
+  MOSFunctionInfo(MachineFunction &MF) {}
 
   /// Returns the fake frame index indicating the start of the varargs region of
   /// the incoming call stack.
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
 
-  /// Sets the fake frame index indicating the start of the varargs region of the
-  /// incoming call stack.
+  /// Sets the fake frame index indicating the start of the varargs region of
+  /// the incoming call stack.
   void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
 
-  /// Returns the static stack variable allocated for this function.
-  const GlobalVariable *getStaticStackVariable() const {
-    return StaticStackVariable;
-  }
+  /// Returns the static stack allocated for this function.
+  const GlobalValue *getStaticStackValue() const { return StaticStackValue; }
 
-  /// Sets the static stack variable allocated for this function.
-  void setStaticStackVariable(const GlobalVariable *Var) {
-    StaticStackVariable = Var;
-  }
+  /// Sets the static stack allocated for this function.
+  void setStaticStackValue(const GlobalValue *Val) { StaticStackValue = Val; }
 };
 
 } // namespace llvm

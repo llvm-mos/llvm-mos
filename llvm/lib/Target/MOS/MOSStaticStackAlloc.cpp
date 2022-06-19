@@ -23,11 +23,14 @@
 
 #include "MOSStaticStackAlloc.h"
 
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSFrameLowering.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSSubtarget.h"
 
+#include "llvm/ADT/SCCIterator.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -60,48 +63,216 @@ public:
 void MOSStaticStackAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addPreserved<MachineModuleInfoWrapperPass>();
+  AU.addRequired<CallGraphWrapperPass>();
 }
 
 bool MOSStaticStackAlloc::runOnModule(Module &M) {
-  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+  auto &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+  auto &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
-  bool Changed = false;
-  for (Function &F : M) {
-    MachineFunction *MF = MMI.getMachineFunction(F);
+  // Collect any external libcalls and add them to the call graph, which was
+  // computed before code generation.
+  for (auto &KV : CG) {
+    CallGraphNode &CGN = *KV.second;
+    if (!CGN.getFunction())
+      continue;
+    MachineFunction *MF = MMI.getMachineFunction(*CGN.getFunction());
     if (!MF)
       continue;
+    for (const MachineBasicBlock &MBB : *MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (MI.getOpcode() != MOS::JMP && MI.getOpcode() != MOS::JSR)
+          continue;
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isSymbol())
+            continue;
+          Function *Callee = M.getFunction(MO.getSymbolName());
+          if (Callee && MMI.getMachineFunction(*Callee))
+            CGN.addCalledFunction(nullptr, CG[Callee]);
+        }
+      }
+    }
+  }
 
+  // Extract the list of strongly-connected components from the call graph, and
+  // make a note of which SCC contains each node.
+  DenseMap<CallGraphNode *, uint64_t> SCCID;
+  struct SCC {
+    SmallVector<CallGraphNode *, 1> Nodes;
+    uint64_t Offset = 0;
+  };
+  std::vector<SCC> SCCs;
+  std::vector<uint64_t> SCCOffsets;
+  for (auto I = scc_begin(&CG), E = scc_end(&CG); I != E; ++I) {
+    SCCs.emplace_back();
+    for (CallGraphNode *CGN : *I) {
+      SCCID[CGN] = SCCs.size() - 1;
+      SCCs.back().Nodes.push_back(CGN);
+    }
+  }
+
+  // For each SCC, determine the set of calling SCCs, that is, those containing
+  // at least one node that calls at least one node in the SCC. The calling SCCs
+  // must be placed higher on the static stack than the called SCC; otherwise,
+  // their stack would conflict.
+  std::map<SCC *, SmallPtrSet<SCC *, 4>> CallerSCCs;
+  for (const auto &KV : enumerate(SCCs)) {
+    auto &CallerSCC = KV.value();
+    for (CallGraphNode *CGN : CallerSCC.Nodes) {
+      for (const auto &KV : *CGN) {
+        SCC &CalleeSCC = SCCs[SCCID[KV.second]];
+        if (&CalleeSCC != &CallerSCC)
+          CallerSCCs[&CalleeSCC].insert(&CallerSCC);
+      }
+    }
+  }
+
+  // Collect the set of SCCs that have no callers. There must always be at least
+  // one, since the SCC graph is acyclic.
+  std::vector<SCC *> RootSCCs;
+  for (SCC &SCC : SCCs)
+    if (CallerSCCs.find(&SCC) == CallerSCCs.end())
+      RootSCCs.push_back(&SCC);
+
+  // Handle each root discovered in turn.
+  uint64_t StackSize = 0;
+  std::vector<SCC *> InterruptNorecurseSCCs;
+  bool ToInterruptNorecurse = false;
+  while (!RootSCCs.empty() || !InterruptNorecurseSCCs.empty()) {
+    // If only INR's are left, then handle one. This will cause all its
+    // descendants to be scheduled. Start its offset at the end of the current
+    // stack, since it and its descendants might interrupt anything seen so far.
+    if (RootSCCs.empty()) {
+      ToInterruptNorecurse = true;
+      RootSCCs.push_back(InterruptNorecurseSCCs.back());
+      RootSCCs.back()->Offset = StackSize;
+      InterruptNorecurseSCCs.pop_back();
+      continue;
+    }
+
+    // For each reached root, it's certain that all calling SCCs have already
+    // been assigned offsets. Accordingly, the current offset for this SCC can
+    // be taken as its final position in the static stack.
+    SCC &RootSCC = *RootSCCs.back();
+    RootSCCs.pop_back();
+
+    // Defer interrupt-norecurse SCCs and their descendants until later, since
+    // they conflict with all other nodes.
+    if (!ToInterruptNorecurse && RootSCC.Nodes.size() == 1 &&
+        RootSCC.Nodes.front()->getFunction() &&
+        RootSCC.Nodes.front()->getFunction()->hasFnAttribute(
+            "interrupt-norecurse")) {
+      InterruptNorecurseSCCs.push_back(&RootSCC);
+      continue;
+    }
+
+    LLVM_DEBUG({
+      dbgs() << "\nSCC:\n";
+      for (CallGraphNode *CGN : RootSCC.Nodes)
+        CGN->dump();
+      dbgs() << "Offset: " << RootSCC.Offset << "\n";
+    });
+
+    // Any callee SCCs need to be placed below the end of this SCC's static
+    // stack region. Note that this is true even if the SCC is internally
+    // recursive; the SCCs above and below may not be.
+    const auto &GetStaticStackSize = [&]() -> uint64_t {
+      if (RootSCC.Nodes.size() != 1)
+        return 0;
+      Function *F = RootSCC.Nodes.front()->getFunction();
+      if (!F)
+        return 0;
+      MachineFunction *MF = MMI.getMachineFunction(*F);
+      if (!MF)
+        return 0;
+      const MOSFrameLowering &TFL =
+          *MF->getSubtarget<MOSSubtarget>().getFrameLowering();
+      return TFL.staticSize(MF->getFrameInfo());
+    };
+    uint64_t Size = GetStaticStackSize();
+    LLVM_DEBUG(dbgs() << "Size: " << Size << "\n");
+
+    // Determine the new offset to propagate to callee SCCs, and note if this
+    // increased the overall stack size.
+    uint64_t Offset = RootSCC.Offset + Size;
+    StackSize = std::max(StackSize, Offset);
+
+    // For each callee SCC, propagate the offset and ensure that each occupies a
+    // position in the static stack below the end of the current SCC.
+    for (CallGraphNode *CGN : RootSCC.Nodes) {
+      for (const auto &KV : *CGN) {
+        SCC &CalleeSCC = SCCs[SCCID[KV.second]];
+        if (&CalleeSCC != &RootSCC &&
+            CallerSCCs[&CalleeSCC].contains(&RootSCC)) {
+          CalleeSCC.Offset = std::max(CalleeSCC.Offset, Offset);
+          CallerSCCs[&CalleeSCC].erase(&RootSCC);
+          // If there are no longer any caller SCCs for a SCC, then that SCC is
+          // a newly-discovered root, so schedule it for placement. Since the
+          // SCC graph is acyclic, every SCC must eventually become a root via
+          // this process.
+          if (CallerSCCs[&CalleeSCC].empty())
+            RootSCCs.push_back(&CalleeSCC);
+        }
+      }
+    }
+  }
+
+  if (!StackSize)
+    return false;
+
+  // Create a global variable for the static stack as a whole.
+  Type *Typ = ArrayType::get(Type::getInt8Ty(M.getContext()), StackSize);
+  GlobalVariable *Stack =
+      new GlobalVariable(M, Typ, false, GlobalValue::PrivateLinkage,
+                         UndefValue::get(Typ), "static_stack");
+  LLVM_DEBUG(dbgs() << *Stack << "\n");
+
+  // Create an alias for each SCC's static stack region and rewrite instructions
+  // to reference it.
+  for (const SCC &SCC : SCCs) {
+    if (SCC.Nodes.size() != 1)
+      continue;
+    Function *F = SCC.Nodes.front()->getFunction();
+    if (!F)
+      continue;
+    MachineFunction *MF = MMI.getMachineFunction(*F);
+    if (!MF)
+      continue;
     const MOSFrameLowering &TFL =
         *MF->getSubtarget<MOSSubtarget>().getFrameLowering();
-
     uint64_t Size = TFL.staticSize(MF->getFrameInfo());
     if (!Size)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Found static stack for " << F.getName() << "\n");
-    LLVM_DEBUG(dbgs() << "Size " << Size << "\n");
-
     Type *Typ = ArrayType::get(Type::getInt8Ty(M.getContext()), Size);
-    GlobalVariable *Stack =
-        new GlobalVariable(M, Typ, false, GlobalValue::PrivateLinkage,
-                           UndefValue::get(Typ), Twine(F.getName()) + "_sstk");
-    LLVM_DEBUG(dbgs() << "Allocated: " << *Stack << "\n");
-    Changed = true;
+    Constant *Aliasee = Stack;
+    if (SCC.Offset) {
+      Type *I16 = Type::getInt16Ty(Stack->getContext());
+      Aliasee = ConstantExpr::getGetElementPtr(
+          Stack->getValueType(), Stack,
+          SmallVector<Constant *>{ConstantInt::get(I16, 0),
+                                  ConstantInt::get(I16, SCC.Offset)},
+          /*InBounds=*/true);
+    }
+    auto *Alias = GlobalAlias::create(
+        Typ, Stack->getAddressSpace(), Stack->getLinkage(),
+        Twine(F->getName()) + "_sstk", Aliasee, Stack->getParent());
+    LLVM_DEBUG(dbgs() << *Alias << "\n");
 
     MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
-    MFI.setStaticStackVariable(Stack);
+    MFI.setStaticStackValue(Alias);
 
     for (MachineBasicBlock &MBB : *MF) {
       for (MachineInstr &MI : MBB) {
         for (MachineOperand &MO : MI.operands()) {
           if (!MO.isTargetIndex())
             continue;
-          MO.ChangeToGA(Stack, MO.getOffset(), MO.getTargetFlags());
+          MO.ChangeToGA(Alias, MO.getOffset(), MO.getTargetFlags());
         }
       }
     }
   }
-  return Changed;
+  return true;
 }
 
 } // namespace
