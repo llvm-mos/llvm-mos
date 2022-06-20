@@ -318,6 +318,10 @@ Retry:
     break;
 
   case tok::kw_asm: {
+    for (const ParsedAttr &AL : CXX11Attrs)
+      Diag(AL.getRange().getBegin(), diag::warn_attribute_ignored) << AL;
+    // Prevent these from being interpreted as statement attributes later on.
+    CXX11Attrs.clear();
     bool msAsm = false;
     Res = ParseAsmStatement(msAsm);
     if (msAsm) return Res;

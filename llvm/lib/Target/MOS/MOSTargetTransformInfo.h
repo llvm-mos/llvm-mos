@@ -43,8 +43,8 @@ public:
 
   bool allowIllegalIntegerIV() const { return true; }
 
-  bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
-                     TargetTransformInfo::LSRCost &C2) {
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2) {
     // Prefer instruction count to the other metrics.
     return std::tie(C1.Insns, C1.NumRegs, C1.AddRecCost, C1.NumIVMuls,
                     C1.NumBaseAdds, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
