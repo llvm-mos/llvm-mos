@@ -81,7 +81,7 @@ bool MOSStaticStackAlloc::runOnModule(Module &M) {
       continue;
     for (const MachineBasicBlock &MBB : *MF) {
       for (const MachineInstr &MI : MBB) {
-        if (MI.getOpcode() != MOS::JMP && MI.getOpcode() != MOS::JSR)
+        if (!MI.isCall())
           continue;
         for (const MachineOperand &MO : MI.operands()) {
           if (!MO.isSymbol())

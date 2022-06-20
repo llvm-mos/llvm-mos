@@ -282,6 +282,15 @@ def JSR : MOSLogicalInstr, PseudoInstExpansion<(JSR_Absolute addr16:$tgt)> {
   let isCall = true;
 }
 
+def TailJMP : MOSLogicalInstr, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
+  dag InOperandList = (ins label:$tgt);
+
+  let isBarrier = true;
+  let isTerminator = true;
+  let isCall = true;
+  let isReturn = true;
+}
+
 class MOSReturn<Instruction Opcode> : MOSLogicalInstr, PseudoInstExpansion<(Opcode)> {
   let isBarrier = true;
   let isReturn = true;

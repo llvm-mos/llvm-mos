@@ -165,8 +165,7 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    stx mos8(__rc4)
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
-; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    rts
+; CHECK-NEXT:    jmp __memset
 entry:
   call void @llvm.memset.p0i8.i16(i8* noundef nonnull align 1 dereferenceable(1000) %scr, i8 15, i16 1000, i1 false)
   call void @llvm.memset.p0i8.i16(i8* noundef nonnull align 2048 dereferenceable(1000) inttoptr (i16 -10240 to i8*), i8 11, i16 1000, i1 false)

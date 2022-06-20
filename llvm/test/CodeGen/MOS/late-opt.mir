@@ -373,3 +373,13 @@ body: |
     $x = LDImm 1
     RTS implicit $x
 ...
+---
+name: tail_jmp
+body: |
+  bb.0.entry:
+    liveins: $a
+    ; CHECK-LABEL: name: tail_jmp
+    ; CHECK: TailJMP &foo
+    JSR &foo
+    RTS
+...

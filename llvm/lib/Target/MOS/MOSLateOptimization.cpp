@@ -45,6 +45,7 @@ public:
   bool lowerCMPTermZs(MachineBasicBlock &MBB) const;
   void lowerCMPTermZ(MachineInstr &MI) const;
   bool ldImmToInxyDexy(MachineBasicBlock &MBB) const;
+  bool tailJMP(MachineBasicBlock &MBB) const;
 };
 
 bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
@@ -52,6 +53,7 @@ bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     Changed |= lowerCMPTermZs(MBB);
     Changed |= ldImmToInxyDexy(MBB);
+    Changed |= tailJMP(MBB);
   }
   return Changed;
 }
@@ -277,6 +279,22 @@ bool MOSLateOptimization::ldImmToInxyDexy(MachineBasicBlock &MBB) const {
     Load->Val = Val;
   }
   return Changed;
+}
+
+bool MOSLateOptimization::tailJMP(MachineBasicBlock &MBB) const {
+  if (MBB.size() < 2)
+    return false;
+  auto It = std::prev(MBB.end());
+  if (It->getOpcode() != MOS::RTS)
+    return false;
+  MachineInstr &RTS = *It;
+  --It;
+  if (It->getOpcode() != MOS::JSR)
+    return false;
+  MachineInstr &JSR = *It;
+  RTS.eraseFromParent();
+  JSR.setDesc(JSR.getMF()->getSubtarget().getInstrInfo()->get(MOS::TailJMP));
+  return true;
 }
 
 } // namespace
