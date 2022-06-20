@@ -14,7 +14,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/CodegenStrategy.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -30,7 +30,8 @@ using namespace mlir::linalg;
 
 namespace {
 struct TestLinalgCodegenStrategy
-    : public PassWrapper<TestLinalgCodegenStrategy, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLinalgCodegenStrategy,
+                         OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgCodegenStrategy)
 
   StringRef getArgument() const final { return "test-linalg-codegen-strategy"; }
@@ -222,7 +223,7 @@ void TestLinalgCodegenStrategy::runStrategy(
               .enableContractionLowering()
               .enableTransferToSCFConversion());
   // Created a nested OpPassManager and run.
-  FuncOp funcOp = getOperation();
+  func::FuncOp funcOp = getOperation();
   OpPassManager dynamicPM("func.func");
   strategy.configurePassPipeline(dynamicPM, funcOp.getContext(), runEnablePass);
   if (failed(runPipeline(dynamicPM, funcOp)))

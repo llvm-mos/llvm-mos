@@ -36,6 +36,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
 #include <numeric>
+#include <utility>
 
 using namespace mlir;
 using llvm::Error;
@@ -74,8 +75,7 @@ struct Options {
   llvm::cl::OptionCategory clOptionsCategory{"linking options"};
   llvm::cl::list<std::string> clSharedLibs{
       "shared-libs", llvm::cl::desc("Libraries to link dynamically"),
-      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
-      llvm::cl::cat(clOptionsCategory)};
+      llvm::cl::MiscFlags::CommaSeparated, llvm::cl::cat(clOptionsCategory)};
 
   /// CLI variables for debugging.
   llvm::cl::opt<bool> dumpObjectFile{
@@ -242,7 +242,8 @@ static Error compileAndExecuteVoidFunction(Options &options, ModuleOp module,
   if (!mainFunction || mainFunction.empty())
     return makeStringError("entry point not found");
   void *empty = nullptr;
-  return compileAndExecute(options, module, entryPoint, config, &empty);
+  return compileAndExecute(options, module, entryPoint, std::move(config),
+                           &empty);
 }
 
 template <typename Type>
@@ -297,8 +298,8 @@ Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
     void *data;
   } data;
   data.data = &res;
-  if (auto error = compileAndExecute(options, module, entryPoint, config,
-                                     (void **)&data))
+  if (auto error = compileAndExecute(options, module, entryPoint,
+                                     std::move(config), (void **)&data))
     return error;
 
   // Intentional printing of the output so we can test.

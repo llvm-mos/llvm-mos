@@ -27,6 +27,7 @@
 #include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/CallPrinter.h"
 #include "llvm/Analysis/CostModel.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DDG.h"
@@ -374,6 +375,17 @@ bool shouldPopulateClassToPassNames() {
          !printAfterPasses().empty();
 }
 
+// A pass for testing -print-on-crash.
+// DO NOT USE THIS EXCEPT FOR TESTING!
+class TriggerCrashPass : public PassInfoMixin<TriggerCrashPass> {
+public:
+  PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
+    abort();
+    return PreservedAnalyses::all();
+  }
+  static StringRef name() { return "TriggerCrashPass"; }
+};
+
 } // namespace
 
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
@@ -586,6 +598,10 @@ Expected<bool> parseSinglePassOption(StringRef Params, StringRef OptionName,
 
 Expected<bool> parseInlinerPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "only-mandatory", "InlinerPass");
+}
+
+Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "optimizing", "CoroSplitPass");
 }
 
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {

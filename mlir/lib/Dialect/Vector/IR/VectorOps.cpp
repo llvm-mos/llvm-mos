@@ -476,6 +476,12 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   case arith::AtomicRMWKind::maxu:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MAXUI, vector);
+  case arith::AtomicRMWKind::andi:
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::AND, vector);
+  case arith::AtomicRMWKind::ori:
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::OR, vector);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
@@ -486,6 +492,45 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
 
 Optional<SmallVector<int64_t, 4>> ReductionOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
+}
+
+namespace {
+struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ReductionOp reductionOp,
+                                PatternRewriter &rewriter) const override {
+    if (reductionOp.getVectorType().getDimSize(0) != 1)
+      return failure();
+
+    Location loc = reductionOp.getLoc();
+    Value result = rewriter.create<ExtractOp>(loc, reductionOp.getType(),
+                                              reductionOp.getVector(),
+                                              rewriter.getI64ArrayAttr(0));
+
+    if (Value acc = reductionOp.getAcc()) {
+      assert(reductionOp.getType().isa<FloatType>());
+      switch (reductionOp.getKind()) {
+      case CombiningKind::ADD:
+        result = rewriter.create<arith::AddFOp>(loc, result, acc);
+        break;
+      case CombiningKind::MUL:
+        result = rewriter.create<arith::MulFOp>(loc, result, acc);
+        break;
+      default:
+        assert(false && "invalid op!");
+      }
+    }
+
+    rewriter.replaceOp(reductionOp, result);
+    return success();
+  }
+};
+} // namespace
+
+void ReductionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<ElideSingleElementReduction>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1292,20 +1337,25 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   };
   unsigned broadcastSrcRank = getRank(source.getType());
   unsigned extractResultRank = getRank(extractOp.getType());
-  if (extractResultRank < broadcastSrcRank) {
-    auto extractPos = extractVector<int64_t>(extractOp.getPosition());
-    unsigned rankDiff = broadcastSrcRank - extractResultRank;
-    extractPos.erase(
-        extractPos.begin(),
-        std::next(extractPos.begin(), extractPos.size() - rankDiff));
-    extractOp.setOperand(source);
-    // OpBuilder is only used as a helper to build an I64ArrayAttr.
-    OpBuilder b(extractOp.getContext());
-    extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
-                       b.getI64ArrayAttr(extractPos));
-    return extractOp.getResult();
-  }
-  return Value();
+  if (extractResultRank >= broadcastSrcRank)
+    return Value();
+  // Check that the dimension of the result haven't been broadcasted.
+  auto extractVecType = extractOp.getType().dyn_cast<VectorType>();
+  auto broadcastVecType = source.getType().dyn_cast<VectorType>();
+  if (extractVecType && broadcastVecType &&
+      extractVecType.getShape() !=
+          broadcastVecType.getShape().take_back(extractResultRank))
+    return Value();
+  auto extractPos = extractVector<int64_t>(extractOp.getPosition());
+  unsigned rankDiff = broadcastSrcRank - extractResultRank;
+  extractPos.erase(extractPos.begin(),
+                   std::next(extractPos.begin(), extractPos.size() - rankDiff));
+  extractOp.setOperand(source);
+  // OpBuilder is only used as a helper to build an I64ArrayAttr.
+  OpBuilder b(extractOp.getContext());
+  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
+                     b.getI64ArrayAttr(extractPos));
+  return extractOp.getResult();
 }
 
 // Fold extractOp with source coming from ShapeCast op.
@@ -2820,7 +2870,8 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   ParseResult hasMask = parser.parseOptionalComma();
   if (hasMask.succeeded()) {
-    parser.parseOperand(maskInfo);
+    if (parser.parseOperand(maskInfo))
+      return failure();
   }
   if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.getCurrentLocation(&typesLoc) || parser.parseColonTypeList(types))
@@ -4083,7 +4134,7 @@ LogicalResult ShapeCastOp::verify() {
 }
 
 OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
-  // Nop shape cast.
+  // No-op shape cast.
   if (getSource().getType() == getResult().getType())
     return getSource();
 
@@ -4108,6 +4159,13 @@ OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
     setOperand(otherOp.getSource());
     return getResult();
   }
+
+  // Cancelling broadcast and shape cast ops.
+  if (auto bcastOp = getSource().getDefiningOp<BroadcastOp>()) {
+    if (bcastOp.getSourceType() == getType())
+      return bcastOp.getSource();
+  }
+
   return {};
 }
 
@@ -4181,9 +4239,13 @@ OpFoldResult BitCastOp::fold(ArrayRef<Attribute> operands) {
     return getSource();
 
   // Canceling bitcasts.
-  if (auto otherOp = getSource().getDefiningOp<BitCastOp>())
+  if (auto otherOp = getSource().getDefiningOp<BitCastOp>()) {
     if (getResult().getType() == otherOp.getSource().getType())
       return otherOp.getSource();
+
+    setOperand(otherOp.getSource());
+    return getResult();
+  }
 
   Attribute sourceConstant = operands.front();
   if (!sourceConstant)
@@ -4392,11 +4454,30 @@ struct FoldTransposedScalarBroadcast final
   }
 };
 
+// Folds transpose(splat x : src_type) : res_type into splat x : res_type.
+class FoldTransposeSplat final : public OpRewritePattern<TransposeOp> {
+public:
+  using OpRewritePattern<TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    auto splatOp = transposeOp.getVector().getDefiningOp<vector::SplatOp>();
+    if (!splatOp)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<vector::SplatOp>(
+        transposeOp, transposeOp.getResultType(), splatOp.getInput());
+    return success();
+  }
+};
+
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<FoldTransposedScalarBroadcast, TransposeFolder>(context);
+  results
+      .add<FoldTransposedScalarBroadcast, TransposeFolder, FoldTransposeSplat>(
+          context);
 }
 
 void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
@@ -4564,6 +4645,13 @@ LogicalResult ScanOp::verify() {
     return emitOpError("incompatible input/initial value shapes");
   }
 
+  // Verify supported reduction kind.
+  Type eltType = getDestType().getElementType();
+  if (!isSupportedCombiningKind(getKind(), eltType))
+    return emitOpError("unsupported reduction type ")
+           << eltType << " for kind '" << stringifyCombiningKind(getKind())
+           << "'";
+
   return success();
 }
 
@@ -4621,7 +4709,8 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand laneId;
 
   // Parse predicate operand.
-  if (parser.parseLParen() || parser.parseRegionArgument(laneId) ||
+  if (parser.parseLParen() ||
+      parser.parseOperand(laneId, /*allowResultNumber=*/false) ||
       parser.parseRParen())
     return failure();
 
@@ -4670,7 +4759,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
-  if (index.hasValue()) {
+  if (index) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }

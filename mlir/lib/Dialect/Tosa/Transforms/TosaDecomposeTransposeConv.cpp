@@ -1,5 +1,4 @@
-//===- TosaDecomposeTransposeConv.cpp
-//------------------------------------------===//
+//===- TosaDecomposeTransposeConv.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -131,7 +130,7 @@ public:
         loc, weightTy, reverse1, rewriter.getI64IntegerAttr(2));
 
     Value conv2d;
-    if (op.quantization_info().hasValue()) {
+    if (op.quantization_info()) {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
           rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
@@ -215,8 +214,7 @@ public:
       weight = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
           weightPaddingVal, nullptr,
-          PadOpQuantizationAttr::get(quantInfo.weight_zp(),
-                                     rewriter.getContext()));
+          rewriter.getAttr<PadOpQuantizationAttr>(quantInfo.getWeightZp()));
 
     } else {
       weight = createOpAndInfer<tosa::PadOp>(rewriter, loc,
@@ -280,8 +278,7 @@ public:
       input = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
           inputPaddingVal, nullptr,
-          PadOpQuantizationAttr::get(quantInfo.input_zp(),
-                                     rewriter.getContext()));
+          rewriter.getAttr<PadOpQuantizationAttr>(quantInfo.getInputZp()));
     } else {
       input = createOpAndInfer<tosa::PadOp>(rewriter, loc,
                                             UnrankedTensorType::get(inputETy),
@@ -300,7 +297,7 @@ public:
 
     // Perform the convolution using the zero bias.
     Value conv2d;
-    if (op.quantization_info().hasValue()) {
+    if (op.quantization_info()) {
       conv2d = createOpAndInfer<tosa::Conv2DOp>(
                    rewriter, loc, UnrankedTensorType::get(resultETy), input,
                    weight, zeroBias,

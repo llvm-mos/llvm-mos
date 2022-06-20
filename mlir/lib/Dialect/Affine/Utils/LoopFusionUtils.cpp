@@ -482,7 +482,7 @@ bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
   auto walkResult = forOpRoot.walk([&](AffineForOp forOp) {
     auto *childForOp = forOp.getOperation();
     auto *parentForOp = forOp->getParentOp();
-    if (!llvm::isa<FuncOp>(parentForOp)) {
+    if (!llvm::isa<func::FuncOp>(parentForOp)) {
       if (!isa<AffineForOp>(parentForOp)) {
         LLVM_DEBUG(llvm::dbgs() << "Expected parent AffineForOp\n");
         return WalkResult::interrupt();
@@ -503,7 +503,7 @@ bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
     // Record trip count for 'forOp'. Set flag if trip count is not
     // constant.
     Optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
-    if (!maybeConstTripCount.hasValue()) {
+    if (!maybeConstTripCount) {
       // Currently only constant trip count loop nests are supported.
       LLVM_DEBUG(llvm::dbgs() << "Non-constant trip count unsupported\n");
       return WalkResult::interrupt();

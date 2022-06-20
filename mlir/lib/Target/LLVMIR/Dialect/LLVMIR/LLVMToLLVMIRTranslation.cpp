@@ -157,7 +157,6 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
       {FastmathFlags::contract, &llvmFMF::setAllowContract},
       {FastmathFlags::afn,      &llvmFMF::setApproxFunc},
       {FastmathFlags::reassoc,  &llvmFMF::setAllowReassoc},
-      {FastmathFlags::fast,     &llvmFMF::setFast},
       // clang-format on
   };
   llvm::FastMathFlags ret;
@@ -220,7 +219,7 @@ static void setLoopMetadata(Operation &opInst, llvm::Instruction &llvmInst,
       auto loopAttr = attr.cast<DictionaryAttr>();
       auto parallelAccessGroup =
           loopAttr.getNamed(LLVMDialect::getParallelAccessAttrName());
-      if (parallelAccessGroup.hasValue()) {
+      if (parallelAccessGroup) {
         SmallVector<llvm::Metadata *> parallelAccess;
         parallelAccess.push_back(
             llvm::MDString::get(ctx, "llvm.loop.parallel_accesses"));

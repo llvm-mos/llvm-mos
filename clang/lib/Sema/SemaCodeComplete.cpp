@@ -1095,7 +1095,9 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
   if (const UsingShadowDecl *Using = dyn_cast<UsingShadowDecl>(R.Declaration)) {
     CodeCompletionResult Result(Using->getTargetDecl(),
                                 getBasePriority(Using->getTargetDecl()),
-                                R.Qualifier);
+                                R.Qualifier, false,
+                                (R.Availability == CXAvailability_Available ||
+                                 R.Availability == CXAvailability_Deprecated));
     Result.ShadowDecl = Using;
     MaybeAddResult(Result, CurContext);
     return;
@@ -1268,7 +1270,9 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
   if (const auto *Using = dyn_cast<UsingShadowDecl>(R.Declaration)) {
     CodeCompletionResult Result(Using->getTargetDecl(),
                                 getBasePriority(Using->getTargetDecl()),
-                                R.Qualifier);
+                                R.Qualifier, false,
+                                (R.Availability == CXAvailability_Available ||
+                                 R.Availability == CXAvailability_Deprecated));
     Result.ShadowDecl = Using;
     AddResult(Result, CurContext, Hiding);
     return;
@@ -2122,8 +2126,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       if (CCC == Sema::PCC_Class) {
         AddTypedefResult(Results);
 
-        bool IsNotInheritanceScope =
-            !(S->getFlags() & Scope::ClassInheritanceScope);
+        bool IsNotInheritanceScope = !S->isClassInheritanceScope();
         // public:
         Builder.AddTypedTextChunk("public");
         if (IsNotInheritanceScope && Results.includeCodePatterns())
@@ -4045,6 +4048,9 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::ObjCTypeParam:
     return CXCursor_TemplateTypeParameter;
 
+  case Decl::Concept:
+    return CXCursor_ConceptDecl;
+
   default:
     if (const auto *TD = dyn_cast<TagDecl>(D)) {
       switch (TD->getTagKind()) {
@@ -5639,7 +5645,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       // Objective-C property reference. Bail if we're performing fix-it code
       // completion since Objective-C properties are normally backed by ivars,
       // most Objective-C fix-its here would have little value.
-      if (AccessOpFixIt.hasValue()) {
+      if (AccessOpFixIt) {
         return false;
       }
       AddedPropertiesSet AddedProperties;
@@ -5664,7 +5670,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       // Objective-C instance variable access. Bail if we're performing fix-it
       // code completion since Objective-C properties are normally backed by
       // ivars, most Objective-C fix-its here would have little value.
-      if (AccessOpFixIt.hasValue()) {
+      if (AccessOpFixIt) {
         return false;
       }
       ObjCInterfaceDecl *Class = nullptr;

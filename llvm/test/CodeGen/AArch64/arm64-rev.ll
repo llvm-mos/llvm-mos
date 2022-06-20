@@ -559,10 +559,9 @@ define void @float_vrev64(float* nocapture %source, <4 x float>* nocapture %dest
 ; CHECK-LABEL: float_vrev64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    add x8, x0, #12
 ; CHECK-NEXT:    dup.4s v0, v0[0]
-; CHECK-NEXT:    ext.16b v0, v1, v0, #12
-; CHECK-NEXT:    rev64.4s v0, v0
+; CHECK-NEXT:    ld1.s { v0 }[1], [x8]
 ; CHECK-NEXT:    str q0, [x1, #176]
 ; CHECK-NEXT:    ret
 ;
@@ -949,4 +948,26 @@ entry:
   %6 = and i64 %0, 16711680
   %7 = or i64 %5, %6
   ret i64 %7
+}
+
+define i32 @pr55484(i32 %0) {
+; CHECK-LABEL: pr55484:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w0, #8
+; CHECK-NEXT:    orr w8, w8, w0, lsl #8
+; CHECK-NEXT:    sxth w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: pr55484:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    lsl w8, w0, #8
+; GISEL-NEXT:    orr w8, w8, w0, lsr #8
+; GISEL-NEXT:    sxth w0, w8
+; GISEL-NEXT:    ret
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
 }

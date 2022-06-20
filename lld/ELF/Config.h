@@ -199,6 +199,7 @@ struct Configuration {
   bool oFormatBinary;
   bool oFormatBinaryFromCLI = false;
   bool omagic;
+  bool opaquePointers;
   bool optEB = false;
   bool optEL = false;
   bool optimizeBBJumps;

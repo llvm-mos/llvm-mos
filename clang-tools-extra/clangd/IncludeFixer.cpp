@@ -197,8 +197,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_no_member_template:
   case diag::err_no_member_template_suggest:
   case diag::warn_implicit_function_decl:
-  case diag::ext_implicit_function_decl:
-  case diag::err_opencl_implicit_function_decl:
+  case diag::ext_implicit_function_decl_c99:
     dlog("Unresolved name at {0}, last typo was {1}",
          Info.getLocation().printToString(Info.getSourceManager()),
          LastUnresolvedName
@@ -241,7 +240,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
     if (Info.getNumArgs() > 0)
       if (auto Header = getArgStr(Info, 0))
         return only(insertHeader(("<" + *Header + ">").str(),
-                                 getArgStr(Info, 1).getValueOr("")));
+                                 getArgStr(Info, 1).value_or("")));
     break;
   }
 
@@ -545,7 +544,7 @@ IncludeFixer::unresolvedNameRecorder() {
 }
 
 std::vector<Fix> IncludeFixer::fixUnresolvedName() const {
-  assert(LastUnresolvedName.hasValue());
+  assert(LastUnresolvedName);
   auto &Unresolved = *LastUnresolvedName;
   vlog("Trying to fix unresolved name \"{0}\" in scopes: [{1}]",
        Unresolved.Name, llvm::join(Unresolved.Scopes, ", "));

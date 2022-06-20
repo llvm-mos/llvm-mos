@@ -94,8 +94,6 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/BranchProbability.h"
@@ -110,6 +108,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
@@ -173,14 +172,14 @@ static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
 // Command line option to set the maximum number of VP annotations to write to
 // the metadata for a single indirect call callsite.
 static cl::opt<unsigned> MaxNumAnnotations(
-    "icp-max-annotations", cl::init(3), cl::Hidden, cl::ZeroOrMore,
+    "icp-max-annotations", cl::init(3), cl::Hidden,
     cl::desc("Max number of annotations for a single indirect "
              "call callsite"));
 
 // Command line option to set the maximum number of value annotations
 // to write to the metadata for a single memop intrinsic.
 static cl::opt<unsigned> MaxNumMemOPAnnotations(
-    "memop-max-annotations", cl::init(4), cl::Hidden, cl::ZeroOrMore,
+    "memop-max-annotations", cl::init(4), cl::Hidden,
     cl::desc("Max number of preicise value annotations for a single memop"
              "intrinsic"));
 
@@ -256,7 +255,7 @@ static cl::opt<bool> PGOInstrumentEntry(
     cl::desc("Force to instrument function entry basicblock."));
 
 static cl::opt<bool> PGOFunctionEntryCoverage(
-    "pgo-function-entry-coverage", cl::init(false), cl::Hidden, cl::ZeroOrMore,
+    "pgo-function-entry-coverage", cl::Hidden,
     cl::desc(
         "Use this option to enable function entry coverage instrumentation."));
 
@@ -1608,7 +1607,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
   BlockFrequencyInfo NBFI(F, NBPI, LI);
 #ifndef NDEBUG
   auto BFIEntryCount = F.getEntryCount();
-  assert(BFIEntryCount.hasValue() && (BFIEntryCount->getCount() > 0) &&
+  assert(BFIEntryCount && (BFIEntryCount->getCount() > 0) &&
          "Invalid BFI Entrycount");
 #endif
   auto SumCount = APFloat::getZero(APFloat::IEEEdouble());
@@ -1965,6 +1964,8 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
                                            : Weights) {
     dbgs() << W << " ";
   } dbgs() << "\n";);
+
+  misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
   TI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
   if (EmitBranchProbability) {

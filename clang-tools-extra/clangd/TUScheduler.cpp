@@ -798,7 +798,7 @@ ASTWorker::~ASTWorker() {
 
 void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
                        bool ContentChanged) {
-  std::string TaskName = llvm::formatv("Update ({0})", Inputs.Version);
+  llvm::StringLiteral TaskName = "Update";
   auto Task = [=]() mutable {
     // Get the actual command as `Inputs` does not have a command.
     // FIXME: some build systems like Bazel will take time to preparing
@@ -1013,9 +1013,10 @@ void PreambleThread::build(Request Req) {
   bool IsFirstPreamble = !LatestBuild;
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
-      [this, Version(Inputs.Version)](ASTContext &Ctx, Preprocessor &PP,
-                                      const CanonicalIncludes &CanonIncludes) {
-        Callbacks.onPreambleAST(FileName, Version, Ctx, PP, CanonIncludes);
+      [&](ASTContext &Ctx, Preprocessor &PP,
+          const CanonicalIncludes &CanonIncludes) {
+        Callbacks.onPreambleAST(FileName, Inputs.Version, *Req.CI, Ctx, PP,
+                                CanonIncludes);
       },
       &Stats);
   if (!LatestBuild)

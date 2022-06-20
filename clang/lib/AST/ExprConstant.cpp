@@ -2552,18 +2552,15 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
   return true;
 }
 
-/// Get rounding mode used for evaluation of the specified expression.
-/// \param[out] DynamicRM Is set to true is the requested rounding mode is
-///                       dynamic.
+/// Get rounding mode to use in evaluation of the specified expression.
+///
 /// If rounding mode is unknown at compile time, still try to evaluate the
 /// expression. If the result is exact, it does not depend on rounding mode.
 /// So return "tonearest" mode instead of "dynamic".
-static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E,
-                                                bool &DynamicRM) {
+static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
   llvm::RoundingMode RM =
       E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).getRoundingMode();
-  DynamicRM = (RM == llvm::RoundingMode::Dynamic);
-  if (DynamicRM)
+  if (RM == llvm::RoundingMode::Dynamic)
     RM = llvm::RoundingMode::NearestTiesToEven;
   return RM;
 }
@@ -2613,8 +2610,7 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
                                    QualType SrcType, QualType DestType,
                                    APFloat &Result) {
   assert(isa<CastExpr>(E) || isa<CompoundAssignOperator>(E));
-  bool DynamicRM;
-  llvm::RoundingMode RM = getActiveRoundingMode(Info, E, DynamicRM);
+  llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St;
   APFloat Value = Result;
   bool ignored;
@@ -2849,8 +2845,7 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
 static bool handleFloatFloatBinOp(EvalInfo &Info, const BinaryOperator *E,
                                   APFloat &LHS, BinaryOperatorKind Opcode,
                                   const APFloat &RHS) {
-  bool DynamicRM;
-  llvm::RoundingMode RM = getActiveRoundingMode(Info, E, DynamicRM);
+  llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St;
   switch (Opcode) {
   default:
@@ -4259,9 +4254,33 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
         Info.FFDiag(Conv);
         return false;
       }
+
       APValue Lit;
       if (!Evaluate(Lit, Info, CLE->getInitializer()))
         return false;
+
+      // According to GCC info page:
+      //
+      // 6.28 Compound Literals
+      //
+      // As an optimization, G++ sometimes gives array compound literals longer
+      // lifetimes: when the array either appears outside a function or has a
+      // const-qualified type. If foo and its initializer had elements of type
+      // char *const rather than char *, or if foo were a global variable, the
+      // array would have static storage duration. But it is probably safest
+      // just to avoid the use of array compound literals in C++ code.
+      //
+      // Obey that rule by checking constness for converted array types.
+
+      QualType CLETy = CLE->getType();
+      if (CLETy->isArrayType() && !Type->isArrayType()) {
+        if (!CLETy.isConstant(Info.Ctx)) {
+          Info.FFDiag(Conv);
+          Info.Note(CLE->getExprLoc(), diag::note_declared_at);
+          return false;
+        }
+      }
+
       CompleteObject LitObj(LVal.Base, &Lit, Base->getType());
       return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal, AK);
     } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
@@ -6536,7 +6555,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
 
   // We don't have a good way to iterate fields in reverse, so collect all the
   // fields first and then walk them backwards.
-  SmallVector<FieldDecl*, 16> Fields(RD->field_begin(), RD->field_end());
+  SmallVector<FieldDecl*, 16> Fields(RD->fields());
   for (const FieldDecl *FD : llvm::reverse(Fields)) {
     if (FD->isUnnamedBitfield())
       continue;
@@ -8127,6 +8146,7 @@ public:
   bool VisitVarDecl(const Expr *E, const VarDecl *VD);
   bool VisitUnaryPreIncDec(const UnaryOperator *UO);
 
+  bool VisitCallExpr(const CallExpr *E);
   bool VisitDeclRefExpr(const DeclRefExpr *E);
   bool VisitPredefinedExpr(const PredefinedExpr *E) { return Success(E); }
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
@@ -8290,6 +8310,20 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
     return false;
   }
   return Success(*V, E);
+}
+
+bool LValueExprEvaluator::VisitCallExpr(const CallExpr *E) {
+  switch (E->getBuiltinCallee()) {
+  case Builtin::BIas_const:
+  case Builtin::BIforward:
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+    if (cast<FunctionDecl>(E->getCalleeDecl())->isConstexpr())
+      return Visit(E->getArg(0));
+    break;
+  }
+
+  return ExprEvaluatorBaseTy::VisitCallExpr(E);
 }
 
 bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
@@ -8557,7 +8591,7 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
     Into = ExprResult.Val.getInt();
     if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
       return false;
-    Into = Into.zextOrSelf(BitsInSizeT);
+    Into = Into.zext(BitsInSizeT);
     return true;
   };
 
@@ -8616,7 +8650,7 @@ static bool evaluateLValueAsAllocSize(EvalInfo &Info, APValue::LValueBase Base,
     return false;
 
   const Expr *Init = VD->getAnyInitializer();
-  if (!Init)
+  if (!Init || Init->getType().isNull())
     return false;
 
   const Expr *E = Init->IgnoreParens();
@@ -9070,6 +9104,8 @@ static bool isOneByteCharacterType(QualType T) {
 bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                                 unsigned BuiltinOp) {
   switch (BuiltinOp) {
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
     return evaluateLValue(E->getArg(0), Result);
   case Builtin::BI__builtin_assume_aligned: {
@@ -9541,8 +9577,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
       unsigned Bits =
           std::max(CAT->getSize().getBitWidth(), ArrayBound.getBitWidth());
-      llvm::APInt InitBound = CAT->getSize().zextOrSelf(Bits);
-      llvm::APInt AllocBound = ArrayBound.zextOrSelf(Bits);
+      llvm::APInt InitBound = CAT->getSize().zext(Bits);
+      llvm::APInt AllocBound = ArrayBound.zext(Bits);
       if (InitBound.ugt(AllocBound)) {
         if (IsNothrow)
           return ZeroInitialization(E);
@@ -10336,9 +10372,9 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
       for (unsigned i = 0; i < NElts; i++) {
         llvm::APInt Elt;
         if (BigEndian)
-          Elt = SValInt.rotl(i*EltSize+FloatEltSize).trunc(FloatEltSize);
+          Elt = SValInt.rotl(i * EltSize + FloatEltSize).trunc(FloatEltSize);
         else
-          Elt = SValInt.rotr(i*EltSize).trunc(FloatEltSize);
+          Elt = SValInt.rotr(i * EltSize).trunc(FloatEltSize);
         Elts.push_back(APValue(APFloat(Sem, Elt)));
       }
     } else if (EltTy->isIntegerType()) {
@@ -13839,10 +13875,12 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_huge_val:
   case Builtin::BI__builtin_huge_valf:
   case Builtin::BI__builtin_huge_vall:
+  case Builtin::BI__builtin_huge_valf16:
   case Builtin::BI__builtin_huge_valf128:
   case Builtin::BI__builtin_inf:
   case Builtin::BI__builtin_inff:
   case Builtin::BI__builtin_infl:
+  case Builtin::BI__builtin_inff16:
   case Builtin::BI__builtin_inff128: {
     const llvm::fltSemantics &Sem =
       Info.Ctx.getFloatTypeSemantics(E->getType());
@@ -13853,6 +13891,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_nans:
   case Builtin::BI__builtin_nansf:
   case Builtin::BI__builtin_nansl:
+  case Builtin::BI__builtin_nansf16:
   case Builtin::BI__builtin_nansf128:
     if (!TryEvaluateBuiltinNaN(Info.Ctx, E->getType(), E->getArg(0),
                                true, Result))
@@ -13862,6 +13901,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_nan:
   case Builtin::BI__builtin_nanf:
   case Builtin::BI__builtin_nanl:
+  case Builtin::BI__builtin_nanf16:
   case Builtin::BI__builtin_nanf128:
     // If this is __builtin_nan() turn this into a nan, otherwise we
     // can't constant fold it.

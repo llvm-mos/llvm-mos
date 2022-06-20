@@ -2282,7 +2282,7 @@ def fir_CallOp : fir_Op<"call", [CallOpInterface]> {
   let hasCustomAssemblyFormat = 1;
 
   let builders = [
-    OpBuilder<(ins "mlir::FuncOp":$callee,
+    OpBuilder<(ins "mlir::func::FuncOp":$callee,
         CArg<"mlir::ValueRange", "{}">:$operands)>,
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
         "llvm::ArrayRef<mlir::Type>":$results,
@@ -2559,16 +2559,13 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
-    Or<[CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::CharacterType>()">,
-        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::ComplexType>()">,
-        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::IntegerType>()">,
-        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::LogicalType>()">,
-        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::RealType>()">,
-        CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::RecordType>()">]>]>,
+    Or<[CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::CharacterType,"
+              "fir::ComplexType, fir::IntegerType, fir::LogicalType,"
+              "fir::RealType, fir::RecordType>()">]>]>,
     "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
   let returnType = "mlir::Type";
-  let convertFromStorage = "$_self.getValue().cast<Type>()";
+  let convertFromStorage = "$_self.getValue().cast<mlir::Type>()";
 }
 
 def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
@@ -2579,7 +2576,7 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
     is `!fir.tdesc<T>`.
 
     ```mlir
-      !T = type !fir.type<T{...}>
+      !T = !fir.type<T{...}>
       %t = fir.gentypedesc !T  // returns value of !fir.tdesc<!T>
     ```
   }];
@@ -2689,7 +2686,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     mlir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
-    mlir::Attribute getValueOrNull() { return getInitVal().getValueOr(mlir::Attribute()); }
+    mlir::Attribute getValueOrNull() { return getInitVal().value_or(mlir::Attribute()); }
 
     /// Append the next initializer value to the `GlobalOp` to construct
     /// the variable's initial value.

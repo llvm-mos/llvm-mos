@@ -215,13 +215,17 @@ StringRef AttrOrTypeParameter::getName() const {
   return def->getArgName(index)->getValue();
 }
 
+std::string AttrOrTypeParameter::getAccessorName() const {
+  return "get" +
+         llvm::convertToCamelFromSnakeCase(getName(), /*capitalizeFirst=*/true);
+}
+
 Optional<StringRef> AttrOrTypeParameter::getAllocator() const {
   return getDefValue<llvm::StringInit>("allocator");
 }
 
 StringRef AttrOrTypeParameter::getComparator() const {
-  return getDefValue<llvm::StringInit>("comparator")
-      .getValueOr("$_lhs == $_rhs");
+  return getDefValue<llvm::StringInit>("comparator").value_or("$_lhs == $_rhs");
 }
 
 StringRef AttrOrTypeParameter::getCppType() const {
@@ -237,12 +241,11 @@ StringRef AttrOrTypeParameter::getCppType() const {
 
 StringRef AttrOrTypeParameter::getCppAccessorType() const {
   return getDefValue<llvm::StringInit>("cppAccessorType")
-      .getValueOr(getCppType());
+      .value_or(getCppType());
 }
 
 StringRef AttrOrTypeParameter::getCppStorageType() const {
-  return getDefValue<llvm::StringInit>("cppStorageType")
-      .getValueOr(getCppType());
+  return getDefValue<llvm::StringInit>("cppStorageType").value_or(getCppType());
 }
 
 Optional<StringRef> AttrOrTypeParameter::getParser() const {
@@ -260,12 +263,12 @@ Optional<StringRef> AttrOrTypeParameter::getSummary() const {
 StringRef AttrOrTypeParameter::getSyntax() const {
   if (auto *stringType = dyn_cast<llvm::StringInit>(getDef()))
     return stringType->getValue();
-  return getDefValue<llvm::StringInit>("syntax").getValueOr(getCppType());
+  return getDefValue<llvm::StringInit>("syntax").value_or(getCppType());
 }
 
 bool AttrOrTypeParameter::isOptional() const {
   // Parameters with default values are automatically optional.
-  return getDefValue<llvm::BitInit>("isOptional").getValueOr(false) ||
+  return getDefValue<llvm::BitInit>("isOptional").value_or(false) ||
          getDefaultValue().hasValue();
 }
 

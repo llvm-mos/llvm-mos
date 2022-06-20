@@ -326,7 +326,7 @@ static Block *getCommonBlock(const MemRefAccess &srcAccess,
 
   if (numCommonLoops == 0) {
     Block *block = srcAccess.opInst->getBlock();
-    while (!llvm::isa<FuncOp>(block->getParentOp())) {
+    while (!llvm::isa<func::FuncOp>(block->getParentOp())) {
       block = block->getParentOp()->getBlock();
     }
     return block;
@@ -448,10 +448,10 @@ static void computeDirectionVector(
     (*dependenceComponents)[j].op = commonLoops[j].getOperation();
     auto lbConst = dependenceDomain->getConstantBound(IntegerPolyhedron::LB, j);
     (*dependenceComponents)[j].lb =
-        lbConst.getValueOr(std::numeric_limits<int64_t>::min());
+        lbConst.value_or(std::numeric_limits<int64_t>::min());
     auto ubConst = dependenceDomain->getConstantBound(IntegerPolyhedron::UB, j);
     (*dependenceComponents)[j].ub =
-        ubConst.getValueOr(std::numeric_limits<int64_t>::max());
+        ubConst.value_or(std::numeric_limits<int64_t>::max());
   }
 }
 

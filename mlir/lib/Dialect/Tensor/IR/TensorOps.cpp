@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -227,11 +229,58 @@ struct ChainedTensorCast : public OpRewritePattern<CastOp> {
   }
 };
 
+/// Fold tensor.cast into tesor.extract_slice producer.
+/// Example:
+/// ```
+///  %0 = tensor.extract_slice %arg0[%o, 0] [%s, 512] [1, 1] :
+///    tensor<128x512xf32> to tensor<?x512xf32>
+///  %1 = tensor.cast %0 : tensor<?x512xf32> to tensor<16x512xf32>
+/// ```
+/// ->
+/// ```
+/// %1 = tensor.extract_slice %arg0[%o, 0] [16, 512] [1, 1] :
+///   tensor<128x512xf32> to tensor<16x512xf32>
+/// ```
+struct TensorCastExtractSlice : public OpRewritePattern<CastOp> {
+  using OpRewritePattern<CastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CastOp tensorCast,
+                                PatternRewriter &rewriter) const final {
+    auto extractOperand =
+        tensorCast.getOperand().getDefiningOp<ExtractSliceOp>();
+
+    if (!extractOperand || !canFoldIntoProducerOp(tensorCast) ||
+        tensorCast.getType().getShape() ==
+            tensorCast.source().getType().cast<RankedTensorType>().getShape())
+      return failure();
+
+    SmallVector<OpFoldResult, 4> sizes = extractOperand.getMixedSizes();
+    auto dimMask = computeRankReductionMask(
+        extractFromI64ArrayAttr(extractOperand.static_sizes()),
+        extractOperand.getType().getShape());
+    size_t dimIndex = 0;
+    for (size_t i = 0, e = sizes.size(); i < e; i++) {
+      if (dimMask && dimMask->count(i))
+        continue;
+      int64_t dim = tensorCast.getType().getShape()[dimIndex++];
+      if (ShapedType::isDynamic(dim))
+        continue;
+      sizes[i] = rewriter.getIndexAttr(dim);
+    }
+
+    rewriter.replaceOpWithNewOp<ExtractSliceOp>(
+        tensorCast, tensorCast.getType().cast<RankedTensorType>(),
+        extractOperand.source(), extractOperand.getMixedOffsets(), sizes,
+        extractOperand.getMixedStrides());
+    return success();
+  }
+};
+
 } // namespace
 
 void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<ChainedTensorCast>(context);
+  results.add<ChainedTensorCast, TensorCastExtractSlice>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -254,7 +303,7 @@ Optional<int64_t> DimOp::getConstantIndex() {
 LogicalResult DimOp::verify() {
   // Assume unknown index to be in range.
   Optional<int64_t> index = getConstantIndex();
-  if (!index.hasValue())
+  if (!index)
     return success();
 
   // Check that constant index is not knowingly out of range.
@@ -361,16 +410,13 @@ LogicalResult ExtractOp::verify() {
 }
 
 OpFoldResult ExtractOp::fold(ArrayRef<Attribute> operands) {
-  // The tensor operand must be a known constant.
-  Attribute tensor = operands.front();
-  if (!tensor)
-    return {};
   // If this is a splat elements attribute, simply return the value. All of the
   // elements of a splat attribute are the same.
-  if (auto splatTensor = tensor.dyn_cast<SplatElementsAttr>())
-    return splatTensor.getSplatValue<Attribute>();
+  if (Attribute tensor = operands.front())
+    if (auto splatTensor = tensor.dyn_cast<SplatElementsAttr>())
+      return splatTensor.getSplatValue<Attribute>();
 
-  // Otherwise, collect the constant indices into the tensor.
+  // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
   for (Attribute indice : llvm::drop_begin(operands, 1)) {
     if (!indice || !indice.isa<IntegerAttr>())
@@ -378,10 +424,34 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute> operands) {
     indices.push_back(indice.cast<IntegerAttr>().getInt());
   }
 
+  // Fold extract(from_elements(...)).
+  if (auto fromElementsOp = tensor().getDefiningOp<FromElementsOp>()) {
+    auto tensorType = fromElementsOp.getType().cast<RankedTensorType>();
+    auto rank = tensorType.getRank();
+    assert(static_cast<int64_t>(indices.size()) == tensorType.getRank() &&
+           "rank mismatch");
+    int flatIndex = 0;
+    int stride = 1;
+    for (int i = rank - 1; i >= 0; --i) {
+      if (i < rank - 1)
+        stride *= tensorType.getDimSize(i);
+      flatIndex += indices[i] * stride;
+    }
+    // Prevent out of bounds accesses. This can happen in invalid code that will
+    // never execute.
+    if (static_cast<int>(fromElementsOp.elements().size()) <= flatIndex ||
+        flatIndex < 0)
+      return {};
+    return fromElementsOp.elements()[flatIndex];
+  }
+
   // If this is an elements attribute, query the value at the given indices.
-  auto elementsAttr = tensor.dyn_cast<ElementsAttr>();
-  if (elementsAttr && elementsAttr.isValidIndex(indices))
-    return elementsAttr.getValues<Attribute>()[indices];
+  if (Attribute tensor = operands.front()) {
+    auto elementsAttr = tensor.dyn_cast<ElementsAttr>();
+    if (elementsAttr && elementsAttr.isValidIndex(indices))
+      return elementsAttr.getValues<Attribute>()[indices];
+  }
+
   return {};
 }
 
@@ -410,47 +480,6 @@ OpFoldResult FromElementsOp::fold(ArrayRef<Attribute> operands) {
 }
 
 namespace {
-
-// Canonicalizes the pattern of the form
-//
-// %tensor = tensor.from_elements(%element) : (i32) -> tensor<1xi32>
-// %extracted_element = tensor.extract %tensor[%c0] : tensor<1xi32>
-//
-// to just %element.
-struct ExtractElementFromTensorFromElements
-    : public OpRewritePattern<tensor::ExtractOp> {
-  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
-                                PatternRewriter &rewriter) const final {
-    auto tensorFromElements = extract.tensor().getDefiningOp<FromElementsOp>();
-    if (!tensorFromElements)
-      return failure();
-    auto tensorType = tensorFromElements.getType().cast<RankedTensorType>();
-    auto rank = tensorType.getRank();
-    if (rank == 0) {
-      rewriter.replaceOp(extract, tensorFromElements.getOperand(0));
-      return success();
-    }
-    SmallVector<APInt, 3> indices(rank);
-    int64_t flatIndex = 0;
-    int64_t stride = 1;
-    for (int i = rank - 1; i >= 0; --i) {
-      APInt index;
-      if (!matchPattern(extract.indices()[i], m_ConstantInt(&index)))
-        return failure();
-      if (i < rank - 1)
-        stride *= tensorType.getDimSize(i);
-      flatIndex += index.getSExtValue() * stride;
-    }
-    // Prevent out of bounds accesses. This can happen in invalid code that will
-    // never execute.
-    if (tensorFromElements->getNumOperands() <= flatIndex || flatIndex < 0)
-      return failure();
-    rewriter.replaceOp(extract, tensorFromElements.getOperand(flatIndex));
-    return success();
-  }
-};
 
 // Pushes the index_casts that occur before extractions to after the extract.
 // This minimizes type conversion in some cases and enables the extract
@@ -494,9 +523,7 @@ struct ExtractElementFromIndexCast
 
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results
-      .add<ExtractElementFromIndexCast, ExtractElementFromTensorFromElements>(
-          context);
+  results.add<ExtractElementFromIndexCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -660,7 +687,7 @@ struct ExtractFromTensorGenerate : public OpRewritePattern<tensor::ExtractOp> {
       return failure();
 
     BlockAndValueMapping mapping;
-    Block *body = tensorFromElements.getBody();
+    Block *body = &tensorFromElements.getBody().front();
     mapping.map(body->getArguments(), extract.indices());
     for (auto &op : body->without_terminator())
       rewriter.clone(op, mapping);
@@ -813,7 +840,7 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
       getSymbolLessAffineMaps(
           convertReassociationIndicesToExprs(b.getContext(), reassociation)));
   build(b, result, resultType, src, attrs);
-  result.addAttribute(getReassociationAttrName(),
+  result.addAttribute(getReassociationAttrStrName(),
                       getReassociationIndicesAttribute(b, reassociation));
 }
 
@@ -857,7 +884,7 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
     if (!attr || !attr.isSplat())
       return failure();
     DenseElementsAttr newAttr = DenseElementsAttr::getFromRawBuffer(
-        reshapeOp.getResultType(), attr.getRawData(), true);
+        reshapeOp.getResultType(), attr.getRawData());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(reshapeOp, newAttr);
     return success();
   }

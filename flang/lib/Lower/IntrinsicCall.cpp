@@ -19,7 +19,6 @@
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
-#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -32,6 +31,7 @@
 #include "flang/Optimizer/Builder/Runtime/Reduction.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Runtime/Transformational.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -573,8 +573,9 @@ struct IntrinsicLibrary {
                            llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <typename GeneratorType>
-  mlir::FuncOp getWrapper(GeneratorType, llvm::StringRef name,
-                          mlir::FunctionType, bool loadRefArguments = false);
+  mlir::func::FuncOp getWrapper(GeneratorType, llvm::StringRef name,
+                                mlir::FunctionType,
+                                bool loadRefArguments = false);
 
   /// Generate calls to ElementalGenerator, handling the elemental aspects
   template <typename GeneratorType>
@@ -1226,11 +1227,12 @@ private:
   bool infinite = false; // When forbidden conversion or wrong argument number
 };
 
-/// Build mlir::FuncOp from runtime symbol description and add
+/// Build mlir::func::FuncOp from runtime symbol description and add
 /// fir.runtime attribute.
-static mlir::FuncOp getFuncOp(mlir::Location loc, fir::FirOpBuilder &builder,
-                              const RuntimeFunction &runtime) {
-  mlir::FuncOp function = builder.addNamedFunction(
+static mlir::func::FuncOp getFuncOp(mlir::Location loc,
+                                    fir::FirOpBuilder &builder,
+                                    const RuntimeFunction &runtime) {
+  mlir::func::FuncOp function = builder.addNamedFunction(
       loc, runtime.symbol, runtime.typeGenerator(builder.getContext()));
   function->setAttr("fir.runtime", builder.getUnitAttr());
   return function;
@@ -1239,8 +1241,8 @@ static mlir::FuncOp getFuncOp(mlir::Location loc, fir::FirOpBuilder &builder,
 /// Select runtime function that has the smallest distance to the intrinsic
 /// function type and that will not imply narrowing arguments or extending the
 /// result.
-/// If nothing is found, the mlir::FuncOp will contain a nullptr.
-mlir::FuncOp searchFunctionInLibrary(
+/// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
+mlir::func::FuncOp searchFunctionInLibrary(
     mlir::Location loc, fir::FirOpBuilder &builder,
     const Fortran::common::StaticMultimapView<RuntimeFunction> &lib,
     llvm::StringRef name, mlir::FunctionType funcType,
@@ -1266,14 +1268,14 @@ mlir::FuncOp searchFunctionInLibrary(
 /// Search runtime for the best runtime function given an intrinsic name
 /// and interface. The interface may not be a perfect match in which case
 /// the caller is responsible to insert argument and return value conversions.
-/// If nothing is found, the mlir::FuncOp will contain a nullptr.
-static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
-                                       fir::FirOpBuilder &builder,
-                                       llvm::StringRef name,
-                                       mlir::FunctionType funcType) {
+/// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
+static mlir::func::FuncOp getRuntimeFunction(mlir::Location loc,
+                                             fir::FirOpBuilder &builder,
+                                             llvm::StringRef name,
+                                             mlir::FunctionType funcType) {
   const RuntimeFunction *bestNearMatch = nullptr;
   FunctionDistance bestMatchDistance{};
-  mlir::FuncOp match;
+  mlir::func::FuncOp match;
   using RtMap = Fortran::common::StaticMultimapView<RuntimeFunction>;
   static constexpr RtMap pgmathF(pgmathFast);
   static_assert(pgmathF.Verify() && "map must be sorted");
@@ -1300,7 +1302,7 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
   // mathRuntimeVersion == llvmOnly
   static constexpr RtMap llvmIntr(llvmIntrinsics);
   static_assert(llvmIntr.Verify() && "map must be sorted");
-  if (mlir::FuncOp exactMatch =
+  if (mlir::func::FuncOp exactMatch =
           searchFunctionInLibrary(loc, builder, llvmIntr, name, funcType,
                                   &bestNearMatch, bestMatchDistance))
     return exactMatch;
@@ -1577,12 +1579,12 @@ IntrinsicLibrary::invokeGenerator(SubroutineGenerator generator,
 }
 
 template <typename GeneratorType>
-mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
-                                          llvm::StringRef name,
-                                          mlir::FunctionType funcType,
-                                          bool loadRefArguments) {
+mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
+                                                llvm::StringRef name,
+                                                mlir::FunctionType funcType,
+                                                bool loadRefArguments) {
   std::string wrapperName = fir::mangleIntrinsicProcedure(name, funcType);
-  mlir::FuncOp function = builder.getNamedFunction(wrapperName);
+  mlir::func::FuncOp function = builder.getNamedFunction(wrapperName);
   if (!function) {
     // First time this wrapper is needed, build it.
     function = builder.createFunction(loc, wrapperName, funcType);
@@ -1663,7 +1665,7 @@ IntrinsicLibrary::outlineInWrapper(GeneratorType generator,
   }
 
   mlir::FunctionType funcType = getFunctionType(resultType, args, builder);
-  mlir::FuncOp wrapper = getWrapper(generator, name, funcType);
+  mlir::func::FuncOp wrapper = getWrapper(generator, name, funcType);
   return builder.create<fir::CallOp>(loc, wrapper, args).getResult(0);
 }
 
@@ -1679,7 +1681,7 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
   for (const auto &extendedVal : args)
     mlirArgs.emplace_back(toValue(extendedVal, builder, loc));
   mlir::FunctionType funcType = getFunctionType(resultType, mlirArgs, builder);
-  mlir::FuncOp wrapper = getWrapper(generator, name, funcType);
+  mlir::func::FuncOp wrapper = getWrapper(generator, name, funcType);
   auto call = builder.create<fir::CallOp>(loc, wrapper, mlirArgs);
   if (resultType)
     return toExtendedValue(call.getResult(0), builder, loc);
@@ -1690,7 +1692,8 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
 IntrinsicLibrary::RuntimeCallGenerator
 IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
                                           mlir::FunctionType soughtFuncType) {
-  mlir::FuncOp funcOp = getRuntimeFunction(loc, builder, name, soughtFuncType);
+  mlir::func::FuncOp funcOp =
+      getRuntimeFunction(loc, builder, name, soughtFuncType);
   if (!funcOp) {
     std::string buffer("not yet implemented: missing intrinsic lowering: ");
     llvm::raw_string_ostream sstream(buffer);
@@ -1722,7 +1725,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
   // So instead of duplicating the runtime, just have the wrappers loading
   // this before calling the code generators.
   bool loadRefArguments = true;
-  mlir::FuncOp funcOp;
+  mlir::func::FuncOp funcOp;
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
     funcOp = std::visit(
         [&](auto generator) {
@@ -2423,7 +2426,8 @@ void IntrinsicLibrary::genGetCommandArgument(
         fir::runtime::genArgumentValue(builder, loc, number, valBox, errBox);
     if (isStaticallyPresent(status)) {
       mlir::Value statAddr = fir::getBase(status);
-      mlir::Value statIsPresentAtRuntime = builder.genIsNotNull(loc, statAddr);
+      mlir::Value statIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statAddr);
       builder.genIfThen(loc, statIsPresentAtRuntime)
           .genThen(
               [&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
@@ -2432,7 +2436,7 @@ void IntrinsicLibrary::genGetCommandArgument(
   }
   if (isStaticallyPresent(length)) {
     mlir::Value lenAddr = fir::getBase(length);
-    mlir::Value lenIsPresentAtRuntime = builder.genIsNotNull(loc, lenAddr);
+    mlir::Value lenIsPresentAtRuntime = builder.genIsNotNullAddr(loc, lenAddr);
     builder.genIfThen(loc, lenIsPresentAtRuntime)
         .genThen([&]() {
           mlir::Value len =
@@ -2462,7 +2466,7 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
     mlir::Type i1Ty = builder.getI1Type();
     mlir::Value trimNameAddr = fir::getBase(trimName);
     mlir::Value trimNameIsPresentAtRuntime =
-        builder.genIsNotNull(loc, trimNameAddr);
+        builder.genIsNotNullAddr(loc, trimNameAddr);
     trim = builder
                .genIfOp(loc, {i1Ty}, trimNameIsPresentAtRuntime,
                         /*withElseRegion=*/true)
@@ -2493,7 +2497,8 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
                                                          valBox, trim, errBox);
     if (isStaticallyPresent(status)) {
       mlir::Value statAddr = fir::getBase(status);
-      mlir::Value statIsPresentAtRuntime = builder.genIsNotNull(loc, statAddr);
+      mlir::Value statIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statAddr);
       builder.genIfThen(loc, statIsPresentAtRuntime)
           .genThen(
               [&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
@@ -2503,7 +2508,7 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
 
   if (isStaticallyPresent(length)) {
     mlir::Value lenAddr = fir::getBase(length);
-    mlir::Value lenIsPresentAtRuntime = builder.genIsNotNull(loc, lenAddr);
+    mlir::Value lenIsPresentAtRuntime = builder.genIsNotNullAddr(loc, lenAddr);
     builder.genIfThen(loc, lenIsPresentAtRuntime)
         .genThen([&]() {
           mlir::Value len =
@@ -2611,6 +2616,8 @@ IntrinsicLibrary::genIchar(mlir::Type resultType,
   }
   LLVM_DEBUG(llvm::dbgs() << "ichar(" << charVal << ")\n");
   auto code = helper.extractCodeFromSingleton(charVal);
+  if (code.getType() == resultType)
+    return code;
   return builder.create<mlir::arith::ExtUIOp>(loc, resultType, code);
 }
 
@@ -3306,7 +3313,7 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
     return builder.createConvert(
         loc, resultType, fir::runtime::genSizeDim(builder, loc, array, dim));
 
-  mlir::Value isDynamicallyAbsent = builder.genIsNull(loc, dim);
+  mlir::Value isDynamicallyAbsent = builder.genIsNullAddr(loc, dim);
   return builder
       .genIfOp(loc, {resultType}, isDynamicallyAbsent,
                /*withElseRegion=*/true)
@@ -3358,7 +3365,7 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
 fir::ExtendedValue
 IntrinsicLibrary::genLbound(mlir::Type resultType,
                             llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() > 0);
+  assert(args.size() == 2 || args.size() == 3);
   const fir::ExtendedValue &array = args[0];
   if (const auto *boxValue = array.getBoxOf<fir::BoxValue>())
     if (boxValue->hasAssumedRank())
@@ -3367,7 +3374,10 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
   //===----------------------------------------------------------------------===//
   mlir::Type indexType = builder.getIndexType();
 
-  if (isStaticallyAbsent(args, 1)) {
+  // Semantics builds signatures for LBOUND calls as either
+  // LBOUND(array, dim, [kind]) or LBOUND(array, [kind]).
+  if (args.size() == 2 || isStaticallyAbsent(args, 1)) {
+    // DIM is absent.
     mlir::Type lbType = fir::unwrapSequenceType(resultType);
     unsigned rank = array.rank();
     mlir::Type lbArrayType = fir::SequenceType::get(

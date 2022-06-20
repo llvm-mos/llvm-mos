@@ -22,7 +22,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
@@ -44,7 +44,7 @@ struct AffineIfAnalysis;
 /// these analysis are used twice, first for marking operations for rewrite and
 /// second when doing rewrite.
 struct AffineFunctionAnalysis {
-  explicit AffineFunctionAnalysis(mlir::FuncOp funcOp) {
+  explicit AffineFunctionAnalysis(mlir::func::FuncOp funcOp) {
     for (fir::DoLoopOp op : funcOp.getOps<fir::DoLoopOp>())
       loopAnalysisMap.try_emplace(op, op, *this);
   }

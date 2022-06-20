@@ -1603,7 +1603,7 @@ ScalarExprEmitter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
       Context.getTargetInfo().getConstantAddressSpace();
   llvm::Constant *GlobalConstStr = Builder.CreateGlobalStringPtr(
       E->ComputeName(Context), "__usn_str",
-      static_cast<unsigned>(GlobalAS.getValueOr(LangAS::Default)));
+      static_cast<unsigned>(GlobalAS.value_or(LangAS::Default)));
 
   unsigned ExprAS = Context.getTargetAddressSpace(E->getType());
 
@@ -4642,7 +4642,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
     return tmp5;
   }
 
-  if (condExpr->getType()->isVectorType()) {
+  if (condExpr->getType()->isVectorType() ||
+      condExpr->getType()->isVLSTBuiltinType()) {
     CGF.incrementProfileCounter(E);
 
     llvm::Value *CondV = CGF.EmitScalarExpr(condExpr);

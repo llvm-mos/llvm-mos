@@ -31,11 +31,11 @@ namespace llvm {
 void MOSMCELFStreamer::initSections(bool NoExecStack,
                                     const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
-  SwitchSection(Ctx.getObjectFileInfo()->getTextSection());
+  switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(1, &STI);
 
   if (NoExecStack)
-    SwitchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+    switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
 }
 
 void MOSMCELFStreamer::changeSection(MCSection *Section, const MCExpr *Subsection) {

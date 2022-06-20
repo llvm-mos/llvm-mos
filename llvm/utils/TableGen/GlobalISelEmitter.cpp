@@ -466,9 +466,9 @@ public:
   MatchTableRecord(Optional<unsigned> LabelID_, StringRef EmitStr,
                    unsigned NumElements, unsigned Flags,
                    int64_t RawValue = std::numeric_limits<int64_t>::min())
-      : LabelID(LabelID_.getValueOr(~0u)), EmitStr(EmitStr),
+      : LabelID(LabelID_.value_or(~0u)), EmitStr(EmitStr),
         NumElements(NumElements), Flags(Flags), RawValue(RawValue) {
-    assert((!LabelID_.hasValue() || LabelID != ~0u) &&
+    assert((!LabelID_ || LabelID != ~0u) &&
            "This value is reserved for non-labels");
   }
   MatchTableRecord(const MatchTableRecord &Other) = default;
@@ -3816,12 +3816,15 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
       if (!ParsedAddrSpaces.empty()) {
         InsnMatcher.addPredicate<MemoryAddressSpacePredicateMatcher>(
             0, ParsedAddrSpaces);
+        return InsnMatcher;
       }
     }
 
     int64_t MinAlign = Predicate.getMinAlignment();
-    if (MinAlign > 0)
+    if (MinAlign > 0) {
       InsnMatcher.addPredicate<MemoryAlignmentPredicateMatcher>(0, MinAlign);
+      return InsnMatcher;
+    }
   }
 
   // G_LOAD is used for both non-extending and any-extending loads.
@@ -4270,7 +4273,7 @@ Error GlobalISelEmitter::importChildMatcher(
 
     auto MaybeInsnOperand = OM.addPredicate<InstructionOperandMatcher>(
         InsnMatcher.getRuleMatcher(), SrcChild->getName());
-    if (!MaybeInsnOperand.hasValue()) {
+    if (!MaybeInsnOperand) {
       // This isn't strictly true. If the user were to provide exactly the same
       // matchers as the original operand then we could allow it. However, it's
       // simpler to not permit the redundant specification.
@@ -4401,7 +4404,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     TreePatternNode *DstChild) {
 
   const auto &SubOperand = Rule.getComplexSubOperand(DstChild->getName());
-  if (SubOperand.hasValue()) {
+  if (SubOperand) {
     DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
         *std::get<0>(*SubOperand), DstChild->getName(),
         std::get<1>(*SubOperand), std::get<2>(*SubOperand));
@@ -4803,7 +4806,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
     const auto SrcRCDstRCPair =
       RC->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
-    if (SrcRCDstRCPair.hasValue()) {
+    if (SrcRCDstRCPair) {
       assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
       if (SrcRCDstRCPair->first != RC)
         return failedImport("EXTRACT_SUBREG requires an additional COPY");

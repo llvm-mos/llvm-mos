@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -98,7 +99,7 @@ static cl::opt<bool>
                            cl::init(false), cl::Hidden);
 
 static cl::opt<int> ColdCCRelFreq(
-    "coldcc-rel-freq", cl::Hidden, cl::init(2), cl::ZeroOrMore,
+    "coldcc-rel-freq", cl::Hidden, cl::init(2),
     cl::desc(
         "Maximum block frequency, expressed as a percentage of caller's "
         "entry frequency, for a call site to be considered cold for enabling"
@@ -607,17 +608,14 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
       // Will trap.
     } else if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
       if (SI->getOperand(0) == V) {
-        //cerr << "NONTRAPPING USE: " << *U;
         return false;  // Storing the value.
       }
     } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
       if (CI->getCalledOperand() != V) {
-        //cerr << "NONTRAPPING USE: " << *U;
         return false;  // Not calling the ptr
       }
     } else if (const InvokeInst *II = dyn_cast<InvokeInst>(U)) {
       if (II->getCalledOperand() != V) {
-        //cerr << "NONTRAPPING USE: " << *U;
         return false;  // Not calling the ptr
       }
     } else if (const BitCastInst *CI = dyn_cast<BitCastInst>(U)) {
@@ -641,7 +639,6 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
       // the comparing of the value of the created global init bool later in
       // optimizeGlobalAddressOfAllocation for the global variable.
     } else {
-      //cerr << "NONTRAPPING USE: " << *U;
       return false;
     }
   }
@@ -904,7 +901,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
     }
   }
 
-  SmallPtrSet<Constant *, 1> RepValues;
+  SmallSetVector<Constant *, 1> RepValues;
   RepValues.insert(NewGV);
 
   // If there is a comparison against null, we will insert a global bool to
@@ -1041,7 +1038,6 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
 /// accessing the data, and exposes the resultant global to further GlobalOpt.
 static bool tryToOptimizeStoreOfAllocationToGlobal(GlobalVariable *GV,
                                                    CallInst *CI,
-                                                   AtomicOrdering Ordering,
                                                    const DataLayout &DL,
                                                    TargetLibraryInfo *TLI) {
   if (!isAllocRemovable(CI, TLI))
@@ -1088,7 +1084,7 @@ static bool tryToOptimizeStoreOfAllocationToGlobal(GlobalVariable *GV,
 // its initializer) is ever stored to the global.
 static bool
 optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
-                         AtomicOrdering Ordering, const DataLayout &DL,
+                         const DataLayout &DL,
                          function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   // Ignore no-op GEPs and bitcasts.
   StoredOnceVal = StoredOnceVal->stripPointerCasts();
@@ -1113,7 +1109,7 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
     } else if (isAllocationFn(StoredOnceVal, GetTLI)) {
       if (auto *CI = dyn_cast<CallInst>(StoredOnceVal)) {
         auto *TLI = &GetTLI(*CI->getFunction());
-        if (tryToOptimizeStoreOfAllocationToGlobal(GV, CI, Ordering, DL, TLI))
+        if (tryToOptimizeStoreOfAllocationToGlobal(GV, CI, DL, TLI))
           return true;
       }
     }
@@ -1598,7 +1594,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 
     // Try to optimize globals based on the knowledge that only one value
     // (besides its initializer) is ever stored to the global.
-    if (optimizeOnceStoredGlobal(GV, StoredOnceValue, GS.Ordering, DL, GetTLI))
+    if (optimizeOnceStoredGlobal(GV, StoredOnceValue, DL, GetTLI))
       return true;
 
     // Otherwise, if the global was not a boolean, we can shrink it to be a
@@ -1781,7 +1777,7 @@ hasOnlyColdCalls(Function &F,
           return false;
         if (!CalledFn->hasLocalLinkage())
           return false;
-        // Skip over instrinsics since they won't remain as function calls.
+        // Skip over intrinsics since they won't remain as function calls.
         if (CalledFn->getIntrinsicID() != Intrinsic::not_intrinsic)
           continue;
         // Check if it's valid to use coldcc calling convention.
@@ -2057,6 +2053,9 @@ OptimizeGlobalVars(Module &M,
 /// can, false otherwise.
 static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
                                       TargetLibraryInfo *TLI) {
+  // Skip external functions.
+  if (F->isDeclaration())
+    return false;
   // Call the function.
   Evaluator Eval(DL, TLI);
   Constant *RetValDummy;
@@ -2418,6 +2417,8 @@ static bool optimizeGlobalsInModule(
   SmallPtrSet<const Comdat *, 8> NotDiscardableComdats;
   bool Changed = false;
   bool LocalChange = true;
+  Optional<uint32_t> FirstNotFullyEvaluatedPriority;
+
   while (LocalChange) {
     LocalChange = false;
 
@@ -2440,9 +2441,16 @@ static bool optimizeGlobalsInModule(
                                      NotDiscardableComdats);
 
     // Optimize global_ctors list.
-    LocalChange |= optimizeGlobalCtorsList(M, [&](Function *F) {
-      return EvaluateStaticConstructor(F, DL, &GetTLI(*F));
-    });
+    LocalChange |=
+        optimizeGlobalCtorsList(M, [&](uint32_t Priority, Function *F) {
+          if (FirstNotFullyEvaluatedPriority &&
+              *FirstNotFullyEvaluatedPriority != Priority)
+            return false;
+          bool Evaluated = EvaluateStaticConstructor(F, DL, &GetTLI(*F));
+          if (!Evaluated)
+            FirstNotFullyEvaluatedPriority = Priority;
+          return Evaluated;
+        });
 
     // Optimize non-address-taken globals.
     LocalChange |= OptimizeGlobalVars(M, GetTTI, GetTLI, LookupDomTree,

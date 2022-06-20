@@ -639,6 +639,7 @@ struct TupleExpander : SetTheory::Expander {
       Def->getValueAsListOfStrings("RegAsmNames");
 
     // Zip them up.
+    RecordKeeper &RK = Def->getRecords();
     for (unsigned n = 0; n != Length; ++n) {
       std::string Name;
       Record *Proto = Lists[0][n];
@@ -655,13 +656,13 @@ struct TupleExpander : SetTheory::Expander {
       SmallVector<Init *, 2> CostPerUse;
       CostPerUse.insert(CostPerUse.end(), CostList->begin(), CostList->end());
 
-      StringInit *AsmName = StringInit::get("");
+      StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
         if (RegNames.size() <= n)
           PrintFatalError(Def->getLoc(),
                           "Register tuple definition missing name for '" +
                             Name + "'.");
-        AsmName = StringInit::get(RegNames[n]);
+        AsmName = StringInit::get(RK, RegNames[n]);
       }
 
       // Create a new Record representing the synthesized register. This record
@@ -700,7 +701,7 @@ struct TupleExpander : SetTheory::Expander {
 
         // Composite registers are always covered by sub-registers.
         if (Field == "CoveredBySubRegs")
-          RV.setValue(BitInit::get(true));
+          RV.setValue(BitInit::get(RK, true));
 
         // Copy fields from the RegisterTuples def.
         if (Field == "SubRegIndices" ||

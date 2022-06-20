@@ -524,44 +524,16 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       (ins "ValueRange":$inputs, "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
-        $_state.addOperands(inputs);
-        $_state.addOperands(outputs);
-        SmallVector<Type> resultTensorTypes;
-        copy_if(outputs.getTypes(),
-                std::back_inserter(resultTensorTypes),
-                [](Type type) {{ return type.isa<RankedTensorType>(); });
-        $_state.addTypes(resultTensorTypes);
-        $_state.addAttribute(
-          "operand_segment_sizes",
-          $_builder.getI32VectorAttr({{
-            static_cast<int32_t>(inputs.size()),
-            static_cast<int32_t>(outputs.size())}));
-        $_state.addAttributes(attributes);
-        createAndFillStructuredOpRegion<{0}>(
-          $_builder,
-          $_state,
-          TypeRange(inputs),
-          TypeRange(outputs));
+        buildStructuredOp($_builder, $_state, llvm::None, inputs, outputs,
+          attributes, {0}::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
             "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
-        $_state.addOperands(inputs);
-        $_state.addOperands(outputs);
-        $_state.addTypes(resultTensorTypes);
-        $_state.addAttributes(attributes);
-        $_state.addAttribute(
-          "operand_segment_sizes",
-          $_builder.getI32VectorAttr({{
-            static_cast<int32_t>(inputs.size()),
-            static_cast<int32_t>(outputs.size())}));
-        createAndFillStructuredOpRegion<{0}>(
-          $_builder,
-          $_state,
-          TypeRange(inputs),
-          TypeRange(outputs));
+        buildStructuredOp($_builder, $_state, resultTensorTypes,
+          inputs, outputs, attributes, {0}::getRegionBuilder());
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
@@ -608,21 +580,9 @@ static const char structuredOpBuilderFormat[] = R"FMT(
        "ValueRange":$outputs, {1},
        CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
   [{{
-    $_state.addOperands(inputs);
-    $_state.addOperands(outputs);
-    $_state.addTypes(resultTensorTypes);
     {2}
-    $_state.addAttributes(attributes);
-    $_state.addAttribute(
-      "operand_segment_sizes",
-      $_builder.getI32VectorAttr({{
-        static_cast<int32_t>(inputs.size()),
-        static_cast<int32_t>(outputs.size())}));
-    createAndFillStructuredOpRegion<{0}>(
-      $_builder,
-      $_state,
-      TypeRange(inputs),
-      TypeRange(outputs));
+    buildStructuredOp($_builder, $_state, resultTensorTypes, inputs, outputs,
+      attributes, {0}::getRegionBuilder());
   }]>
 )FMT";
 
@@ -705,10 +665,11 @@ void {0}::getEffects(SmallVectorImpl<
 // {0}: Class name
 static const char structuredOpParserFormat[] = R"FMT(
 ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
-  return ::parseNamedStructuredOp<{0}>(parser, result);
+  return ::parseNamedStructuredOp(parser, result,
+    {0}::getNumRegionArgs(), {0}::getRegionBuilder());
 }
 void {0}::print(OpAsmPrinter &p) {{
-  ::printNamedStructuredOp(p, *this);
+  ::printNamedStructuredOp(p, getOperation(), inputs(), outputs());
 }
 )FMT";
 
@@ -757,7 +718,7 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
       static const char stmtFmt[] = "$_state.addAttribute(\"{0}\", {0});";
       // Add the type conversion attributes to the op definition and builders.
       if (isFunctionAttribute(arg.kind)) {
-        assert(arg.defaultFn.hasValue());
+        assert(arg.defaultFn);
         std::string enumName = convertOperandKindToEnumName(arg.kind);
         static const char typeFmt[] = "{0}::{1}";
         static const char defFmt[] = "DefaultValuedAttr<{0}, \"{1}\">:${2}";
@@ -900,7 +861,7 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
           if (arg.kind != LinalgOperandDefKind::IndexAttr)
             continue;
-          assert(arg.indexAttrMap.hasValue());
+          assert(arg.indexAttrMap);
           for (auto &en :
                llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
             if (auto symbol = en.value().dyn_cast<AffineSymbolExpr>()) {
@@ -997,7 +958,7 @@ std::string {0}::getLibraryCallName() {{
     for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
       if (arg.kind != LinalgOperandDefKind::IndexAttr)
         continue;
-      assert(arg.indexAttrMap.hasValue());
+      assert(arg.indexAttrMap);
       // Verify index attribute. Paramters:
       // {0}: Attribute name
       // {1}: Attribute size

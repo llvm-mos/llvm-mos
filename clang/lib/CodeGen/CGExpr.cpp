@@ -757,23 +757,23 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     }
   }
 
-  uint64_t AlignVal = 0;
+  llvm::MaybeAlign AlignVal;
   llvm::Value *PtrAsInt = nullptr;
 
   if (SanOpts.has(SanitizerKind::Alignment) &&
       !SkippedChecks.has(SanitizerKind::Alignment)) {
-    AlignVal = Alignment.getQuantity();
+    AlignVal = Alignment.getAsMaybeAlign();
     if (!Ty->isIncompleteType() && !AlignVal)
       AlignVal = CGM.getNaturalTypeAlignment(Ty, nullptr, nullptr,
                                              /*ForPointeeType=*/true)
-                     .getQuantity();
+                     .getAsMaybeAlign();
 
     // The glvalue must be suitably aligned.
-    if (AlignVal > 1 &&
-        (!PtrToAlloca || PtrToAlloca->getAlignment() < AlignVal)) {
+    if (AlignVal && *AlignVal > llvm::Align(1) &&
+        (!PtrToAlloca || PtrToAlloca->getAlign() < *AlignVal)) {
       PtrAsInt = Builder.CreatePtrToInt(Ptr, IntPtrTy);
       llvm::Value *Align = Builder.CreateAnd(
-          PtrAsInt, llvm::ConstantInt::get(IntPtrTy, AlignVal - 1));
+          PtrAsInt, llvm::ConstantInt::get(IntPtrTy, AlignVal->value() - 1));
       llvm::Value *Aligned =
           Builder.CreateICmpEQ(Align, llvm::ConstantInt::get(IntPtrTy, 0));
       if (Aligned != True)
@@ -782,12 +782,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   }
 
   if (Checks.size() > 0) {
-    // Make sure we're not losing information. Alignment needs to be a power of
-    // 2
-    assert(!AlignVal || (uint64_t)1 << llvm::Log2_64(AlignVal) == AlignVal);
     llvm::Constant *StaticData[] = {
         EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(Ty),
-        llvm::ConstantInt::get(Int8Ty, AlignVal ? llvm::Log2_64(AlignVal) : 1),
+        llvm::ConstantInt::get(Int8Ty, AlignVal ? llvm::Log2(*AlignVal) : 1),
         llvm::ConstantInt::get(Int8Ty, TCK)};
     EmitCheck(Checks, SanitizerHandler::TypeMismatch, StaticData,
               PtrAsInt ? PtrAsInt : Ptr);
@@ -1167,6 +1164,22 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
       if (BaseInfo) *BaseInfo = LV.getBaseInfo();
       if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
       return LV.getAddress(*this);
+    }
+  }
+
+  // std::addressof and variants.
+  if (auto *Call = dyn_cast<CallExpr>(E)) {
+    switch (Call->getBuiltinCallee()) {
+    default:
+      break;
+    case Builtin::BIaddressof:
+    case Builtin::BI__addressof:
+    case Builtin::BI__builtin_addressof: {
+      LValue LV = EmitLValue(Call->getArg(0));
+      if (BaseInfo) *BaseInfo = LV.getBaseInfo();
+      if (TBAAInfo) *TBAAInfo = LV.getTBAAInfo();
+      return LV.getAddress(*this);
+    }
     }
   }
 
@@ -5018,7 +5031,16 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
   if (auto builtinID = FD->getBuiltinID()) {
+    std::string NoBuiltinFD = ("no-builtin-" + FD->getName()).str();
+    std::string NoBuiltins = "no-builtins";
     std::string FDInlineName = (FD->getName() + ".inline").str();
+
+    bool IsPredefinedLibFunction =
+        CGF.getContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
+    bool HasAttributeNoBuiltin =
+        CGF.CurFn->getAttributes().hasFnAttr(NoBuiltinFD) ||
+        CGF.CurFn->getAttributes().hasFnAttr(NoBuiltins);
+
     // When directing calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
@@ -5038,8 +5060,11 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
 
     // Replaceable builtins provide their own implementation of a builtin. If we
     // are in an inline builtin implementation, avoid trivial infinite
-    // recursion.
-    else
+    // recursion. Honor __attribute__((no_builtin("foo"))) or
+    // __attribute__((no_builtin)) on the current function unless foo is
+    // not a predefined library function which means we must generate the
+    // builtin no matter what.
+    else if (!IsPredefinedLibFunction || !HasAttributeNoBuiltin)
       return CGCallee::forBuiltin(builtinID, FD);
   }
 

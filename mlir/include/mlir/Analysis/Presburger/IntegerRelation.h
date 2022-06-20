@@ -24,6 +24,9 @@
 namespace mlir {
 namespace presburger {
 
+class IntegerRelation;
+class IntegerPolyhedron;
+
 /// An IntegerRelation represents the set of points from a PresburgerSpace that
 /// satisfy a list of affine constraints. Affine constraints can be inequalities
 /// or equalities in the form:
@@ -49,7 +52,6 @@ public:
   enum class Kind {
     FlatAffineConstraints,
     FlatAffineValueConstraints,
-    MultiAffineFunction,
     IntegerRelation,
     IntegerPolyhedron,
   };
@@ -457,25 +459,43 @@ public:
   void removeDuplicateDivs();
 
   /// Converts identifiers of kind srcKind in the range [idStart, idLimit) to
-  /// variables of kind dstKind and placed after all the other variables of kind
-  /// dstKind. The internal ordering among the moved variables is preserved.
+  /// variables of kind dstKind. If `pos` is given, the variables are placed at
+  /// position `pos` of dstKind, otherwise they are placed after all the other
+  /// variables of kind dstKind. The internal ordering among the moved variables
+  /// is preserved.
   void convertIdKind(IdKind srcKind, unsigned idStart, unsigned idLimit,
-                     IdKind dstKind);
+                     IdKind dstKind, unsigned pos);
+  void convertIdKind(IdKind srcKind, unsigned idStart, unsigned idLimit,
+                     IdKind dstKind) {
+    convertIdKind(srcKind, idStart, idLimit, dstKind, getNumIdKind(dstKind));
+  }
   void convertToLocal(IdKind kind, unsigned idStart, unsigned idLimit) {
     convertIdKind(kind, idStart, idLimit, IdKind::Local);
   }
 
   /// Adds additional local ids to the sets such that they both have the union
   /// of the local ids in each set, without changing the set of points that
-  /// lie in `this` and `other`. The ordering of the local ids in the
-  /// sets may also be changed. After merging, if the `i^th` local variable in
-  /// one set has a known division representation, then the `i^th` local
-  /// variable in the other set either has the same division representation or
-  /// no known division representation.
+  /// lie in `this` and `other`.
   ///
-  /// The number of dimensions and symbol ids in `this` and `other` should
-  /// match.
-  void mergeLocalIds(IntegerRelation &other);
+  /// While taking union, if a local id in `other` has a division representation
+  /// which is a duplicate of division representation, of another local id, it
+  /// is not added to the final union of local ids and is instead merged. The
+  /// new ordering of local ids is:
+  ///
+  /// [Local ids of `this`] [Non-merged local ids of `other`]
+  ///
+  /// The relative ordering of local ids is same as before.
+  ///
+  /// After merging, if the `i^th` local variable in one set has a known
+  /// division representation, then the `i^th` local variable in the other set
+  /// either has the same division representation or no known division
+  /// representation.
+  ///
+  /// The spaces of both relations should be compatible.
+  ///
+  /// Returns the number of non-merged local ids of `other`, i.e. the number of
+  /// locals that have been added to `this`.
+  unsigned mergeLocalIds(IntegerRelation &other);
 
   /// Changes the partition between dimensions and symbols. Depending on the new
   /// symbol count, either a chunk of dimensional identifiers immediately before
@@ -484,6 +504,56 @@ public:
   void setDimSymbolSeparation(unsigned newSymbolCount) {
     space.setDimSymbolSeparation(newSymbolCount);
   }
+
+  /// Return a set corresponding to all points in the domain of the relation.
+  IntegerPolyhedron getDomainSet() const;
+
+  /// Return a set corresponding to all points in the range of the relation.
+  IntegerPolyhedron getRangeSet() const;
+
+  /// Intersect the given `poly` with the domain in-place.
+  ///
+  /// Formally, let the relation `this` be R: A -> B and poly is C, then this
+  /// operation modifies R to be (A intersection C) -> B.
+  void intersectDomain(const IntegerPolyhedron &poly);
+
+  /// Intersect the given `poly` with the range in-place.
+  ///
+  /// Formally, let the relation `this` be R: A -> B and poly is C, then this
+  /// operation modifies R to be A -> (B intersection C).
+  void intersectRange(const IntegerPolyhedron &poly);
+
+  /// Invert the relation i.e., swap its domain and range.
+  ///
+  /// Formally, let the relation `this` be R: A -> B, then this operation
+  /// modifies R to be B -> A.
+  void inverse();
+
+  /// Let the relation `this` be R1, and the relation `rel` be R2. Modifies R1
+  /// to be the composition of R1 and R2: R1;R2.
+  ///
+  /// Formally, if R1: A -> B, and R2: B -> C, then this function returns a
+  /// relation R3: A -> C such that a point (a, c) belongs to R3 iff there
+  /// exists b such that (a, b) is in R1 and, (b, c) is in R2.
+  void compose(const IntegerRelation &rel);
+
+  /// Given a relation `rel`, apply the relation to the domain of this relation.
+  ///
+  /// R1: i -> j : (0 <= i < 2, j = i)
+  /// R2: i -> k : (k = i floordiv 2)
+  /// R3: k -> j : (0 <= k < 1, 2k <=  j <= 2k + 1)
+  ///
+  /// R1 = {(0, 0), (1, 1)}. R2 maps both 0 and 1 to 0.
+  /// So R3 = {(0, 0), (0, 1)}.
+  ///
+  /// Formally, R1.applyDomain(R2) = R2.inverse().compose(R1).
+  void applyDomain(const IntegerRelation &rel);
+
+  /// Given a relation `rel`, apply the relation to the range of this relation.
+  ///
+  /// Formally, R1.applyRange(R2) is the same as R1.compose(R2) but we provide
+  /// this for uniformity with `applyDomain`.
+  void applyRange(const IntegerRelation &rel);
 
   void print(raw_ostream &os) const;
   void dump() const;
@@ -631,6 +701,21 @@ public:
       : IntegerPolyhedron(/*numReservedInequalities=*/0,
                           /*numReservedEqualities=*/0,
                           /*numReservedCols=*/space.getNumIds() + 1, space) {}
+
+  /// Construct a set from an IntegerRelation. The relation should have
+  /// no domain ids.
+  explicit IntegerPolyhedron(const IntegerRelation &rel)
+      : IntegerRelation(rel) {
+    assert(space.getNumDomainIds() == 0 &&
+           "Number of domain id's should be zero in Set kind space.");
+  }
+
+  /// Construct a set from an IntegerRelation, but instead of creating a copy,
+  /// use move constructor. The relation should have no domain ids.
+  explicit IntegerPolyhedron(IntegerRelation &&rel) : IntegerRelation(rel) {
+    assert(space.getNumDomainIds() == 0 &&
+           "Number of domain id's should be zero in Set kind space.");
+  }
 
   /// Return a system with no constraints, i.e., one which is satisfied by all
   /// points.

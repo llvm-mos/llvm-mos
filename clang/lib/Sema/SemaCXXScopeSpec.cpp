@@ -292,11 +292,6 @@ bool Sema::ActOnCXXGlobalScopeSpecifier(SourceLocation CCLoc,
 bool Sema::ActOnSuperScopeSpecifier(SourceLocation SuperLoc,
                                     SourceLocation ColonColonLoc,
                                     CXXScopeSpec &SS) {
-  if (getCurLambda()) {
-    Diag(SuperLoc, diag::err_super_in_lambda_unsupported);
-    return true;
-  }
-
   CXXRecordDecl *RD = nullptr;
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
     if (S->isFunctionScope()) {
@@ -312,6 +307,9 @@ bool Sema::ActOnSuperScopeSpecifier(SourceLocation SuperLoc,
 
   if (!RD) {
     Diag(SuperLoc, diag::err_invalid_super_scope);
+    return true;
+  } else if (RD->isLambda()) {
+    Diag(SuperLoc, diag::err_super_in_lambda_unsupported);
     return true;
   } else if (RD->getNumBases() == 0) {
     Diag(SuperLoc, diag::err_no_base_classes) << RD->getName();
@@ -830,10 +828,14 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   }
 
   if (!Found.empty()) {
-    if (TypeDecl *TD = Found.getAsSingle<TypeDecl>())
+    if (TypeDecl *TD = Found.getAsSingle<TypeDecl>()) {
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
           << Context.getTypeDeclType(TD) << getLangOpts().CPlusPlus;
-    else {
+    } else if (Found.getAsSingle<TemplateDecl>()) {
+      ParsedType SuggestedType;
+      DiagnoseUnknownTypeName(IdInfo.Identifier, IdInfo.IdentifierLoc, S, &SS,
+                              SuggestedType);
+    } else {
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
           << IdInfo.Identifier << getLangOpts().CPlusPlus;
       if (NamedDecl *ND = Found.getAsSingle<NamedDecl>())
@@ -852,7 +854,6 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
 
 bool Sema::ActOnCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool EnteringContext, CXXScopeSpec &SS,
-                                       bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon,
                                        bool OnlyNamespace) {
   if (SS.isInvalid())

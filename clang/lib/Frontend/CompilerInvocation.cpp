@@ -108,6 +108,20 @@ using namespace options;
 using namespace llvm::opt;
 
 //===----------------------------------------------------------------------===//
+// Helpers.
+//===----------------------------------------------------------------------===//
+
+// Parse misexpect tolerance argument value.
+// Valid option values are integers in the range [0, 100)
+inline Expected<Optional<uint64_t>> parseToleranceOption(StringRef Arg) {
+  int64_t Val;
+  if (Arg.getAsInteger(10, Val))
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Not an integer: %s", Arg.data());
+  return Val;
+}
+
+//===----------------------------------------------------------------------===//
 // Initialization.
 //===----------------------------------------------------------------------===//
 
@@ -802,18 +816,6 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
 #include "clang/Driver/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
-  if (Opts.AnalysisStoreOpt != RegionStoreModel) {
-    switch (Opts.AnalysisStoreOpt) {
-#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN)                           \
-  case NAME##Model:                                                            \
-    GenerateArg(Args, OPT_analyzer_store, CMDFLAG, SA);                        \
-    break;
-#include "clang/StaticAnalyzer/Core/Analyses.def"
-    default:
-      llvm_unreachable("Tried to generate unknown analysis store.");
-    }
-  }
-
   if (Opts.AnalysisConstraintsOpt != RangeConstraintsModel) {
     switch (Opts.AnalysisConstraintsOpt) {
 #define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN)                     \
@@ -901,20 +903,13 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 #include "clang/Driver/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
-  if (Arg *A = Args.getLastArg(OPT_analyzer_store)) {
-    StringRef Name = A->getValue();
-    AnalysisStores Value = llvm::StringSwitch<AnalysisStores>(Name)
-#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN) \
-      .Case(CMDFLAG, NAME##Model)
-#include "clang/StaticAnalyzer/Core/Analyses.def"
-      .Default(NumStores);
-    if (Value == NumStores) {
-      Diags.Report(diag::err_drv_invalid_value)
-        << A->getAsString(Args) << Name;
-    } else {
-      Opts.AnalysisStoreOpt = Value;
-    }
-  }
+  if (Args.hasArg(OPT_analyzer_store))
+    Diags.Report(diag::warn_analyzer_deprecated_option) << "-analyzer-store"
+                                                        << "clang-16";
+  if (Args.hasArg(OPT_analyzer_opt_analyze_nested_blocks))
+    Diags.Report(diag::warn_analyzer_deprecated_option)
+        << "-analyzer-opt-analyze-nested-blocks"
+        << "clang-16";
 
   if (Arg *A = Args.getLastArg(OPT_analyzer_constraints)) {
     StringRef Name = A->getValue();
@@ -1098,25 +1093,22 @@ static void initOption(AnalyzerOptions::ConfigTable &Config,
 static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
                                  DiagnosticsEngine *Diags) {
   // TODO: There's no need to store the entire configtable, it'd be plenty
-  // enough tostore checker options.
+  // enough to store checker options.
 
 #define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
   initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, DEFAULT_VAL);
-
-#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
-                                           SHALLOW_VAL, DEEP_VAL)              \
-  switch (AnOpts.getUserMode()) {                                              \
-  case UMK_Shallow:                                                            \
-    initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, SHALLOW_VAL);       \
-    break;                                                                     \
-  case UMK_Deep:                                                               \
-    initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, DEEP_VAL);          \
-    break;                                                                     \
-  }                                                                            \
-
+#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(...)
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
-#undef ANALYZER_OPTION
-#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
+
+  assert(AnOpts.UserMode == "shallow" || AnOpts.UserMode == "deep");
+  const bool InShallowMode = AnOpts.UserMode == "shallow";
+
+#define ANALYZER_OPTION(...)
+#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
+                                             SHALLOW_VAL, DEEP_VAL)            \
+  initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG,                       \
+             InShallowMode ? SHALLOW_VAL : DEEP_VAL);
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
 
   // At this point, AnalyzerOptions is configured. Let's validate some options.
 
@@ -1490,6 +1482,9 @@ void CompilerInvocation::GenerateCodeGenArgs(
   else if (Opts.CFProtectionBranch)
     GenerateArg(Args, OPT_fcf_protection_EQ, "branch", SA);
 
+  if (Opts.IBTSeal)
+    GenerateArg(Args, OPT_mibt_seal, SA);
+
   for (const auto &F : Opts.LinkBitcodeFiles) {
     bool Builtint = F.LinkFlags == llvm::Linker::Flags::LinkOnlyNeeded &&
                     F.PropagateAttrs && F.Internalize;
@@ -1509,7 +1504,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
   if (Opts.FPDenormalMode != llvm::DenormalMode::getIEEE())
     GenerateArg(Args, OPT_fdenormal_fp_math_EQ, Opts.FPDenormalMode.str(), SA);
 
-  if (Opts.FP32DenormalMode != llvm::DenormalMode::getIEEE())
+  if ((Opts.FPDenormalMode != Opts.FP32DenormalMode) ||
+      (Opts.FP32DenormalMode != llvm::DenormalMode::getIEEE()))
     GenerateArg(Args, OPT_fdenormal_fp_math_f32_EQ, Opts.FP32DenormalMode.str(),
                 SA);
 
@@ -1546,6 +1542,9 @@ void CompilerInvocation::GenerateCodeGenArgs(
                   ? Twine(*Opts.DiagnosticsHotnessThreshold)
                   : "auto",
               SA);
+
+  GenerateArg(Args, OPT_fdiagnostics_misexpect_tolerance_EQ,
+              Twine(*Opts.DiagnosticsMisExpectTolerance), SA);
 
   for (StringRef Sanitizer : serializeSanitizerKinds(Opts.SanitizeRecover))
     GenerateArg(Args, OPT_fsanitize_recover_EQ, Sanitizer, SA);
@@ -1859,6 +1858,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
     StringRef Val = A->getValue();
     Opts.FPDenormalMode = llvm::parseDenormalFPAttribute(Val);
+    Opts.FP32DenormalMode = Opts.FPDenormalMode;
     if (!Opts.FPDenormalMode.isValid())
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
@@ -1956,6 +1956,23 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           !UsingProfile)
         Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
             << "-fdiagnostics-hotness-threshold=";
+    }
+  }
+
+  if (auto *arg =
+          Args.getLastArg(options::OPT_fdiagnostics_misexpect_tolerance_EQ)) {
+    auto ResultOrErr = parseToleranceOption(arg->getValue());
+
+    if (!ResultOrErr) {
+      Diags.Report(diag::err_drv_invalid_diagnotics_misexpect_tolerance)
+          << "-fdiagnostics-misexpect-tolerance=";
+    } else {
+      Opts.DiagnosticsMisExpectTolerance = *ResultOrErr;
+      if ((!Opts.DiagnosticsMisExpectTolerance.hasValue() ||
+           Opts.DiagnosticsMisExpectTolerance.getValue() > 0) &&
+          !UsingProfile)
+        Diags.Report(diag::warn_drv_diagnostics_misexpect_requires_pgo)
+            << "-fdiagnostics-misexpect-tolerance=";
     }
   }
 
@@ -3477,8 +3494,8 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fclang_abi_compat_EQ, "11.0", SA);
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver12)
     GenerateArg(Args, OPT_fclang_abi_compat_EQ, "12.0", SA);
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver13)
-    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "13.0", SA);
+  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver14)
+    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "14.0", SA);
 
   if (Opts.getSignReturnAddressScope() ==
       LangOptions::SignReturnAddressScopeKind::All)
@@ -3499,6 +3516,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fexperimental_relative_cxx_abi_vtables, SA);
   else
     GenerateArg(Args, OPT_fno_experimental_relative_cxx_abi_vtables, SA);
+
+  if (Opts.UseTargetPathSeparator)
+    GenerateArg(Args, OPT_ffile_reproducible, SA);
+  else
+    GenerateArg(Args, OPT_fno_file_reproducible, SA);
 
   for (const auto &MP : Opts.MacroPrefixMap)
     GenerateArg(Args, OPT_fmacro_prefix_map_EQ, MP.first + "=" + MP.second, SA);
@@ -3689,8 +3711,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     VersionTuple GNUCVer;
     bool Invalid = GNUCVer.tryParse(A->getValue());
     unsigned Major = GNUCVer.getMajor();
-    unsigned Minor = GNUCVer.getMinor().getValueOr(0);
-    unsigned Patch = GNUCVer.getSubminor().getValueOr(0);
+    unsigned Minor = GNUCVer.getMinor().value_or(0);
+    unsigned Patch = GNUCVer.getSubminor().value_or(0);
     if (Invalid || GNUCVer.getBuild() || Minor >= 100 || Patch >= 100) {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -3698,28 +3720,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.GNUCVersion = Major * 100 * 100 + Minor * 100 + Patch;
   }
 
-  // In AIX OS, the -mignore-xcoff-visibility is enable by default if there is
-  // no -fvisibility=* option.
-  // This is the reason why '-fvisibility' needs to be always generated:
-  // its absence implies '-mignore-xcoff-visibility'.
-  //
-  // Suppose the original cc1 command line does contain '-fvisibility default':
-  // '-mignore-xcoff-visibility' should not be implied.
-  // * If '-fvisibility' is not generated (as most options with default values
-  //   don't), its absence would imply '-mignore-xcoff-visibility'. This changes
-  //   the command line semantics.
-  // * If '-fvisibility' is generated regardless of its presence and value,
-  //   '-mignore-xcoff-visibility' won't be implied and the command line
-  //   semantics are kept intact.
-  //
-  // When the original cc1 command line does **not** contain '-fvisibility',
-  // '-mignore-xcoff-visibility' is implied. The generated command line will
-  // contain both '-fvisibility default' and '-mignore-xcoff-visibility' and
-  // subsequent calls to `CreateFromArgs`/`generateCC1CommandLine` will always
-  // produce the same arguments.
-
-  if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility) ||
-                      !Args.hasArg(OPT_fvisibility)))
+  if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility)))
     Opts.IgnoreXCOFFVisibility = 1;
 
   if (Args.hasArg(OPT_ftrapv)) {
@@ -3738,8 +3739,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
                                                 << A->getValue();
     Opts.MSCompatibilityVersion = VT.getMajor() * 10000000 +
-                                  VT.getMinor().getValueOr(0) * 100000 +
-                                  VT.getSubminor().getValueOr(0);
+                                  VT.getMinor().value_or(0) * 100000 +
+                                  VT.getSubminor().value_or(0);
   }
 
   // Mimicking gcc's behavior, trigraphs are only enabled if -trigraphs
@@ -3984,8 +3985,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver11);
       else if (Major <= 12)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver12);
-      else if (Major <= 13)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver13);
+      else if (Major <= 14)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver14);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -4048,6 +4049,12 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.MacroPrefixMap.insert(
         {std::string(Split.first), std::string(Split.second)});
   }
+
+  Opts.UseTargetPathSeparator =
+      !Args.getLastArg(OPT_fno_file_reproducible) &&
+      (Args.getLastArg(OPT_ffile_compilation_dir_EQ) ||
+       Args.getLastArg(OPT_fmacro_prefix_map_EQ) ||
+       Args.getLastArg(OPT_ffile_reproducible));
 
   // Error if -mvscale-min is unbounded.
   if (Arg *A = Args.getLastArg(options::OPT_mvscale_min_EQ)) {
@@ -4171,6 +4178,10 @@ static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
     if (LangOpts.OpenCL && LangOpts.IncludeDefaultHeader &&
         ((LangOpts.DeclareOpenCLBuiltins && I == "opencl-c-base.h") ||
          I == "opencl-c.h"))
+      continue;
+    // Don't generate HLSL includes. They are implied by other flags that are
+    // generated elsewhere.
+    if (LangOpts.HLSL && I == "hlsl.h")
       continue;
 
     GenerateArg(Args, OPT_include, I, SA);
@@ -4430,6 +4441,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
                 Diags);
   if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
     LangOpts.ObjCExceptions = 1;
+
+  for (auto Warning : Res.getDiagnosticOpts().Warnings) {
+    if (Warning == "misexpect" &&
+        !Diags.isIgnored(diag::warn_profile_data_misexpect, SourceLocation())) {
+      Res.getCodeGenOpts().MisExpect = true;
+    }
+  }
 
   if (LangOpts.CUDA) {
     // During CUDA device-side compilation, the aux triple is the

@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
@@ -32,7 +32,7 @@ using namespace mlir::linalg;
 
 namespace {
 struct TestLinalgTransforms
-    : public PassWrapper<TestLinalgTransforms, OperationPass<FuncOp>> {
+    : public PassWrapper<TestLinalgTransforms, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgTransforms)
 
   TestLinalgTransforms() = default;
@@ -110,8 +110,8 @@ struct TestLinalgTransforms
       llvm::cl::init(false)};
   Option<bool> testSwapSubTensorPadTensor{
       *this, "test-swap-subtensor-padtensor",
-      llvm::cl::desc("Test rewrite of subtensor(pad_tensor) into "
-                     "pad_tensor(subtensor)"),
+      llvm::cl::desc("Test rewrite of subtensor(tensor.pad) into "
+                     "tensor.pad(subtensor)"),
       llvm::cl::init(false)};
   Option<bool> testSplitReduction{
       *this, "test-split-reduction",
@@ -142,7 +142,7 @@ struct TestLinalgTransforms
 };
 } // namespace
 
-static void applyPatterns(FuncOp funcOp) {
+static void applyPatterns(func::FuncOp funcOp) {
   MLIRContext *ctx = funcOp.getContext();
   RewritePatternSet patterns(ctx);
 
@@ -288,7 +288,7 @@ static void applyPatterns(FuncOp funcOp) {
 }
 
 static void fillL1TilingAndMatmulToVectorPatterns(
-    FuncOp funcOp, StringRef startMarker,
+    func::FuncOp funcOp, StringRef startMarker,
     SmallVectorImpl<RewritePatternSet> &patternsVector) {
   MLIRContext *ctx = funcOp.getContext();
   patternsVector.emplace_back(
@@ -531,7 +531,7 @@ static void fillTileFuseAndDistributePatterns(MLIRContext *context,
 }
 
 static void
-applyMatmulToVectorPatterns(FuncOp funcOp,
+applyMatmulToVectorPatterns(func::FuncOp funcOp,
                             bool testMatmulToVectorPatterns1dTiling,
                             bool testMatmulToVectorPatterns2dTiling) {
   MLIRContext *ctx = funcOp.getContext();
@@ -564,14 +564,14 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
   (void)applyStagedPatterns(funcOp, frozenStage1Patterns, stage2Patterns);
 }
 
-static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
+static void applyVectorTransferForwardingPatterns(func::FuncOp funcOp) {
   RewritePatternSet forwardPattern(funcOp.getContext());
   forwardPattern.add<LinalgCopyVTRForwardingPattern>(funcOp.getContext());
   forwardPattern.add<LinalgCopyVTWForwardingPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(forwardPattern));
 }
 
-static void applyLinalgToVectorPatterns(FuncOp funcOp) {
+static void applyLinalgToVectorPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   auto *ctx = funcOp.getContext();
   patterns.add<LinalgVectorizationPattern>(
@@ -583,25 +583,25 @@ static void applyLinalgToVectorPatterns(FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyPadTensorToGenericPatterns(FuncOp funcOp) {
+static void applyPadTensorToGenericPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<PadOpTransformationPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyGeneralizePadTensorPatterns(FuncOp funcOp) {
+static void applyGeneralizePadTensorPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<GeneralizePadOpPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
+static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<ExtractSliceOfPadTensorSwapPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyTilePattern(FuncOp funcOp, const std::string &loopType,
+static void applyTilePattern(func::FuncOp funcOp, const std::string &loopType,
                              ArrayRef<int64_t> tileSizes,
                              ArrayRef<int64_t> peeledLoops,
                              bool scalarizeDynamicDims) {
@@ -628,7 +628,7 @@ static void applyTilePattern(FuncOp funcOp, const std::string &loopType,
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
 }
 
-static void applySplitReduction(FuncOp funcOp) {
+static void applySplitReduction(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   linalg::populateSplitReductionPattern(
       patterns,
@@ -642,7 +642,7 @@ static void applySplitReduction(FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyBubbleUpExtractSliceOpPattern(FuncOp funcOp) {
+static void applyBubbleUpExtractSliceOpPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateBubbleUpExtractSliceOpPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));

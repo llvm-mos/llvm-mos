@@ -39,6 +39,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
@@ -52,7 +53,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "llvm/Transforms/Coroutines/CoroElide.h"
@@ -237,6 +237,7 @@ static bool asanUseGlobalsGC(const Triple &T, const CodeGenOptions &CGOpts) {
     llvm::report_fatal_error("ASan not implemented for XCOFF.");
   case Triple::Wasm:
   case Triple::DXContainer:
+  case Triple::SPIRV:
   case Triple::UnknownObjectFormat:
     break;
   }
@@ -452,9 +453,13 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   }
 
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
+  Options.MCOptions.EmitDwarfUnwind = CodeGenOpts.getEmitDwarfUnwind();
   Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
   Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
-  Options.MCOptions.MCUseDwarfDirectory = !CodeGenOpts.NoDwarfDirectoryAsm;
+  Options.MCOptions.MCUseDwarfDirectory =
+      CodeGenOpts.NoDwarfDirectoryAsm
+          ? llvm::MCTargetOptions::DisableDwarfDirectory
+          : llvm::MCTargetOptions::EnableDwarfDirectory;
   Options.MCOptions.MCNoExecStack = CodeGenOpts.NoExecStack;
   Options.MCOptions.MCIncrementalLinkerCompatible =
       CodeGenOpts.IncrementalLinkerCompatible;
@@ -473,6 +478,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
           Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
   Options.MCOptions.Argv0 = CodeGenOpts.Argv0;
   Options.MCOptions.CommandLineArgs = CodeGenOpts.CommandLineArgs;
+  Options.MisExpect = CodeGenOpts.MisExpect;
 
   return true;
 }
@@ -735,7 +741,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     assert(!CodeGenOpts.hasProfileCSIRUse() &&
            "Cannot have both CSProfileUse pass and CSProfileGen pass at "
            "the same time");
-    if (PGOOpt.hasValue()) {
+    if (PGOOpt) {
       assert(PGOOpt->Action != PGOOptions::IRInstr &&
              PGOOpt->Action != PGOOptions::SampleUse &&
              "Cannot run CSProfileGen pass with ProfileGen or SampleUse "
@@ -1206,22 +1212,16 @@ void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
     return;
 
   for (StringRef OffloadObject : CGOpts.OffloadObjects) {
-    if (OffloadObject.count(',') != 1)
-      Diags.Report(Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "Invalid string pair for embedding '%0'"))
-          << OffloadObject;
-    auto FilenameAndSection = OffloadObject.split(',');
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
-        llvm::MemoryBuffer::getFileOrSTDIN(FilenameAndSection.first);
+        llvm::MemoryBuffer::getFileOrSTDIN(OffloadObject);
     if (std::error_code EC = ObjectOrErr.getError()) {
       auto DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                           "could not open '%0' for embedding");
-      Diags.Report(DiagID) << FilenameAndSection.first;
+      Diags.Report(DiagID) << OffloadObject;
       return;
     }
 
-    SmallString<128> SectionName(
-        {".llvm.offloading.", FilenameAndSection.second});
-    llvm::embedBufferInModule(*M, **ObjectOrErr, SectionName);
+    llvm::embedBufferInModule(*M, **ObjectOrErr, ".llvm.offloading",
+                              Align(object::OffloadBinary::getAlignment()));
   }
 }

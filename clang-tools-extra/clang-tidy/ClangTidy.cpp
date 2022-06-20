@@ -104,7 +104,7 @@ public:
               DiagPrinter),
         SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes),
         TotalFixes(0), AppliedFixes(0), WarningsAsErrors(0) {
-    DiagOpts->ShowColors = Context.getOptions().UseColor.getValueOr(
+    DiagOpts->ShowColors = Context.getOptions().UseColor.value_or(
         llvm::sys::Process::StandardOutHasColors());
     DiagPrinter->BeginSourceFile(LangOpts);
     if (DiagOpts->ShowColors && !llvm::sys::Process::StandardOutIsDisplayed()) {
@@ -402,11 +402,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
     Context.setCurrentBuildDirectory(WorkingDir.get());
 
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
-      CheckFactories->createChecks(&Context);
-
-  llvm::erase_if(Checks, [&](std::unique_ptr<ClangTidyCheck> &Check) {
-    return !Check->isLanguageVersionSupported(Context.getLangOpts());
-  });
+      CheckFactories->createChecksForLanguage(&Context);
 
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 
@@ -445,9 +441,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
       Context, Context.canEnableAnalyzerAlphaCheckers());
   if (!AnalyzerOptions->CheckersAndPackages.empty()) {
     setStaticAnalyzerCheckerOpts(Context.getOptions(), *AnalyzerOptions);
-    AnalyzerOptions->AnalysisStoreOpt = RegionStoreModel;
     AnalyzerOptions->AnalysisDiagOpt = PD_NONE;
-    AnalyzerOptions->AnalyzeNestedBlocks = true;
     AnalyzerOptions->eagerlyAssumeBinOpBifurcation = true;
     std::unique_ptr<ento::AnalysisASTConsumer> AnalysisConsumer =
         ento::CreateAnalysisConsumer(Compiler);

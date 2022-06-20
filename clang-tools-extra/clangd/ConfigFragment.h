@@ -199,6 +199,9 @@ struct Fragment {
       llvm::Optional<Located<std::string>> MountPoint;
     };
     llvm::Optional<Located<ExternalBlock>> External;
+    // Whether the standard library visible from this file should be indexed.
+    // This makes all standard library symbols available, included or not.
+    llvm::Optional<Located<bool>> StandardLibrary;
   };
   IndexBlock Index;
 
@@ -231,6 +234,15 @@ struct Fragment {
     /// - Strict
     /// - None
     llvm::Optional<Located<std::string>> UnusedIncludes;
+
+    /// Controls IncludeCleaner diagnostics.
+    struct IncludesBlock {
+      /// Regexes that will be used to avoid diagnosing certain includes as
+      /// unused or missing. These can match any suffix of the header file in
+      /// question.
+      std::vector<Located<std::string>> IgnoreHeader;
+    };
+    IncludesBlock Includes;
 
     /// Controls how clang-tidy will run over the code base.
     ///

@@ -458,6 +458,12 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MF.setExposesReturnsTwice(YamlMF.ExposesReturnsTwice);
   MF.setHasWinCFI(YamlMF.HasWinCFI);
 
+  MF.setCallsEHReturn(YamlMF.CallsEHReturn);
+  MF.setCallsUnwindInit(YamlMF.CallsUnwindInit);
+  MF.setHasEHCatchret(YamlMF.HasEHCatchret);
+  MF.setHasEHScopes(YamlMF.HasEHScopes);
+  MF.setHasEHFunclets(YamlMF.HasEHFunclets);
+
   if (YamlMF.Legalized)
     MF.getProperties().set(MachineFunctionProperties::Property::Legalized);
   if (YamlMF.RegBankSelected)
@@ -825,6 +831,15 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
       return error(Error, YamlMFI.StackProtector.SourceRange);
     MFI.setStackProtectorIndex(FI);
   }
+
+  if (!YamlMFI.FunctionContext.Value.empty()) {
+    SMDiagnostic Error;
+    int FI;
+    if (parseStackObjectReference(PFS, FI, YamlMFI.FunctionContext.Value, Error))
+      return error(Error, YamlMFI.FunctionContext.SourceRange);
+    MFI.setFunctionContextIndex(FI);
+  }
+
   return false;
 }
 
@@ -908,7 +923,7 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
       return error(Error, YamlConstant.Value.SourceRange);
     const Align PrefTypeAlign =
         M.getDataLayout().getPrefTypeAlign(Value->getType());
-    const Align Alignment = YamlConstant.Alignment.getValueOr(PrefTypeAlign);
+    const Align Alignment = YamlConstant.Alignment.value_or(PrefTypeAlign);
     unsigned Index = ConstantPool.getConstantPoolIndex(Value, Alignment);
     if (!ConstantPoolSlots.insert(std::make_pair(YamlConstant.ID.Value, Index))
              .second)

@@ -47,7 +47,7 @@ for.end:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ir<%iv>, ir<13>
@@ -58,7 +58,6 @@ for.end:
 ; CHECK-NEXT:    pred.store.entry:
 ; CHECK-NEXT:      BRANCH-ON-MASK vp<[[COND]]>
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
-; CHECK-NEXT:    CondBit: vp<[[COND]]> (vector.body)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
 ; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>

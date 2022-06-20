@@ -25,7 +25,23 @@ def Bufferization_Dialect : Dialect {
     found in [bufferization](/docs/Bufferization/) and [buffer
     deallocation](/docs/BufferDeallocationInternals/).
   }];
-  let dependentDialects = ["memref::MemRefDialect", "tensor::TensorDialect"];
+  let dependentDialects = [
+    "AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+  ];
+
+  let extraClassDeclaration = [{
+    /// An attribute that can override writability of buffers of tensor function
+    /// arguments during One-Shot Module Bufferize.
+    constexpr const static ::llvm::StringLiteral
+        kWritableAttrName = "bufferization.writable";
+
+    /// Attribute name used to mark the bufferization layout for region
+    /// arguments during One-Shot Module Bufferize.
+    constexpr const static ::llvm::StringLiteral
+        kBufferLayoutAttrName = "bufferization.buffer_layout";
+  }];
+  let hasOperationAttrVerify = 1;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 #endif // BUFFERIZATION_BASE

@@ -87,29 +87,29 @@ struct RegisterEncoding {
 };
 
 enum WaitEventType {
-  VMEM_ACCESS,      // vector-memory read & write
-  VMEM_READ_ACCESS, // vector-memory read
-  VMEM_WRITE_ACCESS,// vector-memory write
-  LDS_ACCESS,       // lds read & write
-  GDS_ACCESS,       // gds read & write
-  SQ_MESSAGE,       // send message
-  SMEM_ACCESS,      // scalar-memory read & write
-  EXP_GPR_LOCK,     // export holding on its data src
-  GDS_GPR_LOCK,     // GDS holding on its data and addr src
-  EXP_POS_ACCESS,   // write to export position
-  EXP_PARAM_ACCESS, // write to export parameter
-  VMW_GPR_LOCK,     // vector-memory write holding on its data src
+  VMEM_ACCESS,       // vector-memory read & write
+  VMEM_READ_ACCESS,  // vector-memory read
+  VMEM_WRITE_ACCESS, // vector-memory write
+  LDS_ACCESS,        // lds read & write
+  GDS_ACCESS,        // gds read & write
+  SQ_MESSAGE,        // send message
+  SMEM_ACCESS,       // scalar-memory read & write
+  EXP_GPR_LOCK,      // export holding on its data src
+  GDS_GPR_LOCK,      // GDS holding on its data and addr src
+  EXP_POS_ACCESS,    // write to export position
+  EXP_PARAM_ACCESS,  // write to export parameter
+  VMW_GPR_LOCK,      // vector-memory write holding on its data src
+  EXP_LDS_ACCESS,    // read by ldsdir counting as export
   NUM_WAIT_EVENTS,
 };
 
 static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
-  (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS),
-  (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
-      (1 << SQ_MESSAGE),
-  (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
-      (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS),
-  (1 << VMEM_WRITE_ACCESS)
-};
+    (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS),
+    (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
+        (1 << SQ_MESSAGE),
+    (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
+        (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) | (1 << EXP_LDS_ACCESS),
+    (1 << VMEM_WRITE_ACCESS)};
 
 // The mapping is:
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
@@ -122,7 +122,7 @@ enum RegisterMapping {
   AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
   NUM_EXTRA_VGPRS = 1,    // A reserved slot for DS.
-  EXTRA_VGPR_LDS = 0,     // This is a placeholder the Shader algorithm uses.
+  EXTRA_VGPR_LDS = 0,     // An artificial register to track LDS writes.
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
 };
 
@@ -496,6 +496,14 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
   }
 }
 
+// MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS written
+// can be accessed. A load from LDS to VMEM does not need a wait.
+static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
+  return SIInstrInfo::isVALU(MI) &&
+         (SIInstrInfo::isMUBUF(MI) || SIInstrInfo::isFLAT(MI)) &&
+         MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
+}
+
 void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                     const SIRegisterInfo *TRI,
                                     const MachineRegisterInfo *MRI,
@@ -588,6 +596,12 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data),
             CurrScore);
       }
+    } else if (TII->isLDSDIR(Inst)) {
+      // LDSDIR instructions attach the score to the destination.
+      setExpScore(
+          &Inst, TII, TRI, MRI,
+          AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::vdst),
+          CurrScore);
     } else {
       if (TII->isEXP(Inst)) {
         // For export the destination registers are really temps that
@@ -644,7 +658,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         setRegScore(RegNo, T, CurrScore);
       }
     }
-    if (TII->isDS(Inst) && Inst.mayStore()) {
+    if (Inst.mayStore() && (TII->isDS(Inst) || mayWriteLDSThroughDMA(Inst))) {
       setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
     }
   }
@@ -963,8 +977,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // Resolve vm waits before gs-done.
   else if ((MI.getOpcode() == AMDGPU::S_SENDMSG ||
             MI.getOpcode() == AMDGPU::S_SENDMSGHALT) &&
-           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_) ==
-            AMDGPU::SendMsg::ID_GS_DONE)) {
+           ST->hasLegacyGeometry() &&
+           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
+            AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
     Wait.VmCnt = 0;
   }
 #if 0 // TODO: the following blocks of logic when we have fence.
@@ -1089,7 +1104,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
             SLoadAddresses.erase(Ptr);
         }
         unsigned AS = Memop->getAddrSpace();
-        if (AS != AMDGPUAS::LOCAL_ADDRESS)
+        if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
+          continue;
+        // No need to wait before load from VMEM to LDS.
+        if (mayWriteLDSThroughDMA(MI))
           continue;
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         // VM_CNT is only relevant to vgpr or LDS.
@@ -1123,7 +1141,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
                   VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
               ScoreBrackets.clearVgprVmemTypes(RegNo);
             }
-            if (Op.isDef()) {
+            if (Op.isDef() || ScoreBrackets.hasPendingEvent(EXP_LDS_ACCESS)) {
               ScoreBrackets.determineWait(
                   EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
             }
@@ -1135,12 +1153,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     }
   }
 
-  // The subtarget may have an implicit S_WAITCNT 0 before barriers. If it does
-  // not, we need to ensure the subtarget is capable of backing off barrier
-  // instructions in case there are any outstanding memory operations that may
-  // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
+  // Check to see if this is an S_BARRIER, and if an implicit S_WAITCNT 0
+  // occurs before the instruction. Doing it here prevents any additional
+  // S_WAITCNTs from being emitted if the instruction was marked as
+  // requiring a WAITCNT beforehand.
   if (MI.getOpcode() == AMDGPU::S_BARRIER &&
-      !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
+      !ST->hasAutoWaitcntBeforeBarrier()) {
     Wait = Wait.combined(AMDGPU::Waitcnt::allZero(ST->hasVscnt()));
   }
 
@@ -1178,6 +1196,19 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   } else {
     // Update waitcnt brackets after determining the required wait.
     ScoreBrackets.applyWaitcnt(Wait);
+  }
+
+  // ExpCnt can be merged into VINTERP.
+  if (Wait.ExpCnt != ~0u && SIInstrInfo::isVINTERP(MI)) {
+    MachineOperand *WaitExp = TII->getNamedOperand(MI, AMDGPU::OpName::waitexp);
+    if (Wait.ExpCnt < WaitExp->getImm()) {
+      WaitExp->setImm(Wait.ExpCnt);
+      Modified = true;
+    }
+    Wait.ExpCnt = ~0u;
+
+    LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
+                      << "Update Instr: " << MI);
   }
 
   // Build new waitcnt instructions unless no wait is needed or the old waitcnt
@@ -1338,6 +1369,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
     }
+  } else if (SIInstrInfo::isLDSDIR(Inst)) {
+    ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_LDS_ACCESS, Inst);
+  } else if (TII->isVINTERP(Inst)) {
+    int64_t Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
+    ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
   } else if (SIInstrInfo::isEXP(Inst)) {
     unsigned Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
@@ -1349,6 +1385,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
+    case AMDGPU::S_SENDMSG_RTN_B32:
+    case AMDGPU::S_SENDMSG_RTN_B64:
     case AMDGPU::S_SENDMSGHALT:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SQ_MESSAGE, Inst);
       break;

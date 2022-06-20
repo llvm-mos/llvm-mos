@@ -299,8 +299,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::BinaryConditionalOperatorClass:
   case Stmt::TypeTraitExprClass:
   case Stmt::CoawaitExprClass:
-  case Stmt::ConceptSpecializationExprClass:
-  case Stmt::RequiresExprClass:
   case Stmt::DependentCoawaitExprClass:
   case Stmt::CoyieldExprClass:
   case Stmt::CXXBindTemporaryExprClass:
@@ -637,6 +635,14 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     return getSelectorIdentifierCursor(SelectorIdIndex, C);
   }
 
+  case Stmt::ConceptSpecializationExprClass:
+    K = CXCursor_ConceptSpecializationExpr;
+    break;
+
+  case Stmt::RequiresExprClass:
+    K = CXCursor_RequiresExpr;
+    break;
+
   case Stmt::MSDependentExistsStmtClass:
     K = CXCursor_UnexposedStmt;
     break;
@@ -687,6 +693,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OMPParallelMasterDirectiveClass:
     K = CXCursor_OMPParallelMasterDirective;
+    break;
+  case Stmt::OMPParallelMaskedDirectiveClass:
+    K = CXCursor_OMPParallelMaskedDirective;
     break;
   case Stmt::OMPParallelSectionsDirectiveClass:
     K = CXCursor_OMPParallelSectionsDirective;

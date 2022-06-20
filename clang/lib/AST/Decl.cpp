@@ -31,6 +31,7 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Randstruct.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
@@ -1850,7 +1851,7 @@ bool NamedDecl::hasLinkage() const {
 
 NamedDecl *NamedDecl::getUnderlyingDeclImpl() {
   NamedDecl *ND = this;
-  while (auto *UD = dyn_cast<UsingShadowDecl>(ND))
+  if (auto *UD = dyn_cast<UsingShadowDecl>(ND))
     ND = UD->getTargetDecl();
 
   if (auto *AD = dyn_cast<ObjCCompatibleAliasDecl>(ND))
@@ -2722,6 +2723,21 @@ VarDecl::needsDestruction(const ASTContext &Ctx) const {
   return getType().isDestructedType();
 }
 
+bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
+  assert(hasInit() && "Expect initializer to check for flexible array init");
+  auto *Ty = getType()->getAs<RecordType>();
+  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+    return false;
+  auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
+  if (!List)
+    return false;
+  const Expr *FlexibleInit = List->getInit(List->getNumInits() - 1);
+  auto InitTy = Ctx.getAsConstantArrayType(FlexibleInit->getType());
+  if (!InitTy)
+    return false;
+  return InitTy->getSize() != 0;
+}
+
 CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
   auto *Ty = getType()->getAs<RecordType>();
@@ -2730,11 +2746,17 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List)
     return CharUnits::Zero();
-  auto FlexibleInit = List->getInit(List->getNumInits() - 1);
+  const Expr *FlexibleInit = List->getInit(List->getNumInits() - 1);
   auto InitTy = Ctx.getAsConstantArrayType(FlexibleInit->getType());
   if (!InitTy)
     return CharUnits::Zero();
-  return Ctx.getTypeSizeInChars(InitTy);
+  CharUnits FlexibleArraySize = Ctx.getTypeSizeInChars(InitTy);
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Ty->getDecl());
+  CharUnits FlexibleArrayOffset =
+      Ctx.toCharUnitsFromBits(RL.getFieldOffset(RL.getFieldCount() - 1));
+  if (FlexibleArrayOffset + FlexibleArraySize < RL.getSize())
+    return CharUnits::Zero();
+  return FlexibleArrayOffset + FlexibleArraySize - RL.getSize();
 }
 
 MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
@@ -2845,7 +2867,8 @@ Expr *ParmVarDecl::getDefaultArg() {
 
   Expr *Arg = getInit();
   if (auto *E = dyn_cast_or_null<FullExpr>(Arg))
-    return E->getSubExpr();
+    if (!isa<ConstantExpr>(E))
+      return E->getSubExpr();
 
   return Arg;
 }
@@ -2932,6 +2955,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsDefaulted = false;
   FunctionDeclBits.IsExplicitlyDefaulted = false;
   FunctionDeclBits.HasDefaultedFunctionInfo = false;
+  FunctionDeclBits.IsIneligibleOrNotSelected = false;
   FunctionDeclBits.HasImplicitReturnZero = false;
   FunctionDeclBits.IsLateTemplateParsed = false;
   FunctionDeclBits.ConstexprKind = static_cast<uint64_t>(ConstexprKind);
@@ -4683,8 +4707,8 @@ bool RecordDecl::isMsStruct(const ASTContext &C) const {
   return hasAttr<MSStructAttr>() || C.getLangOpts().MSBitfields == 1;
 }
 
-void RecordDecl::reorderFields(const SmallVectorImpl<Decl *> &Fields) {
-  std::tie(FirstDecl, LastDecl) = DeclContext::BuildDeclChain(Fields, false);
+void RecordDecl::reorderDecls(const SmallVectorImpl<Decl *> &Decls) {
+  std::tie(FirstDecl, LastDecl) = DeclContext::BuildDeclChain(Decls, false);
   LastDecl->NextInContextAndBits.setPointer(nullptr);
   setIsRandomized(true);
 }

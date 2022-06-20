@@ -74,16 +74,13 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
         } else if (P->kind() == Sequence) {
           Children = P->elements();
           if (Abbreviated) {
-            if (P->startTokenIndex() == End)
-              return;
-            for (size_t I = 0; I < Children.size(); ++I)
-              if (Children[I]->startTokenIndex() == P->startTokenIndex() &&
-                  EndOfElement(I) == End) {
-                return Dump(
-                    Children[I], End,
-                    /*ElidedParent=*/ElidedParent.getValueOr(P->symbol()),
-                    LineDec);
-              }
+            if (Children.size() == 1) {
+              assert(Children[0]->startTokenIndex() == P->startTokenIndex() &&
+                     EndOfElement(0) == End);
+              return Dump(Children[0], End,
+                          /*ElidedParent=*/ElidedParent.value_or(P->symbol()),
+                          LineDec);
+            }
           }
         }
 
@@ -93,7 +90,7 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
           Result += llvm::formatv("[{0,3}, {1,3}) ", P->startTokenIndex(), End);
         Result += LineDec.Prefix;
         Result += LineDec.First;
-        if (ElidedParent.hasValue()) {
+        if (ElidedParent) {
           Result += G.symbolName(*ElidedParent);
           Result += "~";
         }

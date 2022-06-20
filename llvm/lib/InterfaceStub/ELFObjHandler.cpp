@@ -217,7 +217,8 @@ public:
       // time as long as it is not SHN_UNDEF. Set shndx to 1, which
       // points to ".dynsym".
       uint16_t Shndx = Sym.Undefined ? SHN_UNDEF : 1;
-      DynSym.Content.add(DynStr.Content.getOffset(Sym.Name), Sym.Size, Bind,
+      uint64_t Size = Sym.Size.value_or(0);
+      DynSym.Content.add(DynStr.Content.getOffset(Sym.Name), Size, Bind,
                          convertIFSSymbolTypeToELF(Sym.Type), 0, Shndx);
     }
     DynSym.Size = DynSym.Content.getSize();
@@ -492,7 +493,7 @@ static Error populateDynamic(DynamicEntries &Dyn,
     return createError(
         "Couldn't locate dynamic symbol table (no DT_SYMTAB entry)");
   }
-  if (Dyn.SONameOffset.hasValue() && *Dyn.SONameOffset >= Dyn.StrSize) {
+  if (Dyn.SONameOffset && *Dyn.SONameOffset >= Dyn.StrSize) {
     return createStringError(object_error::parse_failed,
                              "DT_SONAME string offset (0x%016" PRIx64
                              ") outside of dynamic string table",
@@ -607,7 +608,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   DestStub->Target.ObjectFormat = "ELF";
 
   // Populate SoName from .dynamic entries and dynamic string table.
-  if (DynEnt.SONameOffset.hasValue()) {
+  if (DynEnt.SONameOffset) {
     Expected<StringRef> NameOrErr =
         terminatedSubstr(DynStr, *DynEnt.SONameOffset);
     if (!NameOrErr) {

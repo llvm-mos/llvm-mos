@@ -135,7 +135,7 @@ SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
 }
 
 SymbolFilePDB::SymbolFilePDB(lldb::ObjectFileSP objfile_sp)
-    : SymbolFile(std::move(objfile_sp)), m_session_up(), m_global_scope_up() {}
+    : SymbolFileCommon(std::move(objfile_sp)), m_session_up(), m_global_scope_up() {}
 
 SymbolFilePDB::~SymbolFilePDB() = default;
 
@@ -797,7 +797,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t old_size = sc_list.GetSize();
   const FileSpec &file_spec = src_location_spec.GetFileSpec();
-  const uint32_t line = src_location_spec.GetLine().getValueOr(0);
+  const uint32_t line = src_location_spec.GetLine().value_or(0);
   if (resolve_scope & lldb::eSymbolContextCompUnit) {
     // Locate all compilation units with line numbers referencing the specified
     // file.  For example, if `file_spec` is <vector>, then this should return

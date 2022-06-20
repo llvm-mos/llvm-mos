@@ -902,7 +902,11 @@ struct GHashTable {
 
 /// A ghash table cell for deduplicating types from TpiSources.
 class GHashCell {
-  uint64_t data = 0;
+  // Force "data" to be 64-bit aligned; otherwise, some versions of clang
+  // will generate calls to libatomic when using some versions of libstdc++
+  // on 32-bit targets.  (Also, in theory, there could be a target where
+  // new[] doesn't always return an 8-byte-aligned allocation.)
+  alignas(sizeof(uint64_t)) uint64_t data = 0;
 
 public:
   GHashCell() = default;
@@ -1052,7 +1056,7 @@ void TypeMerger::mergeTypesWithGHash() {
   // position. Because the table does not rehash, the position will not change
   // under insertion. After insertion is done, the value of the cell can be read
   // to retrieve the final PDB type index.
-  parallelForEachN(0, ctx.tpiSourceList.size(), [&](size_t tpiSrcIdx) {
+  parallelFor(0, ctx.tpiSourceList.size(), [&](size_t tpiSrcIdx) {
     TpiSource *source = ctx.tpiSourceList[tpiSrcIdx];
     source->indexMapStorage.resize(source->ghashes.size());
     for (uint32_t i = 0, e = source->ghashes.size(); i < e; i++) {
