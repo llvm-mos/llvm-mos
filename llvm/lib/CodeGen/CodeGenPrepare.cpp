@@ -6592,6 +6592,9 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
   // FIXME: This should use the same heuristics as IfConversion to determine
   // whether a select is better represented as a branch.
 
+  if (TTI->getPredictableBranchThreshold().isZero())
+    return true;
+
   // If metadata tells us that the select condition is obviously predictable,
   // then we want to replace the select with a branch.
   uint64_t TrueWeight, FalseWeight;

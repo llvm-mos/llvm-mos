@@ -749,6 +749,9 @@ void SelectOptimize::getExclBackwardsSlice(Instruction *I,
 }
 
 bool SelectOptimize::isSelectHighlyPredictable(const SelectInst *SI) {
+  if (TTI->getPredictableBranchThreshold().isZero())
+    return true;
+
   uint64_t TrueWeight, FalseWeight;
   if (SI->extractProfMetadata(TrueWeight, FalseWeight)) {
     uint64_t Max = std::max(TrueWeight, FalseWeight);

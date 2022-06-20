@@ -18,6 +18,7 @@
 
 #include "MOSTargetMachine.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/Support/BranchProbability.h"
 
 namespace llvm {
 
@@ -50,6 +51,10 @@ public:
                     C1.NumBaseAdds, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
            std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost, C2.NumIVMuls,
                     C2.NumBaseAdds, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+  }
+
+  BranchProbability getPredictableBranchThreshold() const {
+    return BranchProbability(0, 1);
   }
 };
 

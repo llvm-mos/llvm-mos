@@ -2765,6 +2765,9 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   }
   assert(EndBB == BI->getSuccessor(!Invert) && "No edge from to end block");
 
+  if (TTI.getPredictableBranchThreshold().isZero())
+    return false;
+
   // If the branch is non-unpredictable, and is predicted to *not* branch to
   // the `then` block, then avoid speculating it.
   if (!BI->getMetadata(LLVMContext::MD_unpredictable)) {
@@ -3413,6 +3416,9 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
          "Both blocks must end with a conditional branches.");
   assert(is_contained(predecessors(BI->getParent()), PBI->getParent()) &&
          "PredBB must be a predecessor of BB.");
+
+  if (TTI && TTI->getPredictableBranchThreshold().isZero())
+    return None;
 
   // We have the potential to fold the conditions together, but if the
   // predecessor branch is predictable, we may not want to merge them.
