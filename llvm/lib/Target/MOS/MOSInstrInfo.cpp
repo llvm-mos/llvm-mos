@@ -457,9 +457,51 @@ bool MOSInstrInfo::shouldOverlapInterval(const MachineInstr &MI) const {
   return MI.getOpcode() != MOS::CMPTermZ;
 }
 
+static bool isTargetCopy(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case MOS::LDImag8:
+  case MOS::STImag8:
+  case MOS::TA:
+  case MOS::T_A:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isCopyRedundant(MachineIRBuilder &Builder, Register Dst,
+                            Register Src) {
+  if (Dst == Src)
+    return true;
+  const TargetRegisterInfo *TRI = Builder.getMRI()->getTargetRegisterInfo();
+  MachineInstr *DstKillMI = nullptr;
+  for (MachineInstr &MI :
+       make_range(MachineBasicBlock::reverse_iterator(Builder.getInsertPt()),
+                  Builder.getMBB().rend())) {
+    if (MI.killsRegister(Dst, TRI))
+      DstKillMI = &MI;
+    if (isTargetCopy(MI)) {
+      Register CopyDst = MI.getOperand(0).getReg();
+      Register CopySrc = MI.getOperand(1).getReg();
+      if ((CopyDst == Dst && CopySrc == Src) ||
+          (CopyDst == Src && CopySrc == Dst)) {
+        MI.clearRegisterDeads(Dst);
+        if (DstKillMI)
+          DstKillMI->clearRegisterKills(Dst, TRI);
+        return true;
+      }
+    }
+    if (MI.modifiesRegister(Dst, TRI))
+      return false;
+    if (MI.modifiesRegister(Src, TRI))
+      return false;
+  }
+  return false;
+}
+
 void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
-                                   Register SrcReg) const {
-  if (DestReg == SrcReg)
+                                   Register SrcReg, bool Force) const {
+  if (!Force && isCopyRedundant(Builder, DestReg, SrcReg))
     return;
 
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
@@ -539,7 +581,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
           } else {
             Register Tmp = createVReg(Builder, StackRegClass);
-            copyPhysRegImpl(Builder, Tmp, SrcReg);
+            copyPhysRegImpl(Builder, Tmp, SrcReg, /*Force=*/true);
             std::prev(Builder.getInsertPt())
                 ->addOperand(MachineOperand::CreateReg(MOS::NZ,
                                                        /*isDef=*/true,
@@ -592,13 +634,7 @@ Register MOSInstrInfo::getRegWithVal(MachineIRBuilder &Builder, Register Val,
         Clobbered[R] = true;
 
     // At this point, all previous copies will already have been lowered.
-    switch (MI.getOpcode()) {
-    case MOS::LDImag8:
-    case MOS::STImag8:
-    case MOS::TA:
-    case MOS::T_A:
-      break;
-    default:
+    if (!isTargetCopy(MI)) {
       if (MI.modifiesRegister(Val, TRI))
         goto none;
       continue;

@@ -292,3 +292,95 @@ body: |
     ; CHECK-NEXT: $rc2 = STImag8 [[SelectImm]]
     $rc2lsb = COPY $v
 ...
+---
+name: redundant_copy_dst
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $a
+    ; CHECK-LABEL: name: redundant_copy_dst
+    ; CHECK: liveins: $a
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x = TA $a
+    $x = COPY $a
+    $x = COPY $a
+...
+---
+name: redundant_copy_dst_clobber_dst
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $a, $y
+    ; CHECK-LABEL: name: redundant_copy_dst_clobber_dst
+    ; CHECK: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x = TA $a
+    ; CHECK-NEXT: [[T_A:%[0-9]+]]:ac = T_A $y
+    ; CHECK-NEXT: $x = TA [[T_A]]
+    ; CHECK-NEXT: $x = TA $a
+    $x = COPY $a
+    $x = COPY $y
+    $x = COPY $a
+...
+---
+name: redundant_copy_dst_clobber_src
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $a, $y
+    ; CHECK-LABEL: name: redundant_copy_dst_clobber_src
+    ; CHECK: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x = TA $a
+    ; CHECK-NEXT: $a = T_A $y
+    ; CHECK-NEXT: $x = TA $a
+    $x = COPY $a
+    $a = COPY $y
+    $x = COPY $a
+...
+---
+name: redundant_copy_src
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x
+    ; CHECK-LABEL: name: redundant_copy_src
+    ; CHECK: liveins: $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = T_A $x
+    $a = COPY $x
+    $x = COPY $a
+...
+---
+name: redundant_copy_src_clobber_dst
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x, $y
+    ; CHECK-LABEL: name: redundant_copy_src_clobber_dst
+    ; CHECK: liveins: $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = T_A $x
+    ; CHECK-NEXT: $a = T_A $y
+    ; CHECK-NEXT: $x = TA $a
+    $a = COPY $x
+    $a = COPY $y
+    $x = COPY $a
+...
+---
+name: redundant_copy_src_clobber_src
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x, $y
+    ; CHECK-LABEL: name: redundant_copy_src_clobber_src
+    ; CHECK: liveins: $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = T_A $x
+    ; CHECK-NEXT: [[T_A:%[0-9]+]]:ac = T_A $y
+    ; CHECK-NEXT: $x = TA [[T_A]]
+    ; CHECK-NEXT: $x = TA $a
+    $a = COPY $x
+    $x = COPY $y
+    $x = COPY $a
+...
