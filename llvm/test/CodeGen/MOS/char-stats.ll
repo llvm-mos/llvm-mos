@@ -103,12 +103,10 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    ldx mos8(__rc0)
 ; CMOS-NEXT:    stx mos8(__rc20)
-; CMOS-NEXT:    ldx mos8(__rc1)
-; CMOS-NEXT:    stx mos8(__rc21)
+; CMOS-NEXT:    sta mos8(__rc21)
 ; CMOS-NEXT:    ldx mos8(__rc20)
 ; CMOS-NEXT:    stx mos8(__rc2)
-; CMOS-NEXT:    ldx mos8(__rc21)
-; CMOS-NEXT:    stx mos8(__rc3)
+; CMOS-NEXT:    sta mos8(__rc3)
 ; CMOS-NEXT:    lda #0
 ; CMOS-NEXT:    ldx #2
 ; CMOS-NEXT:    stx mos8(__rc4)

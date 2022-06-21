@@ -487,18 +487,16 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
       assert(MOS::XYRegClass.contains(SrcReg));
       Builder.buildInstr(MOS::T_A).addDef(DestReg).addUse(SrcReg);
     } else {
-      Register Tmp = createVReg(Builder, MOS::AcRegClass);
-      copyPhysRegImpl(Builder, Tmp, SrcReg);
-      copyPhysRegImpl(Builder, DestReg, Tmp);
+      copyPhysRegImpl(Builder, DestReg,
+                      getRegWithVal(Builder, SrcReg, MOS::AcRegClass));
     }
   } else if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
     Builder.buildInstr(MOS::STImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
     Builder.buildInstr(MOS::LDImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    Register Tmp = createVReg(Builder, MOS::GPRRegClass);
-    copyPhysRegImpl(Builder, Tmp, SrcReg);
-    copyPhysRegImpl(Builder, DestReg, Tmp);
+    copyPhysRegImpl(Builder, DestReg,
+                    getRegWithVal(Builder, SrcReg, MOS::GPRRegClass));
   } else if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
     assert(SrcReg.isPhysical() && DestReg.isPhysical());
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo),
@@ -524,13 +522,10 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         copyPhysRegImpl(Builder, DestReg, SrcReg);
       } else {
         if (DestReg == MOS::C) {
-          if (!MOS::GPRRegClass.contains(SrcReg)) {
-            Register Tmp = createVReg(Builder, MOS::GPRRegClass);
-            copyPhysRegImpl(Builder, Tmp, SrcReg);
-            SrcReg = Tmp;
-          }
           // C = SrcReg >= 1
-          Builder.buildInstr(MOS::CMPImm, {MOS::C}, {SrcReg, INT64_C(1)});
+          Builder.buildInstr(
+              MOS::CMPImm, {MOS::C},
+              {getRegWithVal(Builder, SrcReg, MOS::GPRRegClass), INT64_C(1)});
         } else {
           assert(DestReg == MOS::V);
           const TargetRegisterClass &StackRegClass =
@@ -574,10 +569,64 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
     llvm_unreachable("Unexpected physical register copy.");
 }
 
+// Get the value of the given physical register into a location of the given
+// register class. This will search for an ealier instance of this value to use,
+// starting from the insertion point of the given builder. If none is found,
+// creates a virtual register and copies in the value.
+Register MOSInstrInfo::getRegWithVal(MachineIRBuilder &Builder, Register Val,
+                                     const TargetRegisterClass &RC) const {
+  if (RC.contains(Val))
+    return Val;
+
+  const TargetRegisterInfo *TRI = Builder.getMRI()->getTargetRegisterInfo();
+
+  // Whether the register still holds the value it does at the Builder
+  // instruction.
+  DenseMap<Register, bool> Clobbered;
+
+  for (MachineInstr &MI :
+       make_range(MachineBasicBlock::reverse_iterator(Builder.getInsertPt()),
+                  Builder.getMBB().rend())) {
+    for (Register R : RC)
+      if (MI.modifiesRegister(R, TRI))
+        Clobbered[R] = true;
+
+    // At this point, all previous copies will already have been lowered.
+    switch (MI.getOpcode()) {
+    case MOS::LDImag8:
+    case MOS::STImag8:
+    case MOS::TA:
+    case MOS::T_A:
+      break;
+    default:
+      if (MI.modifiesRegister(Val, TRI))
+        goto none;
+      continue;
+    }
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+
+    if (Dst == Val) {
+      if (RC.contains(Src) && !Clobbered[Src])
+        return Src;
+      break;
+    }
+    if (Src == Val && RC.contains(Dst) && !Clobbered[Dst])
+      return Dst;
+  }
+
+none:
+  Register R = createVReg(Builder, RC);
+  copyPhysRegImpl(Builder, R, Val);
+  return R;
+}
+
 const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
                                                      unsigned FoldIdx) const {
   const MachineFunction &MF = *MI.getMF();
-  const MOSFrameLowering &TFL = *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
+  const MOSFrameLowering &TFL =
+      *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
   if (!TFL.usesStaticStack(MF))
     return TargetInstrInfo::canFoldCopy(MI, FoldIdx);
 
@@ -684,7 +733,8 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MOSFrameLowering &TFL = *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
+  const MOSFrameLowering &TFL =
+      *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
 
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(MF, FrameIndex);

@@ -116,6 +116,9 @@ private:
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                        Register SrcReg) const;
 
+  Register getRegWithVal(MachineIRBuilder &Builder, Register Val,
+                         const TargetRegisterClass &RC) const;
+
   // Post RA pseudos
   void expandLDIdx(MachineIRBuilder &Builder) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;
