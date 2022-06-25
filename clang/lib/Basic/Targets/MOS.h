@@ -57,6 +57,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override { return isValidCPUName(Name); }
+  bool hasBitIntType() const override { return true; }
 };
 
 } // namespace targets
