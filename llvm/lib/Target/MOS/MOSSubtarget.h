@@ -98,6 +98,7 @@ public:
 
   bool has6502() const { return Has6502Insns; }
   bool has65C02() const { return Has65C02Insns; }
+  bool has65CE02() const { return Has65CE02Insns; }
   bool hasW65816() const { return HasW65816Insns; }
   bool staticStack() const { return StaticStack; }
 

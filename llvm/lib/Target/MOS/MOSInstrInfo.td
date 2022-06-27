@@ -222,8 +222,8 @@ def NOP_Implied: InstLowA<"nop", 0b1110>;
 let Predicates = [Has65C02] in {
 
 /// Single-byte opcodes
-/// PHY PLY PHX PLX
-/// 5A  7A  DA  FA
+/// INCA DECA PHY PLY PHX PLX
+/// 1A   3A   5A  7A  DA  FA
 
 def PHY_Implied: InstLowA<"phy", 0b0101>;
 def PLY_Implied: InstLowA<"ply", 0b0111>;
@@ -248,6 +248,36 @@ def STZ_ZeroPageX : Inst16<"stz", OpcodeC0<0b011, 0b101>, ZeroPageX>;
 def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
 
 } // Predicates = [Has65C02]
+
+let Predicates = [Has65CE02] {
+
+/// Single-byte opcodes
+/// NEG
+/// 42
+/// ASR
+/// 43
+/// INZ DEZ TAZ TZA PHZ PLZ
+/// 1B  3B  4B  6B  DB  FB
+
+def NEG_Implied: InstLow2<"neg", 0b0100>;
+def ASR_Implied: InstLow3<"asr", 0b0100>;
+
+def INZ_Implied: InstLowB<"inz", 0b0001>;
+def DEZ_Implied: InstLowB<"dez", 0b0011>;
+def TAZ_Implied: InstLowB<"taz", 0b0100>;
+def TZA_Implied: InstLowB<"tza", 0b0110>;
+def PHZ_Implied: InstLowB<"phz", 0b1101>;
+def PLZ_Implied: InstLowB<"plz", 0b1111>;
+
+///       LDZ_IMM  LDZ_ABS  LDZ_ABSX
+/// bytes 2        3        3
+///  code 0xA3     0xAB     0xBB
+
+/// def LDZ_Immediate : Inst16<"ldz", OpcodeC0<0b000, 0b000>, Immediate>;
+/// def LDZ_Absolute : Inst24<"ldz", OpcodeC0<0b000, 0b000>, Absolute>;
+/// def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC0<0b000, 0b000>, AbsoluteX>;
+
+} // Predicates = [Has65CE02]
 
 let Predicates = [HasW65816] in {
 
