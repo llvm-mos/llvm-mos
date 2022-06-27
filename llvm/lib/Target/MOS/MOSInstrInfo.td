@@ -249,7 +249,7 @@ def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
 
 } // Predicates = [Has65C02]
 
-let Predicates = [Has65CE02] {
+let Predicates = [Has65CE02] in {
 
 /// Single-byte opcodes
 /// NEG
@@ -270,7 +270,7 @@ def PHZ_Implied: InstLowB<"phz", 0b1101>;
 def PLZ_Implied: InstLowB<"plz", 0b1111>;
 
 def RTN_Immediate : Inst16<"rtn", OpcodeC2<0b011, 0b000>, Immediate>; /// 0x62
-def BSR_Relative : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative; /// 0x63
+def BSR_Relative : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative>; /// 0x63
 def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>; /// 0xa3
 def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>; /// 0xab
 def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>; /// 0xbb

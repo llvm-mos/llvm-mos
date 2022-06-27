@@ -350,10 +350,17 @@ class InstNybble<string asmstr, bits<4> low = 0, bits<4> high = 0> :
 
 /// Instructions where the low nybble is 0x0.
 class InstLow0<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x0, high>;
+/// Instructions where the low nybble is 0x2.
+class InstLow2<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x2, high>;
+/// Instructions where the low nybble is 0x3.
+class InstLow3<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x3, high>;
 /// Instructions where the low nybble is 0x8.
 class InstLow8<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x8, high>;
 /// Instructions where the low nybble is 0xa.
 class InstLowA<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0xa, high>;
+/// Instructions where the low nybble is 0xb.
+class InstLowB<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0xb, high>;
+
 
 /// Opcode groups based on cc
 /// -------------------------
