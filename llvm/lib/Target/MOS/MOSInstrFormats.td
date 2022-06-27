@@ -144,7 +144,7 @@ class Opcode<bits<8> opcode = 0> {
 }
 def DefaultOpcode : Opcode<0>;
 
-/// Per Parker, opcodes on the MOS series tend to fit into the pattern aaabbbcc
+/// Neil Parker, opcodes on the MOS series tend to fit into the pattern aaabbbcc
 /// where bbb is the addressing mode, and aaacc describe the instruction in
 /// question. This is not a fixed rule however, especially for later processors
 /// in the MOS series.
