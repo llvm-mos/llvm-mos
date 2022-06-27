@@ -269,13 +269,11 @@ def TZA_Implied: InstLowB<"tza", 0b0110>;
 def PHZ_Implied: InstLowB<"phz", 0b1101>;
 def PLZ_Implied: InstLowB<"plz", 0b1111>;
 
-///       LDZ_IMM  LDZ_ABS  LDZ_ABSX
-/// bytes 2        3        3
-///  code 0xA3     0xAB     0xBB
-
-/// def LDZ_Immediate : Inst16<"ldz", OpcodeC0<0b000, 0b000>, Immediate>;
-/// def LDZ_Absolute : Inst24<"ldz", OpcodeC0<0b000, 0b000>, Absolute>;
-/// def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC0<0b000, 0b000>, AbsoluteX>;
+/// LDZ_IMM LDZ_ABS LDZ_ABSX
+/// A3      AB      BB
+def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>;
+def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>;
+def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>;
 
 } // Predicates = [Has65CE02]
 
