@@ -270,12 +270,14 @@ def PHZ_Implied: InstLowB<"phz", 0b1101>;
 def PLZ_Implied: InstLowB<"plz", 0b1111>;
 
 def RTN_Immediate : Inst16<"rtn", OpcodeC2<0b011, 0b000>, Immediate>; /// 0x62
-def BSR_Relative : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative>; /// 0x63
 def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>; /// 0xa3
 def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>; /// 0xab
 def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>; /// 0xbb
 def DEW_ZeroPage : Inst16<"dew", OpcodeC3<0b110, 0b000>, ZeroPage>; /// 0xc3
 def INW_ZeroPage : Inst16<"inw", OpcodeC3<0b111, 0b000>, ZeroPage>; /// 0xe3
+
+// conditional branch?
+//def BSR_Relative : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative>; /// 0x63
 
 } // Predicates = [Has65CE02]
 
