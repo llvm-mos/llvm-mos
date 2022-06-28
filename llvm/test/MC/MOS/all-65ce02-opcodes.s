@@ -24,6 +24,10 @@
         dew     $ea                 ; CHECK: encoding: [0xc3,0xea]
         inw     $ea                 ; CHECK: encoding: [0xe3,0xea]
 
+        cpz     #$ea                ; CHECK: encoding: [0xc2,0xea]
+        cpz     $ea                 ; CHECK: encoding: [0xd4,0xea]
+        cpz     $eaea               ; CHECK: encoding: [0xdc,0xea,0xea]
+
         ldz     #$ea                ; CHECK: encoding: [0xa3,0xea]
  	ldz	$eaea               ; CHECK: encoding: [0xab,0xea,0xea]
  	ldz	$eaea,x             ; CHECK: encoding: [0xbb,0xea,0xea]

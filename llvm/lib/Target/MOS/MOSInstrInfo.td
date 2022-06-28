@@ -271,7 +271,11 @@ def INW_ZeroPage : Inst16<"inw", OpcodeC3<0b111, 0b000>, ZeroPage>; /// Inc. wor
 def DEW_ZeroPage : Inst16<"dew", OpcodeC3<0b110, 0b000>, ZeroPage>; /// Dec. word
 
 def INZ_Implied: InstLowB<"inz", 0b0001>; /// INcrement Z register;
-def DEZ_Implied: InstLowB<"dez", 0b0011>; /// DEcrement Z register
+def DEZ_Implied: InstLowB<"dez", 0b0011>; /// DEcrement Z register;
+
+def CPZ_Immediate : Inst16<"cpz", OpcodeC2<0b110, 0b000>, Immediate>;
+def CPZ_ZeroPage : Inst16<"cpz", OpcodeC0<0b110, 0b101>, ZeroPage>;
+def CPZ_Absolute : Inst24<"cpz", OpcodeC0<0b110, 0b111>, Absolute>;
 
 /// Loads, Stores, Pushes, Pulls and Transfers
 
