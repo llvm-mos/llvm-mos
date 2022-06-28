@@ -15,12 +15,14 @@
 	phz                         ; CHECK: encoding: [0xdb]
 	plz                         ; CHECK: encoding: [0xfb]
 
+        bpl     $eaea               ; CHECK: encoding: [0x13,0xea,0xea]
+        bmi     $eaea               ; CHECK: encoding: [0x33,0xea,0xea]
+        bra     $eaea               ; CHECK: encoding: [0x83,0xea,0xea]
+        bsr     $eaea               ; CHECK: encoding: [0x63,0xea,0xea]
         jsr     ($eaea)             ; CHECK: encoding: [0x22,0xea,0xea]
         jsr     ($eaea,x)           ; CHECK: encoding: [0x23,0xea,0xea]
-
         rtn     #$ea                ; CHECK: encoding: [0x62,0xea]
-        bsr     $eaea               ; CHECK: encoding: [0x63,0xea,0xea]
-        bra     $eaea               ; CHECK: encoding: [0x83,0xea,0xea]
+
         dew     $ea                 ; CHECK: encoding: [0xc3,0xea]
         inw     $ea                 ; CHECK: encoding: [0xe3,0xea]
 

@@ -256,7 +256,9 @@ let Predicates = [Has65CE02] in {
 
 /// Branches and jumps
 
-def BRA_Relative16 : Inst24<"bra", OpcodeC3<0b100, 0b000>, Relative16>;
+def BPL_Relative16 : Inst24<"bpl", OpcodeC3<0b000, 0b100>, Relative16>;
+def BMI_Relative16 : Inst24<"bmi", OpcodeC3<0b001, 0b100>, Relative16>;
+def BRA_Relative16 : Inst24<"bra", OpcodeC3<0b100, 0b000>, Relative16>; /// BRU
 def BSR_Relative16 : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative16>;
 def JSR_AbsoluteIndirect: Inst24<"jsr", Opcode<0x22>, Indirect16>;
 def JSR_AbsoluteIndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>;
