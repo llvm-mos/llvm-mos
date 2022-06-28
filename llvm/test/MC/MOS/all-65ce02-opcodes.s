@@ -55,3 +55,7 @@
         lda     ($ea),z             ; CHECK: encoding: [0xb2,0xea]
  	ldz	$eaea,x             ; CHECK: encoding: [0xbb,0xea,0xea]
 
+        sta     ($ea),z             ; CHECK: encoding: [0x92,0xea] 
+        stx     $eaea,y             ; CHECK: encoding: [0x9b,0xea,0xea] 
+        sty     $eaea,x             ; CHECK: encoding: [0x8b,0xea,0xea] 
+

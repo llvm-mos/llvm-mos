@@ -308,6 +308,10 @@ def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>;
 def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>;
 def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>;
 
+def STA_IndirectZeroPageZ : Inst16<"sta", Opcode<0x92>, IndirectZeroPageZ>;
+def STX_AbsoluteY : Inst24<"stx", Opcode<0x9b>, AbsoluteY>;
+def STY_AbsoluteX : Inst24<"sty", Opcode<0x8b>, AbsoluteX>;
+
 def CLE_Implied: InstLow2<"cle", 0b0000>; /// CLear stack Extend disable bit
 def SEE_Implied: InstLow3<"sse", 0b0000>; /// SEt stack Extend disable bit
 
