@@ -283,6 +283,10 @@ def DEW_ZeroPage : Inst16<"dew", OpcodeC3<0b110, 0b000>, ZeroPage>; /// Dec. wor
 def INZ_Implied: InstLowB<"inz", 0b0001>; /// INcrement Z register;
 def DEZ_Implied: InstLowB<"dez", 0b0011>; /// DEcrement Z register;
 
+def ASW_Absolute : Inst24<"asw", Opcode<0xcb>, Absolute>; /// Arithmetic Shift left Word
+def ROW_Absolute : Inst24<"row", Opcode<0xeb>, Absolute>; /// Arithmetic Shift left Word
+
+
 def CPZ_Immediate : Inst16<"cpz", OpcodeC2<0b110, 0b000>, Immediate>;
 def CPZ_ZeroPage : Inst16<"cpz", OpcodeC0<0b110, 0b101>, ZeroPage>;
 def CPZ_Absolute : Inst24<"cpz", OpcodeC0<0b110, 0b111>, Absolute>;

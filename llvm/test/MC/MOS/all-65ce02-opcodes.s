@@ -30,6 +30,9 @@
         jsr     ($eaea,x)           ; CHECK: encoding: [0x23,0xea,0xea]
         rtn     #$ea                ; CHECK: encoding: [0x62,0xea]
 
+        asw     $eaea               ; CHECK: encoding: [0xcb,0xea,0xea]
+        row     $eaea               ; CHECK: encoding: [0xeb,0xea,0xea]
+
         dew     $ea                 ; CHECK: encoding: [0xc3,0xea]
         inw     $ea                 ; CHECK: encoding: [0xe3,0xea]
 
@@ -39,6 +42,6 @@
 
         ldz     #$ea                ; CHECK: encoding: [0xa3,0xea]
  	ldz	$eaea               ; CHECK: encoding: [0xab,0xea,0xea]
- 	ldz	$eaea,x             ; CHECK: encoding: [0xbb,0xea,0xea]
         lda     ($ea),z             ; CHECK: encoding: [0xb2,0xea]
+ 	ldz	$eaea,x             ; CHECK: encoding: [0xbb,0xea,0xea]
 
