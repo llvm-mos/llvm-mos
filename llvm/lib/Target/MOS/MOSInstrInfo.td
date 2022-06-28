@@ -251,31 +251,45 @@ def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
 
 let Predicates = [Has65CE02] in {
 
-/// Single-byte opcodes
-/// NEG
-/// 42
-/// ASR
-/// 43
-/// INZ DEZ TAZ TZA PHZ PLZ
-/// 1B  3B  4B  6B  DB  FB
+/// Layout follows CMOS 65CE02 micrprocessor datasheet
+/// (http://archive.6502.org/datasheets/mos_65ce02_mpu.pdf)
 
-def NEG_Implied: InstLow2<"neg", 0b0100>;
-def ASR_Implied: InstLow3<"asr", 0b0100>;
+/// Branches and jumps
 
-def INZ_Implied: InstLowB<"inz", 0b0001>;
-def DEZ_Implied: InstLowB<"dez", 0b0011>;
-def TAZ_Implied: InstLowB<"taz", 0b0100>;
-def TZA_Implied: InstLowB<"tza", 0b0110>;
-def PHZ_Implied: InstLowB<"phz", 0b1101>;
-def PLZ_Implied: InstLowB<"plz", 0b1111>;
+def BRA_Relative16 : Inst24<"bra", OpcodeC3<0b100, 0b000>, Relative16>;
+def BSR_Relative16 : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative16>;
+def JSR_Indirect: Inst24<"jsr", Opcode<0x22>, Indirect16>;
+def JSR_IndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>;
+def RTN_Immediate : Inst16<"rtn", OpcodeC2<0b011, 0b000>, Immediate>;
 
-def RTN_Immediate : Inst16<"rtn", OpcodeC2<0b011, 0b000>, Immediate>; /// 0x62
-def BSR_Relative : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative16>; /// 0x63
-def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>; /// 0xa3
-def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>; /// 0xab
-def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>; /// 0xbb
-def DEW_ZeroPage : Inst16<"dew", OpcodeC3<0b110, 0b000>, ZeroPage>; /// 0xc3
-def INW_ZeroPage : Inst16<"inw", OpcodeC3<0b111, 0b000>, ZeroPage>; /// 0xe3
+/// Arithmetic Operations
+
+def NEG_Implied: InstLow2<"neg", 0b0100>; /// NEGate (or 2's complement) accumulator
+def ASR_Implied: InstLow3<"asr", 0b0100>; /// Arithmetic Shift Right accumulator
+
+def INW_ZeroPage : Inst16<"inw", OpcodeC3<0b111, 0b000>, ZeroPage>; /// Inc. word
+def DEW_ZeroPage : Inst16<"dew", OpcodeC3<0b110, 0b000>, ZeroPage>; /// Dec. word
+def INZ_Implied: InstLowB<"inz", 0b0001>; /// INcrement Z register;
+def DEZ_Implied: InstLowB<"dez", 0b0011>; /// DEcrement Z register
+
+/// Loads, Stores, Pushes, Pulls and Transfers
+
+def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>;
+def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>;
+def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>;
+
+def CLE_Implied: InstLow2<"cle", 0b0000>; /// CLear stack Extend disable bit
+def SEE_Implied: InstLow3<"sse", 0b0000>; /// SEt stack Extend disable bit
+
+def PHZ_Implied: InstLowB<"phz", 0b1101>; /// PusH Z register onto stack
+def PLZ_Implied: InstLowB<"plz", 0b1111>; /// PulL Z register from stack
+
+def TAZ_Implied: InstLowB<"taz", 0b0100>; /// Transfer Accumulator to Z register
+def TZA_Implied: InstLowB<"tza", 0b0110>; /// Transfer Z register to Accumulator
+def TAB_Implied: InstLowB<"tab", 0b0101>; /// Transfer Accumulator to Base page reg.
+def TBA_Implied: InstLowB<"tba", 0b0111>; /// Transfer Base page register to Acc.
+def TSY_Implied: InstLowB<"tsy", 0b0000>; /// Transfer Stack pointer high byte to Y
+def TYS_Implied: InstLowB<"tys", 0b0010>; /// Transfer Y reg. to Stack pointer high byte
 
 } // Predicates = [Has65CE02]
 

@@ -1,16 +1,26 @@
 ; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mosw65ce02 < %s | FileCheck %s
 
+	cle                         ; CHECK: encoding: [0x02]
+	sse                         ; CHECK: encoding: [0x03]
+	tsy                         ; CHECK: encoding: [0x0b]
 	inz                         ; CHECK: encoding: [0x1b]
+	tys                         ; CHECK: encoding: [0x2b]
 	dez                         ; CHECK: encoding: [0x3b]
 	neg                         ; CHECK: encoding: [0x42]
 	asr                         ; CHECK: encoding: [0x43]
 	taz                         ; CHECK: encoding: [0x4b]
+	tab                         ; CHECK: encoding: [0x5b]
 	tza                         ; CHECK: encoding: [0x6b]
+	tba                         ; CHECK: encoding: [0x7b]
 	phz                         ; CHECK: encoding: [0xdb]
 	plz                         ; CHECK: encoding: [0xfb]
 
+        jsr     ($eaea)             ; CHECK: encoding: [0x22,0xea,0xea]
+        jsr     ($eaea,x)           ; CHECK: encoding: [0x23,0xea,0xea]
+
         rtn     #$ea                ; CHECK: encoding: [0x62,0xea]
         bsr     $eaea               ; CHECK: encoding: [0x63,0xea,0xea]
+        bra     $eaea               ; CHECK: encoding: [0x83,0xea,0xea]
         dew     $ea                 ; CHECK: encoding: [0xc3,0xea]
         inw     $ea                 ; CHECK: encoding: [0xe3,0xea]
 
