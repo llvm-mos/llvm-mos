@@ -238,6 +238,12 @@ def PLX_Implied: InstLowA<"plx", 0b1111>;
 
 def BRA_Relative : Inst16<"bra", OpcodeC0<0b100, 0b000>, Relative>;
 
+def JMP_IndexedIndirect : Inst24<"jmp", Opcode<0x7c>, IndexedIndirect16>;
+
+def BIT_ZeroPageX : Inst16<"bit", Opcode<0x34>, ZeroPageX>;
+def BIT_AbsoluteX : Inst24<"bit", Opcode<0x3c>, AbsoluteX>;
+def BIT_Immediate : Inst16<"bit", Opcode<0x89>, Immediate>;
+
 ///       STZ
 /// zp    64
 /// abs   9C
