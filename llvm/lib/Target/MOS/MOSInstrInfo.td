@@ -225,12 +225,12 @@ let Predicates = [Has65C02] in {
 /// INCA DECA PHY PLY PHX PLX
 /// 1A   3A   5A  7A  DA  FA
 
-def INC_Implied: InstLowA<"inc", 0b0001>;
-def DEC_Implied: InstLowA<"dec", 0b0011>;
-def PHY_Implied: InstLowA<"phy", 0b0101>;
-def PLY_Implied: InstLowA<"ply", 0b0111>;
-def PHX_Implied: InstLowA<"phx", 0b1101>;
-def PLX_Implied: InstLowA<"plx", 0b1111>;
+def INC_Implied: InstLowA<"inc", 0b0001>; /// Increase accumulator
+def DEC_Implied: InstLowA<"dec", 0b0011>; /// Decrease accumulator
+def PHY_Implied: InstLowA<"phy", 0b0101>; /// Push Y
+def PLY_Implied: InstLowA<"ply", 0b0111>; /// Pull Y
+def PHX_Implied: InstLowA<"phx", 0b1101>; /// Push X
+def PLX_Implied: InstLowA<"plx", 0b1111>; /// Pull X
 
 /// Unconditional relative branch instruction
 /// BRA
@@ -244,8 +244,11 @@ def BIT_ZeroPageX : Inst16<"bit", Opcode<0x34>, ZeroPageX>;
 def BIT_AbsoluteX : Inst24<"bit", Opcode<0x3c>, AbsoluteX>;
 def BIT_Immediate : Inst16<"bit", Opcode<0x89>, Immediate>;
 
-def TRB_ZeroPage : Inst16<"trb", Opcode<0x14>, ZeroPage>;
-def TRB_Absolute : Inst24<"trb", Opcode<0x1c>, Absolute>;
+def TRB_ZeroPage : Inst16<"trb", Opcode<0x14>, ZeroPage>; /// Test and Reset Bits
+def TRB_Absolute : Inst24<"trb", Opcode<0x1c>, Absolute>; /// Test and Reset Bits
+
+def TSB_ZeroPage : Inst16<"tsb", Opcode<0x04>, ZeroPage>; /// Test and Set Bits
+def TSB_Absolute : Inst24<"tsb", Opcode<0x0c>, Absolute>; /// Test and Set Bits
 
 ///       STZ
 /// zp    64
