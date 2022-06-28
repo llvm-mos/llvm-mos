@@ -27,4 +27,5 @@
         ldz     #$ea                ; CHECK: encoding: [0xa3,0xea]
  	ldz	$eaea               ; CHECK: encoding: [0xab,0xea,0xea]
  	ldz	$eaea,x             ; CHECK: encoding: [0xbb,0xea,0xea]
+        lda     ($ea),z             ; CHECK: encoding: [0xb2,0xea]
 

@@ -251,15 +251,15 @@ def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
 
 let Predicates = [Has65CE02] in {
 
-/// Layout follows CMOS 65CE02 micrprocessor datasheet
-/// (http://archive.6502.org/datasheets/mos_65ce02_mpu.pdf)
+/// Layout follows CMOS 65CE02 micrprocessor datasheet:
+/// http://archive.6502.org/datasheets/mos_65ce02_mpu.pdf
 
 /// Branches and jumps
 
 def BRA_Relative16 : Inst24<"bra", OpcodeC3<0b100, 0b000>, Relative16>;
 def BSR_Relative16 : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative16>;
-def JSR_Indirect: Inst24<"jsr", Opcode<0x22>, Indirect16>;
-def JSR_IndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>;
+def JSR_AbsoluteIndirect: Inst24<"jsr", Opcode<0x22>, Indirect16>;
+def JSR_AbsoluteIndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>;
 def RTN_Immediate : Inst16<"rtn", OpcodeC2<0b011, 0b000>, Immediate>;
 
 /// Arithmetic Operations
@@ -269,10 +269,13 @@ def ASR_Implied: InstLow3<"asr", 0b0100>; /// Arithmetic Shift Right accumulator
 
 def INW_ZeroPage : Inst16<"inw", OpcodeC3<0b111, 0b000>, ZeroPage>; /// Inc. word
 def DEW_ZeroPage : Inst16<"dew", OpcodeC3<0b110, 0b000>, ZeroPage>; /// Dec. word
+
 def INZ_Implied: InstLowB<"inz", 0b0001>; /// INcrement Z register;
 def DEZ_Implied: InstLowB<"dez", 0b0011>; /// DEcrement Z register
 
 /// Loads, Stores, Pushes, Pulls and Transfers
+
+def LDA_IndirectZeroPageZ : Inst16<"lda", OpcodeC2<0b101, 0b100>, IndirectZeroPageZ>;
 
 def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>;
 def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>;
@@ -286,8 +289,10 @@ def PLZ_Implied: InstLowB<"plz", 0b1111>; /// PulL Z register from stack
 
 def TAZ_Implied: InstLowB<"taz", 0b0100>; /// Transfer Accumulator to Z register
 def TZA_Implied: InstLowB<"tza", 0b0110>; /// Transfer Z register to Accumulator
+
 def TAB_Implied: InstLowB<"tab", 0b0101>; /// Transfer Accumulator to Base page reg.
 def TBA_Implied: InstLowB<"tba", 0b0111>; /// Transfer Base page register to Acc.
+
 def TSY_Implied: InstLowB<"tsy", 0b0000>; /// Transfer Stack pointer high byte to Y
 def TYS_Implied: InstLowB<"tys", 0b0010>; /// Transfer Y reg. to Stack pointer high byte
 
