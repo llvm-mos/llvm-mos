@@ -147,6 +147,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .unsupported();
 
   getActionDefinitionsBuilder({G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM})
+      .clampScalar(0, S8, S64)
+      .widenScalarToNextPow2(0)
       .libcall();
 
   getActionDefinitionsBuilder({G_SDIVREM, G_UDIVREM})
