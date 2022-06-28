@@ -256,13 +256,21 @@ let Predicates = [Has65CE02] in {
 
 /// Branches and jumps
 
-def BPL_Relative16 : Inst24<"bpl", OpcodeC3<0b000, 0b100>, Relative16>;
-def BMI_Relative16 : Inst24<"bmi", OpcodeC3<0b001, 0b100>, Relative16>;
-def BRA_Relative16 : Inst24<"bra", OpcodeC3<0b100, 0b000>, Relative16>; /// BRU
-def BSR_Relative16 : Inst24<"bsr", OpcodeC3<0b011, 0b000>, Relative16>;
+def BPL_Relative16 : Inst24<"bpl", Opcode<0x13>, Relative16>;
+def BMI_Relative16 : Inst24<"bmi", Opcode<0x33>, Relative16>;
+def BVC_Relative16 : Inst24<"bvc", Opcode<0x53>, Relative16>;
+def BSR_Relative16 : Inst24<"bsr", Opcode<0x63>, Relative16>;
+def BVS_Relative16 : Inst24<"bvs", Opcode<0x73>, Relative16>;
+def BRA_Relative16 : Inst24<"bra", Opcode<0x83>, Relative16>; /// BRU
+def BCC_Relative16 : Inst24<"bcc", Opcode<0x93>, Relative16>;
+def BCS_Relative16 : Inst24<"bcs", Opcode<0xb3>, Relative16>;
+def BNE_Relative16 : Inst24<"bne", Opcode<0xd3>, Relative16>;
+def BEQ_Relative16 : Inst24<"beq", Opcode<0xf3>, Relative16>;
+
 def JSR_AbsoluteIndirect: Inst24<"jsr", Opcode<0x22>, Indirect16>;
 def JSR_AbsoluteIndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>;
-def RTN_Immediate : Inst16<"rtn", OpcodeC2<0b011, 0b000>, Immediate>;
+
+def RTN_Immediate : Inst16<"rtn", Opcode<0x62>, Immediate>;
 
 /// Arithmetic Operations
 

@@ -17,8 +17,15 @@
 
         bpl     $eaea               ; CHECK: encoding: [0x13,0xea,0xea]
         bmi     $eaea               ; CHECK: encoding: [0x33,0xea,0xea]
-        bra     $eaea               ; CHECK: encoding: [0x83,0xea,0xea]
+        bvc     $eaea               ; CHECK: encoding: [0x53,0xea,0xea]
         bsr     $eaea               ; CHECK: encoding: [0x63,0xea,0xea]
+        bvs     $eaea               ; CHECK: encoding: [0x73,0xea,0xea]
+        bra     $eaea               ; CHECK: encoding: [0x83,0xea,0xea]
+        bcc     $eaea               ; CHECK: encoding: [0x93,0xea,0xea]
+        bcs     $eaea               ; CHECK: encoding: [0xb3,0xea,0xea]
+        bne     $eaea               ; CHECK: encoding: [0xd3,0xea,0xea]
+        beq     $eaea               ; CHECK: encoding: [0xf3,0xea,0xea]
+
         jsr     ($eaea)             ; CHECK: encoding: [0x22,0xea,0xea]
         jsr     ($eaea,x)           ; CHECK: encoding: [0x23,0xea,0xea]
         rtn     #$ea                ; CHECK: encoding: [0x62,0xea]
