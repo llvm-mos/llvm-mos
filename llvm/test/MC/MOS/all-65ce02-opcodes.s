@@ -32,12 +32,13 @@
         jsr     ($eaea,x)           ; CHECK: encoding: [0x23,0xea,0xea]
         rtn     #$ea                ; CHECK: encoding: [0x62,0xea]
 
+        phw     #$eaea              ; CHECK: encoding: [0xf4,0xea,0xea]
+        phw     $eaea               ; CHECK: encoding: [0xfc,0xea,0xea]
+
         asw     $eaea               ; CHECK: encoding: [0xcb,0xea,0xea]
         row     $eaea               ; CHECK: encoding: [0xeb,0xea,0xea]
-
         dew     $ea                 ; CHECK: encoding: [0xc3,0xea]
         inw     $ea                 ; CHECK: encoding: [0xe3,0xea]
-
         ora     ($ea),z             ; CHECK: encoding: [0x12,0xea]
         and     ($ea),z             ; CHECK: encoding: [0x32,0xea]
         eor     ($ea),z             ; CHECK: encoding: [0x52,0xea]
