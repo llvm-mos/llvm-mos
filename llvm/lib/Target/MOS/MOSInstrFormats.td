@@ -288,6 +288,12 @@ def IndirectZeroPageZ : AddressingMode {
   let InOperandList = (ins addr8:$param);
 }
 
+def IndirectStackPointerY : AddressingMode {
+  let OperandsStr = "( $param , sp ) , y";
+  let InOperandList = (ins addr8:$param);
+}
+
+
 /// An unsized MOS instruction, to which an addressing mode may be applied.
 class InstAddressMode<string asmstr, Opcode op = DefaultOpcode,
                       AddressingMode mode = Implicit> : Inst<asmstr> {

@@ -53,9 +53,11 @@
         ldz     #$ea                ; CHECK: encoding: [0xa3,0xea]
  	ldz	$eaea               ; CHECK: encoding: [0xab,0xea,0xea]
         lda     ($ea),z             ; CHECK: encoding: [0xb2,0xea]
+        lda     ($ea,sp),y          ; CHECK: encoding: [0xe2,0xea]
  	ldz	$eaea,x             ; CHECK: encoding: [0xbb,0xea,0xea]
 
         sta     ($ea),z             ; CHECK: encoding: [0x92,0xea] 
+        sta     ($ea,sp),y          ; CHECK: encoding: [0x82,0xea] 
         stx     $eaea,y             ; CHECK: encoding: [0x9b,0xea,0xea] 
         sty     $eaea,x             ; CHECK: encoding: [0x8b,0xea,0xea] 
 

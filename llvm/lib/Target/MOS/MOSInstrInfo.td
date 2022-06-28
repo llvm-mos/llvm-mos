@@ -303,12 +303,14 @@ def CPZ_Absolute : Inst24<"cpz", OpcodeC0<0b110, 0b111>, Absolute>;
 /// Loads, Stores, Pushes, Pulls and Transfers
 
 def LDA_IndirectZeroPageZ : Inst16<"lda", OpcodeC2<0b101, 0b100>, IndirectZeroPageZ>;
+def LDA_IndirectStackPointerY : Inst16<"lda", Opcode<0xe2>, IndirectStackPointerY>;
 
 def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>;
 def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>;
 def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>;
 
 def STA_IndirectZeroPageZ : Inst16<"sta", Opcode<0x92>, IndirectZeroPageZ>;
+def STA_IndirectStackPointerY : Inst16<"sta", Opcode<0x82>, IndirectStackPointerY>;
 def STX_AbsoluteY : Inst24<"stx", Opcode<0x9b>, AbsoluteY>;
 def STY_AbsoluteX : Inst24<"sty", Opcode<0x8b>, AbsoluteX>;
 
