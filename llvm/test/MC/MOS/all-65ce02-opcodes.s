@@ -10,6 +10,7 @@
 	plz                         ; CHECK: encoding: [0xfb]
 
         rtn     #$ea                ; CHECK: encoding: [0x62,0xea]
+        bsr     $eaea               ; CHECK: encoding: [0x63,0xea,0xea]
         dew     $ea                 ; CHECK: encoding: [0xc3,0xea]
         inw     $ea                 ; CHECK: encoding: [0xe3,0xea]
 
