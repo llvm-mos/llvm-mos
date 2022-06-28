@@ -62,6 +62,9 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLTOOptions(TC, Args, Output, Inputs, CmdArgs);
 
+  CmdArgs.push_back("--gc-sections");
+  CmdArgs.push_back("--sort-section=alignment");
+
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
