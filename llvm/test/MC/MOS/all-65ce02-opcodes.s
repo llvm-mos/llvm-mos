@@ -8,6 +8,8 @@
 	dez                         ; CHECK: encoding: [0x3b]
 	neg                         ; CHECK: encoding: [0x42]
 	asr                         ; CHECK: encoding: [0x43]
+        asr     $ea                 ; CHECK: encoding: [0x44,0xea]
+        asr     $ea,x               ; CHECK: encoding: [0x54,0xea]
 	taz                         ; CHECK: encoding: [0x4b]
 	tab                         ; CHECK: encoding: [0x5b]
 	tza                         ; CHECK: encoding: [0x6b]
@@ -35,6 +37,13 @@
 
         dew     $ea                 ; CHECK: encoding: [0xc3,0xea]
         inw     $ea                 ; CHECK: encoding: [0xe3,0xea]
+
+        ora     ($ea),z             ; CHECK: encoding: [0x12,0xea]
+        and     ($ea),z             ; CHECK: encoding: [0x32,0xea]
+        eor     ($ea),z             ; CHECK: encoding: [0x52,0xea]
+        adc     ($ea),z             ; CHECK: encoding: [0x72,0xea]
+        cmp     ($ea),z             ; CHECK: encoding: [0xd2,0xea]
+        sbc     ($ea),z             ; CHECK: encoding: [0xf2,0xea]
 
         cpz     #$ea                ; CHECK: encoding: [0xc2,0xea]
         cpz     $ea                 ; CHECK: encoding: [0xd4,0xea]

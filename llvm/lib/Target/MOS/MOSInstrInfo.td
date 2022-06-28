@@ -275,7 +275,10 @@ def RTN_Immediate : Inst16<"rtn", Opcode<0x62>, Immediate>;
 /// Arithmetic Operations
 
 def NEG_Implied: InstLow2<"neg", 0b0100>; /// NEGate (or 2's complement) accumulator
+
 def ASR_Implied: InstLow3<"asr", 0b0100>; /// Arithmetic Shift Right accumulator
+def ASR_ZeroPage: Inst16<"asr", Opcode<0x44>, ZeroPage>; 
+def ASR_ZeroPageX: Inst16<"asr", Opcode<0x54>, ZeroPageX>; 
 
 def INW_ZeroPage : Inst16<"inw", OpcodeC3<0b111, 0b000>, ZeroPage>; /// Inc. word
 def DEW_ZeroPage : Inst16<"dew", OpcodeC3<0b110, 0b000>, ZeroPage>; /// Dec. word
@@ -284,8 +287,14 @@ def INZ_Implied: InstLowB<"inz", 0b0001>; /// INcrement Z register;
 def DEZ_Implied: InstLowB<"dez", 0b0011>; /// DEcrement Z register;
 
 def ASW_Absolute : Inst24<"asw", Opcode<0xcb>, Absolute>; /// Arithmetic Shift left Word
-def ROW_Absolute : Inst24<"row", Opcode<0xeb>, Absolute>; /// Arithmetic Shift left Word
+def ROW_Absolute : Inst24<"row", Opcode<0xeb>, Absolute>; /// ROtate left Word
 
+def ORA_IndirectZeroPageZ : Inst16<"ora", Opcode<0x12>, IndirectZeroPageZ>;
+def AND_IndirectZeroPageZ : Inst16<"and", Opcode<0x32>, IndirectZeroPageZ>;
+def EOR_IndirectZeroPageZ : Inst16<"eor", Opcode<0x52>, IndirectZeroPageZ>;
+def ADC_IndirectZeroPageZ : Inst16<"adc", Opcode<0x72>, IndirectZeroPageZ>;
+def CMP_IndirectZeroPageZ : Inst16<"cmp", Opcode<0xd2>, IndirectZeroPageZ>;
+def SBC_IndirectZeroPageZ : Inst16<"sbc", Opcode<0xf2>, IndirectZeroPageZ>;
 
 def CPZ_Immediate : Inst16<"cpz", OpcodeC2<0b110, 0b000>, Immediate>;
 def CPZ_ZeroPage : Inst16<"cpz", OpcodeC0<0b110, 0b101>, ZeroPage>;
