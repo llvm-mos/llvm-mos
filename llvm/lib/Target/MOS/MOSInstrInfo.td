@@ -225,6 +225,8 @@ let Predicates = [Has65C02] in {
 /// INCA DECA PHY PLY PHX PLX
 /// 1A   3A   5A  7A  DA  FA
 
+def INC_Implied: InstLowA<"inc", 0b0001>;
+def DEC_Implied: InstLowA<"dec", 0b0011>;
 def PHY_Implied: InstLowA<"phy", 0b0101>;
 def PLY_Implied: InstLowA<"ply", 0b0111>;
 def PHX_Implied: InstLowA<"phx", 0b1101>;

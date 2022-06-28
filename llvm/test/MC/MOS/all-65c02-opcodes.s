@@ -1,5 +1,7 @@
 ; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mos65c02 < %s | FileCheck %s
 
+ 	inc                         ; CHECK: encoding: [0x1a]
+ 	dec                         ; CHECK: encoding: [0x3a]
  	phx                         ; CHECK: encoding: [0xda]
  	plx                         ; CHECK: encoding: [0xfa]
  	phy                         ; CHECK: encoding: [0x5a]
