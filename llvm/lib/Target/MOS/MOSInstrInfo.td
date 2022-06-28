@@ -244,6 +244,9 @@ def BIT_ZeroPageX : Inst16<"bit", Opcode<0x34>, ZeroPageX>;
 def BIT_AbsoluteX : Inst24<"bit", Opcode<0x3c>, AbsoluteX>;
 def BIT_Immediate : Inst16<"bit", Opcode<0x89>, Immediate>;
 
+def TRB_ZeroPage : Inst16<"trb", Opcode<0x14>, ZeroPage>;
+def TRB_Absolute : Inst24<"trb", Opcode<0x1c>, Absolute>;
+
 ///       STZ
 /// zp    64
 /// abs   9C

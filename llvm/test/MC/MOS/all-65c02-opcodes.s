@@ -17,6 +17,8 @@
  	bit	$ea,x                   ; CHECK: encoding: [0x34,0xea]
  	bit	$eaea,x                 ; CHECK: encoding: [0x3c,0xea,0xea]
  	bit	#$ea                    ; CHECK: encoding: [0x89,0xea]
+ 	trb	$ea                     ; CHECK: encoding: [0x14,0xea]
+ 	trb	$eaea                   ; CHECK: encoding: [0x1c,0xea,0xea]
 
  	jmp	($eaea,x)               ; CHECK: encoding: [0x7c,0xea,0xea]
 
