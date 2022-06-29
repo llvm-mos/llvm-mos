@@ -5570,6 +5570,7 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
                            "a scale at the same time!");
     if (F.Scale == -1) {
       if (ICmpScaledV->getType() != OpTy) {
+        dbgs() << "A\n";
         Instruction *Cast =
           CastInst::Create(CastInst::getCastOpcode(ICmpScaledV, false,
                                                    OpTy, false),
@@ -5662,12 +5663,14 @@ void LSRInstance::RewriteForPHI(
 
         // If this is reuse-by-noop-cast, insert the noop cast.
         Type *OpTy = LF.OperandValToReplace->getType();
-        if (FullV->getType() != OpTy)
+        if (FullV->getType() != OpTy) {
+          dbgs() << "B\n";
           FullV =
             CastInst::Create(CastInst::getCastOpcode(FullV, false,
                                                      OpTy, false),
                              FullV, LF.OperandValToReplace->getType(),
                              "tmp", BB->getTerminator());
+        }
 
         PN->setIncomingValue(i, FullV);
         Pair.first->second = FullV;
@@ -5730,6 +5733,7 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     // If this is reuse-by-noop-cast, insert the noop cast.
     Type *OpTy = LF.OperandValToReplace->getType();
     if (FullV->getType() != OpTy) {
+      dbgs() << "C\n";
       Instruction *Cast =
         CastInst::Create(CastInst::getCastOpcode(FullV, false, OpTy, false),
                          FullV, OpTy, "tmp", LF.UserInst);
