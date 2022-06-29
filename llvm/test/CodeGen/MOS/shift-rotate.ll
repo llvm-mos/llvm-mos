@@ -567,23 +567,20 @@ define i16 @ror_4(i16 %a) {
 ; CHECK-LABEL: ror_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx mos8(__rc2)
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    sta mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc3)
-; CHECK-NEXT:    ror mos8(__rc2)
-; CHECK-NEXT:    ror
-; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 4)
@@ -592,18 +589,18 @@ entry:
 define i16 @ror_5(i16 %a) {
 ; CHECK-LABEL: ror_5:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    cpx #128
-; CHECK-NEXT:    rol mos8(__rc2)
-; CHECK-NEXT:    rol
+; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    cmp #128
 ; CHECK-NEXT:    rol mos8(__rc2)
 ; CHECK-NEXT:    rol
 ; CHECK-NEXT:    cmp #128
 ; CHECK-NEXT:    rol mos8(__rc2)
 ; CHECK-NEXT:    rol
-; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    rol mos8(__rc2)
+; CHECK-NEXT:    rol
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 5)
@@ -612,12 +609,12 @@ entry:
 define i16 @ror_7(i16 %a) {
 ; CHECK-LABEL: ror_7:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sta mos8(__rc2)
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    cpx #128
+; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    cmp #128
 ; CHECK-NEXT:    rol mos8(__rc2)
 ; CHECK-NEXT:    rol
-; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 7)
@@ -637,11 +634,13 @@ entry:
 define i16 @ror_15(i16 %a) {
 ; CHECK-LABEL: ror_15:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    stx mos8(__rc2)
-; CHECK-NEXT:    cmp #128
+; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    cpx #128
 ; CHECK-NEXT:    rol mos8(__rc2)
 ; CHECK-NEXT:    rol
-; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    lda mos8(__rc2)
 ; CHECK-NEXT:    rts
 entry:
   %0 = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 15)
