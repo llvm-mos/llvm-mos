@@ -1,7 +1,7 @@
 ; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mosw65ce02 < %s | FileCheck %s
 
 	cle                         ; CHECK: encoding: [0x02]
-	sse                         ; CHECK: encoding: [0x03]
+	see                         ; CHECK: encoding: [0x03]
 	tsy                         ; CHECK: encoding: [0x0b]
 	inz                         ; CHECK: encoding: [0x1b]
 	tys                         ; CHECK: encoding: [0x2b]

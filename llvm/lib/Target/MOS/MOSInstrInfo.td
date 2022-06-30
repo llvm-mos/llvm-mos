@@ -329,7 +329,7 @@ def STX_AbsoluteY : Inst24<"stx", Opcode<0x9b>, AbsoluteY>;
 def STY_AbsoluteX : Inst24<"sty", Opcode<0x8b>, AbsoluteX>;
 
 def CLE_Implied: InstLow2<"cle", 0b0000>; /// CLear stack Extend disable bit
-def SEE_Implied: InstLow3<"sse", 0b0000>; /// SEt stack Extend disable bit
+def SEE_Implied: InstLow3<"see", 0b0000>; /// SEt stack Extend disable bit
 
 def PHW_Immediate : Inst24<"phw", Opcode<0xf4>, Immediate16>; /// PusH Data Immediate (Word)
 def PHW_Absolute : Inst24<"phw", Opcode<0xfc>, Absolute>; /// PusH Data Absolute (Word)
