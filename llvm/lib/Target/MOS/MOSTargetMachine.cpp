@@ -25,6 +25,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Utils.h"
 
@@ -191,6 +192,8 @@ void MOSPassConfig::addIRPasses() {
   // Aggressively find provably non-recursive functions.
   addPass(createMOSNoRecursePass());
   TargetPassConfig::addIRPasses();
+  // Clean up after LSR in particular.
+  addPass(createInstructionCombiningPass());
 }
 
 bool MOSPassConfig::addPreISel() { return false; }
