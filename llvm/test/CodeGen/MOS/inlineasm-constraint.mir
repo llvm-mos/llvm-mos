@@ -128,4 +128,24 @@
     ret void
     ; CHECK-NEXT: RTS
   }
+
+  define void @constraint_c() {
+  ; CHECK-LABEL: name: constraint_c
+  entry:
+    ; CHECK:      %0:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: $c = COPY %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse */, $c
+    call void asm sideeffect "JSR 1234", "c"(i1 1)
+    ret void
+  }
+
+  define void @constraint_v() {
+  ; CHECK-LABEL: name: constraint_v
+  entry:
+    ; CHECK:      %0:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: $v = COPY %0
+    ; CHECK-NEXT: INLINEASM &"JSR 1234", {{.*}} /* sideeffect attdialect */, {{.*}} /* reguse */, $v
+    call void asm sideeffect "JSR 1234", "v"(i1 1)
+    ret void
+  }
 ...

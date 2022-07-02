@@ -3,6 +3,7 @@
 // Test MOSs inline assembly.
 
 char c;
+_Bool b;
 
 void test_a() {
   // CHECK-LABEL: define dso_local void @test_a() {{.*}} {
@@ -30,6 +31,22 @@ void test_d() {
   // CHECK: [[V:%[0-9]+]] = load i8, ptr @c
   // CHECK: tail call void asm sideeffect "", "d"(i8 [[V]])
   asm volatile("" :: "d"(c));
+}
+
+void test_c() {
+  // CHECK-LABEL: define dso_local void @test_c() {{.*}} {
+  // CHECK: [[V:%[0-9]+]] = load i8, ptr @b
+  // CHECK: %tobool = icmp ne i8 [[V]], 0
+  // CHECK: tail call void asm sideeffect "", "c"(i1 %tobool)
+  asm volatile("" :: "c"(b));
+}
+
+void test_v() {
+  // CHECK-LABEL: define dso_local void @test_v() {{.*}} {
+  // CHECK: [[V:%[0-9]+]] = load i8, ptr @b
+  // CHECK: %tobool = icmp ne i8 [[V]], 0
+  // CHECK: tail call void asm sideeffect "", "v"(i1 %tobool)
+  asm volatile("" :: "v"(b));
 }
 
 void test_leaf_asm() {
