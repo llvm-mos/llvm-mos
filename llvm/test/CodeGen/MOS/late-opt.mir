@@ -6,7 +6,9 @@ body: |
   bb.0.entry:
     liveins: $a
     ; CHECK-LABEL: name: cmptermz_alone
-    ; CHECK: dead $x = TA $a, implicit-def $nz
+    ; CHECK: liveins: $a
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $x = TA $a, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n
     dead $c = CMPTermZ $a, implicit-def $nz
     RTS implicit $n
@@ -17,7 +19,9 @@ body: |
   bb.0.entry:
     liveins: $x
     ; CHECK-LABEL: name: cmptermz_elision
-    ; CHECK: $a = T_A killed $x, implicit-def $nz
+    ; CHECK: liveins: $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = T_A killed $x, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n
     $a = T_A killed $x
     dead $c = CMPTermZ $a, implicit-def $nz
@@ -29,7 +33,9 @@ body: |
   bb.0.entry:
     liveins: $a
     ; CHECK-LABEL: name: cmptermz_copy_elision
-    ; CHECK: $x = TA killed $a, implicit-def $nz
+    ; CHECK: liveins: $a
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x = TA killed $a, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n
     $x = TA killed $a
     dead $c = CMPTermZ $a, implicit-def $nz
@@ -41,7 +47,9 @@ body: |
   bb.0.entry:
     liveins: $x
     ; CHECK-LABEL: name: cmptermz_stimag8
-    ; CHECK: $rc1 = STImag8 $x
+    ; CHECK: liveins: $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc1 = STImag8 $x
     ; CHECK-NEXT: dead $a = LDImag8 $rc1, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n
     $rc1 = STImag8 $x
@@ -54,7 +62,9 @@ body: |
   bb.0.entry:
     liveins: $a, $rc2
     ; CHECK-LABEL: name: cmptermz_clobbered
-    ; CHECK: $a = T_A killed $x
+    ; CHECK: liveins: $a, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = T_A killed $x
     ; CHECK-NEXT: $y = LDImag8 $rc2
     ; CHECK-NEXT: dead $x = TA $a, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n
@@ -69,7 +79,9 @@ body: |
   bb.0.entry:
     liveins: $a, $y
     ; CHECK-LABEL: name: cmptermz_not_clobbered
-    ; CHECK: $a = T_A killed $x, implicit-def $nz
+    ; CHECK: liveins: $a, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = T_A killed $x, implicit-def $nz
     ; CHECK-NEXT: $rc2 = STImag8 $y
     ; CHECK-NEXT: RTS implicit $n
     $a = T_A killed $x
@@ -83,7 +95,9 @@ body: |
   bb.0.entry:
     liveins: $a, $x
     ; CHECK-LABEL: name: cmptermz_a_x_busy
-    ; CHECK: dead $y = TA $a, implicit-def $nz
+    ; CHECK: liveins: $a, $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $y = TA $a, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $x
     dead $c = CMPTermZ $a, implicit-def $nz
     RTS implicit $n, implicit $x
@@ -94,7 +108,9 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: cmptermz_a_xy_busy
-    ; CHECK: dead $c = CMPImm $a, 0, implicit-def $nz
+    ; CHECK: liveins: $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $c = CMPImm $a, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $x, implicit $y
     dead $c = CMPTermZ $a, implicit-def $nz
     RTS implicit $n, implicit $x, implicit $y
@@ -105,7 +121,9 @@ body: |
   bb.0.entry:
     liveins: $x
     ; CHECK-LABEL: name: cmptermz_x
-    ; CHECK: dead $a = T_A $x, implicit-def $nz
+    ; CHECK: liveins: $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $a = T_A $x, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n
     dead $c = CMPTermZ $x, implicit-def $nz
     RTS implicit $n
@@ -116,7 +134,9 @@ body: |
   bb.0.entry:
     liveins: $x, $a
     ; CHECK-LABEL: name: cmptermz_x_a_busy
-    ; CHECK: dead $c = CMPImm $x, 0, implicit-def $nz
+    ; CHECK: liveins: $x, $a
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $c = CMPImm $x, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a
     dead $c = CMPTermZ $x, implicit-def $nz
     RTS implicit $n, implicit $a
@@ -127,7 +147,9 @@ body: |
   bb.0.entry:
     liveins: $x
     ; CHECK-LABEL: name: cmptermz_y
-    ; CHECK: dead $a = T_A $y, implicit-def $nz
+    ; CHECK: liveins: $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $a = T_A $y, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n
     dead $c = CMPTermZ $y, implicit-def $nz
     RTS implicit $n
@@ -138,7 +160,9 @@ body: |
   bb.0.entry:
     liveins: $x, $a
     ; CHECK-LABEL: name: cmptermz_y_a_busy
-    ; CHECK: dead $c = CMPImm $y, 0, implicit-def $nz
+    ; CHECK: liveins: $x, $a
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $c = CMPImm $y, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a
     dead $c = CMPTermZ $y, implicit-def $nz
     RTS implicit $n, implicit $a
@@ -149,7 +173,9 @@ body: |
   bb.0.entry:
     liveins: $rc2
     ; CHECK-LABEL: name: cmptermz_imag8_a_free
-    ; CHECK: dead $a = LDImag8 $rc2, implicit-def $nz
+    ; CHECK: liveins: $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $a = LDImag8 $rc2, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n
     dead $c = CMPTermZ $rc2, implicit-def $nz
     RTS implicit $n
@@ -160,7 +186,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $a
     ; CHECK-LABEL: name: cmptermz_imag8_x_free
-    ; CHECK: dead $x = LDImag8 $rc2, implicit-def $nz
+    ; CHECK: liveins: $rc2, $a
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $x = LDImag8 $rc2, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a
     dead $c = CMPTermZ $rc2, implicit-def $nz
     RTS implicit $n, implicit $a
@@ -171,7 +199,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $a, $x
     ; CHECK-LABEL: name: cmptermz_imag8_y_free
-    ; CHECK: dead $y = LDImag8 $rc2, implicit-def $nz
+    ; CHECK: liveins: $rc2, $a, $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $y = LDImag8 $rc2, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x
     dead $c = CMPTermZ $rc2, implicit-def $nz
     RTS implicit $n, implicit $a, implicit $x
@@ -182,7 +212,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $a, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free
-    ; CHECK: $rc2 = INCImag8 $rc2
+    ; CHECK: liveins: $rc2, $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc2 = INCImag8 $rc2
     ; CHECK-NEXT: dead $rc2 = DECImag8 $rc2, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     dead $c = CMPTermZ $rc2, implicit-def $nz
@@ -194,7 +226,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free_lda_avail
-    ; CHECK: $a = LDImag8 $rc2
+    ; CHECK: liveins: $rc2, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = LDImag8 $rc2
     ; CHECK-NEXT: $x = IN $x
     ; CHECK-NEXT: dead $c = CMPImm $a, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
@@ -209,7 +243,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $a, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free_ldx_avail
-    ; CHECK: $x = LDImag8 $rc2
+    ; CHECK: liveins: $rc2, $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x = LDImag8 $rc2
     ; CHECK-NEXT: $y = IN $y
     ; CHECK-NEXT: dead $c = CMPImm $x, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
@@ -224,7 +260,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $a, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free_ldy_avail
-    ; CHECK: $y = LDImag8 $rc2
+    ; CHECK: liveins: $rc2, $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $y = LDImag8 $rc2
     ; CHECK-NEXT: $x = IN $x
     ; CHECK-NEXT: dead $c = CMPImm $y, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
@@ -239,7 +277,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $a, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free_lda_clobbered
-    ; CHECK: $a = LDImag8 $rc2
+    ; CHECK: liveins: $rc2, $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = LDImag8 $rc2
     ; CHECK-NEXT: $a = COPY $x
     ; CHECK-NEXT: $rc2 = INCImag8 $rc2
     ; CHECK-NEXT: dead $rc2 = DECImag8 $rc2, implicit-def $nz
@@ -255,7 +295,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free_lda_clobbered_ldx_avail
-    ; CHECK: $x = LDImag8 $rc2
+    ; CHECK: liveins: $rc2, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x = LDImag8 $rc2
     ; CHECK-NEXT: $a = LDImag8 $rc2
     ; CHECK-NEXT: $a = COPY $y
     ; CHECK-NEXT: dead $c = CMPImm $x, 0, implicit-def $nz
@@ -272,7 +314,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free_sta
-    ; CHECK: $rc2 = STImag8 $a
+    ; CHECK: liveins: $rc2, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc2 = STImag8 $a
     ; CHECK-NEXT: dead $c = CMPImm $a, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     $rc2 = STImag8 $a
@@ -285,7 +329,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $a, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free_lda_but_val_changed
-    ; CHECK: $a = LDImag8 $rc2
+    ; CHECK: liveins: $rc2, $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = LDImag8 $rc2
     ; CHECK-NEXT: $rc2 = INCImag8 $rc2
     ; CHECK-NEXT: $x = IN $x
     ; CHECK-NEXT: $rc2 = INCImag8 $rc2
@@ -303,7 +349,9 @@ body: |
   bb.0.entry:
     liveins: $rc2, $x, $y
     ; CHECK-LABEL: name: cmptermz_imag8_no_gpr_free_sta_clobbered
-    ; CHECK: $rc2 = STImag8 $a
+    ; CHECK: liveins: $rc2, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc2 = STImag8 $a
     ; CHECK-NEXT: $a = EORImm $a, 42
     ; CHECK-NEXT: $rc2 = INCImag8 $rc2
     ; CHECK-NEXT: dead $rc2 = DECImag8 $rc2, implicit-def $nz
@@ -379,7 +427,65 @@ body: |
   bb.0.entry:
     liveins: $a
     ; CHECK-LABEL: name: tail_jmp
-    ; CHECK: TailJMP &foo
+    ; CHECK: liveins: $a
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: TailJMP &foo
     JSR &foo
     RTS
+...
+---
+name: ldimm_to_tay
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm_to_tay
+    ; CHECK: $a = LDImm 1
+    ; CHECK-NEXT: $rc0 = STImag8 killed $a
+    ; CHECK-NEXT: $y = TA $a
+    ; CHECK-NEXT: RTS implicit $y
+    $a = LDImm 1
+    $rc0 = STImag8 killed $a
+    $y = LDImm 1
+    RTS implicit $y
+...
+---
+name: ldimm_to_tax
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm_to_tax
+    ; CHECK: $a = LDImm 1
+    ; CHECK-NEXT: $rc0 = STImag8 killed $a
+    ; CHECK-NEXT: $x = TA $a
+    ; CHECK-NEXT: RTS implicit $x
+    $a = LDImm 1
+    $rc0 = STImag8 killed $a
+    $x = LDImm 1
+    RTS implicit $x
+...
+---
+name: ldimm_to_txa
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm_to_txa
+    ; CHECK: $x = LDImm 1
+    ; CHECK-NEXT: $rc0 = STImag8 killed $x
+    ; CHECK-NEXT: $a = T_A $x
+    ; CHECK-NEXT: RTS implicit $a
+    $x = LDImm 1
+    $rc0 = STImag8 killed $x
+    $a = LDImm 1
+    RTS implicit $a
+...
+---
+name: ldimm_to_tya
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm_to_tya
+    ; CHECK: $y = LDImm 1
+    ; CHECK-NEXT: $rc0 = STImag8 killed $y
+    ; CHECK-NEXT: $a = T_A $y
+    ; CHECK-NEXT: RTS implicit $a
+    $y = LDImm 1
+    $rc0 = STImag8 killed $y
+    $a = LDImm 1
+    RTS implicit $a
 ...
