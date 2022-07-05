@@ -55,6 +55,9 @@ bool MOSTargetInfo::validateAsmConstraint(
   case 'y':
   // The index (X or Y) registers.
   case 'd':
+  // The C and V flags.
+  case 'c':
+  case 'v':
     Info.setAllowsRegister();
     return true;
   }

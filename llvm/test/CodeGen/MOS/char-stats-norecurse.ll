@@ -34,7 +34,7 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    asl
 ; NMOS-NEXT:    sta mos8(__rc2)
 ; NMOS-NEXT:    lda #0
-; NMOS-NEXT:    ldy #0
+; NMOS-NEXT:    tay
 ; NMOS-NEXT:    rol
 ; NMOS-NEXT:    sta mos8(__rc3)
 ; NMOS-NEXT:    lda #mos16lo(.Lchar_stats_sstk)
@@ -103,7 +103,7 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    asl
 ; CMOS-NEXT:    sta mos8(__rc2)
 ; CMOS-NEXT:    lda #0
-; CMOS-NEXT:    ldy #0
+; CMOS-NEXT:    tay
 ; CMOS-NEXT:    rol
 ; CMOS-NEXT:    sta mos8(__rc3)
 ; CMOS-NEXT:    lda #mos16lo(.Lchar_stats_sstk)

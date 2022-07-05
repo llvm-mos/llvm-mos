@@ -24,7 +24,7 @@ define i16 @main() local_unnamed_addr #0 {
 ; NMOS-NEXT:    bne .LBB0_1
 ; NMOS-NEXT:  ; %bb.2: ; %while.end
 ; NMOS-NEXT:    ldx #0
-; NMOS-NEXT:    lda #0
+; NMOS-NEXT:    txa
 ; NMOS-NEXT:    rts
 ;
 ; CMOS-LABEL: main:
@@ -42,7 +42,7 @@ define i16 @main() local_unnamed_addr #0 {
 ; CMOS-NEXT:    bne .LBB0_1
 ; CMOS-NEXT:  ; %bb.2: ; %while.end
 ; CMOS-NEXT:    ldx #0
-; CMOS-NEXT:    lda #0
+; CMOS-NEXT:    txa
 ; CMOS-NEXT:    rts
 entry:
   br label %while.body

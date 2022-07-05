@@ -44,7 +44,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool lowerCMPTermZs(MachineBasicBlock &MBB) const;
   void lowerCMPTermZ(MachineInstr &MI) const;
-  bool ldImmToInxyDexy(MachineBasicBlock &MBB) const;
+  bool combineLdImm(MachineBasicBlock &MBB) const;
   bool tailJMP(MachineBasicBlock &MBB) const;
 };
 
@@ -52,7 +52,7 @@ bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     Changed |= lowerCMPTermZs(MBB);
-    Changed |= ldImmToInxyDexy(MBB);
+    Changed |= combineLdImm(MBB);
     Changed |= tailJMP(MBB);
   }
   return Changed;
@@ -220,7 +220,7 @@ void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
-bool MOSLateOptimization::ldImmToInxyDexy(MachineBasicBlock &MBB) const {
+bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
   const auto &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
   const auto *TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
 
@@ -229,50 +229,90 @@ bool MOSLateOptimization::ldImmToInxyDexy(MachineBasicBlock &MBB) const {
   struct ImmLoad {
     MachineInstr *MI = nullptr;
     int64_t Val;
-  } ConstX, ConstY;
+  } LoadA, LoadX, LoadY;
 
   for (MachineInstr &MI : MBB) {
     if (MI.getOpcode() != MOS::LDImm || !MI.getOperand(1).isImm()) {
+      if (MI.modifiesRegister(MOS::A, TRI))
+        LoadA.MI = nullptr;
       if (MI.modifiesRegister(MOS::X, TRI))
-        ConstX.MI = nullptr;
+        LoadX.MI = nullptr;
       if (MI.modifiesRegister(MOS::Y, TRI))
-        ConstY.MI = nullptr;
+        LoadY.MI = nullptr;
       continue;
     }
 
     Register Dst = MI.getOperand(0).getReg();
     int64_t Val = MI.getOperand(1).getImm();
+
     ImmLoad *Load = nullptr;
+    // Try to replace with T__.
     switch (Dst) {
-    default:
-      continue;
-    case MOS::X:
-      Load = &ConstX;
+    case MOS::A: {
+      Register Src;
+      if (LoadX.MI && LoadX.Val == Val) {
+        Src = MOS::X;
+        Load = &LoadX;
+      }
+      if (LoadY.MI && LoadY.Val == Val) {
+        Src = MOS::Y;
+        Load = &LoadY;
+      }
+      if (Load) {
+        MI.setDesc(TII.get(MOS::T_A));
+        MI.getOperand(1).ChangeToRegister(Src, /*isDef=*/false);
+      }
       break;
+    }
+    case MOS::X:
     case MOS::Y:
-      Load = &ConstY;
+      if (LoadA.MI && LoadA.Val == Val) {
+        Load = &LoadA;
+        MI.setDesc(TII.get(MOS::TA));
+        MI.getOperand(1).ChangeToRegister(MOS::A, /*isDef=*/false);
+      }
       break;
     }
 
-    if (Load->MI) {
-      bool Reduced = false;
-      if (Val == Load->Val + 1) {
-        MI.setDesc(TII.get(MOS::IN));
-        Reduced = true;
-      } else if (Val == Load->Val - 1) {
-        MI.setDesc(TII.get(MOS::DE));
-        Reduced = true;
+    // Try to replace with IN_ or DE_.
+    if (!Load) {
+      switch (Dst) {
+      case MOS::X:
+        if (LoadX.MI && std::abs(LoadX.Val - Val) == 1)
+          Load = &LoadX;
+        break;
+      case MOS::Y:
+        if (LoadY.MI && std::abs(LoadY.Val - Val) == 1)
+          Load = &LoadY;
+        break;
       }
-      if (Reduced) {
-        Changed = true;
-        Load->MI->getOperand(0).setIsDead(false);
-        for (MachineInstr &J : make_range(MachineBasicBlock::iterator(Load->MI),
-                                          MachineBasicBlock::iterator(MI)))
-          J.clearRegisterKills(Dst, TRI);
+
+      if (Load) {
+        MI.setDesc(TII.get(Val > Load->Val ? MOS::IN : MOS::DE));
         MI.getOperand(1).ChangeToRegister(Dst, /*isDef=*/false, /*isImp=*/false,
                                           /*isKill=*/true);
         MI.tieOperands(0, 1);
       }
+    }
+
+    if (Load) {
+      Changed = true;
+      Load->MI->getOperand(0).setIsDead(false);
+      for (MachineInstr &J : make_range(MachineBasicBlock::iterator(Load->MI),
+                                        MachineBasicBlock::iterator(MI)))
+        J.clearRegisterKills(Dst, TRI);
+    }
+
+    switch (Dst) {
+    case MOS::A:
+      Load = &LoadA;
+      break;
+    case MOS::X:
+      Load = &LoadX;
+      break;
+    case MOS::Y:
+      Load = &LoadY;
+      break;
     }
 
     Load->MI = &MI;

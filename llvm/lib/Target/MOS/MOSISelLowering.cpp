@@ -97,6 +97,8 @@ MOSTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'x':
     case 'y':
     case 'd':
+    case 'c':
+    case 'v':
       return C_Register;
     case 'R':
       return C_RegisterClass;
@@ -127,6 +129,10 @@ MOSTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(MOS::Y, &MOS::GPRRegClass);
     case 'd':
       return std::make_pair(0U, &MOS::XYRegClass);
+    case 'c':
+      return std::make_pair(MOS::C, &MOS::FlagRegClass);
+    case 'v':
+      return std::make_pair(MOS::V, &MOS::FlagRegClass);
     }
   }
   if (Constraint == "{cc}")

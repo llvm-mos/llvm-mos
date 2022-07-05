@@ -633,52 +633,52 @@ define i64 @test_ds_cross_basic_blocks(i8* %0, i32 signext %1) {
 ; CHECK-NEXT:    li r10, 1
 ; CHECK-NEXT:    li r11, 1
 ; CHECK-NEXT:    li r12, 1
-; CHECK-NEXT:    li r30, 1
+; CHECK-NEXT:    li r0, 1
 ; CHECK-NEXT:    ld r5, 0(r5)
 ; CHECK-NEXT:    mtctr r4
 ; CHECK-NEXT:    li r4, -9
-; CHECK-NEXT:    li r29, 1
+; CHECK-NEXT:    li r30, 1
 ; CHECK-NEXT:    addi r5, r5, -1
 ; CHECK-NEXT:    b .LBB6_4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    ldx r0, r6, r4
-; CHECK-NEXT:    add r29, r0, r29
-; CHECK-NEXT:    ld r0, -8(r6)
-; CHECK-NEXT:    add r30, r0, r30
+; CHECK-NEXT:    ldx r29, r6, r4
+; CHECK-NEXT:    add r30, r29, r30
+; CHECK-NEXT:    ld r29, -8(r6)
+; CHECK-NEXT:    add r0, r29, r0
 ; CHECK-NEXT:  .LBB6_3:
-; CHECK-NEXT:    mulld r0, r30, r29
+; CHECK-NEXT:    mulld r29, r0, r30
 ; CHECK-NEXT:    addi r6, r6, 1
-; CHECK-NEXT:    mulld r0, r0, r12
-; CHECK-NEXT:    mulld r0, r0, r11
-; CHECK-NEXT:    mulld r0, r0, r10
-; CHECK-NEXT:    maddld r3, r0, r7, r3
+; CHECK-NEXT:    mulld r29, r29, r12
+; CHECK-NEXT:    mulld r29, r29, r11
+; CHECK-NEXT:    mulld r29, r29, r10
+; CHECK-NEXT:    maddld r3, r29, r7, r3
 ; CHECK-NEXT:    bdz .LBB6_9
 ; CHECK-NEXT:  .LBB6_4:
-; CHECK-NEXT:    lbzu r0, 1(r5)
-; CHECK-NEXT:    mulli r28, r0, 171
+; CHECK-NEXT:    lbzu r29, 1(r5)
+; CHECK-NEXT:    mulli r28, r29, 171
 ; CHECK-NEXT:    rlwinm r27, r28, 24, 8, 30
 ; CHECK-NEXT:    srwi r28, r28, 9
 ; CHECK-NEXT:    add r28, r28, r27
-; CHECK-NEXT:    sub r0, r0, r28
-; CHECK-NEXT:    clrlwi r0, r0, 24
-; CHECK-NEXT:    cmplwi r0, 1
+; CHECK-NEXT:    sub r29, r29, r28
+; CHECK-NEXT:    clrlwi r29, r29, 24
+; CHECK-NEXT:    cmplwi r29, 1
 ; CHECK-NEXT:    beq cr0, .LBB6_2
 ; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    cmplwi r0, 2
+; CHECK-NEXT:    cmplwi r29, 2
 ; CHECK-NEXT:    bne cr0, .LBB6_7
 ; CHECK-NEXT:  # %bb.6:
-; CHECK-NEXT:    ldx r0, r6, r8
-; CHECK-NEXT:    add r12, r0, r12
-; CHECK-NEXT:    ld r0, -4(r6)
-; CHECK-NEXT:    add r11, r0, r11
+; CHECK-NEXT:    ldx r29, r6, r8
+; CHECK-NEXT:    add r12, r29, r12
+; CHECK-NEXT:    ld r29, -4(r6)
+; CHECK-NEXT:    add r11, r29, r11
 ; CHECK-NEXT:    b .LBB6_3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_7:
-; CHECK-NEXT:    ldx r0, r6, r9
-; CHECK-NEXT:    add r10, r0, r10
-; CHECK-NEXT:    ld r0, 0(r6)
-; CHECK-NEXT:    add r7, r0, r7
+; CHECK-NEXT:    ldx r29, r6, r9
+; CHECK-NEXT:    add r10, r29, r10
+; CHECK-NEXT:    ld r29, 0(r6)
+; CHECK-NEXT:    add r7, r29, r7
 ; CHECK-NEXT:    b .LBB6_3
 ; CHECK-NEXT:  .LBB6_8:
 ; CHECK-NEXT:    li r3, 0
