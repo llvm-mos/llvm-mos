@@ -270,6 +270,7 @@ let Predicates = [Has65CE02] in {
 
 /// Branches and jumps
 
+let DecoderNamespace = "65ce02" in {
 def BPL_Relative16 : Inst24<"bpl", Opcode<0x13>, Relative16>;
 def BMI_Relative16 : Inst24<"bmi", Opcode<0x33>, Relative16>;
 def BVC_Relative16 : Inst24<"bvc", Opcode<0x53>, Relative16>;
@@ -345,6 +346,7 @@ def TBA_Implied: InstLowB<"tba", 0b0111>; /// Transfer Base page register to Acc
 
 def TSY_Implied: InstLowB<"tsy", 0b0000>; /// Transfer Stack pointer high byte to Y
 def TYS_Implied: InstLowB<"tys", 0b0010>; /// Transfer Y reg. to Stack pointer high byte
+}
 
 } // Predicates = [Has65CE02]
 
@@ -390,11 +392,9 @@ def RTL_Implied : Inst8<"rtl", OpcodeC3<0b011, 0b010>>;
 def JML_Indirect16 : Inst24<"jml", OpcodeC0<0b110, 0b111>, Indirect16>;
 
 /// 16-bit indexed-indirect jumps
-/// JMP JSR
-/// 7C  FC
+/// JSR
+/// FC
 
-def JMP_IndexedIndirect16 :
-  Inst24<"jmp", OpcodeC0<0b011, 0b111>, IndexedIndirect16>;
 def JSR_IndexedIndirect16 :
   Inst24<"jsr", OpcodeC0<0b111, 0b111>, IndexedIndirect16>;
 
