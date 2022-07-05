@@ -5,7 +5,7 @@
 ; RUN: sed -e 's/__mos_target_cpu/mosw65c02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,W65C02 %s
 ; RUN: sed -e 's/__mos_target_cpu/mosw65816/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,W65816 %s
 ; RUN: sed -e 's/__mos_target_cpu/mosw65el02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65EL02 %s
-; RUN: sed -e 's/__mos_target_cpu/mosw65ce02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65CE02 %s
+; RUN: sed -e 's/__mos_target_cpu/mos65ce02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65CE02 %s
 
 ; CHECK:        Machine: EM_MOS (0x1966)
 ; 6502:         Flags [

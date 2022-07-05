@@ -50,7 +50,7 @@ def Feature65EL02
 def Feature65CE02
     : SubtargetFeature<"mos-insns-65ce02", "Has65CE02Insns", "true",
                        "The new and modified instructions present on "
-                       "WDC 65CE02">;
+                       "65ce02 and variants">;
 
 def FeatureSWEET16
     : SubtargetFeature<"mos-insns-sweet16", "HasSWEET16Insns", "true",
@@ -134,9 +134,9 @@ class Device<string Name, Family Fam,
 def : Device<"mos6502",  Family6502>;
 def : Device<"mos6502x", Family6502X>;
 def : Device<"mos65c02", Family65C02>;
+def : Device<"mos65ce02", Family65CE02>;
 def : Device<"mosr65c02", FamilyR65C02>;
 def : Device<"mosw65c02", FamilyW65C02>;
 def : Device<"mosw65816", FamilyW65816>;
 def : Device<"mosw65el02", Family65EL02>;
-def : Device<"mosw65ce02", Family65CE02>;
 def : Device<"mossweet16", FamilySWEET16>;
