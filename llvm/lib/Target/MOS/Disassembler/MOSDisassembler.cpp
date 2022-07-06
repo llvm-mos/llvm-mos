@@ -9,6 +9,7 @@
 // This file is part of the MOS Disassembler.
 //
 //===----------------------------------------------------------------------===//
+
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
@@ -78,7 +79,7 @@ const uint8_t *getDecoderTable(size_t Size) {
   }
 }
 
-const uint8_t *get65CE02DecoderTable(size_t Size) {
+const uint8_t *getDecoderTable65CE02(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTable65ce028;
@@ -158,7 +159,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       Insn |= Bytes[Byte] << (8 * Byte);
     }
     if (STI.getFeatureBits()[MOS::Feature65CE02]) {
-      Result = decodeInstruction(get65CE02DecoderTable(InsnSize), Instr, Insn,
+      Result = decodeInstruction(getDecoderTable65CE02(InsnSize), Instr, Insn,
                                  Address, this, STI);
     }
     if (Result == MCDisassembler::Fail) {
