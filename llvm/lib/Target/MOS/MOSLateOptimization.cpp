@@ -300,7 +300,7 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       Load->MI->getOperand(0).setIsDead(false);
       for (MachineInstr &J : make_range(MachineBasicBlock::iterator(Load->MI),
                                         MachineBasicBlock::iterator(MI)))
-        J.clearRegisterKills(Dst, TRI);
+        J.clearRegisterKills(Load->MI->getOperand(0).getReg(), TRI);
     }
 
     switch (Dst) {
