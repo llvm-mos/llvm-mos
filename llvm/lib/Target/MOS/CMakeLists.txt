@@ -44,6 +44,7 @@ add_llvm_target(MOSCodeGen
   MOSSubtarget.cpp
   MOSTargetMachine.cpp
   MOSTargetObjectFile.cpp
+  MOSZeroPageAlloc.cpp
 
   DEPENDS
   intrinsics_gen

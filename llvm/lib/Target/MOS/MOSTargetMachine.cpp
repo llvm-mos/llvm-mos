@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -42,6 +43,7 @@
 #include "MOSStaticStackAlloc.h"
 #include "MOSTargetObjectFile.h"
 #include "MOSTargetTransformInfo.h"
+#include "MOSZeroPageAlloc.h"
 
 using namespace llvm;
 
@@ -58,6 +60,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   initializeMOSNoRecursePass(PR);
   initializeMOSPostRAScavengingPass(PR);
   initializeMOSStaticStackAllocPass(PR);
+  initializeMOSZeroPageAllocPass(PR);
 }
 
 static const char *MOSDataLayout =
@@ -174,6 +177,7 @@ public:
   void addFastRegAlloc() override { addOptimizedRegAlloc(); }
   void addOptimizedRegAlloc() override;
 
+  void addPrePEI() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 
@@ -243,6 +247,8 @@ void MOSPassConfig::addOptimizedRegAlloc() {
   insertPass(&llvm::TwoAddressInstructionPassID, &llvm::RegisterCoalescerID);
   TargetPassConfig::addOptimizedRegAlloc();
 }
+
+void MOSPassConfig::addPrePEI() { addPass(createMOSZeroPageAllocPass()); }
 
 void MOSPassConfig::addPreSched2() {
   addPass(createMOSPostRAScavengingPass());

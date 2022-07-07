@@ -27,6 +27,7 @@ void initializeMOSLowerSelectPass(PassRegistry &);
 void initializeMOSNoRecursePass(PassRegistry &);
 void initializeMOSPostRAScavengingPass(PassRegistry &);
 void initializeMOSStaticStackAllocPass(PassRegistry &);
+void initializeMOSZeroPageAllocPass(PassRegistry &);
 
 // The behind-by-one property of the std::reverse_iterator adaptor applied by
 // reverse() does not properly handle instruction erasures. This range construct

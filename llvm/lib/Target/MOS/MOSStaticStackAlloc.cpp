@@ -10,14 +10,8 @@
 //
 // The code generator lowers accesses to regions of the stack frame that can be
 // allocated statically as a target-specific index operand. This pass allocates
-// a global variable for each function with static stack, then the
-// target-specific indices in a function with references to the corresponding
-// global.
-//
-// In the future, this pass can be a bit cleverer. It's free to modify the
-// module as a whole (since it needs to insert global variables), so it can
-// examine the call graph to allow the static stack regions for certain
-// functions to overlap, as normal stack frames would at runtime.
+// a global variable for the static stack, then the target-specific indices in a
+// function with references to the corresponding offset within that global.
 //
 //===----------------------------------------------------------------------===//
 
