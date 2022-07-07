@@ -680,4 +680,11 @@ def err_drv_invalid_format_dxil_validator_version : Error<
 def err_drv_invalid_empty_dxil_validator_version : Error<
   "invalid validator version : %0\n"
   "If validator major version is 0, minor version must also be 0.">;
+
+def err_drv_invalid_zp : Error<
+  "invalid zero page amount : %0\n"
+  "Zero page amounts must be unsigned integers.">;
+def err_drv_too_much_zp_reserved : Error<
+  "reserved more zp than available: %0 \n"
+  "Cannot reserve more bytes of zero page than allocated to the compiler.">;
 }

@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSInstrInfo.h"
+#include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -446,6 +447,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
 }
 
 bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
+  const auto &FuncInfo = *MO.getParent()->getMF()->getInfo<MOSFunctionInfo>();
   const MOSRegisterInfo &TRI =
       *MO.getParent()->getMF()->getSubtarget<MOSSubtarget>().getRegisterInfo();
 
@@ -466,10 +468,18 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GV = MO.getGlobal();
     MCOp = lowerSymbolOperand(MO, AP.getSymbol(GV));
+
+    // Don't add addr8 to expressions that have already been given a fixup type.
+    if (auto *E = dyn_cast<MOSMCExpr>(MCOp.getExpr()))
+      if (E->getKind() != MOSMCExpr::VK_MOS_NONE)
+        break;
+
     // This is the last chance to catch values that are attributed a zero-page
     // section. It is the user's responsibility to ensure the linker will
     // locate the symbol completely within the zero-page.
-    if (MOSAsmBackend::isZeroPageSectionName(GV->getSection())) {
+    const auto *GVar = dyn_cast<GlobalVariable>(GV->getAliaseeObject());
+    if (MOSAsmBackend::isZeroPageSectionName(GV->getSection()) ||
+        (GVar && GVar->hasAttribute("zero-page"))) {
       const MOSMCExpr *Expr =
           MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, MCOp.getExpr(),
                             /*isNegated=*/false, Ctx);
@@ -493,6 +503,24 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     if (MO.isImplicit())
       return false;
     Register Reg = MO.getReg();
+
+    // Some CSRs may have been "spilled" by silently renaming them to zero page
+    // locations on the zero page stack. We want to maintain the illusion that
+    // these are imaginary registers, so they are rewritten as late as possible.
+    auto It = FuncInfo.CSRZPOffsets.find(Reg);
+    if (It != FuncInfo.CSRZPOffsets.end()) {
+      const MCExpr *Expr = MCSymbolRefExpr::create(
+          AP.getSymbol(FuncInfo.ZeroPageStackValue), Ctx);
+      size_t Offset = It->second;
+      if (Offset)
+        Expr = MCBinaryExpr::createAdd(
+            Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+      Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, Expr,
+                               /*isNegated=*/false, Ctx);
+      MCOp = MCOperand::createExpr(Expr);
+      break;
+    }
+
     if (MOS::Imag16RegClass.contains(Reg) || MOS::Imag8RegClass.contains(Reg)) {
       const MCExpr *Expr = MCSymbolRefExpr::create(
           Ctx.getOrCreateSymbol(TRI.getImag8SymbolName(Reg)), Ctx);

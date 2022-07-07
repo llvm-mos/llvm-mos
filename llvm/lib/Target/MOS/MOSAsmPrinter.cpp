@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/MOSAsmBackend.h"
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
-#include "MCTargetDesc/MOSAsmBackend.h"
 #include "MOSMCInstLower.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAssembler.h"
@@ -226,11 +227,15 @@ void MOSAsmPrinter::emitJumpTableInfo() {
 }
 
 const MCSymbol *MOSAsmPrinter::getFunctionFrameSymbol(int FI) const {
-  if (MF->getFrameInfo().getStackID(FI) == TargetStackID::NoAlloc) {
-    MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
-    return getSymbol(MFI.getStaticStackValue());
+  MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
+  switch (MF->getFrameInfo().getStackID(FI)) {
+  default:
+    return AsmPrinter::getFunctionFrameSymbol(FI);
+  case TargetStackID::MosStatic:
+    return getSymbol(MFI.StaticStackValue);
+  case TargetStackID::MosZeroPage:
+    return getSymbol(MFI.ZeroPageStackValue);
   }
-  return AsmPrinter::getFunctionFrameSymbol(FI);
 }
 
 } // namespace

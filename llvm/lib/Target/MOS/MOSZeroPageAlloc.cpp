@@ -16,6 +16,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSFrameLowering.h"
+#include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -36,6 +37,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -142,25 +144,29 @@ namespace {
 struct SCC;
 
 struct Candidate {
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
   size_t Size;
-  // Benefit relative to local function entry.
-  Freq Benefit;
 
   // One of
   Register CSR = 0;
-  GlobalValue *GV = nullptr;
+  GlobalVariable *GV = nullptr;
   int FI = -1;
 
   // The number of ZP locations tentatively assigned to this candidate. When
   // this reaches Size, the assignment is final.
-  unsigned Assigned = 0;
+  unsigned AssignedSize = 0;
 
   SCC *Comp = nullptr;
 };
 
-struct EntryCandidate {
+struct LocalCandidate {
   Candidate *Cand;
+  // Benefit relative to local function entry.
+  Freq Benefit;
+};
+
+struct EntryCandidate {
+  LocalCandidate *LC;
   Freq Benefit;
 };
 
@@ -168,21 +174,31 @@ struct EntryCandidate {
 
 #ifndef NDEBUG
 raw_ostream &operator<<(raw_ostream &OS, const Candidate &C) {
-  OS << C.MF->getName() << ", ";
+  if (C.MF)
+    OS << C.MF->getName() << ", ";
   if (C.CSR)
     OS << "CSR " << printReg(C.CSR, C.MF->getSubtarget().getRegisterInfo());
   else if (C.GV)
     OS << "Global " << *C.GV;
   else
     OS << "Frame Index " << C.FI;
-  OS << ", Size " << C.Size << ", Benefit " << C.Benefit;
-  if (C.Assigned)
-    OS << ", Assigned " << C.Assigned;
+  OS << ", Size " << C.Size;
+  if (C.AssignedSize) {
+    if (C.AssignedSize == C.Size)
+      OS << ", Assigned";
+    else
+      OS << ", Partially assigned " << C.AssignedSize;
+  }
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const LocalCandidate &EC) {
+  OS << *EC.Cand << ", Benefit " << EC.Benefit;
   return OS;
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const EntryCandidate &EC) {
-  OS << *EC.Cand << ", Global benefit " << EC.Benefit;
+  OS << *EC.LC << ", Global benefit " << EC.Benefit;
   return OS;
 }
 #endif
@@ -195,7 +211,7 @@ struct SCC {
   SmallVector<Function *> Funcs;
   SmallVector<SCC *> Callees;
   SmallVector<SCC *> Callers;
-  std::vector<Candidate> Candidates;
+  std::vector<LocalCandidate> Candidates;
 
   // Offset of the zero page area for this SCC from the start of the zero page
   // section for this TU.
@@ -225,6 +241,7 @@ struct SCCGraph {
   DenseMap<const Function *, SCC *> FunctionSCCs;
   // Corresponds to the external calling sentinel call graph node.
   SCC *ExternalCallingSCC;
+  std::vector<std::unique_ptr<Candidate>> Candidates;
 };
 
 } // namespace
@@ -277,7 +294,10 @@ private:
   MachineModuleInfo *MMI;
   SCCGraph buildSCCGraph(Module &M);
 
-  std::vector<Candidate> collectCandidates(MachineFunction &MF);
+  std::vector<LocalCandidate>
+  collectCandidates(MachineFunction &MF,
+                    std::vector<std::unique_ptr<Candidate>> &Candidates,
+                    DenseMap<GlobalVariable *, Candidate *> &GVCandidates);
 
   std::vector<EntryGraph> buildEntryGraphs(Module &M, SCCGraph &SCCGraph);
   bool assignZPs(SCCGraph &SCCGraph, std::vector<EntryGraph>::iterator Begin,
@@ -311,6 +331,10 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   if (!ZPAvail)
     return false;
 
+  // The frontend should report this error on the corresponding option.
+  assert(ZPAvail <= 256 - 32 &&
+         "There must be room for the imaginary registers.");
+
   MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
   LLVM_DEBUG(dbgs() << "*******************************************************"
@@ -337,7 +361,76 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   while (assignZPs(SCCGraph, RegularEGBegin, EntryGraphs.end()))
     ;
 
-  return false;
+  LLVM_DEBUG(dbgs() << "Enacting assignments:\n");
+
+  // Create a global variable for the static stack as a whole.
+  size_t StackSize = SCCGraph.ExternalCallingSCC->MaxZPSize -
+                     SCCGraph.ExternalCallingSCC->ZPSize;
+  GlobalVariable *Stack;
+  if (StackSize) {
+    Type *Typ = ArrayType::get(Type::getInt8Ty(M.getContext()), StackSize);
+    Stack = new GlobalVariable(M, Typ, false, GlobalValue::PrivateLinkage,
+                               UndefValue::get(Typ), "zp_stack");
+    Stack->addAttribute("zero-page");
+    LLVM_DEBUG(dbgs() << "  " << *Stack << '\n');
+  }
+
+  bool Changed = false;
+  DenseMap<const MachineFunction *, size_t> NextOffsets;
+  for (std::unique_ptr<Candidate> &Cand : SCCGraph.Candidates) {
+    if (Cand->AssignedSize < Cand->Size)
+      continue;
+    Changed = true;
+    if (Cand->GV) {
+      Cand->GV->addAttribute("zero-page");
+      LLVM_DEBUG(dbgs() << "  " << *Cand->GV << '\n');
+    } else {
+      MachineFunction &MF = *Cand->MF;
+      MachineFrameInfo &MFI = MF.getFrameInfo();
+      auto Res = NextOffsets.try_emplace(
+          &MF, Cand->Comp->ZPOffset - SCCGraph.ExternalCallingSCC->ZPSize);
+      size_t &Offset = Res.first->second;
+      if (Res.second) {
+        Constant *Aliasee = Stack;
+        if (Offset) {
+          Type *I16 = Type::getInt16Ty(Stack->getContext());
+          Aliasee = ConstantExpr::getGetElementPtr(
+              Stack->getValueType(), Stack,
+              SmallVector<Constant *>{ConstantInt::get(I16, 0),
+                                      ConstantInt::get(I16, Offset)},
+              /*InBounds=*/true);
+        }
+        Type *Typ =
+            ArrayType::get(Type::getInt8Ty(M.getContext()), Cand->Comp->ZPSize);
+        auto *Alias = GlobalAlias::create(
+            Typ, Stack->getAddressSpace(), Stack->getLinkage(),
+            Twine(MF.getName()) + "_zp_stk", Aliasee, Stack->getParent());
+        LLVM_DEBUG(dbgs() << "  " << *Alias);
+        MF.getInfo<MOSFunctionInfo>()->ZeroPageStackValue = Alias;
+      }
+      LLVM_DEBUG(dbgs() << "  " << *Cand << ", Offset " << Offset << '\n');
+
+      if (Cand->CSR) {
+        DenseMap<Register, size_t> &CSRZPOffsets =
+            MF.getInfo<MOSFunctionInfo>()->CSRZPOffsets;
+        const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+        if (MOS::Imag16RegClass.contains(Cand->CSR)) {
+          CSRZPOffsets[Cand->CSR] =
+              CSRZPOffsets[TRI.getSubReg(Cand->CSR, MOS::sublo)] = Offset++;
+          CSRZPOffsets[TRI.getSubReg(Cand->CSR, MOS::subhi)] = Offset++;
+        } else {
+          CSRZPOffsets[Cand->CSR] = Offset++;
+        }
+      } else {
+        assert(Cand->FI >= 0);
+        MFI.setStackID(Cand->FI, TargetStackID::MosZeroPage);
+        MFI.setObjectOffset(Cand->FI, Offset);
+        Offset += Cand->Size;
+      }
+    }
+  }
+
+  return Changed;
 }
 
 // Contract the call graph into its strongly-connect components, then build a
@@ -372,6 +465,8 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   std::vector<SCC> SCCs;
   std::vector<SmallSet<const CallGraphNode *, 4>> SCCCallees;
   DenseMap<const CallGraphNode *, size_t> SCCIdx;
+  std::vector<std::unique_ptr<Candidate>> Candidates;
+  DenseMap<GlobalVariable *, Candidate *> GVCandidates;
   for (auto I = scc_begin(&CG), E = scc_end(&CG); I != E; ++I) {
     SCCs.emplace_back();
     SCC &SCC = SCCs.back();
@@ -391,10 +486,7 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
     MachineFunction *MF = MMI->getMachineFunction(*SCC.Funcs.front());
     if (!MF)
       continue;
-    const MOSFrameLowering &TFL =
-        *MF->getSubtarget<MOSSubtarget>().getFrameLowering();
-    if (TFL.usesStaticStack(*MF))
-      SCC.Candidates = collectCandidates(*MF);
+    SCC.Candidates = collectCandidates(*MF, Candidates, GVCandidates);
   }
   for (const auto &KV : enumerate(SCCCallees)) {
     SmallVector<SCC *> &Callees = SCCs[KV.index()].Callees;
@@ -403,38 +495,92 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   }
   DenseMap<const Function *, SCC *> FunctionSCCs;
 
+  SCC *ExternalCallingSCC = &SCCs[SCCIdx[CG.getExternalCallingNode()]];
   for (SCC &Component : SCCs) {
-    for (Candidate &C : Component.Candidates)
-      C.Comp = &Component;
+    for (LocalCandidate &LC : Component.Candidates) {
+      // Global value candidates are globally-visible, so account them to the
+      // entry node of the call graph. This ensures their offsets before the
+      // offsets of non-gv candidates, and they're mutually exclusive amongst
+      // themselves because they're all considered members of the same
+      // candidate. Note that they still are in the candidate list for each
+      // referencing component, since that's how their relative values are to be
+      // judged.
+      LC.Cand->Comp = LC.Cand->GV ? ExternalCallingSCC : &Component;
+    }
     for (const Function *F : Component.Funcs)
       FunctionSCCs[F] = &Component;
     for (SCC *Callee : Component.Callees)
       Callee->Callers.push_back(&Component);
   }
-  SCC *ExternalCallingSCC = &SCCs[SCCIdx[CG.getExternalCallingNode()]];
 
   LLVM_DEBUG({
     dbgs() << "Candidates:\n";
     for (SCC &Component : SCCs)
-      for (const Candidate &C : Component.Candidates)
-        dbgs() << "  " << C << '\n';
+      for (const LocalCandidate &LC : Component.Candidates)
+        dbgs() << "  " << LC << '\n';
     dbgs() << '\n';
   });
 
-  return {std::move(SCCs), std::move(FunctionSCCs), ExternalCallingSCC};
+  return {std::move(SCCs), std::move(FunctionSCCs), ExternalCallingSCC,
+          std::move(Candidates)};
 }
 
 // For each SCC, find all of the local options for ZP allocation and score
 // them relative to the function's entry frequency.
-std::vector<Candidate>
-MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
-  const MOSFrameLowering &TFL =
-      *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
+std::vector<LocalCandidate> MOSZeroPageAlloc::collectCandidates(
+    MachineFunction &MF, std::vector<std::unique_ptr<Candidate>> &Candidates,
+    DenseMap<GlobalVariable *, Candidate *> &GVCandidates) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   auto &BFI =
       getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
 
-  std::vector<Candidate> Candidates;
+  std::vector<LocalCandidate> LocalCandidates;
+
+  DenseMap<GlobalVariable *, Freq> GlobalBenefit;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MI.mayLoadOrStore() && MO.isGlobal()) {
+          const GlobalValue *GVal = MO.getGlobal();
+          const GlobalObject *GO = GVal->getAliaseeObject();
+          if (!GO)
+            continue;
+          const auto *GV = dyn_cast<GlobalVariable>(GO);
+          if (!GV || GV->getAlign().valueOrOne() != 1)
+            continue;
+
+          // Generally moving an absolute reference to the zero page saves one
+          // cycle and one byte.
+          GlobalBenefit[const_cast<GlobalVariable *>(GV)] +=
+              2 * getFreq(BFI, MBB);
+        }
+      }
+    }
+  }
+
+  for (const auto &KV : GlobalBenefit) {
+    GlobalVariable *GV = KV.first;
+    auto It = GVCandidates.find(GV);
+    if (It == GVCandidates.end()) {
+      size_t Size = (GV->getParent()->getDataLayout().getTypeSizeInBits(
+                         GV->getValueType()) +
+                     7) /
+                    8;
+      Candidates.push_back(std::make_unique<Candidate>(
+          Candidate{/*MF=*/nullptr, Size, /*CSR=*/0, GV}));
+      It = GVCandidates.try_emplace(GV, Candidates.back().get()).first;
+    }
+    assert(It != GVCandidates.end());
+    Candidate *Cand = It->second;
+    Freq Benefit = KV.second;
+    Benefit /= Cand->Size;
+    LocalCandidates.push_back(LocalCandidate{Cand, Benefit});
+  }
+
+  const MOSFrameLowering &TFL =
+      *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
+  if (!TFL.usesStaticStack(MF))
+    return LocalCandidates;
 
   Freq SaveFreq;
   Freq RestoreFreq;
@@ -458,6 +604,7 @@ MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
   BitVector SavedRegs;
   TFL.determineCalleeSaves(MF, SavedRegs, /*RS=*/nullptr);
   unsigned Idx = 0;
+  DenseSet<Register> Imag16Regs;
   for (Register Reg : SavedRegs.set_bits()) {
     if (!MOS::Imag8RegClass.contains(Reg))
       continue;
@@ -471,36 +618,44 @@ MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
       Benefit = 12 * SaveFreq;     // LDA ZP,STA ABS
       Benefit += 12 * RestoreFreq; // LDA ABS,STA ZP
     }
-    Benefit /= Size;
-    Candidates.push_back(Candidate{&MF, Size, Benefit, Reg});
+
+    // If the CSR is used as a 16-bit pointer, then the two halves cannot be
+    // assigned independently. Thus, instead of two size-1 candidates, one
+    // size-2 candidate is used.
+    Register Imag16 =
+        *MF.getSubtarget().getRegisterInfo()->superregs(Reg).begin();
+    assert(MOS::Imag16RegClass.contains(Imag16));
+    if (!MF.getRegInfo().reg_nodbg_empty(Imag16)) {
+      // Don't create the Imag16 candidate twice.
+      if (Imag16Regs.contains(Imag16))
+        continue;
+
+      Reg = Imag16;
+      Imag16Regs.insert(Reg);
+
+      // Account for the second byte.
+      if (Idx++ < 4) {
+        Benefit = 9 * SaveFreq;      // LDA ZP,PHA
+        Benefit += 10 * RestoreFreq; // PLA,STA ZP
+      } else {
+        Benefit = 12 * SaveFreq;     // LDA ZP,STA ABS
+        Benefit += 12 * RestoreFreq; // LDA ABS,STA ZP
+      }
+      ++Size;
+      Benefit /= Size;
+    }
+
+    Candidates.push_back(
+        std::make_unique<Candidate>(Candidate{&MF, Size, /*CSR=*/Reg}));
+    LocalCandidates.push_back(LocalCandidate{Candidates.back().get(), Benefit});
   }
 
   std::vector<SmallVector<MachineInstr *>> FIMIs(MFI.getObjectIndexEnd());
-  DenseMap<GlobalValue *, Freq> GlobalBenefit;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      for (const MachineOperand &MO : MI.operands()) {
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : MBB)
+      for (const MachineOperand &MO : MI.operands())
         if (MO.isFI() && MO.getIndex() >= 0)
           FIMIs[MO.getIndex()].push_back(&MI);
-        if (MI.mayLoadOrStore() && MO.isGlobal()) {
-          // Generally moving an absolute reference to the zero page saves one
-          // cycle and one byte.
-          GlobalBenefit[const_cast<GlobalValue *>(MO.getGlobal())] +=
-              2 * getFreq(BFI, MBB);
-        }
-      }
-    }
-  }
-  for (const auto &KV : GlobalBenefit) {
-    GlobalValue *GV = KV.first;
-    Freq Benefit = KV.second;
-    size_t Size = (GV->getParent()->getDataLayout().getTypeSizeInBits(
-                       GV->getValueType()) +
-                   7) /
-                  8;
-    Benefit /= Size;
-    Candidates.push_back(Candidate{&MF, Size, Benefit, /*CSR=*/0, GV});
-  }
 
   // Compute the benefit for moving each stack object to the ZP.
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
@@ -515,11 +670,39 @@ MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
     }
     auto Size = static_cast<size_t>(MFI.getObjectSize(I));
     Benefit /= Size;
-    Candidates.push_back(
-        Candidate{&MF, Size, Benefit, /*CSR=*/0, /*GV=*/nullptr, I});
+    Candidates.push_back(std::make_unique<Candidate>(
+        Candidate{&MF, Size, /*CSR=*/0, /*GV=*/nullptr, /*FI=*/I}));
+    LocalCandidates.push_back(LocalCandidate{Candidates.back().get(), Benefit});
   }
 
-  return Candidates;
+  return LocalCandidates;
+}
+
+static bool isUndef(const Constant *C) {
+  if (isa<UndefValue>(C))
+    return true;
+  if (!isa<ConstantAggregate>(C))
+    return false;
+  for (auto Operand : C->operand_values()) {
+    if (!isUndef(cast<Constant>(Operand)))
+      return false;
+  }
+  return true;
+}
+
+static bool isSuitableForNoInit(const GlobalVariable *GV) {
+  const Constant *C = GV->getInitializer();
+
+  // Must have an undef initializer.
+  if (!isUndef(C))
+    return false;
+
+  // If the global has an explicit section specified, don't put it in BSS.
+  if (GV->hasSection())
+    return false;
+
+  // Otherwise, put it in NoInit!
+  return true;
 }
 
 // For each globally-callable entry point, trace the SCCs transitively callable
@@ -602,9 +785,22 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
       // for the component.
 
       // Apply the final entry frequency to the candidates.
-      for (Candidate &Cand : Component->Candidates)
-        EG.Candidates.push_back(
-            EntryCandidate{&Cand, EntryFreq * Cand.Benefit});
+      for (LocalCandidate &LC : Component->Candidates) {
+        EntryCandidate EC{&LC, EntryFreq * LC.Benefit};
+        if (LC.Cand->GV && LC.Cand->GV->hasInitializer() &&
+            !isSuitableForNoInit(LC.Cand->GV)) {
+          // Pessimistically assume that initializing the global variable costs
+          // takes a LDA #imm, STA zp, and that the entry function is only
+          // called once.
+          if (EC.Benefit < 9) {
+            LLVM_DEBUG(dbgs() << "GV not worth initializing to ZP; skipping: "
+                              << EC << '\n');
+            continue;
+          }
+        }
+
+        EG.Candidates.push_back(EC);
+      }
 
       // Apply the final entry frequency to each outgoing call from the SCC and
       // propagate the resulting entry frequencies to callee SCCs.
@@ -644,43 +840,44 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
   for (;; ++EG.NextCand) {
     if (EG.NextCand == EG.Candidates.size())
       return false;
-    EntryCandidate &Cand = EG.Candidates[EG.NextCand];
+    EntryCandidate &EC = EG.Candidates[EG.NextCand];
+    Candidate &Cand = *EC.LC->Cand;
     // Another entry path may have already assigned the candidate.
-    if (Cand.Cand->Assigned == Cand.Cand->Size)
+    if (Cand.AssignedSize == Cand.Size)
       continue;
     // If the candidate is too big to fit, no reason to start allocating bytes
     // to it.
-    if (!Cand.Cand->Assigned &&
-        Cand.Cand->Size + Cand.Cand->Comp->MaxZPSize > ZPAvail)
+    if (!Cand.AssignedSize && Cand.Size + Cand.Comp->MaxZPSize > ZPAvail)
       continue;
 
     break;
   }
-  EntryCandidate &Cand = EG.Candidates[EG.NextCand];
+  EntryCandidate &EC = EG.Candidates[EG.NextCand];
+  Candidate &Cand = *EC.LC->Cand;
 
-  ++Cand.Cand->Assigned;
+  ++Cand.AssignedSize;
 
   LLVM_DEBUG(dbgs() << "Entry " << EG.Entry->Funcs.front()->getName()
                     << ", Func " << Cand << '\n';);
 
-  if (Cand.Cand->Assigned + Cand.Cand->Comp->MaxZPSize > ZPAvail) {
+  if (Cand.AssignedSize + Cand.Comp->MaxZPSize > ZPAvail) {
     LLVM_DEBUG(dbgs() << "No longer fits; unassigning.\n");
-    size_t NumToReassign = Cand.Cand->Assigned;
-    Cand.Cand->Assigned = 0;
+    size_t NumToReassign = Cand.AssignedSize;
+    Cand.AssignedSize = 0;
     bool AssignedAny = false;
     for (size_t I = 0; I < NumToReassign; ++I)
       AssignedAny |= assignZP(SCCGraph, EG);
     return AssignedAny;
   }
 
-  if (Cand.Cand->Assigned < Cand.Cand->Size)
+  if (Cand.AssignedSize < Cand.Size)
     return true;
 
-  Cand.Cand->Comp->ZPSize += Cand.Cand->Assigned;
+  Cand.Comp->ZPSize += Cand.AssignedSize;
 
   // Allocating a ZP can change the offsets of transitive callees, so propagate
   // those downward.
-  for (SCC *Comp : ReversePostOrderTraversal<SCC>(*Cand.Cand->Comp)) {
+  for (SCC *Comp : ReversePostOrderTraversal<SCC>(*Cand.Comp)) {
     size_t EndOffset = Comp->ZPOffset + Comp->ZPSize;
     for (struct SCC *Callee : Comp->Callees)
       Callee->ZPOffset = std::max(Callee->ZPOffset, EndOffset);

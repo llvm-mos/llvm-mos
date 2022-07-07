@@ -141,6 +141,13 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 }
 
+StringRef MOSTargetMachine::getSectionPrefix(const GlobalObject *GO) const {
+  if (const auto *GV = dyn_cast<GlobalVariable>(GO))
+    if (GV->hasAttribute("zero-page"))
+      return ".zp";
+  return "";
+}
+
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration
 //===----------------------------------------------------------------------===//

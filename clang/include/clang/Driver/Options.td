@@ -3933,6 +3933,10 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[NoXarchOption,CC1
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
   HelpText<"Only supported on X86 and RISC-V. Otherwise accepted for compatibility with GCC.">;
+def mlto_zp_EQ : Joined<["-"], "mlto-zp=">, Group<m_Group>,
+  HelpText<"Allocate a number of bytes of zero page for use by the compiler in LTO.">;
+def mreserve_zp_EQ : Joined<["-"], "mreserve-zp=">, Group<m_Group>,
+  HelpText<"Reserve a number of bytes of zero page from the region allocated to the compiler in LTO">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
 def multiply__defined : Separate<["-"], "multiply_defined">;

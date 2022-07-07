@@ -619,7 +619,8 @@ static SmallString<128>
 getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
                            Mangler &Mang, const TargetMachine &TM,
                            unsigned EntrySize, bool UniqueSectionName) {
-  SmallString<128> Name;
+  SmallString<128> Name = TM.getSectionPrefix(GO);
+
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
     // FIXME: this is getting the alignment of the character, not the
@@ -628,12 +629,12 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         cast<GlobalVariable>(GO));
 
     std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
-    Name = SizeSpec + utostr(Alignment.value());
+    Name += SizeSpec + utostr(Alignment.value());
   } else if (Kind.isMergeableConst()) {
-    Name = ".rodata.cst";
+    Name += ".rodata.cst";
     Name += utostr(EntrySize);
   } else {
-    Name = getSectionPrefixForGlobal(Kind);
+    Name += getSectionPrefixForGlobal(Kind);
   }
 
   bool HasPrefix = false;

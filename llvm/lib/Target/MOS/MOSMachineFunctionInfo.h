@@ -17,26 +17,13 @@
 
 namespace llvm {
 
-class MOSFunctionInfo : public MachineFunctionInfo {
-  int VarArgsStackIndex = -1;
-  const GlobalValue *StaticStackValue = nullptr;
-
-public:
+struct MOSFunctionInfo : public MachineFunctionInfo {
   MOSFunctionInfo(MachineFunction &MF) {}
 
-  /// Returns the fake frame index indicating the start of the varargs region of
-  /// the incoming call stack.
-  int getVarArgsStackIndex() const { return VarArgsStackIndex; }
-
-  /// Sets the fake frame index indicating the start of the varargs region of
-  /// the incoming call stack.
-  void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
-
-  /// Returns the static stack allocated for this function.
-  const GlobalValue *getStaticStackValue() const { return StaticStackValue; }
-
-  /// Sets the static stack allocated for this function.
-  void setStaticStackValue(const GlobalValue *Val) { StaticStackValue = Val; }
+  int VarArgsStackIndex = -1;
+  const GlobalValue *StaticStackValue = nullptr;
+  const GlobalValue *ZeroPageStackValue = nullptr;
+  DenseMap<Register, size_t> CSRZPOffsets;
 };
 
 } // namespace llvm

@@ -110,4 +110,29 @@ void mos::Linker::AddLTOOptions(const toolchains::MOS &TC, const ArgList &Args,
   addLTOOptions(TC, Args, CmdArgs, Output, Inputs[0],
                 TC.getDriver().getLTOMode() == LTOK_Thin);
   addMOSCodeGenArgs(CmdArgs);
+  unsigned ZPBytes = 0;
+  StringRef LTOZP = Args.getLastArgValue(options::OPT_mlto_zp_EQ);
+  if (!LTOZP.empty()) {
+    if (LTOZP.getAsInteger(0, ZPBytes))
+      TC.getDriver().Diag(diag::err_drv_invalid_zp) << LTOZP;
+  }
+  for (const std::string &Val :
+       Args.getAllArgValues(options::OPT_mreserve_zp_EQ)) {
+    if (Val.empty())
+      continue;
+    unsigned Amt;
+    if (StringRef(Val).getAsInteger(0, Amt)) {
+      TC.getDriver().Diag(diag::err_drv_invalid_zp) << Val;
+      continue;
+    }
+    if (ZPBytes < Amt) {
+      TC.getDriver().Diag(diag::err_drv_too_much_zp_reserved) << Val;
+      continue;
+    }
+    ZPBytes -= Amt;
+  }
+  if (ZPBytes) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-zp-avail=" + Twine(ZPBytes)));
+  }
 }

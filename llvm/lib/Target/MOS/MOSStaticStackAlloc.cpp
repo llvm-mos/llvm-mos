@@ -254,7 +254,7 @@ bool MOSStaticStackAlloc::runOnModule(Module &M) {
     LLVM_DEBUG(dbgs() << *Alias << "\n");
 
     MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
-    MFI.setStaticStackValue(Alias);
+    MFI.StaticStackValue = Alias;
 
     for (MachineBasicBlock &MBB : *MF) {
       for (MachineInstr &MI : MBB) {

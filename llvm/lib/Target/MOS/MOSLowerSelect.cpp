@@ -369,7 +369,10 @@ void MOSLowerSelect::moveAwayFromCalls(MachineFunction &MF) {
       for (; J->getOpcode() != MOS::ADJCALLSTACKDOWN; --J) {
         if (J->getOpcode() == MOS::G_SELECT || DefinesUsedReg(*J)) {
           // Conservatively assume there was a store.
-          assert(J->isSafeToMove(nullptr, /*SawStore=*/true));
+#ifndef NDEBUG
+          bool SawStore = true;
+#endif
+          assert(J->isSafeToMove(nullptr, SawStore));
           TrackUsedRegs(*J);
           auto NewJ = std::next(J);
           PushedMIs.push_back(J->removeFromParent());

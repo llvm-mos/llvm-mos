@@ -1706,7 +1706,7 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   auto *FuncInfo = Builder.getMF().getInfo<MOSFunctionInfo>();
   Builder.buildStore(
-      Builder.buildFrameIndex(P, FuncInfo->getVarArgsStackIndex()),
+      Builder.buildFrameIndex(P, FuncInfo->VarArgsStackIndex),
       MI.getOperand(0), **MI.memoperands_begin());
   MI.eraseFromParent();
   return true;
