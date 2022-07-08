@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/BlockFrequency.h"
@@ -62,24 +63,61 @@ struct Freq {
   Freq(uint64_t Scalar) : Num(Scalar), Denom(1) {}
   Freq() : Num(0), Denom(1) {}
 
-  Freq operator*(const Freq &Other) const {
-    if (Denom > Other.Denom)
-      return Other * *this;
-    // WLOG the other denominator is larger, so divide out the smaller
-    // denominator after the multiplication.
-    return {Num * Other.Num / Denom, Other.Denom};
+  Freq operator+(const Freq &Other) const {
+    if (Denom < Other.Denom)
+      return Other + *this;
+    if (Denom == Other.Denom)
+      return {Num + Other.Num, Denom};
+    return *this + scaleToDenom(Other);
   }
 
   Freq &operator+=(const Freq &Other) {
-    if (Denom > Other.Denom) {
-      Num += Other.Num * Denom / Other.Denom;
-    } else {
-      Num *= Other.Denom;
-      Num /= Denom;
-      Denom = Other.Denom;
-      Num += Other.Num;
-    }
+    *this = *this + Other;
     return *this;
+  }
+
+  Freq operator*(const Freq &Other) const {
+    if (Denom < Other.Denom)
+      return Other * *this;
+    if (Denom == Other.Denom)
+      return {Num * Other.Num / Denom, Denom};
+    return *this * scaleToDenom(Other);
+  }
+  Freq &operator*=(const Freq &Other) {
+    *this = *this * Other;
+    return *this;
+  }
+
+  Freq operator-(const Freq &Other) const { return *this + Freq(-1) * Other; }
+  Freq &operator-=(const Freq &Other) {
+    *this = *this - Other;
+    return *this;
+  }
+
+  Freq operator/(const Freq &Other) const {
+    return *this * Freq(Other.Denom, Other.Num);
+  }
+  Freq &operator/=(const Freq &Other) {
+    *this = *this / Other;
+    return *this;
+  }
+
+  bool operator==(const Freq &Other) const {
+    return Num == Other.Num && Denom == Other.Denom;
+  }
+  bool operator!=(const Freq &Other) const { return !(*this == Other); }
+  bool operator<(const Freq &Other) const {
+    return Num * Other.Denom < Other.Num * Denom;
+  }
+  bool operator<=(const Freq &Other) const {
+    return *this == Other || *this < Other;
+  }
+  bool operator>(const Freq &Other) const { return Other < *this; }
+  bool operator>=(const Freq &Other) const { return Other <= *this; }
+
+private:
+  Freq scaleToDenom(const Freq &Other) const {
+    return Freq{Other.Num * Denom / Other.Denom, Denom};
   }
 };
 
@@ -94,6 +132,7 @@ static raw_ostream &operator<<(raw_ostream &OS, const Freq &Freq) {
 namespace {
 
 struct Candidate {
+  MachineFunction *MF;
   size_t Size;
   // Benefit relative to local function entry.
   Freq Benefit;
@@ -102,17 +141,33 @@ struct Candidate {
   Register CSR = 0;
   GlobalValue *GV = nullptr;
   int FI = -1;
-
-  void dump(raw_ostream &OS, const TargetRegisterInfo &TRI) const {
-    if (CSR)
-      OS << "CSR " << printReg(CSR, &TRI);
-    else if (GV)
-      OS << "Global " << *GV;
-    else
-      OS << "Frame Index " << FI;
-    OS << ", Size " << Size << ", Benefit " << Benefit;
-  }
 };
+
+struct EntryCandidate {
+  Candidate *Cand;
+  Freq Benefit;
+};
+
+} // namespace
+
+raw_ostream &operator<<(raw_ostream &OS, const Candidate &C) {
+  OS << C.MF->getName() << ", ";
+  if (C.CSR)
+    OS << "CSR " << printReg(C.CSR, C.MF->getSubtarget().getRegisterInfo());
+  else if (C.GV)
+    OS << "Global " << *C.GV;
+  else
+    OS << "Frame Index " << C.FI;
+  OS << ", Size " << C.Size << ", Benefit " << C.Benefit;
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const EntryCandidate &EC) {
+  OS << *EC.Cand << ", Global benefit " << EC.Benefit;
+  return OS;
+}
+
+namespace {
 
 // A strongly connected component in the call graph. These SCCs themselves form
 // a DAG used throughout this algorithm.
@@ -127,6 +182,9 @@ struct SCC {
 // instead ZP's are assigned equally to EntryGraphs round-robin.
 struct EntryGraph {
   SCC *Entry;
+
+  // Candidates scored for this entry point, ordered best first.
+  std::vector<EntryCandidate> Candidates = {};
 };
 
 } // namespace
@@ -165,6 +223,8 @@ private:
   SCCGraph buildSCCGraph(Module &M);
 
   std::vector<Candidate> collectCandidates(MachineFunction &MF);
+
+  std::vector<EntryGraph> buildEntryGraphs(Module &M, SCCGraph &SCCGraph);
 };
 
 void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -200,92 +260,8 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
 
   SCCGraph SCCGraph = buildSCCGraph(M);
 
-  LLVM_DEBUG(
-      dbgs()
-      << "Computing relative entry frequences for each global entry point.\n"
-      << "*****************************************"
-         "***************************************\n");
-  std::vector<EntryGraph> EntryGraphs;
-  for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees)
-    EntryGraphs.push_back(EntryGraph{Entry});
-  for (const EntryGraph &EG : EntryGraphs) {
-    LLVM_DEBUG({
-      dbgs() << "Entry SCC\n";
-      for (const Function *F : EG.Entry->Funcs)
-        dbgs() << "  " << F->getName() << "\n";
-      dbgs() << '\n';
-    });
-
-    DenseMap<const SCC *, Freq> EntryFreqs;
-    EntryFreqs[EG.Entry] = Freq{1, 1};
-    // Callers are traversed before callees.
-    for (SCC *Component : ReversePostOrderTraversal<EntryGraph>(EG)) {
-      // Keep track of the original entry frequency of the SCC. Recursive calls
-      // within the SCC should increase the entry frequency, but this shouldn't
-      // compound, so they're scaled to the original entry frequency, not the
-      // increased one.
-      Freq OldEntryFreq = EntryFreqs[Component];
-
-      // This is the current entry frequency of the SCC, based on SCC callers
-      // and recursive calls seen so far.
-      Freq EntryFreq = OldEntryFreq;
-      LLVM_DEBUG(dbgs() << "  SCC " << EntryFreq << "\n");
-
-      // Find all calls within the SCC and propagate entry frequencies across
-      // the edges.
-      DenseMap<const Function *, Freq> CalleeFreqs;
-      for (Function *F : Component->Funcs) {
-        LLVM_DEBUG(dbgs() << "    " << F->getName() << "\n");
-        MachineFunction *MF = MMI->getMachineFunction(*F);
-        if (!MF)
-          continue;
-
-        auto &BFI = getAnalysis<BlockFrequencyInfoWrapperPass>(*F).getBFI();
-        for (MachineBasicBlock &MBB : *MF) {
-          for (const MachineInstr &MI : MBB) {
-            if (!MI.isCall())
-              continue;
-            for (const MachineOperand &MO : MI.operands()) {
-              const Function *Callee = nullptr;
-              if (MO.isGlobal())
-                Callee = dyn_cast<Function>(MO.getGlobal());
-              else if (MO.isSymbol())
-                Callee = M.getFunction(MO.getSymbolName());
-              if (!Callee)
-                continue;
-              Freq Freq = getFreq(BFI, MBB);
-              if (is_contained(Component->Funcs, Callee)) {
-                LLVM_DEBUG(dbgs() << "      Recursively calls "
-                                  << Callee->getName() << " " << Freq << '\n');
-                // Recursive calls are another way to enter the given SCC, so
-                // increase the Entry frequency. Don't compound the increases
-                // though; it's not worth risking overflowing the entry counts,
-                // especially since possible recursion paths may be accidental.
-                EntryFreq += OldEntryFreq * Freq;
-                LLVM_DEBUG(dbgs() << "    SCC freq += " << OldEntryFreq * Freq
-                                  << '\n');
-              }
-              // Defer handling normal calls until after the loop; the final
-              // entry frequency won't be known until afterwards.
-              LLVM_DEBUG(dbgs() << "      Calls " << Callee->getName() << ' '
-                                << Freq << '\n');
-              CalleeFreqs[Callee] += Freq;
-            }
-          }
-        }
-      }
-      // Now that recursion has been handled, the final entry frequency is known
-      // for the component. Apply it to each outgoing call from the SCC and
-      // propagate the resulting entry frequencies to callee SCCs.
-      for (const auto &KV : CalleeFreqs) {
-        Freq Freq = EntryFreq * KV.second;
-        LLVM_DEBUG(dbgs() << "    " << KV.first->getName() << " += " << Freq
-                          << '\n');
-        EntryFreqs[SCCGraph.FunctionSCCs[KV.first]] += Freq;
-      }
-    }
-    LLVM_DEBUG(dbgs() << '\n');
-  }
+  std::vector<EntryGraph> EntryGraphs = buildEntryGraphs(M, SCCGraph);
+  (void)EntryGraphs;
 
   return false;
 }
@@ -356,6 +332,15 @@ MOSZeroPageAlloc::SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
     for (const Function *F : Component.Funcs)
       FunctionSCCs[F] = &Component;
   SCC *ExternalCallingSCC = &SCCs[SCCIdx[CG.getExternalCallingNode()]];
+
+  LLVM_DEBUG({
+    dbgs() << "Candidates:\n";
+    for (SCC &Component : SCCs)
+      for (const Candidate &C : Component.Candidates)
+        dbgs() << "  " << C << '\n';
+    dbgs() << '\n';
+  });
+
   return {std::move(SCCs), std::move(FunctionSCCs), ExternalCallingSCC};
 }
 
@@ -369,7 +354,6 @@ MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
   auto &BFI =
       getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
 
-  LLVM_DEBUG(dbgs() << MF.getName() << ":\n");
   std::vector<Candidate> Candidates;
 
   Freq SaveFreq;
@@ -407,7 +391,8 @@ MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
       Benefit = 12 * SaveFreq;     // LDA ZP,STA ABS
       Benefit += 12 * RestoreFreq; // LDA ABS,STA ZP
     }
-    Candidates.push_back(Candidate{Size, Benefit, Reg});
+    Benefit /= Size;
+    Candidates.push_back(Candidate{&MF, Size, Benefit, Reg});
   }
 
   std::vector<SmallVector<MachineInstr *>> FIMIs(MFI.getObjectIndexEnd());
@@ -428,11 +413,13 @@ MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
   }
   for (const auto &KV : GlobalBenefit) {
     GlobalValue *GV = KV.first;
-    const Freq &Benefit = KV.second;
-    size_t Size =
-        GV->getParent()->getDataLayout().getTypeSizeInBits(GV->getValueType()) *
-        7 / 8;
-    Candidates.push_back(Candidate{Size, Benefit, /*CSR=*/0, GV});
+    Freq Benefit = KV.second;
+    size_t Size = (GV->getParent()->getDataLayout().getTypeSizeInBits(
+                       GV->getValueType()) +
+                   7) /
+                  8;
+    Benefit /= Size;
+    Candidates.push_back(Candidate{&MF, Size, Benefit, /*CSR=*/0, GV});
   }
 
   // Compute the benefit for moving each stack object to the ZP.
@@ -446,20 +433,121 @@ MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
       // cycle and one byte.
       Benefit += 2 * getFreq(BFI, *MI->getParent());
     }
-    Candidates.push_back(Candidate{static_cast<size_t>(MFI.getObjectSize(I)),
-                                   Benefit, /*CSR=*/0, /*GV=*/nullptr, I});
+    auto Size = static_cast<size_t>(MFI.getObjectSize(I));
+    Benefit /= Size;
+    Candidates.push_back(
+        Candidate{&MF, Size, Benefit, /*CSR=*/0, /*GV=*/nullptr, I});
   }
 
-  LLVM_DEBUG({
-    const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-    for (const Candidate &C : Candidates) {
-      dbgs() << "  ";
-      C.dump(dbgs(), TRI);
-      dbgs() << '\n';
-    }
-    dbgs() << '\n';
-  });
   return Candidates;
+}
+
+// For each globally-callable entry point, trace the SCCs transitively callable
+// from that entry, and assign each their relative frequency to the entry point.
+// From these frequences, an ordered set of candidates is derived for each entry
+// point.
+std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
+                                                           SCCGraph &SCCGraph) {
+  std::vector<EntryGraph> EntryGraphs;
+  for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees)
+    EntryGraphs.push_back(EntryGraph{Entry});
+  for (EntryGraph &EG : EntryGraphs) {
+    LLVM_DEBUG({
+      dbgs() << "Entry SCC\n";
+      for (const Function *F : EG.Entry->Funcs)
+        dbgs() << "  " << F->getName() << "\n";
+      dbgs() << '\n';
+    });
+
+    DenseMap<const SCC *, Freq> EntryFreqs;
+    EntryFreqs[EG.Entry] = Freq{1, 1};
+
+    // Callers are traversed before callees.
+    for (SCC *Component : ReversePostOrderTraversal<EntryGraph>(EG)) {
+      // Keep track of the original entry frequency of the SCC. Recursive calls
+      // within the SCC should increase the entry frequency, but this shouldn't
+      // compound, so they're scaled to the original entry frequency, not the
+      // increased one.
+      Freq OldEntryFreq = EntryFreqs[Component];
+
+      // This is the current entry frequency of the SCC, based on SCC callers
+      // and recursive calls seen so far.
+      Freq EntryFreq = OldEntryFreq;
+      LLVM_DEBUG(dbgs() << "  SCC " << EntryFreq << "\n");
+
+      // Find all calls within the SCC and propagate entry frequencies across
+      // the edges.
+      DenseMap<const Function *, Freq> CalleeFreqs;
+      for (Function *F : Component->Funcs) {
+        LLVM_DEBUG(dbgs() << "    " << F->getName() << "\n");
+        MachineFunction *MF = MMI->getMachineFunction(*F);
+        if (!MF)
+          continue;
+
+        auto &BFI = getAnalysis<BlockFrequencyInfoWrapperPass>(*F).getBFI();
+        for (MachineBasicBlock &MBB : *MF) {
+          for (const MachineInstr &MI : MBB) {
+            if (!MI.isCall())
+              continue;
+            for (const MachineOperand &MO : MI.operands()) {
+              const Function *Callee = nullptr;
+              if (MO.isGlobal())
+                Callee = dyn_cast<Function>(MO.getGlobal());
+              else if (MO.isSymbol())
+                Callee = M.getFunction(MO.getSymbolName());
+              if (!Callee)
+                continue;
+              Freq Freq = getFreq(BFI, MBB);
+              if (is_contained(Component->Funcs, Callee)) {
+                LLVM_DEBUG(dbgs() << "      Recursively calls "
+                                  << Callee->getName() << " " << Freq << '\n');
+                // Recursive calls are another way to enter the given SCC, so
+                // increase the Entry frequency. Don't compound the increases
+                // though; it's not worth risking overflowing the entry counts,
+                // especially since possible recursion paths may be accidental.
+                EntryFreq += OldEntryFreq * Freq;
+                LLVM_DEBUG(dbgs() << "    SCC freq += " << OldEntryFreq * Freq
+                                  << '\n');
+              }
+              // Defer handling normal calls until after the loop; the final
+              // entry frequency won't be known until afterwards.
+              LLVM_DEBUG(dbgs() << "      Calls " << Callee->getName() << ' '
+                                << Freq << '\n');
+              CalleeFreqs[Callee] += Freq;
+            }
+          }
+        }
+      }
+      // Now that recursion has been handled, the final entry frequency is known
+      // for the component.
+
+      // Apply the final entry frequency to the candidates.
+      for (Candidate &Cand : Component->Candidates)
+        EG.Candidates.push_back(
+            EntryCandidate{&Cand, EntryFreq * Cand.Benefit});
+
+      // Apply the final entry frequency to each outgoing call from the SCC and
+      // propagate the resulting entry frequencies to callee SCCs.
+      for (const auto &KV : CalleeFreqs) {
+        Freq Freq = EntryFreq * KV.second;
+        LLVM_DEBUG(dbgs() << "    " << KV.first->getName() << " += " << Freq
+                          << '\n');
+        EntryFreqs[SCCGraph.FunctionSCCs[KV.first]] += Freq;
+      }
+    }
+
+    stable_sort(EG.Candidates,
+                [](const EntryCandidate &A, const EntryCandidate &B) {
+                  return A.Benefit > B.Benefit;
+                });
+    LLVM_DEBUG({
+      dbgs() << "\n  Candidates:\n";
+      for (EntryCandidate &Cand : EG.Candidates)
+        dbgs() << "    " << Cand << '\n';
+      dbgs() << '\n';
+    });
+  }
+  return EntryGraphs;
 }
 
 // We can't use machine block frequency due to a pass scheduling SNAFU, so
