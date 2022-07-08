@@ -50,25 +50,6 @@ using namespace llvm;
 
 namespace {
 
-// A strongly connected component in the call graph. These SCCs themselves form
-// a DAG used throughout this algorithm.
-struct SCC {
-  SmallVector<Function *> Funcs;
-  SmallVector<SCC *> Callees;
-
-  // Whether or not the SCC is a candidate for ZP allocation. This means it has
-  // exactly one machine function node, it's non-recursive, and static stacks
-  // are allowed for it.
-  bool IsCand = false;
-};
-
-// A view of the SCC graph rooted at an externally callable node. Since we can't
-// generally reason about the relative frequencies of calls from outside the TU,
-// instead ZP's are assigned equally to EntryGraphs round-robin.
-struct EntryGraph {
-  SCC *Entry;
-};
-
 // A rational number expressed as a numerator and denominator pair. Binary
 // arithmetic operations between entries generally uses the denominator of the
 // larger operand and rounds, avoiding the explosion typical of exact rational
@@ -103,13 +84,52 @@ struct Freq {
 };
 
 Freq operator*(uint64_t Scalar, const Freq &F) { return Freq(Scalar) * F; }
-
 } // namespace
 
 static raw_ostream &operator<<(raw_ostream &OS, const Freq &Freq) {
   OS << Freq.Num << '/' << Freq.Denom;
   return OS;
 }
+
+namespace {
+
+struct Candidate {
+  size_t Size;
+  // Benefit relative to local function entry.
+  Freq Benefit;
+
+  // One of
+  Register CSR = 0;
+  GlobalValue *GV = nullptr;
+  int FI = -1;
+
+  void dump(raw_ostream &OS, const TargetRegisterInfo &TRI) const {
+    if (CSR)
+      OS << "CSR " << printReg(CSR, &TRI);
+    else if (GV)
+      OS << "Global " << *GV;
+    else
+      OS << "Frame Index " << FI;
+    OS << ", Size " << Size << ", Benefit " << Benefit;
+  }
+};
+
+// A strongly connected component in the call graph. These SCCs themselves form
+// a DAG used throughout this algorithm.
+struct SCC {
+  SmallVector<Function *> Funcs;
+  SmallVector<SCC *> Callees;
+  std::vector<Candidate> Candidates;
+};
+
+// A view of the SCC graph rooted at an externally callable node. Since we can't
+// generally reason about the relative frequencies of calls from outside the TU,
+// instead ZP's are assigned equally to EntryGraphs round-robin.
+struct EntryGraph {
+  SCC *Entry;
+};
+
+} // namespace
 
 template <> struct GraphTraits<EntryGraph> {
   using NodeRef = SCC *;
@@ -142,7 +162,9 @@ private:
   };
 
   MachineModuleInfo *MMI;
-  SCCGraph buildSCCGraph(Module &M) const;
+  SCCGraph buildSCCGraph(Module &M);
+
+  std::vector<Candidate> collectCandidates(MachineFunction &MF);
 };
 
 void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -178,106 +200,6 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
 
   SCCGraph SCCGraph = buildSCCGraph(M);
 
-  LLVM_DEBUG(dbgs() << "Collecting Zero Page allocation candidates.\n"
-                    << "*****************************************************"
-                       "***************************\n");
-
-  // For each SCC, find all of the local options for ZP allocation and score
-  // them relative to the function's entry frequency.
-  for (const SCC &Component : SCCGraph.SCCs) {
-    if (!Component.IsCand)
-      continue;
-    assert(Component.Funcs.size() == 1);
-    MachineFunction &MF = *MMI->getMachineFunction(*Component.Funcs.front());
-
-    const MOSFrameLowering &TFL =
-        *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
-    const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    auto &BFI =
-        getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
-
-    LLVM_DEBUG(dbgs() << MF.getName() << ":\n");
-
-    Freq SaveFreq;
-    Freq RestoreFreq;
-    if (MFI.getSavePoint()) {
-      SaveFreq = getFreq(BFI, *MFI.getSavePoint());
-      MachineBasicBlock *RestoreBlock = MFI.getRestorePoint();
-      // If RestoreBlock does not have any successor and is not a return block
-      // then the end point is unreachable and we do not need to insert any
-      // epilogue.
-      if (!RestoreBlock->succ_empty() || RestoreBlock->isReturnBlock())
-        RestoreFreq += getFreq(BFI, *RestoreBlock);
-    } else {
-      SaveFreq = getFreq(BFI, *MF.begin());
-      for (MachineBasicBlock &MBB : MF) {
-        if (MBB.isReturnBlock())
-          RestoreFreq += getFreq(BFI, MBB);
-      }
-    }
-
-    // Compute the benefit for moving each CSR to a static ZP location.
-    BitVector SavedRegs;
-    TFL.determineCalleeSaves(MF, SavedRegs, /*RS=*/nullptr);
-    unsigned Idx = 0;
-    for (Register Reg : SavedRegs.set_bits()) {
-      if (!MOS::Imag8RegClass.contains(Reg))
-        continue;
-
-      LLVM_DEBUG(dbgs() << "  CSR " << printReg(Reg, &TRI) << ":\n");
-      LLVM_DEBUG(dbgs() << "    Size: 1\n");
-
-      Freq Benefit;
-      if (Idx++ < 4) {
-        Benefit = 9 * SaveFreq;      // LDA ZP,PHA
-        Benefit += 10 * RestoreFreq; // PLA,STA ZP
-      } else {
-        Benefit = 12 * SaveFreq;     // LDA ZP,STA ABS
-        Benefit += 12 * RestoreFreq; // LDA ABS,STA ZP
-      }
-      LLVM_DEBUG(dbgs() << "    Benefit: " << Benefit << '\n');
-    }
-
-    std::vector<SmallVector<MachineInstr *>> FIMIs(MFI.getObjectIndexEnd());
-    DenseMap<const GlobalValue *, Freq> GlobalBenefit;
-    for (MachineBasicBlock &MBB : MF) {
-      for (MachineInstr &MI : MBB) {
-        for (const MachineOperand &MO : MI.operands()) {
-          if (MO.isFI() && MO.getIndex() >= 0)
-            FIMIs[MO.getIndex()].push_back(&MI);
-          if (MI.mayLoadOrStore() && MO.isGlobal()) {
-            // Generally moving an absolute reference to the zero page saves one
-            // cycle and one byte.
-            GlobalBenefit[MO.getGlobal()] += 2 * getFreq(BFI, MBB);
-          }
-        }
-      }
-    }
-    for (const auto &KV : GlobalBenefit) {
-      LLVM_DEBUG(dbgs() << "  Global " << *KV.first << ":\n");
-      LLVM_DEBUG(dbgs() << "    Benefit: " << KV.second << '\n');
-    }
-
-    // Compute the benefit for moving each stack object to the ZP.
-    for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
-      if (MFI.isDeadObjectIndex(I) || MFI.isVariableSizedObjectIndex(I))
-        continue;
-      LLVM_DEBUG(dbgs() << "  Frame Index #" << I << ":\n");
-      LLVM_DEBUG(dbgs() << "    Size: " << MFI.getObjectSize(I) << '\n');
-
-      Freq Benefit;
-      for (MachineInstr *MI : FIMIs[I]) {
-        // Generally moving an absolute reference to the zero page saves one
-        // cycle and one byte.
-        Benefit += 2 * getFreq(BFI, *MI->getParent());
-      }
-      LLVM_DEBUG(dbgs() << "    Benefit: " << Benefit << '\n');
-    }
-
-    LLVM_DEBUG(dbgs() << '\n');
-  }
-
   LLVM_DEBUG(
       dbgs()
       << "Computing relative entry frequences for each global entry point.\n"
@@ -287,7 +209,6 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees)
     EntryGraphs.push_back(EntryGraph{Entry});
   for (const EntryGraph &EG : EntryGraphs) {
-
     LLVM_DEBUG(dbgs() << "Entry SCC\n");
     for (const Function *F : EG.Entry->Funcs)
       LLVM_DEBUG(dbgs() << "  " << F->getName() << "\n");
@@ -369,7 +290,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
 
 // Contract the call graph into its strongly-connect components, then build a
 // SCC DAG out of the results.
-MOSZeroPageAlloc::SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) const {
+MOSZeroPageAlloc::SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   auto &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
   // Collect any external libcalls and add them to the call graph, which was
@@ -421,7 +342,7 @@ MOSZeroPageAlloc::SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) const {
     const MOSFrameLowering &TFL =
         *MF->getSubtarget<MOSSubtarget>().getFrameLowering();
     if (TFL.usesStaticStack(*MF))
-      SCC.IsCand = true;
+      SCC.Candidates = collectCandidates(*MF);
   }
   for (const auto &KV : enumerate(SCCCallees)) {
     SmallVector<SCC *> &Callees = SCCs[KV.index()].Callees;
@@ -434,6 +355,105 @@ MOSZeroPageAlloc::SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) const {
       FunctionSCCs[F] = &Component;
   SCC *ExternalCallingSCC = &SCCs[SCCIdx[CG.getExternalCallingNode()]];
   return {std::move(SCCs), std::move(FunctionSCCs), ExternalCallingSCC};
+}
+
+// For each SCC, find all of the local options for ZP allocation and score
+// them relative to the function's entry frequency.
+std::vector<Candidate>
+MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
+  const MOSFrameLowering &TFL =
+      *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto &BFI =
+      getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
+
+  LLVM_DEBUG(dbgs() << MF.getName() << ":\n");
+  std::vector<Candidate> Candidates;
+
+  Freq SaveFreq;
+  Freq RestoreFreq;
+  if (MFI.getSavePoint()) {
+    SaveFreq = getFreq(BFI, *MFI.getSavePoint());
+    MachineBasicBlock *RestoreBlock = MFI.getRestorePoint();
+    // If RestoreBlock does not have any successor and is not a return block
+    // then the end point is unreachable and we do not need to insert any
+    // epilogue.
+    if (!RestoreBlock->succ_empty() || RestoreBlock->isReturnBlock())
+      RestoreFreq += getFreq(BFI, *RestoreBlock);
+  } else {
+    SaveFreq = getFreq(BFI, *MF.begin());
+    for (MachineBasicBlock &MBB : MF) {
+      if (MBB.isReturnBlock())
+        RestoreFreq += getFreq(BFI, MBB);
+    }
+  }
+
+  // Compute the benefit for moving each CSR to a static ZP location.
+  BitVector SavedRegs;
+  TFL.determineCalleeSaves(MF, SavedRegs, /*RS=*/nullptr);
+  unsigned Idx = 0;
+  for (Register Reg : SavedRegs.set_bits()) {
+    if (!MOS::Imag8RegClass.contains(Reg))
+      continue;
+
+    size_t Size = 1;
+    Freq Benefit;
+    if (Idx++ < 4) {
+      Benefit = 9 * SaveFreq;      // LDA ZP,PHA
+      Benefit += 10 * RestoreFreq; // PLA,STA ZP
+    } else {
+      Benefit = 12 * SaveFreq;     // LDA ZP,STA ABS
+      Benefit += 12 * RestoreFreq; // LDA ABS,STA ZP
+    }
+    Candidates.push_back(Candidate{Size, Benefit, Reg});
+  }
+
+  std::vector<SmallVector<MachineInstr *>> FIMIs(MFI.getObjectIndexEnd());
+  DenseMap<GlobalValue *, Freq> GlobalBenefit;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isFI() && MO.getIndex() >= 0)
+          FIMIs[MO.getIndex()].push_back(&MI);
+        if (MI.mayLoadOrStore() && MO.isGlobal()) {
+          // Generally moving an absolute reference to the zero page saves one
+          // cycle and one byte.
+          GlobalBenefit[const_cast<GlobalValue *>(MO.getGlobal())] +=
+              2 * getFreq(BFI, MBB);
+        }
+      }
+    }
+  }
+  for (const auto &KV : GlobalBenefit) {
+    GlobalValue *GV = KV.first;
+    const Freq &Benefit = KV.second;
+    size_t Size =
+        GV->getParent()->getDataLayout().getTypeSizeInBits(GV->getValueType()) *
+        7 / 8;
+    Candidates.push_back(Candidate{Size, Benefit, /*CSR=*/0, GV});
+  }
+
+  // Compute the benefit for moving each stack object to the ZP.
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    if (MFI.isDeadObjectIndex(I) || MFI.isVariableSizedObjectIndex(I))
+      continue;
+
+    Freq Benefit;
+    for (MachineInstr *MI : FIMIs[I]) {
+      // Generally moving an absolute reference to the zero page saves one
+      // cycle and one byte.
+      Benefit += 2 * getFreq(BFI, *MI->getParent());
+    }
+    Candidates.push_back(Candidate{static_cast<size_t>(MFI.getObjectSize(I)),
+                                   Benefit, /*CSR=*/0, /*GV=*/nullptr, I});
+  }
+
+  for (const Candidate &C : Candidates)
+    LLVM_DEBUG(dbgs() << "  "; C.dump(dbgs(), TRI); dbgs() << '\n');
+
+  LLVM_DEBUG(dbgs() << '\n');
+  return Candidates;
 }
 
 // We can't use machine block frequency due to a pass scheduling SNAFU, so
