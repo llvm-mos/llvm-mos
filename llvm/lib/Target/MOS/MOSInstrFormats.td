@@ -22,6 +22,11 @@ def Has65C02 : Predicate<"Subtarget->has65C02()">,
   let PredicateName = "Feature65C02";
 }
 
+def Has65CE02 : Predicate<"Subtarget->has65CE02()">,
+               AssemblerPredicate<(all_of Feature65CE02), "Feature65CE02"> {
+  let PredicateName = "Feature65CE02";
+}
+
 def HasW65816 : Predicate<"Subtarget->hasW65816()">,
                 AssemblerPredicate<(all_of FeatureW65816), "FeatureW65816"> {
   let PredicateName = "FeatureW65816";
@@ -278,6 +283,17 @@ def IndirectIndexedLong : AddressingMode {
   let InOperandList = (ins addr8:$param);
 }
 
+def IndirectZeroPageZ : AddressingMode {
+  let OperandsStr = "( $param ) , z";
+  let InOperandList = (ins addr8:$param);
+}
+
+def IndirectStackPointerY : AddressingMode {
+  let OperandsStr = "( $param , sp ) , y";
+  let InOperandList = (ins addr8:$param);
+}
+
+
 /// An unsized MOS instruction, to which an addressing mode may be applied.
 class InstAddressMode<string asmstr, Opcode op = DefaultOpcode,
                       AddressingMode mode = Implicit> : Inst<asmstr> {
@@ -345,10 +361,17 @@ class InstNybble<string asmstr, bits<4> low = 0, bits<4> high = 0> :
 
 /// Instructions where the low nybble is 0x0.
 class InstLow0<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x0, high>;
+/// Instructions where the low nybble is 0x2.
+class InstLow2<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x2, high>;
+/// Instructions where the low nybble is 0x3.
+class InstLow3<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x3, high>;
 /// Instructions where the low nybble is 0x8.
 class InstLow8<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x8, high>;
 /// Instructions where the low nybble is 0xa.
 class InstLowA<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0xa, high>;
+/// Instructions where the low nybble is 0xb.
+class InstLowB<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0xb, high>;
+
 
 /// Opcode groups based on cc
 /// -------------------------

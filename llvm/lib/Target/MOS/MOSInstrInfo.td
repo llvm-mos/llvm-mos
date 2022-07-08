@@ -222,19 +222,33 @@ def NOP_Implied: InstLowA<"nop", 0b1110>;
 let Predicates = [Has65C02] in {
 
 /// Single-byte opcodes
-/// PHY PLY PHX PLX
-/// 5A  7A  DA  FA
+/// INCA DECA PHY PLY PHX PLX
+/// 1A   3A   5A  7A  DA  FA
 
-def PHY_Implied: InstLowA<"phy", 0b0101>;
-def PLY_Implied: InstLowA<"ply", 0b0111>;
-def PHX_Implied: InstLowA<"phx", 0b1101>;
-def PLX_Implied: InstLowA<"plx", 0b1111>;
+def INC_Implied: InstLowA<"inc", 0b0001>; /// Increase accumulator
+def DEC_Implied: InstLowA<"dec", 0b0011>; /// Decrease accumulator
+def PHY_Implied: InstLowA<"phy", 0b0101>; /// Push Y
+def PLY_Implied: InstLowA<"ply", 0b0111>; /// Pull Y
+def PHX_Implied: InstLowA<"phx", 0b1101>; /// Push X
+def PLX_Implied: InstLowA<"plx", 0b1111>; /// Pull X
 
 /// Unconditional relative branch instruction
 /// BRA
 /// 80
 
 def BRA_Relative : Inst16<"bra", OpcodeC0<0b100, 0b000>, Relative>;
+
+def JMP_IndexedIndirect : Inst24<"jmp", Opcode<0x7c>, IndexedIndirect16>;
+
+def BIT_ZeroPageX : Inst16<"bit", Opcode<0x34>, ZeroPageX>;
+def BIT_AbsoluteX : Inst24<"bit", Opcode<0x3c>, AbsoluteX>;
+def BIT_Immediate : Inst16<"bit", Opcode<0x89>, Immediate>;
+
+def TRB_ZeroPage : Inst16<"trb", Opcode<0x14>, ZeroPage>; /// Test and Reset Bits
+def TRB_Absolute : Inst24<"trb", Opcode<0x1c>, Absolute>; /// Test and Reset Bits
+
+def TSB_ZeroPage : Inst16<"tsb", Opcode<0x04>, ZeroPage>; /// Test and Set Bits
+def TSB_Absolute : Inst24<"tsb", Opcode<0x0c>, Absolute>; /// Test and Set Bits
 
 ///       STZ
 /// zp    64
@@ -248,6 +262,93 @@ def STZ_ZeroPageX : Inst16<"stz", OpcodeC0<0b011, 0b101>, ZeroPageX>;
 def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
 
 } // Predicates = [Has65C02]
+
+let Predicates = [Has65CE02] in {
+
+/// Layout follows CMOS 65CE02 micrprocessor datasheet:
+/// http://archive.6502.org/datasheets/mos_65ce02_mpu.pdf
+
+/// Branches and jumps
+
+let DecoderNamespace = "65ce02" in {
+def BPL_Relative16 : Inst24<"bpl", Opcode<0x13>, Relative16>;
+def BMI_Relative16 : Inst24<"bmi", Opcode<0x33>, Relative16>;
+def BVC_Relative16 : Inst24<"bvc", Opcode<0x53>, Relative16>;
+def BSR_Relative16 : Inst24<"bsr", Opcode<0x63>, Relative16>;
+def BVS_Relative16 : Inst24<"bvs", Opcode<0x73>, Relative16>;
+def BRA_Relative16 : Inst24<"bra", Opcode<0x83>, Relative16>; /// BRU
+def BCC_Relative16 : Inst24<"bcc", Opcode<0x93>, Relative16>;
+def BCS_Relative16 : Inst24<"bcs", Opcode<0xb3>, Relative16>;
+def BNE_Relative16 : Inst24<"bne", Opcode<0xd3>, Relative16>;
+def BEQ_Relative16 : Inst24<"beq", Opcode<0xf3>, Relative16>;
+
+def JSR_AbsoluteIndirect: Inst24<"jsr", Opcode<0x22>, Indirect16>;
+def JSR_AbsoluteIndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>;
+
+def RTN_Immediate : Inst16<"rtn", Opcode<0x62>, Immediate>;
+
+/// Arithmetic Operations
+
+def NEG_Implied: InstLow2<"neg", 0b0100>; /// NEGate (or 2's complement) accumulator
+
+def ASR_Implied: InstLow3<"asr", 0b0100>; /// Arithmetic Shift Right accumulator
+def ASR_ZeroPage: Inst16<"asr", Opcode<0x44>, ZeroPage>; 
+def ASR_ZeroPageX: Inst16<"asr", Opcode<0x54>, ZeroPageX>; 
+
+def INW_ZeroPage : Inst16<"inw", OpcodeC3<0b111, 0b000>, ZeroPage>; /// Inc. word
+def DEW_ZeroPage : Inst16<"dew", OpcodeC3<0b110, 0b000>, ZeroPage>; /// Dec. word
+
+def INZ_Implied: InstLowB<"inz", 0b0001>; /// INcrement Z register;
+def DEZ_Implied: InstLowB<"dez", 0b0011>; /// DEcrement Z register;
+
+def ASW_Absolute : Inst24<"asw", Opcode<0xcb>, Absolute>; /// Arithmetic Shift left Word
+def ROW_Absolute : Inst24<"row", Opcode<0xeb>, Absolute>; /// ROtate left Word
+
+def ORA_IndirectZeroPageZ : Inst16<"ora", Opcode<0x12>, IndirectZeroPageZ>;
+def AND_IndirectZeroPageZ : Inst16<"and", Opcode<0x32>, IndirectZeroPageZ>;
+def EOR_IndirectZeroPageZ : Inst16<"eor", Opcode<0x52>, IndirectZeroPageZ>;
+def ADC_IndirectZeroPageZ : Inst16<"adc", Opcode<0x72>, IndirectZeroPageZ>;
+def CMP_IndirectZeroPageZ : Inst16<"cmp", Opcode<0xd2>, IndirectZeroPageZ>;
+def SBC_IndirectZeroPageZ : Inst16<"sbc", Opcode<0xf2>, IndirectZeroPageZ>;
+
+def CPZ_Immediate : Inst16<"cpz", OpcodeC2<0b110, 0b000>, Immediate>;
+def CPZ_ZeroPage : Inst16<"cpz", OpcodeC0<0b110, 0b101>, ZeroPage>;
+def CPZ_Absolute : Inst24<"cpz", OpcodeC0<0b110, 0b111>, Absolute>;
+
+/// Loads, Stores, Pushes, Pulls and Transfers
+
+def LDA_IndirectZeroPageZ : Inst16<"lda", OpcodeC2<0b101, 0b100>, IndirectZeroPageZ>;
+def LDA_IndirectStackPointerY : Inst16<"lda", Opcode<0xe2>, IndirectStackPointerY>;
+
+def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>;
+def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>;
+def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>;
+
+def STA_IndirectZeroPageZ : Inst16<"sta", Opcode<0x92>, IndirectZeroPageZ>;
+def STA_IndirectStackPointerY : Inst16<"sta", Opcode<0x82>, IndirectStackPointerY>;
+def STX_AbsoluteY : Inst24<"stx", Opcode<0x9b>, AbsoluteY>;
+def STY_AbsoluteX : Inst24<"sty", Opcode<0x8b>, AbsoluteX>;
+
+def CLE_Implied: InstLow2<"cle", 0b0000>; /// CLear stack Extend disable bit
+def SEE_Implied: InstLow3<"see", 0b0000>; /// SEt stack Extend disable bit
+
+def PHW_Immediate : Inst24<"phw", Opcode<0xf4>, Immediate16>; /// PusH Data Immediate (Word)
+def PHW_Absolute : Inst24<"phw", Opcode<0xfc>, Absolute>; /// PusH Data Absolute (Word)
+
+def PHZ_Implied: InstLowB<"phz", 0b1101>; /// PusH Z register onto stack
+def PLZ_Implied: InstLowB<"plz", 0b1111>; /// PulL Z register from stack
+
+def TAZ_Implied: InstLowB<"taz", 0b0100>; /// Transfer Accumulator to Z register
+def TZA_Implied: InstLowB<"tza", 0b0110>; /// Transfer Z register to Accumulator
+
+def TAB_Implied: InstLowB<"tab", 0b0101>; /// Transfer Accumulator to Base page reg.
+def TBA_Implied: InstLowB<"tba", 0b0111>; /// Transfer Base page register to Acc.
+
+def TSY_Implied: InstLowB<"tsy", 0b0000>; /// Transfer Stack pointer high byte to Y
+def TYS_Implied: InstLowB<"tys", 0b0010>; /// Transfer Y reg. to Stack pointer high byte
+}
+
+} // Predicates = [Has65CE02]
 
 let Predicates = [HasW65816] in {
 
@@ -291,11 +392,9 @@ def RTL_Implied : Inst8<"rtl", OpcodeC3<0b011, 0b010>>;
 def JML_Indirect16 : Inst24<"jml", OpcodeC0<0b110, 0b111>, Indirect16>;
 
 /// 16-bit indexed-indirect jumps
-/// JMP JSR
-/// 7C  FC
+/// JSR
+/// FC
 
-def JMP_IndexedIndirect16 :
-  Inst24<"jmp", OpcodeC0<0b011, 0b111>, IndexedIndirect16>;
 def JSR_IndexedIndirect16 :
   Inst24<"jsr", OpcodeC0<0b111, 0b111>, IndexedIndirect16>;
 

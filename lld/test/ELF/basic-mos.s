@@ -28,7 +28,7 @@
 # RUN: ld.lld %t.o.65el02 -o %t.65el02
 # RUN: llvm-readobj --file-headers --sections -l %t.65el02 | FileCheck %s -check-prefixes=CHECK,65EL02
 
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65ce02 %s -o %t.o.65ce02
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65ce02 %s -o %t.o.65ce02
 # RUN: ld.lld %t.o.65ce02 -o %t.65ce02
 # RUN: llvm-readobj --file-headers --sections -l %t.65ce02 | FileCheck %s -check-prefixes=CHECK,65CE02
 

@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65c02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,W65C02
 # RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65816 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,W65816
 # RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65el02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65EL02
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65ce02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65CE02
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65ce02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65CE02
 
 # returns with 42 in accumulator
 .globl _start
