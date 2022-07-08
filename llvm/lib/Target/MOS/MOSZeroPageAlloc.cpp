@@ -131,7 +131,7 @@ struct EntryGraph {
 
 } // namespace
 
-template <> struct GraphTraits<EntryGraph> {
+template <> struct llvm::GraphTraits<EntryGraph> {
   using NodeRef = SCC *;
   using ChildIteratorType = SmallVector<SCC *>::iterator;
 
@@ -209,10 +209,12 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees)
     EntryGraphs.push_back(EntryGraph{Entry});
   for (const EntryGraph &EG : EntryGraphs) {
-    LLVM_DEBUG(dbgs() << "Entry SCC\n");
-    for (const Function *F : EG.Entry->Funcs)
-      LLVM_DEBUG(dbgs() << "  " << F->getName() << "\n");
-    LLVM_DEBUG(dbgs() << '\n');
+    LLVM_DEBUG({
+      dbgs() << "Entry SCC\n";
+      for (const Function *F : EG.Entry->Funcs)
+        dbgs() << "  " << F->getName() << "\n";
+      dbgs() << '\n';
+    });
 
     DenseMap<const SCC *, Freq> EntryFreqs;
     EntryFreqs[EG.Entry] = Freq{1, 1};
@@ -363,7 +365,6 @@ std::vector<Candidate>
 MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
   const MOSFrameLowering &TFL =
       *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   auto &BFI =
       getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
@@ -449,10 +450,15 @@ MOSZeroPageAlloc::collectCandidates(MachineFunction &MF) {
                                    Benefit, /*CSR=*/0, /*GV=*/nullptr, I});
   }
 
-  for (const Candidate &C : Candidates)
-    LLVM_DEBUG(dbgs() << "  "; C.dump(dbgs(), TRI); dbgs() << '\n');
-
-  LLVM_DEBUG(dbgs() << '\n');
+  LLVM_DEBUG({
+    const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+    for (const Candidate &C : Candidates) {
+      dbgs() << "  ";
+      C.dump(dbgs(), TRI);
+      dbgs() << '\n';
+    }
+    dbgs() << '\n';
+  });
   return Candidates;
 }
 
