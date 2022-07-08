@@ -39,6 +39,10 @@ public:
                      const MachineInstr &Orig,
                      const TargetRegisterInfo &TRI) const override;
 
+  MachineInstr &duplicate(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const MachineInstr &Orig) const override;
+
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;

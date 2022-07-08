@@ -105,6 +105,18 @@ void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
   }
 }
 
+MachineInstr &MOSInstrInfo::duplicate(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator InsertBefore,
+                                      const MachineInstr &Orig) const {
+  MachineInstr &MI = TargetInstrInfo::duplicate(MBB, InsertBefore, Orig);
+  // These require tied variable operands, which aren't cloned by default.
+  if (MI.getOpcode() == MOS::IncMB || MI.getOpcode() == MOS::DecMB)
+    for (unsigned I = 0, E = MI.getNumExplicitDefs(); I != E; ++I)
+      if (Orig.getOperand(I).isTied())
+        MI.tieOperands(I, Orig.findTiedOperandIdx(I));
+  return MI;
+}
+
 // The main difficulty in commuting 6502 instructions is that their register
 // classes aren't symmetric. This routine determines whether or not the operands
 // of an instruction can be commuted anyway, potentially rewriting the register
