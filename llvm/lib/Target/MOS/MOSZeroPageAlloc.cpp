@@ -42,6 +42,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/Casting.h"
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -50,6 +51,11 @@
 using namespace llvm;
 
 namespace {
+
+cl::opt<uint64_t> ZPAvail("zp-avail",
+                          cl::desc("Number of bytes of zero page available for "
+                                   "the compiler in the current TU"),
+                          cl::value_desc("bytes"));
 
 // A rational number expressed as a numerator and denominator pair. Binary
 // arithmetic operations between entries generally uses the denominator of the
@@ -131,6 +137,8 @@ static raw_ostream &operator<<(raw_ostream &OS, const Freq &Freq) {
 
 namespace {
 
+struct SCC;
+
 struct Candidate {
   MachineFunction *MF;
   size_t Size;
@@ -141,6 +149,12 @@ struct Candidate {
   Register CSR = 0;
   GlobalValue *GV = nullptr;
   int FI = -1;
+
+  // The number of ZP locations tentatively assigned to this candidate. When
+  // this reaches Size, the assignment is final.
+  unsigned Assigned = 0;
+
+  SCC *SCC = nullptr;
 };
 
 struct EntryCandidate {
@@ -159,6 +173,8 @@ raw_ostream &operator<<(raw_ostream &OS, const Candidate &C) {
   else
     OS << "Frame Index " << C.FI;
   OS << ", Size " << C.Size << ", Benefit " << C.Benefit;
+  if (C.Assigned)
+    OS << ", Assigned " << C.Assigned;
   return OS;
 }
 
@@ -174,7 +190,18 @@ namespace {
 struct SCC {
   SmallVector<Function *> Funcs;
   SmallVector<SCC *> Callees;
+  SmallVector<SCC *> Callers;
   std::vector<Candidate> Candidates;
+
+  // Offset of the zero page area for this SCC from the start of the zero page
+  // section for this TU.
+  size_t ZPOffset = 0;
+
+  // Current size of the zero page area of this SCC, in bytes.
+  size_t ZPSize = 0;
+
+  // The maximum amount of ZP used by any path that includes this SCC.
+  size_t MaxZPSize = 0;
 };
 
 // A view of the SCC graph rooted at an externally callable node. Since we can't
@@ -185,6 +212,15 @@ struct EntryGraph {
 
   // Candidates scored for this entry point, ordered best first.
   std::vector<EntryCandidate> Candidates = {};
+
+  size_t NextCand = 0;
+};
+
+struct SCCGraph {
+  std::vector<SCC> SCCs;
+  DenseMap<const Function *, SCC *> FunctionSCCs;
+  // Corresponds to the external calling sentinel call graph node.
+  SCC *ExternalCallingSCC;
 };
 
 } // namespace
@@ -194,6 +230,28 @@ template <> struct llvm::GraphTraits<EntryGraph> {
   using ChildIteratorType = SmallVector<SCC *>::iterator;
 
   static NodeRef getEntryNode(const EntryGraph &EG) { return EG.Entry; }
+  static ChildIteratorType child_begin(NodeRef N) { return N->Callees.begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->Callees.end(); }
+};
+
+template <> struct llvm::GraphTraits<SCC> {
+  using NodeRef = SCC *;
+  using ChildIteratorType = SmallVector<SCC *>::iterator;
+
+  static NodeRef getEntryNode(const SCC &SCC) {
+    return const_cast<struct SCC *>(&SCC);
+  }
+  static ChildIteratorType child_begin(NodeRef N) { return N->Callees.begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->Callees.end(); }
+};
+
+template <> struct llvm::GraphTraits<SCCGraph> {
+  using NodeRef = SCC *;
+  using ChildIteratorType = SmallVector<SCC *>::iterator;
+
+  static NodeRef getEntryNode(const SCCGraph &G) {
+    return G.ExternalCallingSCC;
+  }
   static ChildIteratorType child_begin(NodeRef N) { return N->Callees.begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->Callees.end(); }
 };
@@ -212,19 +270,15 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  struct SCCGraph {
-    std::vector<SCC> SCCs;
-    DenseMap<const Function *, SCC *> FunctionSCCs;
-    // Corresponds to the external calling sentinel call graph node.
-    SCC *ExternalCallingSCC;
-  };
-
   MachineModuleInfo *MMI;
   SCCGraph buildSCCGraph(Module &M);
 
   std::vector<Candidate> collectCandidates(MachineFunction &MF);
 
   std::vector<EntryGraph> buildEntryGraphs(Module &M, SCCGraph &SCCGraph);
+  bool assignZPs(SCCGraph &SCCGraph, std::vector<EntryGraph>::iterator Begin,
+                 std::vector<EntryGraph>::iterator End);
+  bool assignZP(SCCGraph &SCCGraph, EntryGraph &EG);
 };
 
 void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -250,6 +304,9 @@ void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
 static Freq getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB);
 
 bool MOSZeroPageAlloc::runOnModule(Module &M) {
+  if (!ZPAvail)
+    return false;
+
   MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
   LLVM_DEBUG(dbgs() << "*******************************************************"
@@ -261,14 +318,27 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   SCCGraph SCCGraph = buildSCCGraph(M);
 
   std::vector<EntryGraph> EntryGraphs = buildEntryGraphs(M, SCCGraph);
-  (void)EntryGraphs;
+
+  // Interrupt-norecurse functions get absolute priority, since they're almost
+  // always time-sensitive, and they have an abnormally high number of CSRs.
+  const auto RegularEGBegin = partition(EntryGraphs, [](EntryGraph &EG) {
+    return !EG.Candidates.empty() &&
+           EG.Entry->Funcs.front()->hasFnAttribute("interrupt_norecurse");
+  });
+
+  // Assign ZP locations to entry graphs round-robin until no candidates remain.
+  LLVM_DEBUG(dbgs() << "Assigning ZP to candidates:\n");
+  while (assignZPs(SCCGraph, EntryGraphs.begin(), RegularEGBegin))
+    ;
+  while (assignZPs(SCCGraph, RegularEGBegin, EntryGraphs.end()))
+    ;
 
   return false;
 }
 
 // Contract the call graph into its strongly-connect components, then build a
 // SCC DAG out of the results.
-MOSZeroPageAlloc::SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
+SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   auto &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
   // Collect any external libcalls and add them to the call graph, which was
@@ -328,9 +398,15 @@ MOSZeroPageAlloc::SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
       Callees.push_back(&SCCs[SCCIdx[Callee]]);
   }
   DenseMap<const Function *, SCC *> FunctionSCCs;
-  for (SCC &Component : SCCs)
+
+  for (SCC &Component : SCCs) {
+    for (Candidate &C : Component.Candidates)
+      C.SCC = &Component;
     for (const Function *F : Component.Funcs)
       FunctionSCCs[F] = &Component;
+    for (SCC *Callee : Component.Callees)
+      Callee->Callers.push_back(&Component);
+  }
   SCC *ExternalCallingSCC = &SCCs[SCCIdx[CG.getExternalCallingNode()]];
 
   LLVM_DEBUG({
@@ -548,6 +624,78 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
     });
   }
   return EntryGraphs;
+}
+
+bool MOSZeroPageAlloc::assignZPs(SCCGraph &SCCGraph,
+                                 std::vector<EntryGraph>::iterator Begin,
+                                 std::vector<EntryGraph>::iterator End) {
+  bool AssignedAny = false;
+  for (auto I = Begin; I != End; ++I)
+    AssignedAny |= assignZP(SCCGraph, *I);
+  return AssignedAny;
+}
+
+bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
+  // Advance to first unassigned candidate.
+  for (;; ++EG.NextCand) {
+    if (EG.NextCand == EG.Candidates.size())
+      return false;
+    EntryCandidate &Cand = EG.Candidates[EG.NextCand];
+    // Another entry path may have already assigned the candidate.
+    if (Cand.Cand->Assigned == Cand.Cand->Size)
+      continue;
+    // If the candidate is too big to fit, no reason to start allocating bytes
+    // to it.
+    if (!Cand.Cand->Assigned &&
+        Cand.Cand->Size + Cand.Cand->SCC->MaxZPSize > ZPAvail)
+      continue;
+
+    break;
+  }
+  EntryCandidate &Cand = EG.Candidates[EG.NextCand];
+
+  ++Cand.Cand->Assigned;
+
+  LLVM_DEBUG(dbgs() << "Entry " << EG.Entry->Funcs.front()->getName()
+                    << ", Func " << Cand << '\n';);
+
+  if (Cand.Cand->Assigned + Cand.Cand->SCC->MaxZPSize > ZPAvail) {
+    LLVM_DEBUG(dbgs() << "No longer fits; unassigning.\n");
+    size_t NumToReassign = Cand.Cand->Assigned;
+    Cand.Cand->Assigned = 0;
+    bool AssignedAny = false;
+    for (size_t I = 0; I < NumToReassign; ++I)
+      AssignedAny |= assignZP(SCCGraph, EG);
+    return AssignedAny;
+  }
+
+  if (Cand.Cand->Assigned < Cand.Cand->Size)
+    return true;
+
+  Cand.Cand->SCC->ZPSize += Cand.Cand->Assigned;
+
+  // Allocating a ZP can change the offsets of transitive callees, so propagate
+  // those downward.
+  for (SCC *Comp : ReversePostOrderTraversal<SCC>(*Cand.Cand->SCC)) {
+    size_t EndOffset = Comp->ZPOffset + Comp->ZPSize;
+    for (struct SCC *Callee : Comp->Callees)
+      Callee->ZPOffset = std::max(Callee->ZPOffset, EndOffset);
+  }
+
+  // From the new offsets, the new max ZP sizes for paths through each node can
+  // be computed. They're trivial at the leaves and computable upward.
+  for (SCC *Comp : post_order(SCCGraph)) {
+    if (Comp->Callees.empty()) {
+      Comp->MaxZPSize = Comp->ZPOffset + Comp->ZPSize;
+      continue;
+    }
+
+    Comp->MaxZPSize = 0;
+    for (struct SCC *Callee : Comp->Callees)
+      Comp->MaxZPSize = std::max(Comp->MaxZPSize, Callee->MaxZPSize);
+  }
+
+  return true;
 }
 
 // We can't use machine block frequency due to a pass scheduling SNAFU, so
