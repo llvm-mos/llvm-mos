@@ -24,6 +24,7 @@
 #include "MOSCallLowering.h"
 #include "MOSFrameLowering.h"
 #include "MOSISelLowering.h"
+#include "MOSInlineAsmLowering.h"
 #include "MOSInstrInfo.h"
 #include "MOSLegalizerInfo.h"
 #include "MOSRegisterBankInfo.h"
@@ -75,7 +76,7 @@ public:
     return InstSelector.get();
   }
 
-  const InlineAsmLowering *getInlineAsmLowering() const override {
+  const MOSInlineAsmLowering *getInlineAsmLowering() const override {
     return &InlineAsmLoweringInfo;
   }
 
@@ -136,7 +137,7 @@ private:
   MOSLegalizerInfo Legalizer;
   MOSRegisterBankInfo RegBankInfo;
   std::unique_ptr<InstructionSelector> InstSelector;
-  InlineAsmLowering InlineAsmLoweringInfo;
+  MOSInlineAsmLowering InlineAsmLoweringInfo;
 };
 
 } // end namespace llvm

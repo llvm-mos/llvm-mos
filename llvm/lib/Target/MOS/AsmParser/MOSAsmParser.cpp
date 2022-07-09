@@ -309,7 +309,7 @@ public:
     case Match_InvalidAddr8:
       return Error(Loc, "operand must be an 8-bit address");
     case Match_InvalidAddr16:
-      return Error(Loc, "operand must be an 16-bit address");
+      return Error(Loc, "operand must be a 16-bit address");
     case Match_InvalidPCRel8:
       return Error(Loc, "operand must be an 8-bit PC relative address");
     case Match_immediate:
