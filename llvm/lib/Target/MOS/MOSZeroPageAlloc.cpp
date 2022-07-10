@@ -154,7 +154,7 @@ struct Candidate {
   // this reaches Size, the assignment is final.
   unsigned Assigned = 0;
 
-  SCC *SCC = nullptr;
+  SCC *Comp = nullptr;
 };
 
 struct EntryCandidate {
@@ -401,7 +401,7 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
 
   for (SCC &Component : SCCs) {
     for (Candidate &C : Component.Candidates)
-      C.SCC = &Component;
+      C.Comp = &Component;
     for (const Function *F : Component.Funcs)
       FunctionSCCs[F] = &Component;
     for (SCC *Callee : Component.Callees)
@@ -647,7 +647,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
     // If the candidate is too big to fit, no reason to start allocating bytes
     // to it.
     if (!Cand.Cand->Assigned &&
-        Cand.Cand->Size + Cand.Cand->SCC->MaxZPSize > ZPAvail)
+        Cand.Cand->Size + Cand.Cand->Comp->MaxZPSize > ZPAvail)
       continue;
 
     break;
@@ -659,7 +659,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
   LLVM_DEBUG(dbgs() << "Entry " << EG.Entry->Funcs.front()->getName()
                     << ", Func " << Cand << '\n';);
 
-  if (Cand.Cand->Assigned + Cand.Cand->SCC->MaxZPSize > ZPAvail) {
+  if (Cand.Cand->Assigned + Cand.Cand->Comp->MaxZPSize > ZPAvail) {
     LLVM_DEBUG(dbgs() << "No longer fits; unassigning.\n");
     size_t NumToReassign = Cand.Cand->Assigned;
     Cand.Cand->Assigned = 0;
@@ -672,11 +672,11 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
   if (Cand.Cand->Assigned < Cand.Cand->Size)
     return true;
 
-  Cand.Cand->SCC->ZPSize += Cand.Cand->Assigned;
+  Cand.Cand->Comp->ZPSize += Cand.Cand->Assigned;
 
   // Allocating a ZP can change the offsets of transitive callees, so propagate
   // those downward.
-  for (SCC *Comp : ReversePostOrderTraversal<SCC>(*Cand.Cand->SCC)) {
+  for (SCC *Comp : ReversePostOrderTraversal<SCC>(*Cand.Cand->Comp)) {
     size_t EndOffset = Comp->ZPOffset + Comp->ZPSize;
     for (struct SCC *Callee : Comp->Callees)
       Callee->ZPOffset = std::max(Callee->ZPOffset, EndOffset);
