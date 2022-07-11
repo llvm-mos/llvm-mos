@@ -232,6 +232,26 @@ def PLY_Implied: InstLowA<"ply", 0b0111>; /// Pull Y
 def PHX_Implied: InstLowA<"phx", 0b1101>; /// Push X
 def PLX_Implied: InstLowA<"plx", 0b1111>; /// Pull X
 
+/// Reset Memory Bit
+def RMB0_ZeroPage : Inst16<"rmb0", Opcode<0x07>, ZeroPage>;
+def RMB1_ZeroPage : Inst16<"rmb1", Opcode<0x17>, ZeroPage>;
+def RMB2_ZeroPage : Inst16<"rmb2", Opcode<0x27>, ZeroPage>;
+def RMB3_ZeroPage : Inst16<"rmb3", Opcode<0x37>, ZeroPage>;
+def RMB4_ZeroPage : Inst16<"rmb4", Opcode<0x47>, ZeroPage>;
+def RMB5_ZeroPage : Inst16<"rmb5", Opcode<0x57>, ZeroPage>;
+def RMB6_ZeroPage : Inst16<"rmb6", Opcode<0x67>, ZeroPage>;
+def RMB7_ZeroPage : Inst16<"rmb7", Opcode<0x77>, ZeroPage>;
+
+/// Set Memory Bit
+def SMB0_ZeroPage : Inst16<"smb0", Opcode<0x87>, ZeroPage>;
+def SMB1_ZeroPage : Inst16<"smb1", Opcode<0x97>, ZeroPage>;
+def SMB2_ZeroPage : Inst16<"smb2", Opcode<0xa7>, ZeroPage>;
+def SMB3_ZeroPage : Inst16<"smb3", Opcode<0xb7>, ZeroPage>;
+def SMB4_ZeroPage : Inst16<"smb4", Opcode<0xc7>, ZeroPage>;
+def SMB5_ZeroPage : Inst16<"smb5", Opcode<0xd7>, ZeroPage>;
+def SMB6_ZeroPage : Inst16<"smb6", Opcode<0xe7>, ZeroPage>;
+def SMB7_ZeroPage : Inst16<"smb7", Opcode<0xf7>, ZeroPage>;
+
 /// Unconditional relative branch instruction
 /// BRA
 /// 80
