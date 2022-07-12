@@ -40,13 +40,17 @@ public:
                         SMLoc Loc = SMLoc());
 
   bool hasBSS() const { return HasBSS; }
+  bool hasZPBSS() const { return HasZPBSS; }
   bool hasData() const { return HasData; }
+  bool hasZPData() const { return HasZPData; }
   bool hasInitArray() const { return HasInitArray; }
   bool hasFiniArray() const { return HasFiniArray; }
 
 private:
   bool HasBSS = false;
+  bool HasZPBSS = false;
   bool HasData = false;
+  bool HasZPData = false;
   bool HasInitArray = false;
   bool HasFiniArray = false;
 };

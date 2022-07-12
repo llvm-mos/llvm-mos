@@ -23,7 +23,9 @@ public:
 
 protected:
   virtual bool hasBSS() = 0;
+  virtual bool hasZPBSS() = 0;
   virtual bool hasData() = 0;
+  virtual bool hasZPData() = 0;
   virtual bool hasInitArray() = 0;
   virtual bool hasFiniArray() = 0;
 
@@ -41,14 +43,18 @@ private:
                      const MCExpr *SubSection, raw_ostream &OS) override;
 
   bool hasBSS() override { return HasBSS; }
+  bool hasZPBSS() override { return HasZPBSS; }
   bool hasData() override { return HasData; }
+  bool hasZPData() override { return HasZPData; }
   bool hasInitArray() override { return HasInitArray; }
   bool hasFiniArray() override { return HasFiniArray; }
 
   void stronglyReference(MCSymbol *Sym) override;
 
   bool HasBSS = false;
+  bool HasZPBSS = false;
   bool HasData = false;
+  bool HasZPData = false;
   bool HasInitArray = false;
   bool HasFiniArray = false;
 };
@@ -60,7 +66,9 @@ public:
 
 private:
   bool hasBSS() override;
+  bool hasZPBSS() override;
   bool hasData() override;
+  bool hasZPData() override;
   bool hasInitArray() override;
   bool hasFiniArray() override;
 

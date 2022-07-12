@@ -41,7 +41,9 @@ void MOSMCELFStreamer::initSections(bool NoExecStack,
 void MOSMCELFStreamer::changeSection(MCSection *Section, const MCExpr *Subsection) {
   MCELFStreamer::changeSection(Section, Subsection);
   HasBSS |= Section->getName().startswith(".bss");
+  HasZPBSS |= Section->getName().startswith(".zp.bss");
   HasData |= Section->getName().startswith(".data");
+  HasZPData |= Section->getName().startswith(".zp.data");
   HasInitArray |= Section->getName().startswith(".init_array");
   HasFiniArray |= Section->getName().startswith(".fini_array");
 }
