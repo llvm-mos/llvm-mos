@@ -1542,16 +1542,13 @@ bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
 bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
 
-  LLT S16 = LLT::scalar(16);
   LLT S8 = LLT::scalar(8);
-  LLT S1 = LLT::scalar(1);
 
   Register From = MI.getOperand(1).getReg();
-  Register To = MI.getOperand(0).getReg();
 
-  LLT FromType = Builder.getMRI()->getType(From);
-  LLT ToType = Builder.getMRI()->getType(To);
-  assert(FromType == S16 && ToType == S1);
+  assert(Builder.getMRI()->getType(From) == LLT::scalar(16));
+  assert(Builder.getMRI()->getType(MI.getOperand(0).getReg()) ==
+         LLT::scalar(1));
 
   MachineInstrSpan MIS(MI, MI.getParent());
   MI.getOperand(1).setReg(Builder.buildTrunc(S8, From).getReg(0));
