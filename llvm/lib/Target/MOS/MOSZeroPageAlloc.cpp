@@ -130,10 +130,12 @@ private:
 Freq operator*(uint64_t Scalar, const Freq &F) { return Freq(Scalar) * F; }
 } // namespace
 
+#ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS, const Freq &Freq) {
   OS << Freq.Num << '/' << Freq.Denom;
   return OS;
 }
+#endif
 
 namespace {
 
@@ -164,6 +166,7 @@ struct EntryCandidate {
 
 } // namespace
 
+#ifndef NDEBUG
 raw_ostream &operator<<(raw_ostream &OS, const Candidate &C) {
   OS << C.MF->getName() << ", ";
   if (C.CSR)
@@ -182,6 +185,7 @@ raw_ostream &operator<<(raw_ostream &OS, const EntryCandidate &EC) {
   OS << *EC.Cand << ", Global benefit " << EC.Benefit;
   return OS;
 }
+#endif
 
 namespace {
 
