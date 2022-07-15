@@ -1993,7 +1993,7 @@ void CodeGenRegBank::computeRegUnitSets() {
       RegUnitSets.back().Name =
         RegUnitSets[Idx].Name + "_with_" + RegUnitSets[SearchIdx].Name;
       RegUnitSets.back().IsFineGrained =
-        RegUnitSets[Idx].IsFineGrained | RegUnitSets[SearchIdx].IsFineGrained;
+        RegUnitSets[Idx].IsFineGrained || RegUnitSets[SearchIdx].IsFineGrained;
 
       std::set_union(RegUnitSets[Idx].Units.begin(),
                      RegUnitSets[Idx].Units.end(),
