@@ -26,6 +26,13 @@ void test_y() {
   asm volatile("" :: "y"(c));
 }
 
+void test_R() {
+  // CHECK-LABEL: define dso_local void @test_R() {{.*}} {
+  // CHECK: [[V:%[0-9]+]] = load i8, ptr @c
+  // CHECK: tail call void asm sideeffect "", "R"(i8 [[V]])
+  asm volatile("" :: "R"(c));
+}
+
 void test_d() {
   // CHECK-LABEL: define dso_local void @test_d() {{.*}} {
   // CHECK: [[V:%[0-9]+]] = load i8, ptr @c

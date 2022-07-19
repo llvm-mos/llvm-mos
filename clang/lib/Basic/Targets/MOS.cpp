@@ -53,6 +53,8 @@ bool MOSTargetInfo::validateAsmConstraint(
   case 'a':
   case 'x':
   case 'y':
+  // Any of A, X, or Y.
+  case 'R':
   // The index (X or Y) registers.
   case 'd':
   // The C and V flags.
@@ -88,7 +90,10 @@ bool MOSTargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
   case 'a':
   case 'x':
   case 'y':
+  case 'R':
   case 'd':
+  case 'c':
+  case 'v':
     return Size <= 8;
   }
 }
