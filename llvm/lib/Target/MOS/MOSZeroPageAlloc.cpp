@@ -311,7 +311,6 @@ void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineModuleInfoWrapperPass>();
   AU.addRequired<BlockFrequencyInfoWrapperPass>();
   AU.addRequired<CallGraphWrapperPass>();
-  AU.addPreserved<CallGraphWrapperPass>();
 
   AU.addPreserved<BasicAAWrapperPass>();
   AU.addPreserved<DominanceFrontierWrapperPass>();
@@ -461,6 +460,14 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
       }
     }
   }
+
+  // Record an edge from external calls back to externally callable nodes, since
+  // we cannot prove what they might call. There may be norecurse nodes in there
+  // (e.g., main), but as a simplification, don't collect candidates for such
+  // node.
+  assert(CG.getCallsExternalNode()->empty());
+  CG.getCallsExternalNode()->addCalledFunction(nullptr,
+                                               CG.getExternalCallingNode());
 
   std::vector<SCC> SCCs;
   std::vector<SmallSet<const CallGraphNode *, 4>> SCCCallees;
