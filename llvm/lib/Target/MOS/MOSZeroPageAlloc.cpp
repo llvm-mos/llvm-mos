@@ -360,6 +360,26 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   while (assignZPs(SCCGraph, RegularEGBegin, EntryGraphs.end()))
     ;
 
+  size_t InterruptOffset = 0;
+  for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees) {
+    if (Entry->Funcs.size() == 1 &&
+        Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse"))
+      continue;
+    InterruptOffset = std::max(InterruptOffset, Entry->MaxZPSize);
+  }
+  for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees) {
+    if (Entry->Funcs.size() != 1 ||
+        !Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse"))
+      continue;
+    Entry->ZPOffset = InterruptOffset;
+    InterruptOffset += Entry->MaxZPSize;
+    for (SCC *Comp : ReversePostOrderTraversal<SCC>(*Entry)) {
+      size_t EndOffset = Comp->ZPOffset + Comp->ZPSize;
+      for (struct SCC *Callee : Comp->Callees)
+        Callee->ZPOffset = std::max(Callee->ZPOffset, EndOffset);
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Enacting assignments:\n");
 
   // Create a global variable for the static stack as a whole.
@@ -849,6 +869,23 @@ bool MOSZeroPageAlloc::assignZPs(SCCGraph &SCCGraph,
 }
 
 bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
+  const auto NewZPSize = [&](SCC *Comp, size_t Size) {
+    size_t RegularZPSize = 0;
+    size_t InterruptZPSize = 0;
+    for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees) {
+      size_t EntrySize = Entry == EG.Entry ? std::max(EG.Entry->MaxZPSize,
+                                                      Comp->MaxZPSize + Size)
+                                           : Entry->MaxZPSize;
+      if (Entry->Funcs.size() == 1 &&
+          Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse"))
+        InterruptZPSize += EntrySize;
+      else
+        RegularZPSize = std::max(RegularZPSize, EntrySize);
+    }
+    return SCCGraph.ExternalCallingSCC->ZPSize + RegularZPSize +
+           InterruptZPSize;
+  };
+
   // Advance to first unassigned candidate.
   for (;; ++EG.NextCand) {
     if (EG.NextCand == EG.Candidates.size())
@@ -860,7 +897,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
       continue;
     // If the candidate is too big to fit, no reason to start allocating bytes
     // to it.
-    if (!Cand.AssignedSize && Cand.Size + Cand.Comp->MaxZPSize > ZPAvail)
+    if (!Cand.AssignedSize && NewZPSize(Cand.Comp, Cand.Size) > ZPAvail)
       continue;
 
     break;
@@ -873,7 +910,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
   LLVM_DEBUG(dbgs() << "Entry " << EG.Entry->Funcs.front()->getName()
                     << ", Func " << Cand << '\n';);
 
-  if (Cand.AssignedSize + Cand.Comp->MaxZPSize > ZPAvail) {
+  if (NewZPSize(Cand.Comp, Cand.AssignedSize) > ZPAvail) {
     LLVM_DEBUG(dbgs() << "No longer fits; unassigning.\n");
     size_t NumToReassign = Cand.AssignedSize;
     Cand.AssignedSize = 0;
