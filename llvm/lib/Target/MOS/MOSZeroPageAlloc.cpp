@@ -616,6 +616,12 @@ std::vector<LocalCandidate> MOSZeroPageAlloc::collectCandidates(
     if (!MOS::Imag8RegClass.contains(Reg))
       continue;
 
+    // If a call occurs with a different calling convention, it may clobber
+    // callee-saved registers in a way that can't be rewritten by this pass.
+    // These need to be saved and restored like normal.
+    if (MF.getRegInfo().getUsedPhysRegsMask().test(Reg))
+      continue;
+
     size_t Size = 1;
     Freq Benefit;
     if (Idx++ < 4) {
