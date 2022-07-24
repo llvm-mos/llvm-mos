@@ -186,9 +186,9 @@ define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-NEXT:    stx .Linr_sstk+16 ; 1-byte Folded Spill
 ; CHECK-NEXT:    cld
 ; CHECK-NEXT:    ldx global
-; CHECK-NEXT:    stx mos8(.Linr_zp_stk+8) ; 1-byte Folded Spill
+; CHECK-NEXT:    stx mos8(.Linr_zp_stk) ; 1-byte Folded Spill
 ; CHECK-NEXT:    jsr inr_callee
-; CHECK-NEXT:    ldx mos8(.Linr_zp_stk+8) ; 1-byte Folded Reload
+; CHECK-NEXT:    ldx mos8(.Linr_zp_stk) ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx mos8(vol)
 ; CHECK-NEXT:    ldx .Linr_sstk+16 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx mos8(__rc19)

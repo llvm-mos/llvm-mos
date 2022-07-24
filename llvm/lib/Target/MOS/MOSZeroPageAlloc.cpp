@@ -213,14 +213,17 @@ struct SCC {
   SmallVector<SCC *> Callers;
   std::vector<LocalCandidate> Candidates;
 
-  // Offset of the zero page area for this SCC from the start of the zero page
-  // section for this TU.
+  // Offset of the zero page area for this SCC from the start of the entry
+  // graph. If this is within an interrupt-norecurse call, relative to the start
+  // of the call.
   size_t ZPOffset = 0;
 
   // Current size of the zero page area of this SCC, in bytes.
   size_t ZPSize = 0;
 
-  // The maximum amount of ZP used by any path that includes this SCC.
+  // The maximum amount of ZP used by any path that includes this SCC. If this
+  // is within an interrupt-norecurse call, only considers the contents of the
+  // call.
   size_t MaxZPSize = 0;
 };
 
@@ -242,6 +245,10 @@ struct SCCGraph {
   // Corresponds to the external calling sentinel call graph node.
   SCC *ExternalCallingSCC;
   std::vector<std::unique_ptr<Candidate>> Candidates;
+  size_t ZPSize = 0;
+  size_t GlobalZPSize = 0;
+  size_t InterruptZPSize = 0;
+  size_t RegularZPSize = 0;
 };
 
 } // namespace
@@ -360,13 +367,9 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   while (assignZPs(SCCGraph, RegularEGBegin, EntryGraphs.end()))
     ;
 
-  size_t InterruptOffset = 0;
-  for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees) {
-    if (Entry->Funcs.size() == 1 &&
-        Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse"))
-      continue;
-    InterruptOffset = std::max(InterruptOffset, Entry->MaxZPSize);
-  }
+  // Move the offsets of the interrupts after everything else and after one
+  // another.
+  size_t InterruptOffset = SCCGraph.GlobalZPSize + SCCGraph.RegularZPSize;
   for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees) {
     if (Entry->Funcs.size() != 1 ||
         !Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse"))
@@ -383,8 +386,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "Enacting assignments:\n");
 
   // Create a global variable for the static stack as a whole.
-  size_t StackSize = SCCGraph.ExternalCallingSCC->MaxZPSize -
-                     SCCGraph.ExternalCallingSCC->ZPSize;
+  size_t StackSize = SCCGraph.InterruptZPSize + SCCGraph.RegularZPSize;
   GlobalVariable *Stack;
   if (StackSize) {
     Type *Typ = ArrayType::get(Type::getInt8Ty(M.getContext()), StackSize);
@@ -406,17 +408,17 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
     } else {
       MachineFunction &MF = *Cand->MF;
       MachineFrameInfo &MFI = MF.getFrameInfo();
-      auto Res = NextOffsets.try_emplace(
-          &MF, Cand->Comp->ZPOffset - SCCGraph.ExternalCallingSCC->ZPSize);
+      auto Res = NextOffsets.try_emplace(&MF, 0);
       size_t &Offset = Res.first->second;
       if (Res.second) {
         Constant *Aliasee = Stack;
-        if (Offset) {
+        if (Cand->Comp->ZPOffset) {
           Type *I16 = Type::getInt16Ty(Stack->getContext());
           Aliasee = ConstantExpr::getGetElementPtr(
               Stack->getValueType(), Stack,
-              SmallVector<Constant *>{ConstantInt::get(I16, 0),
-                                      ConstantInt::get(I16, Offset)},
+              SmallVector<Constant *>{
+                  ConstantInt::get(I16, 0),
+                  ConstantInt::get(I16, Cand->Comp->ZPOffset)},
               /*InBounds=*/true);
         }
         Type *Typ =
@@ -508,7 +510,7 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
       if (F)
         SCC.Funcs.push_back(F);
     }
-    if (SCC.Funcs.size() != 1)
+    if (SCC.Funcs.size() != 1 || I->size() != 1)
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*SCC.Funcs.front());
     if (!MF)
@@ -573,7 +575,8 @@ std::vector<LocalCandidate> MOSZeroPageAlloc::collectCandidates(
           if (!GO)
             continue;
           const auto *GV = dyn_cast<GlobalVariable>(GO);
-          if (!GV || GV->isDeclaration() || GV->getAlign().valueOrOne() != 1)
+          if (!GV || GV->isDeclaration() || GV->getAlign().valueOrOne() != 1 ||
+              GV->hasSection())
             continue;
 
           // Generally moving an absolute reference to the zero page saves one
@@ -869,21 +872,23 @@ bool MOSZeroPageAlloc::assignZPs(SCCGraph &SCCGraph,
 }
 
 bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
-  const auto NewZPSize = [&](SCC *Comp, size_t Size) {
-    size_t RegularZPSize = 0;
-    size_t InterruptZPSize = 0;
-    for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees) {
-      size_t EntrySize = Entry == EG.Entry ? std::max(EG.Entry->MaxZPSize,
-                                                      Comp->MaxZPSize + Size)
-                                           : Entry->MaxZPSize;
-      if (Entry->Funcs.size() == 1 &&
-          Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse"))
-        InterruptZPSize += EntrySize;
-      else
-        RegularZPSize = std::max(RegularZPSize, EntrySize);
+  const auto NewZPSize = [&](Candidate &Cand, size_t Size) {
+    size_t NewGlobalSize = SCCGraph.GlobalZPSize;
+    size_t NewRegularSize = SCCGraph.RegularZPSize;
+    size_t NewInterruptSize = SCCGraph.InterruptZPSize;
+    if (Cand.GV) {
+      NewGlobalSize += Size;
+    } else {
+      if (EG.Entry->Funcs.size() == 1 &&
+          EG.Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse")) {
+        NewInterruptSize -= EG.Entry->MaxZPSize;
+        NewInterruptSize +=
+            std::max(EG.Entry->MaxZPSize, Size + Cand.Comp->MaxZPSize);
+      } else {
+        NewRegularSize = std::max(NewRegularSize, Size + Cand.Comp->MaxZPSize);
+      }
     }
-    return SCCGraph.ExternalCallingSCC->ZPSize + RegularZPSize +
-           InterruptZPSize;
+    return NewGlobalSize + NewRegularSize + NewInterruptSize;
   };
 
   // Advance to first unassigned candidate.
@@ -897,9 +902,8 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
       continue;
     // If the candidate is too big to fit, no reason to start allocating bytes
     // to it.
-    if (!Cand.AssignedSize && NewZPSize(Cand.Comp, Cand.Size) > ZPAvail)
+    if (!Cand.AssignedSize && NewZPSize(Cand, Cand.Size) > ZPAvail)
       continue;
-
     break;
   }
   EntryCandidate &EC = EG.Candidates[EG.NextCand];
@@ -910,7 +914,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
   LLVM_DEBUG(dbgs() << "Entry " << EG.Entry->Funcs.front()->getName()
                     << ", Func " << Cand << '\n';);
 
-  if (NewZPSize(Cand.Comp, Cand.AssignedSize) > ZPAvail) {
+  if (NewZPSize(Cand, Cand.AssignedSize) > ZPAvail) {
     LLVM_DEBUG(dbgs() << "No longer fits; unassigning.\n");
     size_t NumToReassign = Cand.AssignedSize;
     Cand.AssignedSize = 0;
@@ -925,6 +929,21 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
 
   Cand.Comp->ZPSize += Cand.AssignedSize;
 
+  // Update the whole-graph sizes.
+  if (Cand.GV) {
+    SCCGraph.GlobalZPSize += Cand.Size;
+    return true;
+  }
+  if (EG.Entry->Funcs.size() == 1 &&
+      EG.Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse")) {
+    SCCGraph.InterruptZPSize -= EG.Entry->MaxZPSize;
+    SCCGraph.InterruptZPSize +=
+        std::max(EG.Entry->MaxZPSize, Cand.Size + Cand.Comp->MaxZPSize);
+  } else {
+    SCCGraph.RegularZPSize =
+        std::max(SCCGraph.RegularZPSize, Cand.Size + Cand.Comp->MaxZPSize);
+  }
+
   // Allocating a ZP can change the offsets of transitive callees, so propagate
   // those downward.
   for (SCC *Comp : ReversePostOrderTraversal<SCC>(*Cand.Comp)) {
@@ -935,7 +954,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
 
   // From the new offsets, the new max ZP sizes for paths through each node can
   // be computed. They're trivial at the leaves and computable upward.
-  for (SCC *Comp : post_order(SCCGraph)) {
+  for (SCC *Comp : post_order(*EG.Entry)) {
     if (Comp->Callees.empty()) {
       Comp->MaxZPSize = Comp->ZPOffset + Comp->ZPSize;
       continue;
