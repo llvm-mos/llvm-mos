@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=mos -run-pass=prologepilog -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=6502
 # RUN: llc -mtriple=mos -mcpu=mos65c02 -run-pass=prologepilog -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=65C02
 --- |
-  target datalayout = "e-p:16:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-a:8:8-Fi8-n8"
+  target datalayout = "e-p:16:8:8-p1:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-a:8:8-Fi8-n8"
   target triple = "mos"
 
   define void @norecurse() norecurse {

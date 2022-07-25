@@ -64,7 +64,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
 }
 
 static const char *MOSDataLayout =
-    "e-m:e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
+    "e-m:e-p:16:8-p1:8:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
 
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
@@ -142,10 +142,7 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 }
 
 StringRef MOSTargetMachine::getSectionPrefix(const GlobalObject *GO) const {
-  if (const auto *GV = dyn_cast<GlobalVariable>(GO))
-    if (GV->hasAttribute("zero-page"))
-      return ".zp";
-  return "";
+  return GO->getAddressSpace() == 1 ? ".zp" : "";
 }
 
 //===----------------------------------------------------------------------===//

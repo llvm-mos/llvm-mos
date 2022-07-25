@@ -479,7 +479,7 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     // locate the symbol completely within the zero-page.
     const auto *GVar = dyn_cast<GlobalVariable>(GV->getAliaseeObject());
     if (MOSAsmBackend::isZeroPageSectionName(GV->getSection()) ||
-        (GVar && GVar->hasAttribute("zero-page"))) {
+        (GVar && GVar->getAddressSpace() == 1)) {
       const MOSMCExpr *Expr =
           MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, MCOp.getExpr(),
                             /*isNegated=*/false, Ctx);

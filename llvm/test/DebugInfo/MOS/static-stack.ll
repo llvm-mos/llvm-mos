@@ -85,7 +85,7 @@
 
 ; ModuleID = 'static-stack.c'
 source_filename = "static-stack.c"
-target datalayout = "e-m:e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8"
+target datalayout = "e-m:e-p:16:8-p1:8:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8"
 target triple = "mos"
 
 ; Function Attrs: noinline nounwind optnone

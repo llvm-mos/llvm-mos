@@ -390,9 +390,11 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   GlobalVariable *Stack;
   if (StackSize) {
     Type *Typ = ArrayType::get(Type::getInt8Ty(M.getContext()), StackSize);
-    Stack = new GlobalVariable(M, Typ, false, GlobalValue::PrivateLinkage,
-                               UndefValue::get(Typ), "zp_stack");
-    Stack->addAttribute("zero-page");
+    Stack = new GlobalVariable(M, Typ, /*IsConstant=*/false,
+                               GlobalValue::PrivateLinkage,
+                               UndefValue::get(Typ), "zp_stack",
+                               /*InsertBefore=*/nullptr,
+                               GlobalValue::NotThreadLocal, /*AddressSpace=*/1);
     LLVM_DEBUG(dbgs() << "  " << *Stack << '\n');
   }
 
@@ -403,7 +405,8 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
       continue;
     Changed = true;
     if (Cand->GV) {
-      Cand->GV->addAttribute("zero-page");
+      Cand->GV->mutateType(
+          PointerType::get(Cand->GV->getValueType(), /*AddressSpace=*/1));
       LLVM_DEBUG(dbgs() << "  " << *Cand->GV << '\n');
     } else {
       MachineFunction &MF = *Cand->MF;
