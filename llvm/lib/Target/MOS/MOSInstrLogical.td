@@ -204,13 +204,13 @@ def LSR : MOSShift;
 def ASLAbs : MOSShiftRMW, PseudoInstExpansion<(ASL_ZeroPage addr8:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
 }
-def ASLAbsIdx : MOSShiftRMW, PseudoInstExpansion<(ASL_AbsoluteX addr16:$addr)> {
+def ASLAbsIdx : MOSShiftRMW {
   dag InOperandList = (ins i16imm:$addr, Xc:$idx);
 }
 def LSRAbs : MOSShiftRMW, PseudoInstExpansion<(LSR_ZeroPage addr8:$addr)> {
   dag InOperandList = (ins i16imm:$addr);
 }
-def LSRAbsIdx : MOSShiftRMW, PseudoInstExpansion<(LSR_AbsoluteX addr16:$addr)> {
+def LSRAbsIdx : MOSShiftRMW {
   dag InOperandList = (ins i16imm:$addr, Xc:$idx);
 }
 
@@ -220,13 +220,13 @@ def ROR : MOSRotate;
 def ROLAbs : MOSRotateRMW, PseudoInstExpansion<(ROL_ZeroPage addr8:$addr)> {
   dag InOperandList = (ins i16imm:$addr, Cc:$carryin);
 }
-def ROLAbsIdx : MOSRotateRMW, PseudoInstExpansion<(ROL_AbsoluteX addr16:$addr)> {
+def ROLAbsIdx : MOSRotateRMW {
   dag InOperandList = (ins i16imm:$addr, Xc:$idx, Cc:$carryin);
 }
 def RORAbs : MOSRotateRMW, PseudoInstExpansion<(ROR_ZeroPage addr8:$addr)> {
   dag InOperandList = (ins i16imm:$addr, Cc:$carryin);
 }
-def RORAbsIdx : MOSRotateRMW, PseudoInstExpansion<(ROR_AbsoluteX addr16:$addr)> {
+def RORAbsIdx : MOSRotateRMW {
   dag InOperandList = (ins i16imm:$addr, Xc:$idx, Cc:$carryin);
 }
 
@@ -363,7 +363,7 @@ multiclass MOSIncDec {
     def CAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPage) addr8:$addr)> {
       dag InOperandList = (ins i16imm:$addr);
     }
-    def CAbsIdx : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_AbsoluteX) addr16:$addr)> {
+    def CAbsIdx : MOSLogicalInstr {
       dag InOperandList = (ins i16imm:$addr, Xc:$idx);
     }
   }
@@ -438,11 +438,9 @@ class MOSLoadIndexed<RegisterClass dst, RegisterClass idx> : MOSLoad {
 // LDA abs,x; LDA abs,y
 def LDAAbsIdx : MOSLoadIndexed<Ac, XY>;
 // LDX abs,y
-def LDXAbsIdx : MOSLoadIndexed<Xc, Yc>,
-             PseudoInstExpansion<(LDX_AbsoluteY addr16:$addr)>;
+def LDXAbsIdx : MOSLoadIndexed<Xc, Yc>;
 // LDY abs,x
-def LDYAbsIdx : MOSLoadIndexed<Yc, Xc>,
-             PseudoInstExpansion<(LDY_AbsoluteX addr16:$addr)>;
+def LDYAbsIdx : MOSLoadIndexed<Yc, Xc>;
 
 // LDA (zp),y
 def LDIndirIdx : MOSLoad, PseudoInstExpansion<(LDA_IndirectIndexed addr8:$addr)> {
@@ -472,7 +470,7 @@ let Predicates = [Has65C02] in {
     dag InOperandList = (ins i16imm:$addr);
   }
   // STZ abs,x
-  def STZAbsIdx : MOSStore, PseudoInstExpansion<(STZ_AbsoluteX addr16:$addr)> {
+  def STZAbsIdx : MOSStore {
     dag InOperandList = (ins i16imm:$addr, Xc:$idx);
   }
   // STZ zp

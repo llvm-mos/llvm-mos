@@ -121,6 +121,17 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: asl_absolute_x
+# CHECK-LABEL: asl_absolute_x
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: bb.0
+    $c = ASLAbsIdx 42, $x
+    ; CHECK: asl 42,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: bcs_relative
 # CHECK-LABEL: bcs_relative
 body: |
@@ -253,6 +264,16 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: inc_absolute_x
+# CHECK-LABEL: inc_absolute_x
+body: |
+  bb.0.entry:
+    INCAbsIdx 42, $x
+    ; CHECK: inc 42,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |
@@ -269,6 +290,26 @@ body: |
   bb.0.entry:
     $a = LDAAbsIdx 1234, $x
     ; CHECK: lda 1234,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: ldx_absolutey
+# CHECK-LABEL: ldx_absolutey
+body: |
+  bb.0.entry:
+    $x = LDXAbsIdx 1234, $y
+    ; CHECK: ldx 1234,y
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: ldy_absolutex
+# CHECK-LABEL: ldy_absolutex
+body: |
+  bb.0.entry:
+    $y = LDYAbsIdx 1234, $x
+    ; CHECK: ldy 1234,x
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -417,8 +458,8 @@ name: stz_absolutex
 # CHECK-LABEL: stz_absolutex
 body: |
   bb.0.entry:
-    STZAbsIdx 1234, $x
-    ; CHECK: stz 1234,x
+    STZAbsIdx 42, $x
+    ; CHECK: stz 42,x
     RTS
     ; CHECK-NEXT: rts
 ...
