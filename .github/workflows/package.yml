@@ -18,7 +18,7 @@ jobs:
         run: sudo apt-get -y install ninja-build
       - name: Install Windows tools
         if: startsWith(matrix.os, 'windows')
-        run: choco install ninja zip
+        run: choco install ninja
       - name: Add Windows development tools to path
         if: startsWith(matrix.os, 'windows')
         uses: ilammy/msvc-dev-cmd@v1.4.1
