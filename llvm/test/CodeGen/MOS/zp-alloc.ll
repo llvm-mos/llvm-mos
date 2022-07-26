@@ -109,8 +109,8 @@ declare void @ext_ptr(ptr %p) nocallback
 define void @alloca() norecurse {
 ; CHECK-LABEL: alloca:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx #mos16lo(.Lalloca_zp_stk)
-; CHECK-NEXT:    ldy #mos16hi(.Lalloca_zp_stk)
+; CHECK-NEXT:    ldx #mos8(.Lalloca_zp_stk)
+; CHECK-NEXT:    ldy #mos8(0)
 ; CHECK-NEXT:    stx mos8(__rc2)
 ; CHECK-NEXT:    sty mos8(__rc3)
 ; CHECK-NEXT:    jmp ext_ptr

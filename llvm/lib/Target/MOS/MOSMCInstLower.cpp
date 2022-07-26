@@ -18,8 +18,10 @@
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -622,6 +624,18 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
 
 MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
                                              const MCSymbol *Sym) {
+  const MachineFrameInfo &MFI = MO.getParent()->getMF()->getFrameInfo();
+  bool ZP;
+  if (MO.isFI()) {
+    ZP = MFI.getStackID(MO.getIndex()) == TargetStackID::MosZeroPage;
+  } else if (MO.isGlobal()) {
+    const auto *GV =
+        dyn_cast<GlobalVariable>(MO.getGlobal()->getAliaseeObject());
+    ZP = GV && GV->getAddressSpace() == 1;
+  } else {
+    ZP = false;
+  }
+
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
   if (!MO.isJTI() && MO.getOffset() != 0)
     Expr = MCBinaryExpr::createAdd(
@@ -632,12 +646,18 @@ MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   case MOS::MO_NO_FLAGS:
     break;
   case MOS::MO_LO:
-    Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR16_LO, Expr,
-                             /*isNegated=*/false, Ctx);
+    if (!ZP) {
+      Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR16_LO, Expr,
+                               /*isNegated=*/false, Ctx);
+    }
     break;
   case MOS::MO_HI:
-    Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR16_HI, Expr,
-                             /*isNegated=*/false, Ctx);
+    if (ZP) {
+      Expr = MCConstantExpr::create(0, Ctx);
+    } else {
+      Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR16_HI, Expr,
+                               /*isNegated=*/false, Ctx);
+    }
     break;
   case MOS::MO_HI_JT: {
     // Jump tables are partitioned in two arrays: first all the low bytes,

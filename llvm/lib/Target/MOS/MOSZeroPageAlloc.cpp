@@ -529,16 +529,9 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
 
   SCC *ExternalCallingSCC = &SCCs[SCCIdx[CG.getExternalCallingNode()]];
   for (SCC &Component : SCCs) {
-    for (LocalCandidate &LC : Component.Candidates) {
-      // Global value candidates are globally-visible, so account them to the
-      // entry node of the call graph. This ensures their offsets before the
-      // offsets of non-gv candidates, and they're mutually exclusive amongst
-      // themselves because they're all considered members of the same
-      // candidate. Note that they still are in the candidate list for each
-      // referencing component, since that's how their relative values are to be
-      // judged.
-      LC.Cand->Comp = LC.Cand->GV ? ExternalCallingSCC : &Component;
-    }
+    for (LocalCandidate &LC : Component.Candidates)
+      if (!LC.Cand->GV)
+        LC.Cand->Comp = &Component;
     for (const Function *F : Component.Funcs)
       FunctionSCCs[F] = &Component;
     for (SCC *Callee : Component.Callees)
@@ -930,13 +923,14 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
   if (Cand.AssignedSize < Cand.Size)
     return true;
 
-  Cand.Comp->ZPSize += Cand.AssignedSize;
-
   // Update the whole-graph sizes.
   if (Cand.GV) {
     SCCGraph.GlobalZPSize += Cand.Size;
     return true;
   }
+
+  Cand.Comp->ZPSize += Cand.AssignedSize;
+
   if (EG.Entry->Funcs.size() == 1 &&
       EG.Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse")) {
     SCCGraph.InterruptZPSize -= EG.Entry->MaxZPSize;
