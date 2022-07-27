@@ -55,6 +55,8 @@ public:
   // Wrapper needed for tblgenned pseudo lowering.
   void lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
+  const MCExpr *lowerConstant(const Constant *CV) override;
+
   void EmitToStreamer(MCStreamer &S, MCInst &Inst);
 
   void emitInstruction(const MachineInstr *MI) override;
@@ -75,6 +77,13 @@ public:
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "MOSGenMCPseudoLowering.inc"
+
+const MCExpr *MOSAsmPrinter::lowerConstant(const Constant *CV) {
+  if (auto *CE = dyn_cast<ConstantExpr>(CV))
+    if (CE->getOpcode() == Instruction::AddrSpaceCast)
+      return AsmPrinter::lowerConstant(CE->getOperand(0));
+  return AsmPrinter::lowerConstant(CV);
+}
 
 void MOSAsmPrinter::EmitToStreamer(MCStreamer &S, MCInst &Inst) {
   // If this instruction contains an out-of-range immediate address, perform an

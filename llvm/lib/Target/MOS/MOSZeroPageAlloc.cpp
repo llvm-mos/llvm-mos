@@ -405,8 +405,17 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
       continue;
     Changed = true;
     if (Cand->GV) {
+      // The dance here with Tmp avoids an infinite recursion in
+      // replaceAllUsesWith().
+      auto *Tmp = new GlobalVariable(
+          M, Cand->GV->getValueType(), Cand->GV->isConstant(),
+          Cand->GV->getLinkage(), Cand->GV->getInitializer());
+      Cand->GV->replaceAllUsesWith(Tmp);
       Cand->GV->mutateType(
           PointerType::get(Cand->GV->getValueType(), /*AddressSpace=*/1));
+      Tmp->replaceAllUsesWith(ConstantExpr::getAddrSpaceCast(
+          Cand->GV, PointerType::get(Cand->GV->getValueType(), 0)));
+      Tmp->eraseFromParent();
       LLVM_DEBUG(dbgs() << "  " << *Cand->GV << '\n');
     } else {
       MachineFunction &MF = *Cand->MF;
