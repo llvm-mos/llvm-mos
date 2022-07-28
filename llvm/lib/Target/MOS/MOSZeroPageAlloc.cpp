@@ -211,7 +211,7 @@ struct SCC {
   SmallVector<Function *> Funcs;
   SmallVector<SCC *> Callees;
   SmallVector<SCC *> Callers;
-  std::vector<LocalCandidate> Candidates;
+  SmallVector<LocalCandidate> Candidates;
 
   // Offset of the zero page area for this SCC from the start of the entry
   // graph. If this is within an interrupt-norecurse call, relative to the start
@@ -236,6 +236,8 @@ struct EntryGraph {
   // Candidates scored for this entry point, ordered best first.
   std::vector<EntryCandidate> Candidates = {};
 
+  bool IsINR = false;
+
   size_t NextCand = 0;
 };
 
@@ -249,6 +251,8 @@ struct SCCGraph {
   size_t GlobalZPSize = 0;
   size_t InterruptZPSize = 0;
   size_t RegularZPSize = 0;
+  DenseMap<const MachineFunction *, size_t> MFZPSizes =
+      DenseMap<const MachineFunction *, size_t>();
 };
 
 } // namespace
@@ -301,10 +305,10 @@ private:
   MachineModuleInfo *MMI;
   SCCGraph buildSCCGraph(Module &M);
 
-  std::vector<LocalCandidate>
-  collectCandidates(MachineFunction &MF,
-                    std::vector<std::unique_ptr<Candidate>> &Candidates,
-                    DenseMap<GlobalVariable *, Candidate *> &GVCandidates);
+  void collectCandidates(MachineFunction &MF,
+                         std::vector<std::unique_ptr<Candidate>> &Candidates,
+                         SmallVectorImpl<LocalCandidate> &LocalCandidates,
+                         DenseMap<GlobalVariable *, Candidate *> &GVCandidates);
 
   std::vector<EntryGraph> buildEntryGraphs(Module &M, SCCGraph &SCCGraph);
   bool assignZPs(SCCGraph &SCCGraph, std::vector<EntryGraph>::iterator Begin,
@@ -355,10 +359,8 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
 
   // Interrupt-norecurse functions get absolute priority, since they're almost
   // always time-sensitive, and they have an abnormally high number of CSRs.
-  const auto RegularEGBegin = partition(EntryGraphs, [](EntryGraph &EG) {
-    return !EG.Candidates.empty() &&
-           EG.Entry->Funcs.front()->hasFnAttribute("interrupt_norecurse");
-  });
+  const auto RegularEGBegin =
+      partition(EntryGraphs, [](EntryGraph &EG) { return !EG.IsINR; });
 
   // Assign ZP locations to entry graphs round-robin until no candidates remain.
   LLVM_DEBUG(dbgs() << "Assigning ZP to candidates:\n");
@@ -370,13 +372,12 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   // Move the offsets of the interrupts after everything else and after one
   // another.
   size_t InterruptOffset = SCCGraph.GlobalZPSize + SCCGraph.RegularZPSize;
-  for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees) {
-    if (Entry->Funcs.size() != 1 ||
-        !Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse"))
+  for (EntryGraph &EG : EntryGraphs) {
+    if (!EG.IsINR)
       continue;
-    Entry->ZPOffset = InterruptOffset;
-    InterruptOffset += Entry->MaxZPSize;
-    for (SCC *Comp : ReversePostOrderTraversal<SCC>(*Entry)) {
+    EG.Entry->ZPOffset = InterruptOffset;
+    InterruptOffset += EG.Entry->MaxZPSize;
+    for (SCC *Comp : ReversePostOrderTraversal<SCC>(*EG.Entry)) {
       size_t EndOffset = Comp->ZPOffset + Comp->ZPSize;
       for (struct SCC *Callee : Comp->Callees)
         Callee->ZPOffset = std::max(Callee->ZPOffset, EndOffset);
@@ -433,6 +434,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
                   ConstantInt::get(I16, Cand->Comp->ZPOffset)},
               /*InBounds=*/true);
         }
+        Cand->Comp->ZPOffset += SCCGraph.MFZPSizes[&MF];
         Type *Typ =
             ArrayType::get(Type::getInt8Ty(M.getContext()), Cand->Comp->ZPSize);
         auto *Alias = GlobalAlias::create(
@@ -495,13 +497,16 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
     }
   }
 
-  // Record an edge from external calls back to externally callable nodes, since
-  // we cannot prove what they might call. There may be norecurse nodes in there
-  // (e.g., main), but as a simplification, don't collect candidates for such
-  // node.
+  // External calls may call any externally callable node except interrupt
+  // handlers.
   assert(CG.getCallsExternalNode()->empty());
-  CG.getCallsExternalNode()->addCalledFunction(nullptr,
-                                               CG.getExternalCallingNode());
+  for (auto &KV : *CG.getExternalCallingNode()) {
+    Function *F = KV.second->getFunction();
+    if (F && !F->hasFnAttribute("interrupt") &&
+        !F->hasFnAttribute("interrupt-norecurse"))
+      CG.getCallsExternalNode()->addCalledFunction(nullptr, KV.second);
+  }
+  LLVM_DEBUG(CG.dump());
 
   std::vector<SCC> SCCs;
   std::vector<SmallSet<const CallGraphNode *, 4>> SCCCallees;
@@ -522,17 +527,20 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
       if (F)
         SCC.Funcs.push_back(F);
     }
-    if (SCC.Funcs.size() != 1 || I->size() != 1)
-      continue;
-    MachineFunction *MF = MMI->getMachineFunction(*SCC.Funcs.front());
-    if (!MF)
-      continue;
-    SCC.Candidates = collectCandidates(*MF, Candidates, GVCandidates);
+    for (Function *F : SCC.Funcs) {
+      MachineFunction *MF = MMI->getMachineFunction(*F);
+      if (!MF)
+        continue;
+      collectCandidates(*MF, Candidates, SCC.Candidates, GVCandidates);
+    }
   }
   for (const auto &KV : enumerate(SCCCallees)) {
     SmallVector<SCC *> &Callees = SCCs[KV.index()].Callees;
-    for (const CallGraphNode *Callee : KV.value())
-      Callees.push_back(&SCCs[SCCIdx[Callee]]);
+    for (const CallGraphNode *Callee : KV.value()) {
+      size_t CalleeSCCIdx = SCCIdx[Callee];
+      if (CalleeSCCIdx != KV.index())
+        Callees.push_back(&SCCs[CalleeSCCIdx]);
+    }
   }
   DenseMap<const Function *, SCC *> FunctionSCCs;
 
@@ -561,14 +569,13 @@ SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
 
 // For each SCC, find all of the local options for ZP allocation and score
 // them relative to the function's entry frequency.
-std::vector<LocalCandidate> MOSZeroPageAlloc::collectCandidates(
+void MOSZeroPageAlloc::collectCandidates(
     MachineFunction &MF, std::vector<std::unique_ptr<Candidate>> &Candidates,
+    SmallVectorImpl<LocalCandidate> &LocalCandidates,
     DenseMap<GlobalVariable *, Candidate *> &GVCandidates) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   auto &BFI =
       getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
-
-  std::vector<LocalCandidate> LocalCandidates;
 
   DenseMap<GlobalVariable *, Freq> GlobalBenefit;
   for (MachineBasicBlock &MBB : MF) {
@@ -615,7 +622,7 @@ std::vector<LocalCandidate> MOSZeroPageAlloc::collectCandidates(
   const MOSFrameLowering &TFL =
       *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
   if (!TFL.usesStaticStack(MF))
-    return LocalCandidates;
+    return;
 
   Freq SaveFreq;
   Freq RestoreFreq;
@@ -715,8 +722,6 @@ std::vector<LocalCandidate> MOSZeroPageAlloc::collectCandidates(
         Candidate{&MF, Size, /*CSR=*/0, /*GV=*/nullptr, /*FI=*/I}));
     LocalCandidates.push_back(LocalCandidate{Candidates.back().get(), Benefit});
   }
-
-  return LocalCandidates;
 }
 
 static bool isUndef(const Constant *C) {
@@ -753,8 +758,12 @@ static bool isSuitableForNoInit(const GlobalVariable *GV) {
 std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
                                                            SCCGraph &SCCGraph) {
   std::vector<EntryGraph> EntryGraphs;
-  for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees)
+  for (SCC *Entry : SCCGraph.ExternalCallingSCC->Callees) {
     EntryGraphs.push_back(EntryGraph{Entry});
+    EntryGraphs.back().IsINR = any_of(Entry->Funcs, [](Function *F) {
+      return F->hasFnAttribute("interrupt-norecurse");
+    });
+  }
   for (EntryGraph &EG : EntryGraphs) {
     LLVM_DEBUG({
       dbgs() << "Entry SCC\n";
@@ -884,8 +893,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
     if (Cand.GV) {
       NewGlobalSize += Size;
     } else {
-      if (EG.Entry->Funcs.size() == 1 &&
-          EG.Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse")) {
+      if (EG.IsINR) {
         NewInterruptSize -= EG.Entry->MaxZPSize;
         NewInterruptSize +=
             std::max(EG.Entry->MaxZPSize, Size + Cand.Comp->MaxZPSize);
@@ -939,9 +947,9 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
   }
 
   Cand.Comp->ZPSize += Cand.AssignedSize;
+  SCCGraph.MFZPSizes[Cand.MF] += Cand.AssignedSize;
 
-  if (EG.Entry->Funcs.size() == 1 &&
-      EG.Entry->Funcs.front()->hasFnAttribute("interrupt-norecurse")) {
+  if (EG.IsINR) {
     SCCGraph.InterruptZPSize -= EG.Entry->MaxZPSize;
     SCCGraph.InterruptZPSize +=
         std::max(EG.Entry->MaxZPSize, Cand.Size + Cand.Comp->MaxZPSize);

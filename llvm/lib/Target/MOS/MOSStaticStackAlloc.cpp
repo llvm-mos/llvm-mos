@@ -88,13 +88,15 @@ bool MOSStaticStackAlloc::runOnModule(Module &M) {
     }
   }
 
-  // Record an edge from external calls back to externally callable nodes, since
-  // we cannot prove what they might call. This may cause norecurse nodes (e.g.,
-  // main) to occur within a multiple-entry SCC; in this case, elements of the
-  // SCC are allocated sequentially.
+  // External calls may call any externally callable node except interrupt
+  // handlers.
   assert(CG.getCallsExternalNode()->empty());
-  CG.getCallsExternalNode()->addCalledFunction(nullptr,
-                                               CG.getExternalCallingNode());
+  for (auto &KV : *CG.getExternalCallingNode()) {
+    Function *F = KV.second->getFunction();
+    if (F && !F->hasFnAttribute("interrupt") &&
+        !F->hasFnAttribute("interrupt-norecurse"))
+      CG.getCallsExternalNode()->addCalledFunction(nullptr, KV.second);
+  }
 
   // Extract the list of strongly-connected components from the call graph, and
   // make a note of which SCC contains each node.
