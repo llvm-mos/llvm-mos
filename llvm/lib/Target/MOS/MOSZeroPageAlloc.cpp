@@ -608,6 +608,8 @@ void MOSZeroPageAlloc::collectCandidates(
                          GV->getValueType()) +
                      7) /
                     8;
+      if (!Size)
+        continue;
       Candidates.push_back(std::make_unique<Candidate>(
           Candidate{/*MF=*/nullptr, Size, /*CSR=*/0, GV}));
       It = GVCandidates.try_emplace(GV, Candidates.back().get()).first;
