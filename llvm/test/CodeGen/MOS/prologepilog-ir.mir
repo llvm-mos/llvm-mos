@@ -136,7 +136,10 @@ name: interrupt_axy
 body: |
   bb.0.entry:
     ; 6502-LABEL: name: interrupt_axy
-    ; 6502: PH $a
+    ; 6502: liveins: $a, $x, $y
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: CLD_Implied
+    ; 6502-NEXT: PH $a
     ; 6502-NEXT: $c = LDCImm 0
     ; 6502-NEXT: $a = COPY $rc0
     ; 6502-NEXT: $a, $c, $v = ADCImm $a, 255, $c
@@ -179,7 +182,10 @@ body: |
     ; 6502-NEXT: $a = PL
     ; 6502-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
     ; 65C02-LABEL: name: interrupt_axy
-    ; 65C02: PH $a
+    ; 65C02: liveins: $a, $x, $y
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: CLD_Implied
+    ; 65C02-NEXT: PH $a
     ; 65C02-NEXT: $c = LDCImm 0
     ; 65C02-NEXT: $a = COPY $rc0
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 255, $c
@@ -217,6 +223,7 @@ body: |
     ; 65C02-NEXT: $rc1 = COPY killed $a
     ; 65C02-NEXT: $a = PL
     ; 65C02-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
+    CLD_Implied
     $x = LDImm 42
     $a = LDImm 43
     $y = LDImm 44
@@ -231,6 +238,7 @@ body: |
   ; 6502-NEXT:   successors: %bb.1(0x80000000)
   ; 6502-NEXT:   liveins: $a, $x, $y
   ; 6502-NEXT: {{  $}}
+  ; 6502-NEXT:   CLD_Implied
   ; 6502-NEXT:   PH $a
   ; 6502-NEXT:   $c = LDCImm 0
   ; 6502-NEXT:   $a = COPY $rc0
@@ -278,6 +286,7 @@ body: |
   ; 65C02-NEXT:   successors: %bb.1(0x80000000)
   ; 65C02-NEXT:   liveins: $a, $x, $y
   ; 65C02-NEXT: {{  $}}
+  ; 65C02-NEXT:   CLD_Implied
   ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
@@ -317,6 +326,7 @@ body: |
   ; 65C02-NEXT:   $a = PL
   ; 65C02-NEXT:   RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
   bb.0.entry:
+    CLD_Implied
   bb.1.entry:
     $x = LDImm 42
     RTI
@@ -330,6 +340,7 @@ body: |
   ; 6502-NEXT:   successors: %bb.1(0x80000000)
   ; 6502-NEXT:   liveins: $a, $y, $rc30, $rc31
   ; 6502-NEXT: {{  $}}
+  ; 6502-NEXT:   CLD_Implied
   ; 6502-NEXT:   PH $a
   ; 6502-NEXT:   $c = LDCImm 0
   ; 6502-NEXT:   $a = COPY $rc0
@@ -383,6 +394,7 @@ body: |
   ; 65C02-NEXT:   successors: %bb.1(0x80000000)
   ; 65C02-NEXT:   liveins: $a, $y, $rc30, $rc31
   ; 65C02-NEXT: {{  $}}
+  ; 65C02-NEXT:   CLD_Implied
   ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
@@ -430,6 +442,7 @@ body: |
   ; 65C02-NEXT:   $a = PL
   ; 65C02-NEXT:   RTI implicit $a, implicit $y, implicit $rc16, implicit $rc17, implicit $rc30, implicit $rc31
   bb.0.entry:
+    CLD_Implied
   bb.1.entry:
     $rs15 = IMPLICIT_DEF
     RTI
@@ -443,6 +456,7 @@ body: |
   ; 6502-NEXT:   successors: %bb.1(0x80000000)
   ; 6502-NEXT:   liveins: $a, $y, $rc30, $rc31
   ; 6502-NEXT: {{  $}}
+  ; 6502-NEXT:   CLD_Implied
   ; 6502-NEXT:   PH $a
   ; 6502-NEXT:   $c = LDCImm 0
   ; 6502-NEXT:   $a = COPY $rc0
@@ -498,6 +512,7 @@ body: |
   ; 65C02-NEXT:   successors: %bb.1(0x80000000)
   ; 65C02-NEXT:   liveins: $a, $y, $rc30, $rc31
   ; 65C02-NEXT: {{  $}}
+  ; 65C02-NEXT:   CLD_Implied
   ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
@@ -547,6 +562,7 @@ body: |
   ; 65C02-NEXT:   $a = PL
   ; 65C02-NEXT:   RTI implicit $a, implicit $y, implicit $rc16, implicit $rc17, implicit $rc30, implicit $rc31
   bb.0.entry:
+    CLD_Implied
   bb.1.entry:
     $rs15 = IMPLICIT_DEF
     $rs16 = IMPLICIT_DEF
@@ -558,7 +574,10 @@ name: interrupt_caller
 body: |
   bb.0.entry:
     ; 6502-LABEL: name: interrupt_caller
-    ; 6502: PH $a
+    ; 6502: liveins: $a, $x, $y, $rc2, $rc3, $rc4, $rc5, $rc6, $rc7, $rc8, $rc9, $rc10, $rc11, $rc12, $rc13, $rc14, $rc15, $rc18, $rc19
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: CLD_Implied
+    ; 6502-NEXT: PH $a
     ; 6502-NEXT: $c = LDCImm 0
     ; 6502-NEXT: $a = COPY $rc0
     ; 6502-NEXT: $a, $c, $v = ADCImm $a, 239, $c
@@ -695,7 +714,10 @@ body: |
     ; 6502-NEXT: $a = PL
     ; 6502-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit $rc16, implicit $rc17, implicit $rc18, implicit $rc19
     ; 65C02-LABEL: name: interrupt_caller
-    ; 65C02: PH $a
+    ; 65C02: liveins: $a, $x, $y, $rc2, $rc3, $rc4, $rc5, $rc6, $rc7, $rc8, $rc9, $rc10, $rc11, $rc12, $rc13, $rc14, $rc15, $rc18, $rc19
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: CLD_Implied
+    ; 65C02-NEXT: PH $a
     ; 65C02-NEXT: $c = LDCImm 0
     ; 65C02-NEXT: $a = COPY $rc0
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 239, $c
@@ -827,6 +849,7 @@ body: |
     ; 65C02-NEXT: $rc1 = COPY killed $a
     ; 65C02-NEXT: $a = PL
     ; 65C02-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit $rc16, implicit $rc17, implicit $rc18, implicit $rc19
+    CLD_Implied
     ADJCALLSTACKDOWN 0, 0, implicit $rs0, implicit-def $rs0
     JSR &fn, mos_csr
     ADJCALLSTACKUP 0, 0, implicit $rs0, implicit-def $rs0

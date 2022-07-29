@@ -92,6 +92,11 @@ bool MOSFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
 bool MOSFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+  // CLD remain the first thing in a function, since even setting up the frame
+  // can involve arithmetic.
+  if (MI != MBB.end() && MI->getOpcode() == MOS::CLD_Implied)
+    ++MI;
+
   MachineIRBuilder Builder(MBB, MI);
   MachineInstrSpan MIS(MI, &MBB);
   const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
@@ -286,6 +291,12 @@ void MOSFrameLowering::emitPrologue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo &TRI = *MF.getRegInfo().getTargetRegisterInfo();
   MachineIRBuilder Builder(MBB, MBB.begin());
+
+  // Stack pointer adjustments need to occur after the CLD in an interrupt
+  // handler or the sum might be incorrect.
+  for (MachineInstr &MI : MBB)
+    if (MI.getOpcode() == MOS::CLD_Implied)
+      Builder.setInsertPt(MBB, std::next(MI.getIterator()));
 
   int64_t StackSize = MFI.getStackSize();
   // If the interrupted routine is in the middle of decrementing its stack
