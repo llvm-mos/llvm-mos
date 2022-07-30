@@ -137,6 +137,7 @@ entry:
 define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-LABEL: inr:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cld
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    lda mos8(__rc1)
@@ -184,7 +185,6 @@ define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-NEXT:    stx .Linr_sstk+15 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx mos8(__rc19)
 ; CHECK-NEXT:    stx .Linr_sstk+16 ; 1-byte Folded Spill
-; CHECK-NEXT:    cld
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx mos8(.Linr_zp_stk) ; 1-byte Folded Spill
 ; CHECK-NEXT:    jsr inr_callee
