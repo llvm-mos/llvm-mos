@@ -300,7 +300,7 @@ define i16 @ashr_5(i16 %a) {
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    bpl .LBB18_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    jmp .LBB18_3
 ; CHECK-NEXT:  .LBB18_2: ; %entry
 ; CHECK-NEXT:    ldx #0
@@ -328,7 +328,7 @@ define i16 @ashr_7(i16 %a) {
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    bpl .LBB19_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    jmp .LBB19_3
 ; CHECK-NEXT:  .LBB19_2: ; %entry
 ; CHECK-NEXT:    ldx #0
@@ -349,7 +349,7 @@ define i16 @ashr_8(i16 %a) {
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    bpl .LBB20_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB20_2: ; %entry
 ; CHECK-NEXT:    ldx #0
@@ -365,7 +365,7 @@ define i16 @ashr_15(i16 %a) {
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    bpl .LBB21_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    bmi .LBB21_4
 ; CHECK-NEXT:  .LBB21_2: ; %entry
@@ -376,7 +376,7 @@ define i16 @ashr_15(i16 %a) {
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    bpl .LBB21_2
 ; CHECK-NEXT:  .LBB21_4: ; %entry
-; CHECK-NEXT:    ldx #-1
+; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:  .LBB21_5: ; %entry
 ; CHECK-NEXT:    asl mos8(__rc2)
 ; CHECK-NEXT:    rol
@@ -395,7 +395,7 @@ define i32 @ashr_16(i32 %a) {
 ; CHECK-NEXT:    ldx mos8(__rc3)
 ; CHECK-NEXT:    bpl .LBB22_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldy #-1
+; CHECK-NEXT:    ldy #255
 ; CHECK-NEXT:    jmp .LBB22_3
 ; CHECK-NEXT:  .LBB22_2: ; %entry
 ; CHECK-NEXT:    ldy #0

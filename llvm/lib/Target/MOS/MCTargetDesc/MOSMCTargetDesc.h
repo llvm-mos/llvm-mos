@@ -14,6 +14,7 @@
 #define LLVM_MOS_MCTARGET_DESC_H
 
 #include "llvm/ADT/Sequence.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
 
 #include <memory>
@@ -69,6 +70,17 @@ namespace llvm {
 template <> struct enum_iteration_traits<decltype(MOS::NoRegister)> {
   static constexpr bool is_iterable = true;
 };
+
+namespace MOSOp {
+
+enum OperandType : unsigned {
+  OPERAND_IMM8 = MCOI::OPERAND_FIRST_TARGET,
+  OPERAND_ADDR8,
+  OPERAND_ADDR16,
+};
+
+} // namespace MOSOp
+
 } // namespace llvm
 
 #endif // LLVM_MOS_MCTARGET_DESC_H

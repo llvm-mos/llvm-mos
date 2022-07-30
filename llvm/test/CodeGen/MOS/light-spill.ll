@@ -30,7 +30,7 @@ define void @light_spill(i8 zeroext %sel) {
 ; CHECK-NEXT:    ldx #22
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    lda #-46
+; CHECK-NEXT:    lda #210
 ; CHECK-NEXT:    ldx #4
 ; CHECK-NEXT:  .LBB0_3: ; %select.end
 ; CHECK-NEXT:    ldy #0

@@ -10,7 +10,7 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx #3
 ; CHECK-NEXT:    stx mos8(__rc4)
-; CHECK-NEXT:    ldx #-24
+; CHECK-NEXT:    ldx #232
 ; CHECK-NEXT:    lda #15
 ; CHECK-NEXT:    jsr __memset
 ; CHECK-NEXT:    ldx #0
@@ -19,7 +19,7 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    stx mos8(__rc3)
 ; CHECK-NEXT:    ldx #3
 ; CHECK-NEXT:    stx mos8(__rc4)
-; CHECK-NEXT:    ldx #-24
+; CHECK-NEXT:    ldx #232
 ; CHECK-NEXT:    lda #11
 ; CHECK-NEXT:    jsr __memset
 ; CHECK-NEXT:    ldx #164

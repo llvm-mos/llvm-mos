@@ -579,9 +579,25 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     MCOp = lowerSymbolOperand(MO, AP.GetJTISymbol(MO.getIndex()));
     break;
   }
-  case MachineOperand::MO_Immediate:
-    MCOp = MCOperand::createImm(MO.getImm());
+  case MachineOperand::MO_Immediate: {
+    auto GetTotal = [&]() {
+      size_t Idx = &MO - MO.getParent()->operands_begin();
+      switch (MO.getParent()->getDesc().OpInfo[Idx].OperandType) {
+      default:
+        llvm_unreachable("Unexpected operand type.");
+      case MOSOp::OPERAND_IMM8:
+      case MOSOp::OPERAND_ADDR8:
+        return 256;
+        break;
+      case MOSOp::OPERAND_ADDR16:
+        return 65536;
+        break;
+      }
+    };
+    MCOp = MCOperand::createImm(MO.getImm() >= 0 ? MO.getImm()
+                                                 : MO.getImm() + GetTotal());
     break;
+  }
   case MachineOperand::MO_MachineBasicBlock:
     MCOp = MCOperand::createExpr(
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
