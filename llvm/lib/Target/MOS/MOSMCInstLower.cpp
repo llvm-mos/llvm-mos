@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -40,6 +41,22 @@ static bool canUseZeroPageIdx(const MachineOperand &MO) {
   return MO.getGlobal()->getAliaseeObject()->getAddressSpace() == 1;
 }
 
+// Instructions with indexed addressing must have bases < 256 wrapped in mos16.
+// Otherwise, if the assembly were later parsed, the zero page indexed
+// addressing mode might be selected, which has different semantics when Base +
+// Idx >= 256;
+static MCOperand wrapAbsoluteIdxBase(MCOperand Op, MCContext &Ctx) {
+  if (!Op.isImm() || Op.getImm() >= 256)
+    return Op;
+
+  // Using IMM16 here is a hack, but it seems to work. This really should be
+  // ADDR16, but that doesn't exist, and it's unclear whether that would
+  // conflict with IMM16, which is currently assigned to mos16().
+  return MCOperand::createExpr(MOSMCExpr::create(
+      MOSMCExpr::VK_MOS_IMM16, MCConstantExpr::create(Op.getImm(), Ctx),
+      /*isNegated=*/false, Ctx));
+}
+
 void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   switch (MI->getOpcode()) {
   default:
@@ -48,6 +65,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::ADCAbsIdx:
   case MOS::SBCAbsIdx: {
     bool ZP = canUseZeroPageIdx(MI->getOperand(4));
+    bool ImmConfusable = false;
     switch (MI->getOpcode()) {
     case MOS::ADCAbsIdx:
       switch (MI->getOperand(5).getReg()) {
@@ -55,6 +73,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         llvm_unreachable("Unexpected register.");
       case MOS::X:
         OutMI.setOpcode(ZP ? MOS::ADC_ZeroPageX : MOS::ADC_AbsoluteX);
+        ImmConfusable = !ZP;
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::ADC_AbsoluteY);
@@ -67,6 +86,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         llvm_unreachable("Unexpected register.");
       case MOS::X:
         OutMI.setOpcode(ZP ? MOS::SBC_ZeroPageX : MOS::SBC_AbsoluteX);
+        ImmConfusable = !ZP;
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::SBC_AbsoluteY);
@@ -77,6 +97,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     MCOperand Addr;
     if (!lowerOperand(MI->getOperand(4), Addr))
       llvm_unreachable("Failed to lower operand");
+    if (ImmConfusable)
+      Addr = wrapAbsoluteIdxBase(Addr, Ctx);
     OutMI.addOperand(Addr);
     return;
   }
@@ -84,6 +106,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::EORAbsIdx:
   case MOS::ORAAbsIdx: {
     bool ZP = canUseZeroPageIdx(MI->getOperand(2));
+    bool ImmConfusable = false;
     switch (MI->getOpcode()) {
     case MOS::ANDAbsIdx:
       switch (MI->getOperand(3).getReg()) {
@@ -103,6 +126,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         llvm_unreachable("Unexpected register.");
       case MOS::X:
         OutMI.setOpcode(ZP ? MOS::EOR_ZeroPageX : MOS::EOR_AbsoluteX);
+        ImmConfusable = !ZP;
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::EOR_AbsoluteY);
@@ -115,6 +139,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         llvm_unreachable("Unexpected register.");
       case MOS::X:
         OutMI.setOpcode(ZP ? MOS::ORA_ZeroPageX : MOS::ORA_AbsoluteX);
+        ImmConfusable = !ZP;
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::ORA_AbsoluteY);
@@ -125,6 +150,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     MCOperand Addr;
     if (!lowerOperand(MI->getOperand(2), Addr))
       llvm_unreachable("Failed to lower operand");
+    if (ImmConfusable)
+      Addr = wrapAbsoluteIdxBase(Addr, Ctx);
     OutMI.addOperand(Addr);
     return;
   }
@@ -195,6 +222,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     MCOperand Tgt;
     if (!lowerOperand(MI->getOperand(1), Tgt))
       llvm_unreachable("Failed to lower operand");
+    if (!ZP)
+      Tgt = wrapAbsoluteIdxBase(Tgt, Ctx);
     OutMI.addOperand(Tgt);
     return;
   }
@@ -227,6 +256,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::CMPImag8:
   case MOS::CMPAbs:
   case MOS::CMPAbsIdx: {
+    bool ImmConfusable = false;
     switch (MI->getOpcode()) {
     case MOS::CMPImm:
       switch (MI->getOperand(1).getReg()) {
@@ -266,6 +296,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         llvm_unreachable("Unexpected register.");
       case MOS::X:
         OutMI.setOpcode(ZP ? MOS::CMP_ZeroPageX : MOS::CMP_AbsoluteX);
+        ImmConfusable = !ZP;
         break;
       case MOS::Y:
         OutMI.setOpcode(MOS::CMP_AbsoluteY);
@@ -277,6 +308,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     MCOperand Val;
     if (!lowerOperand(MI->getOperand(2), Val))
       llvm_unreachable("Failed to lower operand");
+    if (ImmConfusable)
+      Val = wrapAbsoluteIdxBase(Val, Ctx);
     OutMI.addOperand(Val);
     return;
   }
@@ -293,6 +326,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     MCOperand Tgt;
     if (!lowerOperand(MI->getOperand(0), Tgt))
       llvm_unreachable("Failed to lower operand");
+    if (!ZP)
+      Tgt = wrapAbsoluteIdxBase(Tgt, Ctx);
     OutMI.addOperand(Tgt);
     return;
   }
@@ -355,11 +390,13 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
   case MOS::LDAAbsIdx: {
     bool ZP = canUseZeroPageIdx(MI->getOperand(1));
+    bool ImmConfusable = false;
     switch (MI->getOperand(2).getReg()) {
     default:
       llvm_unreachable("Unexpected LDAAbsIdx register.");
     case MOS::X:
       OutMI.setOpcode(ZP ? MOS::LDA_ZeroPageX : MOS::LDA_AbsoluteX);
+      ImmConfusable = !ZP;
       break;
     case MOS::Y:
       OutMI.setOpcode(MOS::LDA_AbsoluteY);
@@ -368,6 +405,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     MCOperand Val;
     if (!lowerOperand(MI->getOperand(1), Val))
       llvm_unreachable("Failed to lower operand");
+    if (ImmConfusable)
+      Val = wrapAbsoluteIdxBase(Val, Ctx);
     OutMI.addOperand(Val);
     return;
   }
@@ -387,6 +426,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     MCOperand Val;
     if (!lowerOperand(MI->getOperand(1), Val))
       llvm_unreachable("Failed to lower operand");
+    if (!ZP)
+      Val = wrapAbsoluteIdxBase(Val, Ctx);
     OutMI.addOperand(Val);
     return;
   }
@@ -499,11 +540,13 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     return;
   }
   case MOS::STZAbsIdx: {
-    OutMI.setOpcode(canUseZeroPageIdx(MI->getOperand(0)) ? MOS::STZ_ZeroPageX
-                                                         : MOS::STZ_AbsoluteX);
+    bool ZP = canUseZeroPageIdx(MI->getOperand(0));
+    OutMI.setOpcode(ZP ? MOS::STZ_ZeroPageX : MOS::STZ_AbsoluteX);
     MCOperand Tgt;
     if (!lowerOperand(MI->getOperand(0), Tgt))
       llvm_unreachable("Failed to lower operand");
+    if (!ZP)
+      Tgt = wrapAbsoluteIdxBase(Tgt, Ctx);
     OutMI.addOperand(Tgt);
     return;
   }

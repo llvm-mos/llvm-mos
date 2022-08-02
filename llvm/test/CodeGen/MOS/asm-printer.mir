@@ -137,7 +137,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: bb.0
     $c = ASLAbsIdx 42, $x
-    ; CHECK: asl 42,x
+    ; CHECK: asl mos16(42),x
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -279,7 +279,7 @@ name: inc_absolute_x
 body: |
   bb.0.entry:
     INCAbsIdx 42, $x
-    ; CHECK: inc 42,x
+    ; CHECK: inc mos16(42),x
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -469,7 +469,7 @@ name: stz_absolutex
 body: |
   bb.0.entry:
     STZAbsIdx 42, $x
-    ; CHECK: stz 42,x
+    ; CHECK: stz mos16(42),x
     RTS
     ; CHECK-NEXT: rts
 ...
