@@ -15,6 +15,7 @@
 #include "MOS.h"
 #include "MOSFrameLowering.h"
 #include "MOSInstrInfo.h"
+#include "MOSMachineFunctionInfo.h"
 #include "MOSSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -191,6 +192,7 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                           RegScavenger *RS) const {
   MachineFunction &MF = *MI->getMF();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const auto &MOSFI = MF.getInfo<MOSFunctionInfo>();
 
   assert(!SPAdj);
 
@@ -224,9 +226,16 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   switch (MI->getOpcode()) {
   default:
-    MI->getOperand(FIOperandNum)
-        .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset,
-                             MI->getOperand(FIOperandNum).getTargetFlags());
+    if (MFI.getStackID(Idx) == TargetStackID::MosZeroPage) {
+      MI->getOperand(FIOperandNum)
+          .ChangeToGA(MOSFI->ZeroPageStackValue, Offset,
+                      MI->getOperand(FIOperandNum).getTargetFlags());
+    } else {
+      assert(MFI.getStackID(Idx) == TargetStackID::MosStatic);
+      MI->getOperand(FIOperandNum)
+          .ChangeToTargetIndex(MOS::TI_STATIC_STACK, Offset,
+                               MI->getOperand(FIOperandNum).getTargetFlags());
+    }
     break;
   case MOS::AddrLostk:
   case MOS::AddrHistk:

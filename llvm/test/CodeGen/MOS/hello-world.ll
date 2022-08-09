@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s -check-prefix=NMOS
 ; RUN: llc -mcpu=mos65c02 -verify-machineinstrs < %s | FileCheck %s -check-prefix=CMOS
 
-target datalayout = "e-p:16:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-a:8:8-Fi8-n8"
+target datalayout = "e-p:16:8:8-p1:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-a:8:8-Fi8-n8"
 target triple = "mos"
 
 @.str = private unnamed_addr constant [15 x i8] c"HELLO, WORLD!\0A\00", align 1

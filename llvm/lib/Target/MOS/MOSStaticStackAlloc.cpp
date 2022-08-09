@@ -88,6 +88,16 @@ bool MOSStaticStackAlloc::runOnModule(Module &M) {
     }
   }
 
+  // External calls may call any externally callable node except interrupt
+  // handlers.
+  assert(CG.getCallsExternalNode()->empty());
+  for (auto &KV : *CG.getExternalCallingNode()) {
+    Function *F = KV.second->getFunction();
+    if (F && !F->hasFnAttribute("interrupt") &&
+        !F->hasFnAttribute("interrupt-norecurse"))
+      CG.getCallsExternalNode()->addCalledFunction(nullptr, KV.second);
+  }
+
   // Extract the list of strongly-connected components from the call graph, and
   // make a note of which SCC contains each node.
   DenseMap<CallGraphNode *, uint64_t> SCCID;
@@ -171,17 +181,19 @@ bool MOSStaticStackAlloc::runOnModule(Module &M) {
     // stack region. Note that this is true even if the SCC is internally
     // recursive; the SCCs above and below may not be.
     const auto &GetStaticStackSize = [&]() -> uint64_t {
-      if (RootSCC.Nodes.size() != 1)
-        return 0;
-      Function *F = RootSCC.Nodes.front()->getFunction();
-      if (!F)
-        return 0;
-      MachineFunction *MF = MMI.getMachineFunction(*F);
-      if (!MF)
-        return 0;
-      const MOSFrameLowering &TFL =
-          *MF->getSubtarget<MOSSubtarget>().getFrameLowering();
-      return TFL.staticSize(MF->getFrameInfo());
+      size_t Size = 0;
+      for (CallGraphNode *Node : RootSCC.Nodes) {
+        Function *F = Node->getFunction();
+        if (!F)
+          continue;
+        MachineFunction *MF = MMI.getMachineFunction(*F);
+        if (!MF)
+          continue;
+        const MOSFrameLowering &TFL =
+            *MF->getSubtarget<MOSSubtarget>().getFrameLowering();
+        Size += TFL.staticSize(MF->getFrameInfo());
+      }
+      return Size;
     };
     uint64_t Size = GetStaticStackSize();
     LLVM_DEBUG(dbgs() << "Size: " << Size << "\n");
@@ -224,44 +236,46 @@ bool MOSStaticStackAlloc::runOnModule(Module &M) {
   // Create an alias for each SCC's static stack region and rewrite instructions
   // to reference it.
   for (const SCC &SCC : SCCs) {
-    if (SCC.Nodes.size() != 1)
-      continue;
-    Function *F = SCC.Nodes.front()->getFunction();
-    if (!F)
-      continue;
-    MachineFunction *MF = MMI.getMachineFunction(*F);
-    if (!MF)
-      continue;
-    const MOSFrameLowering &TFL =
-        *MF->getSubtarget<MOSSubtarget>().getFrameLowering();
-    uint64_t Size = TFL.staticSize(MF->getFrameInfo());
-    if (!Size)
-      continue;
+    size_t Offset = SCC.Offset;
+    for (CallGraphNode *Node : SCC.Nodes) {
+      Function *F = Node->getFunction();
+      if (!F)
+        continue;
+      MachineFunction *MF = MMI.getMachineFunction(*F);
+      if (!MF)
+        continue;
+      const MOSFrameLowering &TFL =
+          *MF->getSubtarget<MOSSubtarget>().getFrameLowering();
+      uint64_t Size = TFL.staticSize(MF->getFrameInfo());
+      if (!Size)
+        continue;
 
-    Type *Typ = ArrayType::get(Type::getInt8Ty(M.getContext()), Size);
-    Constant *Aliasee = Stack;
-    if (SCC.Offset) {
-      Type *I16 = Type::getInt16Ty(Stack->getContext());
-      Aliasee = ConstantExpr::getGetElementPtr(
-          Stack->getValueType(), Stack,
-          SmallVector<Constant *>{ConstantInt::get(I16, 0),
-                                  ConstantInt::get(I16, SCC.Offset)},
-          /*InBounds=*/true);
-    }
-    auto *Alias = GlobalAlias::create(
-        Typ, Stack->getAddressSpace(), Stack->getLinkage(),
-        Twine(F->getName()) + "_sstk", Aliasee, Stack->getParent());
-    LLVM_DEBUG(dbgs() << *Alias << "\n");
+      Type *Typ = ArrayType::get(Type::getInt8Ty(M.getContext()), Size);
+      Constant *Aliasee = Stack;
+      if (Offset) {
+        Type *I16 = Type::getInt16Ty(Stack->getContext());
+        Aliasee = ConstantExpr::getGetElementPtr(
+            Stack->getValueType(), Stack,
+            SmallVector<Constant *>{ConstantInt::get(I16, 0),
+                                    ConstantInt::get(I16, Offset)},
+            /*InBounds=*/true);
+      }
+      Offset += Size;
+      auto *Alias = GlobalAlias::create(
+          Typ, Stack->getAddressSpace(), Stack->getLinkage(),
+          Twine(F->getName()) + "_sstk", Aliasee, Stack->getParent());
+      LLVM_DEBUG(dbgs() << *Alias << "\n");
 
-    MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
-    MFI.setStaticStackValue(Alias);
+      MOSFunctionInfo &MFI = *MF->getInfo<MOSFunctionInfo>();
+      MFI.StaticStackValue = Alias;
 
-    for (MachineBasicBlock &MBB : *MF) {
-      for (MachineInstr &MI : MBB) {
-        for (MachineOperand &MO : MI.operands()) {
-          if (!MO.isTargetIndex())
-            continue;
-          MO.ChangeToGA(Alias, MO.getOffset(), MO.getTargetFlags());
+      for (MachineBasicBlock &MBB : *MF) {
+        for (MachineInstr &MI : MBB) {
+          for (MachineOperand &MO : MI.operands()) {
+            if (!MO.isTargetIndex())
+              continue;
+            MO.ChangeToGA(Alias, MO.getOffset(), MO.getTargetFlags());
+          }
         }
       }
     }

@@ -508,3 +508,52 @@ body: |
   bb.1.entry:
     RTS
 ...
+---
+name: brnz_cmpz_decmb_incmb_s16
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: brnz_cmpz_decmb_incmb_s16
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $y = COPY $rc2
+  ; CHECK-NEXT:   $rc2 = DEC $rc2, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   $c = CMPImm $y, 0, implicit-def $z
+  ; CHECK-NEXT:   BR %bb.3, $z, -1
+  ; CHECK-NEXT:   JMP %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.entry:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $rc3 = DEC $rc3, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   JMP %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.entry:
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.4(0x40000000)
+  ; CHECK-NEXT:   liveins: $rc3, $rc2, $a, $x
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $a = INC $a, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   dead $c = CMPTermZ $a, implicit-def $nz
+  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.entry:
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $x = INC $x, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   $c = CMPTermZ $x, implicit-def $nz
+  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.entry:
+  ; CHECK-NEXT:   RTS
+  bb.0.entry:
+    liveins: $a, $x, $rc2, $rc3
+    $a, $x = IncMB $a, $x, implicit-def $c
+    $y, $rc2, $rc3 = DecMB $rc2, $rc3, implicit-def $c
+    $c = CMPTermZMB $a, $x, implicit-def $nz
+    BR %bb.0, $z, 0
+  bb.1.entry:
+    RTS
+...

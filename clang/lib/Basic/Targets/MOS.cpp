@@ -17,7 +17,7 @@ using namespace clang::targets;
 MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
     : TargetInfo(Triple) {
   static const char Layout[] =
-      "e-m:e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
+      "e-m:e-p:16:8-p1:8:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
   resetDataLayout(Layout);
 
   PointerWidth = 16;
@@ -53,6 +53,8 @@ bool MOSTargetInfo::validateAsmConstraint(
   case 'a':
   case 'x':
   case 'y':
+  // Any of A, X, or Y.
+  case 'R':
   // The index (X or Y) registers.
   case 'd':
   // The C and V flags.
@@ -88,7 +90,10 @@ bool MOSTargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
   case 'a':
   case 'x':
   case 'y':
+  case 'R':
   case 'd':
+  case 'c':
+  case 'v':
     return Size <= 8;
   }
 }

@@ -331,11 +331,14 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
   return TailMBB;
 }
 
-static MachineInstr *findCmpTermZMBInc(MachineInstr &MI) {
+// Returns an IncMB that is safe to fold into the given CMPTermZ.
+static MachineInstr *findCMPTermZMBInc(MachineInstr &MI) {
   const TargetRegisterInfo *TRI = MI.getMF()->getSubtarget().getRegisterInfo();
   for (auto I = MachineBasicBlock::reverse_iterator(MI.getIterator()),
             E = MI.getParent()->rend();
        I != E; ++I) {
+    if (I->hasUnmodeledSideEffects() || I->isCall())
+      return nullptr;
     bool ReferencesCmpReg = false;
     for (const MachineOperand &MO : MI.explicit_uses()) {
       if (I->readsRegister(MO.getReg(), TRI) ||
@@ -367,8 +370,15 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   if (MI.getOpcode() == MOS::IncMB && MI.getNumExplicitDefs() > 1) {
     auto Term = MBB->getFirstTerminator();
     if (Term != MBB->end() && Term->getOpcode() == MOS::CMPTermZMB &&
-        findCmpTermZMBInc(*Term) == &MI)
+        findCMPTermZMBInc(*Term) == &MI) {
+      if (std::prev(Term) != MI) {
+        // The expansion of an intervening multi-byte instruction could separate
+        // the IncMB from its CMPTermZMB, so move it right before the
+        // CMPTermZMB. This is guaranteed safe by findCMPTermZMBInc.
+        MBB->insert(Term, MI.removeFromParent());
+      }
       return MBB;
+    }
   }
 
   MachineIRBuilder Builder(MI);
@@ -459,7 +469,7 @@ static MachineBasicBlock *emitCMPTermZMB(MachineInstr &MI,
     return MBB;
   }
 
-  MachineInstr *Inc = findCmpTermZMBInc(MI);
+  MachineInstr *Inc = findCMPTermZMBInc(MI);
 
   SmallVector<MachineBasicBlock::RegisterMaskPair> LiveOuts;
   for (const MachineBasicBlock::RegisterMaskPair &P : MBB->liveouts())

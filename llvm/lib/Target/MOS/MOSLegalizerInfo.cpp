@@ -468,9 +468,8 @@ bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
   Register Src = MI.getOperand(1).getReg();
 
   LLT DstTy = MRI.getType(Dst);
-  LLT SrcTy = MRI.getType(Src);
 
-  assert(SrcTy == LLT::scalar(1));
+  assert(MRI.getType(Src) == LLT::scalar(1));
   auto One = Builder.buildConstant(DstTy, 1);
   auto Zero = Builder.buildConstant(DstTy, 0);
   Builder.buildSelect(Dst, Src, One, Zero);
@@ -485,9 +484,8 @@ bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::legalizeBSwap(LegalizerHelper &Helper,
                                      MachineRegisterInfo &MRI,
                                      MachineInstr &MI) const {
-  LLT S8 = LLT::scalar(8);
-  assert(MRI.getType(MI.getOperand(0).getReg()) == S8);
-  assert(MRI.getType(MI.getOperand(1).getReg()) == S8);
+  assert(MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(8));
+  assert(MRI.getType(MI.getOperand(1).getReg()) == LLT::scalar(8));
   Helper.Observer.changingInstr(MI);
   MI.setDesc(Helper.MIRBuilder.getTII().get(COPY));
   Helper.Observer.changedInstr(MI);
@@ -505,8 +503,7 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
   LLT S8 = LLT::scalar(8);
 
   Register Dst = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(Dst);
-  assert(DstTy.isByteSized());
+  assert(MRI.getType(Dst).isByteSized());
   Register Src = MI.getOperand(1).getReg();
 
   auto RHSConst =
@@ -1190,11 +1187,15 @@ bool MOSLegalizerInfo::legalizeSelect(LegalizerHelper &Helper,
                                       MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
+#ifndef NDEBUG
   LLT P = LLT::pointer(0, 16);
+#endif
   LLT S16 = LLT::scalar(16);
 
   Register Dst = MI.getOperand(0).getReg();
+#ifndef NDEBUG
   Register Test = MI.getOperand(1).getReg();
+#endif
   Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
 
@@ -1623,8 +1624,10 @@ bool MOSLegalizerInfo::legalizeBrJt(LegalizerHelper &Helper,
   LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
+#ifndef NDEBUG
   const MachineInstr *Base =
       getOpcodeDef(G_JUMP_TABLE, MI.getOperand(0).getReg(), MRI);
+#endif
   assert(Base && "Invalid first argument to G_BRJT; expected G_JUMP_TABLE.");
 
   assert(MI.getOperand(1).isJTI());
@@ -1703,7 +1706,7 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   auto *FuncInfo = Builder.getMF().getInfo<MOSFunctionInfo>();
   Builder.buildStore(
-      Builder.buildFrameIndex(P, FuncInfo->getVarArgsStackIndex()),
+      Builder.buildFrameIndex(P, FuncInfo->VarArgsStackIndex),
       MI.getOperand(0), **MI.memoperands_begin());
   MI.eraseFromParent();
   return true;

@@ -50,6 +50,8 @@ public:
   // scheduling by claiming to emit it ourselves, then never doing so.
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
+  StringRef getSectionPrefix(const GlobalObject *GO) const override;
+
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   MOSSubtarget SubTarget;

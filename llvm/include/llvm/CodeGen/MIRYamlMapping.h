@@ -350,6 +350,8 @@ struct ScalarEnumerationTraits<TargetStackID::Value> {
     IO.enumCase(ID, "sgpr-spill", TargetStackID::SGPRSpill);
     IO.enumCase(ID, "scalable-vector", TargetStackID::ScalableVector);
     IO.enumCase(ID, "wasm-local", TargetStackID::WasmLocal);
+    IO.enumCase(ID, "mos-static", TargetStackID::MosStatic);
+    IO.enumCase(ID, "mos-zero-page", TargetStackID::MosZeroPage);
     IO.enumCase(ID, "noalloc", TargetStackID::NoAlloc);
   }
 };

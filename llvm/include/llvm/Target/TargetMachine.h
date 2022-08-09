@@ -394,6 +394,8 @@ public:
 
   void getNameWithPrefix(SmallVectorImpl<char> &Name, const GlobalValue *GV,
                          Mangler &Mang, bool MayAlwaysUsePrivate = false) const;
+  virtual StringRef getSectionPrefix(const GlobalObject *GO) const { return {}; }
+
   MCSymbol *getSymbol(const GlobalValue *GV) const;
 
   /// The integer bit size to use for SjLj based exception handling.

@@ -88,6 +88,9 @@ class Addr24Operand<string name> : MOSAsmOperand<name>;
 def imm8 : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8">;
   let EncoderMethod = "encodeImm<MOS::Imm8, 1>";
+  let OperandType = "OPERAND_IMM8";
+  let OperandNamespace = "MOSOp";
+  let Type = i8;
 }
 
 /// This operand will only match a value from 0 to 65535 inclusive.
@@ -114,11 +117,17 @@ def pcrel16 : Operand<i32> {
 def addr8 : Operand<i32> {
   let ParserMatchClass = Addr8Operand<"Addr8">;
   let EncoderMethod = "encodeImm<MOS::Addr8, 1>";
+  let OperandType = "OPERAND_ADDR8";
+  let OperandNamespace = "MOSOp";
+  let Type = i8;
 }
 
 def addr16 : Operand<i32> {
   let ParserMatchClass = Addr16Operand<"Addr16">;
   let EncoderMethod = "encodeImm<MOS::Addr16, 1>";
+  let OperandType = "OPERAND_ADDR16";
+  let OperandNamespace = "MOSOp";
+  let Type = i16;
 }
 
 def addr24 : Operand<i32> {

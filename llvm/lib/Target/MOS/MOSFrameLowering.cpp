@@ -43,21 +43,33 @@ MOSFrameLowering::MOSFrameLowering()
 
 bool MOSFrameLowering::usesStaticStack(const MachineFunction &MF) const {
   return MF.getSubtarget<MOSSubtarget>().staticStack() &&
-         MF.getFunction().doesNotRecurse();
+         !MF.getFunction().hasOptNone() && MF.getFunction().doesNotRecurse();
 }
 
 bool MOSFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  const auto &MOSFI = *MF.getInfo<MOSFunctionInfo>();
 
-  for (const auto &Info : enumerate(CSI)) {
-    // We place the first four CSRs on the hard stack, which we don't explicitly
-    // model in PEI.
-    if (Info.index() < 4)
-      Info.value().setTargetSpilled();
-    else
-      Info.value().setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
+  size_t HardStackRemaining = 4;
+  for (CalleeSavedInfo &Info : CSI) {
+    // Some CSRs may be rewritten to other zero page locations at
+    // MOSStaticStackAlloc time. These don't need to be spilled.
+    auto It = MOSFI.CSRZPOffsets.find(Info.getReg());
+    if (It != MOSFI.CSRZPOffsets.end()) {
+      Info.setTargetSpilled();
+      continue;
+    }
+
+    // We place the first four CSRs on the hard stack, which we don't
+    // explicitly model in PEI.
+    if (HardStackRemaining) {
+      Info.setTargetSpilled();
+      --HardStackRemaining;
+    } else {
+      Info.setFrameIdx(MFI.CreateSpillStackObject(1, Align()));
+    }
   }
 
   return true;
@@ -80,12 +92,18 @@ bool MOSFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
 bool MOSFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+  // CLD remain the first thing in a function, since even setting up the frame
+  // can involve arithmetic.
+  if (MI != MBB.end() && MI->getOpcode() == MOS::CLD_Implied)
+    ++MI;
+
   MachineIRBuilder Builder(MBB, MI);
   MachineInstrSpan MIS(MI, &MBB);
   const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   const TargetRegisterClass &StackRegClass =
       STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
+  const auto &FuncInfo = MBB.getParent()->getInfo<MOSFunctionInfo>();
 
   // There are intentionally very few CSRs, few enough to place on the hard
   // stack without much risk of overflow. This is the only across-calls way
@@ -94,7 +112,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   // directly on the hard stack, but it's significantly simpler.
   for (const CalleeSavedInfo &CI : CSI) {
     Register Reg = CI.getReg();
-    if (!CI.isTargetSpilled())
+    if (!CI.isTargetSpilled() || FuncInfo->CSRZPOffsets.count(Reg))
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
@@ -149,6 +167,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   const TargetRegisterClass &StackRegClass =
       STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
+  const auto &FuncInfo = MBB.getParent()->getInfo<MOSFunctionInfo>();
 
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Register Reg = CI.getReg();
@@ -166,7 +185,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
 
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Register Reg = CI.getReg();
-    if (!CI.isTargetSpilled())
+    if (!CI.isTargetSpilled() || FuncInfo->CSRZPOffsets.count(Reg))
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
@@ -179,7 +198,10 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   // doesn't remove the copies that set them.
   visitReturnBlocks(&MBB, [&CSI](MachineBasicBlock &MBB) {
     assert(MBB.rbegin()->isReturn());
+    const auto &FuncInfo = MBB.getParent()->getInfo<MOSFunctionInfo>();
     for (const CalleeSavedInfo &CI : CSI) {
+      if (FuncInfo->CSRZPOffsets.count(CI.getReg()))
+        continue;
       MBB.rbegin()->addOperand(MachineOperand::CreateReg(
           CI.getReg(), /*isDef=*/false, /*isImp=*/true));
     }
@@ -233,10 +255,11 @@ void MOSFrameLowering::processFunctionBeforeFrameFinalized(
   if (usesStaticStack(MF)) {
     int64_t Offset = 0;
     for (int Idx : seq(0, MFI.getObjectIndexEnd())) {
-      if (MFI.isDeadObjectIndex(Idx) || MFI.isVariableSizedObjectIndex(Idx))
+      if (MFI.isDeadObjectIndex(Idx) || MFI.isVariableSizedObjectIndex(Idx) ||
+          MFI.getStackID(Idx) != TargetStackID::Default)
         continue;
 
-      MFI.setStackID(Idx, TargetStackID::NoAlloc);
+      MFI.setStackID(Idx, TargetStackID::MosStatic);
       MFI.setObjectOffset(Idx, Offset);
       Offset += MFI.getObjectSize(Idx); // Static stack grows up.
     }
@@ -268,6 +291,12 @@ void MOSFrameLowering::emitPrologue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo &TRI = *MF.getRegInfo().getTargetRegisterInfo();
   MachineIRBuilder Builder(MBB, MBB.begin());
+
+  // Stack pointer adjustments need to occur after the CLD in an interrupt
+  // handler or the sum might be incorrect.
+  for (MachineInstr &MI : MBB)
+    if (MI.getOpcode() == MOS::CLD_Implied)
+      Builder.setInsertPt(MBB, std::next(MI.getIterator()));
 
   int64_t StackSize = MFI.getStackSize();
   // If the interrupted routine is in the middle of decrementing its stack
@@ -333,7 +362,7 @@ bool MOSFrameLowering::hasFP(const MachineFunction &MF) const {
 uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
   uint64_t Size = 0;
   for (int Idx : seq(0, MFI.getObjectIndexEnd()))
-    if (MFI.getStackID(Idx) == TargetStackID::NoAlloc)
+    if (MFI.getStackID(Idx) == TargetStackID::MosStatic)
       Size += MFI.getObjectSize(Idx);
   return Size;
 }

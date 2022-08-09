@@ -31,13 +31,24 @@ void MOSTargetStreamer::finish() {
   if (hasBSS())
     stronglyReference("__do_zero_bss",
                       "Declaring this symbol tells the CRT that there is "
-                      "something in BSS, so it may need to be zeroed.");
+                      "something in .bss, so it may need to be zeroed.");
+
+  if (hasZPBSS())
+    stronglyReference("__do_zero_zp_bss",
+                      "Declaring this symbol tells the CRT that there is "
+                      "something in .zp.bss, so it may need to be zeroed.");
 
   if (hasData())
     stronglyReference(
         "__do_copy_data",
         "Declaring this symbol tells the CRT that there is something in .data, "
         "so it may need to be copied from LMA to VMA.");
+
+  if (hasZPData())
+    stronglyReference(
+        "__do_copy_zp_data",
+        "Declaring this symbol tells the CRT that there is something in "
+        ".zp.data, so it may need to be copied from LMA to VMA.");
 
   if (hasInitArray())
     stronglyReference("__do_init_array",
@@ -74,7 +85,10 @@ void MOSTargetAsmStreamer::changeSection(const MCSection *CurSection,
                                          raw_ostream &OS) {
   MCTargetStreamer::changeSection(CurSection, Section, SubSection, OS);
   HasBSS |= Section->getName().startswith(".bss");
+  HasZPBSS |= Section->getName().startswith(".zp.bss");
   HasData |= Section->getName().startswith(".data");
+  HasZPData |= Section->getName().startswith(".zp.data");
+  HasZPData |= Section->getName().startswith(".zp.rodata");
   HasInitArray |= Section->getName().startswith(".init_array");
   HasFiniArray |= Section->getName().startswith(".fini_array");
 }
@@ -90,8 +104,14 @@ MOSTargetELFStreamer::MOSTargetELFStreamer(MCStreamer &S,
 bool MOSTargetELFStreamer::hasBSS() {
   return static_cast<MOSMCELFStreamer &>(getStreamer()).hasBSS();
 }
+bool MOSTargetELFStreamer::hasZPBSS() {
+  return static_cast<MOSMCELFStreamer &>(getStreamer()).hasZPBSS();
+}
 bool MOSTargetELFStreamer::hasData() {
   return static_cast<MOSMCELFStreamer &>(getStreamer()).hasData();
+}
+bool MOSTargetELFStreamer::hasZPData() {
+  return static_cast<MOSMCELFStreamer &>(getStreamer()).hasZPData();
 }
 bool MOSTargetELFStreamer::hasInitArray() {
   return static_cast<MOSMCELFStreamer &>(getStreamer()).hasInitArray();

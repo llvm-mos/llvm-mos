@@ -26,6 +26,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Utils.h"
@@ -64,7 +65,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
 }
 
 static const char *MOSDataLayout =
-    "e-m:e-p:16:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
+    "e-m:e-p:16:8-p1:8:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n8";
 
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
@@ -141,6 +142,10 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 }
 
+StringRef MOSTargetMachine::getSectionPrefix(const GlobalObject *GO) const {
+  return GO->getAddressSpace() == 1 ? ".zp" : "";
+}
+
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration
 //===----------------------------------------------------------------------===//
@@ -193,11 +198,12 @@ TargetPassConfig *MOSTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void MOSPassConfig::addIRPasses() {
-  // Aggressively find provably non-recursive functions.
-  addPass(createMOSNoRecursePass());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createMOSNoRecursePass());
   TargetPassConfig::addIRPasses();
   // Clean up after LSR in particular.
-  addPass(createInstructionCombiningPass());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createInstructionCombiningPass());
 }
 
 bool MOSPassConfig::addPreISel() { return false; }
@@ -207,7 +213,10 @@ bool MOSPassConfig::addIRTranslator() {
   return false;
 }
 
-void MOSPassConfig::addPreLegalizeMachineIR() { addPass(createMOSCombiner()); }
+void MOSPassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createMOSCombiner());
+}
 
 bool MOSPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
@@ -215,7 +224,8 @@ bool MOSPassConfig::addLegalizeMachineIR() {
 }
 
 void MOSPassConfig::addPreRegBankSelect() {
-  addPass(createMOSCombiner());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createMOSCombiner());
   addPass(createMOSLowerSelectPass());
 }
 
@@ -238,17 +248,23 @@ bool MOSPassConfig::addGlobalInstructionSelect() {
 
 void MOSPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
-  addPass(createMOSInsertCopiesPass());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createMOSInsertCopiesPass());
 }
 
 void MOSPassConfig::addOptimizedRegAlloc() {
-  // Run the coalescer twice to coalesce RMW patterns revealed by the first
-  // coalesce.
-  insertPass(&llvm::TwoAddressInstructionPassID, &llvm::RegisterCoalescerID);
+  if (getOptLevel() != CodeGenOpt::None) {
+    // Run the coalescer twice to coalesce RMW patterns revealed by the first
+    // coalesce.
+    insertPass(&llvm::TwoAddressInstructionPassID, &llvm::RegisterCoalescerID);
+  }
   TargetPassConfig::addOptimizedRegAlloc();
 }
 
-void MOSPassConfig::addPrePEI() { addPass(createMOSZeroPageAllocPass()); }
+void MOSPassConfig::addPrePEI() {
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createMOSZeroPageAllocPass());
+}
 
 void MOSPassConfig::addPreSched2() {
   addPass(createMOSPostRAScavengingPass());
@@ -258,8 +274,10 @@ void MOSPassConfig::addPreSched2() {
   addPass(&ExpandPostRAPseudosID);
   addPass(createMOSPostRAScavengingPass());
 
+  // This is currently mandatory, since it lowers CMPTermZ.
   addPass(createMOSLateOptimizationPass());
-  addPass(createMOSStaticStackAllocPass());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createMOSStaticStackAllocPass());
 }
 
 void MOSPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }

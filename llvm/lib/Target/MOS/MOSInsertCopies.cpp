@@ -48,6 +48,9 @@ public:
 };
 
 bool MOSInsertCopies::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   bool Changed = false;

@@ -370,8 +370,8 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   // walking a pointer forward from that memory location.
   if (F.isVarArg()) {
     auto *FuncInfo = MF.getInfo<MOSFunctionInfo>();
-    FuncInfo->setVarArgsStackIndex(MF.getFrameInfo().CreateFixedObject(
-        /*Size=*/1, Assigner.StackOffset, /*IsImmutable=*/true));
+    FuncInfo->VarArgsStackIndex = MF.getFrameInfo().CreateFixedObject(
+        /*Size=*/1, Assigner.StackOffset, /*IsImmutable=*/true);
   }
 
   return true;

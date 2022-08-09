@@ -37,8 +37,7 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                raw_ostream &OS) {
   std::string AiryOperands;
   raw_string_ostream AiryOperandStream(AiryOperands);
-  auto MnemonicInfo = getMnemonic(MI);
-  assert(MnemonicInfo.second && "Missing opcode for instruction.");
+  assert(getMnemonic(MI).second && "Missing opcode for instruction.");
   printInstruction(MI, Address, AiryOperandStream);
   AiryOperands = AiryOperandStream.str();
   size_t SpacesSeen = 0;
