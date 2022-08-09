@@ -391,7 +391,7 @@ static void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     m68k::getM68kTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::mos:
-    mos::getMOSTargetFeatures(Args, Features);
+    mos::getMOSTargetFeatures(D, Args, Features);
     break;
   case llvm::Triple::msp430:
     msp430::getMSP430TargetFeatures(D, Args, Features);

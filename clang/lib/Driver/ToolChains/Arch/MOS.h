@@ -14,12 +14,15 @@
 
 namespace clang {
 namespace driver {
+
+class Driver;
+
 namespace tools {
 namespace mos {
 
 std::string getMOSTargetCPU(const llvm::opt::ArgList &Args);
 
-void getMOSTargetFeatures(const llvm::opt::ArgList &Args,
+void getMOSTargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,
                           std::vector<llvm::StringRef> &Features);
 
 } // end namespace mos
