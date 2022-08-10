@@ -296,7 +296,8 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     // Copy flags from the instruction definition over to the return value
     // description for TableGen compatibility layer.
     SmallVector<ArgInfo> Args;
-	for (const auto &[VReg, ValueVT, ValueLLT] : zip(VRegs, ValueVTs, ValueLLTs)) {
+    for (const auto &[VReg, ValueVT, ValueLLT] :
+         zip(VRegs, ValueVTs, ValueLLTs)) {
       Args.emplace_back(VReg, ValueVT.getTypeForEVT(Ctx), 0);
       setArgFlags(Args.back(), AttributeList::ReturnIndex, DL, F);
       adjustArgFlags(Args.back(), ValueLLT);

@@ -314,8 +314,9 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
     //  ...
     Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
-    for (const auto &[Dst, TrueValue, FalseValue] : zip(Dsts, TrueValues, FalseValues)) {
-	  Builder.buildInstr(MOS::G_PHI)
+    for (const auto &[Dst, TrueValue, FalseValue] :
+         zip(Dsts, TrueValues, FalseValues)) {
+      Builder.buildInstr(MOS::G_PHI)
           .addDef(Dst)
           .addUse(TrueValue)
           .addMBB(TrueMBB)
