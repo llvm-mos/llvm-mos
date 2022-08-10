@@ -314,11 +314,8 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
     //   %Result = phi [ %TrueValue, TrueMBB ], [ %FalseValue, FalseMBB ]
     //  ...
     Builder.setInsertPt(*SinkMBB, SinkMBB->begin());
-    // TODO: C++17 structured bindings
-    for (const auto &I : zip(Dsts, TrueValues, FalseValues)) {
-      Register Dst = std::get<0>(I);
-      Register TrueValue = std::get<1>(I);
-      Register FalseValue = std::get<2>(I);
+    for (const auto &[Dst, TrueValue, FalseValue] :
+         zip(Dsts, TrueValues, FalseValues)) {
       Builder.buildInstr(MOS::G_PHI)
           .addDef(Dst)
           .addUse(TrueValue)
