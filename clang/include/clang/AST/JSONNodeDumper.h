@@ -160,6 +160,7 @@ class JSONNodeDumper
   std::string createPointerRepresentation(const void *Ptr);
   llvm::json::Object createQualType(QualType QT, bool Desugar = true);
   llvm::json::Object createBareDeclRef(const Decl *D);
+  llvm::json::Object createFPOptions(FPOptionsOverride FPO);
   void writeBareDeclRef(const Decl *D);
   llvm::json::Object createCXXRecordDefinitionData(const CXXRecordDecl *RD);
   llvm::json::Object createCXXBaseSpecifier(const CXXBaseSpecifier &BS);
@@ -219,6 +220,7 @@ public:
   void VisitUnaryTransformType(const UnaryTransformType *UTT);
   void VisitTagType(const TagType *TT);
   void VisitTemplateTypeParmType(const TemplateTypeParmType *TTPT);
+  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *STTPT);
   void VisitAutoType(const AutoType *AT);
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST);
   void VisitInjectedClassNameType(const InjectedClassNameType *ICNT);
@@ -317,6 +319,7 @@ public:
   void VisitGotoStmt(const GotoStmt *GS);
   void VisitWhileStmt(const WhileStmt *WS);
   void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *OACS);
+  void VisitCompoundStmt(const CompoundStmt *IS);
 
   void VisitNullTemplateArgument(const TemplateArgument &TA);
   void VisitTypeTemplateArgument(const TemplateArgument &TA);
@@ -378,7 +381,7 @@ class JSONDumper : public ASTNodeTraverser<JSONDumper, JSONNodeDumper> {
       case TSK_ExplicitInstantiationDefinition:
         if (!DumpExplicitInst)
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case TSK_Undeclared:
       case TSK_ImplicitInstantiation:
         if (DumpRefOnly)

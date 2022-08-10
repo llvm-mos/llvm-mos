@@ -306,7 +306,7 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
-LLVM_NODISCARD unsigned
+[[nodiscard]] unsigned
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;
@@ -911,8 +911,8 @@ static const MachineInstr *getCallInstr(const MachineInstr *MI) {
   if (!MI->isBundle())
     return MI;
 
-  for (auto &BMI : make_range(getBundleStart(MI->getIterator()),
-                              getBundleEnd(MI->getIterator())))
+  for (const auto &BMI : make_range(getBundleStart(MI->getIterator()),
+                                    getBundleEnd(MI->getIterator())))
     if (BMI.isCandidateForCallSiteEntry())
       return &BMI;
 

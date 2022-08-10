@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_CPP_UINT_H
 #define LLVM_LIBC_UTILS_CPP_UINT_H
 
-#include "Array.h"
+#include "array.h"
 
 #include <stddef.h> // For size_t
 #include <stdint.h>
@@ -44,7 +44,7 @@ public:
       val[i] = 0;
     }
   }
-  constexpr explicit UInt(const cpp::Array<uint64_t, WordCount> &words) {
+  constexpr explicit UInt(const cpp::array<uint64_t, WordCount> &words) {
     for (size_t i = 0; i < WordCount; ++i)
       val[i] = words[i];
   }
@@ -67,26 +67,84 @@ public:
 
   // Add x to this number and store the result in this number.
   // Returns the carry value produced by the addition operation.
+  // To prevent overflow from intermediate results, we use the following
+  // property of unsigned integers:
+  //   x + (~x) = 2^(sizeof(x)) - 1.
   constexpr uint64_t add(const UInt<Bits> &x) {
-    uint64_t carry = 0;
+    bool carry = false;
     for (size_t i = 0; i < WordCount; ++i) {
-      uint64_t res_lo = low(val[i]) + low(x.val[i]) + carry;
-      carry = high(res_lo);
-      res_lo = low(res_lo);
-
-      uint64_t res_hi = high(val[i]) + high(x.val[i]) + carry;
-      carry = high(res_hi);
-      res_hi = low(res_hi);
-
-      val[i] = res_lo + (res_hi << 32);
+      uint64_t complement = ~x.val[i];
+      if (!carry) {
+        if (val[i] <= complement)
+          val[i] += x.val[i];
+        else {
+          val[i] -= complement + 1;
+          carry = true;
+        }
+      } else {
+        if (val[i] < complement) {
+          val[i] += x.val[i] + 1;
+          carry = false;
+        } else
+          val[i] -= complement;
+      }
     }
-    return carry;
+    return carry ? 1 : 0;
   }
 
   constexpr UInt<Bits> operator+(const UInt<Bits> &other) const {
     UInt<Bits> result(*this);
     result.add(other);
+    // TODO(lntue): Set overflow flag / errno when carry is true.
     return result;
+  }
+
+  constexpr UInt<Bits> operator+=(const UInt<Bits> &other) {
+    // TODO(lntue): Set overflow flag / errno when carry is true.
+    add(other);
+    return *this;
+  }
+
+  // Subtract x to this number and store the result in this number.
+  // Returns the carry value produced by the subtraction operation.
+  // To prevent overflow from intermediate results, we use the following
+  // property of unsigned integers:
+  //   x + (~x) = 2^(sizeof(x)) - 1,
+  // So:
+  //   -x = ((~x) + 1) + (-2^(sizeof(x))),
+  // where 2^(sizeof(x)) is represented by the carry bit.
+  constexpr uint64_t sub(const UInt<Bits> &x) {
+    bool carry = false;
+    for (size_t i = 0; i < WordCount; ++i) {
+      if (!carry) {
+        if (val[i] >= x.val[i])
+          val[i] -= x.val[i];
+        else {
+          val[i] += (~x.val[i]) + 1;
+          carry = true;
+        }
+      } else {
+        if (val[i] > x.val[i]) {
+          val[i] -= x.val[i] + 1;
+          carry = false;
+        } else
+          val[i] += ~x.val[i];
+      }
+    }
+    return carry ? 1 : 0;
+  }
+
+  constexpr UInt<Bits> operator-(const UInt<Bits> &other) const {
+    UInt<Bits> result(*this);
+    result.sub(other);
+    // TODO(lntue): Set overflow flag / errno when carry is true.
+    return result;
+  }
+
+  constexpr UInt<Bits> operator-=(const UInt<Bits> &other) {
+    // TODO(lntue): Set overflow flag / errno when carry is true.
+    sub(other);
+    return *this;
   }
 
   // Multiply this number with x and store the result in this number. It is
@@ -99,7 +157,7 @@ public:
     uint64_t x_lo = low(x);
     uint64_t x_hi = high(x);
 
-    cpp::Array<uint64_t, WordCount + 1> row1;
+    cpp::array<uint64_t, WordCount + 1> row1;
     uint64_t carry = 0;
     for (size_t i = 0; i < WordCount; ++i) {
       uint64_t l = low(val[i]);
@@ -118,7 +176,7 @@ public:
     }
     row1[WordCount] = carry;
 
-    cpp::Array<uint64_t, WordCount + 1> row2;
+    cpp::array<uint64_t, WordCount + 1> row2;
     row2[0] = 0;
     carry = 0;
     for (size_t i = 0; i < WordCount; ++i) {
@@ -158,6 +216,11 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> &operator*=(const UInt<Bits> &other) {
+    *this = *this * other;
+    return *this;
+  }
+
   constexpr void shift_left(size_t s) {
     const size_t drop = s / 64;  // Number of words to drop
     const size_t shift = s % 64; // Bits to shift in the remaining words.
@@ -181,6 +244,11 @@ public:
     UInt<Bits> result(*this);
     result.shift_left(s);
     return result;
+  }
+
+  constexpr UInt<Bits> &operator<<=(size_t s) {
+    shift_left(s);
+    return *this;
   }
 
   constexpr void shift_right(size_t s) {
@@ -208,11 +276,22 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> &operator>>=(size_t s) {
+    shift_right(s);
+    return *this;
+  }
+
   constexpr UInt<Bits> operator&(const UInt<Bits> &other) const {
     UInt<Bits> result;
     for (size_t i = 0; i < WordCount; ++i)
       result.val[i] = val[i] & other.val[i];
     return result;
+  }
+
+  constexpr UInt<Bits> &operator&=(const UInt<Bits> &other) {
+    for (size_t i = 0; i < WordCount; ++i)
+      val[i] &= other.val[i];
+    return *this;
   }
 
   constexpr UInt<Bits> operator|(const UInt<Bits> &other) const {
@@ -222,10 +301,29 @@ public:
     return result;
   }
 
+  constexpr UInt<Bits> &operator|=(const UInt<Bits> &other) {
+    for (size_t i = 0; i < WordCount; ++i)
+      val[i] |= other.val[i];
+    return *this;
+  }
+
   constexpr UInt<Bits> operator^(const UInt<Bits> &other) const {
     UInt<Bits> result;
     for (size_t i = 0; i < WordCount; ++i)
       result.val[i] = val[i] ^ other.val[i];
+    return result;
+  }
+
+  constexpr UInt<Bits> &operator^=(const UInt<Bits> &other) {
+    for (size_t i = 0; i < WordCount; ++i)
+      val[i] ^= other.val[i];
+    return *this;
+  }
+
+  constexpr UInt<Bits> operator~() const {
+    UInt<Bits> result;
+    for (size_t i = 0; i < WordCount; ++i)
+      result.val[i] = ~val[i];
     return result;
   }
 
@@ -247,34 +345,60 @@ public:
 
   constexpr bool operator>(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] <= other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
+        return true;
+      else if (word < other_word)
         return false;
     }
-    return true;
+    // Equal
+    return false;
   }
 
   constexpr bool operator>=(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] < other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
+        return true;
+      else if (word < other_word)
         return false;
     }
+    // Equal
     return true;
   }
 
   constexpr bool operator<(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] >= other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
         return false;
+      else if (word < other_word)
+        return true;
     }
-    return true;
+    // Equal
+    return false;
   }
 
   constexpr bool operator<=(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] > other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
         return false;
+      else if (word < other_word)
+        return true;
     }
+    // Equal
     return true;
+  }
+
+  constexpr UInt<Bits> &operator++() {
+    UInt<Bits> one(1);
+    add(one);
+    return *this;
   }
 
   // Return the i-th 64-bit word of the number.
@@ -324,11 +448,5 @@ constexpr UInt<128> UInt<128>::operator*(const UInt<128> &other) const {
 
 } // namespace cpp
 } // namespace __llvm_libc
-
-/* TODO: determine the best way to support uint128 using this class.
-#if !defined(__SIZEOF_INT128__)
-using __uint128_t = __llvm_libc::internal::UInt<128>;
-#endif // uint128 is not defined, define it with this class.
-*/
 
 #endif // LLVM_LIBC_UTILS_CPP_UINT_H

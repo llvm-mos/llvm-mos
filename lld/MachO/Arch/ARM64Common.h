@@ -16,8 +16,7 @@
 
 #include "llvm/BinaryFormat/MachO.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 struct ARM64Common : TargetInfo {
   template <class LP> ARM64Common(LP lp) : TargetInfo(lp) {}
@@ -29,6 +28,9 @@ struct ARM64Common : TargetInfo {
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   uint64_t getPageSize() const override { return 16 * 1024; }
+
+  void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                         uint8_t *loc) const override;
 };
 
 inline uint64_t bitField(uint64_t value, int right, int width, int left) {
@@ -145,7 +147,6 @@ inline void writeStubHelperEntry(uint8_t *buf8,
   buf32[2] = sym.lazyBindOffset;
 }
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

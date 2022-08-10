@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
@@ -23,6 +24,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
+#include <cstdint>
 
 #define DEBUG_TYPE "spirv-serialization"
 
@@ -192,8 +194,11 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
-  uint32_t mm = module->getAttrOfType<IntegerAttr>("memory_model").getInt();
-  uint32_t am = module->getAttrOfType<IntegerAttr>("addressing_model").getInt();
+  auto mm = static_cast<uint32_t>(
+      module->getAttrOfType<spirv::MemoryModelAttr>("memory_model").getValue());
+  auto am = static_cast<uint32_t>(
+      module->getAttrOfType<spirv::AddressingModelAttr>("addressing_model")
+          .getValue());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
@@ -210,7 +215,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
            << attrName;
   }
   SmallVector<uint32_t, 1> args;
-  switch (decoration.getValue()) {
+  switch (*decoration) {
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
@@ -223,7 +228,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
     if (auto strAttr = attr.getValue().dyn_cast<StringAttr>()) {
       auto enumVal = spirv::symbolizeBuiltIn(strAttr.getValue());
       if (enumVal) {
-        args.push_back(static_cast<uint32_t>(enumVal.getValue()));
+        args.push_back(static_cast<uint32_t>(*enumVal));
         break;
       }
       return emitError(loc, "invalid ")
@@ -244,7 +249,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   default:
     return emitError(loc, "unhandled decoration ") << decorationName;
   }
-  return emitDecoration(resultID, decoration.getValue(), args);
+  return emitDecoration(resultID, *decoration, args);
 }
 
 LogicalResult Serializer::processName(uint32_t resultID, StringRef name) {
@@ -769,7 +774,8 @@ uint32_t Serializer::prepareConstantBool(Location loc, BoolAttr boolAttr,
 
   // Process the type for this bool literal
   uint32_t typeID = 0;
-  if (failed(processType(loc, boolAttr.getType(), typeID))) {
+  if (failed(
+          processType(loc, boolAttr.cast<IntegerAttr>().getType(), typeID))) {
     return 0;
   }
 

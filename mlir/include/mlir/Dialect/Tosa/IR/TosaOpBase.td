@@ -45,6 +45,8 @@ def Tosa_Dialect : Dialect {
   let cppNamespace = "mlir::tosa";
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -134,12 +136,11 @@ def Tosa_ConvOpQuantInfoBuilder : OpBuilder<
 // Handles tosa.transpose_conv2d which has an outpad and output shape attribute.
 def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias,
-       "ArrayAttr":$outpad, "ArrayAttr":$stride, "ArrayAttr":$dilation,
-       "ArrayAttr":$outputShape),
+       "ArrayAttr":$outpad, "ArrayAttr":$stride, "ArrayAttr":$outputShape),
   [{
     buildTransConvOpWithQuantInfo($_builder, $_state, outputType,
                                   input, weight, bias,
-                                  outpad, stride, dilation,
+                                  outpad, stride,
                                   outputShape);
   }]>;
 

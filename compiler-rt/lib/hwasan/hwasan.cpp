@@ -232,7 +232,6 @@ void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
 
   HandleTagMismatch(ai, (uptr)__builtin_return_address(0),
                     (uptr)__builtin_frame_address(0), nullptr, registers_frame);
-  __builtin_unreachable();
 }
 
 Thread *GetCurrentThread() {
@@ -574,6 +573,12 @@ u8 __hwasan_generate_tag() {
   Thread *t = GetCurrentThread();
   if (!t) return kFallbackTag;
   return t->GenerateRandomTag();
+}
+
+void __hwasan_add_frame_record(u64 frame_record_info) {
+  Thread *t = GetCurrentThread();
+  if (t)
+    t->stack_allocations()->push(frame_record_info);
 }
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS

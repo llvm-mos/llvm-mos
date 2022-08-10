@@ -139,7 +139,7 @@ public:
   }
 
   /// For convenience, returns a valid alignment or 1 if undefined.
-  Align valueOrOne() const { return hasValue() ? getValue() : Align(); }
+  Align valueOrOne() const { return value_or(Align()); }
 };
 
 /// Checks that SizeInBytes is a multiple of the alignment.
@@ -210,24 +210,8 @@ inline unsigned Log2(Align A) { return A.ShiftValue; }
 
 /// Returns the alignment that satisfies both alignments.
 /// Same semantic as MinAlign.
-inline Align commonAlignment(Align A, Align B) { return std::min(A, B); }
-
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
 inline Align commonAlignment(Align A, uint64_t Offset) {
   return Align(MinAlign(A.value(), Offset));
-}
-
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
-inline MaybeAlign commonAlignment(MaybeAlign A, MaybeAlign B) {
-  return A && B ? commonAlignment(*A, *B) : A ? A : B;
-}
-
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
-inline MaybeAlign commonAlignment(MaybeAlign A, uint64_t Offset) {
-  return MaybeAlign(MinAlign((*A).value(), Offset));
 }
 
 /// Returns a representation of the alignment that encodes undefined as 0.
@@ -270,14 +254,6 @@ inline bool operator<(Align Lhs, uint64_t Rhs) {
 inline bool operator>(Align Lhs, uint64_t Rhs) {
   ALIGN_CHECK_ISPOSITIVE(Rhs);
   return Lhs.value() > Rhs;
-}
-
-/// Comparisons between MaybeAlign and scalars.
-inline bool operator==(MaybeAlign Lhs, uint64_t Rhs) {
-  return Lhs ? (*Lhs).value() == Rhs : Rhs == 0;
-}
-inline bool operator!=(MaybeAlign Lhs, uint64_t Rhs) {
-  return Lhs ? (*Lhs).value() != Rhs : Rhs != 0;
 }
 
 /// Comparisons operators between Align.

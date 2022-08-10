@@ -156,7 +156,7 @@ uint64_t LLVMContext::getDiagnosticsMisExpectTolerance() const {
 }
 
 bool LLVMContext::isDiagnosticsHotnessThresholdSetFromPSI() const {
-  return !pImpl->DiagnosticsHotnessThreshold.hasValue();
+  return !pImpl->DiagnosticsHotnessThreshold.has_value();
 }
 
 remarks::RemarkStreamer *LLVMContext::getMainRemarkStreamer() {
@@ -373,8 +373,4 @@ void LLVMContext::setOpaquePointers(bool Enable) const {
 
 bool LLVMContext::supportsTypedPointers() const {
   return !pImpl->getOpaquePointers();
-}
-
-Any &LLVMContext::getTargetData() const {
-  return pImpl->TargetDataStorage;
 }

@@ -24,7 +24,6 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/CodeGen/SwiftCallingConv.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -36,7 +35,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm> // std::sort
+#include <algorithm>
 
 using namespace clang;
 using namespace CodeGen;
@@ -118,7 +117,9 @@ bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   return false;
 }
 
-ABIInfo::~ABIInfo() {}
+ABIInfo::~ABIInfo() = default;
+
+SwiftABIInfo::~SwiftABIInfo() = default;
 
 /// Does the given lowering require more than the given number of
 /// registers when expanded?
@@ -152,12 +153,16 @@ static bool occupiesMoreThan(CodeGenTypes &cgt,
   return (intCount + fpCount > maxAllRegisters);
 }
 
-bool SwiftABIInfo::isLegalVectorTypeForSwift(CharUnits vectorSize,
-                                             llvm::Type *eltTy,
-                                             unsigned numElts) const {
+bool SwiftABIInfo::shouldPassIndirectly(ArrayRef<llvm::Type *> ComponentTys,
+                                        bool AsReturnValue) const {
+  return occupiesMoreThan(CGT, ComponentTys, /*total=*/4);
+}
+
+bool SwiftABIInfo::isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
+                                     unsigned NumElts) const {
   // The default implementation of this assumes that the target guarantees
   // 128-bit SIMD support but nothing more.
-  return (vectorSize.getQuantity() > 8 && vectorSize.getQuantity() <= 16);
+  return (VectorSize.getQuantity() > 8 && VectorSize.getQuantity() <= 16);
 }
 
 static CGCXXABI::RecordArgABI getRecordArgABI(const RecordType *RT,
@@ -443,6 +448,9 @@ static Address emitMergePHI(CodeGenFunction &CGF,
   CharUnits Align = std::min(Addr1.getAlignment(), Addr2.getAlignment());
   return Address(PHI, Addr1.getElementType(), Align);
 }
+
+TargetCodeGenInfo::TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info)
+    : Info(std::move(Info)) {}
 
 TargetCodeGenInfo::~TargetCodeGenInfo() = default;
 
@@ -812,7 +820,7 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
 // This is a very simple ABI that relies a lot on DefaultABIInfo.
 //===----------------------------------------------------------------------===//
 
-class WebAssemblyABIInfo final : public SwiftABIInfo {
+class WebAssemblyABIInfo final : public ABIInfo {
 public:
   enum ABIKind {
     MVP = 0,
@@ -825,7 +833,7 @@ private:
 
 public:
   explicit WebAssemblyABIInfo(CodeGen::CodeGenTypes &CGT, ABIKind Kind)
-      : SwiftABIInfo(CGT), defaultInfo(CGT), Kind(Kind) {}
+      : ABIInfo(CGT), defaultInfo(CGT), Kind(Kind) {}
 
 private:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
@@ -843,22 +851,16 @@ private:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
-
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
-
-  bool isSwiftErrorInRegister() const override {
-    return false;
-  }
 };
 
 class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
 public:
   explicit WebAssemblyTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT,
                                         WebAssemblyABIInfo::ABIKind K)
-      : TargetCodeGenInfo(std::make_unique<WebAssemblyABIInfo>(CGT, K)) {}
+      : TargetCodeGenInfo(std::make_unique<WebAssemblyABIInfo>(CGT, K)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
@@ -1134,7 +1136,7 @@ struct CCState {
 };
 
 /// X86_32ABIInfo - The X86-32 ABI information.
-class X86_32ABIInfo : public SwiftABIInfo {
+class X86_32ABIInfo : public ABIInfo {
   enum Class {
     Integer,
     Float
@@ -1208,26 +1210,27 @@ public:
   X86_32ABIInfo(CodeGen::CodeGenTypes &CGT, bool DarwinVectorABI,
                 bool RetSmallStructInRegABI, bool Win32StructABI,
                 unsigned NumRegisterParameters, bool SoftFloatABI)
-    : SwiftABIInfo(CGT), IsDarwinVectorABI(DarwinVectorABI),
-      IsRetSmallStructInRegABI(RetSmallStructInRegABI),
-      IsWin32StructABI(Win32StructABI), IsSoftFloatABI(SoftFloatABI),
-      IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
-      IsLinuxABI(CGT.getTarget().getTriple().isOSLinux() ||
-                 CGT.getTarget().getTriple().isOSCygMing()),
-      DefaultNumRegisterParameters(NumRegisterParameters) {}
+      : ABIInfo(CGT), IsDarwinVectorABI(DarwinVectorABI),
+        IsRetSmallStructInRegABI(RetSmallStructInRegABI),
+        IsWin32StructABI(Win32StructABI), IsSoftFloatABI(SoftFloatABI),
+        IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
+        IsLinuxABI(CGT.getTarget().getTriple().isOSLinux() ||
+                   CGT.getTarget().getTriple().isOSCygMing()),
+        DefaultNumRegisterParameters(NumRegisterParameters) {}
+};
 
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
+class X86_32SwiftABIInfo : public SwiftABIInfo {
+public:
+  explicit X86_32SwiftABIInfo(CodeGenTypes &CGT)
+      : SwiftABIInfo(CGT, /*SwiftErrorInRegister=*/false) {}
+
+  bool shouldPassIndirectly(ArrayRef<llvm::Type *> ComponentTys,
+                            bool AsReturnValue) const override {
     // LLVM's x86-32 lowering currently only assigns up to three
     // integer registers and three fp registers.  Oddly, it'll use up to
     // four vector registers for vectors, but those can overlap with the
     // scalar registers.
-    return occupiesMoreThan(CGT, scalars, /*total*/ 3);
-  }
-
-  bool isSwiftErrorInRegister() const override {
-    // x86-32 lowering does not support passing swifterror in a register.
-    return false;
+    return occupiesMoreThan(CGT, ComponentTys, /*total=*/3);
   }
 };
 
@@ -1238,7 +1241,9 @@ public:
                           unsigned NumRegisterParameters, bool SoftFloatABI)
       : TargetCodeGenInfo(std::make_unique<X86_32ABIInfo>(
             CGT, DarwinVectorABI, RetSmallStructInRegABI, Win32StructABI,
-            NumRegisterParameters, SoftFloatABI)) {}
+            NumRegisterParameters, SoftFloatABI)) {
+    SwiftInfo = std::make_unique<X86_32SwiftABIInfo>(CGT);
+  }
 
   static bool isStructReturnInRegABI(
       const llvm::Triple &Triple, const CodeGenOptions &Opts);
@@ -2248,7 +2253,7 @@ static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
 }
 
 /// X86_64ABIInfo - The X86_64 ABI information.
-class X86_64ABIInfo : public SwiftABIInfo {
+class X86_64ABIInfo : public ABIInfo {
   enum Class {
     Integer = 0,
     SSE,
@@ -2394,10 +2399,9 @@ class X86_64ABIInfo : public SwiftABIInfo {
   bool Has64BitPointers;
 
 public:
-  X86_64ABIInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel) :
-      SwiftABIInfo(CGT), AVXLevel(AVXLevel),
-      Has64BitPointers(CGT.getDataLayout().getPointerSize(0) == 8) {
-  }
+  X86_64ABIInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel)
+      : ABIInfo(CGT), AVXLevel(AVXLevel),
+        Has64BitPointers(CGT.getDataLayout().getPointerSize(0) == 8) {}
 
   bool isPassedUsingAVXType(QualType type) const {
     unsigned neededInt, neededSSE;
@@ -2422,21 +2426,13 @@ public:
   bool has64BitPointers() const {
     return Has64BitPointers;
   }
-
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
-  bool isSwiftErrorInRegister() const override {
-    return true;
-  }
 };
 
 /// WinX86_64ABIInfo - The Windows X86_64 ABI information.
-class WinX86_64ABIInfo : public SwiftABIInfo {
+class WinX86_64ABIInfo : public ABIInfo {
 public:
   WinX86_64ABIInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel)
-      : SwiftABIInfo(CGT), AVXLevel(AVXLevel),
+      : ABIInfo(CGT), AVXLevel(AVXLevel),
         IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
@@ -2455,15 +2451,6 @@ public:
     return isX86VectorCallAggregateSmallEnough(NumMembers);
   }
 
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type *> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
-
-  bool isSwiftErrorInRegister() const override {
-    return true;
-  }
-
 private:
   ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
                       bool IsVectorCall, bool IsRegCall) const;
@@ -2478,7 +2465,10 @@ private:
 class X86_64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   X86_64TargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel)
-      : TargetCodeGenInfo(std::make_unique<X86_64ABIInfo>(CGT, AVXLevel)) {}
+      : TargetCodeGenInfo(std::make_unique<X86_64ABIInfo>(CGT, AVXLevel)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/true);
+  }
 
   const X86_64ABIInfo &getABIInfo() const {
     return static_cast<const X86_64ABIInfo&>(TargetCodeGenInfo::getABIInfo());
@@ -2720,7 +2710,10 @@ class WinX86_64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   WinX86_64TargetCodeGenInfo(CodeGen::CodeGenTypes &CGT,
                              X86AVXABILevel AVXLevel)
-      : TargetCodeGenInfo(std::make_unique<WinX86_64ABIInfo>(CGT, AVXLevel)) {}
+      : TargetCodeGenInfo(std::make_unique<WinX86_64ABIInfo>(CGT, AVXLevel)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/true);
+  }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
@@ -4982,7 +4975,7 @@ PPC32TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 
 namespace {
 /// PPC64_SVR4_ABIInfo - The 64-bit PowerPC ELF (SVR4) ABI information.
-class PPC64_SVR4_ABIInfo : public SwiftABIInfo {
+class PPC64_SVR4_ABIInfo : public ABIInfo {
 public:
   enum ABIKind {
     ELFv1 = 0,
@@ -4997,7 +4990,7 @@ private:
 public:
   PPC64_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, ABIKind Kind,
                      bool SoftFloatABI)
-      : SwiftABIInfo(CGT), Kind(Kind), IsSoftFloatABI(SoftFloatABI) {}
+      : ABIInfo(CGT), Kind(Kind), IsSoftFloatABI(SoftFloatABI) {}
 
   bool isPromotableTypeForABI(QualType Ty) const;
   CharUnits getParamTypeAlignment(QualType Ty) const;
@@ -5038,15 +5031,6 @@ public:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
-
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
-
-  bool isSwiftErrorInRegister() const override {
-    return false;
-  }
 };
 
 class PPC64_SVR4_TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -5056,7 +5040,10 @@ public:
                                PPC64_SVR4_ABIInfo::ABIKind Kind,
                                bool SoftFloatABI)
       : TargetCodeGenInfo(
-            std::make_unique<PPC64_SVR4_ABIInfo>(CGT, Kind, SoftFloatABI)) {}
+            std::make_unique<PPC64_SVR4_ABIInfo>(CGT, Kind, SoftFloatABI)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &M) const override {
     // This is recovered from gcc output.
@@ -5490,7 +5477,7 @@ PPC64TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 
 namespace {
 
-class AArch64ABIInfo : public SwiftABIInfo {
+class AArch64ABIInfo : public ABIInfo {
 public:
   enum ABIKind {
     AAPCS = 0,
@@ -5502,8 +5489,7 @@ private:
   ABIKind Kind;
 
 public:
-  AArch64ABIInfo(CodeGenTypes &CGT, ABIKind Kind)
-    : SwiftABIInfo(CGT), Kind(Kind) {}
+  AArch64ABIInfo(CodeGenTypes &CGT, ABIKind Kind) : ABIInfo(CGT), Kind(Kind) {}
 
 private:
   ABIKind getABIKind() const { return Kind; }
@@ -5551,26 +5537,26 @@ private:
   Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                       QualType Ty) const override;
 
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
-  bool isSwiftErrorInRegister() const override {
-    return true;
-  }
-
-  bool isLegalVectorTypeForSwift(CharUnits totalSize, llvm::Type *eltTy,
-                                 unsigned elts) const override;
-
   bool allowBFloatArgsAndRet() const override {
     return getTarget().hasBFloat16Type();
   }
 };
 
+class AArch64SwiftABIInfo : public SwiftABIInfo {
+public:
+  explicit AArch64SwiftABIInfo(CodeGenTypes &CGT)
+      : SwiftABIInfo(CGT, /*SwiftErrorInRegister=*/true) {}
+
+  bool isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
+                         unsigned NumElts) const override;
+};
+
 class AArch64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   AArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIInfo::ABIKind Kind)
-      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {}
+      : TargetCodeGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {
+    SwiftInfo = std::make_unique<AArch64SwiftABIInfo>(CGT);
+  }
 
   StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
     return "mov\tfp, fp\t\t// marker for objc_retainAutoreleaseReturnValue";
@@ -5944,13 +5930,13 @@ bool AArch64ABIInfo::isIllegalVectorType(QualType Ty) const {
   return false;
 }
 
-bool AArch64ABIInfo::isLegalVectorTypeForSwift(CharUnits totalSize,
-                                               llvm::Type *eltTy,
-                                               unsigned elts) const {
-  if (!llvm::isPowerOf2_32(elts))
+bool AArch64SwiftABIInfo::isLegalVectorType(CharUnits VectorSize,
+                                            llvm::Type *EltTy,
+                                            unsigned NumElts) const {
+  if (!llvm::isPowerOf2_32(NumElts))
     return false;
-  if (totalSize.getQuantity() != 8 &&
-      (totalSize.getQuantity() != 16 || elts == 1))
+  if (VectorSize.getQuantity() != 8 &&
+      (VectorSize.getQuantity() != 16 || NumElts == 1))
     return false;
   return true;
 }
@@ -6288,7 +6274,7 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 namespace {
 
-class ARMABIInfo : public SwiftABIInfo {
+class ARMABIInfo : public ABIInfo {
 public:
   enum ABIKind {
     APCS = 0,
@@ -6302,8 +6288,7 @@ private:
   bool IsFloatABISoftFP;
 
 public:
-  ARMABIInfo(CodeGenTypes &CGT, ABIKind _Kind)
-      : SwiftABIInfo(CGT), Kind(_Kind) {
+  ARMABIInfo(CodeGenTypes &CGT, ABIKind Kind) : ABIInfo(CGT), Kind(Kind) {
     setCCs();
     IsFloatABISoftFP = CGT.getCodeGenOpts().FloatABI == "softfp" ||
         CGT.getCodeGenOpts().FloatABI == ""; // default
@@ -6367,22 +6352,23 @@ private:
   llvm::CallingConv::ID getLLVMDefaultCC() const;
   llvm::CallingConv::ID getABIDefaultCC() const;
   void setCCs();
+};
 
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
-  bool isSwiftErrorInRegister() const override {
-    return true;
-  }
-  bool isLegalVectorTypeForSwift(CharUnits totalSize, llvm::Type *eltTy,
-                                 unsigned elts) const override;
+class ARMSwiftABIInfo : public SwiftABIInfo {
+public:
+  explicit ARMSwiftABIInfo(CodeGenTypes &CGT)
+      : SwiftABIInfo(CGT, /*SwiftErrorInRegister=*/true) {}
+
+  bool isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
+                         unsigned NumElts) const override;
 };
 
 class ARMTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   ARMTargetCodeGenInfo(CodeGenTypes &CGT, ARMABIInfo::ABIKind K)
-      : TargetCodeGenInfo(std::make_unique<ARMABIInfo>(CGT, K)) {}
+      : TargetCodeGenInfo(std::make_unique<ARMABIInfo>(CGT, K)) {
+    SwiftInfo = std::make_unique<ARMSwiftABIInfo>(CGT);
+  }
 
   const ARMABIInfo &getABIInfo() const {
     return static_cast<const ARMABIInfo&>(TargetCodeGenInfo::getABIInfo());
@@ -6984,16 +6970,15 @@ bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
   }
 }
 
-bool ARMABIInfo::isLegalVectorTypeForSwift(CharUnits vectorSize,
-                                           llvm::Type *eltTy,
-                                           unsigned numElts) const {
-  if (!llvm::isPowerOf2_32(numElts))
+bool ARMSwiftABIInfo::isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
+                                        unsigned NumElts) const {
+  if (!llvm::isPowerOf2_32(NumElts))
     return false;
-  unsigned size = getDataLayout().getTypeStoreSizeInBits(eltTy);
+  unsigned size = CGT.getDataLayout().getTypeStoreSizeInBits(EltTy);
   if (size > 64)
     return false;
-  if (vectorSize.getQuantity() != 8 &&
-      (vectorSize.getQuantity() != 16 || numElts == 1))
+  if (VectorSize.getQuantity() != 8 &&
+      (VectorSize.getQuantity() != 16 || NumElts == 1))
     return false;
   return true;
 }
@@ -7378,13 +7363,13 @@ bool NVPTXTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
 
 namespace {
 
-class SystemZABIInfo : public SwiftABIInfo {
+class SystemZABIInfo : public ABIInfo {
   bool HasVector;
   bool IsSoftFloatABI;
 
 public:
   SystemZABIInfo(CodeGenTypes &CGT, bool HV, bool SF)
-    : SwiftABIInfo(CGT), HasVector(HV), IsSoftFloatABI(SF) {}
+      : ABIInfo(CGT), HasVector(HV), IsSoftFloatABI(SF) {}
 
   bool isPromotableIntegerTypeForABI(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
@@ -7404,21 +7389,16 @@ public:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
-
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
-  bool isSwiftErrorInRegister() const override {
-    return false;
-  }
 };
 
 class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   SystemZTargetCodeGenInfo(CodeGenTypes &CGT, bool HasVector, bool SoftFloatABI)
       : TargetCodeGenInfo(
-            std::make_unique<SystemZABIInfo>(CGT, HasVector, SoftFloatABI)) {}
+            std::make_unique<SystemZABIInfo>(CGT, HasVector, SoftFloatABI)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
 
   llvm::Value *testFPKind(llvm::Value *V, unsigned BuiltinID,
                           CGBuilderTy &Builder,
@@ -9496,7 +9476,7 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   if (CGM.isTypeConstant(D->getType(), false) &&
       D->hasConstantInitialization()) {
     if (auto ConstAS = CGM.getTarget().getConstantAddressSpace())
-      return ConstAS.getValue();
+      return *ConstAS;
   }
   return DefaultGlobalAS;
 }
@@ -10447,6 +10427,15 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       LTy = llvm::PointerType::getWithSamePointeeType(PtrTy, GlobalAS);
       return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
     }
+
+    // Force copying aggregate type in kernel arguments by value when
+    // compiling CUDA targeting SPIR-V. This is required for the object
+    // copied to be valid on the device.
+    // This behavior follows the CUDA spec
+    // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
+    // and matches the NVPTX implementation.
+    if (isAggregateTypeForABI(Ty))
+      return getNaturalAlignIndirect(Ty, /* byval */ true);
   }
   return classifyArgumentType(Ty);
 }

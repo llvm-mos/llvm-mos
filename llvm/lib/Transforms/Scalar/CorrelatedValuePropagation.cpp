@@ -581,7 +581,7 @@ static bool processOverflowIntrinsic(WithOverflowInst *WO, LazyValueInfo *LVI) {
 
   StructType *ST = cast<StructType>(WO->getType());
   Constant *Struct = ConstantStruct::get(ST,
-      { UndefValue::get(ST->getElementType(0)),
+      { PoisonValue::get(ST->getElementType(0)),
         ConstantInt::getFalse(ST->getElementType(1)) });
   Value *NewI = B.CreateInsertValue(Struct, NewOp, 0);
   WO->replaceAllUsesWith(NewI);
@@ -729,7 +729,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // operands.
   unsigned OrigWidth = Instr->getType()->getIntegerBitWidth();
 
-  // What is the smallest bit width that can accomodate the entire value ranges
+  // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
   std::array<Optional<ConstantRange>, 2> CRs;
   unsigned MinSignedBits = 0;
@@ -781,7 +781,7 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // Find the smallest power of two bitwidth that's sufficient to hold Instr's
   // operands.
 
-  // What is the smallest bit width that can accomodate the entire value ranges
+  // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
   unsigned MaxActiveBits = 0;
   for (Value *Operand : Instr->operands()) {

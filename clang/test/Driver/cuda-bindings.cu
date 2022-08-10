@@ -40,6 +40,7 @@
 // Test two gpu architectures with complete compilation.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --offload-arch=sm_30,sm_35 %s 2>&1 \
 // RUN: | FileCheck -check-prefix=BIN2 %s
 // BIN2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output:
 // BIN2-NOT: cuda-bindings-device-cuda-nvptx64
@@ -134,3 +135,14 @@
 // RUN: | FileCheck -check-prefix=DASM2 %s
 // DASM2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_30.s"
 // DASM2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_35.s"
+
+//
+// Ensure we output the user's specified name in device-only mode.
+//
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -### \
+// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o %s 2>&1 \
+// RUN: | FileCheck -check-prefix=D_ONLY %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -### --offload-new-driver \
+// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o %s 2>&1 \
+// RUN: | FileCheck -check-prefix=D_ONLY %s
+// D_ONLY: "foo.o"

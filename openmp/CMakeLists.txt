@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-# Add cmake directory to search for custom cmake functions.
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+
+# Add path for custom modules
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
 
 # llvm/runtimes/ will set OPENMP_STANDALONE_BUILD.
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -62,7 +67,7 @@ set(ENABLE_LIBOMPTARGET ON)
 # Currently libomptarget cannot be compiled on Windows or MacOS X.
 # Since the device plugins are only supported on Linux anyway,
 # there is no point in trying to compile libomptarget on other OSes.
-if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP14_FLAG)
+if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP17_FLAG)
   set(ENABLE_LIBOMPTARGET OFF)
 endif()
 
@@ -88,7 +93,7 @@ if (OPENMP_ENABLE_LIBOMPTARGET)
   # Check that the library can actually be built.
   if (APPLE OR WIN32)
     message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
-  elseif (NOT OPENMP_HAVE_STD_CPP14_FLAG)
+  elseif (NOT OPENMP_HAVE_STD_CPP17_FLAG)
     message(FATAL_ERROR "Host compiler must support C++14 to build libomptarget!")
   endif()
 

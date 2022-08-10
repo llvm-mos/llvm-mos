@@ -20,14 +20,14 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class Symbol;
 class Defined;
 class DylibSymbol;
 class InputSection;
+class ConcatInputSection;
 
 class TargetInfo {
 public:
@@ -64,12 +64,17 @@ public:
   // on a level of address indirection.
   virtual void relaxGotLoad(uint8_t *loc, uint8_t type) const = 0;
 
-  virtual const RelocAttrs &getRelocAttrs(uint8_t type) const = 0;
-
   virtual uint64_t getPageSize() const = 0;
 
   virtual void populateThunk(InputSection *thunk, Symbol *funcSym) {
     llvm_unreachable("target does not use thunks");
+  }
+
+  const RelocAttrs &getRelocAttrs(uint8_t type) const {
+    assert(type < relocAttrs.size() && "invalid relocation type");
+    if (type >= relocAttrs.size())
+      return invalidRelocAttrs;
+    return relocAttrs[type];
   }
 
   bool hasAttr(uint8_t type, RelocAttrBits bit) const {
@@ -77,6 +82,18 @@ public:
   }
 
   bool usesThunks() const { return thunkSize > 0; }
+
+  // For now, handleDtraceReloc only implements -no_dtrace_dof, and ensures
+  // that the linking would not fail even when there are user-provided dtrace
+  // symbols. However, unlike ld64, lld currently does not emit __dof sections.
+  virtual void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                                 uint8_t *loc) const {
+    llvm_unreachable("Unsupported architecture for dtrace symbols");
+  }
+
+
+  virtual void applyOptimizationHints(uint8_t *buf, const ConcatInputSection *,
+                                      llvm::ArrayRef<uint64_t>) const {};
 
   uint32_t magic;
   llvm::MachO::CPUType cpuType;
@@ -97,6 +114,8 @@ public:
   uint32_t modeDwarfEncoding;
   uint8_t subtractorRelocType;
   uint8_t unsignedRelocType;
+
+  llvm::ArrayRef<RelocAttrs> relocAttrs;
 
   // We contrive this value as sufficiently far from any valid address that it
   // will always be out-of-range for any architecture. UINT64_MAX is not a
@@ -144,7 +163,6 @@ struct ILP32 {
 
 extern TargetInfo *target;
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

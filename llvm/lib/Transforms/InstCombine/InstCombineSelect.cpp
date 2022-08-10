@@ -517,6 +517,16 @@ static Instruction *foldSelectICmpAndAnd(Type *SelType, const ICmpInst *Cmp,
   // Where %B may be optionally shifted:  lshr %X, %Z.
   Value *X, *Z;
   const bool HasShift = match(B, m_OneUse(m_LShr(m_Value(X), m_Value(Z))));
+
+  // The shift must be valid.
+  // TODO: This restricts the fold to constant shift amounts. Is there a way to
+  //       handle variable shifts safely? PR47012
+  if (HasShift &&
+      !match(Z, m_SpecificInt_ICMP(CmpInst::ICMP_ULT,
+                                   APInt(SelType->getScalarSizeInBits(),
+                                         SelType->getScalarSizeInBits()))))
+    return nullptr;
+
   if (!HasShift)
     X = B;
 
@@ -1361,7 +1371,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
                                       C2->getType()->getScalarSizeInBits()))))
       return nullptr; // Can't do, have signed max element[s].
     C2 = InstCombiner::AddOne(C2);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ICmpInst::Predicate::ICMP_SGE:
     // Also non-canonical, but here we don't need to change C2,
     // so we don't have any restrictions on C2, so we can just handle it.

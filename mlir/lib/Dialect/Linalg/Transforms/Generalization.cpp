@@ -46,7 +46,7 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
 
   SmallVector<Value> inputOperands = linalgOp.getInputOperands();
   SmallVector<Value> outputOperands = linalgOp.getOutputOperands();
-  SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMaps();
+  SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
   SmallVector<StringRef> iterators = llvm::to_vector<4>(
       linalgOp.iterator_types().getAsValueRange<StringAttr>());
   SmallVector<RankedTensorType> resultTypes = linalgOp.getOutputTensorTypes();
@@ -58,8 +58,8 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   GenericOp genericOp =
       rewriter.create<GenericOp>(linalgOp.getLoc(), types, inputOperands,
                                  outputOperands, indexingMaps, iterators);
-  rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.region(),
-                              genericOp.region().begin());
+  rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
+                              genericOp.getRegion().begin());
   rewriter.replaceOp(linalgOp, genericOp->getResults());
   return genericOp;
 }

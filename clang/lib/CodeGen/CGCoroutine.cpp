@@ -238,8 +238,8 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     auto Loc = S.getResumeExpr()->getExprLoc();
     auto *Catch = new (CGF.getContext())
         CXXCatchStmt(Loc, /*exDecl=*/nullptr, Coro.ExceptionHandler);
-    auto *TryBody =
-        CompoundStmt::Create(CGF.getContext(), S.getResumeExpr(), Loc, Loc);
+    auto *TryBody = CompoundStmt::Create(CGF.getContext(), S.getResumeExpr(),
+                                         FPOptionsOverride(), Loc, Loc);
     TryStmt = CXXTryStmt::Create(CGF.getContext(), Loc, TryBody, Catch);
     CGF.EnterCXXTryStmt(*TryStmt);
   }
@@ -689,7 +689,7 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
     CGM.Error(E->getBeginLoc(), "this builtin expect that __builtin_coro_id has"
                                 " been used earlier in this function");
     // Fallthrough to the next case to add TokenNone as the first argument.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   // @llvm.coro.suspend takes a token parameter. Add token 'none' as the first
   // argument.

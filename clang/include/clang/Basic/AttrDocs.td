@@ -257,6 +257,28 @@ applies to copies of the block. For example:
   }];
 }
 
+def MaybeUndefDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``maybe_undef`` attribute can be placed on a function parameter. It indicates
+that the parameter is allowed to use undef values. It informs the compiler
+to insert a freeze LLVM IR instruction on the function parameter.
+Please note that this is an attribute that is used as an internal
+implementation detail and not intended to be used by external users.
+
+In languages HIP, CUDA etc., some functions have multi-threaded semantics and
+it is enough for only one or some threads to provide defined arguments.
+Depending on semantics, undef arguments in some threads don't produce
+undefined results in the function call. Since, these functions accept undefined
+arguments, ``maybe_undef`` attribute can be placed.
+
+Sample usage:
+.. code-block:: c
+
+  void maybeundeffunc(int __attribute__((maybe_undef))param);
+  }];
+}
+
 def CarriesDependencyDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -3088,8 +3110,8 @@ def FormatDocs : Documentation {
   let Content = [{
 
 Clang supports the ``format`` attribute, which indicates that the function
-accepts a ``printf`` or ``scanf``-like format string and corresponding
-arguments or a ``va_list`` that contains these arguments.
+accepts (among other possibilities) a ``printf`` or ``scanf``-like format string
+and corresponding arguments or a ``va_list`` that contains these arguments.
 
 Please see `GCC documentation about format attribute
 <http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html>`_ to find details
@@ -3143,6 +3165,27 @@ Clang implements two kinds of checks with this attribute.
    In this case Clang does not warn because the format string ``s`` and
    the corresponding arguments are annotated. If the arguments are
    incorrect, the caller of ``foo`` will receive a warning.
+
+As an extension to GCC's behavior, Clang accepts the ``format`` attribute on
+non-variadic functions. Clang checks non-variadic format functions for the same
+classes of issues that can be found on variadic functions, as controlled by the
+same warning flags, except that the types of formatted arguments is forced by
+the function signature. For example:
+
+.. code-block:: c
+
+  __attribute__((__format__(__printf__, 1, 2)))
+  void fmt(const char *s, const char *a, int b);
+
+  void bar(void) {
+    fmt("%s %i", "hello", 123); // OK
+    fmt("%i %g", "hello", 123); // warning: arguments don't match format
+    extern const char *fmt;
+    fmt(fmt, "hello", 123); // warning: format string is not a string literal
+  }
+
+Using the ``format`` attribute on a non-variadic function emits a GCC
+compatibility diagnostic.
   }];
 }
 
@@ -4330,6 +4373,7 @@ Clang provides the following context selector extensions, used via
     match_none
     disable_implicit_base
     allow_templates
+    bind_to_declaration
 
 The match extensions change when the *entire* context selector is considered a
 match for an OpenMP context. The default is ``all``, with ``none`` no trait in the
@@ -4345,8 +4389,9 @@ The allow extensions change when the ``begin declare variant`` effect is
 applied to a definition. If ``allow_templates`` is given, template function
 definitions are considered as specializations of existing or assumed template
 declarations with the same name. The template parameters for the base functions
-are used to instantiate the specialization.
-
+are used to instantiate the specialization. If ``bind_to_declaration`` is given,
+apply the same variant rules to function declarations. This allows the user to
+override declarations with only a function declaration.
   }];
 }
 
@@ -5017,6 +5062,12 @@ general this requires the template to be declared at least twice. For example:
                                 clang::preferred_name(wstring)]] basic_string {
     // ...
   };
+
+
+Note that the ``preferred_name`` attribute will be ignored when the compiler
+writes a C++20 Module interface now. This is due to a compiler issue
+(https://github.com/llvm/llvm-project/issues/56490) that blocks users to modularize
+declarations with `preferred_name`. This is intended to be fixed in the future.
   }];
 }
 
@@ -6055,7 +6106,7 @@ deferring any errors to the point of use. For instance:
 
   does_not_exist x; // error: use of unresolved 'using_if_exists'
 
-The C++ spelling of the attribte (`[[clang::using_if_exists]]`) is also
+The C++ spelling of the attribute (`[[clang::using_if_exists]]`) is also
 supported as a clang extension, since ISO C++ doesn't support attributes in this
 position. If the entity referred to by the using-declaration is found by name
 lookup, the attribute has no effect. This attribute is useful for libraries
@@ -6393,7 +6444,7 @@ of the call-used registers to be zeroed:
   command-line arguments.
 - ``used`` only zeros call-used registers used in the function. By ``used``, we
   mean a register whose contents have been set or referenced in the function.
-- ``used-gpr`` only zeros call-used GPR registers used in the funciton.
+- ``used-gpr`` only zeros call-used GPR registers used in the function.
 - ``used-arg`` only zeros call-used registers used to pass arguments to the
   function.
 - ``used-gpr-arg`` only zeros call-used GPR registers used to pass arguments to
@@ -6405,7 +6456,7 @@ of the call-used registers to be zeroed:
 - ``all-gpr-arg`` zeros all call-used GPR registers used to pass arguments to
   the function.
 
-The default for the attribute is contolled by the ``-fzero-call-used-regs``
+The default for the attribute is controlled by the ``-fzero-call-used-regs``
 flag.
 
 .. _Return-Oriented Programming: https://en.wikipedia.org/wiki/Return-oriented_programming
@@ -6583,6 +6634,28 @@ evaluate to NULL.
       }
       return 0;
   }
+  }];
+}
 
+def FunctionReturnThunksDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The attribute ``function_return`` can replace return instructions with jumps to
+target-specific symbols. This attribute supports 2 possible values,
+corresponding to the values supported by the ``-mfunction-return=`` command
+line flag:
+
+* ``__attribute__((function_return("keep")))`` to disable related transforms.
+  This is useful for undoing global setting from ``-mfunction-return=`` locally
+  for individual functions.
+* ``__attribute__((function_return("thunk-extern")))`` to replace returns with
+  jumps, while NOT emitting the thunk.
+
+The values ``thunk`` and ``thunk-inline`` from GCC are not supported.
+
+The symbol used for ``thunk-extern`` is target specific:
+* X86: ``__x86_return_thunk``
+
+As such, this function attribute is currently only supported on X86 targets.
   }];
 }

@@ -828,7 +828,7 @@ public:
   /// Determine whether this pack expansion scope has a known, fixed arity.
   /// This happens if it involves a pack from an outer template that has
   /// (notionally) already been expanded.
-  bool hasFixedArity() { return FixedNumExpansions.hasValue(); }
+  bool hasFixedArity() { return FixedNumExpansions.has_value(); }
 
   /// Determine whether the next element of the argument is still part of this
   /// pack. This is the case unless the pack is already expanded to a fixed
@@ -1587,7 +1587,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // FIXME: Implement deduction in dependent case.
       if (P->isDependentType())
         return Sema::TDK_Success;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Type::Builtin:
     case Type::VariableArray:
     case Type::Vector:
@@ -1775,7 +1775,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         switch (FPA->canThrow()) {
         case CT_Cannot:
           Noexcept = 1;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
 
         case CT_Can:
           // We give E in noexcept(E) the "deduced from array bound" treatment.
@@ -2791,8 +2791,13 @@ CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
                                 TemplateDeductionInfo& Info) {
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
+  // FIXME: This will change quite a bit once deferred concept instantiation is
+  // implemented.
+  MultiLevelTemplateArgumentList MLTAL;
+  MLTAL.addOuterTemplateArguments(DeducedArgs);
+
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints,
-                                    DeducedArgs, Info.getLocation(),
+                                    MLTAL, Info.getLocation(),
                                     Info.AssociatedConstraintsSatisfaction) ||
       !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
     Info.reset(TemplateArgumentList::CreateCopy(S.Context, DeducedArgs));
@@ -4572,8 +4577,10 @@ CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
   if (S.CheckTemplateArgumentList(Concept, SourceLocation(), TemplateArgs,
                                   /*PartialTemplateArgs=*/false, Converted))
     return Sema::DAR_FailedAlreadyDiagnosed;
+  MultiLevelTemplateArgumentList MLTAL;
+  MLTAL.addOuterTemplateArguments(Converted);
   if (S.CheckConstraintSatisfaction(Concept, {Concept->getConstraintExpr()},
-                                    Converted, TypeLoc.getLocalSourceRange(),
+                                    MLTAL, TypeLoc.getLocalSourceRange(),
                                     Satisfaction))
     return Sema::DAR_FailedAlreadyDiagnosed;
   if (!Satisfaction.IsSatisfied) {
@@ -5734,7 +5741,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                cast<DependentSizedArrayType>(T)->getSizeExpr(),
                                OnlyDeduced, Depth, Used);
     // Fall through to check the element type
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case Type::ConstantArray:
   case Type::IncompleteArray:
@@ -5844,7 +5851,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
 
   case Type::InjectedClassName:
     T = cast<InjectedClassNameType>(T)->getInjectedSpecializationType();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case Type::TemplateSpecialization: {
     const TemplateSpecializationType *Spec

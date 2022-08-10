@@ -1023,8 +1023,11 @@ VariableSP SymbolFilePDB::ParseVariableForPDBData(
   auto mangled_cstr = mangled.empty() ? nullptr : mangled.c_str();
 
   bool is_constant;
-  DWARFExpression location = ConvertPDBLocationToDWARFExpression(
-      GetObjectFile()->GetModule(), pdb_data, ranges, is_constant);
+  ModuleSP module_sp = GetObjectFile()->GetModule();
+  DWARFExpressionList location(module_sp,
+                               ConvertPDBLocationToDWARFExpression(
+                                   module_sp, pdb_data, ranges, is_constant),
+                               nullptr);
 
   var_sp = std::make_shared<Variable>(
       var_uid, var_name.c_str(), mangled_cstr, type_sp, scope, context_scope,
@@ -1054,7 +1057,7 @@ SymbolFilePDB::ParseVariables(const lldb_private::SymbolContext &sc,
         switch (lexical_parent->getSymTag()) {
         case PDB_SymType::Exe:
           assert(sc.comp_unit);
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case PDB_SymType::Compiland: {
           if (sc.comp_unit) {
             local_variable_list_sp = sc.comp_unit->GetVariableList(false);
@@ -1302,12 +1305,17 @@ void SymbolFilePDB::CacheFunctionNames() {
 }
 
 void SymbolFilePDB::FindFunctions(
-    lldb_private::ConstString name,
+    const lldb_private::Module::LookupInfo &lookup_info,
     const lldb_private::CompilerDeclContext &parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines,
+    bool include_inlines,
     lldb_private::SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  ConstString name = lookup_info.GetLookupName();
+  FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
   lldbassert((name_type_mask & eFunctionNameTypeAuto) == 0);
+
+  if (name_type_mask & eFunctionNameTypeFull)
+    name = lookup_info.GetName();
 
   if (name_type_mask == eFunctionNameTypeNone)
     return;
@@ -1610,9 +1618,7 @@ void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
 
   if (can_parse) {
     if (auto *type = ResolveTypeUID(pdb_symbol.getSymIndexId())) {
-      auto result =
-          std::find(type_collection.begin(), type_collection.end(), type);
-      if (result == type_collection.end())
+      if (!llvm::is_contained(type_collection, type))
         type_collection.push_back(type);
     }
   }

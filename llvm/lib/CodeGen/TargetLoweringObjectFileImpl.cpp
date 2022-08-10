@@ -127,7 +127,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
     if (Ctx.getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Triple::ppc:
   case Triple::ppcle:
   case Triple::x86:
@@ -449,9 +449,6 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
       Name == ".llvmbc" || Name == ".llvmcmd")
     return SectionKind::getMetadata();
 
-  if (Name == ".llvm.offloading")
-    return SectionKind::getExclude();
-
   if (Name.empty() || Name[0] != '.') return K;
 
   // Default implementation based on some magic section names.
@@ -500,6 +497,9 @@ static unsigned getELFSectionType(StringRef Name, SectionKind K) {
 
   if (hasPrefix(Name, ".preinit_array"))
     return ELF::SHT_PREINIT_ARRAY;
+
+  if (hasPrefix(Name, ".llvm.offloading"))
+    return ELF::SHT_LLVM_OFFLOADING;
 
   if (K.isBSS() || K.isNoInit() || K.isThreadBSS())
     return ELF::SHT_NOBITS;

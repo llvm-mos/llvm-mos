@@ -35,6 +35,7 @@ public:
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -197,11 +198,16 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_TLSDESC:
     return read64(buf + 8);
   case R_AARCH64_NONE:
+  case R_AARCH64_GLOB_DAT:
+  case R_AARCH64_JUMP_SLOT:
     return 0;
   case R_AARCH64_PREL32:
     return SignExtend64<32>(read32(buf));
   case R_AARCH64_ABS64:
   case R_AARCH64_PREL64:
+  case R_AARCH64_RELATIVE:
+  case R_AARCH64_IRELATIVE:
+  case R_AARCH64_TLS_TPREL64:
     return read64(buf);
   default:
     internalLinkerError(getErrorLocation(buf),
@@ -212,6 +218,11 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
   write64(buf, in.plt->getVA());
+}
+
+void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
+  if (config->writeAddends)
+    write64(buf, s.getVA());
 }
 
 void AArch64::writePltHeader(uint8_t *buf) const {
@@ -364,7 +375,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     checkInt(loc, val, 33, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_ADR_PREL_PG_HI21_NC:
     write32AArch64Addr(loc, val >> 12);
     break;
@@ -381,7 +392,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     // transformation by placing a R_AARCH64_JUMP26 relocation at the offset of
     // the instruction we want to patch.
     write32le(loc, 0x14000000);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_CALL26:
     checkInt(loc, val, 28, rel);
     or32le(loc, (val & 0x0FFFFFFC) >> 2);
@@ -425,19 +436,19 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_MOVW_UABS_G0:
     checkUInt(loc, val, 16, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G0_NC:
     or32le(loc, (val & 0xFFFF) << 5);
     break;
   case R_AARCH64_MOVW_UABS_G1:
     checkUInt(loc, val, 32, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G1_NC:
     or32le(loc, (val & 0xFFFF0000) >> 11);
     break;
   case R_AARCH64_MOVW_UABS_G2:
     checkUInt(loc, val, 48, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G2_NC:
     or32le(loc, (val & 0xFFFF00000000) >> 27);
     break;
@@ -448,7 +459,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_SABS_G0:
   case R_AARCH64_TLSLE_MOVW_TPREL_G0:
     checkInt(loc, val, 17, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G0_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
     writeSMovWImm(loc, val);
@@ -457,7 +468,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_SABS_G1:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1:
     checkInt(loc, val, 33, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G1_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
     writeSMovWImm(loc, val >> 16);
@@ -466,7 +477,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_SABS_G2:
   case R_AARCH64_TLSLE_MOVW_TPREL_G2:
     checkInt(loc, val, 49, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G2_NC:
     writeSMovWImm(loc, val >> 32);
     break;
@@ -693,6 +704,11 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
     return false;
 
   Symbol &sym = *adrpRel.sym;
+  // GOT references to absolute symbols can't be relaxed to use ADRP/ADD in
+  // position-independent code because these instructions produce a relative
+  // address.
+  if (config->isPic && !cast<Defined>(sym).section)
+    return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
       getAArch64Page(sym.getVA()) - getAArch64Page(secAddr + adrpRel.offset);
@@ -868,8 +884,8 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 static TargetInfo *getTargetInfo() {
-  if (config->andFeatures & (GNU_PROPERTY_AARCH64_FEATURE_1_BTI |
-                             GNU_PROPERTY_AARCH64_FEATURE_1_PAC)) {
+  if ((config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
+      config->zPacPlt) {
     static AArch64BtiPac t;
     return &t;
   }

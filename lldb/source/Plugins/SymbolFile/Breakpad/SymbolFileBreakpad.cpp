@@ -421,12 +421,13 @@ uint32_t SymbolFileBreakpad::ResolveSymbolContext(
 }
 
 void SymbolFileBreakpad::FindFunctions(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines,
+    const Module::LookupInfo &lookup_info,
+    const CompilerDeclContext &parent_decl_ctx, bool include_inlines,
     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // TODO: Implement this with supported FunctionNameType.
 
+  ConstString name = lookup_info.GetLookupName();
   for (uint32_t i = 0; i < GetNumCompileUnits(); ++i) {
     CompUnitSP cu_sp = GetCompileUnitAtIndex(i);
     FunctionSP func_sp = GetOrCreateFunction(*cu_sp);
@@ -489,7 +490,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
         /*is_trampoline*/ false, /*is_artificial*/ false,
         AddressRange(section_sp, address - section_sp->GetFileAddress(),
                      size.value_or(0)),
-        size.hasValue(), /*contains_linker_annotations*/ false, /*flags*/ 0);
+        size.has_value(), /*contains_linker_annotations*/ false, /*flags*/ 0);
   };
 
   for (llvm::StringRef line : lines(Record::Public)) {
@@ -674,9 +675,9 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
   plan_sp->AppendRow(row_sp);
   for (++It; It != End; ++It) {
     llvm::Optional<StackCFIRecord> record = StackCFIRecord::parse(*It);
-    if (!record.hasValue())
+    if (!record)
       return nullptr;
-    if (record->Size.hasValue())
+    if (record->Size)
       break;
 
     row_sp = std::make_shared<UnwindPlan::Row>(*row_sp);

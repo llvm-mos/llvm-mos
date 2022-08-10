@@ -22,7 +22,7 @@ public:
     virtual ~type_info();
 
     bool operator==(const type_info& rhs) const noexcept;
-    bool operator!=(const type_info& rhs) const noexcept;
+    bool operator!=(const type_info& rhs) const noexcept; // removed in C++20
 
     bool before(const type_info& rhs) const noexcept;
     size_t hash_code() const noexcept;
@@ -112,9 +112,11 @@ public:
       return __compare(__arg) == 0;
     }
 
+#if _LIBCPP_STD_VER <= 17
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const type_info& __arg) const _NOEXCEPT
     { return !operator==(__arg); }
+#endif
 };
 
 #else // !defined(_LIBCPP_ABI_MICROSOFT)
@@ -174,8 +176,8 @@ public:
 // we pick a default implementation based on the platform here.
 #ifndef _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION
 
-  // Windows binaries can't merge typeinfos, so use the NonUnique implementation.
-# ifdef _LIBCPP_OBJECT_FORMAT_COFF
+  // Windows and AIX binaries can't merge typeinfos, so use the NonUnique implementation.
+# if defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF)
 #   define _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION 2
 
   // On arm64 on Apple platforms, use the special NonUniqueARMRTTIBit implementation.
@@ -337,9 +339,11 @@ public:
       return __impl::__eq(__type_name, __arg.__type_name);
     }
 
+#if _LIBCPP_STD_VER <= 17
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const type_info& __arg) const _NOEXCEPT
     { return !operator==(__arg); }
+#endif
 };
 #endif // defined(_LIBCPP_ABI_MICROSOFT)
 

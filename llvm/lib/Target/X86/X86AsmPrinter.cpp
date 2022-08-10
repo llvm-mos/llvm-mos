@@ -66,6 +66,9 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   EmitFPOData =
       Subtarget->isTargetWin32() && MF.getMMI().getModule()->getCodeViewFlag();
 
+  IndCSPrefix =
+      MF.getMMI().getModule()->getModuleFlag("indirect_branch_cs_prefix");
+
   SetupMachineFunction(MF);
 
   if (Subtarget->isTargetCOFF()) {
@@ -85,6 +88,8 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   emitXRayTable();
 
   EmitFPOData = false;
+
+  IndCSPrefix = false;
 
   // We didn't modify anything.
   return false;
@@ -469,7 +474,7 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case 'V':
     EmitPercent = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 'q':
     // Print 64-bit register names if 64-bit integer registers are available.
     // Otherwise, print 32-bit register names.

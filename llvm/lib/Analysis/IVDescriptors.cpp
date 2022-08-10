@@ -63,20 +63,6 @@ bool RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurKind Kind) {
   return (Kind != RecurKind::None) && !isIntegerRecurrenceKind(Kind);
 }
 
-bool RecurrenceDescriptor::isArithmeticRecurrenceKind(RecurKind Kind) {
-  switch (Kind) {
-  default:
-    break;
-  case RecurKind::Add:
-  case RecurKind::Mul:
-  case RecurKind::FAdd:
-  case RecurKind::FMul:
-  case RecurKind::FMulAdd:
-    return true;
-  }
-  return false;
-}
-
 /// Determines if Phi may have been type-promoted. If Phi has a single user
 /// that ANDs the Phi with a type mask, return the user. RT is updated to
 /// account for the narrower bit width represented by the mask, and the AND
@@ -803,7 +789,7 @@ RecurrenceDescriptor::isRecurrenceInstr(Loop *L, PHINode *OrigPhi,
   case Instruction::Select:
     if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul)
       return isConditionalRdxPattern(Kind, I);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Call:
@@ -1170,7 +1156,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     ExpectedUses = 2;
 
   auto getNextInstruction = [&](Instruction *Cur) -> Instruction * {
-    for (auto User : Cur->users()) {
+    for (auto *User : Cur->users()) {
       Instruction *UI = cast<Instruction>(User);
       if (isa<PHINode>(UI))
         continue;

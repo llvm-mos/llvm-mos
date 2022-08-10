@@ -46,9 +46,10 @@ Using Clang as a Compiler
    OpenCLSupport
    OpenMPSupport
    SYCLSupport
-   HLSLSupport
+   HLSL/HLSLDocs
    ThinLTO
    APINotes
+   DebuggingCoroutines
    CommandGuide/index
    FAQ
 

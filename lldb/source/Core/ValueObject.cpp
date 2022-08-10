@@ -265,7 +265,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
           process_sp->GetLanguageRuntime(GetObjectRuntimeLanguage())) {
     if (llvm::Optional<CompilerType> complete_type =
             runtime->GetRuntimeType(compiler_type)) {
-      m_override_type = complete_type.getValue();
+      m_override_type = *complete_type;
       if (m_override_type.IsValid())
         return m_override_type;
     }
@@ -2113,7 +2113,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
         return ValueObjectSP();
       }
     }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case '.': // or fallthrough from ->
     {
       if (options.m_check_dot_vs_arrow_syntax &&

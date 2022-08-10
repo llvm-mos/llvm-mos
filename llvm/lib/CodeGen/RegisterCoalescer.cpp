@@ -418,24 +418,24 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(RegisterCoalescer, "simple-register-coalescing",
                     "Simple Register Coalescing", false, false)
 
-LLVM_NODISCARD static bool isMoveInstr(const TargetRegisterInfo &tri,
-                                       const MachineInstr *MI, Register &Src,
-                                       Register &Dst, unsigned &SrcSub,
-                                       unsigned &DstSub) {
-  if (MI->isCopy()) {
-    Dst = MI->getOperand(0).getReg();
-    DstSub = MI->getOperand(0).getSubReg();
-    Src = MI->getOperand(1).getReg();
-    SrcSub = MI->getOperand(1).getSubReg();
-  } else if (MI->isSubregToReg()) {
-    Dst = MI->getOperand(0).getReg();
-    DstSub = tri.composeSubRegIndices(MI->getOperand(0).getSubReg(),
-                                      MI->getOperand(3).getImm());
-    Src = MI->getOperand(2).getReg();
-    SrcSub = MI->getOperand(2).getSubReg();
-  } else
-    return false;
-  return true;
+[[nodiscard]] static bool isMoveInstr(const TargetRegisterInfo &tri,
+                                      const MachineInstr *MI, Register &Src,
+                                      Register &Dst, unsigned &SrcSub,
+                                      unsigned &DstSub) {
+    if (MI->isCopy()) {
+      Dst = MI->getOperand(0).getReg();
+      DstSub = MI->getOperand(0).getSubReg();
+      Src = MI->getOperand(1).getReg();
+      SrcSub = MI->getOperand(1).getSubReg();
+    } else if (MI->isSubregToReg()) {
+      Dst = MI->getOperand(0).getReg();
+      DstSub = tri.composeSubRegIndices(MI->getOperand(0).getSubReg(),
+                                        MI->getOperand(3).getImm());
+      Src = MI->getOperand(2).getReg();
+      SrcSub = MI->getOperand(2).getSubReg();
+    } else
+      return false;
+    return true;
 }
 
 /// Return true if this block should be vacated by the coalescer to eliminate
@@ -1148,7 +1148,7 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     // we need to keep the copy of B = A at the end of Pred if we remove
     // B = A from MBB.
     bool ValB_Changed = false;
-    for (auto VNI : IntB.valnos) {
+    for (auto *VNI : IntB.valnos) {
       if (VNI->isUnused())
         continue;
       if (PVal->def < VNI->def && VNI->def < LIS->getMBBEndIdx(Pred)) {
@@ -1306,7 +1306,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   }
   if (!TII->isAsCheapAsAMove(*DefMI))
     return false;
-  if (!TII->isTriviallyReMaterializable(*DefMI, AA))
+  if (!TII->isTriviallyReMaterializable(*DefMI))
     return false;
   if (!definesFullReg(*DefMI, SrcReg))
     return false;
@@ -2108,6 +2108,7 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
       LLVM_DEBUG(dbgs() << "Shrink LaneUses (Lane " << PrintLaneMask(S.LaneMask)
                         << ")\n");
       LIS->shrinkToUses(S, LI.reg());
+      ShrinkMainRange = true;
     }
     LI.removeEmptySubRanges();
   }
@@ -2960,7 +2961,7 @@ void JoinVals::computeAssignment(unsigned ValNo, JoinVals &Other) {
     }
 
     OtherV.Pruned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   default:
     // This value number needs to go in the final joined live range.
@@ -3403,7 +3404,7 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
         if (LI != nullptr)
           dbgs() << "\t\t  LHS = " << *LI << '\n';
       });
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
 
     case CR_Erase: {

@@ -66,21 +66,42 @@ class Math_FloatTernaryOp<string mnemonic, list<Trait> traits = []> :
 }
 
 //===----------------------------------------------------------------------===//
-// AbsOp
+// AbsFOp
 //===----------------------------------------------------------------------===//
 
-def Math_AbsOp : Math_FloatUnaryOp<"abs"> {
+def Math_AbsFOp : Math_FloatUnaryOp<"absf"> {
   let summary = "floating point absolute-value operation";
   let description = [{
-    The `abs` operation computes the absolute value. It takes one operand of
-    floating point type (i.e., scalar, tensor or vector) and returns one result of
-    the same type.
+    The `absf` operation computes the absolute value. It takes one operand of
+    floating point type (i.e., scalar, tensor or vector) and returns one result
+    of the same type.
 
     Example:
 
     ```mlir
     // Scalar absolute value.
-    %a = math.abs %b : f64
+    %a = math.absf %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AbsIOp
+//===----------------------------------------------------------------------===//
+
+def Math_AbsIOp : Math_IntegerUnaryOp<"absi"> {
+  let summary = "integer absolute-value operation";
+  let description = [{
+    The `absi` operation computes the absolute value. It takes one operand of
+    integer type (i.e., scalar, tensor or vector) and returns one result of the
+    same type.
+
+    Example:
+
+    ```mlir
+    // Scalar absolute value.
+    %a = math.absi %b : i64
     ```
   }];
   let hasFolder = 1;
@@ -110,6 +131,7 @@ def Math_AtanOp : Math_FloatUnaryOp<"atan">{
     %a = math.atan %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -143,6 +165,7 @@ def Math_Atan2Op : Math_FloatBinaryOp<"atan2">{
     %a = math.atan2 %b, %c : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -363,6 +386,7 @@ def Math_ExpOp : Math_FloatUnaryOp<"exp"> {
     %a = math.exp %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -390,6 +414,7 @@ def Math_Exp2Op : Math_FloatUnaryOp<"exp2"> {
     %a = math.exp2 %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -418,6 +443,7 @@ def Math_ExpM1Op : Math_FloatUnaryOp<"expm1"> {
     %a = math.expm1 %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -441,7 +467,7 @@ def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
 
     ```mlir
     // Scalar floor value.
-    %a = math.floor %b : f64 
+    %a = math.floor %b : f64
     ```
   }];
 }
@@ -496,6 +522,7 @@ def Math_LogOp : Math_FloatUnaryOp<"log"> {
     %y = math.log %x : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -517,6 +544,7 @@ def Math_Log10Op : Math_FloatUnaryOp<"log10"> {
     %y = math.log10 %x : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -540,6 +568,7 @@ def Math_Log1pOp : Math_FloatUnaryOp<"log1p"> {
     %y = math.log1p %x : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -603,7 +632,7 @@ def Math_RsqrtOp : Math_FloatUnaryOp<"rsqrt"> {
     one result of the same type. It has no standard attributes.
 
     Example:
-  
+
     ```mlir
     // Scalar reciprocal square root value.
     %a = math.rsqrt %b : f64
@@ -633,6 +662,27 @@ def Math_SqrtOp : Math_FloatUnaryOp<"sqrt"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TanOp
+//===----------------------------------------------------------------------===//
+
+def Math_TanOp : Math_FloatUnaryOp<"tan"> {
+  let summary = "tangent of the specified value";
+  let description = [{
+    The `tan` operation computes the tangent. It takes one operand
+    of floating point type (i.e., scalar, tensor or vector) and returns one
+    result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar tangent value.
+    %a = math.tan %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // TanhOp
 //===----------------------------------------------------------------------===//
 
@@ -650,6 +700,7 @@ def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
     %a = math.tanh %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -667,7 +718,10 @@ def Math_RoundOp : Math_FloatUnaryOp<"round"> {
 
     The `round` operation returns the operand rounded to the nearest integer
     value in floating-point format. It takes one operand of floating point type
-    (i.e., scalar, tensor or vector) and produces one result of the same type.
+    (i.e., scalar, tensor or vector) and produces one result of the same type.  The
+    operation rounds the argument to the nearest integer value in floating-point
+    format, rounding halfway cases away from zero, regardless of the current
+    rounding direction.
 
     Example:
 

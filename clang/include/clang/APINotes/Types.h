@@ -76,8 +76,8 @@ public:
   }
 
   void setSwiftPrivate(llvm::Optional<bool> Private) {
-    SwiftPrivateSpecified = Private.hasValue();
-    SwiftPrivate = Private.hasValue() ? *Private : 0;
+    SwiftPrivateSpecified = Private.has_value();
+    SwiftPrivate = Private.value_or(0);
   }
 
   friend bool operator==(const CommonEntityInfo &, const CommonEntityInfo &);
@@ -238,7 +238,7 @@ public:
                : llvm::None;
   }
   void setSwiftImportAsNonGeneric(llvm::Optional<bool> Value) {
-    SwiftImportAsNonGenericSpecified = Value.hasValue();
+    SwiftImportAsNonGenericSpecified = Value.has_value();
     SwiftImportAsNonGeneric = Value.value_or(false);
   }
 
@@ -247,7 +247,7 @@ public:
                                      : llvm::None;
   }
   void setSwiftObjCMembers(llvm::Optional<bool> Value) {
-    SwiftObjCMembersSpecified = Value.hasValue();
+    SwiftObjCMembersSpecified = Value.has_value();
     SwiftObjCMembers = Value.value_or(false);
   }
 
@@ -365,7 +365,7 @@ public:
                : llvm::None;
   }
   void setSwiftImportAsAccessors(llvm::Optional<bool> Value) {
-    SwiftImportAsAccessorsSpecified = Value.hasValue();
+    SwiftImportAsAccessorsSpecified = Value.has_value();
     SwiftImportAsAccessors = Value.value_or(false);
   }
 
@@ -429,7 +429,7 @@ public:
     return NoEscape;
   }
   void setNoEscape(llvm::Optional<bool> Value) {
-    NoEscapeSpecified = Value.hasValue();
+    NoEscapeSpecified = Value.has_value();
     NoEscape = Value.value_or(false);
   }
 
@@ -440,8 +440,7 @@ public:
   }
   void
   setRetainCountConvention(llvm::Optional<RetainCountConventionKind> Value) {
-    RawRetainCountConvention =
-        Value.hasValue() ? static_cast<unsigned>(Value.getValue()) + 1 : 0;
+    RawRetainCountConvention = Value ? static_cast<unsigned>(*Value) + 1 : 0;
     assert(getRetainCountConvention() == Value && "bitfield too small");
   }
 
@@ -559,8 +558,7 @@ public:
   }
   void
   setRetainCountConvention(llvm::Optional<RetainCountConventionKind> Value) {
-    RawRetainCountConvention =
-        Value.hasValue() ? static_cast<unsigned>(Value.getValue()) + 1 : 0;
+    RawRetainCountConvention = Value ? static_cast<unsigned>(*Value) + 1 : 0;
     assert(getRetainCountConvention() == Value && "bitfield too small");
   }
 
@@ -666,14 +664,14 @@ public:
     return llvm::None;
   }
   void setFlagEnum(llvm::Optional<bool> Value) {
-    HasFlagEnum = Value.hasValue();
+    HasFlagEnum = Value.has_value();
     IsFlagEnum = Value.value_or(false);
   }
 
   TagInfo &operator|=(const TagInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
 
-    if (!HasFlagEnum && HasFlagEnum)
+    if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
 
     if (!EnumExtensibility)

@@ -14,10 +14,12 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Common/Fortran.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace fir {
@@ -101,13 +103,16 @@ public:
   virtual bool
   createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
 
-  virtual void copyHostAssociateVar(const Fortran::semantics::Symbol &sym) = 0;
+  virtual void copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
+                                    mlir::Block *lastPrivBlock = nullptr) = 0;
 
-  /// Collect the set of symbols flagged as \p flag in \p eval region.
+  /// Collect the set of ultimate symbols of symbols with \p flag in \p eval
+  /// region if \p isUltimateSymbol is true. Otherwise, collect the set of
+  /// symbols with \p flag.
   virtual void collectSymbolSet(
       pft::Evaluation &eval,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
-      Fortran::semantics::Symbol::Flag flag) = 0;
+      Fortran::semantics::Symbol::Flag flag, bool isUltimateSymbol = true) = 0;
 
   //===--------------------------------------------------------------------===//
   // Expressions
@@ -221,7 +226,22 @@ public:
   /// Get the KindMap.
   virtual const fir::KindMapping &getKindMap() = 0;
 
+  AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
+      : loweringOptions(loweringOptions) {}
   virtual ~AbstractConverter() = default;
+
+  //===--------------------------------------------------------------------===//
+  // Miscellaneous
+  //===--------------------------------------------------------------------===//
+
+  /// Return options controlling lowering behavior.
+  const Fortran::lower::LoweringOptions &getLoweringOptions() const {
+    return loweringOptions;
+  }
+
+private:
+  /// Options controlling lowering behavior.
+  const Fortran::lower::LoweringOptions &loweringOptions;
 };
 
 } // namespace lower

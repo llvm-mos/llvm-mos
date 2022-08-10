@@ -50,8 +50,8 @@ public:
                              TTI::TargetCostKind CostKind) const {
     // In the basic model, we just assume that all-constant GEPs will be folded
     // into their uses via addressing modes.
-    for (unsigned Idx = 0, Size = Operands.size(); Idx != Size; ++Idx)
-      if (!isa<Constant>(Operands[Idx]))
+    for (const Value *Operand : Operands)
+      if (!isa<Constant>(Operand))
         return TTI::TCC_Basic;
 
     return TTI::TCC_Free;
@@ -163,12 +163,13 @@ public:
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
-                                   const LoopAccessInfo *LAI) const {
+                                   LoopVectorizationLegality *LVL,
+                                   InterleavedAccessInfo *IAI) const {
     return false;
   }
 
-  bool emitGetActiveLaneMask() const {
-    return false;
+  PredicationStyle emitGetActiveLaneMask() const {
+    return PredicationStyle::None;
   }
 
   Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
@@ -287,6 +288,11 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataType) const { return false; }
 
+  bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+                       const SmallBitVector &OpcodeMask) const {
+    return false;
+  }
+
   bool isLegalMaskedExpandLoad(Type *DataType) const { return false; }
 
   bool enableOrderedReductions() const { return false; }
@@ -356,6 +362,8 @@ public:
   }
 
   bool supportsEfficientVectorElementLoadStore() const { return false; }
+
+  bool supportsTailCalls() const { return true; }
 
   bool enableAggressiveInterleaving(bool LoopHasReductions) const {
     return false;
@@ -463,7 +471,7 @@ public:
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
     switch (Level) {
     case TargetTransformInfo::CacheLevel::L1D:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case TargetTransformInfo::CacheLevel::L2D:
       return llvm::Optional<unsigned>();
     }
@@ -474,7 +482,7 @@ public:
   getCacheAssociativity(TargetTransformInfo::CacheLevel Level) const {
     switch (Level) {
     case TargetTransformInfo::CacheLevel::L1D:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case TargetTransformInfo::CacheLevel::L2D:
       return llvm::Optional<unsigned>();
     }
@@ -490,6 +498,7 @@ public:
   }
   unsigned getMaxPrefetchIterationsAhead() const { return UINT_MAX; }
   bool enableWritePrefetching() const { return false; }
+  bool shouldPrefetchAddressSpace(unsigned AS) const { return !AS; }
 
   unsigned getMaxInterleaveFactor(unsigned VF) const { return 1; }
 
@@ -588,6 +597,11 @@ public:
     return 1;
   }
 
+  InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
+                                     unsigned Index) const {
+    return 1;
+  }
+
   unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                                      const APInt &DemandedDstElts,
                                      TTI::TargetCostKind CostKind) {
@@ -664,6 +678,7 @@ public:
     case Intrinsic::coro_align:
     case Intrinsic::coro_suspend:
     case Intrinsic::coro_subfn_addr:
+    case Intrinsic::threadlocal_address:
       // These intrinsics don't actually represent code after lowering.
       return 0;
     }
@@ -695,10 +710,16 @@ public:
     return 1;
   }
 
-  InstructionCost
-  getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned, Type *ResTy,
-                              VectorType *Ty,
-                              TTI::TargetCostKind CostKind) const {
+  InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
+                                           Type *ResTy, VectorType *Ty,
+                                           Optional<FastMathFlags> FMF,
+                                           TTI::TargetCostKind CostKind) const {
+    return 1;
+  }
+
+  InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
+                                         VectorType *Ty,
+                                         TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
@@ -1156,7 +1177,7 @@ public:
       if (auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2)))
         if (CI->getValue().getActiveBits() <= 32)
           Idx = CI->getZExtValue();
-      return TargetTTI->getVectorInstrCost(Opcode, Ty, Idx);
+      return TargetTTI->getVectorInstrCost(*IE, Ty, Idx);
     }
     case Instruction::ShuffleVector: {
       auto *Shuffle = dyn_cast<ShuffleVectorInst>(U);
@@ -1246,7 +1267,7 @@ public:
         if (CI->getValue().getActiveBits() <= 32)
           Idx = CI->getZExtValue();
       Type *DstTy = U->getOperand(0)->getType();
-      return TargetTTI->getVectorInstrCost(Opcode, DstTy, Idx);
+      return TargetTTI->getVectorInstrCost(*EEI, DstTy, Idx);
     }
     }
     // By default, just classify everything as 'basic'.

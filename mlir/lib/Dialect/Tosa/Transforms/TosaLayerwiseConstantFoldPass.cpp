@@ -21,6 +21,19 @@ using namespace mlir::tosa;
 
 namespace {
 
+template <typename... Args>
+void addOpsCanonicalizations(MLIRContext *ctx, RewritePatternSet &patterns) {
+  (Args::getCanonicalizationPatterns(patterns, ctx), ...);
+}
+
+void populateTosaOpsCanonicalizationPatterns(MLIRContext *ctx,
+                                             RewritePatternSet &patterns) {
+  addOpsCanonicalizations<
+#define GET_OP_LIST
+#include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"
+      >(ctx, patterns);
+}
+
 struct TosaLayerwiseConstantFoldPass
     : public TosaLayerwiseConstantFoldPassBase<TosaLayerwiseConstantFoldPass> {
   void runOnOperation() override {
@@ -29,7 +42,7 @@ struct TosaLayerwiseConstantFoldPass
     auto func = getOperation();
 
     mlir::tosa::populateTosaFoldConstantTransposePatterns(ctx, patterns);
-    mlir::tosa::populateTosaOpsCanonicalizationPatterns(ctx, patterns);
+    populateTosaOpsCanonicalizationPatterns(ctx, patterns);
 
     if (applyPatternsAndFoldGreedily(func, std::move(patterns)).failed())
       signalPassFailure();

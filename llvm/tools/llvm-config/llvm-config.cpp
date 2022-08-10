@@ -370,7 +370,11 @@ int main(int argc, char **argv) {
       ActiveBinDir = std::string(Path.str());
     }
     ActiveLibDir = ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX;
-    ActiveCMakeDir = ActiveLibDir + "/cmake/llvm";
+    {
+      SmallString<256> Path(LLVM_INSTALL_PACKAGE_DIR);
+      sys::fs::make_absolute(ActivePrefix, Path);
+      ActiveCMakeDir = std::string(Path.str());
+    }
     ActiveIncludeOption = "-I" + ActiveIncludeDir;
   }
 
@@ -656,7 +660,7 @@ int main(int argc, char **argv) {
         }
         WithColor::error(errs(), "llvm-config")
             << "component libraries and shared library\n\n";
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case LinkModeStatic:
         for (auto &Lib : MissingLibs)
           WithColor::error(errs(), "llvm-config") << "missing: " << Lib << "\n";

@@ -1146,7 +1146,7 @@ void DataFlowSanitizer::buildExternWeakCheckIfNeeded(IRBuilder<> &IRB,
   // but replacing with a known-to-not-be-null wrapper can break this check.
   // When replacing uses of the extern weak function with the wrapper we try
   // to avoid replacing uses in conditionals, but this is not perfect.
-  // In the case where we fail, and accidentially optimize out a null check
+  // In the case where we fail, and accidentally optimize out a null check
   // for a extern weak function, add a check here to help identify the issue.
   if (GlobalValue::isExternalWeakLinkage(F->getLinkage())) {
     std::vector<Value *> Args;
@@ -1464,8 +1464,8 @@ bool DataFlowSanitizer::runImpl(Module &M) {
       //   br i1 icmp ne (i8 (i8)* @my_func, i8 (i8)* null), label %use_my_func,
       //   label %avoid_my_func
       // The @"dfsw$my_func" wrapper is never null, so if we replace this use
-      // in the comparision, the icmp will simplify to false and we have
-      // accidentially optimized away a null check that is necessary.
+      // in the comparison, the icmp will simplify to false and we have
+      // accidentally optimized away a null check that is necessary.
       // This can lead to a crash when the null extern_weak my_func is called.
       //
       // To prevent (the most common pattern of) this problem,

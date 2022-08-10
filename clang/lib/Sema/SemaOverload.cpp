@@ -6241,7 +6241,7 @@ ExprResult Sema::PerformContextualImplicitConversion(
                                      HadMultipleCandidates,
                                      ExplicitConversions))
         return ExprError();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case OR_Deleted:
       // We'll complain below about a non-integral condition type.
       break;
@@ -6398,6 +6398,27 @@ void Sema::AddOverloadCandidate(
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_explicit;
     return;
+  }
+
+  // Functions with internal linkage are only viable in the same module unit.
+  if (auto *MF = Function->getOwningModule()) {
+    if (getLangOpts().CPlusPlusModules && !MF->isModuleMapModule() &&
+        !isModuleUnitOfCurrentTU(MF)) {
+      /// FIXME: Currently, the semantics of linkage in clang is slightly
+      /// different from the semantics in C++ spec. In C++ spec, only names
+      /// have linkage. So that all entities of the same should share one
+      /// linkage. But in clang, different entities of the same could have
+      /// different linkage.
+      NamedDecl *ND = Function;
+      if (auto *SpecInfo = Function->getTemplateSpecializationInfo())
+        ND = SpecInfo->getTemplate();
+      
+      if (ND->getFormalLinkage() == Linkage::InternalLinkage) {
+        Candidate.Viable = false;
+        Candidate.FailureKind = ovl_fail_module_mismatched;
+        return;
+      }
+    }
   }
 
   if (Function->isMultiVersion() && Function->hasAttr<TargetAttr>() &&
@@ -9290,7 +9311,7 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
   case OO_Plus: // '+' is either unary or binary
     if (Args.size() == 1)
       OpBuilder.addUnaryPlusPointerOverloads();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case OO_Minus: // '-' is either unary or binary
     if (Args.size() == 1) {
@@ -9365,12 +9386,12 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
 
   case OO_Equal:
     OpBuilder.addAssignmentMemberPointerOrEnumeralOverloads();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case OO_PlusEqual:
   case OO_MinusEqual:
     OpBuilder.addAssignmentPointerOverloads(Op == OO_Equal);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case OO_StarEqual:
   case OO_SlashEqual:
@@ -11266,6 +11287,13 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   if (shouldSkipNotingLambdaConversionDecl(Fn))
     return;
 
+  // There is no physical candidate declaration to point to for OpenCL builtins.
+  // Except for failed conversions, the notes are identical for each candidate,
+  // so do not generate such notes.
+  if (S.getLangOpts().OpenCL && Fn->isImplicit() &&
+      Cand->FailureKind != ovl_fail_bad_conversion)
+    return;
+
   // Note deleted candidates, but only if they're viable.
   if (Cand->Viable) {
     if (Fn->isDeleted()) {
@@ -12540,7 +12568,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
 /// Returns false if resolveAddressOfSingleOverloadCandidate fails.
 /// Otherwise, returns true. This may emit diagnostics and return true.
 bool Sema::resolveAndFixAddressOfSingleOverloadCandidate(
-    ExprResult &SrcExpr, bool DoFunctionPointerConverion) {
+    ExprResult &SrcExpr, bool DoFunctionPointerConversion) {
   Expr *E = SrcExpr.get();
   assert(E->getType() == Context.OverloadTy && "SrcExpr must be an overload");
 
@@ -12556,7 +12584,7 @@ bool Sema::resolveAndFixAddressOfSingleOverloadCandidate(
   DiagnoseUseOfDecl(Found, E->getExprLoc());
   CheckAddressOfMemberAccess(E, DAP);
   Expr *Fixed = FixOverloadedFunctionReference(E, DAP, Found);
-  if (DoFunctionPointerConverion && Fixed->getType()->isFunctionType())
+  if (DoFunctionPointerConversion && Fixed->getType()->isFunctionType())
     SrcExpr = DefaultFunctionArrayConversion(Fixed, /*Diagnose=*/false);
   else
     SrcExpr = Fixed;
@@ -12658,10 +12686,9 @@ Sema::ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
 // expression, regardless of whether or not it succeeded.  Always
 // returns true if 'complain' is set.
 bool Sema::ResolveAndFixSingleFunctionTemplateSpecialization(
-                      ExprResult &SrcExpr, bool doFunctionPointerConverion,
-                      bool complain, SourceRange OpRangeForComplaining,
-                                           QualType DestTypeForComplaining,
-                                            unsigned DiagIDForComplaining) {
+    ExprResult &SrcExpr, bool doFunctionPointerConversion, bool complain,
+    SourceRange OpRangeForComplaining, QualType DestTypeForComplaining,
+    unsigned DiagIDForComplaining) {
   assert(SrcExpr.get()->getType() == Context.OverloadTy);
 
   OverloadExpr::FindResult ovl = OverloadExpr::find(SrcExpr.get());
@@ -12702,7 +12729,7 @@ bool Sema::ResolveAndFixSingleFunctionTemplateSpecialization(
         FixOverloadedFunctionReference(SrcExpr.get(), found, fn);
 
     // If desired, do function-to-pointer decay.
-    if (doFunctionPointerConverion) {
+    if (doFunctionPointerConversion) {
       SingleFunctionExpression =
         DefaultFunctionArrayLvalueConversion(SingleFunctionExpression.get());
       if (SingleFunctionExpression.isInvalid()) {
@@ -13196,7 +13223,7 @@ static QualType chooseRecoveryType(OverloadCandidateSet &CS,
 
   if (!Result)
     return QualType();
-  auto Value = Result.getValue();
+  auto Value = *Result;
   if (Value.isNull() || Value->isUndeducedType())
     return QualType();
   return Value;

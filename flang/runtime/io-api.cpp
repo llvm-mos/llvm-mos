@@ -147,6 +147,18 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
       format, formatLength, scratchArea, scratchBytes, sourceFile, sourceLine);
 }
 
+static Cookie NoopUnit(const Terminator &terminator, int unitNumber,
+    enum Iostat iostat = IostatOk) {
+  Cookie cookie{&New<NoopStatementState>{terminator}(
+      terminator.sourceFileName(), terminator.sourceLine(), unitNumber)
+                     .release()
+                     ->ioStatementState()};
+  if (iostat != IostatOk) {
+    cookie->GetIoErrorHandler().SetPendingError(iostat);
+  }
+  return cookie;
+}
+
 static ExternalFileUnit *GetOrCreateUnit(int unitNumber, Direction direction,
     std::optional<bool> isUnformatted, const Terminator &terminator,
     Cookie &errorCookie) {
@@ -156,11 +168,7 @@ static ExternalFileUnit *GetOrCreateUnit(int unitNumber, Direction direction,
     errorCookie = nullptr;
     return unit;
   } else {
-    errorCookie = &New<NoopStatementState>{terminator}(
-        terminator.sourceFileName(), terminator.sourceLine(), unitNumber)
-                       .release()
-                       ->ioStatementState();
-    errorCookie->GetIoErrorHandler().SetPendingError(IostatBadUnitNumber);
+    errorCookie = NoopUnit(terminator, unitNumber, IostatBadUnitNumber);
     return nullptr;
   }
 }
@@ -205,10 +213,10 @@ Cookie BeginExternalListIO(
     }
     if (iostat == IostatOk) {
       return &unit->BeginIoStatement<STATE<DIR>>(
-          std::forward<A>(xs)..., *unit, sourceFile, sourceLine);
+          terminator, std::forward<A>(xs)..., *unit, sourceFile, sourceLine);
     } else {
       return &unit->BeginIoStatement<ErroneousIoStatementState>(
-          iostat, unit, sourceFile, sourceLine);
+          terminator, iostat, unit, sourceFile, sourceLine);
     }
   }
 }
@@ -262,10 +270,10 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
     }
     if (iostat == IostatOk) {
       return &unit->BeginIoStatement<ExternalFormattedIoStatementState<DIR>>(
-          *unit, format, formatLength, sourceFile, sourceLine);
+          terminator, *unit, format, formatLength, sourceFile, sourceLine);
     } else {
       return &unit->BeginIoStatement<ErroneousIoStatementState>(
-          iostat, unit, sourceFile, sourceLine);
+          terminator, iostat, unit, sourceFile, sourceLine);
     }
   }
 }
@@ -319,7 +327,7 @@ Cookie BeginUnformattedIO(
     if (iostat == IostatOk) {
       IoStatementState &io{
           unit->BeginIoStatement<ExternalUnformattedIoStatementState<DIR>>(
-              *unit, sourceFile, sourceLine)};
+              terminator, *unit, sourceFile, sourceLine)};
       if constexpr (DIR == Direction::Output) {
         if (unit->access == Access::Sequential) {
           // Create space for (sub)record header to be completed by
@@ -331,7 +339,7 @@ Cookie BeginUnformattedIO(
       return &io;
     } else {
       return &unit->BeginIoStatement<ErroneousIoStatementState>(
-          iostat, unit, sourceFile, sourceLine);
+          terminator, iostat, unit, sourceFile, sourceLine);
     }
   }
 }
@@ -356,14 +364,9 @@ Cookie IONAME(BeginOpenUnit)( // OPEN(without NEWUNIT=)
       unit{ExternalFileUnit::LookUpOrCreate(
           unitNumber, terminator, wasExtant)}) {
     return &unit->BeginIoStatement<OpenStatementState>(
-        *unit, wasExtant, sourceFile, sourceLine);
+        terminator, *unit, wasExtant, sourceFile, sourceLine);
   } else {
-    auto &io{
-        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
-            .release()
-            ->ioStatementState()};
-    io.GetIoErrorHandler().SetPendingError(IostatBadUnitNumber);
-    return &io;
+    return NoopUnit(terminator, unitNumber, IostatBadUnitNumber);
   }
 }
 
@@ -373,7 +376,7 @@ Cookie IONAME(BeginOpenNewUnit)( // OPEN(NEWUNIT=j)
   ExternalFileUnit &unit{
       ExternalFileUnit::NewUnit(terminator, false /*not child I/O*/)};
   return &unit.BeginIoStatement<OpenStatementState>(
-      unit, false /*was an existing file*/, sourceFile, sourceLine);
+      terminator, unit, false /*was an existing file*/, sourceFile, sourceLine);
 }
 
 Cookie IONAME(BeginWait)(ExternalUnit unitNumber, AsynchronousId id,
@@ -381,21 +384,15 @@ Cookie IONAME(BeginWait)(ExternalUnit unitNumber, AsynchronousId id,
   Terminator terminator{sourceFile, sourceLine};
   if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
     if (unit->Wait(id)) {
-      return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+      return &unit->BeginIoStatement<ExternalMiscIoStatementState>(terminator,
           *unit, ExternalMiscIoStatementState::Wait, sourceFile, sourceLine);
     } else {
       return &unit->BeginIoStatement<ErroneousIoStatementState>(
-          IostatBadWaitId, unit, sourceFile, sourceLine);
+          terminator, IostatBadWaitId, unit, sourceFile, sourceLine);
     }
   } else {
-    auto &io{
-        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
-            .release()
-            ->ioStatementState()};
-    if (id != 0) {
-      io.GetIoErrorHandler().SetPendingError(IostatBadWaitUnit);
-    }
-    return &io;
+    return NoopUnit(
+        terminator, unitNumber, id == 0 ? IostatOk : IostatBadWaitUnit);
   }
 }
 Cookie IONAME(BeginWaitAll)(
@@ -405,29 +402,26 @@ Cookie IONAME(BeginWaitAll)(
 
 Cookie IONAME(BeginClose)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
   if (ExternalFileUnit * unit{ExternalFileUnit::LookUpForClose(unitNumber)}) {
     return &unit->BeginIoStatement<CloseStatementState>(
-        *unit, sourceFile, sourceLine);
+        terminator, *unit, sourceFile, sourceLine);
   } else {
     // CLOSE(UNIT=bad unit) is just a no-op
-    Terminator oom{sourceFile, sourceLine};
-    return &New<NoopStatementState>{oom}(sourceFile, sourceLine, unitNumber)
-                .release()
-                ->ioStatementState();
+    return NoopUnit(terminator, unitNumber);
   }
 }
 
 Cookie IONAME(BeginFlush)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
   if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
-    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(terminator,
         *unit, ExternalMiscIoStatementState::Flush, sourceFile, sourceLine);
   } else {
-    // FLUSH(UNIT=unknown) is a no-op
-    Terminator oom{sourceFile, sourceLine};
-    return &New<NoopStatementState>{oom}(sourceFile, sourceLine, unitNumber)
-                .release()
-                ->ioStatementState();
+    // FLUSH(UNIT=bad unit) is an error; an unconnected unit is a no-op
+    return NoopUnit(terminator, unitNumber,
+        unitNumber >= 0 ? IostatOk : IostatBadFlushUnit);
   }
 }
 
@@ -435,15 +429,10 @@ Cookie IONAME(BeginBackspace)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
-    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(terminator,
         *unit, ExternalMiscIoStatementState::Backspace, sourceFile, sourceLine);
   } else {
-    auto &io{
-        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
-            .release()
-            ->ioStatementState()};
-    io.GetIoErrorHandler().SetPendingError(IostatBadBackspaceUnit);
-    return &io;
+    return NoopUnit(terminator, unitNumber, IostatBadBackspaceUnit);
   }
 }
 
@@ -454,7 +443,7 @@ Cookie IONAME(BeginEndfile)(
   if (ExternalFileUnit *
       unit{GetOrCreateUnit(unitNumber, Direction::Output, std::nullopt,
           terminator, errorCookie)}) {
-    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(terminator,
         *unit, ExternalMiscIoStatementState::Endfile, sourceFile, sourceLine);
   } else {
     return errorCookie;
@@ -468,7 +457,7 @@ Cookie IONAME(BeginRewind)(
   if (ExternalFileUnit *
       unit{GetOrCreateUnit(unitNumber, Direction::Input, std::nullopt,
           terminator, errorCookie)}) {
-    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(terminator,
         *unit, ExternalMiscIoStatementState::Rewind, sourceFile, sourceLine);
   } else {
     return errorCookie;
@@ -477,18 +466,19 @@ Cookie IONAME(BeginRewind)(
 
 Cookie IONAME(BeginInquireUnit)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
   if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
     if (ChildIo * child{unit->GetChildIo()}) {
       return &child->BeginIoStatement<InquireUnitState>(
           *unit, sourceFile, sourceLine);
     } else {
       return &unit->BeginIoStatement<InquireUnitState>(
-          *unit, sourceFile, sourceLine);
+          terminator, *unit, sourceFile, sourceLine);
     }
   } else {
     // INQUIRE(UNIT=unrecognized unit)
-    Terminator oom{sourceFile, sourceLine};
-    return &New<InquireNoUnitState>{oom}(sourceFile, sourceLine, unitNumber)
+    return &New<InquireNoUnitState>{terminator}(
+        sourceFile, sourceLine, unitNumber)
                 .release()
                 ->ioStatementState();
   }
@@ -496,17 +486,17 @@ Cookie IONAME(BeginInquireUnit)(
 
 Cookie IONAME(BeginInquireFile)(const char *path, std::size_t pathLength,
     const char *sourceFile, int sourceLine) {
-  Terminator oom{sourceFile, sourceLine};
-  auto trimmed{
-      SaveDefaultCharacter(path, TrimTrailingSpaces(path, pathLength), oom)};
+  Terminator terminator{sourceFile, sourceLine};
+  auto trimmed{SaveDefaultCharacter(
+      path, TrimTrailingSpaces(path, pathLength), terminator)};
   if (ExternalFileUnit *
       unit{ExternalFileUnit::LookUp(
           trimmed.get(), std::strlen(trimmed.get()))}) {
     // INQUIRE(FILE=) to a connected unit
     return &unit->BeginIoStatement<InquireUnitState>(
-        *unit, sourceFile, sourceLine);
+        terminator, *unit, sourceFile, sourceLine);
   } else {
-    return &New<InquireUnconnectedFileState>{oom}(
+    return &New<InquireUnconnectedFileState>{terminator}(
         std::move(trimmed), sourceFile, sourceLine)
                 .release()
                 ->ioStatementState();
@@ -634,44 +624,22 @@ bool IONAME(SetPad)(Cookie cookie, const char *keyword, std::size_t length) {
 
 bool IONAME(SetPos)(Cookie cookie, std::int64_t pos) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
   IoErrorHandler &handler{io.GetIoErrorHandler()};
-  if (connection.access != Access::Stream) {
-    handler.SignalError("POS= may not appear unless ACCESS='STREAM'");
-    return false;
-  }
-  if (pos < 1) { // POS=1 is beginning of file (12.6.2.11)
-    handler.SignalError("POS=%zd is invalid", static_cast<std::intmax_t>(pos));
-    return false;
-  }
   if (auto *unit{io.GetExternalFileUnit()}) {
-    unit->SetPosition(pos - 1, handler);
-    return true;
+    return unit->SetStreamPos(pos, handler);
   } else if (!io.get_if<ErroneousIoStatementState>()) {
-    io.GetIoErrorHandler().Crash("SetPos() called on internal unit");
+    handler.Crash("SetPos() called on internal unit");
   }
   return false;
 }
 
 bool IONAME(SetRec)(Cookie cookie, std::int64_t rec) {
   IoStatementState &io{*cookie};
-  ConnectionState &connection{io.GetConnectionState()};
   IoErrorHandler &handler{io.GetIoErrorHandler()};
-  if (connection.access != Access::Direct) {
-    handler.SignalError("REC= may not appear unless ACCESS='DIRECT'");
-    return false;
-  }
-  if (!connection.openRecl) {
-    handler.SignalError("RECL= was not specified");
-    return false;
-  }
-  if (rec < 1) {
-    handler.SignalError("REC=%zd is invalid", static_cast<std::intmax_t>(rec));
-    return false;
-  }
-  connection.currentRecordNumber = rec;
   if (auto *unit{io.GetExternalFileUnit()}) {
-    unit->SetPosition((rec - 1) * *connection.openRecl, handler);
+    unit->SetDirectRec(rec, handler);
+  } else if (!io.get_if<ErroneousIoStatementState>()) {
+    handler.Crash("SetRec() called on internal unit");
   }
   return true;
 }

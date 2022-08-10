@@ -378,7 +378,7 @@ wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
 SymbolRelevanceSignals::DerivedSignals
 SymbolRelevanceSignals::calculateDerivedSignals() const {
   DerivedSignals Derived;
-  Derived.NameMatchesContext = wordMatching(Name, ContextWords).hasValue();
+  Derived.NameMatchesContext = wordMatching(Name, ContextWords).has_value();
   Derived.FileProximityDistance = !FileProximityMatch || SymbolURI.empty()
                                       ? FileDistance::Unreachable
                                       : FileProximityMatch->distance(SymbolURI);
@@ -570,7 +570,7 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
   DecisionForestScores Scores;
   // Exponentiating DecisionForest prediction makes the score of each tree a
   // multiplciative boost (like NameMatch). This allows us to weigh the
-  // prediciton score and NameMatch appropriately.
+  // prediction score and NameMatch appropriately.
   Scores.ExcludingName = pow(Base, Evaluate(E));
   // Following cases are not part of the generated training dataset:
   //  - Symbols with `NeedsFixIts`.

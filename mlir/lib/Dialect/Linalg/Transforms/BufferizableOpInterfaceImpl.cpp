@@ -44,15 +44,21 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    newInputBuffers.push_back(getBuffer(rewriter, opOperand->get(), options));
+    FailureOr<Value> buffer = getBuffer(rewriter, opOperand->get(), options);
+    if (failed(buffer))
+      return failure();
+    newInputBuffers.push_back(*buffer);
   }
 
   // New output operands for the cloned op.
   SmallVector<Value> newOutputBuffers;
   for (OpResult opResult : op->getOpResults()) {
     OpOperand *opOperand = op.getOutputOperand(opResult.getResultNumber());
-    Value resultBuffer = getBuffer(rewriter, opOperand->get(), options);
-    newOutputBuffers.push_back(resultBuffer);
+    FailureOr<Value> resultBuffer =
+        getBuffer(rewriter, opOperand->get(), options);
+    if (failed(resultBuffer))
+      return failure();
+    newOutputBuffers.push_back(*resultBuffer);
   }
 
   // Merge input/output operands.
@@ -131,8 +137,7 @@ struct LinalgOpInterface
 template <typename... Ops>
 struct LinalgOpInterfaceHelper {
   static void registerOpInterface(MLIRContext *ctx) {
-    (void)std::initializer_list<int>{
-        0, (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), 0)...};
+    (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), ...);
   }
 };
 } // namespace

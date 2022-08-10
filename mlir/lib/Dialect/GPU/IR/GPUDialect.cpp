@@ -1040,9 +1040,7 @@ LogicalResult gpu::ReturnOp::verify() {
 
   for (const auto &pair : llvm::enumerate(
            llvm::zip(function.getFunctionType().getResults(), operands()))) {
-    Type type;
-    Value operand;
-    std::tie(type, operand) = pair.value();
+    auto [type, operand] = pair.value();
     if (type != operand.getType())
       return emitOpError() << "unexpected type `" << operand.getType()
                            << "' for operand #" << pair.index();
@@ -1372,15 +1370,15 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
 
   LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto index = dimOp.index().getDefiningOp<arith::ConstantIndexOp>();
+    auto index = dimOp.getIndex().getDefiningOp<arith::ConstantIndexOp>();
     if (!index)
       return failure();
 
-    auto memrefType = dimOp.source().getType().dyn_cast<MemRefType>();
+    auto memrefType = dimOp.getSource().getType().dyn_cast<MemRefType>();
     if (!memrefType || !memrefType.isDynamicDim(index.value()))
       return failure();
 
-    auto alloc = dimOp.source().getDefiningOp<AllocOp>();
+    auto alloc = dimOp.getSource().getDefiningOp<AllocOp>();
     if (!alloc)
       return failure();
 

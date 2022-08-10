@@ -1404,8 +1404,12 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Value);
   case CCValAssign::BCvt: {
     assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::i128);
-    assert(VA.getValVT().isVector() || VA.getValVT() == MVT::f64 ||
-           VA.getValVT() == MVT::f128);
+    assert(VA.getValVT().isVector() || VA.getValVT() == MVT::f32 ||
+           VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::f128);
+    // For an f32 vararg we need to first promote it to an f64 and then
+    // bitcast it to an i64.
+    if (VA.getValVT() == MVT::f32 && VA.getLocVT() == MVT::i64)
+      Value = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f64, Value);
     MVT BitCastToType = VA.getValVT().isVector() && VA.getLocVT() == MVT::i64
                             ? MVT::v2i64
                             : VA.getLocVT();
@@ -3033,7 +3037,7 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
     // Handle tests for order using (or (ogt y x) (oge x y)).
   case ISD::SETUO:
     Invert = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETO: {
     assert(IsFP && "Unexpected integer comparison");
     SDValue LT = getVectorCmp(DAG, getVectorComparison(ISD::SETOGT, Mode),
@@ -3050,7 +3054,7 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
     // Handle <> tests using (or (ogt y x) (ogt x y)).
   case ISD::SETUEQ:
     Invert = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETONE: {
     assert(IsFP && "Unexpected integer comparison");
     SDValue LT = getVectorCmp(DAG, getVectorComparison(ISD::SETOGT, Mode),
@@ -7316,7 +7320,7 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::s390_vupllh:
     case Intrinsic::s390_vupllf:
       IsLogical = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Intrinsic::s390_vuphb:  // VECTOR UNPACK HIGH
     case Intrinsic::s390_vuphh:
     case Intrinsic::s390_vuphf:

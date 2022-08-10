@@ -77,7 +77,7 @@ template <typename SingleInputPoolingOp>
 static InputAndOutputIndices
 getInputAndOutputIndices(OpBuilder &b, Location loc, ArrayRef<Value> allIvs,
                          SingleInputPoolingOp op) {
-  auto mapsRange = op.indexing_maps().template getAsRange<AffineMapAttr>();
+  auto mapsRange = op.getIndexingMapsArray();
   auto maps = llvm::to_vector<8>(
       llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
   return InputAndOutputIndices{
@@ -189,7 +189,7 @@ static void replaceIndexOpsByInductionVariables(LinalgOp linalgOp,
     LoopLikeOpInterface loopOp = loopOps.back();
     for (IndexOp indexOp :
          llvm::make_early_inc_range(loopOp.getLoopBody().getOps<IndexOp>()))
-      rewriter.replaceOp(indexOp, allIvs[indexOp.dim()]);
+      rewriter.replaceOp(indexOp, allIvs[indexOp.getDim()]);
   }
 }
 

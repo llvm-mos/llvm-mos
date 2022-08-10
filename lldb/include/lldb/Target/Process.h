@@ -475,15 +475,6 @@ public:
     const ProcessEventData &operator=(const ProcessEventData &) = delete;
   };
 
-  /// Construct with a shared pointer to a target, and the Process listener.
-  /// Uses the Host UnixSignalsSP by default.
-  Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
-
-  /// Construct with a shared pointer to a target, the Process listener, and
-  /// the appropriate UnixSignalsSP for the process.
-  Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-          const lldb::UnixSignalsSP &unix_signals_sp);
-
   /// Destructor.
   ///
   /// The destructor is virtual since this class is designed to be inherited
@@ -1715,8 +1706,8 @@ public:
   ///     an error saying so.
   ///     If it does, either the memory tags or an error describing a
   ///     failure to read or unpack them.
-  llvm::Expected<std::vector<lldb::addr_t>> ReadMemoryTags(lldb::addr_t addr,
-                                                           size_t len);
+  virtual llvm::Expected<std::vector<lldb::addr_t>>
+  ReadMemoryTags(lldb::addr_t addr, size_t len);
 
   /// Write memory tags for a range of memory.
   /// (calls DoWriteMemoryTags to do the target specific work)
@@ -2499,6 +2490,16 @@ void PruneThreadPlans();
 
 protected:
   friend class Trace;
+
+  /// Construct with a shared pointer to a target, and the Process listener.
+  /// Uses the Host UnixSignalsSP by default.
+  Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+
+  /// Construct with a shared pointer to a target, the Process listener, and
+  /// the appropriate UnixSignalsSP for the process.
+  Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+          const lldb::UnixSignalsSP &unix_signals_sp);
+
   ///  Get the processor tracing type supported for this process.
   ///  Responses might be different depending on the architecture and
   ///  capabilities of the underlying OS.

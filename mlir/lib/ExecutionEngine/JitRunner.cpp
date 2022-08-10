@@ -148,8 +148,7 @@ static Error compileAndExecute(Options &options, ModuleOp module,
                                CompileAndExecuteConfig config, void **args) {
   Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel;
   if (auto clOptLevel = getCommandLineOptLevel(options))
-    jitCodeGenOptLevel =
-        static_cast<llvm::CodeGenOpt::Level>(clOptLevel.getValue());
+    jitCodeGenOptLevel = static_cast<llvm::CodeGenOpt::Level>(*clOptLevel);
 
   // If shared library implements custom mlir-runner library init and destroy
   // functions, we'll use them to register the library with the execution
@@ -230,7 +229,8 @@ static Error compileAndExecute(Options &options, ModuleOp module,
   (*fptr)(args);
 
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
-  llvm::for_each(destroyFns, [](MlirRunnerDestroyFn destroy) { destroy(); });
+  for (MlirRunnerDestroyFn destroy : destroyFns)
+    destroy();
 
   return Error::success();
 }

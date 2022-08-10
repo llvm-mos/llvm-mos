@@ -68,7 +68,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     case Instruction::Shl:
       // SIMD128's shifts currently only accept a scalar shift count. For each
       // element, we'll need to extract, op, insert. The following is a rough
-      // approxmation.
+      // approximation.
       if (Opd2Info != TTI::OK_UniformValue &&
           Opd2Info != TTI::OK_UniformConstantValue)
         Cost =
@@ -138,4 +138,8 @@ void WebAssemblyTTIImpl::getUnrollingPreferences(
   // Set number of instructions optimized when "back edge"
   // becomes "fall through" to default value of 2.
   UP.BEInsns = 2;
+}
+
+bool WebAssemblyTTIImpl::supportsTailCalls() const {
+  return getST()->hasTailCall();
 }

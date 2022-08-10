@@ -333,7 +333,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
     }
     return LLDB_INVALID_MODULE_VERSION;
   } else
-    return m_Foundation_major.getValue();
+    return *m_Foundation_major;
 }
 
 void AppleObjCRuntime::GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
@@ -503,7 +503,7 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
 /// \param msg The message to add to the log.
 /// \return An invalid ThreadSP to be returned from
 ///         GetBacktraceThreadFromException.
-LLVM_NODISCARD
+[[nodiscard]]
 static ThreadSP FailExceptionParsing(llvm::StringRef msg) {
   Log *log = GetLog(LLDBLog::Language);
   LLDB_LOG(log, "Failed getting backtrace from exception: {0}", msg);

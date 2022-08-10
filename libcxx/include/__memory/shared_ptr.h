@@ -11,6 +11,8 @@
 #define _LIBCPP___MEMORY_SHARED_PTR_H
 
 #include <__availability>
+#include <__compare/compare_three_way.h>
+#include <__compare/ordering.h>
 #include <__config>
 #include <__functional/binary_function.h>
 #include <__functional/operations.h>
@@ -20,6 +22,7 @@
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/auto_ptr.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
@@ -38,9 +41,6 @@
 #  include <atomic>
 #endif
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-#   include <__memory/auto_ptr.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -1186,6 +1186,8 @@ operator==(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT
     return __x.get() == __y.get();
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template<class _Tp, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1232,6 +1234,17 @@ operator>=(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT
     return !(__x < __y);
 }
 
+#endif // _LIBCPP_STD_VER <= 17
+
+#if _LIBCPP_STD_VER > 17
+template<class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI strong_ordering
+operator<=>(shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) noexcept
+{
+    return compare_three_way()(__x.get(), __y.get());
+}
+#endif
+
 template<class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1239,6 +1252,8 @@ operator==(const shared_ptr<_Tp>& __x, nullptr_t) _NOEXCEPT
 {
     return !__x;
 }
+
+#if _LIBCPP_STD_VER <= 17
 
 template<class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1327,6 +1342,17 @@ operator>=(nullptr_t, const shared_ptr<_Tp>& __x) _NOEXCEPT
 {
     return !(nullptr < __x);
 }
+
+#endif // _LIBCPP_STD_VER <= 17
+
+#if _LIBCPP_STD_VER > 17
+template<class _Tp>
+_LIBCPP_HIDE_FROM_ABI strong_ordering
+operator<=>(shared_ptr<_Tp> const& __x, nullptr_t) noexcept
+{
+    return compare_three_way()(__x.get(), static_cast<typename shared_ptr<_Tp>::element_type*>(nullptr));
+}
+#endif
 
 template<class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1657,19 +1683,10 @@ template <class _Tp> struct owner_less;
 #endif
 
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS owner_less<shared_ptr<_Tp> >
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : binary_function<shared_ptr<_Tp>, shared_ptr<_Tp>, bool>
-#endif
+    : __binary_function<shared_ptr<_Tp>, shared_ptr<_Tp>, bool>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef bool result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef shared_ptr<_Tp> first_argument_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef shared_ptr<_Tp> second_argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(shared_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
@@ -1681,19 +1698,10 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
         {return __x.owner_before(__y);}
 };
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS owner_less<weak_ptr<_Tp> >
-#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : binary_function<weak_ptr<_Tp>, weak_ptr<_Tp>, bool>
-#endif
+    : __binary_function<weak_ptr<_Tp>, weak_ptr<_Tp>, bool>
 {
-_LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef bool result_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef weak_ptr<_Tp> first_argument_type;
-    _LIBCPP_DEPRECATED_IN_CXX17 typedef weak_ptr<_Tp> second_argument_type;
-#endif
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(  weak_ptr<_Tp> const& __x,   weak_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}

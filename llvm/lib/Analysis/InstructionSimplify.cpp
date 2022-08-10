@@ -1252,12 +1252,14 @@ static bool isPoisonShift(Value *Amount, const SimplifyQuery &Q) {
   if (Q.isUndefValue(C))
     return true;
 
-  // Shifting by the bitwidth or more is undefined.
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(C))
-    if (CI->getValue().uge(CI->getType()->getScalarSizeInBits()))
-      return true;
+  // Shifting by the bitwidth or more is poison. This covers scalars and
+  // fixed/scalable vectors with splat constants.
+  const APInt *AmountC;
+  if (match(C, m_APInt(AmountC)) && AmountC->uge(AmountC->getBitWidth()))
+    return true;
 
-  // If all lanes of a vector shift are undefined the whole shift is.
+  // Try harder for fixed-length vectors:
+  // If all lanes of a vector shift are poison, the whole shift is poison.
   if (isa<ConstantVector>(C) || isa<ConstantDataVector>(C)) {
     for (unsigned I = 0,
                   E = cast<FixedVectorType>(C->getType())->getNumElements();
@@ -1582,57 +1584,6 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   return nullptr;
 }
 
-/// Commuted variants are assumed to be handled by calling this function again
-/// with the parameters swapped.
-static Value *simplifyAndOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
-  ICmpInst::Predicate Pred0, Pred1;
-  Value *A, *B;
-  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
-      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
-    return nullptr;
-
-  // We have (icmp Pred0, A, B) & (icmp Pred1, A, B).
-  // If Op1 is always implied true by Op0, then Op0 is a subset of Op1, and we
-  // can eliminate Op1 from this 'and'.
-  if (ICmpInst::isImpliedTrueByMatchingCmp(Pred0, Pred1))
-    return Op0;
-
-  // Check for any combination of predicates that are guaranteed to be disjoint.
-  if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_EQ && ICmpInst::isFalseWhenEqual(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_SLT && Pred1 == ICmpInst::ICMP_SGT) ||
-      (Pred0 == ICmpInst::ICMP_ULT && Pred1 == ICmpInst::ICMP_UGT))
-    return getFalse(Op0->getType());
-
-  return nullptr;
-}
-
-/// Commuted variants are assumed to be handled by calling this function again
-/// with the parameters swapped.
-static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
-  ICmpInst::Predicate Pred0, Pred1;
-  Value *A, *B;
-  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
-      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
-    return nullptr;
-
-  // We have (icmp Pred0, A, B) | (icmp Pred1, A, B).
-  // If Op1 is always implied true by Op0, then Op0 is a subset of Op1, and we
-  // can eliminate Op0 from this 'or'.
-  if (ICmpInst::isImpliedTrueByMatchingCmp(Pred0, Pred1))
-    return Op1;
-
-  // Check for any combination of predicates that cover the entire range of
-  // possibilities.
-  if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_NE && ICmpInst::isTrueWhenEqual(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_SLE && Pred1 == ICmpInst::ICMP_SGE) ||
-      (Pred0 == ICmpInst::ICMP_ULE && Pred1 == ICmpInst::ICMP_UGE))
-    return getTrue(Op0->getType());
-
-  return nullptr;
-}
-
 /// Test if a pair of compares with a shared operand and 2 constants has an
 /// empty set intersection, full set union, or if one compare is a superset of
 /// the other.
@@ -1845,11 +1796,6 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/true, Q))
     return X;
 
-  if (Value *X = simplifyAndOfICmpsWithSameOperands(Op0, Op1))
-    return X;
-  if (Value *X = simplifyAndOfICmpsWithSameOperands(Op1, Op0))
-    return X;
-
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
     return X;
 
@@ -1924,11 +1870,6 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false, Q))
     return X;
   if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/false, Q))
-    return X;
-
-  if (Value *X = simplifyOrOfICmpsWithSameOperands(Op0, Op1))
-    return X;
-  if (Value *X = simplifyOrOfICmpsWithSameOperands(Op1, Op0))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
@@ -2232,12 +2173,22 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getNullValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    // Op0&Op1 -> Op0 where Op0 implies Op1
-    if (isImpliedCondition(Op0, Op1, Q.DL).value_or(false))
-      return Op0;
-    // Op0&Op1 -> Op1 where Op1 implies Op0
-    if (isImpliedCondition(Op1, Op0, Q.DL).value_or(false))
-      return Op1;
+    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
+      // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
+      if (*Implied == true)
+        return Op0;
+      // If Op0 is true implies Op1 is false, then they are not true together.
+      if (*Implied == false)
+        return ConstantInt::getFalse(Op0->getType());
+    }
+    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
+      // If Op1 is true implies Op0 is true, then Op1 is a subset of Op0.
+      if (Implied.value())
+        return Op1;
+      // If Op1 is true implies Op0 is false, then they are not true together.
+      if (!Implied.value())
+        return ConstantInt::getFalse(Op1->getType());
+    }
   }
 
   return nullptr;
@@ -2472,12 +2423,22 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return V;
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    // Op0|Op1 -> Op1 where Op0 implies Op1
-    if (isImpliedCondition(Op0, Op1, Q.DL).value_or(false))
-      return Op1;
-    // Op0|Op1 -> Op0 where Op1 implies Op0
-    if (isImpliedCondition(Op1, Op0, Q.DL).value_or(false))
-      return Op0;
+    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL, false)) {
+      // If Op0 is false implies Op1 is false, then Op1 is a subset of Op0.
+      if (*Implied == false)
+        return Op0;
+      // If Op0 is false implies Op1 is true, then at least one is always true.
+      if (*Implied == true)
+        return ConstantInt::getTrue(Op0->getType());
+    }
+    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL, false)) {
+      // If Op1 is false implies Op0 is false, then Op0 is a subset of Op1.
+      if (*Implied == false)
+        return Op1;
+      // If Op1 is false implies Op0 is true, then at least one is always true.
+      if (*Implied == true)
+        return ConstantInt::getTrue(Op1->getType());
+    }
   }
 
   return nullptr;
@@ -2701,7 +2662,7 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
   default:
     return nullptr;
 
-    // Equality comaprisons are easy to fold.
+    // Equality comparisons are easy to fold.
   case CmpInst::ICMP_EQ:
   case CmpInst::ICMP_NE:
     break;
@@ -3066,7 +3027,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
       KnownBits Known = computeKnownBits(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
       if (!Known.isNonNegative())
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case ICmpInst::ICMP_EQ:
     case ICmpInst::ICMP_UGT:
@@ -3077,7 +3038,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
       KnownBits Known = computeKnownBits(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
       if (!Known.isNonNegative())
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case ICmpInst::ICMP_NE:
     case ICmpInst::ICMP_ULT:
@@ -3900,7 +3861,8 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI);
+      return ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL, Q.TLI,
+                                             Q.CxtI);
 
     // If we have a constant, make sure it is on the RHS.
     std::swap(LHS, RHS);
@@ -4208,14 +4170,6 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   // refinement.
   if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
     return nullptr;
-
-  if (CmpInst *C = dyn_cast<CmpInst>(I))
-    return ConstantFoldCompareInstOperands(C->getPredicate(), ConstOps[0],
-                                           ConstOps[1], Q.DL, Q.TLI);
-
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    if (!LI->isVolatile())
-      return ConstantFoldLoadFromConstPtr(ConstOps[0], LI->getType(), Q.DL);
 
   return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
 }
@@ -4856,12 +4810,6 @@ static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
     return UndefValue::get(PN->getType());
 
   if (HasUndefInput) {
-    // We cannot start executing a trapping constant expression on more control
-    // flow paths.
-    auto *C = dyn_cast<Constant>(CommonValue);
-    if (C && C->canTrap())
-      return nullptr;
-
     // If we have a PHI node like phi(X, undef, X), where X is defined by some
     // instruction, we cannot return X as the result of the PHI node unless it
     // dominates the PHI block.
@@ -5598,6 +5546,24 @@ static bool isIdempotent(Intrinsic::ID ID) {
   }
 }
 
+/// Return true if the intrinsic rounds a floating-point value to an integral
+/// floating-point value (not an integer type).
+static bool removesFPFraction(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    return false;
+
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::roundeven:
+    return true;
+  }
+}
+
 static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
                                    const DataLayout &DL) {
   GlobalValue *PtrSym;
@@ -5663,6 +5629,18 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
       if (II->getIntrinsicID() == IID)
         return II;
 
+  if (removesFPFraction(IID)) {
+    // Converting from int or calling a rounding function always results in a
+    // finite integral number or infinity. For those inputs, rounding functions
+    // always return the same value, so the (2nd) rounding is eliminated. Ex:
+    // floor (sitofp x) -> sitofp x
+    // round (ceil x) -> ceil x
+    auto *II = dyn_cast<IntrinsicInst>(Op0);
+    if ((II && removesFPFraction(II->getIntrinsicID())) ||
+        match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+      return Op0;
+  }
+
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
@@ -5720,23 +5698,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
         match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X))))
       return X;
     break;
-  case Intrinsic::floor:
-  case Intrinsic::trunc:
-  case Intrinsic::ceil:
-  case Intrinsic::round:
-  case Intrinsic::roundeven:
-  case Intrinsic::nearbyint:
-  case Intrinsic::rint: {
-    // floor (sitofp x) -> sitofp x
-    // floor (uitofp x) -> uitofp x
-    //
-    // Converting from int always results in a finite integral number or
-    // infinity. For either of those inputs, these rounding functions always
-    // return the same value, so the rounding can be eliminated.
-    if (match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
-      return Op0;
-    break;
-  }
   case Intrinsic::experimental_vector_reverse:
     // experimental.vector.reverse(experimental.vector.reverse(x)) -> x
     if (match(Op0,
@@ -5908,7 +5869,7 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // sat(X + MAX) -> MAX
     if (match(Op0, m_AllOnes()) || match(Op1, m_AllOnes()))
       return Constant::getAllOnesValue(ReturnType);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::sadd_sat:
     // sat(X + undef) -> -1
     // sat(undef + X) -> -1
@@ -5928,7 +5889,7 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // sat(0 - X) -> 0, sat(X - MAX) -> 0
     if (match(Op0, m_Zero()) || match(Op1, m_AllOnes()))
       return Constant::getNullValue(ReturnType);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::ssub_sat:
     // X - X -> 0, X - undef -> 0, undef - X -> 0
     if (Op0 == Op1 || Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
@@ -6021,14 +5982,14 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
 
     break;
   }
-  case Intrinsic::experimental_vector_extract: {
+  case Intrinsic::vector_extract: {
     Type *ReturnType = F->getReturnType();
 
     // (extract_vector (insert_vector _, X, 0), 0) -> X
     unsigned IdxN = cast<ConstantInt>(Op1)->getZExtValue();
     Value *X = nullptr;
-    if (match(Op0, m_Intrinsic<Intrinsic::experimental_vector_insert>(
-                       m_Value(), m_Value(X), m_Zero())) &&
+    if (match(Op0, m_Intrinsic<Intrinsic::vector_insert>(m_Value(), m_Value(X),
+                                                         m_Zero())) &&
         IdxN == 0 && X->getType() == ReturnType)
       return X;
 
@@ -6124,8 +6085,8 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
     Value *Op2 = Call->getArgOperand(2);
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
     if (Value *V = simplifyFPOp({Op0, Op1, Op2}, {}, Q,
-                                FPI->getExceptionBehavior().getValue(),
-                                FPI->getRoundingMode().getValue()))
+                                FPI->getExceptionBehavior().value(),
+                                FPI->getRoundingMode().value()))
       return V;
     return nullptr;
   }
@@ -6169,7 +6130,7 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
 
     return nullptr;
   }
-  case Intrinsic::experimental_vector_insert: {
+  case Intrinsic::vector_insert: {
     Value *Vec = Call->getArgOperand(0);
     Value *SubVec = Call->getArgOperand(1);
     Value *Idx = Call->getArgOperand(2);
@@ -6179,8 +6140,8 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
     // where: Y is X, or Y is undef
     unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
     Value *X = nullptr;
-    if (match(SubVec, m_Intrinsic<Intrinsic::experimental_vector_extract>(
-                          m_Value(X), m_Zero())) &&
+    if (match(SubVec,
+              m_Intrinsic<Intrinsic::vector_extract>(m_Value(X), m_Zero())) &&
         (Q.isUndefValue(Vec) || Vec == X) && IdxN == 0 &&
         X->getType() == ReturnType)
       return X;
@@ -6189,38 +6150,33 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
   }
   case Intrinsic::experimental_constrained_fadd: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFAddInst(FPI->getArgOperand(0), FPI->getArgOperand(1),
-                            FPI->getFastMathFlags(), Q,
-                            FPI->getExceptionBehavior().getValue(),
-                            FPI->getRoundingMode().getValue());
+    return simplifyFAddInst(
+        FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
+        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
   }
   case Intrinsic::experimental_constrained_fsub: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFSubInst(FPI->getArgOperand(0), FPI->getArgOperand(1),
-                            FPI->getFastMathFlags(), Q,
-                            FPI->getExceptionBehavior().getValue(),
-                            FPI->getRoundingMode().getValue());
+    return simplifyFSubInst(
+        FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
+        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
   }
   case Intrinsic::experimental_constrained_fmul: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFMulInst(FPI->getArgOperand(0), FPI->getArgOperand(1),
-                            FPI->getFastMathFlags(), Q,
-                            FPI->getExceptionBehavior().getValue(),
-                            FPI->getRoundingMode().getValue());
+    return simplifyFMulInst(
+        FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
+        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
   }
   case Intrinsic::experimental_constrained_fdiv: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFDivInst(FPI->getArgOperand(0), FPI->getArgOperand(1),
-                            FPI->getFastMathFlags(), Q,
-                            FPI->getExceptionBehavior().getValue(),
-                            FPI->getRoundingMode().getValue());
+    return simplifyFDivInst(
+        FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
+        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
   }
   case Intrinsic::experimental_constrained_frem: {
     auto *FPI = cast<ConstrainedFPIntrinsic>(Call);
-    return simplifyFRemInst(FPI->getArgOperand(0), FPI->getArgOperand(1),
-                            FPI->getFastMathFlags(), Q,
-                            FPI->getExceptionBehavior().getValue(),
-                            FPI->getRoundingMode().getValue());
+    return simplifyFRemInst(
+        FPI->getArgOperand(0), FPI->getArgOperand(1), FPI->getFastMathFlags(),
+        Q, FPI->getExceptionBehavior().value(), FPI->getRoundingMode().value());
   }
   default:
     return nullptr;

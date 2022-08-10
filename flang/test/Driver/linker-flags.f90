@@ -2,9 +2,6 @@
 ! invocation. These libraries are added on top of other standard runtime
 ! libraries that the Clang driver will include.
 
-!-------------
-! RUN COMMANDS
-!-------------
 ! RUN: %flang -### -flang-experimental-exec -target ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU
 ! RUN: %flang -### -flang-experimental-exec -target aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN
 ! RUN: %flang -### -flang-experimental-exec -target x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
@@ -15,9 +12,6 @@
 !       Make sure they're not added.
 ! RUN: %flang -### -flang-experimental-exec -target aarch64-windows-msvc %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
 
-!----------------
-! EXPECTED OUTPUT
-!----------------
 ! Compiler invocation to generate the object file
 ! CHECK-LABEL: {{.*}} "-emit-obj"
 ! CHECK-SAME:  "-o" "[[object_file:.*\.o]]" {{.*}}Inputs/hello.f90
@@ -42,8 +36,11 @@
 ! MINGW-SAME: -lFortranRuntime
 ! MINGW-SAME: -lFortranDecimal
 
-! NOTE: This check should also match if the default linker is lld-link.exe
-! MSVC-LABEL: link.exe
+! NOTE: This also matches lld-link (when CLANG_DEFAULT_LINKER=lld) and
+!       any .exe suffix that is added when resolving to the full path of
+!       (lld-)link.exe on Windows platforms. The suffix may not be added
+!       when the executable is not found or on non-Windows platforms.
+! MSVC-LABEL: link
 ! MSVC-SAME: Fortran_main.lib
 ! MSVC-SAME: FortranRuntime.lib
 ! MSVC-SAME: FortranDecimal.lib

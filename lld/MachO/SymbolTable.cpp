@@ -51,10 +51,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  bool isPrivateExtern, bool isThumb,
                                  bool isReferencedDynamically, bool noDeadStrip,
                                  bool isWeakDefCanBeHidden) {
-  Symbol *s;
-  bool wasInserted;
   bool overridesWeakDef = false;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   assert(!isWeakDef || (isa<BitcodeFile>(file) && !isec) ||
          (isa<ObjFile>(file) && file == isec->getFile()));
@@ -83,9 +81,17 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
         }
       } else {
-        error("duplicate symbol: " + toString(*defined) + "\n>>> defined in " +
-              toString(defined->getFile()) + "\n>>> defined in " +
-              toString(file));
+        std::string src1 = defined->getSourceLocation();
+        std::string src2 = isec ? isec->getSourceLocation(value) : "";
+
+        std::string message =
+            "duplicate symbol: " + toString(*defined) + "\n>>> defined in ";
+        if (!src1.empty())
+          message += src1 + "\n>>>            ";
+        message += toString(defined->getFile()) + "\n>>> defined in ";
+        if (!src2.empty())
+          message += src2 + "\n>>>            ";
+        error(message + toString(file));
       }
 
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -109,11 +115,16 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   return defined;
 }
 
+Defined *SymbolTable::aliasDefined(Defined *src, StringRef target) {
+  return addDefined(target, src->getFile(), src->isec, src->value, src->size,
+                    src->isWeakDef(), src->privateExtern, src->thumb,
+                    src->referencedDynamically, src->noDeadStrip,
+                    src->weakDefCanBeHidden);
+}
+
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
                                   bool isWeakRef) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   RefState refState = isWeakRef ? RefState::Weak : RefState::Strong;
 
@@ -132,9 +143,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
 
 Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
                                uint32_t align, bool isPrivateExtern) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   if (!wasInserted) {
     if (auto *common = dyn_cast<CommonSymbol>(s)) {
@@ -153,9 +162,7 @@ Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
 
 Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
                               bool isTlv) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   RefState refState = RefState::Unreferenced;
   if (!wasInserted) {
@@ -188,9 +195,7 @@ Symbol *SymbolTable::addDynamicLookup(StringRef name) {
 
 Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
                                     const object::Archive::Symbol &sym) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   if (wasInserted) {
     replaceSymbol<LazyArchive>(s, file, sym);
@@ -208,9 +213,7 @@ Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
 }
 
 Symbol *SymbolTable::addLazyObject(StringRef name, InputFile &file) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, &file);
+  auto [s, wasInserted] = insert(name, &file);
 
   if (wasInserted) {
     replaceSymbol<LazyObject>(s, file, name);
@@ -254,8 +257,7 @@ static Defined *createBoundarySymbol(const Undefined &sym) {
 
 static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
                                         Boundary which) {
-  StringRef segName, sectName;
-  std::tie(segName, sectName) = segSect.split('$');
+  auto [segName, sectName] = segSect.split('$');
 
   // Attach the symbol to any InputSection that will end up in the right
   // OutputSection -- it doesn't matter which one we pick.
@@ -324,6 +326,10 @@ static bool recoverFromUndefinedSymbol(const Undefined &sym) {
     return true;
   }
 
+  // Leave dtrace symbols, since we will handle them when we do the relocation
+  if (name.startswith("___dtrace_"))
+    return true;
+
   // Handle -U.
   if (config->explicitDynamicLookups.count(sym.getName())) {
     symtab->addDynamicLookup(sym.getName());
@@ -381,8 +387,11 @@ void macho::reportPendingUndefinedSymbols() {
          locations.codeReferences) {
       if (i >= maxUndefinedReferences)
         break;
-      // TODO: Get source file/line from debug information.
-      message += "\n>>> referenced by " + loc.isec->getLocation(loc.offset);
+      message += "\n>>> referenced by ";
+      std::string src = loc.isec->getSourceLocation(loc.offset);
+      if (!src.empty())
+        message += src + "\n>>>               ";
+      message += loc.isec->getLocation(loc.offset);
       ++i;
     }
 
