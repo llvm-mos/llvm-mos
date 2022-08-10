@@ -660,8 +660,8 @@ define amdgpu_kernel void @udiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX9-NEXT:    s_and_b32 s4, 0xffff, s7
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v4, s4
 ; GFX9-NEXT:    v_add_u16_e64 v3, s7, 1
-; GFX9-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX9-NEXT:    v_cmp_eq_u16_e32 vcc, s6, v3
+; GFX9-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v4, v1
 ; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v5, v3
@@ -696,8 +696,8 @@ define amdgpu_kernel void @udiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v4, s0
 ; GFX10-NEXT:    s_lshl_b64 s[4:5], s[0:1], 1
 ; GFX10-NEXT:    s_add_u32 s6, s2, s4
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v3
 ; GFX10-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x400, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v3
 ; GFX10-NEXT:    v_mul_f32_e32 v3, v4, v1
 ; GFX10-NEXT:    s_addc_u32 s7, s3, s5
 ; GFX10-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
@@ -733,8 +733,8 @@ define amdgpu_kernel void @udiv16_invariant_denom(i16 addrspace(1)* nocapture %a
 ; GFX11-NEXT:    s_lshl_b64 s[4:5], s[0:1], 1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    s_add_u32 s6, s2, s4
-; GFX11-NEXT:    v_readfirstlane_b32 s4, v3
 ; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x400, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v3
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v3, v4, v1
 ; GFX11-NEXT:    s_addc_u32 s7, s3, s5

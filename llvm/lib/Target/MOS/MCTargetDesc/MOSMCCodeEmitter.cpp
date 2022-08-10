@@ -49,9 +49,6 @@ void MOSMCCodeEmitter::emitInstruction(uint64_t Val, unsigned Size,
 void MOSMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
-  verifyInstructionPredicates(MI,
-                              computeAvailableFeatures(STI.getFeatureBits()));
-
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   // Get byte count of instruction
   unsigned Size = Desc.getSize();

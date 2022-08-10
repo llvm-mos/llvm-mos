@@ -47,8 +47,8 @@ MOSInstrInfo::MOSInstrInfo()
     : MOSGenInstrInfo(/*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
                       /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP) {}
 
-bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                     AAResults *AA) const {
+bool MOSInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return false;

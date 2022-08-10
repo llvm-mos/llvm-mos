@@ -47,7 +47,7 @@ static uint32_t getEFlags(InputFile *file) {
 uint32_t MOS::calcEFlags() const {
   uint32_t outputFlags = 0;
 
-  for (InputFile *f : objectFiles) {
+  for (InputFile *f : ctx->objectFiles) {
     const uint32_t flags = getEFlags(f);
     if (!llvm::MOS::checkEFlagsCompatibility(flags, outputFlags)) {
       error("Input file '" + f->getName() +

@@ -49,6 +49,8 @@ MOSRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     LLT Ty = MRI.getType(I.value().getReg());
+    if (!Ty.isValid())
+      continue;
     ValMappings[I.index()] =
         &getValueMapping(0, Ty.getSizeInBits(), MOS::AnyRegBank);
   }

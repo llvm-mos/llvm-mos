@@ -25,8 +25,7 @@ class MOSInstrInfo : public MOSGenInstrInfo {
 public:
   MOSInstrInfo();
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                         AAResults *AA) const override;
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;

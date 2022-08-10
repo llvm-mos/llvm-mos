@@ -143,20 +143,7 @@ struct MOSOutgoingReturnHandler : MOSOutgoingValueHandler {
                            MachinePointerInfo &MPO,
                            ISD::ArgFlagsTy Flags) override {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
-
-    bool FoundFI = false;
-    int FI;
-    for (FI = MFI.getObjectIndexBegin(); FI; ++FI) {
-      assert(MFI.getObjectSize(FI) == 1);
-      if (MFI.getObjectOffset(FI) == Offset) {
-        MFI.setIsImmutableObjectIndex(FI, false);
-        FoundFI = true;
-        break;
-      }
-    }
-    if (!FoundFI)
-      FI = MFI.CreateFixedObject(Size, Offset, false);
-
+    int FI = MFI.CreateFixedObject(Size, Offset, false);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
     auto AddrReg = MIRBuilder.buildFrameIndex(LLT::pointer(0, 16), FI);
     return AddrReg.getReg(0);
@@ -466,5 +453,5 @@ void MOSCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   computeValueLLTs(DL, *OrigArg.Ty, SplitLLTs);
   assert((size_t)size(NewArgs) == SplitLLTs.size());
   for (const auto &I : zip(NewArgs, SplitLLTs))
-    apply_tuple(adjustArgFlags, I);
+    std::apply(adjustArgFlags, I);
 }

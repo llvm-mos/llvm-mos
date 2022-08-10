@@ -108,11 +108,6 @@ private:
 
   const MCInstrInfo &MCII;
   MCContext &Ctx;
-
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // namespace llvm
