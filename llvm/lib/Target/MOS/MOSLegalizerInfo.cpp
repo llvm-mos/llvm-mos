@@ -1118,10 +1118,9 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     auto RHSUnmergeDefs = unmergeDefsSplitHigh(RHSUnmerge);
     assert(LHSUnmerge->getNumOperands() == RHSUnmerge->getNumOperands());
     CIn = Builder.buildConstant(S1, 1).getReg(0);
-    // TODO: C++17 structured bindings
-    for (const auto &I : zip(LHSUnmergeDefs.Lows, RHSUnmergeDefs.Lows)) {
+	for (const auto &[LHS, RHS] : zip(LHSUnmergeDefs.Lows, RHSUnmergeDefs.Lows)) {
       auto Sbc = Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1},
-                                    {std::get<0>(I), std::get<1>(I), CIn});
+                                    {LHS, RHS, CIn});
       CIn = Sbc.getReg(1);
     }
     Type = S8;
