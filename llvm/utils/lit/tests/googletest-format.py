@@ -1,7 +1,5 @@
 # Check the various features of the GoogleTest format.
 
-# XFAIL: *
-
 # RUN: not %{lit} -v --order=random %{inputs}/googletest-format > %t.out
 # FIXME: Temporarily dump test output so we can debug failing tests on
 # buildbots.
