@@ -91,8 +91,10 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lc");
 
   // No matter what's included in the link, the default linker script is
-  // nonsense for the 6502. Accordingly, require one named "link.ld".
-  CmdArgs.push_back("-Tlink.ld");
+  // nonsense for the 6502. Accordingly, use one named "link.ld" if none is
+  // specified.
+  if (!Args.hasArg(options::OPT_T))
+    CmdArgs.push_back("-Tlink.ld");
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
