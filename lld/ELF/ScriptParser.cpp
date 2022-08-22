@@ -936,6 +936,8 @@ OutputDesc *ScriptParser::readOutputSectionDescription(StringRef outSec) {
     osec->alignExpr = checkAlignment(readParenExpr(), location);
   if (consume("SUBALIGN"))
     osec->subalignExpr = checkAlignment(readParenExpr(), location);
+  if (consume("OVERLAY"))
+    osec->inOverlay = true;
 
   // Parse constraints.
   if (consume("ONLY_IF_RO"))
