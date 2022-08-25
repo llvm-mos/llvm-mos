@@ -377,7 +377,7 @@ void ScriptParser::readGroup() {
 void ScriptParser::readInclude() {
   StringRef tok = unquote(next());
 
-  if (consume("IF") && !readExpr()().getValue())
+  if (!atEOF() && consume("IF") && !readExpr()().getValue())
     return;
 
   if (!seen.insert(tok).second) {
