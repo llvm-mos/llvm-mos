@@ -303,6 +303,7 @@ public:
 
 private:
   MachineModuleInfo *MMI;
+  unsigned ModuleZPAvail;
   SCCGraph buildSCCGraph(Module &M);
 
   void collectCandidates(MachineFunction &MF,
@@ -338,12 +339,29 @@ void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
 static Freq getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB);
 
 bool MOSZeroPageAlloc::runOnModule(Module &M) {
-  if (!ZPAvail)
+  if (!ModuleZPAvail)
     return false;
 
   // The frontend should report this error on the corresponding option.
   assert(ZPAvail <= 256 - 32 &&
          "There must be room for the imaginary registers.");
+
+  ModuleZPAvail = ZPAvail;
+  for (GlobalVariable &GV : M.getGlobalList()) {
+    if (!GV.hasSection())
+      continue;
+    StringRef SecName = GV.getSection();
+    if (SecName.startswith(".zp") || SecName.startswith(".zeropage") ||
+        SecName.startswith(".directpage")) {
+      size_t Size = (GV.getParent()->getDataLayout().getTypeSizeInBits(
+            GV.getValueType()) +
+          7) /
+        8;
+      if (Size >= ModuleZPAvail)
+        return false;
+      ModuleZPAvail -= Size;
+    }
+  }
 
   MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
@@ -917,7 +935,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
       continue;
     // If the candidate is too big to fit, no reason to start allocating bytes
     // to it.
-    if (!Cand.AssignedSize && NewZPSize(Cand, Cand.Size) > ZPAvail)
+    if (!Cand.AssignedSize && NewZPSize(Cand, Cand.Size) > ModuleZPAvail)
       continue;
     break;
   }
@@ -929,7 +947,7 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
   LLVM_DEBUG(dbgs() << "Entry " << EG.Entry->Funcs.front()->getName()
                     << ", Func " << Cand << '\n';);
 
-  if (NewZPSize(Cand, Cand.AssignedSize) > ZPAvail) {
+  if (NewZPSize(Cand, Cand.AssignedSize) > ModuleZPAvail) {
     LLVM_DEBUG(dbgs() << "No longer fits; unassigning.\n");
     size_t NumToReassign = Cand.AssignedSize;
     Cand.AssignedSize = 0;
