@@ -339,7 +339,7 @@ void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
 static Freq getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB);
 
 bool MOSZeroPageAlloc::runOnModule(Module &M) {
-  if (!ModuleZPAvail)
+  if (!ZPAvail)
     return false;
 
   // The frontend should report this error on the corresponding option.
