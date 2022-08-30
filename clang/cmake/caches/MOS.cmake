@@ -60,6 +60,7 @@ set(LLVM_MOS_TOOLCHAIN_TOOLS
     llvm-cxxfilt
     llvm-dwarfdump
     llvm-mc
+    llvm-mlb
     llvm-nm
     llvm-objcopy
     llvm-objdump

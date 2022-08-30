@@ -1,0 +1,88 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-mlb %t.o
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.mlb %s
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+ProgramHeaders:
+  - Type: PT_LOAD
+    Offset: 0x1233
+    PAddr: 0x01000000
+  - Type: PT_LOAD
+    Offset: 0x1235
+    FileSize: 1
+    PAddr: 0x01000010
+  - Type: PT_LOAD
+    Offset: 0x1234
+    FileSize: 1
+    PAddr: 0x01000020
+  - Type: PT_LOAD
+    Offset: 0x5678
+    PAddr: 0x03000000
+    VAddr: 0x5000
+    MemSize: 0x100
+  - Type: PT_LOAD
+    Offset: 0x5678
+    PAddr: 0x03010000
+    VAddr: 0x5100
+    MemSize: 0x1
+Sections:
+  - Name: .a
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    ContentArray: []
+  - Name: .b
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    ContentArray: []
+    Address: 0x1000
+    Offset: 0x1234
+  - Name: .c
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    ContentArray: []
+    Address: 0x6000
+    Offset: 0x5678
+  - Name: .d
+    Type: SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
+    Address: 0x5000
+    Offset: 0x5678
+  - Name: .e
+    Type: SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
+    Address: 0x5100
+    Offset: 0x5678
+Symbols:
+  - Name:  __internal_abs
+    Index: SHN_ABS
+    Value: 0x1234
+# CHECK: R:34:__rc5
+  - Name:  __rc5
+    Index: SHN_ABS
+    Value: 0x34
+# CHECK: R:10:a
+  - Name:  a
+    Section: .a
+    Value: 0x10
+# CHECK: R:1fff:b
+  - Name:  b
+    Section: .a
+    Value: 0x1fff
+# CHECK: P:101f:c
+  - Name:  c
+    Section: .b
+    Value: 0x1fff
+# CHECK: W:0:d
+  - Name:  d
+    Section: .d
+    Value: 0x5000
+# CHECK: W:10000:e
+  - Name:  e
+    Section: .e
+    Value: 0x5100
+...
