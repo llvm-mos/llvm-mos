@@ -89,8 +89,11 @@ int main(int argc, char **argv) {
       reportError(InputFilename, "expected an ELF object file");
     const ELFFile<ELF32LE> &ELFFile = O->getELFFile();
 
-    SmallString<32> OutputFilename = InputFilename;
-    sys::path::replace_extension(OutputFilename, "mlb");
+    StringRef OutputBase = InputFilename;
+    OutputBase.consume_back(".elf");
+    OutputBase.consume_back(".nes");
+    SmallString<32> OutputFilename = OutputBase;
+    OutputFilename += ".mlb";
     std::error_code EC;
     raw_fd_ostream OS(OutputFilename, EC);
     if (EC)
