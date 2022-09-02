@@ -6928,3 +6928,7 @@ def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Flags<[DXCOption, NoXarchOption]>,
                      HelpText<"Entry point name">;
+
+def fpost_link_tool
+  : Joined<["-"], "fpost-link-tool=">, Group<f_Group>,
+    HelpText<"LLVM-MOS flag to run the given tool on the ELF file after linking.">;
