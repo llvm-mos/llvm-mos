@@ -7,6 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSTargetObjectFile.h"
+#include "llvm/IR/GlobalObject.h"
+#include "llvm/MC/SectionKind.h"
 
-namespace llvm {
-} // end of namespace llvm
+using namespace llvm;
+
+MCSection *MOSTargetObjectFile::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind SK, const TargetMachine &TM) const {
+  StringRef SectionName = GO->getSection();
+  if (SectionName == ".zp.bss" || SectionName.startswith(".zp.bss."))
+    SK = SectionKind::getBSS();
+  else if (SectionName == ".zp.data" || SectionName.startswith(".zp.data."))
+    SK = SectionKind::getData();
+  else if (SectionName == ".zp" || SectionName.startswith(".zp.") ||
+           SectionName.endswith(".noinit") || SectionName.contains(".noinit."))
+    SK = SectionKind::getNoInit();
+  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, SK, TM);
+}
