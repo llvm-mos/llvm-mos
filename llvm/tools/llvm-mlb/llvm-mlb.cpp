@@ -157,11 +157,11 @@ int main(int argc, char **argv) {
         std::string SizeStr =
             Size > 1 ? formatv("-{0:x-}", LMA + Size - 1) : std::string();
         OS << formatv("{0}:{1:x-}{2}:{3}\n", PRGRAMType, LMA, SizeStr, Name);
-      } else if (Address <= 0x2000) {
+      } else if (Address < 0x2000) {
         std::string SizeStr =
             Size > 1 ? formatv("-{0:x-}", Address + Size - 1) : std::string();
         OS << formatv("R:{0:x-}{1}:{2}\n", Address, SizeStr, Name);
-      } else if (Address >= 0x4000 && Address < 0x4020) {
+      } else if (Address >= 0x2000 && Address < 0x4020) {
         std::string SizeStr =
             Size > 1 ? formatv("-{0:x-}", Address + Size - 1) : std::string();
         OS << formatv("G:{0:x-}{1}:{2}\n", Address, SizeStr, Name);

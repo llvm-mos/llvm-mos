@@ -65,10 +65,10 @@ Symbols:
   - Name:  __rc5
     Index: SHN_ABS
     Value: 0x34
-# CHECK: G:4000:A
+# CHECK: G:2000:A
   - Name:  A
     Index: SHN_ABS
-    Value: 0x4000
+    Value: 0x2000
 # CHECK: G:401f:B
   - Name:  B
     Index: SHN_ABS
