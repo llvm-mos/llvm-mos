@@ -22,6 +22,8 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
     steps:
     - name: Setup Windows
       if: startsWith(matrix.os, 'windows')
