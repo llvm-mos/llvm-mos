@@ -38,15 +38,21 @@ void MOSMCELFStreamer::initSections(bool NoExecStack,
     switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
 }
 
+static bool HasPrefix(StringRef Name, StringRef Prefix) {
+  SmallString<32> PrefixDot = Prefix;
+  PrefixDot += ".";
+  return Name == Prefix || Name.startswith(PrefixDot);
+}
+
 void MOSMCELFStreamer::changeSection(MCSection *Section, const MCExpr *Subsection) {
   MCELFStreamer::changeSection(Section, Subsection);
-  HasBSS |= Section->getName().startswith(".bss");
-  HasZPBSS |= Section->getName().startswith(".zp.bss");
-  HasData |= Section->getName().startswith(".data");
-  HasZPData |= Section->getName().startswith(".zp.data");
-  HasZPData |= Section->getName().startswith(".zp.rodata");
-  HasInitArray |= Section->getName().startswith(".init_array");
-  HasFiniArray |= Section->getName().startswith(".fini_array");
+  HasBSS |= HasPrefix(Section->getName(), ".bss");
+  HasZPBSS |= HasPrefix(Section->getName(), ".zp.bss");
+  HasData |= HasPrefix(Section->getName(), ".data");
+  HasZPData |= HasPrefix(Section->getName(), ".zp.data");
+  HasZPData |= HasPrefix(Section->getName(), ".zp.rodata");
+  HasInitArray |= HasPrefix(Section->getName(), ".init_array");
+  HasFiniArray |= HasPrefix(Section->getName(), ".fini_array");
 }
 
 void MOSMCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
