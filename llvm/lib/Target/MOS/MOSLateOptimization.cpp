@@ -97,7 +97,7 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
       if (J.modifiesRegister(MOS::NZ, TRI))
         break;
       bool ClobbersNZ = true;
-      if (J.isBranch() || J.mayStore())
+      if (J.isBranch() || (J.mayStore() && !J.mayLoad()))
         ClobbersNZ = false;
       else
         switch (J.getOpcode()) {
