@@ -89,6 +89,10 @@ public:
 
 private:
   void reserveAllSubregs(BitVector *Reserved, Register Reg) const;
+
+  Optional<Register> getStrongCopyHint(Register VirtReg,
+                                       const MachineFunction &MF,
+                                       const VirtRegMap *VRM) const;
 };
 
 } // namespace llvm
