@@ -77,6 +77,12 @@ public:
   bool matchUAddO1(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool applyUAddO1(MachineInstr &MI, MachineRegisterInfo &MRI,
                    MachineIRBuilder &B, GISelChangeObserver &Observer) const;
+
+  bool matchCMPZZero(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineOperand *&Zero) const;
+  bool applyCMPZZero(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &B, GISelChangeObserver &Observer,
+                     MachineOperand *&Zero) const;
 };
 
 // G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
@@ -266,6 +272,39 @@ bool MOSCombinerHelperState::applyUAddO1(MachineInstr &MI,
   B.buildAdd(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
   B.buildICmp(CmpInst::ICMP_EQ, MI.getOperand(1), MI.getOperand(0),
               B.buildConstant(Ty, 0));
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSCombinerHelperState::matchCMPZZero(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           MachineOperand *&Zero) const {
+  if (MI.getOpcode() != MOS::G_CMPZ)
+    return false;
+  for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
+    MachineOperand &MO = MI.getOperand(I);
+    if (Optional<ValueAndVReg> Val =
+            getIConstantVRegValWithLookThrough(MO.getReg(), MRI);
+        Val && Val->Value.isZero()) {
+      Zero = &MO;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool MOSCombinerHelperState::applyCMPZZero(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           MachineIRBuilder &B,
+                                           GISelChangeObserver &Observer,
+                                           MachineOperand *&Zero) const {
+  B.setInsertPt(*MI.getParent(), MI);
+  auto New = B.buildInstr(MOS::G_CMPZ);
+  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+    MachineOperand &MO = MI.getOperand(I);
+    if (&MO != Zero)
+      New.add(MO);
+  }
   MI.eraseFromParent();
   return true;
 }
