@@ -122,18 +122,45 @@ static bool isClobbered(MachineInstr &MI, Register NewSrc,
 
     bool Found = false;
     for (MachineInstr &MI : make_range(E.I, E.MBB.rend())) {
-      if (MI.modifiesRegister(NewSrc, &TRI))
-        return true;
       if (is_contained(NewSrcMIs, &MI)) {
         Found = true;
         break;
       }
+      if (MI.modifiesRegister(NewSrc, &TRI))
+        return true;
     }
     if (!Found)
       for (MachineBasicBlock *MBB : E.MBB.predecessors())
         WorkList.push_back({*MBB, MBB->rbegin()});
   }
   return false;
+}
+
+static Register findBetterCopySource(MachineInstr &MI,
+                                     MachineInstr *&NewSrcMI) {
+  assert(MI.isCopy());
+  const MOSSubtarget &STI = MI.getMF()->getSubtarget<MOSSubtarget>();
+  const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  for (MachineInstr &MI :
+       make_range(MachineBasicBlock::reverse_iterator(MI.getIterator()),
+                  MI.getParent()->rend())) {
+    if (MI.modifiesRegister(Src, &TRI))
+      return 0;
+    if (!MI.isCopy())
+      continue;
+    if (MI.getOperand(1).getReg() != Src)
+      continue;
+    Register NewSrc = MI.getOperand(0).getReg();
+    if (TRI.copyCost(Dst, NewSrc, STI) < TRI.copyCost(Dst, Src, STI)) {
+      NewSrcMI = &MI;
+      return NewSrc;
+    }
+  }
+  return 0;
 }
 
 bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
@@ -176,6 +203,7 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
         MI.eraseFromParent();
       } else {
         MI.getOperand(1).setReg(NewSrc);
+        MI.getOperand(1).setIsKill(false);
         LLVM_DEBUG(dbgs() << "Rewrote to: " << MI);
       }
     }
@@ -183,16 +211,52 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     LivePhysRegs LPR(TRI);
-    if (!MBB->isEntryBlock()) {
-      MBB->clearLiveIns();
-      computeAndAddLiveIns(LPR, *MBB);
-    }
+
     recomputeLivenessFlags(*MBB);
     for (MachineInstr &MI : make_early_inc_range(*MBB)) {
       if (MI.isCopy() && MI.getOperand(0).isDead()) {
         LLVM_DEBUG(dbgs() << "Erasing dead copy: " << MI);
         MI.eraseFromParent();
       }
+    }
+
+    for (MachineInstr &MI : make_early_inc_range(*MBB)) {
+      if (!MI.isCopy())
+        continue;
+
+      Register Dst = MI.getOperand(0).getReg();
+
+      MachineInstr *NewSrcMI;
+      Register NewSrc = findBetterCopySource(MI, NewSrcMI);
+      if (!NewSrc)
+        continue;
+
+      LLVM_DEBUG(dbgs() << MI);
+      LLVM_DEBUG(dbgs() << "Found candidate: " << printReg(NewSrc, &TRI)
+                        << '\n');
+
+      SmallVector<MachineInstr *> NewSrcMIs = {NewSrcMI};
+      if (isClobbered(MI, NewSrc, NewSrcMIs)) {
+        LLVM_DEBUG(dbgs() << "Clobbered.\n");
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "Rewriting copy: " << MI);
+      NewSrcMI->clearRegisterDeads(NewSrc);
+      if (Dst == NewSrc) {
+        LLVM_DEBUG(dbgs() << "Erased.\n");
+        MI.eraseFromParent();
+      } else {
+        MI.getOperand(1).setReg(NewSrc);
+        MI.getOperand(1).setIsKill(false);
+        LLVM_DEBUG(dbgs() << "Rewrote to: " << MI);
+      }
+    }
+
+    if (!MBB->isEntryBlock()) {
+      recomputeLivenessFlags(*MBB);
+      MBB->clearLiveIns();
+      computeAndAddLiveIns(LPR, *MBB);
     }
   }
   return true;
