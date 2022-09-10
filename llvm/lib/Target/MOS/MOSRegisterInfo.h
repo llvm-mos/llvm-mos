@@ -20,6 +20,8 @@
 
 namespace llvm {
 
+class MOSSubtarget;
+
 class MOSRegisterInfo : public MOSGenRegisterInfo {
   std::unique_ptr<std::string[]> Imag8SymbolNames;
   BitVector Reserved;
@@ -86,6 +88,8 @@ public:
   const char *getImag8SymbolName(Register Reg) const {
     return Imag8SymbolNames[Reg].c_str();
   }
+
+  int copyCost(Register DestReg, Register SrcReg, const MOSSubtarget &STI) const;
 
 private:
   void reserveAllSubregs(BitVector *Reserved, Register Reg) const;

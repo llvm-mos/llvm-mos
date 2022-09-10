@@ -34,7 +34,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSCombiner.h"
-#include "MOSDeadCopy.h"
+#include "MOSCopyOpt.h"
 #include "MOSIncDecPhi.h"
 #include "MOSIndexIV.h"
 #include "MOSInsertCopies.h"
@@ -57,7 +57,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeMOSCombinerPass(PR);
-  initializeMOSDeadCopyPass(PR);
+  initializeMOSCopyOptPass(PR);
   initializeMOSIncDecPhiPass(PR);
   initializeMOSInsertCopiesPass(PR);
   initializeMOSLateOptimizationPass(PR);
@@ -270,7 +270,7 @@ void MOSPassConfig::addOptimizedRegAlloc() {
 
 void MOSPassConfig::addMachineLateOptimization() {
   TargetPassConfig::addMachineLateOptimization();
-  addPass(createMOSDeadCopyPass());
+  addPass(createMOSCopyOptPass());
 }
 
 void MOSPassConfig::addPrePEI() {

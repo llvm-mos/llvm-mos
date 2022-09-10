@@ -1,4 +1,4 @@
-//===-- MOSDeadCopy.h - MOS Dead Copy Elimination ---------------*- C++ -*-===//
+//===-- MOSCopyOpt.h - MOS Copy Optimization --------------------*- C++ -*-===//
 //
 // Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the MOS pass to elminiate dead COPY operations before
-// COPYs are lowered. 
+// This file declares the MOS pass to optimize COPY operations before lowering.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_MOS_MOSDEADCOPY_H
-#define LLVM_LIB_TARGET_MOS_MOSDEADCOPY_H
+#ifndef LLVM_LIB_TARGET_MOS_MOSCOPYOPT_H
+#define LLVM_LIB_TARGET_MOS_MOSCOPYOPT_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
 
-MachineFunctionPass *createMOSDeadCopyPass();
+MachineFunctionPass *createMOSCopyOptPass();
 
 } // namespace llvm
 
-#endif // not LLVM_LIB_TARGET_MOS_MOSDEADCOPY_H
+#endif // not LLVM_LIB_TARGET_MOS_MOSCOPYOPT_H
