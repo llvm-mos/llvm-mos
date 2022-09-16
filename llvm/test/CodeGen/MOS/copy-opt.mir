@@ -400,41 +400,4 @@ body: |
     liveins: $x, $y
     RTS implicit $x, implicit $y
 ...
----
-name: better_src
-legalized: true
-regBankSelected: true
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $x
-    ; CHECK-LABEL: name: better_src
-    ; CHECK: liveins: $x
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = COPY $x
-    ; CHECK-NEXT: $y = COPY $a
-    ; CHECK-NEXT: RTS implicit killed $a, implicit killed $y
-    $a = COPY $x
-    $y = COPY $x
-    RTS implicit $a, implicit $y
-...
----
-name: clobber_src
-legalized: true
-regBankSelected: true
-tracksRegLiveness: true
-body: |
-  bb.0.entry:
-    liveins: $x, $y
-    ; CHECK-LABEL: name: clobber_src
-    ; CHECK: liveins: $x, $y
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = COPY killed $y
-    ; CHECK-NEXT: $y = COPY killed $x
-    ; CHECK-NEXT: RTS implicit killed $a, implicit killed $y
-    $a = COPY $x
-    $a = COPY $y
-    $y = COPY $x
-    RTS implicit $a, implicit $y
-...
 

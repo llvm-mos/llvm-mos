@@ -136,33 +136,6 @@ static bool isClobbered(MachineInstr &MI, Register NewSrc,
   return false;
 }
 
-static Register findBetterCopySource(MachineInstr &MI,
-                                     MachineInstr *&NewSrcMI) {
-  assert(MI.isCopy());
-  const MOSSubtarget &STI = MI.getMF()->getSubtarget<MOSSubtarget>();
-  const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-
-  for (MachineInstr &MI :
-       make_range(MachineBasicBlock::reverse_iterator(MI.getIterator()),
-                  MI.getParent()->rend())) {
-    if (MI.modifiesRegister(Src, &TRI))
-      return 0;
-    if (!MI.isCopy())
-      continue;
-    if (MI.getOperand(1).getReg() != Src)
-      continue;
-    Register NewSrc = MI.getOperand(0).getReg();
-    if (TRI.copyCost(Dst, NewSrc, STI) < TRI.copyCost(Dst, Src, STI)) {
-      NewSrcMI = &MI;
-      return NewSrc;
-    }
-  }
-  return 0;
-}
-
 bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -217,39 +190,6 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
       if (MI.isCopy() && MI.getOperand(0).isDead()) {
         LLVM_DEBUG(dbgs() << "Erasing dead copy: " << MI);
         MI.eraseFromParent();
-      }
-    }
-
-    for (MachineInstr &MI : make_early_inc_range(*MBB)) {
-      if (!MI.isCopy())
-        continue;
-
-      Register Dst = MI.getOperand(0).getReg();
-
-      MachineInstr *NewSrcMI;
-      Register NewSrc = findBetterCopySource(MI, NewSrcMI);
-      if (!NewSrc)
-        continue;
-
-      LLVM_DEBUG(dbgs() << MI);
-      LLVM_DEBUG(dbgs() << "Found candidate: " << printReg(NewSrc, &TRI)
-                        << '\n');
-
-      SmallVector<MachineInstr *> NewSrcMIs = {NewSrcMI};
-      if (isClobbered(MI, NewSrc, NewSrcMIs)) {
-        LLVM_DEBUG(dbgs() << "Clobbered.\n");
-        continue;
-      }
-
-      LLVM_DEBUG(dbgs() << "Rewriting copy: " << MI);
-      NewSrcMI->clearRegisterDeads(NewSrc);
-      if (Dst == NewSrc) {
-        LLVM_DEBUG(dbgs() << "Erased.\n");
-        MI.eraseFromParent();
-      } else {
-        MI.getOperand(1).setReg(NewSrc);
-        MI.getOperand(1).setIsKill(false);
-        LLVM_DEBUG(dbgs() << "Rewrote to: " << MI);
       }
     }
 
