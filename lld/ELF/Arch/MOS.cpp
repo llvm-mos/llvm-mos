@@ -84,6 +84,7 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     *loc = static_cast<unsigned char>(val);
     break;
   case R_MOS_PCREL_8:
+    checkInt(loc, val - 1, 8, rel);
     // MOS's PC relative addressing is off by one from the standard LLVM PC
     // relative convention.
     *loc = static_cast<unsigned char>(val - 1);
