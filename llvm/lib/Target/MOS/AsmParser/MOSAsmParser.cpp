@@ -239,6 +239,11 @@ public:
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
+    Parser.addAliasForDirective(".hword", ".byte");
+    Parser.addAliasForDirective(".word", ".2byte");
+    Parser.addAliasForDirective(".dword", ".4byte");
+    Parser.addAliasForDirective(".xword", ".8byte");
+
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
     if (MCAssembler *Asm = Parser.getStreamer().getAssemblerPtr())
