@@ -1468,6 +1468,7 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                                     MachineRegisterInfo &MRI,
                                                     MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   bool IsLoad = MI.getOpcode() == G_LOAD;
@@ -1516,12 +1517,11 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
       }
     }
     if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
-      Register Base = PtrAddAddr->getOperand(1).getReg();
+      Addr = PtrAddAddr->getOperand(1).getReg();
       Register NewOffset = PtrAddAddr->getOperand(2).getReg();
       if (auto ConstOffset =
               getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
         Offset += ConstOffset->Value.getSExtValue();
-        Addr = Base;
         continue;
       }
       if (MachineInstr *ZExtOffset = getOpcodeDef(G_ZEXT, NewOffset, MRI)) {
@@ -1533,10 +1533,16 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
         if (SrcTy.getSizeInBits() > 8)
           return false;
         if (SrcTy.getSizeInBits() < 8)
-          Src = Builder.buildZExt(LLT::scalar(8), Src).getReg(0);
-        assert(MRI.getType(Src) == LLT::scalar(8));
+          Src = Builder.buildZExt(S8, Src).getReg(0);
+        assert(MRI.getType(Src) == S8);
         Index = Src;
-        Addr = Base;
+        continue;
+      }
+      if (Helper.KB &&
+          Helper.KB->getKnownBits(NewOffset).countMaxActiveBits() <= 8) {
+        if (Index)
+          return false;
+        Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
         continue;
       }
     }
@@ -1548,6 +1554,7 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
                                                        MachineRegisterInfo &MRI,
                                                        MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   bool IsLoad = MI.getOpcode() == G_LOAD;
@@ -1563,9 +1570,7 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
     Register NewOffset = PtrAddAddr->getOperand(2).getReg();
     if (auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
       if (ConstOffset->Value.getActiveBits() <= 8) {
-        Index = Builder
-                    .buildConstant(LLT::scalar(8),
-                                   ConstOffset->Value.getSExtValue())
+        Index = Builder.buildConstant(S8, ConstOffset->Value.getSExtValue())
                     .getReg(0);
         Addr = Base;
       }
@@ -1575,11 +1580,15 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
       LLT SrcTy = MRI.getType(Src);
       if (SrcTy.getSizeInBits() <= 8) {
         if (SrcTy.getSizeInBits() < 8)
-          Src = Builder.buildZExt(LLT::scalar(8), Src).getReg(0);
-        assert(MRI.getType(Src) == LLT::scalar(8));
+          Src = Builder.buildZExt(S8, Src).getReg(0);
+        assert(MRI.getType(Src) == S8);
         Index = Src;
         Addr = Base;
       }
+    } else if (Helper.KB &&
+               Helper.KB->getKnownBits(NewOffset).countMaxActiveBits() <= 8) {
+      Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
+      Addr = Base;
     }
   }
 
@@ -1705,9 +1714,8 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
   // Store the address of the fake varargs frame index into the valist.
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   auto *FuncInfo = Builder.getMF().getInfo<MOSFunctionInfo>();
-  Builder.buildStore(
-      Builder.buildFrameIndex(P, FuncInfo->VarArgsStackIndex),
-      MI.getOperand(0), **MI.memoperands_begin());
+  Builder.buildStore(Builder.buildFrameIndex(P, FuncInfo->VarArgsStackIndex),
+                     MI.getOperand(0), **MI.memoperands_begin());
   MI.eraseFromParent();
   return true;
 }

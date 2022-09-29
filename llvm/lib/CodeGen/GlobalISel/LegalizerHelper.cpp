@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
@@ -105,9 +106,9 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF,
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
                                  GISelChangeObserver &Observer,
-                                 MachineIRBuilder &B)
-  : MIRBuilder(B), Observer(Observer), MRI(MF.getRegInfo()), LI(LI),
-    TLI(*MF.getSubtarget().getTargetLowering()) { }
+                                 MachineIRBuilder &B, GISelKnownBits *KB)
+    : MIRBuilder(B), Observer(Observer), KB(KB), MRI(MF.getRegInfo()), LI(LI),
+      TLI(*MF.getSubtarget().getTargetLowering()) {}
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
