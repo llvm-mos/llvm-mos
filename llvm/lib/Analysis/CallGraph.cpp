@@ -119,9 +119,13 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
         } else if (!Callee->isIntrinsic())
           Node->addCalledFunction(Call, getOrInsertFunction(Callee));
 
-        // Add reference to callback functions.
-        forEachCallbackFunction(*Call, [=](Function *CB) {
-          Node->addCalledFunction(nullptr, getOrInsertFunction(CB));
+        // Add reference to callback functions or the external node if the
+        // callback is indirect.
+        forEachCallbackCallSite(*Call, [=](AbstractCallSite &ACS) {
+          if (Function *Callback = ACS.getCalledFunction())
+            Node->addCalledFunction(nullptr, getOrInsertFunction(Callback));
+          else
+            Node->addCalledFunction(nullptr, CallsExternalNode.get());
         });
       }
     }
