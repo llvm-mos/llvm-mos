@@ -525,6 +525,10 @@ RTLIB::Libcall llvm::getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE_INT(SRA_I);
   case TargetOpcode::G_SHL:
     RTLIBCASE_INT(SHL_I);
+  case TargetOpcode::G_ROTL:
+    RTLIBCASE_INT(ROTL_I);
+  case TargetOpcode::G_ROTR:
+    RTLIBCASE_INT(ROTR_I);
    case TargetOpcode::G_BSWAP:
     RTLIBCASE_INT(BSWAP_I);
   case TargetOpcode::G_FADD:

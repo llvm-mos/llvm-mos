@@ -662,14 +662,20 @@ bool MOSLegalizerInfo::legalizeShiftRotate(LegalizerHelper &Helper,
   // Presently, only left shifts by one bit are supported.
   auto ConstantAmt = getIConstantVRegValWithLookThrough(AmtReg, MRI);
   if (!ConstantAmt) {
-    if (IsRotate)
-      return Helper.lowerRotate(MI);
-    if (!isPowerOf2_32(Ty.getSizeInBits()))
-      return Helper.widenScalar(MI, 0,
-                                LLT::scalar(NextPowerOf2(Ty.getSizeInBits())));
-    if (Ty.getSizeInBits() > 64)
-      return Helper.narrowScalar(MI, 0, LLT::scalar(64));
-    return shiftLibcall(Helper, MRI, MI);
+    if (!isPowerOf2_32(Ty.getSizeInBits())) {
+      return IsRotate
+                 ? Helper.lowerRotate(MI)
+                 : Helper.widenScalar(
+                       MI, 0, LLT::scalar(NextPowerOf2(Ty.getSizeInBits())));
+    }
+    if (Ty.getSizeInBits() > 64) {
+      return IsRotate ? Helper.lowerRotate(MI)
+                      : Helper.narrowScalar(MI, 0, LLT::scalar(64));
+    }
+    LLT AmtTy = MRI.getType(AmtReg);
+    if (AmtTy != S8)
+      MI.getOperand(2).setReg(Builder.buildTrunc(S8, AmtReg).getReg(0));
+    return shiftRotateLibcall(Helper, MRI, MI);
   }
 
   uint64_t Amt = ConstantAmt->Value.getZExtValue();
@@ -902,9 +908,9 @@ bool MOSLegalizerInfo::legalizeLshrEShlE(LegalizerHelper &Helper,
   return true;
 }
 
-bool MOSLegalizerInfo::shiftLibcall(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
+bool MOSLegalizerInfo::shiftRotateLibcall(LegalizerHelper &Helper,
+                                          MachineRegisterInfo &MRI,
+                                          MachineInstr &MI) const {
   unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
   auto &Ctx = MI.getMF()->getFunction().getContext();
 
