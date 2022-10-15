@@ -146,7 +146,17 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .maxScalar(0, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder({G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM})
+  getActionDefinitionsBuilder(G_MUL)
+      .libcallFor({S8, S16, S32, S64})
+      .widenScalarToNextPow2(0)
+      // Multiplications can only be narrowed to sizes where a multiplication of
+      // double that size is legal, since that's the lowered algorithm invokes
+      // such multiplications. Lowering S128 to S64 would produce infinite regress
+      // because of this, so instead it's lowered to S32.
+      .clampScalar(0, S8, S32)
+      .unsupported();
+
+  getActionDefinitionsBuilder({G_SDIV, G_SREM, G_UDIV, G_UREM})
       .clampScalar(0, S8, S64)
       .widenScalarToNextPow2(0)
       .libcall();
