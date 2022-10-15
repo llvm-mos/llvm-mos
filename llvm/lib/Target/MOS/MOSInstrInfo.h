@@ -115,6 +115,11 @@ public:
 
   bool shouldOverlapInterval(const MachineInstr &MI) const override;
 
+  bool hasCustomTiedOperands(unsigned Opcode) const override;
+
+  unsigned findCustomTiedOperandIdx(const MachineInstr &MI,
+                                    unsigned OpIdx) const override;
+
 private:
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                        Register SrcReg, bool Force = false) const;

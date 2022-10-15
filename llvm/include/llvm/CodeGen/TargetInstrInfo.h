@@ -2010,6 +2010,19 @@ public:
     return true;
   }
 
+  /// Returns true if the operand can have more than TiedMax tied operands, and
+  /// the logic for determining tied operands is custom.
+  virtual bool hasCustomTiedOperands(unsigned Opcode) const {
+    return false;
+  }
+
+  /// For an instruction where hasCustomTiedOperands(), implement
+  /// MachinInstr.findTiedOperandIdx().
+  virtual unsigned findCustomTiedOperandIdx(const MachineInstr &MI,
+                                            unsigned OpIdx) const {
+    llvm_unreachable("target did not implement");
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
