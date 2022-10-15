@@ -5895,7 +5895,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
 
   // If a rotate in the other direction is supported, use it.
   unsigned RevRot = IsLeft ? TargetOpcode::G_ROTR : TargetOpcode::G_ROTL;
-  if (LI.isLegalOrCustom({RevRot, {DstTy, SrcTy}}) &&
+  if ((LI.isLegal({RevRot, {DstTy, SrcTy}}) ||
+       (LI.isLegalOrCustom({RevRot, {DstTy, SrcTy}}) &&
+        !LI.isLegalOrCustom({MI.getOpcode(), {DstTy, SrcTy}}))) &&
       isPowerOf2_32(EltSizeInBits))
     return lowerRotateWithReverseRotate(MI);
 
