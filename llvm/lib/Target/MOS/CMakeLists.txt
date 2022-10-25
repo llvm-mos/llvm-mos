@@ -53,17 +53,24 @@ add_llvm_target(MOSCodeGen
   intrinsics_gen
 
   LINK_COMPONENTS
+  Analysis
   AsmPrinter
+  BinaryFormat
   CodeGen
   Core
   GlobalISel
-  MC
   IPO
+  InstCombine
   LTO
+  MC
+  MOSDesc
+  MOSInfo
   Passes
+  Scalar
   SelectionDAG
   Support
   Target
+  TransformUtils
 
   ADD_TO_COMPONENT
   MOS
