@@ -1065,14 +1065,14 @@ void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
   if (DefIdx < TiedMax)
     UseMO.TiedTo = DefIdx + 1;
   else {
-    const TargetInstrInfo &TII = *getMF()->getSubtarget().getInstrInfo();
-    (void)TII;
     // Inline asm can use the group descriptors to find tied operands,
     // statepoint tied operands are trivial to match (1-1 reg def with reg use),
     // but on normal instruction, the tied def must be within the first TiedMax
     // operands.
     assert((isInlineAsm() || getOpcode() == TargetOpcode::STATEPOINT ||
-            TII.hasCustomTiedOperands(getOpcode())) &&
+            (getMF() &&
+             getMF()->getSubtarget().getInstrInfo()->hasCustomTiedOperands(
+                 getOpcode()))) &&
            "DefIdx out of range");
     UseMO.TiedTo = TiedMax;
   }
@@ -1085,7 +1085,8 @@ void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
 /// Defs are tied to uses and vice versa. Returns the index of the tied operand
 /// which must exist.
 unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
-  const TargetInstrInfo &TII = *getMF()->getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII =
+      getMF() ? getMF()->getSubtarget().getInstrInfo() : nullptr;
   const MachineOperand &MO = getOperand(OpIdx);
   assert(MO.isTied() && "Operand isn't tied");
 
@@ -1095,7 +1096,7 @@ unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
 
   // Uses on normal instructions can be out of range.
   if (!isInlineAsm() && getOpcode() != TargetOpcode::STATEPOINT &&
-      !TII.hasCustomTiedOperands(getOpcode())) {
+      (!TII || !TII->hasCustomTiedOperands(getOpcode()))) {
     // Normal tied defs must be in the 0..TiedMax-1 range.
     if (MO.isUse())
       return TiedMax - 1;
@@ -1127,8 +1128,8 @@ unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
     llvm_unreachable("Can't find tied use");
   }
 
-  if (TII.hasCustomTiedOperands(getOpcode()))
-    return TII.findCustomTiedOperandIdx(*this, OpIdx);
+  if (TII && TII->hasCustomTiedOperands(getOpcode()))
+    return TII->findCustomTiedOperandIdx(*this, OpIdx);
 
   // Now deal with inline asm by parsing the operand group descriptor flags.
   // Find the beginning of each operand group.
