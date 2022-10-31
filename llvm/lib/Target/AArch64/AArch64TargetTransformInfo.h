@@ -378,8 +378,6 @@ public:
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = None);
 
-  using BaseT::getScalingFactorCost;
-
   /// Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store
   /// of the specified type.
@@ -387,7 +385,8 @@ public:
   /// If the AM is not supported, it returns a negative value.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        int64_t BaseOffset, bool HasBaseReg,
-                                       int64_t Scale, unsigned AddrSpace) const;
+                                       Type *BaseTy, int64_t Scale,
+                                       Type *ScaleTy, unsigned AddrSpace) const;
   /// @}
 };
 

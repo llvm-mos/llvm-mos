@@ -58,8 +58,7 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; NMOS-NEXT:    sta mos8(__rc1)
 ; NMOS-NEXT:    lda mos8(__rc16)
 ; NMOS-NEXT:  .LBB0_2: ; %if.then
-; NMOS-NEXT:    clc
-; NMOS-NEXT:    adc #48
+; NMOS-NEXT:    ora #48
 ; NMOS-NEXT:    ;APP
 ; NMOS-NEXT:    jsr 65490
 ; NMOS-NEXT:    ;NO_APP
@@ -117,8 +116,7 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; CMOS-NEXT:    sta mos8(__rc1)
 ; CMOS-NEXT:    lda mos8(__rc16)
 ; CMOS-NEXT:  .LBB0_2: ; %if.then
-; CMOS-NEXT:    clc
-; CMOS-NEXT:    adc #48
+; CMOS-NEXT:    ora #48
 ; CMOS-NEXT:    ;APP
 ; CMOS-NEXT:    jsr 65490
 ; CMOS-NEXT:    ;NO_APP

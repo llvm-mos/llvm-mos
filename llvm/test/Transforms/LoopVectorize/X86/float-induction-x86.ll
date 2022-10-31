@@ -562,7 +562,7 @@ define void @fadd_reassoc_FMF(float* nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 5
 ; AUTO_VEC-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP4]], 1
-; AUTO_VEC-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP2]], 32
+; AUTO_VEC-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP3]], 0
 ; AUTO_VEC-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; AUTO_VEC:       vector.ph.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP4]], -2

@@ -138,23 +138,3 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
-
-define void @TermCondMoreThanOneUse(ptr %a) {
-;CHECK: Cannot replace terminating condition with more than one use
-entry:
-  %uglygep = getelementptr i8, ptr %a, i64 84
-  br label %for.body
-
-for.body:                                         ; preds = %for.body, %entry
-  %lsr.iv1 = phi ptr [ %uglygep2, %for.body ], [ %uglygep, %entry ]
-  %lsr.iv = phi i64 [ %lsr.iv.next, %for.body ], [ 379, %entry ]
-  store i32 1, ptr %lsr.iv1, align 4
-  %lsr.iv.next = add nsw i64 %lsr.iv, -1
-  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i64 4
-  %exitcond.not = icmp eq i64 %lsr.iv.next, 0
-  %dummy = select i1 %exitcond.not, i8 0, i8 1
-  br i1 %exitcond.not, label %for.end, label %for.body
-
-for.end:                                          ; preds = %for.body
-  ret void
-}

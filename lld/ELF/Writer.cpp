@@ -2889,7 +2889,7 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
       }
       os.write(buf, data->size);
     } else if (MemoryRegionCommand *mem =
-                   dyn_cast<MemoryRegionCommand>(command)) {
+                  dyn_cast<MemoryRegionCommand>(command)) {
       uint64_t regionBegin = mem->memRegion->origin().getValue();
       uint64_t regionLength = mem->memRegion->length().getValue();
       uint64_t regionEnd = regionBegin + regionLength;
@@ -2899,46 +2899,54 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
       // LMAs collected so far.
       uint64_t regionWriteEnd = mem->full ? regionEnd : regionBegin;
 
-      // Collect each output section that LMA overlaps with the memory region
-      // and write it to the corresponding portion of the buffer.
-      for (OutputSection *sec : outputSections) {
-        if (!(sec->flags & SHF_ALLOC) || sec->type != SHT_PROGBITS ||
-            !sec->size)
-          continue;
+      {
+        parallel::TaskGroup tg;
+        // Collect each output section that LMA overlaps with the memory region
+        // and write it to the corresponding portion of the buffer.
+        for (OutputSection *sec : outputSections) {
+          if (!(sec->flags & SHF_ALLOC) || sec->type != SHT_PROGBITS ||
+              !sec->size)
+            continue;
 
-        uint64_t lmaBegin = sec->getLMA();
-        uint64_t lmaEnd = lmaBegin + sec->size;
+          uint64_t lmaBegin = sec->getLMA();
+          uint64_t lmaEnd = lmaBegin + sec->size;
 
-        // Skip the section if it doesn't LMA overlap with the region.
-        if (lmaEnd <= regionBegin || lmaBegin >= regionEnd)
-          continue;
+          // Skip the section if it doesn't LMA overlap with the region.
+          if (lmaEnd <= regionBegin || lmaBegin >= regionEnd)
+            continue;
 
-        // If the section is wholly contained by the region, just write it
-        // directly to the buffer.
-        if (lmaBegin >= regionBegin && lmaEnd <= regionEnd) {
-          regionWriteEnd = std::max(regionWriteEnd, lmaEnd);
-          sec->writeTo<ELFT>(reinterpret_cast<uint8_t *>(
-              buf->getBufferStart() + (lmaBegin - regionBegin)));
-          continue;
+          // If the section is wholly contained by the region, just write it
+          // directly to the buffer.
+          if (lmaBegin >= regionBegin && lmaEnd <= regionEnd) {
+            regionWriteEnd = std::max(regionWriteEnd, lmaEnd);
+            sec->writeTo<ELFT>(
+                reinterpret_cast<uint8_t *>(buf->getBufferStart() +
+                                            (lmaBegin - regionBegin)),
+                tg);
+            continue;
+          }
+
+          // Otherwise, collect the whole output section into a separate buffer.
+          auto secBuf = WritableMemoryBuffer::getNewMemBuffer(sec->size);
+          {
+            parallel::TaskGroup tg;
+            sec->writeTo<ELFT>(
+                reinterpret_cast<uint8_t *>(secBuf->getBufferStart()), tg);
+          }
+
+          // Trim the output section against the memory region.
+          uint64_t copyBegin = 0;
+          if (lmaBegin < regionBegin)
+            copyBegin += regionBegin - lmaBegin;
+          uint64_t copyEnd = sec->size;
+          if (lmaEnd > regionEnd)
+            copyEnd -= lmaEnd - regionEnd;
+
+          // Copy the trimmed portion of the output section into the region
+          // buffer.
+          memcpy(buf->getBufferStart() + (lmaBegin + copyBegin - regionBegin),
+                  secBuf->getBufferStart() + copyBegin, copyEnd - copyBegin);
         }
-
-        // Otherwise, collect the whole output section into a separate buffer.
-        auto secBuf = WritableMemoryBuffer::getNewMemBuffer(sec->size);
-        sec->writeTo<ELFT>(
-            reinterpret_cast<uint8_t *>(secBuf->getBufferStart()));
-
-        // Trim the output section against the memory region.
-        uint64_t copyBegin = 0;
-        if (lmaBegin < regionBegin)
-          copyBegin += regionBegin - lmaBegin;
-        uint64_t copyEnd = sec->size;
-        if (lmaEnd > regionEnd)
-          copyEnd -= lmaEnd - regionEnd;
-
-        // Copy the trimmed portion of the output section into the region
-        // buffer.
-        memcpy(buf->getBufferStart() + (lmaBegin + copyBegin - regionBegin),
-               secBuf->getBufferStart() + copyBegin, copyEnd - copyBegin);
       }
 
       // Now that all overlapping output sections have been placed, write out

@@ -382,23 +382,18 @@ public:
 
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        int64_t BaseOffset, bool HasBaseReg,
-                                       int64_t Scale, unsigned AddrSpace) {
+                                       Type *BaseType, int64_t Scale,
+                                       Type *ScaleType, unsigned AddrSpace) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;
     AM.HasBaseReg = HasBaseReg;
+    AM.BaseType = BaseType;
     AM.Scale = Scale;
+    AM.ScaleType = ScaleType;
     if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
       return 0;
     return -1;
-  }
-
-  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
-                                       Type *BaseType, int64_t Scale,
-                                       Type *ScaleType, unsigned AddrSpace) {
-    return thisT()->getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg,
-                                         Scale, AddrSpace);
   }
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) {

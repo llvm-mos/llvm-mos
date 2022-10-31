@@ -39,7 +39,7 @@ define void @vdiv(double* %x, double* %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; CHECK:       vector.ph.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP3]], -2

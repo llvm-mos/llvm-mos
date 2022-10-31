@@ -4792,22 +4792,26 @@ bool CombinerHelper::matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo) {
          MI.getOpcode() == TargetOpcode::G_SSUBE);
   if (!mi_match(MI.getOperand(4).getReg(), MRI, m_SpecificICstOrSplat(0)))
     return false;
-  MatchInfo = [&](MachineIRBuilder &B) {
-    unsigned NewOpcode;
-    switch (MI.getOpcode()) {
-    case TargetOpcode::G_UADDE:
-      NewOpcode = TargetOpcode::G_UADDO;
-      break;
-    case TargetOpcode::G_SADDE:
-      NewOpcode = TargetOpcode::G_SADDO;
-      break;
-    case TargetOpcode::G_USUBE:
-      NewOpcode = TargetOpcode::G_USUBO;
-      break;
-    case TargetOpcode::G_SSUBE:
-      NewOpcode = TargetOpcode::G_SSUBO;
-      break;
-    }
+  unsigned NewOpcode;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_UADDE:
+    NewOpcode = TargetOpcode::G_UADDO;
+    break;
+  case TargetOpcode::G_SADDE:
+    NewOpcode = TargetOpcode::G_SADDO;
+    break;
+  case TargetOpcode::G_USUBE:
+    NewOpcode = TargetOpcode::G_USUBO;
+    break;
+  case TargetOpcode::G_SSUBE:
+    NewOpcode = TargetOpcode::G_SSUBO;
+    break;
+  }
+  if (!isLegalOrBeforeLegalizer({NewOpcode,
+                                 {MRI.getType(MI.getOperand(0).getReg()),
+                                  MRI.getType(MI.getOperand(1).getReg())}}))
+    return false;
+  MatchInfo = [&, NewOpcode](MachineIRBuilder &B) {
     Observer.changingInstr(MI);
     MI.setDesc(B.getTII().get(NewOpcode));
     MI.removeOperand(4);

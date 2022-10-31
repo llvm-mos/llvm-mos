@@ -3184,10 +3184,9 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(
   return (TailFoldingKindLoc & Required) == Required;
 }
 
-InstructionCost
-AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                     int64_t BaseOffset, bool HasBaseReg,
-                                     int64_t Scale, unsigned AddrSpace) const {
+InstructionCost AArch64TTIImpl::getScalingFactorCost(
+    Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset, bool HasBaseReg,
+    Type *BaseTy, int64_t Scale, Type *ScaleTy, unsigned AddrSpace) const {
   // Scaling factors are not free at all.
   // Operands                     | Rt Latency
   // -------------------------------------------
