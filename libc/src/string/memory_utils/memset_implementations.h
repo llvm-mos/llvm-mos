@@ -92,7 +92,7 @@ inline static void inline_memset(char *dst, unsigned char value, size_t count) {
     return splat_set<HeadTail<_8>>(dst, value, count);
   if (count <= 32)
     return splat_set<HeadTail<_16>>(dst, value, count);
-  if (count <= 96) {
+  if (count <= (32 + 64)) {
     splat_set<_32>(dst, value);
     if (count <= 64)
       return splat_set<Tail<_32>>(dst, value, count);
@@ -100,8 +100,11 @@ inline static void inline_memset(char *dst, unsigned char value, size_t count) {
     splat_set<Tail<_32>>(dst, value, count);
     return;
   }
-  if (count < 448 || value != 0 || !AArch64ZVA(dst, count))
-    return splat_set<Align<_16, Arg::_1>::Then<Loop<_64>>>(dst, value, count);
+  if (count >= 448 && value == 0 && hasZva())
+    return splat_set<Align<_64, Arg::P1>::Then<Loop<Zva64, _64>>>(dst, 0,
+                                                                  count);
+  else
+    return splat_set<Align<_16, Arg::P1>::Then<Loop<_64>>>(dst, value, count);
 #else
   /////////////////////////////////////////////////////////////////////////////
   // Default

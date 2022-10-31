@@ -375,6 +375,11 @@ static bool collectSRATypes(DenseMap<uint64_t, Type *> &Types, GlobalValue *GV,
       auto It = Types.try_emplace(Offset.getZExtValue(), Ty).first;
       if (Ty != It->second)
         return false;
+
+      // Scalable types not currently supported.
+      if (isa<ScalableVectorType>(Ty))
+        return false;
+
       continue;
     }
 
@@ -650,7 +655,7 @@ static bool allUsesOfLoadedValueWillTrapIfNull(const GlobalVariable *GV) {
   Worklist.push_back(GV);
   while (!Worklist.empty()) {
     const Value *P = Worklist.pop_back_val();
-    for (auto *U : P->users()) {
+    for (const auto *U : P->users()) {
       if (auto *LI = dyn_cast<LoadInst>(U)) {
         SmallPtrSet<const PHINode *, 8> PHIs;
         if (!AllUsesOfValueWillTrapIfNull(LI, PHIs))
@@ -1816,11 +1821,14 @@ hasOnlyColdCalls(Function &F,
         Function *CalledFn = CI->getCalledFunction();
         if (!CalledFn)
           return false;
-        if (!CalledFn->hasLocalLinkage())
-          return false;
         // Skip over intrinsics since they won't remain as function calls.
+        // Important to do this check before the linkage check below so we
+        // won't bail out on debug intrinsics, possibly making the generated
+        // code dependent on the presence of debug info.
         if (CalledFn->getIntrinsicID() != Intrinsic::not_intrinsic)
           continue;
+        if (!CalledFn->hasLocalLinkage())
+          return false;
         // Check if it's valid to use coldcc calling convention.
         if (!hasChangeableCC(CalledFn) || CalledFn->isVarArg() ||
             CalledFn->hasAddressTaken())
@@ -2397,7 +2405,7 @@ static bool cxxDtorIsEmpty(const Function &Fn) {
   if (Fn.isDeclaration())
     return false;
 
-  for (auto &I : Fn.getEntryBlock()) {
+  for (const auto &I : Fn.getEntryBlock()) {
     if (I.isDebugOrPseudoInst())
       continue;
     if (isa<ReturnInst>(I))

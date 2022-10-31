@@ -310,7 +310,42 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
         type{addendum ? addendum->derivedType() : nullptr}) {
       if (const typeInfo::Component *
           comp{type->FindDataComponent(compName, std::strlen(compName))}) {
-        comp->CreatePointerDescriptor(desc, source, handler);
+        bool createdDesc{false};
+        if (comp->rank() > 0 && source.rank() > 0) {
+          // If base and component are both arrays, the component name
+          // must be followed by subscripts; process them now.
+          std::size_t byteCount{0};
+          if (std::optional<char32_t> next{io.GetNextNonBlank(byteCount)};
+              next && *next == '(') {
+            io.HandleRelativePosition(byteCount); // skip over '('
+            StaticDescriptor<maxRank, true, 16> staticDesc;
+            Descriptor &tmpDesc{staticDesc.descriptor()};
+            comp->CreatePointerDescriptor(tmpDesc, source, handler);
+            if (!HandleSubscripts(io, desc, tmpDesc, compName)) {
+              return false;
+            }
+            createdDesc = true;
+          }
+        }
+        if (!createdDesc) {
+          comp->CreatePointerDescriptor(desc, source, handler);
+        }
+        if (source.rank() > 0) {
+          if (desc.rank() > 0) {
+            handler.SignalError(
+                "NAMELIST component reference '%%%s' of input group "
+                "item %s cannot be an array when its base is not scalar",
+                compName, name);
+            return false;
+          }
+          desc.raw().rank = source.rank();
+          for (int j{0}; j < source.rank(); ++j) {
+            const auto &srcDim{source.GetDimension(j)};
+            desc.GetDimension(j)
+                .SetBounds(1, srcDim.UpperBound())
+                .SetByteStride(srcDim.ByteStride());
+          }
+        }
         return true;
       } else {
         handler.SignalError(
@@ -329,7 +364,7 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
     }
   } else {
     handler.SignalError("NAMELIST component reference of input group item %s "
-                        "has no name after '%'",
+                        "has no name after '%%'",
         name);
   }
   return false;
@@ -383,7 +418,11 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         next = io.GetNextNonBlank(byteCount);
       }
     }
-    if (!next || *next != '&') {
+    if (!next) {
+      handler.SignalEnd();
+      return false;
+    }
+    if (*next != '&') {
       handler.SignalError(
           "NAMELIST input group does not begin with '&' (at '%lc')", *next);
       return false;
@@ -475,7 +514,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
     io.HandleRelativePosition(byteCount);
     // Read the values into the descriptor.  An array can be short.
-    listInput->ResetForNextNamelistItem();
+    listInput->ResetForNextNamelistItem(useDescriptor->rank() > 0);
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
     }
@@ -493,9 +532,10 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   return true;
 }
 
-bool IsNamelistName(IoStatementState &io) {
-  if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
-    if (io.mutableModes().inNamelist) {
+bool IsNamelistNameOrSlash(IoStatementState &io) {
+  if (auto *listInput{
+          io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
+    if (listInput->inNamelistArray()) {
       SavedPosition savedPosition{io};
       std::size_t byteCount{0};
       if (auto ch{io.GetNextNonBlank(byteCount)}) {
@@ -507,6 +547,8 @@ bool IsNamelistName(IoStatementState &io) {
           ch = io.GetNextNonBlank(byteCount);
           // TODO: how to deal with NaN(...) ambiguity?
           return ch && (*ch == '=' || *ch == '(' || *ch == '%');
+        } else {
+          return *ch == '/';
         }
       }
     }

@@ -4819,10 +4819,10 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportSubstTemplateTypeParmType) {
   };
   auto tests = [&](ASTContext &Ctx) {
     testType(Ctx, "void", None);
-    testType(Ctx, "char", 0);
-    testType(Ctx, "float", 1);
-    testType(Ctx, "int", 2);
-    testType(Ctx, "short", 3);
+    testType(Ctx, "char", 3);
+    testType(Ctx, "float", 2);
+    testType(Ctx, "int", 1);
+    testType(Ctx, "short", 0);
   };
 
   tests(FromTU->getASTContext());
@@ -4962,9 +4962,9 @@ TEST_P(ASTImporterLookupTableTest,
   FooDC->getRedeclContext()->localUncachedLookup(FooName, FoundDecls);
   EXPECT_EQ(FoundDecls.size(), 0u);
 
-  // Cannot find in the LookupTable of its LexicalDC (A).
+  // Finds via linear search of its LexicalDC (A).
   FooLexicalDC->getRedeclContext()->localUncachedLookup(FooName, FoundDecls);
-  EXPECT_EQ(FoundDecls.size(), 0u);
+  EXPECT_EQ(FoundDecls.size(), 1u);
 
   // Can't find in the list of Decls of the DC.
   EXPECT_EQ(findInDeclListOfDC(FooDC, FooName), nullptr);

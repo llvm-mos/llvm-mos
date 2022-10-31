@@ -879,11 +879,12 @@ static Mangled::NamePreference opts::symtab::getNamePreference() {
   case ManglingPreference::MangledWithoutArguments:
     return Mangled::ePreferDemangledWithoutArguments;
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 int opts::symtab::handleSymtabCommand(Debugger &Dbg) {
   if (auto error = validate()) {
-    logAllUnhandledErrors(std::move(error.getValue()), WithColor::error(), "");
+    logAllUnhandledErrors(std::move(error.value()), WithColor::error(), "");
     return 1;
   }
 

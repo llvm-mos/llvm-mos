@@ -875,6 +875,23 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
   }
 }
 
+static bool AreCompatibleFunctionResultShapes(const Shape &x, const Shape &y) {
+  int rank{GetRank(x)};
+  if (GetRank(y) != rank) {
+    return false;
+  }
+  for (int j{0}; j < rank; ++j) {
+    if (auto xDim{ToInt64(x[j])}) {
+      if (auto yDim{ToInt64(y[j])}) {
+        if (*xDim != *yDim) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 bool FunctionResult::IsCompatibleWith(
     const FunctionResult &actual, std::string *whyNot) const {
   Attrs actualAttrs{actual.attrs};
@@ -892,9 +909,10 @@ bool FunctionResult::IsCompatibleWith(
           *whyNot = "function results have distinct ranks";
         }
       } else if (!attrs.test(Attr::Allocatable) && !attrs.test(Attr::Pointer) &&
-          ifaceTypeShape->shape() != actualTypeShape->shape()) {
+          !AreCompatibleFunctionResultShapes(
+              ifaceTypeShape->shape(), actualTypeShape->shape())) {
         if (whyNot) {
-          *whyNot = "function results have distinct extents";
+          *whyNot = "function results have distinct constant extents";
         }
       } else if (!ifaceTypeShape->type().IsTkCompatibleWith(
                      actualTypeShape->type())) {
@@ -1279,7 +1297,7 @@ int DistinguishUtils::FindLastToDistinguishByName(
 // passed-object, and that x is TKR compatible with
 int DistinguishUtils::CountCompatibleWith(
     const DummyArgument &x, const DummyArguments &args) const {
-  return std::count_if(args.begin(), args.end(), [&](const DummyArgument &y) {
+  return llvm::count_if(args, [&](const DummyArgument &y) {
     return !y.pass && !y.IsOptional() && IsTkrCompatible(x, y);
   });
 }
@@ -1288,7 +1306,7 @@ int DistinguishUtils::CountCompatibleWith(
 // distinguishable from x and not passed-object.
 int DistinguishUtils::CountNotDistinguishableFrom(
     const DummyArgument &x, const DummyArguments &args) const {
-  return std::count_if(args.begin(), args.end(), [&](const DummyArgument &y) {
+  return llvm::count_if(args, [&](const DummyArgument &y) {
     return !y.pass && std::holds_alternative<DummyDataObject>(y.u) &&
         !Distinguishable(y, x);
   });

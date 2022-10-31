@@ -35,6 +35,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <numeric>
 
 #define DEBUG_TYPE "legalizer"
 
@@ -1592,7 +1593,7 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
   // %9:_(s6) = G_MERGE_VALUES %6, %7, %7
   // %10:_(s12) = G_MERGE_VALUES %8, %9
 
-  const int GCD = greatestCommonDivisor(SrcSize, WideSize);
+  const int GCD = std::gcd(SrcSize, WideSize);
   LLT GCDTy = LLT::scalar(GCD);
 
   SmallVector<Register, 8> Parts;
@@ -1865,7 +1866,7 @@ LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
                                            LLT WideTy) {
   unsigned Opcode;
   unsigned ExtOpcode;
-  Optional<Register> CarryIn = None;
+  Optional<Register> CarryIn;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");
@@ -1911,9 +1912,9 @@ LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
     unsigned BoolExtOp = MIRBuilder.getBoolExtOp(WideTy.isVector(), false);
 
     Observer.changingInstr(MI);
-    widenScalarDst(MI, WideTy, 1);
     if (CarryIn)
       widenScalarSrc(MI, WideTy, 4, BoolExtOp);
+    widenScalarDst(MI, WideTy, 1);
 
     Observer.changedInstr(MI);
     return Legalized;
@@ -4334,7 +4335,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
       // The input vector this mask element indexes into.
       unsigned Input = (unsigned)Idx / NewElts;
 
-      if (Input >= array_lengthof(Inputs)) {
+      if (Input >= std::size(Inputs)) {
         // The mask element does not index into any input vector.
         Ops.push_back(-1);
         continue;
@@ -4345,7 +4346,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
 
       // Find or create a shuffle vector operand to hold this input.
       unsigned OpNo;
-      for (OpNo = 0; OpNo < array_lengthof(InputUsed); ++OpNo) {
+      for (OpNo = 0; OpNo < std::size(InputUsed); ++OpNo) {
         if (InputUsed[OpNo] == Input) {
           // This input vector is already an operand.
           break;
@@ -4356,7 +4357,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
         }
       }
 
-      if (OpNo >= array_lengthof(InputUsed)) {
+      if (OpNo >= std::size(InputUsed)) {
         // More than two input vectors used!  Give up on trying to create a
         // shuffle vector.  Insert all elements into a BUILD_VECTOR instead.
         UseBuildVector = true;
@@ -4379,7 +4380,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
         // The input vector this mask element indexes into.
         unsigned Input = (unsigned)Idx / NewElts;
 
-        if (Input >= array_lengthof(Inputs)) {
+        if (Input >= std::size(Inputs)) {
           // The mask element is "undef" or indexes off the end of the input.
           SVOps.push_back(MIRBuilder.buildUndef(EltTy).getReg(0));
           continue;
@@ -7258,6 +7259,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   if (!DstTy.isVector())
     return UnableToLegalize;
 
+  bool IsEltPtr = DstTy.getElementType().isPointer();
+  if (IsEltPtr) {
+    LLT ScalarPtrTy = LLT::scalar(DstTy.getScalarSizeInBits());
+    LLT NewTy = DstTy.changeElementType(ScalarPtrTy);
+    Op1Reg = MIRBuilder.buildPtrToInt(NewTy, Op1Reg).getReg(0);
+    Op2Reg = MIRBuilder.buildPtrToInt(NewTy, Op2Reg).getReg(0);
+    DstTy = NewTy;
+  }
+
   if (MaskTy.isScalar()) {
     // Turn the scalar condition into a vector condition mask.
 
@@ -7265,10 +7275,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
 
     // The condition was potentially zero extended before, but we want a sign
     // extended boolean.
-    if (MaskTy.getSizeInBits() <= DstTy.getScalarSizeInBits() &&
-        MaskTy != LLT::scalar(1)) {
+    if (MaskTy != LLT::scalar(1))
       MaskElt = MIRBuilder.buildSExtInReg(MaskTy, MaskElt, 1).getReg(0);
-    }
 
     // Continue the sign extension (or truncate) to match the data type.
     MaskElt = MIRBuilder.buildSExtOrTrunc(DstTy.getElementType(),
@@ -7287,7 +7295,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   auto NotMask = MIRBuilder.buildNot(MaskTy, MaskReg);
   auto NewOp1 = MIRBuilder.buildAnd(MaskTy, Op1Reg, MaskReg);
   auto NewOp2 = MIRBuilder.buildAnd(MaskTy, Op2Reg, NotMask);
-  MIRBuilder.buildOr(DstReg, NewOp1, NewOp2);
+  if (IsEltPtr) {
+    auto Or = MIRBuilder.buildOr(DstTy, NewOp1, NewOp2);
+    MIRBuilder.buildIntToPtr(DstReg, Or);
+  } else {
+    MIRBuilder.buildOr(DstReg, NewOp1, NewOp2);
+  }
   MI.eraseFromParent();
   return Legalized;
 }

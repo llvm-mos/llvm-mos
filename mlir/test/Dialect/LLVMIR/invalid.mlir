@@ -148,7 +148,7 @@ func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr<f32>) {
 
 func.func @gep_too_few_dynamic(%base : !llvm.ptr<f32>) {
   // expected-error@+1 {{expected as many dynamic indices as specified in 'rawConstantIndices'}}
-  %1 = "llvm.getelementptr"(%base) {rawConstantIndices = [:i32 -2147483648]} : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+  %1 = "llvm.getelementptr"(%base) {rawConstantIndices = array<i32: -2147483648>} : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
 }
 
 // -----
@@ -385,44 +385,28 @@ llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !
 // -----
 
 func.func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
-  // expected-error@+1 {{expected LLVM IR Dialect type}}
+  // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.insertvalue %a, %b[0] : tensor<*xi32>
 }
 
 // -----
 
-func.func @insertvalue_non_array_position() {
-  // Note the double-type, otherwise attribute parsing consumes the trailing
-  // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{invalid kind of attribute specified}}
-  llvm.insertvalue %a, %b 0 : i32 : !llvm.struct<(i32)>
-}
-
-// -----
-
-func.func @insertvalue_non_integer_position() {
-  // expected-error@+1 {{expected an array of integer literals}}
-  llvm.insertvalue %a, %b[0.0] : !llvm.struct<(i32)>
-}
-
-// -----
-
 func.func @insertvalue_struct_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.insertvalue %a, %b[1] : !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @insertvalue_array_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.insertvalue %a, %b[1] : !llvm.array<1 x i32>
 }
 
 // -----
 
 func.func @insertvalue_wrong_nesting() {
-  // expected-error@+1 {{expected LLVM IR structure/array type}}
+  // expected-error@+2 {{expected LLVM IR structure/array type}}
   llvm.insertvalue %a, %b[0,0] : !llvm.struct<(i32)>
 }
 
@@ -430,7 +414,7 @@ func.func @insertvalue_wrong_nesting() {
 
 func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 x i32> {
   // expected-error@+1 {{'llvm.insertvalue' op Type mismatch: cannot insert '!llvm.array<1 x i32>' into '!llvm.array<1 x i32>'}}
-  %b = "llvm.insertvalue"(%a, %a) {position = [0]} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
+  %b = "llvm.insertvalue"(%a, %a) {position = array<i64: 0>} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
   return %b : !llvm.array<1 x i32>
 }
 
@@ -438,7 +422,7 @@ func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 
 
 func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>> {
   // expected-error@+1 {{'llvm.extractvalue' op Type mismatch: extracting from '!llvm.array<4 x vector<8xf32>>' should produce 'vector<8xf32>' but this op returns '!llvm.array<4 x vector<8xf32>>'}}
-  %b = "llvm.extractvalue"(%a) {position = [1]}
+  %b = "llvm.extractvalue"(%a) {position = array<i64: 1>}
             : (!llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>>
   return %b : !llvm.array<4 x vector<8xf32>>
 }
@@ -447,72 +431,55 @@ func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !ll
 // -----
 
 func.func @extractvalue_non_llvm_type(%a : i32, %b : tensor<*xi32>) {
-  // expected-error@+1 {{expected LLVM IR Dialect type}}
+  // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.extractvalue %b[0] : tensor<*xi32>
 }
-
-// -----
-
-func.func @extractvalue_non_array_position() {
-  // Note the double-type, otherwise attribute parsing consumes the trailing
-  // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{invalid kind of attribute specified}}
-  llvm.extractvalue %b 0 : i32 : !llvm.struct<(i32)>
-}
-
-// -----
-
-func.func @extractvalue_non_integer_position() {
-  // expected-error@+1 {{expected an array of integer literals}}
-  llvm.extractvalue %b[0.0] : !llvm.struct<(i32)>
-}
-
 // -----
 
 func.func @extractvalue_struct_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.extractvalue %b[1] : !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @extractvalue_array_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.extractvalue %b[1] : !llvm.array<1 x i32>
 }
 
 // -----
 
 func.func @extractvalue_wrong_nesting() {
-  // expected-error@+1 {{expected LLVM IR structure/array type}}
+  // expected-error@+2 {{expected LLVM IR structure/array type}}
   llvm.extractvalue %b[0,0] : !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @invalid_vector_type_1(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM dialect-compatible vector type for operand #1}}
+  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
   %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM dialect-compatible vector type for operand #1}}
+  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
-  %0 = llvm.shufflevector %arg2, %arg2 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : f32, f32
+  // expected-error@+2 {{expected an LLVM compatible vector type}}
+  %0 = llvm.shufflevector %arg2, %arg2 [0, 0, 0, 0, 7] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_4(%a : vector<4xf32>, %idx : i32) -> vector<4xf32> {
-  // expected-error@+1 {{'llvm.extractelement' op Type mismatch: extracting from 'vector<4xf32>' should produce 'f32' but this op returns 'vector<4xf32>'}}
+  // expected-error@+1 {{failed to verify that result type matches vector element type}}
   %b = "llvm.extractelement"(%a, %idx) : (vector<4xf32>, i32) -> vector<4xf32>
   return %b : vector<4xf32>
 }
@@ -520,7 +487,7 @@ func.func @invalid_vector_type_4(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 // -----
 
 func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32> {
-  // expected-error@+1 {{'llvm.insertelement' op Type mismatch: cannot insert 'vector<4xf32>' into 'vector<4xf32>'}}
+  // expected-error@+1 {{failed to verify that argument type matches vector element type}}
   %b = "llvm.insertelement"(%a, %a, %idx) : (vector<4xf32>, vector<4xf32>, i32) -> vector<4xf32>
   return %b : vector<4xf32>
 }
@@ -528,7 +495,7 @@ func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 // -----
 
 func.func @null_non_llvm_type() {
-  // expected-error@+1 {{custom op 'llvm.mlir.null' invalid kind of type specified}}
+  // expected-error@+1 {{'llvm.mlir.null' op result #0 must be LLVM pointer type, but got 'i32'}}
   llvm.mlir.null : i32
 }
 
@@ -1307,7 +1274,7 @@ func.func @gep_out_of_bounds(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>,
 
 func.func @non_splat_shuffle_on_scalable_vector(%arg0: vector<[4]xf32>) {
   // expected-error@below {{expected a splat operation for scalable vectors}}
-  %0 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 1 : i32] : vector<[4]xf32>, vector<[4]xf32>
+  %0 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 1] : vector<[4]xf32>
   return
 }
 

@@ -620,7 +620,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
       if (MI.getOpcode() == Hexagon::PS_alloca)
         AdjustRegs.push_back(&MI);
 
-  for (auto MI : AdjustRegs) {
+  for (auto *MI : AdjustRegs) {
     assert((MI->getOpcode() == Hexagon::PS_alloca) && "Expected alloca");
     expandAlloca(MI, HII, SP, MaxCF);
     MI->eraseFromParent();
@@ -2156,7 +2156,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
     for (unsigned VR : NewRegs)
       SpillRCs.insert(MRI.getRegClass(VR));
 
-    for (auto *RC : SpillRCs) {
+    for (const auto *RC : SpillRCs) {
       if (!needToReserveScavengingSpillSlots(MF, HRI, RC))
         continue;
       unsigned Num = 1;

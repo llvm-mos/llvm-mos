@@ -100,7 +100,7 @@ struct InstRegexOp : public SetTheory::Operator {
       if (removeParens(Original).find_first_of("|?") != std::string::npos)
         FirstMeta = 0;
 
-      Optional<Regex> Regexpr = None;
+      Optional<Regex> Regexpr;
       StringRef Prefix = Original.substr(0, FirstMeta);
       StringRef PatStr = Original.substr(FirstMeta);
       if (!PatStr.empty()) {
@@ -734,14 +734,12 @@ unsigned CodeGenSchedModels::getSchedRWIdx(const Record *Def,
 }
 
 bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
-  for (const CodeGenSchedRW &Read : SchedReads) {
-    Record *ReadDef = Read.TheDef;
-    if (!ReadDef || !ReadDef->isSubClassOf("ProcReadAdvance"))
-      continue;
-
-    RecVec ValidWrites = ReadDef->getValueAsListOfDefs("ValidWrites");
-    if (is_contained(ValidWrites, WriteDef)) {
-      return true;
+  for (auto& ProcModel : ProcModels) {
+    const RecVec &RADefs = ProcModel.ReadAdvanceDefs;
+    for (auto& RADef : RADefs) {
+      RecVec ValidWrites = RADef->getValueAsListOfDefs("ValidWrites");
+      if (is_contained(ValidWrites, WriteDef))
+        return true;
     }
   }
   return false;

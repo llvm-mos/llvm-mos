@@ -45,11 +45,15 @@ public:
 
   /// Returns true if we contain a valid ParseResult value.
   bool has_value() const { return impl.has_value(); }
-  bool hasValue() const { return impl.has_value(); }
+  LLVM_DEPRECATED("Use has_value instead", "has_value") bool hasValue() const {
+    return impl.has_value();
+  }
 
   /// Access the internal ParseResult value.
   ParseResult value() const { return impl.value(); }
-  ParseResult getValue() const { return impl.value(); }
+  LLVM_DEPRECATED("Use value instead", "value") ParseResult getValue() const {
+    return impl.value();
+  }
   ParseResult operator*() const { return value(); }
 
 private:
@@ -143,8 +147,8 @@ public:
   /// See Operation::walk for more details.
   template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<
-      llvm::function_traits<std::decay_t<FnT>>::num_args == 1, RetT>::type
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 1,
+                   RetT>
   walk(FnT &&callback) {
     return state->walk<Order>(std::forward<FnT>(callback));
   }
@@ -171,8 +175,8 @@ public:
   ///         return WalkResult::advance();
   ///       });
   template <typename FnT, typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<
-      llvm::function_traits<std::decay_t<FnT>>::num_args == 2, RetT>::type
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 2,
+                   RetT>
   walk(FnT &&callback) {
     return state->walk(std::forward<FnT>(callback));
   }
@@ -236,7 +240,7 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
   using PointerUnion<Attribute, Value>::PointerUnion;
 
 public:
-  void dump() { llvm::errs() << *this << "\n"; }
+  void dump() const { llvm::errs() << *this << "\n"; }
 };
 
 /// Allow printing to a stream.
@@ -850,7 +854,7 @@ public:
   /// can use SFINAE to disable the methods for non-single region operations.
   template <typename OpT, typename T = void>
   using enable_if_single_region =
-      typename std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
+      std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
 
   template <typename OpT = ConcreteType>
   enable_if_single_region<OpT, Block::iterator> begin() {
@@ -953,7 +957,7 @@ struct SingleBlockImplicitTerminator {
 
     template <typename OpT, typename T = void>
     using enable_if_single_region =
-        typename std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
+        std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
 
     /// Insert the operation into the back of the body, before the terminator.
     template <typename OpT = ConcreteType>

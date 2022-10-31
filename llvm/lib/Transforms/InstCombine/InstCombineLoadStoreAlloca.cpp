@@ -111,12 +111,14 @@ isOnlyCopiedFromConstantMemory(AAResults *AA,
       if (!MI)
         return false;
 
+      // If the transfer is volatile, reject it.
+      if (MI->isVolatile())
+        return false;
+
       // If the transfer is using the alloca as a source of the transfer, then
       // ignore it since it is a load (unless the transfer is volatile).
-      if (U.getOperandNo() == 1) {
-        if (MI->isVolatile()) return false;
+      if (U.getOperandNo() == 1)
         continue;
-      }
 
       // If we already have seen a copy, reject the second one.
       if (TheCopy) return false;
@@ -250,7 +252,7 @@ private:
 } // end anonymous namespace
 
 bool PointerReplacer::collectUsers(Instruction &I) {
-  for (auto U : I.users()) {
+  for (auto *U : I.users()) {
     auto *Inst = cast<Instruction>(&*U);
     if (auto *Load = dyn_cast<LoadInst>(Inst)) {
       if (Load->isVolatile())
@@ -639,7 +641,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
                                                   ".unpack");
       NewLoad->setAAMetadata(LI.getAAMetadata());
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
-        UndefValue::get(T), NewLoad, 0, Name));
+        PoisonValue::get(T), NewLoad, 0, Name));
     }
 
     // We don't want to break loads with padding here as we'd loose
@@ -654,7 +656,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     auto *IdxType = Type::getInt32Ty(T->getContext());
     auto *Zero = ConstantInt::get(IdxType, 0);
 
-    Value *V = UndefValue::get(T);
+    Value *V = PoisonValue::get(T);
     for (unsigned i = 0; i < NumElements; i++) {
       Value *Indices[2] = {
         Zero,
@@ -681,7 +683,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       LoadInst *NewLoad = IC.combineLoadToNewType(LI, ET, ".unpack");
       NewLoad->setAAMetadata(LI.getAAMetadata());
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
-        UndefValue::get(T), NewLoad, 0, Name));
+        PoisonValue::get(T), NewLoad, 0, Name));
     }
 
     // Bail out if the array is too large. Ideally we would like to optimize
@@ -699,7 +701,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     auto *IdxType = Type::getInt64Ty(T->getContext());
     auto *Zero = ConstantInt::get(IdxType, 0);
 
-    Value *V = UndefValue::get(T);
+    Value *V = PoisonValue::get(T);
     uint64_t Offset = 0;
     for (uint64_t i = 0; i < NumElements; i++) {
       Value *Indices[2] = {
@@ -769,10 +771,13 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
       if (!CS)
         return false;
 
-      uint64_t TypeSize = DL.getTypeAllocSize(AI->getAllocatedType());
+      TypeSize TS = DL.getTypeAllocSize(AI->getAllocatedType());
+      if (TS.isScalable())
+        return false;
       // Make sure that, even if the multiplication below would wrap as an
       // uint64_t, we still do the right thing.
-      if ((CS->getValue().zext(128) * APInt(128, TypeSize)).ugt(MaxSize))
+      if ((CS->getValue().zext(128) * APInt(128, TS.getFixedSize()))
+              .ugt(MaxSize))
         return false;
       continue;
     }

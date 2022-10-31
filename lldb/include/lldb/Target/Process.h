@@ -22,10 +22,10 @@
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointSiteList.h"
-#include "lldb/Core/Communication.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/ThreadSafeValue.h"
+#include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -641,6 +641,8 @@ public:
   /// plug-in.
   virtual DynamicLoader *GetDynamicLoader();
 
+  void SetDynamicLoader(lldb::DynamicLoaderUP dyld);
+
   // Returns AUXV structure found in many ELF-based environments.
   //
   // The default action is to return an empty data buffer.
@@ -882,11 +884,9 @@ public:
 
   /// Called before attaching to a process.
   ///
-  /// Allow Process plug-ins to execute some code before attaching a process.
-  ///
   /// \return
   ///     Returns an error object.
-  virtual Status WillAttachToProcessWithID(lldb::pid_t pid) { return Status(); }
+  Status WillAttachToProcessWithID(lldb::pid_t pid);
 
   /// Called before attaching to a process.
   ///
@@ -894,8 +894,25 @@ public:
   ///
   /// \return
   ///     Returns an error object.
-  virtual Status WillAttachToProcessWithName(const char *process_name,
-                                             bool wait_for_launch) {
+  virtual Status DoWillAttachToProcessWithID(lldb::pid_t pid) {
+    return Status();
+  }
+
+  /// Called before attaching to a process.
+  ///
+  /// \return
+  ///     Returns an error object.
+  Status WillAttachToProcessWithName(const char *process_name,
+                                     bool wait_for_launch);
+
+  /// Called before attaching to a process.
+  ///
+  /// Allow Process plug-ins to execute some code before attaching a process.
+  ///
+  /// \return
+  ///     Returns an error object.
+  virtual Status DoWillAttachToProcessWithName(const char *process_name,
+                                               bool wait_for_launch) {
     return Status();
   }
 
@@ -988,12 +1005,17 @@ public:
   virtual void DidVForkDone() {}
 
   /// Called before launching to a process.
+  /// \return
+  ///     Returns an error object.
+  Status WillLaunch(Module *module);
+
+  /// Called before launching to a process.
   ///
   /// Allow Process plug-ins to execute some code before launching a process.
   ///
   /// \return
   ///     Returns an error object.
-  virtual Status WillLaunch(Module *module) { return Status(); }
+  virtual Status DoWillLaunch(Module *module) { return Status(); }
 
   /// Launch a new process.
   ///
@@ -2883,7 +2905,7 @@ protected:
       m_unix_signals_sp; /// This is the current signal set for this process.
   lldb::ABISP m_abi_sp;
   lldb::IOHandlerSP m_process_input_reader;
-  Communication m_stdio_communication;
+  ThreadedCommunication m_stdio_communication;
   std::recursive_mutex m_stdio_communication_mutex;
   bool m_stdin_forward; /// Remember if stdin must be forwarded to remote debug
                         /// server

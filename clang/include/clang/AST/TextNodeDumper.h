@@ -318,6 +318,8 @@ public:
   void VisitTagType(const TagType *T);
   void VisitTemplateTypeParmType(const TemplateTypeParmType *T);
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T);
+  void
+  VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
   void VisitAutoType(const AutoType *T);
   void VisitDeducedTemplateSpecializationType(
       const DeducedTemplateSpecializationType *T);
@@ -381,6 +383,7 @@ public:
   void VisitConceptDecl(const ConceptDecl *D);
   void
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
+  void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
 };
 
 } // namespace clang

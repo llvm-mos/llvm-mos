@@ -589,6 +589,33 @@ define i32 @select_andor(i32 %v1, i32 %v2, i32 %v3) {
   ret i32 %sel
 }
 
+define i32 @select_andor32(i32 %v1, i32 %v2, i32 %v3) {
+; SDISEL-LABEL: select_andor32:
+; SDISEL:       ; %bb.0:
+; SDISEL-NEXT:    cmp w1, w2
+; SDISEL-NEXT:    mov w8, #32
+; SDISEL-NEXT:    ccmp w0, w8, #4, lt
+; SDISEL-NEXT:    ccmp w0, w1, #0, eq
+; SDISEL-NEXT:    csel w0, w0, w1, eq
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: select_andor32:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    mov w8, #32
+; GISEL-NEXT:    cmp w1, w2
+; GISEL-NEXT:    ccmp w0, w8, #4, lt
+; GISEL-NEXT:    ccmp w0, w1, #0, eq
+; GISEL-NEXT:    csel w0, w0, w1, eq
+; GISEL-NEXT:    ret
+  %c0 = icmp eq i32 %v1, %v2
+  %c1 = icmp sge i32 %v2, %v3
+  %c2 = icmp eq i32 %v1, 32
+  %or = or i1 %c2, %c1
+  %and = and i1 %or, %c0
+  %sel = select i1 %and, i32 %v1, i32 %v2
+  ret i32 %sel
+}
+
 define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 ; SDISEL-LABEL: select_noccmp1:
 ; SDISEL:       ; %bb.0:
@@ -1167,4 +1194,47 @@ entry:
 }
 declare i32 @callee(i32)
 
+define i1 @cmp_and_negative_const(i32 %0, i32 %1) {
+; SDISEL-LABEL: cmp_and_negative_const:
+; SDISEL:       ; %bb.0:
+; SDISEL-NEXT:    cmn w0, #1
+; SDISEL-NEXT:    ccmn w1, #2, #0, eq
+; SDISEL-NEXT:    cset w0, eq
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: cmp_and_negative_const:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    cmn w0, #1
+; GISEL-NEXT:    cset w8, eq
+; GISEL-NEXT:    cmn w1, #2
+; GISEL-NEXT:    cset w9, eq
+; GISEL-NEXT:    and w0, w8, w9
+; GISEL-NEXT:    ret
+  %3 = icmp eq i32 %0, -1
+  %4 = icmp eq i32 %1, -2
+  %5 = and i1 %3, %4
+  ret i1 %5
+}
+
+define i1 @cmp_or_negative_const(i32 %a, i32 %b) {
+; SDISEL-LABEL: cmp_or_negative_const:
+; SDISEL:       ; %bb.0:
+; SDISEL-NEXT:    cmn w0, #1
+; SDISEL-NEXT:    ccmn w1, #2, #4, ne
+; SDISEL-NEXT:    cset w0, eq
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: cmp_or_negative_const:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    cmn w0, #1
+; GISEL-NEXT:    cset w8, eq
+; GISEL-NEXT:    cmn w1, #2
+; GISEL-NEXT:    cset w9, eq
+; GISEL-NEXT:    orr w0, w8, w9
+; GISEL-NEXT:    ret
+  %cmp = icmp eq i32 %a, -1
+  %cmp1 = icmp eq i32 %b, -2
+  %or.cond = or i1 %cmp, %cmp1
+  ret i1 %or.cond
+}
 attributes #0 = { nounwind }

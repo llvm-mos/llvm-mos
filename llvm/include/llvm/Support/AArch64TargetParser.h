@@ -67,11 +67,13 @@ enum ArchExtKind : uint64_t {
   AEK_PAUTH =       1ULL << 35, // FEAT_PAuth
   AEK_FLAGM =       1ULL << 36, // FEAT_FlagM
   AEK_SME =         1ULL << 37, // FEAT_SME
-  AEK_SMEF64 =      1ULL << 38, // FEAT_SME_F64F64
-  AEK_SMEI64 =      1ULL << 39, // FEAT_SME_I16I64
+  AEK_SMEF64F64 =   1ULL << 38, // FEAT_SME_F64F64
+  AEK_SMEI16I64 =   1ULL << 39, // FEAT_SME_I16I64
   AEK_HBC =         1ULL << 40, // FEAT_HBC
   AEK_MOPS =        1ULL << 41, // FEAT_MOPS
   AEK_PERFMON =     1ULL << 42, // FEAT_PMUv3
+  AEK_SME2 =        1ULL << 43, // FEAT_SME2
+  AEK_SVE2p1 =      1ULL << 44, // FEAT_SVE2p1
 };
 
 enum class ArchKind {
@@ -86,8 +88,8 @@ const ARM::ArchNames<ArchKind> AArch64ARCHNames[] = {
    sizeof(NAME) - 1,                                                           \
    CPU_ATTR,                                                                   \
    sizeof(CPU_ATTR) - 1,                                                       \
-   SUB_ARCH,                                                                   \
-   sizeof(SUB_ARCH) - 1,                                                       \
+   "+" SUB_ARCH,                                                               \
+   sizeof(SUB_ARCH),                                                           \
    ARM::FPUKind::ARCH_FPU,                                                     \
    ARCH_BASE_EXT,                                                              \
    AArch64::ArchKind::ID,                                                      \
@@ -107,11 +109,36 @@ const ARM::CpuNames<ArchKind> AArch64CPUNames[] = {
 #include "AArch64TargetParser.def"
 };
 
+const struct {
+  const char *Alias;
+  size_t AliasLength;
+  const char *Name;
+  size_t NameLength;
+
+  StringRef getAlias() const { return StringRef(Alias, AliasLength); }
+  StringRef getName() const { return StringRef(Name, NameLength); }
+} AArch64CPUAliases[] = {
+#define AARCH64_CPU_ALIAS(ALIAS,NAME)                                          \
+  {ALIAS, sizeof(ALIAS) - 1, NAME, sizeof(NAME) - 1},
+#include "AArch64TargetParser.def"
+};
+
 const ArchKind ArchKinds[] = {
 #define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT) \
     ArchKind::ID,
 #include "AArch64TargetParser.def"
 };
+
+inline ArchKind &operator--(ArchKind &Kind) {
+  if ((Kind == ArchKind::INVALID) || (Kind == ArchKind::ARMV8A) ||
+      (Kind == ArchKind::ARMV9A) || (Kind == ArchKind::ARMV8R))
+    Kind = ArchKind::INVALID;
+  else {
+    unsigned KindAsInteger = static_cast<unsigned>(Kind);
+    Kind = static_cast<ArchKind>(--KindAsInteger);
+  }
+  return Kind;
+}
 
 // FIXME: These should be moved to TargetTuple once it exists
 bool getExtensionFeatures(uint64_t Extensions,
@@ -124,12 +151,15 @@ StringRef getCPUAttr(ArchKind AK);
 StringRef getSubArch(ArchKind AK);
 StringRef getArchExtName(unsigned ArchExtKind);
 StringRef getArchExtFeature(StringRef ArchExt);
+ArchKind convertV9toV8(ArchKind AK);
+StringRef resolveCPUAlias(StringRef CPU);
 
 // Information by Name
 unsigned getDefaultFPU(StringRef CPU, ArchKind AK);
 uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
 ArchKind getCPUArchKind(StringRef CPU);
+ArchKind getSubArchArchKind(StringRef SubArch);
 
 // Parser
 ArchKind parseArch(StringRef Arch);

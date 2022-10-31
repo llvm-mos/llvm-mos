@@ -7,19 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTMATHTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 using AbsFOpLowering = VectorConvertToLLVMPattern<math::AbsFOp, LLVM::FAbsOp>;
-using AbsIOpLowering = VectorConvertToLLVMPattern<math::AbsIOp, LLVM::AbsOp>;
 using CeilOpLowering = VectorConvertToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     VectorConvertToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
@@ -36,16 +41,20 @@ using Log10OpLowering =
 using Log2OpLowering = VectorConvertToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
 using LogOpLowering = VectorConvertToLLVMPattern<math::LogOp, LLVM::LogOp>;
 using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
+using RoundEvenOpLowering =
+    VectorConvertToLLVMPattern<math::RoundEvenOp, LLVM::RoundEvenOp>;
 using RoundOpLowering =
     VectorConvertToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
 using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
 using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
+using FTruncOpLowering =
+    VectorConvertToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
 
-// A `CtLz/CtTz(a)` is converted into `CtLz/CtTz(a, false)`.
+// A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
 template <typename MathOp, typename LLVMOp>
-struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
+struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
   using ConvertOpToLLVMPattern<MathOp>::ConvertOpToLLVMPattern;
-  using Super = CountOpLowering<MathOp, LLVMOp>;
+  using Super = IntOpWithFlagLowering<MathOp, LLVMOp>;
 
   LogicalResult
   matchAndRewrite(MathOp op, typename MathOp::Adaptor adaptor,
@@ -83,9 +92,10 @@ struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
 };
 
 using CountLeadingZerosOpLowering =
-    CountOpLowering<math::CountLeadingZerosOp, LLVM::CountLeadingZerosOp>;
+    IntOpWithFlagLowering<math::CountLeadingZerosOp, LLVM::CountLeadingZerosOp>;
 using CountTrailingZerosOpLowering =
-    CountOpLowering<math::CountTrailingZerosOp, LLVM::CountTrailingZerosOp>;
+    IntOpWithFlagLowering<math::CountTrailingZerosOp, LLVM::CountTrailingZerosOp>;
+using AbsIOpLowering = IntOpWithFlagLowering<math::AbsIOp, LLVM::AbsOp>;
 
 // A `expm1` is converted into `exp - 1`.
 struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {
@@ -248,7 +258,7 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
 };
 
 struct ConvertMathToLLVMPass
-    : public ConvertMathToLLVMBase<ConvertMathToLLVMPass> {
+    : public impl::ConvertMathToLLVMBase<ConvertMathToLLVMPass> {
   ConvertMathToLLVMPass() = default;
 
   void runOnOperation() override {
@@ -285,10 +295,12 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     Log2OpLowering,
     LogOpLowering,
     PowFOpLowering,
+    RoundEvenOpLowering,
     RoundOpLowering,
     RsqrtOpLowering,
     SinOpLowering,
-    SqrtOpLowering
+    SqrtOpLowering,
+    FTruncOpLowering
   >(converter);
   // clang-format on
 }

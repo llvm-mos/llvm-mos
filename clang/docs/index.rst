@@ -40,6 +40,7 @@ Using Clang as a Compiler
    SafeStack
    ShadowCallStack
    SourceBasedCodeCoverage
+   StandardCPlusPlusModules
    Modules
    MSVCCompatibility
    MisExpect
@@ -97,6 +98,7 @@ Design Documents
 .. toctree::
    :maxdepth: 1
 
+   CodeOwners
    InternalsManual
    DriverInternals
    OffloadingDesign

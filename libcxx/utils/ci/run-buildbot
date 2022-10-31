@@ -148,6 +148,8 @@ function check-cxx-benchmarks() {
 ${CMAKE} --version
 ${NINJA} --version
 
+if [ ! -z "${CXX}" ]; then ${CXX} --version; fi
+
 case "${BUILDER}" in
 check-format)
     clean
@@ -185,10 +187,19 @@ check-generated-output)
 
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
-    ! grep -rn '[^ -~]' libcxx/include/ || false
+    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
+           --exclude '*.dat' \
+           --exclude 'escaped_output.*.pass.cpp' \
+           --exclude 'format_tests.h' \
+           --exclude 'formatter.*.pass.cpp' \
+           --exclude 'grep.pass.cpp' \
+           --exclude 'locale-specific_form.pass.cpp' \
+           --exclude 'ostream.pass.cpp' \
+           --exclude 'std_format_spec_string_unicode.bench.cpp' \
+           || false
 
-    # Reject patches that introduce dependency cycles in the headers.
-    python3 libcxx/utils/graph_header_deps.py >/dev/null
+    # Reject code with trailing whitespace
+    ! grep -rn '[[:blank:]]$' libcxx/include libcxx/src libcxx/test libcxx/benchmarks || false
 ;;
 generic-cxx03)
     clean
@@ -263,25 +274,7 @@ generic-merged)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-merged.cfg.in"
     check-runtimes
 ;;
-generic-clang-13)
-    export CC=clang-13
-    export CXX=clang++-13
-    clean
-    generate-cmake
-    check-runtimes
-    check-abi-list
-;;
-generic-clang-14)
-    export CC=clang-14
-    export CXX=clang++-14
-    clean
-    generate-cmake
-    check-runtimes
-    check-abi-list
-;;
 generic-gcc)
-    export CC=gcc-12
-    export CXX=g++-12
     clean
     generate-cmake -DLIBCXX_ENABLE_WERROR=NO \
                    -DLIBCXXABI_ENABLE_WERROR=NO \
@@ -289,8 +282,6 @@ generic-gcc)
     check-runtimes
 ;;
 generic-gcc-cxx11)
-    export CC=gcc-12
-    export CXX=g++-12
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
                    -DLIBCXX_ENABLE_WERROR=NO \
@@ -503,28 +494,6 @@ bootstrapping-build)
     echo "--- Installing libc++ and libc++abi to a fake location"
     ${NINJA} -C "${BUILD_DIR}" install-runtimes
 ;;
-legacy-test-config)
-    clean
-    generate-cmake -DLIBCXX_TEST_CONFIG="legacy.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="${MONOREPO_ROOT}/libcxxabi/test/lit.site.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="${MONOREPO_ROOT}/libunwind/test/lit.site.cfg.in"
-    check-runtimes
-;;
-legacy-project-build)
-    clean
-
-    echo "--- Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/llvm" \
-          -B "${BUILD_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml --timeout=1500" \
-          -DLIBCXX_CXX_ABI=libcxxabi
-    check-runtimes
-;;
 aarch64)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake"
@@ -577,6 +546,17 @@ clang-cl-static)
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
+clang-cl-no-vcruntime)
+    clean
+    # Building libc++ in the same way as in clang-cl-dll above, but running
+    # tests with -D_HAS_EXCEPTIONS=0, which users might set in certain
+    # translation units while using libc++, even if libc++ is built with
+    # exceptions enabled.
+    generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
+                              -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-no-vcruntime-clangcl.cfg.in"
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
 mingw-dll)
     clean
     # Explicitly specify the compiler with a triple prefix. The CI
@@ -612,8 +592,6 @@ mingw-dll-i686)
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 aix)
-    export CC=clang
-    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
                    -DLIBCXX_TEST_CONFIG="ibm-libc++-shared.cfg.in" \

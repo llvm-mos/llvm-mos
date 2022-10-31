@@ -10,9 +10,16 @@ func.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64) {
   %2 = math.sqrt %arg0 : f32
   // CHECK: = "llvm.intr.sqrt"(%{{.*}}) : (f64) -> f64
   %3 = math.sqrt %arg4 : f64
-  // CHECK: = "llvm.intr.abs"(%{{.*}}) : (i32) -> i32
-  %4 = math.absi %arg2 : i32
   func.return
+}
+
+// -----
+
+func.func @absi(%arg0: i32) -> i32 {
+  // CHECK: %[[FALSE:.*]] = llvm.mlir.constant(false
+  // CHECK: = "llvm.intr.abs"(%{{.*}}, %[[FALSE]]) : (i32, i1) -> i32
+  %0 = math.absi %arg0 : i32
+  return %0 : i32
 }
 
 // -----
@@ -181,5 +188,25 @@ func.func @powf(%arg0 : f64) {
 func.func @round(%arg0 : f32) {
   // CHECK: "llvm.intr.round"(%arg0) : (f32) -> f32
   %0 = math.round %arg0 : f32
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @roundeven(
+// CHECK-SAME: f32
+func.func @roundeven(%arg0 : f32) {
+  // CHECK: "llvm.intr.roundeven"(%arg0) : (f32) -> f32
+  %0 = math.roundeven %arg0 : f32
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @trunc(
+// CHECK-SAME: f32
+func.func @trunc(%arg0 : f32) {
+  // CHECK: "llvm.intr.trunc"(%arg0) : (f32) -> f32
+  %0 = math.trunc %arg0 : f32
   func.return
 }

@@ -7,7 +7,7 @@ define i64 @callee_i128_in_regs(i64 %a, i128 %b) nounwind {
 ; CHECK-LABEL: callee_i128_in_regs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %b_trunc = trunc i128 %b to i64
   %1 = add i64 %a, %b_trunc
   ret i64 %1
@@ -21,10 +21,10 @@ define i64 @caller_i128_in_regs() nounwind {
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a1, $zero, 2
 ; CHECK-NEXT:    move $a2, $zero
-; CHECK-NEXT:    bl callee_i128_in_regs
+; CHECK-NEXT:    bl %plt(callee_i128_in_regs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call i64 @callee_i128_in_regs(i64 1, i128 2)
   ret i64 %1
 }
@@ -48,7 +48,7 @@ define i64 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i128 %e, i64 %f, 
 ; CHECK-NEXT:    add.d $a0, $a0, $a6
 ; CHECK-NEXT:    ld.d $a1, $sp, 8
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %a_ext = zext i8 %a to i64
   %b_ext = zext i16 %b to i64
   %c_ext = zext i32 %c to i64
@@ -79,10 +79,10 @@ define i64 @caller_many_scalars() nounwind {
 ; CHECK-NEXT:    ori $a6, $zero, 6
 ; CHECK-NEXT:    ori $a7, $zero, 7
 ; CHECK-NEXT:    move $a5, $zero
-; CHECK-NEXT:    bl callee_many_scalars
+; CHECK-NEXT:    bl %plt(callee_many_scalars)
 ; CHECK-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 32
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call i64 @callee_many_scalars(i8 1, i16 2, i32 3, i64 4, i128 5, i64 6, i128 7, i64 8)
   ret i64 %1
 }
@@ -108,7 +108,7 @@ define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    or $a0, $a0, $a3
 ; CHECK-NEXT:    or $a0, $a0, $a2
 ; CHECK-NEXT:    sltui $a0, $a0, 1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = icmp eq i256 %a, %b
   %2 = zext i1 %1 to i64
   ret i64 %2
@@ -131,10 +131,10 @@ define i64 @caller_large_scalars() nounwind {
 ; CHECK-NEXT:    st.d $a0, $sp, 32
 ; CHECK-NEXT:    addi.d $a0, $sp, 32
 ; CHECK-NEXT:    addi.d $a1, $sp, 0
-; CHECK-NEXT:    bl callee_large_scalars
+; CHECK-NEXT:    bl %plt(callee_large_scalars)
 ; CHECK-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 80
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call i64 @callee_large_scalars(i256 1, i256 2)
   ret i64 %1
 }
@@ -163,7 +163,7 @@ define i64 @callee_large_scalars_exhausted_regs(i64 %a, i64 %b, i64 %c, i64 %d, 
 ; CHECK-NEXT:    or $a0, $a0, $a2
 ; CHECK-NEXT:    or $a0, $a0, $a1
 ; CHECK-NEXT:    sltui $a0, $a0, 1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = icmp eq i256 %h, %j
   %2 = zext i1 %1 to i64
   ret i64 %2
@@ -196,10 +196,10 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a5, $zero, 6
 ; CHECK-NEXT:    ori $a6, $zero, 7
 ; CHECK-NEXT:    addi.d $a7, $sp, 48
-; CHECK-NEXT:    bl callee_large_scalars_exhausted_regs
+; CHECK-NEXT:    bl %plt(callee_large_scalars_exhausted_regs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 96
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call i64 @callee_large_scalars_exhausted_regs(
       i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i256 8, i64 9,
       i256 10)
@@ -216,7 +216,7 @@ define i64 @callee_large_struct(ptr byval(%struct.large) align 8 %a) nounwind {
 ; CHECK-NEXT:    ld.d $a1, $a0, 24
 ; CHECK-NEXT:    ld.d $a0, $a0, 0
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = getelementptr inbounds %struct.large, ptr %a, i64 0, i32 0
   %2 = getelementptr inbounds %struct.large, ptr %a, i64 0, i32 3
   %3 = load i64, ptr %1
@@ -243,10 +243,10 @@ define i64 @caller_large_struct() nounwind {
 ; CHECK-NEXT:    st.d $a0, $sp, 64
 ; CHECK-NEXT:    st.d $a0, $sp, 32
 ; CHECK-NEXT:    addi.d $a0, $sp, 8
-; CHECK-NEXT:    bl callee_large_struct
+; CHECK-NEXT:    bl %plt(callee_large_struct)
 ; CHECK-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 80
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %ls = alloca %struct.large, align 8
   %a = getelementptr inbounds %struct.large, ptr %ls, i64 0, i32 0
   store i64 1, ptr %a
@@ -267,7 +267,7 @@ define i128 @callee_small_scalar_ret() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.w $a0, $zero, -1
 ; CHECK-NEXT:    move $a1, $a0
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   ret i128 -1
 }
 
@@ -276,14 +276,14 @@ define i64 @caller_small_scalar_ret() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl callee_small_scalar_ret
+; CHECK-NEXT:    bl %plt(callee_small_scalar_ret)
 ; CHECK-NEXT:    addi.w $a2, $zero, -2
 ; CHECK-NEXT:    xor $a0, $a0, $a2
 ; CHECK-NEXT:    orn $a0, $a0, $a1
 ; CHECK-NEXT:    sltui $a0, $a0, 1
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call i128 @callee_small_scalar_ret()
   %2 = icmp eq i128 -2, %1
   %3 = zext i1 %2 to i64
@@ -299,7 +299,7 @@ define %struct.small @callee_small_struct_ret() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    move $a1, $zero
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   ret %struct.small { i64 1, ptr null }
 }
 
@@ -308,11 +308,11 @@ define i64 @caller_small_struct_ret() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl callee_small_struct_ret
+; CHECK-NEXT:    bl %plt(callee_small_struct_ret)
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call %struct.small @callee_small_struct_ret()
   %2 = extractvalue %struct.small %1, 0
   %3 = extractvalue %struct.small %1, 1
@@ -333,7 +333,7 @@ define i256 @callee_large_scalar_ret() nounwind {
 ; CHECK-NEXT:    lu12i.w $a1, -30141
 ; CHECK-NEXT:    ori $a1, $a1, 747
 ; CHECK-NEXT:    st.d $a1, $a0, 0
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   ret i256 -123456789
 }
 
@@ -343,10 +343,10 @@ define void @caller_large_scalar_ret() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -48
 ; CHECK-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $a0, $sp, 0
-; CHECK-NEXT:    bl callee_large_scalar_ret
+; CHECK-NEXT:    bl %plt(callee_large_scalar_ret)
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 48
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call i256 @callee_large_scalar_ret()
   ret void
 }
@@ -368,7 +368,7 @@ define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result
 ; CHECK-NEXT:    st.w $zero, $a0, 4
 ; CHECK-NEXT:    ori $a1, $zero, 1
 ; CHECK-NEXT:    st.w $a1, $a0, 0
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %a = getelementptr inbounds %struct.large, ptr %agg.result, i64 0, i32 0
   store i64 1, ptr %a, align 4
   %b = getelementptr inbounds %struct.large, ptr %agg.result, i64 0, i32 1
@@ -386,13 +386,13 @@ define i64 @caller_large_struct_ret() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -48
 ; CHECK-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $a0, $sp, 8
-; CHECK-NEXT:    bl callee_large_struct_ret
+; CHECK-NEXT:    bl %plt(callee_large_struct_ret)
 ; CHECK-NEXT:    ld.d $a0, $sp, 32
 ; CHECK-NEXT:    ld.d $a1, $sp, 8
 ; CHECK-NEXT:    add.d $a0, $a1, $a0
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 48
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = alloca %struct.large
   call void @callee_large_struct_ret(ptr sret(%struct.large) %1)
   %2 = getelementptr inbounds %struct.large, ptr %1, i64 0, i32 0
@@ -414,7 +414,7 @@ define i64 @callee_float_in_fpr(i64 %a, float %b, double %c) nounwind {
 ; CHECK-NEXT:    ftintrz.l.d $fa0, $fa1
 ; CHECK-NEXT:    movfr2gr.d $a1, $fa0
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %b_fptosi = fptosi float %b to i64
   %c_fptosi = fptosi double %c to i64
   %1 = add i64 %a, %b_fptosi
@@ -430,10 +430,10 @@ define i64 @caller_float_in_fpr() nounwind {
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    movgr2fr.w $fa0, $zero
 ; CHECK-NEXT:    movgr2fr.d $fa1, $zero
-; CHECK-NEXT:    bl callee_float_in_fpr
+; CHECK-NEXT:    bl %plt(callee_float_in_fpr)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call i64 @callee_float_in_fpr(i64 1, float 0.0, double 0.0)
   ret i64 %1
 }
@@ -450,7 +450,7 @@ define i64 @callee_double_in_gpr_exhausted_fprs(double %a, double %b, double %c,
 ; CHECK-NEXT:    ftintrz.l.d $fa0, $fa0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    add.d $a0, $a1, $a0
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %h_fptosi = fptosi double %h to i64
   %i_fptosi = fptosi double %i to i64
   %1 = add i64 %h_fptosi, %i_fptosi
@@ -462,37 +462,37 @@ define i64 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    pcalau12i $a0, .LCPI21_0
-; CHECK-NEXT:    addi.d $a0, $a0, .LCPI21_0
-; CHECK-NEXT:    pcalau12i $a1, .LCPI21_1
-; CHECK-NEXT:    addi.d $a1, $a1, .LCPI21_1
-; CHECK-NEXT:    pcalau12i $a2, .LCPI21_2
-; CHECK-NEXT:    addi.d $a2, $a2, .LCPI21_2
-; CHECK-NEXT:    pcalau12i $a3, .LCPI21_3
-; CHECK-NEXT:    addi.d $a3, $a3, .LCPI21_3
-; CHECK-NEXT:    pcalau12i $a4, .LCPI21_4
-; CHECK-NEXT:    addi.d $a4, $a4, .LCPI21_4
-; CHECK-NEXT:    pcalau12i $a5, .LCPI21_5
-; CHECK-NEXT:    addi.d $a5, $a5, .LCPI21_5
-; CHECK-NEXT:    addi.d $a6, $zero, 1
-; CHECK-NEXT:    movgr2fr.d $fa0, $a6
-; CHECK-NEXT:    ffint.d.l $fa0, $fa0
-; CHECK-NEXT:    fld.d $fa1, $a5, 0
-; CHECK-NEXT:    fld.d $fa2, $a4, 0
-; CHECK-NEXT:    fld.d $fa3, $a3, 0
-; CHECK-NEXT:    fld.d $fa4, $a2, 0
-; CHECK-NEXT:    fld.d $fa5, $a1, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_0)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_0)
+; CHECK-NEXT:    fld.d $fa1, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_1)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_1)
+; CHECK-NEXT:    fld.d $fa2, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_2)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_2)
+; CHECK-NEXT:    fld.d $fa3, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_3)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_3)
+; CHECK-NEXT:    fld.d $fa4, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_4)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_4)
+; CHECK-NEXT:    fld.d $fa5, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_5)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_5)
 ; CHECK-NEXT:    fld.d $fa6, $a0, 0
-; CHECK-NEXT:    pcalau12i $a0, .LCPI21_6
-; CHECK-NEXT:    addi.d $a0, $a0, .LCPI21_6
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_6)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_6)
 ; CHECK-NEXT:    fld.d $fa7, $a0, 0
+; CHECK-NEXT:    addi.d $a0, $zero, 1
+; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    ffint.d.l $fa0, $fa0
 ; CHECK-NEXT:    ori $a0, $zero, 0
 ; CHECK-NEXT:    lu32i.d $a0, 131072
 ; CHECK-NEXT:    lu52i.d $a0, $a0, 1026
-; CHECK-NEXT:    bl callee_double_in_gpr_exhausted_fprs
+; CHECK-NEXT:    bl %plt(callee_double_in_gpr_exhausted_fprs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call i64 @callee_double_in_gpr_exhausted_fprs(
       double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0,
       double 7.0, double 8.0, double 9.0)
@@ -507,7 +507,7 @@ define double @callee_double_ret() nounwind {
 ; CHECK-NEXT:    addi.d $a0, $zero, 1
 ; CHECK-NEXT:    movgr2fr.d $fa0, $a0
 ; CHECK-NEXT:    ffint.d.l $fa0, $fa0
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   ret double 1.0
 }
 
@@ -516,11 +516,11 @@ define i64 @caller_double_ret() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl callee_double_ret
+; CHECK-NEXT:    bl %plt(callee_double_ret)
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = call double @callee_double_ret()
   %2 = bitcast double %1 to i64
   ret i64 %2

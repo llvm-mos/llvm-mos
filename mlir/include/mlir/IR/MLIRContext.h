@@ -24,6 +24,7 @@ class DebugActionManager;
 class DiagnosticEngine;
 class Dialect;
 class DialectRegistry;
+class DynamicDialect;
 class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
@@ -97,18 +98,29 @@ public:
         }));
   }
 
+  /// Return true if the given dialect is currently loading.
+  bool isDialectLoading(StringRef dialectNamespace);
+
   /// Load a dialect in the context.
   template <typename Dialect>
   void loadDialect() {
-    getOrLoadDialect<Dialect>();
+    // Do not load the dialect if it is currently loading. This can happen if a
+    // dialect initializer triggers loading the same dialect recursively.
+    if (!isDialectLoading(Dialect::getDialectNamespace()))
+      getOrLoadDialect<Dialect>();
   }
 
   /// Load a list dialects in the context.
   template <typename Dialect, typename OtherDialect, typename... MoreDialects>
   void loadDialect() {
-    getOrLoadDialect<Dialect>();
+    loadDialect<Dialect>();
     loadDialect<OtherDialect, MoreDialects...>();
   }
+
+  /// Get (or create) a dynamic dialect for the given name.
+  DynamicDialect *
+  getOrLoadDynamicDialect(StringRef dialectNamespace,
+                          function_ref<void(DynamicDialect *)> ctor);
 
   /// Load all dialects available in the registry in this context.
   void loadAllAvailableDialects();

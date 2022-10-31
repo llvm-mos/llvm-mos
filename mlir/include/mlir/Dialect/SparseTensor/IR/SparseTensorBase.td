@@ -49,9 +49,9 @@ def SparseTensor_Dialect : Dialect {
     lattices drive actual sparse code generation, which consists of a
     relatively straightforward one-to-one mapping from iteration lattices
     to combinations of for-loops, while-loops, and if-statements. Sparse
-    tensor outputs that materialize uninitialized are handled with
-    insertions in pure lexicographical index order if all parallel loops
-    are outermost or using a 1-dimensional access pattern expansion
+    tensor outputs that materialize uninitialized are handled with direct
+    insertions if all parallel loops are outermost or insertions that
+    indirectly go through a 1-dimensional access pattern expansion
     (a.k.a. workspace) where feasible [Gustavson72,Bik96,Kjolstad19].
 
     * [Bik96] Aart J.C. Bik. Compiler Support for Sparse Matrix Computations.
@@ -59,10 +59,14 @@ def SparseTensor_Dialect : Dialect {
     * [Biketal22] Aart J.C. Bik, Penporn Koanantakool, Tatiana Shpeisman,
     Nicolas Vasilache, Bixia Zheng, and Fredrik Kjolstad. Compiler Support
     for Sparse Tensor Computations in MLIR. ACM Transactions on Architecture
-    and Code Optimization, June, 2022 (see https://dl.acm.org/doi/10.1145/3544559).
+    and Code Optimization, June, 2022. See: https://dl.acm.org/doi/10.1145/3544559
     * [Chou18] Stephen Chou, Fredrik Berg Kjolstad, and Saman Amarasinghe.
     Format Abstraction for Sparse Tensor Algebra Compilers. Proceedings of
     the ACM on Programming Languages, October 2018.
+    * [Chou20] Stephen Chou, Fredrik Berg Kjolstad, and Saman Amarasinghe.
+    Automatic Generation of Efficient Sparse Tensor Format Conversion Routines.
+    Proceedings of the 41st ACM SIGPLAN Conference on Programming Language
+    Design and Implementation, June, 2020.
     * [Gustavson72] Fred G. Gustavson. Some basic techniques for solving
     sparse systems of linear equations. In Sparse Matrices and Their
     Applications, pages 41–52. Plenum Press, New York, 1972.
@@ -78,8 +82,6 @@ def SparseTensor_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 #endif // SPARSETENSOR_BASE

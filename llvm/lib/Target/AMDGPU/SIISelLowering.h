@@ -479,6 +479,11 @@ public:
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
   bool denormalsEnabledForType(LLT Ty, MachineFunction &MF) const;
 
+  bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
+                                 const TargetRegisterInfo *TRI,
+                                 const TargetInstrInfo *TII, unsigned &PhysReg,
+                                 int &Cost) const override;
+
   bool isKnownNeverNaNForTargetNode(SDValue Op,
                                     const SelectionDAG &DAG,
                                     bool SNaN = false,
@@ -524,9 +529,6 @@ public:
                                       MachineFunction &MF,
                                       const SIRegisterInfo &TRI,
                                       SIMachineFunctionInfo &Info) const;
-
-  std::pair<InstructionCost, MVT> getTypeLegalizationCost(const DataLayout &DL,
-                                                          Type *Ty) const;
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;

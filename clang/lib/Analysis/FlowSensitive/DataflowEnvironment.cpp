@@ -20,6 +20,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -48,27 +49,6 @@ llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
   return Result;
 }
 
-static bool areEquivalentIndirectionValues(Value *Val1, Value *Val2) {
-  if (auto *IndVal1 = dyn_cast<ReferenceValue>(Val1)) {
-    auto *IndVal2 = cast<ReferenceValue>(Val2);
-    return &IndVal1->getReferentLoc() == &IndVal2->getReferentLoc();
-  }
-  if (auto *IndVal1 = dyn_cast<PointerValue>(Val1)) {
-    auto *IndVal2 = cast<PointerValue>(Val2);
-    return &IndVal1->getPointeeLoc() == &IndVal2->getPointeeLoc();
-  }
-  return false;
-}
-
-/// Returns true if and only if `Val1` is equivalent to `Val2`.
-static bool equivalentValues(QualType Type, Value *Val1,
-                             const Environment &Env1, Value *Val2,
-                             const Environment &Env2,
-                             Environment::ValueModel &Model) {
-  return Val1 == Val2 || areEquivalentIndirectionValues(Val1, Val2) ||
-         Model.compareEquivalent(Type, *Val1, Env1, *Val2, Env2);
-}
-
 /// Attempts to merge distinct values `Val1` and `Val2` in `Env1` and `Env2`,
 /// respectively, of the same type `Type`. Merging generally produces a single
 /// value that (soundly) approximates the two inputs, although the actual
@@ -80,9 +60,6 @@ static Value *mergeDistinctValues(QualType Type, Value *Val1,
                                   Environment::ValueModel &Model) {
   // Join distinct boolean values preserving information about the constraints
   // in the respective path conditions.
-  //
-  // FIXME: Does not work for backedges, since the two (or more) paths will not
-  // have mutually exclusive conditions.
   if (auto *Expr1 = dyn_cast<BoolValue>(Val1)) {
     auto *Expr2 = cast<BoolValue>(Val2);
     auto &MergedVal = MergedEnv.makeAtomicBoolValue();
@@ -92,11 +69,6 @@ static Value *mergeDistinctValues(QualType Type, Value *Val1,
         MergedEnv.makeAnd(Env2.getFlowConditionToken(),
                           MergedEnv.makeIff(MergedVal, *Expr2))));
     return &MergedVal;
-  }
-
-  // FIXME: add unit tests that cover this statement.
-  if (areEquivalentIndirectionValues(Val1, Val2)) {
-    return Val1;
   }
 
   // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
@@ -154,10 +126,10 @@ Environment::Environment(DataflowAnalysisContext &DACtx)
     : DACtx(&DACtx), FlowConditionToken(&DACtx.makeFlowConditionToken()) {}
 
 Environment::Environment(const Environment &Other)
-    : DACtx(Other.DACtx), ReturnLoc(Other.ReturnLoc),
-      ThisPointeeLoc(Other.ThisPointeeLoc), DeclToLoc(Other.DeclToLoc),
-      ExprToLoc(Other.ExprToLoc), LocToVal(Other.LocToVal),
-      MemberLocToStruct(Other.MemberLocToStruct),
+    : DACtx(Other.DACtx), CallStack(Other.CallStack),
+      ReturnLoc(Other.ReturnLoc), ThisPointeeLoc(Other.ThisPointeeLoc),
+      DeclToLoc(Other.DeclToLoc), ExprToLoc(Other.ExprToLoc),
+      LocToVal(Other.LocToVal), MemberLocToStruct(Other.MemberLocToStruct),
       FlowConditionToken(&DACtx->forkFlowCondition(*Other.FlowConditionToken)) {
 }
 
@@ -170,6 +142,8 @@ Environment &Environment::operator=(const Environment &Other) {
 Environment::Environment(DataflowAnalysisContext &DACtx,
                          const DeclContext &DeclCtx)
     : Environment(DACtx) {
+  CallStack.push_back(&DeclCtx);
+
   if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
     assert(FuncDecl->getBody() != nullptr);
     initGlobalVars(*FuncDecl->getBody(), *this);
@@ -203,61 +177,89 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
   }
 }
 
+bool Environment::canDescend(unsigned MaxDepth,
+                             const DeclContext *Callee) const {
+  return CallStack.size() <= MaxDepth && !llvm::is_contained(CallStack, Callee);
+}
+
 Environment Environment::pushCall(const CallExpr *Call) const {
   Environment Env(*this);
-  // FIXME: Support references here.
-  Env.ReturnLoc = Env.getStorageLocation(*Call, SkipPast::Reference);
 
-  const auto *FuncDecl = Call->getDirectCallee();
-  assert(FuncDecl != nullptr);
-  // FIXME: In order to allow the callee to reference globals, we probably need
-  // to call `initGlobalVars` here in some way.
+  // FIXME: Support references here.
+  Env.ReturnLoc = getStorageLocation(*Call, SkipPast::Reference);
 
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
-      Env.ThisPointeeLoc = Env.getStorageLocation(*Arg, SkipPast::Reference);
+      if (!isa<CXXThisExpr>(Arg))
+        Env.ThisPointeeLoc = getStorageLocation(*Arg, SkipPast::Reference);
+      // Otherwise (when the argument is `this`), retain the current
+      // environment's `ThisPointeeLoc`.
     }
   }
 
-  auto ParamIt = FuncDecl->param_begin();
-  auto ArgIt = Call->arg_begin();
-  auto ArgEnd = Call->arg_end();
-
-  // FIXME: Parameters don't always map to arguments 1:1; examples include
-  // overloaded operators implemented as member functions, and parameter packs.
-  for (; ArgIt != ArgEnd; ++ParamIt, ++ArgIt) {
-    assert(ParamIt != FuncDecl->param_end());
-
-    const Expr *Arg = *ArgIt;
-    auto *ArgLoc = Env.getStorageLocation(*Arg, SkipPast::Reference);
-    assert(ArgLoc != nullptr);
-
-    const VarDecl *Param = *ParamIt;
-    auto &Loc = Env.createStorageLocation(*Param);
-    Env.setStorageLocation(*Param, Loc);
-
-    QualType ParamType = Param->getType();
-    if (ParamType->isReferenceType()) {
-      auto &Val = Env.takeOwnership(std::make_unique<ReferenceValue>(*ArgLoc));
-      Env.setValue(Loc, Val);
-    } else if (auto *ArgVal = Env.getValue(*ArgLoc)) {
-      Env.setValue(Loc, *ArgVal);
-    } else if (Value *Val = Env.createValue(ParamType)) {
-      Env.setValue(Loc, *Val);
-    }
-  }
+  Env.pushCallInternal(Call->getDirectCallee(),
+                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
 
   return Env;
 }
 
+Environment Environment::pushCall(const CXXConstructExpr *Call) const {
+  Environment Env(*this);
+
+  // FIXME: Support references here.
+  Env.ReturnLoc = getStorageLocation(*Call, SkipPast::Reference);
+
+  Env.ThisPointeeLoc = Env.ReturnLoc;
+
+  Env.pushCallInternal(Call->getConstructor(),
+                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+
+  return Env;
+}
+
+void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
+                                   ArrayRef<const Expr *> Args) {
+  CallStack.push_back(FuncDecl);
+
+  // FIXME: In order to allow the callee to reference globals, we probably need
+  // to call `initGlobalVars` here in some way.
+
+  auto ParamIt = FuncDecl->param_begin();
+
+  // FIXME: Parameters don't always map to arguments 1:1; examples include
+  // overloaded operators implemented as member functions, and parameter packs.
+  for (unsigned ArgIndex = 0; ArgIndex < Args.size(); ++ParamIt, ++ArgIndex) {
+    assert(ParamIt != FuncDecl->param_end());
+
+    const Expr *Arg = Args[ArgIndex];
+    auto *ArgLoc = getStorageLocation(*Arg, SkipPast::Reference);
+    if (ArgLoc == nullptr)
+      continue;
+
+    const VarDecl *Param = *ParamIt;
+    auto &Loc = createStorageLocation(*Param);
+    setStorageLocation(*Param, Loc);
+
+    QualType ParamType = Param->getType();
+    if (ParamType->isReferenceType()) {
+      auto &Val = takeOwnership(std::make_unique<ReferenceValue>(*ArgLoc));
+      setValue(Loc, Val);
+    } else if (auto *ArgVal = getValue(*ArgLoc)) {
+      setValue(Loc, *ArgVal);
+    } else if (Value *Val = createValue(ParamType)) {
+      setValue(Loc, *Val);
+    }
+  }
+}
+
 void Environment::popCall(const Environment &CalleeEnv) {
   // We ignore `DACtx` because it's already the same in both. We don't want the
-  // callee's `ReturnLoc` or `ThisPointeeLoc`. We don't bring back `DeclToLoc`
-  // and `ExprToLoc` because we want to be able to later analyze the same callee
-  // in a different context, and `setStorageLocation` requires there to not
-  // already be a storage location assigned. Conceptually, these maps capture
-  // information from the local scope, so when popping that scope, we do not
-  // propagate the maps.
+  // callee's `DeclCtx`, `ReturnLoc` or `ThisPointeeLoc`. We don't bring back
+  // `DeclToLoc` and `ExprToLoc` because we want to be able to later analyze the
+  // same callee in a different context, and `setStorageLocation` requires there
+  // to not already be a storage location assigned. Conceptually, these maps
+  // capture information from the local scope, so when popping that scope, we do
+  // not propagate the maps.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
   this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
@@ -292,7 +294,9 @@ bool Environment::equivalentTo(const Environment &Other,
       continue;
     assert(It->second != nullptr);
 
-    if (!equivalentValues(Loc->getType(), Val, *this, It->second, Other, Model))
+    if (!areEquivalentValues(*Val, *It->second) &&
+        !Model.compareEquivalent(Loc->getType(), *Val, *this, *It->second,
+                                 Other))
       return false;
   }
 
@@ -304,11 +308,13 @@ LatticeJoinEffect Environment::join(const Environment &Other,
   assert(DACtx == Other.DACtx);
   assert(ReturnLoc == Other.ReturnLoc);
   assert(ThisPointeeLoc == Other.ThisPointeeLoc);
+  assert(CallStack == Other.CallStack);
 
   auto Effect = LatticeJoinEffect::Unchanged;
 
   Environment JoinedEnv(*DACtx);
 
+  JoinedEnv.CallStack = CallStack;
   JoinedEnv.ReturnLoc = ReturnLoc;
   JoinedEnv.ThisPointeeLoc = ThisPointeeLoc;
 
@@ -341,7 +347,7 @@ LatticeJoinEffect Environment::join(const Environment &Other,
       continue;
     assert(It->second != nullptr);
 
-    if (Val == It->second) {
+    if (areEquivalentValues(*Val, *It->second)) {
       JoinedEnv.LocToVal.insert({Loc, Val});
       continue;
     }

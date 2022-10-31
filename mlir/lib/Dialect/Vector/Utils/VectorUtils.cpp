@@ -14,7 +14,7 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -166,6 +166,7 @@ static AffineMap makePermutationMap(
             countInvariantIndices == numIndices - 1) &&
            "Vectorization prerequisite violated: at most 1 index may be "
            "invariant wrt a vectorized loop");
+    (void)countInvariantIndices;
   }
   return AffineMap::get(indices.size(), 0, perm, context);
 }

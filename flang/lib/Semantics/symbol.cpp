@@ -174,11 +174,13 @@ void GenericDetails::set_specific(Symbol &specific) {
   CHECK(!derivedType_);
   specific_ = &specific;
 }
+void GenericDetails::clear_specific() { specific_ = nullptr; }
 void GenericDetails::set_derivedType(Symbol &derivedType) {
   CHECK(!specific_);
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
+void GenericDetails::clear_derivedType() { derivedType_ = nullptr; }
 void GenericDetails::AddUse(const Symbol &use) {
   CHECK(use.has<UseDetails>());
   uses_.push_back(use);

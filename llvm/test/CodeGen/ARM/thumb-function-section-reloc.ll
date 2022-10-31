@@ -18,9 +18,8 @@
 ; RELOCS-NEXT:   }
 ; RELOCS-NEXT:   Section (7) .rel.text.test {
 ; RELOCS-NEXT:     0x4 R_ARM_CALL .L_ZdlPv$local
-; FIXME: these two relocation should not be against the section!
-; RELOCS-NEXT:     0xC R_ARM_ABS32 .text._ZdlPv
-; RELOCS-NEXT:     0x10 R_ARM_ABS32 .text._ZdlPv
+; RELOCS-NEXT:     0xC R_ARM_ABS32 .L_ZdlPv$local
+; RELOCS-NEXT:     0x10 R_ARM_ABS32 .L_ZdlPv$local
 ; RELOCS-NEXT:     0x1C R_ARM_REL32 .L_ZdlPv$local
 ; RELOCS-NEXT:   }
 ; RELOCS-NEXT:   Section (9) .rel.ARM.exidx.text.test {
@@ -34,13 +33,10 @@
 ; RELOCS-LABEL: Symbols [
 ; RELOCS:      Symbol {
 ; RELOCS:        Name: .L_ZdlPv$local
-; RELOCS-TODO:   Value: 0x1
-; RELOCS-NEXT:   Value: 0x0
-; RELOCS-TODO:   Size: 2
-; RELOCS-NEXT:   Size: 0
+; RELOCS-NEXT:   Value: 0x1
+; RELOCS-NEXT:   Size: 2
 ; RELOCS-NEXT:   Binding: Local (0x0)
-; RELOCS-TODO:   Type: Function (0x2)
-; RELOCS-NEXT:   Type: None (0x0)
+; RELOCS-NEXT:   Type: Function (0x2)
 ; RELOCS-NEXT:   Other: 0
 ; RELOCS-NEXT:   Section: .text._ZdlPv (
 ; RELOCS-NEXT: }
@@ -54,11 +50,13 @@ define dso_local void @_ZdlPv(ptr %ptr) local_unnamed_addr nounwind "target-feat
 ; CHECK-NEXT: 	.thumb_func
 ; CHECK-NEXT: _ZdlPv:
 ; CHECK-NEXT: .L_ZdlPv$local:
+; CHECK-NEXT: .type .L_ZdlPv$local,%function
 ; CHECK-NEXT: 	.fnstart
 ; CHECK-NEXT: @ %bb.0:
 ; CHECK-NEXT: 	bx	lr
 ; CHECK-NEXT: .Lfunc_end0:
 ; CHECK-NEXT: 	.size	_ZdlPv, .Lfunc_end0-_ZdlPv
+; CHECK-NEXT: 	.size .L_ZdlPv$local, .Lfunc_end0-_ZdlPv
 ; CHECK-NEXT: 	.cantunwind
 ; CHECK-NEXT: 	.fnend
   ret void

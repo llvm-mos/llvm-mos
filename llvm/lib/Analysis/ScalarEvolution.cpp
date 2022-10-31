@@ -70,7 +70,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -127,6 +126,7 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -8087,12 +8087,12 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  Optional<unsigned> Res = None;
+  Optional<unsigned> Res;
   for (auto *ExitingBB : ExitingBlocks) {
     unsigned Multiple = getSmallConstantTripMultiple(L, ExitingBB);
     if (!Res)
       Res = Multiple;
-    Res = (unsigned)GreatestCommonDivisor64(*Res, Multiple);
+    Res = (unsigned)std::gcd(*Res, Multiple);
   }
   return Res.value_or(1);
 }
@@ -8383,8 +8383,42 @@ void ScalarEvolution::forgetValue(Value *V) {
   forgetMemoizedResults(ToForget);
 }
 
-void ScalarEvolution::forgetLoopDispositions(const Loop *L) {
-  LoopDispositions.clear();
+void ScalarEvolution::forgetLoopDispositions() { LoopDispositions.clear(); }
+
+void ScalarEvolution::forgetBlockAndLoopDispositions(Value *V) {
+  // Unless a specific value is passed to invalidation, completely clear both
+  // caches.
+  if (!V) {
+    BlockDispositions.clear();
+    LoopDispositions.clear();
+    return;
+  }
+
+  if (!isSCEVable(V->getType()))
+    return;
+
+  const SCEV *S = getExistingSCEV(V);
+  if (!S)
+    return;
+
+  // Invalidate the block and loop dispositions cached for S. Dispositions of
+  // S's users may change if S's disposition changes (i.e. a user may change to
+  // loop-invariant, if S changes to loop invariant), so also invalidate
+  // dispositions of S's users recursively.
+  SmallVector<const SCEV *, 8> Worklist = {S};
+  SmallPtrSet<const SCEV *, 8> Seen = {S};
+  while (!Worklist.empty()) {
+    const SCEV *Curr = Worklist.pop_back_val();
+    bool LoopDispoRemoved = LoopDispositions.erase(Curr);
+    bool BlockDispoRemoved = BlockDispositions.erase(Curr);
+    if (!LoopDispoRemoved && !BlockDispoRemoved)
+      continue;
+    auto Users = SCEVUsers.find(Curr);
+    if (Users != SCEVUsers.end())
+      for (const auto *User : Users->second)
+        if (Seen.insert(User).second)
+          Worklist.push_back(User);
+  }
 }
 
 /// Get the exact loop backedge taken count considering all loop exits. A
@@ -10056,7 +10090,7 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
                       << Bound << " (before multiplying by " << M << ")\n");
     Bound *= M; // The quadratic equation multiplier.
 
-    Optional<APInt> SO = None;
+    Optional<APInt> SO;
     if (BitWidth > 1) {
       LLVM_DEBUG(dbgs() << "SolveQuadraticAddRecRange: solving for "
                            "signed overflow\n");
@@ -10763,8 +10797,8 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
 Optional<ScalarEvolution::LoopInvariantPredicate>
 ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
                                            const SCEV *LHS, const SCEV *RHS,
-                                           const Loop *L) {
-
+                                           const Loop *L,
+                                           const Instruction *CtxI) {
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
     if (!isLoopInvariant(LHS, L))
@@ -10801,10 +10835,49 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
   bool Increasing = *MonotonicType == ScalarEvolution::MonotonicallyIncreasing;
   auto P = Increasing ? Pred : ICmpInst::getInversePredicate(Pred);
 
-  if (!isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
-    return None;
+  if (isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
+    return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
+                                                   RHS);
 
-  return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(), RHS);
+  if (!CtxI)
+    return None;
+  // Try to prove via context.
+  // TODO: Support other cases.
+  switch (Pred) {
+  default:
+    break;
+  case ICmpInst::ICMP_ULE:
+  case ICmpInst::ICMP_ULT: {
+    assert(ArLHS->hasNoUnsignedWrap() && "Is a requirement of monotonicity!");
+    // Given preconditions
+    // (1) ArLHS does not cross the border of positive and negative parts of
+    //     range because of:
+    //     - Positive step; (TODO: lift this limitation)
+    //     - nuw - does not cross zero boundary;
+    //     - nsw - does not cross SINT_MAX boundary;
+    // (2) ArLHS <s RHS
+    // (3) RHS >=s 0
+    // we can replace the loop variant ArLHS <u RHS condition with loop
+    // invariant Start(ArLHS) <u RHS.
+    //
+    // Because of (1) there are two options:
+    // - ArLHS is always negative. It means that ArLHS <u RHS is always false;
+    // - ArLHS is always non-negative. Because of (3) RHS is also non-negative.
+    //   It means that ArLHS <s RHS <=> ArLHS <u RHS.
+    //   Because of (2) ArLHS <u RHS is trivially true.
+    // All together it means that ArLHS <u RHS <=> Start(ArLHS) >=s 0.
+    // We can strengthen this to Start(ArLHS) <u RHS.
+    auto SignFlippedPred = ICmpInst::getFlippedSignednessPredicate(Pred);
+    if (ArLHS->hasNoSignedWrap() && ArLHS->isAffine() &&
+        isKnownPositive(ArLHS->getStepRecurrence(*this)) &&
+        isKnownNonNegative(RHS) &&
+        isKnownPredicateAt(SignFlippedPred, ArLHS, RHS, CtxI))
+      return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
+                                                     RHS);
+  }
+  }
+
+  return None;
 }
 
 Optional<ScalarEvolution::LoopInvariantPredicate>
@@ -12377,11 +12450,11 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
   if (IsSigned && BitWidth == 1)
     return getZero(Stride->getType());
 
-  // This code has only been closely audited for negative strides in the
+  // This code below only been closely audited for negative strides in the
   // unsigned comparison case, it may be correct for signed comparison, but
   // that needs to be established.
-  assert((!IsSigned || !isKnownNonPositive(Stride)) &&
-         "Stride is expected strictly positive for signed case!");
+  if (IsSigned && isKnownNegative(Stride))
+    return getCouldNotCompute();
 
   // Calculate the maximum backedge count based on the range of values
   // permitted by Start, End, and Stride.
@@ -12565,13 +12638,6 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     //
     if (PredicatedIV || !NoWrap || !loopIsFiniteByAssumption(L) ||
         !loopHasNoAbnormalExits(L))
-      return getCouldNotCompute();
-
-    // This bailout is protecting the logic in computeMaxBECountForLT which
-    // has not yet been sufficiently auditted or tested with negative strides.
-    // We used to filter out all known-non-positive cases here, we're in the
-    // process of being less restrictive bit by bit.
-    if (IsSigned && isKnownNonPositive(Stride))
       return getCouldNotCompute();
 
     if (!isKnownNonZero(Stride)) {
@@ -13938,6 +14004,40 @@ void ScalarEvolution::verify() const {
   };
   VerifyBECountUsers(/* Predicated */ false);
   VerifyBECountUsers(/* Predicated */ true);
+
+  // Verify intergity of loop disposition cache.
+  for (const auto &It : LoopDispositions) {
+    const SCEV *S = It.first;
+    auto &Values = It.second;
+    for (auto &V : Values) {
+      auto CachedDisposition = V.getInt();
+      const auto *Loop = V.getPointer();
+      const auto RecomputedDisposition = SE2.getLoopDisposition(S, Loop);
+      if (CachedDisposition != RecomputedDisposition) {
+        dbgs() << "Cached disposition of " << *S << " for loop " << *Loop
+               << " is incorrect: cached "
+               << loopDispositionToStr(CachedDisposition) << ", actual "
+               << loopDispositionToStr(RecomputedDisposition) << "\n";
+        std::abort();
+      }
+    }
+  }
+
+  // Verify integrity of the block disposition cache.
+  for (const auto &It : BlockDispositions) {
+    const SCEV *S = It.first;
+    auto &Values = It.second;
+    for (auto &V : Values) {
+      auto CachedDisposition = V.getInt();
+      const BasicBlock *BB = V.getPointer();
+      const auto RecomputedDisposition = SE2.getBlockDisposition(S, BB);
+      if (CachedDisposition != RecomputedDisposition) {
+        dbgs() << "Cached disposition of " << *S << " for block %"
+               << BB->getName() << " is incorrect! \n";
+        std::abort();
+      }
+    }
+  }
 }
 
 bool ScalarEvolution::invalidate(

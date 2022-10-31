@@ -463,7 +463,7 @@ inline Error joinErrors(Error E1, Error E2) {
 ///     outs() << "The answer is " << *Result << "\n";
 ///   @endcode
 ///
-///  For unit-testing a function returning an 'Expceted<T>', see the
+///  For unit-testing a function returning an 'Expected<T>', see the
 ///  'EXPECT_THAT_EXPECTED' macros in llvm/Testing/Support/Error.h
 
 template <class T> class [[nodiscard]] Expected {
@@ -822,8 +822,8 @@ T& cantFail(Expected<T&> ValOrErr, const char *Msg = nullptr) {
 /// ErrorInfo types.
 template <typename HandlerT>
 class ErrorHandlerTraits
-    : public ErrorHandlerTraits<decltype(
-          &std::remove_reference<HandlerT>::type::operator())> {};
+    : public ErrorHandlerTraits<
+          decltype(&std::remove_reference_t<HandlerT>::operator())> {};
 
 // Specialization functions of the form 'Error (const ErrT&)'.
 template <typename ErrT> class ErrorHandlerTraits<Error (&)(ErrT &)> {

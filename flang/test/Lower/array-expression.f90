@@ -482,7 +482,6 @@ end subroutine test15
 ! CHECK-LABEL: func @_QPtest16(
 ! CHECK-SAME: %[[a:.*]]: !fir.ref<!fir.array<100xf32>>{{.*}}, %[[b:.*]]: !fir.ref<!fir.array<100xf32>>{{.*}})
 subroutine test16(a,b)
-  ! CHECK: %[[tmp:.*]] = fir.alloca f32 {adapt.valuebyref
   ! CHECK-DAG: %[[aarr:.*]] = fir.array_load %[[a]](%{{.*}}) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   ! CHECK-DAG: %[[barr:.*]] = fir.array_load %[[b]](%{{.*}}) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   interface
@@ -493,8 +492,7 @@ subroutine test16(a,b)
   real :: a(100), b(100)
   ! CHECK: %[[loop:.*]] = fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[bth:.*]] = %[[barr]]) -> (!fir.array<100xf32>) {
   ! CHECK: %[[val:.*]] = fir.array_fetch %[[aarr]], %[[i]] : (!fir.array<100xf32>, index) -> f32
-  ! CHECK: fir.store %[[val]] to %[[tmp]]
-  ! CHECK: %[[fres:.*]] = fir.call @_QPf2(%[[tmp]]) : (!fir.ref<f32>) -> f32
+  ! CHECK: %[[fres:.*]] = fir.call @_QPf2(%[[val]]) : (f32) -> f32
   ! CHECK: %[[res:.*]] = fir.array_update %[[bth]], %[[fres]], %[[i]] : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
   ! CHECK: fir.result %[[res]] : !fir.array<100xf32>
   ! CHECK: fir.array_merge_store %[[barr]], %[[loop]] to %[[b]]
@@ -994,6 +992,7 @@ end subroutine test19f
 ! CHECK:         %[[VAL_24:.*]] = fir.array_load %[[VAL_5]](%[[VAL_22]]) {{\[}}%[[VAL_23]]] : (!fir.ref<!fir.array<140x!fir.char<2,13>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<140x!fir.char<2,13>>
 ! CHECK:         %[[VAL_25:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i32) -> i64
+! CHECK:         %[[char_temp:.*]] = fir.alloca !fir.char<4,?>(%16 : i64) {bindc_name = ".chrtmp"}
 ! CHECK:         %[[VAL_27:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_28:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_29:.*]] = arith.subi %[[VAL_13]], %[[VAL_27]] : index
@@ -1024,7 +1023,7 @@ end subroutine test19f
 ! CHECK:           %[[VAL_53:.*]] = arith.muli %[[VAL_51]], %[[VAL_52]] : i64
 ! CHECK:           %[[VAL_54:.*]] = arith.constant false
 ! CHECK:           %[[VAL_55:.*]] = fir.convert %[[VAL_46]] : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<i8>
-! CHECK:           %[[VAL_56:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_56:.*]] = fir.convert %[[char_temp]] : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<i8>
 ! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_55]], %[[VAL_56]], %[[VAL_53]], %[[VAL_54]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:           %[[VAL_57:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_58:.*]] = arith.subi %[[VAL_11]], %[[VAL_57]] : i32

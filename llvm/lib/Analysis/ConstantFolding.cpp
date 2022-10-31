@@ -1333,7 +1333,7 @@ Constant *llvm::ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
                                            const DataLayout &DL) {
   assert(Instruction::isUnaryOp(Opcode));
 
-  return ConstantExpr::get(Opcode, Op);
+  return ConstantFoldUnaryInstruction(Opcode, Op);
 }
 
 Constant *llvm::ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
@@ -2150,7 +2150,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return ConstantFoldFP(log, APF, Ty);
       case Intrinsic::log2:
         // TODO: What about hosts that lack a C99 library?
-        return ConstantFoldFP(Log2, APF, Ty);
+        return ConstantFoldFP(log2, APF, Ty);
       case Intrinsic::log10:
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
@@ -2279,7 +2279,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_log2f_finite:
       if (!APF.isNegative() && !APF.isZero() && TLI->has(Func))
         // TODO: What about hosts that lack a C99 library?
-        return ConstantFoldFP(Log2, APF, Ty);
+        return ConstantFoldFP(log2, APF, Ty);
       break;
     case LibFunc_log10:
     case LibFunc_log10f:
@@ -2569,6 +2569,11 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         break;
       case LibFunc_atan2:
       case LibFunc_atan2f:
+        // atan2(+/-0.0, +/-0.0) is known to raise an exception on some libm
+        // (Solaris), so we do not assume a known result for that.
+        if (Op1V.isZero() && Op2V.isZero())
+          return nullptr;
+        [[fallthrough]];
       case LibFunc_atan2_finite:
       case LibFunc_atan2f_finite:
         if (TLI->has(Func))
@@ -3296,6 +3301,13 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         break;
       }
 
+      case LibFunc_atan:
+      case LibFunc_atanf:
+      case LibFunc_atanl:
+        // Per POSIX, this MAY fail if Op is denormal. We choose not failing.
+        return true;
+
+
       case LibFunc_asinl:
       case LibFunc_asin:
       case LibFunc_asinf:
@@ -3360,6 +3372,15 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_remainderf:
         return Op0.isNaN() || Op1.isNaN() ||
                (!Op0.isInfinity() && !Op1.isZero());
+
+      case LibFunc_atan2:
+      case LibFunc_atan2f:
+      case LibFunc_atan2l:
+        // Although IEEE-754 says atan2(+/-0.0, +/-0.0) are well-defined, and
+        // GLIBC and MSVC do not appear to raise an error on those, we
+        // cannot rely on that behavior. POSIX and C11 say that a domain error
+        // may occur, so allow for that possibility.
+        return !Op0.isZero() || !Op1.isZero();
 
       default:
         break;

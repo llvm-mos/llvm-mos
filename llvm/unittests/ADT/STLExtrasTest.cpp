@@ -399,23 +399,6 @@ TEST(STLExtrasTest, ADLTest) {
   EXPECT_EQ(5, count);
 }
 
-TEST(STLExtrasTest, EmptyTest) {
-  std::vector<void*> V;
-  EXPECT_TRUE(llvm::empty(V));
-  V.push_back(nullptr);
-  EXPECT_FALSE(llvm::empty(V));
-
-  std::initializer_list<int> E = {};
-  std::initializer_list<int> NotE = {7, 13, 42};
-  EXPECT_TRUE(llvm::empty(E));
-  EXPECT_FALSE(llvm::empty(NotE));
-
-  auto R0 = make_range(V.begin(), V.begin());
-  EXPECT_TRUE(llvm::empty(R0));
-  auto R1 = make_range(V.begin(), V.end());
-  EXPECT_FALSE(llvm::empty(R1));
-}
-
 TEST(STLExtrasTest, DropBeginTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
@@ -588,26 +571,27 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
-TEST(STLExtrasTest, IsSplat) {
+TEST(STLExtrasTest, AllEqual) {
   std::vector<int> V;
-  EXPECT_FALSE(is_splat(V));
+  EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);
-  EXPECT_TRUE(is_splat(V));
+  EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);
   V.push_back(1);
-  EXPECT_TRUE(is_splat(V));
+  EXPECT_TRUE(all_equal(V));
 
   V.push_back(2);
-  EXPECT_FALSE(is_splat(V));
+  EXPECT_FALSE(all_equal(V));
 }
 
-TEST(STLExtrasTest, IsSplatInitializerList) {
-  EXPECT_TRUE(is_splat({1}));
-  EXPECT_TRUE(is_splat({1, 1}));
-  EXPECT_FALSE(is_splat({1, 2}));
-  EXPECT_TRUE(is_splat({1, 1, 1}));
+TEST(STLExtrasTest, AllEqualInitializerList) {
+  EXPECT_TRUE(all_equal({1}));
+  EXPECT_TRUE(all_equal({1, 1}));
+  EXPECT_FALSE(all_equal({1, 2}));
+  EXPECT_FALSE(all_equal({2, 1}));
+  EXPECT_TRUE(all_equal({1, 1, 1}));
 }
 
 TEST(STLExtrasTest, to_address) {

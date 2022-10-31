@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
+
 # Add path for custom modules.
 set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
@@ -16,6 +22,8 @@ endif()
 
 # Must go below project(..)
 include(GNUInstallDirs)
+
+option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
 
 if(LLDB_BUILT_STANDALONE)
   include(LLDBStandalone)
@@ -124,10 +132,16 @@ if (LLDB_ENABLE_LUA)
   finish_swig_lua("lldb-lua" "${lldb_lua_bindings_dir}" "${lldb_lua_target_dir}")
 endif()
 
-option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
+set(LLDB_INCLUDE_UNITTESTS ON)
+if (NOT TARGET llvm_gtest)
+  set(LLDB_INCLUDE_UNITTESTS OFF)
+endif()
+
 if(LLDB_INCLUDE_TESTS)
   add_subdirectory(test)
-  add_subdirectory(unittests)
+  if (LLDB_INCLUDE_UNITTESTS)
+    add_subdirectory(unittests)
+  endif()
   add_subdirectory(utils)
 endif()
 

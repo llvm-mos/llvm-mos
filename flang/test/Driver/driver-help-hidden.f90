@@ -24,6 +24,7 @@
 ! CHECK-NEXT: Enable the old style PARAMETER statement
 ! CHECK-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
 ! CHECK-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
+! CHECK-NEXT: -fconvert=<value>      Set endian conversion of data for unformatted files
 ! CHECK-NEXT: -fdefault-double-8     Set the default double precision kind to an 8 byte wide type
 ! CHECK-NEXT: -fdefault-integer-8    Set the default integer kind to an 8 byte wide type
 ! CHECK-NEXT: -fdefault-real-8       Set the default real kind to an 8 byte wide type
@@ -44,6 +45,7 @@
 ! CHECK-NEXT: -fno-integrated-as     Disable the integrated assembler
 ! CHECK-NEXT: -fopenacc              Enable OpenACC
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! CHECK-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths

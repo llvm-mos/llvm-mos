@@ -53,6 +53,7 @@ struct Configuration {
   bool stripAll;
   bool stripDebug;
   bool stackFirst;
+  bool isStatic = false;
   bool trace;
   uint64_t globalBase;
   uint64_t initialMemory;
@@ -76,6 +77,7 @@ struct Configuration {
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   llvm::Optional<std::vector<std::string>> features;
+  llvm::Optional<std::vector<std::string>> extraFeatures;
 
   // The following config options do not directly correspond to any
   // particular command line options.

@@ -2075,20 +2075,7 @@ public:
 
   /// Return true if this operand bundle user has operand bundles that
   /// may write to the heap.
-  bool hasClobberingOperandBundles() const {
-    for (const auto &BOI : bundle_op_infos()) {
-      if (BOI.Tag->second == LLVMContext::OB_deopt ||
-          BOI.Tag->second == LLVMContext::OB_funclet ||
-          BOI.Tag->second == LLVMContext::OB_ptrauth)
-        continue;
-
-      // This instruction has an operand bundle that is not known to us.
-      // Assume the worst.
-      return true;
-    }
-
-    return false;
-  }
+  bool hasClobberingOperandBundles() const;
 
   /// Return true if the bundle operand at index \p OpIdx has the
   /// attribute \p A.
@@ -2391,9 +2378,9 @@ public:
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// getNumArgOperands - Return the number of funcletpad arguments.
+  /// arg_size - Return the number of funcletpad arguments.
   ///
-  unsigned getNumArgOperands() const { return getNumOperands() - 1; }
+  unsigned arg_size() const { return getNumOperands() - 1; }
 
   /// Convenience accessors
 

@@ -8,16 +8,20 @@
 
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 
-#include <memory>
-#include <type_traits>
-
-#include "../PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <memory>
+#include <type_traits>
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTCOMPLEXTOSTANDARD
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -513,11 +517,28 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
 
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
+
+    Value half = b.create<arith::ConstantOp>(elementType,
+                                             b.getFloatAttr(elementType, 0.5));
     Value one = b.create<arith::ConstantOp>(elementType,
                                             b.getFloatAttr(elementType, 1));
+    Value two = b.create<arith::ConstantOp>(elementType,
+                                            b.getFloatAttr(elementType, 2));
+
+    // log1p(a+bi) = .5*log((a+1)^2+b^2) + i*atan2(b, a + 1)
+    // log((a+1)+bi) = .5*log(a*a + 2*a + 1 + b*b) + i*atan2(b, a+1)
+    // log((a+1)+bi) = .5*log1p(a*a + 2*a + b*b) + i*atan2(b, a+1)
+    Value sumSq = b.create<arith::MulFOp>(real, real);
+    sumSq = b.create<arith::AddFOp>(sumSq, b.create<arith::MulFOp>(real, two));
+    sumSq = b.create<arith::AddFOp>(sumSq, b.create<arith::MulFOp>(imag, imag));
+    Value logSumSq = b.create<math::Log1pOp>(elementType, sumSq);
+    Value resultReal = b.create<arith::MulFOp>(logSumSq, half);
+
     Value realPlusOne = b.create<arith::AddFOp>(real, one);
-    Value newComplex = b.create<complex::CreateOp>(type, realPlusOne, imag);
-    rewriter.replaceOpWithNewOp<complex::LogOp>(op, type, newComplex);
+
+    Value resultImag = b.create<math::Atan2Op>(elementType, imag, realPlusOne);
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
+                                                   resultImag);
     return success();
   }
 };
@@ -1064,7 +1085,7 @@ void mlir::populateComplexToStandardConversionPatterns(
 
 namespace {
 struct ConvertComplexToStandardPass
-    : public ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
+    : public impl::ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
   void runOnOperation() override;
 };
 
@@ -1074,7 +1095,7 @@ void ConvertComplexToStandardPass::runOnOperation() {
   populateComplexToStandardConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<arith::ArithmeticDialect, math::MathDialect>();
+  target.addLegalDialect<arith::ArithDialect, math::MathDialect>();
   target.addLegalOp<complex::CreateOp, complex::ImOp, complex::ReOp>();
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

@@ -341,10 +341,9 @@ public:
 bool MOSCombinerInfo::combine(GISelChangeObserver &Observer, MachineInstr &MI,
                               MachineIRBuilder &B) const {
   const LegalizerInfo *LI = MI.getMF()->getSubtarget().getLegalizerInfo();
-  if (!MI.getMF()->getProperties().hasProperty(
-          MachineFunctionProperties::Property::Legalized))
-    LI = nullptr;
-  CombinerHelper Helper(Observer, B, KB, MDT, LI);
+  bool IsPreLegalize = !MI.getMF()->getProperties().hasProperty(
+      MachineFunctionProperties::Property::Legalized);
+  CombinerHelper Helper(Observer, B, IsPreLegalize, KB, MDT, LI);
   MOSGenCombinerHelper Generated(GeneratedRuleCfg, Helper);
   return Generated.tryCombineAll(Observer, MI, B);
 }

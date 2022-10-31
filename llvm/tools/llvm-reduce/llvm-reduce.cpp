@@ -17,27 +17,19 @@
 #include "DeltaManager.h"
 #include "ReducerWorkItem.h"
 #include "TestRunner.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include <system_error>
 #include <vector>
 
@@ -100,6 +92,8 @@ static cl::opt<int>
 
 static codegen::RegisterCodeGenFlags CGF;
 
+bool isReduced(ReducerWorkItem &M, TestRunner &Test);
+
 void writeOutput(ReducerWorkItem &M, StringRef Message) {
   if (ReplaceInput) // In-place
     OutputFilename = InputFilename.c_str();
@@ -117,9 +111,19 @@ void writeOutput(ReducerWorkItem &M, StringRef Message) {
 
 void writeBitcode(ReducerWorkItem &M, llvm::raw_ostream &OutStream) {
   if (M.LTOInfo && M.LTOInfo->IsThinLTO && M.LTOInfo->EnableSplitLTOUnit) {
-    legacy::PassManager PM;
-    PM.add(llvm::createWriteThinLTOBitcodePass(OutStream));
-    PM.run(*(M.M));
+    PassBuilder PB;
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+    ModulePassManager MPM;
+    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr));
+    MPM.run(*M.M, MAM);
   } else {
     std::unique_ptr<ModuleSummaryIndex> Index;
     if (M.LTOInfo && M.LTOInfo->HasSummary) {
@@ -180,6 +184,15 @@ int main(int Argc, char **Argv) {
   TestRunner Tester(TestFilename, TestArguments, std::move(OriginalProgram),
                     std::move(TM), Argv[0]);
 
+  // This parses and writes out the testcase into a temporary file copy for the
+  // test, rather than evaluating the source IR directly. This is for the
+  // convenience of lit tests; the stripped out comments may have broken the
+  // interestingness checks.
+  if (!isReduced(Tester.getProgram(), Tester)) {
+    errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
+    return 1;
+  }
+
   // Try to reduce code
   runDeltaPasses(Tester, MaxPassIterations);
 
@@ -187,7 +200,7 @@ int main(int Argc, char **Argv) {
   if (OutputFilename == "-")
     Tester.getProgram().print(outs(), nullptr);
   else
-    writeOutput(Tester.getProgram(), "\nDone reducing! Reduced testcase: ");
+    writeOutput(Tester.getProgram(), "Done reducing! Reduced testcase: ");
 
   return 0;
 }

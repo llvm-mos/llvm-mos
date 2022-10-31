@@ -584,8 +584,12 @@ public:
   }
 
   bool isAccessSpecifier(bool ColonRequired = true) const {
-    return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private) &&
-           (!ColonRequired || (Next && Next->is(tok::colon)));
+    if (!isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private))
+      return false;
+    if (!ColonRequired)
+      return true;
+    const auto NextNonComment = getNextNonComment();
+    return NextNonComment && NextNonComment->is(tok::colon);
   }
 
   bool canBePointerOrReferenceQualifier() const {
@@ -677,7 +681,8 @@ public:
     case tok::kw_static_assert:
     case tok::kw__Atomic:
     case tok::kw___attribute:
-    case tok::kw___underlying_type:
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
     case tok::kw_requires:
       return true;
     default:

@@ -937,7 +937,14 @@ public:
   ///
   /// We don't have a way to invalidate per-loop dispositions. Clear and
   /// recompute is simpler.
-  void forgetLoopDispositions(const Loop *L);
+  void forgetLoopDispositions();
+
+  /// Called when the client has changed the disposition of values in
+  /// a loop or block.
+  ///
+  /// We don't have a way to invalidate per-loop/per-block dispositions. Clear
+  /// and recompute is simpler.
+  void forgetBlockAndLoopDispositions(Value *V = nullptr);
 
   /// Determine the minimum number of zero bits that S is guaranteed to end in
   /// (at every loop iteration).  It is, at the same time, the minimum number
@@ -1091,7 +1098,8 @@ public:
   /// invariants, available at L's entry. Otherwise, return None.
   Optional<LoopInvariantPredicate>
   getLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
-                            const SCEV *RHS, const Loop *L);
+                            const SCEV *RHS, const Loop *L,
+                            const Instruction *CtxI = nullptr);
 
   /// If the result of the predicate LHS `Pred` RHS is loop invariant with
   /// respect to L at given Context during at least first MaxIter iterations,

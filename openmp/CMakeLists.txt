@@ -71,16 +71,17 @@ if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP17_FLAG)
   set(ENABLE_LIBOMPTARGET OFF)
 endif()
 
-set(ENABLE_LIBOMPTARGET_PROFILING OFF)
-if (ENABLE_LIBOMPTARGET AND NOT LLVM_RUNTIMES_BUILD)
-  set(ENABLE_LIBOMPTARGET_PROFILING ON)
-endif()
-
 option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
        ${ENABLE_LIBOMPTARGET})
-option(OPENMP_ENABLE_LIBOMPTARGET_PROFILING "Enable time profiling for libomptarget."
-       ${ENABLE_LIBOMPTARGET_PROFILING})
 option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
+
+# Header install location
+if(${OPENMP_STANDALONE_BUILD})
+  set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
+else()
+  string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION ${PACKAGE_VERSION})
+  set(LIBOMP_HEADERS_INSTALL_PATH "${OPENMP_INSTALL_LIBDIR}/clang/${CLANG_VERSION}/include")
+endif()
 
 # Build host runtime library, after LIBOMPTARGET variables are set since they are needed
 # to enable time profiling support in the OpenMP runtime.

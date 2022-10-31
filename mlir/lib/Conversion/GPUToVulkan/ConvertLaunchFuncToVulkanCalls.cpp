@@ -14,15 +14,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
+
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-
+#include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FormatVariadic.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTVULKANLAUNCHFUNCTOVULKANCALLS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -53,7 +58,7 @@ namespace {
 /// * deinitVulkan         -- deinitializes vulkan runtime
 ///
 class VulkanLaunchFuncToVulkanCallsPass
-    : public ConvertVulkanLaunchFuncToVulkanCallsBase<
+    : public impl::ConvertVulkanLaunchFuncToVulkanCallsBase<
           VulkanLaunchFuncToVulkanCallsPass> {
 private:
   void initializeCachedTypes() {
@@ -374,7 +379,7 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
       loc, TypeRange{getPointerType()}, kInitVulkan);
   // The result of `initVulkan` function is a pointer to Vulkan runtime, we
   // need to pass that pointer to each Vulkan runtime call.
-  auto vulkanRuntime = initVulkanCall.getResult(0);
+  auto vulkanRuntime = initVulkanCall.getResult();
 
   // Create LLVM global with SPIR-V binary data, so we can pass a pointer with
   // that data to runtime call.

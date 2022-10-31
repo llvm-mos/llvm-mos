@@ -3826,7 +3826,7 @@ static bool allUsesExtend(SDValue Compare, SelectionDAG *CurDAG) {
     return true;
   // We want the value in a GPR if it is being extended, used for a select, or
   // used in logical operations.
-  for (auto CompareUse : Compare.getNode()->uses())
+  for (auto *CompareUse : Compare.getNode()->uses())
     if (CompareUse->getOpcode() != ISD::SIGN_EXTEND &&
         CompareUse->getOpcode() != ISD::ZERO_EXTEND &&
         CompareUse->getOpcode() != ISD::SELECT &&
@@ -5053,8 +5053,18 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::INTRINSIC_VOID: {
     auto IntrinsicID = N->getConstantOperandVal(1);
-    if (IntrinsicID == Intrinsic::ppc_tdw || IntrinsicID == Intrinsic::ppc_tw) {
-      unsigned Opcode = IntrinsicID == Intrinsic::ppc_tdw ? PPC::TDI : PPC::TWI;
+    if (IntrinsicID != Intrinsic::ppc_tdw && IntrinsicID != Intrinsic::ppc_tw &&
+        IntrinsicID != Intrinsic::ppc_trapd &&
+        IntrinsicID != Intrinsic::ppc_trap)
+        break;
+    unsigned Opcode = (IntrinsicID == Intrinsic::ppc_tdw ||
+                       IntrinsicID == Intrinsic::ppc_trapd)
+                          ? PPC::TDI
+                          : PPC::TWI;
+    SmallVector<SDValue, 4> OpsWithMD;
+    unsigned MDIndex;
+    if (IntrinsicID == Intrinsic::ppc_tdw ||
+        IntrinsicID == Intrinsic::ppc_tw) {
       SDValue Ops[] = {N->getOperand(4), N->getOperand(2), N->getOperand(3)};
       int16_t SImmOperand2;
       int16_t SImmOperand3;
@@ -5090,10 +5100,31 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
         Ops[1] = N->getOperand(3);
         Ops[2] = getI32Imm(int(SImmOperand2) & 0xFFFF, dl);
       }
-      CurDAG->SelectNodeTo(N, Opcode, MVT::Other, Ops);
-      return;
+      OpsWithMD = {Ops[0], Ops[1], Ops[2]};
+      MDIndex = 5;
+    } else {
+      OpsWithMD = {getI32Imm(24, dl), N->getOperand(2), getI32Imm(0, dl)};
+      MDIndex = 3;
     }
-    break;
+
+    if (N->getNumOperands() > MDIndex) {
+      SDValue MDV = N->getOperand(MDIndex);
+      const MDNode *MD = cast<MDNodeSDNode>(MDV)->getMD();
+      assert(MD->getNumOperands() != 0 && "Empty MDNode in operands!");
+      assert((isa<MDString>(MD->getOperand(0)) && cast<MDString>(
+           MD->getOperand(0))->getString().equals("ppc-trap-reason")) 
+           && "Unsupported annotation data type!");
+      for (unsigned i = 1; i < MD->getNumOperands(); i++) {
+        assert(isa<MDString>(MD->getOperand(i)) && 
+               "Invalid data type for annotation ppc-trap-reason!");
+        OpsWithMD.push_back(
+            getI32Imm(std::stoi(cast<MDString>(
+                      MD->getOperand(i))->getString().str()), dl));
+      }
+    }
+    OpsWithMD.push_back(N->getOperand(0)); // chain
+    CurDAG->SelectNodeTo(N, Opcode, MVT::Other, OpsWithMD);
+    return;
   }
 
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -6540,8 +6571,9 @@ void PPCDAGToDAGISel::PeepholeCROps() {
             Op2Set = true;
           else if (Op.getMachineOpcode() == PPC::CRUNSET)
             Op2Unset = true;
-          else if (Op.getMachineOpcode() == PPC::CRNOR &&
-                   Op.getOperand(0) == Op.getOperand(1))
+          else if ((Op.getMachineOpcode() == PPC::CRNOR &&
+                    Op.getOperand(0) == Op.getOperand(1)) ||
+                   Op.getMachineOpcode() == PPC::CRNOT)
             Op2Not = true;
         }
         [[fallthrough]];
@@ -6564,8 +6596,9 @@ void PPCDAGToDAGISel::PeepholeCROps() {
             Op1Set = true;
           else if (Op.getMachineOpcode() == PPC::CRUNSET)
             Op1Unset = true;
-          else if (Op.getMachineOpcode() == PPC::CRNOR &&
-                   Op.getOperand(0) == Op.getOperand(1))
+          else if ((Op.getMachineOpcode() == PPC::CRNOR &&
+                    Op.getOperand(0) == Op.getOperand(1)) ||
+                   Op.getMachineOpcode() == PPC::CRNOT)
             Op1Not = true;
         }
         }

@@ -213,7 +213,8 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *PN = dyn_cast<PHINode>(IVOperand);
   if (!PN)
     return false;
-  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L);
+
+  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L, ICmp);
   if (!LIP)
     return false;
   ICmpInst::Predicate InvariantPredicate = LIP->Pred;
@@ -288,6 +289,7 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     Users.push_back(cast<Instruction>(U));
   const Instruction *CtxI = findCommonDominator(Users, *DT);
   if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, CtxI)) {
+    SE->forgetValue(ICmp);
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
@@ -769,6 +771,7 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 
   LLVM_DEBUG(dbgs() << "INDVARS: Eliminated identity: " << *UseInst << '\n');
 
+  SE->forgetValue(UseInst);
   UseInst->replaceAllUsesWith(IVOperand);
   ++NumElimIdentity;
   Changed = true;

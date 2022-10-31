@@ -248,19 +248,9 @@ thread safety annotations.
   replacement scenarios from working, e.g. replacing `operator new` and
   expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
-**_LIBCPP_ENABLE_NODISCARD**:
-  Allow the library to add ``[[nodiscard]]`` attributes to entities not specified
-  as ``[[nodiscard]]`` by the current language dialect. This includes
-  backporting applications of ``[[nodiscard]]`` from newer dialects and
-  additional extended applications at the discretion of the library. All
-  additional applications of ``[[nodiscard]]`` are disabled by default.
-  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for
-  more information.
-
 **_LIBCPP_DISABLE_NODISCARD_EXT**:
-  This macro prevents the library from applying ``[[nodiscard]]`` to entities
-  purely as an extension. See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
-  for more information.
+  This macro disables library-extensions of ``[[nodiscard]]``.
+  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for more information.
 
 **_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
   This macro disables warnings when using deprecated components. For example,
@@ -350,25 +340,14 @@ Users who want help diagnosing misuses of STL functions may desire a more
 liberal application of ``[[nodiscard]]``.
 
 For this reason libc++ provides an extension that does just that! The
-extension must be enabled by defining ``_LIBCPP_ENABLE_NODISCARD``. The extended
-applications of ``[[nodiscard]]`` takes two forms:
+extension is enabled by default and can be disabled by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
+The extended applications of ``[[nodiscard]]`` takes two forms:
 
 1. Backporting ``[[nodiscard]]`` to entities declared as such by the
    standard in newer dialects, but not in the present one.
 
 2. Extended applications of ``[[nodiscard]]``, at the library's discretion,
    applied to entities never declared as such by the standard.
-
-Users may also opt-out of additional applications ``[[nodiscard]]`` using
-additional macros.
-
-Applications of the first form, which backport ``[[nodiscard]]`` from a newer
-dialect, may be disabled using macros specific to the dialect in which it was
-added. For example, ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17``.
-
-Applications of the second form, which are pure extensions, may be disabled
-by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
-
 
 Entities declared with ``_LIBCPP_NODISCARD_EXT``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -424,6 +403,21 @@ which no dialect declares as such (See the second form described above).
 * ``to_integer``
 * ``to_underlying``
 
+Extended integral type support
+------------------------------
+
+Several platforms support types that are not specified in the Standard, such as
+the 128-bit integral types ``__int128_t`` and ``__uint128_t``. As an extension,
+libc++ does a best-effort attempt to support these types like other integral
+types, by supporting them notably in:
+
+* ``<bits>``
+* ``<charconv>``
+* ``<functional>``
+* ``<type_traits>``
+* ``<format>``
+* ``<random>``
+
 Additional types supported in random distributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -432,23 +426,6 @@ distributions with types other than ``short``, ``int``, ``long``, ``long long``,
 undefined. As an extension, libc++ supports instantiating ``binomial_distribution``, ``discrete_distribution``,
 ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``, and ``uniform_int_distribution``
 with ``int8_t``, ``__int128_t`` and their unsigned versions.
-
-Extended integral type support
-------------------------------
-
-Several platforms support the 128-bit integral types ``__int128_t`` and
-``__uint128_t``. When these types are present they can be used in the headers
-as required by the Standard:
-
-* ``<bits>``
-* ``<charconv>``
-* ``<functional>``
-* ``<type_traits>``
-
-As an extension these types can be used in the following headers:
-
-* ``<format>``
-* ``<random>``
 
 Extensions to ``<format>``
 --------------------------

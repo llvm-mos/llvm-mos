@@ -124,6 +124,39 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::driver::options::OPT_fdebug_pass_manager,
                    clang::driver::options::OPT_fno_debug_pass_manager, false))
     opts.DebugPassManager = 1;
+
+  // -mrelocation-model option.
+  if (const llvm::opt::Arg *A =
+          args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {
+    llvm::StringRef ModelName = A->getValue();
+    auto RM = llvm::StringSwitch<llvm::Optional<llvm::Reloc::Model>>(ModelName)
+                  .Case("static", llvm::Reloc::Static)
+                  .Case("pic", llvm::Reloc::PIC_)
+                  .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC)
+                  .Case("ropi", llvm::Reloc::ROPI)
+                  .Case("rwpi", llvm::Reloc::RWPI)
+                  .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
+                  .Default(llvm::None);
+    if (RM.has_value())
+      opts.setRelocationModel(*RM);
+    else
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << A->getAsString(args) << ModelName;
+  }
+
+  // -pic-level and -pic-is-pie option.
+  if (int PICLevel = getLastArgIntValue(
+          args, clang::driver::options::OPT_pic_level, 0, diags)) {
+    if (PICLevel > 2)
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << args.getLastArg(clang::driver::options::OPT_pic_level)
+                 ->getAsString(args)
+          << PICLevel;
+
+    opts.PICLevel = PICLevel;
+    if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
+      opts.IsPIE = 1;
+  }
 }
 
 /// Parses all target input arguments and populates the target
@@ -145,6 +178,17 @@ static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
   if (opts.programAction == DebugDumpProvenance ||
       opts.programAction == Fortran::frontend::GetDefinition)
     opts.needProvenanceRangeToCharBlockMappings = true;
+}
+
+/// Parse the argument specified for the -fconvert=<value> option
+static std::optional<const char *> parseConvertArg(const char *s) {
+  return llvm::StringSwitch<std::optional<const char *>>(s)
+      .Case("unknown", "UNKNOWN")
+      .Case("native", "NATIVE")
+      .Case("little-endian", "LITTLE_ENDIAN")
+      .Case("big-endian", "BIG_ENDIAN")
+      .Case("swap", "SWAP")
+      .Default(std::nullopt);
 }
 
 static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
@@ -364,6 +408,17 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     } else {
       opts.fixedFormColumns = columns;
     }
+  }
+
+  // Set conversion based on -fconvert=<value>
+  if (const auto *arg =
+          args.getLastArg(clang::driver::options::OPT_fconvert_EQ)) {
+    const char *argValue = arg->getValue();
+    if (auto convert = parseConvertArg(argValue))
+      opts.envDefaults.push_back({"FORT_CONVERT", *convert});
+    else
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << argValue;
   }
 
   // -f{no-}implicit-none
@@ -729,6 +784,11 @@ void CompilerInvocation::setDefaultPredefinitions() {
           Fortran::common::LanguageFeature::OpenMP)) {
     fortranOptions.predefinitions.emplace_back("_OPENMP", "201511");
   }
+  llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
+  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+    fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
+    fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+  }
 }
 
 void CompilerInvocation::setFortranOpts() {
@@ -763,7 +823,7 @@ void CompilerInvocation::setFortranOpts() {
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
-  if (moduleDirJ.compare(".") != 0)
+  if (moduleDirJ != ".")
     fortranOptions.searchDirectories.emplace_back(moduleDirJ);
 
   if (frontendOptions.instrumentedParse)
@@ -782,7 +842,7 @@ void CompilerInvocation::setFortranOpts() {
 
 void CompilerInvocation::setSemanticsOpts(
     Fortran::parser::AllCookedSources &allCookedSources) {
-  const auto &fortranOptions = getFortranOpts();
+  auto &fortranOptions = getFortranOpts();
 
   semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, allCookedSources);
@@ -793,6 +853,13 @@ void CompilerInvocation::setSemanticsOpts(
       .set_warnOnNonstandardUsage(getEnableConformanceChecks())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix());
+
+  llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
+  // FIXME: Handle real(3) ?
+  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
+    semanticsContext->targetCharacteristics().DisableType(
+        Fortran::common::TypeCategory::Real, /*kind=*/10);
+  }
 }
 
 /// Set \p loweringOptions controlling lowering behavior based

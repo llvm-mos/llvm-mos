@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Vectorize.h"
+#include <numeric>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -97,6 +98,7 @@ private:
   void foldExtExtBinop(ExtractElementInst *Ext0, ExtractElementInst *Ext1,
                        Instruction &I);
   bool foldExtractExtract(Instruction &I);
+  bool foldInsExtFNeg(Instruction &I);
   bool foldBitcastShuf(Instruction &I);
   bool scalarizeBinopOrCmp(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
@@ -173,7 +175,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
   Align Alignment = Load->getAlign();
-  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), DL, Load, &DT)) {
+  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), DL, Load, &AC,
+                                   &DT)) {
     // It is not safe to load directly from the pointer, but we can still peek
     // through gep offsets and check if it safe to load from a base address with
     // updated alignment. If it is, we can shuffle the element(s) into place
@@ -198,7 +201,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     if (OffsetEltIndex >= MinVecNumElts)
       return false;
 
-    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), DL, Load, &DT))
+    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), DL, Load, &AC,
+                                     &DT))
       return false;
 
     // Update alignment with offset value. Note that the offset could be negated
@@ -528,6 +532,71 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
 
   Worklist.push(Ext0);
   Worklist.push(Ext1);
+  return true;
+}
+
+/// Try to replace an extract + scalar fneg + insert with a vector fneg +
+/// shuffle.
+bool VectorCombine::foldInsExtFNeg(Instruction &I) {
+  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!VecTy)
+    return false;
+
+  // Match an insert (op (extract)) pattern.
+  Value *DestVec;
+  uint64_t Index;
+  Instruction *FNeg;
+  if (!match(&I, m_InsertElt(m_Value(DestVec), m_OneUse(m_Instruction(FNeg)),
+                             m_ConstantInt(Index))))
+    return false;
+
+  // Note: This handles the canonical fneg instruction and "fsub -0.0, X".
+  Value *SrcVec;
+  Instruction *Extract;
+  if (!match(FNeg, m_FNeg(m_CombineAnd(
+                       m_Instruction(Extract),
+                       m_ExtractElt(m_Value(SrcVec), m_SpecificInt(Index))))))
+    return false;
+
+  // TODO: We could handle this with a length-changing shuffle.
+  if (SrcVec->getType() != VecTy)
+    return false;
+
+  // Ignore bogus insert/extract index.
+  unsigned NumElts = VecTy->getNumElements();
+  if (Index >= NumElts)
+    return false;
+
+  // We are inserting the negated element into the same lane that we extracted
+  // from. This is equivalent to a select-shuffle that chooses all but the
+  // negated element from the destination vector.
+  SmallVector<int> Mask(NumElts);
+  std::iota(Mask.begin(), Mask.end(), 0);
+  Mask[Index] = Index + NumElts;
+
+  Type *ScalarTy = VecTy->getScalarType();
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(Instruction::FNeg, ScalarTy) +
+      TTI.getVectorInstrCost(I, VecTy, Index);
+
+  // If the extract has one use, it will be eliminated, so count it in the
+  // original cost. If it has more than one use, ignore the cost because it will
+  // be the same before/after.
+  if (Extract->hasOneUse())
+    OldCost += TTI.getVectorInstrCost(*Extract, VecTy, Index);
+
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(Instruction::FNeg, VecTy) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_Select, VecTy, Mask);
+
+  if (NewCost > OldCost)
+    return false;
+
+  // insertelt DestVec, (fneg (extractelt SrcVec, Index)), Index -->
+  // shuffle DestVec, (fneg SrcVec), Mask
+  Value *VecFNeg = Builder.CreateFNegFMF(SrcVec, FNeg);
+  Value *Shuf = Builder.CreateShuffleVector(DestVec, VecFNeg, Mask);
+  replaceValue(I, *Shuf);
   return true;
 }
 
@@ -1297,7 +1366,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   // cost calculations.
   if (!FromReduction) {
     for (ShuffleVectorInst *SV : Shuffles) {
-      for (auto U : SV->users()) {
+      for (auto *U : SV->users()) {
         ShuffleVectorInst *SSV = dyn_cast<ShuffleVectorInst>(U);
         if (SSV && isa<UndefValue>(SSV->getOperand(1)) && SSV->getType() == VT)
           Shuffles.push_back(SSV);
@@ -1569,6 +1638,7 @@ bool VectorCombine::run() {
     if (!ScalarizationOnly) {
       MadeChange |= vectorizeLoadInsert(I);
       MadeChange |= foldExtractExtract(I);
+      MadeChange |= foldInsExtFNeg(I);
       MadeChange |= foldBitcastShuf(I);
       MadeChange |= foldExtractedCmps(I);
       MadeChange |= foldShuffleOfBinops(I);

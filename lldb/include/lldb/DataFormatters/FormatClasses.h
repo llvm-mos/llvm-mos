@@ -17,6 +17,7 @@
 #include "lldb/DataFormatters/TypeFormat.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-enumerations.h"
@@ -73,12 +74,21 @@ public:
     }
   };
 
-  FormattersMatchCandidate(ConstString name, Flags flags)
-      : m_type_name(name), m_flags(flags) {}
+  FormattersMatchCandidate(ConstString name,
+                           ScriptInterpreter *script_interpreter, TypeImpl type,
+                           Flags flags)
+      : m_type_name(name), m_script_interpreter(script_interpreter),
+        m_type(type), m_flags(flags) {}
 
   ~FormattersMatchCandidate() = default;
 
   ConstString GetTypeName() const { return m_type_name; }
+
+  TypeImpl GetType() const { return m_type; }
+
+  ScriptInterpreter *GetScriptInterpreter() const {
+    return m_script_interpreter;
+  }
 
   bool DidStripPointer() const { return m_flags.stripped_pointer; }
 
@@ -101,6 +111,10 @@ public:
 
 private:
   ConstString m_type_name;
+  // If a formatter provides a matching callback function, we need the script
+  // interpreter and the type object (as an argument to the callback).
+  ScriptInterpreter *m_script_interpreter;
+  TypeImpl m_type;
   Flags m_flags;
 };
 
@@ -133,21 +147,23 @@ class TypeNameSpecifierImpl {
 public:
   TypeNameSpecifierImpl() = default;
 
-  TypeNameSpecifierImpl(llvm::StringRef name, bool is_regex)
-      : m_is_regex(is_regex) {
+  TypeNameSpecifierImpl(llvm::StringRef name,
+                        lldb::FormatterMatchType match_type)
+      : m_match_type(match_type) {
     m_type.m_type_name = std::string(name);
   }
 
-  // if constructing with a given type, is_regex cannot be true since we are
-  // giving an exact type to match
-  TypeNameSpecifierImpl(lldb::TypeSP type) : m_is_regex(false) {
+  // if constructing with a given type, we consider that a case of exact match.
+  TypeNameSpecifierImpl(lldb::TypeSP type)
+      : m_match_type(lldb::eFormatterMatchExact) {
     if (type) {
       m_type.m_type_name = std::string(type->GetName().GetStringRef());
       m_type.m_compiler_type = type->GetForwardCompilerType();
     }
   }
 
-  TypeNameSpecifierImpl(CompilerType type) : m_is_regex(false) {
+  TypeNameSpecifierImpl(CompilerType type)
+      : m_match_type(lldb::eFormatterMatchExact) {
     if (type.IsValid()) {
       m_type.m_type_name.assign(type.GetTypeName().GetCString());
       m_type.m_compiler_type = type;
@@ -166,10 +182,12 @@ public:
     return CompilerType();
   }
 
-  bool IsRegex() { return m_is_regex; }
+  lldb::FormatterMatchType GetMatchType() { return m_match_type; }
+
+  bool IsRegex() { return m_match_type == lldb::eFormatterMatchRegex; }
 
 private:
-  bool m_is_regex = false;
+  lldb::FormatterMatchType m_match_type = lldb::eFormatterMatchExact;
   // TODO: Replace this with TypeAndOrName.
   struct TypeOrName {
     std::string m_type_name;

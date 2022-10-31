@@ -10,13 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
+
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SCFPARALLELLOOPTILING
+#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -162,8 +167,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
       thenBlock.getArgument(ivs.index())
           .replaceAllUsesExcept(newIndex, newIndex);
     }
-    thenBlock.eraseArguments(llvm::to_vector<4>(
-        llvm::seq((unsigned)0, thenBlock.getNumArguments())));
+    thenBlock.eraseArguments(0, thenBlock.getNumArguments());
   } else {
     innerLoop.getRegion().takeBody(op.getRegion());
     b.setInsertionPointToStart(innerLoop.getBody());
@@ -182,7 +186,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
 
 namespace {
 struct ParallelLoopTiling
-    : public SCFParallelLoopTilingBase<ParallelLoopTiling> {
+    : public impl::SCFParallelLoopTilingBase<ParallelLoopTiling> {
   ParallelLoopTiling() = default;
   explicit ParallelLoopTiling(ArrayRef<int64_t> tileSizes,
                               bool noMinMaxBounds = false) {
