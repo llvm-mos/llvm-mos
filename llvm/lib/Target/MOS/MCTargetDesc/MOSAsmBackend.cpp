@@ -137,43 +137,15 @@ static cl::opt<bool> ForcePCRelReloc(
     cl::desc("Force relocation entries to be emitted for PCREL fixups."),
     cl::init(false), cl::Hidden);
 
-static uint64_t getSymbolOffset(const MCSymbolRefExpr *SymRefExpr,
-                                const MCAsmLayout &Layout) {
-  if (!SymRefExpr) {
-    return 0;
-  }
-
-  const MCSymbol &Sym = SymRefExpr->getSymbol();
-
-  return Sym.isDefined() ? Layout.getSymbolOffset(Sym) : 0;
-}
-
-static auto getCumulativeSymbolOffset(const MCValue &Target,
-                                      const MCAsmLayout &Layout) {
-  return getSymbolOffset(Target.getSymB(), Layout) -
-         getSymbolOffset(Target.getSymA(), Layout);
-}
-
-static auto getRelativeMOSPCCorrection(const bool IsPCRel16) {
+static int getRelativeMOSPCCorrection(const bool IsPCRel16) {
   // MOS's PC relative addressing is off by one or two from the standard LLVM
   // PC relative convention.
-  return IsPCRel16 ? 2 : 1;
+  return IsPCRel16 ? -2 : -1;
 }
 
 static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
   return SignedValue >= (IsPCRel16 ? INT16_MIN : INT8_MIN) &&
          SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
-}
-
-static auto getFixupValue(const MCAsmLayout &Layout, const MCFixup &Fixup,
-                          const MCFragment *DF, const MCValue &Target,
-                          const bool IsPCRel16) {
-  assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
-         "unexpected target fixup kind");
-
-  return Target.getConstant() - getCumulativeSymbolOffset(Target, Layout) -
-         Layout.getFragmentOffset(DF) - Fixup.getOffset() -
-         getRelativeMOSPCCorrection(IsPCRel16);
 }
 
 bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
@@ -187,9 +159,43 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   WasForced = ForcePCRelReloc;
 
   const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
-  Value = getFixupValue(Layout, Fixup, DF, Target, IsPCRel16);
+  assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
+         "unexpected target fixup kind");
 
-  return !WasForced && fitsIntoFixup(Value, IsPCRel16);
+  // Logic taken from MCAssembler::evaluateFixup.
+  bool IsResolved = false;
+  if (Target.getSymB()) {
+    IsResolved = false;
+  } else if (!Target.getSymA()) {
+    IsResolved = false;
+  } else {
+    const MCSymbolRefExpr *A = Target.getSymA();
+    const MCSymbol &SA = A->getSymbol();
+    if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
+      IsResolved = false;
+    } else if (auto *Writer = Asm.getWriterPtr()) {
+      IsResolved = Writer->isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, *DF,
+                                                                  false, true);
+    }
+  }
+
+  Value = Target.getConstant();
+
+  if (const MCSymbolRefExpr *A = Target.getSymA()) {
+    const MCSymbol &Sym = A->getSymbol();
+    if (Sym.isDefined())
+      Value += Layout.getSymbolOffset(Sym);
+  }
+  if (const MCSymbolRefExpr *B = Target.getSymB()) {
+    const MCSymbol &Sym = B->getSymbol();
+    if (Sym.isDefined())
+      Value -= Layout.getSymbolOffset(Sym);
+  }
+
+  Value -= Layout.getFragmentOffset(DF) + Fixup.getOffset();
+  Value += getRelativeMOSPCCorrection(IsPCRel16);
+
+  return IsResolved && !WasForced && fitsIntoFixup(Value, IsPCRel16);
 }
 
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
