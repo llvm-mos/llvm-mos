@@ -41,7 +41,7 @@
 #include "MOSLateOptimization.h"
 #include "MOSLowerSelect.h"
 #include "MOSMachineScheduler.h"
-#include "MOSNoRecurse.h"
+#include "MOSNonReentrant.h"
 #include "MOSPostRAScavenging.h"
 #include "MOSStaticStackAlloc.h"
 #include "MOSTargetObjectFile.h"
@@ -62,7 +62,7 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   initializeMOSInsertCopiesPass(PR);
   initializeMOSLateOptimizationPass(PR);
   initializeMOSLowerSelectPass(PR);
-  initializeMOSNoRecursePass(PR);
+  initializeMOSNonReentrantPass(PR);
   initializeMOSPostRAScavengingPass(PR);
   initializeMOSStaticStackAllocPass(PR);
   initializeMOSZeroPageAllocPass(PR);
@@ -204,7 +204,7 @@ TargetPassConfig *MOSTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void MOSPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createMOSNoRecursePass());
+    addPass(createMOSNonReentrantPass());
   TargetPassConfig::addIRPasses();
   // Clean up after LSR in particular.
   if (getOptLevel() != CodeGenOpt::None)

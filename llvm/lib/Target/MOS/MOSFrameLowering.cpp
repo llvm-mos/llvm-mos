@@ -43,7 +43,8 @@ MOSFrameLowering::MOSFrameLowering()
 
 bool MOSFrameLowering::usesStaticStack(const MachineFunction &MF) const {
   return MF.getSubtarget<MOSSubtarget>().staticStack() &&
-         !MF.getFunction().hasOptNone() && MF.getFunction().doesNotRecurse();
+         !MF.getFunction().hasOptNone() &&
+         MF.getFunction().hasFnAttribute("nonreentrant");
 }
 
 bool MOSFrameLowering::assignCalleeSavedSpillSlots(

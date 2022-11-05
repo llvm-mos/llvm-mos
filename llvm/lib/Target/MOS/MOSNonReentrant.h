@@ -1,4 +1,4 @@
-//===-- MOSNoRecurse.h - MOS NoRecurse Pass ---------------------*- C++ -*-===//
+//===-- MOSNonReentrant.h - MOS NonReentrant Pass ---------------*- C++ -*-===//
 //
 // Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the MOS NoRecurse pass.
+// This file declares the MOS NonReentrant pass.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +17,7 @@
 
 namespace llvm {
 
-ModulePass *createMOSNoRecursePass();
+ModulePass *createMOSNonReentrantPass();
 
 } // end namespace llvm
 

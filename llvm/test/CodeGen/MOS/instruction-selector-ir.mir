@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=mos -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s
 --- |
   @.str = constant [1 x i8] c"X"
-  define void @addrstk_fixed() norecurse {
+  define void @addrstk_fixed() "nonreentrant" {
     entry:
       ret void
   }
@@ -18,11 +18,11 @@
     entry:
       ret void
   }
-  define void @ldimm_local() norecurse {
+  define void @ldimm_local() "nonreentrant" {
     entry:
       ret void
   }
-  define void @unmerge_local() norecurse {
+  define void @unmerge_local() "nonreentrant" {
     entry:
       ret void
   }

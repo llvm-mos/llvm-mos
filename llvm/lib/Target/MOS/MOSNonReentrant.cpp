@@ -1,4 +1,4 @@
-//===-- MOSNoRecurse.cpp - MOS NoRecurse Pass -----------------------------===//
+//===-- MOSNonReentrant.cpp - MOS NonReentrant Pass -----------------------===//
 //
 // Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the MOS NoRecurse pass.
+// This file defines the MOS NonReentrant pass.
 //
 // This pass examines the full inter-procedural Module function call graph to
-// identify functions that cannot possibly be recursive. Those functiosn are
-// marked with the norecurse annotation, which allows the code generator to lay
+// identify functions that need not be reentrant. Those functions are marked
+// with the nonreentrant annotation, which allows the code generator to lay
 // their local stack frames out in globally static memory. This is possible
 // because such functions can have at most one invocation active at any given
-// time.
+// time. Along the way, this pass performs a norecurse analysis as well.
 //
-// This pass is considerably more aggressive than LLVM's built-in NoRecurse
-// passes, as it examines the call graph SCCs themselves, not individual
-// functions in SCC order.
 //===----------------------------------------------------------------------===//
 
-#include "MOSNoRecurse.h"
+#include "MOSNonReentrant.h"
 
 #include "MOS.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -31,28 +28,28 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
-#define DEBUG_TYPE "mos-norecurse"
+#define DEBUG_TYPE "mos-nonreentrant"
 
 using namespace llvm;
 
 namespace {
 
-struct MOSNoRecurse : public ModulePass {
+struct MOSNonReentrant : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
-  SmallPtrSet<const CallGraphNode *, 8> ReachableFromMultipleInterrupts;
+  SmallPtrSet<const CallGraphNode *, 8> Reentrant;
   SmallPtrSet<const CallGraphNode *, 8> ReachableFromCurrentNorecurseInterrupt;
   SmallPtrSet<const CallGraphNode *, 8> ReachableFromOtherNorecurseInterrupt;
   bool HasInterrupts = false;
 
-  MOSNoRecurse() : ModulePass(ID) {
-    initializeMOSNoRecursePass(*PassRegistry::getPassRegistry());
+  MOSNonReentrant() : ModulePass(ID) {
+    initializeMOSNonReentrantPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &Info) const override;
 
   bool runOnSCC(CallGraphSCC &SCC);
-  void markReachableFromMultipleInterrupts(const CallGraphNode &CGN);
+  void markReentrant(const CallGraphNode &CGN);
   void visitNorecurseInterrupt(const CallGraphNode &CGN);
 };
 
@@ -63,8 +60,8 @@ static bool callsSelf(const CallGraphNode &N) {
   return false;
 }
 
-bool MOSNoRecurse::runOnModule(Module &M) {
-  LLVM_DEBUG(dbgs() << "**** MOS NoRecurse Pass ****\n");
+bool MOSNonReentrant::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "**** MOS NonReentrant Pass ****\n");
 
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
@@ -84,12 +81,11 @@ bool MOSNoRecurse::runOnModule(Module &M) {
     Changed |= runOnSCC(CurSCC);
   }
 
-  // Mark all functions reachable from an interrupt function as possibly
-  // recursive.
+  // Mark all functions reachable from an interrupt function as non-reentrant.
   for (Function &F : M.functions()) {
     if (F.hasFnAttribute("interrupt")) {
       HasInterrupts = true;
-      markReachableFromMultipleInterrupts(*CG[&F]);
+      markReentrant(*CG[&F]);
     }
   }
 
@@ -116,25 +112,31 @@ bool MOSNoRecurse::runOnModule(Module &M) {
     // other than making the conservative assumption here.
     for (const char *LibcallName : lto::LTO::getRuntimeLibcallSymbols()) {
       Function *Libcall = M.getFunction(LibcallName);
-      if (Libcall && !Libcall->isDeclaration() && Libcall->doesNotRecurse()) {
-        LLVM_DEBUG(dbgs() << "Marking libcall as possibly recursive: "
+      if (Libcall && !Libcall->isDeclaration()) {
+        LLVM_DEBUG(dbgs() << "Marking libcall as reentrant: "
                           << Libcall->getName() << "\n");
-        Libcall->removeFnAttr(Attribute::NoRecurse);
+        Reentrant.insert(CG[Libcall]);
       }
     }
   }
+
+  // Make all norecurse functions that were not determined to be reentrant as
+  // nonreentrant.
+  for (Function &F : M.functions())
+    if (F.doesNotRecurse() && !Reentrant.contains(CG[&F]))
+      F.addFnAttr("nonreentrant");
 
   // Remove the artificial edge.
   CG.getCallsExternalNode()->removeAllCalledFunctions();
   return Changed;
 }
 
-void MOSNoRecurse::getAnalysisUsage(AnalysisUsage &AU) const {
+void MOSNonReentrant::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<CallGraphWrapperPass>();
   AU.addPreserved<CallGraphWrapperPass>();
 }
 
-bool MOSNoRecurse::runOnSCC(CallGraphSCC &SCC) {
+bool MOSNonReentrant::runOnSCC(CallGraphSCC &SCC) {
   // All nodes in SCCs with more than one node may be recursive. It's not
   // certain since CFG analysis is conservative, but there's no more
   // information to be gleaned from looking at the call graph, and other
@@ -146,6 +148,7 @@ bool MOSNoRecurse::runOnSCC(CallGraphSCC &SCC) {
   const CallGraphNode &N = **SCC.begin();
 
   if (!N.getFunction() || N.getFunction()->isDeclaration() ||
+      N.getFunction()->hasFnAttribute("nonreentrant") ||
       N.getFunction()->doesNotRecurse())
     return false;
 
@@ -158,31 +161,22 @@ bool MOSNoRecurse::runOnSCC(CallGraphSCC &SCC) {
   LLVM_DEBUG(dbgs() << "Found new non-recursive function.\n");
   LLVM_DEBUG(N.print(dbgs()));
 
-  // At this point, the function in N is known non-recursive.
+  // At this point, the function in N can safely be made non-reentrant.
   N.getFunction()->setDoesNotRecurse();
   return true;
 }
 
-void MOSNoRecurse::markReachableFromMultipleInterrupts(
-    const CallGraphNode &CGN) {
-  if (ReachableFromMultipleInterrupts.contains(&CGN))
+void MOSNonReentrant::markReentrant(const CallGraphNode &CGN) {
+  if (Reentrant.contains(&CGN))
     return;
-  ReachableFromMultipleInterrupts.insert(&CGN);
-
-  Function *F = CGN.getFunction();
-  if (F && !F->isDeclaration()) {
-    LLVM_DEBUG(dbgs() << "Marking reachable from interrupt: " << F->getName()
-                      << "\n");
-    if (F->doesNotRecurse())
-      F->removeFnAttr(Attribute::NoRecurse);
-  }
+  Reentrant.insert(&CGN);
 
   for (const auto &CallRecord : CGN)
-    markReachableFromMultipleInterrupts(*CallRecord.second);
+    markReentrant(*CallRecord.second);
 }
 
-void MOSNoRecurse::visitNorecurseInterrupt(const CallGraphNode &CGN) {
-  if (ReachableFromMultipleInterrupts.contains(&CGN))
+void MOSNonReentrant::visitNorecurseInterrupt(const CallGraphNode &CGN) {
+  if (Reentrant.contains(&CGN))
     return;
   if (ReachableFromCurrentNorecurseInterrupt.contains(&CGN))
     return;
@@ -194,20 +188,18 @@ void MOSNoRecurse::visitNorecurseInterrupt(const CallGraphNode &CGN) {
     LLVM_DEBUG(
         dbgs() << "Marking reachable from multiple norecurse interrupts: "
                << F->getName() << "\n");
-    ReachableFromMultipleInterrupts.insert(&CGN);
-    if (F->doesNotRecurse())
-      F->removeFnAttr(Attribute::NoRecurse);
+    Reentrant.insert(&CGN);
   }
   for (const auto &CallRecord : CGN)
     visitNorecurseInterrupt(*CallRecord.second);
 }
 } // namespace
 
-char MOSNoRecurse::ID = 0;
+char MOSNonReentrant::ID = 0;
 
 INITIALIZE_PASS(
-    MOSNoRecurse, DEBUG_TYPE,
-    "Detect non-recursive functions via detailed call graph analysis", false,
+    MOSNonReentrant, DEBUG_TYPE,
+    "Detect non-reentrant functions via detailed call graph analysis", false,
     false)
 
-ModulePass *llvm::createMOSNoRecursePass() { return new MOSNoRecurse(); }
+ModulePass *llvm::createMOSNonReentrantPass() { return new MOSNonReentrant(); }

@@ -18,15 +18,15 @@
     entry:
       ret void
   }
-  define void @load_frame_index_offset() norecurse {
+  define void @load_frame_index_offset() "nonreentrant" {
     entry:
       ret void
   }
-  define void @load_frame_index_offset_no_ss() norecurse "target-features"="-static-stack" {
+  define void @load_frame_index_offset_no_ss() "nonreentrant" "target-features"="-static-stack" {
     entry:
       ret void
   }
-  define void @load_frame_index_zext() norecurse {
+  define void @load_frame_index_zext() "nonreentrant" {
     entry:
       ret void
   }
