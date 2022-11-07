@@ -496,6 +496,10 @@ CODEGENOPT(OpaquePointers, 1, 0)
 /// non-deleting destructors. (No effect on Microsoft ABI.)
 CODEGENOPT(CtorDtorReturnThis, 1, 0)
 
+/// Whether to assume that functions cannot have more than one simultaneous
+/// activation.
+CODEGENOPT(AssumeNonReentrant, 1, 0)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

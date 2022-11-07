@@ -2464,6 +2464,10 @@ def fstatic_stack : Flag<["-"], "fstatic-stack">, Group<f_Group>,
   HelpText<"Statically allocates stack frames whenever possible.">;
 def fno_static_stack : Flag<["-"], "fno-static-stack">, Group<f_Group>,
   HelpText<"Always use a dynamic stack pointer.">;
+def fnonreentrant : Flag<["-"], "fnonreentrant">, Flags<[CC1Option]>, Group<f_Group>,
+  HelpText<"Assume that at most one invocation of a function can be active simultaneously">;
+def freentrant : Flag<["-"], "freentrant">, Group<f_Group>,
+  HelpText<"Use the default reentrant C function semantics">;
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,
   HelpText<"Disable the use of stack protectors">;
 def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,

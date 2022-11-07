@@ -28,6 +28,7 @@
 #include "CoverageMappingGen.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -1993,6 +1994,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
         CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
       B.addAttribute(llvm::Attribute::NoInline);
 
+    if (CodeGenOpts.AssumeNonReentrant)
+      B.addAttribute("nonreentrant");
+
     F->addFnAttrs(B);
     return;
   }
@@ -2079,6 +2083,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     if (D->hasAttr<MinSizeAttr>())
       B.addAttribute(llvm::Attribute::MinSize);
   }
+
+  if (D->hasAttr<NonReentrantAttr>() ||
+      (CodeGenOpts.AssumeNonReentrant && !D->hasAttr<ReentrantAttr>()))
+    B.addAttribute("nonreentrant");
 
   F->addFnAttrs(B);
 

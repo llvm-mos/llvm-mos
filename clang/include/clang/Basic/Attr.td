@@ -1728,6 +1728,17 @@ def MOSNoISR : InheritableAttr, TargetSpecificAttr<TargetMOS> {
   let Documentation = [Undocumented];
 }
 
+def Reentrant : InheritableAttr {
+  let Spellings = [GCC<"reentrant">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [Undocumented];
+}
+def NonReentrant : InheritableAttr {
+  let Spellings = [GCC<"nonreentrant">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [Undocumented];
+}
+
 def Mode : Attr {
   let Spellings = [GCC<"mode">];
   let Subjects = SubjectList<[Var, Enum, TypedefName, Field], ErrorDiag>;
