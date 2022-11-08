@@ -1332,6 +1332,11 @@ unsigned RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
   // register.
   LiveRangeEdit LREdit(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
   if (LightSpill) {
+    if (LREdit.anyRematerializable()) {
+      // Prefer to remat by spilling rather than inserting unnecessary copies.
+      ExtraInfo->setStage(LREdit.begin(), LREdit.end(), RS_Spill);
+      return 0;
+    }
     // Don't rematerialize during the light-spill stage, as this can cause
     // register classes to become over-constrained.
     LREdit.setRematEnable(false);
