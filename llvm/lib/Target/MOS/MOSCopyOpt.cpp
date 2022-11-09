@@ -13,6 +13,7 @@
 
 #include "MOSCopyOpt.h"
 
+#include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
@@ -21,6 +22,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
@@ -43,8 +45,10 @@ public:
 
 } // namespace
 
-static Register findForwardedCopy(MachineInstr &MI,
-                                  SmallVectorImpl<MachineInstr *> &NewSrcMIs) {
+template <typename AcceptDefT>
+static bool findReachingDefs(MachineInstr &MI,
+                             SmallVectorImpl<MachineInstr *> &DefMIs,
+                             const AcceptDefT &AcceptDef) {
   assert(MI.isCopy());
   const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
 
@@ -58,7 +62,6 @@ static Register findForwardedCopy(MachineInstr &MI,
   SmallVector<Entry> WorkList = {
       {*MI.getParent(), MachineBasicBlock::reverse_iterator(MI.getIterator())}};
   DenseSet<const MachineBasicBlock *> Seen;
-  Register NewSrc = 0;
   while (!WorkList.empty()) {
     Entry E = WorkList.back();
     WorkList.pop_back();
@@ -73,29 +76,65 @@ static Register findForwardedCopy(MachineInstr &MI,
     for (MachineInstr &MI : make_range(E.I, E.MBB.rend())) {
       if (!MI.modifiesRegister(Src, &TRI))
         continue;
-      if (!MI.isCopy())
-        return 0;
-      Register NewDst = MI.getOperand(0).getReg();
-      if (NewDst != Src)
-        return 0;
-      Register NewSrcCand = MI.getOperand(1).getReg();
-      if (NewSrc && NewSrc != NewSrcCand)
-        return 0;
 
-      NewSrc = NewSrcCand;
+      if (!AcceptDef(MI))
+        return false;
+
       Found = true;
-      NewSrcMIs.push_back(&MI);
+      DefMIs.push_back(&MI);
       break;
     }
     if (!Found) {
       // The register must have been live-in.
       if (E.MBB.isEntryBlock())
-        return 0;
+        return false;
       for (MachineBasicBlock *MBB : E.MBB.predecessors())
         WorkList.push_back({*MBB, MBB->rbegin()});
     }
   }
+  return true;
+}
+
+static Register findForwardedCopy(MachineInstr &MI,
+                                  SmallVectorImpl<MachineInstr *> &NewSrcMIs) {
+  Register Src = MI.getOperand(1).getReg();
+  Register NewSrc = 0;
+  if (!findReachingDefs(MI, NewSrcMIs, [&](MachineInstr &Def) {
+        if (!Def.isCopy())
+          return false;
+        Register Dst = Def.getOperand(0).getReg();
+        if (Dst != Src)
+          return false;
+        Register NewSrcCand = Def.getOperand(1).getReg();
+        if (NewSrc && NewSrc != NewSrcCand)
+          return false;
+        NewSrc = NewSrcCand;
+        return true;
+      })) {
+    return 0;
+  }
   return NewSrc;
+}
+
+static bool findLdImm(MachineInstr &MI,
+                      SmallVectorImpl<MachineInstr *> &LdImms) {
+  const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
+  const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  return findReachingDefs(MI, LdImms, [&](MachineInstr &Def) {
+    if (!Def.isMoveImmediate())
+      return false;
+    if (Def.getOperand(0).getReg() != Src)
+      return false;
+    const TargetRegisterClass *RC =
+        TII.getRegClass(Def.getDesc(), 0, &TRI, *MI.getMF());
+    if (!RC->contains(Dst))
+      return false;
+    if (LdImms.empty())
+      return true;
+    return LdImms.front()->isIdenticalTo(Def);
+  });
 }
 
 static bool isClobbered(MachineInstr &MI, Register NewSrc,
@@ -139,6 +178,7 @@ static bool isClobbered(MachineInstr &MI, Register NewSrc,
 bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
 
   LLVM_DEBUG(dbgs() << MF.getName() << "\n");
 
@@ -179,6 +219,36 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
         MI.getOperand(1).setIsKill(false);
         LLVM_DEBUG(dbgs() << "Rewrote to: " << MI);
       }
+    }
+
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      if (!MI.isCopy())
+        continue;
+
+      Register Dst = MI.getOperand(0).getReg();
+      Register Src = MI.getOperand(1).getReg();
+
+      if (!MOS::Imag16RegClass.contains(Dst) && Dst != MOS::C &&
+          Dst != MOS::V && TRI.copyCost(Dst, Src, STI) <= 4)
+        continue;
+
+      SmallVector<MachineInstr *> LdImms;
+      if (!findLdImm(MI, LdImms))
+        continue;
+
+      LLVM_DEBUG(dbgs() << MI);
+      LLVM_DEBUG(dbgs() << "Found remat candidate: " << *LdImms.front());
+
+      if (isClobbered(MI, LdImms.front()->getOperand(0).getReg(), LdImms)) {
+        LLVM_DEBUG(dbgs() << "Clobbered.\n");
+        continue;
+      }
+
+      for (MachineInstr *LdImm : LdImms)
+        LdImm->clearRegisterKills(Src, &TRI);
+      LdImms.front()->clearRegisterKills(Src, &TRI);
+      TII.reMaterialize(MBB, MI, Dst, 0, *LdImms.front(), TRI);
+      MI.eraseFromParent();
     }
   }
 

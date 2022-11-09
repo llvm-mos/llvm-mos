@@ -30,10 +30,7 @@ define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_
 ; CHECK-NEXT:    ldy #32
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx mos8(__rc4)
-; CHECK-NEXT:    pha
-; CHECK-NEXT:    tya
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    pla
+; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    jsr __memset
 ; CHECK-NEXT:    ldx #204
 ; CHECK-NEXT:    stx mos8(__rc2)
