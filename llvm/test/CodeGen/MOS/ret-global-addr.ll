@@ -8,8 +8,8 @@ target triple = "mos"
 define i16 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       ; %bb.0: ; %while.end
-; CHECK-NEXT:    ldx #mos16hi(.La.b_c)
 ; CHECK-NEXT:    lda #mos16lo(.La.b_c)
+; CHECK-NEXT:    ldx #mos16hi(.La.b_c)
 ; CHECK-NEXT:    rts
 while.end:
   %0 = getelementptr [1 x i8], [1 x i8]* @a.b_c, i16 0, i16 0

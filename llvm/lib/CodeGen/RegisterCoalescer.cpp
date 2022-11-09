@@ -1281,6 +1281,20 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (Register::isPhysicalRegister(SrcReg))
     return false;
 
+  if (DstReg.isPhysical() && !TII->shouldRematPhysRegCopy()) {
+    const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+    if (SrcIdx) {
+      if (llvm::any_of(*SrcRC, [&](Register R) {
+            return Register(TRI->getSubReg(R, SrcIdx)) == DstReg;
+          })) {
+        return false;
+      }
+    } else {
+      if (SrcRC->contains(DstReg))
+        return false;
+    }
+  }
+
   LiveInterval &SrcInt = LIS->getInterval(SrcReg);
   SlotIndex CopyIdx = LIS->getInstructionIndex(*CopyMI);
   VNInfo *ValNo = SrcInt.Query(CopyIdx).valueIn();

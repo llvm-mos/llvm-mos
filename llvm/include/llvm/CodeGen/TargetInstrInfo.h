@@ -2037,6 +2037,8 @@ public:
     llvm_unreachable("target did not implement");
   }
 
+  virtual bool shouldRematPhysRegCopy() const { return true; }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

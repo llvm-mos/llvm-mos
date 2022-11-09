@@ -138,6 +138,8 @@ private:
 
   // Control flow pseudos
   void expandGBR(MachineIRBuilder &Builder) const;
+
+  bool shouldRematPhysRegCopy() const override { return false; }
 };
 
 namespace MOS {
