@@ -45,15 +45,11 @@ public:
 
 } // namespace
 
-template <typename AcceptDefT>
-static bool findReachingDefs(MachineInstr &MI,
-                             SmallVectorImpl<MachineInstr *> &DefMIs,
-                             const AcceptDefT &AcceptDef) {
-  assert(MI.isCopy());
-  const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
-
-  Register Src = MI.getOperand(1).getReg();
-
+// Scan backwards along possible traces from a given Machine Instruction and
+// check that a condition holds along all of them. If the entry is reached, the
+// default value is used for that trace.
+template <typename CondT>
+static bool allPrevTraces(MachineInstr &MI, const CondT &Cond, bool Default) {
   struct Entry {
     MachineBasicBlock &MBB;
     MachineBasicBlock::reverse_iterator I;
@@ -74,19 +70,16 @@ static bool findReachingDefs(MachineInstr &MI,
 
     bool Found = false;
     for (MachineInstr &MI : make_range(E.I, E.MBB.rend())) {
-      if (!MI.modifiesRegister(Src, &TRI))
+      Optional<bool> C = Cond(MI);
+      if (!C)
         continue;
-
-      if (!AcceptDef(MI))
+      if (!*C)
         return false;
-
       Found = true;
-      DefMIs.push_back(&MI);
       break;
     }
     if (!Found) {
-      // The register must have been live-in.
-      if (E.MBB.isEntryBlock())
+      if (E.MBB.isEntryBlock() && !Default)
         return false;
       for (MachineBasicBlock *MBB : E.MBB.predecessors())
         WorkList.push_back({*MBB, MBB->rbegin()});
@@ -97,20 +90,28 @@ static bool findReachingDefs(MachineInstr &MI,
 
 static Register findForwardedCopy(MachineInstr &MI,
                                   SmallVectorImpl<MachineInstr *> &NewSrcMIs) {
+  assert(MI.isCopy());
+  const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
   Register Src = MI.getOperand(1).getReg();
   Register NewSrc = 0;
-  if (!findReachingDefs(MI, NewSrcMIs, [&](MachineInstr &Def) {
-        if (!Def.isCopy())
-          return false;
-        Register Dst = Def.getOperand(0).getReg();
-        if (Dst != Src)
-          return false;
-        Register NewSrcCand = Def.getOperand(1).getReg();
-        if (NewSrc && NewSrc != NewSrcCand)
-          return false;
-        NewSrc = NewSrcCand;
-        return true;
-      })) {
+  if (!allPrevTraces(
+          MI,
+          [&](MachineInstr &MI) -> Optional<bool> {
+            if (!MI.modifiesRegister(Src, &TRI))
+              return llvm::None;
+            if (!MI.isCopy())
+              return false;
+            Register Dst = MI.getOperand(0).getReg();
+            if (Dst != Src)
+              return false;
+            Register NewSrcCand = MI.getOperand(1).getReg();
+            if (NewSrc && NewSrc != NewSrcCand)
+              return false;
+            NewSrc = NewSrcCand;
+            NewSrcMIs.push_back(&MI);
+            return true;
+          },
+          /*Default=*/false)) {
     return 0;
   }
   return NewSrc;
@@ -122,57 +123,40 @@ static bool findLdImm(MachineInstr &MI,
   const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
-  return findReachingDefs(MI, LdImms, [&](MachineInstr &Def) {
-    if (!Def.isMoveImmediate())
-      return false;
-    if (Def.getOperand(0).getReg() != Src)
-      return false;
-    const TargetRegisterClass *RC =
-        TII.getRegClass(Def.getDesc(), 0, &TRI, *MI.getMF());
-    if (!RC->contains(Dst))
-      return false;
-    if (LdImms.empty())
-      return true;
-    return LdImms.front()->isIdenticalTo(Def);
-  });
+  return allPrevTraces(
+      MI,
+      [&](MachineInstr &MI) -> Optional<bool> {
+        if (!MI.modifiesRegister(Src, &TRI))
+          return llvm::None;
+        if (!MI.isMoveImmediate())
+          return false;
+        if (MI.getOperand(0).getReg() != Src)
+          return false;
+        const TargetRegisterClass *RC =
+            TII.getRegClass(MI.getDesc(), 0, &TRI, *MI.getMF());
+        if (!RC->contains(Dst))
+          return false;
+        if (!LdImms.empty() && !LdImms.front()->isIdenticalTo(MI))
+          return false;
+        LdImms.push_back(&MI);
+        return true;
+      },
+      /*Default=*/false);
 }
 
 static bool isClobbered(MachineInstr &MI, Register NewSrc,
                         const SmallVectorImpl<MachineInstr *> &NewSrcMIs) {
   const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
-
-  struct Entry {
-    MachineBasicBlock &MBB;
-    MachineBasicBlock::reverse_iterator I;
-  };
-
-  SmallVector<Entry> WorkList = {
-      {*MI.getParent(), MachineBasicBlock::reverse_iterator(MI.getIterator())}};
-  DenseSet<const MachineBasicBlock *> Seen;
-  while (!WorkList.empty()) {
-    Entry E = WorkList.back();
-    WorkList.pop_back();
-    if (Seen.contains(&E.MBB))
-      continue;
-
-    // Don't count the start MBB as seen until it's been seen as a predecessor.
-    if (E.I == E.MBB.rbegin())
-      Seen.insert(&E.MBB);
-
-    bool Found = false;
-    for (MachineInstr &MI : make_range(E.I, E.MBB.rend())) {
-      if (is_contained(NewSrcMIs, &MI)) {
-        Found = true;
-        break;
-      }
-      if (MI.modifiesRegister(NewSrc, &TRI))
-        return true;
-    }
-    if (!Found)
-      for (MachineBasicBlock *MBB : E.MBB.predecessors())
-        WorkList.push_back({*MBB, MBB->rbegin()});
-  }
-  return false;
+  return !allPrevTraces(
+      MI,
+      [&](MachineInstr &MI) -> Optional<bool> {
+        if (is_contained(NewSrcMIs, &MI))
+          return true;
+        if (MI.modifiesRegister(NewSrc, &TRI))
+          return false;
+        return llvm::None;
+      },
+      /*Default=*/true);
 }
 
 bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
