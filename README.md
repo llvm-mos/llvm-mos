@@ -25,6 +25,8 @@ main:
         bne     .LBB0_1
         lda     #13
         jsr     65490
+        ldx     #0
+        txa
         rts
 .LBB0_4:
         lda     #13
