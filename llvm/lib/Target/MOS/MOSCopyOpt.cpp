@@ -21,11 +21,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
@@ -43,155 +40,131 @@ public:
     llvm::initializeMOSCopyOptPass(*PassRegistry::getPassRegistry());
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<ReachingDefAnalysis>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
 } // namespace
 
-static bool
-isRegLiveInFunction(MachineBasicBlock &MBB, Register PhysReg,
-                    SmallPtrSetImpl<MachineBasicBlock *> &VisitedMBBs,
-                    const ReachingDefAnalysis &RDA) {
-  if (llvm::is_contained(VisitedMBBs, &MBB))
-    return false;
-  VisitedMBBs.insert(&MBB);
-  if (!MBB.isLiveIn(PhysReg))
-    return false;
-  if (RDA.getLocalLiveOutMIDef(&MBB, PhysReg))
-    return false;
-  if (MBB.isEntryBlock())
-    return true;
-  return llvm::any_of(MBB.predecessors(), [&](MachineBasicBlock *MBB) {
-    return isRegLiveInFunction(*MBB, PhysReg, VisitedMBBs, RDA);
-  });
-}
+// Scan backwards along possible traces from a given Machine Instruction and
+// check that a condition holds along all of them. If the entry is reached, the
+// default value is used for that trace.
+template <typename CondT>
+static bool allPrevTraces(MachineInstr &MI, const CondT &Cond, bool Default) {
+  struct Entry {
+    MachineBasicBlock &MBB;
+    MachineBasicBlock::reverse_iterator I;
+  };
 
-// Returns whether the value of the physical register used in a given MI might
-// be live in to the containing function.
-static bool isRegLiveInFunction(MachineInstr &MI, Register PhysReg,
-                                const ReachingDefAnalysis &RDA) {
-  if (RDA.hasLocalDefBefore(&MI, PhysReg))
-    return false;
-  SmallPtrSet<MachineBasicBlock *, 4> VisitedMBBs;
-  return llvm::any_of(
-      MI.getParent()->predecessors(), [&](MachineBasicBlock *MBB) {
-        return isRegLiveInFunction(*MBB, PhysReg, VisitedMBBs, RDA);
-      });
-}
+  SmallVector<Entry> WorkList = {
+      {*MI.getParent(), MachineBasicBlock::reverse_iterator(MI.getIterator())}};
+  DenseSet<const MachineBasicBlock *> Seen;
+  while (!WorkList.empty()) {
+    Entry E = WorkList.back();
+    WorkList.pop_back();
+    if (Seen.contains(&E.MBB))
+      continue;
 
-static Register findForwardedCopy(MachineInstr &MI,
-                                  SmallPtrSetImpl<MachineInstr *> &NewSrcMIs,
-                                  const ReachingDefAnalysis &RDA) {
-  assert(MI.isCopy());
-  Register Src = MI.getOperand(1).getReg();
+    // Don't count the start MBB as seen until it's been seen as a predecessor.
+    if (E.I == E.MBB.rbegin())
+      Seen.insert(&E.MBB);
 
-  RDA.getGlobalReachingDefs(&MI, Src, NewSrcMIs);
-
-  Register NewSrc = 0;
-  for (MachineInstr *MI : NewSrcMIs) {
-    if (!MI->isCopy())
-      return 0;
-    if (MI->getOperand(0).getReg() != Src)
-      return 0;
-    Register NewSrcCand = MI->getOperand(1).getReg();
-    if (!NewSrc)
-      NewSrc = NewSrcCand;
-    if (NewSrcCand != NewSrc)
-      return 0;
+    bool Found = false;
+    for (MachineInstr &MI : make_range(E.I, E.MBB.rend())) {
+      Optional<bool> C = Cond(MI);
+      if (!C)
+        continue;
+      if (!*C)
+        return false;
+      Found = true;
+      break;
+    }
+    if (!Found) {
+      if (E.MBB.isEntryBlock() && !Default)
+        return false;
+      for (MachineBasicBlock *MBB : E.MBB.predecessors())
+        WorkList.push_back({*MBB, MBB->rbegin()});
+    }
   }
-
-  if (isRegLiveInFunction(MI, Src, RDA))
-    return 0;
-
-  return NewSrc;
-}
-
-static bool findLdImm(MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LdImms,
-                      const ReachingDefAnalysis &RDA) {
-  const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
-  const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
-
-  assert(MI.isCopy());
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-
-  RDA.getGlobalReachingDefs(&MI, Src, LdImms);
-  if (LdImms.empty())
-    return false;
-
-  for (MachineInstr *MI : LdImms) {
-    if (!MI->isMoveImmediate())
-      return false;
-    if (MI->getOperand(0).getReg() != Src)
-      return false;
-    const TargetRegisterClass *RC =
-        TII.getRegClass(MI->getDesc(), 0, &TRI, *MI->getMF());
-    if (!RC->contains(Dst))
-      return false;
-    if (!(*LdImms.begin())->isIdenticalTo(*MI))
-      return false;
-  }
-
-  if (isRegLiveInFunction(MI, Src, RDA))
-    return false;
-
   return true;
 }
 
-static bool isClobberedBetween(MachineBasicBlock &MBB, Register PhysReg,
-                               const SmallPtrSetImpl<MachineInstr *> &EndMIs,
-                               SmallPtrSetImpl<MachineBasicBlock *> &Visited) {
-  if (Visited.contains(&MBB))
-    return false;
-  Visited.insert(&MBB);
-  const TargetRegisterInfo &TRI =
-      *MBB.getParent()->getSubtarget().getRegisterInfo();
-  for (MachineInstr &MI : llvm::reverse(MBB)) {
-    if (is_contained(EndMIs, &MI))
-      return false;
-    if (MI.modifiesRegister(PhysReg, &TRI))
-      return true;
+static Register findForwardedCopy(MachineInstr &MI,
+                                  SmallVectorImpl<MachineInstr *> &NewSrcMIs) {
+  assert(MI.isCopy());
+  const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
+  Register Src = MI.getOperand(1).getReg();
+  Register NewSrc = 0;
+  if (!allPrevTraces(
+          MI,
+          [&](MachineInstr &MI) -> Optional<bool> {
+            if (!MI.modifiesRegister(Src, &TRI))
+              return llvm::None;
+            if (!MI.isCopy())
+              return false;
+            Register Dst = MI.getOperand(0).getReg();
+            if (Dst != Src)
+              return false;
+            Register NewSrcCand = MI.getOperand(1).getReg();
+            if (NewSrc && NewSrc != NewSrcCand)
+              return false;
+            NewSrc = NewSrcCand;
+            NewSrcMIs.push_back(&MI);
+            return true;
+          },
+          /*Default=*/false)) {
+    return 0;
   }
-  return llvm::any_of(MBB.predecessors(), [&](MachineBasicBlock *MBB) {
-    return isClobberedBetween(*MBB, PhysReg, EndMIs, Visited);
-  });
+  return NewSrc;
 }
 
-static bool isClobberedBetween(MachineInstr &MI, Register PhysReg,
-                               const SmallPtrSetImpl<MachineInstr *> &EndMIs) {
+static bool findLdImm(MachineInstr &MI,
+                      SmallVectorImpl<MachineInstr *> &LdImms) {
   const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
-  for (MachineInstr &MI :
-       llvm::make_range(MachineBasicBlock::reverse_iterator(MI.getIterator()),
-                        MI.getParent()->rend())) {
-    if (is_contained(EndMIs, &MI))
-      return false;
-    if (MI.modifiesRegister(PhysReg, &TRI))
-      return true;
-  }
-  SmallPtrSet<MachineBasicBlock *, 4> Visited;
-  return llvm::any_of(
-      MI.getParent()->predecessors(), [&](MachineBasicBlock *MBB) {
-        return isClobberedBetween(*MBB, PhysReg, EndMIs, Visited);
-      });
+  const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  return allPrevTraces(
+      MI,
+      [&](MachineInstr &MI) -> Optional<bool> {
+        if (!MI.modifiesRegister(Src, &TRI))
+          return llvm::None;
+        if (!MI.isMoveImmediate())
+          return false;
+        if (MI.getOperand(0).getReg() != Src)
+          return false;
+        const TargetRegisterClass *RC =
+            TII.getRegClass(MI.getDesc(), 0, &TRI, *MI.getMF());
+        if (!RC->contains(Dst))
+          return false;
+        if (!LdImms.empty() && !LdImms.front()->isIdenticalTo(MI))
+          return false;
+        LdImms.push_back(&MI);
+        return true;
+      },
+      /*Default=*/false);
+}
+
+static bool isClobbered(MachineInstr &MI, Register NewSrc,
+                        const SmallVectorImpl<MachineInstr *> &NewSrcMIs) {
+  const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
+  return !allPrevTraces(
+      MI,
+      [&](MachineInstr &MI) -> Optional<bool> {
+        if (is_contained(NewSrcMIs, &MI))
+          return true;
+        if (MI.modifiesRegister(NewSrc, &TRI))
+          return false;
+        return llvm::None;
+      },
+      /*Default=*/true);
 }
 
 bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
-  const ReachingDefAnalysis &RDA = getAnalysis<ReachingDefAnalysis>();
 
   LLVM_DEBUG(dbgs() << MF.getName() << "\n");
-
-  // Capture all mutations to perform before performing any of them to avoid
-  // recomputing ReachingDefAnalysis.
-  SmallVector<std::function<void()>, 16> Effects;
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
@@ -200,9 +173,8 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
 
       Register Dst = MI.getOperand(0).getReg();
       Register Src = MI.getOperand(1).getReg();
-
-      SmallPtrSet<MachineInstr *, 4> NewSrcMIs;
-      Register NewSrc = findForwardedCopy(MI, NewSrcMIs, RDA);
+      SmallVector<MachineInstr *> NewSrcMIs;
+      Register NewSrc = findForwardedCopy(MI, NewSrcMIs);
       if (!NewSrc)
         continue;
 
@@ -215,25 +187,22 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (isClobberedBetween(MI, NewSrc, NewSrcMIs)) {
+      if (isClobbered(MI, NewSrc, NewSrcMIs)) {
         LLVM_DEBUG(dbgs() << "Clobbered.\n");
         continue;
       }
 
-      Effects.push_back(
-          [&MI, NewSrc, NewSrcMIs = std::move(NewSrcMIs), &TRI, Dst]() {
-            LLVM_DEBUG(dbgs() << "Rewriting copy: " << MI);
-            for (MachineInstr *NewSrcMI : NewSrcMIs)
-              NewSrcMI->clearRegisterKills(NewSrc, &TRI);
-            if (Dst == NewSrc) {
-              LLVM_DEBUG(dbgs() << "Erased.\n");
-              MI.eraseFromParent();
-            } else {
-              MI.getOperand(1).setReg(NewSrc);
-              MI.getOperand(1).setIsKill(false);
-              LLVM_DEBUG(dbgs() << "Rewrote to: " << MI);
-            }
-          });
+      LLVM_DEBUG(dbgs() << "Rewriting copy: " << MI);
+      for (MachineInstr *NewSrcMI : NewSrcMIs)
+        NewSrcMI->clearRegisterKills(NewSrc, &TRI);
+      if (Dst == NewSrc) {
+        LLVM_DEBUG(dbgs() << "Erased.\n");
+        MI.eraseFromParent();
+      } else {
+        MI.getOperand(1).setReg(NewSrc);
+        MI.getOperand(1).setIsKill(false);
+        LLVM_DEBUG(dbgs() << "Rewrote to: " << MI);
+      }
     }
 
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
@@ -247,32 +216,25 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
           Dst != MOS::V && TRI.copyCost(Dst, Src, STI) <= 4)
         continue;
 
-      SmallPtrSet<MachineInstr *, 4> LdImms;
-      if (!findLdImm(MI, LdImms, RDA))
+      SmallVector<MachineInstr *> LdImms;
+      if (!findLdImm(MI, LdImms))
         continue;
 
       LLVM_DEBUG(dbgs() << MI);
-      MachineInstr &Cand = **LdImms.begin();
-      LLVM_DEBUG(dbgs() << "Found remat candidate: " << Cand);
+      LLVM_DEBUG(dbgs() << "Found remat candidate: " << *LdImms.front());
 
-      if (isClobberedBetween(MI, Cand.getOperand(0).getReg(), LdImms)) {
+      if (isClobbered(MI, LdImms.front()->getOperand(0).getReg(), LdImms)) {
         LLVM_DEBUG(dbgs() << "Clobbered.\n");
         continue;
       }
 
-      Effects.push_back([LdImms = std::move(LdImms), Src, &TRI, &Cand, &TII,
-                         &MI, &MBB, Dst]() {
-        for (MachineInstr *LdImm : LdImms)
-          LdImm->clearRegisterKills(Src, &TRI);
-        Cand.clearRegisterKills(Src, &TRI);
-        TII.reMaterialize(MBB, MI, Dst, 0, Cand, TRI);
-        MI.eraseFromParent();
-      });
+      for (MachineInstr *LdImm : LdImms)
+        LdImm->clearRegisterKills(Src, &TRI);
+      LdImms.front()->clearRegisterKills(Src, &TRI);
+      TII.reMaterialize(MBB, MI, Dst, 0, *LdImms.front(), TRI);
+      MI.eraseFromParent();
     }
   }
-
-  for (const auto &E : Effects)
-    E();
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     LivePhysRegs LPR(TRI);
