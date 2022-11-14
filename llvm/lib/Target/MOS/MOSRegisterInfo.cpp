@@ -153,6 +153,10 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
 
   MachineIRBuilder Builder(MBB, I);
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  (void)TRI;
+  assert(!I->readsRegister(MOS::NZ, &TRI));
+  assert(UseMI == MBB.end() || !UseMI->readsRegister(MOS::NZ, &TRI));
 
   switch (Reg) {
   default:

@@ -599,8 +599,12 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                 ->addOperand(MachineOperand::CreateReg(MOS::NZ,
                                                        /*isDef=*/true,
                                                        /*isImp=*/true));
-            Builder.buildInstr(MOS::SelectImm, {MOS::V},
+            // Add an implicit use of the vreg; otherwise, the register
+            // scavenger may try to insert a reload between the load and the
+            // select.
+            auto Select = Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
+            Select.addUse(Tmp, RegState::Implicit);
           }
         }
       }
