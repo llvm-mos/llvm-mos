@@ -274,7 +274,8 @@ void MOSPassConfig::addOptimizedRegAlloc() {
 
 void MOSPassConfig::addMachineLateOptimization() {
   TargetPassConfig::addMachineLateOptimization();
-  addPass(createMOSCopyOptPass());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createMOSCopyOptPass());
 }
 
 void MOSPassConfig::addPrePEI() {
