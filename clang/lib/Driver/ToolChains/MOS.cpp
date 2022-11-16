@@ -49,6 +49,17 @@ void MOS::addClangTargetOptions(const ArgList &DriverArgs,
   CC1Args.push_back("-nostdsysteminc");
 }
 
+static bool hasLTOEmitAsm(const ArgList &Args) {
+  for (Arg *A : Args) {
+    if (!A->getOption().matches(options::OPT_Wl_COMMA) &&
+        !A->getOption().matches(options::OPT_Xlinker))
+      continue;
+    if (A->containsValue("--lto-emit-asm"))
+      return true;
+  }
+  return false;
+}
+
 void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs, const ArgList &Args,
@@ -102,16 +113,18 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Args.MakeArgString(TC.GetLinkerPath()),
                                          CmdArgs, Inputs, Output));
-  for (StringRef PostLinkTool :
-       Args.getAllArgValues(options::OPT_fpost_link_tool)) {
-    ArgStringList PostLinkToolArgs;
-    PostLinkToolArgs.push_back(
-        Args.MakeArgString(Twine(Output.getFilename()) + ".elf"));
-    C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::None(),
-        Args.MakeArgString(
-            getToolChain().GetProgramPath(PostLinkTool.str().c_str())),
-        PostLinkToolArgs, Inputs, Output));
+  if (!hasLTOEmitAsm(Args)) {
+    for (StringRef PostLinkTool :
+         Args.getAllArgValues(options::OPT_fpost_link_tool)) {
+      ArgStringList PostLinkToolArgs;
+      PostLinkToolArgs.push_back(
+          Args.MakeArgString(Twine(Output.getFilename()) + ".elf"));
+      C.addCommand(std::make_unique<Command>(
+          JA, *this, ResponseFileSupport::None(),
+          Args.MakeArgString(
+              getToolChain().GetProgramPath(PostLinkTool.str().c_str())),
+          PostLinkToolArgs, Inputs, Output));
+    }
   }
 }
 
