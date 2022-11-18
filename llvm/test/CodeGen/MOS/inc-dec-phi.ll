@@ -85,4 +85,125 @@ select.end:                                       ; preds = %entry, %select.fals
   %sub = add i8 %0, %.
   store i8 %sub, ptr @s
   ret void
+
+}
+
+define dso_local i16 @repro() {
+; CHECK-LABEL: repro:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldx #1
+; CHECK-NEXT:    bpl .LBB3_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    ldx #255
+; CHECK-NEXT:    jmp .LBB3_3
+; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:  .LBB3_3:
+; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    ldx #255
+; CHECK-NEXT:    bmi .LBB3_5
+; CHECK-NEXT:  ; %bb.4:
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:  .LBB3_5:
+; CHECK-NEXT:    lda 1024
+; CHECK-NEXT:    sta mos8(__rc3)
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    ldy 1025
+; CHECK-NEXT:    sty mos8(__rc5)
+; CHECK-NEXT:    sty mos8(__rc4)
+; CHECK-NEXT:    sta mos8(__rc6)
+; CHECK-NEXT:    sbc mos8(__rc4)
+; CHECK-NEXT:    bvc .LBB3_7
+; CHECK-NEXT:  ; %bb.6:
+; CHECK-NEXT:    eor #128
+; CHECK-NEXT:  .LBB3_7:
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bpl .LBB3_9
+; CHECK-NEXT:  ; %bb.8:
+; CHECK-NEXT:    ldx #1
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    tya
+; CHECK-NEXT:    sbc mos8(__rc3)
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    jmp .LBB3_10
+; CHECK-NEXT:  .LBB3_9:
+; CHECK-NEXT:    ldy #255
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    lda mos8(__rc6)
+; CHECK-NEXT:    sbc mos8(__rc5)
+; CHECK-NEXT:    sty mos8(__rc3)
+; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    tay
+; CHECK-NEXT:  .LBB3_10:
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:    stx .Lrepro_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:    stx .Lrepro_sstk+1 ; 1-byte Folded Spill
+; CHECK-NEXT:    tya
+; CHECK-NEXT:    bpl .LBB3_15
+; CHECK-NEXT:    jmp .LBB3_13
+; CHECK-NEXT:  .LBB3_11:
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    bpl .LBB3_14
+; CHECK-NEXT:  ; %bb.12:
+; CHECK-NEXT:    tya
+; CHECK-NEXT:    bpl .LBB3_15
+; CHECK-NEXT:  .LBB3_13:
+; CHECK-NEXT:    lda #255
+; CHECK-NEXT:    jmp .LBB3_16
+; CHECK-NEXT:  .LBB3_14:
+; CHECK-NEXT:    lda .Lrepro_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    adc mos8(__rc3)
+; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    lda .Lrepro_sstk+1 ; 1-byte Folded Reload
+; CHECK-NEXT:    adc mos8(__rc2)
+; CHECK-NEXT:    sta .Lrepro_sstk+1 ; 1-byte Folded Spill
+; CHECK-NEXT:    tya
+; CHECK-NEXT:    bmi .LBB3_13
+; CHECK-NEXT:  .LBB3_15:
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:  .LBB3_16:
+; CHECK-NEXT:    ldx .Lrepro_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    stx mos8(__rc4)
+; CHECK-NEXT:    cpy mos8(__rc4)
+; CHECK-NEXT:    ldx .Lrepro_sstk+1 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx mos8(__rc4)
+; CHECK-NEXT:    sbc mos8(__rc4)
+; CHECK-NEXT:    bvc .LBB3_11
+; CHECK-NEXT:  ; %bb.17:
+; CHECK-NEXT:    eor #128
+; CHECK-NEXT:    jmp .LBB3_11
+  %1 = load volatile i8, ptr inttoptr (i16 1024 to ptr), align 1024
+  %2 = load volatile i8, ptr inttoptr (i16 1025 to ptr), align 1
+  %3 = icmp slt i8 %1, %2
+  br i1 %3, label %4, label %6
+
+4:                                                ; preds = %0
+  %5 = sub i8 %2, %1
+  br label %8
+
+6:                                                ; preds = %0
+  %7 = sub i8 %1, %2
+  br label %8
+
+8:                                                ; preds = %6, %4
+  %9 = phi i8 [ %5, %4 ], [ %7, %6 ]
+  %10 = phi i8 [ 1, %4 ], [ -1, %6 ]
+  %11 = sext i8 %9 to i16
+  %12 = sext i8 %10 to i16
+  br label %13
+
+13:                                               ; preds = %17, %8
+  %14 = phi i16 [ %18, %17 ], [ 0, %8 ]
+  %15 = icmp sgt i16 %14, %11
+  br label %16
+
+16:                                               ; preds = %16, %13
+  br i1 %15, label %16, label %17
+
+17:                                               ; preds = %16
+  %18 = add nsw i16 %14, %12
+  br label %13
 }

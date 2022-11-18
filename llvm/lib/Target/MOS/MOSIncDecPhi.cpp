@@ -15,9 +15,12 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "mos-incdecphi"
 
@@ -31,6 +34,11 @@ public:
 
   MOSIncDecPhi() : MachineFunctionPass(ID) {
     llvm::initializeMOSIncDecPhiPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineDominatorTree>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -109,6 +117,7 @@ static MachineBasicBlock *splitCriticalEdge(MachineBasicBlock &MBB,
 bool MOSIncDecPhi::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   bool Changed = false;
+  const auto &MDT = getAnalysis<MachineDominatorTree>();
   for (MachineBasicBlock &MBB : MF) {
     for (auto I = MBB.begin(), E = MBB.end(); I != E; ++I) {
       MachineInstr &MI = *I;
@@ -131,8 +140,12 @@ bool MOSIncDecPhi::runOnMachineFunction(MachineFunction &MF) {
           continue;
       }
 
+      // If the value's definition is in this basic block, then it is
+      // unavailable in the predecessors. In that case, check that it can be
+      // safely hoisted and duplicated.
       MachineInstr *ValDef = MRI.getOneDef(Val)->getParent();
-      if (ValDef->getParent() == &MBB) {
+      MachineBasicBlock *ValDefMBB = ValDef->getParent();
+      if (ValDefMBB == &MBB) {
         bool SawStore = false;
         if (!ValDef->isSafeToMove(nullptr, SawStore))
           continue;
@@ -146,6 +159,12 @@ bool MOSIncDecPhi::runOnMachineFunction(MachineFunction &MF) {
           }
         }
         if (!CanHoist)
+          continue;
+      } else {
+        // If the value is defined in some other basic block, we don't try to
+        // rematerialize it. Instead, just check that it's available in both
+        // predecessors.
+        if (!MDT.dominates(ValDefMBB, IncMBB) || !MDT.dominates(ValDefMBB, DecMBB))
           continue;
       }
 
@@ -163,6 +182,8 @@ bool MOSIncDecPhi::runOnMachineFunction(MachineFunction &MF) {
 
       Register IncMBBVal = Val;
       Register DecMBBVal = Val;
+      // Hoist and duplicate the definition of the value out of the final basic
+      // block into the increment and decrement predecessors.
       if (ValDef->getParent() == &MBB) {
         IncMBBVal = MRI.createGenericVirtualRegister(MRI.getType(Val));
         MachineInstr *IncValDef = MBB.getParent()->CloneMachineInstr(ValDef);
@@ -207,8 +228,13 @@ bool MOSIncDecPhi::runOnMachineFunction(MachineFunction &MF) {
 
 char MOSIncDecPhi::ID = 0;
 
-INITIALIZE_PASS(MOSIncDecPhi, DEBUG_TYPE,
-                "Optimize MOS Increment/Decrement PHI pattern", false, false)
+INITIALIZE_PASS_BEGIN(MOSIncDecPhi, DEBUG_TYPE,
+                      "Optimize MOS Increment/Decrement PHI pattern", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_END(MOSIncDecPhi, DEBUG_TYPE,
+                    "Optimize MOS Increment/Decrement PHI pattern", false,
+                    false)
 
 MachineFunctionPass *llvm::createMOSIncDecPhiPass() {
   return new MOSIncDecPhi();
