@@ -10,6 +10,7 @@
 #include "MCTargetDesc/MOSMCELFStreamer.h"
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MCTargetDesc/MOSTargetStreamer.h"
 #include "MOS.h"
 #include "MOSRegisterInfo.h"
 #include "llvm/ADT/APInt.h"
@@ -327,6 +328,11 @@ public:
     }
   }
 
+  MOSTargetStreamer &getTargetStreamer() {
+    MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
+    return static_cast<MOSTargetStreamer &>(TS);
+  }
+
   /// ParseDirective - Parse a target specific assembler directive
   ///
   /// The parser is positioned following the directive name.  The target
@@ -341,6 +347,8 @@ public:
     StringRef IDVal = DirectiveID.getIdentifier();
     if (IDVal.startswith(".mos_addr_asciz"))
       return parseAddrAsciz(DirectiveID.getLoc());
+    if (IDVal.startswith(".zeropage"))
+      return parseZeropage(DirectiveID.getLoc());
     return true;
   }
 
@@ -377,6 +385,26 @@ public:
       getStreamer().emitValue(Expr, CharCountValue + 1, DirectiveLoc);
     }
     return false;
+  }
+
+  bool parseZeropage(SMLoc DirectiveLoc) {
+    auto parseOp = [&]() -> bool {
+      StringRef Name;
+      SMLoc Loc = getTok().getLoc();
+      if (Parser.parseIdentifier(Name))
+        return Error(Loc, "expected identifier");
+
+      if (Parser.discardLTOSymbol(Name))
+        return false;
+
+      MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+
+      if (!getTargetStreamer().emitDirectiveZeroPage(Sym))
+        return Error(Loc, "unable to mark symbol as zero page");
+      return false;
+    };
+
+    return parseMany(parseOp);
   }
 
   signed char hexToChar(const signed char Letter) {
@@ -617,8 +645,7 @@ public:
       if (STI.hasFeature(MOS::FeatureW65816) &&
           getLexer().is(AsmToken::LBrac)) {
         eatThatToken(Operands);
-        if (!tryParseExpr(Operands,
-                          "expression expected after left bracket")) {
+        if (!tryParseExpr(Operands, "expression expected after left bracket")) {
           FirstTime = false;
           continue;
         }
