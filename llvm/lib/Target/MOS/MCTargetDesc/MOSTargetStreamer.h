@@ -10,6 +10,8 @@
 #define LLVM_MOS_TARGET_STREAMER_H
 
 #include "llvm/MC/MCELFStreamer.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
 class MCStreamer;
@@ -20,6 +22,7 @@ public:
   explicit MOSTargetStreamer(MCStreamer &S);
 
   void finish() override;
+  virtual bool emitDirectiveZeroPage(MCSymbol *Symbol) = 0;
 
 protected:
   virtual bool hasBSS() = 0;
@@ -36,9 +39,16 @@ protected:
 /// A target streamer for textual MOS assembly code.
 class MOSTargetAsmStreamer final : public MOSTargetStreamer {
 public:
-  explicit MOSTargetAsmStreamer(MCStreamer &S);
+  MOSTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 
 private:
+  formatted_raw_ostream &OS;
+
+  bool emitDirectiveZeroPage(MCSymbol *Symbol) override {
+    OS << "\t.zeropage\t" << Symbol->getName() << "\n";
+    return true;
+  };
+
   void changeSection(const MCSection *CurSection, MCSection *Section,
                      const MCExpr *SubSection, raw_ostream &OS) override;
 
@@ -59,12 +69,17 @@ private:
   bool HasFiniArray = false;
 };
 
+inline MOSTargetAsmStreamer::MOSTargetAsmStreamer(MCStreamer &S,
+                                                  formatted_raw_ostream &OS)
+    : MOSTargetStreamer(S), OS(OS) {}
+
 /// A target streamer for an MOS ELF object file.
 class MOSTargetELFStreamer final : public MOSTargetStreamer {
 public:
   MOSTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
 private:
+  bool emitDirectiveZeroPage(MCSymbol *Symbol) override;
   bool hasBSS() override;
   bool hasZPBSS() override;
   bool hasData() override;

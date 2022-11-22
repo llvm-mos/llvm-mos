@@ -83,8 +83,6 @@ static bool HasPrefix(StringRef Name, StringRef Prefix) {
   return Name == Prefix || Name.startswith(PrefixDot);
 }
 
-MOSTargetAsmStreamer::MOSTargetAsmStreamer(MCStreamer &S)
-    : MOSTargetStreamer(S) {}
 void MOSTargetAsmStreamer::changeSection(const MCSection *CurSection,
                                          MCSection *Section,
                                          const MCExpr *SubSection,
@@ -125,6 +123,12 @@ bool MOSTargetELFStreamer::hasInitArray() {
 bool MOSTargetELFStreamer::hasFiniArray() {
   return static_cast<MOSMCELFStreamer &>(getStreamer()).hasFiniArray();
 }
+
+bool MOSTargetELFStreamer::emitDirectiveZeroPage(MCSymbol *Sym) {
+  cast<MCSymbolELF>(Sym)->setOther(ELF::STO_MOS_ZEROPAGE);
+  return true;
+}
+
 void MOSTargetELFStreamer::stronglyReference(MCSymbol *Sym) {
   auto *ES = cast<MCSymbolELF>(Sym);
   // There's an explicit check in emitSymbolAttribute to avoid accidentally

@@ -499,6 +499,12 @@ enum : unsigned {
                                     // relaxation to be applied
 };
 
+// Special values for the st_other field in the symbol table entry for MOS.
+enum {
+  // External symbol is in the zero page.
+  STO_MOS_ZEROPAGE = 0x20
+};
+
 // ELF relocation types for MOS
 enum {
 #include "ELFRelocs/MOS.def"

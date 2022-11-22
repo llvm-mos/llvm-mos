@@ -1693,6 +1693,10 @@ const EnumEntry<unsigned> ElfMips16SymOtherFlags[] = {
 const EnumEntry<unsigned> ElfRISCVSymOtherFlags[] = {
     LLVM_READOBJ_ENUM_ENT(ELF, STO_RISCV_VARIANT_CC)};
 
+const EnumEntry<unsigned> ElfMOSSymOtherFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_MOS_ZEROPAGE)
+};
+
 static const char *getElfMipsOptionsOdkType(unsigned Odk) {
   switch (Odk) {
   LLVM_READOBJ_ENUM_CASE(ELF, ODK_NULL);
@@ -3885,6 +3889,15 @@ void GNUELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
       if (Other & STO_RISCV_VARIANT_CC) {
         Other &= ~STO_RISCV_VARIANT_CC;
         Fields[5].Str += " [VARIANT_CC";
+        if (Other != 0)
+          Fields[5].Str.append(" | " + utohexstr(Other, /*LowerCase=*/true));
+        Fields[5].Str.append("]");
+      }
+    } else if (this->Obj.getHeader().e_machine == ELF::EM_MOS) {
+      uint8_t Other = Symbol.st_other & ~0x3;
+      if (Other & STO_MOS_ZEROPAGE) {
+        Other &= ~STO_MOS_ZEROPAGE;
+        Fields[5].Str += " [ZEROPAGE";
         if (Other != 0)
           Fields[5].Str.append(" | " + utohexstr(Other, /*LowerCase=*/true));
         Fields[5].Str.append("]");
@@ -6836,6 +6849,9 @@ void LLVMELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
       SymOtherFlags.insert(SymOtherFlags.end(),
                            std::begin(ElfRISCVSymOtherFlags),
                            std::end(ElfRISCVSymOtherFlags));
+    } else if (this->Obj.getHeader().e_machine == EM_MOS) {
+      SymOtherFlags.insert(SymOtherFlags.end(), std::begin(ElfMOSSymOtherFlags),
+                           std::end(ElfMOSSymOtherFlags));
     }
     W.printFlags("Other", Symbol.st_other, makeArrayRef(SymOtherFlags), 0x3u);
   }

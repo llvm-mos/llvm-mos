@@ -198,6 +198,32 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   return IsResolved && !WasForced && fitsIntoFixup(Value, IsPCRel16);
 }
 
+// Derived from findAssociatedFragment.
+bool isBasedOnZeroPageSymbol(const MCExpr *E) {
+  switch (E->getKind()) {
+  case MCExpr::Target:
+    return isBasedOnZeroPageSymbol(cast<MOSMCExpr>(E)->getSubExpr());
+
+  case MCExpr::Constant:
+    return false;
+
+  case MCExpr::SymbolRef:
+    return cast<MCSymbolELF>(cast<MCSymbolRefExpr>(E)->getSymbol()).getOther() &
+           ELF::STO_MOS_ZEROPAGE;
+
+  case MCExpr::Unary:
+    return cast<MCUnaryExpr>(E)->getSubExpr()->findAssociatedFragment();
+
+  case MCExpr::Binary: {
+    const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
+    return isBasedOnZeroPageSymbol(BE->getLHS()) ||
+           isBasedOnZeroPageSymbol(BE->getRHS());
+  }
+  }
+
+  llvm_unreachable("Invalid assembly expression kind!");
+}
+
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  bool Resolved, uint64_t Value,
                                                  const MCRelaxableFragment *DF,
@@ -222,10 +248,14 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   if (Info.TargetSize > (BankRelax ? 16 : 8))
     return true;
 
-  // In order to resolve an eight to sixteen bit possible relaxation, we need to
-  // figure out whether the symbol in question is in zero page or not.  If it is
-  // in zero page, then we don't need to do anything.  If not, we need to relax
-  // the instruction to 16 bits.
+  // See if the expression is derived from a zero page symbol.
+  if (isBasedOnZeroPageSymbol(Fixup.getValue()))
+    return false;
+
+  // In order to resolve an eight to sixteen bit possible relaxation, we need
+  // to figure out whether the symbol in question is in zero page or not.  If
+  // it is in zero page, then we don't need to do anything.  If not, we need
+  // to relax the instruction to 16 bits.
   MCFragment *Frag = Fixup.getValue()->findAssociatedFragment();
   if (!Frag)
     return true;
