@@ -162,8 +162,8 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
 }
 
 Type::Type()
-    : std::enable_shared_from_this<Type>(), UserID(0),
-      m_name("<INVALID TYPE>") {
+    : std::enable_shared_from_this<Type>(), UserID(0), m_name("<INVALID TYPE>"),
+      m_payload(0) {
   m_byte_size = 0;
   m_byte_size_has_value = false;
 }
@@ -184,7 +184,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
     }
   }
 
-  // Call the get byte size accesor so we resolve our byte size
+  // Call the get byte size accessor so we resolve our byte size
   if (GetByteSize(exe_scope))
     s->Printf(", byte-size = %" PRIu64, m_byte_size);
   bool show_fullpaths = (level == lldb::eDescriptionLevelVerbose);
@@ -303,6 +303,10 @@ ConstString Type::GetName() {
   if (!m_name)
     m_name = GetForwardCompilerType().GetTypeName();
   return m_name;
+}
+
+ConstString Type::GetBaseName() {
+  return GetForwardCompilerType().GetTypeName(/*BaseOnly*/ true);
 }
 
 void Type::DumpTypeName(Stream *s) { GetName().Dump(s, "<invalid-type-name>"); }

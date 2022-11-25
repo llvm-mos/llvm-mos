@@ -27,6 +27,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -136,41 +137,15 @@ static cl::opt<bool> ForcePCRelReloc(
     cl::desc("Force relocation entries to be emitted for PCREL fixups."),
     cl::init(false), cl::Hidden);
 
-static uint64_t getSymbolOffset(const MCSymbolRefExpr *SymRefExpr, const MCAsmLayout &Layout) {
-  if (!SymRefExpr) {
-      return 0;
-  }
-
-  const MCSymbol &Sym = SymRefExpr->getSymbol();
-
-  return Sym.isDefined() ? Layout.getSymbolOffset(Sym) : 0;
-}
-
-static auto getCumulativeSymbolOffset(const MCValue &Target, const MCAsmLayout &Layout) {
-  return getSymbolOffset(Target.getSymB(), Layout) - getSymbolOffset(Target.getSymA(), Layout);
-}
-
-static auto getRelativeMOSPCCorrection(const bool IsPCRel16) {
+static int getRelativeMOSPCCorrection(const bool IsPCRel16) {
   // MOS's PC relative addressing is off by one or two from the standard LLVM
   // PC relative convention.
-  return IsPCRel16 ? 2 : 1;
+  return IsPCRel16 ? -2 : -1;
 }
 
 static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
-  return SignedValue >= (IsPCRel16 ? INT16_MIN : INT8_MIN)
-    && SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
-}
-
-static auto getFixupValue(const MCAsmLayout &Layout, const MCFixup &Fixup,
-			  const MCFragment *DF, const MCValue &Target, const bool IsPCRel16) {
-  assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
-         "unexpected target fixup kind");
-
-  return Target.getConstant()
-    - getCumulativeSymbolOffset(Target, Layout)
-    - Layout.getFragmentOffset(DF)
-    - Fixup.getOffset()
-    - getRelativeMOSPCCorrection(IsPCRel16);
+  return SignedValue >= (IsPCRel16 ? INT16_MIN : INT8_MIN) &&
+         SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
 }
 
 bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
@@ -179,26 +154,48 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
                                         const MCFragment *DF,
                                         const MCValue &Target, uint64_t &Value,
                                         bool &WasForced) {
-  // ForcePCRelReloc is a CLI option to force relocation emit, primarily for testing
-  // R_MOS_PCREL_*.
+  // ForcePCRelReloc is a CLI option to force relocation emit, primarily for
+  // testing R_MOS_PCREL_*.
   WasForced = ForcePCRelReloc;
 
   const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
-  Value = getFixupValue(Layout, Fixup, DF, Target, IsPCRel16);
+  assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
+         "unexpected target fixup kind");
 
-  return !WasForced && fitsIntoFixup(Value, IsPCRel16);
-}
+  // Logic taken from MCAssembler::evaluateFixup.
+  bool IsResolved = false;
+  if (Target.getSymB()) {
+    IsResolved = false;
+  } else if (!Target.getSymA()) {
+    IsResolved = false;
+  } else {
+    const MCSymbolRefExpr *A = Target.getSymA();
+    const MCSymbol &SA = A->getSymbol();
+    if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
+      IsResolved = false;
+    } else if (auto *Writer = Asm.getWriterPtr()) {
+      IsResolved = Writer->isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, *DF,
+                                                                  false, true);
+    }
+  }
 
-static bool isSymbolChar(const char C) {
-  return (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z')
-      || (C >= '0' && C <= '9') || (C == '$') || (C == '_');
-}
+  Value = Target.getConstant();
 
-static size_t getFixupLength(const char *FixupNameStart) {
-  size_t i;
-  for (i = 0; isSymbolChar(FixupNameStart[i]); i++)
-    ;
-  return i;
+  if (const MCSymbolRefExpr *A = Target.getSymA()) {
+    const MCSymbol &Sym = A->getSymbol();
+    if (Sym.isDefined())
+      Value += Layout.getSymbolOffset(Sym);
+  }
+  if (const MCSymbolRefExpr *B = Target.getSymB()) {
+    const MCSymbol &Sym = B->getSymbol();
+    if (Sym.isDefined())
+      Value -= Layout.getSymbolOffset(Sym);
+  }
+
+  Value -= Layout.getFragmentOffset(DF) + Fixup.getOffset();
+  Value += getRelativeMOSPCCorrection(IsPCRel16);
+
+  return IsResolved && !WasForced && fitsIntoFixup(Value, IsPCRel16);
 }
 
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -217,60 +214,35 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   const auto *MME = dyn_cast<MOSMCExpr>(Fixup.getValue());
   // If this is a target-specific relaxation, e.g. a modifier, then the Info
   // field already knows the exact width of the answer, so decide now.
-  if (MME != nullptr) {
+  if (MME != nullptr)
     return (Info.TargetSize > (BankRelax ? 16 : 8));
-  }
+
   // Now the fixup kind is not target-specific.  Yet, if it requires more than
   // 8 (or 16) bits, then relaxation is needed.
-  if (Info.TargetSize > (BankRelax ? 16 : 8)) {
+  if (Info.TargetSize > (BankRelax ? 16 : 8))
     return true;
-  }
+
   // In order to resolve an eight to sixteen bit possible relaxation, we need to
   // figure out whether the symbol in question is in zero page or not.  If it is
   // in zero page, then we don't need to do anything.  If not, we need to relax
   // the instruction to 16 bits.
-  const char *FixupNameStart = Fixup.getValue()->getLoc().getPointer();
-  // If there's no symbol name, and if the fixup does not have a known size,
-  // then we can't assume it lives in zero page.
-  if (FixupNameStart == nullptr) {
+  MCFragment *Frag = Fixup.getValue()->findAssociatedFragment();
+  if (!Frag)
     return true;
-  }
 
-  StringRef FixupName(FixupNameStart, getFixupLength(FixupNameStart));
+  // If we're not writing to ELF, punt on this whole idea, just do the
+  // relaxation for safety's sake
+  const auto *Sec = dyn_cast_if_present<MCSectionELF>(Frag->getParent());
+  if (!Sec)
+    return true;
 
-  // The list of symbols is maintained by the assembler, and since that list
-  // is not maintained in alpha order, it seems that we need to iterate across
-  // it to find the symbol in question... is there a non-O(n) way to do this?
-  for (const auto &Symbol : Layout.getAssembler().symbols()) {
-    const auto SymbolName = Symbol.getName();
-    if (FixupName == SymbolName) {
-      // If this symbol has not been assigned to a section, then it can't
-      // be in zero page
-      if (!Symbol.isInSection()) {
-        return true;
-      }
-      const auto &Section = Symbol.getSection();
-      const auto *ELFSection = dyn_cast_or_null<MCSectionELF>(&Section);
-      /// If we're not writing to ELF, punt on this whole idea, just do the
-      /// relaxation for safety's sake
-      if (ELFSection == nullptr) {
-        return true;
-      }
-      /// If the section of the symbol is marked with special zero-page flag
-      /// then this is an 8 bit instruction and it doesn't need
-      /// relaxation.
-      if ((ELFSection->getFlags() & ELF::SHF_MOS_ZEROPAGE) != 0) {
-        return false;
-      }
-      /// If the section of the symbol is one of the prenamed zero page
-      /// sections, then this is an 8 bit instruction and it doesn't need
-      /// relaxation.
-      if (isZeroPageSectionName(ELFSection->getName()))
-        return false;
-    }
-  }
-  // we have no convincing reason not to do the relaxation
-  return true;
+  // If the section of the symbol is marked with special zero-page flag
+  // then this is an 8 bit instruction and it doesn't need
+  // relaxation.
+  if (Sec->getFlags() & ELF::SHF_MOS_ZEROPAGE)
+    return false;
+
+  return !isZeroPageSectionName(Sec->getName());
 }
 
 bool MOSAsmBackend::isZeroPageSectionName(StringRef Name) {
@@ -316,8 +288,8 @@ static bool visitRelaxableOperand(const MCInst &Inst,
   bool BankRelax = false;
   unsigned RelaxTo = MOSAsmBackend::relaxInstructionTo(Inst, STI, BankRelax);
 
-  return RelaxTo && Inst.getNumOperands() == 1 && Visit(Inst.getOperand(0),
-							RelaxTo, BankRelax);
+  return RelaxTo && Inst.getNumOperands() == 1 &&
+         Visit(Inst.getOperand(0), RelaxTo, BankRelax);
 }
 
 void MOSAsmBackend::relaxForImmediate(MCInst &Inst,
@@ -342,11 +314,9 @@ void MOSAsmBackend::relaxForImmediate(MCInst &Inst,
 
 bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
-  return visitRelaxableOperand(
-      Inst, STI,
-      [](const MCOperand &Operand, unsigned RelaxTo, bool BankRelax) {
-        return Operand.isExpr();
-      });
+  return visitRelaxableOperand(Inst, STI,
+                               [](const MCOperand &Operand, unsigned RelaxTo,
+                                  bool BankRelax) { return Operand.isExpr(); });
 }
 
 void MOSAsmBackend::relaxInstruction(MCInst &Inst,

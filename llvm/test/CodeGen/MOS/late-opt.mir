@@ -74,6 +74,23 @@ body: |
     RTS implicit $n
 ...
 ---
+name: cmptermz_clobbered_rmw
+body: |
+  bb.0.entry:
+    liveins: $a, $rc2
+    ; CHECK-LABEL: name: cmptermz_clobbered_rmw
+    ; CHECK: liveins: $a, $rc2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $a = T_A killed $x
+    ; CHECK-NEXT: INCAbs 1234
+    ; CHECK-NEXT: dead $x = TA $a, implicit-def $nz
+    ; CHECK-NEXT: RTS implicit $n
+    $a = T_A killed $x
+    INCAbs 1234
+    dead $c = CMPTermZ $a, implicit-def $nz
+    RTS implicit $n
+...
+---
 name: cmptermz_not_clobbered
 body: |
   bb.0.entry:

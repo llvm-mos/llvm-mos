@@ -5,9 +5,10 @@ add_header_library(
   HDRS
     string_utils.h
   DEPENDS
+    libc.include.stdlib
     libc.src.__support.CPP.bitset
     .memory_utils.memcpy_implementation
-    .memory_utils.memset_implementation
+    .memory_utils.bzero_implementation
 )
 
 add_entrypoint_object(
@@ -65,7 +66,7 @@ add_entrypoint_object(
   HDRS
     stpncpy.h
   DEPENDS
-    .memory_utils.memset_implementation
+    .memory_utils.bzero_implementation
 )
 
 add_entrypoint_object(
@@ -93,6 +94,14 @@ add_entrypoint_object(
     strcmp.cpp
   HDRS
     strcmp.h
+)
+
+add_entrypoint_object(
+  strcoll
+  SRCS
+    strcoll.cpp
+  HDRS
+    strcoll.h
 )
 
 add_entrypoint_object(
@@ -126,6 +135,26 @@ add_entrypoint_object(
     .memory_utils.memcpy_implementation
     .string_utils
     libc.include.stdlib
+)
+
+add_entrypoint_object(
+  strerror
+  SRCS
+    strerror.cpp
+  HDRS
+    strerror.h
+  DEPENDS
+    libc.src.__support.StringUtil.error_to_string
+)
+
+add_entrypoint_object(
+  strerror_r
+  SRCS
+    strerror_r.cpp
+  HDRS
+    strerror_r.h
+  DEPENDS
+    libc.src.__support.StringUtil.error_to_string
 )
 
 add_entrypoint_object(
@@ -228,6 +257,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strsignal
+  SRCS
+    strsignal.cpp
+  HDRS
+    strsignal.h
+  DEPENDS
+    libc.src.__support.StringUtil.signal_to_string
+)
+
+add_entrypoint_object(
   strspn
   SRCS
     strspn.cpp
@@ -308,9 +347,6 @@ function(add_bcmp bcmp_name)
     DEPENDS
       .memory_utils.memory_utils
       libc.include.string
-    COMPILE_OPTIONS
-      -fno-builtin-memcmp
-      -fno-builtin-bcmp
     ${ARGN}
   )
 endfunction()
@@ -338,8 +374,6 @@ function(add_bzero bzero_name)
     DEPENDS
       .memory_utils.memset_implementation
       libc.include.string
-    COMPILE_OPTIONS
-      -fno-builtin-bzero
     ${ARGN}
   )
 endfunction()
@@ -367,8 +401,6 @@ function(add_memcmp memcmp_name)
     DEPENDS
       .memory_utils.memcmp_implementation
       libc.include.string
-    COMPILE_OPTIONS
-      -fno-builtin-memcmp
     ${ARGN}
   )
 endfunction()
@@ -399,8 +431,6 @@ function(add_memcpy memcpy_name)
     DEPENDS
       .memory_utils.memcpy_implementation
       libc.include.string
-    COMPILE_OPTIONS
-      -fno-builtin-memcpy
     ${ARGN}
   )
 endfunction()
@@ -433,8 +463,6 @@ function(add_memmove memmove_name)
     DEPENDS
       .memory_utils.memory_utils
       libc.include.string
-    COMPILE_OPTIONS
-      -fno-builtin
     ${ARGN}
   )
 endfunction()
@@ -467,8 +495,6 @@ function(add_memset memset_name)
     DEPENDS
       .memory_utils.memset_implementation
       libc.include.string
-    COMPILE_OPTIONS
-      -fno-builtin-memset
     ${ARGN}
   )
 endfunction()

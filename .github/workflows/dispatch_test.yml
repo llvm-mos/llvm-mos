@@ -10,7 +10,7 @@ jobs:
       - name: Repository Dispatch
         uses: llvm-mos/repository-dispatch@v1
         with:
-          token: ${{ secrets.TEST_SUITE_ACCESS_TOKEN }}
+          token: ${{ secrets.ACTION_TOKEN }}
           repository: llvm-mos/llvm-test-suite
           event-type: on-llvm-update
           client-payload: '{"head_commit": ${{ toJSON(github.event.head_commit) }}}'

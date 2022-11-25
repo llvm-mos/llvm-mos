@@ -20,6 +20,8 @@
 
 namespace llvm {
 
+class MOSSubtarget;
+
 class MOSRegisterInfo : public MOSGenRegisterInfo {
   std::unique_ptr<std::string[]> Imag8SymbolNames;
   BitVector Reserved;
@@ -87,8 +89,14 @@ public:
     return Imag8SymbolNames[Reg].c_str();
   }
 
+  int copyCost(Register DestReg, Register SrcReg, const MOSSubtarget &STI) const;
+
 private:
   void reserveAllSubregs(BitVector *Reserved, Register Reg) const;
+
+  Optional<Register> getStrongCopyHint(Register VirtReg,
+                                       const MachineFunction &MF,
+                                       const VirtRegMap *VRM) const;
 };
 
 } // namespace llvm

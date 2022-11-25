@@ -31,8 +31,6 @@ def ROCDL_Dialect : Dialect {
     /// functions.
     static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
   }];
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 //===----------------------------------------------------------------------===//
@@ -49,7 +47,7 @@ class ROCDL_Op<string mnemonic, list<Trait> traits = []> :
 
 class ROCDL_SpecialRegisterOp<string mnemonic,
     list<Trait> traits = []> :
-  ROCDL_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
+  ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createIntrinsicCall(builder,"
     # "llvm::Intrinsic::amdgcn_" # !subst(".","_", mnemonic) # ");";
@@ -58,7 +56,7 @@ class ROCDL_SpecialRegisterOp<string mnemonic,
 
 class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
                              int parameter, list<Trait> traits = []> :
-  ROCDL_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
+  ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""
   # device_function # "\", " # parameter # ");";
@@ -189,7 +187,7 @@ def ROCDL_MubufStoreOp :
                  LLVM_Type:$glc,
                  LLVM_Type:$slc)>{
   string llvmBuilder = [{
-    auto vdataType = moduleTranslation.convertType(op.vdata().getType());
+    auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
     createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
           $offset, $glc, $slc}, {vdataType});
@@ -223,7 +221,7 @@ def ROCDL_RawBufferStoreOp :
                  LLVM_Type:$soffset,
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
-    auto vdataType = moduleTranslation.convertType(op.vdata().getType());
+    auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
     createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_store, {$vdata, $rsrc,
           $offset, $soffset, $aux}, {vdataType});
@@ -242,7 +240,7 @@ def ROCDL_RawBufferAtomicFAddOp :
                  LLVM_Type:$soffset,
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
-      auto vdataType = moduleTranslation.convertType(op.vdata().getType());
+      auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_fadd, {$vdata, $rsrc,
             $offset, $soffset, $aux}, {vdataType});

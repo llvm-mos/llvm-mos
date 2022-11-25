@@ -143,20 +143,7 @@ struct MOSOutgoingReturnHandler : MOSOutgoingValueHandler {
                            MachinePointerInfo &MPO,
                            ISD::ArgFlagsTy Flags) override {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
-
-    bool FoundFI = false;
-    int FI;
-    for (FI = MFI.getObjectIndexBegin(); FI; ++FI) {
-      assert(MFI.getObjectSize(FI) == 1);
-      if (MFI.getObjectOffset(FI) == Offset) {
-        MFI.setIsImmutableObjectIndex(FI, false);
-        FoundFI = true;
-        break;
-      }
-    }
-    if (!FoundFI)
-      FI = MFI.CreateFixedObject(Size, Offset, false);
-
+    int FI = MFI.CreateFixedObject(Size, Offset, false);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
     auto AddrReg = MIRBuilder.buildFrameIndex(LLT::pointer(0, 16), FI);
     return AddrReg.getReg(0);
@@ -309,11 +296,11 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     // Copy flags from the instruction definition over to the return value
     // description for TableGen compatibility layer.
     SmallVector<ArgInfo> Args;
-    // TODO: C++17 structured bindings
-    for (const auto &I : zip(VRegs, ValueVTs, ValueLLTs)) {
-      Args.emplace_back(std::get<0>(I), std::get<1>(I).getTypeForEVT(Ctx), 0);
+    for (const auto &[VReg, ValueVT, ValueLLT] :
+         zip(VRegs, ValueVTs, ValueLLTs)) {
+      Args.emplace_back(VReg, ValueVT.getTypeForEVT(Ctx), 0);
       setArgFlags(Args.back(), AttributeList::ReturnIndex, DL, F);
-      adjustArgFlags(Args.back(), std::get<2>(I));
+      adjustArgFlags(Args.back(), ValueLLT);
     }
 
     // Invoke TableGen compatibility layer. This will generate copies and stores
@@ -466,5 +453,5 @@ void MOSCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   computeValueLLTs(DL, *OrigArg.Ty, SplitLLTs);
   assert((size_t)size(NewArgs) == SplitLLTs.size());
   for (const auto &I : zip(NewArgs, SplitLLTs))
-    apply_tuple(adjustArgFlags, I);
+    std::apply(adjustArgFlags, I);
 }

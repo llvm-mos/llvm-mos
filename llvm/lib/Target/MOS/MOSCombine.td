@@ -37,9 +37,17 @@ def uaddo_1 : GICombineRule<
           [{ return matchUAddO1(*${root}, MRI); }]),
   (apply [{  return applyUAddO1(*${root}, MRI, B, Observer);}])>;
 
+def cmpz_zero_matchdata : GIDefMatchData<"MachineOperand*">;
+def cmpz_zero : GICombineRule<
+  (defs root:$root, cmpz_zero_matchdata:$matchinfo),
+  (match (wip_match_opcode G_CMPZ):$root,
+          [{ return matchCMPZZero(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{  return applyCMPZZero(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+
 def MOSCombinerHelper: GICombinerHelper<
     "MOSGenCombinerHelper",
-    [all_combines, fold_global_offset, sbc_equal, extract_low_bit, uaddo_1]> {
+    [all_combines, fold_global_offset, sbc_equal, extract_low_bit, uaddo_1,
+     cmpz_zero]> {
   let DisableRuleOption = "moscombiner-disable-rule";
   let StateClass = "MOSCombinerHelperState";
   let AdditionalArguments = [];

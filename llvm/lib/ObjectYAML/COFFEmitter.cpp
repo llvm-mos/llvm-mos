@@ -46,10 +46,11 @@ struct COFFParser {
            COFF::MaxNumberOfSections16;
   }
 
-  bool isPE() const { return Obj.OptionalHeader.hasValue(); }
+  bool isPE() const { return Obj.OptionalHeader.has_value(); }
   bool is64Bit() const {
     return Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_AMD64 ||
-           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64;
+           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64 ||
+           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64EC;
   }
 
   uint32_t getFileAlignment() const {

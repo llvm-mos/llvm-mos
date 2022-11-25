@@ -146,7 +146,17 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .maxScalar(0, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder({G_MUL, G_SDIV, G_SREM, G_UDIV, G_UREM})
+  getActionDefinitionsBuilder(G_MUL)
+      .libcallFor({S8, S16, S32, S64})
+      .widenScalarToNextPow2(0)
+      // Multiplications can only be narrowed to sizes where a multiplication of
+      // double that size is legal, since that's the lowered algorithm invokes
+      // such multiplications. Lowering S128 to S64 would produce infinite regress
+      // because of this, so instead it's lowered to S32.
+      .clampScalar(0, S8, S32)
+      .unsupported();
+
+  getActionDefinitionsBuilder({G_SDIV, G_SREM, G_UDIV, G_UREM})
       .clampScalar(0, S8, S64)
       .widenScalarToNextPow2(0)
       .libcall();
@@ -662,14 +672,20 @@ bool MOSLegalizerInfo::legalizeShiftRotate(LegalizerHelper &Helper,
   // Presently, only left shifts by one bit are supported.
   auto ConstantAmt = getIConstantVRegValWithLookThrough(AmtReg, MRI);
   if (!ConstantAmt) {
-    if (IsRotate)
-      return Helper.lowerRotate(MI);
-    if (!isPowerOf2_32(Ty.getSizeInBits()))
-      return Helper.widenScalar(MI, 0,
-                                LLT::scalar(NextPowerOf2(Ty.getSizeInBits())));
-    if (Ty.getSizeInBits() > 64)
-      return Helper.narrowScalar(MI, 0, LLT::scalar(64));
-    return shiftLibcall(Helper, MRI, MI);
+    if (!isPowerOf2_32(Ty.getSizeInBits())) {
+      return IsRotate
+                 ? Helper.lowerRotate(MI)
+                 : Helper.widenScalar(
+                       MI, 0, LLT::scalar(NextPowerOf2(Ty.getSizeInBits())));
+    }
+    if (Ty.getSizeInBits() > 64) {
+      return IsRotate ? Helper.lowerRotate(MI)
+                      : Helper.narrowScalar(MI, 0, LLT::scalar(64));
+    }
+    LLT AmtTy = MRI.getType(AmtReg);
+    if (AmtTy != S8)
+      MI.getOperand(2).setReg(Builder.buildTrunc(S8, AmtReg).getReg(0));
+    return shiftRotateLibcall(Helper, MRI, MI);
   }
 
   uint64_t Amt = ConstantAmt->Value.getZExtValue();
@@ -902,9 +918,9 @@ bool MOSLegalizerInfo::legalizeLshrEShlE(LegalizerHelper &Helper,
   return true;
 }
 
-bool MOSLegalizerInfo::shiftLibcall(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
+bool MOSLegalizerInfo::shiftRotateLibcall(LegalizerHelper &Helper,
+                                          MachineRegisterInfo &MRI,
+                                          MachineInstr &MI) const {
   unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
   auto &Ctx = MI.getMF()->getFunction().getContext();
 
@@ -1118,10 +1134,10 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     auto RHSUnmergeDefs = unmergeDefsSplitHigh(RHSUnmerge);
     assert(LHSUnmerge->getNumOperands() == RHSUnmerge->getNumOperands());
     CIn = Builder.buildConstant(S1, 1).getReg(0);
-    // TODO: C++17 structured bindings
-    for (const auto &I : zip(LHSUnmergeDefs.Lows, RHSUnmergeDefs.Lows)) {
-      auto Sbc = Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1},
-                                    {std::get<0>(I), std::get<1>(I), CIn});
+    for (const auto &[LHS, RHS] :
+         zip(LHSUnmergeDefs.Lows, RHSUnmergeDefs.Lows)) {
+      auto Sbc =
+          Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
       CIn = Sbc.getReg(1);
     }
     Type = S8;
@@ -1468,6 +1484,7 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                                     MachineRegisterInfo &MRI,
                                                     MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   bool IsLoad = MI.getOpcode() == G_LOAD;
@@ -1516,12 +1533,11 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
       }
     }
     if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
-      Register Base = PtrAddAddr->getOperand(1).getReg();
+      Addr = PtrAddAddr->getOperand(1).getReg();
       Register NewOffset = PtrAddAddr->getOperand(2).getReg();
       if (auto ConstOffset =
               getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
         Offset += ConstOffset->Value.getSExtValue();
-        Addr = Base;
         continue;
       }
       if (MachineInstr *ZExtOffset = getOpcodeDef(G_ZEXT, NewOffset, MRI)) {
@@ -1533,10 +1549,16 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
         if (SrcTy.getSizeInBits() > 8)
           return false;
         if (SrcTy.getSizeInBits() < 8)
-          Src = Builder.buildZExt(LLT::scalar(8), Src).getReg(0);
-        assert(MRI.getType(Src) == LLT::scalar(8));
+          Src = Builder.buildZExt(S8, Src).getReg(0);
+        assert(MRI.getType(Src) == S8);
         Index = Src;
-        Addr = Base;
+        continue;
+      }
+      if (Helper.KB &&
+          Helper.KB->getKnownBits(NewOffset).countMaxActiveBits() <= 8) {
+        if (Index)
+          return false;
+        Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
         continue;
       }
     }
@@ -1548,6 +1570,7 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
 bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
                                                        MachineRegisterInfo &MRI,
                                                        MachineInstr &MI) const {
+  LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   bool IsLoad = MI.getOpcode() == G_LOAD;
@@ -1563,9 +1586,7 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
     Register NewOffset = PtrAddAddr->getOperand(2).getReg();
     if (auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
       if (ConstOffset->Value.getActiveBits() <= 8) {
-        Index = Builder
-                    .buildConstant(LLT::scalar(8),
-                                   ConstOffset->Value.getSExtValue())
+        Index = Builder.buildConstant(S8, ConstOffset->Value.getSExtValue())
                     .getReg(0);
         Addr = Base;
       }
@@ -1575,11 +1596,15 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
       LLT SrcTy = MRI.getType(Src);
       if (SrcTy.getSizeInBits() <= 8) {
         if (SrcTy.getSizeInBits() < 8)
-          Src = Builder.buildZExt(LLT::scalar(8), Src).getReg(0);
-        assert(MRI.getType(Src) == LLT::scalar(8));
+          Src = Builder.buildZExt(S8, Src).getReg(0);
+        assert(MRI.getType(Src) == S8);
         Index = Src;
         Addr = Base;
       }
+    } else if (Helper.KB &&
+               Helper.KB->getKnownBits(NewOffset).countMaxActiveBits() <= 8) {
+      Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
+      Addr = Base;
     }
   }
 
@@ -1705,9 +1730,8 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
   // Store the address of the fake varargs frame index into the valist.
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   auto *FuncInfo = Builder.getMF().getInfo<MOSFunctionInfo>();
-  Builder.buildStore(
-      Builder.buildFrameIndex(P, FuncInfo->VarArgsStackIndex),
-      MI.getOperand(0), **MI.memoperands_begin());
+  Builder.buildStore(Builder.buildFrameIndex(P, FuncInfo->VarArgsStackIndex),
+                     MI.getOperand(0), **MI.memoperands_begin());
   MI.eraseFromParent();
   return true;
 }

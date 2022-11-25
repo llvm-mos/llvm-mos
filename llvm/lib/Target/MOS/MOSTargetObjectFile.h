@@ -15,7 +15,8 @@ namespace llvm {
 
 /// Lowering for an MOS ELF32 object file.
 class MOSTargetObjectFile : public TargetLoweringObjectFileELF {
-  typedef TargetLoweringObjectFileELF Base;
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
+                                      const TargetMachine &TM) const override;
 };
 
 } // end namespace llvm

@@ -34,12 +34,14 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSCombiner.h"
+#include "MOSCopyOpt.h"
+#include "MOSIncDecPhi.h"
 #include "MOSIndexIV.h"
 #include "MOSInsertCopies.h"
 #include "MOSLateOptimization.h"
 #include "MOSLowerSelect.h"
 #include "MOSMachineScheduler.h"
-#include "MOSNoRecurse.h"
+#include "MOSNonReentrant.h"
 #include "MOSPostRAScavenging.h"
 #include "MOSStaticStackAlloc.h"
 #include "MOSTargetObjectFile.h"
@@ -55,10 +57,12 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeMOSCombinerPass(PR);
+  initializeMOSCopyOptPass(PR);
+  initializeMOSIncDecPhiPass(PR);
   initializeMOSInsertCopiesPass(PR);
   initializeMOSLateOptimizationPass(PR);
   initializeMOSLowerSelectPass(PR);
-  initializeMOSNoRecursePass(PR);
+  initializeMOSNonReentrantPass(PR);
   initializeMOSPostRAScavengingPass(PR);
   initializeMOSStaticStackAllocPass(PR);
   initializeMOSZeroPageAllocPass(PR);
@@ -73,7 +77,7 @@ static StringRef getCPU(StringRef CPU) {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  return RM.hasValue() ? *RM : Reloc::Static;
+  return RM ? *RM : Reloc::Static;
 }
 
 MOSTargetMachine::MOSTargetMachine(const Target &T, const Triple &TT,
@@ -182,6 +186,7 @@ public:
   void addFastRegAlloc() override { addOptimizedRegAlloc(); }
   void addOptimizedRegAlloc() override;
 
+  void addMachineLateOptimization() override;
   void addPrePEI() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -199,7 +204,7 @@ TargetPassConfig *MOSTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void MOSPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createMOSNoRecursePass());
+    addPass(createMOSNonReentrantPass());
   TargetPassConfig::addIRPasses();
   // Clean up after LSR in particular.
   if (getOptLevel() != CodeGenOpt::None)
@@ -214,8 +219,10 @@ bool MOSPassConfig::addIRTranslator() {
 }
 
 void MOSPassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::None) {
     addPass(createMOSCombiner());
+    addPass(createMOSIncDecPhiPass());
+  }
 }
 
 bool MOSPassConfig::addLegalizeMachineIR() {
@@ -257,8 +264,18 @@ void MOSPassConfig::addOptimizedRegAlloc() {
     // Run the coalescer twice to coalesce RMW patterns revealed by the first
     // coalesce.
     insertPass(&llvm::TwoAddressInstructionPassID, &llvm::RegisterCoalescerID);
+
+    // Re-run Live Intervals after coalescing to renumber the contained values.
+    // This can allow constant rematerialization after aggressive coalescing.
+    insertPass(&llvm::MachineSchedulerID, &llvm::LiveIntervalsID);
   }
   TargetPassConfig::addOptimizedRegAlloc();
+}
+
+void MOSPassConfig::addMachineLateOptimization() {
+  TargetPassConfig::addMachineLateOptimization();
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createMOSCopyOptPass());
 }
 
 void MOSPassConfig::addPrePEI() {

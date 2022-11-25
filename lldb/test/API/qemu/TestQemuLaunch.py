@@ -1,4 +1,3 @@
-from __future__ import print_function
 import lldb
 import unittest
 import os
@@ -66,7 +65,7 @@ class TestQemuLaunch(TestBase):
         process = target.Launch(info, error)
         self.assertSuccess(error)
         self.assertIsNotNone(process)
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0x47)
 
         # Verify the qemu invocation parameters.
@@ -142,7 +141,7 @@ class TestQemuLaunch(TestBase):
 
         process = target.Launch(info, error)
         self.assertSuccess(error)
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
 
         with open(self.getBuildArtifact("stdout.txt")) as f:
             self.assertEqual(f.read(), "STDOUT CONTENT")

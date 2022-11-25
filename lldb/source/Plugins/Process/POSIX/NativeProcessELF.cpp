@@ -39,7 +39,7 @@ lldb::addr_t NativeProcessELF::GetSharedLibraryInfoAddress() {
                                  llvm::ELF::Elf32_Dyn>();
   }
 
-  return m_shared_library_info_addr.getValue();
+  return *m_shared_library_info_addr;
 }
 
 template <typename ELF_EHDR, typename ELF_PHDR, typename ELF_DYN>
@@ -161,7 +161,7 @@ NativeProcessELF::GetLoadedSVR4Libraries() {
                       GetAddressByteSize(), bytes_read);
   if (!status.Success())
     return status.ToError();
-  if (address == 0)
+  if (link_map == 0)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Invalid link_map address");
 

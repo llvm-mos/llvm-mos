@@ -25,8 +25,7 @@ class MOSInstrInfo : public MOSGenInstrInfo {
 public:
   MOSInstrInfo();
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                         AAResults *AA) const override;
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -38,10 +37,6 @@ public:
                      Register DestReg, unsigned SubIdx,
                      const MachineInstr &Orig,
                      const TargetRegisterInfo &TRI) const override;
-
-  MachineInstr &duplicate(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator InsertBefore,
-                          const MachineInstr &Orig) const override;
 
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
@@ -116,6 +111,11 @@ public:
 
   bool shouldOverlapInterval(const MachineInstr &MI) const override;
 
+  bool hasCustomTiedOperands(unsigned Opcode) const override;
+
+  unsigned findCustomTiedOperandIdx(const MachineInstr &MI,
+                                    unsigned OpIdx) const override;
+
 private:
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                        Register SrcReg, bool Force = false) const;
@@ -138,6 +138,8 @@ private:
 
   // Control flow pseudos
   void expandGBR(MachineIRBuilder &Builder) const;
+
+  bool shouldRematPhysRegCopy() const override { return false; }
 };
 
 namespace MOS {

@@ -20,7 +20,6 @@
 #include "llvm/ADT/None.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -39,7 +38,6 @@
 
 namespace llvm {
 
-class AAResults;
 class DFAPacketizer;
 class InstrItineraryData;
 class LiveIntervals;
@@ -56,11 +54,14 @@ class ScheduleDAGMI;
 class ScheduleHazardRecognizer;
 class SDNode;
 class SelectionDAG;
+class SMSchedule;
+class SwingSchedulerDAG;
 class RegScavenger;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
+enum class MachineCombinerPattern;
 
 template <class T> class SmallVectorImpl;
 
@@ -110,6 +111,11 @@ public:
     return Opc <= TargetOpcode::GENERIC_OP_END;
   }
 
+  static bool isGenericAtomicRMWOpcode(unsigned Opc) {
+    return Opc >= TargetOpcode::GENERIC_ATOMICRMW_OP_START &&
+           Opc <= TargetOpcode::GENERIC_ATOMICRMW_OP_END;
+  }
+
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
   virtual
@@ -122,12 +128,11 @@ public:
   /// This means the only allowed uses are constants and unallocatable physical
   /// registers so that the instructions result is independent of the place
   /// in the function.
-  bool isTriviallyReMaterializable(const MachineInstr &MI,
-                                   AAResults *AA = nullptr) const {
+  bool isTriviallyReMaterializable(const MachineInstr &MI) const {
     return MI.getOpcode() == TargetOpcode::IMPLICIT_DEF ||
            (MI.getDesc().isRematerializable() &&
-            (isReallyTriviallyReMaterializable(MI, AA) ||
-             isReallyTriviallyReMaterializableGeneric(MI, AA)));
+            (isReallyTriviallyReMaterializable(MI) ||
+             isReallyTriviallyReMaterializableGeneric(MI)));
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
@@ -144,8 +149,7 @@ protected:
   /// than producing a value, or if it requres any address registers that are
   /// not always available.
   /// Requirements must be check as stated in isTriviallyReMaterializable() .
-  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                 AAResults *AA) const {
+  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const {
     return false;
   }
 
@@ -187,8 +191,7 @@ private:
   /// set and the target hook isReallyTriviallyReMaterializable returns false,
   /// this function does target-independent tests to determine if the
   /// instruction is really trivially rematerializable.
-  bool isReallyTriviallyReMaterializableGeneric(const MachineInstr &MI,
-                                                AAResults *AA) const;
+  bool isReallyTriviallyReMaterializableGeneric(const MachineInstr &MI) const;
 
 public:
   /// These methods return the opcode of the frame setup/destroy instructions
@@ -733,6 +736,13 @@ public:
     /// be ignored. An example could be a loop comparison, or induction variable
     /// update with no users being pipelined.
     virtual bool shouldIgnoreForPipelining(const MachineInstr *MI) const = 0;
+
+    /// Return true if the proposed schedule should used.  Otherwise return
+    /// false to not pipeline the loop. This function should be used to ensure
+    /// that pipelined loops meet target-specific quality heuristics.
+    virtual bool shouldUseSchedule(SwingSchedulerDAG &SSD, SMSchedule &SMS) {
+      return true;
+    }
 
     /// Create a condition to determine if the trip count of the loop is greater
     /// than TC, where TC is always one more than for the previous prologue or
@@ -2013,6 +2023,21 @@ public:
   virtual bool shouldOverlapInterval(const MachineInstr &MI) const {
     return true;
   }
+
+  /// Returns true if the operand can have more than TiedMax tied operands, and
+  /// the logic for determining tied operands is custom.
+  virtual bool hasCustomTiedOperands(unsigned Opcode) const {
+    return false;
+  }
+
+  /// For an instruction where hasCustomTiedOperands(), implement
+  /// MachinInstr.findTiedOperandIdx().
+  virtual unsigned findCustomTiedOperandIdx(const MachineInstr &MI,
+                                            unsigned OpIdx) const {
+    llvm_unreachable("target did not implement");
+  }
+
+  virtual bool shouldRematPhysRegCopy() const { return true; }
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;

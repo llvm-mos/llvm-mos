@@ -49,6 +49,17 @@ void MOS::addClangTargetOptions(const ArgList &DriverArgs,
   CC1Args.push_back("-nostdsysteminc");
 }
 
+static bool hasLTOEmitAsm(const ArgList &Args) {
+  for (Arg *A : Args) {
+    if (!A->getOption().matches(options::OPT_Wl_COMMA) &&
+        !A->getOption().matches(options::OPT_Xlinker))
+      continue;
+    if (A->containsValue("--lto-emit-asm"))
+      return true;
+  }
+  return false;
+}
+
 void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs, const ArgList &Args,
@@ -91,8 +102,10 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lc");
 
   // No matter what's included in the link, the default linker script is
-  // nonsense for the 6502. Accordingly, require one named "link.ld".
-  CmdArgs.push_back("-Tlink.ld");
+  // nonsense for the 6502. Accordingly, use one named "link.ld" if none is
+  // specified.
+  if (!Args.hasArg(options::OPT_T))
+    CmdArgs.push_back("-Tlink.ld");
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
@@ -100,6 +113,19 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Args.MakeArgString(TC.GetLinkerPath()),
                                          CmdArgs, Inputs, Output));
+  if (!hasLTOEmitAsm(Args)) {
+    for (StringRef PostLinkTool :
+         Args.getAllArgValues(options::OPT_fpost_link_tool)) {
+      ArgStringList PostLinkToolArgs;
+      PostLinkToolArgs.push_back(
+          Args.MakeArgString(Twine(Output.getFilename()) + ".elf"));
+      C.addCommand(std::make_unique<Command>(
+          JA, *this, ResponseFileSupport::None(),
+          Args.MakeArgString(
+              getToolChain().GetProgramPath(PostLinkTool.str().c_str())),
+          PostLinkToolArgs, Inputs, Output));
+    }
+  }
 }
 
 void mos::Linker::AddLTOOptions(const toolchains::MOS &TC, const ArgList &Args,

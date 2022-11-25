@@ -2,9 +2,6 @@
 Test lldb command aliases.
 """
 
-from __future__ import print_function
-
-
 import unittest2
 import os
 import lldb
@@ -46,4 +43,4 @@ class LaunchInTerminalTestCase(TestBase):
             "Make sure launch happened successfully in a terminal window")
         # Running in synchronous mode our process should have run and already
         # exited by the time target.Launch() returns
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)

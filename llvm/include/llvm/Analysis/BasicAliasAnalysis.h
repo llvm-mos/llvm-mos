@@ -41,9 +41,7 @@ class Value;
 /// While it does retain some storage, that is used as an optimization and not
 /// to preserve information from query to query. However it does retain handles
 /// to various other analyses and must be recomputed when those analyses are.
-class BasicAAResult : public AAResultBase<BasicAAResult> {
-  friend AAResultBase<BasicAAResult>;
-
+class BasicAAResult : public AAResultBase {
   const DataLayout &DL;
   const Function &F;
   const TargetLibraryInfo &TLI;
@@ -85,16 +83,16 @@ public:
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);
 
   /// Returns the behavior when calling the given call site.
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
+  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
 
   /// Returns the behavior when calling the given function. For use when the
   /// call site is not known.
-  FunctionModRefBehavior getModRefBehavior(const Function *Fn);
+  MemoryEffects getMemoryEffects(const Function *Fn);
 
 private:
   struct DecomposedGEP;
 
-  /// Tracks phi nodes we have visited.
+  /// Tracks whether the accesses may be on different cycle iterations.
   ///
   /// When interpret "Value" pointer equality as value equality we need to make
   /// sure that the "Value" is not part of a cycle. Otherwise, two uses could
@@ -108,7 +106,7 @@ private:
   ///   %addr2 = gep  %alloca2, 0, (%l + 1)
   ///      alias(%p, %addr1) -> MayAlias !
   ///   store %l, ...
-  SmallPtrSet<const BasicBlock *, 8> VisitedPhiBBs;
+  bool MayBeCrossIteration = false;
 
   /// Tracks instructions visited by pointsToConstantMemory.
   SmallPtrSet<const Value *, 16> Visited;

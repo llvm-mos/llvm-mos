@@ -58,7 +58,7 @@ jobs:
       - name: Dispatch SDK Packaging
         uses: llvm-mos/repository-dispatch@v1
         with:
-          token: ${{ secrets.SDK_ACCESS_TOKEN }}
+          token: ${{ secrets.ACTION_TOKEN }}
           repository: llvm-mos/llvm-mos-sdk
           event-type: on-llvm-update
           client-payload: '{"head_commit": ${{ toJSON(github.event.head_commit) }}}'

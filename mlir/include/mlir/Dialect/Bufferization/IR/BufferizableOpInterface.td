@@ -15,9 +15,29 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   let description = [{
     An op interface for One-Shot Bufferize. Ops that implement this interface
     interface can be analyzed and bufferized using One-Shot Bufferize.
+
+    Note: All "bufferizesTo*" and "getAliasing*" interface methods must be
+    implemented conservatively. If it is not statically known whether an
+    OpOperand/OpResult bufferizes in a certain way (e.g., to a memory write),
+    the worst case must be assumed (e.g., that it does). Similarly,
+    "getAliasing*" interface methods may always return additional OpOperands or
+    OpResults, but must not miss an OpOperand or OpResult that could potentially
+    alias at runtime.
   }];
   let cppNamespace = "::mlir::bufferization";
   let methods = [
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given OpResult may bufferize to a new buffer
+          allocation. If it is statically unknown if the given OpResult
+          bufferizes to a buffer allocation, `true` should be returned.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"bufferizesToAllocation",
+        /*args=*/(ins "OpResult":$opResult),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return false;"
+      >,
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the given OpOperand bufferizes to a memory read. This
@@ -123,6 +143,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           Return the OpResult that aliases with a given OpOperand when
           bufferized in-place. This method will never be called on OpOperands
           that do not have a tensor type.
+
+          Note: This method can return multiple OpResults, indicating that a
+          given OpOperand may at runtime alias with any (or multiple) of the
+          returned OpResults.
         }],
         /*retType=*/"SmallVector<OpResult>",
         /*methodName=*/"getAliasingOpResult",
@@ -145,8 +169,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           return the OpOperands that are yielded by the terminator.
 
           Note: This method can return multiple OpOperands, indicating that the
-          given OpResult may at runtime alias with any of the OpOperands. This
-          is useful for branches and for ops such as `arith.select`.
+          given OpResult may at runtime alias with any (or multiple) of the
+          returned OpOperands. This can be useful for branches and for ops such
+          as `arith.select`.
         }],
         /*retType=*/"SmallVector<OpOperand *>",
         /*methodName=*/"getAliasingOpOperand",
@@ -317,6 +342,51 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           return success();
         }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the bufferized type of the given tensor value (without
+          bufferizing the IR). The value is either a BlockArgument of a block
+          that belongs to this op or an OpResult of the given op.
+
+          This method is useful when the bufferized type of value must be
+          predicted before modifying any IR.
+        }],
+        /*retType=*/"FailureOr<BaseMemRefType>",
+        /*methodName=*/"getBufferType",
+        /*args=*/(ins "Value":$value,
+                      "const BufferizationOptions &":$options,
+                      "const DenseMap<Value, BaseMemRefType>":$fixedTypes),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          assert(getOwnerOfValue(value) == $_op.getOperation() &&
+                 "expected that value belongs to this op");
+          return bufferization::detail::defaultGetBufferType(
+              value, options, fixedTypes);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given region of this op is repetitive. By default
+          this information is queried from the `RegionBranchOpInterface`. Ops
+          that do not implement this inferface can override this method to
+          declare regions as repetitive.
+
+          The RaW conflict detection of One-Shot Analysis is more strict inside
+          repetitive regions: Op dominance cannot always be used to rule out
+          certain potential conflicts (e.g., a conflicting write happening after
+          a read), because there may not be a meaningful ordering of certain ops
+          that are executed multiple times. This is described in more detail in
+          documentation of One-Shot Analysis.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isRepetitiveRegion",
+        /*args=*/(ins "unsigned":$index),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return mlir::bufferization::detail::defaultIsRepetitiveRegion(
+              cast<BufferizableOpInterface>($_op.getOperation()), index);
+        }]
       >
   ];
 
@@ -340,13 +410,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           && !bufferizableOp.bufferizesToMemoryWrite(opOperand, state)
           && !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
     }
-
-    // TODO: This attribute is deprecated. Use `bufferization.writable` or add
-    // a new attribute in a different dialect.
-    /// Attribute name used to mark region arguments that can be bufferized
-    /// in-place during one-shot bufferization.
-    constexpr const static ::llvm::StringLiteral
-        kInplaceableAttrName = "linalg.inplaceable";
   }];
 }
 

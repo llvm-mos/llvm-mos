@@ -31,11 +31,11 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; NMOS-NEXT:    stx mos8(__rc20)
 ; NMOS-NEXT:    ldx mos8(__rc1)
 ; NMOS-NEXT:    stx mos8(__rc21)
-; NMOS-NEXT:    ldx mos8(__rc20)
-; NMOS-NEXT:    stx mos8(__rc2)
-; NMOS-NEXT:    ldx mos8(__rc21)
-; NMOS-NEXT:    stx mos8(__rc3)
 ; NMOS-NEXT:    ldx #10
+; NMOS-NEXT:    ldy mos8(__rc20)
+; NMOS-NEXT:    sty mos8(__rc2)
+; NMOS-NEXT:    ldy mos8(__rc21)
+; NMOS-NEXT:    sty mos8(__rc3)
 ; NMOS-NEXT:    jsr __udivmodqi4
 ; NMOS-NEXT:    tax
 ; NMOS-NEXT:    ldy #0
@@ -58,8 +58,7 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; NMOS-NEXT:    sta mos8(__rc1)
 ; NMOS-NEXT:    lda mos8(__rc16)
 ; NMOS-NEXT:  .LBB0_2: ; %if.then
-; NMOS-NEXT:    clc
-; NMOS-NEXT:    adc #48
+; NMOS-NEXT:    ora #48
 ; NMOS-NEXT:    ;APP
 ; NMOS-NEXT:    jsr 65490
 ; NMOS-NEXT:    ;NO_APP
@@ -90,11 +89,11 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; CMOS-NEXT:    stx mos8(__rc20)
 ; CMOS-NEXT:    ldx mos8(__rc1)
 ; CMOS-NEXT:    stx mos8(__rc21)
-; CMOS-NEXT:    ldx mos8(__rc20)
-; CMOS-NEXT:    stx mos8(__rc2)
-; CMOS-NEXT:    ldx mos8(__rc21)
-; CMOS-NEXT:    stx mos8(__rc3)
 ; CMOS-NEXT:    ldx #10
+; CMOS-NEXT:    ldy mos8(__rc20)
+; CMOS-NEXT:    sty mos8(__rc2)
+; CMOS-NEXT:    ldy mos8(__rc21)
+; CMOS-NEXT:    sty mos8(__rc3)
 ; CMOS-NEXT:    jsr __udivmodqi4
 ; CMOS-NEXT:    tax
 ; CMOS-NEXT:    ldy #0
@@ -117,8 +116,7 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; CMOS-NEXT:    sta mos8(__rc1)
 ; CMOS-NEXT:    lda mos8(__rc16)
 ; CMOS-NEXT:  .LBB0_2: ; %if.then
-; CMOS-NEXT:    clc
-; CMOS-NEXT:    adc #48
+; CMOS-NEXT:    ora #48
 ; CMOS-NEXT:    ;APP
 ; CMOS-NEXT:    jsr 65490
 ; CMOS-NEXT:    ;NO_APP

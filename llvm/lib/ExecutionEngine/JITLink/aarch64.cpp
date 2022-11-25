@@ -18,8 +18,8 @@ namespace llvm {
 namespace jitlink {
 namespace aarch64 {
 
-const uint8_t NullGOTEntryContent[8] = {0x00, 0x00, 0x00, 0x00,
-                                        0x00, 0x00, 0x00, 0x00};
+const char NullPointerContent[8] = {0x00, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00};
 
 const uint8_t StubContent[8] = {
     0x10, 0x00, 0x00, 0x58, // LDR x16, <literal>
@@ -32,8 +32,6 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "Branch26";
   case Pointer64:
     return "Pointer64";
-  case Pointer64Anon:
-    return "Pointer64Anon";
   case Page21:
     return "Page21";
   case PageOffset12:
@@ -48,8 +46,12 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "TLVPage21";
   case TLVPageOffset12:
     return "TLVPageOffset12";
-  case PointerToGOT:
-    return "PointerToGOT";
+  case TLSDescPage21:
+    return "TLSDescPage21";
+  case TLSDescPageOffset12:
+    return "TLSDescPageOffset12";
+  case Delta32ToGOT:
+    return "Delta32ToGOT";
   case PairedAddend:
     return "PairedAddend";
   case LDRLiteral19:

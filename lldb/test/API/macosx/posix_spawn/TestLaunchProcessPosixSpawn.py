@@ -1,6 +1,5 @@
 import contextlib
 import os
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -35,7 +34,7 @@ class TestLaunchProcessPosixSpawn(TestBase):
         self.runCmd('run')
 
         process = self.dbg.GetSelectedTarget().process
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertIn('slice: {}'.format(arch), process.GetSTDOUT(1000))
 
     @skipUnlessDarwin

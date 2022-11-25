@@ -15,7 +15,7 @@
 
 #include "TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/ExecutionEngine/JITLink/MemoryFlags.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 
 namespace llvm {
 namespace jitlink {
@@ -25,7 +25,6 @@ enum EdgeKind_aarch64 : Edge::Kind {
   Branch26 = Edge::FirstRelocation,
   Pointer32,
   Pointer64,
-  Pointer64Anon,
   Page21,
   PageOffset12,
   MoveWide16,
@@ -33,7 +32,9 @@ enum EdgeKind_aarch64 : Edge::Kind {
   GOTPageOffset12,
   TLVPage21,
   TLVPageOffset12,
-  PointerToGOT,
+  TLSDescPage21,
+  TLSDescPageOffset12,
+  Delta32ToGOT,
   PairedAddend,
   LDRLiteral19,
   Delta32,
@@ -129,8 +130,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     *(ulittle32_t *)FixupPtr = Value;
     break;
   }
-  case Pointer64:
-  case Pointer64Anon: {
+  case Pointer64: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     *(ulittle64_t *)FixupPtr = Value;
     break;
@@ -223,10 +223,12 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     break;
   }
   case TLVPage21:
-  case GOTPage21:
   case TLVPageOffset12:
+  case TLSDescPage21:
+  case TLSDescPageOffset12:
+  case GOTPage21:
   case GOTPageOffset12:
-  case PointerToGOT: {
+  case Delta32ToGOT: {
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
         "GOT/TLV edge kinds not lowered: " + getEdgeKindName(E.getKind()));
@@ -234,17 +236,40 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
-        "unsupported edge kind" + getEdgeKindName(E.getKind()));
+        " unsupported edge kind " + getEdgeKindName(E.getKind()));
   }
 
   return Error::success();
 }
 
+/// aarch64 pointer size.
+constexpr uint64_t PointerSize = 8;
+
 /// AArch64 null pointer content.
-extern const uint8_t NullGOTEntryContent[8];
+extern const char NullPointerContent[PointerSize];
 
 /// AArch64 PLT stub content.
 extern const uint8_t StubContent[8];
+
+/// Creates a new pointer block in the given section and returns an
+/// Anonymous symobl pointing to it.
+///
+/// If InitialTarget is given then an Pointer64 relocation will be added to the
+/// block pointing at InitialTarget.
+///
+/// The pointer block will have the following default values:
+///   alignment: 64-bit
+///   alignment-offset: 0
+///   address: highest allowable (~7U)
+inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
+                                      Symbol *InitialTarget = nullptr,
+                                      uint64_t InitialAddend = 0) {
+  auto &B = G.createContentBlock(PointerSection, NullPointerContent,
+                                 orc::ExecutorAddr(~uint64_t(7)), 8, 0);
+  if (InitialTarget)
+    B.addEdge(Pointer64, 0, *InitialTarget, InitialAddend);
+  return G.addAnonymousSymbol(B, 0, 8, false, false);
+}
 
 /// Global Offset Table Builder.
 class GOTTableManager : public TableManager<GOTTableManager> {
@@ -273,8 +298,8 @@ public:
              "RawInstr isn't a 64-bit LDR immediate");
       break;
     }
-    case aarch64::PointerToGOT: {
-      KindToSet = aarch64::Delta64;
+    case aarch64::Delta32ToGOT: {
+      KindToSet = aarch64::Delta32;
       break;
     }
     default:
@@ -293,23 +318,15 @@ public:
   }
 
   Symbol &createEntry(LinkGraph &G, Symbol &Target) {
-    auto &GOTEntryBlock = G.createContentBlock(
-        getGOTSection(G), getGOTEntryBlockContent(), orc::ExecutorAddr(), 8, 0);
-    GOTEntryBlock.addEdge(aarch64::Pointer64, 0, Target, 0);
-    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
+    return createAnonymousPointer(G, getGOTSection(G), &Target);
   }
 
 private:
   Section &getGOTSection(LinkGraph &G) {
     if (!GOTSection)
-      GOTSection =
-          &G.createSection(getSectionName(), MemProt::Read | MemProt::Exec);
+      GOTSection = &G.createSection(getSectionName(),
+                                    orc::MemProt::Read | orc::MemProt::Exec);
     return *GOTSection;
-  }
-
-  ArrayRef<char> getGOTEntryBlockContent() {
-    return {reinterpret_cast<const char *>(NullGOTEntryContent),
-            sizeof(NullGOTEntryContent)};
   }
 
   Section *GOTSection = nullptr;
@@ -347,8 +364,8 @@ public:
 public:
   Section &getStubsSection(LinkGraph &G) {
     if (!StubsSection)
-      StubsSection =
-          &G.createSection(getSectionName(), MemProt::Read | MemProt::Exec);
+      StubsSection = &G.createSection(getSectionName(),
+                                      orc::MemProt::Read | orc::MemProt::Exec);
     return *StubsSection;
   }
 

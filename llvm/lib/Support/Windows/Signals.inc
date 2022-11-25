@@ -246,7 +246,7 @@ static bool printStackTraceWithLLVMSymbolizer(llvm::raw_ostream &OS,
     if (StackFrame.AddrFrame.Offset == 0)
       break;
     StackTrace[Depth++] = (void *)(uintptr_t)StackFrame.AddrPC.Offset;
-    if (Depth >= array_lengthof(StackTrace))
+    if (Depth >= std::size(StackTrace))
       break;
   }
 
@@ -731,6 +731,11 @@ static bool GetDumpType(HKEY Key, MINIDUMP_TYPE &ResultType) {
 /// otherwise.
 static std::error_code WINAPI
 WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
+  struct ScopedCriticalSection {
+    ScopedCriticalSection() { EnterCriticalSection(&CriticalSection); }
+    ~ScopedCriticalSection() { LeaveCriticalSection(&CriticalSection); }
+  } SCS;
+
   using namespace llvm;
   using namespace llvm::sys;
 

@@ -155,6 +155,7 @@ namespace llvm {
     bool CoveredBySubRegs;
     bool HasDisjunctSubRegs;
     bool Artificial;
+    bool Constant;
 
     // Map SubRegIndex -> Register.
     typedef std::map<CodeGenSubRegIndex *, CodeGenRegister *,
@@ -332,6 +333,7 @@ namespace llvm {
     bool Allocatable;
     StringRef AltOrderSelect;
     uint8_t AllocationPriority;
+    bool GlobalPriority;
     uint8_t TSFlags;
     /// Contains the combination of the lane masks of all subregisters.
     LaneBitmask LaneMask;
@@ -355,10 +357,7 @@ namespace llvm {
     std::string getQualifiedName() const;
     ArrayRef<ValueTypeByHwMode> getValueTypes() const { return VTs; }
     unsigned getNumValueTypes() const { return VTs.size(); }
-
-    bool hasType(const ValueTypeByHwMode &VT) const {
-      return llvm::is_contained(VTs, VT);
-    }
+    bool hasType(const ValueTypeByHwMode &VT) const;
 
     const ValueTypeByHwMode &getValueTypeNum(unsigned VTNum) const {
       if (VTNum < VTs.size())

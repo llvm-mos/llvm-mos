@@ -94,7 +94,9 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <ctime>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -113,8 +115,8 @@ using namespace llvm::opt;
 
 // Parse misexpect tolerance argument value.
 // Valid option values are integers in the range [0, 100)
-inline Expected<Optional<uint64_t>> parseToleranceOption(StringRef Arg) {
-  int64_t Val;
+inline Expected<Optional<uint32_t>> parseToleranceOption(StringRef Arg) {
+  uint32_t Val;
   if (Arg.getAsInteger(10, Val))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Not an integer: %s", Arg.data());
@@ -510,6 +512,10 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fgnu89-inline" << GetInputKindName(IK);
 
+  if (Args.hasArg(OPT_hlsl_entrypoint) && !LangOpts.HLSL)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-hlsl-entry" << GetInputKindName(IK);
+
   if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
@@ -903,14 +909,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 #include "clang/Driver/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
-  if (Args.hasArg(OPT_analyzer_store))
-    Diags.Report(diag::warn_analyzer_deprecated_option) << "-analyzer-store"
-                                                        << "clang-16";
-  if (Args.hasArg(OPT_analyzer_opt_analyze_nested_blocks))
-    Diags.Report(diag::warn_analyzer_deprecated_option)
-        << "-analyzer-opt-analyze-nested-blocks"
-        << "clang-16";
-
   if (Arg *A = Args.getLastArg(OPT_analyzer_constraints)) {
     StringRef Name = A->getValue();
     AnalysisConstraints Value = llvm::StringSwitch<AnalysisConstraints>(Name)
@@ -1074,7 +1072,7 @@ static void initOption(AnalyzerOptions::ConfigTable &Config,
     else
       OptionField = DefaultVal;
   } else
-    OptionField = PossiblyInvalidVal.getValue();
+    OptionField = *PossiblyInvalidVal;
 }
 
 static void initOption(AnalyzerOptions::ConfigTable &Config,
@@ -1297,17 +1295,23 @@ static std::string serializeXRayInstrumentationBundle(const XRayInstrSet &S) {
 
 // Set the profile kind using fprofile-instrument-use-path.
 static void setPGOUseInstrumentor(CodeGenOptions &Opts,
-                                  const Twine &ProfileName) {
+                                  const Twine &ProfileName,
+                                  DiagnosticsEngine &Diags) {
   auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName);
-  // In error, return silently and let Clang PGOUse report the error message.
   if (auto E = ReaderOrErr.takeError()) {
-    llvm::consumeError(std::move(E));
-    Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
+    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                            "Error in reading profile %0: %1");
+    llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
+      Diags.Report(DiagID) << ProfileName.str() << EI.message();
+    });
     return;
   }
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
     std::move(ReaderOrErr.get());
-  if (PGOReader->isIRLevelProfile()) {
+  // Currently memprof profiles are only added at the IR level. Mark the profile
+  // type as IR in that case as well and the subsequent matching needs to detect
+  // which is available (might be one or both).
+  if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
     if (PGOReader->hasCSIRLevelProfile())
       Opts.setProfileUse(CodeGenOptions::ProfileCSIRInstr);
     else
@@ -1485,6 +1489,9 @@ void CompilerInvocation::GenerateCodeGenArgs(
   if (Opts.IBTSeal)
     GenerateArg(Args, OPT_mibt_seal, SA);
 
+  if (Opts.FunctionReturnThunks)
+    GenerateArg(Args, OPT_mfunction_return_EQ, "thunk-extern", SA);
+
   for (const auto &F : Opts.LinkBitcodeFiles) {
     bool Builtint = F.LinkFlags == llvm::Linker::Flags::LinkOnlyNeeded &&
                     F.PropagateAttrs && F.Internalize;
@@ -1493,13 +1500,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
                 F.Filename, SA);
   }
 
-  // TODO: Consider removing marshalling annotations from f[no_]emulated_tls.
-  //  That would make it easy to generate the option only **once** if it was
-  //  explicitly set to non-default value.
-  if (Opts.ExplicitEmulatedTLS) {
-    GenerateArg(
-        Args, Opts.EmulatedTLS ? OPT_femulated_tls : OPT_fno_emulated_tls, SA);
-  }
+  GenerateArg(
+      Args, Opts.EmulatedTLS ? OPT_femulated_tls : OPT_fno_emulated_tls, SA);
 
   if (Opts.FPDenormalMode != llvm::DenormalMode::getIEEE())
     GenerateArg(Args, OPT_fdenormal_fp_math_EQ, Opts.FPDenormalMode.str(), SA);
@@ -1565,6 +1567,9 @@ void CompilerInvocation::GenerateCodeGenArgs(
     GenerateArg(Args, OPT_fno_finite_loops, SA);
     break;
   }
+
+  if (Opts.AssumeNonReentrant)
+    GenerateArg(Args, OPT_fnonreentrant, SA);
 }
 
 bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
@@ -1718,7 +1723,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   }
 
   if (!Opts.ProfileInstrumentUsePath.empty())
-    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
+    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath, Diags);
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
@@ -1825,6 +1830,27 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
   }
 
+  if (const Arg *A = Args.getLastArg(OPT_mfunction_return_EQ)) {
+    auto Val = llvm::StringSwitch<llvm::FunctionReturnThunksKind>(A->getValue())
+                   .Case("keep", llvm::FunctionReturnThunksKind::Keep)
+                   .Case("thunk-extern", llvm::FunctionReturnThunksKind::Extern)
+                   .Default(llvm::FunctionReturnThunksKind::Invalid);
+    // SystemZ might want to add support for "expolines."
+    if (!T.isX86())
+      Diags.Report(diag::err_drv_argument_not_allowed_with)
+          << A->getSpelling() << T.getTriple();
+    else if (Val == llvm::FunctionReturnThunksKind::Invalid)
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+    else if (Val == llvm::FunctionReturnThunksKind::Extern &&
+             Args.getLastArgValue(OPT_mcmodel_EQ).equals("large"))
+      Diags.Report(diag::err_drv_argument_not_allowed_with)
+          << A->getAsString(Args)
+          << Args.getLastArg(OPT_mcmodel_EQ)->getAsString(Args);
+    else
+      Opts.FunctionReturnThunks = static_cast<unsigned>(Val);
+  }
+
   if (Opts.PrepareForLTO && Args.hasArg(OPT_mibt_seal))
     Opts.IBTSeal = 1;
 
@@ -1842,9 +1868,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.LinkBitcodeFiles.push_back(F);
   }
 
-  if (Args.getLastArg(OPT_femulated_tls) ||
-      Args.getLastArg(OPT_fno_emulated_tls)) {
-    Opts.ExplicitEmulatedTLS = true;
+  if (!Args.getLastArg(OPT_femulated_tls) &&
+      !Args.getLastArg(OPT_fno_emulated_tls)) {
+    Opts.EmulatedTLS = T.hasDefaultEmulatedTLS();
   }
 
   if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
@@ -1902,6 +1928,12 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.EnableAIXExtendedAltivecABI = O.matches(OPT_mabi_EQ_vec_extabi);
   }
 
+  if (Arg *A = Args.getLastArg(OPT_mabi_EQ_quadword_atomics)) {
+    if (!T.isOSAIX() || T.isPPC32())
+      Diags.Report(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << T.str();
+  }
+
   bool NeedLocTracking = false;
 
   if (!Opts.OptRecordFile.empty())
@@ -1951,8 +1983,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << "-fdiagnostics-hotness-threshold=";
     } else {
       Opts.DiagnosticsHotnessThreshold = *ResultOrErr;
-      if ((!Opts.DiagnosticsHotnessThreshold.hasValue() ||
-           Opts.DiagnosticsHotnessThreshold.getValue() > 0) &&
+      if ((!Opts.DiagnosticsHotnessThreshold ||
+           Opts.DiagnosticsHotnessThreshold.value() > 0) &&
           !UsingProfile)
         Diags.Report(diag::warn_drv_diagnostics_hotness_requires_pgo)
             << "-fdiagnostics-hotness-threshold=";
@@ -1968,8 +2000,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << "-fdiagnostics-misexpect-tolerance=";
     } else {
       Opts.DiagnosticsMisExpectTolerance = *ResultOrErr;
-      if ((!Opts.DiagnosticsMisExpectTolerance.hasValue() ||
-           Opts.DiagnosticsMisExpectTolerance.getValue() > 0) &&
+      if ((!Opts.DiagnosticsMisExpectTolerance ||
+           Opts.DiagnosticsMisExpectTolerance.value() > 0) &&
           !UsingProfile)
         Diags.Report(diag::warn_drv_diagnostics_misexpect_requires_pgo)
             << "-fdiagnostics-misexpect-tolerance=";
@@ -2010,6 +2042,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee, true);
   if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs)
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
+
+  if (Args.hasArg(OPT_fnonreentrant))
+    Opts.AssumeNonReentrant = true;
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -2578,10 +2613,10 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
   for (const auto &ModuleFile : Opts.ModuleFiles)
     GenerateArg(Args, OPT_fmodule_file, ModuleFile, SA);
 
-  if (Opts.AuxTargetCPU.hasValue())
+  if (Opts.AuxTargetCPU)
     GenerateArg(Args, OPT_aux_target_cpu, *Opts.AuxTargetCPU, SA);
 
-  if (Opts.AuxTargetFeatures.hasValue())
+  if (Opts.AuxTargetFeatures)
     for (const auto &Feature : *Opts.AuxTargetFeatures)
       GenerateArg(Args, OPT_aux_target_feature, Feature, SA);
 
@@ -3458,9 +3493,6 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Args, OPT_fopenmp_cuda_mode, SA);
 
-  if (Opts.OpenMPCUDAForceFullRuntime)
-    GenerateArg(Args, OPT_fopenmp_cuda_force_full_runtime, SA);
-
   // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
   // generated from CodeGenOptions.
 
@@ -3496,6 +3528,8 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Args, OPT_fclang_abi_compat_EQ, "12.0", SA);
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver14)
     GenerateArg(Args, OPT_fclang_abi_compat_EQ, "14.0", SA);
+  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver15)
+    GenerateArg(Args, OPT_fclang_abi_compat_EQ, "15.0", SA);
 
   if (Opts.getSignReturnAddressScope() ==
       LangOptions::SignReturnAddressScopeKind::All)
@@ -3909,11 +3943,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPCUDAMode = Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
-  // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
-  Opts.OpenMPCUDAForceFullRuntime =
-      Opts.OpenMPIsDevice && (T.isNVPTX() || T.isAMDGCN()) &&
-      Args.hasArg(options::OPT_fopenmp_cuda_force_full_runtime);
-
   // FIXME: Eliminate this dependency.
   unsigned Opt = getOptimizationLevel(Args, IK, Diags),
        OptSize = getOptimizationLevelSize(Args);
@@ -3987,6 +4016,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver12);
       else if (Major <= 14)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver14);
+      else if (Major <= 15)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver15);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -4075,6 +4106,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(OPT_frandomize_layout_seed_EQ))
     Opts.RandstructSeed = A->getValue(0);
+
+  // Validate options for HLSL
+  if (Opts.HLSL) {
+    bool SupportedTarget = T.getArch() == llvm::Triple::dxil &&
+                           T.getOS() == llvm::Triple::ShaderModel;
+    if (!SupportedTarget)
+      Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
+  }
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -4193,6 +4232,9 @@ static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
   for (const auto &RF : Opts.RemappedFiles)
     GenerateArg(Args, OPT_remap_file, RF.first + ";" + RF.second, SA);
 
+  if (Opts.SourceDateEpoch)
+    GenerateArg(Args, OPT_source_date_epoch, Twine(*Opts.SourceDateEpoch), SA);
+
   // Don't handle LexEditorPlaceholders. It is implied by the action that is
   // generated elsewhere.
 }
@@ -4273,6 +4315,22 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
     }
 
     Opts.addRemappedFile(Split.first, Split.second);
+  }
+
+  if (const Arg *A = Args.getLastArg(OPT_source_date_epoch)) {
+    StringRef Epoch = A->getValue();
+    // SOURCE_DATE_EPOCH, if specified, must be a non-negative decimal integer.
+    // On time64 systems, pick 253402300799 (the UNIX timestamp of
+    // 9999-12-31T23:59:59Z) as the upper bound.
+    const uint64_t MaxTimestamp =
+        std::min<uint64_t>(std::numeric_limits<time_t>::max(), 253402300799);
+    uint64_t V;
+    if (Epoch.getAsInteger(10, V) || V > MaxTimestamp) {
+      Diags.Report(diag::err_fe_invalid_source_date_epoch)
+          << Epoch << MaxTimestamp;
+    } else {
+      Opts.SourceDateEpoch = V;
+    }
   }
 
   // Always avoid lexing editor placeholders when we're just running the
@@ -4513,7 +4571,10 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
         return CreateFromArgsImpl(Invocation, CommandLineArgs, Diags, Argv0);
       },
       [](CompilerInvocation &Invocation, SmallVectorImpl<const char *> &Args,
-         StringAllocator SA) { Invocation.generateCC1CommandLine(Args, SA); },
+         StringAllocator SA) {
+        Args.push_back("-cc1");
+        Invocation.generateCC1CommandLine(Args, SA);
+      },
       Invocation, DummyInvocation, CommandLineArgs, Diags, Argv0);
 }
 
@@ -4632,6 +4693,37 @@ void CompilerInvocation::generateCC1CommandLine(
   GeneratePreprocessorOutputArgs(PreprocessorOutputOpts, Args, SA,
                                  FrontendOpts.ProgramAction);
   GenerateDependencyOutputArgs(DependencyOutputOpts, Args, SA);
+}
+
+std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
+  // Set up string allocator.
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Strings(Alloc);
+  auto SA = [&Strings](const Twine &Arg) { return Strings.save(Arg).data(); };
+
+  // Synthesize full command line from the CompilerInvocation, including "-cc1".
+  SmallVector<const char *, 32> Args{"-cc1"};
+  generateCC1CommandLine(Args, SA);
+
+  // Convert arguments to the return type.
+  return std::vector<std::string>{Args.begin(), Args.end()};
+}
+
+void CompilerInvocation::resetNonModularOptions() {
+  getLangOpts()->resetNonModularOptions();
+  getPreprocessorOpts().resetNonModularOptions();
+}
+
+void CompilerInvocation::clearImplicitModuleBuildOptions() {
+  getLangOpts()->ImplicitModules = false;
+  getHeaderSearchOpts().ImplicitModuleMaps = false;
+  getHeaderSearchOpts().ModuleCachePath.clear();
+  getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;
+  getHeaderSearchOpts().BuildSessionTimestamp = 0;
+  // The specific values we canonicalize to for pruning don't affect behaviour,
+  /// so use the default values so they may be dropped from the command-line.
+  getHeaderSearchOpts().ModuleCachePruneInterval = 7 * 24 * 60 * 60;
+  getHeaderSearchOpts().ModuleCachePruneAfter = 31 * 24 * 60 * 60;
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

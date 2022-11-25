@@ -42,7 +42,7 @@ class targetCommandTestCase(TestBase):
         self.buildAll()
         self.do_target_command()
 
-    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # <rdar://problem/37773624>
+    @skipIfDarwin # Chained Fixups
     def test_target_variable_command(self):
         """Test 'target variable' command before and after starting the inferior."""
         d = {'C_SOURCES': 'globals.c', 'EXE': self.getBuildArtifact('globals')}
@@ -51,7 +51,7 @@ class targetCommandTestCase(TestBase):
 
         self.do_target_variable_command('globals')
 
-    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # <rdar://problem/37773624>
+    @skipIfDarwin # Chained Fixups
     def test_target_variable_command_no_fail(self):
         """Test 'target variable' command before and after starting the inferior."""
         d = {'C_SOURCES': 'globals.c', 'EXE': self.getBuildArtifact('globals')}
@@ -325,7 +325,7 @@ class targetCommandTestCase(TestBase):
     @no_debug_info_test
     def test_target_list_args(self):
         self.expect("target list blub", error=True,
-                    substrs=["the 'target list' command takes no arguments"])
+                    substrs=["'target list' doesn't take any arguments"])
 
     @no_debug_info_test
     def test_target_select_no_index(self):

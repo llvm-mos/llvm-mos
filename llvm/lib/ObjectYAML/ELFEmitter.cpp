@@ -596,7 +596,7 @@ unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
   const ELFYAML::SectionHeaderTable &SectionHeaders =
       Doc.getSectionHeaderTable();
   if (SectionHeaders.IsImplicit ||
-      (SectionHeaders.NoHeaders && !SectionHeaders.NoHeaders.getValue()) ||
+      (SectionHeaders.NoHeaders && !*SectionHeaders.NoHeaders) ||
       SectionHeaders.isDefault())
     return Index;
 
@@ -1393,6 +1393,16 @@ void ELFState<ELFT>::writeSectionContent(
     return;
 
   for (const ELFYAML::BBAddrMapEntry &E : *Section.Entries) {
+    // Write version and feature values.
+    if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
+      if (E.Version > 1)
+        WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
+                             << static_cast<int>(E.Version)
+                             << "; encoding using the most recent version";
+      CBA.write(E.Version);
+      CBA.write(E.Feature);
+      SHeader.sh_size += 2;
+    }
     // Write the address of the function.
     CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
     // Write number of BBEntries (number of basic blocks in the function). This

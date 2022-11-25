@@ -85,6 +85,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// stack.
   int VarArgsStackIndex = 0;
 
+  /// Offset of start of varargs area for arguments passed on the stack.
+  unsigned VarArgsStackOffset = 0;
+
   /// FrameIndex for start of varargs area for arguments passed in
   /// general purpose registers.
   int VarArgsGPRIndex = 0;
@@ -177,6 +180,18 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   bool IsMTETagged = false;
 
+  /// The function has Scalable Vector or Scalable Predicate register argument
+  /// or return type
+  bool IsSVECC = false;
+
+  /// The virtual register that is the pointer to the lazy save buffer.
+  /// This value is used during ISelLowering.
+  Register LazySaveBufferReg = 0;
+
+  /// The frame-index for the TPIDR2 object used for lazy saves.
+  Register LazySaveTPIDR2Obj = 0;
+
+
   /// True if the function need unwind information.
   mutable Optional<bool> NeedsDwarfUnwindInfo;
 
@@ -190,6 +205,15 @@ public:
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  bool isSVECC() const { return IsSVECC; };
+  void setIsSVECC(bool s) { IsSVECC = s; };
+
+  unsigned getLazySaveBufferReg() const { return LazySaveBufferReg; }
+  void setLazySaveBufferReg(unsigned Reg) { LazySaveBufferReg = Reg; }
+
+  unsigned getLazySaveTPIDR2Obj() const { return LazySaveTPIDR2Obj; }
+  void setLazySaveTPIDR2Obj(unsigned Reg) { LazySaveTPIDR2Obj = Reg; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
@@ -321,6 +345,9 @@ public:
 
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
   void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
+
+  unsigned getVarArgsStackOffset() const { return VarArgsStackOffset; }
+  void setVarArgsStackOffset(unsigned Offset) { VarArgsStackOffset = Offset; }
 
   int getVarArgsGPRIndex() const { return VarArgsGPRIndex; }
   void setVarArgsGPRIndex(int Index) { VarArgsGPRIndex = Index; }

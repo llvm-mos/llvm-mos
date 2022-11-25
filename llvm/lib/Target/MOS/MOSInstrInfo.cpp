@@ -47,8 +47,8 @@ MOSInstrInfo::MOSInstrInfo()
     : MOSGenInstrInfo(/*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
                       /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP) {}
 
-bool MOSInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                     AAResults *AA) const {
+bool MOSInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return false;
@@ -103,18 +103,6 @@ void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
   } else {
     TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, TRI);
   }
-}
-
-MachineInstr &MOSInstrInfo::duplicate(MachineBasicBlock &MBB,
-                                      MachineBasicBlock::iterator InsertBefore,
-                                      const MachineInstr &Orig) const {
-  MachineInstr &MI = TargetInstrInfo::duplicate(MBB, InsertBefore, Orig);
-  // These require tied variable operands, which aren't cloned by default.
-  if (MI.getOpcode() == MOS::IncMB || MI.getOpcode() == MOS::DecMB)
-    for (unsigned I = 0, E = MI.getNumExplicitDefs(); I != E; ++I)
-      if (Orig.getOperand(I).isTied())
-        MI.tieOperands(I, Orig.findTiedOperandIdx(I));
-  return MI;
 }
 
 // The main difficulty in commuting 6502 instructions is that their register
@@ -511,6 +499,20 @@ static bool isCopyRedundant(MachineIRBuilder &Builder, Register Dst,
   return false;
 }
 
+bool MOSInstrInfo::hasCustomTiedOperands(unsigned Opcode) const {
+  return Opcode == MOS::IncMB || Opcode == MOS::DecMB;
+}
+
+unsigned MOSInstrInfo::findCustomTiedOperandIdx(const MachineInstr &MI,
+                                                unsigned OpIdx) const {
+  assert(hasCustomTiedOperands(MI.getOpcode()));
+  if (OpIdx < MI.getNumExplicitDefs())
+    return MI.getOpcode() == MOS::DecMB ? OpIdx + MI.getNumExplicitDefs() - 1
+                                        : OpIdx + MI.getNumExplicitDefs();
+  return MI.getOpcode() == MOS::DecMB ? OpIdx - MI.getNumExplicitDefs() + 1
+                                      : OpIdx - MI.getNumExplicitDefs();
+}
+
 void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                                    Register SrcReg, bool Force) const {
   if (!Force && isCopyRedundant(Builder, DestReg, SrcReg))
@@ -597,8 +599,12 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                 ->addOperand(MachineOperand::CreateReg(MOS::NZ,
                                                        /*isDef=*/true,
                                                        /*isImp=*/true));
-            Builder.buildInstr(MOS::SelectImm, {MOS::V},
+            // Add an implicit use of the vreg; otherwise, the register
+            // scavenger may try to insert a reload between the load and the
+            // select.
+            auto Select = Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
+            Select.addUse(Tmp, RegState::Implicit);
           }
         }
       }
@@ -623,9 +629,9 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
 }
 
 // Get the value of the given physical register into a location of the given
-// register class. This will search for an ealier instance of this value to use,
-// starting from the insertion point of the given builder. If none is found,
-// creates a virtual register and copies in the value.
+// register class. This will search for an ealier instance of this value to
+// use, starting from the insertion point of the given builder. If none is
+// found, creates a virtual register and copies in the value.
 Register MOSInstrInfo::getRegWithVal(MachineIRBuilder &Builder, Register Val,
                                      const TargetRegisterClass &RC) const {
   if (RC.contains(Val))
@@ -792,9 +798,9 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   MachineIRBuilder Builder(MBB, MI);
   MachineInstrSpan MIS(MI, &MBB);
 
-  // If we're using the soft stack, since the offset is not yet known, it may be
-  // either 8 or 16 bits. Emit a 16-bit pseudo to be lowered during frame index
-  // elimination.
+  // If we're using the soft stack, since the offset is not yet known, it may
+  // be either 8 or 16 bits. Emit a 16-bit pseudo to be lowered during frame
+  // index elimination.
   if (!TFL.usesStaticStack(MF)) {
     Register Ptr = MRI.createVirtualRegister(&MOS::Imag16RegClass);
     auto Instr = Builder.buildInstr(IsLoad ? MOS::LDStk : MOS::STStk);
@@ -817,10 +823,10 @@ void MOSInstrInfo::loadStoreRegStackSlot(
       } else {
         assert(Reg.isVirtual());
         // Live intervals for the original virtual register will already have
-        // been computed by this point. Since this code introduces subregisters,
-        // these must be using a new virtual register; otherwise there would be
-        // no subregister live ranges for the new instructions. This can cause
-        // VirtRegMap to fail.
+        // been computed by this point. Since this code introduces
+        // subregisters, these must be using a new virtual register; otherwise
+        // there would be no subregister live ranges for the new instructions.
+        // This can cause VirtRegMap to fail.
         Tmp = MRI.createVirtualRegister(&MOS::Imag16RegClass);
         Lo.setReg(Tmp);
         Lo.setSubReg(MOS::sublo);
@@ -1014,7 +1020,8 @@ void MOSInstrInfo::expandLDImm16(MachineIRBuilder &Builder) const {
     Hi.add(Src);
     Hi->getOperand(1).setTargetFlags(MOS::MO_HI);
   }
-  // Appease the register scavenger by making this appear to be a redefinition.
+  // Appease the register scavenger by making this appear to be a
+  // redefinition.
   if (Tmp.isVirtual())
     Hi.addUse(Tmp, RegState::Implicit);
   copyPhysRegImpl(Builder, TRI.getSubReg(Dst, MOS::subhi), Tmp);

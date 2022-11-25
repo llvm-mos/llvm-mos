@@ -52,8 +52,8 @@ private:
                    MachineInstr &MI) const;
   bool legalizeShiftRotate(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                            MachineInstr &MI) const;
-  bool shiftLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
+  bool shiftRotateLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                          MachineInstr &MI) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeSelect(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

@@ -85,7 +85,7 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
     Register Val = MI.getOperand(1).getReg();
 
     for (auto &J : mbb_reverse(MBB.begin(), MI)) {
-      if (J.isCall())
+      if (J.isCall() || J.isInlineAsm())
         break;
       if (definesNZ(J, Val)) {
         Changed = true;
@@ -97,7 +97,7 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
       if (J.modifiesRegister(MOS::NZ, TRI))
         break;
       bool ClobbersNZ = true;
-      if (J.isBranch() || J.mayStore())
+      if (J.isBranch() || (J.mayStore() && !J.mayLoad()))
         ClobbersNZ = false;
       else
         switch (J.getOpcode()) {

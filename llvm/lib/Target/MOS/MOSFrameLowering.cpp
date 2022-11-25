@@ -43,7 +43,8 @@ MOSFrameLowering::MOSFrameLowering()
 
 bool MOSFrameLowering::usesStaticStack(const MachineFunction &MF) const {
   return MF.getSubtarget<MOSSubtarget>().staticStack() &&
-         !MF.getFunction().hasOptNone() && MF.getFunction().doesNotRecurse();
+         !MF.getFunction().hasOptNone() &&
+         MF.getFunction().hasFnAttribute("nonreentrant");
 }
 
 bool MOSFrameLowering::assignCalleeSavedSpillSlots(
@@ -211,6 +212,13 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
     MI.setFlag(MachineInstr::FrameDestroy);
 
+  return true;
+}
+
+bool MOSFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const {
+  assert(MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
+         MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+         !MF.getFunction().hasFnAttribute(Attribute::UWTable));
   return true;
 }
 

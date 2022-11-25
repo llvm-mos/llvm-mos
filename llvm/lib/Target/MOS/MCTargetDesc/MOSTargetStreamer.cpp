@@ -77,6 +77,12 @@ void MOSTargetStreamer::stronglyReference(StringRef Name, StringRef Comment) {
   stronglyReference(InitStack);
 }
 
+static bool HasPrefix(StringRef Name, StringRef Prefix) {
+  SmallString<32> PrefixDot = Prefix;
+  PrefixDot += ".";
+  return Name == Prefix || Name.startswith(PrefixDot);
+}
+
 MOSTargetAsmStreamer::MOSTargetAsmStreamer(MCStreamer &S)
     : MOSTargetStreamer(S) {}
 void MOSTargetAsmStreamer::changeSection(const MCSection *CurSection,
@@ -84,13 +90,13 @@ void MOSTargetAsmStreamer::changeSection(const MCSection *CurSection,
                                          const MCExpr *SubSection,
                                          raw_ostream &OS) {
   MCTargetStreamer::changeSection(CurSection, Section, SubSection, OS);
-  HasBSS |= Section->getName().startswith(".bss");
-  HasZPBSS |= Section->getName().startswith(".zp.bss");
-  HasData |= Section->getName().startswith(".data");
-  HasZPData |= Section->getName().startswith(".zp.data");
-  HasZPData |= Section->getName().startswith(".zp.rodata");
-  HasInitArray |= Section->getName().startswith(".init_array");
-  HasFiniArray |= Section->getName().startswith(".fini_array");
+  HasBSS |= HasPrefix(Section->getName(), ".bss");
+  HasZPBSS |= HasPrefix(Section->getName(), ".zp.bss");
+  HasData |= HasPrefix(Section->getName(), ".data");
+  HasZPData |= HasPrefix(Section->getName(), ".zp.data");
+  HasZPData |= HasPrefix(Section->getName(), ".zp.rodata");
+  HasInitArray |= HasPrefix(Section->getName(), ".init_array");
+  HasFiniArray |= HasPrefix(Section->getName(), ".fini_array");
 }
 
 void MOSTargetAsmStreamer::stronglyReference(MCSymbol *Sym) {

@@ -5,12 +5,12 @@
   target datalayout = "e-p:16:8:8-p1:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-a:8:8-Fi8-n8"
   target triple = "mos"
 
-  define void @norecurse() norecurse {
+  define void @nonreentrant() "nonreentrant" {
   entry:
     ret void
   }
 
-  define void @norecurse_variable_sized() norecurse {
+  define void @nonreentrant_variable_sized() "nonreentrant" {
   entry:
     ret void
   }
@@ -40,13 +40,13 @@
     ret void
   }
 ---
-name: norecurse
+name: nonreentrant
 stack:
   - { id: 0, size: 1}
   - { id: 1, size: 1}
 body:             |
   bb.0.entry:
-    ; 6502-LABEL: name: norecurse
+    ; 6502-LABEL: name: nonreentrant
     ; 6502: PH $a
     ; 6502-NEXT: $c = LDCImm 0
     ; 6502-NEXT: $a = COPY $rc0
@@ -66,7 +66,7 @@ body:             |
     ; 6502-NEXT: $a, $c, $v = ADCImm $a, 0, $c
     ; 6502-NEXT: $rc1 = COPY killed $a
     ; 6502-NEXT: RTS
-    ; 65C02-LABEL: name: norecurse
+    ; 65C02-LABEL: name: nonreentrant
     ; 65C02: PH $a
     ; 65C02-NEXT: $c = LDCImm 0
     ; 65C02-NEXT: $a = COPY $rc0
@@ -95,14 +95,14 @@ body:             |
     RTS
 ...
 ---
-name: norecurse_variable_sized
+name: nonreentrant_variable_sized
 stack:
   - { id: 0, type: variable-sized }
   - { id: 1, size: 1 }
   - { id: 2, size: 2 }
 body: |
   bb.0.entry:
-    ; 6502-LABEL: name: norecurse_variable_sized
+    ; 6502-LABEL: name: nonreentrant_variable_sized
     ; 6502: $a = frame-setup COPY $rc30
     ; 6502-NEXT: frame-setup PH killed $a
     ; 6502-NEXT: $a = frame-setup COPY $rc31
@@ -115,7 +115,7 @@ body: |
     ; 6502-NEXT: $a = frame-destroy PL
     ; 6502-NEXT: $rc30 = frame-destroy COPY killed $a
     ; 6502-NEXT: RTS implicit $rc30, implicit $rc31
-    ; 65C02-LABEL: name: norecurse_variable_sized
+    ; 65C02-LABEL: name: nonreentrant_variable_sized
     ; 65C02: $x = frame-setup COPY $rc30
     ; 65C02-NEXT: frame-setup PH killed $x
     ; 65C02-NEXT: $x = frame-setup COPY $rc31

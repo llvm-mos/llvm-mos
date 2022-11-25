@@ -18,6 +18,7 @@
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/ParallelCombiningOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
@@ -48,6 +49,10 @@ ForOp getForInductionVarOwner(Value val);
 /// Returns the parallel loop parent of an induction variable. If the provided
 /// value is not an induction variable, then return nullptr.
 ParallelOp getParallelForInductionVarOwner(Value val);
+
+/// Returns the ForeachThreadOp parent of an thread index variable.
+/// If the provided value is not a thread index variable, then return nullptr.
+ForeachThreadOp getForeachThreadOpThreadIndexOwner(Value val);
 
 /// Return true if ops a and b (or their ancestors) are in mutually exclusive
 /// regions/blocks of an IfOp.

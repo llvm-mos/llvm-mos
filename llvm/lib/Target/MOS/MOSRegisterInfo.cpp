@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -152,6 +153,10 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
 
   MachineIRBuilder Builder(MBB, I);
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  (void)TRI;
+  assert(!I->readsRegister(MOS::NZ, &TRI));
+  assert(UseMI == MBB.end() || !UseMI->readsRegister(MOS::NZ, &TRI));
 
   switch (Reg) {
   default:
@@ -604,93 +609,6 @@ bool MOSRegisterInfo::shouldCoalesce(
   return true;
 }
 
-int copyCost(Register DestReg, Register SrcReg, const MOSSubtarget &STI) {
-  const auto &TRI = *STI.getRegisterInfo();
-  if (DestReg == SrcReg)
-    return 0;
-
-  const auto &AreClasses = [&](const TargetRegisterClass &Dest,
-                               const TargetRegisterClass &Src) {
-    return Dest.contains(DestReg) && Src.contains(SrcReg);
-  };
-
-  if (AreClasses(MOS::GPRRegClass, MOS::GPRRegClass)) {
-    if (MOS::AcRegClass.contains(SrcReg)) {
-      assert(MOS::XYRegClass.contains(DestReg));
-      // TAX
-      return 3;
-    }
-    if (MOS::AcRegClass.contains(DestReg)) {
-      // TXA
-      return 3;
-    }
-    // May need to pha/pla around; avg cost 4
-    return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
-  }
-  if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
-    // STImag8
-    return 5;
-  }
-  if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
-    // LDImag8
-    return 5;
-  }
-  if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    // May need to pha/pla around; avg cost 4
-    return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
-  }
-  if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
-    return 2 * copyCost(MOS::RC0, MOS::RC1, STI);
-  }
-  if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
-    Register SrcReg8 =
-        TRI.getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
-    Register DestReg8 =
-        TRI.getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
-
-    if (SrcReg8) {
-      SrcReg = SrcReg8;
-      if (DestReg8) {
-        DestReg = DestReg8;
-        return copyCost(DestReg, SrcReg, STI);
-      }
-      if (DestReg == MOS::C) {
-        // Cmp #1
-        int Cost = 4;
-        if (!MOS::GPRRegClass.contains(SrcReg))
-          Cost += copyCost(MOS::A, SrcReg, STI);
-        return Cost;
-      }
-      assert(DestReg == MOS::V);
-      const TargetRegisterClass &StackRegClass =
-          STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
-
-      if (StackRegClass.contains(SrcReg)) {
-        // PHA; PLA; BNE; BIT setv; JMP; CLV
-        return 30;
-      }
-      // [PHA]; COPY; BNE; BIT setv; JMP; CLV; [PLA]
-      return 23 + copyCost(MOS::A, SrcReg, STI);
-    }
-    if (DestReg8) {
-      DestReg = DestReg8;
-
-      Register Tmp = DestReg;
-      if (!MOS::GPRRegClass.contains(Tmp))
-        Tmp = MOS::A;
-      // LDImm; BNE; LDImm;
-      int Cost = 13;
-      if (Tmp != DestReg)
-        Cost += copyCost(DestReg, Tmp, STI);
-      return Cost;
-    }
-    // BIT setv; BR; CLV;
-    return 15;
-  }
-
-  llvm_unreachable("Unexpected physical register copy.");
-}
-
 bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
                                             ArrayRef<MCPhysReg> Order,
                                             SmallVectorImpl<MCPhysReg> &Hints,
@@ -705,6 +623,12 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   DenseMap<Register, int> OriginalIndex;
   for (const auto &R : enumerate(Order))
     OriginalIndex[R.value()] = R.index();
+
+  if (Optional<Register> StrongHint = getStrongCopyHint(VirtReg, MF, VRM)) {
+    if (*StrongHint)
+      Hints.push_back(*StrongHint);
+    return true;
+  }
 
   SmallSet<const MachineInstr *, 32> Visited;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
@@ -802,8 +726,150 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   return false;
 }
 
+// If the VirtReg is trivially rematerializable, and the only uses of VirtReg
+// are copies with exactly one register, returns a hint containing that
+// register. If there are more than one such register, returns Some(0).
+// Otherwise, returns None. This prevents the register allocator from assigning
+// a value to a useless register; it's always better to split or spill in such
+// cases, since absolutely nothing can use the value in that register.
+Optional<Register>
+MOSRegisterInfo::getStrongCopyHint(Register VirtReg, const MachineFunction &MF,
+                                   const VirtRegMap *VRM) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
+  const auto &TRI = *STI.getRegisterInfo();
+  const auto &TII = *STI.getInstrInfo();
+
+  if (!MRI.hasOneDef(VirtReg))
+    return None;
+  if (!TII.isReallyTriviallyReMaterializable(
+          *MRI.getOneDef(VirtReg)->getParent()))
+    return None;
+
+  Optional<Register> Hint;
+  for (MachineInstr &MI : MRI.use_nodbg_instructions(VirtReg)) {
+    if (MI.getOpcode() != MOS::COPY)
+      return None;
+    const MachineOperand &Self = MI.getOperand(0).getReg() == VirtReg
+                                     ? MI.getOperand(0)
+                                     : MI.getOperand(1);
+    const MachineOperand &Other = MI.getOperand(0).getReg() == VirtReg
+                                      ? MI.getOperand(1)
+                                      : MI.getOperand(0);
+    Register OtherReg = Other.getReg();
+    if (OtherReg.isVirtual()) {
+      if (!VRM->hasPhys(OtherReg))
+        return None;
+      OtherReg = VRM->getPhys(OtherReg);
+    }
+    if (Other.getSubReg())
+      OtherReg = TRI.getSubReg(OtherReg, Other.getSubReg());
+
+    Register Reg = OtherReg;
+    if (Self.getSubReg())
+      Reg = TRI.getMatchingSuperReg(Reg, Self.getSubReg(),
+                                    MRI.getRegClass(Self.getReg()));
+    if (!Reg || !MRI.getRegClass(Self.getReg())->contains(Reg))
+      return None;
+    if (Hint && *Hint != Reg) {
+      *Hint = MOS::NoRegister;
+      break;
+    }
+    if (!Hint)
+      Hint = Reg;
+  }
+  return Hint;
+}
+
 void MOSRegisterInfo::reserveAllSubregs(BitVector *Reserved,
                                         Register Reg) const {
   for (Register R : subregs_inclusive(Reg))
     Reserved->set(R);
+}
+
+int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
+                              const MOSSubtarget &STI) const {
+  if (DestReg == SrcReg)
+    return 0;
+
+  const auto &AreClasses = [&](const TargetRegisterClass &Dest,
+                               const TargetRegisterClass &Src) {
+    return Dest.contains(DestReg) && Src.contains(SrcReg);
+  };
+
+  if (AreClasses(MOS::GPRRegClass, MOS::GPRRegClass)) {
+    if (MOS::AcRegClass.contains(SrcReg)) {
+      assert(MOS::XYRegClass.contains(DestReg));
+      // TAX
+      return 3;
+    }
+    if (MOS::AcRegClass.contains(DestReg)) {
+      // TXA
+      return 3;
+    }
+    // May need to pha/pla around; avg cost 4
+    return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
+  }
+  if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
+    // STImag8
+    return 5;
+  }
+  if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
+    // LDImag8
+    return 5;
+  }
+  if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
+    // May need to pha/pla around; avg cost 4
+    return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
+  }
+  if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
+    return 2 * copyCost(MOS::RC0, MOS::RC1, STI);
+  }
+  if (AreClasses(MOS::Anyi1RegClass, MOS::Anyi1RegClass)) {
+    Register SrcReg8 =
+        getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    Register DestReg8 =
+        getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
+
+    if (SrcReg8) {
+      SrcReg = SrcReg8;
+      if (DestReg8) {
+        DestReg = DestReg8;
+        return copyCost(DestReg, SrcReg, STI);
+      }
+      if (DestReg == MOS::C) {
+        // Cmp #1
+        int Cost = 4;
+        if (!MOS::GPRRegClass.contains(SrcReg))
+          Cost += copyCost(MOS::A, SrcReg, STI);
+        return Cost;
+      }
+      assert(DestReg == MOS::V);
+      const TargetRegisterClass &StackRegClass =
+          STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
+
+      if (StackRegClass.contains(SrcReg)) {
+        // PHA; PLA; BNE; BIT setv; JMP; CLV
+        return 30;
+      }
+      // [PHA]; COPY; BNE; BIT setv; JMP; CLV; [PLA]
+      return 23 + copyCost(MOS::A, SrcReg, STI);
+    }
+    if (DestReg8) {
+      DestReg = DestReg8;
+
+      Register Tmp = DestReg;
+      if (!MOS::GPRRegClass.contains(Tmp))
+        Tmp = MOS::A;
+      // LDImm; BNE; LDImm;
+      int Cost = 13;
+      if (Tmp != DestReg)
+        Cost += copyCost(DestReg, Tmp, STI);
+      return Cost;
+    }
+    // BIT setv; BR; CLV;
+    return 15;
+  }
+
+  llvm_unreachable("Unexpected physical register copy.");
 }

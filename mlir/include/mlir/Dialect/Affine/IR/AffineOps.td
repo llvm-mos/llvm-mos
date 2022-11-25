@@ -13,7 +13,7 @@
 #ifndef AFFINE_OPS
 #define AFFINE_OPS
 
-include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -23,9 +23,7 @@ def Affine_Dialect : Dialect {
   let name = "affine";
   let cppNamespace = "mlir";
   let hasConstantMaterializer = 1;
-  let dependentDialects = ["arith::ArithmeticDialect"];
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let dependentDialects = ["arith::ArithDialect"];
 }
 
 // Base class for Affine dialect ops.
@@ -36,7 +34,7 @@ class Affine_Op<string mnemonic, list<Trait> traits = []> :
 def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
-def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
+def AffineApplyOp : Affine_Op<"apply", [Pure]> {
   let summary = "affine apply operation";
   let description = [{
     The affine.apply operation applies an [affine mapping](#affine-expressions)
@@ -78,7 +76,7 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
 
   let extraClassDeclaration = [{
     /// Returns the affine map to be applied by this operation.
-    AffineMap getAffineMap() { return map(); }
+    AffineMap getAffineMap() { return getMap(); }
 
     /// Returns the affine value map computed from this operation.
     AffineValueMap getAffineValueMap();
@@ -107,8 +105,8 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
 }
 
 def AffineForOp : Affine_Op<"for",
-    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursiveSideEffects,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface,
+    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursivelySpeculatable,
+     RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
      ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
       "getSingleUpperBound"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -351,8 +349,8 @@ def AffineForOp : Affine_Op<"for",
 }
 
 def AffineIfOp : Affine_Op<"if",
-                           [ImplicitAffineTerminator, RecursiveSideEffects,
-                            NoRegionArguments]> {
+                           [ImplicitAffineTerminator, RecursivelySpeculatable,
+                            RecursiveMemoryEffects, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     Syntax:
@@ -445,26 +443,26 @@ def AffineIfOp : Affine_Op<"if",
     void setConditional(IntegerSet set, ValueRange operands);
 
     /// Returns true if an else block exists.
-    bool hasElse() { return !elseRegion().empty(); }
+    bool hasElse() { return !getElseRegion().empty(); }
 
     Block *getThenBlock() {
-      assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
-      return &thenRegion().front();
+      assert(!getThenRegion().empty() && "Unexpected empty 'then' region.");
+      return &getThenRegion().front();
     }
 
     Block *getElseBlock() {
       assert(hasElse() && "Empty 'else' region.");
-      return &elseRegion().front();
+      return &getElseRegion().front();
     }
 
     OpBuilder getThenBodyBuilder() {
-      assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
-      Block &body = thenRegion().front();
+      assert(!getThenRegion().empty() && "Unexpected empty 'then' region.");
+      Block &body = getThenRegion().front();
       return OpBuilder(&body, std::prev(body.end()));
     }
     OpBuilder getElseBodyBuilder() {
       assert(hasElse() && "No 'else' block");
-      Block &body = elseRegion().front();
+      Block &body = getElseRegion().front();
       return OpBuilder(&body, std::prev(body.end()));
     }
   }];
@@ -556,14 +554,14 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     static StringRef getMapAttrStrName() { return "map"; }
-    AffineMap getAffineMap() { return map(); }
+    AffineMap getAffineMap() { return getMap(); }
     ValueRange getMapOperands() { return operands(); }
     ValueRange getDimOperands() {
       return OperandRange{operands().begin(),
-                        operands().begin() + map().getNumDims()};
+                        operands().begin() + getMap().getNumDims()};
     }
     ValueRange getSymbolOperands() {
-      return OperandRange{operands().begin() + map().getNumDims(),
+      return OperandRange{operands().begin() + getMap().getNumDims(),
                         operands().end()};
     }
   }];
@@ -573,7 +571,7 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
   let hasVerifier = 1;
 }
 
-def AffineMinOp : AffineMinMaxOpBase<"min", [NoSideEffect]> {
+def AffineMinOp : AffineMinMaxOpBase<"min", [Pure]> {
   let summary = "min operation";
   let description = [{
     Syntax:
@@ -597,7 +595,7 @@ def AffineMinOp : AffineMinMaxOpBase<"min", [NoSideEffect]> {
   }];
 }
 
-def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
+def AffineMaxOp : AffineMinMaxOpBase<"max", [Pure]> {
   let summary = "max operation";
   let description = [{
     The "max" operation computes the maximum value result from a multi-result
@@ -612,8 +610,9 @@ def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
 }
 
 def AffineParallelOp : Affine_Op<"parallel",
-    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursiveSideEffects,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>, MemRefsNormalizable]> {
+    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursivelySpeculatable,
+     RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     MemRefsNormalizable]> {
   let summary = "multi-index parallel band operation";
   let description = [{
     The "affine.parallel" operation represents a hyper-rectangular affine
@@ -719,7 +718,6 @@ def AffineParallelOp : Affine_Op<"parallel",
 
     /// Sets elements of the loop lower bound.
     void setLowerBounds(ValueRange operands, AffineMap map);
-    void setLowerBoundsMap(AffineMap map);
 
     /// Returns elements of the loop upper bound.
     AffineMap getUpperBoundMap(unsigned pos);
@@ -728,7 +726,6 @@ def AffineParallelOp : Affine_Op<"parallel",
 
     /// Sets elements fo the loop upper bound.
     void setUpperBounds(ValueRange operands, AffineMap map);
-    void setUpperBoundsMap(AffineMap map);
 
     void setSteps(ArrayRef<int64_t> newSteps);
 
@@ -747,8 +744,8 @@ def AffineParallelOp : Affine_Op<"parallel",
 
     /// Returns `true` if the loop bounds have min/max expressions.
     bool hasMinMaxBounds() {
-      return lowerBoundsMap().getNumResults() != getNumDims() ||
-             upperBoundsMap().getNumResults() != getNumDims();
+      return getLowerBoundsMap().getNumResults() != getNumDims() ||
+             getUpperBoundsMap().getNumResults() != getNumDims();
     }
   }];
 
@@ -779,7 +776,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
 
   let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices,
                    BoolAttr:$isWrite,
-                   Confined<I32Attr, [IntMinValue<0>,
+                   ConfinedAttr<I32Attr, [IntMinValue<0>,
                      IntMaxValue<3>]>:$localityHint,
                    BoolAttr:$isDataCache);
 
@@ -803,7 +800,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
+      return getMemref().getType().cast<MemRefType>();
     }
 
     /// Returns the affine map used to index the memref for this operation.
@@ -815,7 +812,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
     /// Impelements the AffineMapAccessInterface.
     /// Returns the AffineMapAttr associated with 'memref'.
     NamedAttribute getAffineMapAttrForMemRef(Value mref) {
-      assert(mref == memref() &&
+      assert(mref == getMemref() &&
              "Expected mref argument to match memref operand");
       return {StringAttr::get(getContext(), getMapAttrStrName()),
         getAffineMapAttr()};
@@ -904,7 +901,7 @@ def AffineStoreOp : AffineStoreOpBase<"store"> {
   let hasVerifier = 1;
 }
 
-def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator, ReturnLike,
+def AffineYieldOp : Affine_Op<"yield", [Pure, Terminator, ReturnLike,
     MemRefsNormalizable]> {
   let summary = "Yield values to parent operation";
   let description = [{
@@ -986,7 +983,7 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     VectorType getVectorType() {
-      return result().getType().cast<VectorType>();
+      return getResult().getType().cast<VectorType>();
     }
   }];
 
@@ -1052,12 +1049,55 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     VectorType getVectorType() {
-      return value().getType().cast<VectorType>();
+      return getValue().getType().cast<VectorType>();
     }
   }];
 
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AffineDelinearizeIndexOp
+//===----------------------------------------------------------------------===//
+
+def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
+    [Pure]> {
+  let summary = "delinearize an index";
+  let description = [{
+    The `affine.delinearize_index` operation takes a single index value and
+    calculates the multi-index according to the given basis.
+
+    Example:
+
+    ```
+    %indices:3 = affine.delinearize_index %linear_index into (%c16, %c224, %c224) : index, index, index
+    ```
+
+    In the above example, `%indices:3` conceptually holds the following:
+
+    ```
+    #map0 = affine_map<()[s0] -> (s0 floordiv 50176)>
+    #map1 = affine_map<()[s0] -> ((s0 mod 50176) floordiv 224)>
+    #map2 = affine_map<()[s0] -> (s0 mod 224)>
+    %indices_0 = affine.apply #map0()[%linear_index]
+    %indices_1 = affine.apply #map1()[%linear_index]
+    %indices_2 = affine.apply #map2()[%linear_index]
+    ```
+  }];
+
+  let arguments = (ins Index:$linear_index, Variadic<Index>:$basis);
+  let results = (outs Variadic<Index>:$multi_index);
+
+  let assemblyFormat = [{
+    $linear_index `into` ` ` `(` $basis `)` attr-dict `:` type($multi_index)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis)>
+  ];
+
   let hasVerifier = 1;
 }
 

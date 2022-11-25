@@ -138,15 +138,15 @@ lldb_private::Status SelectHelper::Select() {
   llvm::SmallVector<fd_set, 1> write_fdset;
   llvm::SmallVector<fd_set, 1> error_fdset;
 
-  if (max_read_fd.hasValue()) {
+  if (max_read_fd.has_value()) {
     read_fdset.resize((nfds / FD_SETSIZE) + 1);
     read_fdset_ptr = read_fdset.data();
   }
-  if (max_write_fd.hasValue()) {
+  if (max_write_fd.has_value()) {
     write_fdset.resize((nfds / FD_SETSIZE) + 1);
     write_fdset_ptr = write_fdset.data();
   }
-  if (max_error_fd.hasValue()) {
+  if (max_error_fd.has_value()) {
     error_fdset.resize((nfds / FD_SETSIZE) + 1);
     error_fdset_ptr = error_fdset.data();
   }
@@ -161,15 +161,15 @@ lldb_private::Status SelectHelper::Select() {
   fd_set write_fdset;
   fd_set error_fdset;
 
-  if (max_read_fd.hasValue()) {
+  if (max_read_fd) {
     FD_ZERO(&read_fdset);
     read_fdset_ptr = &read_fdset;
   }
-  if (max_write_fd.hasValue()) {
+  if (max_write_fd) {
     FD_ZERO(&write_fdset);
     write_fdset_ptr = &write_fdset;
   }
-  if (max_error_fd.hasValue()) {
+  if (max_error_fd) {
     FD_ZERO(&error_fdset);
     error_fdset_ptr = &error_fdset;
   }
@@ -195,10 +195,10 @@ lldb_private::Status SelectHelper::Select() {
   while (true) {
     using namespace std::chrono;
     // Setup out relative timeout based on the end time if we have one
-    if (m_end_time.hasValue()) {
+    if (m_end_time) {
       tv_ptr = &tv;
-      const auto remaining_dur = duration_cast<microseconds>(
-          m_end_time.getValue() - steady_clock::now());
+      const auto remaining_dur =
+          duration_cast<microseconds>(m_end_time.value() - steady_clock::now());
       if (remaining_dur.count() > 0) {
         // Wait for a specific amount of time
         const auto dur_secs = duration_cast<seconds>(remaining_dur);

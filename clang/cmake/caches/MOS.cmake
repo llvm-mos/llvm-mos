@@ -9,8 +9,8 @@ set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD "MOS"
     CACHE STRING "LLVM experimental targets to build")
 set(LLVM_ENABLE_PROJECTS clang;clang-tools-extra;lld
     CACHE STRING "LLVM projects to enable")
-set(LIBXML2_LIBRARIES "IGNORE"
-    CACHE STRING "Ignore LibXML2 libraries")
+set(LLVM_ENABLE_LIBXML2 "OFF" CACHE STRING "")
+set(LLVM_ENABLE_ZSTD "OFF" CACHE STRING "")
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON
     CACHE BOOL "LLVM install toolchain only")
 
@@ -60,6 +60,7 @@ set(LLVM_MOS_TOOLCHAIN_TOOLS
     llvm-cxxfilt
     llvm-dwarfdump
     llvm-mc
+    llvm-mlb
     llvm-nm
     llvm-objcopy
     llvm-objdump

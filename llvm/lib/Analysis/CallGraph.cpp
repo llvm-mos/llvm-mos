@@ -8,6 +8,7 @@
 
 
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
@@ -119,9 +120,13 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
         } else if (!Callee->isIntrinsic())
           Node->addCalledFunction(Call, getOrInsertFunction(Callee));
 
-        // Add reference to callback functions.
-        forEachCallbackFunction(*Call, [=](Function *CB) {
-          Node->addCalledFunction(nullptr, getOrInsertFunction(CB));
+        // Add reference to callback functions or the external node if the
+        // callback is indirect.
+        forEachCallbackCallSite(*Call, [=](AbstractCallSite &ACS) {
+          if (Function *Callback = ACS.getCalledFunction())
+            Node->addCalledFunction(nullptr, getOrInsertFunction(Callback));
+          else
+            Node->addCalledFunction(nullptr, CallsExternalNode.get());
         });
       }
     }
@@ -321,6 +326,34 @@ AnalysisKey CallGraphAnalysis::Key;
 PreservedAnalyses CallGraphPrinterPass::run(Module &M,
                                             ModuleAnalysisManager &AM) {
   AM.getResult<CallGraphAnalysis>(M).print(OS);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses CallGraphSCCsPrinterPass::run(Module &M,
+                                                ModuleAnalysisManager &AM) {
+  auto &CG = AM.getResult<CallGraphAnalysis>(M);
+  unsigned sccNum = 0;
+  OS << "SCCs for the program in PostOrder:";
+  for (scc_iterator<CallGraph *> SCCI = scc_begin(&CG); !SCCI.isAtEnd();
+       ++SCCI) {
+    const std::vector<CallGraphNode *> &nextSCC = *SCCI;
+    OS << "\nSCC #" << ++sccNum << ": ";
+    bool First = true;
+    for (std::vector<CallGraphNode *>::const_iterator I = nextSCC.begin(),
+                                                      E = nextSCC.end();
+         I != E; ++I) {
+      if (First)
+        First = false;
+      else
+        OS << ", ";
+      OS << ((*I)->getFunction() ? (*I)->getFunction()->getName()
+                                 : "external node");
+    }
+
+    if (nextSCC.size() == 1 && SCCI.hasCycle())
+      OS << " (Has self-loop).";
+  }
+  OS << "\n";
   return PreservedAnalyses::all();
 }
 

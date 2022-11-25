@@ -47,7 +47,7 @@ static uint32_t getEFlags(InputFile *file) {
 uint32_t MOS::calcEFlags() const {
   uint32_t outputFlags = 0;
 
-  for (InputFile *f : objectFiles) {
+  for (InputFile *f : ctx.objectFiles) {
     const uint32_t flags = getEFlags(f);
     if (!llvm::MOS::checkEFlagsCompatibility(flags, outputFlags)) {
       error("Input file '" + f->getName() +
@@ -84,6 +84,7 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     *loc = static_cast<unsigned char>(val);
     break;
   case R_MOS_PCREL_8:
+    checkInt(loc, val - 1, 8, rel);
     // MOS's PC relative addressing is off by one from the standard LLVM PC
     // relative convention.
     *loc = static_cast<unsigned char>(val - 1);

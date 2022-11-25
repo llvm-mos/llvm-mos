@@ -3,6 +3,8 @@ module m
   abstract interface
     subroutine foo
     end subroutine
+    subroutine foo2
+    end subroutine
   end interface
 
   procedure() :: a
@@ -57,7 +59,7 @@ module m
     integer :: i
   contains
     !ERROR: 'proc' must be an abstract interface or a procedure with an explicit interface
-    !ERROR: Procedure component 'p1' has invalid interface 'proc'
+    !ERROR: Procedure component 'p1' must have NOPASS attribute or explicit interface
     procedure(proc), deferred :: p1
   end type t1
 
@@ -70,9 +72,9 @@ contains
   subroutine bar
   end subroutine
   subroutine test
-    !ERROR: Abstract interface 'foo' may not be called
-    call foo()
-    !ERROR: Abstract interface 'f' may not be called
+    !ERROR: Abstract procedure interface 'foo2' may not be referenced
+    call foo2()
+    !ERROR: Abstract procedure interface 'f' may not be referenced
     x = f()
   end subroutine
 end module
