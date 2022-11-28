@@ -606,7 +606,7 @@ void MOSZeroPageAlloc::collectCandidates(
             continue;
           const auto *GV = dyn_cast<GlobalVariable>(GO);
           if (!GV || GV->isDeclaration() || GV->getAlign().valueOrOne() != 1 ||
-              GV->hasSection())
+              GV->hasSection() || GV->hasImplicitSection())
             continue;
 
           // Generally moving an absolute reference to the zero page saves one
