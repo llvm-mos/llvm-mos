@@ -38,5 +38,5 @@ jobs:
     - name: Test lld
       uses: llvm/actions/build-test-llvm-project@main
       with:
-        cmake_args: -G Ninja -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="MOS" -DLLVM_ENABLE_PROJECTS="lld" -DCMAKE_BUILD_TYPE=Release
+        cmake_args: -G Ninja -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="MOS" -DLLVM_ENABLE_PROJECTS="lld" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZLIB=OFF
         build_target: check-lld
