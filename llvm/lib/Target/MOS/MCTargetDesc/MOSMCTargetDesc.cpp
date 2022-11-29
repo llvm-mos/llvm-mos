@@ -118,7 +118,7 @@ static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
                                                    formatted_raw_ostream &OS,
                                                    MCInstPrinter *InstPrint,
                                                    bool isVerboseAsm) {
-  return new MOSTargetAsmStreamer(S, OS);
+  return new MOSTargetAsmStreamer(S);
 }
 
 extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTargetMC() {
