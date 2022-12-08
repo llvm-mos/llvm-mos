@@ -1829,6 +1829,12 @@ void tools::addMOSCodeGenArgs(llvm::opt::ArgStringList &CmdArgs) {
   // generate vregs here, then use the register scavenger.
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-disable-spill-hoist");
+
+  // Loop strength reduction gives up too easily, but loop quality is absolutely
+  // essential on the 6502. There's far less code to compile, so we can be
+  // pickier.
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back("-lsr-complexity-limit=10000000");
 }
 
 /// SDLSearch: Search for Static Device Library
