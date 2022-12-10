@@ -14,6 +14,7 @@
 #include "MCTargetDesc/MOSAsmBackend.h"
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MCTargetDesc/MOSTargetStreamer.h"
 #include "MOSMCInstLower.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
@@ -129,7 +130,7 @@ bool MOSAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   case MachineOperand::MO_Register:
     Register Reg = MO.getReg();
     if (MOS::Imag16RegClass.contains(Reg) || MOS::Imag8RegClass.contains(Reg))
-      OS << "mos8(" << TRI.getImag8SymbolName(Reg) << ")";
+      OS << TRI.getImag8SymbolName(Reg);
     else
       OS << TRI.getRegAsmName(Reg);
     break;
@@ -174,6 +175,11 @@ void MOSAsmPrinter::emitStartOfAsmFile(Module &M) {
   OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
   if (Assembler)
     Assembler->setELFHeaderEFlags(ModuleEFlags);
+
+  auto &MTS =
+      *static_cast<MOSTargetStreamer *>(OutStreamer->getTargetStreamer());
+  for (int I = 0; I < 32; I++)
+    MTS.emitDirectiveZeroPage(OutContext.getOrCreateSymbol("__rc" + Twine(I)));
 }
 
 void MOSAsmPrinter::emitJumpTableInfo() {

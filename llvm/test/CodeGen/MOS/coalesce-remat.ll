@@ -15,23 +15,23 @@ define fastcc void @_ZN9crabquest15write_nametable17h6fe548716a276623E() unnamed
 ; CHECK:       ; %bb.0: ; %start
 ; CHECK-NEXT:    lda #4
 ; CHECK-NEXT:    ldx #mos16lo(_ZN9crabquest9NAMETABLE17hd51a107367afa20aE)
-; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    ldx #mos16hi(_ZN9crabquest9NAMETABLE17hd51a107367afa20aE)
-; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    stx 8198
 ; CHECK-NEXT:    ldy #0
 ; CHECK-NEXT:    sty 8198
 ; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:    sta mos8(__rc4)
+; CHECK-NEXT:    sta __rc4
 ; CHECK-NEXT:  .LBB0_1: ; %bb6
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lda (mos8(__rc2)),y
-; CHECK-NEXT:    inc mos8(__rc2)
+; CHECK-NEXT:    lda (__rc2),y
+; CHECK-NEXT:    inc __rc2
 ; CHECK-NEXT:    bne .LBB0_3
 ; CHECK-NEXT:  ; %bb.2: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    inc mos8(__rc3)
+; CHECK-NEXT:    inc __rc3
 ; CHECK-NEXT:  .LBB0_3: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    sta 8199
@@ -41,10 +41,10 @@ define fastcc void @_ZN9crabquest15write_nametable17h6fe548716a276623E() unnamed
 ; CHECK-NEXT:    bne .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    dec mos8(__rc4)
+; CHECK-NEXT:    dec __rc4
 ; CHECK-NEXT:  .LBB0_5: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    lda mos8(__rc4)
+; CHECK-NEXT:    lda __rc4
 ; CHECK-NEXT:    bne .LBB0_1
 ; CHECK-NEXT:  ; %bb.6: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1

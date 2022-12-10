@@ -42,10 +42,10 @@ define i32 @inc_i32(i32 %a) {
 ; CHECK-NEXT:    inx
 ; CHECK-NEXT:    bne .LBB2_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    inc mos8(__rc2)
+; CHECK-NEXT:    inc __rc2
 ; CHECK-NEXT:    bne .LBB2_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
-; CHECK-NEXT:    inc mos8(__rc3)
+; CHECK-NEXT:    inc __rc3
 ; CHECK-NEXT:  .LBB2_4: ; %entry
 ; CHECK-NEXT:  .LBB2_5: ; %entry
 ; CHECK-NEXT:  .LBB2_6: ; %entry
@@ -58,10 +58,10 @@ entry:
 define i8* @inc_ptr(i8* %a) {
 ; CHECK-LABEL: inc_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    inc mos8(__rc2)
+; CHECK-NEXT:    inc __rc2
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    inc mos8(__rc3)
+; CHECK-NEXT:    inc __rc3
 ; CHECK-NEXT:  .LBB3_2: ; %entry
 ; CHECK-NEXT:    rts
 entry:
@@ -130,12 +130,12 @@ define i32 @dec_i32(i32 %a) {
 ; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    ldy mos8(__rc2)
-; CHECK-NEXT:    dec mos8(__rc2)
+; CHECK-NEXT:    ldy __rc2
+; CHECK-NEXT:    dec __rc2
 ; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
-; CHECK-NEXT:    dec mos8(__rc3)
+; CHECK-NEXT:    dec __rc3
 ; CHECK-NEXT:  .LBB7_4: ; %entry
 ; CHECK-NEXT:  .LBB7_5: ; %entry
 ; CHECK-NEXT:  .LBB7_6: ; %entry
@@ -148,12 +148,12 @@ entry:
 define i8* @dec_ptr(i8* %a) {
 ; CHECK-LABEL: dec_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx mos8(__rc2)
-; CHECK-NEXT:    dec mos8(__rc2)
+; CHECK-NEXT:    ldx __rc2
+; CHECK-NEXT:    dec __rc2
 ; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bne .LBB8_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    dec mos8(__rc3)
+; CHECK-NEXT:    dec __rc3
 ; CHECK-NEXT:  .LBB8_2: ; %entry
 ; CHECK-NEXT:    rts
 entry:

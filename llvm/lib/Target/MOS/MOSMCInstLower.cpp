@@ -671,8 +671,6 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     if (MOS::Imag16RegClass.contains(Reg) || MOS::Imag8RegClass.contains(Reg)) {
       const MCExpr *Expr = MCSymbolRefExpr::create(
           Ctx.getOrCreateSymbol(TRI.getImag8SymbolName(Reg)), Ctx);
-      Expr = MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, Expr,
-                               /*isNegated=*/false, Ctx);
       MCOp = MCOperand::createExpr(Expr);
     } else
       MCOp = MCOperand::createReg(MO.getReg());

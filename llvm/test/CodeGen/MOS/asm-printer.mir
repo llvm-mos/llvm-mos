@@ -115,7 +115,7 @@ name: asl_zeropage
 body: |
   bb.0.entry:
     $rc0, $c = ASL $rc0
-    ; CHECK: asl mos8(__rc0)
+    ; CHECK: asl __rc0
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -199,7 +199,7 @@ name: cmp_zeropage
 body: |
   bb.0.entry:
     $c = CMPImag8 $a, $rc0
-    ; CHECK: cmp mos8(__rc0)
+    ; CHECK: cmp __rc0
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -209,7 +209,7 @@ name: cpx_zeropage
 body: |
   bb.0.entry:
     $c = CMPImag8 $x, $rc0
-    ; CHECK: cpx mos8(__rc0)
+    ; CHECK: cpx __rc0
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -219,7 +219,7 @@ name: cpy_zeropage
 body: |
   bb.0.entry:
     $c = CMPImag8 $y, $rc0
-    ; CHECK: cpy mos8(__rc0)
+    ; CHECK: cpy __rc0
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -439,7 +439,7 @@ name: sta_zeropage
 body: |
   bb.0.entry:
     $rc0 = STImag8 $a
-    ; CHECK: sta mos8(__rc0)
+    ; CHECK: sta __rc0
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -449,7 +449,7 @@ name: sty_zeropage
 body: |
   bb.0.entry:
     $rc0 = STImag8 $y
-    ; CHECK: sty mos8(__rc0)
+    ; CHECK: sty __rc0
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -479,7 +479,7 @@ name: stz_zeropage
 body: |
   bb.0.entry:
     $rc0 = STZImag8
-    ; CHECK: stz mos8(__rc0)
+    ; CHECK: stz __rc0
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -529,7 +529,7 @@ name: memory_operand
 body: |
   bb.0.entry:
     INLINEASM &"sta ($0),y", 17 /* sideeffect maystore attdialect */, 196622 /* mem:m */, $rs2
-    ; CHECK: sta (mos8(__rc4)),y
+    ; CHECK: sta (__rc4),y
     RTS
     ; CHECK: rts
 ...

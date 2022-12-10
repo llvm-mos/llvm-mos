@@ -8,11 +8,11 @@ target triple = "mos"
 define dso_local void @test_callee_saved_regs() local_unnamed_addr #0 {
 ; CHECK-LABEL: test_callee_saved_regs:
 ; CHECK-LABEL: %bb.0: ; %entry
-; CHECK-NOT:		lda	mos8(__rc20)
+; CHECK-NOT:		lda	__rc20
 ; CHECK-NOT:		pha
-; CHECK-NOT:		lda mos8(__rc21)
+; CHECK-NOT:		lda __rc21
 ; CHECK-NOT:		pha
-; CHECK-NOT:		lda mos8(__rc22)
+; CHECK-NOT:		lda __rc22
 ; CHECK-NOT:		pha
 ; CHECK-NEXT: ldy	#0
 ; CHECK-NEXT: tya
@@ -20,16 +20,16 @@ entry:
   br label %for.cond
 
 ; CHECK-LABEL: .LBB0_1:
-; CHECK:	      sta	mos8(__rc22)
+; CHECK:	      sta	__rc22
 ; CHECK-NEXT:	  tax
-; CHECK-NEXT:	  sty	mos8(__rc21)
+; CHECK-NEXT:	  sty	__rc21
 ; CHECK-NEXT:	  tya
 ; CHECK-NEXT:	  jsr	g
-; CHECK-NEXT:	  sta	mos8(__rc20)
-; CHECK-NEXT:	  ldx	mos8(__rc22)
-; CHECK-NEXT:	  lda	mos8(__rc21)
+; CHECK-NEXT:	  sta	__rc20
+; CHECK-NEXT:	  ldx	__rc22
+; CHECK-NEXT:	  lda	__rc21
 ; CHECK-NEXT:	  jsr	g
-; CHECK-NEXT:	  ldy	mos8(__rc20)
+; CHECK-NEXT:	  ldy	__rc20
 ; CHECK-NEXT:	  jmp	.LBB0_1
 for.cond:                                         ; preds = %for.cond, %entry
   %x1.0 = phi i8 [ 0, %entry ], [ %call, %for.cond ]

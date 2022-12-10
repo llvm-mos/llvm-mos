@@ -99,20 +99,20 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:  .LBB3_3:
-; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    bmi .LBB3_5
 ; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:  .LBB3_5:
 ; CHECK-NEXT:    lda 1024
-; CHECK-NEXT:    sta mos8(__rc3)
+; CHECK-NEXT:    sta __rc3
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    ldy 1025
-; CHECK-NEXT:    sty mos8(__rc5)
-; CHECK-NEXT:    sty mos8(__rc4)
-; CHECK-NEXT:    sta mos8(__rc6)
-; CHECK-NEXT:    sbc mos8(__rc4)
+; CHECK-NEXT:    sty __rc5
+; CHECK-NEXT:    sty __rc4
+; CHECK-NEXT:    sta __rc6
+; CHECK-NEXT:    sbc __rc4
 ; CHECK-NEXT:    bvc .LBB3_7
 ; CHECK-NEXT:  ; %bb.6:
 ; CHECK-NEXT:    eor #128
@@ -123,17 +123,17 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:    ldx #1
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    tya
-; CHECK-NEXT:    sbc mos8(__rc3)
+; CHECK-NEXT:    sbc __rc3
 ; CHECK-NEXT:    tay
-; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    jmp .LBB3_10
 ; CHECK-NEXT:  .LBB3_9:
 ; CHECK-NEXT:    ldy #255
 ; CHECK-NEXT:    sec
-; CHECK-NEXT:    lda mos8(__rc6)
-; CHECK-NEXT:    sbc mos8(__rc5)
-; CHECK-NEXT:    sty mos8(__rc3)
-; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    lda __rc6
+; CHECK-NEXT:    sbc __rc5
+; CHECK-NEXT:    sty __rc3
+; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    tay
 ; CHECK-NEXT:  .LBB3_10:
 ; CHECK-NEXT:    ldx #0
@@ -155,10 +155,10 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:  .LBB3_14:
 ; CHECK-NEXT:    lda .Lrepro_sstk ; 1-byte Folded Reload
 ; CHECK-NEXT:    clc
-; CHECK-NEXT:    adc mos8(__rc3)
+; CHECK-NEXT:    adc __rc3
 ; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
 ; CHECK-NEXT:    lda .Lrepro_sstk+1 ; 1-byte Folded Reload
-; CHECK-NEXT:    adc mos8(__rc2)
+; CHECK-NEXT:    adc __rc2
 ; CHECK-NEXT:    sta .Lrepro_sstk+1 ; 1-byte Folded Spill
 ; CHECK-NEXT:    tya
 ; CHECK-NEXT:    bmi .LBB3_13
@@ -166,11 +166,11 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:  .LBB3_16:
 ; CHECK-NEXT:    ldx .Lrepro_sstk ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc4)
-; CHECK-NEXT:    cpy mos8(__rc4)
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    cpy __rc4
 ; CHECK-NEXT:    ldx .Lrepro_sstk+1 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc4)
-; CHECK-NEXT:    sbc mos8(__rc4)
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    sbc __rc4
 ; CHECK-NEXT:    bvc .LBB3_11
 ; CHECK-NEXT:  ; %bb.17:
 ; CHECK-NEXT:    eor #128

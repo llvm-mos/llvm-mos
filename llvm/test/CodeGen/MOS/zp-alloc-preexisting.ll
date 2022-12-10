@@ -15,33 +15,33 @@ define i64 @foo(i64 %live_across_call) norecurse {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta .Lfoo_sstk ; 1-byte Folded Spill
 ; CHECK-NEXT:    stx .Lfoo_sstk+1 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    ldx __rc2
 ; CHECK-NEXT:    stx .Lfoo_sstk+2 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc3)
+; CHECK-NEXT:    ldx __rc3
 ; CHECK-NEXT:    stx .Lfoo_sstk+3 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc4)
+; CHECK-NEXT:    ldx __rc4
 ; CHECK-NEXT:    stx .Lfoo_sstk+4 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc5)
+; CHECK-NEXT:    ldx __rc5
 ; CHECK-NEXT:    stx .Lfoo_sstk+5 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc6)
+; CHECK-NEXT:    ldx __rc6
 ; CHECK-NEXT:    stx .Lfoo_sstk+6 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc7)
+; CHECK-NEXT:    ldx __rc7
 ; CHECK-NEXT:    stx .Lfoo_sstk+7 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx global_noinit
 ; CHECK-NEXT:    jsr bar
 ; CHECK-NEXT:    ldx .Lfoo_sstk+2 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    ldx .Lfoo_sstk+3 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx .Lfoo_sstk+4 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc4)
+; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx .Lfoo_sstk+5 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc5)
+; CHECK-NEXT:    stx __rc5
 ; CHECK-NEXT:    ldx .Lfoo_sstk+6 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc6)
+; CHECK-NEXT:    stx __rc6
 ; CHECK-NEXT:    ldx .Lfoo_sstk+7 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc7)
+; CHECK-NEXT:    stx __rc7
 ; CHECK-NEXT:    ldx .Lfoo_sstk+1 ; 1-byte Folded Reload
 ; CHECK-NEXT:    lda .Lfoo_sstk ; 1-byte Folded Reload
 ; CHECK-NEXT:    rts

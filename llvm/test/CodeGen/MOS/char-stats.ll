@@ -10,35 +10,35 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-LABEL: char_stats:
 ; NMOS:       ; %bb.0: ; %entry
 ; NMOS-NEXT:    clc
-; NMOS-NEXT:    lda mos8(__rc1)
+; NMOS-NEXT:    lda __rc1
 ; NMOS-NEXT:    adc #254
-; NMOS-NEXT:    sta mos8(__rc1)
-; NMOS-NEXT:    lda mos8(__rc20)
+; NMOS-NEXT:    sta __rc1
+; NMOS-NEXT:    lda __rc20
 ; NMOS-NEXT:    pha
-; NMOS-NEXT:    lda mos8(__rc21)
+; NMOS-NEXT:    lda __rc21
 ; NMOS-NEXT:    pha
 ; NMOS-NEXT:    clc
-; NMOS-NEXT:    ldx mos8(__rc0)
-; NMOS-NEXT:    stx mos8(__rc20)
-; NMOS-NEXT:    ldx mos8(__rc1)
-; NMOS-NEXT:    stx mos8(__rc21)
-; NMOS-NEXT:    ldx mos8(__rc20)
-; NMOS-NEXT:    stx mos8(__rc2)
-; NMOS-NEXT:    ldx mos8(__rc21)
-; NMOS-NEXT:    stx mos8(__rc3)
+; NMOS-NEXT:    ldx __rc0
+; NMOS-NEXT:    stx __rc20
+; NMOS-NEXT:    ldx __rc1
+; NMOS-NEXT:    stx __rc21
+; NMOS-NEXT:    ldx __rc20
+; NMOS-NEXT:    stx __rc2
+; NMOS-NEXT:    ldx __rc21
+; NMOS-NEXT:    stx __rc3
 ; NMOS-NEXT:    lda #0
 ; NMOS-NEXT:    ldx #2
-; NMOS-NEXT:    stx mos8(__rc4)
+; NMOS-NEXT:    stx __rc4
 ; NMOS-NEXT:    tax
 ; NMOS-NEXT:    jsr __memset
 ; NMOS-NEXT:    jmp .LBB0_2
 ; NMOS-NEXT:  .LBB0_1: ; %while.body
 ; NMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; NMOS-NEXT:    ldy #0
-; NMOS-NEXT:    sta (mos8(__rc2)),y
+; NMOS-NEXT:    sta (__rc2),y
 ; NMOS-NEXT:    txa
 ; NMOS-NEXT:    iny
-; NMOS-NEXT:    sta (mos8(__rc2)),y
+; NMOS-NEXT:    sta (__rc2),y
 ; NMOS-NEXT:  .LBB0_2: ; %while.body
 ; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NMOS-NEXT:    jsr next_char
@@ -47,26 +47,26 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:  ; %bb.3: ; %while.body
 ; NMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; NMOS-NEXT:    asl
-; NMOS-NEXT:    sta mos8(__rc2)
+; NMOS-NEXT:    sta __rc2
 ; NMOS-NEXT:    ldx #0
-; NMOS-NEXT:    stx mos8(__rc3)
+; NMOS-NEXT:    stx __rc3
 ; NMOS-NEXT:    ldy #0
-; NMOS-NEXT:    rol mos8(__rc3)
+; NMOS-NEXT:    rol __rc3
 ; NMOS-NEXT:    clc
-; NMOS-NEXT:    lda mos8(__rc0)
-; NMOS-NEXT:    ldx mos8(__rc1)
+; NMOS-NEXT:    lda __rc0
+; NMOS-NEXT:    ldx __rc1
 ; NMOS-NEXT:    clc
-; NMOS-NEXT:    adc mos8(__rc2)
-; NMOS-NEXT:    sta mos8(__rc2)
+; NMOS-NEXT:    adc __rc2
+; NMOS-NEXT:    sta __rc2
 ; NMOS-NEXT:    txa
-; NMOS-NEXT:    adc mos8(__rc3)
-; NMOS-NEXT:    sta mos8(__rc3)
-; NMOS-NEXT:    lda (mos8(__rc2)),y
-; NMOS-NEXT:    sta mos8(__rc4)
+; NMOS-NEXT:    adc __rc3
+; NMOS-NEXT:    sta __rc3
+; NMOS-NEXT:    lda (__rc2),y
+; NMOS-NEXT:    sta __rc4
 ; NMOS-NEXT:    iny
-; NMOS-NEXT:    lda (mos8(__rc2)),y
+; NMOS-NEXT:    lda (__rc2),y
 ; NMOS-NEXT:    tax
-; NMOS-NEXT:    lda mos8(__rc4)
+; NMOS-NEXT:    lda __rc4
 ; NMOS-NEXT:    clc
 ; NMOS-NEXT:    adc #1
 ; NMOS-NEXT:    bne .LBB0_1
@@ -75,51 +75,51 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    inx
 ; NMOS-NEXT:    jmp .LBB0_1
 ; NMOS-NEXT:  .LBB0_5: ; %while.end
-; NMOS-NEXT:    ldx mos8(__rc20)
-; NMOS-NEXT:    stx mos8(__rc2)
-; NMOS-NEXT:    ldx mos8(__rc21)
-; NMOS-NEXT:    stx mos8(__rc3)
+; NMOS-NEXT:    ldx __rc20
+; NMOS-NEXT:    stx __rc2
+; NMOS-NEXT:    ldx __rc21
+; NMOS-NEXT:    stx __rc3
 ; NMOS-NEXT:    jsr report_counts
 ; NMOS-NEXT:    pla
-; NMOS-NEXT:    sta mos8(__rc21)
+; NMOS-NEXT:    sta __rc21
 ; NMOS-NEXT:    pla
-; NMOS-NEXT:    sta mos8(__rc20)
+; NMOS-NEXT:    sta __rc20
 ; NMOS-NEXT:    clc
-; NMOS-NEXT:    lda mos8(__rc1)
+; NMOS-NEXT:    lda __rc1
 ; NMOS-NEXT:    adc #2
-; NMOS-NEXT:    sta mos8(__rc1)
+; NMOS-NEXT:    sta __rc1
 ; NMOS-NEXT:    rts
 ;
 ; CMOS-LABEL: char_stats:
 ; CMOS:       ; %bb.0: ; %entry
 ; CMOS-NEXT:    clc
-; CMOS-NEXT:    lda mos8(__rc1)
+; CMOS-NEXT:    lda __rc1
 ; CMOS-NEXT:    adc #254
-; CMOS-NEXT:    sta mos8(__rc1)
-; CMOS-NEXT:    ldx mos8(__rc20)
+; CMOS-NEXT:    sta __rc1
+; CMOS-NEXT:    ldx __rc20
 ; CMOS-NEXT:    phx
-; CMOS-NEXT:    ldx mos8(__rc21)
+; CMOS-NEXT:    ldx __rc21
 ; CMOS-NEXT:    phx
 ; CMOS-NEXT:    clc
-; CMOS-NEXT:    ldx mos8(__rc0)
-; CMOS-NEXT:    stx mos8(__rc20)
-; CMOS-NEXT:    sta mos8(__rc21)
-; CMOS-NEXT:    ldx mos8(__rc20)
-; CMOS-NEXT:    stx mos8(__rc2)
-; CMOS-NEXT:    sta mos8(__rc3)
+; CMOS-NEXT:    ldx __rc0
+; CMOS-NEXT:    stx __rc20
+; CMOS-NEXT:    sta __rc21
+; CMOS-NEXT:    ldx __rc20
+; CMOS-NEXT:    stx __rc2
+; CMOS-NEXT:    sta __rc3
 ; CMOS-NEXT:    lda #0
 ; CMOS-NEXT:    ldx #2
-; CMOS-NEXT:    stx mos8(__rc4)
+; CMOS-NEXT:    stx __rc4
 ; CMOS-NEXT:    tax
 ; CMOS-NEXT:    jsr __memset
 ; CMOS-NEXT:    bra .LBB0_2
 ; CMOS-NEXT:  .LBB0_1: ; %while.body
 ; CMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CMOS-NEXT:    ldy #0
-; CMOS-NEXT:    sta (mos8(__rc2)),y
+; CMOS-NEXT:    sta (__rc2),y
 ; CMOS-NEXT:    txa
 ; CMOS-NEXT:    iny
-; CMOS-NEXT:    sta (mos8(__rc2)),y
+; CMOS-NEXT:    sta (__rc2),y
 ; CMOS-NEXT:  .LBB0_2: ; %while.body
 ; CMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CMOS-NEXT:    jsr next_char
@@ -128,25 +128,25 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:  ; %bb.3: ; %while.body
 ; CMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CMOS-NEXT:    asl
-; CMOS-NEXT:    sta mos8(__rc2)
-; CMOS-NEXT:    stz mos8(__rc3)
+; CMOS-NEXT:    sta __rc2
+; CMOS-NEXT:    stz __rc3
 ; CMOS-NEXT:    ldy #0
-; CMOS-NEXT:    rol mos8(__rc3)
+; CMOS-NEXT:    rol __rc3
 ; CMOS-NEXT:    clc
-; CMOS-NEXT:    lda mos8(__rc0)
-; CMOS-NEXT:    ldx mos8(__rc1)
+; CMOS-NEXT:    lda __rc0
+; CMOS-NEXT:    ldx __rc1
 ; CMOS-NEXT:    clc
-; CMOS-NEXT:    adc mos8(__rc2)
-; CMOS-NEXT:    sta mos8(__rc2)
+; CMOS-NEXT:    adc __rc2
+; CMOS-NEXT:    sta __rc2
 ; CMOS-NEXT:    txa
-; CMOS-NEXT:    adc mos8(__rc3)
-; CMOS-NEXT:    sta mos8(__rc3)
-; CMOS-NEXT:    lda (mos8(__rc2)),y
-; CMOS-NEXT:    sta mos8(__rc4)
+; CMOS-NEXT:    adc __rc3
+; CMOS-NEXT:    sta __rc3
+; CMOS-NEXT:    lda (__rc2),y
+; CMOS-NEXT:    sta __rc4
 ; CMOS-NEXT:    iny
-; CMOS-NEXT:    lda (mos8(__rc2)),y
+; CMOS-NEXT:    lda (__rc2),y
 ; CMOS-NEXT:    tax
-; CMOS-NEXT:    lda mos8(__rc4)
+; CMOS-NEXT:    lda __rc4
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    adc #1
 ; CMOS-NEXT:    bne .LBB0_1
@@ -155,19 +155,19 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    inx
 ; CMOS-NEXT:    bra .LBB0_1
 ; CMOS-NEXT:  .LBB0_5: ; %while.end
-; CMOS-NEXT:    ldx mos8(__rc20)
-; CMOS-NEXT:    stx mos8(__rc2)
-; CMOS-NEXT:    ldx mos8(__rc21)
-; CMOS-NEXT:    stx mos8(__rc3)
+; CMOS-NEXT:    ldx __rc20
+; CMOS-NEXT:    stx __rc2
+; CMOS-NEXT:    ldx __rc21
+; CMOS-NEXT:    stx __rc3
 ; CMOS-NEXT:    jsr report_counts
 ; CMOS-NEXT:    plx
-; CMOS-NEXT:    stx mos8(__rc21)
+; CMOS-NEXT:    stx __rc21
 ; CMOS-NEXT:    plx
-; CMOS-NEXT:    stx mos8(__rc20)
+; CMOS-NEXT:    stx __rc20
 ; CMOS-NEXT:    clc
-; CMOS-NEXT:    lda mos8(__rc1)
+; CMOS-NEXT:    lda __rc1
 ; CMOS-NEXT:    adc #2
-; CMOS-NEXT:    sta mos8(__rc1)
+; CMOS-NEXT:    sta __rc1
 ; CMOS-NEXT:    rts
 entry:
   %counts = alloca [256 x i16], align 1

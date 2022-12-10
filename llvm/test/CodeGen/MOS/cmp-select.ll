@@ -5,9 +5,9 @@ define i8 @cmp_select(i8 %a, i8 %b) {
 ; CHECK-LABEL: cmp_select:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    tay
-; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    lda #1
-; CHECK-NEXT:    cpy mos8(__rc2)
+; CHECK-NEXT:    cpy __rc2
 ; CHECK-NEXT:    beq .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %select.false
 ; CHECK-NEXT:    lda #2

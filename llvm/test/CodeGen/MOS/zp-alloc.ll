@@ -12,33 +12,33 @@ define i64 @foo(i64 %live_across_call) norecurse {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta mos8(.Lfoo_zp_stk) ; 1-byte Folded Spill
 ; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+1) ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc2)
+; CHECK-NEXT:    ldx __rc2
 ; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+2) ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc3)
+; CHECK-NEXT:    ldx __rc3
 ; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+3) ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc4)
+; CHECK-NEXT:    ldx __rc4
 ; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+4) ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc5)
+; CHECK-NEXT:    ldx __rc5
 ; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+5) ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc6)
+; CHECK-NEXT:    ldx __rc6
 ; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+6) ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc7)
+; CHECK-NEXT:    ldx __rc7
 ; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+7) ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx mos8(global_noinit)
 ; CHECK-NEXT:    jsr bar
 ; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+2) ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc2)
+; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+3) ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+4) ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc4)
+; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+5) ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc5)
+; CHECK-NEXT:    stx __rc5
 ; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+6) ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc6)
+; CHECK-NEXT:    stx __rc6
 ; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+7) ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc7)
+; CHECK-NEXT:    stx __rc7
 ; CHECK-NEXT:    ldx mos8(.Lfoo_zp_stk+1) ; 1-byte Folded Reload
 ; CHECK-NEXT:    lda mos8(.Lfoo_zp_stk) ; 1-byte Folded Reload
 ; CHECK-NEXT:    rts
@@ -111,8 +111,8 @@ define void @alloca() norecurse {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx #mos8(.Lalloca_zp_stk)
 ; CHECK-NEXT:    ldy #mos8(0)
-; CHECK-NEXT:    stx mos8(__rc2)
-; CHECK-NEXT:    sty mos8(__rc3)
+; CHECK-NEXT:    stx __rc2
+; CHECK-NEXT:    sty __rc3
 ; CHECK-NEXT:    jmp ext_ptr
 entry:
   %0 = alloca i8
@@ -140,50 +140,50 @@ define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-NEXT:    cld
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    clc
-; CHECK-NEXT:    lda mos8(__rc1)
+; CHECK-NEXT:    lda __rc1
 ; CHECK-NEXT:    adc #255
-; CHECK-NEXT:    sta mos8(__rc1)
+; CHECK-NEXT:    sta __rc1
 ; CHECK-NEXT:    pla
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    tya
 ; CHECK-NEXT:    pha
-; CHECK-NEXT:    lda mos8(__rc2)
+; CHECK-NEXT:    lda __rc2
 ; CHECK-NEXT:    pha
-; CHECK-NEXT:    ldx mos8(__rc3)
+; CHECK-NEXT:    ldx __rc3
 ; CHECK-NEXT:    stx .Linr_sstk ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc4)
+; CHECK-NEXT:    ldx __rc4
 ; CHECK-NEXT:    stx .Linr_sstk+1 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc5)
+; CHECK-NEXT:    ldx __rc5
 ; CHECK-NEXT:    stx .Linr_sstk+2 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc6)
+; CHECK-NEXT:    ldx __rc6
 ; CHECK-NEXT:    stx .Linr_sstk+3 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc7)
+; CHECK-NEXT:    ldx __rc7
 ; CHECK-NEXT:    stx .Linr_sstk+4 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc8)
+; CHECK-NEXT:    ldx __rc8
 ; CHECK-NEXT:    stx .Linr_sstk+5 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc9)
+; CHECK-NEXT:    ldx __rc9
 ; CHECK-NEXT:    stx .Linr_sstk+6 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc10)
+; CHECK-NEXT:    ldx __rc10
 ; CHECK-NEXT:    stx .Linr_sstk+7 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc11)
+; CHECK-NEXT:    ldx __rc11
 ; CHECK-NEXT:    stx .Linr_sstk+8 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc12)
+; CHECK-NEXT:    ldx __rc12
 ; CHECK-NEXT:    stx .Linr_sstk+9 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc13)
+; CHECK-NEXT:    ldx __rc13
 ; CHECK-NEXT:    stx .Linr_sstk+10 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc14)
+; CHECK-NEXT:    ldx __rc14
 ; CHECK-NEXT:    stx .Linr_sstk+11 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc15)
+; CHECK-NEXT:    ldx __rc15
 ; CHECK-NEXT:    stx .Linr_sstk+12 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc16)
+; CHECK-NEXT:    ldx __rc16
 ; CHECK-NEXT:    stx .Linr_sstk+13 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc17)
+; CHECK-NEXT:    ldx __rc17
 ; CHECK-NEXT:    stx .Linr_sstk+14 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc18)
+; CHECK-NEXT:    ldx __rc18
 ; CHECK-NEXT:    stx .Linr_sstk+15 ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx mos8(__rc19)
+; CHECK-NEXT:    ldx __rc19
 ; CHECK-NEXT:    stx .Linr_sstk+16 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx mos8(.Linr_zp_stk) ; 1-byte Folded Spill
@@ -191,41 +191,41 @@ define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-NEXT:    ldx mos8(.Linr_zp_stk) ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx mos8(vol)
 ; CHECK-NEXT:    ldx .Linr_sstk+16 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc19)
+; CHECK-NEXT:    stx __rc19
 ; CHECK-NEXT:    ldx .Linr_sstk+15 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc18)
+; CHECK-NEXT:    stx __rc18
 ; CHECK-NEXT:    ldx .Linr_sstk+14 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc17)
+; CHECK-NEXT:    stx __rc17
 ; CHECK-NEXT:    ldx .Linr_sstk+13 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc16)
+; CHECK-NEXT:    stx __rc16
 ; CHECK-NEXT:    ldx .Linr_sstk+12 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc15)
+; CHECK-NEXT:    stx __rc15
 ; CHECK-NEXT:    ldx .Linr_sstk+11 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc14)
+; CHECK-NEXT:    stx __rc14
 ; CHECK-NEXT:    ldx .Linr_sstk+10 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc13)
+; CHECK-NEXT:    stx __rc13
 ; CHECK-NEXT:    ldx .Linr_sstk+9 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc12)
+; CHECK-NEXT:    stx __rc12
 ; CHECK-NEXT:    ldx .Linr_sstk+8 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc11)
+; CHECK-NEXT:    stx __rc11
 ; CHECK-NEXT:    ldx .Linr_sstk+7 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc10)
+; CHECK-NEXT:    stx __rc10
 ; CHECK-NEXT:    ldx .Linr_sstk+6 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc9)
+; CHECK-NEXT:    stx __rc9
 ; CHECK-NEXT:    ldx .Linr_sstk+5 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc8)
+; CHECK-NEXT:    stx __rc8
 ; CHECK-NEXT:    ldx .Linr_sstk+4 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc7)
+; CHECK-NEXT:    stx __rc7
 ; CHECK-NEXT:    ldx .Linr_sstk+3 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc6)
+; CHECK-NEXT:    stx __rc6
 ; CHECK-NEXT:    ldx .Linr_sstk+2 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc5)
+; CHECK-NEXT:    stx __rc5
 ; CHECK-NEXT:    ldx .Linr_sstk+1 ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc4)
+; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx .Linr_sstk ; 1-byte Folded Reload
-; CHECK-NEXT:    stx mos8(__rc3)
+; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    pla
-; CHECK-NEXT:    sta mos8(__rc2)
+; CHECK-NEXT:    sta __rc2
 ; CHECK-NEXT:    pla
 ; CHECK-NEXT:    tay
 ; CHECK-NEXT:    pla
@@ -233,9 +233,9 @@ define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-NEXT:    pla
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    clc
-; CHECK-NEXT:    lda mos8(__rc1)
+; CHECK-NEXT:    lda __rc1
 ; CHECK-NEXT:    adc #1
-; CHECK-NEXT:    sta mos8(__rc1)
+; CHECK-NEXT:    sta __rc1
 ; CHECK-NEXT:    pla
 ; CHECK-NEXT:    rti
 entry:

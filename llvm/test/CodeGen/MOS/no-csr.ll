@@ -22,17 +22,17 @@ define i8 @norecurse(i8 %a) optsize norecurse {
 define i8 @mayrecurse(i8 %a) optsize {
 ; CHECK-LABEL: mayrecurse:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sta mos8(__rc16)
-; CHECK-NEXT:    lda mos8(__rc20)
+; CHECK-NEXT:    sta __rc16
+; CHECK-NEXT:    lda __rc20
 ; CHECK-NEXT:    pha
-; CHECK-NEXT:    lda mos8(__rc16)
-; CHECK-NEXT:    sta mos8(__rc20)
+; CHECK-NEXT:    lda __rc16
+; CHECK-NEXT:    sta __rc20
 ; CHECK-NEXT:    jsr foo
-; CHECK-NEXT:    lda mos8(__rc20)
-; CHECK-NEXT:    sta mos8(__rc16)
+; CHECK-NEXT:    lda __rc20
+; CHECK-NEXT:    sta __rc16
 ; CHECK-NEXT:    pla
-; CHECK-NEXT:    sta mos8(__rc20)
-; CHECK-NEXT:    lda mos8(__rc16)
+; CHECK-NEXT:    sta __rc20
+; CHECK-NEXT:    lda __rc16
 ; CHECK-NEXT:    rts
   call void @foo()
   ret i8 %a
