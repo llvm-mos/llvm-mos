@@ -225,8 +225,12 @@ let Predicates = [Has65C02] in {
 /// INCA DECA PHY PLY PHX PLX
 /// 1A   3A   5A  7A  DA  FA
 
-def INC_Implied: InstLowA<"inc", 0b0001>; /// Increase accumulator
-def DEC_Implied: InstLowA<"dec", 0b0011>; /// Decrease accumulator
+def INC_Accumulator: InstLowA<"inc", 0b0001>;
+def DEC_Accumulator: InstLowA<"dec", 0b0011>;
+def : InstAlias<"inc a", (INC_Accumulator)>;
+def : InstAlias<"dec a", (DEC_Accumulator)>;
+// TODO: def : InstAlias<"ina", (INC_Accumulator)>;
+// TODO: def : InstAlias<"dea", (DEC_Accumulator)>;
 def PHY_Implied: InstLowA<"phy", 0b0101>; /// Push Y
 def PLY_Implied: InstLowA<"ply", 0b0111>; /// Pull Y
 def PHX_Implied: InstLowA<"phx", 0b1101>; /// Push X
