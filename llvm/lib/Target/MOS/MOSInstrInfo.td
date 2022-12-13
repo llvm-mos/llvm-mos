@@ -229,8 +229,8 @@ def INC_Accumulator: InstLowA<"inc", 0b0001>;
 def DEC_Accumulator: InstLowA<"dec", 0b0011>;
 def : InstAlias<"inc a", (INC_Accumulator)>;
 def : InstAlias<"dec a", (DEC_Accumulator)>;
-// TODO: def : InstAlias<"ina", (INC_Accumulator)>;
-// TODO: def : InstAlias<"dea", (DEC_Accumulator)>;
+def : InstAlias<"ina", (INC_Accumulator), 0>;
+def : InstAlias<"dea", (DEC_Accumulator), 0>;
 def PHY_Implied: InstLowA<"phy", 0b0101>; /// Push Y
 def PLY_Implied: InstLowA<"ply", 0b0111>; /// Pull Y
 def PHX_Implied: InstLowA<"phx", 0b1101>; /// Push X
