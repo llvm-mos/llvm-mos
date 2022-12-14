@@ -596,9 +596,33 @@ public:
     return MatchOperand_NoMatch;
   }
 
-  // This depends on some stuff in MOSGenAsmMatcher.inc, so we can't define it
-  // inline like everything else in this file.  See below.
-  OperandMatchResultTy tryParseAsmParamRegClass(OperandVector &Operands);
+  // Parse only registers that can be considered parameters to real MOS
+  // instructions.  The instruction parser considers a, x, y, z, and sp to be
+  // strings, not registers, so make a point of filtering those cases out
+  // of what's acceptable.
+  OperandMatchResultTy tryParseAsmParamRegClass(OperandVector &Operands) {
+    SMLoc S = getLexer().getLoc();
+
+    const char *LowerStr = StringSwitch<const char *>(getLexer().getTok().getString())
+      .CaseLower("a", "a")
+      .CaseLower("x", "x")
+      .CaseLower("y", "y")
+      .CaseLower("z", "z")
+      .CaseLower("sp", "sp")
+      .Default(nullptr);
+    if (LowerStr != nullptr) {
+      Operands.push_back(MOSOperand::createToken(LowerStr, S));
+      return MatchOperand_Success;
+    }
+
+    unsigned RegNo = 0;
+    SMLoc E = getLexer().getTok().getEndLoc();
+    if (tryParseRegister(RegNo, S, E) == MatchOperand_Success) {
+      Operands.push_back(MOSOperand::createReg(RegNo, S, E));
+      return MatchOperand_Success;
+    }
+    return MatchOperand_NoMatch;
+  }
 
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Mnemonic,
                         SMLoc NameLoc, OperandVector &Operands) override {
@@ -688,35 +712,6 @@ public:
 
 #define GET_MATCHER_IMPLEMENTATION
 #include "MOSGenAsmMatcher.inc"
-
-// Parse only registers that can be considered parameters to real MOS
-// instructions.  The instruction parser considers a, x, y, z, and sp to be
-// strings, not registers, so make a point of filtering those cases out
-// of what's acceptable.
-OperandMatchResultTy
-MOSAsmParser::tryParseAsmParamRegClass(OperandVector &Operands) {
-  SMLoc S = getLexer().getLoc();
-
-  const char *LowerStr = StringSwitch<const char *>(getLexer().getTok().getString())
-    .CaseLower("a", "a")
-    .CaseLower("x", "x")
-    .CaseLower("y", "y")
-    .CaseLower("z", "z")
-    .CaseLower("sp", "sp")
-    .Default(nullptr);
-  if (LowerStr != nullptr) {
-    Operands.push_back(MOSOperand::createToken(LowerStr, S));
-    return MatchOperand_Success;
-  }
-
-  unsigned RegNo = 0;
-  SMLoc E = getLexer().getTok().getEndLoc();
-  if (tryParseRegister(RegNo, S, E) == MatchOperand_Success) {
-    Operands.push_back(MOSOperand::createReg(RegNo, S, E));
-    return MatchOperand_Success;
-  }
-  return MatchOperand_NoMatch;
-}
 
 extern "C" void LLVM_EXTERNAL_VISIBILITY
 LLVMInitializeMOSAsmParser() { // NOLINT
