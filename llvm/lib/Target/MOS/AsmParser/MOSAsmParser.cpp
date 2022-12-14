@@ -659,19 +659,6 @@ public:
         continue;
       }
 
-      StringRef TokName;
-      SMLoc TokLoc;
-      TokName = getLexer().getTok().getString();
-      TokLoc = getLexer().getTok().getLoc();
-
-      // We'll only ever see this on rol a or asl a commands, so handle it
-      // as a special case
-      if (FirstTime && (TokName == "a" || TokName == "A")) {
-        eatThatToken(Operands);
-        FirstTime = false;
-        continue;
-      }
-
       // We'll only ever see a register name on the third or later parameter.
       if (tryParseAsmParamRegClass(Operands) == MatchOperand_Success) {
         Parser.Lex();
@@ -703,20 +690,28 @@ public:
 #include "MOSGenAsmMatcher.inc"
 
 // Parse only registers that can be considered parameters to real MOS
-// instructions.  The instruction parser considers x, y, and s to be
+// instructions.  The instruction parser considers a, x, y, z, and sp to be
 // strings, not registers, so make a point of filtering those cases out
 // of what's acceptable.
 OperandMatchResultTy
 MOSAsmParser::tryParseAsmParamRegClass(OperandVector &Operands) {
-  unsigned RegNo = 0;
   SMLoc S = getLexer().getLoc();
+
+  const char *LowerStr = StringSwitch<const char *>(getLexer().getTok().getString())
+    .CaseLower("a", "a")
+    .CaseLower("x", "x")
+    .CaseLower("y", "y")
+    .CaseLower("z", "z")
+    .CaseLower("sp", "sp")
+    .Default(nullptr);
+  if (LowerStr != nullptr) {
+    Operands.push_back(MOSOperand::createToken(LowerStr, S));
+    return MatchOperand_Success;
+  }
+
+  unsigned RegNo = 0;
   SMLoc E = getLexer().getTok().getEndLoc();
   if (tryParseRegister(RegNo, S, E) == MatchOperand_Success) {
-    auto AsmParamReg = MOSOperand::createReg(RegNo, S, E);
-    // If it's x, y, or s, then drop it
-    if (validateOperandClass(*AsmParamReg, MCK_MOSAsmParamRegClass) ==
-        MCTargetAsmParser::Match_Success)
-      return MatchOperand_NoMatch;
     Operands.push_back(MOSOperand::createReg(RegNo, S, E));
     return MatchOperand_Success;
   }
