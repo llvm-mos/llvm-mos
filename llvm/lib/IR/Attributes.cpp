@@ -26,10 +26,10 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/ModRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -209,6 +209,11 @@ Attribute Attribute::getWithInAllocaType(LLVMContext &Context, Type *Ty) {
 Attribute Attribute::getWithUWTableKind(LLVMContext &Context,
                                         UWTableKind Kind) {
   return get(Context, UWTable, uint64_t(Kind));
+}
+
+Attribute Attribute::getWithMemoryEffects(LLVMContext &Context,
+                                          MemoryEffects ME) {
+  return get(Context, Memory, ME.toIntValue());
 }
 
 Attribute
@@ -831,6 +836,10 @@ AllocFnKind AttributeSet::getAllocKind() const {
   return SetNode ? SetNode->getAllocKind() : AllocFnKind::Unknown;
 }
 
+MemoryEffects AttributeSet::getMemoryEffects() const {
+  return SetNode ? SetNode->getMemoryEffects() : MemoryEffects::unknown();
+}
+
 std::string AttributeSet::getAsString(bool InAttrGrp) const {
   return SetNode ? SetNode->getAsString(InAttrGrp) : "";
 }
@@ -1007,6 +1016,12 @@ AllocFnKind AttributeSetNode::getAllocKind() const {
   if (auto A = findEnumAttribute(Attribute::AllocKind))
     return A->getAllocKind();
   return AllocFnKind::Unknown;
+}
+
+MemoryEffects AttributeSetNode::getMemoryEffects() const {
+  if (auto A = findEnumAttribute(Attribute::Memory))
+    return A->getMemoryEffects();
+  return MemoryEffects::unknown();
 }
 
 std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
@@ -1559,6 +1574,10 @@ UWTableKind AttributeList::getUWTableKind() const {
 
 AllocFnKind AttributeList::getAllocKind() const {
   return getFnAttrs().getAllocKind();
+}
+
+MemoryEffects AttributeList::getMemoryEffects() const {
+  return getFnAttrs().getMemoryEffects();
 }
 
 std::string AttributeList::getAsString(unsigned Index, bool InAttrGrp) const {

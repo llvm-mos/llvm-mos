@@ -74,6 +74,8 @@ def FdSet : NamedType<"fd_set">;
 def FdSetPtr : PtrType<FdSet>;
 def RestrictedFdSetPtr : RestrictedPtrType<FdSet>;
 
+def GetoptArgvT : NamedType<"__getoptargv_t">;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -348,6 +350,7 @@ def POSIX : StandardSpec<"POSIX"> {
       SizeTType,
       PidT,
       UidT,
+      GetoptArgvT,
     ],
     [], // Enumerations
     [
@@ -581,9 +584,30 @@ def POSIX : StandardSpec<"POSIX"> {
           RetValSpec<SSizeTType>,
           [ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>]
         >,
+        FunctionSpec<
+          "getopt",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<GetoptArgvT>, ArgSpec<ConstCharPtr>]
+        >,
     ],
     [
         ObjectSpec<"environ", "char **">,
+        ObjectSpec<
+          "optarg",
+          "char *"
+        >,
+        ObjectSpec<
+          "optind",
+          "int"
+        >,
+        ObjectSpec<
+          "opterr",
+          "int"
+        >,
+        ObjectSpec<
+          "optopt",
+          "int"
+        >,
     ]
   >;
 
@@ -699,7 +723,20 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysStat = HeaderSpec<
     "sys/stat.h",
     [], // Macros
-    [ModeTType, DevT, InoT, UidT, GidT, StructTimeSpec, BlkSizeT, BlkCntT, OffTType, NLinkT, StatType], // Types
+    [
+        ModeTType,
+        DevT,
+        InoT,
+        UidT,
+        GidT,
+        StructTimeSpec,
+        StructTimevalType,
+        BlkSizeT,
+        BlkCntT,
+        OffTType,
+        NLinkT,
+        StatType,
+    ], // Types
     [], // Enumerations
     [
         FunctionSpec<
@@ -987,6 +1024,11 @@ def POSIX : StandardSpec<"POSIX"> {
               RetValSpec<VoidType>,
               [ArgSpec<FILEPtr>]
           >,
+          FunctionSpec<
+              "getc_unlocked",
+              RetValSpec<IntType>,
+              [ArgSpec<FILEPtr>]
+          >,
       ]
   >;
 
@@ -1032,21 +1074,23 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec Time = HeaderSpec<
       "time.h",
       [], // Macros
-      [ClockIdT, StructTimeSpec], // Types
+      [ClockIdT, StructTimeSpec, StructTimevalType], // Types
       [], // Enumerations
       [
           FunctionSpec<
-              "nanosleep",
-              RetValSpec<IntType>,
-              [
-	      	      ArgSpec<StructTimeSpecPtr>,
-	      	      ArgSpec<StructTimeSpecPtr>,
-	            ]
-          >,
-          FunctionSpec<
               "clock_gettime",
               RetValSpec<IntType>,
-              [ArgSpec<ClockIdT>,ArgSpec<StructTimeSpecPtr>]
+              [ArgSpec<ClockIdT>, ArgSpec<StructTimeSpecPtr>]
+          >,
+          FunctionSpec<
+              "gettimeofday",
+              RetValSpec<IntType>,
+              [ArgSpec<StructTimevalPtr>, ArgSpec<VoidPtr>]
+          >,
+          FunctionSpec<
+              "nanosleep",
+              RetValSpec<IntType>,
+              [ArgSpec<StructTimeSpecPtr>, ArgSpec<StructTimeSpecPtr>]
           >,
       ]
   >;

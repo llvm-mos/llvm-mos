@@ -199,8 +199,7 @@ static void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
 }
 
 template <typename T> static constexpr bool is_uint64_t_convertible() {
-  return !std::is_same<T, uint64_t>::value &&
-         llvm::is_integral_or_enum<T>::value;
+  return !std::is_same_v<T, uint64_t> && llvm::is_integral_or_enum<T>::value;
 }
 
 template <typename T,
@@ -1715,7 +1714,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     StringRef Value = A->getValue();
     if (Value != "simple" && Value != "mangled")
       Diags.Report(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << A->getValue();
+          << A->getSpelling() << A->getValue();
     Opts.setDebugSimpleTemplateNames(
         StringRef(A->getValue()) == "simple"
             ? codegenoptions::DebugTemplateNamesKind::Simple
@@ -2476,7 +2475,6 @@ static const auto &getFrontendActionTable() {
 
       {frontend::GenerateModule, OPT_emit_module},
       {frontend::GenerateModuleInterface, OPT_emit_module_interface},
-      {frontend::GenerateHeaderModule, OPT_emit_header_module},
       {frontend::GenerateHeaderUnit, OPT_emit_header_unit},
       {frontend::GeneratePCH, OPT_emit_pch},
       {frontend::GenerateInterfaceStubs, OPT_emit_interface_stubs},
@@ -3806,7 +3804,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     else
       Opts.LongDoubleSize = 0;
   }
-  if (Opts.FastRelaxedMath)
+  if (Opts.FastRelaxedMath || Opts.CLUnsafeMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
 
   llvm::sort(Opts.ModuleFeatures);
@@ -4135,7 +4133,6 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::FixIt:
   case frontend::GenerateModule:
   case frontend::GenerateModuleInterface:
-  case frontend::GenerateHeaderModule:
   case frontend::GenerateHeaderUnit:
   case frontend::GeneratePCH:
   case frontend::GenerateInterfaceStubs:
@@ -4551,8 +4548,10 @@ bool CompilerInvocation::CreateFromArgsImpl(
   }
 
   // Store the command-line for using in the CodeView backend.
-  Res.getCodeGenOpts().Argv0 = Argv0;
-  append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
+  if (Res.getCodeGenOpts().CodeViewCommandLine) {
+    Res.getCodeGenOpts().Argv0 = Argv0;
+    append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
+  }
 
   FixupInvocation(Res, Diags, Args, DashX);
 

@@ -1,5 +1,5 @@
 set(TARGET_PUBLIC_HEADERS
-    libc.include.assert_h
+    libc.include.assert
     libc.include.ctype
     libc.include.dirent
     libc.include.errno
@@ -11,6 +11,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sched
     libc.include.signal
     libc.include.spawn
+    libc.include.setjmp
     libc.include.stdio
     libc.include.stdlib
     libc.include.string

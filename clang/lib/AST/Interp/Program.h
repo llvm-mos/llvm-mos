@@ -42,17 +42,18 @@ public:
   Program(Context &Ctx) : Ctx(Ctx) {}
 
   ~Program() {
-    // Records might actually allocate memory themselves, but they
-    // are allocated using a BumpPtrAllocator. Call their desctructors
-    // here manually so they are properly freeing their resources.
-    for (auto RecordPair : Records)
-      RecordPair.second->~Record();
-
     // Manually destroy all the blocks. They are almost all harmless,
     // but primitive arrays might have an InitMap* heap allocated and
     // that needs to be freed.
-    for (Global *G : Globals) {
+    for (Global *G : Globals)
       G->block()->invokeDtor();
+
+    // Records might actually allocate memory themselves, but they
+    // are allocated using a BumpPtrAllocator. Call their desctructors
+    // here manually so they are properly freeing their resources.
+    for (auto RecordPair : Records) {
+      if (Record *R = RecordPair.second)
+        R->~Record();
     }
   }
 

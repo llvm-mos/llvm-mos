@@ -710,7 +710,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// not have been loaded, so that value would be unknown.
   SourceLocation::UIntTy CurrentLoadedOffset;
 
-  /// The highest possible offset is 2^32-1 (2^63-1 for 64-bit source
+  /// The highest possible offset is 2^31-1 (2^63-1 for 64-bit source
   /// locations), so CurrentLoadedOffset starts at 2^31 (2^63 resp.).
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
@@ -1114,13 +1114,7 @@ public:
   /// the entry in SLocEntryTable which contains the specified location.
   ///
   FileID getFileID(SourceLocation SpellingLoc) const {
-    SourceLocation::UIntTy SLocOffset = SpellingLoc.getOffset();
-
-    // If our one-entry cache covers this offset, just return it.
-    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
-      return LastFileIDLookup;
-
-    return getFileIDSlow(SLocOffset);
+    return getFileID(SpellingLoc.getOffset());
   }
 
   /// Return the filename of the file containing a SourceLocation.
@@ -1697,6 +1691,10 @@ public:
 
   void dump() const;
 
+  // Produce notes describing the current source location address space usage.
+  void noteSLocAddressSpaceUsage(DiagnosticsEngine &Diag,
+                                 Optional<unsigned> MaxNotes = 32) const;
+
   /// Get the number of local SLocEntries we have.
   unsigned local_sloc_entry_size() const { return LocalSLocEntryTable.size(); }
 
@@ -1747,12 +1745,12 @@ public:
 
   /// Returns true if \p Loc came from a PCH/Module.
   bool isLoadedSourceLocation(SourceLocation Loc) const {
-    return Loc.getOffset() >= CurrentLoadedOffset;
+    return isLoadedOffset(Loc.getOffset());
   }
 
   /// Returns true if \p Loc did not come from a PCH/Module.
   bool isLocalSourceLocation(SourceLocation Loc) const {
-    return Loc.getOffset() < NextLocalOffset;
+    return isLocalOffset(Loc.getOffset());
   }
 
   /// Returns true if \p FID came from a PCH/Module.
@@ -1820,6 +1818,22 @@ private:
   const SrcMgr::SLocEntry &
   getLoadedSLocEntryByID(int ID, bool *Invalid = nullptr) const {
     return getLoadedSLocEntry(static_cast<unsigned>(-ID - 2), Invalid);
+  }
+
+  FileID getFileID(SourceLocation::UIntTy SLocOffset) const {
+    // If our one-entry cache covers this offset, just return it.
+    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
+      return LastFileIDLookup;
+
+    return getFileIDSlow(SLocOffset);
+  }
+
+  bool isLocalOffset(SourceLocation::UIntTy SLocOffset) const {
+    return SLocOffset < CurrentLoadedOffset;
+  }
+
+  bool isLoadedOffset(SourceLocation::UIntTy SLocOffset) const {
+    return SLocOffset >= CurrentLoadedOffset;
   }
 
   /// Implements the common elements of storing an expansion info struct into

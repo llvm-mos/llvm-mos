@@ -37,7 +37,6 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_HAS_NO_WIDE_CHARACTERS=",
       "_LIBCPP_ABI_DEFINES=",
       "_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=",
-      "_LIBCPP_ENABLE_DEBUG_MODE=",
     ]
     if (libcxx_abi_version != 1) {
       values += [ "_LIBCPP_ABI_VERSION=$libcxx_abi_version" ]
@@ -48,6 +47,11 @@ if (current_toolchain == default_toolchain) {
       values += [ "_LIBCPP_ABI_NAMESPACE=$libcxx_abi_namespace" ]
     } else {
       values += [ "_LIBCPP_ABI_NAMESPACE=__" + libcxx_abi_version ]
+    }
+    if (libcxx_enable_debug_mode) {
+      values += [ "_LIBCPP_ENABLE_DEBUG_MODE=1" ]
+    } else {
+      values += [ "_LIBCPP_ENABLE_DEBUG_MODE=" ]
     }
   }
 
@@ -411,8 +415,10 @@ if (current_toolchain == default_toolchain) {
       "__fwd/array.h",
       "__fwd/get.h",
       "__fwd/hash.h",
+      "__fwd/memory_resource.h",
       "__fwd/pair.h",
       "__fwd/span.h",
+      "__fwd/string.h",
       "__fwd/string_view.h",
       "__fwd/tuple.h",
       "__hash_table",
@@ -463,6 +469,7 @@ if (current_toolchain == default_toolchain) {
       "__memory/allocation_guard.h",
       "__memory/allocator.h",
       "__memory/allocator_arg_t.h",
+      "__memory/allocator_destructor.h",
       "__memory/allocator_traits.h",
       "__memory/assume_aligned.h",
       "__memory/auto_ptr.h",
