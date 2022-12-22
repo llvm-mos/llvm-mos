@@ -192,7 +192,7 @@ bool MOSRegisterInfo::canSaveScavengerRegister(Register Reg) const {
   return Reg != MOS::X;
 }
 
-void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
+bool MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                           int SPAdj, unsigned FIOperandNum,
                                           RegScavenger *RS) const {
   MachineFunction &MF = *MI->getMF();
@@ -254,7 +254,7 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   switch (MI->getOpcode()) {
   default:
-    break;
+    return false;
   case MOS::AddrLostk:
     expandAddrLostk(MI);
     break;
@@ -266,6 +266,7 @@ void MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     expandLDSTStk(MI);
     break;
   }
+  return true;
 }
 
 void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
