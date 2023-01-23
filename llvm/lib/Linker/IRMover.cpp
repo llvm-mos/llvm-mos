@@ -1534,30 +1534,7 @@ static std::string adjustInlineAsm(const std::string &InlineAsm,
 }
 
 void IRLinker::updateAttributes(GlobalValue &GV) {
-  /// Remove nocallback attribute while linking, because nocallback attribute
-  /// indicates that the function is only allowed to jump back into caller's
-  /// module only by a return or an exception. When modules are linked, this
-  /// property cannot be guaranteed anymore. For example, the nocallback
-  /// function may contain a call to another module. But if we merge its caller
-  /// and callee module here, and not the module containing the nocallback
-  /// function definition itself, the nocallback property will be violated
-  /// (since the nocallback function will call back into the newly merged module
-  /// containing both its caller and callee). This could happen if the module
-  /// containing the nocallback function definition is native code, so it does
-  /// not participate in the LTO link. Note if the nocallback function does
-  /// participate in the LTO link, and thus ends up in the merged module
-  /// containing its caller and callee, removing the attribute doesn't hurt as
-  /// it has no effect on definitions in the same module.
-  if (auto *F = dyn_cast<Function>(&GV)) {
-    if (!F->isIntrinsic())
-      F->removeFnAttr(llvm::Attribute::NoCallback);
-
-    // Remove nocallback attribute when it is on a call-site.
-    for (BasicBlock &BB : *F)
-      for (Instruction &I : BB)
-        if (CallInst *CI = dyn_cast<CallInst>(&I))
-          CI->removeFnAttr(Attribute::NoCallback);
-  }
+  // NOTE: Removed gulfem's nocallback when LTO linking patch.
 }
 
 Error IRLinker::run() {
