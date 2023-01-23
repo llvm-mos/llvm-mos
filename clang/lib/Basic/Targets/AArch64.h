@@ -16,7 +16,6 @@
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/Support/AArch64TargetParser.h"
-#include "llvm/Support/TargetParser.h"
 
 namespace clang {
 namespace targets {
@@ -54,6 +53,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasLSE;
   bool HasFlagM;
   bool HasMOPS;
+  bool HasD128;
   bool HasRCPC;
 
   llvm::AArch64::ArchKind ArchKind;

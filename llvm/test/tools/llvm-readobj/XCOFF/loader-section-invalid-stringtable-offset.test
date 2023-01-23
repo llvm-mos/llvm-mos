@@ -1,7 +1,7 @@
 ## Test invalid offset to symbol string table of loader section for --loader-section-symbols option.
 
 # RUN: yaml2obj %s -o %t_xcoff.o
-# RUN: llvm-readobj --loader-section-symbols %t_xcoff.o 2>&1 | FileCheck   -DFILE=%t_xcoff.o %s 
+# RUN: llvm-readobj --loader-section-symbols %t_xcoff.o 2>&1 | FileCheck   -DFILE=%t_xcoff.o %s
 
 --- !XCOFF
 FileHeader:

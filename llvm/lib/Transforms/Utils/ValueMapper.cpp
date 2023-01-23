@@ -270,8 +270,9 @@ private:
   /// MDNode, compute and return the mapping.  If it's a distinct \a MDNode,
   /// return the result of \a mapDistinctNode().
   ///
-  /// \return None if \c Op is an unmapped uniqued \a MDNode.
-  /// \post getMappedOp(Op) only returns None if this returns None.
+  /// \return std::nullopt if \c Op is an unmapped uniqued \a MDNode.
+  /// \post getMappedOp(Op) only returns std::nullopt if this returns
+  /// std::nullopt.
   Optional<Metadata *> tryToMapOperand(const Metadata *Op);
 
   /// Map a distinct node.
@@ -317,11 +318,10 @@ private:
   /// This visits all the nodes in \c G in post-order, using the identity
   /// mapping or creating a new node depending on \a Data::HasChanged.
   ///
-  /// \pre \a getMappedOp() returns None for nodes in \c G, but not for any of
-  /// their operands outside of \c G.
-  /// \pre \a Data::HasChanged is true for a node in \c G iff any of its
-  /// operands have changed.
-  /// \post \a getMappedOp() returns the mapped node for every node in \c G.
+  /// \pre \a getMappedOp() returns std::nullopt for nodes in \c G, but not for
+  /// any of their operands outside of \c G. \pre \a Data::HasChanged is true
+  /// for a node in \c G iff any of its operands have changed. \post \a
+  /// getMappedOp() returns the mapped node for every node in \c G.
   void mapNodesInPOT(UniquedGraph &G);
 
   /// Remap a node's operands using the given functor.
@@ -391,8 +391,9 @@ Value *Mapper::mapValue(const Value *V) {
       // ensures metadata operands only reference defined SSA values.
       return (Flags & RF_IgnoreMissingLocals)
                  ? nullptr
-                 : MetadataAsValue::get(V->getContext(),
-                                        MDTuple::get(V->getContext(), None));
+                 : MetadataAsValue::get(
+                       V->getContext(),
+                       MDTuple::get(V->getContext(), std::nullopt));
     }
     if (auto *AL = dyn_cast<DIArgList>(MD)) {
       SmallVector<ValueAsMetadata *, 4> MappedArgs;
@@ -578,7 +579,7 @@ Optional<Metadata *> MDNodeMapper::tryToMapOperand(const Metadata *Op) {
   const MDNode &N = *cast<MDNode>(Op);
   if (N.isDistinct())
     return mapDistinctNode(N);
-  return None;
+  return std::nullopt;
 }
 
 MDNode *MDNodeMapper::mapDistinctNode(const MDNode &N) {
@@ -610,7 +611,7 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
   if (!Op)
     return nullptr;
 
-  if (Optional<Metadata *> MappedOp = M.getVM().getMappedMD(Op))
+  if (std::optional<Metadata *> MappedOp = M.getVM().getMappedMD(Op))
     return *MappedOp;
 
   if (isa<MDString>(Op))
@@ -619,7 +620,7 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
   if (auto *CMD = dyn_cast<ConstantAsMetadata>(Op))
     return wrapConstantAsMetadata(*CMD, M.getVM().lookup(CMD->getValue()));
 
-  return None;
+  return std::nullopt;
 }
 
 Metadata &MDNodeMapper::UniquedGraph::getFwdReference(MDNode &Op) {
@@ -827,7 +828,7 @@ Metadata *MDNodeMapper::mapTopLevelUniquedNode(const MDNode &FirstN) {
 
 Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   // If the value already exists in the map, use it.
-  if (Optional<Metadata *> NewMD = getVM().getMappedMD(MD))
+  if (std::optional<Metadata *> NewMD = getVM().getMappedMD(MD))
     return *NewMD;
 
   if (isa<MDString>(MD))
@@ -848,7 +849,7 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
 
-  return None;
+  return std::nullopt;
 }
 
 Metadata *Mapper::mapMetadata(const Metadata *MD) {

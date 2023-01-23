@@ -34,7 +34,7 @@ Sections:
 ##                                                                                                                             ^-------   ImportFileID=0
 ##                                                                                                                                     ^-------ParameterCheckType=0
 ##                                                                                                                                             ^-------SymbolZero=0
-##                                                                                                                                                     ^-------OffsetToSymTbl=2 
+##                                                                                                                                                     ^-------OffsetToSymTbl=2
 ##                                                                                                                                                             ^------- Value=20000284
 ##                                                                                                                                                                     ^---  sectionNumber = 2
 ##                                                                                                                                                                         ^- SymbolType=0x11
@@ -113,7 +113,7 @@ Sections:
 # CHECK64-NEXT:       }
 # CHECK64-NEXT:       Symbol {
 # CHECK64-NEXT:         Name: _Z5func0v
-# CHECK64-NEXT:         Virtual Address: 0x110000308 
+# CHECK64-NEXT:         Virtual Address: 0x110000308
 # CHECK64-NEXT:         SectionNum: 2
 # CHECK64-NEXT:         SymbolType: 0x11
 # CHECK64-NEXT:         StorageClass: C_STRTAG (0xA)

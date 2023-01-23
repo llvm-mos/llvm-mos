@@ -58,8 +58,8 @@ class ControlConditions {
 public:
   /// Return a ControlConditions which stores all conditions required to execute
   /// \p BB from \p Dominator. If \p MaxLookup is non-zero, it limits the
-  /// number of conditions to collect. Return None if not all conditions are
-  /// collected successfully, or we hit the limit.
+  /// number of conditions to collect. Return std::nullopt if not all conditions
+  /// are collected successfully, or we hit the limit.
   static const Optional<ControlConditions>
   collectControlConditions(const BasicBlock &BB, const BasicBlock &Dominator,
                            const DominatorTree &DT,
@@ -129,7 +129,7 @@ const Optional<ControlConditions> ControlConditions::collectControlConditions(
     // Limitation: can only handle branch instruction currently.
     const BranchInst *BI = dyn_cast<BranchInst>(IDom->getTerminator());
     if (!BI)
-      return None;
+      return std::nullopt;
 
     bool Inserted = false;
     if (PDT.dominates(CurBlock, IDom)) {
@@ -149,13 +149,13 @@ const Optional<ControlConditions> ControlConditions::collectControlConditions(
       Inserted = Conditions.addControlCondition(
           ControlCondition(BI->getCondition(), false));
     } else
-      return None;
+      return std::nullopt;
 
     if (Inserted)
       ++NumConditions;
 
     if (MaxLookup != 0 && NumConditions > MaxLookup)
-      return None;
+      return std::nullopt;
 
     CurBlock = IDom;
   } while (CurBlock != &Dominator);
@@ -252,13 +252,13 @@ bool llvm::isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
   const Optional<ControlConditions> BB0Conditions =
       ControlConditions::collectControlConditions(BB0, *CommonDominator, DT,
                                                   PDT);
-  if (BB0Conditions == None)
+  if (BB0Conditions == std::nullopt)
     return false;
 
   const Optional<ControlConditions> BB1Conditions =
       ControlConditions::collectControlConditions(BB1, *CommonDominator, DT,
                                                   PDT);
-  if (BB1Conditions == None)
+  if (BB1Conditions == std::nullopt)
     return false;
 
   return BB0Conditions->isEquivalent(*BB1Conditions);

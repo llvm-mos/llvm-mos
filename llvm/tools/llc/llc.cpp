@@ -28,7 +28,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -57,6 +56,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <memory>
+#include <optional>
 using namespace llvm;
 
 static codegen::RegisterCodeGenFlags CGF;
@@ -166,7 +166,7 @@ static cl::opt<bool> RemarksWithHotness(
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
 
-static cl::opt<Optional<uint64_t>, false, remarks::HotnessThresholdParser>
+static cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
     RemarksHotnessThreshold(
         "pass-remarks-hotness-threshold",
         cl::desc("Minimum profile count required for "
@@ -520,8 +520,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
   };
 
-  Optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
-  Optional<CodeModel::Model> CM = codegen::getExplicitCodeModel();
+  std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
+  std::optional<CodeModel::Model> CM = codegen::getExplicitCodeModel();
 
   const Target *TheTarget = nullptr;
   std::unique_ptr<TargetMachine> Target;
@@ -575,7 +575,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     if (!TargetTriple.empty())
       M->setTargetTriple(Triple::normalize(TargetTriple));
 
-    Optional<CodeModel::Model> CM_IR = M->getCodeModel();
+    std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
       Target->setCodeModel(CM_IR.value());
   } else {

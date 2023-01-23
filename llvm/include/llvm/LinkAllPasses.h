@@ -72,8 +72,7 @@ namespace {
 
       (void) llvm::createAAEvalPass();
       (void) llvm::createAggressiveDCEPass();
-      (void) llvm::createBitTrackingDCEPass();
-      (void)llvm::createOpenMPOptCGSCCLegacyPass();
+      (void)llvm::createBitTrackingDCEPass();
       (void) llvm::createAlignmentFromAssumptionsPass();
       (void) llvm::createBasicAAWrapperPass();
       (void) llvm::createSCEVAAWrapperPass();
@@ -228,7 +227,8 @@ namespace {
       llvm::TargetLibraryInfoImpl TLII;
       llvm::TargetLibraryInfo TLI(TLII);
       llvm::AliasAnalysis AA(TLI);
-      llvm::AliasSetTracker X(AA);
+      llvm::BatchAAResults BAA(AA);
+      llvm::AliasSetTracker X(BAA);
       X.add(nullptr, llvm::LocationSize::beforeOrAfterPointer(),
             llvm::AAMDNodes()); // for -print-alias-sets
       (void) llvm::AreStatisticsEnabled();

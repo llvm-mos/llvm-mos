@@ -72,6 +72,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -2007,6 +2008,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceOperand(*II, 0, TVal);
     }
 
+    Value *Magnitude, *Sign;
+    if (match(II->getArgOperand(0),
+              m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
+      // fabs (copysign x, y) -> (fabs x)
+      CallInst *AbsSign =
+          Builder.CreateCall(II->getCalledFunction(), {Magnitude});
+      AbsSign->copyFastMathFlags(II);
+      return replaceInstUsesWith(*II, AbsSign);
+    }
+
     [[fallthrough]];
   }
   case Intrinsic::ceil:
@@ -2345,7 +2356,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         Pred == ICmpInst::ICMP_NE && LHS->getOpcode() == Instruction::Load &&
         LHS->getType()->isPointerTy() &&
         isValidAssumeForContext(II, LHS, &DT)) {
-      MDNode *MD = MDNode::get(II->getContext(), None);
+      MDNode *MD = MDNode::get(II->getContext(), std::nullopt);
       LHS->setMetadata(LLVMContext::MD_nonnull, MD);
       return RemoveConditionFromAssume(II);
 
@@ -2587,11 +2598,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Vec = II->getArgOperand(0);
     if (match(Vec, m_OneUse(m_BinOp(m_Value(BO0), m_Value(BO1))))) {
       auto *OldBinOp = cast<BinaryOperator>(Vec);
-      if (match(BO0, m_Intrinsic<Intrinsic::experimental_vector_reverse>(
-                         m_Value(X)))) {
+      if (match(BO0, m_VecReverse(m_Value(X)))) {
         // rev(binop rev(X), rev(Y)) --> binop X, Y
-        if (match(BO1, m_Intrinsic<Intrinsic::experimental_vector_reverse>(
-                           m_Value(Y))))
+        if (match(BO1, m_VecReverse(m_Value(Y))))
           return replaceInstUsesWith(CI,
                                      BinaryOperator::CreateWithCopiedFlags(
                                          OldBinOp->getOpcode(), X, Y, OldBinOp,
@@ -2604,17 +2613,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                          OldBinOp, OldBinOp->getName(), II));
       }
       // rev(binop BO0Splat, rev(Y)) --> binop BO0Splat, Y
-      if (match(BO1, m_Intrinsic<Intrinsic::experimental_vector_reverse>(
-                         m_Value(Y))) &&
-          isSplatValue(BO0))
+      if (match(BO1, m_VecReverse(m_Value(Y))) && isSplatValue(BO0))
         return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
                                            OldBinOp->getOpcode(), BO0, Y,
                                            OldBinOp, OldBinOp->getName(), II));
     }
     // rev(unop rev(X)) --> unop X
-    if (match(Vec, m_OneUse(m_UnOp(
-                       m_Intrinsic<Intrinsic::experimental_vector_reverse>(
-                           m_Value(X)))))) {
+    if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
       auto *OldUnOp = cast<UnaryOperator>(Vec);
       auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
           OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(), II);
@@ -2827,7 +2832,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   default: {
     // Handle target specific intrinsics
-    Optional<Instruction *> V = targetInstCombineIntrinsic(*II);
+    std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
     if (V)
       return V.value();
     break;
@@ -3312,7 +3317,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       LiveGcValues.insert(BasePtr);
       LiveGcValues.insert(DerivedPtr);
     }
-    Optional<OperandBundleUse> Bundle =
+    std::optional<OperandBundleUse> Bundle =
         GCSP.getOperandBundle(LLVMContext::OB_gc_live);
     unsigned NumOfGCLives = LiveGcValues.size();
     if (!Bundle || NumOfGCLives == Bundle->Inputs.size())
