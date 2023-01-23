@@ -32,7 +32,7 @@ void MOSMCELFStreamer::initSections(bool NoExecStack,
                                     const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(1, &STI);
+  emitCodeAlignment(Align(1), &STI);
 
   if (NoExecStack)
     switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));

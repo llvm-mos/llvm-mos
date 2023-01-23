@@ -41,7 +41,7 @@ public:
   MOSDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx), Has65816(STI.hasFeature(MOS::FeatureW65816)) {
   }
-  Optional<MCDisassembler::DecodeStatus>
+  std::optional<MCDisassembler::DecodeStatus>
   onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
                 uint64_t Address, raw_ostream &CStream) const override;
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
@@ -92,7 +92,7 @@ const uint8_t *getDecoderTable65CE02(size_t Size) {
   }
 }
 
-Optional<MCDisassembler::DecodeStatus>
+std::optional<MCDisassembler::DecodeStatus>
 MOSDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                ArrayRef<uint8_t> Bytes, uint64_t Address,
                                raw_ostream &CStream) const {

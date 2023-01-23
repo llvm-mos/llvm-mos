@@ -28,8 +28,9 @@ class MOSTargetMachine : public LLVMTargetMachine {
 public:
   MOSTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,
-                   Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                   CodeGenOpt::Level OL, bool JIT);
+                   std::optional<Reloc::Model> RM,
+                   std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                   bool JIT);
 
   const MOSSubtarget *getSubtargetImpl() const { return &SubTarget; }
   const MOSSubtarget *getSubtargetImpl(const Function &F) const override;
