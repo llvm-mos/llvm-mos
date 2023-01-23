@@ -3,7 +3,7 @@
 # Usage for configuring:
 #   cmake -C [path-to-this-file] ...
 
-set(LLVM_TARGETS_TO_BUILD "X86"
+set(LLVM_TARGETS_TO_BUILD ""
     CACHE STRING "LLVM targets to build")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD "MOS"
     CACHE STRING "LLVM experimental targets to build")
@@ -12,12 +12,10 @@ set(LLVM_ENABLE_PROJECTS clang;clang-tools-extra;lld
 set(LLVM_ENABLE_LIBXML2 "OFF" CACHE STRING "")
 set(LLVM_ENABLE_ZLIB "OFF" CACHE STRING "")
 set(LLVM_ENABLE_ZSTD "OFF" CACHE STRING "")
-set(LLVM_INSTALL_TOOLCHAIN_ONLY OFF
+set(LLVM_INSTALL_TOOLCHAIN_ONLY ON
     CACHE BOOL "LLVM install toolchain only")
 
 set(LLVM_DEFAULT_TARGET_TRIPLE "mos-unknown-unknown" CACHE STRING "")
-set(LLVM_TOOLCHAIN_UTILITIES FileCheck CACHE STRING "")
-set(LLVM_INSTALL_UTILS "ON" CACHE STRING "")
 
 # The following options are principally to reduce space on Github action
 # runner builds. They make smaller, and possibly slower, releases; but the
@@ -58,7 +56,6 @@ endif() # LLVM_MOS_USE_COMPILER_CACHE
 
 # Ship the release with these tools
 set(LLVM_MOS_TOOLCHAIN_TOOLS
-    llvm-config
     llvm-addr2line
     llvm-ar
     llvm-cxxfilt
