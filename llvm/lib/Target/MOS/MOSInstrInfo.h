@@ -79,7 +79,8 @@ public:
                            MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
 
   const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
                                          unsigned FoldIdx) const override;
@@ -87,7 +88,8 @@ public:
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
 
   void loadStoreRegStackSlot(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MI, Register Reg,

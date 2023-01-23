@@ -58,7 +58,7 @@ void test_v() {
 
 void test_leaf_asm() {
   // CHECK-LABEL: define dso_local void @test_leaf_asm() {{.*}} {
-  // CHECK: tail call void asm sideeffect "", ""() #2
-  // CHECK: #2 = { nocallback nounwind }
+  // CHECK: tail call void asm sideeffect "", ""() #3
+  // CHECK: #3 = { nocallback nounwind }
   __attribute__((leaf)) asm volatile("");
 }

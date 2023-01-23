@@ -6186,10 +6186,10 @@ define void @load_i32_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; SSE-NEXT:    # xmm0 = mem[1,1,1,1]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm11[3,3,3,3]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[2,3,2,3]
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
-; SSE-NEXT:    punpckldq {{.*#+}} xmm14 = xmm14[0],xmm1[0],xmm14[1],xmm1[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm14 = xmm0[0],xmm14[1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm14 = xmm4[2,3,2,3]
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm14[0],xmm1[1],xmm14[1]
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 224(%rsi)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -6343,7 +6343,7 @@ define void @load_i32_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, (%r9)
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE-NEXT:    movapd %xmm14, 240(%rax)
+; SSE-NEXT:    movapd %xmm1, 240(%rax)
 ; SSE-NEXT:    movapd %xmm13, 224(%rax)
 ; SSE-NEXT:    movapd %xmm15, 208(%rax)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload

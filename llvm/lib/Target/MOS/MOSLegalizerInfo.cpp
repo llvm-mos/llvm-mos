@@ -151,8 +151,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .widenScalarToNextPow2(0)
       // Multiplications can only be narrowed to sizes where a multiplication of
       // double that size is legal, since that's the lowered algorithm invokes
-      // such multiplications. Lowering S128 to S64 would produce infinite regress
-      // because of this, so instead it's lowered to S32.
+      // such multiplications. Lowering S128 to S64 would produce infinite
+      // regress because of this, so instead it's lowered to S32.
       .clampScalar(0, S8, S32)
       .unsupported();
 
@@ -463,7 +463,7 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
       Parts.push_back(Fill);
       Bits += 8;
     }
-    Builder.buildMerge(Dst, Parts);
+    Builder.buildMergeValues(Dst, Parts);
   }
 
   MI.eraseFromParent();
@@ -540,7 +540,7 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
   }
   for (MachineOperand &MO : unmergeDefs(Unmerge))
     IncDec.addUse(MO.getReg());
-  Builder.buildMerge(Dst, DstParts);
+  Builder.buildMergeValues(Dst, DstParts);
   MI.eraseFromParent();
   return true;
 }
@@ -760,7 +760,7 @@ bool MOSLegalizerInfo::legalizeShiftRotate(LegalizerHelper &Helper,
       Amt -= 8;
     }
     assert(Amt < 8);
-    Partial = Builder.buildMerge(Ty, DstBytes).getReg(0);
+    Partial = Builder.buildMergeValues(Ty, DstBytes).getReg(0);
     NewAmt = Builder.buildConstant(S8, Amt).getReg(0);
   } else if (shouldOverCorrect(Amt, Ty, IsRotate)) {
     Register LeftAmt, RightAmt;
@@ -913,7 +913,7 @@ bool MOSLegalizerInfo::legalizeLshrEShlE(LegalizerHelper &Helper,
   if (MI.getOpcode() == MOS::G_LSHRE)
     std::reverse(Parts.begin(), Parts.end());
 
-  Builder.buildMerge(Dst, Parts).getReg(0);
+  Builder.buildMergeValues(Dst, Parts).getReg(0);
   MI.eraseFromParent();
   return true;
 }
@@ -1020,7 +1020,8 @@ static std::pair<Register, Register> splitHighRest(Register Reg,
     RestParts.push_back(Op.getReg());
   Register Rest =
       (RestParts.size() > 1)
-          ? Builder.buildMerge(LLT::scalar(RestParts.size() * 8), RestParts)
+          ? Builder
+                .buildMergeValues(LLT::scalar(RestParts.size() * 8), RestParts)
                 .getReg(0)
           : RestParts[0];
 
@@ -1673,7 +1674,8 @@ bool MOSLegalizerInfo::legalizeBrJt(LegalizerHelper &Helper,
       .addJumpTableIndex(MI.getOperand(1).getIndex(), MOS::MO_HI_JT)
       .addUse(Offset);
   Builder.buildBrIndirect(
-      Builder.buildMerge(LLT::pointer(0, 16), {LoAddr, HiAddr}).getReg(0));
+      Builder.buildMergeValues(LLT::pointer(0, 16), {LoAddr, HiAddr})
+          .getReg(0));
 
   MI.eraseFromParent();
   return true;

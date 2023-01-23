@@ -23,6 +23,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -108,7 +109,7 @@ MOSDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
     else if (Symbol.Name.startswith("$xh"))
       XLow = false;
   }
-  return None;
+  return std::nullopt;
 }
 
 DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,

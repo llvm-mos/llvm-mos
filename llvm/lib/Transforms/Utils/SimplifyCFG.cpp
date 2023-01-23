@@ -3538,7 +3538,7 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
          "PredBB must be a predecessor of BB.");
 
   if (TTI && TTI->getPredictableBranchThreshold().isZero())
-    return None;
+    return std::nullopt;
 
   // We have the potential to fold the conditions together, but if the
   // predecessor branch is predictable, we may not want to merge them.

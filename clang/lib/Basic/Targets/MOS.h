@@ -29,7 +29,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {}
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -49,7 +49,7 @@ public:
 
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return None;
+    return {};
   }
   unsigned getRegisterWidth() const override { return 8; }
 

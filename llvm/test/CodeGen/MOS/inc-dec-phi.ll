@@ -138,7 +138,6 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:  .LBB3_10:
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx .Lrepro_sstk ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx .Lrepro_sstk+1 ; 1-byte Folded Spill
 ; CHECK-NEXT:    tya
 ; CHECK-NEXT:    bpl .LBB3_15

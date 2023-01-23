@@ -566,31 +566,31 @@ public:
     return false;
   }
 
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  OperandMatchResultTy tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override {
     std::string AnyCase(StartLoc.getPointer(),
                         EndLoc.getPointer() - StartLoc.getPointer());
     std::transform(AnyCase.begin(), AnyCase.end(), AnyCase.begin(),
                    [](unsigned char C) { return std::tolower(C); });
     StringRef RegisterName(AnyCase.c_str(), AnyCase.size());
-    RegNo = MatchRegisterName(RegisterName);
-    if (RegNo == 0) {
+    Reg = MatchRegisterName(RegisterName);
+    if (Reg == 0) {
       // If the user has requested to ignore short register names, then ignore
       // them
       if (getSTI().getFeatureBits()[MOS::FeatureAltRegisterNamesOnly] ==
           false) {
-        RegNo = MatchRegisterAltName(RegisterName);
+        Reg = MatchRegisterAltName(RegisterName);
       }
     }
-    return (RegNo != 0) ? MatchOperand_Success : MatchOperand_NoMatch;
+    return (Reg != 0) ? MatchOperand_Success : MatchOperand_NoMatch;
   }
 
   OperandMatchResultTy tryParseRegister(OperandVector &Operands) {
-    unsigned RegNo = 0;
+    MCRegister Reg = 0;
     SMLoc S = getLexer().getLoc();
     SMLoc E = getLexer().getTok().getEndLoc();
-    if (tryParseRegister(RegNo, S, E) == MatchOperand_Success) {
-      Operands.push_back(MOSOperand::createReg(RegNo, S, E));
+    if (tryParseRegister(Reg, S, E) == MatchOperand_Success) {
+      Operands.push_back(MOSOperand::createReg(Reg, S, E));
       return MatchOperand_Success;
     }
     return MatchOperand_NoMatch;
@@ -603,22 +603,23 @@ public:
   OperandMatchResultTy tryParseAsmParamRegClass(OperandVector &Operands) {
     SMLoc S = getLexer().getLoc();
 
-    const char *LowerStr = StringSwitch<const char *>(getLexer().getTok().getString())
-      .CaseLower("a", "a")
-      .CaseLower("x", "x")
-      .CaseLower("y", "y")
-      .CaseLower("z", "z")
-      .CaseLower("sp", "sp")
-      .Default(nullptr);
+    const char *LowerStr =
+        StringSwitch<const char *>(getLexer().getTok().getString())
+            .CaseLower("a", "a")
+            .CaseLower("x", "x")
+            .CaseLower("y", "y")
+            .CaseLower("z", "z")
+            .CaseLower("sp", "sp")
+            .Default(nullptr);
     if (LowerStr != nullptr) {
       Operands.push_back(MOSOperand::createToken(LowerStr, S));
       return MatchOperand_Success;
     }
 
-    unsigned RegNo = 0;
+    MCRegister Reg = 0;
     SMLoc E = getLexer().getTok().getEndLoc();
-    if (tryParseRegister(RegNo, S, E) == MatchOperand_Success) {
-      Operands.push_back(MOSOperand::createReg(RegNo, S, E));
+    if (tryParseRegister(Reg, S, E) == MatchOperand_Success) {
+      Operands.push_back(MOSOperand::createReg(Reg, S, E));
       return MatchOperand_Success;
     }
     return MatchOperand_NoMatch;
@@ -702,9 +703,8 @@ public:
     return false;
   }
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override {
-
-    auto Result = tryParseRegister(RegNo, StartLoc, EndLoc);
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override {
+    auto Result = tryParseRegister(Reg, StartLoc, EndLoc);
     return (Result != MatchOperand_Success);
   }
 

@@ -625,7 +625,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   for (const auto &R : enumerate(Order))
     OriginalIndex[R.value()] = R.index();
 
-  if (Optional<Register> StrongHint = getStrongCopyHint(VirtReg, MF, VRM)) {
+  if (std::optional<Register> StrongHint = getStrongCopyHint(VirtReg, MF, VRM)) {
     if (*StrongHint)
       Hints.push_back(*StrongHint);
     return true;
@@ -733,7 +733,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 // Otherwise, returns None. This prevents the register allocator from assigning
 // a value to a useless register; it's always better to split or spill in such
 // cases, since absolutely nothing can use the value in that register.
-Optional<Register>
+std::optional<Register>
 MOSRegisterInfo::getStrongCopyHint(Register VirtReg, const MachineFunction &MF,
                                    const VirtRegMap *VRM) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -742,15 +742,15 @@ MOSRegisterInfo::getStrongCopyHint(Register VirtReg, const MachineFunction &MF,
   const auto &TII = *STI.getInstrInfo();
 
   if (!MRI.hasOneDef(VirtReg))
-    return None;
+    return std::nullopt;
   if (!TII.isReallyTriviallyReMaterializable(
           *MRI.getOneDef(VirtReg)->getParent()))
-    return None;
+    return std::nullopt;
 
   Optional<Register> Hint;
   for (MachineInstr &MI : MRI.use_nodbg_instructions(VirtReg)) {
     if (MI.getOpcode() != MOS::COPY)
-      return None;
+      return std::nullopt;
     const MachineOperand &Self = MI.getOperand(0).getReg() == VirtReg
                                      ? MI.getOperand(0)
                                      : MI.getOperand(1);
@@ -760,7 +760,7 @@ MOSRegisterInfo::getStrongCopyHint(Register VirtReg, const MachineFunction &MF,
     Register OtherReg = Other.getReg();
     if (OtherReg.isVirtual()) {
       if (!VRM->hasPhys(OtherReg))
-        return None;
+        return std::nullopt;
       OtherReg = VRM->getPhys(OtherReg);
     }
     if (Other.getSubReg())
@@ -771,7 +771,7 @@ MOSRegisterInfo::getStrongCopyHint(Register VirtReg, const MachineFunction &MF,
       Reg = TRI.getMatchingSuperReg(Reg, Self.getSubReg(),
                                     MRI.getRegClass(Self.getReg()));
     if (!Reg || !MRI.getRegClass(Self.getReg())->contains(Reg))
-      return None;
+      return std::nullopt;
     if (Hint && *Hint != Reg) {
       *Hint = MOS::NoRegister;
       break;

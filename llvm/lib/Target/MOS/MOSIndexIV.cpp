@@ -117,7 +117,7 @@ PreservedAnalyses MOSIndexIV::run(Loop &L, LoopAnalysisManager &AM,
 
       auto Inst = I;
       --I;
-      ReplaceInstWithValue(I->getParent()->getInstList(), Inst, V);
+      ReplaceInstWithValue(Inst, V);
     }
   }
 

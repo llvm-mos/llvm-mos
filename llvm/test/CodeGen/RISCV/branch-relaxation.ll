@@ -962,18 +962,18 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t5, 30
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    sd t0, 0(sp)
-; CHECK-RV64-NEXT:    lui t0, 1
-; CHECK-RV64-NEXT:    add t0, sp, t0
-; CHECK-RV64-NEXT:    sd t5, -8(t0) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    sd ra, 0(sp)
+; CHECK-RV64-NEXT:    lui t6, 1
+; CHECK-RV64-NEXT:    add t6, sp, t6
+; CHECK-RV64-NEXT:    sd t5, -8(t6) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    sext.w t5, t5
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li t6, 31
 ; CHECK-RV64-NEXT:    #NO_APP
-; CHECK-RV64-NEXT:    lui t0, 1
-; CHECK-RV64-NEXT:    add t0, sp, t0
-; CHECK-RV64-NEXT:    sd t6, -16(t0) # 8-byte Folded Spill
-; CHECK-RV64-NEXT:    ld t0, 0(sp)
+; CHECK-RV64-NEXT:    lui ra, 1
+; CHECK-RV64-NEXT:    add ra, sp, ra
+; CHECK-RV64-NEXT:    sd t6, -16(ra) # 8-byte Folded Spill
+; CHECK-RV64-NEXT:    ld ra, 0(sp)
 ; CHECK-RV64-NEXT:    sext.w t6, t6
 ; CHECK-RV64-NEXT:    beq t5, t6, .LBB3_1
 ; CHECK-RV64-NEXT:  # %bb.3:

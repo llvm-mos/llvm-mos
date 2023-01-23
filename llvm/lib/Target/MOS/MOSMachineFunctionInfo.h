@@ -17,8 +17,10 @@
 
 namespace llvm {
 
+class MOSSubtarget;
+
 struct MOSFunctionInfo : public MachineFunctionInfo {
-  MOSFunctionInfo(MachineFunction &MF) {}
+  MOSFunctionInfo(const Function &F, const MOSSubtarget *STI) {}
 
   int VarArgsStackIndex = -1;
   const GlobalValue *StaticStackValue = nullptr;

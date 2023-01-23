@@ -3747,9 +3747,9 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:  .LBB11_53:
 ; RV32I-NEXT:    lw a5, 68(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    slti a5, a5, 0
-; RV32I-NEXT:    neg a5, a5
-; RV32I-NEXT:    lw t2, 64(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    and a5, a5, t2
+; RV32I-NEXT:    neg t2, a5
+; RV32I-NEXT:    lw a5, 64(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    and a5, t2, a5
 ; RV32I-NEXT:    lw t2, 52(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    or a5, a5, s3
 ; RV32I-NEXT:  .LBB11_54:

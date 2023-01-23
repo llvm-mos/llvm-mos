@@ -89,14 +89,15 @@ public:
     return Imag8SymbolNames[Reg].c_str();
   }
 
-  int copyCost(Register DestReg, Register SrcReg, const MOSSubtarget &STI) const;
+  int copyCost(Register DestReg, Register SrcReg,
+               const MOSSubtarget &STI) const;
 
 private:
   void reserveAllSubregs(BitVector *Reserved, Register Reg) const;
 
-  Optional<Register> getStrongCopyHint(Register VirtReg,
-                                       const MachineFunction &MF,
-                                       const VirtRegMap *VRM) const;
+  std::optional<Register> getStrongCopyHint(Register VirtReg,
+                                            const MachineFunction &MF,
+                                            const VirtRegMap *VRM) const;
 };
 
 } // namespace llvm

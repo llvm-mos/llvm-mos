@@ -53,6 +53,10 @@ public:
 
   StringRef getSectionPrefix(const GlobalObject *GO) const override;
 
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   MOSSubtarget SubTarget;

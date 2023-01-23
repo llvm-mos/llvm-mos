@@ -40,6 +40,7 @@
 #include "MOSInsertCopies.h"
 #include "MOSLateOptimization.h"
 #include "MOSLowerSelect.h"
+#include "MOSMachineFunctionInfo.h"
 #include "MOSMachineScheduler.h"
 #include "MOSNonReentrant.h"
 #include "MOSPostRAScavenging.h"
@@ -148,6 +149,14 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 StringRef MOSTargetMachine::getSectionPrefix(const GlobalObject *GO) const {
   return GO->getAddressSpace() == 1 ? ".zp" : "";
+}
+
+MachineFunctionInfo *MOSTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+
+  return MOSFunctionInfo::create<MOSFunctionInfo>(
+      Allocator, F, static_cast<const MOSSubtarget *>(STI));
 }
 
 //===----------------------------------------------------------------------===//

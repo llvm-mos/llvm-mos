@@ -602,8 +602,9 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
             // Add an implicit use of the vreg; otherwise, the register
             // scavenger may try to insert a reload between the load and the
             // select.
-            auto Select = Builder.buildInstr(MOS::SelectImm, {MOS::V},
-                               {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
+            auto Select =
+                Builder.buildInstr(MOS::SelectImm, {MOS::V},
+                                   {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
             Select.addUse(Tmp, RegState::Implicit);
           }
         }
@@ -695,12 +696,10 @@ const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
   return nullptr;
 }
 
-void MOSInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MI,
-                                       Register SrcReg, bool isKill,
-                                       int FrameIndex,
-                                       const TargetRegisterClass *RC,
-                                       const TargetRegisterInfo *TRI) const {
+void MOSInstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+    const TargetRegisterInfo *TRI, Register VReg) const {
   loadStoreRegStackSlot(MBB, MI, SrcReg, isKill, FrameIndex, RC, TRI,
                         /*IsLoad=*/false);
 }
@@ -709,7 +708,8 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI) const {
+                                        const TargetRegisterInfo *TRI,
+                                        Register VReg) const {
   loadStoreRegStackSlot(MBB, MI, DestReg, false, FrameIndex, RC, TRI,
                         /*IsLoad=*/true);
 }
