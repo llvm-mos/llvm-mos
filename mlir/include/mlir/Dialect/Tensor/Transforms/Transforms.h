@@ -40,6 +40,15 @@ void populateMergeConsecutiveInsertExtractSlicePatterns(
 /// `tensor.collapse_shape` into other ops.
 void populateReassociativeReshapeFoldingPatterns(RewritePatternSet &patterns);
 
+/// Populates `patterns` with patterns that fold tensor.empty with
+/// tensor.[extract_slice|cast|expand_shape|collapse_shape].
+void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns);
+
+/// Populates `patterns` with patterns that fold operations like `tensor.pad`
+/// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
+/// respectively.
+void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
+
 } // namespace tensor
 } // namespace mlir
 

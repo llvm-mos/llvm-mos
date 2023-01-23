@@ -3926,12 +3926,10 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
   }
 }
 
-void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MI,
-                                       Register SrcReg, bool isKill,
-                                       int FrameIdx,
-                                       const TargetRegisterClass *RC,
-                                       const TargetRegisterInfo *TRI) const {
+void X86InstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+    bool isKill, int FrameIdx, const TargetRegisterClass *RC,
+    const TargetRegisterInfo *TRI, Register VReg) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -3954,7 +3952,8 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIdx,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI) const {
+                                        const TargetRegisterInfo *TRI,
+                                        Register VReg) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -5803,8 +5802,7 @@ unsigned
 X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
                                    const TargetRegisterInfo *TRI) const {
   const MachineOperand &MO = MI.getOperand(OpNum);
-  if (Register::isPhysicalRegister(MO.getReg()) &&
-      hasUndefRegUpdate(MI.getOpcode(), OpNum))
+  if (MO.getReg().isPhysical() && hasUndefRegUpdate(MI.getOpcode(), OpNum))
     return UndefRegClearance;
 
   return 0;
@@ -8716,7 +8714,10 @@ bool X86InstrInfo::hasReassociableOperands(const MachineInstr &Inst,
 //       1. Other data types (integer, vectors)
 //       2. Other math / logic operations (xor, or)
 //       3. Other forms of the same operation (intrinsics and other variants)
-bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
+bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                               bool Invert) const {
+  if (Invert)
+    return false;
   switch (Inst.getOpcode()) {
   case X86::ADD8rr:
   case X86::ADD16rr:
@@ -9096,8 +9097,8 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
 
     const MachineOperand &Op1 = MI.getOperand(1);
     const MachineOperand &Op2 = MI.getOperand(3);
-    assert(Op2.isReg() && (Op2.getReg() == X86::NoRegister ||
-                           Register::isPhysicalRegister(Op2.getReg())));
+    assert(Op2.isReg() &&
+           (Op2.getReg() == X86::NoRegister || Op2.getReg().isPhysical()));
 
     // Omit situations like:
     // %rsi = lea %rsi, 4, ...
@@ -9295,7 +9296,7 @@ X86InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLVP_PIC_BASE, "x86-tlvp-pic-base"},
       {MO_SECREL, "x86-secrel"},
       {MO_COFFSTUB, "x86-coffstub"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 namespace {

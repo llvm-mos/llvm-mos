@@ -17,6 +17,7 @@
 #include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include <optional>
 
 namespace llvm {
 class ElementCount;
@@ -282,10 +283,11 @@ enum class PtrDLEntryPos { Size = 0, Abi = 1, Preferred = 2, Index = 3 };
 
 /// Returns the value that corresponds to named position `pos` from the
 /// data layout entry `attr` assuming it's a dense integer elements attribute.
-/// Returns `None` if `pos` is not present in the entry.
+/// Returns `std::nullopt` if `pos` is not present in the entry.
 /// Currently only `PtrDLEntryPos::Index` is optional, and all other positions
 /// may be assumed to be present.
-Optional<unsigned> extractPointerSpecValue(Attribute attr, PtrDLEntryPos pos);
+std::optional<unsigned> extractPointerSpecValue(Attribute attr,
+                                                PtrDLEntryPos pos);
 
 } // namespace LLVM
 } // namespace mlir

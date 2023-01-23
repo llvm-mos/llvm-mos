@@ -29,6 +29,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-isel"
+#define PASS_NAME "AArch64 Instruction Selection"
 
 //===--------------------------------------------------------------------===//
 /// AArch64DAGToDAGISel - AArch64 specific code to select AArch64 machine
@@ -43,13 +44,13 @@ class AArch64DAGToDAGISel : public SelectionDAGISel {
   const AArch64Subtarget *Subtarget;
 
 public:
+  static char ID;
+
+  AArch64DAGToDAGISel() = delete;
+
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
                                CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr) {}
-
-  StringRef getPassName() const override {
-    return "AArch64 Instruction Selection";
-  }
+      : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
@@ -174,6 +175,35 @@ public:
         Index != VT.getVectorNumElements())
       return false;
     Res = N->getOperand(0);
+    return true;
+  }
+
+  bool SelectRoundingVLShr(SDValue N, SDValue &Res1, SDValue &Res2) {
+    if (N.getOpcode() != AArch64ISD::VLSHR)
+      return false;
+    SDValue Op = N->getOperand(0);
+    EVT VT = Op.getValueType();
+    unsigned ShtAmt = N->getConstantOperandVal(1);
+    if (ShtAmt > VT.getScalarSizeInBits() / 2 || Op.getOpcode() != ISD::ADD)
+      return false;
+
+    APInt Imm;
+    if (Op.getOperand(1).getOpcode() == AArch64ISD::MOVIshift)
+      Imm = APInt(VT.getScalarSizeInBits(),
+                  Op.getOperand(1).getConstantOperandVal(0)
+                      << Op.getOperand(1).getConstantOperandVal(1));
+    else if (Op.getOperand(1).getOpcode() == AArch64ISD::DUP &&
+             isa<ConstantSDNode>(Op.getOperand(1).getOperand(0)))
+      Imm = APInt(VT.getScalarSizeInBits(),
+                  Op.getOperand(1).getConstantOperandVal(0));
+    else
+      return false;
+
+    if (Imm != 1ULL << (ShtAmt - 1))
+      return false;
+
+    Res1 = Op.getOperand(0);
+    Res2 = CurDAG->getTargetConstant(ShtAmt, SDLoc(N), MVT::i32);
     return true;
   }
 
@@ -370,6 +400,7 @@ public:
 private:
   bool SelectShiftedRegister(SDValue N, bool AllowROR, SDValue &Reg,
                              SDValue &Shift);
+  bool SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectAddrModeIndexed7S(SDValue N, unsigned Size, SDValue &Base,
                                SDValue &OffImm) {
     return SelectAddrModeIndexedBitWidth(N, true, 7, Size, Base, OffImm);
@@ -417,6 +448,10 @@ private:
   bool SelectAllActivePredicate(SDValue N);
 };
 } // end anonymous namespace
+
+char AArch64DAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(AArch64DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isIntImmediate - This method tests to see if the node is a constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -607,6 +642,84 @@ bool AArch64DAGToDAGISel::isWorthFolding(SDValue V) const {
   return false;
 }
 
+/// and (shl/srl/sra, x, c), mask --> shl (srl/sra, x, c1), c2
+/// to select more shifted register
+bool AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg,
+                                                       SDValue &Shift) {
+  EVT VT = N.getValueType();
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return false;
+
+  if (N->getOpcode() != ISD::AND || !N->hasOneUse())
+    return false;
+  SDValue LHS = N.getOperand(0);
+  if (!LHS->hasOneUse())
+    return false;
+
+  unsigned LHSOpcode = LHS->getOpcode();
+  if (LHSOpcode != ISD::SHL && LHSOpcode != ISD::SRL && LHSOpcode != ISD::SRA)
+    return false;
+
+  ConstantSDNode *ShiftAmtNode = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+  if (!ShiftAmtNode)
+    return false;
+
+  uint64_t ShiftAmtC = ShiftAmtNode->getZExtValue();
+  ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(N.getOperand(1));
+  if (!RHSC)
+    return false;
+
+  APInt AndMask = RHSC->getAPIntValue();
+  unsigned LowZBits, MaskLen;
+  if (!AndMask.isShiftedMask(LowZBits, MaskLen))
+    return false;
+
+  unsigned BitWidth = N.getValueSizeInBits();
+  SDLoc DL(LHS);
+  uint64_t NewShiftC;
+  unsigned NewShiftOp;
+  if (LHSOpcode == ISD::SHL) {
+    // LowZBits <= ShiftAmtC will fall into isBitfieldPositioningOp
+    // BitWidth != LowZBits + MaskLen doesn't match the pattern
+    if (LowZBits <= ShiftAmtC || (BitWidth != LowZBits + MaskLen))
+      return false;
+
+    NewShiftC = LowZBits - ShiftAmtC;
+    NewShiftOp = VT == MVT::i64 ? AArch64::UBFMXri : AArch64::UBFMWri;
+  } else {
+    if (LowZBits == 0)
+      return false;
+
+    // NewShiftC >= BitWidth will fall into isBitfieldExtractOp
+    NewShiftC = LowZBits + ShiftAmtC;
+    if (NewShiftC >= BitWidth)
+      return false;
+
+    // SRA need all high bits
+    if (LHSOpcode == ISD::SRA && (BitWidth != (LowZBits + MaskLen)))
+      return false;
+
+    // SRL high bits can be 0 or 1
+    if (LHSOpcode == ISD::SRL && (BitWidth > (NewShiftC + MaskLen)))
+      return false;
+
+    if (LHSOpcode == ISD::SRL)
+      NewShiftOp = VT == MVT::i64 ? AArch64::UBFMXri : AArch64::UBFMWri;
+    else
+      NewShiftOp = VT == MVT::i64 ? AArch64::SBFMXri : AArch64::SBFMWri;
+  }
+
+  assert(NewShiftC < BitWidth && "Invalid shift amount");
+  SDValue NewShiftAmt = CurDAG->getTargetConstant(NewShiftC, DL, VT);
+  SDValue BitWidthMinus1 = CurDAG->getTargetConstant(BitWidth - 1, DL, VT);
+  Reg = SDValue(CurDAG->getMachineNode(NewShiftOp, DL, VT, LHS->getOperand(0),
+                                       NewShiftAmt, BitWidthMinus1),
+                0);
+  unsigned ShVal = AArch64_AM::getShifterImm(AArch64_AM::LSL, LowZBits);
+  Shift = CurDAG->getTargetConstant(ShVal, DL, MVT::i32);
+  return true;
+}
+
 /// SelectShiftedRegister - Select a "shifted register" operand.  If the value
 /// is not shifted, set the Shift operand to default of "LSL 0".  The logical
 /// instructions allow the shifted register to be rotated, but the arithmetic
@@ -614,6 +727,9 @@ bool AArch64DAGToDAGISel::isWorthFolding(SDValue V) const {
 /// supported.
 bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
                                                 SDValue &Reg, SDValue &Shift) {
+  if (SelectShiftedRegisterFromAnd(N, Reg, Shift))
+    return true;
+
   AArch64_AM::ShiftExtendType ShType = getShiftTypeForNode(N);
   if (ShType == AArch64_AM::InvalidShiftExtend)
     return false;
@@ -3482,26 +3598,28 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
     // pstatefield for the MSR (immediate) instruction, we also require that an
     // immediate value has been provided as an argument, we know that this is
     // the case as it has been ensured by semantic checking.
-    auto PMapper = AArch64PState::lookupPStateByName(RegString->getString());
-    if (PMapper) {
-      assert(isa<ConstantSDNode>(N->getOperand(2)) &&
-             "Expected a constant integer expression.");
-      unsigned Reg = PMapper->Encoding;
-      uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
-      unsigned State;
-      if (Reg == AArch64PState::PAN || Reg == AArch64PState::UAO ||
-          Reg == AArch64PState::SSBS) {
-        assert(Immed < 2 && "Bad imm");
-        State = AArch64::MSRpstateImm1;
-      } else {
-        assert(Immed < 16 && "Bad imm");
-        State = AArch64::MSRpstateImm4;
+    auto trySelectPState = [&](auto PMapper, unsigned State) {
+      if (PMapper) {
+        assert(isa<ConstantSDNode>(N->getOperand(2)) &&
+               "Expected a constant integer expression.");
+        unsigned Reg = PMapper->Encoding;
+        uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+        CurDAG->SelectNodeTo(
+            N, State, MVT::Other, CurDAG->getTargetConstant(Reg, DL, MVT::i32),
+            CurDAG->getTargetConstant(Immed, DL, MVT::i16), N->getOperand(0));
+        return true;
       }
-      CurDAG->SelectNodeTo(
-          N, State, MVT::Other, CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-          CurDAG->getTargetConstant(Immed, DL, MVT::i16), N->getOperand(0));
+      return false;
+    };
+
+    if (trySelectPState(
+            AArch64PState::lookupPStateImm0_15ByName(RegString->getString()),
+            AArch64::MSRpstateImm4))
       return true;
-    }
+    if (trySelectPState(
+            AArch64PState::lookupPStateImm0_1ByName(RegString->getString()),
+            AArch64::MSRpstateImm1))
+      return true;
   }
 
   int Imm = getIntOperandFromRegisterString(RegString->getString());
@@ -3827,7 +3945,7 @@ void AArch64DAGToDAGISel::SelectTagP(SDNode *N) {
 // vector types larger than NEON don't have a matching SubRegIndex.
 static SDNode *extractSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
   assert(V.getValueType().isScalableVector() &&
-         V.getValueType().getSizeInBits().getKnownMinSize() ==
+         V.getValueType().getSizeInBits().getKnownMinValue() ==
              AArch64::SVEBitsPerBlock &&
          "Expected to extract from a packed scalable vector!");
   assert(VT.isFixedLengthVector() &&
@@ -3854,7 +3972,7 @@ static SDNode *extractSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
 // vector types larger than NEON don't have a matching SubRegIndex.
 static SDNode *insertSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
   assert(VT.isScalableVector() &&
-         VT.getSizeInBits().getKnownMinSize() == AArch64::SVEBitsPerBlock &&
+         VT.getSizeInBits().getKnownMinValue() == AArch64::SVEBitsPerBlock &&
          "Expected to insert into a packed scalable vector!");
   assert(V.getValueType().isFixedLengthVector() &&
          "Expected to insert a fixed length vector!");
@@ -5579,7 +5697,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     return false;
 
   TypeSize TS = MemVT.getSizeInBits();
-  int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinSize()) / 8;
+  int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinValue()) / 8;
   int64_t MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
 
   if ((MulImm % MemWidthBytes) != 0)

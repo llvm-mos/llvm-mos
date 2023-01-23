@@ -181,12 +181,14 @@ public:
                            MachineBasicBlock::iterator MBBI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
 
   // This tells target independent code that it is okay to pass instructions
   // with subreg operands to foldMemoryOperandImpl.
@@ -260,8 +262,10 @@ public:
                              SmallVectorImpl<MachineCombinerPattern> &Patterns,
                              bool DoRegPressureReduce) const override;
   /// Return true when Inst is associative and commutative so that it can be
-  /// reassociated.
-  bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
+  /// reassociated. If Invert is true, then the inverse of Inst operation must
+  /// be checked.
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
   /// When getMachineCombinerPatterns() finds patterns, this function generates
   /// the instructions that could replace the original code sequence
   void genAlternativeCodeSequence(

@@ -524,7 +524,7 @@ bool RegAllocEvictionAdvisor::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
   return !Matrix->isPhysRegUsed(PhysReg);
 }
 
-Optional<unsigned>
+std::optional<unsigned>
 RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
                                        const AllocationOrder &Order,
                                        unsigned CostPerUseLimit) const {
@@ -682,7 +682,7 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
       assert(T < GroupSize && "Array overflow");
       TBS[T] = Number;
       if (++T == GroupSize) {
-        SpillPlacer->addLinks(makeArrayRef(TBS, T));
+        SpillPlacer->addLinks(ArrayRef(TBS, T));
         T = 0;
       }
       continue;
@@ -711,13 +711,13 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
       BCS[B].Exit = SpillPlacement::PrefSpill;
 
     if (++B == GroupSize) {
-      SpillPlacer->addConstraints(makeArrayRef(BCS, B));
+      SpillPlacer->addConstraints(ArrayRef(BCS, B));
       B = 0;
     }
   }
 
-  SpillPlacer->addConstraints(makeArrayRef(BCS, B));
-  SpillPlacer->addLinks(makeArrayRef(TBS, T));
+  SpillPlacer->addConstraints(ArrayRef(BCS, B));
+  SpillPlacer->addLinks(ArrayRef(TBS, T));
   return true;
 }
 
@@ -758,7 +758,7 @@ bool RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
 
     // Compute through constraints from the interference, or assume that all
     // through blocks prefer spilling when forming compact regions.
-    auto NewBlocks = makeArrayRef(ActiveBlocks).slice(AddedTo);
+    auto NewBlocks = ArrayRef(ActiveBlocks).slice(AddedTo);
     if (Cand.PhysReg) {
       if (!addThroughConstraints(Cand.Intf, NewBlocks))
         return false;
@@ -2218,7 +2218,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     Reg = RecoloringCandidates.pop_back_val();
 
     // We cannot recolor physical register.
-    if (Register::isPhysicalRegister(Reg))
+    if (Reg.isPhysical())
       continue;
 
     // This may be a skipped class
@@ -2312,7 +2312,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
 /// getting rid of 2 copies.
 void RAGreedy::tryHintsRecoloring() {
   for (const LiveInterval *LI : SetOfBrokenHints) {
-    assert(Register::isVirtualRegister(LI->reg()) &&
+    assert(LI->reg().isVirtual() &&
            "Recoloring is possible only for virtual registers");
     // Some dead defs may be around (e.g., because of debug uses).
     // Ignore those.

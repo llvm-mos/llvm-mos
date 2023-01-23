@@ -140,7 +140,9 @@ def Async_FuncOp : Async_Op<"func",
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        TypeAttrOf<FunctionType>:$function_type,
-                       OptionalAttr<StrAttr>:$sym_visibility);
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       OptionalAttr<DictArrayAttr>:$arg_attrs,
+                       OptionalAttr<DictArrayAttr>:$res_attrs);
 
   let regions = (region AnyRegion:$body);
 
@@ -331,7 +333,7 @@ def Async_AwaitOp : Async_Op<"await"> {
   ];
 
   let extraClassDeclaration = [{
-    Optional<Type> getResultType() {
+    std::optional<Type> getResultType() {
       if (getResultTypes().empty()) return std::nullopt;
       return getResultTypes()[0];
     }

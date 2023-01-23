@@ -16,10 +16,11 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -193,19 +194,6 @@ CudaInstallationDetector::CudaInstallationDetector(
       continue;
     bool CheckLibDevice = (!NoCudaLib || Candidate.StrictChecking);
     if (CheckLibDevice && !FS.exists(LibDevicePath))
-      continue;
-
-    // On Linux, we have both lib and lib64 directories, and we need to choose
-    // based on our triple.  On MacOS, we have only a lib directory.
-    //
-    // It's sufficient for our purposes to be flexible: If both lib and lib64
-    // exist, we choose whichever one matches our triple.  Otherwise, if only
-    // lib exists, we use it.
-    if (HostTriple.isArch64Bit() && FS.exists(InstallPath + "/lib64"))
-      LibPath = InstallPath + "/lib64";
-    else if (FS.exists(InstallPath + "/lib"))
-      LibPath = InstallPath + "/lib";
-    else
       continue;
 
     Version = CudaVersion::UNKNOWN;
@@ -767,10 +755,22 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
       if (!llvm::is_contained(*DAL, A))
         DAL->append(A);
 
-    if (!DAL->hasArg(options::OPT_march_EQ))
-      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                        !BoundArch.empty() ? BoundArch
-                                           : CLANG_OPENMP_NVPTX_DEFAULT_ARCH);
+    if (!DAL->hasArg(options::OPT_march_EQ)) {
+      StringRef Arch = BoundArch;
+      if (Arch.empty()) {
+        auto ArchsOrErr = getSystemGPUArchs(Args);
+        if (!ArchsOrErr) {
+          std::string ErrMsg =
+              llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
+          getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+              << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
+          Arch = CudaArchToString(CudaArch::CudaDefault);
+        } else {
+          Arch = Args.MakeArgString(ArchsOrErr->front());
+        }
+      }
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
+    }
 
     return DAL;
   }
@@ -784,6 +784,31 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), BoundArch);
   }
   return DAL;
+}
+
+Expected<SmallVector<std::string>>
+CudaToolChain::getSystemGPUArchs(const ArgList &Args) const {
+  // Detect NVIDIA GPUs availible on the system.
+  std::string Program;
+  if (Arg *A = Args.getLastArg(options::OPT_nvptx_arch_tool_EQ))
+    Program = A->getValue();
+  else
+    Program = GetProgramPath("nvptx-arch");
+
+  auto StdoutOrErr = executeToolChainProgram(Program);
+  if (!StdoutOrErr)
+    return StdoutOrErr.takeError();
+
+  SmallVector<std::string, 1> GPUArchs;
+  for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
+    if (!Arch.empty())
+      GPUArchs.push_back(Arch.str());
+
+  if (GPUArchs.empty())
+    return llvm::createStringError(std::error_code(),
+                                   "No NVIDIA GPU detected in the system");
+
+  return std::move(GPUArchs);
 }
 
 Tool *CudaToolChain::buildAssembler() const {

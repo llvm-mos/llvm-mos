@@ -13,7 +13,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -4226,10 +4225,10 @@ bool AsmParser::parseDirectiveCFIEndProc() {
 /// parse register name or number.
 bool AsmParser::parseRegisterOrRegisterNumber(int64_t &Register,
                                               SMLoc DirectiveLoc) {
-  unsigned RegNo;
+  MCRegister RegNo;
 
   if (getLexer().isNot(AsmToken::Integer)) {
-    if (getTargetParser().ParseRegister(RegNo, DirectiveLoc, DirectiveLoc))
+    if (getTargetParser().parseRegister(RegNo, DirectiveLoc, DirectiveLoc))
       return true;
     Register = getContext().getRegisterInfo()->getDwarfRegNum(RegNo, true);
   } else
@@ -5059,11 +5058,12 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
 
   // Create the Symbol as a common or local common with Size and Pow2Alignment
   if (IsLocal) {
-    getStreamer().emitLocalCommonSymbol(Sym, Size, 1 << Pow2Alignment);
+    getStreamer().emitLocalCommonSymbol(Sym, Size,
+                                        Align(1ULL << Pow2Alignment));
     return false;
   }
 
-  getStreamer().emitCommonSymbol(Sym, Size, 1 << Pow2Alignment);
+  getStreamer().emitCommonSymbol(Sym, Size, Align(1ULL << Pow2Alignment));
   return false;
 }
 

@@ -52,11 +52,7 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   assert(type.hasStaticShape() && "unexpected dynamic shape");
 
   // Extract all strides and offsets and verify they are static.
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto result = getStridesAndOffset(type, strides, offset);
-  (void)result;
-  assert(succeeded(result) && "unexpected failure in stride computation");
+  auto [strides, offset] = getStridesAndOffset(type);
   assert(!ShapedType::isDynamic(offset) &&
          "expected static offset");
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
@@ -143,7 +139,7 @@ Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
   // Copy size values to stack-allocated memory.
   auto one = createIndexAttrConstant(builder, loc, indexType, 1);
   auto sizes = builder.create<LLVM::ExtractValueOp>(
-      loc, value, llvm::makeArrayRef<int64_t>({kSizePosInMemRefDescriptor}));
+      loc, value, llvm::ArrayRef<int64_t>({kSizePosInMemRefDescriptor}));
   auto sizesPtr =
       builder.create<LLVM::AllocaOp>(loc, arrayPtrTy, one, /*alignment=*/0);
   builder.create<LLVM::StoreOp>(loc, sizes, sizesPtr);

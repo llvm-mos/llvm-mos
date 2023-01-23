@@ -135,10 +135,6 @@ public:
     return CallsExternalNode.get();
   }
 
-  CallGraphNode *getNoCallbackNode() const {
-    return NoCallbackNode.get();
-  }
-
   /// Old node has been deleted, and New is to be used in its place, update the
   /// ExternalCallingNode.
   void ReplaceExternalCallEdge(CallGraphNode *Old, CallGraphNode *New);
@@ -184,7 +180,7 @@ public:
   /// first field and it is not supposed to be `nullptr`.
   /// Reference edges, for example, are used for connecting broker function
   /// caller to the callback function for callback call sites.
-  using CallRecord = std::pair<Optional<WeakTrackingVH>, CallGraphNode *>;
+  using CallRecord = std::pair<std::optional<WeakTrackingVH>, CallGraphNode *>;
 
 public:
   using CalledFunctionsVector = std::vector<CallRecord>;
@@ -249,11 +245,9 @@ public:
 
   /// Adds a function to the list of functions called by this one.
   void addCalledFunction(CallBase *Call, CallGraphNode *M) {
-    assert(!Call || !Call->getCalledFunction() ||
-           !Call->getCalledFunction()->isIntrinsic() ||
-           !Intrinsic::isLeaf(Call->getCalledFunction()->getIntrinsicID()));
-    CalledFunctions.emplace_back(
-        Call ? Optional<WeakTrackingVH>(Call) : Optional<WeakTrackingVH>(), M);
+    CalledFunctions.emplace_back(Call ? std::optional<WeakTrackingVH>(Call)
+                                      : std::optional<WeakTrackingVH>(),
+                                 M);
     M->AddRef();
   }
 

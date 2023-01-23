@@ -15,7 +15,6 @@
 #include "index/MemIndex.h"
 #include "clang/AST/Attr.h"
 #include "clang/Index/IndexSymbol.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "gmock/gmock.h"
@@ -899,9 +898,7 @@ class Foo final {})cpp";
          HI.CalleeArgInfo.emplace();
          HI.CalleeArgInfo->Name = "arg_b";
          HI.CalleeArgInfo->Type = "int &";
-         HI.CallPassType.emplace();
-         HI.CallPassType->PassBy = PassMode::Ref;
-         HI.CallPassType->Converted = false;
+         HI.CallPassType = HoverInfo::PassType{PassMode::Ref, false};
        }},
       {// Extra info for method call.
        R"cpp(
@@ -927,9 +924,7 @@ class Foo final {})cpp";
          HI.CalleeArgInfo->Name = "arg_a";
          HI.CalleeArgInfo->Type = "int";
          HI.CalleeArgInfo->Default = "3";
-         HI.CallPassType.emplace();
-         HI.CallPassType->PassBy = PassMode::Value;
-         HI.CallPassType->Converted = false;
+         HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
        }},
       {// Dont crash on invalid decl
        R"cpp(
@@ -3038,9 +3033,7 @@ private: union foo {})",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Value;
-            HI.CallPassType->Converted = false;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
           },
           R"(variable foo
 
@@ -3063,9 +3056,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Ref;
-            HI.CallPassType->Converted = false;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Ref, false};
           },
           R"(variable foo
 
@@ -3088,9 +3079,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = {"alias_int", "int"};
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Value;
-            HI.CallPassType->Converted = true;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, true};
           },
           R"(variable foo
 
@@ -3128,9 +3117,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::ConstRef;
-            HI.CallPassType->Converted = true;
+            HI.CallPassType = HoverInfo::PassType{PassMode::ConstRef, true};
           },
           R"(variable foo
 

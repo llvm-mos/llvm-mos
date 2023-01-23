@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <utility>
+#include <optional>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -50,11 +51,11 @@ struct LinalgTransformationFilter {
 
   explicit LinalgTransformationFilter(
       ArrayRef<StringAttr> matchDisjunction = {},
-      Optional<StringAttr> replacement = std::nullopt);
+      std::optional<StringAttr> replacement = std::nullopt);
 
   explicit LinalgTransformationFilter(
       const FilterFunction &f, ArrayRef<StringAttr> matchDisjunction = {},
-      Optional<StringAttr> replacement = std::nullopt);
+      std::optional<StringAttr> replacement = std::nullopt);
 
   LinalgTransformationFilter(LinalgTransformationFilter &&) = default;
   LinalgTransformationFilter(const LinalgTransformationFilter &) = default;
@@ -88,14 +89,15 @@ struct LinalgTransformationFilter {
 private:
   SmallVector<FilterFunction> filters;
   SmallVector<StringAttr> matchDisjunction;
-  Optional<StringAttr> replacement;
+  std::optional<StringAttr> replacement;
   /// When set to true, if the attribute is not set, it will be treated as
   /// a match. Default is false.
   bool matchByDefault;
 };
 
 LinalgTransformationFilter::LinalgTransformationFilter(
-    ArrayRef<StringAttr> matchDisjunction, Optional<StringAttr> replacement)
+    ArrayRef<StringAttr> matchDisjunction,
+    std::optional<StringAttr> replacement)
     : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement), matchByDefault(false) {}
 
@@ -135,7 +137,7 @@ LinalgTransformationFilter::checkAndNotify(PatternRewriter &rewriter,
 void LinalgTransformationFilter::replaceLinalgTransformationFilter(
     PatternRewriter &rewriter, Operation *op) const {
   if (replacement.has_value())
-    op->setAttr(kLinalgTransformMarker, replacement.value());
+    op->setAttr(kLinalgTransformMarker, *replacement);
   else
     op->removeAttr(rewriter.getStringAttr(kLinalgTransformMarker));
 }
@@ -368,6 +370,9 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
     // 5. Tile and fuse a sequence of GEMMs by tiling and fusing only along M
     // dimension.
     addPatternForTileAndFuse(context, patterns, "gemm_sequence_fusion", {10});
+    // 6. Fusion of back-to-back-reduction ops
+    addPatternForTileAndFuse(context, patterns, "reduction_sequence_fusion",
+                             {10});
     return;
   }
   if (testLoweringToScalar) {

@@ -736,7 +736,7 @@ TEST_F(AArch64GISelMITest, WidenUADDO) {
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
   auto MIBUAddO =
       B.buildInstr(TargetOpcode::G_UADDO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -775,7 +775,7 @@ TEST_F(AArch64GISelMITest, WidenUSUBO) {
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
   auto MIBUSUBO =
       B.buildInstr(TargetOpcode::G_USUBO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -814,7 +814,7 @@ TEST_F(AArch64GISelMITest, WidenSADDO) {
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
   auto MIBSAddO =
       B.buildInstr(TargetOpcode::G_SADDO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -853,7 +853,7 @@ TEST_F(AArch64GISelMITest, WidenSSUBO) {
   LLT s8{LLT::scalar(8)};
   LLT s16{LLT::scalar(16)};
   auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
-  unsigned CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
+  Register CarryReg = MRI->createGenericVirtualRegister(LLT::scalar(1));
   auto MIBSSUBO =
       B.buildInstr(TargetOpcode::G_SSUBO, {s8, CarryReg}, {MIBTrunc, MIBTrunc});
   AInfo Info(MF->getSubtarget());
@@ -1784,7 +1784,7 @@ TEST_F(AArch64GISelMITest, LowerMergeValues) {
   for (int I = 0; I != 8; ++I)
     Merge0Ops.push_back(B.buildConstant(S3, I).getReg(0));
 
-  auto Merge0 = B.buildMerge(S24, Merge0Ops);
+  auto Merge0 = B.buildMergeLikeInstr(S24, Merge0Ops);
 
   // 21 = 3 3 3   3 3 3   3
   //     => 9, 2 extra implicit_def needed
@@ -1793,13 +1793,13 @@ TEST_F(AArch64GISelMITest, LowerMergeValues) {
   for (int I = 0; I != 7; ++I)
     Merge1Ops.push_back(B.buildConstant(S3, I).getReg(0));
 
-  auto Merge1 = B.buildMerge(S21, Merge1Ops);
+  auto Merge1 = B.buildMergeLikeInstr(S21, Merge1Ops);
 
   SmallVector<Register, 8> Merge2Ops;
   for (int I = 0; I != 2; ++I)
     Merge2Ops.push_back(B.buildConstant(S8, I).getReg(0));
 
-  auto Merge2 = B.buildMerge(S16, Merge2Ops);
+  auto Merge2 = B.buildMergeLikeInstr(S16, Merge2Ops);
 
   B.setInstr(*Merge0);
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -1877,7 +1877,7 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
   auto Lo = B.buildTrunc(S32, Copies[0]);
   auto Hi = B.buildTrunc(S32, Copies[1]);
 
-  auto Merge = B.buildMerge(P0, {Lo, Hi});
+  auto Merge = B.buildMergeLikeInstr(P0, {Lo, Hi});
 
   B.setInstr(*Merge);
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
@@ -2087,7 +2087,7 @@ TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
   auto MIBFPTrunc1 =
       B.buildInstr(TargetOpcode::G_FPTRUNC, {S16}, {MIBTrunc});
 
-  auto MIBMerge = B.buildMerge(S128, {Copies[1], Copies[2]});
+  auto MIBMerge = B.buildMergeLikeInstr(S128, {Copies[1], Copies[2]});
 
   auto MIBFPTrunc2 =
       B.buildInstr(TargetOpcode::G_FPTRUNC, {S64}, {MIBMerge});

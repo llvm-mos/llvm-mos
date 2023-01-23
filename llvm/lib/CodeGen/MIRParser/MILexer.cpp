@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MILexer.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -217,6 +216,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("debug-location", MIToken::kw_debug_location)
       .Case("debug-instr-number", MIToken::kw_debug_instr_number)
+      .Case("dbg-instr-ref", MIToken::kw_dbg_instr_ref)
       .Case("same_value", MIToken::kw_cfi_same_value)
       .Case("offset", MIToken::kw_cfi_offset)
       .Case("rel_offset", MIToken::kw_cfi_rel_offset)

@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -598,11 +597,12 @@ public:
 
 private:
   std::optional<ChecksumInfo<MDString *>> Checksum;
-  std::optional<MDString *> Source;
+  /// An optional source. A nullptr means none.
+  MDString *Source;
 
   DIFile(LLVMContext &C, StorageType Storage,
-         std::optional<ChecksumInfo<MDString *>> CS,
-         std::optional<MDString *> Src, ArrayRef<Metadata *> Ops);
+         std::optional<ChecksumInfo<MDString *>> CS, MDString *Src,
+         ArrayRef<Metadata *> Ops);
   ~DIFile() = default;
 
   static DIFile *getImpl(LLVMContext &Context, StringRef Filename,
@@ -615,15 +615,13 @@ private:
       MDChecksum.emplace(CS->Kind, getCanonicalMDString(Context, CS->Value));
     return getImpl(Context, getCanonicalMDString(Context, Filename),
                    getCanonicalMDString(Context, Directory), MDChecksum,
-                   Source ? std::optional<MDString *>(
-                                getCanonicalMDString(Context, *Source))
-                          : std::nullopt,
-                   Storage, ShouldCreate);
+                   Source ? MDString::get(Context, *Source) : nullptr, Storage,
+                   ShouldCreate);
   }
   static DIFile *getImpl(LLVMContext &Context, MDString *Filename,
                          MDString *Directory,
                          std::optional<ChecksumInfo<MDString *>> CS,
-                         std::optional<MDString *> Source, StorageType Storage,
+                         MDString *Source, StorageType Storage,
                          bool ShouldCreate = true);
 
   TempDIFile cloneImpl() const {
@@ -640,7 +638,7 @@ public:
   DEFINE_MDNODE_GET(DIFile,
                     (MDString * Filename, MDString *Directory,
                      std::optional<ChecksumInfo<MDString *>> CS = std::nullopt,
-                     std::optional<MDString *> Source = std::nullopt),
+                     MDString *Source = nullptr),
                     (Filename, Directory, CS, Source))
 
   TempDIFile clone() const { return cloneImpl(); }
@@ -654,7 +652,7 @@ public:
     return StringRefChecksum;
   }
   std::optional<StringRef> getSource() const {
-    return Source ? std::optional<StringRef>((*Source)->getString())
+    return Source ? std::optional<StringRef>(Source->getString())
                   : std::nullopt;
   }
 
@@ -663,7 +661,7 @@ public:
   std::optional<ChecksumInfo<MDString *>> getRawChecksum() const {
     return Checksum;
   }
-  std::optional<MDString *> getRawSource() const { return Source; }
+  MDString *getRawSource() const { return Source; }
 
   static StringRef getChecksumKindAsString(ChecksumKind CSKind);
   static std::optional<ChecksumKind> getChecksumKind(StringRef CSKindStr);
@@ -1581,6 +1579,13 @@ public:
   /// chain.
   DISubprogram *getSubprogram() const;
 
+  /// Traverses the scope chain rooted at RootScope until it hits a Subprogram,
+  /// recreating the chain with "NewSP" instead.
+  static DILocalScope *
+  cloneScopeForSubprogram(DILocalScope &RootScope, DISubprogram &NewSP,
+                          LLVMContext &Ctx,
+                          DenseMap<const MDNode *, MDNode *> &Cache);
+
   /// Get the first non DILexicalBlockFile scope of this scope.
   ///
   /// Return this if it's not a \a DILexicalBlockFIle; otherwise, look up the
@@ -1802,9 +1807,9 @@ public:
   /// \p DF: duplication factor
   /// \p CI: copy index
   ///
-  /// The return is None if the values cannot be encoded in 32 bits - for
-  /// example, values for BD or DF larger than 12 bits. Otherwise, the return is
-  /// the encoded value.
+  /// The return is std::nullopt if the values cannot be encoded in 32 bits -
+  /// for example, values for BD or DF larger than 12 bits. Otherwise, the
+  /// return is the encoded value.
   static std::optional<unsigned> encodeDiscriminator(unsigned BD, unsigned DF,
                                                      unsigned CI);
 
@@ -2120,6 +2125,11 @@ public:
   DILocalScope *getScope() const { return cast<DILocalScope>(getRawScope()); }
 
   Metadata *getRawScope() const { return getOperand(1); }
+
+  void replaceScope(DIScope *Scope) {
+    assert(!isUniqued());
+    setOperand(1, Scope);
+  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILexicalBlockKind ||
@@ -2783,6 +2793,57 @@ public:
   /// Return whether the location is computed on the expression stack, meaning
   /// it cannot be a simple register location.
   bool isComplex() const;
+
+  /// Return whether the evaluated expression makes use of a single location at
+  /// the start of the expression, i.e. if it contains only a single
+  /// DW_OP_LLVM_arg op as its first operand, or if it contains none.
+  bool isSingleLocationExpression() const;
+
+  /// Removes all elements from \p Expr that do not apply to an undef debug
+  /// value, which includes every operator that computes the value/location on
+  /// the DWARF stack, including any DW_OP_LLVM_arg elements (making the result
+  /// of this function always a single-location expression) while leaving
+  /// everything that defines what the computed value applies to, i.e. the
+  /// fragment information.
+  static const DIExpression *convertToUndefExpression(const DIExpression *Expr);
+
+  /// If \p Expr is a non-variadic expression (i.e. one that does not contain
+  /// DW_OP_LLVM_arg), returns \p Expr converted to variadic form by adding a
+  /// leading [DW_OP_LLVM_arg, 0] to the expression; otherwise returns \p Expr.
+  static const DIExpression *
+  convertToVariadicExpression(const DIExpression *Expr);
+
+  /// If \p Expr is a valid single-location expression, i.e. it refers to only a
+  /// single debug operand at the start of the expression, then return that
+  /// expression in a non-variadic form by removing DW_OP_LLVM_arg from the
+  /// expression if it is present; otherwise returns std::nullopt.
+  static std::optional<const DIExpression *>
+  convertToNonVariadicExpression(const DIExpression *Expr);
+
+  /// Inserts the elements of \p Expr into \p Ops modified to a canonical form,
+  /// which uses DW_OP_LLVM_arg (i.e. is a variadic expression) and folds the
+  /// implied derefence from the \p IsIndirect flag into the expression. This
+  /// allows us to check equivalence between expressions with differing
+  /// directness or variadicness.
+  static void canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
+                                        const DIExpression *Expr,
+                                        bool IsIndirect);
+
+  /// Determines whether two debug values should produce equivalent DWARF
+  /// expressions, using their DIExpressions and directness, ignoring the
+  /// differences between otherwise identical expressions in variadic and
+  /// non-variadic form and not considering the debug operands.
+  /// \p FirstExpr is the DIExpression for the first debug value.
+  /// \p FirstIndirect should be true if the first debug value is indirect; in
+  /// IR this should be true for dbg.declare and dbg.addr intrinsics and false
+  /// for dbg.values, and in MIR this should be true only for DBG_VALUE
+  /// instructions whose second operand is an immediate value.
+  /// \p SecondExpr and \p SecondIndirect have the same meaning as the prior
+  /// arguments, but apply to the second debug value.
+  static bool isEqualExpression(const DIExpression *FirstExpr,
+                                bool FirstIndirect,
+                                const DIExpression *SecondExpr,
+                                bool SecondIndirect);
 
   /// Append \p Ops with operations to apply the \p Offset.
   static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset);

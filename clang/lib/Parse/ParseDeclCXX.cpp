@@ -359,8 +359,11 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
                 Tok.is(tok::l_brace) ? Tok.getLocation() : SourceLocation());
 
   ParsedAttributes DeclAttrs(AttrFactory);
-  MaybeParseCXX11Attributes(DeclAttrs);
-  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+  ParsedAttributes DeclSpecAttrs(AttrFactory);
+
+  while (MaybeParseCXX11Attributes(DeclAttrs) ||
+         MaybeParseGNUAttributes(DeclSpecAttrs))
+    ;
 
   if (Tok.isNot(tok::l_brace)) {
     // Reset the source range in DS, as the leading "extern"
@@ -369,7 +372,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
     DS.SetRangeEnd(SourceLocation());
     // ... but anyway remember that such an "extern" was seen.
     DS.setExternInLinkageSpec(true);
-    ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs, &DS);
+    ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs, &DS);
     return LinkageSpec ? Actions.ActOnFinishLinkageSpecification(
                              getCurScope(), LinkageSpec, SourceLocation())
                        : nullptr;
@@ -411,7 +414,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
     default:
       ParsedAttributes DeclAttrs(AttrFactory);
       MaybeParseCXX11Attributes(DeclAttrs);
-      ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs);
+      ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
       continue;
     }
 
@@ -2070,7 +2073,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         DSC == DeclSpecContext::DSC_type_specifier,
         DSC == DeclSpecContext::DSC_template_param ||
             DSC == DeclSpecContext::DSC_template_type_arg,
-        &SkipBody);
+        OffsetOfState, &SkipBody);
 
     // If ActOnTag said the type was dependent, try again with the
     // less common call.
@@ -3188,7 +3191,11 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
          "Data member initializer not starting with '=' or '{'");
 
   EnterExpressionEvaluationContext Context(
-      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, D);
+      Actions,
+      isa_and_present<FieldDecl>(D)
+          ? Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed
+          : Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      D);
   if (TryConsumeToken(tok::equal, EqualLoc)) {
     if (Tok.is(tok::kw_delete)) {
       // In principle, an initializer of '= delete p;' is legal, but it will

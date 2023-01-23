@@ -21,7 +21,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -65,7 +64,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     if (!File)
@@ -76,7 +75,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
   }
 
   void HasInclude(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
-                  Optional<FileEntryRef> File,
+                  OptionalFileEntryRef File,
                   SrcMgr::CharacteristicKind FileType) override {
     if (!File)
       return;
@@ -109,7 +108,9 @@ struct DepCollectorMMCallbacks : public ModuleMapCallbacks {
 
 struct DepCollectorASTListener : public ASTReaderListener {
   DependencyCollector &DepCollector;
-  DepCollectorASTListener(DependencyCollector &L) : DepCollector(L) { }
+  FileManager &FileMgr;
+  DepCollectorASTListener(DependencyCollector &L, FileManager &FileMgr)
+      : DepCollector(L), FileMgr(FileMgr) {}
   bool needsInputFileVisitation() override { return true; }
   bool needsSystemInputFileVisitation() override {
     return DepCollector.needSystemDependencies();
@@ -124,6 +125,11 @@ struct DepCollectorASTListener : public ASTReaderListener {
                       bool IsOverridden, bool IsExplicitModule) override {
     if (IsOverridden || IsExplicitModule)
       return true;
+
+    // Run this through the FileManager in order to respect 'use-external-name'
+    // in case we have a VFS overlay.
+    if (auto FE = FileMgr.getOptionalFileRef(Filename))
+      Filename = FE->getName();
 
     DepCollector.maybeAddDependency(Filename, /*FromModule*/true, IsSystem,
                                    /*IsModuleFile*/false, /*IsMissing*/false);
@@ -177,7 +183,8 @@ void DependencyCollector::attachToPreprocessor(Preprocessor &PP) {
       std::make_unique<DepCollectorMMCallbacks>(*this));
 }
 void DependencyCollector::attachToASTReader(ASTReader &R) {
-  R.addListener(std::make_unique<DepCollectorASTListener>(*this));
+  R.addListener(
+      std::make_unique<DepCollectorASTListener>(*this, R.getFileManager()));
 }
 
 DependencyFileGenerator::DependencyFileGenerator(

@@ -23,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include <cassert>
+#include <optional>
 
 namespace llvm {
 
@@ -30,14 +31,12 @@ namespace yaml {
 struct AArch64FunctionInfo;
 } // end namespace yaml
 
+class AArch64Subtarget;
 class MachineInstr;
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
-  /// Backreference to the machine function.
-  MachineFunction *MF;
-
   /// Number of bytes of arguments this function has on the stack. If the callee
   /// is expected to restore the argument stack this should be a multiple of 16,
   /// all usable during a tail call.
@@ -132,7 +131,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// redzone, and no value otherwise.
   /// Initialized during frame lowering, unless the function has the noredzone
   /// attribute, in which case it is set to false at construction.
-  Optional<bool> HasRedZone;
+  std::optional<bool> HasRedZone;
 
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
   /// that must be forwarded to every musttail call.
@@ -194,7 +193,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   mutable std::optional<bool> NeedsAsyncDwarfUnwindInfo;
 
 public:
-  explicit AArch64FunctionInfo(MachineFunction &MF);
+  AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -334,7 +333,7 @@ public:
     return NumLocalDynamicTLSAccesses;
   }
 
-  Optional<bool> hasRedZone() const { return HasRedZone; }
+  std::optional<bool> hasRedZone() const { return HasRedZone; }
   void setHasRedZone(bool s) { HasRedZone = s; }
 
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
@@ -427,7 +426,7 @@ public:
     CalleeSaveBaseToFrameRecordOffset = Offset;
   }
 
-  bool shouldSignReturnAddress() const;
+  bool shouldSignReturnAddress(const MachineFunction &MF) const;
   bool shouldSignReturnAddress(bool SpillsLR) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
@@ -445,8 +444,8 @@ public:
   }
   int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
 
-  bool needsDwarfUnwindInfo() const;
-  bool needsAsyncDwarfUnwindInfo() const;
+  bool needsDwarfUnwindInfo(const MachineFunction &MF) const;
+  bool needsAsyncDwarfUnwindInfo(const MachineFunction &MF) const;
 
 private:
   // Hold the lists of LOHs.
@@ -458,7 +457,7 @@ private:
 
 namespace yaml {
 struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
-  Optional<bool> HasRedZone;
+  std::optional<bool> HasRedZone;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);

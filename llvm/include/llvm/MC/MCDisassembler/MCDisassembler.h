@@ -9,7 +9,6 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 #define LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
@@ -152,8 +151,9 @@ public:
   ///                   must hold the number of bytes that were decoded before
   ///                   failing. The target must print nothing. This can be
   ///                   done by buffering the output if needed.
-  ///                 - None if the target doesn't want to handle the symbol
-  ///                   separately. Value of Size is ignored in this case.
+  ///                 - std::nullopt if the target doesn't want to handle the
+  ///                   symbol separately. Value of Size is ignored in this
+  ///                   case.
   virtual std::optional<DecodeStatus>
   onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
                 uint64_t Address, raw_ostream &CStream) const;

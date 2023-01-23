@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -254,6 +255,10 @@ MachineBasicBlock::instr_iterator MachineBasicBlock::getFirstInstrTerminator() {
   return I;
 }
 
+MachineBasicBlock::iterator MachineBasicBlock::getFirstTerminatorForward() {
+  return find_if(instrs(), [](auto &II) { return II.isTerminator(); });
+}
+
 MachineBasicBlock::iterator
 MachineBasicBlock::getFirstNonDebugInstr(bool SkipPseudoOp) {
   // Skip over begin-of-block dbg_value instructions.
@@ -451,8 +456,8 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   if (IrrLoopHeaderWeight && IsStandalone) {
     if (Indexes) OS << '\t';
-    OS.indent(2) << "; Irreducible loop header weight: "
-                 << IrrLoopHeaderWeight.value() << '\n';
+    OS.indent(2) << "; Irreducible loop header weight: " << *IrrLoopHeaderWeight
+                 << '\n';
   }
 }
 
@@ -1061,8 +1066,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
             MO.isUndef())
           continue;
         Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg) ||
-            LV->getVarInfo(Reg).removeKill(MI)) {
+        if (Reg.isPhysical() || LV->getVarInfo(Reg).removeKill(MI)) {
           KilledRegs.push_back(Reg);
           LLVM_DEBUG(dbgs() << "Removing terminator kill: " << MI);
           MO.setIsKill(false);
@@ -1148,7 +1152,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
       for (instr_iterator I = instr_end(), E = instr_begin(); I != E;) {
         if (!(--I)->addRegisterKilled(Reg, TRI, /* AddIfNotFound= */ false))
           continue;
-        if (Register::isVirtualRegister(Reg))
+        if (Reg.isVirtual())
           LV->getVarInfo(Reg).Kills.push_back(&*I);
         LLVM_DEBUG(dbgs() << "Restored terminator kill: " << *I);
         break;

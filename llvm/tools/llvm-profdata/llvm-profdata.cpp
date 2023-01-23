@@ -13,7 +13,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -338,9 +337,16 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
                              FuncName, firstTime);
     });
   }
-  if (Reader->hasError())
+
+  if (Reader->hasError()) {
     if (Error E = Reader->getError())
       WC->Errors.emplace_back(std::move(E), Filename);
+  }
+
+  std::vector<llvm::object::BuildID> BinaryIds;
+  if (Error E = Reader->readBinaryIds(BinaryIds))
+    WC->Errors.emplace_back(std::move(E), Filename);
+  WC->Writer.addBinaryIds(BinaryIds);
 }
 
 /// Merge the \p Src writer context into \p Dst.
@@ -348,6 +354,9 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
   for (auto &ErrorPair : Src->Errors)
     Dst->Errors.push_back(std::move(ErrorPair));
   Src->Errors.clear();
+
+  if (Error E = Dst->Writer.mergeProfileKind(Src->Writer.getProfileKind()))
+    exitWithError(std::move(E));
 
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
     instrprof_error IPE = InstrProfError::take(std::move(E));
@@ -406,9 +415,6 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (NumThreads == 0)
     NumThreads = std::min(hardware_concurrency().compute_thread_count(),
                           unsigned((Inputs.size() + 1) / 2));
-  // FIXME: There's a bug here, where setting NumThreads = Inputs.size() fails
-  // the merge_empty_profile.test because the InstrProfWriter.ProfileKind isn't
-  // merged, thus the emitted file ends up with a PF_Unknown kind.
 
   // Initialize the writer contexts.
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;
@@ -959,7 +965,8 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
                    StringRef ProfileSymbolListFile, bool CompressAllSections,
                    bool UseMD5, bool GenPartialProfile, bool GenCSNestedProfile,
                    bool SampleMergeColdContext, bool SampleTrimColdContext,
-                   bool SampleColdContextFrameDepth, FailureMode FailMode) {
+                   bool SampleColdContextFrameDepth, FailureMode FailMode,
+                   bool DropProfileSymbolList) {
   using namespace sampleprof;
   SampleProfileMap ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
@@ -1012,10 +1019,12 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
       }
     }
 
-    std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
-        Reader->getProfileSymbolList();
-    if (ReaderList)
-      WriterList.merge(*ReaderList);
+    if (!DropProfileSymbolList) {
+      std::unique_ptr<sampleprof::ProfileSymbolList> ReaderList =
+          Reader->getProfileSymbolList();
+      if (ReaderList)
+        WriterList.merge(*ReaderList);
+    }
   }
 
   if (ProfileIsCS && (SampleMergeColdContext || SampleTrimColdContext)) {
@@ -1227,6 +1236,10 @@ static int merge_main(int argc, const char *argv[]) {
   cl::opt<std::string> ProfiledBinary(
       "profiled-binary", cl::init(""),
       cl::desc("Path to binary from which the profile was collected."));
+  cl::opt<bool> DropProfileSymbolList(
+      "drop-profile-symbol-list", cl::init(false), cl::Hidden,
+      cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
+               "(only meaningful for -sample)"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
 
@@ -1271,11 +1284,11 @@ static int merge_main(int argc, const char *argv[]) {
                       OutputFilename, OutputFormat, OutputSparse, NumThreads,
                       FailureMode, ProfiledBinary);
   else
-    mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
-                       OutputFormat, ProfileSymbolListFile, CompressAllSections,
-                       UseMD5, GenPartialProfile, GenCSNestedProfile,
-                       SampleMergeColdContext, SampleTrimColdContext,
-                       SampleColdContextFrameDepth, FailureMode);
+    mergeSampleProfile(
+        WeightedInputs, Remapper.get(), OutputFilename, OutputFormat,
+        ProfileSymbolListFile, CompressAllSections, UseMD5, GenPartialProfile,
+        GenCSNestedProfile, SampleMergeColdContext, SampleTrimColdContext,
+        SampleColdContextFrameDepth, FailureMode, DropProfileSymbolList);
   return 0;
 }
 

@@ -367,12 +367,14 @@ public:
                            MachineBasicBlock::iterator MI, Register SrcReg,
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
 
   void loadStoreTileReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                         unsigned Opc, Register Reg, int FrameIdx,
@@ -506,7 +508,8 @@ public:
 
   bool useMachineCombiner() const override { return true; }
 
-  bool isAssociativeAndCommutative(const MachineInstr &Inst) const override;
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
   bool hasReassociableOperands(const MachineInstr &Inst,
                                const MachineBasicBlock *MBB) const override;

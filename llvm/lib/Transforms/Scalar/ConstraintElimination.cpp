@@ -26,12 +26,11 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Transforms/Scalar.h"
 
 #include <cmath>
 #include <string>
@@ -44,6 +43,10 @@ using namespace PatternMatch;
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
+
+static cl::opt<unsigned>
+    MaxRows("constraint-elimination-max-rows", cl::init(500), cl::Hidden,
+            cl::desc("Maximum number of rows to keep in constraint system"));
 
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
@@ -184,12 +187,12 @@ struct DecompEntry {
   int64_t Coefficient;
   Value *Variable;
   /// True if the variable is known positive in the current constraint.
-  bool IsKnownPositive;
+  bool IsKnownNonNegative;
 
   DecompEntry(int64_t Coefficient, Value *Variable,
-              bool IsKnownPositive = false)
+              bool IsKnownNonNegative = false)
       : Coefficient(Coefficient), Variable(Variable),
-        IsKnownPositive(IsKnownPositive) {}
+        IsKnownNonNegative(IsKnownNonNegative) {}
 };
 
 /// Represents an Offset + Coefficient1 * Variable1 + ... decomposition.
@@ -198,8 +201,8 @@ struct Decomposition {
   SmallVector<DecompEntry, 3> Vars;
 
   Decomposition(int64_t Offset) : Offset(Offset) {}
-  Decomposition(Value *V, bool IsKnownPositive = false) {
-    Vars.emplace_back(1, V, IsKnownPositive);
+  Decomposition(Value *V, bool IsKnownNonNegative = false) {
+    Vars.emplace_back(1, V, IsKnownNonNegative);
   }
   Decomposition(int64_t Offset, ArrayRef<DecompEntry> Vars)
       : Offset(Offset), Vars(Vars) {}
@@ -243,6 +246,8 @@ decomposeGEP(GetElementPtrInst &GEP,
   if (!GEP.isInBounds())
     return &GEP;
 
+  assert(!IsSigned && "The logic below only supports decomposition for "
+                      "unsinged predicates at the moment.");
   Type *PtrTy = GEP.getType()->getScalarType();
   unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
   MapVector<Value *, APInt> VariableOffsets;
@@ -328,9 +333,9 @@ static Decomposition decompose(Value *V,
     return decomposeGEP(*GEP, Preconditions, IsSigned, DL);
 
   Value *Op0;
-  bool IsKnownPositive = false;
+  bool IsKnownNonNegative = false;
   if (match(V, m_ZExt(m_Value(Op0)))) {
-    IsKnownPositive = true;
+    IsKnownNonNegative = true;
     V = Op0;
   }
 
@@ -377,7 +382,7 @@ static Decomposition decompose(Value *V,
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1))))
     return {0, {{1, Op0}, {-1, Op1}}};
 
-  return {V, IsKnownPositive};
+  return {V, IsKnownNonNegative};
 }
 
 ConstraintTy
@@ -413,7 +418,6 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     break;
   }
 
-  // Only ULE and ULT predicates are supported at the moment.
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT &&
       Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
     return {};
@@ -458,19 +462,21 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
       IsSigned);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
-  DenseMap<Value *, bool> KnownPositiveVariables;
+  DenseMap<Value *, bool> KnownNonNegativeVariables;
   Res.IsEq = IsEq;
   auto &R = Res.Coefficients;
   for (const auto &KV : VariablesA) {
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
-    auto I = KnownPositiveVariables.insert({KV.Variable, KV.IsKnownPositive});
-    I.first->second &= KV.IsKnownPositive;
+    auto I =
+        KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
+    I.first->second &= KV.IsKnownNonNegative;
   }
 
   for (const auto &KV : VariablesB) {
     R[GetOrAddIndex(KV.Variable)] -= KV.Coefficient;
-    auto I = KnownPositiveVariables.insert({KV.Variable, KV.IsKnownPositive});
-    I.first->second &= KV.IsKnownPositive;
+    auto I =
+        KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
+    I.first->second &= KV.IsKnownNonNegative;
   }
 
   int64_t OffsetSum;
@@ -494,7 +500,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   }
 
   // Add extra constraints for variables that are known positive.
-  for (auto &KV : KnownPositiveVariables) {
+  for (auto &KV : KnownNonNegativeVariables) {
     if (!KV.second || (Value2Index.find(KV.first) == Value2Index.end() &&
                        NewIndexMap.find(KV.first) == NewIndexMap.end()))
       continue;
@@ -623,19 +629,9 @@ struct State {
   void addInfoFor(BasicBlock &BB);
 
   /// Returns true if we can add a known condition from BB to its successor
-  /// block Succ. Each predecessor of Succ can either be BB or be dominated
-  /// by Succ (e.g. the case when adding a condition from a pre-header to a
-  /// loop header).
+  /// block Succ.
   bool canAddSuccessor(BasicBlock &BB, BasicBlock *Succ) const {
-    if (BB.getSingleSuccessor()) {
-      assert(BB.getSingleSuccessor() == Succ);
-      return DT.properlyDominates(&BB, Succ);
-    }
-    return any_of(successors(&BB),
-                  [Succ](const BasicBlock *S) { return S != Succ; }) &&
-           all_of(predecessors(Succ), [&BB, Succ, this](BasicBlock *Pred) {
-             return Pred == &BB || DT.dominates(Succ, Pred);
-           });
+    return DT.dominates(BasicBlockEdge(&BB, Succ), Succ);
   }
 };
 
@@ -850,7 +846,8 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
       dbgs() << "\n";
     });
 
-    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned, ValuesToRelease);
+    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                            std::move(ValuesToRelease));
 
     if (R.IsEq) {
       // Also add the inverted constraint for equality constraints.
@@ -955,15 +952,15 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // If both entries have the same In numbers, conditional facts come first.
     // Otherwise use the relative order in the basic block.
     if (A.NumIn == B.NumIn) {
-      if (A.isConditionFact() && B.IsCheck)
-        return true;
-      if (B.isConditionFact() && A.IsCheck)
-        return false;
       if (A.isConditionFact() && B.isConditionFact()) {
         bool NoConstOpA = HasNoConstOp(A);
         bool NoConstOpB = HasNoConstOp(B);
         return NoConstOpA < NoConstOpB;
       }
+      if (A.isConditionFact())
+        return true;
+      if (B.isConditionFact())
+        return false;
       return A.Inst->comesBefore(B.Inst);
     }
     return A.NumIn < B.NumIn;
@@ -1025,6 +1022,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     Value *Cmp = CB.Inst;
     match(Cmp, m_Intrinsic<Intrinsic::assume>(m_Value(Cmp)));
     if (match(Cmp, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+      if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
+        LLVM_DEBUG(
+            dbgs()
+            << "Skip adding constraint because system has too many rows.\n");
+        continue;
+      }
+
       // Use the inverse predicate if required.
       if (CB.Not)
         Pred = CmpInst::getInversePredicate(Pred);
@@ -1058,42 +1062,4 @@ PreservedAnalyses ConstraintEliminationPass::run(Function &F,
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
-}
-
-namespace {
-
-class ConstraintElimination : public FunctionPass {
-public:
-  static char ID;
-
-  ConstraintElimination() : FunctionPass(ID) {
-    initializeConstraintEliminationPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return eliminateConstraints(F, DT);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-};
-
-} // end anonymous namespace
-
-char ConstraintElimination::ID = 0;
-
-INITIALIZE_PASS_BEGIN(ConstraintElimination, "constraint-elimination",
-                      "Constraint Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
-INITIALIZE_PASS_END(ConstraintElimination, "constraint-elimination",
-                    "Constraint Elimination", false, false)
-
-FunctionPass *llvm::createConstraintEliminationPass() {
-  return new ConstraintElimination();
 }

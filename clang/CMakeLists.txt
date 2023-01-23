@@ -11,6 +11,13 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(Clang)
   set(CLANG_BUILT_STANDALONE TRUE)
+  if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
+    message(WARNING
+      "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
+      "minimum version of CMake required to build LLVM will become 3.20.0, and "
+      "using an older CMake will become an error. Please upgrade your CMake to "
+      "at least 3.20.0 now to avoid issues in the future!")
+  endif()
 endif()
 
 # Must go below project(..)
@@ -237,31 +244,6 @@ set(CLANG_DEFAULT_OBJCOPY "objcopy" CACHE STRING
 
 set(CLANG_DEFAULT_OPENMP_RUNTIME "libomp" CACHE STRING
   "Default OpenMP runtime used by -fopenmp.")
-
-# OpenMP offloading requires at least sm_35 because we use shuffle instructions
-# to generate efficient code for reductions and the atomicMax instruction on
-# 64-bit integers in the implementation of conditional lastprivate.
-set(CUDA_ARCH_FLAGS "sm_35")
-
-# Try to find the highest Nvidia GPU architecture the system supports
-if (NOT DEFINED CLANG_OPENMP_NVPTX_DEFAULT_ARCH)
-  find_package(CUDA QUIET)
-  if (CUDA_FOUND)
-    cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS)
-  endif()
-else()
-  set(CUDA_ARCH_FLAGS ${CLANG_OPENMP_NVPTX_DEFAULT_ARCH})
-endif()
-
-string(REGEX MATCH "sm_([0-9]+)" CUDA_ARCH_MATCH ${CUDA_ARCH_FLAGS})
-if (NOT DEFINED CUDA_ARCH_MATCH OR "${CMAKE_MATCH_1}" LESS 35)
-  set(CLANG_OPENMP_NVPTX_DEFAULT_ARCH "sm_35" CACHE STRING
-    "Default architecture for OpenMP offloading to Nvidia GPUs." FORCE)
-  message(WARNING "Resetting default architecture for OpenMP offloading to Nvidia GPUs to sm_35")
-else()
-  set(CLANG_OPENMP_NVPTX_DEFAULT_ARCH ${CUDA_ARCH_MATCH} CACHE STRING
-    "Default architecture for OpenMP offloading to Nvidia GPUs.")
-endif()
 
 set(CLANG_SYSTEMZ_DEFAULT_ARCH "z10" CACHE STRING "SystemZ Default Arch")
 

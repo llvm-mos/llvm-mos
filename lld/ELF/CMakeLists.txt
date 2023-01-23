@@ -72,6 +72,7 @@ add_lld_library(lldELF
   Option
   Passes
   Support
+  TargetParser
 
   LINK_LIBS
   lldCommon

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 
 // Checks that NOP casts are removed.
 // CHECK-LABEL: cast_values
@@ -1013,9 +1013,34 @@ func.func @reshape_splat_constant_int32() -> tensor<2x4x2xi32> {
 //       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xi32>
 //   CHECK-NOT:   tensor.expand_shape
 //       CHECK:   return %[[CST]]
+// -----
+func.func @expand_shape_splat(%arg : f32) -> tensor<2x2x2xf32> {
+  %c0 = tensor.splat %arg : tensor<2x4xf32>
+  %0 = tensor.expand_shape %c0 [[0], [1, 2]]
+      : tensor<2x4xf32> into tensor<2x2x2xf32>
+  return %0 : tensor<2x2x2xf32>
+}
+// CHECK-LABEL: @expand_shape_splat
+// CHECK-SAME:    %[[ARG0:.+]]: f32
+//       CHECK:   %[[CST:.*]] = tensor.splat %[[ARG0:.+]] : tensor<2x2x2xf32>
+//   CHECK-NOT:   tensor.expand_shape
+//       CHECK:   return %[[CST]]
 
 // -----
 
+func.func @collapse_shape_splat(%arg : f32) -> tensor<2x4xf32> {
+  %c0 = tensor.splat %arg : tensor<2x2x2xf32>
+  %0 = tensor.collapse_shape %c0 [[0], [1, 2]]
+      : tensor<2x2x2xf32> into tensor<2x4xf32>
+  return %0 : tensor<2x4xf32>
+}
+// CHECK-LABEL: @collapse_shape_splat
+// CHECK-SAME:    %[[ARG0:.+]]: f32
+//       CHECK:   %[[CST:.*]] = tensor.splat %[[ARG0:.+]] : tensor<2x4xf32>
+//   CHECK-NOT:   tensor.collapse_shape
+//       CHECK:   return %[[CST]]
+
+// -----
 func.func @reshape_splat_constant_int16() -> tensor<2x4x2xi16> {
   %c0 = arith.constant dense<42> : tensor<2x8xi16>
   %0 = tensor.expand_shape %c0 [[0], [1, 2]]
@@ -1538,52 +1563,6 @@ func.func @empty_canonicalize() -> (tensor<4x5x?xf32>) {
 
 // -----
 
-func.func @empty_reshape_expansion(%arg0 : index) -> tensor<2x3x5x4x?x7xf32> {
-  %0 = tensor.empty(%arg0) : tensor<6x5x?xf32>
-  %1 = tensor.expand_shape %0 [[0, 1], [2], [3, 4, 5]]
-      : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
-  return %1 : tensor<2x3x5x4x?x7xf32>
-}
-//      CHECK: #[[MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 28)>
-//      CHECK: func @empty_reshape_expansion
-// CHECK-SAME:     %[[ARG0:.+]]: index
-// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
-// CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[D]])
-// CHECK-NEXT:   return %[[INIT]]
-
-// -----
-
-func.func @empty_reshape_collapse(%arg0 : index) -> tensor<6x5x?xf32> {
-  %0 = tensor.empty(%arg0) : tensor<2x3x5x4x?x7xf32>
-  %1 = tensor.collapse_shape %0 [[0, 1], [2], [3, 4, 5]]
-      : tensor<2x3x5x4x?x7xf32> into tensor<6x5x?xf32>
-  return %1 : tensor<6x5x?xf32>
-}
-//      CHECK: #[[MAP:.+]] = affine_map<()[s0] -> (s0 * 28)>
-//      CHECK: func @empty_reshape_collapse
-// CHECK-SAME:     %[[ARG0:.+]]: index
-// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
-// CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[D]])
-// CHECK-NEXT:   return %[[INIT]]
-
-// -----
-
-func.func @fold_empty_tensor_with_slice
-  (%arg0 : index, %arg1 : index) -> tensor<5x?x20xf32>
-{
-  %0 = tensor.empty(%arg0) : tensor<?x10x40xf32>
-  %1 = tensor.extract_slice %0[0, 0, 0] [5, %arg1, 20] [1, 1, 1]
-    : tensor<?x10x40xf32> to tensor<5x?x20xf32>
-  return %1 : tensor<5x?x20xf32>
-}
-//      CHECK: func @fold_empty_tensor_with_slice
-// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
-//      CHECK:   %[[T0:.+]] = tensor.empty(%[[ARG1]])
-//      CHECK:   return %[[T0]]
-
-// -----
-
 func.func @fold_empty_tensor_with_cast(%arg0 : index) -> tensor<1x12xf32> {
   %0 = tensor.empty(%arg0) : tensor<?x12xf32>
   %1 = tensor.cast %0 : tensor<?x12xf32> to tensor<1x12xf32>
@@ -1615,18 +1594,6 @@ func.func @empty_tensor_canonicalize(%i : index) {
   call @some_use(%1, %2) : (index, index) -> ()
 
   return
-}
-
-// -----
-
-// CHECK-LABEL: func @rank_reducing_empty_tensor_extract
-func.func @rank_reducing_empty_tensor_extract(%sz : index, %idx : index) -> tensor<2xf32> {
-  // CHECK: tensor.empty() : tensor<2xf32>
-  %a = tensor.empty(%sz) : tensor<?x2xf32>
-
-  // CHECK-NOT: extract
-  %r = tensor.extract_slice %a[%idx, 0] [1, 2] [1, 1] : tensor<?x2xf32> to tensor<2xf32>
-  return %r: tensor<2xf32>
 }
 
 // -----
@@ -1736,4 +1703,74 @@ func.func @unpack_pack(%t: tensor<128x128xf32>, %tile1: index, %tile2: index) ->
   %unpacked = tensor.unpack %packed inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty1 : tensor<16x16x?x?xf32> -> tensor
 <128x128xf32>
   return %unpacked : tensor<128x128xf32>
+}
+
+// -----
+
+// Chain NCnc -> NC -> NC -> NCnc
+// CHECK: func.func @pack_unpack(
+// CHECK-SAME: %[[T:.+]]: tensor<16x16x?x?xf32>,
+// CHECK: return %[[T]] : tensor<16x16x?x?xf32>
+func.func @pack_unpack(%t: tensor<16x16x?x?xf32>, %tile1: index, %tile2: index) -> tensor<16x16x?x?xf32> {
+  %tensor_empty = tensor.empty() : tensor<128x128xf32>
+  %unpacked = tensor.unpack %t inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty : tensor<16x16x?x?xf32> -> tensor<128x128xf32>
+  %tensor_empty1 = tensor.empty(%tile1, %tile2) : tensor<16x16x?x?xf32>
+  %packed = tensor.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty1 : tensor<128x128xf32> -> tensor<16x16x?x?xf32>
+  return %packed : tensor<16x16x?x?xf32>
+}
+
+// -----
+
+// Chain NCnc -> NC -> NC -> NCnc
+// CHECK: func.func @pack_unpack(
+// CHECK-SAME: %[[T:.+]]: tensor<16x16x8x8xf32>
+// CHECK: return %[[T]] : tensor<16x16x8x8xf32>
+func.func @pack_unpack(%t: tensor<16x16x8x8xf32>) -> tensor<16x16x8x8xf32> {
+  %tensor_empty = tensor.empty() : tensor<128x128xf32>
+  %unpacked = tensor.unpack %t inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %tensor_empty : tensor<16x16x8x8xf32> -> tensor<128x128xf32>
+  %tensor_empty1 = tensor.empty() : tensor<16x16x8x8xf32>
+  %packed = tensor.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %tensor_empty1 : tensor<128x128xf32> -> tensor<16x16x8x8xf32>
+  return %packed : tensor<16x16x8x8xf32>
+}
+
+// -----
+
+// CHECK: func.func @pack_unpack_same_tiles(
+// CHECK-SAME:  %[[T:.+]]: tensor<?x?x?x?xf32>,
+// CHECK: return %[[T]] : tensor<?x?x?x?xf32>
+func.func @pack_unpack_same_tiles(%t: tensor<?x?x?x?xf32>, %dim1: index, %dim2: index, %dim3: index, %dim4: index, %dim5: index, %dim6: index,
+                       %tile1: index, %tile2: index) -> tensor<?x?x?x?xf32> {
+  %tensor_empty = tensor.empty(%dim1, %dim2) : tensor<?x?xf32>
+  %unpacked = tensor.unpack %t inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+  %tensor_empty1 = tensor.empty(%dim3, %dim4, %dim5, %dim6) : tensor<?x?x?x?xf32>
+  %packed = tensor.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty1 : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  return %packed : tensor<?x?x?x?xf32>
+}
+
+// -----
+
+// CHECK: func.func @pack_unpack_different_tiles(
+// CHECK-SAME:  %[[T:.+]]: tensor<?x?x?x?xf32>,
+// CHECK-NOT: return %[[T]] : tensor<?x?x?x?xf32>
+func.func @pack_unpack_different_tiles(%t: tensor<?x?x?x?xf32>, %dim1: index, %dim2: index, %dim3: index, %dim4: index, %dim5: index, %dim6: index,
+                       %tile1: index, %tile2: index) -> tensor<?x?x?x?xf32> {
+  %tensor_empty = tensor.empty(%dim1, %dim2) : tensor<?x?xf32>
+  %unpacked = tensor.unpack %t inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+  %tensor_empty1 = tensor.empty(%dim3, %dim4, %dim5, %dim6) : tensor<?x?x?x?xf32>
+  %packed = tensor.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [%tile2, %tile1] into %tensor_empty1 : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  return %packed : tensor<?x?x?x?xf32>
+}
+
+// -----
+
+// CHECK: func.func @pack_unpack_dynamic_with_padding(
+// CHECK-SAME:  %[[T:.+]]: tensor<?x?x?x?xf32>,
+// CHECK-NOT: return %[[T]] : tensor<?x?x?x?xf32>
+func.func @pack_unpack_dynamic_with_padding(%t: tensor<?x?x?x?xf32>, %dim1: index, %dim2: index, %dim3: index, %dim4: index, %dim5: index, %dim6: index,
+                       %tile1: index, %tile2: index, %pad: f32) -> tensor<?x?x?x?xf32> {
+  %tensor_empty = tensor.empty(%dim1, %dim2) : tensor<?x?xf32>
+  %unpacked = tensor.unpack %t inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+  %tensor_empty1 = tensor.empty(%dim3, %dim4, %dim5, %dim6) : tensor<?x?x?x?xf32>
+  %packed = tensor.pack %unpacked padding_value(%pad: f32) inner_dims_pos = [0, 1] inner_tiles = [%tile1, %tile2] into %tensor_empty1 : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  return %packed : tensor<?x?x?x?xf32>
 }

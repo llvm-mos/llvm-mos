@@ -25,6 +25,7 @@
 #include "mlir/Parser/Parser.h"
 
 #include <cstddef>
+#include <optional>
 
 using namespace mlir;
 
@@ -288,7 +289,7 @@ void mlirOperationStateEnableResultTypeInference(MlirOperationState *state) {
 
 static LogicalResult inferOperationTypes(OperationState &state) {
   MLIRContext *context = state.getContext();
-  Optional<RegisteredOperationName> info = state.name.getRegisteredInfo();
+  std::optional<RegisteredOperationName> info = state.name.getRegisteredInfo();
   if (!info) {
     emitError(state.location)
         << "type inference was requested for the operation " << state.name
@@ -717,6 +718,43 @@ void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(value).print(stream);
+}
+
+MlirOpOperand mlirValueGetFirstUse(MlirValue value) {
+  Value cppValue = unwrap(value);
+  if (cppValue.use_empty())
+    return {};
+
+  OpOperand *opOperand = cppValue.use_begin().getOperand();
+
+  return wrap(opOperand);
+}
+
+//===----------------------------------------------------------------------===//
+// OpOperand API.
+//===----------------------------------------------------------------------===//
+
+bool mlirOpOperandIsNull(MlirOpOperand opOperand) { return !opOperand.ptr; }
+
+MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand) {
+  return wrap(unwrap(opOperand)->getOwner());
+}
+
+unsigned mlirOpOperandGetOperandNumber(MlirOpOperand opOperand) {
+  return unwrap(opOperand)->getOperandNumber();
+}
+
+MlirOpOperand mlirOpOperandGetNextUse(MlirOpOperand opOperand) {
+  if (mlirOpOperandIsNull(opOperand))
+    return {};
+
+  OpOperand *nextOpOperand = static_cast<OpOperand *>(
+      unwrap(opOperand)->getNextOperandUsingThisValue());
+
+  if (!nextOpOperand)
+    return {};
+
+  return wrap(nextOpOperand);
 }
 
 //===----------------------------------------------------------------------===//

@@ -10,7 +10,6 @@
 #define LLVM_MC_MCCONTEXT_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -191,8 +190,7 @@ private:
   SmallString<128> CompilationDir;
 
   /// Prefix replacement map for source file information.
-  std::map<std::string, const std::string, std::greater<std::string>>
-      DebugPrefixMap;
+  std::map<std::string, const std::string, std::greater<>> DebugPrefixMap;
 
   /// The main file name if passed in explicitly.
   std::string MainFileName;

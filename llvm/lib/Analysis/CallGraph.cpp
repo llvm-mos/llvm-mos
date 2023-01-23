@@ -15,7 +15,6 @@
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -33,8 +32,7 @@ using namespace llvm;
 
 CallGraph::CallGraph(Module &M)
     : M(M), ExternalCallingNode(getOrInsertFunction(nullptr)),
-      CallsExternalNode(std::make_unique<CallGraphNode>(this, nullptr)),
-      NoCallbackNode(std::make_unique<CallGraphNode>(this, nullptr)) {
+      CallsExternalNode(std::make_unique<CallGraphNode>(this, nullptr)) {
   // Add every interesting function to the call graph.
   for (Function &F : M)
     if (!isDbgInfoIntrinsic(F.getIntrinsicID()))
@@ -44,14 +42,12 @@ CallGraph::CallGraph(Module &M)
 CallGraph::CallGraph(CallGraph &&Arg)
     : M(Arg.M), FunctionMap(std::move(Arg.FunctionMap)),
       ExternalCallingNode(Arg.ExternalCallingNode),
-      CallsExternalNode(std::move(Arg.CallsExternalNode)),
-      NoCallbackNode(std::move(Arg.NoCallbackNode)) {
+      CallsExternalNode(std::move(Arg.CallsExternalNode)) {
   Arg.FunctionMap.clear();
   Arg.ExternalCallingNode = nullptr;
 
   // Update parent CG for all call graph's nodes.
   CallsExternalNode->CG = this;
-  NoCallbackNode->CG = this;
   for (auto &P : FunctionMap)
     P.second->CG = this;
 }
@@ -61,8 +57,6 @@ CallGraph::~CallGraph() {
   // delete them explicitly.
   if (CallsExternalNode)
     CallsExternalNode->allReferencesDropped();
-  if (NoCallbackNode)
-    NoCallbackNode->allReferencesDropped();
 
 // Reset all node's use counts to zero before deleting them to prevent an
 // assertion from firing.
@@ -98,9 +92,8 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
   Function *F = Node->getFunction();
 
   // If this function is not defined in this translation unit, it could call
-  // anything, unless it's also marked NoCallback.
-  if (F->isDeclaration() && !F->isIntrinsic() &&
-      !F->hasFnAttribute(Attribute::NoCallback))
+  // anything.
+  if (F->isDeclaration() && !F->hasFnAttribute(Attribute::NoCallback))
     Node->addCalledFunction(nullptr, CallsExternalNode.get());
 
   // Look for calls by this function.
@@ -108,16 +101,10 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
     for (Instruction &I : BB) {
       if (auto *Call = dyn_cast<CallBase>(&I)) {
         const Function *Callee = Call->getCalledFunction();
-        if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID())) {
-          // Indirect calls of intrinsics are not allowed so no need to check.
-          // We can be more precise here by using TargetArg returned by
-          // Intrinsic::isLeaf.
-
-          if (Call->hasFnAttr(Attribute::NoCallback))
-            Node->addCalledFunction(Call, NoCallbackNode.get());
-          else
-          Node->addCalledFunction(Call, CallsExternalNode.get());
-        } else if (!Callee->isIntrinsic())
+        if (!Callee) {
+          if (!Call->hasFnAttr(Attribute::NoCallback))
+            Node->addCalledFunction(Call, CallsExternalNode.get());
+        } else if (!isDbgInfoIntrinsic(Callee->getIntrinsicID()))
           Node->addCalledFunction(Call, getOrInsertFunction(Callee));
 
         // Add reference to callback functions or the external node if the

@@ -460,6 +460,26 @@ func.func @while_bad_terminator() {
 
 // -----
 
+func.func @while_empty_region() {
+  // expected-error@+1 {{'scf.while' op region #0 ('before') failed to verify constraint: region with 1 blocks}}
+  scf.while : () -> () {
+  } do {
+  }
+}
+
+// -----
+
+func.func @while_empty_block() {
+  // expected-error@+1 {{expects the 'before' region to terminate with 'scf.condition'}}
+  scf.while : () -> () {
+   ^bb0:
+  } do {
+   ^bb0:
+  }
+}
+
+// -----
+
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
   // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to Region #1: source has 0 operands, but target successor needs 1}}
@@ -640,4 +660,15 @@ func.func @switch_wrong_types(%arg0: index, %arg1: i32) {
     scf.yield %arg0 : index
   }
   return
+}
+
+// -----
+
+func.func @switch_missing_terminator(%arg0: index, %arg1: i32) {
+  // expected-error @below {{'scf.index_switch' op expected region to end with scf.yield, but got func.return}}
+  "scf.index_switch"(%arg0) ({
+    "scf.yield"() : () -> ()
+  }, {
+    return
+  }) {cases = array<i64: 1>} : (index) -> ()
 }

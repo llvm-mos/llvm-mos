@@ -32,7 +32,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -59,7 +58,7 @@ bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
                              const tooling::CompileCommand &RHS) {
   // We don't check for Output, it should not matter to clangd.
   return LHS.Directory == RHS.Directory && LHS.Filename == RHS.Filename &&
-         llvm::makeArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
+         llvm::ArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
 }
 
 class CppFilePreambleCallbacks : public PreambleCallbacks {

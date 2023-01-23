@@ -23,6 +23,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -33,7 +34,11 @@ class Module;
 class MemoryBuffer;
 class ModuleSummaryIndex;
 
-typedef llvm::function_ref<Optional<std::string>(StringRef)>
+// Callback to override the data layout string of an imported bitcode module.
+// The first argument is the target triple, the second argument the data layout
+// string from the input, or a default string. It will be used if the callback
+// returns std::nullopt.
+typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
     DataLayoutCallbackTy;
 
   // These functions are for converting Expected/Error values to
@@ -100,14 +105,18 @@ typedef llvm::function_ref<Optional<std::string>(StringRef)>
     /// bodies. If ShouldLazyLoadMetadata is true, lazily load metadata as well.
     /// If IsImporting is true, this module is being parsed for ThinLTO
     /// importing into another module.
-    Expected<std::unique_ptr<Module>> getLazyModule(LLVMContext &Context,
-                                                    bool ShouldLazyLoadMetadata,
-                                                    bool IsImporting);
+    Expected<std::unique_ptr<Module>> getLazyModule(
+        LLVMContext &Context, bool ShouldLazyLoadMetadata, bool IsImporting,
+        DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+          return std::nullopt;
+        });
 
     /// Read the entire bitcode module and return it.
     Expected<std::unique_ptr<Module>> parseModule(
-        LLVMContext &Context, DataLayoutCallbackTy DataLayoutCallback =
-                                  [](StringRef) { return std::nullopt; });
+        LLVMContext &Context,
+        DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+          return std::nullopt;
+        });
 
     /// Returns information about the module to be used for LTO: whether to
     /// compile with ThinLTO, and whether it has a summary.
@@ -144,10 +153,12 @@ typedef llvm::function_ref<Optional<std::string>(StringRef)>
   /// deserialization of function bodies. If ShouldLazyLoadMetadata is true,
   /// lazily load metadata as well. If IsImporting is true, this module is
   /// being parsed for ThinLTO importing into another module.
-  Expected<std::unique_ptr<Module>>
-  getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
-                       bool ShouldLazyLoadMetadata = false,
-                       bool IsImporting = false);
+  Expected<std::unique_ptr<Module>> getLazyBitcodeModule(
+      MemoryBufferRef Buffer, LLVMContext &Context,
+      bool ShouldLazyLoadMetadata = false, bool IsImporting = false,
+      DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+        return std::nullopt;
+      });
 
   /// Like getLazyBitcodeModule, except that the module takes ownership of
   /// the memory buffer if successful. If successful, this moves Buffer. On
@@ -174,7 +185,7 @@ typedef llvm::function_ref<Optional<std::string>(StringRef)>
   /// Read the specified bitcode file, returning the module.
   Expected<std::unique_ptr<Module>> parseBitcodeFile(
       MemoryBufferRef Buffer, LLVMContext &Context,
-      DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+      DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
         return std::nullopt;
       });
 

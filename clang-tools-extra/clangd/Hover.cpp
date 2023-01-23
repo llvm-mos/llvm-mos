@@ -38,8 +38,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Tooling/Syntax/Tokens.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -48,6 +46,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -402,8 +401,8 @@ static llvm::FormattedNumber printHex(const llvm::APSInt &V) {
   return llvm::format_hex(Bits, 0);
 }
 
-llvm::Optional<std::string> printExprValue(const Expr *E,
-                                           const ASTContext &Ctx) {
+std::optional<std::string> printExprValue(const Expr *E,
+                                          const ASTContext &Ctx) {
   // InitListExpr has two forms, syntactic and semantic. They are the same thing
   // (refer to a same AST node) in most cases.
   // When they are different, RAV returns the syntactic form, and we should feed
@@ -451,8 +450,8 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
   return Constant.Val.getAsString(Ctx, T);
 }
 
-llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
-                                           const ASTContext &Ctx) {
+std::optional<std::string> printExprValue(const SelectionTree::Node *N,
+                                          const ASTContext &Ctx) {
   for (; N; N = N->Parent) {
     // Try to evaluate the first evaluatable enclosing expression.
     if (const Expr *E = N->ASTNode.get<Expr>()) {
@@ -471,7 +470,7 @@ llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
   return std::nullopt;
 }
 
-llvm::Optional<StringRef> fieldName(const Expr *E) {
+std::optional<StringRef> fieldName(const Expr *E) {
   const auto *ME = llvm::dyn_cast<MemberExpr>(E->IgnoreCasts());
   if (!ME || !llvm::isa<CXXThisExpr>(ME->getBase()->IgnoreCasts()))
     return std::nullopt;
@@ -482,7 +481,7 @@ llvm::Optional<StringRef> fieldName(const Expr *E) {
 }
 
 // If CMD is of the form T foo() { return FieldName; } then returns "FieldName".
-llvm::Optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
+std::optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
   if (CMD->getNumParams() != 0 || CMD->isVariadic())
     return std::nullopt;
@@ -501,7 +500,7 @@ llvm::Optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
 //   void foo(T arg) { FieldName = std::move(arg); }
 //   R foo(T arg) { FieldName = std::move(arg); return *this; }
 // then returns "FieldName"
-llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
+std::optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
   if (CMD->isConst() || CMD->getNumParams() != 1 || CMD->isVariadic())
     return std::nullopt;
@@ -643,7 +642,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
 }
 
 /// The standard defines __func__ as a "predefined variable".
-llvm::Optional<HoverInfo>
+std::optional<HoverInfo>
 getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
                                const PrintingPolicy &PP) {
   HoverInfo HI;
@@ -734,9 +733,9 @@ std::string typeAsDefinition(const HoverInfo::PrintedType &PType) {
   return Result;
 }
 
-llvm::Optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
-                                                   ASTContext &ASTCtx,
-                                                   const PrintingPolicy &PP) {
+std::optional<HoverInfo> getThisExprHoverContents(const CXXThisExpr *CTE,
+                                                  ASTContext &ASTCtx,
+                                                  const PrintingPolicy &PP) {
   QualType OriginThisType = CTE->getType()->getPointeeType();
   QualType ClassType = declaredType(OriginThisType->getAsTagDecl());
   // For partial specialization class, origin `this` pointee type will be
@@ -812,9 +811,9 @@ llvm::StringLiteral getNameForExpr(const Expr *E) {
 
 // Generates hover info for `this` and evaluatable expressions.
 // FIXME: Support hover for literals (esp user-defined)
-llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
-                                           const PrintingPolicy &PP,
-                                           const SymbolIndex *Index) {
+std::optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
+                                          const PrintingPolicy &PP,
+                                          const SymbolIndex *Index) {
   // There's not much value in hovering over "42" and getting a hover card
   // saying "42 is an int", similar for other literals.
   if (isLiteral(E))
@@ -841,7 +840,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
 }
 
 // Generates hover info for attributes.
-llvm::Optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
+std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   HoverInfo HI;
   HI.Name = A->getSpelling();
   if (A->hasScope())
@@ -1053,9 +1052,9 @@ const NamedDecl *pickDeclToUse(llvm::ArrayRef<const NamedDecl *> Candidates) {
 
 } // namespace
 
-llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
-                                   const format::FormatStyle &Style,
-                                   const SymbolIndex *Index) {
+std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
+                                  const format::FormatStyle &Style,
+                                  const SymbolIndex *Index) {
   PrintingPolicy PP =
       getPrintingPolicy(AST.getASTContext().getPrintingPolicy());
   const SourceManager &SM = AST.getSourceManager();
@@ -1088,7 +1087,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   // for the left of the hovered token).
   CharSourceRange HighlightRange =
       TokensTouchingCursor.back().range(SM).toCharRange(SM);
-  llvm::Optional<HoverInfo> HI;
+  std::optional<HoverInfo> HI;
   // Macros and deducedtype only works on identifiers and auto/decltype keywords
   // respectively. Therefore they are only trggered on whichever works for them,
   // similar to SelectionTree::create().
@@ -1283,8 +1282,8 @@ markup::Document HoverInfo::present() const {
 
 // If the backtick at `Offset` starts a probable quoted range, return the range
 // (including the quotes).
-llvm::Optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
-                                                      unsigned Offset) {
+std::optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
+                                                     unsigned Offset) {
   assert(Line[Offset] == '`');
 
   // The open-quote is usually preceded by whitespace.

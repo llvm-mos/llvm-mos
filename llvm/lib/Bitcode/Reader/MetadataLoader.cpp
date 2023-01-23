@@ -14,8 +14,6 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1395,7 +1393,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (IsBigInt) {
       const uint64_t BitWidth = Record[1];
       const size_t NumWords = Record.size() - 3;
-      Value = readWideAPInt(makeArrayRef(&Record[3], NumWords), BitWidth);
+      Value = readWideAPInt(ArrayRef(&Record[3], NumWords), BitWidth);
     } else
       Value = APInt(64, unrotateSign(Record[1]), !IsUnsigned);
 
@@ -1622,11 +1620,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       Checksum.emplace(static_cast<DIFile::ChecksumKind>(Record[3]),
                        getMDString(Record[4]));
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIFile, (Context, getMDString(Record[1]),
-                                 getMDString(Record[2]), Checksum,
-                                 Record.size() > 5 ? std::optional<MDString *>(
-                                                         getMDString(Record[5]))
-                                                   : std::nullopt)),
+        GET_OR_DISTINCT(DIFile,
+                        (Context, getMDString(Record[1]),
+                         getMDString(Record[2]), Checksum,
+                         Record.size() > 5 ? getMDString(Record[5]) : nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

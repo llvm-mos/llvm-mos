@@ -70,11 +70,25 @@ struct TestTensorTransforms
       llvm::cl::desc("Test folding of expand_shape/collapse_shape"),
       llvm::cl::init(false)};
 
+  Option<bool> testEmptyOpFolding{
+      *this, "test-empty-op-folding",
+      llvm::cl::desc("Test folding of tensor.empty"), llvm::cl::init(false)};
+
+  Option<bool> testFoldIntoPackAndUnpack{
+      *this, "test-fold-into-pack-and-unpack",
+      llvm::cl::desc("Test folding ops into tensor.pack and tensor.unpack"),
+      llvm::cl::init(false)};
+
   Option<bool> useForeach{
       *this, "use-foreach",
       llvm::cl::desc(
           "Use the scf.foreach_thread operation when generating loop nests for "
           "the extract_slice of collapse_shape pattern"),
+      llvm::cl::init(false)};
+
+  Option<bool> testSimplifyPackPatterns{
+      *this, "test-simplify-pack-patterns",
+      llvm::cl::desc("Test patterns to simplify tensor.pack"),
       llvm::cl::init(false)};
 };
 } // namespace
@@ -82,6 +96,18 @@ struct TestTensorTransforms
 static void applyReassociativeReshapeFoldingPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+}
+
+static void applyEmptyOpFoldingPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateFoldTensorEmptyPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+}
+
+static void applyFoldIntoPackAndUnpackPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -110,6 +136,12 @@ static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
 static void applyFoldConsecutiveInsertExtractSlicePatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+}
+
+static void applySimplifyPackPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateSimplifyTensorPack(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -256,6 +288,8 @@ applyRewriteExtractFromCollapseShapePatterns(Operation *rootOp,
 
 void TestTensorTransforms::runOnOperation() {
   Operation *rootOp = getOperation();
+  if (testSimplifyPackPatterns)
+    applySimplifyPackPatterns(rootOp);
   if (testSplitPaddingPatterns)
     applySplitPaddingPatterns(rootOp);
   if (testFoldConstantExtractSlice)
@@ -264,6 +298,10 @@ void TestTensorTransforms::runOnOperation() {
     applyFoldConsecutiveInsertExtractSlicePatterns(rootOp);
   if (testReassociativeReshapeFolding)
     applyReassociativeReshapeFoldingPatterns(rootOp);
+  if (testEmptyOpFolding)
+    applyEmptyOpFoldingPatterns(rootOp);
+  if (testFoldIntoPackAndUnpack)
+    applyFoldIntoPackAndUnpackPatterns(rootOp);
   if (testRewriteExtractSliceWithTiledCollapseShape) {
     if (failed(
             applyRewriteExtractFromCollapseShapePatterns(rootOp, useForeach)))

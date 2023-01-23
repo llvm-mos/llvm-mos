@@ -20,7 +20,7 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
   for (auto Instr : Res) {
     // Assume instructions that aren't listed aren't compressible.
     bool Compressed = false;
-    switch (Instr.Opc) {
+    switch (Instr.getOpcode()) {
     case RISCV::SLLI:
     case RISCV::SRLI:
       Compressed = true;
@@ -28,7 +28,7 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
     case RISCV::ADDI:
     case RISCV::ADDIW:
     case RISCV::LUI:
-      Compressed = isInt<6>(Instr.Imm);
+      Compressed = isInt<6>(Instr.getImm());
       break;
     }
     // Two RVC instructions take the same space as one RVI instruction, but
@@ -49,6 +49,13 @@ static void generateInstSeqImpl(int64_t Val,
                                 const FeatureBitset &ActiveFeatures,
                                 RISCVMatInt::InstSeq &Res) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
+
+  // Use BSETI for a single bit that can't be expressed by a single LUI or ADDI.
+  if (ActiveFeatures[RISCV::FeatureStdExtZbs] && isPowerOf2_64(Val) &&
+      (!isInt<32>(Val) || Val == 0x800)) {
+    Res.emplace_back(RISCV::BSETI, Log2_64(Val));
+    return;
+  }
 
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
@@ -72,12 +79,6 @@ static void generateInstSeqImpl(int64_t Val,
   }
 
   assert(IsRV64 && "Can't emit >32-bit imm for non-RV64 target");
-
-  // Use BSETI for a single bit.
-  if (ActiveFeatures[RISCV::FeatureStdExtZbs] && isPowerOf2_64(Val)) {
-    Res.emplace_back(RISCV::BSETI, Log2_64(Val));
-    return;
-  }
 
   // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
   // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emitted. Note
@@ -110,7 +111,7 @@ static void generateInstSeqImpl(int64_t Val,
 
   // Val might now be valid for LUI without needing a shift.
   if (!isInt<32>(Val)) {
-    ShiftAmount = findFirstSet((uint64_t)Val);
+    ShiftAmount = findFirstSet((uint64_t)Val, ZB_Undefined);
     Val >>= ShiftAmount;
 
     // If the remaining bits don't fit in 12 bits, we might be able to reduce the
@@ -175,17 +176,24 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   RISCVMatInt::InstSeq Res;
   generateInstSeqImpl(Val, ActiveFeatures, Res);
 
-  // If there are trailing zeros, try generating a sign extended constant with
-  // no trailing zeros and use a final SLLI to restore them.
-  if ((Val & 1) == 0 && Res.size() > 2) {
-    unsigned TrailingZeros = countTrailingZeros((uint64_t)Val);
+  // If the low 12 bits are non-zero, the first expansion may end with an ADDI
+  // or ADDIW. If there are trailing zeros, try generating a sign extended
+  // constant with no trailing zeros and use a final SLLI to restore them.
+  if ((Val & 0xfff) != 0 && (Val & 1) == 0 && Res.size() >= 2) {
+    unsigned TrailingZeros = countTrailingZeros((uint64_t)Val, ZB_Undefined);
     int64_t ShiftedVal = Val >> TrailingZeros;
+    // If we can use C.LI+C.SLLI instead of LUI+ADDI(W) prefer that since
+    // its more compressible. But only if LUI+ADDI(W) isn't fusable.
+    // NOTE: We don't check for C extension to minimize differences in generated
+    // code.
+    bool IsShiftedCompressible =
+              isInt<6>(ShiftedVal) && !ActiveFeatures[RISCV::TuneLUIADDIFusion];
     RISCVMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(ShiftedVal, ActiveFeatures, TmpSeq);
     TmpSeq.emplace_back(RISCV::SLLI, TrailingZeros);
 
     // Keep the new sequence if it is an improvement.
-    if (TmpSeq.size() < Res.size())
+    if (TmpSeq.size() < Res.size() || IsShiftedCompressible)
       Res = TmpSeq;
   }
 
@@ -194,7 +202,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   if (Val > 0 && Res.size() > 2) {
     assert(ActiveFeatures[RISCV::Feature64Bit] &&
            "Expected RV32 to only need 2 instructions");
-    unsigned LeadingZeros = countLeadingZeros((uint64_t)Val);
+    unsigned LeadingZeros = countLeadingZeros((uint64_t)Val, ZB_Undefined);
     uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;
     // Fill in the bits that will be shifted out with 1s. An example where this
     // helps is trailing one masks with 32 or more ones. This will generate
@@ -362,7 +370,8 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 int getIntMatCost(const APInt &Val, unsigned Size,
                   const FeatureBitset &ActiveFeatures, bool CompressionCost) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
-  bool HasRVC = CompressionCost && ActiveFeatures[RISCV::FeatureStdExtC];
+  bool HasRVC = CompressionCost && (ActiveFeatures[RISCV::FeatureStdExtC] ||
+                                    ActiveFeatures[RISCV::FeatureExtZca]);
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost
