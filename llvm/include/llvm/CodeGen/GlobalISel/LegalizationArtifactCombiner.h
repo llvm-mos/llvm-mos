@@ -98,8 +98,11 @@ public:
       const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
         auto &CstVal = SrcMI->getOperand(1);
-        Builder.buildConstant(
-            DstReg, CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits()));
+        APInt WideVal =
+            LI.preferZext()
+                ? CstVal.getCImm()->getValue().zext(DstTy.getSizeInBits())
+                : CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits());
+        Builder.buildConstant(DstReg, WideVal);
         UpdatedDefs.push_back(DstReg);
         markInstAndDefDead(MI, *SrcMI, DeadInsts);
         return true;
