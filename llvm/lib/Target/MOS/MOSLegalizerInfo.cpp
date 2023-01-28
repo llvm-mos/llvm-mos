@@ -31,7 +31,6 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -582,25 +581,14 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
       }
     }
 
-    if (isTriviallyDead(MI, MRI)) {
-      MI.eraseFromParent();
-      return true;
+    if (!isTriviallyDead(MI, MRI)) {
+      MachineIRBuilder &Builder = Helper.MIRBuilder;
+      // If Not is true, select 0, otherwise select 1. This will eventually
+      // lower to control flow.
+      auto Zero = Builder.buildConstant(S1, 0);
+      auto One = Builder.buildConstant(S1, 1);
+      Helper.MIRBuilder.buildSelect(Dst, Not, Zero, One);
     }
-
-    if (llvm::all_of(MRI.use_nodbg_instructions(Dst),
-                     [](const MachineInstr &MI) {
-                       return MI.getOpcode() == MOS::G_ZEXT;
-                     })) {
-      Helper.widenScalar(MI, 0, LLT::scalar(8));
-      return true;
-    }
-
-    // If Not is true, select 0, otherwise select 1. This will eventually
-    // lower to control flow.
-    MachineIRBuilder &Builder = Helper.MIRBuilder;
-    auto Zero = Builder.buildConstant(S1, 0);
-    auto One = Builder.buildConstant(S1, 1);
-    Helper.MIRBuilder.buildSelect(Dst, Not, Zero, One);
     MI.eraseFromParent();
     return true;
   }
