@@ -609,7 +609,7 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     // section. It is the user's responsibility to ensure the linker will
     // locate the symbol completely within the zero-page.
     const auto *GVar = dyn_cast<GlobalVariable>(GV->getAliaseeObject());
-    if (MOSAsmBackend::isZeroPageSectionName(GV->getSection()) ||
+    if (MOS::isZeroPageSectionName(GV->getSection()) ||
         (GVar && GVar->getAddressSpace() == 1)) {
       const MOSMCExpr *Expr =
           MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, MCOp.getExpr(),

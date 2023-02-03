@@ -81,6 +81,9 @@ enum OperandType : unsigned {
 
 } // namespace MOSOp
 
+namespace MOS {
+bool isZeroPageSectionName(StringRef Name);
+} // namespace MOS
 } // namespace llvm
 
 #endif // LLVM_MOS_MCTARGET_DESC_H

@@ -88,8 +88,6 @@ public:
                                     const MCRelaxableFragment *DF,
                                     const MCAsmLayout &Layout,
                                     const bool WasForced) const override;
-  /// Determine if section name indicates zero-page placement by linker.
-  static bool isZeroPageSectionName(StringRef Name);
   unsigned getNumFixupKinds() const override;
   MCFixupKindInfo const &getFixupKindInfo(MCFixupKind Kind) const override;
   /// Check whether the given instruction may need relaxation.

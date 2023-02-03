@@ -54,8 +54,6 @@ struct InstructionRelaxationEntry {
 #define GET_ZeroPageInstructionRelaxation_IMPL
 #define GET_ZeroBankInstructionRelaxation_DECL
 #define GET_ZeroBankInstructionRelaxation_IMPL
-#define GET_ZeroPageSectionTable_DECL
-#define GET_ZeroPageSectionTable_IMPL
 #include "MOSGenSearchableTables.inc"
 } // namespace MOS
 
@@ -272,11 +270,7 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   if (Sec->getFlags() & ELF::SHF_MOS_ZEROPAGE)
     return false;
 
-  return !isZeroPageSectionName(Sec->getName());
-}
-
-bool MOSAsmBackend::isZeroPageSectionName(StringRef Name) {
-  return is_contained(MOS::ZeroPageSectionTable, Name);
+  return !MOS::isZeroPageSectionName(Sec->getName());
 }
 
 MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {

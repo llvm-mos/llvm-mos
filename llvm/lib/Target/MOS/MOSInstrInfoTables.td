@@ -129,21 +129,3 @@ class MOSRelaxationTable : GenericTable {
 
 def ZeroPageInstructionRelaxation : MOSRelaxationTable;
 def ZeroBankInstructionRelaxation : MOSRelaxationTable;
-
-/// Zero page section entry.  If a symbol exists in one of these sections,
-/// it belongs in zero page.
-class ZeroPageSectionEntry< string name > {
-  string Name = name;
-}
-
-class ZPSE< string name > : ZeroPageSectionEntry< name >;
-
-def : ZPSE<".zp">;
-def : ZPSE<".zeropage">;
-def : ZPSE<".directpage">;
-
-def ZeroPageSectionTable : GenericTable {
-  let FilterClass = "ZeroPageSectionEntry";
-  let CppTypeName = "StringRef";
-  let Fields = ["Name"];
-}

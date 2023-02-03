@@ -10,6 +10,14 @@ adrImm16 = 0xeaea
 .section .zp,"",@nobits
 adrzp: .ds.b 1
 
+; Sections that begin with these values as a prefix are also zp.
+.section .zp.foo,"",@nobits
+adrzpdotfoo: .ds.b 1
+
+; Unless there is not intervening period.
+.section .zpfoo,"",@nobits
+adrzpfoo: .ds.b 1
+
 ; A section with the special name "zeropage", which should be placed in 8-bit
 ; memory
 .section .zeropage,"",@nobits
@@ -46,6 +54,10 @@ _start:
                           ; CHECK: R_MOS_ADDR16	.text
   lda adrzp               ; CHECK: a5 00
                           ; CHECK: R_MOS_ADDR8	.zp
+  lda adrzpdotfoo         ; CHECK: a5 00
+                          ; CHECK: R_MOS_ADDR8	.zp.foo
+  lda adrzpfoo            ; CHECK: ad 00 00
+                          ; CHECK: R_MOS_ADDR16	.zpfoo
   lda adrzeropage         ; CHECK: a5 00
                           ; CHECK: R_MOS_ADDR8	.zeropage
   lda adrdirectpage       ; CHECK: a5 00

@@ -158,3 +158,17 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTargetMC() {
   // Register the asm backend (as little endian).
   TargetRegistry::RegisterMCAsmBackend(getTheMOSTarget(), createMOSAsmBackend);
 }
+
+constexpr StringRef ZPPrefixes[] = {
+    ".zp",
+    ".zeropage",
+    ".directpage",
+};
+
+bool MOS::isZeroPageSectionName(StringRef Name) {
+  for (StringRef Prefix : ZPPrefixes)
+    if (Name.starts_with(Prefix) &&
+        (Name.size() == Prefix.size() || Name[Prefix.size()] == '.'))
+      return true;
+  return false;
+}
