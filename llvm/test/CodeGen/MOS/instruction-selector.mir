@@ -955,26 +955,6 @@ body: |
     RTS implicit %2, implicit %3
 ...
 ---
-name: anyext_8_1
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; 6502-LABEL: name: anyext_8_1
-    ; 6502: [[COPY:%[0-9]+]]:anyi1 = COPY $c
-    ; 6502-NEXT: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
-    ; 6502-NEXT: [[INSERT_SUBREG:%[0-9]+]]:anyi8 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
-    ; 6502-NEXT: RTS implicit [[INSERT_SUBREG]]
-    ; 65C02-LABEL: name: anyext_8_1
-    ; 65C02: [[COPY:%[0-9]+]]:anyi1 = COPY $c
-    ; 65C02-NEXT: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
-    ; 65C02-NEXT: [[INSERT_SUBREG:%[0-9]+]]:anyi8 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
-    ; 65C02-NEXT: RTS implicit [[INSERT_SUBREG]]
-    %0:any(s1) = COPY $c
-    %1:any(s8) = G_ANYEXT %0
-    RTS implicit %1
-...
----
 name: anyext_16_8
 legalized: true
 regBankSelected: true
@@ -991,30 +971,6 @@ body: |
     ; 65C02-NEXT: [[INSERT_SUBREG:%[0-9]+]]:imag16 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublo
     ; 65C02-NEXT: RTS implicit [[INSERT_SUBREG]]
     %0:any(s8) = COPY $a
-    %1:any(s16) = G_ANYEXT %0
-    RTS implicit %1
-...
----
-name: anyext_16_1
-legalized: true
-regBankSelected: true
-body: |
-  bb.0.entry:
-    ; 6502-LABEL: name: anyext_16_1
-    ; 6502: [[COPY:%[0-9]+]]:anyi1 = COPY $c
-    ; 6502-NEXT: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
-    ; 6502-NEXT: [[INSERT_SUBREG:%[0-9]+]]:anyi8 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
-    ; 6502-NEXT: [[DEF1:%[0-9]+]]:imag16 = IMPLICIT_DEF
-    ; 6502-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:imag16 = INSERT_SUBREG [[DEF1]], [[INSERT_SUBREG]], %subreg.sublo
-    ; 6502-NEXT: RTS implicit [[INSERT_SUBREG1]]
-    ; 65C02-LABEL: name: anyext_16_1
-    ; 65C02: [[COPY:%[0-9]+]]:anyi1 = COPY $c
-    ; 65C02-NEXT: [[DEF:%[0-9]+]]:anyi8 = IMPLICIT_DEF
-    ; 65C02-NEXT: [[INSERT_SUBREG:%[0-9]+]]:anyi8 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sublsb
-    ; 65C02-NEXT: [[DEF1:%[0-9]+]]:imag16 = IMPLICIT_DEF
-    ; 65C02-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:imag16 = INSERT_SUBREG [[DEF1]], [[INSERT_SUBREG]], %subreg.sublo
-    ; 65C02-NEXT: RTS implicit [[INSERT_SUBREG1]]
-    %0:any(s1) = COPY $c
     %1:any(s16) = G_ANYEXT %0
     RTS implicit %1
 ...

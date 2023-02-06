@@ -492,12 +492,7 @@ def : Pat<(sub Ac:$l, Imag8:$r), (SBCImag8 Ac:$l, Imag8:$r, (LDCImm -1))>;
 // Integer Extension/Truncation Patterns
 //===---------------------------------------------------------------------===//
 
-def : Pat<(i8 (anyext Anyi1:$s)), (INSERT_SUBREG (IMPLICIT_DEF), Anyi1:$s, sublsb)>;
 def : Pat<(i16 (anyext Anyi8:$s)), (INSERT_SUBREG (IMPLICIT_DEF), Anyi8:$s, sublo)>;
-def : Pat<(i16 (anyext Anyi1:$s)),
-          (INSERT_SUBREG (IMPLICIT_DEF),
-                         (INSERT_SUBREG (i8 (IMPLICIT_DEF)), Anyi1:$s, sublsb),
-                         sublo)>;
 
 def : Pat<(i1 (trunc Ac:$s)), (EXTRACT_SUBREG (ANDImm Ac:$s, 1), sublsb)>;
 def : Pat<(i8 (trunc Imag16:$s)), (EXTRACT_SUBREG Imag16:$s, sublo)>;

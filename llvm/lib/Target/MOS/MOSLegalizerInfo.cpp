@@ -81,7 +81,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   // Integer Extension and Truncation
 
   getActionDefinitionsBuilder(G_ANYEXT)
-      .legalFor({{S8, S1}, {S16, S1}, {S16, S8}})
+      .legalFor({{S16, S8}})
+      .customIf(typeIs(1, S1))
       .unsupported();
   getActionDefinitionsBuilder(G_TRUNC)
       .legalFor({{S1, S8}, {S1, S16}, {S8, S16}})
@@ -333,6 +334,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   default:
     llvm_unreachable("Invalid opcode for custom legalization.");
   // Integer Extension and Truncation
+  case G_ANYEXT:
+    return legalizeAnyExt(Helper, MRI, MI);
   case G_SEXT:
     return legalizeSExt(Helper, MRI, MI);
   case G_ZEXT:
@@ -419,6 +422,15 @@ static auto unmergeDefsSplitHigh(MachineInstr *MI) {
   };
   return LowsAndHigh{make_range(MI->operands_begin(), MI->operands_end() - 2),
                      MI->getOperand(MI->getNumOperands() - 2)};
+}
+
+bool MOSLegalizerInfo::legalizeAnyExt(LegalizerHelper &Helper,
+                                      MachineRegisterInfo &MRI,
+                                      MachineInstr &MI) const {
+  Helper.Observer.changingInstr(MI);
+  MI.setDesc(Helper.MIRBuilder.getTII().get(G_ZEXT));
+  Helper.Observer.changedInstr(MI);
+  return true;
 }
 
 bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,

@@ -34,6 +34,8 @@ public:
 
 private:
   // Integer Extension and Truncation
+  bool legalizeAnyExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
   bool legalizeSExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
