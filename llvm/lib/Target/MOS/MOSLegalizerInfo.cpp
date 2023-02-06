@@ -1028,6 +1028,35 @@ static std::pair<Register, Register> splitHighRest(Register Reg,
   return {UnmergeDefs.High.getReg(), Rest};
 }
 
+static bool isNZUseLegal(Register R, const MachineRegisterInfo &MRI) {
+  for (MachineOperand &MO : MRI.use_nodbg_operands(R)) {
+    MachineInstr &MI = *MO.getParent();
+    switch (MO.getParent()->getOpcode()) {
+    case MOS::COPY:
+      if (isNZUseLegal(MI.getOperand(0).getReg(), MRI))
+        continue;
+      break;
+    case MOS::G_BRCOND_IMM:
+      continue;
+    case MOS::G_SELECT:
+      if (&MO == &MI.getOperand(1))
+        continue;
+      break;
+    }
+    return false;
+  }
+
+  return true;
+}
+
+static Register buildNZSelect(Register R, MachineIRBuilder &Builder) {
+  LLT S1 = LLT::scalar(1);
+  return Builder
+      .buildSelect(S1, R, Builder.buildConstant(S1, -1),
+                   Builder.buildConstant(S1, 0))
+      .getReg(0);
+}
+
 bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
@@ -1159,7 +1188,10 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   case CmpInst::ICMP_EQ: {
     auto Sbc =
         Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
-    Builder.buildCopy(Dst, Sbc.getReg(4) /*=Z*/);
+    Register Z = Sbc.getReg(4);
+    if (!isNZUseLegal(Dst, MRI))
+      Z = buildNZSelect(Z, Builder);
+    Builder.buildCopy(Dst, Z);
     MI.eraseFromParent();
     break;
   }
@@ -1175,7 +1207,10 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
     if (RHSIsZero) {
       auto Sbc =
           Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, S1}, {LHS, RHS, CIn});
-      Builder.buildCopy(Dst, Sbc.getReg(2) /*=N*/);
+      Register N = Sbc.getReg(2);
+      if (!isNZUseLegal(Dst, MRI))
+        N = buildNZSelect(N, Builder);
+      Builder.buildCopy(Dst, N);
     } else {
       // General subtractions can overflow; if so, N is flipped.
       auto Sbc =
@@ -1185,9 +1220,16 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
       auto Eor = Builder.buildXor(S8, Sbc, Builder.buildConstant(S8, 0x80));
       auto Zero = Builder.buildConstant(S8, 0);
       auto One = Builder.buildConstant(S1, 1);
-      Builder.buildInstr(
-          MOS::G_SBC, {S8, S1, Dst /*=N*/, S1, S1},
-          {Builder.buildSelect(S8, Sbc.getReg(3) /*=V*/, Eor, Sbc), Zero, One});
+      Register N =
+          Builder
+              .buildInstr(
+                  MOS::G_SBC, {S8, S1, S1, S1, S1},
+                  {Builder.buildSelect(S8, Sbc.getReg(3) /*=V*/, Eor, Sbc),
+                   Zero, One})
+              .getReg(2);
+      if (!isNZUseLegal(Dst, MRI))
+        N = buildNZSelect(N, Builder);
+      Builder.buildCopy(Dst, N);
     }
     MI.eraseFromParent();
     break;

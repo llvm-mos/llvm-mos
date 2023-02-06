@@ -207,62 +207,8 @@ def STStk : MOSPseudo {
 }
 
 //===---------------------------------------------------------------------===//
-// NZ
+// CMPTerm
 //===---------------------------------------------------------------------===//
-
-// These pseudoinstructions bundle the definition and use of N and Z together to
-// maintain the invariant that neither can be live across pseudoinstructions. At
-// most one of N or Z can be set (the other must be $noreg), since copying N out
-// clobbers Z, and vice versa. If neither is set, then this represents a regular
-// SBC or CMP.
-
-class MOSCMPNZ : MOSPseudo {
-  dag OutOperandList = (outs Cc:$carryout, GPR_LSB:$nout, GPR_LSB:$zout);
-  let isCompare = true;
-}
-
-def CMPNZImm : MOSCMPNZ {
-  dag InOperandList = (ins GPR:$l, i8imm:$r);
-}
-def CMPNZImag8 : MOSCMPNZ {
-  dag InOperandList = (ins GPR:$l, Imag8:$r);
-}
-let mayLoad = true in {
-  def CMPNZAbs : MOSCMPNZ {
-    dag InOperandList = (ins GPR:$l, i16imm:$addr);
-  }
-  def CMPNZAbsIdx : MOSCMPNZ {
-    dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
-  }
-  def CMPNZIndirIdx : MOSCMPNZ {
-    dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
-  }
-}
-
-class MOSSBCNZ : MOSPseudo {
-  dag OutOperandList = (outs Ac:$dst, Cc:$carryout, GPR_LSB:$nout, Vc:$vout, GPR_LSB:$zout);
-  let Constraints = "$dst = $l, $carryout = $carryin";
-  let isCompare = true;
-}
-
-def SBCNZImm : MOSSBCNZ {
-  dag InOperandList = (ins Ac:$l, i8imm:$r, Cc:$carryin);
-}
-def SBCNZImag8 : MOSSBCNZ {
-  dag InOperandList = (ins Ac:$l, Imag8:$r, Cc:$carryin);
-}
-
-let mayLoad = true in {
-  def SBCNZAbs : MOSSBCNZ {
-    dag InOperandList = (ins GPR:$l, i16imm:$addr, Cc:$carryin);
-  }
-  def SBCNZAbsIdx : MOSSBCNZ {
-    dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx, Cc:$carryin);
-  }
-  def SBCNZIndirIdx : MOSSBCNZ {
-    dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx, Cc:$carryin);
-  }
-}
 
 // Terminator versions of CMP. Each of these instructions is ensured to stay
 // adjacent to the branch that consumes its N or Z value.

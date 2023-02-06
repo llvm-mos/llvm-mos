@@ -899,9 +899,6 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
 // Although some G_SBC instructions can be folded in to their (branch) uses,
 // others need to be selected directly.
 bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
-  LLT S1 = LLT::scalar(1);
-  LLT S8 = LLT::scalar(8);
-
   MachineIRBuilder Builder(MI);
   const auto &MRI = *Builder.getMRI();
 
@@ -921,21 +918,12 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
   if (Builder.getMRI()->use_nodbg_empty(Z))
     Z = MOS::NoRegister;
 
+  assert(!N && !Z &&
+         "All N and Z uses must be selected to terminator instructions.");
+
   auto CInConst =
       getIConstantVRegValWithLookThrough(MI.getOperand(7).getReg(), MRI);
   bool CInSet = CInConst && !CInConst->Value.isNullValue();
-
-  // We can only extract one of N or Z at a time, so if both are needed,
-  // arbitrarily extract out the comparison that produces Z. This case
-  // should very rarely be hit, if ever.
-  if (N && Z) {
-    MachineInstrSpan MIS(MI, MI.getParent());
-    MI.getOperand(4).setReg(Builder.getMRI()->createGenericVirtualRegister(S1));
-    Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
-    Builder.buildInstr(MOS::G_SBC, {S8, S1, S1, S1, Z},
-                       {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
-    return selectAll(MIS);
-  }
 
   auto RConst = getIConstantVRegValWithLookThrough(R, *Builder.getMRI());
   MachineInstr *Load;
@@ -946,7 +934,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     if (!Instr && RConst) {
       assert(RConst->Value.getBitWidth() == 8);
       Instr =
-          Builder.buildInstr(MOS::CMPNZImm, {MI.getOperand(1), N, Z},
+          Builder.buildInstr(MOS::CMPImm, {MI.getOperand(1)},
                              {MI.getOperand(5), RConst->Value.getZExtValue()});
     }
     MachineOperand Addr =
@@ -954,18 +942,18 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     if (!Instr &&
         mi_match(MI.getOperand(6).getReg(), MRI,
                  m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA)))) {
-      Instr = Builder
-                  .buildInstr(MOS::CMPNZAbs, {MI.getOperand(1), N, Z},
-                              {MI.getOperand(5)})
-                  .add(Addr)
-                  .cloneMemRefs(*Load);
+      Instr =
+          Builder
+              .buildInstr(MOS::CMPAbs, {MI.getOperand(1)}, {MI.getOperand(5)})
+              .add(Addr)
+              .cloneMemRefs(*Load);
     }
     Register Idx;
     if (!Instr &&
         mi_match(MI.getOperand(6).getReg(), MRI,
                  m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA)))) {
       Instr = Builder
-                  .buildInstr(MOS::CMPNZAbsIdx, {MI.getOperand(1), N, Z},
+                  .buildInstr(MOS::CMPAbsIdx, {MI.getOperand(1)},
                               {MI.getOperand(5)})
                   .add(Addr)
                   .addUse(Idx)
@@ -977,20 +965,19 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
                  m_all_of(m_MInstr(Load),
                           m_FoldedLdIndirIdx(MI, RegAddr, Idx, AA)))) {
       Instr = Builder
-                  .buildInstr(MOS::CMPNZIndirIdx, {MI.getOperand(1), N, Z},
+                  .buildInstr(MOS::CMPIndirIdx, {MI.getOperand(1)},
                               {MI.getOperand(5), RegAddr, Idx})
                   .cloneMemRefs(*Load);
     }
     if (!Instr) {
-      Instr = Builder.buildInstr(MOS::CMPNZImag8, {MI.getOperand(1), N, Z},
+      Instr = Builder.buildInstr(MOS::CMPImag8, {MI.getOperand(1)},
                                  {MI.getOperand(5), MI.getOperand(6)});
     }
   } else {
     if (!Instr && RConst) {
       assert(RConst->Value.getBitWidth() == 8);
       Instr = Builder.buildInstr(
-          MOS::SBCNZImm,
-          {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
+          MOS::SBCImm, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
           {MI.getOperand(5), RConst->Value.getZExtValue(), MI.getOperand(7)});
     }
     MachineOperand Addr =
@@ -999,10 +986,10 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
         mi_match(MI.getOperand(6).getReg(), MRI,
                  m_all_of(m_MInstr(Load), m_FoldedLdAbs(MI, Addr, AA)))) {
       Instr = Builder
-                  .buildInstr(MOS::SBCNZAbs,
-                              {MI.getOperand(0), MI.getOperand(1), N,
-                               MI.getOperand(3), Z},
-                              {MI.getOperand(5)})
+                  .buildInstr(
+                      MOS::SBCAbs,
+                      {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+                      {MI.getOperand(5)})
                   .add(Addr)
                   .add(MI.getOperand(7))
                   .cloneMemRefs(*Load);
@@ -1012,10 +999,10 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
         mi_match(MI.getOperand(6).getReg(), MRI,
                  m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, AA)))) {
       Instr = Builder
-                  .buildInstr(MOS::SBCNZAbsIdx,
-                              {MI.getOperand(0), MI.getOperand(1), N,
-                               MI.getOperand(3), Z},
-                              {MI.getOperand(5)})
+                  .buildInstr(
+                      MOS::SBCAbsIdx,
+                      {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+                      {MI.getOperand(5)})
                   .add(Addr)
                   .addUse(Idx)
                   .add(MI.getOperand(7))
@@ -1026,18 +1013,16 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
         mi_match(MI.getOperand(6).getReg(), MRI,
                  m_all_of(m_MInstr(Load),
                           m_FoldedLdIndirIdx(MI, RegAddr, Idx, AA)))) {
-      Instr =
-          Builder
-              .buildInstr(
-                  MOS::SBCNZIndirIdx,
-                  {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
-                  {MI.getOperand(5), RegAddr, Idx, MI.getOperand(7)})
-              .cloneMemRefs(*Load);
+      Instr = Builder
+                  .buildInstr(
+                      MOS::SBCIndirIdx,
+                      {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
+                      {MI.getOperand(5), RegAddr, Idx, MI.getOperand(7)})
+                  .cloneMemRefs(*Load);
     }
     if (!Instr) {
       Instr = Builder.buildInstr(
-          MOS::SBCNZImag8,
-          {MI.getOperand(0), MI.getOperand(1), N, MI.getOperand(3), Z},
+          MOS::SBCImag8, {MI.getOperand(0), MI.getOperand(1), MI.getOperand(3)},
           {MI.getOperand(5), MI.getOperand(6), MI.getOperand(7)});
     }
   }

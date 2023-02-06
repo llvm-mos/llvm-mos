@@ -134,8 +134,7 @@ private:
   void expandIncDec(MachineIRBuilder &Builder) const;
   void expandIncDecPtr(MachineIRBuilder &Builder) const;
 
-  // NZ pseudos
-  void expandNZ(MachineIRBuilder &Builder) const;
+  // CMP pseudos
   void expandCMPTerm(MachineIRBuilder &Builder) const;
 
   // Control flow pseudos

@@ -1347,10 +1347,12 @@ body: |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[COPY1]], [[C]], [[C1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC2]](s1)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[COPY2]](s1), [[C2]], [[C]]
-    ; CHECK-NEXT: RTS implicit [[COPY]](s8), implicit [[COPY1]](s8), implicit [[SELECT]](s8), implicit [[SELECT]](s8)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC2]](s1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s8) = G_SELECT [[COPY2]](s1), [[C3]], [[C]]
+    ; CHECK-NEXT: RTS implicit [[COPY]](s8), implicit [[COPY1]](s8), implicit [[SELECT1]](s8), implicit [[SELECT1]](s8)
     %0:_(s8) = COPY $a
     %1:_(s8) = COPY $x
     %2:_(s8) = COPY $y
@@ -1459,9 +1461,10 @@ body: |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC4]](s1)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[UV]], [[UV2]], [[C]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s1) = COPY [[SBC9]](s1)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[COPY2]](s1), [[COPY3]], [[C1]]
-    ; CHECK-NEXT: RTS implicit [[SELECT]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC9]](s1), [[C]], [[C1]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[COPY2]](s1), [[COPY3]], [[C1]]
+    ; CHECK-NEXT: RTS implicit [[SELECT1]](s1)
     %0:_(p0) = COPY $rs1
     %1:_(p0) = COPY $rs3
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -1478,7 +1481,9 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY [[AND]](s8)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[COPY1]], [[AND]], [[C1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC4]](s1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC4]](s1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
     ; CHECK-NEXT: RTS implicit [[COPY2]](s1)
     %0:_(s8) = COPY $a
     %1:_(s3) = G_TRUNC %0
@@ -1500,9 +1505,10 @@ body: |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC4]](s1)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[UV]], [[UV2]], [[C]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s1) = COPY [[SBC9]](s1)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[COPY2]](s1), [[COPY3]], [[C1]]
-    ; CHECK-NEXT: RTS implicit [[SELECT]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC9]](s1), [[C]], [[C1]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[COPY2]](s1), [[COPY3]], [[C1]]
+    ; CHECK-NEXT: RTS implicit [[SELECT1]](s1)
     %0:_(s16) = COPY $rs1
     %1:_(s16) = COPY $rs2
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -1521,9 +1527,10 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SBC4]](s1)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[UV]], [[C]], [[C1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC9]](s1)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[COPY1]](s1), [[COPY2]], [[C2]]
-    ; CHECK-NEXT: RTS implicit [[SELECT]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC9]](s1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[COPY1]](s1), [[COPY2]], [[C2]]
+    ; CHECK-NEXT: RTS implicit [[SELECT1]](s1)
     %0:_(s16) = COPY $rs1
     %1:_(s16) = G_CONSTANT i16 0
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -1568,7 +1575,10 @@ body: |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC8]](s1), [[XOR]], [[SBC5]]
     ; CHECK-NEXT: [[SBC10:%[0-9]+]]:_(s8), [[SBC11:%[0-9]+]]:_(s1), [[SBC12:%[0-9]+]]:_, [[SBC13:%[0-9]+]]:_, [[SBC14:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C2]], [[C]]
-    ; CHECK-NEXT: RTS implicit [[SBC12]](s1)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC12]](s1), [[C]], [[C3]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SELECT1]](s1)
+    ; CHECK-NEXT: RTS implicit [[COPY2]](s1)
     %0:_(s16) = COPY $rs1
     %1:_(s16) = COPY $rs2
     %2:_(s1) = G_ICMP intpred(slt), %0, %1
@@ -1583,7 +1593,9 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $x
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[COPY]], [[COPY1]], [[C]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC4]](s1)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC4]](s1), [[C]], [[C1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
     ; CHECK-NEXT: RTS implicit [[COPY2]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = COPY $x
@@ -1758,7 +1770,10 @@ body: |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC3]](s1), [[XOR]], [[SBC]]
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C2]], [[C]]
-    ; CHECK-NEXT: RTS implicit [[SBC7]](s1)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC7]](s1), [[C]], [[C3]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SELECT1]](s1)
+    ; CHECK-NEXT: RTS implicit [[COPY2]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = COPY $x
     %2:_(s1) = G_ICMP intpred(sgt), %0, %1
@@ -1778,8 +1793,9 @@ body: |
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC3]](s1), [[XOR]], [[SBC]]
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C3]], [[C1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SBC7]](s1)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC7]](s1), [[C4]], [[C1]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[COPY1]](s1), [[C4]], [[C1]]
     ; CHECK-NEXT: RTS implicit [[SELECT1]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = G_CONSTANT i8 126
@@ -1800,7 +1816,10 @@ body: |
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC3]](s1), [[XOR]], [[SBC]]
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C3]], [[C1]]
-    ; CHECK-NEXT: RTS implicit [[SBC7]](s1)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC7]](s1), [[C1]], [[C4]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SELECT1]](s1)
+    ; CHECK-NEXT: RTS implicit [[COPY1]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = G_CONSTANT i8 127
     %2:_(s1) = G_ICMP intpred(sgt), %0, %1
@@ -1820,8 +1839,9 @@ body: |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC3]](s1), [[XOR]], [[SBC]]
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C2]], [[C]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC7]](s1)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC7]](s1), [[C3]], [[C]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[COPY2]](s1), [[C3]], [[C]]
     ; CHECK-NEXT: RTS implicit [[SELECT1]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = COPY $x
@@ -1842,7 +1862,10 @@ body: |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC3]](s1), [[XOR]], [[SBC]]
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C2]], [[C]]
-    ; CHECK-NEXT: RTS implicit [[SBC7]](s1)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC7]](s1), [[C]], [[C3]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SELECT1]](s1)
+    ; CHECK-NEXT: RTS implicit [[COPY2]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = COPY $x
     %2:_(s1) = G_ICMP intpred(slt), %0, %1
@@ -1857,7 +1880,9 @@ body: |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[COPY]], [[C]], [[C1]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SBC2]](s1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC2]](s1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
     ; CHECK-NEXT: RTS implicit [[COPY1]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = G_CONSTANT i8 0
@@ -1873,7 +1898,9 @@ body: |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[COPY]], [[C]], [[C1]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SBC2]](s1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC2]](s1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
     ; CHECK-NEXT: RTS implicit [[COPY1]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = COPY $x
@@ -1896,8 +1923,9 @@ body: |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC3]](s1), [[XOR]], [[SBC]]
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C2]], [[C]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SBC7]](s1)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC7]](s1), [[C3]], [[C]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[COPY2]](s1), [[C3]], [[C]]
     ; CHECK-NEXT: RTS implicit [[SELECT1]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = COPY $x
@@ -1918,7 +1946,10 @@ body: |
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC3]](s1), [[XOR]], [[SBC]]
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C3]], [[C1]]
-    ; CHECK-NEXT: RTS implicit [[SBC7]](s1)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC7]](s1), [[C1]], [[C4]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SELECT1]](s1)
+    ; CHECK-NEXT: RTS implicit [[COPY1]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = G_CONSTANT i8 126
     %2:_(s1) = G_ICMP intpred(sle), %0, %1
@@ -1938,8 +1969,9 @@ body: |
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[SBC3]](s1), [[XOR]], [[SBC]]
     ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[SELECT]], [[C3]], [[C1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[SBC7]](s1)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[SBC7]](s1), [[C4]], [[C1]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s1) = G_SELECT [[COPY1]](s1), [[C4]], [[C1]]
     ; CHECK-NEXT: RTS implicit [[SELECT1]](s1)
     %0:_(s8) = COPY $a
     %1:_(s8) = G_CONSTANT i8 127

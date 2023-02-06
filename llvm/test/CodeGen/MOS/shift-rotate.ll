@@ -363,21 +363,24 @@ define i16 @ashr_15(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    bpl .LBB21_3
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldx #255
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    bmi .LBB21_4
-; CHECK-NEXT:  .LBB21_2: ; %entry
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:    jmp .LBB21_5
-; CHECK-NEXT:  .LBB21_3: ; %entry
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:    txa
 ; CHECK-NEXT:    bpl .LBB21_2
-; CHECK-NEXT:  .LBB21_4: ; %entry
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    jmp .LBB21_3
+; CHECK-NEXT:  .LBB21_2: ; %entry
+; CHECK-NEXT:    clc
+; CHECK-NEXT:  .LBB21_3: ; %entry
 ; CHECK-NEXT:    ldx #255
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    bcs .LBB21_5
+; CHECK-NEXT:  ; %bb.4: ; %entry
+; CHECK-NEXT:    lda #0
 ; CHECK-NEXT:  .LBB21_5: ; %entry
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    bmi .LBB21_7
+; CHECK-NEXT:  ; %bb.6: ; %entry
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:  .LBB21_7: ; %entry
 ; CHECK-NEXT:    asl __rc2
 ; CHECK-NEXT:    rol
 ; CHECK-NEXT:    stx __rc2
