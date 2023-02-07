@@ -35,8 +35,21 @@ jobs:
     - uses: actions/checkout@v1
       with:
         fetch-depth: 250
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        # A full build of llvm, clang, lld, and lldb takes about 250MB
+        # of ccache space. There's not much reason to have more than this,
+        # because we usually won't need to save cache entries from older
+        # builds.  Also, there is an overall 10GB cache limit, and each
+        # run creates a new cache entry so we want to ensure that we have
+        # enough cache space for all the tests to run at once and still
+        # fit under the 10 GB limit.
+        max-size: 500M
+        key: sccache-${{ matrix.os }}
+        variant: sccache
     - name: Test lld
       uses: llvm/actions/build-test-llvm-project@main
       with:
-        cmake_args: -G Ninja -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="MOS" -DLLVM_ENABLE_PROJECTS="lld" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZLIB=OFF
+        cmake_args: -G Ninja -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="MOS" -DLLVM_ENABLE_PROJECTS="lld" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZLIB=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         build_target: check-lld
