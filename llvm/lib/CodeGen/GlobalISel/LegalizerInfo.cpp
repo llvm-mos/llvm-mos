@@ -372,6 +372,8 @@ unsigned LegalizerInfo::getExtOpcodeForWideningConstant(LLT SmallTy) const {
   return SmallTy.isByteSized() ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
 }
 
+bool LegalizerInfo::preferZext() const { return false; }
+
 /// \pre Type indices of every opcode form a dense set starting from 0.
 void LegalizerInfo::verify(const MCInstrInfo &MII) const {
 #ifndef NDEBUG

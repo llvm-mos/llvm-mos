@@ -103,6 +103,8 @@ private:
                              MachineInstr &MI) const;
   bool legalizeFreeze(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
+
+  bool preferZext() const override { return true; }
 };
 
 } // namespace llvm

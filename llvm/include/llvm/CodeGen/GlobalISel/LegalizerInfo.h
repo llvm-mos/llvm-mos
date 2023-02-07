@@ -1286,6 +1286,9 @@ public:
   /// will be the default.
   virtual unsigned getExtOpcodeForWideningConstant(LLT SmallTy) const;
 
+  /// Returns whether the Zext interpretation for ANYEXT is preferred.
+  virtual bool preferZext() const;
+
 private:
   static const int FirstOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START;
   static const int LastOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
