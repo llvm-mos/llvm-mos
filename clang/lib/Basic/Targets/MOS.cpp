@@ -151,7 +151,7 @@ static const char *const GCCRegNames[] = {
 };
 
 llvm::ArrayRef<const char *> MOSTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return GCCRegNames;
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
