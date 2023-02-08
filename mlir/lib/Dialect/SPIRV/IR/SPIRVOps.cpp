@@ -569,8 +569,8 @@ verifyMemorySemantics(Operation *op, spirv::MemorySemantics memorySemantics) {
                         spirv::MemorySemantics::AcquireRelease |
                         spirv::MemorySemantics::SequentiallyConsistent;
 
-  auto bitCount = llvm::countPopulation(
-      static_cast<uint32_t>(memorySemantics & atMostOneInSet));
+  auto bitCount =
+      llvm::popcount(static_cast<uint32_t>(memorySemantics & atMostOneInSet));
   if (bitCount > 1) {
     return op->emitError(
         "expected at most one of these four memory constraints "
@@ -2124,6 +2124,8 @@ void mlir::spirv::ConstantOp::getAsmResultNames(
 
     if (intTy.isSignless()) {
       specialName << intCst.getInt();
+    } else if (intTy.isUnsigned()) {
+      specialName << intCst.getUInt();
     } else {
       specialName << intCst.getSInt();
     }

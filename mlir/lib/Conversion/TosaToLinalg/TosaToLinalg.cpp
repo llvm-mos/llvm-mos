@@ -963,11 +963,6 @@ public:
           reshape, "Cannot collapse dynamic dims to more than one dimension");
     }
 
-    if (operandTy == resultTy) {
-      rewriter.replaceOp(reshape, adaptor.getOperands()[0]);
-      return success();
-    }
-
     SmallVector<ReassociationExprs, 4> reassociationMap;
     if (!createReassociationMapsForCollapse(rewriter, operandTy.getShape(),
                                             resultTy.getShape(),
@@ -1000,11 +995,6 @@ public:
     ShapedType operandTy = adaptor.getInput1().getType().cast<ShapedType>();
     ShapedType resultTy = reshape.getType().template cast<ShapedType>();
     bool isDynamic = !operandTy.hasStaticShape();
-
-    if (operandTy == resultTy) {
-      rewriter.replaceOp(reshape, adaptor.getOperands()[0]);
-      return success();
-    }
 
     if (isDynamic && operandTy.getRank() != 1) {
       return rewriter.notifyMatchFailure(
@@ -1044,11 +1034,6 @@ public:
     ShapedType operandTy = adaptor.getInput1().getType().cast<ShapedType>();
     ShapedType resultTy = reshape.getType().template cast<ShapedType>();
     bool isDynamic = !operandTy.hasStaticShape();
-
-    if (operandTy == resultTy) {
-      rewriter.replaceOp(reshape, adaptor.getOperands()[0]);
-      return success();
-    }
 
     SmallVector<int64_t> intermediateShape;
     if (!findIntermediateShape(resultTy.getShape(), operandTy.getShape(),
@@ -1899,7 +1884,7 @@ public:
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
           llvm::SmallVector<Value> indices;
           for (unsigned int i = 0; i < inputTy.getRank(); i++) {
-            auto index =
+            Value index =
                 rewriter.create<linalg::IndexOp>(nestedLoc, i).getResult();
             if (i == axis) {
               auto one = rewriter.create<arith::ConstantIndexOp>(nestedLoc, 1);
@@ -2310,6 +2295,13 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
   patterns->add<MaterializeResizeBroadcast>(patterns->getContext(),
                                             /*benefit=*/300);
 
+  patterns->add<ReshapeConverterCollapse>(patterns->getContext(),
+                                          /*benefit=*/100);
+  patterns->add<ReshapeConverterExpand>(patterns->getContext(),
+                                        /*benefit=*/200);
+  patterns->add<ReshapeConverterCollapseExpand>(patterns->getContext(),
+                                                /*benefit=*/300);
+
   patterns->add<
       // clang-format off
       PointwiseConverter<tosa::AddOp>,
@@ -2357,9 +2349,6 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ArgMaxConverter,
       ConcatConverter,
       GatherConverter,
-      ReshapeConverterCollapse,
-      ReshapeConverterExpand,
-      ReshapeConverterCollapseExpand,
       RescaleConverter,
       ReverseConverter,
       TableConverter,

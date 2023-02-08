@@ -12,38 +12,58 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 
-static std::string getEnumFeatures(const Record &Rec) {
-  std::vector<Record *> Features = Rec.getValueAsListOfDefs("Features");
-  if (find_if(Features, [](const Record *R) {
-        return R->getName() == "Feature64Bit";
-      }) != Features.end())
-    return "FK_64BIT";
+using ISAInfoTy = llvm::Expected<std::unique_ptr<RISCVISAInfo>>;
 
-  return "FK_NONE";
+// We can generate march string from target features as what has been described
+// in RISCV ISA specification (version 20191213) 'Chapter 27. ISA Extension
+// Naming Conventions'.
+//
+// This is almost the same as RISCVFeatures::parseFeatureBits, except that we
+// get feature name from feature records instead of feature bits.
+static std::string getMArch(const Record &Rec) {
+  std::vector<std::string> FeatureVector;
+  int XLen = 32;
+
+  // Convert features to FeatureVector.
+  for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
+    StringRef FeatureName = Feature->getValueAsString("Name");
+    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(FeatureName))
+      FeatureVector.push_back((Twine("+") + FeatureName).str());
+    else if (FeatureName == "64bit")
+      XLen = 64;
+  }
+
+  ISAInfoTy ISAInfo = llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
+  if (!ISAInfo)
+    report_fatal_error("Invalid features");
+
+  // RISCVISAInfo::toString will generate a march string with all the extensions
+  // we have added to it.
+  return (*ISAInfo)->toString();
 }
 
 void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
-  using MapTy = std::pair<const std::string, std::unique_ptr<llvm::Record>>;
-  using RecordMap = std::map<std::string, std::unique_ptr<Record>, std::less<>>;
-  const RecordMap &Map = RK.getDefs();
-
   OS << "#ifndef PROC\n"
-     << "#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH)\n"
+     << "#define PROC(ENUM, NAME, DEFAULT_MARCH)\n"
      << "#endif\n\n";
 
-  OS << "PROC(INVALID, {\"invalid\"}, FK_INVALID, {\"\"})\n";
+  OS << "PROC(INVALID, {\"invalid\"}, {\"\"})\n";
   // Iterate on all definition records.
-  for (const MapTy &Def : Map) {
-    const Record &Rec = *(Def.second);
-    if (Rec.isSubClassOf("RISCVProcessorModel"))
-      OS << "PROC(" << Rec.getName() << ", "
-         << "{\"" << Rec.getValueAsString("Name") << "\"},"
-         << getEnumFeatures(Rec) << ", "
-         << "{\"" << Rec.getValueAsString("DefaultMarch") << "\"})\n";
+  for (const Record *Rec : RK.getAllDerivedDefinitions("RISCVProcessorModel")) {
+    std::string MArch = Rec->getValueAsString("DefaultMarch").str();
+
+    // Compute MArch from features if we don't specify it.
+    if (MArch.empty())
+      MArch = getMArch(*Rec);
+
+    OS << "PROC(" << Rec->getName() << ", "
+       << "{\"" << Rec->getValueAsString("Name") << "\"}, "
+       << "{\"" << MArch << "\"})\n";
   }
   OS << "\n#undef PROC\n";
   OS << "\n";
@@ -51,11 +71,11 @@ void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
      << "#define TUNE_PROC(ENUM, NAME)\n"
      << "#endif\n\n";
   OS << "TUNE_PROC(GENERIC, \"generic\")\n";
-  for (const MapTy &Def : Map) {
-    const Record &Rec = *(Def.second);
-    if (Rec.isSubClassOf("RISCVTuneProcessorModel"))
-      OS << "TUNE_PROC(" << Rec.getName() << ", "
-         << "\"" << Rec.getValueAsString("Name") << "\")\n";
+
+  for (const Record *Rec :
+       RK.getAllDerivedDefinitions("RISCVTuneProcessorModel")) {
+    OS << "TUNE_PROC(" << Rec->getName() << ", "
+       << "\"" << Rec->getValueAsString("Name") << "\")\n";
   }
 
   OS << "\n#undef TUNE_PROC\n";

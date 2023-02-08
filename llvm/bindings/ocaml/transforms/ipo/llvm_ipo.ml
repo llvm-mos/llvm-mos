@@ -9,9 +9,6 @@
 external add_constant_merge
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_constant_merge"
-external add_merge_functions
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_merge_functions"
 external add_dead_arg_elimination
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_dead_arg_elimination"
@@ -33,12 +30,3 @@ external add_global_optimizer
 external add_ipsccp
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_ipsccp"
-external add_internalize
-  : [ `Module ] Llvm.PassManager.t -> all_but_main:bool -> unit
-  = "llvm_add_internalize"
-external add_strip_dead_prototypes
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_strip_dead_prototypes"
-external add_strip_symbols
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_strip_symbols"

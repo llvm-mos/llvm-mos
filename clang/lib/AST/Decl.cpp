@@ -54,20 +54,20 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -169,8 +169,8 @@ withExplicitVisibilityAlready(LVComputationKind Kind) {
   return Kind;
 }
 
-static Optional<Visibility> getExplicitVisibility(const NamedDecl *D,
-                                                  LVComputationKind kind) {
+static std::optional<Visibility> getExplicitVisibility(const NamedDecl *D,
+                                                       LVComputationKind kind) {
   assert(!kind.IgnoreExplicitVisibility &&
          "asking for explicit visibility when we shouldn't be");
   return D->getExplicitVisibility(kind.getExplicitVisibilityKind());
@@ -219,8 +219,8 @@ static Visibility getVisibilityFromAttr(const T *attr) {
 }
 
 /// Return the explicit visibility of the given declaration.
-static Optional<Visibility> getVisibilityOf(const NamedDecl *D,
-                                    NamedDecl::ExplicitVisibilityKind kind) {
+static std::optional<Visibility>
+getVisibilityOf(const NamedDecl *D, NamedDecl::ExplicitVisibilityKind kind) {
   // If we're ultimately computing the visibility of a type, look for
   // a 'type_visibility' attribute before looking for 'visibility'.
   if (kind == NamedDecl::VisibilityForType) {
@@ -728,7 +728,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   LinkageInfo LV = getExternalLinkageFor(D);
 
   if (!hasExplicitVisibilityAlready(computation)) {
-    if (Optional<Visibility> Vis = getExplicitVisibility(D, computation)) {
+    if (std::optional<Visibility> Vis = getExplicitVisibility(D, computation)) {
       LV.mergeVisibility(*Vis, true);
     } else {
       // If we're declared in a namespace with a visibility attribute,
@@ -738,7 +738,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
            DC = DC->getParent()) {
         const auto *ND = dyn_cast<NamespaceDecl>(DC);
         if (!ND) continue;
-        if (Optional<Visibility> Vis = getExplicitVisibility(ND, computation)) {
+        if (std::optional<Visibility> Vis =
+                getExplicitVisibility(ND, computation)) {
           LV.mergeVisibility(*Vis, true);
           break;
         }
@@ -964,7 +965,7 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
   // If we have an explicit visibility attribute, merge that in.
   if (!hasExplicitVisibilityAlready(computation)) {
-    if (Optional<Visibility> Vis = getExplicitVisibility(D, computation))
+    if (std::optional<Visibility> Vis = getExplicitVisibility(D, computation))
       LV.mergeVisibility(*Vis, true);
     // If we're paying attention to global visibility, apply
     // -finline-visibility-hidden if this is an inline method.
@@ -1176,14 +1177,14 @@ LinkageInfo NamedDecl::getLinkageAndVisibility() const {
   return LinkageComputer{}.getDeclLinkageAndVisibility(this);
 }
 
-static Optional<Visibility>
+static std::optional<Visibility>
 getExplicitVisibilityAux(const NamedDecl *ND,
                          NamedDecl::ExplicitVisibilityKind kind,
                          bool IsMostRecent) {
   assert(!IsMostRecent || ND == ND->getMostRecentDecl());
 
   // Check the declaration itself first.
-  if (Optional<Visibility> V = getVisibilityOf(ND, kind))
+  if (std::optional<Visibility> V = getVisibilityOf(ND, kind))
     return V;
 
   // If this is a member class of a specialization of a class template
@@ -1255,7 +1256,7 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   return std::nullopt;
 }
 
-Optional<Visibility>
+std::optional<Visibility>
 NamedDecl::getExplicitVisibility(ExplicitVisibilityKind kind) const {
   return getExplicitVisibilityAux(this, kind, false);
 }
@@ -1312,7 +1313,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
 
     LinkageInfo LV;
     if (!hasExplicitVisibilityAlready(computation)) {
-      if (Optional<Visibility> Vis =
+      if (std::optional<Visibility> Vis =
               getExplicitVisibility(Function, computation))
         LV.mergeVisibility(*Vis, true);
     }
@@ -1333,7 +1334,8 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
       if (Var->getStorageClass() == SC_PrivateExtern)
         LV.mergeVisibility(HiddenVisibility, true);
       else if (!hasExplicitVisibilityAlready(computation)) {
-        if (Optional<Visibility> Vis = getExplicitVisibility(Var, computation))
+        if (std::optional<Visibility> Vis =
+                getExplicitVisibility(Var, computation))
           LV.mergeVisibility(*Vis, true);
       }
 
@@ -1528,7 +1530,7 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
   if (computation.IgnoreAllVisibility && D->hasCachedLinkage())
     return LinkageInfo(D->getCachedLinkage(), DefaultVisibility, false);
 
-  if (llvm::Optional<LinkageInfo> LI = lookup(D, computation))
+  if (std::optional<LinkageInfo> LI = lookup(D, computation))
     return *LI;
 
   LinkageInfo LV = computeLVForDecl(D, computation);
@@ -3214,7 +3216,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
 }
 
 bool FunctionDecl::isReplaceableGlobalAllocationFunction(
-    Optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
+    std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
   if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
     return false;
   if (getDeclName().getCXXOverloadedOperator() != OO_New &&
@@ -4709,6 +4711,7 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
   setParamDestroyedInCallee(false);
   setArgPassingRestrictions(APK_CanPassInRegs);
   setIsRandomized(false);
+  setODRHash(0);
 }
 
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
@@ -4767,7 +4770,10 @@ bool RecordDecl::isOrContainsUnion() const {
 RecordDecl::field_iterator RecordDecl::field_begin() const {
   if (hasExternalLexicalStorage() && !hasLoadedFieldsFromExternalStorage())
     LoadFieldsFromExternalStorage();
-
+  // This is necessary for correctness for C++ with modules.
+  // FIXME: Come up with a test case that breaks without definition.
+  if (RecordDecl *D = getDefinition(); D && D != this)
+    return D->field_begin();
   return field_iterator(decl_iterator(FirstDecl));
 }
 
@@ -4881,6 +4887,19 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
 
   // We didn't find a named data member.
   return nullptr;
+}
+
+unsigned RecordDecl::getODRHash() {
+  if (hasODRHash())
+    return RecordDeclBits.ODRHash;
+
+  // Only calculate hash on first call of getODRHash per record.
+  ODRHash Hash;
+  Hash.AddRecordDecl(this);
+  // For RecordDecl the ODRHash is stored in the remaining 26
+  // bit of RecordDeclBits, adjust the hash to accomodate.
+  setODRHash(Hash.CalculateHash() >> 6);
+  return RecordDeclBits.ODRHash;
 }
 
 //===----------------------------------------------------------------------===//

@@ -188,7 +188,7 @@ public:
 
   bool operator<(const PartialSectionKey &other) const {
     int c = name.compare(other.name);
-    if (c == 1)
+    if (c > 0)
       return false;
     if (c == 0)
       return characteristics < other.characteristics;
@@ -488,7 +488,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
       uint32_t &thunkSymbolIndex = insertion.first->second;
       if (insertion.second)
         thunkSymbolIndex = file->addRangeThunkSymbol(thunk);
-      relocReplacements.push_back({j, thunkSymbolIndex});
+      relocReplacements.emplace_back(j, thunkSymbolIndex);
     }
 
     // Get a writable copy of this section's relocations so they can be
@@ -498,11 +498,11 @@ bool Writer::createThunks(OutputSection *os, int margin) {
     ArrayRef<coff_relocation> curRelocs = sc->getRelocs();
     MutableArrayRef<coff_relocation> newRelocs;
     if (originalRelocs.data() == curRelocs.data()) {
-      newRelocs = makeMutableArrayRef(
+      newRelocs = MutableArrayRef(
           bAlloc().Allocate<coff_relocation>(originalRelocs.size()),
           originalRelocs.size());
     } else {
-      newRelocs = makeMutableArrayRef(
+      newRelocs = MutableArrayRef(
           const_cast<coff_relocation *>(curRelocs.data()), curRelocs.size());
     }
 
@@ -531,8 +531,7 @@ bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
       continue;
 
     ArrayRef<coff_relocation> relocs = sc->getRelocs();
-    for (size_t j = 0, e = relocs.size(); j < e; ++j) {
-      const coff_relocation &rel = relocs[j];
+    for (const coff_relocation &rel : relocs) {
       Symbol *relocTarget = sc->file->getSymbol(rel.SymbolTableIndex);
 
       Defined *sym = dyn_cast_or_null<Defined>(relocTarget);
@@ -1034,13 +1033,13 @@ void Writer::createMiscChunks() {
     // allowing a debugger to match a PDB and an executable.  So we need it even
     // if we're ultimately not going to write CodeView data to the PDB.
     buildId = make<CVDebugRecordChunk>(ctx);
-    debugRecords.push_back({COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId});
+    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
   }
 
   if (config->cetCompat) {
-    debugRecords.push_back({COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
-                            make<ExtendedDllCharacteristicsChunk>(
-                                IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT)});
+    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
+                              make<ExtendedDllCharacteristicsChunk>(
+                                  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT));
   }
 
   // Align and add each chunk referenced by the debug data directory.
@@ -1121,6 +1120,10 @@ void Writer::appendImportThunks() {
       dataSec->addChunk(c);
     for (Chunk *c : delayIdata.getCodeChunks())
       textSec->addChunk(c);
+    for (Chunk *c : delayIdata.getCodePData())
+      pdataSec->addChunk(c);
+    for (Chunk *c : delayIdata.getCodeUnwindInfo())
+      rdataSec->addChunk(c);
   }
 }
 

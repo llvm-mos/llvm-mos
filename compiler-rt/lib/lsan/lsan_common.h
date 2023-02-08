@@ -131,6 +131,9 @@ void GetAllocatorGlobalRange(uptr *begin, uptr *end);
 uptr PointsIntoChunk(void *p);
 // Returns address of user-visible chunk contained in this allocator chunk.
 uptr GetUserBegin(uptr chunk);
+// Returns user-visible address for chunk. If memory tagging is used this
+// function will return the tagged address.
+uptr GetUserAddr(uptr chunk);
 
 // Wrapper for chunk metadata operations.
 class LsanMetadata {
@@ -265,7 +268,8 @@ void ScanRangeForPointers(uptr begin, uptr end,
                           Frontier *frontier,
                           const char *region_type, ChunkTag tag);
 void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier);
-void ScanExtraStackRanges(tid_t os_id, Frontier *frontier);
+void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
+                          Frontier *frontier);
 
 // Functions called from the parent tool.
 const char *MaybeCallLsanDefaultOptions();

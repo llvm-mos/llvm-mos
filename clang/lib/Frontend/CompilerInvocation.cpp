@@ -52,13 +52,11 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -88,6 +86,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -878,14 +877,20 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
   AnalyzerOptions ConfigOpts;
   parseAnalyzerConfigs(ConfigOpts, nullptr);
 
-  for (const auto &C : Opts.Config) {
+  // Sort options by key to avoid relying on StringMap iteration order.
+  SmallVector<std::pair<StringRef, StringRef>, 4> SortedConfigOpts;
+  for (const auto &C : Opts.Config)
+    SortedConfigOpts.emplace_back(C.getKey(), C.getValue());
+  llvm::sort(SortedConfigOpts, llvm::less_first());
+
+  for (const auto &[Key, Value] : SortedConfigOpts) {
     // Don't generate anything that came from parseAnalyzerConfigs. It would be
     // redundant and may not be valid on the command line.
-    auto Entry = ConfigOpts.Config.find(C.getKey());
-    if (Entry != ConfigOpts.Config.end() && Entry->getValue() == C.getValue())
+    auto Entry = ConfigOpts.Config.find(Key);
+    if (Entry != ConfigOpts.Config.end() && Entry->getValue() == Value)
       continue;
 
-    GenerateArg(Args, OPT_analyzer_config, C.getKey() + "=" + C.getValue(), SA);
+    GenerateArg(Args, OPT_analyzer_config, Key + "=" + Value, SA);
   }
 
   // Nothing to generate for FullCompilerInvocation.
@@ -1305,8 +1310,9 @@ static std::string serializeXRayInstrumentationBundle(const XRayInstrSet &S) {
 // Set the profile kind using fprofile-instrument-use-path.
 static void setPGOUseInstrumentor(CodeGenOptions &Opts,
                                   const Twine &ProfileName,
+                                  llvm::vfs::FileSystem &FS,
                                   DiagnosticsEngine &Diags) {
-  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName);
+  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName, FS);
   if (auto E = ReaderOrErr.takeError()) {
     unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                             "Error in reading profile %0: %1");
@@ -1728,9 +1734,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
-  if (!Opts.ProfileInstrumentUsePath.empty())
-    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath, Diags);
-
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
 
@@ -1966,8 +1969,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                      Opts.OptimizationRemarkAnalysis.hasValidPattern();
 
   bool UsingSampleProfile = !Opts.SampleProfileFile.empty();
-  bool UsingProfile = UsingSampleProfile ||
-      (Opts.getProfileUse() != CodeGenOptions::ProfileNone);
+  bool UsingProfile =
+      UsingSampleProfile || !Opts.ProfileInstrumentUsePath.empty();
 
   if (Opts.DiagnosticsWithHotness && !UsingProfile &&
       // An IR file will contain PGO as metadata
@@ -2513,7 +2516,8 @@ static const auto &getFrontendActionTable() {
 }
 
 /// Maps command line option to frontend action.
-static Optional<frontend::ActionKind> getFrontendAction(OptSpecifier &Opt) {
+static std::optional<frontend::ActionKind>
+getFrontendAction(OptSpecifier &Opt) {
   for (const auto &ActionOpt : getFrontendActionTable())
     if (ActionOpt.second == Opt.getID())
       return ActionOpt.first;
@@ -2522,7 +2526,7 @@ static Optional<frontend::ActionKind> getFrontendAction(OptSpecifier &Opt) {
 }
 
 /// Maps frontend action to command line option.
-static Optional<OptSpecifier>
+static std::optional<OptSpecifier>
 getProgramActionOpt(frontend::ActionKind ProgramAction) {
   for (const auto &ActionOpt : getFrontendActionTable())
     if (ActionOpt.first == ProgramAction)
@@ -2547,7 +2551,7 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 #include "clang/Driver/Options.inc"
 #undef FRONTEND_OPTION_WITH_MARSHALLING
 
-  Optional<OptSpecifier> ProgramActionOpt =
+  std::optional<OptSpecifier> ProgramActionOpt =
       getProgramActionOpt(Opts.ProgramAction);
 
   // Generating a simple flag covers most frontend actions.
@@ -2726,7 +2730,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.ProgramAction = frontend::ParseSyntaxOnly;
   if (const Arg *A = Args.getLastArg(OPT_Action_Group)) {
     OptSpecifier Opt = OptSpecifier(A->getOption().getID());
-    Optional<frontend::ActionKind> ProgramAction = getFrontendAction(Opt);
+    std::optional<frontend::ActionKind> ProgramAction = getFrontendAction(Opt);
     assert(ProgramAction && "Option specifier not in Action_Group.");
 
     if (ProgramAction == frontend::ASTDump &&
@@ -4566,6 +4570,17 @@ bool CompilerInvocation::CreateFromArgsImpl(
   if (Res.getCodeGenOpts().CodeViewCommandLine) {
     Res.getCodeGenOpts().Argv0 = Argv0;
     append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
+  }
+
+  // Set PGOOptions. Need to create a temporary VFS to read the profile
+  // to determine the PGO type.
+  if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty()) {
+    auto FS =
+        createVFSFromOverlayFiles(Res.getHeaderSearchOpts().VFSOverlayFiles,
+                                  Diags, llvm::vfs::getRealFileSystem());
+    setPGOUseInstrumentor(Res.getCodeGenOpts(),
+                          Res.getCodeGenOpts().ProfileInstrumentUsePath, *FS,
+                          Diags);
   }
 
   FixupInvocation(Res, Diags, Args, DashX);

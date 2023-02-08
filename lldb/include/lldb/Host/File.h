@@ -226,7 +226,7 @@ public:
   ///     A buffer where to put the bytes that are read.
   ///
   /// \param[in,out] num_bytes
-  ///     The number of bytes to read form the current file position
+  ///     The number of bytes to read from the current file position
   ///     which gets modified with the number of bytes that were read.
   ///
   /// \param[in,out] offset
@@ -438,10 +438,10 @@ private:
 class SerialPort : public NativeFile {
 public:
   struct Options {
-    std::optional<unsigned int> BaudRate = std::nullopt;
-    std::optional<Terminal::Parity> Parity = std::nullopt;
-    std::optional<Terminal::ParityCheck> ParityCheck = std::nullopt;
-    std::optional<unsigned int> StopBits = std::nullopt;
+    std::optional<unsigned int> BaudRate;
+    std::optional<Terminal::Parity> Parity;
+    std::optional<Terminal::ParityCheck> ParityCheck;
+    std::optional<unsigned int> StopBits;
   };
 
   // Obtain Options corresponding to the passed URL query string

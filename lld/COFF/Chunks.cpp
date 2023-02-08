@@ -658,8 +658,7 @@ void SectionChunk::getRuntimePseudoRelocs(
     }
     // sizeInBits is used to initialize the Flags field; currently no
     // other flags are defined.
-    res.emplace_back(
-        RuntimePseudoReloc(target, this, rel.VirtualAddress, sizeInBits));
+    res.emplace_back(target, this, rel.VirtualAddress, sizeInBits);
   }
 }
 
@@ -870,7 +869,7 @@ void RVAFlagTableChunk::writeTo(uint8_t *buf) const {
     uint8_t flag;
   };
   auto flags =
-      makeMutableArrayRef(reinterpret_cast<RVAFlag *>(buf), syms.size());
+      MutableArrayRef(reinterpret_cast<RVAFlag *>(buf), syms.size());
   for (auto t : zip(syms, flags)) {
     const auto &sym = std::get<0>(t);
     auto &flag = std::get<1>(t);

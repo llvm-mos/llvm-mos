@@ -49,6 +49,7 @@
 #include "deltas/RunIRPasses.h"
 #include "deltas/SimplifyInstructions.h"
 #include "deltas/StripDebugInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -75,6 +76,7 @@ static cl::list<std::string>
     DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)               \
     DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)               \
     DELTA_PASS("aliases", reduceAliasesDeltaPass)                              \
+    DELTA_PASS("ifuncs", reduceIFuncsDeltaPass)                                \
     DELTA_PASS("simplify-conditionals-true", reduceConditionalsTrueDeltaPass)  \
     DELTA_PASS("simplify-conditionals-false", reduceConditionalsFalseDeltaPass)\
     DELTA_PASS("invokes", reduceInvokesDeltaPass)                              \

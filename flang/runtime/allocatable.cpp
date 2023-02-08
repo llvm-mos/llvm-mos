@@ -12,6 +12,9 @@
 #include "stat.h"
 #include "terminator.h"
 #include "type-info.h"
+#include "flang/ISO_Fortran_binding.h"
+#include "flang/Runtime/assign.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 extern "C" {
@@ -38,10 +41,32 @@ void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
       derivedType, nullptr, rank, nullptr, CFI_attribute_allocatable);
 }
 
-int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor & /*from*/,
-    bool /*hasStat*/, const Descriptor * /*errMsg*/,
-    const char * /*sourceFile*/, int /*sourceLine*/) {
-  INTERNAL_CHECK(false); // TODO: MoveAlloc is not yet implemented
+std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from, bool hasStat,
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  // Should be handled by semantic analysis
+  RUNTIME_CHECK(terminator, to.type() == from.type());
+  RUNTIME_CHECK(terminator, to.IsAllocatable() && from.IsAllocatable());
+
+  // If to and from are the same allocatable they must not be allocated
+  // and nothing should be done.
+  if (from.raw().base_addr == to.raw().base_addr && from.IsAllocated()) {
+    return ReturnError(
+        terminator, StatMoveAllocSameAllocatable, errMsg, hasStat);
+  }
+
+  if (to.IsAllocated()) {
+    int stat{to.Destroy(/*finalize=*/true)};
+    if (stat != StatOk) {
+      return ReturnError(terminator, stat, errMsg, hasStat);
+    }
+  }
+
+  // If from isn't allocated, the standard defines that nothing should be done.
+  if (from.IsAllocated()) {
+    to = from;
+    from.raw().base_addr = nullptr;
+  }
   return StatOk;
 }
 
@@ -60,10 +85,22 @@ void RTNAME(AllocatableSetDerivedLength)(
 }
 
 void RTNAME(AllocatableApplyMold)(
-    Descriptor &descriptor, const Descriptor &mold) {
+    Descriptor &descriptor, const Descriptor &mold, int rank) {
+  if (descriptor.IsAllocated()) {
+    // 9.7.1.3 Return so the error can be emitted by AllocatableAllocate.
+    return;
+  }
   descriptor = mold;
   descriptor.set_base_addr(nullptr);
   descriptor.raw().attribute = CFI_attribute_allocatable;
+  descriptor.raw().rank = rank;
+  if (auto *descAddendum{descriptor.Addendum()}) {
+    if (const auto *moldAddendum{mold.Addendum()}) {
+      if (const auto *derived{moldAddendum->derivedType()}) {
+        descAddendum->set_derivedType(derived);
+      }
+    }
+  }
 }
 
 int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
@@ -98,8 +135,7 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
       alloc, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     Terminator terminator{sourceFile, sourceLine};
-    // 9.7.1.2(7)
-    Assign(alloc, source, terminator, /*skipRealloc=*/true);
+    DoFromSourceAssign(alloc, source, terminator);
   }
   return stat;
 }
@@ -123,8 +159,15 @@ int RTNAME(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,
       descriptor, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     DescriptorAddendum *addendum{descriptor.Addendum()};
-    INTERNAL_CHECK(addendum != nullptr);
-    addendum->set_derivedType(derivedType);
+    if (addendum) { // Unlimited polymorphic allocated from intrinsic type spec
+                    // does not have
+      addendum->set_derivedType(derivedType);
+    } else {
+      // Unlimited polymorphic descriptors initialized with
+      // AllocatableInitIntrinsic do not have an addendum. Make sure the
+      // derivedType is null in that case.
+      INTERNAL_CHECK(!derivedType);
+    }
   }
   return stat;
 }

@@ -15,7 +15,8 @@
 
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/Support/AArch64TargetParser.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -140,7 +141,7 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
-  Optional<std::pair<unsigned, unsigned>>
+  std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;
 
   bool getFeatureDepOptions(StringRef Feature,

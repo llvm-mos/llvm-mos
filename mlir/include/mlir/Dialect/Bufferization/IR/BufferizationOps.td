@@ -89,7 +89,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     LogicalResult bufferize(RewriterBase &rewriter,
                             const BufferizationOptions &options);
 
-    bool isMemoryWrite(OpResult opResult, const AnalysisState &state);
+    bool resultBufferizesToMemoryWrite(OpResult opResult,
+                                       const AnalysisState &state);
 
     bool bufferizesToAllocation(OpResult opResult) { return true; }
 
@@ -99,7 +100,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state);
 
-    SmallVector<OpResult> getAliasingOpResult(
+    AliasingOpResultList getAliasingOpResults(
         OpOperand &opOperand, const AnalysisState &state);
 
     FailureOr<BaseMemRefType> getBufferType(
@@ -247,7 +248,7 @@ def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
       return false;
     }
 
-    SmallVector<OpResult> getAliasingOpResult(
+    AliasingOpResultList getAliasingOpResults(
         OpOperand &opOperand, const AnalysisState &state) const {
       return {};
     }
@@ -408,7 +409,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
       return true;
     }
 
-    SmallVector<OpResult> getAliasingOpResult(
+    AliasingOpResultList getAliasingOpResults(
         OpOperand &opOperand, const AnalysisState &state) const {
       return {};
     }

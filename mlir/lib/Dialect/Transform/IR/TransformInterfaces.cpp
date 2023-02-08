@@ -27,10 +27,20 @@ using namespace mlir;
 
 constexpr const Value transform::TransformState::kTopLevelValue;
 
-transform::TransformState::TransformState(Region *region,
-                                          Operation *payloadRoot,
-                                          const TransformOptions &options)
+transform::TransformState::TransformState(
+    Region *region, Operation *payloadRoot,
+    ArrayRef<ArrayRef<MappedValue>> extraMappings,
+    const TransformOptions &options)
     : topLevel(payloadRoot), options(options) {
+  topLevelMappedValues.reserve(extraMappings.size());
+  for (ArrayRef<MappedValue> mapping : extraMappings) {
+    size_t start = topLevelMappedValueStorage.size();
+    llvm::append_range(topLevelMappedValueStorage, mapping);
+    topLevelMappedValues.push_back(
+        ArrayRef<MappedValue>(topLevelMappedValueStorage)
+            .slice(start, mapping.size()));
+  }
+
   auto result = mappings.try_emplace(region);
   assert(result.second && "the region scope is already present");
   (void)result;
@@ -70,6 +80,38 @@ LogicalResult transform::TransformState::getHandlesForPayloadOp(
   }
 
   return success(found);
+}
+
+LogicalResult
+transform::TransformState::mapBlockArgument(BlockArgument argument,
+                                            ArrayRef<MappedValue> values) {
+  if (argument.getType().isa<TransformHandleTypeInterface>()) {
+    SmallVector<Operation *> operations;
+    operations.reserve(values.size());
+    for (MappedValue value : values) {
+      if (auto *op = value.dyn_cast<Operation *>()) {
+        operations.push_back(op);
+        continue;
+      }
+      return emitError(argument.getLoc())
+             << "wrong kind of value provided for top-level operation handle";
+    }
+    return setPayloadOps(argument, operations);
+  }
+
+  assert(argument.getType().isa<TransformParamTypeInterface>() &&
+         "unsupported kind of block argument");
+  SmallVector<Param> parameters;
+  parameters.reserve(values.size());
+  for (MappedValue value : values) {
+    if (auto attr = value.dyn_cast<Attribute>()) {
+      parameters.push_back(attr);
+      continue;
+    }
+    return emitError(argument.getLoc())
+           << "wrong kind of value provided for top-level parameter";
+  }
+  return setParams(argument, parameters);
 }
 
 LogicalResult
@@ -294,6 +336,20 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   if (result.isDefiniteFailure())
     return result;
 
+  // If a silenceable failure was produced, some results may be unset, set them
+  // to empty lists.
+  if (result.isSilenceableFailure()) {
+    for (OpResult opResult : transform->getResults()) {
+      if (results.isSet(opResult.getResultNumber()))
+        continue;
+
+      if (opResult.getType().isa<TransformParamTypeInterface>())
+        results.setParams(opResult, {});
+      else
+        results.set(opResult, {});
+    }
+  }
+
   // Remove the mapping for the operand if it is consumed by the operation. This
   // allows us to catch use-after-free with assertions later on.
   auto memEffectInterface =
@@ -421,6 +477,13 @@ bool transform::TransformResults::isParam(unsigned resultNumber) const {
   return paramSegments[resultNumber].data() != nullptr;
 }
 
+bool transform::TransformResults::isSet(unsigned resultNumber) const {
+  assert(resultNumber < paramSegments.size() &&
+         "querying association for a non-existent handle");
+  return paramSegments[resultNumber].data() != nullptr ||
+         segments[resultNumber].data() != nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Utilities for TransformEachOpTrait.
 //===----------------------------------------------------------------------===//
@@ -432,57 +495,43 @@ transform::detail::checkApplyToOne(Operation *transformOp,
   Location transformOpLoc = transformOp->getLoc();
   StringRef transformOpName = transformOp->getName().getStringRef();
   unsigned expectedNumResults = transformOp->getNumResults();
-  // TODO: encode this implicit must always produce `expectedNumResults`
-  // and nullptr is fine with a proper trait.
-  if (partialResult.size() != expectedNumResults) {
-    auto diag = mlir::emitError(transformOpLoc, "applications of ")
-                << transformOpName << " expected to produce "
-                << expectedNumResults << " results (actually produced "
-                << partialResult.size() << ").";
-    diag.attachNote(transformOpLoc)
-        << "If you need variadic results, consider a generic `apply` "
-        << "instead of the specialized `applyToOne`.";
-    diag.attachNote(transformOpLoc)
-        << "Producing " << expectedNumResults << " null results is "
-        << "allowed if the use case warrants it.";
-    diag.attachNote(payloadOpLoc) << "when applied to this op";
-    return failure();
-  }
 
-  // Check that all is null or none is null
-  // TODO: relax this behavior and encode with a proper trait.
-  if (llvm::any_of(
-          partialResult,
-          [](llvm::PointerUnion<Operation *, Attribute> ptr) { return ptr; }) &&
-      llvm::any_of(partialResult,
-                   [](llvm::PointerUnion<Operation *, Attribute> ptr) {
-                     return !ptr;
-                   })) {
-    auto diag = mlir::emitError(transformOpLoc, "unexpected application of ")
-                << transformOpName
-                << " produces both null and non null results.";
+  // Reuse the emission of the diagnostic note.
+  auto emitDiag = [&]() {
+    auto diag = mlir::emitError(transformOpLoc);
     diag.attachNote(payloadOpLoc) << "when applied to this op";
+    return diag;
+  };
+
+  if (partialResult.size() != expectedNumResults) {
+    auto diag = emitDiag() << "application of " << transformOpName
+                           << " expected to produce " << expectedNumResults
+                           << " results (actually produced "
+                           << partialResult.size() << ").";
+    diag.attachNote(transformOpLoc)
+        << "if you need variadic results, consider a generic `apply` "
+        << "instead of the specialized `applyToOne`.";
     return failure();
   }
 
   // Check that the right kind of value was produced.
   for (const auto &[ptr, res] :
        llvm::zip(partialResult, transformOp->getResults())) {
+    if (ptr.isNull()) {
+      return emitDiag() << "null result #" << res.getResultNumber()
+                        << " produced";
+    }
     if (ptr.is<Operation *>() &&
         !res.getType().template isa<TransformHandleTypeInterface>()) {
-      mlir::emitError(transformOpLoc)
-          << "applications of " << transformOpName
-          << " expected to produce an Attribute for result #"
-          << res.getResultNumber();
-      return failure();
+      return emitDiag() << "application of " << transformOpName
+                        << " expected to produce an Attribute for result #"
+                        << res.getResultNumber();
     }
     if (ptr.is<Attribute>() &&
         !res.getType().template isa<TransformParamTypeInterface>()) {
-      mlir::emitError(transformOpLoc)
-          << "applications of " << transformOpName
-          << " expected to produce an Operation * for result #"
-          << res.getResultNumber();
-      return failure();
+      return emitDiag() << "application of " << transformOpName
+                        << " expected to produce an Operation * for result #"
+                        << res.getResultNumber();
     }
   }
   return success();
@@ -515,12 +564,43 @@ void transform::detail::setApplyToOneResults(
 LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
     TransformState &state, Operation *op, Region &region) {
   SmallVector<Operation *> targets;
-  if (op->getNumOperands() != 0)
+  SmallVector<SmallVector<MappedValue>> extraMappings;
+  if (op->getNumOperands() != 0) {
     llvm::append_range(targets, state.getPayloadOps(op->getOperand(0)));
-  else
-    targets.push_back(state.getTopLevel());
+    for (Value operand : op->getOperands().drop_front()) {
+      SmallVector<MappedValue> &mapped = extraMappings.emplace_back();
+      if (operand.getType().isa<TransformHandleTypeInterface>()) {
+        llvm::append_range(mapped, state.getPayloadOps(operand));
+      } else {
+        assert(operand.getType().isa<TransformParamTypeInterface>() &&
+               "unsupported kind of transform dialect value");
+        llvm::append_range(mapped, state.getParams(operand));
+      }
+    }
+  } else {
+    if (state.getNumTopLevelMappings() !=
+        region.front().getNumArguments() - 1) {
+      return emitError(op->getLoc())
+             << "operation expects " << region.front().getNumArguments() - 1
+             << " extra value bindings, but " << state.getNumTopLevelMappings()
+             << " were provided to the interpreter";
+    }
 
-  return state.mapBlockArguments(region.front().getArgument(0), targets);
+    targets.push_back(state.getTopLevel());
+    for (unsigned i = 0, e = state.getNumTopLevelMappings(); i < e; ++i)
+      extraMappings.push_back(llvm::to_vector(state.getTopLevelMapping(i)));
+  }
+
+  if (failed(state.mapBlockArguments(region.front().getArgument(0), targets)))
+    return failure();
+
+  for (BlockArgument argument : region.front().getArguments().drop_front()) {
+    if (failed(state.mapBlockArgument(
+            argument, extraMappings[argument.getArgNumber() - 1])))
+      return failure();
+  }
+
+  return success();
 }
 
 LogicalResult
@@ -540,19 +620,42 @@ transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
     return op->emitOpError() << "expects a single-block region";
 
   Block *body = &bodyRegion->front();
-  if (body->getNumArguments() != 1 ||
-      !body->getArgumentTypes()[0].isa<TransformHandleTypeInterface>()) {
+  if (body->getNumArguments() == 0) {
     return op->emitOpError()
-           << "expects the entry block to have one argument "
-              "of type implementing TransformHandleTypeInterface";
+           << "expects the entry block to have at least one argument";
+  }
+  if (!body->getArgument(0).getType().isa<TransformHandleTypeInterface>()) {
+    return op->emitOpError()
+           << "expects the first entry block argument to be of type "
+              "implementing TransformHandleTypeInterface";
+  }
+  BlockArgument arg = body->getArgument(0);
+  if (op->getNumOperands() != 0) {
+    if (arg.getType() != op->getOperand(0).getType()) {
+      return op->emitOpError()
+             << "expects the type of the block argument to match "
+                "the type of the operand";
+    }
+  }
+  for (BlockArgument arg : body->getArguments().drop_front()) {
+    if (arg.getType()
+            .isa<TransformHandleTypeInterface, TransformParamTypeInterface>())
+      continue;
+
+    InFlightDiagnostic diag =
+        op->emitOpError()
+        << "expects trailing entry block arguments to be of type implementing "
+           "TransformHandleTypeInterface or TransformParamTypeInterface";
+    diag.attachNote() << "argument #" << arg.getArgNumber() << " does not";
+    return diag;
   }
 
   if (auto *parent =
           op->getParentWithTrait<PossibleTopLevelTransformOpTrait>()) {
-    if (op->getNumOperands() == 0) {
+    if (op->getNumOperands() != body->getNumArguments()) {
       InFlightDiagnostic diag =
           op->emitOpError()
-          << "expects the root operation to be provided for a nested op";
+          << "expects operands to be provided for a nested op";
       diag.attachNote(parent->getLoc())
           << "nested in another possible top-level op";
       return diag;
@@ -680,6 +783,7 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
         });
   };
 
+  std::optional<unsigned> firstConsumedOperand = std::nullopt;
   for (OpOperand &operand : op->getOpOperands()) {
     auto range = effectsOn(operand.get());
     if (range.empty()) {
@@ -690,7 +794,30 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
                         << operand.getOperandNumber();
       return diag;
     }
+    if (::hasEffect<MemoryEffects::Allocate, TransformMappingResource>(range)) {
+      InFlightDiagnostic diag = op->emitError()
+                                << "TransformOpInterface did not expect "
+                                   "'allocate' memory effect on an operand";
+      diag.attachNote() << "specified for operand #"
+                        << operand.getOperandNumber();
+      return diag;
+    }
+    if (!firstConsumedOperand &&
+        ::hasEffect<MemoryEffects::Free, TransformMappingResource>(range)) {
+      firstConsumedOperand = operand.getOperandNumber();
+    }
   }
+
+  if (firstConsumedOperand &&
+      !::hasEffect<MemoryEffects::Write, PayloadIRResource>(effects)) {
+    InFlightDiagnostic diag =
+        op->emitError()
+        << "TransformOpInterface expects ops consuming operands to have a "
+           "'write' effect on the payload resource";
+    diag.attachNote() << "consumes operand #" << *firstConsumedOperand;
+    return diag;
+  }
+
   for (OpResult result : op->getResults()) {
     auto range = effectsOn(result);
     if (!::hasEffect<MemoryEffects::Allocate, TransformMappingResource>(
@@ -703,6 +830,7 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
       return diag;
     }
   }
+
   return success();
 }
 
@@ -710,9 +838,11 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
 // Entry point.
 //===----------------------------------------------------------------------===//
 
-LogicalResult transform::applyTransforms(Operation *payloadRoot,
-                                         TransformOpInterface transform,
-                                         const TransformOptions &options) {
+LogicalResult
+transform::applyTransforms(Operation *payloadRoot,
+                           TransformOpInterface transform,
+                           ArrayRef<ArrayRef<MappedValue>> extraMapping,
+                           const TransformOptions &options) {
 #ifndef NDEBUG
   if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
       transform->getNumOperands() != 0) {
@@ -723,7 +853,8 @@ LogicalResult transform::applyTransforms(Operation *payloadRoot,
   }
 #endif // NDEBUG
 
-  TransformState state(transform->getParentRegion(), payloadRoot, options);
+  TransformState state(transform->getParentRegion(), payloadRoot, extraMapping,
+                       options);
   return state.applyTransform(transform).checkAndReport();
 }
 

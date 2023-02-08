@@ -143,6 +143,15 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                    const MCRelaxableFragment *DF,
                                                    const MCAsmLayout &Layout,
                                                    const bool WasForced) const {
+  int64_t Offset = int64_t(Value);
+  unsigned Kind = Fixup.getTargetKind();
+
+  // We only do conditional branch relaxation when the symbol is resolved.
+  // For conditional branch, the immediate must be in the range
+  // [-4096, 4094].
+  if (Kind == RISCV::fixup_riscv_branch)
+    return Resolved && !isInt<13>(Offset);
+
   // Return true if the symbol is actually unresolved.
   // Resolved could be always false when shouldForceRelocation return true.
   // We use !WasForced to indicate that the symbol is unresolved and not forced
@@ -150,8 +159,7 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   if (!Resolved && !WasForced)
     return true;
 
-  int64_t Offset = int64_t(Value);
-  switch (Fixup.getTargetKind()) {
+  switch (Kind) {
   default:
     return false;
   case RISCV::fixup_riscv_rvc_branch:
@@ -167,36 +175,29 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
 
 void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
                                        const MCSubtargetInfo &STI) const {
-  // TODO: replace this with call to auto generated uncompressinstr() function.
   MCInst Res;
   switch (Inst.getOpcode()) {
   default:
     llvm_unreachable("Opcode not expected!");
   case RISCV::C_BEQZ:
-    // c.beqz $rs1, $imm -> beq $rs1, X0, $imm.
-    Res.setOpcode(RISCV::BEQ);
-    Res.addOperand(Inst.getOperand(0));
-    Res.addOperand(MCOperand::createReg(RISCV::X0));
-    Res.addOperand(Inst.getOperand(1));
-    break;
   case RISCV::C_BNEZ:
-    // c.bnez $rs1, $imm -> bne $rs1, X0, $imm.
-    Res.setOpcode(RISCV::BNE);
-    Res.addOperand(Inst.getOperand(0));
-    Res.addOperand(MCOperand::createReg(RISCV::X0));
-    Res.addOperand(Inst.getOperand(1));
-    break;
   case RISCV::C_J:
-    // c.j $imm -> jal X0, $imm.
-    Res.setOpcode(RISCV::JAL);
-    Res.addOperand(MCOperand::createReg(RISCV::X0));
-    Res.addOperand(Inst.getOperand(0));
+  case RISCV::C_JAL: {
+    bool Success = RISCVRVC::uncompress(Res, Inst, STI);
+    assert(Success && "Can't uncompress instruction");
+    (void)Success;
     break;
-  case RISCV::C_JAL:
-    // c.jal $imm -> jal X1, $imm.
-    Res.setOpcode(RISCV::JAL);
-    Res.addOperand(MCOperand::createReg(RISCV::X1));
+  }
+  case RISCV::BEQ:
+  case RISCV::BNE:
+  case RISCV::BLT:
+  case RISCV::BGE:
+  case RISCV::BLTU:
+  case RISCV::BGEU:
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode()));
     Res.addOperand(Inst.getOperand(0));
+    Res.addOperand(Inst.getOperand(1));
+    Res.addOperand(Inst.getOperand(2));
     break;
   }
   Inst = std::move(Res);
@@ -229,7 +230,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   }
 
   unsigned Offset;
-  std::pair<unsigned, unsigned> Fixup;
+  std::pair<MCFixupKind, MCFixupKind> Fixup;
 
   // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
   // takes a single unsigned half (unencoded) operand. The maximum encodable
@@ -242,23 +243,19 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 
     OS << uint8_t(dwarf::DW_LNE_set_address);
     Offset = OS.tell();
-    Fixup = PtrSize == 4 ? std::make_pair(RISCV::fixup_riscv_add_32,
-                                          RISCV::fixup_riscv_sub_32)
-                         : std::make_pair(RISCV::fixup_riscv_add_64,
-                                          RISCV::fixup_riscv_sub_64);
+    assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
+    Fixup = RISCV::getRelocPairForSize(PtrSize);
     OS.write_zeros(PtrSize);
   } else {
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
     Offset = OS.tell();
-    Fixup = {RISCV::fixup_riscv_add_16, RISCV::fixup_riscv_sub_16};
+    Fixup = RISCV::getRelocPairForSize(2);
     support::endian::write<uint16_t>(OS, 0, support::little);
   }
 
   const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
-  Fixups.push_back(MCFixup::create(
-      Offset, MBE.getLHS(), static_cast<MCFixupKind>(std::get<0>(Fixup))));
-  Fixups.push_back(MCFixup::create(
-      Offset, MBE.getRHS(), static_cast<MCFixupKind>(std::get<1>(Fixup))));
+  Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(Fixup)));
+  Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(Fixup)));
 
   if (LineDelta == INT64_MAX) {
     OS << uint8_t(dwarf::DW_LNS_extended_op);
@@ -344,6 +341,18 @@ unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
   case RISCV::C_J:
   case RISCV::C_JAL: // fall through.
     return RISCV::JAL;
+  case RISCV::BEQ:
+    return RISCV::PseudoLongBEQ;
+  case RISCV::BNE:
+    return RISCV::PseudoLongBNE;
+  case RISCV::BLT:
+    return RISCV::PseudoLongBLT;
+  case RISCV::BGE:
+    return RISCV::PseudoLongBGE;
+  case RISCV::BLTU:
+    return RISCV::PseudoLongBLTU;
+  case RISCV::BGEU:
+    return RISCV::PseudoLongBGEU;
   }
 }
 

@@ -72,7 +72,9 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -326,6 +328,10 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   // Maps catchswitches and cleanuppads that unwind to siblings to the
   // terminators that indicate the unwind, used to detect cycles therein.
   MapVector<Instruction *, Instruction *> SiblingFuncletInfo;
+
+  /// Cache which blocks are in which funclet, if an EH funclet personality is
+  /// in use. Otherwise empty.
+  DenseMap<BasicBlock *, ColorVector> BlockEHFuncletColors;
 
   /// Cache of constants visited in search of ConstantExprs.
   SmallPtrSet<const Constant *, 32> ConstantExprVisited;
@@ -651,6 +657,28 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
     if (MaybeAlign A = GO->getAlign()) {
       Check(A->value() <= Value::MaximumAlignment,
             "huge alignment values are unsupported", GO);
+    }
+
+    if (const MDNode *Associated =
+            GO->getMetadata(LLVMContext::MD_associated)) {
+      Check(Associated->getNumOperands() == 1,
+            "associated metadata must have one operand", &GV, Associated);
+      const Metadata *Op = Associated->getOperand(0).get();
+      Check(Op, "associated metadata must have a global value", GO, Associated);
+
+      const auto *VM = dyn_cast_or_null<ValueAsMetadata>(Op);
+      Check(VM, "associated metadata must be ValueAsMetadata", GO, Associated);
+      if (VM) {
+        Check(isa<PointerType>(VM->getValue()->getType()),
+              "associated value must be pointer typed", GV, Associated);
+
+        const Value *Stripped = VM->getValue()->stripPointerCastsAndAliases();
+        Check(isa<GlobalObject>(Stripped) || isa<Constant>(Stripped),
+              "associated metadata must point to a GlobalObject", GO, Stripped);
+        Check(Stripped != GO,
+              "global values should not associate to themselves", GO,
+              Associated);
+      }
     }
   }
   Check(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
@@ -2628,6 +2656,9 @@ void Verifier::visitFunction(const Function &F) {
             "Referencing personality function in another module!", &F,
             F.getParent(), Per, Per->getParent());
   }
+
+  // EH funclet coloring can be expensive, recompute on-demand
+  BlockEHFuncletColors.clear();
 
   if (F.isMaterializable()) {
     // Function has a body somewhere we can't see.
@@ -4831,13 +4862,14 @@ void Verifier::visitInstruction(Instruction &I) {
           "invariant.group metadata is only for loads and stores", &I);
   }
 
-  if (I.getMetadata(LLVMContext::MD_nonnull)) {
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
     Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
           &I);
     Check(isa<LoadInst>(I),
           "nonnull applies only to load instructions, use attributes"
           " for calls or invokes",
           &I);
+    Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
   }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable))
@@ -5091,19 +5123,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memmove:
   case Intrinsic::memset:
   case Intrinsic::memset_inline: {
-    const auto *MI = cast<MemIntrinsic>(&Call);
-    auto IsValidAlignment = [&](unsigned Alignment) -> bool {
-      return Alignment == 0 || isPowerOf2_32(Alignment);
-    };
-    Check(IsValidAlignment(MI->getDestAlignment()),
-          "alignment of arg 0 of memory intrinsic must be 0 or a power of 2",
-          Call);
-    if (const auto *MTI = dyn_cast<MemTransferInst>(MI)) {
-      Check(IsValidAlignment(MTI->getSourceAlignment()),
-            "alignment of arg 1 of memory intrinsic must be 0 or a power of 2",
-            Call);
-    }
-
     break;
   }
   case Intrinsic::memcpy_element_unordered_atomic:
@@ -5119,15 +5138,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "must be a power of 2",
           Call);
 
-    auto IsValidAlignment = [&](uint64_t Alignment) {
-      return isPowerOf2_64(Alignment) && ElementSizeVal.ule(Alignment);
+    auto IsValidAlignment = [&](MaybeAlign Alignment) {
+      return Alignment && ElementSizeVal.ule(Alignment->value());
     };
-    uint64_t DstAlignment = AMI->getDestAlignment();
-    Check(IsValidAlignment(DstAlignment),
+    Check(IsValidAlignment(AMI->getDestAlign()),
           "incorrect alignment of the destination argument", Call);
     if (const auto *AMT = dyn_cast<AtomicMemTransferInst>(AMI)) {
-      uint64_t SrcAlignment = AMT->getSourceAlignment();
-      Check(IsValidAlignment(SrcAlignment),
+      Check(IsValidAlignment(AMT->getSourceAlign()),
             "incorrect alignment of the source argument", Call);
     }
     break;
@@ -5376,11 +5393,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // relocated pointer. It can be casted to the correct type later if it's
     // desired. However, they must have the same address space and 'vectorness'
     GCRelocateInst &Relocate = cast<GCRelocateInst>(Call);
-    Check(Relocate.getDerivedPtr()->getType()->isPtrOrPtrVectorTy(),
-          "gc.relocate: relocated value must be a gc pointer", Call);
+    auto *ResultType = Call.getType();
+    auto *DerivedType = Relocate.getDerivedPtr()->getType();
+    auto *BaseType = Relocate.getBasePtr()->getType();
 
-    auto ResultType = Call.getType();
-    auto DerivedType = Relocate.getDerivedPtr()->getType();
+    Check(BaseType->isPtrOrPtrVectorTy(),
+          "gc.relocate: relocated value must be a pointer", Call);
+    Check(DerivedType->isPtrOrPtrVectorTy(),
+          "gc.relocate: relocated value must be a pointer", Call);
+
     Check(ResultType->isVectorTy() == DerivedType->isVectorTy(),
           "gc.relocate: vector relocates to vector and pointer to pointer",
           Call);
@@ -5389,6 +5410,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             DerivedType->getPointerAddressSpace(),
         "gc.relocate: relocating a pointer shouldn't change its address space",
         Call);
+
+    auto GC = llvm::getGCStrategy(Relocate.getFunction()->getGC());
+    Check(GC, "gc.relocate: calling function must have GCStrategy",
+          Call.getFunction());
+    if (GC) {
+      auto isGCPtr = [&GC](Type *PTy) {
+        return GC->isGCManagedPointer(PTy->getScalarType()).value_or(true);
+      };
+      Check(isGCPtr(ResultType), "gc.relocate: must return gc pointer", Call);
+      Check(isGCPtr(BaseType),
+            "gc.relocate: relocated value must be a gc pointer", Call);
+      Check(isGCPtr(DerivedType),
+            "gc.relocate: relocated value must be a gc pointer", Call);
+    }
     break;
   }
   case Intrinsic::eh_exceptioncode:
@@ -5790,6 +5825,37 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   };
+
+  // Verify that there aren't any unmediated control transfers between funclets.
+  if (IntrinsicInst::mayLowerToFunctionCall(ID)) {
+    Function *F = Call.getParent()->getParent();
+    if (F->hasPersonalityFn() &&
+        isScopedEHPersonality(classifyEHPersonality(F->getPersonalityFn()))) {
+      // Run EH funclet coloring on-demand and cache results for other intrinsic
+      // calls in this function
+      if (BlockEHFuncletColors.empty())
+        BlockEHFuncletColors = colorEHFunclets(*F);
+
+      // Check for catch-/cleanup-pad in first funclet block
+      bool InEHFunclet = false;
+      BasicBlock *CallBB = Call.getParent();
+      const ColorVector &CV = BlockEHFuncletColors.find(CallBB)->second;
+      assert(CV.size() > 0 && "Uncolored block");
+      for (BasicBlock *ColorFirstBB : CV)
+        if (dyn_cast_or_null<FuncletPadInst>(ColorFirstBB->getFirstNonPHI()))
+          InEHFunclet = true;
+
+      // Check for funclet operand bundle
+      bool HasToken = false;
+      for (unsigned I = 0, E = Call.getNumOperandBundles(); I != E; ++I)
+        if (Call.getOperandBundleAt(I).getTagID() == LLVMContext::OB_funclet)
+          HasToken = true;
+
+      // This would cause silent code truncation in WinEHPrepare
+      if (InEHFunclet)
+        Check(HasToken, "Missing funclet token on intrinsic call", &Call);
+    }
+  }
 }
 
 /// Carefully grab the subprogram from a local scope.

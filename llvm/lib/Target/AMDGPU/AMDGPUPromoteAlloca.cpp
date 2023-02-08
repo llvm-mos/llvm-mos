@@ -798,7 +798,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
     }
   }
 
-  LocalMemLimit = ST.getLocalMemorySize();
+  LocalMemLimit = ST.getAddressableLocalMemorySize();
   if (LocalMemLimit == 0)
     return false;
 
@@ -1096,9 +1096,9 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       continue;
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
-      Builder.CreateMemSet(
-          MemSet->getRawDest(), MemSet->getValue(), MemSet->getLength(),
-          MaybeAlign(MemSet->getDestAlignment()), MemSet->isVolatile());
+      Builder.CreateMemSet(MemSet->getRawDest(), MemSet->getValue(),
+                           MemSet->getLength(), MemSet->getDestAlign(),
+                           MemSet->isVolatile());
       Intr->eraseFromParent();
       continue;
     }

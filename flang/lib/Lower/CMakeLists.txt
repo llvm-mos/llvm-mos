@@ -9,13 +9,13 @@ add_flang_library(FortranLower
   ConvertConstant.cpp
   ConvertExpr.cpp
   ConvertExprToHLFIR.cpp
+  ConvertProcedureDesignator.cpp
   ConvertType.cpp
   ConvertVariable.cpp
   ComponentPath.cpp
   CustomIntrinsicCall.cpp
   DumpEvaluateExpr.cpp
   HostAssociations.cpp
-  IntrinsicCall.cpp
   IO.cpp
   IterationSpace.cpp
   LoweringOptions.cpp

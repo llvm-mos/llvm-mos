@@ -15,8 +15,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -33,8 +34,12 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/StringSaver.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -49,7 +54,7 @@ namespace {
 
 //===--- Constants --------------------------------------------------------===//
 
-constexpr uint32_t kVersionBase = 1;                // occupies lower 16 bits
+constexpr uint32_t kVersionBase = 2;                // occupies lower 16 bits
 constexpr uint32_t kVersionPtrSizeRel = (1u << 16); // offsets are pointer-sized
 constexpr int kCtorDtorPriority = 2;
 
@@ -59,7 +64,6 @@ class MetadataInfo {
 public:
   const StringRef FunctionPrefix;
   const StringRef SectionSuffix;
-  const uint32_t FeatureMask;
 
   static const MetadataInfo Covered;
   static const MetadataInfo Atomics;
@@ -67,16 +71,13 @@ public:
 private:
   // Forbid construction elsewhere.
   explicit constexpr MetadataInfo(StringRef FunctionPrefix,
-                                  StringRef SectionSuffix, uint32_t Feature)
-      : FunctionPrefix(FunctionPrefix), SectionSuffix(SectionSuffix),
-        FeatureMask(Feature) {}
+                                  StringRef SectionSuffix)
+      : FunctionPrefix(FunctionPrefix), SectionSuffix(SectionSuffix) {}
 };
-const MetadataInfo MetadataInfo::Covered{"__sanitizer_metadata_covered",
-                                         kSanitizerBinaryMetadataCoveredSection,
-                                         kSanitizerBinaryMetadataNone};
-const MetadataInfo MetadataInfo::Atomics{"__sanitizer_metadata_atomics",
-                                         kSanitizerBinaryMetadataAtomicsSection,
-                                         kSanitizerBinaryMetadataAtomics};
+const MetadataInfo MetadataInfo::Covered{
+    "__sanitizer_metadata_covered", kSanitizerBinaryMetadataCoveredSection};
+const MetadataInfo MetadataInfo::Atomics{
+    "__sanitizer_metadata_atomics", kSanitizerBinaryMetadataAtomicsSection};
 
 // The only instances of MetadataInfo are the constants above, so a set of
 // them may simply store pointers to them. To deterministically generate code,
@@ -84,6 +85,11 @@ const MetadataInfo MetadataInfo::Atomics{"__sanitizer_metadata_atomics",
 using MetadataInfoSet = SetVector<const MetadataInfo *>;
 
 //===--- Command-line options ---------------------------------------------===//
+
+cl::opt<bool> ClWeakCallbacks(
+    "sanitizer-metadata-weak-callbacks",
+    cl::desc("Declare callbacks extern weak, and only call if non-null."),
+    cl::Hidden, cl::init(true));
 
 cl::opt<bool> ClEmitCovered("sanitizer-metadata-covered",
                             cl::desc("Emit PCs for covered functions."),
@@ -125,14 +131,6 @@ public:
   bool run();
 
 private:
-  // Return enabled feature mask of per-instruction metadata.
-  uint32_t getEnabledPerInstructionFeature() const {
-    uint32_t FeatureMask = 0;
-    if (Options.Atomics)
-      FeatureMask |= MetadataInfo::Atomics.FeatureMask;
-    return FeatureMask;
-  }
-
   uint32_t getVersion() const {
     uint32_t Version = kVersionBase;
     const auto CM = Mod.getCodeModel();
@@ -151,7 +149,7 @@ private:
   // to determine if a memory operation is atomic or not in modules compiled
   // with SanitizerBinaryMetadata.
   bool runOn(Instruction &I, MetadataInfoSet &MIS, MDBuilder &MDB,
-             uint32_t &FeatureMask);
+             uint64_t &FeatureMask);
 
   // Get start/end section marker pointer.
   GlobalVariable *getSectionMarker(const Twine &MarkerName, Type *Ty);
@@ -165,10 +163,15 @@ private:
   // Returns the section end marker name.
   Twine getSectionEnd(StringRef SectionSuffix);
 
+  // Returns true if the access to the address should be considered "atomic".
+  bool pretendAtomicAccess(const Value *Addr);
+
   Module &Mod;
   const SanitizerBinaryMetadataOptions Options;
   const Triple TargetTriple;
   IRBuilder<> IRB;
+  BumpPtrAllocator Alloc;
+  UniqueStringSaver StringPool{Alloc};
 };
 
 bool SanitizerBinaryMetadata::run() {
@@ -197,22 +200,31 @@ bool SanitizerBinaryMetadata::run() {
         getSectionMarker(getSectionStart(MI->SectionSuffix), Int8PtrTy),
         getSectionMarker(getSectionEnd(MI->SectionSuffix), Int8PtrTy),
     };
+    // We declare the _add and _del functions as weak, and only call them if
+    // there is a valid symbol linked. This allows building binaries with
+    // semantic metadata, but without having callbacks. When a tool that wants
+    // the metadata is linked which provides the callbacks, they will be called.
     Function *Ctor =
         createSanitizerCtorAndInitFunctions(
             Mod, (MI->FunctionPrefix + ".module_ctor").str(),
-            (MI->FunctionPrefix + "_add").str(), InitTypes, InitArgs)
+            (MI->FunctionPrefix + "_add").str(), InitTypes, InitArgs,
+            /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
     Function *Dtor =
         createSanitizerCtorAndInitFunctions(
             Mod, (MI->FunctionPrefix + ".module_dtor").str(),
-            (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs)
+            (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
+            /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
     Constant *CtorData = nullptr;
     Constant *DtorData = nullptr;
     if (TargetTriple.supportsCOMDAT()) {
-      // Use COMDAT to deduplicate constructor/destructor function.
+      // Use COMDAT to deduplicate constructor/destructor function. The COMDAT
+      // key needs to be a non-local linkage.
       Ctor->setComdat(Mod.getOrInsertComdat(Ctor->getName()));
       Dtor->setComdat(Mod.getOrInsertComdat(Dtor->getName()));
+      Ctor->setLinkage(GlobalValue::ExternalLinkage);
+      Dtor->setLinkage(GlobalValue::ExternalLinkage);
       CtorData = Ctor;
       DtorData = Dtor;
     }
@@ -236,13 +248,11 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
 
   // The metadata features enabled for this function, stored along covered
   // metadata (if enabled).
-  uint32_t FeatureMask = getEnabledPerInstructionFeature();
+  uint64_t FeatureMask = 0;
   // Don't emit unnecessary covered metadata for all functions to save space.
   bool RequiresCovered = false;
-  // We can only understand if we need to set UAR feature after looking
-  // at the instructions. So we need to check instructions even if FeatureMask
-  // is empty.
-  if (FeatureMask || Options.UAR) {
+
+  if (Options.Atomics || Options.UAR) {
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
         RequiresCovered |= runOn(I, MIS, MDB, FeatureMask);
@@ -263,12 +273,27 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
     const auto *MI = &MetadataInfo::Covered;
     MIS.insert(MI);
     const StringRef Section = getSectionName(MI->SectionSuffix);
-    // The feature mask will be placed after the size (32 bit) of the function,
-    // so in total one covered entry will use `sizeof(void*) + 4 + 4`.
-    Constant *CFM = IRB.getInt32(FeatureMask);
+    // The feature mask will be placed after the function size.
+    Constant *CFM = IRB.getInt64(FeatureMask);
     F.setMetadata(LLVMContext::MD_pcsections,
                   MDB.createPCSections({{Section, {CFM}}}));
   }
+}
+
+bool isUARSafeCall(CallInst *CI) {
+  auto *F = CI->getCalledFunction();
+  // There are no intrinsic functions that leak arguments.
+  // If the called function does not return, the current function
+  // does not return as well, so no possibility of use-after-return.
+  // Sanitizer function also don't leak or don't return.
+  // It's safe to both pass pointers to local variables to them
+  // and to tail-call them.
+  return F && (F->isIntrinsic() || F->doesNotReturn() ||
+               F->getName().startswith("__asan_") ||
+               F->getName().startswith("__hwsan_") ||
+               F->getName().startswith("__ubsan_") ||
+               F->getName().startswith("__msan_") ||
+               F->getName().startswith("__tsan_"));
 }
 
 bool hasUseAfterReturnUnsafeUses(Value &V) {
@@ -276,6 +301,10 @@ bool hasUseAfterReturnUnsafeUses(Value &V) {
     if (auto *I = dyn_cast<Instruction>(U)) {
       if (I->isLifetimeStartOrEnd() || I->isDroppable())
         continue;
+      if (auto *CI = dyn_cast<CallInst>(U)) {
+        if (isUARSafeCall(CI))
+          continue;
+      }
       if (isa<LoadInst>(U))
         continue;
       if (auto *SI = dyn_cast<StoreInst>(U)) {
@@ -303,27 +332,84 @@ bool useAfterReturnUnsafe(Instruction &I) {
   // at runtime because there is no call instruction.
   // So conservatively mark the caller as requiring checking.
   else if (auto *CI = dyn_cast<CallInst>(&I))
-    return CI->isTailCall();
+    return CI->isTailCall() && !isUARSafeCall(CI);
   return false;
 }
 
+bool SanitizerBinaryMetadata::pretendAtomicAccess(const Value *Addr) {
+  if (!Addr)
+    return false;
+
+  Addr = Addr->stripInBoundsOffsets();
+  auto *GV = dyn_cast<GlobalVariable>(Addr);
+  if (!GV)
+    return false;
+
+  // Some compiler-generated accesses are known racy, to avoid false positives
+  // in data-race analysis pretend they're atomic.
+  if (GV->hasSection()) {
+    const auto OF = Triple(Mod.getTargetTriple()).getObjectFormat();
+    const auto ProfSec =
+        getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false);
+    if (GV->getSection().endswith(ProfSec))
+      return true;
+  }
+  if (GV->getName().startswith("__llvm_gcov") ||
+      GV->getName().startswith("__llvm_gcda"))
+    return true;
+
+  return false;
+}
+
+// Returns true if the memory at `Addr` may be shared with other threads.
+bool maybeSharedMutable(const Value *Addr) {
+  // By default assume memory may be shared.
+  if (!Addr)
+    return true;
+
+  if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
+      !PointerMayBeCaptured(Addr, true, true))
+    return false; // Object is on stack but does not escape.
+
+  Addr = Addr->stripInBoundsOffsets();
+  if (auto *GV = dyn_cast<GlobalVariable>(Addr)) {
+    if (GV->isConstant())
+      return false; // Shared, but not mutable.
+  }
+
+  return true;
+}
+
 bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
-                                    MDBuilder &MDB, uint32_t &FeatureMask) {
+                                    MDBuilder &MDB, uint64_t &FeatureMask) {
   SmallVector<const MetadataInfo *, 1> InstMetadata;
   bool RequiresCovered = false;
+
+  // Only call if at least 1 type of metadata is requested.
+  assert(Options.UAR || Options.Atomics);
 
   if (Options.UAR && !(FeatureMask & kSanitizerBinaryMetadataUAR)) {
     if (useAfterReturnUnsafe(I))
       FeatureMask |= kSanitizerBinaryMetadataUAR;
   }
 
-  if (Options.Atomics && I.mayReadOrWriteMemory()) {
-    auto SSID = getAtomicSyncScopeID(&I);
-    if (SSID.has_value() && *SSID != SyncScope::SingleThread) {
-      NumMetadataAtomics++;
-      InstMetadata.push_back(&MetadataInfo::Atomics);
+  if (Options.Atomics) {
+    const Value *Addr = nullptr;
+    if (auto *SI = dyn_cast<StoreInst>(&I))
+      Addr = SI->getPointerOperand();
+    else if (auto *LI = dyn_cast<LoadInst>(&I))
+      Addr = LI->getPointerOperand();
+
+    if (I.mayReadOrWriteMemory() && maybeSharedMutable(Addr)) {
+      auto SSID = getAtomicSyncScopeID(&I);
+      if ((SSID.has_value() && *SSID != SyncScope::SingleThread) ||
+          pretendAtomicAccess(Addr)) {
+        NumMetadataAtomics++;
+        InstMetadata.push_back(&MetadataInfo::Atomics);
+      }
+      FeatureMask |= kSanitizerBinaryMetadataAtomics;
+      RequiresCovered = true;
     }
-    RequiresCovered = true;
   }
 
   // Attach MD_pcsections to instruction.
@@ -350,8 +436,9 @@ SanitizerBinaryMetadata::getSectionMarker(const Twine &MarkerName, Type *Ty) {
 }
 
 StringRef SanitizerBinaryMetadata::getSectionName(StringRef SectionSuffix) {
-  // FIXME: Other TargetTriple (req. string pool)
-  return SectionSuffix;
+  // FIXME: Other TargetTriples.
+  // Request ULEB128 encoding for all integer constants.
+  return StringPool.save(SectionSuffix + "!C");
 }
 
 Twine SanitizerBinaryMetadata::getSectionStart(StringRef SectionSuffix) {

@@ -14,7 +14,9 @@
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
+#include "AttrKindDetail.h"
 #include "DebugImporter.h"
+#include "LoopAnnotationImporter.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -32,6 +34,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/ModRef.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -70,6 +73,12 @@ static constexpr StringRef getGlobalDtorsVarName() {
   return "llvm.global_dtors";
 }
 
+/// Returns the symbol name for the module-level metadata operation. It must not
+/// conflict with the user namespace.
+static constexpr StringRef getGlobalMetadataOpName() {
+  return "__llvm_global_metadata";
+}
+
 /// Returns a supported MLIR floating point type of the given bit width or null
 /// if the bit width is not supported.
 static FloatType getDLFloatType(MLIRContext &ctx, int32_t bitwidth) {
@@ -86,127 +95,6 @@ static FloatType getDLFloatType(MLIRContext &ctx, int32_t bitwidth) {
     return FloatType::getF128(&ctx);
   default:
     return nullptr;
-  }
-}
-
-static ICmpPredicate getICmpPredicate(llvm::CmpInst::Predicate pred) {
-  switch (pred) {
-  default:
-    llvm_unreachable("incorrect comparison predicate");
-  case llvm::CmpInst::Predicate::ICMP_EQ:
-    return LLVM::ICmpPredicate::eq;
-  case llvm::CmpInst::Predicate::ICMP_NE:
-    return LLVM::ICmpPredicate::ne;
-  case llvm::CmpInst::Predicate::ICMP_SLT:
-    return LLVM::ICmpPredicate::slt;
-  case llvm::CmpInst::Predicate::ICMP_SLE:
-    return LLVM::ICmpPredicate::sle;
-  case llvm::CmpInst::Predicate::ICMP_SGT:
-    return LLVM::ICmpPredicate::sgt;
-  case llvm::CmpInst::Predicate::ICMP_SGE:
-    return LLVM::ICmpPredicate::sge;
-  case llvm::CmpInst::Predicate::ICMP_ULT:
-    return LLVM::ICmpPredicate::ult;
-  case llvm::CmpInst::Predicate::ICMP_ULE:
-    return LLVM::ICmpPredicate::ule;
-  case llvm::CmpInst::Predicate::ICMP_UGT:
-    return LLVM::ICmpPredicate::ugt;
-  case llvm::CmpInst::Predicate::ICMP_UGE:
-    return LLVM::ICmpPredicate::uge;
-  }
-  llvm_unreachable("incorrect integer comparison predicate");
-}
-
-static FCmpPredicate getFCmpPredicate(llvm::CmpInst::Predicate pred) {
-  switch (pred) {
-  default:
-    llvm_unreachable("incorrect comparison predicate");
-  case llvm::CmpInst::Predicate::FCMP_FALSE:
-    return LLVM::FCmpPredicate::_false;
-  case llvm::CmpInst::Predicate::FCMP_TRUE:
-    return LLVM::FCmpPredicate::_true;
-  case llvm::CmpInst::Predicate::FCMP_OEQ:
-    return LLVM::FCmpPredicate::oeq;
-  case llvm::CmpInst::Predicate::FCMP_ONE:
-    return LLVM::FCmpPredicate::one;
-  case llvm::CmpInst::Predicate::FCMP_OLT:
-    return LLVM::FCmpPredicate::olt;
-  case llvm::CmpInst::Predicate::FCMP_OLE:
-    return LLVM::FCmpPredicate::ole;
-  case llvm::CmpInst::Predicate::FCMP_OGT:
-    return LLVM::FCmpPredicate::ogt;
-  case llvm::CmpInst::Predicate::FCMP_OGE:
-    return LLVM::FCmpPredicate::oge;
-  case llvm::CmpInst::Predicate::FCMP_ORD:
-    return LLVM::FCmpPredicate::ord;
-  case llvm::CmpInst::Predicate::FCMP_ULT:
-    return LLVM::FCmpPredicate::ult;
-  case llvm::CmpInst::Predicate::FCMP_ULE:
-    return LLVM::FCmpPredicate::ule;
-  case llvm::CmpInst::Predicate::FCMP_UGT:
-    return LLVM::FCmpPredicate::ugt;
-  case llvm::CmpInst::Predicate::FCMP_UGE:
-    return LLVM::FCmpPredicate::uge;
-  case llvm::CmpInst::Predicate::FCMP_UNO:
-    return LLVM::FCmpPredicate::uno;
-  case llvm::CmpInst::Predicate::FCMP_UEQ:
-    return LLVM::FCmpPredicate::ueq;
-  case llvm::CmpInst::Predicate::FCMP_UNE:
-    return LLVM::FCmpPredicate::une;
-  }
-  llvm_unreachable("incorrect floating point comparison predicate");
-}
-
-static AtomicOrdering getLLVMAtomicOrdering(llvm::AtomicOrdering ordering) {
-  switch (ordering) {
-  case llvm::AtomicOrdering::NotAtomic:
-    return LLVM::AtomicOrdering::not_atomic;
-  case llvm::AtomicOrdering::Unordered:
-    return LLVM::AtomicOrdering::unordered;
-  case llvm::AtomicOrdering::Monotonic:
-    return LLVM::AtomicOrdering::monotonic;
-  case llvm::AtomicOrdering::Acquire:
-    return LLVM::AtomicOrdering::acquire;
-  case llvm::AtomicOrdering::Release:
-    return LLVM::AtomicOrdering::release;
-  case llvm::AtomicOrdering::AcquireRelease:
-    return LLVM::AtomicOrdering::acq_rel;
-  case llvm::AtomicOrdering::SequentiallyConsistent:
-    return LLVM::AtomicOrdering::seq_cst;
-  }
-  llvm_unreachable("incorrect atomic ordering");
-}
-
-static AtomicBinOp getLLVMAtomicBinOp(llvm::AtomicRMWInst::BinOp binOp) {
-  switch (binOp) {
-  case llvm::AtomicRMWInst::Xchg:
-    return LLVM::AtomicBinOp::xchg;
-  case llvm::AtomicRMWInst::Add:
-    return LLVM::AtomicBinOp::add;
-  case llvm::AtomicRMWInst::Sub:
-    return LLVM::AtomicBinOp::sub;
-  case llvm::AtomicRMWInst::And:
-    return LLVM::AtomicBinOp::_and;
-  case llvm::AtomicRMWInst::Nand:
-    return LLVM::AtomicBinOp::nand;
-  case llvm::AtomicRMWInst::Or:
-    return LLVM::AtomicBinOp::_or;
-  case llvm::AtomicRMWInst::Xor:
-    return LLVM::AtomicBinOp::_xor;
-  case llvm::AtomicRMWInst::Max:
-    return LLVM::AtomicBinOp::max;
-  case llvm::AtomicRMWInst::Min:
-    return LLVM::AtomicBinOp::min;
-  case llvm::AtomicRMWInst::UMax:
-    return LLVM::AtomicBinOp::umax;
-  case llvm::AtomicRMWInst::UMin:
-    return LLVM::AtomicBinOp::umin;
-  case llvm::AtomicRMWInst::FAdd:
-    return LLVM::AtomicBinOp::fadd;
-  case llvm::AtomicRMWInst::FSub:
-    return LLVM::AtomicBinOp::fsub;
-  default:
-    llvm_unreachable("unsupported atomic binary operation");
   }
 }
 
@@ -354,27 +242,19 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
-      debugImporter(std::make_unique<DebugImporter>(mlirModule)) {
+      debugImporter(std::make_unique<DebugImporter>(mlirModule)),
+      loopAnnotationImporter(std::make_unique<LoopAnnotationImporter>(*this)) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
-MetadataOp ModuleImport::getTBAAMetadataOp() {
-  if (tbaaMetadataOp)
-    return tbaaMetadataOp;
+MetadataOp ModuleImport::getGlobalMetadataOp() {
+  if (globalMetadataOp)
+    return globalMetadataOp;
 
   OpBuilder::InsertionGuard guard(builder);
-  Location loc = mlirModule.getLoc();
-
   builder.setInsertionPointToEnd(mlirModule.getBody());
-  tbaaMetadataOp = builder.create<MetadataOp>(loc, getTBAAMetadataOpName());
-
-  return tbaaMetadataOp;
-}
-
-std::string ModuleImport::getNewTBAANodeName(StringRef basename) {
-  return (Twine("tbaa_") + Twine(basename) + Twine('_') +
-          Twine(tbaaNodeCounter++))
-      .str();
+  return globalMetadataOp = builder.create<MetadataOp>(
+             mlirModule.getLoc(), getGlobalMetadataOpName());
 }
 
 LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
@@ -533,10 +413,18 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
     return true;
   };
 
+  // Helper to compute a unique symbol name that includes the given `baseName`.
+  // Uses the size of the mapping to unique the symbol name.
+  auto getUniqueSymbolName = [&](StringRef baseName) {
+    return (Twine("tbaa_") + Twine(baseName) + Twine('_') +
+            Twine(tbaaMapping.size()))
+        .str();
+  };
+
   // Insert new operations at the end of the MetadataOp.
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(&getTBAAMetadataOp().getBody().back());
-  StringAttr metadataOpName = SymbolTable::getSymbolName(getTBAAMetadataOp());
+  builder.setInsertionPointToEnd(&getGlobalMetadataOp().getBody().back());
+  StringAttr metadataOpName = SymbolTable::getSymbolName(getGlobalMetadataOp());
 
   // On the first walk, create SymbolRefAttr's and map them
   // to nodes in `nodesToConvert`.
@@ -549,7 +437,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
       // The root nodes do not have operands, so we can create
       // the TBAARootMetadataOp on the first walk.
       auto rootNode = builder.create<TBAARootMetadataOp>(
-          loc, getNewTBAANodeName("root"), identity.value());
+          loc, getUniqueSymbolName("root"), identity.value());
       tbaaMapping.try_emplace(current, FlatSymbolRefAttr::get(rootNode));
       continue;
     }
@@ -558,7 +446,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
         return failure();
       tbaaMapping.try_emplace(
           current, FlatSymbolRefAttr::get(builder.getContext(),
-                                          getNewTBAANodeName("type_desc")));
+                                          getUniqueSymbolName("type_desc")));
       continue;
     }
     if (std::optional<bool> isValid = isTagNode(current)) {
@@ -570,7 +458,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
           current, SymbolRefAttr::get(
                        builder.getContext(), metadataOpName,
                        FlatSymbolRefAttr::get(builder.getContext(),
-                                              getNewTBAANodeName("tag"))));
+                                              getUniqueSymbolName("tag"))));
       continue;
     }
     return emitError(loc) << "unsupported TBAA node format: "
@@ -610,21 +498,62 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   return success();
 }
 
+LogicalResult
+ModuleImport::processAccessGroupMetadata(const llvm::MDNode *node) {
+  // An access group node is either access group or an access group list. Start
+  // by collecting all access groups to translate.
+  SmallVector<const llvm::MDNode *> accessGroups;
+  if (!node->getNumOperands())
+    accessGroups.push_back(node);
+  for (const llvm::MDOperand &operand : node->operands())
+    accessGroups.push_back(cast<llvm::MDNode>(operand.get()));
+
+  // Convert all entries of the access group list to access group operations.
+  for (const llvm::MDNode *accessGroup : accessGroups) {
+    if (accessGroupMapping.count(accessGroup))
+      continue;
+    // Verify the access group node is distinct and empty.
+    Location loc = mlirModule.getLoc();
+    if (accessGroup->getNumOperands() != 0 || !accessGroup->isDistinct())
+      return emitError(loc) << "unsupported access group node: "
+                            << diagMD(accessGroup, llvmModule.get());
+
+    MetadataOp metadataOp = getGlobalMetadataOp();
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(&metadataOp.getBody().back());
+    auto groupOp = builder.create<AccessGroupMetadataOp>(
+        loc, (Twine("group_") + Twine(accessGroupMapping.size())).str());
+    // Add a mapping from the access group node to the symbol reference pointing
+    // to the newly created operation.
+    accessGroupMapping[accessGroup] = SymbolRefAttr::get(
+        builder.getContext(), metadataOp.getSymName(),
+        FlatSymbolRefAttr::get(builder.getContext(), groupOp.getSymName()));
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
-  for (const llvm::Function &func : llvmModule->functions())
+  for (const llvm::Function &func : llvmModule->functions()) {
     for (const llvm::Instruction &inst : llvm::instructions(func)) {
-      llvm::AAMDNodes nodes = inst.getAAMetadata();
-      if (!nodes)
-        continue;
-
-      if (const llvm::MDNode *tbaaMD = nodes.TBAA)
-        if (failed(processTBAAMetadata(tbaaMD)))
+      // Convert access group metadata nodes.
+      if (llvm::MDNode *node =
+              inst.getMetadata(llvm::LLVMContext::MD_access_group))
+        if (failed(processAccessGroupMetadata(node)))
           return failure();
-      // TODO: only TBAA metadata is currently supported.
-    }
 
+      // Convert alias analysis metadata nodes.
+      llvm::AAMDNodes aliasAnalysisNodes = inst.getAAMetadata();
+      if (!aliasAnalysisNodes)
+        continue;
+      if (aliasAnalysisNodes.TBAA)
+        if (failed(processTBAAMetadata(aliasAnalysisNodes.TBAA)))
+          return failure();
+
+      // TODO: Support noalias and scope metadata nodes.
+    }
+  }
   return success();
 }
 
@@ -932,37 +861,57 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
 
 SetVector<llvm::Constant *>
 ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
-  // Traverse the constant dependencies in post order.
-  SmallVector<llvm::Constant *> workList;
-  SmallVector<llvm::Constant *> orderedList;
-  workList.push_back(constant);
+  // Return the empty set if the constant has been translated before.
+  if (valueMapping.count(constant))
+    return {};
+
+  // Traverse the constants in post-order and stop the traversal if a constant
+  // already has a `valueMapping` from an earlier constant translation or if the
+  // constant is traversed a second time.
+  SetVector<llvm::Constant *> orderedSet;
+  SetVector<llvm::Constant *> workList;
+  DenseMap<llvm::Constant *, SmallVector<llvm::Constant *>> adjacencyLists;
+  workList.insert(constant);
   while (!workList.empty()) {
-    llvm::Constant *current = workList.pop_back_val();
-    // Skip constants that have been converted before and store all other ones.
-    if (valueMapping.count(current))
-      continue;
-    orderedList.push_back(current);
-    // Add the current constant's dependencies to the work list. Only add
-    // constant dependencies and skip any other values such as basic block
-    // addresses.
-    for (llvm::Value *operand : current->operands())
-      if (auto *constDependency = dyn_cast<llvm::Constant>(operand))
-        workList.push_back(constDependency);
-    // Use the `getElementValue` method to add the dependencies of zero
-    // initialized aggregate constants since they do not take any operands.
-    if (auto *constAgg = dyn_cast<llvm::ConstantAggregateZero>(current)) {
-      unsigned numElements = constAgg->getElementCount().getFixedValue();
-      for (unsigned i = 0, e = numElements; i != e; ++i)
-        workList.push_back(constAgg->getElementValue(i));
+    llvm::Constant *current = workList.back();
+    // Collect all dependencies of the current constant and add them to the
+    // adjacency list if none has been computed before.
+    auto adjacencyIt = adjacencyLists.find(current);
+    if (adjacencyIt == adjacencyLists.end()) {
+      adjacencyIt = adjacencyLists.try_emplace(current).first;
+      // Add all constant operands to the adjacency list and skip any other
+      // values such as basic block addresses.
+      for (llvm::Value *operand : current->operands())
+        if (auto *constDependency = dyn_cast<llvm::Constant>(operand))
+          adjacencyIt->getSecond().push_back(constDependency);
+      // Use the getElementValue method to add the dependencies of zero
+      // initialized aggregate constants since they do not take any operands.
+      if (auto *constAgg = dyn_cast<llvm::ConstantAggregateZero>(current)) {
+        unsigned numElements = constAgg->getElementCount().getFixedValue();
+        for (unsigned i = 0, e = numElements; i != e; ++i)
+          adjacencyIt->getSecond().push_back(constAgg->getElementValue(i));
+      }
     }
+    // Add the current constant to the `orderedSet` of the traversed nodes if
+    // all its dependencies have been traversed before. Additionally, remove the
+    // constant from the `workList` and continue the traversal.
+    if (adjacencyIt->getSecond().empty()) {
+      orderedSet.insert(current);
+      workList.pop_back();
+      continue;
+    }
+    // Add the next dependency from the adjacency list to the `workList` and
+    // continue the traversal. Remove the dependency from the adjacency list to
+    // mark that it has been processed. Only enqueue the dependency if it has no
+    // `valueMapping` from an earlier translation and if it has not been
+    // enqueued before.
+    llvm::Constant *dependency = adjacencyIt->getSecond().pop_back_val();
+    if (valueMapping.count(dependency) || workList.count(dependency) ||
+        orderedSet.count(dependency))
+      continue;
+    workList.insert(dependency);
   }
 
-  // Add the constants in reverse post order to the result set to ensure all
-  // dependencies are satisfied. Avoid storing duplicates since LLVM constants
-  // are uniqued and only one `valueMapping` entry per constant is possible.
-  SetVector<llvm::Constant *> orderedSet;
-  for (llvm::Constant *orderedConst : llvm::reverse(orderedList))
-    orderedSet.insert(orderedConst);
   return orderedSet;
 }
 
@@ -1059,6 +1008,11 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
       }
     }
     return root;
+  }
+
+  if (isa<llvm::BlockAddress>(constant)) {
+    return emitError(loc)
+           << "blockaddress is not implemented in the LLVM dialect";
   }
 
   return emitError(loc) << "unhandled constant: " << diag(*constant);
@@ -1405,13 +1359,119 @@ FlatSymbolRefAttr ModuleImport::getPersonalityAsAttr(llvm::Function *f) {
   return FlatSymbolRefAttr();
 }
 
+static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
+  llvm::MemoryEffects memEffects = func->getMemoryEffects();
+
+  auto othermem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+  auto argMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
+  auto inaccessibleMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+  auto memAttr = MemoryEffectsAttr::get(funcOp.getContext(), othermem, argMem,
+                                        inaccessibleMem);
+  // Only set the attr when it does not match the default value.
+  if (memAttr.isReadWrite())
+    return;
+  funcOp.setMemoryAttr(memAttr);
+}
+
+static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
+  MLIRContext *context = funcOp.getContext();
+  SmallVector<Attribute> passthroughs;
+  llvm::AttributeSet funcAttrs = func->getAttributes().getAttributes(
+      llvm::AttributeList::AttrIndex::FunctionIndex);
+  for (llvm::Attribute attr : funcAttrs) {
+    // Skip the memory attribute since the LLVMFuncOp has an explicit memory
+    // attribute.
+    if (attr.hasAttribute(llvm::Attribute::Memory))
+      continue;
+
+    // Skip invalid type attributes.
+    if (attr.isTypeAttribute()) {
+      emitWarning(funcOp.getLoc(),
+                  "type attributes on a function are invalid, skipping it");
+      continue;
+    }
+
+    StringRef attrName;
+    if (attr.isStringAttribute())
+      attrName = attr.getKindAsString();
+    else
+      attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
+    auto keyAttr = StringAttr::get(context, attrName);
+
+    if (attr.isStringAttribute()) {
+      StringRef val = attr.getValueAsString();
+      if (val.empty()) {
+        passthroughs.push_back(keyAttr);
+        continue;
+      }
+      passthroughs.push_back(
+          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
+      continue;
+    }
+    if (attr.isIntAttribute()) {
+      auto val = std::to_string(attr.getValueAsInt());
+      passthroughs.push_back(
+          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
+      continue;
+    }
+    if (attr.isEnumAttribute()) {
+      passthroughs.push_back(keyAttr);
+      continue;
+    }
+
+    llvm_unreachable("unexpected attribute kind");
+  }
+
+  if (!passthroughs.empty())
+    funcOp.setPassthroughAttr(ArrayAttr::get(context, passthroughs));
+}
+
 void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
-  auto addNamedUnitAttr = [&](StringRef name) {
-    return funcOp->setAttr(name, UnitAttr::get(context));
-  };
-  if (func->doesNotAccessMemory())
-    addNamedUnitAttr(LLVMDialect::getReadnoneAttrName());
+  processMemoryEffects(func, funcOp);
+  processPassthroughAttrs(func, funcOp);
+}
+
+DictionaryAttr
+ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
+                                        OpBuilder &builder) {
+  SmallVector<NamedAttribute> paramAttrs;
+  for (auto [llvmKind, mlirName] : getAttrKindToNameMapping()) {
+    auto llvmAttr = llvmParamAttrs.getAttribute(llvmKind);
+    // Skip attributes that are not attached.
+    if (!llvmAttr.isValid())
+      continue;
+    Attribute mlirAttr;
+    if (llvmAttr.isTypeAttribute())
+      mlirAttr = TypeAttr::get(convertType(llvmAttr.getValueAsType()));
+    else if (llvmAttr.isIntAttribute())
+      mlirAttr = builder.getI64IntegerAttr(llvmAttr.getValueAsInt());
+    else if (llvmAttr.isEnumAttribute())
+      mlirAttr = builder.getUnitAttr();
+    else
+      llvm_unreachable("unexpected parameter attribute kind");
+    paramAttrs.push_back(builder.getNamedAttr(mlirName, mlirAttr));
+  }
+
+  return builder.getDictionaryAttr(paramAttrs);
+}
+
+void ModuleImport::convertParameterAttributes(llvm::Function *func,
+                                              LLVMFuncOp funcOp,
+                                              OpBuilder &builder) {
+  auto llvmAttrs = func->getAttributes();
+  for (size_t i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
+    llvm::AttributeSet llvmArgAttrs = llvmAttrs.getParamAttrs(i);
+    funcOp.setArgAttrs(i, convertParameterAttribute(llvmArgAttrs, builder));
+  }
+  // Convert the result attributes and attach them wrapped in an ArrayAttribute
+  // to the funcOp.
+  llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
+  funcOp.setResAttrsAttr(
+      builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
 }
 
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {
@@ -1437,35 +1497,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Set the function debug information if available.
   debugImporter->translate(func, funcOp);
 
-  for (const auto &it : llvm::enumerate(functionType.getParams())) {
-    llvm::SmallVector<NamedAttribute, 1> argAttrs;
-    if (auto *type = func->getParamByValType(it.index())) {
-      Type mlirType = convertType(type);
-      argAttrs.push_back(
-          NamedAttribute(builder.getStringAttr(LLVMDialect::getByValAttrName()),
-                         TypeAttr::get(mlirType)));
-    }
-    if (auto *type = func->getParamByRefType(it.index())) {
-      Type mlirType = convertType(type);
-      argAttrs.push_back(
-          NamedAttribute(builder.getStringAttr(LLVMDialect::getByRefAttrName()),
-                         TypeAttr::get(mlirType)));
-    }
-    if (auto *type = func->getParamStructRetType(it.index())) {
-      Type mlirType = convertType(type);
-      argAttrs.push_back(NamedAttribute(
-          builder.getStringAttr(LLVMDialect::getStructRetAttrName()),
-          TypeAttr::get(mlirType)));
-    }
-    if (auto *type = func->getParamInAllocaType(it.index())) {
-      Type mlirType = convertType(type);
-      argAttrs.push_back(NamedAttribute(
-          builder.getStringAttr(LLVMDialect::getInAllocaAttrName()),
-          TypeAttr::get(mlirType)));
-    }
-
-    funcOp.setArgAttrs(it.index(), argAttrs);
-  }
+  convertParameterAttributes(func, funcOp, builder);
 
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(func))
     funcOp.setPersonalityAttr(personality);
@@ -1539,6 +1571,29 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
     }
   }
   return success();
+}
+
+FailureOr<SmallVector<SymbolRefAttr>>
+ModuleImport::lookupAccessGroupAttrs(const llvm::MDNode *node) const {
+  // An access group node is either a single access group or an access group
+  // list.
+  SmallVector<SymbolRefAttr> accessGroups;
+  if (!node->getNumOperands())
+    accessGroups.push_back(accessGroupMapping.lookup(node));
+  for (const llvm::MDOperand &operand : node->operands()) {
+    auto *node = cast<llvm::MDNode>(operand.get());
+    accessGroups.push_back(accessGroupMapping.lookup(node));
+  }
+  // Exit if one of the access group node lookups failed.
+  if (llvm::is_contained(accessGroups, nullptr))
+    return failure();
+  return accessGroups;
+}
+
+LoopAnnotationAttr
+ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
+                                          Location loc) const {
+  return loopAnnotationImporter->translate(node, loc);
 }
 
 OwningOpRef<ModuleOp>

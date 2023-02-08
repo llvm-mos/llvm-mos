@@ -251,6 +251,16 @@ namespace llvm {
   unsigned int APFloatBase::semanticsSizeInBits(const fltSemantics &semantics) {
     return semantics.sizeInBits;
   }
+  unsigned int APFloatBase::semanticsIntSizeInBits(const fltSemantics &semantics,
+                                                   bool isSigned) {
+    // The max FP value is pow(2, MaxExponent) * (1 + MaxFraction), so we need
+    // at least one more bit than the MaxExponent to hold the max FP value.
+    unsigned int MinBitWidth = semanticsMaxExponent(semantics) + 1;
+    // Extra sign bit needed.
+    if (isSigned)
+      ++MinBitWidth;
+    return MinBitWidth;
+  }
 
   unsigned APFloatBase::getSizeInBits(const fltSemantics &Sem) {
     return Sem.sizeInBits;
@@ -4477,7 +4487,7 @@ IEEEFloat scalbn(IEEEFloat X, int Exp, IEEEFloat::roundingMode RoundingMode) {
   int MaxIncrement = MaxExp - (MinExp - SignificandBits) + 1;
 
   // Clamp to one past the range ends to let normalize handle overlflow.
-  X.exponent += std::min(std::max(Exp, -MaxIncrement - 1), MaxIncrement);
+  X.exponent += std::clamp(Exp, -MaxIncrement - 1, MaxIncrement);
   X.normalize(RoundingMode, lfExactlyZero);
   if (X.isNaN())
     X.makeQuiet();

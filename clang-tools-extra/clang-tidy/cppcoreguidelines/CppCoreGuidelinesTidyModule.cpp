@@ -14,6 +14,7 @@
 #include "../modernize/AvoidCArraysCheck.h"
 #include "../modernize/UseOverrideCheck.h"
 #include "../readability/MagicNumbersCheck.h"
+#include "AvoidCaptureDefaultWhenCapturingThisCheck.h"
 #include "AvoidConstOrRefDataMembersCheck.h"
 #include "AvoidDoWhileCheck.h"
 #include "AvoidGotoCheck.h"
@@ -40,14 +41,15 @@
 #include "SpecialMemberFunctionsCheck.h"
 #include "VirtualClassDestructorCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace cppcoreguidelines {
 
 /// A module containing checks of the C++ Core Guidelines
 class CppCoreGuidelinesModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidCaptureDefaultWhenCapturingThisCheck>(
+        "cppcoreguidelines-avoid-capture-default-when-capturing-this");
     CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
         "cppcoreguidelines-avoid-c-arrays");
     CheckFactories.registerCheck<AvoidConstOrRefDataMembersCheck>(
@@ -129,5 +131,4 @@ static ClangTidyModuleRegistry::Add<CppCoreGuidelinesModule>
 // and thus register the CppCoreGuidelinesModule.
 volatile int CppCoreGuidelinesModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

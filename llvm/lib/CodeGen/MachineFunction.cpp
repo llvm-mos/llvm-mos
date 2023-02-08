@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -45,6 +44,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
@@ -444,8 +444,16 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
 /// `new MachineBasicBlock'.
 MachineBasicBlock *
 MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
-  return new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
-             MachineBasicBlock(*this, bb);
+  MachineBasicBlock *MBB =
+      new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
+          MachineBasicBlock(*this, bb);
+  // Set BBID for `-basic-block=sections=labels` and
+  // `-basic-block-sections=list` to allow robust mapping of profiles to basic
+  // blocks.
+  if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
+      Target.getBBSectionsType() == BasicBlockSection::List)
+    MBB->setBBID(NextBBID++);
+  return MBB;
 }
 
 /// Delete the given MachineBasicBlock.
@@ -759,10 +767,6 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
 
   const Instruction *FirstI = LandingPad->getBasicBlock()->getFirstNonPHI();
   if (const auto *LPI = dyn_cast<LandingPadInst>(FirstI)) {
-    if (const auto *PF =
-            dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts()))
-      getMMI().addPersonality(PF);
-
     // If there's no typeid list specified, then "cleanup" is implicit.
     // Otherwise, id 0 is reserved for the cleanup action.
     if (LPI->isCleanup() && LPI->getNumClauses() != 0)
@@ -1082,8 +1086,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     for (auto &MO : Inst->operands()) {
       if (!MO.isReg() || !MO.isDef() || MO.getReg() != State.first)
         continue;
-      return ApplySubregisters(
-          {Inst->getDebugInstrNum(), Inst->getOperandNo(&MO)});
+      return ApplySubregisters({Inst->getDebugInstrNum(), MO.getOperandNo()});
     }
 
     llvm_unreachable("Vreg def with no corresponding operand?");
@@ -1105,7 +1108,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
         continue;
 
       return ApplySubregisters(
-          {ToExamine.getDebugInstrNum(), ToExamine.getOperandNo(&MO)});
+          {ToExamine.getDebugInstrNum(), MO.getOperandNo()});
     }
   }
 
@@ -1191,7 +1194,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
   }
 }
 
-bool MachineFunction::useDebugInstrRef() const {
+bool MachineFunction::shouldUseDebugInstrRef() const {
   // Disable instr-ref at -O0: it's very slow (in compile time). We can still
   // have optimized code inlined into this unoptimized code, however with
   // fewer and less aggressive optimizations happening, coverage and accuracy
@@ -1207,6 +1210,14 @@ bool MachineFunction::useDebugInstrRef() const {
     return true;
 
   return false;
+}
+
+bool MachineFunction::useDebugInstrRef() const {
+  return UseDebugInstrRef;
+}
+
+void MachineFunction::setUseDebugInstrRef(bool Use) {
+  UseDebugInstrRef = Use;
 }
 
 // Use one million as a high / reserved number.

@@ -17,10 +17,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -197,7 +198,7 @@ bool M68kTargetInfo::validateAsmConstraint(
   return false;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 M68kTargetInfo::handleAsmEscapedChar(char EscChar) const {
   char C;
   switch (EscChar) {

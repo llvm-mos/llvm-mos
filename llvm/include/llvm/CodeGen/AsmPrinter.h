@@ -329,6 +329,14 @@ public:
   /// definition in the same module.
   MCSymbol *getSymbolPreferLocal(const GlobalValue &GV) const;
 
+  bool doesDwarfUseRelocationsAcrossSections() const {
+    return DwarfUsesRelocationsAcrossSections;
+  }
+
+  void setDwarfUsesRelocationsAcrossSections(bool Enable) {
+    DwarfUsesRelocationsAcrossSections = Enable;
+  }
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//
@@ -637,6 +645,13 @@ public:
   /// Emit a long long directive and value.
   void emitInt64(uint64_t Value) const;
 
+  /// Emit the specified signed leb128 value.
+  void emitSLEB128(int64_t Value, const char *Desc = nullptr) const;
+
+  /// Emit the specified unsigned leb128 value.
+  void emitULEB128(uint64_t Value, const char *Desc = nullptr,
+                   unsigned PadTo = 0) const;
+
   /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
   /// is specified by Size and Hi/Lo specify the labels.  This implicitly uses
   /// .set if it is available.
@@ -663,13 +678,6 @@ public:
   //===------------------------------------------------------------------===//
   // Dwarf Emission Helper Routines
   //===------------------------------------------------------------------===//
-
-  /// Emit the specified signed leb128 value.
-  void emitSLEB128(int64_t Value, const char *Desc = nullptr) const;
-
-  /// Emit the specified unsigned leb128 value.
-  void emitULEB128(uint64_t Value, const char *Desc = nullptr,
-                   unsigned PadTo = 0) const;
 
   /// Emit a .byte 42 directive that corresponds to an encoding.  If verbose
   /// assembly output is enabled, we output comments describing the encoding.
@@ -821,6 +829,8 @@ private:
   mutable const MachineInstr *LastMI = nullptr;
   mutable unsigned LastFn = 0;
   mutable unsigned Counter = ~0U;
+
+  bool DwarfUsesRelocationsAcrossSections = false;
 
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();

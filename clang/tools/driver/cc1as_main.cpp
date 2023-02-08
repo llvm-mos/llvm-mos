@@ -20,7 +20,6 @@
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -53,7 +52,9 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
+#include <optional>
 #include <system_error>
 using namespace clang;
 using namespace clang::driver;
@@ -150,7 +151,7 @@ struct AssemblerInvocation {
 
   /// Darwin target variant triple, the variant of the deployment target
   /// for which the code is being compiled.
-  llvm::Optional<llvm::Triple> DarwinTargetVariantTriple;
+  std::optional<llvm::Triple> DarwinTargetVariantTriple;
 
   /// The version of the darwin target variant SDK which was used during the
   /// compilation

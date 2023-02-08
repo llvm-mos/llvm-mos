@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -generate-runtime-verification -convert-memref-to-llvm \
+// RUN: mlir-opt %s -generate-runtime-verification -finalize-memref-to-llvm \
 // RUN:     -test-cf-assert \
 // RUN:     -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
@@ -64,6 +64,8 @@ func.func @main() {
   // A last cast that actually succeeds.
   // CHECK-NOT: ERROR: Runtime op verification failed
   func.call @valid_cast(%3) : (memref<*xf32>) -> (memref<?xf32>)
+
+  memref.dealloc %alloc : memref<5xf32>
 
   return
 }

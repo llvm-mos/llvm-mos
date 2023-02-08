@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -47,6 +46,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -823,6 +823,37 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
   return F->hasAddressTaken() || F->hasLinkOnceLinkage();
 }
 
+static inline bool shouldUsePublicSymbol(Function *Fn) {
+  // It isn't legal to make an alias of this function at all
+  if (Fn->isDeclarationForLinker())
+    return true;
+
+  // Symbols with local linkage can just use the symbol directly without
+  // introducing relocations
+  if (Fn->hasLocalLinkage())
+    return true;
+
+  // PGO + ThinLTO + CFI cause duplicate symbols to be introduced due to some
+  // unfavorable interaction between the new alias and the alias renaming done
+  // in LowerTypeTests under ThinLTO. For comdat functions that would normally
+  // be deduplicated, but the renaming scheme ends up preventing renaming, since
+  // it creates unique names for each alias, resulting in duplicated symbols. In
+  // the future, we should update the CFI related passes to migrate these
+  // aliases to the same module as the jump-table they refer to will be defined.
+  if (Fn->hasMetadata(LLVMContext::MD_type))
+    return true;
+
+  // For comdat functions, an alias would need the same linkage as the original
+  // function and hidden visibility. There is no point in adding an alias with
+  // identical linkage an visibility to avoid introducing symbolic relocations.
+  if (Fn->hasComdat() &&
+      (Fn->getVisibility() == GlobalValue::VisibilityTypes::HiddenVisibility))
+    return true;
+
+  // its OK to use an alias
+  return false;
+}
+
 static inline Constant *getFuncAddrForProfData(Function *Fn) {
   auto *Int8PtrTy = Type::getInt8PtrTy(Fn->getContext());
   // Store a nullptr in __llvm_profd, if we shouldn't use a real address
@@ -830,9 +861,8 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
     return ConstantPointerNull::get(Int8PtrTy);
 
   // If we can't use an alias, we must use the public symbol, even though this
-  // may require a symbolic relocation. When the function has local linkage, we
-  // can use the symbol directly without introducing relocations.
-  if (Fn->isDeclarationForLinker() || Fn->hasLocalLinkage())
+  // may require a symbolic relocation.
+  if (shouldUsePublicSymbol(Fn))
     return ConstantExpr::getBitCast(Fn, Int8PtrTy);
 
   // When possible use a private alias to avoid symbolic relocations.
@@ -846,10 +876,16 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
   // section. So, for COMDAT functions, we need to adjust the linkage of the
   // alias. Using hidden visibility avoids a dynamic relocation and an entry in
   // the dynamic symbol table.
+  //
+  // Note that this handles COMDAT functions with visibility other than Hidden,
+  // since that case is covered in shouldUsePublicSymbol()
   if (Fn->hasComdat()) {
     GA->setLinkage(Fn->getLinkage());
     GA->setVisibility(GlobalValue::VisibilityTypes::HiddenVisibility);
   }
+
+  // appendToCompilerUsed(*Fn->getParent(), {GA});
+
   return ConstantExpr::getBitCast(GA, Int8PtrTy);
 }
 

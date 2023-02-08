@@ -13,6 +13,12 @@ on:
       - 'llvm/**'
       - '.github/workflows/clang-tests.yml'
 
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
   build_clang:
     name: clang check-all
@@ -32,7 +38,7 @@ jobs:
         arch: amd64
     - name: Install Ninja
       uses: llvm/actions/install-ninja@main
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 250
     - name: Setup ccache

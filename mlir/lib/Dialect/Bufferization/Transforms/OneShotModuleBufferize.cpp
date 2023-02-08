@@ -139,7 +139,6 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
           continue;
         int64_t returnIdx = resultIt.index();
         int64_t bbArgIdx = inputIt.index();
-        funcState.aliasingFuncArgs[funcOp][returnIdx].push_back(bbArgIdx);
         funcState.aliasingReturnVals[funcOp][bbArgIdx].push_back(returnIdx);
       }
     }
@@ -161,10 +160,8 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
             if (state.getOptions().testAnalysisOnly)
               annotateEquivalentReturnBbArg(returnVal, bbArg);
           }
-          if (state.areAliasingBufferizedValues(returnVal.get(), bbArg)) {
-            funcState.aliasingFuncArgs[funcOp][returnIdx].push_back(bbArgIdx);
+          if (state.areAliasingBufferizedValues(returnVal.get(), bbArg))
             funcState.aliasingReturnVals[funcOp][bbArgIdx].push_back(returnIdx);
-          }
         }
 
   return success();
@@ -253,7 +250,6 @@ static func::FuncOp getCalledFunction(CallOpInterface callOp) {
 /// analyzed.
 // TODO: This does not handle cyclic function call graphs etc.
 static void equivalenceAnalysis(func::FuncOp funcOp,
-                                BufferizationAliasInfo &aliasInfo,
                                 OneShotAnalysisState &state,
                                 FuncAnalysisState &funcState) {
   funcOp->walk([&](func::CallOp callOp) {
@@ -271,7 +267,7 @@ static void equivalenceAnalysis(func::FuncOp funcOp,
         continue;
       Value returnVal = callOp.getResult(returnIdx);
       Value argVal = callOp->getOperand(bbargIdx);
-      aliasInfo.unionEquivalenceClasses(returnVal, argVal);
+      state.unionEquivalenceClasses(returnVal, argVal);
     }
 
     return WalkResult::advance();
@@ -368,7 +364,6 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   assert(state.getOptions().bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
-  BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
 
   // A list of functions in the order in which they are analyzed + bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;
@@ -381,11 +376,14 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
   // Analyze ops.
   for (func::FuncOp funcOp : orderedFuncOps) {
+    if (!state.getOptions().isOpAllowed(funcOp))
+      continue;
+
     // Now analyzing function.
     funcState.startFunctionAnalysis(funcOp);
 
     // Gather equivalence info for CallOps.
-    equivalenceAnalysis(funcOp, aliasInfo, state, funcState);
+    equivalenceAnalysis(funcOp, state, funcState);
 
     // Analyze funcOp.
     if (failed(analyzeOp(funcOp, state, statistics)))
@@ -431,7 +429,10 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   for (func::FuncOp funcOp : orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
-    if (failed(bufferizeOp(funcOp, options, options.copyBeforeWrite,
+    bool copyBeforeWrite =
+        options.copyBeforeWrite ||
+        llvm::is_contained(options.noAnalysisFuncFilter, funcOp.getSymName());
+    if (failed(bufferizeOp(funcOp, options, copyBeforeWrite,
                            /*opFilter=*/nullptr, statistics)))
       return failure();
     // Change buffer return types to more precise layout maps.
@@ -454,8 +455,26 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
-    if (failed(insertTensorCopies(moduleOp, options, statistics)))
-      return failure();
+    if (options.noAnalysisFuncFilter.empty()) {
+      if (failed(insertTensorCopies(moduleOp, options, statistics)))
+        return failure();
+    } else {
+      // FuncOps whose names are specified in options.noAnalysisFuncFilter will
+      // not be analyzed. Ops in these FuncOps will not be analyzed as well.
+      OpFilter::Entry::FilterFn analysisFilterFn = [=](Operation *op) {
+        auto func = dyn_cast<func::FuncOp>(op);
+        if (!func)
+          func = op->getParentOfType<func::FuncOp>();
+        if (func)
+          return llvm::is_contained(options.noAnalysisFuncFilter,
+                                    func.getSymName());
+        return false;
+      };
+      OneShotBufferizationOptions updatedOptions(options);
+      updatedOptions.opFilter.denyOperation(analysisFilterFn);
+      if (failed(insertTensorCopies(moduleOp, updatedOptions, statistics)))
+        return failure();
+    }
   }
   if (options.testAnalysisOnly)
     return success();

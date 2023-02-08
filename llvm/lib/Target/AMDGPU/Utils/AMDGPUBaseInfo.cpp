@@ -22,7 +22,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <optional>
 
 #define GET_INSTRINFO_NAMED_OPS
@@ -150,8 +150,18 @@ unsigned getAmdhsaCodeObjectVersion() {
   return AmdhsaCodeObjectVersion;
 }
 
-unsigned getMultigridSyncArgImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
+unsigned getCodeObjectVersion(const Module &M) {
+  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+      M.getModuleFlag("amdgpu_code_object_version"))) {
+    return (unsigned)Ver->getZExtValue() / 100;
+  }
+
+  // Default code object version.
+  return 4;
+}
+
+unsigned getMultigridSyncArgImplicitArgPosition(unsigned COV) {
+  switch (COV) {
   case 2:
   case 3:
   case 4:
@@ -167,8 +177,8 @@ unsigned getMultigridSyncArgImplicitArgPosition() {
 
 // FIXME: All such magic numbers about the ABI should be in a
 // central TD file.
-unsigned getHostcallImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
+unsigned getHostcallImplicitArgPosition(unsigned COV) {
+  switch (COV) {
   case 2:
   case 3:
   case 4:
@@ -181,8 +191,8 @@ unsigned getHostcallImplicitArgPosition() {
   }
 }
 
-unsigned getDefaultQueueImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
+unsigned getDefaultQueueImplicitArgPosition(unsigned COV) {
+  switch (COV) {
   case 2:
   case 3:
   case 4:
@@ -193,8 +203,8 @@ unsigned getDefaultQueueImplicitArgPosition() {
   }
 }
 
-unsigned getCompletionActionImplicitArgPosition() {
-  switch (AmdhsaCodeObjectVersion) {
+unsigned getCompletionActionImplicitArgPosition(unsigned COV) {
+  switch (COV) {
   case 2:
   case 3:
   case 4:
@@ -539,7 +549,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
   for (CompOprIdx = Component::SRC1; CompOprIdx < OperandsNum; ++CompOprIdx) {
-    if (OpDesc.OpInfo[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
+    if (OpDesc.operands()[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
       MandatoryLiteralIdx = CompOprIdx;
       break;
     }
@@ -828,11 +838,26 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
+  unsigned BytesPerCU = 0;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+    BytesPerCU = 32768;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+    BytesPerCU = 65536;
+
+  // "Per CU" really means "per whatever functional block the waves of a
+  // workgroup must share". So the effective local memory size is doubled in
+  // WGP mode on gfx10.
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    BytesPerCU *= 2;
+
+  return BytesPerCU;
+}
+
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
     return 32768;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
     return 65536;
-
   return 0;
 }
 
@@ -852,11 +877,18 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
   assert(FlatWorkGroupSize != 0);
   if (STI->getTargetTriple().getArch() != Triple::amdgcn)
     return 8;
+  unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
-  if (N == 1)
-    return 40;
-  N = 40 / N;
-  return std::min(N, 16u);
+  if (N == 1) {
+    // Single-wave workgroups don't consume barrier resources.
+    return MaxWaves;
+  }
+
+  unsigned MaxBarriers = 16;
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    MaxBarriers = 32;
+
+  return std::min(MaxWaves / N, MaxBarriers);
 }
 
 unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
@@ -2133,21 +2165,21 @@ bool isInlineValue(unsigned Reg) {
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_KIMM_FIRST &&
          OpType <= AMDGPU::OPERAND_KIMM_LAST;
 }
 
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
@@ -2176,7 +2208,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
 }
@@ -2331,7 +2363,7 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.OpInfo[OpNo].RegClass;
+  unsigned RCID = Desc.operands()[OpNo].RegClass;
   return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }
 
@@ -2612,7 +2644,13 @@ struct SourceOfDivergence {
 };
 const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
+struct AlwaysUniform {
+  unsigned Intr;
+};
+const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
+#define GET_UniformIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -2622,6 +2660,10 @@ const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
   return lookupSourceOfDivergence(IntrID);
+}
+
+bool isIntrinsicAlwaysUniform(unsigned IntrID) {
+  return lookupAlwaysUniform(IntrID);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

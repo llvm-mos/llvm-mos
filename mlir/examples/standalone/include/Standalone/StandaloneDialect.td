@@ -24,6 +24,7 @@ def Standalone_Dialect : Dialect {
         working inside of the LLVM source tree.
     }];
     let cppNamespace = "::mlir::standalone";
+
 }
 
 //===----------------------------------------------------------------------===//

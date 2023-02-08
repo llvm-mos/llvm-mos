@@ -94,14 +94,13 @@ static SmallVector<Range> getPackUnPackIterationDomain(OpTy op,
   return loopBounds;
 }
 
-static void applyInversePermToRange(SmallVector<OpFoldResult> &offsets,
-                                    SmallVector<OpFoldResult> &sizes,
-                                    ArrayRef<int64_t> permutation) {
+static void applyPermToRange(SmallVector<OpFoldResult> &offsets,
+                             SmallVector<OpFoldResult> &sizes,
+                             ArrayRef<int64_t> permutation) {
   if (permutation.empty())
     return;
-  SmallVector<int64_t> inversedPerm = invertPermutationVector(permutation);
-  applyPermutationToVector<OpFoldResult>(offsets, inversedPerm);
-  applyPermutationToVector<OpFoldResult>(sizes, inversedPerm);
+  applyPermutationToVector<OpFoldResult>(offsets, permutation);
+  applyPermutationToVector<OpFoldResult>(sizes, permutation);
 }
 
 struct PackOpTiling
@@ -133,7 +132,8 @@ struct PackOpTiling
     int64_t inputRank = packOp.getSourceRank();
     SmallVector<OpFoldResult> origOffsets(offsets.begin(), offsets.end());
     SmallVector<OpFoldResult> origSizes(sizes.begin(), sizes.end());
-    applyInversePermToRange(origOffsets, origSizes, packOp.getOuterDimsPerm());
+    applyPermToRange(origOffsets, origSizes,
+                     invertPermutationVector(packOp.getOuterDimsPerm()));
 
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
@@ -382,8 +382,8 @@ struct UnPackOpTiling
 
     // The tiling is applied on destination dimensions. We have to apply the
     // interchange on source dimensions if outer_dims_perm is set.
-    applyInversePermToRange(sliceSrcIndices, sliceSrcSizes,
-                            unpackOp.getOuterDimsPerm());
+    applyPermToRange(sliceSrcIndices, sliceSrcSizes,
+                     unpackOp.getOuterDimsPerm());
     Attribute zeroAttr = b.getIndexAttr(0);
     sliceSrcIndices.append(numInnerTiles, zeroAttr);
     sliceSrcSizes.append(unpackOp.getMixedTiles());
@@ -632,7 +632,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
   // creating SliceOps with result dimensions of size 0 at runtime.
   if (generateZeroSliceGuard && dynHasZeroLenCond) {
     auto result = b.create<scf::IfOp>(
-        loc, resultType, dynHasZeroLenCond,
+        loc, dynHasZeroLenCond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
           b.create<scf::YieldOp>(loc, createGenerateOp()->getResult(0));
@@ -650,6 +650,14 @@ void mlir::tensor::registerTilingInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
+    tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
+    tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
+  });
+}
+
+void mlir::tensor::registerTilingInterfaceExternalModelsForPackUnPackOps(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
     tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
   });

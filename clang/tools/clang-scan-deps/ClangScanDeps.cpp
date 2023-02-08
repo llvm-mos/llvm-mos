@@ -24,6 +24,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include <mutex>
+#include <optional>
 #include <thread>
 
 using namespace clang;
@@ -177,11 +178,6 @@ llvm::cl::list<std::string> ModuleDepTargets(
     llvm::cl::desc("The names of dependency targets for the dependency file"),
     llvm::cl::cat(DependencyScannerCategory));
 
-llvm::cl::opt<bool> DeprecatedDriverCommand(
-    "deprecated-driver-command", llvm::cl::Optional,
-    llvm::cl::desc("use a single driver command to build the tu (deprecated)"),
-    llvm::cl::cat(DependencyScannerCategory));
-
 enum ResourceDirRecipeKind {
   RDRK_ModifyCompilerPath,
   RDRK_InvokeCompiler,
@@ -254,18 +250,25 @@ static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
 // Thread safe.
 class FullDeps {
 public:
-  void mergeDeps(StringRef Input, FullDependenciesResult FDR,
+  void mergeDeps(StringRef Input, TranslationUnitDeps TUDeps,
                  size_t InputIndex) {
-    FullDependencies &FD = FDR.FullDeps;
+    mergeDeps(std::move(TUDeps.ModuleGraph), InputIndex);
 
     InputDeps ID;
     ID.FileName = std::string(Input);
-    ID.ContextHash = std::move(FD.ID.ContextHash);
-    ID.FileDeps = std::move(FD.FileDeps);
-    ID.ModuleDeps = std::move(FD.ClangModuleDeps);
+    ID.ContextHash = std::move(TUDeps.ID.ContextHash);
+    ID.FileDeps = std::move(TUDeps.FileDeps);
+    ID.ModuleDeps = std::move(TUDeps.ClangModuleDeps);
+    ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
+    ID.Commands = std::move(TUDeps.Commands);
 
     std::unique_lock<std::mutex> ul(Lock);
-    for (const ModuleDeps &MD : FDR.DiscoveredModules) {
+    Inputs.push_back(std::move(ID));
+  }
+
+  void mergeDeps(ModuleDepsGraph Graph, size_t InputIndex) {
+    std::unique_lock<std::mutex> ul(Lock);
+    for (const ModuleDeps &MD : Graph) {
       auto I = Modules.find({MD.ID, 0});
       if (I != Modules.end()) {
         I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
@@ -273,10 +276,6 @@ public:
       }
       Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
-
-    ID.DriverCommandLine = std::move(FD.DriverCommandLine);
-    ID.Commands = std::move(FD.Commands);
-    Inputs.push_back(std::move(ID));
   }
 
   void printFullOutput(raw_ostream &OS) {
@@ -383,13 +382,12 @@ private:
   std::vector<InputDeps> Inputs;
 };
 
-static bool handleFullDependencyToolResult(
-    const std::string &Input,
-    llvm::Expected<FullDependenciesResult> &MaybeFullDeps, FullDeps &FD,
-    size_t InputIndex, SharedStream &OS, SharedStream &Errs) {
-  if (!MaybeFullDeps) {
+static bool handleTranslationUnitResult(
+    StringRef Input, llvm::Expected<TranslationUnitDeps> &MaybeTUDeps,
+    FullDeps &FD, size_t InputIndex, SharedStream &OS, SharedStream &Errs) {
+  if (!MaybeTUDeps) {
     llvm::handleAllErrors(
-        MaybeFullDeps.takeError(), [&Input, &Errs](llvm::StringError &Err) {
+        MaybeTUDeps.takeError(), [&Input, &Errs](llvm::StringError &Err) {
           Errs.applyLocked([&](raw_ostream &OS) {
             OS << "Error while scanning dependencies for " << Input << ":\n";
             OS << Err.getMessage();
@@ -397,7 +395,25 @@ static bool handleFullDependencyToolResult(
         });
     return true;
   }
-  FD.mergeDeps(Input, std::move(*MaybeFullDeps), InputIndex);
+  FD.mergeDeps(Input, std::move(*MaybeTUDeps), InputIndex);
+  return false;
+}
+
+static bool handleModuleResult(
+    StringRef ModuleName, llvm::Expected<ModuleDepsGraph> &MaybeModuleGraph,
+    FullDeps &FD, size_t InputIndex, SharedStream &OS, SharedStream &Errs) {
+  if (!MaybeModuleGraph) {
+    llvm::handleAllErrors(MaybeModuleGraph.takeError(),
+                          [&ModuleName, &Errs](llvm::StringError &Err) {
+                            Errs.applyLocked([&](raw_ostream &OS) {
+                              OS << "Error while scanning dependencies for "
+                                 << ModuleName << ":\n";
+                              OS << Err.getMessage();
+                            });
+                          });
+    return true;
+  }
+  FD.mergeDeps(std::move(*MaybeModuleGraph), InputIndex);
   return false;
 }
 
@@ -562,7 +578,7 @@ int main(int argc, const char **argv) {
           Filename = std::move(Input->Filename);
           CWD = std::move(Input->Directory);
         }
-        Optional<StringRef> MaybeModuleName;
+        std::optional<StringRef> MaybeModuleName;
         if (!ModuleName.empty())
           MaybeModuleName = ModuleName;
 
@@ -575,25 +591,23 @@ int main(int argc, const char **argv) {
 
         // Run the tool on it.
         if (Format == ScanningOutputFormat::Make) {
-          auto MaybeFile = WorkerTools[I]->getDependencyFile(
-              Input->CommandLine, CWD, MaybeModuleName);
+          auto MaybeFile =
+              WorkerTools[I]->getDependencyFile(Input->CommandLine, CWD);
           if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                              Errs))
             HadErrors = true;
-        } else if (DeprecatedDriverCommand) {
-          auto MaybeFullDeps =
-              WorkerTools[I]->getFullDependenciesLegacyDriverCommand(
-                  Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
-                  MaybeModuleName);
-          if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
-                                             LocalIndex, DependencyOS, Errs))
+        } else if (MaybeModuleName) {
+          auto MaybeModuleDepsGraph = WorkerTools[I]->getModuleDependencies(
+              *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
+              LookupOutput);
+          if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, FD,
+                                 LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
-          auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
-              Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
-              MaybeModuleName);
-          if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
-                                             LocalIndex, DependencyOS, Errs))
+          auto MaybeTUDeps = WorkerTools[I]->getTranslationUnitDependencies(
+              Input->CommandLine, CWD, AlreadySeenModules, LookupOutput);
+          if (handleTranslationUnitResult(Filename, MaybeTUDeps, FD, LocalIndex,
+                                          DependencyOS, Errs))
             HadErrors = true;
         }
       }

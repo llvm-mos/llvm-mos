@@ -30,6 +30,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -58,7 +59,7 @@ auto hasOptionalType() { return hasType(optionalOrAliasType()); }
 
 auto isOptionalMemberCallWithName(
     llvm::StringRef MemberName,
-    const llvm::Optional<StatementMatcher> &Ignorable = std::nullopt) {
+    const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   auto Exception = unless(Ignorable ? expr(anyOf(*Ignorable, cxxThisExpr()))
                                     : cxxThisExpr());
   return cxxMemberCallExpr(
@@ -68,7 +69,7 @@ auto isOptionalMemberCallWithName(
 
 auto isOptionalOperatorCallWithName(
     llvm::StringRef operator_name,
-    const llvm::Optional<StatementMatcher> &Ignorable = std::nullopt) {
+    const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName(operator_name),
       callee(cxxMethodDecl(ofClass(optionalClass()))),
@@ -520,48 +521,54 @@ void transferNulloptAssignment(const CXXOperatorCallExpr *E,
   transferAssignment(E, State.Env.getBoolLiteralValue(false), State);
 }
 
-void transferSwap(const StorageLocation &OptionalLoc1,
-                  const StorageLocation &OptionalLoc2,
-                  LatticeTransferState &State) {
-  auto *OptionalVal1 = State.Env.getValue(OptionalLoc1);
-  assert(OptionalVal1 != nullptr);
+void transferSwap(const Expr &E1, SkipPast E1Skip, const Expr &E2,
+                  Environment &Env) {
+  // We account for cases where one or both of the optionals are not modeled,
+  // either lacking associated storage locations, or lacking values associated
+  // to such storage locations.
+  auto *Loc1 = Env.getStorageLocation(E1, E1Skip);
+  auto *Loc2 = Env.getStorageLocation(E2, SkipPast::Reference);
 
-  auto *OptionalVal2 = State.Env.getValue(OptionalLoc2);
-  assert(OptionalVal2 != nullptr);
+  if (Loc1 == nullptr) {
+    if (Loc2 != nullptr)
+      Env.setValue(*Loc2, createOptionalValue(Env, Env.makeAtomicBoolValue()));
+    return;
+  }
+  if (Loc2 == nullptr) {
+    Env.setValue(*Loc1, createOptionalValue(Env, Env.makeAtomicBoolValue()));
+    return;
+  }
 
-  State.Env.setValue(OptionalLoc1, *OptionalVal2);
-  State.Env.setValue(OptionalLoc2, *OptionalVal1);
+  // Both expressions have locations, though they may not have corresponding
+  // values. In that case, we create a fresh value at this point. Note that if
+  // two branches both do this, they will not share the value, but it at least
+  // allows for local reasoning about the value. To avoid the above, we would
+  // need *lazy* value allocation.
+  // FIXME: allocate values lazily, instead of just creating a fresh value.
+  auto *Val1 = Env.getValue(*Loc1);
+  if (Val1 == nullptr)
+    Val1 = &createOptionalValue(Env, Env.makeAtomicBoolValue());
+
+  auto *Val2 = Env.getValue(*Loc2);
+  if (Val2 == nullptr)
+    Val2 = &createOptionalValue(Env, Env.makeAtomicBoolValue());
+
+  Env.setValue(*Loc1, *Val2);
+  Env.setValue(*Loc2, *Val1);
 }
 
 void transferSwapCall(const CXXMemberCallExpr *E,
                       const MatchFinder::MatchResult &,
                       LatticeTransferState &State) {
   assert(E->getNumArgs() == 1);
-
-  auto *OptionalLoc1 = State.Env.getStorageLocation(
-      *E->getImplicitObjectArgument(), SkipPast::ReferenceThenPointer);
-  assert(OptionalLoc1 != nullptr);
-
-  auto *OptionalLoc2 =
-      State.Env.getStorageLocation(*E->getArg(0), SkipPast::Reference);
-  assert(OptionalLoc2 != nullptr);
-
-  transferSwap(*OptionalLoc1, *OptionalLoc2, State);
+  transferSwap(*E->getImplicitObjectArgument(), SkipPast::ReferenceThenPointer,
+               *E->getArg(0), State.Env);
 }
 
 void transferStdSwapCall(const CallExpr *E, const MatchFinder::MatchResult &,
                          LatticeTransferState &State) {
   assert(E->getNumArgs() == 2);
-
-  auto *OptionalLoc1 =
-      State.Env.getStorageLocation(*E->getArg(0), SkipPast::Reference);
-  assert(OptionalLoc1 != nullptr);
-
-  auto *OptionalLoc2 =
-      State.Env.getStorageLocation(*E->getArg(1), SkipPast::Reference);
-  assert(OptionalLoc2 != nullptr);
-
-  transferSwap(*OptionalLoc1, *OptionalLoc2, State);
+  transferSwap(*E->getArg(0), SkipPast::Reference, *E->getArg(1), State.Env);
 }
 
 BoolValue &evaluateEquality(Environment &Env, BoolValue &EqVal, BoolValue &LHS,
@@ -614,7 +621,7 @@ void transferOptionalAndValueCmp(const clang::CXXOperatorCallExpr *CmpExpr,
   }
 }
 
-llvm::Optional<StatementMatcher>
+std::optional<StatementMatcher>
 ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
   if (Options.IgnoreSmartPointerDereference) {
     auto SmartPtrUse = expr(ignoringParenImpCasts(cxxOperatorCallExpr(
@@ -627,12 +634,12 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
 }
 
 StatementMatcher
-valueCall(const llvm::Optional<StatementMatcher> &IgnorableOptional) {
+valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
   return isOptionalMemberCallWithName("value", IgnorableOptional);
 }
 
 StatementMatcher
-valueOperatorCall(const llvm::Optional<StatementMatcher> &IgnorableOptional) {
+valueOperatorCall(const std::optional<StatementMatcher> &IgnorableOptional) {
   return expr(anyOf(isOptionalOperatorCallWithName("*", IgnorableOptional),
                     isOptionalOperatorCallWithName("->", IgnorableOptional)));
 }

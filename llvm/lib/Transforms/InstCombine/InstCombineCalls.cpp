@@ -668,9 +668,20 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   // If all bits are zero except for exactly one fixed bit, then the result
   // must be 0 or 1, and we can get that answer by shifting to LSB:
   // ctpop (X & 32) --> (X & 32) >> 5
+  // TODO: Investigate removing this as its likely unnecessary given the below
+  // `isKnownToBeAPowerOfTwo` check.
   if ((~Known.Zero).isPowerOf2())
     return BinaryOperator::CreateLShr(
         Op0, ConstantInt::get(Ty, (~Known.Zero).exactLogBase2()));
+
+  // More generally we can also handle non-constant power of 2 patterns such as
+  // shl/shr(Pow2, X), (X & -X), etc... by transforming:
+  // ctpop(Pow2OrZero) --> icmp ne X, 0
+  if (IC.isKnownToBeAPowerOfTwo(Op0, /* OrZero */ true))
+    return CastInst::Create(Instruction::ZExt,
+                            IC.Builder.CreateICmp(ICmpInst::ICMP_NE, Op0,
+                                                  Constant::getNullValue(Ty)),
+                            Ty);
 
   // FIXME: Try to simplify vectors of integers.
   auto *IT = dyn_cast<IntegerType>(Ty);
@@ -819,10 +830,101 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
+  Value *Src0 = II.getArgOperand(0);
+  Value *Src1 = II.getArgOperand(1);
+  const ConstantInt *CMask = cast<ConstantInt>(Src1);
+  uint32_t Mask = CMask->getZExtValue();
+  const bool IsStrict = II.isStrictFP();
+
+  Value *FNegSrc;
+  if (match(Src0, m_FNeg(m_Value(FNegSrc)))) {
+    // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
+    unsigned NewMask = Mask & fcNan;
+    if (Mask & fcNegInf)
+      NewMask |= fcPosInf;
+    if (Mask & fcNegNormal)
+      NewMask |= fcPosNormal;
+    if (Mask & fcNegSubnormal)
+      NewMask |= fcPosSubnormal;
+    if (Mask & fcNegZero)
+      NewMask |= fcPosZero;
+    if (Mask & fcPosZero)
+      NewMask |= fcNegZero;
+    if (Mask & fcPosSubnormal)
+      NewMask |= fcNegSubnormal;
+    if (Mask & fcPosNormal)
+      NewMask |= fcNegNormal;
+    if (Mask & fcPosInf)
+      NewMask |= fcNegInf;
+
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), NewMask));
+    return replaceOperand(II, 0, FNegSrc);
+  }
+
+  Value *FAbsSrc;
+  if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
+    unsigned NewMask = Mask & fcNan;
+    if (Mask & fcPosZero)
+      NewMask |= fcZero;
+    if (Mask & fcPosSubnormal)
+      NewMask |= fcSubnormal;
+    if (Mask & fcPosNormal)
+      NewMask |= fcNormal;
+    if (Mask & fcPosInf)
+      NewMask |= fcInf;
+
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), NewMask));
+    return replaceOperand(II, 0, FAbsSrc);
+  }
+
+  if (Mask == fcNan && !IsStrict) {
+    // Equivalent of isnan. Replace with standard fcmp if we don't care about FP
+    // exceptions.
+    Value *IsNan =
+        Builder.CreateFCmpUNO(Src0, ConstantFP::getZero(Src0->getType()));
+    IsNan->takeName(&II);
+    return replaceInstUsesWith(II, IsNan);
+  }
+
+  if (Mask == (~fcNan & fcAllFlags) && !IsStrict) {
+    // Equivalent of !isnan. Replace with standard fcmp.
+    Value *FCmp =
+        Builder.CreateFCmpORD(Src0, ConstantFP::getZero(Src0->getType()));
+    FCmp->takeName(&II);
+    return replaceInstUsesWith(II, FCmp);
+  }
+
+  // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
+  if ((Mask & fcNan) && isKnownNeverNaN(Src0, &getTargetLibraryInfo())) {
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), Mask & ~fcNan));
+    return &II;
+  }
+
+  // fp_class (nnan x), ~(qnan|snan) -> true
+  if (Mask == (~fcNan & fcAllFlags) &&
+      isKnownNeverNaN(Src0, &getTargetLibraryInfo())) {
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+  }
+
+  // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
+  if ((Mask & fcInf) && isKnownNeverInfinity(Src0, &getTargetLibraryInfo())) {
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), Mask & ~fcInf));
+    return &II;
+  }
+
+  // fp_class (ninf x), ~(ninf|pinf) -> true
+  if (Mask == (~fcInf & fcAllFlags) &&
+      isKnownNeverInfinity(Src0, &getTargetLibraryInfo())) {
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+  }
+
+  return nullptr;
+}
+
 static std::optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
-                                        const DataLayout &DL,
-                                        AssumptionCache *AC,
-                                        DominatorTree *DT) {
+                                   const DataLayout &DL, AssumptionCache *AC,
+                                   DominatorTree *DT) {
   KnownBits Known = computeKnownBits(Op, DL, 0, AC, CxtI, DT);
   if (Known.isNonNegative())
     return false;
@@ -2434,7 +2536,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           llvm::getKnowledgeFromBundle(cast<AssumeInst>(*II), BOI);
         if (BOI.End - BOI.Begin > 2)
           continue; // Prevent reducing knowledge in an align with offset since
-                    // extracting a RetainedKnowledge form them looses offset
+                    // extracting a RetainedKnowledge from them looses offset
                     // information
         RetainedKnowledge CanonRK =
           llvm::simplifyRetainedKnowledge(cast<AssumeInst>(II), RK,
@@ -2839,6 +2941,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       replaceUse(II->getOperandUse(ArgIdx), V);
       return nullptr;
     }
+    break;
+  }
+  case Intrinsic::is_fpclass: {
+    if (Instruction *I = foldIntrinsicIsFPClass(*II))
+      return I;
     break;
   }
   default: {

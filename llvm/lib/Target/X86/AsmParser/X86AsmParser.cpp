@@ -3500,8 +3500,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         Operands[0] = X86Operand::CreateToken(Name, NameLoc);
       }
       // Select the correct equivalent 16-/32-bit source register.
-      unsigned Reg =
-          getX86SubSuperRegisterOrZero(Op1.getReg(), is16BitMode() ? 16 : 32);
+      MCRegister Reg =
+          getX86SubSuperRegister(Op1.getReg(), is16BitMode() ? 16 : 32);
       Operands[1] = X86Operand::CreateReg(Reg, Loc, Loc);
     }
   }
@@ -3923,6 +3923,15 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
     }
   }
 
+  if ((Opcode == X86::PREFETCHIT0 || Opcode == X86::PREFETCHIT1)) {
+    const MCOperand &MO = Inst.getOperand(X86::AddrBaseReg);
+    if (!MO.isReg() || MO.getReg() != X86::RIP)
+      return Warning(
+          Ops[0]->getStartLoc(),
+          Twine((Inst.getOpcode() == X86::PREFETCHIT0 ? "'prefetchit0'"
+                                                      : "'prefetchit1'")) +
+              " only supports RIP-relative address");
+  }
   return false;
 }
 

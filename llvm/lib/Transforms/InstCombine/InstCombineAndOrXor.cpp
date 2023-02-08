@@ -3896,6 +3896,14 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
       return BinaryOperator::CreateAShr(X, Y);
 
+    // Bit-hack form of a signbit test for iN type:
+    // ~(X >>s (N - 1)) --> sext i1 (X > -1) to iN
+    unsigned FullShift = Ty->getScalarSizeInBits() - 1;
+    if (match(NotVal, m_OneUse(m_AShr(m_Value(X), m_SpecificInt(FullShift))))) {
+      Value *IsNotNeg = Builder.CreateIsNotNeg(X, "isnotneg");
+      return new SExtInst(IsNotNeg, Ty);
+    }
+
     // If we are inverting a right-shifted constant, we may be able to eliminate
     // the 'not' by inverting the constant and using the opposite shift type.
     // Canonicalization rules ensure that only a negative constant uses 'ashr',
@@ -3947,6 +3955,15 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     cast<CmpInst>(NotOp)->setPredicate(CmpInst::getInversePredicate(Pred));
     freelyInvertAllUsersOf(NotOp);
     return &I;
+  }
+
+  // Move a 'not' ahead of casts of a bool to enable logic reduction:
+  // not (bitcast (sext i1 X)) --> bitcast (sext (not i1 X))
+  if (match(NotOp, m_OneUse(m_BitCast(m_OneUse(m_SExt(m_Value(X)))))) && X->getType()->isIntOrIntVectorTy(1)) {
+    Type *SextTy = cast<BitCastOperator>(NotOp)->getSrcTy();
+    Value *NotX = Builder.CreateNot(X);
+    Value *Sext = Builder.CreateSExt(NotX, SextTy);
+    return CastInst::CreateBitOrPointerCast(Sext, Ty);
   }
 
   if (auto *NotOpI = dyn_cast<Instruction>(NotOp))
@@ -4260,6 +4277,23 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     if (A == D) {
       Value *NotA = Builder.CreateNot(A);
       return BinaryOperator::CreateAnd(Builder.CreateXor(B, C), NotA);
+    }
+  }
+
+  // (A & B) ^ (A | C) --> A ? ~B : C -- There are 4 commuted variants.
+  if (I.getType()->isIntOrIntVectorTy(1) &&
+      match(Op0, m_OneUse(m_LogicalAnd(m_Value(A), m_Value(B)))) &&
+      match(Op1, m_OneUse(m_LogicalOr(m_Value(C), m_Value(D))))) {
+    bool NeedFreeze = isa<SelectInst>(Op0) && isa<SelectInst>(Op1) && B == D;
+    if (B == C || B == D)
+      std::swap(A, B);
+    if (A == C)
+      std::swap(C, D);
+    if (A == D) {
+      if (NeedFreeze)
+        A = Builder.CreateFreeze(A);
+      Value *NotB = Builder.CreateNot(B);
+      return SelectInst::Create(A, NotB, C);
     }
   }
 

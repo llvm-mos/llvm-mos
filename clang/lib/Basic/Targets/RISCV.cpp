@@ -197,21 +197,21 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (ISAInfo->hasExtension("zve32x")) {
     Builder.defineMacro("__riscv_vector");
-    // Currently we support the v0.10 RISC-V V intrinsics.
-    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(0, 10)));
+    // Currently we support the v0.11 RISC-V V intrinsics.
+    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(0, 11)));
   }
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsRISCVVector.def"
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsRISCV.def"
 };
 
@@ -254,18 +254,23 @@ bool RISCVTargetInfo::initFeatureMap(
   return TargetInfo::initFeatureMap(Features, Diags, CPU, ImpliedFeatures);
 }
 
-Optional<std::pair<unsigned, unsigned>>
+std::optional<std::pair<unsigned, unsigned>>
 RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
-  if (LangOpts.VScaleMin || LangOpts.VScaleMax)
-    return std::pair<unsigned, unsigned>(
-        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
+  // RISCV::RVVBitsPerBlock is 64.
+  unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
-  if (unsigned MinVLen = ISAInfo->getMinVLen();
-      MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
-    unsigned MaxVLen = ISAInfo->getMaxVLen();
-    // RISCV::RVVBitsPerBlock is 64.
-    return std::make_pair(MinVLen / llvm::RISCV::RVVBitsPerBlock,
-                          MaxVLen / llvm::RISCV::RVVBitsPerBlock);
+  if (LangOpts.VScaleMin || LangOpts.VScaleMax) {
+    // Treat Zvl*b as a lower bound on vscale.
+    VScaleMin = std::max(VScaleMin, LangOpts.VScaleMin);
+    unsigned VScaleMax = LangOpts.VScaleMax;
+    if (VScaleMax != 0 && VScaleMax < VScaleMin)
+      VScaleMax = VScaleMin;
+    return std::pair<unsigned, unsigned>(VScaleMin ? VScaleMin : 1, VScaleMax);
+  }
+
+  if (VScaleMin > 0) {
+    unsigned VScaleMax = ISAInfo->getMaxVLen() / llvm::RISCV::RVVBitsPerBlock;
+    return std::make_pair(VScaleMin, VScaleMax);
   }
 
   return std::nullopt;

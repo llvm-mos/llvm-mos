@@ -12,11 +12,11 @@
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
@@ -24,7 +24,7 @@ def AlternativesOp : TransformDialectOp<"alternatives",
         ["getSuccessorEntryOperands", "getSuccessorRegions",
          "getRegionInvocationBounds"]>,
      DeclareOpInterfaceMethods<TransformOpInterface>,
-     FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      IsolatedFromAbove, PossibleTopLevelTransformOpTrait,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">]> {
   let summary = "Attempts sequences of transforms until one succeeds";
@@ -189,6 +189,27 @@ def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent
     "$target attr-dict `:` functional-type(operands, results)";
 }
 
+def GetConsumersOfResult : TransformDialectOp<"get_consumers_of_result",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Get handle to the consumers of this operation's result number";
+  let description = [{
+    The handle defined by this Transform op corresponds to all operations that
+    consume the SSA value defined by the `target` and `result_number`
+    arguments.
+    This operation applies to a single payload operation, otherwise it 
+    definitely fails.
+    The return handle points to the consuming operations operations, which can
+    be empty.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       I64Attr:$result_number);
+  let results = (outs TransformHandleTypeInterface:$consumers);
+  let assemblyFormat = "$target `[` $result_number `]` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
+
 def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
@@ -204,7 +225,7 @@ def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        I64Attr:$operand_number);
-  let results = (outs TransformHandleTypeInterface:$parent);
+  let results = (outs TransformHandleTypeInterface:$producer);
   let assemblyFormat = "$target `[` $operand_number `]` attr-dict `:` "
                        "functional-type(operands, results)";
 }
@@ -350,8 +371,8 @@ def ReplicateOp : TransformDialectOp<"replicate",
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$pattern,
-                       Variadic<TransformHandleTypeInterface>:$handles);
-  let results = (outs Variadic<TransformHandleTypeInterface>:$replicated);
+                       Variadic<Transform_AnyHandleOrParamType>:$handles);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$replicated);
   let assemblyFormat = "`num` `(` $pattern `)` $handles attr-dict `:` "
                        "type($pattern) `,` type($handles)";
 }
@@ -363,7 +384,8 @@ def SequenceOp : TransformDialectOp<"sequence",
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      OpAsmOpInterface, PossibleTopLevelTransformOpTrait,
-     SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">]> {
+     SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">,
+     AttrSizedOperandSegments]> {
   let summary = "Contains a sequence of other transform ops to apply";
   let description = [{
     The transformations indicated by the sequence are applied in order of their
@@ -396,12 +418,14 @@ def SequenceOp : TransformDialectOp<"sequence",
   }];
 
   let arguments = (ins FailurePropagationMode:$failure_propagation_mode,
-                       Optional<TransformHandleTypeInterface>:$root);
+                       Optional<TransformHandleTypeInterface>:$root,
+                       Variadic<Transform_AnyHandleOrParamType>:$extra_bindings);
   let results = (outs Variadic<TransformHandleTypeInterface>:$results);
   let regions = (region SizedRegion<1>:$body);
 
   let assemblyFormat =
-    "($root^ `:` type($root))? (`->` type($results)^)? `failures` `(` "
+    "custom<SequenceOpOperands>($root, type($root), $extra_bindings, type($extra_bindings))"
+    " (`->` type($results)^)? `failures` `(` "
     "$failure_propagation_mode `)` attr-dict-with-keyword regions";
 
   let builders = [
@@ -411,11 +435,25 @@ def SequenceOp : TransformDialectOp<"sequence",
         "::mlir::transform::FailurePropagationMode":$failure_propagation_mode,
         "::mlir::Value":$root, "SequenceBodyBuilderFn":$bodyBuilder)>,
 
-    // Build a sequence without a root but a certain bbArg type.
+    // Build a sequence with a root and additional arguments.
     OpBuilder<(ins
         "::mlir::TypeRange":$resultTypes,
         "::mlir::transform::FailurePropagationMode":$failure_propagation_mode,
-        "::mlir::Type":$bbArgType, "SequenceBodyBuilderFn":$bodyBuilder)>
+        "::mlir::Value":$root, "::mlir::ValueRange":$extraBindings,
+        "SequenceBodyBuilderArgsFn":$bodyBuilder)>,
+
+    // Build a top-level sequence (no root).
+    OpBuilder<(ins
+        "::mlir::TypeRange":$resultTypes,
+        "::mlir::transform::FailurePropagationMode":$failure_propagation_mode,
+        "::mlir::Type":$bbArgType, "SequenceBodyBuilderFn":$bodyBuilder)>,
+
+    // Build a top-level sequence (no root) with extra arguments.
+    OpBuilder<(ins
+        "::mlir::TypeRange":$resultTypes,
+        "::mlir::transform::FailurePropagationMode":$failure_propagation_mode,
+        "::mlir::Type":$bbArgType, "::mlir::TypeRange":$extraBindingTypes,
+        "SequenceBodyBuilderArgsFn":$bodyBuilder)>
   ];
 
   let extraClassDeclaration = [{
@@ -428,7 +466,8 @@ def SequenceOp : TransformDialectOp<"sequence",
 
 def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
     [DeclareOpInterfaceMethods<TransformOpInterface>, NoTerminator,
-     OpAsmOpInterface, PossibleTopLevelTransformOpTrait, RecursiveMemoryEffects,
+     OpAsmOpInterface, PossibleTopLevelTransformOpTrait,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      SymbolTable]> {
   let summary = "Contains PDL patterns available for use in transforms";
   let description = [{
@@ -467,8 +506,8 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
   }];
 
   let arguments = (ins
-    Arg<Optional<TransformHandleTypeInterface>, "Root operation of the Payload IR",
-        [TransformMappingRead]>:$root);
+    Arg<Optional<TransformHandleTypeInterface>, "Root operation of the Payload IR"
+        >:$root);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat = "($root^ `:` type($root))? attr-dict-with-keyword regions";
 
@@ -480,7 +519,8 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
   }];
 }
 
-def YieldOp : TransformDialectOp<"yield", [Terminator]> {
+def YieldOp : TransformDialectOp<"yield",
+    [Terminator, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Yields operation handles from a transform IR region";
   let description = [{
     This terminator operation yields operation handles from regions of the
@@ -489,8 +529,8 @@ def YieldOp : TransformDialectOp<"yield", [Terminator]> {
   }];
 
   let arguments = (ins
-    Arg<Variadic<TransformHandleTypeInterface>, "Operation handles yielded back to the parent",
-        [TransformMappingRead]>:$operands);
+    Arg<Variadic<TransformHandleTypeInterface>, "Operation handles yielded back to the parent"
+        >:$operands);
   let assemblyFormat = "operands attr-dict (`:` type($operands)^)?";
 
   let builders = [

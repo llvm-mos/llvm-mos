@@ -25,7 +25,9 @@ class TransformOpInterface;
 /// TransformState.
 class TransformOptions {
 public:
-  TransformOptions() {}
+  TransformOptions() = default;
+  TransformOptions(const TransformOptions &) = default;
+  TransformOptions &operator=(const TransformOptions &) = default;
 
   /// Requests computationally expensive checks of the transform and payload IR
   /// well-formedness to be performed before each transformation. In particular,
@@ -42,6 +44,9 @@ private:
   bool expensiveChecksEnabled = true;
 };
 
+using Param = Attribute;
+using MappedValue = llvm::PointerUnion<Operation *, Param>;
+
 /// Entry point to the Transform dialect infrastructure. Applies the
 /// transformation specified by `transform` to payload IR contained in
 /// `payloadRoot`. The `transform` operation may contain other operations that
@@ -50,6 +55,7 @@ private:
 /// This function internally keeps track of the transformation state.
 LogicalResult
 applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
+                ArrayRef<ArrayRef<MappedValue>> extraMapping = {},
                 const TransformOptions &options = TransformOptions());
 
 /// The state maintained across applications of various ops implementing the
@@ -85,7 +91,7 @@ applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
 /// using `mapBlockArguments`.
 class TransformState {
 public:
-  using Param = Attribute;
+  using Param = transform::Param;
 
 private:
   /// Mapping between a Value in the transform IR and the corresponding set of
@@ -109,14 +115,22 @@ private:
     ParamMapping params;
   };
 
-  friend LogicalResult applyTransforms(Operation *payloadRoot,
-                                       TransformOpInterface transform,
-                                       const TransformOptions &options);
+  friend LogicalResult applyTransforms(Operation *, TransformOpInterface,
+                                       ArrayRef<ArrayRef<MappedValue>>,
+                                       const TransformOptions &);
 
 public:
   /// Returns the op at which the transformation state is rooted. This is
   /// typically helpful for transformations that apply globally.
   Operation *getTopLevel() const;
+
+  /// Returns the number of extra mappings for the top-level operation.
+  size_t getNumTopLevelMappings() const { return topLevelMappedValues.size(); }
+
+  /// Returns the position-th extra mapping for the top-level operation.
+  ArrayRef<MappedValue> getTopLevelMapping(size_t position) const {
+    return topLevelMappedValues[position];
+  }
 
   /// Returns the list of ops that the given transform IR value corresponds to.
   /// This is helpful for transformations that apply to a particular handle.
@@ -150,6 +164,8 @@ public:
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
     return setPayloadOps(argument, operations);
   }
+  LogicalResult mapBlockArgument(BlockArgument argument,
+                                 ArrayRef<MappedValue> values);
 
   // Forward declarations to support limited visibility.
   class RegionScope;
@@ -186,7 +202,8 @@ public:
       assert(res.second && "the region scope is already present");
       (void)res;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      assert(state.regionStack.back()->isProperAncestor(&region) &&
+      assert(((state.regionStack.size() == 1 && !state.regionStack.back()) ||
+              state.regionStack.back()->isProperAncestor(&region)) &&
              "scope started at a non-nested region");
       state.regionStack.push_back(&region);
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -302,6 +319,7 @@ private:
   /// which may or may not contain the region with transform ops. Additional
   /// options can be provided through the trailing configuration object.
   TransformState(Region *region, Operation *payloadRoot,
+                 ArrayRef<ArrayRef<MappedValue>> extraMappings = {},
                  const TransformOptions &options = TransformOptions());
 
   /// Returns the mappings frame for the reigon in which the value is defined.
@@ -403,6 +421,15 @@ private:
   /// The top-level operation that contains all payload IR, typically a module.
   Operation *topLevel;
 
+  /// Storage for extra mapped values (payload operations or parameters) to be
+  /// associated with additional entry block arguments of the top-level
+  /// transform operation. Each entry in `topLevelMappedValues` is a reference
+  /// to a contiguous block in `topLevelMappedValueStorage`.
+  // TODO: turn this into a proper named data structure, there are several more
+  // below.
+  SmallVector<ArrayRef<MappedValue>> topLevelMappedValues;
+  SmallVector<MappedValue> topLevelMappedValueStorage;
+
   /// Additional options controlling the transformation state behavior.
   TransformOptions options;
 
@@ -458,6 +485,10 @@ private:
   /// operation results is associated with a list of parameters, `false` if it
   /// is associated with the list of payload IR operations.
   bool isParam(unsigned resultNumber) const;
+
+  /// Returns `true` if the result identified by its number in the list of
+  /// operation results is associated with something.
+  bool isSet(unsigned resultNumber) const;
 
   /// Storage for pointers to payload IR ops that are associated with results of
   /// a transform IR op. `segments` contains as many entries as the transform IR
@@ -849,16 +880,19 @@ applyTransformToEach(TransformOpTy transformOp, ArrayRef<Operation *> targets,
     Location specificOpLoc = specificOp->getLoc();
     DiagnosedSilenceableFailure res =
         transformOp.applyToOne(specificOp, partialResults, state);
-    if (res.isDefiniteFailure() ||
-        failed(detail::checkApplyToOne(transformOp, specificOpLoc,
+    if (res.isDefiniteFailure())
+      return DiagnosedSilenceableFailure::definiteFailure();
+
+    if (res.isSilenceableFailure()) {
+      res.takeDiagnostics(silenceableStack);
+      continue;
+    }
+
+    if (failed(detail::checkApplyToOne(transformOp, specificOpLoc,
                                        partialResults))) {
       return DiagnosedSilenceableFailure::definiteFailure();
     }
-
-    if (res.isSilenceableFailure())
-      res.takeDiagnostics(silenceableStack);
-    else
-      results.push_back(std::move(partialResults));
+    results.push_back(std::move(partialResults));
   }
   if (!silenceableStack.empty()) {
     return DiagnosedSilenceableFailure::silenceableFailure(

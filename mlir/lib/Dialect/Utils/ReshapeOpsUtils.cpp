@@ -47,9 +47,9 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       break;
 
     int64_t currTargetShape = targetShape[targetDim];
-    while (sourceShape[sourceDim] != ShapedType::kDynamic &&
-           prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape &&
-           sourceDim < sourceShape.size()) {
+    while (sourceDim < sourceShape.size() &&
+           sourceShape[sourceDim] != ShapedType::kDynamic &&
+           prodOfCollapsedDims * sourceShape[sourceDim] < currTargetShape) {
       prodOfCollapsedDims *= sourceShape[sourceDim];
       currIndices.push_back(sourceDim++);
     }
@@ -360,7 +360,7 @@ SliceFromCollapseHelper::getInsertSliceParams(MLIRContext *ctx,
 static std::optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
                                                   ArrayRef<int64_t> shape) {
   // Return false if more than one of the dimensions in this group are not 1.
-  std::optional<int64_t> dimIndex = std::nullopt;
+  std::optional<int64_t> dimIndex;
   if (indices.size() < 2)
     return std::nullopt;
   for (int64_t idx : indices) {

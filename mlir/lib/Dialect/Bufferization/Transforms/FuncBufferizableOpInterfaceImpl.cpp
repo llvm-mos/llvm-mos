@@ -23,20 +23,16 @@ namespace func_ext {
 void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
   analyzedFuncOps[funcOp] = FuncOpAnalysisState::InProgress;
   auto createdEquiv = equivalentFuncArgs.try_emplace(funcOp, IndexMapping());
-  auto createdAliasingOperands =
-      aliasingFuncArgs.try_emplace(funcOp, IndexToIndexListMapping());
   auto createdAliasingResults =
       aliasingReturnVals.try_emplace(funcOp, IndexToIndexListMapping());
   auto createdRead = readBbArgs.try_emplace(funcOp, BbArgIndexSet());
   auto createdWritten = writtenBbArgs.try_emplace(funcOp, BbArgIndexSet());
   (void)createdEquiv;
-  (void)createdAliasingOperands;
   (void)createdAliasingResults;
   (void)createdRead;
   (void)createdWritten;
 #ifndef NDEBUG
   assert(createdEquiv.second && "equivalence info exists already");
-  assert(createdAliasingOperands.second && "aliasing info exists already");
   assert(createdAliasingResults.second && "aliasing info exists already");
   assert(createdRead.second && "bbarg access info exists already");
   assert(createdWritten.second && "bbarg access info exists already");
@@ -176,55 +172,23 @@ struct CallOpInterface
         opOperand.getOperandNumber());
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     func::CallOp callOp = cast<func::CallOp>(op);
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
-    if (getFuncOpAnalysisState(state, funcOp) !=
-        FuncOpAnalysisState::Analyzed) {
+    if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
       // FuncOp not analyzed yet. Any OpResult may be aliasing.
-      SmallVector<OpResult> result;
-      for (OpResult opResult : op->getOpResults())
-        if (opResult.getType().isa<TensorType>())
-          result.push_back(opResult);
-      return result;
-    }
+      return detail::unknownGetAliasingOpResults(opOperand);
 
     // Get aliasing results from state.
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);
     auto aliasingReturnVals =
         funcState.aliasingReturnVals.lookup(funcOp).lookup(
             opOperand.getOperandNumber());
-    SmallVector<OpResult> result;
+    AliasingOpResultList result;
     for (int64_t resultIdx : aliasingReturnVals)
       result.push_back(callOp->getOpResult(resultIdx));
-    return result;
-  }
-
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
-    func::CallOp callOp = cast<func::CallOp>(op);
-    FuncOp funcOp = getCalledFunction(callOp);
-    assert(funcOp && "expected CallOp to a FuncOp");
-    if (getFuncOpAnalysisState(state, funcOp) !=
-        FuncOpAnalysisState::Analyzed) {
-      // FuncOp not analyzed yet. Any OpOperand may be aliasing.
-      SmallVector<OpOperand *> result;
-      for (OpOperand &opOperand : op->getOpOperands())
-        if (opOperand.get().getType().isa<TensorType>())
-          result.push_back(&opOperand);
-      return result;
-    }
-
-    // Get aliasing bbArgs from state.
-    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
-    auto aliasingFuncArgs = funcState.aliasingFuncArgs.lookup(funcOp).lookup(
-        opResult.getResultNumber());
-    SmallVector<OpOperand *> result;
-    for (int64_t bbArgIdx : aliasingFuncArgs)
-      result.push_back(&callOp->getOpOperand(bbArgIdx));
     return result;
   }
 
@@ -236,7 +200,7 @@ struct CallOpInterface
     if (getFuncOpAnalysisState(state, funcOp) !=
         FuncOpAnalysisState::Analyzed) {
       // Function not analyzed yet. The conservative answer is "None".
-      return BufferRelation::None;
+      return BufferRelation::Unknown;
     }
 
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);
@@ -245,7 +209,7 @@ struct CallOpInterface
     if (maybeEquiv) {
 #ifndef NDEBUG
       SmallVector<OpOperand *> aliasingOpOperands =
-          getAliasingOpOperand(op, opResult, state);
+          getAliasingOpOperands(op, opResult, state);
       assert(aliasingOpOperands.size() == 1 &&
              "expected exactly 1 aliasing OpOperand");
       assert(aliasingOpOperands.front()->getOperandNumber() == *maybeEquiv &&
@@ -253,7 +217,7 @@ struct CallOpInterface
 #endif
       return BufferRelation::Equivalent;
     }
-    return BufferRelation::None;
+    return BufferRelation::Unknown;
   }
 
   /// All function arguments are writable. It is the responsibility of the
@@ -365,7 +329,7 @@ struct ReturnOpInterface
     return false;
   }
 
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
   }

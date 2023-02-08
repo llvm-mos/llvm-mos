@@ -48,9 +48,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/AArch64TargetParser.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cassert>
 #include <cctype>
 #include <cstdint>
@@ -3676,6 +3676,9 @@ static const struct Extension {
     {"the", {AArch64::FeatureTHE}},
     {"d128", {AArch64::FeatureD128}},
     {"lse128", {AArch64::FeatureLSE128}},
+    {"ite", {AArch64::FeatureITE}},
+    {"cssc", {AArch64::FeatureCSSC}},
+    {"rcpc3", {AArch64::FeatureRCPC3}},
     // FIXME: Unsupported extensions
     {"lor", {}},
     {"rdma", {}},
@@ -4935,7 +4938,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     if (isa<MCConstantExpr>(SubExprVal)) {
       uint64_t Imm = (cast<MCConstantExpr>(SubExprVal))->getValue();
       uint32_t ShiftAmt = 0, MaxShiftAmt = IsXReg ? 48 : 16;
-      while(Imm > 0xFFFF && countTrailingZeros(Imm) >= 16) {
+      while (Imm > 0xFFFF && llvm::countr_zero(Imm) >= 16) {
         ShiftAmt += 16;
         Imm >>= 16;
       }
@@ -6877,8 +6880,8 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   std::tie(Arch, ExtensionString) =
       getParser().parseStringToEndOfStatement().trim().split('+');
 
-  const AArch64::ArchInfo &ArchInfo = AArch64::parseArch(Arch);
-  if (ArchInfo == AArch64::INVALID)
+  std::optional<AArch64::ArchInfo> ArchInfo = AArch64::parseArch(Arch);
+  if (!ArchInfo)
     return Error(ArchLoc, "unknown arch name");
 
   if (parseToken(AsmToken::EndOfStatement))
@@ -6886,9 +6889,8 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 
   // Get the architecture and extension features.
   std::vector<StringRef> AArch64Features;
-  AArch64Features.push_back(ArchInfo.ArchFeature);
-  AArch64::getExtensionFeatures(
-      AArch64::getDefaultExtensions("generic", ArchInfo), AArch64Features);
+  AArch64Features.push_back(ArchInfo->ArchFeature);
+  AArch64::getExtensionFeatures(ArchInfo->DefaultExts, AArch64Features);
 
   MCSubtargetInfo &STI = copySTI();
   std::vector<std::string> ArchFeatures(AArch64Features.begin(), AArch64Features.end());
@@ -6899,7 +6901,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   if (!ExtensionString.empty())
     ExtensionString.split(RequestedExtensions, '+');
 
-  ExpandCryptoAEK(ArchInfo, RequestedExtensions);
+  ExpandCryptoAEK(*ArchInfo, RequestedExtensions);
 
   FeatureBitset Features = STI.getFeatureBits();
   for (auto Name : RequestedExtensions) {
@@ -6984,18 +6986,16 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
   if (!ExtensionString.empty())
     ExtensionString.split(RequestedExtensions, '+');
 
-  // FIXME This is using tablegen data, but should be moved to ARMTargetParser
-  // once that is tablegen'ed
-  if (!getSTI().isCPUStringValid(CPU)) {
+  const std::optional<llvm::AArch64::ArchInfo> CpuArch = llvm::AArch64::getArchForCpu(CPU);
+  if (!CpuArch) {
     Error(CurLoc, "unknown CPU name");
     return false;
   }
+  ExpandCryptoAEK(*CpuArch, RequestedExtensions);
 
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
   CurLoc = incrementLoc(CurLoc, CPU.size());
-
-  ExpandCryptoAEK(llvm::AArch64::getArchForCpu(CPU), RequestedExtensions);
 
   for (auto Name : RequestedExtensions) {
     // Advance source location past '+'.

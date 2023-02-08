@@ -24,17 +24,17 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 using ast_matchers::BoundNodes;
 using ast_matchers::callee;
 using ast_matchers::callExpr;
+using ast_matchers::classTemplateDecl;
 using ast_matchers::cxxMemberCallExpr;
 using ast_matchers::cxxMethodDecl;
 using ast_matchers::expr;
 using ast_matchers::functionDecl;
+using ast_matchers::hasAncestor;
 using ast_matchers::hasName;
 using ast_matchers::hasParent;
 using ast_matchers::ignoringImplicit;
@@ -72,10 +72,13 @@ const Expr *getCondition(const BoundNodes &Nodes, const StringRef NodeId) {
 }
 
 void StandaloneEmptyCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+  // Ignore empty calls in a template definition which fall under callExpr
+  // non-member matcher even if they are methods.
   const auto NonMemberMatcher = expr(ignoringImplicit(ignoringParenImpCasts(
       callExpr(
           hasParent(stmt(optionally(hasParent(stmtExpr().bind("stexpr"))))
                         .bind("parent")),
+          unless(hasAncestor(classTemplateDecl())),
           callee(functionDecl(hasName("empty"), unless(returns(voidType())))))
           .bind("empty"))));
   const auto MemberMatcher =
@@ -156,6 +159,8 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     if (ParentReturnStmt)
       return;
+    if (NonMemberCall->getNumArgs() != 1)
+      return;
 
     SourceLocation NonMemberLoc = NonMemberCall->getExprLoc();
     SourceLocation NonMemberEndLoc = NonMemberCall->getEndLoc();
@@ -207,6 +212,4 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -335,7 +335,10 @@ def ConvertFuncToSPIRV : Pass<"convert-func-to-spirv"> {
 def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
   let summary = "Convert GPU dialect to LLVM dialect with GPU runtime calls";
   let constructor = "mlir::createGpuToLLVMConversionPass()";
-  let dependentDialects = ["LLVM::LLVMDialect"];
+  let dependentDialects = [
+    "LLVM::LLVMDialect",
+    "memref::MemRefDialect",
+  ];
 }
 
 def LowerHostCodeToLLVM : Pass<"lower-host-to-llvm", "ModuleOp"> {
@@ -359,7 +362,9 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">
+           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"hasRedux", "has-redux", "bool", /*default=*/"false",
+           "Target gpu supports redux">,
   ];
 }
 
@@ -370,7 +375,11 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
 def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let summary = "Generate ROCDL operations for gpu operations";
   let constructor = "mlir::createLowerGpuOpsToROCDLOpsPass()";
-  let dependentDialects = ["ROCDL::ROCDLDialect"];
+  let dependentDialects = [
+    "ROCDL::ROCDLDialect",
+    "cf::ControlFlowDialect",
+    "memref::MemRefDialect",
+  ];
   let options = [
     Option<"chipset", "chipset", "std::string",
            /*default=*/"\"gfx000\"",
@@ -555,9 +564,13 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
 // MemRefToLLVM
 //===----------------------------------------------------------------------===//
 
-def MemRefToLLVMConversionPass : Pass<"convert-memref-to-llvm", "ModuleOp"> {
-  let summary = "Convert operations from the MemRef dialect to the LLVM "
-                "dialect";
+def FinalizeMemRefToLLVMConversionPass :
+    Pass<"finalize-memref-to-llvm", "ModuleOp"> {
+  let summary = "Finalize the conversion of the operations from the MemRef "
+                "dialect to the LLVM dialect."
+                "This conversion will not convert some complex MemRef "
+                "operations. Make sure to run `expand-strided-metadata` "
+                "beforehand for these.";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
     Option<"useAlignedAlloc", "use-aligned-alloc", "bool", /*default=*/"false",
@@ -569,7 +582,10 @@ def MemRefToLLVMConversionPass : Pass<"convert-memref-to-llvm", "ModuleOp"> {
            "bool",
            /*default=*/"false",
            "Use generic allocation and deallocation functions instead of the "
-           "classic 'malloc', 'aligned_alloc' and 'free' functions">
+           "classic 'malloc', 'aligned_alloc' and 'free' functions">,
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+               /*default=*/"false", "Generate LLVM IR using opaque pointers "
+               "instead of typed pointers">
   ];
 }
 
@@ -933,7 +949,8 @@ def ConvertVectorToSCF : Pass<"convert-vector-to-scf"> {
   let dependentDialects = [
     "AffineDialect",
     "memref::MemRefDialect",
-    "scf::SCFDialect"
+    "scf::SCFDialect",
+    "tensor::TensorDialect"
   ];
   let options = [
     Option<"fullUnroll", "full-unroll", "bool", /*default=*/"false",

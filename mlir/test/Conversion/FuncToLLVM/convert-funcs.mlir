@@ -40,6 +40,10 @@ func.func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 // CHECK-LABEL: llvm.func extern_weak @llvmlinkage(i32)
 func.func private @llvmlinkage(i32) attributes { "llvm.linkage" = #llvm.linkage<extern_weak> }
 
+// CHECK-LABEL: llvm.func @llvmreadnone(i32)
+// CHECK-SAME: memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>
+func.func private @llvmreadnone(i32) attributes { llvm.readnone }
+
 // CHECK-LABEL: llvm.func @body(i32)
 func.func private @body(i32)
 
@@ -48,7 +52,7 @@ func.func private @body(i32)
 func.func @indirect_const_call(%arg0: i32) {
 // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @body : !llvm.ptr<func<void (i32)>>
   %0 = constant @body : (i32) -> ()
-// CHECK-NEXT:  llvm.call %[[ADDR]](%[[ARG0:.*]]) : (i32) -> ()
+// CHECK-NEXT:  llvm.call %[[ADDR]](%[[ARG0:.*]]) : !llvm.ptr<func<void (i32)>>, (i32) -> ()
   call_indirect %0(%arg0) : (i32) -> ()
 // CHECK-NEXT:  llvm.return
   return
@@ -56,7 +60,7 @@ func.func @indirect_const_call(%arg0: i32) {
 
 // CHECK-LABEL: llvm.func @indirect_call(%arg0: !llvm.ptr<func<i32 (f32)>>, %arg1: f32) -> i32 {
 func.func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
-// CHECK-NEXT:  %0 = llvm.call %arg0(%arg1) : (f32) -> i32
+// CHECK-NEXT:  %0 = llvm.call %arg0(%arg1) : !llvm.ptr<func<i32 (f32)>>, (f32) -> i32
   %0 = call_indirect %arg0(%arg1) : (f32) -> i32
 // CHECK-NEXT:  llvm.return %0 : i32
   return %0 : i32

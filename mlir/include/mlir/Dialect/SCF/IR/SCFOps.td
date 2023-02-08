@@ -17,6 +17,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -25,7 +26,6 @@ def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
   let dependentDialects = ["arith::ArithDialect"];
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for SCF dialect ops.
@@ -610,12 +610,11 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
 // IfOp
 //===----------------------------------------------------------------------===//
 
-def IfOp : SCF_Op<"if",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getNumRegionInvocations",
-                                  "getRegionInvocationBounds"]>,
-       SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveMemoryEffects,
-       NoRegionArguments]> {
+def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+    "getNumRegionInvocations", "getRegionInvocationBounds"]>,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>,
+    SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveMemoryEffects,
+    NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for
@@ -630,8 +629,8 @@ def IfOp : SCF_Op<"if",
     }
     ```
 
-    `scf.if` may also return results that are defined in its regions. The
-    values defined are determined by which execution path is taken.
+    `scf.if` may also produce results. Which values are returned depends on
+    which execution path is taken.
 
     Example:
 
@@ -647,11 +646,13 @@ def IfOp : SCF_Op<"if",
     }
     ```
 
-    `scf.if` regions are always terminated with "scf.yield". If "scf.if"
-    defines no values, the "scf.yield" can be left out, and will be inserted
-    implicitly. Otherwise, it must be explicit.
-    Also, if "scf.if" defines one or more values, the 'else' block cannot be
-    omitted.
+    The "then" region has exactly 1 block. The "else" region may have 0 or 1
+    block. In case the `scf.if` produces results, the "else" region must also
+    have exactly 1 block.
+
+    The blocks are always terminated with `scf.yield`. If `scf.if` defines no
+    values, the `scf.yield` can be left out, and will be inserted implicitly.
+    Otherwise, it must be explicit.
 
     Example:
 
@@ -660,26 +661,26 @@ def IfOp : SCF_Op<"if",
       ...
     }
     ```
+
+    The types of the yielded values must match the result types of the
+    `scf.if`.
   }];
   let arguments = (ins I1:$condition);
   let results = (outs Variadic<AnyType>:$results);
-  let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
+  let regions = (region SizedRegion<1>:$thenRegion,
+                        MaxSizedRegion<1>:$elseRegion);
 
   let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond)>,
     OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
       "bool":$withElseRegion)>,
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "buildTerminatedBody">:$thenBuilder,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$elseBuilder)>,
     OpBuilder<(ins "Value":$cond,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "buildTerminatedBody">:$thenBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$elseBuilder)>
+           "nullptr">:$elseBuilder)>,
   ];
 
   let extraClassDeclaration = [{

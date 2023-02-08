@@ -107,16 +107,20 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"svnapot", RISCVExtensionVersion{1, 0}},
     {"svpbmt", RISCVExtensionVersion{1, 0}},
     {"svinval", RISCVExtensionVersion{1, 0}},
-    {"xventanacondops", RISCVExtensionVersion{1, 0}},
+
+    // vendor-defined ('X') extensions
+    {"xtheadba", RISCVExtensionVersion{1, 0}},
     {"xtheadvdot", RISCVExtensionVersion{1, 0}},
+    {"xventanacondops", RISCVExtensionVersion{1, 0}},
 };
 
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zihintntl", RISCVExtensionVersion{0, 2}},
 
-    {"zca", RISCVExtensionVersion{0, 70}},
-    {"zcd", RISCVExtensionVersion{0, 70}},
-    {"zcf", RISCVExtensionVersion{0, 70}},
+    {"zca", RISCVExtensionVersion{1, 0}},
+    {"zcb", RISCVExtensionVersion{1, 0}},
+    {"zcd", RISCVExtensionVersion{1, 0}},
+    {"zcf", RISCVExtensionVersion{1, 0}},
     {"zvfh", RISCVExtensionVersion{0, 1}},
     {"zawrs", RISCVExtensionVersion{1, 0}},
     {"ztso", RISCVExtensionVersion{0, 1}},
@@ -504,7 +508,8 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
-                              bool ExperimentalExtensionVersionCheck) {
+                              bool ExperimentalExtensionVersionCheck,
+                              bool IgnoreUnknown) {
   // RISC-V ISA strings must be lowercase.
   if (llvm::any_of(Arch, isupper)) {
     return createStringError(errc::invalid_argument,
@@ -589,6 +594,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   auto StdExtsItr = StdExts.begin();
   auto StdExtsEnd = StdExts.end();
+  auto GoToNextExt = [](StringRef::iterator &I, unsigned ConsumeLength) {
+    I += 1 + ConsumeLength;
+    if (*I == '_')
+      ++I;
+  };
   for (auto I = Exts.begin(), E = Exts.end(); I != E;) {
     char C = *I;
 
@@ -619,25 +629,32 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       Next = std::string(std::next(I), E);
     if (auto E = getExtensionVersion(std::string(1, C), Next, Major, Minor,
                                      ConsumeLength, EnableExperimentalExtension,
-                                     ExperimentalExtensionVersionCheck))
+                                     ExperimentalExtensionVersionCheck)) {
+      if (IgnoreUnknown) {
+        consumeError(std::move(E));
+        GoToNextExt(I, ConsumeLength);
+        continue;
+      }
       return std::move(E);
+    }
 
     // The order is OK, then push it into features.
     // TODO: Use version number when setting target features
     // Currently LLVM supports only "mafdcvh".
-    StringRef SupportedStandardExtension = "mafdcvh";
-    if (!SupportedStandardExtension.contains(C))
+    if (!isSupportedExtension(StringRef(&C, 1))) {
+      if (IgnoreUnknown) {
+        GoToNextExt(I, ConsumeLength);
+        continue;
+      }
       return createStringError(errc::invalid_argument,
                                "unsupported standard user-level extension '%c'",
                                C);
+    }
     ISAInfo->addExtension(std::string(1, C), Major, Minor);
 
     // Consume full extension name and version, including any optional '_'
     // between this extension and the next
-    ++I;
-    I += ConsumeLength;
-    if (*I == '_')
-      ++I;
+    GoToNextExt(I, ConsumeLength);
   }
 
   // Handle other types of extensions other than the standard
@@ -671,20 +688,26 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       StringRef Name(Ext.substr(0, Pos));
       StringRef Vers(Ext.substr(Pos));
 
-      if (Type.empty())
+      if (Type.empty()) {
+        if (IgnoreUnknown)
+          continue;
         return createStringError(errc::invalid_argument,
                                  "invalid extension prefix '" + Ext + "'");
+      }
 
       // Check ISA extensions are specified in the canonical order.
       while (I != E && *I != Type)
         ++I;
 
-      if (I == E)
+      if (I == E) {
+        if (IgnoreUnknown)
+          continue;
         return createStringError(errc::invalid_argument,
                                  "%s not given in canonical order '%s'",
                                  Desc.str().c_str(), Ext.str().c_str());
+      }
 
-      if (Name.size() == Type.size()) {
+      if (!IgnoreUnknown && Name.size() == Type.size()) {
         return createStringError(errc::invalid_argument,
                                  "%s name missing after '%s'",
                                  Desc.str().c_str(), Type.str().c_str());
@@ -693,13 +716,19 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       unsigned Major, Minor, ConsumeLength;
       if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
                                        EnableExperimentalExtension,
-                                       ExperimentalExtensionVersionCheck))
+                                       ExperimentalExtensionVersionCheck)) {
+        if (IgnoreUnknown) {
+          consumeError(std::move(E));
+          continue;
+        }
         return std::move(E);
+      }
 
       // Check if duplicated extension.
-      if (llvm::is_contained(AllExts, Name))
+      if (!IgnoreUnknown && llvm::is_contained(AllExts, Name)) {
         return createStringError(errc::invalid_argument, "duplicated %s '%s'",
                                  Desc.str().c_str(), Name.str().c_str());
+      }
 
       ISAInfo->addExtension(Name, Major, Minor);
       // Extension format is correct, keep parsing the extensions.
@@ -801,6 +830,7 @@ static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx",
 static const char *ImpliedExtsZks[] = {"zbkb", "zbkc", "zbkx", "zksed", "zksh"};
 static const char *ImpliedExtsZvfh[] = {"zve32f"};
 static const char *ImpliedExtsXTHeadVdot[] = {"v"};
+static const char *ImpliedExtsZcb[] = {"zca"};
 
 struct ImpliedExtsEntry {
   StringLiteral Name;
@@ -817,6 +847,7 @@ struct ImpliedExtsEntry {
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"v"}, {ImpliedExtsV}},
     {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
+    {{"zcb"}, {ImpliedExtsZcb}},
     {{"zdinx"}, {ImpliedExtsZdinx}},
     {{"zfh"}, {ImpliedExtsZfh}},
     {{"zfhmin"}, {ImpliedExtsZfhmin}},

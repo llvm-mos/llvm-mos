@@ -33,6 +33,7 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 #include <system_error>
 
 using namespace clang;
@@ -201,7 +202,8 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
       /*AllowASTWithErrors=*/
       +CI.getFrontendOpts().AllowPCMWithCompilerErrors,
       /*IncludeTimestamps=*/
-      +CI.getFrontendOpts().BuildingImplicitModule,
+      +CI.getFrontendOpts().BuildingImplicitModule &&
+          +CI.getFrontendOpts().IncludeTimestamps,
       /*ShouldCacheASTInMemory=*/
       +CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
@@ -970,7 +972,7 @@ void PrintPreprocessedAction::ExecuteAction() {
   if (llvm::Triple(LLVM_HOST_TRIPLE).isOSWindows()) {
     BinaryMode = true;
     const SourceManager &SM = CI.getSourceManager();
-    if (llvm::Optional<llvm::MemoryBufferRef> Buffer =
+    if (std::optional<llvm::MemoryBufferRef> Buffer =
             SM.getBufferOrNone(SM.getMainFileID())) {
       const char *cur = Buffer->getBufferStart();
       const char *end = Buffer->getBufferEnd();

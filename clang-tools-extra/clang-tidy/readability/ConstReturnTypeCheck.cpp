@@ -16,9 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 // Finds the location of the qualifying `const` token in the `FunctionDecl`'s
 // return type. Returns `std::nullopt` when the return type is not
@@ -112,9 +110,10 @@ void ConstReturnTypeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void ConstReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
   // Find all function definitions for which the return types are `const`
   // qualified, ignoring decltype types.
-  auto NonLocalConstType = qualType(
-      unless(isLocalConstQualified()),
-      anyOf(decltypeType(), autoType(), isTypeOfType(), isTypeOfExprType()));
+  auto NonLocalConstType =
+      qualType(unless(isLocalConstQualified()),
+               anyOf(decltypeType(), autoType(), isTypeOfType(),
+                     isTypeOfExprType(), substTemplateTypeParmType()));
   Finder->addMatcher(
       functionDecl(
           returns(allOf(isConstQualified(), unless(NonLocalConstType))),
@@ -157,6 +156,4 @@ void ConstReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Loc, "could not transform this declaration", DiagnosticIDs::Note);
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

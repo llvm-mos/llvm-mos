@@ -2462,6 +2462,9 @@ struct BubbleUpBitCastForStridedSliceInsert
     VectorType castSrcType = bitcastOp.getSourceVectorType();
     VectorType castDstType = bitcastOp.getResultVectorType();
     assert(castSrcType.getRank() == castDstType.getRank());
+    // Skip 0-D vector which will not from InsertStridedSliceOp.
+    if (castSrcType.getRank() == 0)
+      return failure();
 
     int64_t castSrcLastDim = castSrcType.getShape().back();
     int64_t castDstLastDim = castDstType.getShape().back();
@@ -3040,3 +3043,9 @@ void mlir::vector::populateVectorScanLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<ScanToArithOps>(patterns.getContext(), benefit);
 }
+
+//===----------------------------------------------------------------------===//
+// TableGen'd enum attribute definitions
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.cpp.inc"

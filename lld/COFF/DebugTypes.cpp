@@ -642,7 +642,7 @@ void TpiSource::mergeTypeRecord(TypeIndex curIndex, CVType ty) {
   size_t offset = merged.recs.size();
   size_t newSize = alignTo(ty.length(), 4);
   merged.recs.resize(offset + newSize);
-  auto newRec = makeMutableArrayRef(&merged.recs[offset], newSize);
+  auto newRec = MutableArrayRef(&merged.recs[offset], newSize);
   memcpy(newRec.data(), ty.data().data(), newSize);
 
   // Fix up the record prefix and padding bytes if it required resizing.
@@ -1021,7 +1021,8 @@ uint32_t GHashTable::insert(COFFLinkerContext &ctx, GloballyHashedType ghash,
   // type records are. Swap the byte order for better entropy. A better ghash
   // won't need this.
   uint32_t startIdx =
-      ByteSwap_64(*reinterpret_cast<uint64_t *>(&ghash)) % tableSize;
+      llvm::byteswap<uint64_t>(*reinterpret_cast<uint64_t *>(&ghash)) %
+      tableSize;
 
   // Do a linear probe starting at startIdx.
   uint32_t idx = startIdx;

@@ -319,6 +319,7 @@ cc_library(
         "//mlir:PDLDialect",
         "//mlir:Pass",
         "//mlir:TransformDialect",
+        "//mlir:TransformDialectTransforms",
     ],
 )
 
@@ -564,7 +565,6 @@ cc_library(
         "//mlir:FuncTransforms",
         "//mlir:GPUDialect",
         "//mlir:IR",
-        "//mlir:LinalgAnalysis",
         "//mlir:LinalgDialect",
         "//mlir:LinalgTransforms",
         "//mlir:LinalgUtils",

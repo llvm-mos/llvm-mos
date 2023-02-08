@@ -19,7 +19,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -30,7 +30,7 @@ static cl::opt<bool> Keep16BitSuffixes(
   cl::init(false),
   cl::ReallyHidden);
 
-void AMDGPUInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
+void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   // FIXME: The current implementation of
   // AsmParser::parseRegisterOrRegisterNumber in MC implies we either emit this
   // as an integer or we provide a name which represents a physical register.
@@ -43,7 +43,7 @@ void AMDGPUInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   // would extend MC to support parsing DWARF register names so we could do
   // something like `.cfi_undefined dwarf_wave32_v0`. For now we just live with
   // non-pretty DWARF register names in assembly text.
-  OS << RegNo;
+  OS << Reg.id();
 }
 
 void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -58,11 +58,6 @@ void AMDGPUInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xf);
-}
-
-void AMDGPUInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &O) {
-  O << formatHex(MI->getOperand(OpNo).getImm() & 0xff);
 }
 
 void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -141,15 +136,10 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
     bool IsFlatSeg = !(Desc.TSFlags &
                        (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch));
 
-    if (IsFlatSeg) { // Unsigned offset
+    if (IsFlatSeg) // Unsigned offset
       printU16ImmDecOperand(MI, OpNo, O);
-    } else {         // Signed offset
-      if (AMDGPU::isGFX10(STI)) {
-        O << formatDec(SignExtend32<12>(MI->getOperand(OpNo).getImm()));
-      } else {
-        O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
-      }
-    }
+    else // Signed offset
+      O << formatDec(SignExtend32(Imm, AMDGPU::getNumFlatOffsetBits(STI)));
   }
 }
 
@@ -671,7 +661,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Check if operand register class contains register used.
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
-    int RCID = Desc.OpInfo[OpNo].RegClass;
+    int RCID = Desc.operands()[OpNo].RegClass;
     if (RCID != -1) {
       const MCRegisterClass RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
@@ -681,7 +671,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       }
     }
   } else if (Op.isImm()) {
-    const uint8_t OpTy = Desc.OpInfo[OpNo].OperandType;
+    const uint8_t OpTy = Desc.operands()[OpNo].OperandType;
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_IMM_INT32:
     case AMDGPU::OPERAND_REG_IMM_FP32:
@@ -742,9 +732,10 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       O << formatDec(Op.getImm());
       break;
     case MCOI::OPERAND_REGISTER:
-      // FIXME: This should be removed and handled somewhere else. Seems to come
-      // from a disassembler bug.
-      O << "/*invalid immediate*/";
+      // Disassembler does not fail when operand should not allow immediate
+      // operands but decodes them into 32bit immediate operand.
+      printImmediate32(Op.getImm(), STI, O);
+      O << "/*Invalid immediate*/";
       break;
     default:
       // We hit this for the immediate instruction bits that don't yet have a
@@ -758,7 +749,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       O << "0.0";
     else {
       const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-      int RCID = Desc.OpInfo[OpNo].RegClass;
+      int RCID = Desc.operands()[OpNo].RegClass;
       unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
       if (RCBits == 32)
         printImmediate32(FloatToBits(Value), STI, O);
@@ -925,7 +916,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
                                            AMDGPU::OpName::src0);
 
   if (Src0Idx >= 0 &&
-      Desc.OpInfo[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID &&
+      Desc.operands()[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID &&
       !AMDGPU::isLegal64BitDPPControl(Imm)) {
     O << " /* 64 bit dpp only supports row_newbcast */";
     return;
@@ -1026,9 +1017,9 @@ void AMDGPUInstPrinter::printBankMask(const MCInst *MI, unsigned OpNo,
   printU4ImmOperand(MI, OpNo, STI, O);
 }
 
-void AMDGPUInstPrinter::printBoundCtrl(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+void AMDGPUInstPrinter::printDppBoundCtrl(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   if (Imm) {
     O << " bound_ctrl:1";
@@ -1454,17 +1445,14 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
     uint16_t OrMask  = (Imm >> BITMASK_OR_SHIFT)  & BITMASK_MASK;
     uint16_t XorMask = (Imm >> BITMASK_XOR_SHIFT) & BITMASK_MASK;
 
-    if (AndMask == BITMASK_MAX &&
-        OrMask == 0 &&
-        countPopulation(XorMask) == 1) {
+    if (AndMask == BITMASK_MAX && OrMask == 0 && llvm::popcount(XorMask) == 1) {
 
       O << "swizzle(" << IdSymbolic[ID_SWAP];
       O << ",";
       O << formatDec(XorMask);
       O << ")";
 
-    } else if (AndMask == BITMASK_MAX &&
-               OrMask == 0 && XorMask > 0 &&
+    } else if (AndMask == BITMASK_MAX && OrMask == 0 && XorMask > 0 &&
                isPowerOf2_64(XorMask + 1)) {
 
       O << "swizzle(" << IdSymbolic[ID_REVERSE];

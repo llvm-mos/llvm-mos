@@ -17,33 +17,34 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/AArch64TargetParser.h"
-#include "llvm/Support/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::targets;
 
 static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsNEON.def"
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsSVE.def"
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
-  {#ID, TYPE, ATTRS, nullptr, LANG, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, HEADER, LANGS, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsAArch64.def"
 };
 
@@ -59,14 +60,14 @@ void AArch64TargetInfo::setArchFeatures() {
     HasLSE = true;
     HasRDM = true;
   } else if (ArchInfo->Version.getMajor() == 8) {
-    if (ArchInfo->Version.getMinor() >= 7) {
+    if (ArchInfo->Version.getMinor() >= 7u) {
       HasWFxT = true;
     }
-    if (ArchInfo->Version.getMinor() >= 6) {
+    if (ArchInfo->Version.getMinor() >= 6u) {
       HasBFloat16 = true;
       HasMatMul = true;
     }
-    if (ArchInfo->Version.getMinor() >= 5) {
+    if (ArchInfo->Version.getMinor() >= 5u) {
       HasAlternativeNZCV = true;
       HasFRInt3264 = true;
       HasSSBS = true;
@@ -74,28 +75,28 @@ void AArch64TargetInfo::setArchFeatures() {
       HasPredRes = true;
       HasBTI = true;
     }
-    if (ArchInfo->Version.getMinor() >= 4) {
+    if (ArchInfo->Version.getMinor() >= 4u) {
       HasDotProd = true;
       HasDIT = true;
       HasFlagM = true;
     }
-    if (ArchInfo->Version.getMinor() >= 3) {
+    if (ArchInfo->Version.getMinor() >= 3u) {
       HasRCPC = true;
       FPU |= NeonMode;
     }
-    if (ArchInfo->Version.getMinor() >= 2) {
+    if (ArchInfo->Version.getMinor() >= 2u) {
       HasCCPP = true;
     }
-    if (ArchInfo->Version.getMinor() >= 1) {
+    if (ArchInfo->Version.getMinor() >= 1u) {
       HasCRC = true;
       HasLSE = true;
       HasRDM = true;
     }
   } else if (ArchInfo->Version.getMajor() == 9) {
-    if (ArchInfo->Version.getMinor() >= 2) {
+    if (ArchInfo->Version.getMinor() >= 2u) {
       HasWFxT = true;
     }
-    if (ArchInfo->Version.getMinor() >= 1) {
+    if (ArchInfo->Version.getMinor() >= 1u) {
       HasBFloat16 = true;
       HasMatMul = true;
     }
@@ -222,8 +223,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
-  return Name == "generic" ||
-         llvm::AArch64::parseCpu(Name).Arch != llvm::AArch64::INVALID;
+  return Name == "generic" || llvm::AArch64::parseCpu(Name);
 }
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {
@@ -580,7 +580,7 @@ ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
                                          Builtin::FirstTSBuiltin);
 }
 
-Optional<std::pair<unsigned, unsigned>>
+std::optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
   if (LangOpts.VScaleMin || LangOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
@@ -680,25 +680,25 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   Features[Name] = Enabled;
   // If the feature is an architecture feature (like v8.2a), add all previous
   // architecture versions and any dependant target features.
-  const llvm::AArch64::ArchInfo &ArchInfo =
+  const std::optional<llvm::AArch64::ArchInfo> ArchInfo =
       llvm::AArch64::ArchInfo::findBySubArch(Name);
 
-  if (ArchInfo == llvm::AArch64::INVALID)
-    return; // Not an architecure, nothing more to do.
+  if (!ArchInfo)
+    return; // Not an architecture, nothing more to do.
+
+  // Disabling an architecture feature does not affect dependent features
+  if (!Enabled)
+    return;
 
   for (const auto *OtherArch : llvm::AArch64::ArchInfos)
-    if (ArchInfo.implies(*OtherArch))
-      Features[OtherArch->getSubArch()] = Enabled;
+    if (ArchInfo->implies(*OtherArch))
+      Features[OtherArch->getSubArch()] = true;
 
   // Set any features implied by the architecture
-  uint64_t Extensions =
-      llvm::AArch64::getDefaultExtensions("generic", ArchInfo);
   std::vector<StringRef> CPUFeats;
-  if (llvm::AArch64::getExtensionFeatures(Extensions, CPUFeats)) {
+  if (llvm::AArch64::getExtensionFeatures(ArchInfo->DefaultExts, CPUFeats)) {
     for (auto F : CPUFeats) {
       assert(F[0] == '+' && "Expected + in target feature!");
-      if (F == "+crypto")
-        continue;
       Features[F.drop_front(1)] = true;
     }
   }
@@ -950,9 +950,9 @@ bool AArch64TargetInfo::initFeatureMap(
     const std::vector<std::string> &FeaturesVec) const {
   std::vector<std::string> UpdatedFeaturesVec;
   // Parse the CPU and add any implied features.
-  const llvm::AArch64::ArchInfo &Arch = llvm::AArch64::parseCpu(CPU).Arch;
-  if (Arch != llvm::AArch64::INVALID) {
-    uint64_t Exts = llvm::AArch64::getDefaultExtensions(CPU, Arch);
+  std::optional<llvm::AArch64::CpuInfo> CpuInfo = llvm::AArch64::parseCpu(CPU);
+  if (CpuInfo) {
+    uint64_t Exts = CpuInfo->getImpliedExtensions();
     std::vector<StringRef> CPUFeats;
     llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
     for (auto F : CPUFeats) {
@@ -976,12 +976,16 @@ bool AArch64TargetInfo::initFeatureMap(
       }
     }
   for (const auto &Feature : FeaturesVec)
-    if (Feature[0] == '+') {
-      std::string F;
-      llvm::AArch64::getFeatureOption(Feature, F);
-      UpdatedFeaturesVec.push_back(F);
-    } else if (Feature[0] != '?')
-      UpdatedFeaturesVec.push_back(Feature);
+    if (Feature[0] != '?') {
+      std::string UpdatedFeature = Feature;
+      if (Feature[0] == '+') {
+        std::optional<llvm::AArch64::ExtensionInfo> Extension =
+          llvm::AArch64::parseArchExtension(Feature.substr(1));
+        if (Extension)
+          UpdatedFeature = Extension->Feature.str();
+      }
+      UpdatedFeaturesVec.push_back(UpdatedFeature);
+    }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec);
 }
@@ -1034,13 +1038,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
-      const llvm::AArch64::ArchInfo &AI = llvm::AArch64::parseArch(Split.first);
+      const std::optional<llvm::AArch64::ArchInfo> AI =
+          llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.
-      if (AI == llvm::AArch64::INVALID)
+      if (!AI)
         continue;
-      Ret.Features.push_back(AI.ArchFeature.str());
+      Ret.Features.push_back(AI->ArchFeature.str());
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features);
     } else if (Feature.startswith("cpu=")) {

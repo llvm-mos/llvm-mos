@@ -156,6 +156,7 @@ public:
     return Val.getOpcode() == ISD::BITCAST ? Val.getOperand(0) : Val;
   }
 
+  static bool shouldFoldFNegIntoSrc(SDNode *FNeg, SDValue FNegSrc);
   static bool allUsesHaveSourceMods(const SDNode *N,
                                     unsigned CostThreshold = 4);
   bool isFAbsFree(EVT VT) const override;
@@ -228,6 +229,10 @@ public:
   void ReplaceNodeResults(SDNode * N,
                           SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
+
+  SDValue combineFMinMaxLegacyImpl(const SDLoc &DL, EVT VT, SDValue LHS,
+                                   SDValue RHS, SDValue True, SDValue False,
+                                   SDValue CC, DAGCombinerInfo &DCI) const;
 
   SDValue combineFMinMaxLegacy(const SDLoc &DL, EVT VT, SDValue LHS,
                                SDValue RHS, SDValue True, SDValue False,
@@ -505,8 +510,6 @@ enum NodeType : unsigned {
   TBUFFER_LOAD_FORMAT_D16,
   DS_ORDERED_COUNT,
   ATOMIC_CMP_SWAP,
-  ATOMIC_INC,
-  ATOMIC_DEC,
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,

@@ -713,26 +713,28 @@ func.func @scf_foreach_privatized_but_not_copied(
 // -----
 
 // CHECK-LABEL: func @scf_if_memory_space
-func.func @scf_if_memory_space(%c: i1, %f: f32) -> (f32, f32)
+func.func @scf_if_memory_space(%c: i1, %f: f32, %cst: f32) -> (f32, f32)
 {
   %c0 = arith.constant 0 : index
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
-  %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
+  %alloc = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
+  // CHECK: linalg.fill {{.*}} outs(%[[alloc]] : memref<5xf32, 1>)
+  %filled = linalg.fill ins(%cst : f32) outs(%alloc : tensor<5xf32>) -> tensor<5xf32>
   // CHECK: scf.if %{{.*}} -> (memref<5xf32, 1>) {
   %1 = scf.if %c -> tensor<5xf32> {
     // CHECK: %[[cloned:.*]] = bufferization.clone %[[alloc]]
     // CHECK: scf.yield %[[cloned]]
-    scf.yield %0 : tensor<5xf32>
+    scf.yield %filled : tensor<5xf32>
   } else {
     // CHECK: %[[alloc2:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
     // CHECK: memref.store %{{.*}}, %[[alloc2]]
     // CHECK: %[[cloned2:.*]] = bufferization.clone %[[alloc2]]
     // CHECK: memref.dealloc %[[alloc2]]
     // CHECK: scf.yield %[[cloned2]]
-    %2 = tensor.insert %f into %0[%c0] : tensor<5xf32>
+    %2 = tensor.insert %f into %filled[%c0] : tensor<5xf32>
     scf.yield %2 : tensor<5xf32>
   }
-  %r0 = tensor.extract %0[%c0] : tensor<5xf32>
+  %r0 = tensor.extract %filled[%c0] : tensor<5xf32>
   %r1 = tensor.extract %1[%c0] : tensor<5xf32>
   return %r0, %r1 : f32, f32
 }
@@ -924,4 +926,27 @@ func.func @non_block_argument_yield() {
     scf.yield %ret : tensor<i32>
   }
   return
+}
+
+// -----
+
+// This is a regression test. Make sure that bufferization succeeds.
+
+// CHECK-LABEL: func @regression_cast_in_loop(
+func.func @regression_cast_in_loop() -> tensor<2xindex> {
+  %false = arith.constant false
+  %c0 = arith.constant 0 : index
+  %0 = bufferization.alloc_tensor() : tensor<2xindex>
+  // CHECK: scf.while (%{{.*}} = %{{.*}}) : (memref<2xindex>) -> memref<2xindex>
+  %1 = scf.while (%arg0 = %0) : (tensor<2xindex>) -> tensor<2xindex> {
+    scf.condition(%false) %arg0 : tensor<2xindex>
+  } do {
+  // CHECK: ^bb0(%{{.*}}: memref<2xindex>):
+  ^bb0(%arg0: tensor<2xindex>):
+    %cast = tensor.cast %0 : tensor<2xindex> to tensor<?xindex>
+    %inserted = tensor.insert %c0 into %cast[%c0] : tensor<?xindex>
+    %cast_0 = tensor.cast %inserted : tensor<?xindex> to tensor<2xindex>
+    scf.yield %cast_0 : tensor<2xindex>
+  }
+  return %1 : tensor<2xindex>
 }

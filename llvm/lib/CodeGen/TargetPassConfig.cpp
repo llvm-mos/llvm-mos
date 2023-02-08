@@ -42,6 +42,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
@@ -1149,9 +1150,9 @@ void TargetPassConfig::addMachinePasses() {
         sampleprof::FSDiscriminatorPass::Pass1));
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty() && !DisableRAFSProfileLoader)
-      addPass(
-          createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
-                                     sampleprof::FSDiscriminatorPass::Pass1));
+      addPass(createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
+                                         sampleprof::FSDiscriminatorPass::Pass1,
+                                         nullptr));
   }
 
   // Run register allocation and passes that are tightly coupled with it,
@@ -1271,6 +1272,8 @@ void TargetPassConfig::addMachinePasses() {
 
   if (!DisableCFIFixup && TM->Options.EnableCFIFixup)
     addPass(createCFIFixup());
+
+  PM->add(createStackFrameLayoutAnalysisPass());
 
   // Add passes that directly emit MI after all other MI passes.
   addPreEmitPass2();
@@ -1525,9 +1528,9 @@ void TargetPassConfig::addBlockPlacement() {
         sampleprof::FSDiscriminatorPass::Pass2));
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty() && !DisableLayoutFSProfileLoader)
-      addPass(
-          createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
-                                     sampleprof::FSDiscriminatorPass::Pass2));
+      addPass(createMIRProfileLoaderPass(ProfileFile, getFSRemappingFile(TM),
+                                         sampleprof::FSDiscriminatorPass::Pass2,
+                                         nullptr));
   }
   if (addPass(&MachineBlockPlacementID)) {
     // Run a separate pass to collect block placement statistics.

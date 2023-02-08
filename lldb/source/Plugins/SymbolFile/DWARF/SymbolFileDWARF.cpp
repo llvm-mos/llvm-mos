@@ -2222,8 +2222,14 @@ void SymbolFileDWARF::FindGlobalVariables(
       if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU())) {
         CompilerDeclContext actual_parent_decl_ctx =
             dwarf_ast->GetDeclContextContainingUIDFromDWARF(die);
+
+        /// If the actual namespace is inline (i.e., had a DW_AT_export_symbols)
+        /// and a child (possibly through other layers of inline namespaces)
+        /// of the namespace referred to by 'basename', allow the lookup to
+        /// succeed.
         if (!actual_parent_decl_ctx ||
-            actual_parent_decl_ctx != parent_decl_ctx)
+            (actual_parent_decl_ctx != parent_decl_ctx &&
+             !parent_decl_ctx.IsContainedInLookup(actual_parent_decl_ctx)))
           return true;
       }
     }
@@ -3122,8 +3128,6 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
 
   TypeSP type_sp = dwarf_ast->ParseTypeFromDWARF(sc, die, type_is_new_ptr);
   if (type_sp) {
-    GetTypeList().Insert(type_sp);
-
     if (die.Tag() == DW_TAG_subprogram) {
       std::string scope_qualified_name(GetDeclContextForUID(die.GetID())
                                            .GetScopeQualifiedName()

@@ -14,6 +14,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -750,6 +751,10 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     else if (ImportState == Sema::ModuleImportState::ImportAllowed)
       // Non-imports disallow further imports.
       ImportState = Sema::ModuleImportState::ImportFinished;
+    else if (ImportState ==
+             Sema::ModuleImportState::PrivateFragmentImportAllowed)
+      // Non-imports disallow further imports.
+      ImportState = Sema::ModuleImportState::PrivateFragmentImportFinished;
   }
   return false;
 }
@@ -1400,6 +1405,17 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     if (BodyKind == Sema::FnBodyKind::Other)
       SkipFunctionBody();
 
+    // ExpressionEvaluationContext is pushed in ActOnStartOfFunctionDef
+    // and it would be popped in ActOnFinishFunctionBody.
+    // We pop it explcitly here since ActOnFinishFunctionBody won't get called.
+    //
+    // Do not call PopExpressionEvaluationContext() if it is a lambda because
+    // one is already popped when finishing the lambda in BuildLambdaExpr().
+    //
+    // FIXME: It looks not easy to balance PushExpressionEvaluationContext()
+    // and PopExpressionEvaluationContext().
+    if (!isLambdaCallOperator(dyn_cast_if_present<FunctionDecl>(Res)))
+      Actions.PopExpressionEvaluationContext();
     return Res;
   }
 
@@ -2427,7 +2443,9 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     SourceLocation PrivateLoc = ConsumeToken();
     DiagnoseAndSkipCXX11Attributes();
     ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
-    ImportState = Sema::ModuleImportState::PrivateFragment;
+    ImportState = ImportState == Sema::ModuleImportState::ImportAllowed
+                      ? Sema::ModuleImportState::PrivateFragmentImportAllowed
+                      : Sema::ModuleImportState::PrivateFragmentImportFinished;
     return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
   }
 
@@ -2544,22 +2562,27 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
       SeenError = false;
     break;
   case Sema::ModuleImportState::GlobalFragment:
-    // We can only have pre-processor directives in the global module
-    // fragment.  We cannot import a named modules here, however we have a
-    // header unit import.
-    if (!HeaderUnit || HeaderUnit->Kind != Module::ModuleKind::ModuleHeaderUnit)
-      Diag(ImportLoc, diag::err_import_in_wrong_fragment) << IsPartition << 0;
+  case Sema::ModuleImportState::PrivateFragmentImportAllowed:
+    // We can only have pre-processor directives in the global module fragment
+    // which allows pp-import, but not of a partition (since the global module
+    // does not have partitions).
+    // We cannot import a partition into a private module fragment, since
+    // [module.private.frag]/1 disallows private module fragments in a multi-
+    // TU module.
+    if (IsPartition || (HeaderUnit && HeaderUnit->Kind !=
+                                          Module::ModuleKind::ModuleHeaderUnit))
+      Diag(ImportLoc, diag::err_import_in_wrong_fragment)
+          << IsPartition
+          << (ImportState == Sema::ModuleImportState::GlobalFragment ? 0 : 1);
     else
       SeenError = false;
     break;
   case Sema::ModuleImportState::ImportFinished:
+  case Sema::ModuleImportState::PrivateFragmentImportFinished:
     if (getLangOpts().CPlusPlusModules)
       Diag(ImportLoc, diag::err_import_not_allowed_here);
     else
       SeenError = false;
-    break;
-  case Sema::ModuleImportState::PrivateFragment:
-    Diag(ImportLoc, diag::err_import_in_wrong_fragment) << IsPartition << 1;
     break;
   }
   if (SeenError) {

@@ -20,6 +20,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -434,7 +435,7 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   unsigned UnrollFactor = 0;
   if (A.getNumArgs() == 1) {
     Expr *E = A.getArgAsExpr(0);
-    Optional<llvm::APSInt> ArgVal;
+    std::optional<llvm::APSInt> ArgVal;
 
     if (!(ArgVal = E->getIntegerConstantExpr(S.Context))) {
       S.Diag(A.getLoc(), diag::err_attribute_argument_type)

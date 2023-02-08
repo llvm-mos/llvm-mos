@@ -115,7 +115,7 @@ def Tensor_DimOp : Tensor_Op<"dim", [
     ```
   }];
 
-  let arguments = (ins AnyTensor:$source,
+  let arguments = (ins AnyNon0RankedOrUnrankedTensor:$source,
                        Index:$index);
   let results = (outs Index:$result);
 
@@ -1113,7 +1113,13 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
     }]>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{  
+    static RankedTensorType
+    inferCollapsedType(RankedTensorType type, ArrayRef<AffineMap> reassociation);
+    static RankedTensorType
+    inferCollapsedType(RankedTensorType type, 
+                       SmallVector<ReassociationIndices> reassociation);
+  }];
   let hasVerifier = 1;
 }
 
@@ -1667,8 +1673,8 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
                    "$_self">])> {
 
   code commonExtraClassDeclaration = [{
-    int64_t getSourceRank() { return getSource().getType().getRank(); };
-    int64_t getDestRank() { return getDest().getType().getRank(); };
+    size_t getSourceRank() { return getSource().getType().getRank(); };
+    size_t getDestRank() { return getDest().getType().getRank(); };
     RankedTensorType getSourceType() {
       return getSource().getType().cast<RankedTensorType>(); };
     RankedTensorType getDestType() {
@@ -1776,6 +1782,21 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     static Value createDestinationTensor(OpBuilder &b, Location loc,
         Value source, ArrayRef<OpFoldResult> innerTileSizes,
         ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm);
+
+    /// Build and return a new PackOp that is a clone of the current PackOp with
+    /// (innerDimsPos, innerTiles) (resp. outerDimsPerm) are permuted by 
+    /// innerPermutation (resp. outerPermutation).
+    /// A new `tensor.empty` of the proper shape is built in the process.
+    /// Asserts that:
+    ///   - At least one of innerPermutation or outerPermutation is non-empty.
+    ///   - If not empty, innerPermutation is a valid permutation of size
+    ///     matching innerDimPos.
+    ///   - If not empty, outerPermutation is a valid permutation of size 
+    ///     matching outerDimsPerm.
+    PackOp createTransposedClone(OpBuilder &b,
+                                 Location loc,
+                                 ArrayRef<int64_t> innerPermutation,
+                                 ArrayRef<int64_t> outerPermutation);
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -1832,7 +1853,23 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
     CArg<"ArrayRef<int64_t>", "{}">:$outerDimsPerm)>
   ];
 
-  let extraClassDeclaration = commonExtraClassDeclaration;
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    /// Build and return a new UnPackOp that is a clone of the current UnPackOp
+    /// with (innerDimsPos, innerTiles) (resp. outerDimsPerm) are permuted by 
+    /// innerPermutation (resp. outerPermutation).
+    /// Asserts that:
+    ///   - At least one of innerPermutation or outerPermutation is non-empty.
+    ///   - If not empty, innerPermutation is a valid permutation of size
+    ///     matching innerDimPos.
+    ///   - If not empty, outerPermutation is a valid permutation of size 
+    ///     matching outerDimsPerm.
+    UnPackOp createTransposedClone(OpBuilder &b,
+                                   Location loc,
+                                   Value transposedSource,
+                                   ArrayRef<int64_t> innerPermutation,
+                                   ArrayRef<int64_t> outerPermutation);
+  }];
+
   let hasCanonicalizeMethod = 1;
 }
 

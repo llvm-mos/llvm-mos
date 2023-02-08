@@ -28,10 +28,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -67,6 +65,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -113,6 +112,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -350,6 +350,8 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       SM(*this) {
   VerboseAsm = OutStreamer->isVerboseAsm();
+  DwarfUsesRelocationsAcrossSections =
+      MAI->doesDwarfUseRelocationsAcrossSections();
 }
 
 AsmPrinter::~AsmPrinter() {
@@ -1335,7 +1337,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->pushSection();
   OutStreamer->switchSection(BBAddrMapSection);
   OutStreamer->AddComment("version");
-  OutStreamer->emitInt8(OutStreamer->getContext().getBBAddrMapVersion());
+  uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
+  OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
   OutStreamer->emitInt8(0);
   OutStreamer->AddComment("function address");
@@ -1347,12 +1350,19 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
         MBB.isEntryBlock() ? FunctionSymbol : MBB.getSymbol();
+    // TODO: Remove this check when version 1 is deprecated.
+    if (BBAddrMapVersion > 1) {
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      OutStreamer->emitULEB128IntValue(*MBB.getBBID());
+    }
     // Emit the basic block offset relative to the end of the previous block.
     // This is zero unless the block is padded due to alignment.
     emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
     // Emit the basic block size. When BBs have alignments, their size cannot
     // always be computed from their offsets.
     emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+    // Emit the Metadata.
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
@@ -1486,9 +1496,22 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
     // constants may appear, which will simply be emitted into the current
     // section (the user of MD_pcsections decides the format of encoded data).
     assert(isa<MDString>(MD.getOperand(0)) && "first operand not a string");
+    bool ConstULEB128 = false;
     for (const MDOperand &MDO : MD.operands()) {
       if (auto *S = dyn_cast<MDString>(MDO)) {
-        SwitchSection(S->getString());
+        // Found string, start of new section!
+        // Find options for this section "<section>!<opts>" - supported options:
+        //   C = Compress constant integers of size 2-8 bytes as ULEB128.
+        const StringRef SecWithOpt = S->getString();
+        const size_t OptStart = SecWithOpt.find('!'); // likely npos
+        const StringRef Sec = SecWithOpt.substr(0, OptStart);
+        const StringRef Opts = SecWithOpt.substr(OptStart); // likely empty
+        ConstULEB128 = Opts.find('C') != StringRef::npos;
+#ifndef NDEBUG
+        for (char O : Opts)
+          assert((O == '!' || O == 'C') && "Invalid !pcsections options");
+#endif
+        SwitchSection(Sec);
         const MCSymbol *Prev = Syms.front();
         for (const MCSymbol *Sym : Syms) {
           if (Sym == Prev || !Deltas) {
@@ -1500,17 +1523,30 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
             // `base + addr`.
             emitLabelDifference(Sym, Base, RelativeRelocSize);
           } else {
-            emitLabelDifference(Sym, Prev, 4);
+            // Emit delta between symbol and previous symbol.
+            if (ConstULEB128)
+              emitLabelDifferenceAsULEB128(Sym, Prev);
+            else
+              emitLabelDifference(Sym, Prev, 4);
           }
           Prev = Sym;
         }
       } else {
+        // Emit auxiliary data after PC.
         assert(isa<MDNode>(MDO) && "expecting either string or tuple");
         const auto *AuxMDs = cast<MDNode>(MDO);
         for (const MDOperand &AuxMDO : AuxMDs->operands()) {
           assert(isa<ConstantAsMetadata>(AuxMDO) && "expecting a constant");
-          const auto *C = cast<ConstantAsMetadata>(AuxMDO);
-          emitGlobalConstant(F.getParent()->getDataLayout(), C->getValue());
+          const Constant *C = cast<ConstantAsMetadata>(AuxMDO)->getValue();
+          const DataLayout &DL = F.getParent()->getDataLayout();
+          const uint64_t Size = DL.getTypeStoreSize(C->getType());
+
+          if (auto *CI = dyn_cast<ConstantInt>(C);
+              CI && ConstULEB128 && Size > 1 && Size <= 8) {
+            emitULEB128(CI->getZExtValue());
+          } else {
+            emitGlobalConstant(DL, C);
+          }
         }
       }
     }
@@ -2225,6 +2261,8 @@ bool AsmPrinter::doFinalization(Module &M) {
   SmallVector<const GlobalAlias *, 16> AliasStack;
   SmallPtrSet<const GlobalAlias *, 16> AliasVisited;
   for (const auto &Alias : M.aliases()) {
+    if (Alias.hasAvailableExternallyLinkage())
+      continue;
     for (const GlobalAlias *Cur = &Alias; Cur;
          Cur = dyn_cast<GlobalAlias>(Cur->getAliasee())) {
       if (!AliasVisited.insert(Cur).second)
@@ -2776,6 +2814,22 @@ void AsmPrinter::emitInt16(int Value) const { OutStreamer->emitInt16(Value); }
 /// Emit a long directive and value.
 void AsmPrinter::emitInt32(int Value) const { OutStreamer->emitInt32(Value); }
 
+/// EmitSLEB128 - emit the specified signed leb128 value.
+void AsmPrinter::emitSLEB128(int64_t Value, const char *Desc) const {
+  if (isVerbose() && Desc)
+    OutStreamer->AddComment(Desc);
+
+  OutStreamer->emitSLEB128IntValue(Value);
+}
+
+void AsmPrinter::emitULEB128(uint64_t Value, const char *Desc,
+                             unsigned PadTo) const {
+  if (isVerbose() && Desc)
+    OutStreamer->AddComment(Desc);
+
+  OutStreamer->emitULEB128IntValue(Value, PadTo);
+}
+
 /// Emit a long long directive and value.
 void AsmPrinter::emitInt64(uint64_t Value) const {
   OutStreamer->emitInt64(Value);
@@ -2787,6 +2841,12 @@ void AsmPrinter::emitInt64(uint64_t Value) const {
 void AsmPrinter::emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
                                      unsigned Size) const {
   OutStreamer->emitAbsoluteSymbolDiff(Hi, Lo, Size);
+}
+
+/// Emit something like ".uleb128 Hi-Lo".
+void AsmPrinter::emitLabelDifferenceAsULEB128(const MCSymbol *Hi,
+                                              const MCSymbol *Lo) const {
+  OutStreamer->emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
 
 /// EmitLabelPlusOffset - Emit something like ".long Label+Offset"
@@ -4033,7 +4093,7 @@ unsigned int AsmPrinter::getDwarfOffsetByteSize() const {
 dwarf::FormParams AsmPrinter::getDwarfFormParams() const {
   return {getDwarfVersion(), uint8_t(getPointerSize()),
           OutStreamer->getContext().getDwarfFormat(),
-          MAI->doesDwarfUseRelocationsAcrossSections()};
+          doesDwarfUseRelocationsAcrossSections()};
 }
 
 unsigned int AsmPrinter::getUnitLengthFieldByteSize() const {

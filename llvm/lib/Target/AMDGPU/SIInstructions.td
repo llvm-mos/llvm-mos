@@ -368,7 +368,13 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
-let isTerminator = 1 in {
+// As we have enhanced control flow intrinsics to work under unstructured CFG,
+// duplicating such intrinsics can be actually treated as legal. On the contrary,
+// by making them non-duplicable, we are observing better code generation result.
+// So we choose to mark them non-duplicable in hope of getting better code
+// generation as well as simplied CFG during Machine IR optimization stage.
+
+let isTerminator = 1, isNotDuplicable = 1 in {
 
 let OtherPredicates = [EnableLateCFGStructurize] in {
  def SI_NON_UNIFORM_BRCOND_PSEUDO : CFPseudoInstSI <
@@ -418,6 +424,7 @@ def SI_END_CF : CFPseudoInstSI <
   let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
   let hasSideEffects = 1;
+  let isNotDuplicable = 1; // Not a hard requirement, see long comments above for details.
   let mayLoad = 1; // FIXME: Should not need memory flags
   let mayStore = 1;
 }
@@ -425,6 +432,7 @@ def SI_END_CF : CFPseudoInstSI <
 def SI_IF_BREAK : CFPseudoInstSI <
   (outs SReg_1:$dst), (ins SReg_1:$vcc, SReg_1:$src), []> {
   let Size = 4;
+  let isNotDuplicable = 1; // Not a hard requirement, see long comments above for details.
   let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
 }
@@ -2819,7 +2827,7 @@ def : GCNPat <
 >;
 }
 
-let SubtargetPredicate = isGFX90APlus in
+let OtherPredicates = [HasFmacF64Inst] in
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select fma instead of fmac.
 def : GCNPat <
@@ -3140,7 +3148,7 @@ def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
 }]>;
 
 def IMMPopCount : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(countPopulation(N->getZExtValue()), SDLoc(N),
+  return CurDAG->getTargetConstant(llvm::popcount(N->getZExtValue()), SDLoc(N),
                                    MVT::i32);
 }]>;
 
@@ -3486,8 +3494,6 @@ def G_AMDGPU_ATOMIC_CMPXCHG : AMDGPUGenericInstruction {
 }
 
 let Namespace = "AMDGPU" in {
-def G_AMDGPU_ATOMIC_INC : G_ATOMICRMW_OP;
-def G_AMDGPU_ATOMIC_DEC : G_ATOMICRMW_OP;
 def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
 def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
 }

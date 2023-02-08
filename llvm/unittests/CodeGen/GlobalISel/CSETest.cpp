@@ -16,7 +16,7 @@ namespace {
 TEST_F(AArch64GISelMITest, TestCSE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s16{LLT::scalar(16)};
   LLT s32{LLT::scalar(32)};
@@ -127,12 +127,19 @@ TEST_F(AArch64GISelMITest, TestCSE) {
                                      {Copies[0], static_cast<uint64_t>(1)});
   EXPECT_EQ(&*ExtractMIB, &*ExtractMIB1);
   EXPECT_NE(&*ExtractMIB, &*ExtractMIB2);
+
+
+  auto SextInRegMIB = CSEB.buildSExtInReg(s16, Copies[0], 0);
+  auto SextInRegMIB1 = CSEB.buildSExtInReg(s16, Copies[0], 0);
+  auto SextInRegMIB2 = CSEB.buildSExtInReg(s16, Copies[0], 1);
+  EXPECT_EQ(&*SextInRegMIB, &*SextInRegMIB1);
+  EXPECT_NE(&*SextInRegMIB, &*SextInRegMIB2);
 }
 
 TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s16{LLT::scalar(16)};
   auto MIBInput = B.buildInstr(TargetOpcode::G_TRUNC, {s16}, {Copies[0]});
@@ -162,7 +169,7 @@ TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
 TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32{LLT::scalar(32)};
   // We want to check that when the CSE hit is on the next instruction, i.e. at
@@ -187,7 +194,7 @@ TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
 TEST_F(AArch64GISelMITest, TestConstantFoldCTL) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32 = LLT::scalar(32);
 

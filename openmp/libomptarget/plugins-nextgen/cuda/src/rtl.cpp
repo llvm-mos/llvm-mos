@@ -62,12 +62,11 @@ struct CUDAKernelTy : public GenericKernelTy {
 
   /// Launch the CUDA kernel function
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, uint32_t DynamicMemorySize,
-                   int32_t NumKernelArgs, void *KernelArgs,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// The default number of blocks is common to the whole device.
-  uint64_t getDefaultNumBlocks(GenericDeviceTy &GenericDevice) const override {
+  uint32_t getDefaultNumBlocks(GenericDeviceTy &GenericDevice) const override {
     return GenericDevice.getDefaultNumBlocks();
   }
 
@@ -494,6 +493,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "Error in cuStreamQuery: %s");
   }
 
+  Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
+    // TODO: Register the buffer as CUDA host memory.
+    return HstPtr;
+  }
+
+  Error dataUnlockImpl(void *HstPtr) override { return Plugin::success(); }
+
+  Expected<bool> isPinnedPtrImpl(void *HstPtr, void *&BaseHstPtr,
+                                 void *&BaseDevAccessiblePtr,
+                                 size_t &BaseSize) const override {
+    // TODO: Implement pinning feature for CUDA.
+    return false;
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
@@ -784,8 +797,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "Error in cuDeviceGetAttribute: %s");
   }
 
-  /// See GenericDeviceTy::getArch().
-  std::string getArch() const override { return ComputeCapability.str(); }
+  /// See GenericDeviceTy::getComputeUnitKind().
+  std::string getComputeUnitKind() const override {
+    return ComputeCapability.str();
+  }
 
 private:
   using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
@@ -816,8 +831,7 @@ private:
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                uint32_t NumThreads, uint64_t NumBlocks,
-                               uint32_t DynamicMemorySize,
-                               int32_t NumKernelArgs, void *KernelArgs,
+                               KernelArgsTy &KernelArgs, void *Args,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
@@ -825,11 +839,14 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (!Stream)
     return Plugin::error("Failure to get stream");
 
+  uint32_t MaxDynCGroupMem =
+      std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
+
   CUresult Res =
       cuLaunchKernel(Func, NumBlocks, /* gridDimY */ 1,
                      /* gridDimZ */ 1, NumThreads,
-                     /* blockDimY */ 1, /* blockDimZ */ 1, DynamicMemorySize,
-                     Stream, (void **)KernelArgs, nullptr);
+                     /* blockDimY */ 1, /* blockDimZ */ 1, MaxDynCGroupMem,
+                     Stream, (void **)Args, nullptr);
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }
 
@@ -867,7 +884,7 @@ public:
 /// Class implementing the CUDA-specific functionalities of the plugin.
 struct CUDAPluginTy final : public GenericPluginTy {
   /// Create a CUDA plugin.
-  CUDAPluginTy() : GenericPluginTy() {}
+  CUDAPluginTy() : GenericPluginTy(getTripleArch()) {}
 
   /// This class should not be copied.
   CUDAPluginTy(const CUDAPluginTy &) = delete;
