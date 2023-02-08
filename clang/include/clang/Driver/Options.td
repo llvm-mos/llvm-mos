@@ -4401,11 +4401,6 @@ Flags<[NoXarchOption,CC1Option,FlangOption,FC1Option]>,
   MetaVarName<"<language>">;
 def y : Joined<["-"], "y">;
 
-def fpost_link_tool
-  : Joined<["-"], "fpost-link-tool=">, Group<f_Group>,
-    HelpText<"LLVM-MOS flag to run the given tool on the ELF file after linking.">;
-
-
 defm integrated_as : BoolFOption<"integrated-as",
   CodeGenOpts<"DisableIntegratedAS">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option, FlangOption], "Disable">, PosFlag<SetFalse, [], "Enable">,

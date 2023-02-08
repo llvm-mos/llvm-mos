@@ -1673,7 +1673,7 @@ bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
 
   MachineInstr *SrcMI = getDefIgnoringCopies(Src, *Builder.getMRI());
-  Optional<std::pair<Register, Register>> LoHi;
+  std::optional<std::pair<Register, Register>> LoHi;
   switch (SrcMI->getOpcode()) {
   case MOS::G_FRAME_INDEX:
     LoHi = selectFrameIndexLoHi(*SrcMI);

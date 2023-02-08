@@ -87,8 +87,8 @@ void MOSInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
   O << formatImm(PrintBranchImmAsAddress ? (int8_t)Target + Address + 2: Target);
 }
 
-void MOSInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
-  O << getRegisterName(RegNo);
+void MOSInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+  O << getRegisterName(Reg);
 }
 
 format_object<int64_t> MOSInstPrinter::formatHex(int64_t Value) const {

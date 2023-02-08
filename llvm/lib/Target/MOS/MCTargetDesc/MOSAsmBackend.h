@@ -16,12 +16,12 @@
 
 #include "MCTargetDesc/MOSFixupKinds.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -112,7 +112,8 @@ public:
   /// relaxed, return zero. When 65816 subtarget is active and the instruction
   /// is relaxed to Addr24, BankRelax is set to true.
   static unsigned relaxInstructionTo(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI, bool &BankRelax);
+                                     const MCSubtargetInfo &STI,
+                                     bool &BankRelax);
   static unsigned relaxInstructionTo(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
     bool BankRelax = false;

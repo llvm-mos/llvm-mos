@@ -30,7 +30,7 @@ public:
 
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
-  void printRegName(raw_ostream &O, unsigned RegNo) const override;
+  void printRegName(raw_ostream &O, MCRegister Reg) const override;
 
   std::pair<const char *, uint64_t> getMnemonic(const MCInst *MI) override;
 
@@ -39,8 +39,8 @@ public:
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
                           raw_ostream &O);
-  static const char *getRegisterName(unsigned RegNo);
-  static const char *getRegisterName(unsigned RegNo, unsigned AltIdx);
+  static const char *getRegisterName(MCRegister Reg);
+  static const char *getRegisterName(MCRegister Reg, unsigned AltIdx);
 
   /// Utility function to print immediates in decimal or hex.
   format_object<int64_t> formatImm(int64_t Value) const {

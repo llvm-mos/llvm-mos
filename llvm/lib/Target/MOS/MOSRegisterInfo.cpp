@@ -747,7 +747,7 @@ MOSRegisterInfo::getStrongCopyHint(Register VirtReg, const MachineFunction &MF,
           *MRI.getOneDef(VirtReg)->getParent()))
     return std::nullopt;
 
-  Optional<Register> Hint;
+  std::optional<Register> Hint;
   for (MachineInstr &MI : MRI.use_nodbg_instructions(VirtReg)) {
     if (MI.getOpcode() != MOS::COPY)
       return std::nullopt;

@@ -58,7 +58,7 @@ static bool matchPhiOneNegOne(const MachineInstr &MI,
   bool HasNegOneReg = false;
   for (unsigned I = 1, E = 5; I != E; I += 2) {
     Register R = MI.getOperand(I).getReg();
-    Optional<ValueAndVReg> V = getIConstantVRegValWithLookThrough(R, MRI);
+    std::optional<ValueAndVReg> V = getIConstantVRegValWithLookThrough(R, MRI);
     if (!V || !V->Value.abs().isOne())
       return false;
     if (V->Value.isOne()) {

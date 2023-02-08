@@ -256,7 +256,7 @@ bool MOSCombinerHelperState::matchUAddO1(MachineInstr &MI,
                                          MachineRegisterInfo &MRI) const {
   if (MI.getOpcode() != MOS::G_UADDO)
     return false;
-  Optional<ValueAndVReg> Val =
+  std::optional<ValueAndVReg> Val =
       getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
   if (!Val || !Val->Value.isOne())
     return false;
@@ -283,7 +283,7 @@ bool MOSCombinerHelperState::matchCMPZZero(MachineInstr &MI,
     return false;
   for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
     MachineOperand &MO = MI.getOperand(I);
-    if (Optional<ValueAndVReg> Val =
+    if (std::optional<ValueAndVReg> Val =
             getIConstantVRegValWithLookThrough(MO.getReg(), MRI);
         Val && Val->Value.isZero()) {
       Zero = &MO;
