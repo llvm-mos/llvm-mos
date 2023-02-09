@@ -4,15 +4,20 @@ on:
   workflow_dispatch:
   push:
     ignore-forks: true
-    branches: [main]
+    branches:
+      - 'main'
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
   pull_request:
     ignore-forks: true
+    branches:
+      - 'main'
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -21,41 +26,18 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  build_llvm:
-    name: llvm check-all
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-20.04
-          - windows-2019
-          - macOS-latest
-    steps:
-    - name: Setup Windows
-      if: startsWith(matrix.os, 'windows')
-      uses: llvm/actions/setup-windows@main
-      with:
-        arch: amd64
-    - name: Install Ninja
-      uses: llvm/actions/install-ninja@main
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 250
-    - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@v1.2
-      with:
-        # A full build of llvm, clang, lld, and lldb takes about 250MB
-        # of ccache space. There's not much reason to have more than this,
-        # because we usually won't need to save cache entries from older
-        # builds.  Also, there is an overall 10GB cache limit, and each
-        # run creates a new cache entry so we want to ensure that we have
-        # enough cache space for all the tests to run at once and still
-        # fit under the 10 GB limit.
-        max-size: 500M
-        key: sccache-${{ matrix.os }}
-        variant: sccache
-    - name: Test llvm
-      uses: llvm/actions/build-test-llvm-project@main
-      with:
-        cmake_args: -G Ninja -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="MOS" -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZLIB=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+  check_all:
+    if: github.repository_owner == 'llvm-mos'
+    name: Test llvm,clang
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: check-all
+      projects: clang
+
+  check_lld:
+    if: github.repository_owner == 'llvm-mos'
+    name: Test lld
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: check-lld
+      projects: lld
