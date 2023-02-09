@@ -270,7 +270,7 @@ bool MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 }
 
 void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
-  MachineIRBuilder Builder(*MI->getParent(), MI);
+  MachineIRBuilder Builder(*MI);
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
@@ -309,7 +309,7 @@ void MOSRegisterInfo::expandAddrLostk(MachineBasicBlock::iterator MI) const {
 }
 
 void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
-  MachineIRBuilder Builder(*MI->getParent(), MI);
+  MachineIRBuilder Builder(*MI);
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
 
@@ -350,7 +350,7 @@ void MOSRegisterInfo::expandAddrHistk(MachineBasicBlock::iterator MI) const {
 
 void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getMF();
-  MachineIRBuilder Builder(*MI->getParent(), MI);
+  MachineIRBuilder Builder(*MI);
   MachineRegisterInfo &MRI = *Builder.getMRI();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 
@@ -625,7 +625,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   for (const auto &R : enumerate(Order))
     OriginalIndex[R.value()] = R.index();
 
-  if (std::optional<Register> StrongHint = getStrongCopyHint(VirtReg, MF, VRM)) {
+  if (std::optional<Register> StrongHint =
+          getStrongCopyHint(VirtReg, MF, VRM)) {
     if (*StrongHint)
       Hints.push_back(*StrongHint);
     return true;

@@ -329,6 +329,7 @@ void MOSFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Set the frame pointer to the stack pointer.
   Builder.setInsertPt(MBB, MBBI);
+  Builder.setDebugLoc({});
   Builder.buildCopy(TRI.getFrameRegister(MF), Register(MOS::RS0));
 }
 

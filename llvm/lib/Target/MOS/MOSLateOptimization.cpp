@@ -133,7 +133,7 @@ void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
        make_range(MBB.rbegin(), MachineBasicBlock::reverse_iterator(MI)))
     PhysRegs.stepBackward(J);
 
-  MachineIRBuilder Builder(MBB, MI);
+  MachineIRBuilder Builder(MI);
   switch (Val) {
   default: {
     assert(MOS::Imag8RegClass.contains(Val));

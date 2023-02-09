@@ -154,7 +154,7 @@ bool MOSCombinerHelperState::applySBCEqual(
     GISelChangeObserver &Observer) const {
   LLT S1 = LLT::scalar(1);
 
-  B.setInsertPt(*MI.getParent(), MI);
+  B.setInstrAndDebugLoc(MI);
   B.buildCopy(MI.getOperand(0), B.buildConstant(LLT::scalar(8), 0));
 
   auto S1Zero = B.buildConstant(S1, 0);
@@ -227,10 +227,10 @@ bool MOSCombinerHelperState::applyExtractLowBit(MachineInstr &MI,
                 MI.getOperand(1).getPredicate() == CmpInst::ICMP_EQ;
 
   if (Helper.dominates(*Shift, MI)) {
-    B.setInsertPt(*Shift->getParent(), *Shift);
+    B.setInstrAndDebugLoc(*Shift);
   } else {
     assert(Helper.dominates(MI, *Shift));
-    B.setInsertPt(*MI.getParent(), MI);
+    B.setInstrAndDebugLoc(MI);
   }
 
   auto EvenShift = B.buildInstr(MOS::G_LSHRE, {Shift->getOperand(0), S1},
@@ -241,7 +241,7 @@ bool MOSCombinerHelperState::applyExtractLowBit(MachineInstr &MI,
     B.buildCopy(MI.getOperand(0).getReg(), EvenShift.getReg(1));
   MOSLegalizerInfo Legalizer(B.getMF().getSubtarget<MOSSubtarget>());
   LegalizerHelper LegalizerHelper(B.getMF(), Legalizer, Observer, B);
-  B.setInsertPt(B.getMBB(), *EvenShift);
+  B.setInstrAndDebugLoc(*EvenShift);
   if (!Legalizer.legalizeLshrEShlE(LegalizerHelper, MRI, *EvenShift))
     llvm_unreachable("Failed to legalize shift.");
   Shift->eraseFromParent();
@@ -268,7 +268,7 @@ bool MOSCombinerHelperState::applyUAddO1(MachineInstr &MI,
                                          MachineIRBuilder &B,
                                          GISelChangeObserver &Observer) const {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  B.setInsertPt(*MI.getParent(), MI);
+  B.setInstrAndDebugLoc(MI);
   B.buildAdd(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
   B.buildICmp(CmpInst::ICMP_EQ, MI.getOperand(1), MI.getOperand(0),
               B.buildConstant(Ty, 0));
@@ -298,7 +298,7 @@ bool MOSCombinerHelperState::applyCMPZZero(MachineInstr &MI,
                                            MachineIRBuilder &B,
                                            GISelChangeObserver &Observer,
                                            MachineOperand *&Zero) const {
-  B.setInsertPt(*MI.getParent(), MI);
+  B.setInstrAndDebugLoc(MI);
   auto New = B.buildInstr(MOS::G_CMPZ);
   for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
     MachineOperand &MO = MI.getOperand(I);

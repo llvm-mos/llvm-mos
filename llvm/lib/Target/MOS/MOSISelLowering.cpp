@@ -251,7 +251,7 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
 
   const BasicBlock *LLVM_BB = MBB->getBasicBlock();
   MachineFunction::iterator I = ++MBB->getIterator();
-  MachineIRBuilder Builder(*MBB, MI);
+  MachineIRBuilder Builder(MI);
 
   MachineBasicBlock *HeadMBB = MBB;
   MachineFunction *F = MBB->getParent();
@@ -515,6 +515,7 @@ static MachineBasicBlock *emitCMPTermZMB(MachineInstr &MI,
   NextMBB->sortUniqueLiveIns();
 
   MachineIRBuilder Builder(*MBB, MBB->end());
+  Builder.setDebugLoc(MI.getDebugLoc());
   if (Inc)
     Builder.buildInstr(MOS::INC, {Reg}, {Reg});
   auto Cmp = Builder.buildInstr(MOS::CMPTermZ, {MOS::C}, {Reg});

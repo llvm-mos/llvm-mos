@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H
 #define LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H
 
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER

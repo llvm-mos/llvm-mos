@@ -443,6 +443,7 @@ void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                const DebugLoc &DL, MCRegister DestReg,
                                MCRegister SrcReg, bool KillSrc) const {
   MachineIRBuilder Builder(MBB, MI);
+  Builder.setDebugLoc(DL);
   copyPhysRegImpl(Builder, DestReg, SrcReg);
 }
 
@@ -1023,7 +1024,7 @@ void MOSInstrInfo::expandLDImm16Remat(MachineIRBuilder &Builder) const {
   auto Ld = Builder.buildInstr(MOS::LDImm16, {MI.getOperand(0), Scratch}, {})
                 .add(MI.getOperand(1));
   MI.eraseFromParent();
-  Builder.setInsertPt(*Ld->getParent(), &*Ld);
+  Builder.setInstrAndDebugLoc(*Ld);
   expandLDImm16(Builder);
 }
 
