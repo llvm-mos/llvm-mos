@@ -1,9 +1,10 @@
 name: Packaging
 concurrency: compiler-package
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  push:
+    ignore-forks: true
+    branches: [main]
 jobs:
   package:
     runs-on: ${{ matrix.os }}

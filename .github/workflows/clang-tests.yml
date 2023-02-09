@@ -1,13 +1,16 @@
 name: Clang Tests
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main, sync]
+    ignore-forks: true
+    branches: [main]
     paths:
       - 'clang/**'
       - 'llvm/**'
       - '.github/workflows/clang-tests.yml'
   pull_request:
+    ignore-forks: true
     paths:
       - 'clang/**'
       - 'llvm/**'

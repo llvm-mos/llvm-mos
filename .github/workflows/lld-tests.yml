@@ -1,13 +1,16 @@
 name: LLD Tests
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main, sync]
+    ignore-forks: true
+    branches: [main]
     paths:
       - 'lld/**'
       - 'llvm/**'
       - '.github/workflows/lld-tests.yml'
   pull_request:
+    ignore-forks: true
     paths:
       - 'lld/**'
       - 'llvm/**'
