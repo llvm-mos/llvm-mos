@@ -203,3 +203,9 @@ def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 
 def Anyi1 : MOSReg1Class<(add (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)), CV_GPR_LSB)>;
 def Anyi8 : MOSReg8Class<(add Imag8, GPR)>;
+
+def Fake : MOSReg<13, "Fake">;
+let isAllocatable = false in {
+  def Fakei32 : MOSRegClass<[i32], 8, (add Fake)>;
+  def Fakei64 : MOSRegClass<[i64], 8, (add Fake)>;
+}

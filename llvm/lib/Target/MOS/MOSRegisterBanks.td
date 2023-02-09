@@ -11,4 +11,4 @@
 //===----------------------------------------------------------------------===//
 
 // Register banks are unused, so place everything in one big bank.
-def AnyRegBank : RegisterBank<"Any", [Anyi1, Anyi8, Imag16]>;
+def AnyRegBank : RegisterBank<"Any", [Anyi1, Anyi8, Imag16, Fakei32, Fakei64]>;
