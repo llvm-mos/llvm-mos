@@ -47,11 +47,7 @@ static T unwrapOrError(Expected<T> EO, Ts &&...Args) {
 
 template <class ELFT>
 static uint64_t getSectionLMA(const ELFFile<ELFT> &Obj,
-                              const DenseMap<SectionRef, uint64_t> &PRGSecLMAs,
                               const object::ELFSectionRef &Sec) {
-  auto It = PRGSecLMAs.find(Sec);
-  if (It != PRGSecLMAs.end())
-    return It->getSecond();
   auto PhdrRangeOrErr = Obj.program_headers();
   if (!PhdrRangeOrErr)
     report_fatal_error(Twine(toString(PhdrRangeOrErr.takeError())));
@@ -105,33 +101,6 @@ int main(int argc, char **argv) {
       if (Seg.p_paddr >= 0x03000000 && Seg.p_paddr < 0x04000000)
         PRGSegsByOffset[Seg.p_offset].push_back(&Seg);
 
-    // Find PRG-RAM section LMAs.
-    DenseMap<SectionRef, uint64_t> PRGSecLMAs;
-    for (const auto &[Offset, PRGSegs] : PRGSegsByOffset) {
-      uint64_t I = 0;
-      uint64_t HighVMA = 0;
-      for (const ELFSectionRef Sec : O->sections()) {
-        if (Sec.getAddress() < 0x4020 || Sec.getType() != ELF::SHT_NOBITS ||
-            Sec.getOffset() != Offset ||
-            PRGSecLMAs.find(Sec) != PRGSecLMAs.end())
-          continue;
-        if (I >= PRGSegs.size())
-          break;
-        const ELF32LE::Phdr *CurSeg = PRGSegs[I];
-        while (Sec.getAddress() < HighVMA ||
-               Sec.getAddress() < CurSeg->p_vaddr ||
-               Sec.getAddress() >= CurSeg->p_vaddr + CurSeg->p_memsz) {
-          HighVMA = 0;
-          ++I;
-          if (I >= PRGSegs.size())
-            break;
-          CurSeg = PRGSegs[I];
-        }
-        PRGSecLMAs[Sec] = Sec.getAddress() - CurSeg->p_vaddr + CurSeg->p_paddr;
-        HighVMA = std::max(HighVMA, Sec.getAddress() + Sec.getSize());
-      }
-    }
-
     char PRGRAMType = hasPRGNVRAM(*O) ? 'S' : 'W';
 
     for (const ELFSymbolRef Sym : O->symbols()) {
@@ -139,8 +108,7 @@ int main(int argc, char **argv) {
       auto Sec = unwrapOrError(Sym.getSection(), InputFilename);
       uint64_t Address = unwrapOrError(Sym.getAddress(), InputFilename);
       StringRef Name = unwrapOrError(Sym.getName(), InputFilename);
-      uint64_t LMA = Address - Sec->getAddress() +
-                     getSectionLMA(ELFFile, PRGSecLMAs, *Sec);
+      uint64_t LMA = Address - Sec->getAddress() + getSectionLMA(ELFFile, *Sec);
       uint64_t Size = Sym.getSize();
 
       if (Type == SymbolRef::ST_File)
@@ -149,30 +117,27 @@ int main(int argc, char **argv) {
         if (Name.startswith("__") && !Name.startswith("__rc"))
           continue;
 
+      const auto BoundsStr = [](uint64_t Address, uint16_t Size) {
+        auto UpperBoundStr = Size > 1 ? formatv("-{0:x-}", Address + Size - 1)
+                                      : SmallString<10>();
+        return formatv("{0:x-}{1}", Address, UpperBoundStr).sstr<10>();
+      };
+
       // PRG-ROM
       if (LMA >= 0x01000000 && LMA < 0x02000000) {
         LMA -= 0x01000000;
-        std::string SizeStr =
-            Size > 1 ? formatv("-{0:x-}", LMA + Size - 1) : std::string();
-        OS << formatv("P:{0:x-}{1}:{2}\n", LMA, SizeStr, Name);
-      } else if (LMA >= 0x03000000 && LMA < 0x04000000) {
-        LMA -= 0x03000000;
-        std::string SizeStr =
-            Size > 1 ? formatv("-{0:x-}", LMA + Size - 1) : std::string();
-        OS << formatv("{0}:{1:x-}{2}:{3}\n", PRGRAMType, LMA, SizeStr, Name);
+        OS << formatv("P:{0}:{1}\n", BoundsStr(LMA, Size), Name);
       } else if (Address < 0x2000) {
-        std::string SizeStr =
-            Size > 1 ? formatv("-{0:x-}", Address + Size - 1) : std::string();
-        OS << formatv("R:{0:x-}{1}:{2}\n", Address, SizeStr, Name);
-      } else if (Address >= 0x6000 && Address < 0x8000) {
-        std::string SizeStr =
-            Size > 1 ? formatv("-{0:x-}", Address + Size - 1) : std::string();
-        OS << formatv("{0}:{1:x-}{2}:{3}\n", PRGRAMType, Address, SizeStr,
-                      Name);
+        OS << formatv("R:{0}:{1}\n", BoundsStr(Address, Size), Name);
+      } else if ((Address & 0xffff) >= 0x6000 && (Address & 0xffff) < 0x8000) {
+        uint8_t Bank = Address >> 16;
+        // NOTE: This assumes 8K PRG-RAM banks. Once a mapper is added with
+        // variable PRG-RAM banking, add a symbol to declare the bank size.
+        OS << formatv(
+            "{0}:{1}:{2}\n", PRGRAMType,
+            BoundsStr((Address & 0xffff) - 0x6000 + Bank * 0x2000, Size), Name);
       } else {
-        std::string SizeStr =
-            Size > 1 ? formatv("-{0:x-}", Address + Size - 1) : std::string();
-        OS << formatv("G:{0:x-}{1}:{2}\n", Address, SizeStr, Name);
+        OS << formatv("G:{0}:{1}\n", BoundsStr(Address, Size), Name);
       }
     }
   }
