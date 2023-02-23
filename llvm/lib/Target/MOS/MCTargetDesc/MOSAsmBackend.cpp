@@ -353,11 +353,10 @@ void MOSAsmBackend::relaxInstruction(MCInst &Inst,
 
 bool MOSAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                  const MCSubtargetInfo *STI) const {
-  // todo: fix for virtual targets
-  while ((Count--) > 0) {
-    OS << 0xEA; // Sports. It's in the game.  Knowing the 6502 hexadecimal
-                // representation of a NOP on 6502, used to be an interview
-                // question at Electronic Arts.
+  while (Count--) {
+    // Sports. It's in the game. Knowing the 6502 hexadecimal representation of
+    // a NOP on 6502 used to be an interview question at Electronic Arts.
+    OS << '\xea';
   }
   return true;
 }
