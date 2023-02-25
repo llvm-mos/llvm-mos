@@ -8,35 +8,6 @@ FileHeader:
   Class: ELFCLASS32
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
-ProgramHeaders:
-  - Type: PT_LOAD
-    Offset: 0x1233
-    PAddr: 0x01000000
-  - Type: PT_LOAD
-    Offset: 0x1235
-    FileSize: 1
-    PAddr: 0x01000010
-  - Type: PT_LOAD
-    Offset: 0x1234
-    FileSize: 1
-    PAddr: 0x01000020
-Sections:
-  - Name: .a
-    Type: SHT_PROGBITS
-    Flags: [ SHF_ALLOC ]
-    ContentArray: []
-  - Name: .b
-    Type: SHT_PROGBITS
-    Flags: [ SHF_ALLOC ]
-    ContentArray: []
-    Address: 0x1000
-    Offset: 0x1234
-  - Name: .c
-    Type: SHT_PROGBITS
-    Flags: [ SHF_ALLOC ]
-    ContentArray: []
-    Address: 0x6000
-    Offset: 0x5678
 Symbols:
 # CHECK-NOT: R:1234:__internal_abs
   - Name:  __internal_abs
@@ -51,26 +22,14 @@ Symbols:
   - Name:  __rc5
     Index: SHN_ABS
     Value: 0x34
-# CHECK: G:2000:A
-  - Name:  A
+# CHECK: G:2000:register_lo
+  - Name:  register_lo
     Index: SHN_ABS
     Value: 0x2000
-# CHECK: G:401f:B
-  - Name:  B
+# CHECK: G:5fff:register_hi
+  - Name:  register_hi
     Index: SHN_ABS
-    Value: 0x401f
-# CHECK: R:10:a
-  - Name:  a
-    Section: .a
-    Value: 0x10
-# CHECK: R:1fff:b
-  - Name:  b
-    Section: .a
-    Value: 0x1fff
-# CHECK: P:101f:c
-  - Name:  c
-    Section: .b
-    Value: 0x1fff
+    Value: 0x5fff
 # CHECK: W:0:wram_bank_0_0
   - Name:  wram_bank_0_0
     Index: SHN_ABS
@@ -83,3 +42,48 @@ Symbols:
   - Name:  wram_bank_1_0
     Index: SHN_ABS
     Value: 0x16000
+# CHECK: G:8000:prg_rom_unmapped
+  - Name:  prg_rom_unmapped
+    Index: SHN_ABS
+    Value: 0x8000
+# CHECK: P:4:prg_rom_mapped_unnamed
+  - Name:  __prg_rom_lma
+    Index: SHN_ABS
+    Value: 0x8001
+  - Name:  __prg_rom_offset
+    Index: SHN_ABS
+    Value: 0x0002
+  - Name:  prg_rom_mapped_unnamed
+    Index: SHN_ABS
+    Value: 0x8003
+# CHECK: P:6:prg_rom_mapped_unnamed_later
+  - Name:  prg_rom_mapped_unnamed_later
+    Index: SHN_ABS
+    Value: 0x8005
+# CHECK: P:7:prg_rom_mapped_named_foo
+# CHECK: P:9:prg_rom_mapped_named_bar
+  - Name:  __prg_rom_foo_lma
+    Index: SHN_ABS
+    Value: 0x8006
+  - Name:  __prg_rom_foo_offset
+    Index: SHN_ABS
+    Value: 0x0007
+  - Name:  __prg_rom_bar_lma
+    Index: SHN_ABS
+    Value: 0x8007
+  - Name:  __prg_rom_bar_offset
+    Index: SHN_ABS
+    Value: 0x0009
+  - Name:  prg_rom_mapped_named_foo
+    Index: SHN_ABS
+    Value: 0x8006
+  - Name:  prg_rom_mapped_named_bar
+    Index: SHN_ABS
+    Value: 0x8007
+# CHECK: G:8008:prg_rom_bank_no_offset
+  - Name:  __prg_rom_no_offset_lma
+    Index: SHN_ABS
+    Value: 0x8008
+  - Name:  prg_rom_bank_no_offset
+    Index: SHN_ABS
+    Value: 0x8008
