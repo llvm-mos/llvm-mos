@@ -234,7 +234,6 @@ struct Config {
   bool noinhibitExec;
   bool nostdlib;
   bool oFormatBinary;
-  bool oFormatBinaryFromCLI = false;
   bool omagic;
   bool optEB = false;
   bool optEL = false;

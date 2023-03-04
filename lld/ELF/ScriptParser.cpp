@@ -473,9 +473,7 @@ void ScriptParser::readOutputFormat() {
   // Same as setting --oformat binary
   if (s == "binary") {
     config->bfdname = {};
-    // CLI takes precedence.
-    if (!config->oFormatBinaryFromCLI)
-      config->oFormatBinary = true;
+    config->oFormatBinary = true;
     return;
   }
 
