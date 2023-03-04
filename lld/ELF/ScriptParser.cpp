@@ -469,13 +469,6 @@ void ScriptParser::readOutputFormat() {
     consume(")");
   }
   s = config->bfdname;
-
-  // Same as setting --oformat binary
-  if (s == "binary") {
-    config->bfdname = {};
-    config->oFormatBinary = true;
-  }
-
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 
