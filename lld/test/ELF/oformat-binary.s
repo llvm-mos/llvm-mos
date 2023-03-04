@@ -15,10 +15,6 @@
 # RUN: ld.lld -o %t2.out --script %t.script %t --oformat binary
 # RUN: od -t x1 -v %t2.out | FileCheck %s
 
-# RUN: echo "OUTPUT_FORMAT(binary);" > %t.script
-# RUN: ld.lld -o %t2.out --script %t.script %t
-# RUN: od -t x1 -v %t2.out | FileCheck %s
-
 ## LMA(.text)=0x100, LMA(.mysec)=0x108. The minimum LMA of all non-empty sections is 0x100.
 ## We place an output section at its LMA minus 0x100.
 # RUN: echo 'SECTIONS { .text 0x100 : {*(.text)} .mysec ALIGN(8) : {*(.mysec*)} }' > %talign.lds

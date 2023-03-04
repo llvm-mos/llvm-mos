@@ -474,7 +474,6 @@ void ScriptParser::readOutputFormat() {
   if (s == "binary") {
     config->bfdname = {};
     config->oFormatBinary = true;
-    return;
   }
 
   if (s.consume_back("-freebsd"))
