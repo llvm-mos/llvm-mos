@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "ScriptParser.h"
 #include "Config.h"
 #include "Driver.h"
