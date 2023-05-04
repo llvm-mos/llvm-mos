@@ -1623,8 +1623,8 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
         Index = Src;
         continue;
       }
-      if (Helper.KB &&
-          Helper.KB->getKnownBits(NewOffset).countMaxActiveBits() <= 8) {
+      if (Helper.getKnownBits()->getKnownBits(NewOffset).countMaxActiveBits() <=
+          8) {
         if (Index)
           return false;
         Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
@@ -1670,8 +1670,9 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
         Index = Src;
         Addr = Base;
       }
-    } else if (Helper.KB &&
-               Helper.KB->getKnownBits(NewOffset).countMaxActiveBits() <= 8) {
+    } else if (Helper.getKnownBits()
+                   ->getKnownBits(NewOffset)
+                   .countMaxActiveBits() <= 8) {
       Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
       Addr = Base;
     }

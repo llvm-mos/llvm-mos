@@ -45,7 +45,7 @@ public:
   bool validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
                            StringRef Constraint, unsigned Size) const;
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {

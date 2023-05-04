@@ -661,7 +661,7 @@ struct Cmp_match {
 
     auto CInConst =
         getIConstantVRegValWithLookThrough(CondMI->getOperand(7).getReg(), MRI);
-    if (!CInConst || CInConst->Value.isNullValue())
+    if (!CInConst || CInConst->Value.isZero())
       return false;
 
     LHS = CondMI->getOperand(5).getReg();
@@ -923,7 +923,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
 
   auto CInConst =
       getIConstantVRegValWithLookThrough(MI.getOperand(7).getReg(), MRI);
-  bool CInSet = CInConst && !CInConst->Value.isNullValue();
+  bool CInSet = CInConst && !CInConst->Value.isZero();
 
   auto RConst = getIConstantVRegValWithLookThrough(R, *Builder.getMRI());
   MachineInstr *Load;

@@ -135,7 +135,7 @@ bool MOSCombinerHelperState::matchSBCEqual(MachineInstr &MI,
   auto ConstCarryIn = getIConstantVRegValWithLookThrough(CarryIn, MRI);
   if (!ConstCarryIn)
     return false;
-  if (!ConstCarryIn->Value.isAllOnesValue())
+  if (!ConstCarryIn->Value.isAllOnes())
     return false;
 
   if (LHS == RHS)

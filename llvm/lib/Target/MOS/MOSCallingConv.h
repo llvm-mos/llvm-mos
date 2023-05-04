@@ -15,7 +15,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/Support/MachineValueType.h"
+#include "llvm/CodeGen/MachineValueType.h"
 
 namespace llvm {
 

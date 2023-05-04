@@ -54,8 +54,6 @@ public:
   /// To keep track of changes made by the LegalizerHelper.
   GISelChangeObserver &Observer;
 
-  GISelKnownBits *KB = nullptr;
-
 private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;

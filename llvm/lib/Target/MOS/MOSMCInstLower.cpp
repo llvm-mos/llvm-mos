@@ -625,7 +625,7 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
   case MachineOperand::MO_Immediate: {
     auto GetTotal = [&]() {
       size_t Idx = &MO - MO.getParent()->operands_begin();
-      switch (MO.getParent()->getDesc().OpInfo[Idx].OperandType) {
+      switch (MO.getParent()->getDesc().operands()[Idx].OperandType) {
       default:
         llvm_unreachable("Unexpected operand type.");
       case MOSOp::OPERAND_IMM8:

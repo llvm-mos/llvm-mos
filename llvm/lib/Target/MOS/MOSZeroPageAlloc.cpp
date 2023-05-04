@@ -347,7 +347,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
          "There must be room for the imaginary registers.");
 
   ModuleZPAvail = ZPAvail;
-  for (GlobalVariable &GV : M.getGlobalList()) {
+  for (GlobalVariable &GV : M.globals()) {
     if (!GV.hasSection())
       continue;
     StringRef SecName = GV.getSection();

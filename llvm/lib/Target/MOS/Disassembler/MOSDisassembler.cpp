@@ -66,6 +66,9 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSDisassembler() {
 #include "MOSGenDisassemblerTables.inc"
 
 const uint8_t *getDecoderTable(size_t Size) {
+  // Suppress unused variable warning for generated function.
+  (void)Check;
+
   switch (Size) {
   case 1:
     return DecoderTableMOS8;

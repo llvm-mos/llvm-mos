@@ -318,7 +318,6 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
 
   const size_t NumBlocks = MF.size();
 
