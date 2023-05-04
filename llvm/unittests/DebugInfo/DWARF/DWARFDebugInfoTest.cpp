@@ -51,6 +51,7 @@ void TestAllForms() {
   const AddrType AddrxValue = (AddrType)0x4231abcd4231abcdULL;
   const AddrType Addrx1Value = (AddrType)0x0000aaaabbbbccccULL;
   const AddrType Addrx2Value = (AddrType)0xf00123f00456f000ULL;
+  const AddrType Addrx3Value = (AddrType)0xABABA000B111C222ULL;
   const AddrType Addrx4Value = (AddrType)0xa1b2c3d4e5f6e5d4ULL;
 
   const uint8_t BlockData[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
@@ -100,14 +101,14 @@ void TestAllForms() {
   const auto Attr_DW_FORM_addrx = static_cast<dwarf::Attribute>(Attr++);
   const auto Attr_DW_FORM_addrx1 = static_cast<dwarf::Attribute>(Attr++);
   const auto Attr_DW_FORM_addrx2 = static_cast<dwarf::Attribute>(Attr++);
-  // TODO: Add Attr_DW_FORM_addrx3 test (this form type is currently
-  // unsupported)
+  const auto Attr_DW_FORM_addrx3 = static_cast<dwarf::Attribute>(Attr++);
   const auto Attr_DW_FORM_addrx4 = static_cast<dwarf::Attribute>(Attr++);
 
   if (Version >= 5) {
     CUDie.addAttribute(Attr_DW_FORM_addrx, DW_FORM_addrx, AddrxValue);
     CUDie.addAttribute(Attr_DW_FORM_addrx1, DW_FORM_addrx1, Addrx1Value);
     CUDie.addAttribute(Attr_DW_FORM_addrx2, DW_FORM_addrx2, Addrx2Value);
+    CUDie.addAttribute(Attr_DW_FORM_addrx3, DW_FORM_addrx3, Addrx3Value);
     CUDie.addAttribute(Attr_DW_FORM_addrx4, DW_FORM_addrx4, Addrx4Value);
   }
 
@@ -274,6 +275,10 @@ void TestAllForms() {
     auto ExtractedAddrx2Value = toAddress(DieDG.find(Attr_DW_FORM_addrx2));
     EXPECT_TRUE(ExtractedAddrx2Value.has_value());
     EXPECT_EQ(Addrx2Value, *ExtractedAddrx2Value);
+
+    auto ExtractedAddrx3Value = toAddress(DieDG.find(Attr_DW_FORM_addrx3));
+    EXPECT_TRUE(ExtractedAddrx3Value.has_value());
+    EXPECT_EQ(Addrx3Value, *ExtractedAddrx3Value);
 
     auto ExtractedAddrx4Value = toAddress(DieDG.find(Attr_DW_FORM_addrx4));
     EXPECT_TRUE(ExtractedAddrx1Value.has_value());
@@ -1171,11 +1176,13 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
   EXPECT_STREQ(String1, *Extracted3);
 }
 
-#if defined(_AIX) && defined(__64BIT__)
+// AIX does not support string offset section.
+#if defined(_AIX)
 TEST(DWARFDebugInfo, DISABLED_TestEmptyStringOffsets) {
 #else
 TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
 #endif
+
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1204,11 +1211,7 @@ TEST(DWARFDebugInfo, TestEmptyStringOffsets) {
       DwarfContext->getDWARFObj().getStrOffsetsSection().Data.empty());
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestRelations) {
-#else
 TEST(DWARFDebugInfo, TestRelations) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1395,11 +1398,7 @@ TEST(DWARFDebugInfo, TestDWARFDie) {
   EXPECT_FALSE(DefaultDie.getSibling().isValid());
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestChildIterators) {
-#else
 TEST(DWARFDebugInfo, TestChildIterators) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1508,11 +1507,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
   EXPECT_EQ(CUDie.begin(), CUDie.end());
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestAttributeIterators) {
-#else
 TEST(DWARFDebugInfo, TestAttributeIterators) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1574,11 +1569,7 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
   EXPECT_EQ(E, ++I);
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestFindRecurse) {
-#else
 TEST(DWARFDebugInfo, TestFindRecurse) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1792,11 +1783,7 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   // Test
 }
 
-#if defined(_AIX) && defined(__64BIT__)
-TEST(DWARFDebugInfo, DISABLED_TestFindAttrs) {
-#else
 TEST(DWARFDebugInfo, TestFindAttrs) {
-#endif
   Triple Triple = getNormalizedDefaultTargetTriple();
   if (!isConfigurationSupported(Triple))
     GTEST_SKIP();
@@ -1859,7 +1846,8 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   EXPECT_EQ(DieMangled, toString(NameOpt, ""));
 }
 
-#if defined(_AIX) && defined(__64BIT__)
+// AIX does not support debug_addr section.
+#if defined(_AIX)
 TEST(DWARFDebugInfo, DISABLED_TestImplicitConstAbbrevs) {
 #else
 TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {

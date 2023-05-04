@@ -43,12 +43,7 @@ struct CastOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getResult(0), BufferRelation::Equivalent}};
   }
 
   FailureOr<BaseMemRefType>
@@ -128,12 +123,7 @@ struct CollapseShapeOpInterface
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     // TODO: CollapseShapeOp may allocate at runtime.
-    return {op->getOpResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
   FailureOr<BaseMemRefType>
@@ -297,12 +287,7 @@ struct ExpandShapeOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getOpResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
   FailureOr<BaseMemRefType>
@@ -356,14 +341,7 @@ struct ExtractSliceOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    if (&opOperand == &op->getOpOperand(0) /*source*/)
-      return {op->getOpResult(0)};
-    return {};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Unknown;
+    return {{op->getOpResult(0), BufferRelation::Unknown}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -784,7 +762,7 @@ struct InsertSliceOpInterface
           return isConstantIntValue(ofr, 0);
         });
     bool sizesMatchDestSizes = llvm::all_of(
-        llvm::enumerate(insertSliceOp.getMixedSizes()), [&](auto &it) {
+        llvm::enumerate(insertSliceOp.getMixedSizes()), [&](const auto &it) {
           return getConstantIntValue(it.value()) ==
                  destType.getDimSize(it.index());
         });
@@ -915,7 +893,7 @@ struct PadOpInterface
       AffineExpr s0, s1, s2;
       bindSymbols(op->getContext(), s0, s1, s2);
       AffineExpr sumExpr = s0 + s1 + s2;
-      Value sum = rewriter.create<AffineApplyOp>(
+      Value sum = rewriter.create<affine::AffineApplyOp>(
           loc, sumExpr, ValueRange{srcDim, lowPad, highPad});
       dynamicSizes.push_back(sum);
     }
@@ -1000,12 +978,7 @@ struct ReshapeOpInterface
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    return {op->getOpResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
+    return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -1084,6 +1057,21 @@ struct ParallelInsertSliceOpInterface
     if (failed(options.createMemCpy(rewriter, parallelInsertSliceOp.getLoc(),
                                     *srcBuffer, subview)))
       return failure();
+
+    // In case the source was allocated in the same block, make sure that the
+    // deallocation op (if any) appears after the memcpy. By default, deallocs
+    // are placed before the terminator, but this does not work for ForallOp
+    // because the terminator does more than just yielding a value.
+    //
+    // Note: This is not a problem for the destination buffer because these are
+    // assumed to always bufferize in-place.
+    for (Operation *user : srcBuffer->getUsers()) {
+      if (hasEffect<MemoryEffects::Free>(user)) {
+        if (user->getBlock() == parallelCombiningParent->getBlock())
+          user->moveBefore(user->getBlock()->getTerminator());
+        break;
+      }
+    }
 
     // Delete the op.
     rewriter.eraseOp(op);

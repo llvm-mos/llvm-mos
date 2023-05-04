@@ -165,16 +165,26 @@ template<class T>
 #include <__functional/hash.h>
 #include <__functional/invoke.h>
 #include <__functional/unary_function.h>
+#include <__memory/addressof.h>
 #include <__memory/construct_at.h>
-#include <__tuple_dir/sfinae_helpers.h>
+#include <__tuple/sfinae_helpers.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/disjunction.h>
+#include <__type_traits/is_trivially_copy_assignable.h>
+#include <__type_traits/is_trivially_copy_constructible.h>
+#include <__type_traits/is_trivially_destructible.h>
+#include <__type_traits/is_trivially_move_assignable.h>
+#include <__type_traits/is_trivially_move_constructible.h>
+#include <__type_traits/negation.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
+#include <__verbose_abort>
 #include <initializer_list>
 #include <new>
 #include <stdexcept>
-#include <type_traits>
 #include <version>
 
 // standard-mandated includes
@@ -200,7 +210,7 @@ public:
 
 } // namespace std
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -208,16 +218,16 @@ _LIBCPP_NORETURN
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
 void __throw_bad_optional_access() {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         throw bad_optional_access();
 #else
-        _VSTD::abort();
+    _LIBCPP_VERBOSE_ABORT("bad_optional_access was thrown in -fno-exceptions mode");
 #endif
 }
 
 struct nullopt_t
 {
-    struct __secret_tag { _LIBCPP_INLINE_VISIBILITY explicit __secret_tag() = default; };
+    struct __secret_tag { explicit __secret_tag() = default; };
     _LIBCPP_INLINE_VISIBILITY constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
 };
 
@@ -259,7 +269,7 @@ struct __optional_destruct_base<_Tp, false>
         :  __val_(_VSTD::forward<_Args>(__args)...),
            __engaged_(true) {}
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
   template <class _Fp, class... _Args>
   _LIBCPP_HIDE_FROM_ABI
   constexpr __optional_destruct_base(__optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args)
@@ -301,7 +311,7 @@ struct __optional_destruct_base<_Tp, true>
         :  __val_(_VSTD::forward<_Args>(__args)...),
            __engaged_(true) {}
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
   template <class _Fp, class... _Args>
   _LIBCPP_HIDE_FROM_ABI
   constexpr __optional_destruct_base(__optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args)
@@ -357,7 +367,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp>
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_Args&&... __args)
     {
         _LIBCPP_ASSERT(!has_value(), "__construct called for engaged __optional_storage");
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
         _VSTD::construct_at(_VSTD::addressof(this->__val_), _VSTD::forward<_Args>(__args)...);
 #else
         ::new ((void*)_VSTD::addressof(this->__val_)) value_type(_VSTD::forward<_Args>(__args)...);
@@ -403,7 +413,7 @@ struct __optional_storage_base<_Tp, true>
     __raw_type* __value_;
 
     template <class _Up>
-    static constexpr bool __can_bind_reference() {
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
         using _RawUp = __libcpp_remove_reference_t<_Up>;
         using _UpPtr = _RawUp*;
         using _RawTp = __libcpp_remove_reference_t<_Tp>;
@@ -628,7 +638,7 @@ struct __is_std_optional : false_type {};
 template <class _Tp> struct __is_std_optional<optional<_Tp>> : true_type {};
 
 template <class _Tp>
-class optional
+class _LIBCPP_DECLSPEC_EMPTY_BASES optional
     : private __optional_move_assign_base<_Tp>
     , private __optional_sfinae_ctor_base_t<_Tp>
     , private __optional_sfinae_assign_base_t<_Tp>
@@ -653,13 +663,13 @@ private:
     // LWG2756: conditionally explicit conversion from _Up
     struct _CheckOptionalArgsConstructor {
       template <class _Up>
-      static constexpr bool __enable_implicit() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
           return is_constructible_v<_Tp, _Up&&> &&
                  is_convertible_v<_Up&&, _Tp>;
       }
 
       template <class _Up>
-      static constexpr bool __enable_explicit() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
           return is_constructible_v<_Tp, _Up&&> &&
                  !is_convertible_v<_Up&&, _Tp>;
       }
@@ -692,17 +702,17 @@ private:
           is_assignable<_Tp&, _Opt const&&>
       >;
       template <class _Up, class _QUp = _QualUp>
-      static constexpr bool __enable_implicit() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
           return is_convertible<_QUp, _Tp>::value &&
               !__check_constructible_from_opt<_Up>::value;
       }
       template <class _Up, class _QUp = _QualUp>
-      static constexpr bool __enable_explicit() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
           return !is_convertible<_QUp, _Tp>::value &&
               !__check_constructible_from_opt<_Up>::value;
       }
       template <class _Up, class _QUp = _QualUp>
-      static constexpr bool __enable_assign() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_assign() {
           // Construction and assignability of _QUp to _Tp has already been
           // checked.
           return !__check_constructible_from_opt<_Up>::value &&
@@ -805,7 +815,7 @@ public:
         this->__construct_from(_VSTD::move(__v));
     }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
   template<class _Fp, class... _Args>
   _LIBCPP_HIDE_FROM_ABI
   constexpr explicit optional(__optional_construct_from_invoke_tag, _Fp&& __f, _Args&&... __args)
@@ -820,8 +830,8 @@ public:
         return *this;
     }
 
-    constexpr optional& operator=(const optional&) = default;
-    constexpr optional& operator=(optional&&) = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr optional& operator=(const optional&) = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr optional& operator=(optional&&) = default;
 
     // LWG2756
     template <class _Up = value_type,
@@ -1047,7 +1057,7 @@ public:
                                   static_cast<value_type>(_VSTD::forward<_Up>(__v));
     }
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
   template<class _Func>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
   constexpr auto and_then(_Func&& __f) & {
@@ -1171,7 +1181,7 @@ public:
       return _VSTD::move(*this);
     return _VSTD::forward<_Func>(__f)();
   }
-#endif // _LIBCPP_STD_VER > 20
+#endif // _LIBCPP_STD_VER >= 23
 
     using __base::reset;
 };
@@ -1572,7 +1582,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>
@@ -1583,6 +1593,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <memory>
 #  include <ratio>
 #  include <tuple>
+#  include <type_traits>
 #  include <typeinfo>
 #  include <utility>
 #  include <variant>

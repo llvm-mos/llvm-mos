@@ -37,6 +37,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
+#include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -127,6 +128,13 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
+
+static cl::opt<std::string> BasicBlockProfileDump(
+    "mbb-profile-dump", cl::Hidden,
+    cl::desc("Basic block profile dump for external cost modelling. If "
+             "matching up BBs with afterwards, the compilation must be "
+             "performed with -basic-block-sections=labels. Enabling this "
+             "flag during in-process ThinLTO is not supported."));
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -414,6 +422,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
+  AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -583,6 +592,16 @@ bool AsmPrinter::doInitialization(Module &M) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->beginModule(&M);
+  }
+
+  if (!BasicBlockProfileDump.empty()) {
+    std::error_code PossibleFileError;
+    MBBProfileDumpFileOutput = std::make_unique<raw_fd_ostream>(
+        BasicBlockProfileDump, PossibleFileError);
+    if (PossibleFileError) {
+      M.getContext().emitError("Failed to open file for MBB Profile Dump: " +
+                               PossibleFileError.message() + "\n");
+    }
   }
 
   return false;
@@ -908,13 +927,6 @@ void AsmPrinter::emitFunctionHeader() {
   if (F.hasFnAttribute(Attribute::Cold))
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_Cold);
 
-  if (isVerbose()) {
-    F.printAsOperand(OutStreamer->getCommentOS(),
-                     /*PrintType=*/false, F.getParent());
-    emitFunctionHeaderComment();
-    OutStreamer->getCommentOS() << '\n';
-  }
-
   // Emit the prefix data.
   if (F.hasPrefixData()) {
     if (MAI->hasSubsectionsViaSymbols()) {
@@ -956,6 +968,13 @@ void AsmPrinter::emitFunctionHeader() {
     // May be reassigned when emitting the body, to reference the label after
     // the initial BTI (AArch64) or endbr32/endbr64 (x86).
     CurrentPatchableFunctionEntrySym = CurrentFnBegin;
+  }
+
+  if (isVerbose()) {
+    F.printAsOperand(OutStreamer->getCommentOS(),
+                     /*PrintType=*/false, F.getParent());
+    emitFunctionHeaderComment();
+    OutStreamer->getCommentOS() << '\n';
   }
 
   // Emit the function descriptor. This is a virtual function to allow targets
@@ -1346,7 +1365,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->AddComment("number of basic blocks");
   OutStreamer->emitULEB128IntValue(MF.size());
   const MCSymbol *PrevMBBEndSymbol = FunctionSymbol;
-  // Emit BB Information for each basic block in the funciton.
+  // Emit BB Information for each basic block in the function.
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
         MBB.isEntryBlock() ? FunctionSymbol : MBB.getSymbol();
@@ -1608,6 +1627,7 @@ void AsmPrinter::emitFunctionBody() {
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
+  bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   for (auto &MBB : *MF) {
@@ -1646,9 +1666,24 @@ void AsmPrinter::emitFunctionBody() {
         emitFrameAlloc(MI);
         break;
       case TargetOpcode::ANNOTATION_LABEL:
-      case TargetOpcode::EH_LABEL:
       case TargetOpcode::GC_LABEL:
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
+        break;
+      case TargetOpcode::EH_LABEL:
+        OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
+        // For AsynchEH, insert a Nop if followed by a trap inst
+        //   Or the exception won't be caught.
+        //   (see MCConstantExpr::create(1,..) in WinException.cpp)
+        //  Ignore SDiv/UDiv because a DIV with Const-0 divisor
+        //    must have being turned into an UndefValue.
+        //  Div with variable opnds won't be the first instruction in
+        //  an EH region as it must be led by at least a Load
+        {
+          auto MI2 = std::next(MI.getIterator());
+          if (IsEHa && MI2 != MBB.end() &&
+              (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
+            emitNops(1);
+        }
         break;
       case TargetOpcode::INLINEASM:
       case TargetOpcode::INLINEASM_BR:
@@ -1888,6 +1923,23 @@ void AsmPrinter::emitFunctionBody() {
     OutStreamer->getCommentOS() << "-- End function\n";
 
   OutStreamer->addBlankLine();
+
+  // Output MBB ids, function names, and frequencies if the flag to dump
+  // MBB profile information has been set
+  if (MBBProfileDumpFileOutput) {
+    if (!MF->hasBBLabels())
+      MF->getContext().reportError(
+          SMLoc(),
+          "Unable to find BB labels for MBB profile dump. -mbb-profile-dump "
+          "must be called with -basic-block-sections=labels");
+    MachineBlockFrequencyInfo &MBFI =
+        getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+    for (const auto &MBB : *MF) {
+      *MBBProfileDumpFileOutput.get()
+          << MF->getName() << "," << MBB.getBBID() << ","
+          << MBFI.getBlockFreqRelativeToEntryBlock(&MBB) << "\n";
+    }
+  }
 }
 
 /// Compute the number of Global Variables that uses a Constant.
@@ -3338,7 +3390,8 @@ static void emitGlobalConstantLargeInt(const ConstantInt *CI, AsmPrinter &AP) {
       ExtraBitsSize = alignTo(ExtraBitsSize, 8);
       ExtraBits = Realigned.getRawData()[0] &
         (((uint64_t)-1) >> (64 - ExtraBitsSize));
-      Realigned.lshrInPlace(ExtraBitsSize);
+      if (BitWidth >= 64)
+        Realigned.lshrInPlace(ExtraBitsSize);
     } else
       ExtraBits = Realigned.getRawData()[BitWidth / 64];
   }

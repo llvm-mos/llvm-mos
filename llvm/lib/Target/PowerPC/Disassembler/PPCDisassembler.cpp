@@ -112,6 +112,14 @@ static DecodeStatus DecodeF8RCRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, FRegs);
 }
 
+static DecodeStatus DecodeFpRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  assert(RegNo <= 30 && "Expecting a register number no more than 30.");
+  assert((RegNo & 1) == 0 && "Expecting an even register number.");
+  return decodeRegisterClass(Inst, RegNo >> 1, FpRegs);
+}
+
 static DecodeStatus DecodeVFRCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
@@ -363,7 +371,7 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   // TODO: In this function we call decodeInstruction several times with
   //       different decoder tables. It may be possible to only call once by
   //       looking at the top 6 bits of the instruction.
-  if (STI.getFeatureBits()[PPC::FeaturePrefixInstrs] && Bytes.size() >= 8) {
+  if (STI.hasFeature(PPC::FeaturePrefixInstrs) && Bytes.size() >= 8) {
     uint32_t Prefix = ReadFunc(Bytes.data());
     uint32_t BaseInst = ReadFunc(Bytes.data() + 4);
     uint64_t Inst = BaseInst | (uint64_t)Prefix << 32;
@@ -385,7 +393,7 @@ DecodeStatus PPCDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   // Read the instruction in the proper endianness.
   uint64_t Inst = ReadFunc(Bytes.data());
 
-  if (STI.getFeatureBits()[PPC::FeatureSPE]) {
+  if (STI.hasFeature(PPC::FeatureSPE)) {
     DecodeStatus result =
         decodeInstruction(DecoderTableSPE32, MI, Inst, Address, this, STI);
     if (result != MCDisassembler::Fail)

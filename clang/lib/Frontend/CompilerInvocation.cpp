@@ -12,7 +12,6 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/CommentOptions.h"
-#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -59,6 +58,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -76,7 +76,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/HashBuilder.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -86,6 +85,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <atomic>
@@ -427,8 +427,10 @@ static T extractMaskValue(T KeyPath) {
 }
 
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
-    ARGS, DIAGS, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,       \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)             \
+    ARGS, DIAGS, PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,  \
+    PARAM, HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT,     \
+    KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,          \
+    DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                              \
   if ((FLAGS)&options::CC1Option) {                                            \
     KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
     if (IMPLIED_CHECK)                                                         \
@@ -442,9 +444,10 @@ static T extractMaskValue(T KeyPath) {
 // Capture the extracted value as a lambda argument to avoid potential issues
 // with lifetime extension of the reference.
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
-    ARGS, STRING_ALLOCATOR, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH,       \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR,      \
-    TABLE_INDEX)                                                               \
+    ARGS, STRING_ALLOCATOR, PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS,         \
+    ALIASARGS, FLAGS, PARAM, HELPTEXT, METAVAR, VALUES, SPELLING,              \
+    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
+    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
   if ((FLAGS)&options::CC1Option) {                                            \
     [&](const auto &Extracted) {                                               \
       if (ALWAYS_EMIT ||                                                       \
@@ -641,18 +644,31 @@ using GenerateFn = llvm::function_ref<void(
     CompilerInvocation &, SmallVectorImpl<const char *> &,
     CompilerInvocation::StringAllocator)>;
 
-// May perform round-trip of command line arguments. By default, the round-trip
-// is enabled in assert builds. This can be overwritten at run-time via the
-// "-round-trip-args" and "-no-round-trip-args" command line flags.
-// During round-trip, the command line arguments are parsed into a dummy
-// instance of CompilerInvocation which is used to generate the command line
-// arguments again. The real CompilerInvocation instance is then created by
-// parsing the generated arguments, not the original ones.
+/// May perform round-trip of command line arguments. By default, the round-trip
+/// is enabled in assert builds. This can be overwritten at run-time via the
+/// "-round-trip-args" and "-no-round-trip-args" command line flags, or via the
+/// ForceRoundTrip parameter.
+///
+/// During round-trip, the command line arguments are parsed into a dummy
+/// CompilerInvocation, which is used to generate the command line arguments
+/// again. The real CompilerInvocation is then created by parsing the generated
+/// arguments, not the original ones. This (in combination with tests covering
+/// argument behavior) ensures the generated command line is complete (doesn't
+/// drop/mangle any arguments).
+///
+/// Finally, we check the command line that was used to create the real
+/// CompilerInvocation instance. By default, we compare it to the command line
+/// the real CompilerInvocation generates. This checks whether the generator is
+/// deterministic. If \p CheckAgainstOriginalInvocation is enabled, we instead
+/// compare it to the original command line to verify the original command-line
+/// was canonical and can round-trip exactly.
 static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
                       CompilerInvocation &RealInvocation,
                       CompilerInvocation &DummyInvocation,
                       ArrayRef<const char *> CommandLineArgs,
-                      DiagnosticsEngine &Diags, const char *Argv0) {
+                      DiagnosticsEngine &Diags, const char *Argv0,
+                      bool CheckAgainstOriginalInvocation = false,
+                      bool ForceRoundTrip = false) {
 #ifndef NDEBUG
   bool DoRoundTripDefault = true;
 #else
@@ -660,11 +676,15 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
 #endif
 
   bool DoRoundTrip = DoRoundTripDefault;
-  for (const auto *Arg : CommandLineArgs) {
-    if (Arg == StringRef("-round-trip-args"))
-      DoRoundTrip = true;
-    if (Arg == StringRef("-no-round-trip-args"))
-      DoRoundTrip = false;
+  if (ForceRoundTrip) {
+    DoRoundTrip = true;
+  } else {
+    for (const auto *Arg : CommandLineArgs) {
+      if (Arg == StringRef("-round-trip-args"))
+        DoRoundTrip = true;
+      if (Arg == StringRef("-no-round-trip-args"))
+        DoRoundTrip = false;
+    }
   }
 
   // If round-trip was not requested, simply run the parser with the real
@@ -719,30 +739,34 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // Generate arguments from the dummy invocation. If Generate is the
   // inverse of Parse, the newly generated arguments must have the same
   // semantics as the original.
-  SmallVector<const char *> GeneratedArgs1;
-  Generate(DummyInvocation, GeneratedArgs1, SA);
+  SmallVector<const char *> GeneratedArgs;
+  Generate(DummyInvocation, GeneratedArgs, SA);
 
   // Run the second parse, now on the generated arguments, and with the real
   // invocation and diagnostics. The result is what we will end up using for the
   // rest of compilation, so if Generate is not inverse of Parse, something down
   // the line will break.
-  bool Success2 = Parse(RealInvocation, GeneratedArgs1, Diags, Argv0);
+  bool Success2 = Parse(RealInvocation, GeneratedArgs, Diags, Argv0);
 
   // The first parse on original arguments succeeded, but second parse of
   // generated arguments failed. Something must be wrong with the generator.
   if (!Success2) {
     Diags.Report(diag::err_cc1_round_trip_ok_then_fail);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << 1 << SerializeArgs(GeneratedArgs1);
+        << 1 << SerializeArgs(GeneratedArgs);
     return false;
   }
 
-  // Generate arguments again, this time from the options we will end up using
-  // for the rest of the compilation.
-  SmallVector<const char *> GeneratedArgs2;
-  Generate(RealInvocation, GeneratedArgs2, SA);
+  SmallVector<const char *> ComparisonArgs;
+  if (CheckAgainstOriginalInvocation)
+    // Compare against original arguments.
+    ComparisonArgs.assign(CommandLineArgs.begin(), CommandLineArgs.end());
+  else
+    // Generate arguments again, this time from the options we will end up using
+    // for the rest of the compilation.
+    Generate(RealInvocation, ComparisonArgs, SA);
 
-  // Compares two lists of generated arguments.
+  // Compares two lists of arguments.
   auto Equal = [](const ArrayRef<const char *> A,
                   const ArrayRef<const char *> B) {
     return std::equal(A.begin(), A.end(), B.begin(), B.end(),
@@ -754,21 +778,39 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   // If we generated different arguments from what we assume are two
   // semantically equivalent CompilerInvocations, the Generate function may
   // be non-deterministic.
-  if (!Equal(GeneratedArgs1, GeneratedArgs2)) {
+  if (!Equal(GeneratedArgs, ComparisonArgs)) {
     Diags.Report(diag::err_cc1_round_trip_mismatch);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << 1 << SerializeArgs(GeneratedArgs1);
+        << 1 << SerializeArgs(GeneratedArgs);
     Diags.Report(diag::note_cc1_round_trip_generated)
-        << 2 << SerializeArgs(GeneratedArgs2);
+        << 2 << SerializeArgs(ComparisonArgs);
     return false;
   }
 
   Diags.Report(diag::remark_cc1_round_trip_generated)
-      << 1 << SerializeArgs(GeneratedArgs1);
+      << 1 << SerializeArgs(GeneratedArgs);
   Diags.Report(diag::remark_cc1_round_trip_generated)
-      << 2 << SerializeArgs(GeneratedArgs2);
+      << 2 << SerializeArgs(ComparisonArgs);
 
   return Success2;
+}
+
+bool CompilerInvocation::checkCC1RoundTrip(ArrayRef<const char *> Args,
+                                           DiagnosticsEngine &Diags,
+                                           const char *Argv0) {
+  CompilerInvocation DummyInvocation1, DummyInvocation2;
+  return RoundTrip(
+      [](CompilerInvocation &Invocation, ArrayRef<const char *> CommandLineArgs,
+         DiagnosticsEngine &Diags, const char *Argv0) {
+        return CreateFromArgsImpl(Invocation, CommandLineArgs, Diags, Argv0);
+      },
+      [](CompilerInvocation &Invocation, SmallVectorImpl<const char *> &Args,
+         StringAllocator SA) {
+        Args.push_back("-cc1");
+        Invocation.generateCC1CommandLine(Args, SA);
+      },
+      DummyInvocation1, DummyInvocation2, Args, Diags, Argv0,
+      /*CheckAgainstOriginalInvocation=*/true, /*ForceRoundTrip=*/true);
 }
 
 static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
@@ -809,14 +851,8 @@ static void GenerateAnalyzerArgs(AnalyzerOptions &Opts,
                                  CompilerInvocation::StringAllocator SA) {
   const AnalyzerOptions *AnalyzerOpts = &Opts;
 
-#define ANALYZER_OPTION_WITH_MARSHALLING(                                      \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define ANALYZER_OPTION_WITH_MARSHALLING(...)                                  \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
@@ -902,14 +938,8 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 
   AnalyzerOptions *AnalyzerOpts = &Opts;
 
-#define ANALYZER_OPTION_WITH_MARSHALLING(                                      \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define ANALYZER_OPTION_WITH_MARSHALLING(...)                                  \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef ANALYZER_OPTION_WITH_MARSHALLING
 
@@ -1346,14 +1376,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
   else
     GenerateArg(Args, OPT_O, Twine(Opts.OptimizationLevel), SA);
 
-#define CODEGEN_OPTION_WITH_MARSHALLING(                                       \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define CODEGEN_OPTION_WITH_MARSHALLING(...)                                   \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef CODEGEN_OPTION_WITH_MARSHALLING
 
@@ -1373,28 +1397,28 @@ void CompilerInvocation::GenerateCodeGenArgs(
 
   std::optional<StringRef> DebugInfoVal;
   switch (Opts.DebugInfo) {
-  case codegenoptions::DebugLineTablesOnly:
+  case llvm::codegenoptions::DebugLineTablesOnly:
     DebugInfoVal = "line-tables-only";
     break;
-  case codegenoptions::DebugDirectivesOnly:
+  case llvm::codegenoptions::DebugDirectivesOnly:
     DebugInfoVal = "line-directives-only";
     break;
-  case codegenoptions::DebugInfoConstructor:
+  case llvm::codegenoptions::DebugInfoConstructor:
     DebugInfoVal = "constructor";
     break;
-  case codegenoptions::LimitedDebugInfo:
+  case llvm::codegenoptions::LimitedDebugInfo:
     DebugInfoVal = "limited";
     break;
-  case codegenoptions::FullDebugInfo:
+  case llvm::codegenoptions::FullDebugInfo:
     DebugInfoVal = "standalone";
     break;
-  case codegenoptions::UnusedTypeInfo:
+  case llvm::codegenoptions::UnusedTypeInfo:
     DebugInfoVal = "unused-types";
     break;
-  case codegenoptions::NoDebugInfo: // default value
+  case llvm::codegenoptions::NoDebugInfo: // default value
     DebugInfoVal = std::nullopt;
     break;
-  case codegenoptions::LocTrackingOnly: // implied value
+  case llvm::codegenoptions::LocTrackingOnly: // implied value
     DebugInfoVal = std::nullopt;
     break;
   }
@@ -1439,10 +1463,10 @@ void CompilerInvocation::GenerateCodeGenArgs(
     GenerateArg(Args, OPT_gpubnames, SA);
 
   auto TNK = Opts.getDebugSimpleTemplateNames();
-  if (TNK != codegenoptions::DebugTemplateNamesKind::Full) {
-    if (TNK == codegenoptions::DebugTemplateNamesKind::Simple)
+  if (TNK != llvm::codegenoptions::DebugTemplateNamesKind::Full) {
+    if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Simple)
       GenerateArg(Args, OPT_gsimple_template_names_EQ, "simple", SA);
-    else if (TNK == codegenoptions::DebugTemplateNamesKind::Mangled)
+    else if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Mangled)
       GenerateArg(Args, OPT_gsimple_template_names_EQ, "mangled", SA);
   }
   // ProfileInstrumentUsePath is marshalled automatically, no need to generate
@@ -1512,8 +1536,8 @@ void CompilerInvocation::GenerateCodeGenArgs(
                 F.Filename, SA);
   }
 
-  GenerateArg(
-      Args, Opts.EmulatedTLS ? OPT_femulated_tls : OPT_fno_emulated_tls, SA);
+  if (Opts.EmulatedTLS)
+    GenerateArg(Args, OPT_femulated_tls, SA);
 
   if (Opts.FPDenormalMode != llvm::DenormalMode::getIEEE())
     GenerateArg(Args, OPT_fdenormal_fp_math_EQ, Opts.FPDenormalMode.str(), SA);
@@ -1611,14 +1635,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   // variable name and type.
   const LangOptions *LangOpts = &LangOptsRef;
 
-#define CODEGEN_OPTION_WITH_MARSHALLING(                                       \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define CODEGEN_OPTION_WITH_MARSHALLING(...)                                   \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef CODEGEN_OPTION_WITH_MARSHALLING
 
@@ -1652,18 +1670,19 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
     unsigned Val =
         llvm::StringSwitch<unsigned>(A->getValue())
-            .Case("line-tables-only", codegenoptions::DebugLineTablesOnly)
-            .Case("line-directives-only", codegenoptions::DebugDirectivesOnly)
-            .Case("constructor", codegenoptions::DebugInfoConstructor)
-            .Case("limited", codegenoptions::LimitedDebugInfo)
-            .Case("standalone", codegenoptions::FullDebugInfo)
-            .Case("unused-types", codegenoptions::UnusedTypeInfo)
+            .Case("line-tables-only", llvm::codegenoptions::DebugLineTablesOnly)
+            .Case("line-directives-only",
+                  llvm::codegenoptions::DebugDirectivesOnly)
+            .Case("constructor", llvm::codegenoptions::DebugInfoConstructor)
+            .Case("limited", llvm::codegenoptions::LimitedDebugInfo)
+            .Case("standalone", llvm::codegenoptions::FullDebugInfo)
+            .Case("unused-types", llvm::codegenoptions::UnusedTypeInfo)
             .Default(~0U);
     if (Val == ~0U)
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
                                                 << A->getValue();
     else
-      Opts.setDebugInfo(static_cast<codegenoptions::DebugInfoKind>(Val));
+      Opts.setDebugInfo(static_cast<llvm::codegenoptions::DebugInfoKind>(Val));
   }
 
   // If -fuse-ctor-homing is set and limited debug info is already on, then use
@@ -1671,23 +1690,21 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (const Arg *A =
           Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
     if (A->getOption().matches(OPT_fuse_ctor_homing) &&
-        Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
-      Opts.setDebugInfo(codegenoptions::DebugInfoConstructor);
+        Opts.getDebugInfo() == llvm::codegenoptions::LimitedDebugInfo)
+      Opts.setDebugInfo(llvm::codegenoptions::DebugInfoConstructor);
     if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
-        Opts.getDebugInfo() == codegenoptions::DebugInfoConstructor)
-      Opts.setDebugInfo(codegenoptions::LimitedDebugInfo);
+        Opts.getDebugInfo() == llvm::codegenoptions::DebugInfoConstructor)
+      Opts.setDebugInfo(llvm::codegenoptions::LimitedDebugInfo);
   }
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
-    Opts.DebugPrefixMap.insert(
-        {std::string(Split.first), std::string(Split.second)});
+    Opts.DebugPrefixMap.emplace_back(Split.first, Split.second);
   }
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fcoverage_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
-    Opts.CoveragePrefixMap.insert(
-        {std::string(Split.first), std::string(Split.second)});
+    Opts.CoveragePrefixMap.emplace_back(Split.first, Split.second);
   }
 
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {
@@ -1730,8 +1747,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << A->getSpelling() << A->getValue();
     Opts.setDebugSimpleTemplateNames(
         StringRef(A->getValue()) == "simple"
-            ? codegenoptions::DebugTemplateNamesKind::Simple
-            : codegenoptions::DebugTemplateNamesKind::Mangled);
+            ? llvm::codegenoptions::DebugTemplateNamesKind::Simple
+            : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
@@ -1874,11 +1891,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.LinkBitcodeFiles.push_back(F);
   }
 
-  if (!Args.getLastArg(OPT_femulated_tls) &&
-      !Args.getLastArg(OPT_fno_emulated_tls)) {
-    Opts.EmulatedTLS = T.hasDefaultEmulatedTLS();
-  }
-
   if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
     if (T.isOSAIX()) {
       StringRef Name = A->getValue();
@@ -1922,16 +1934,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
              O.matches(OPT_msvr4_struct_return));
       Opts.setStructReturnConvention(CodeGenOptions::SRCK_InRegs);
     }
-  }
-
-  if (Arg *A =
-          Args.getLastArg(OPT_mabi_EQ_vec_default, OPT_mabi_EQ_vec_extabi)) {
-    if (!T.isOSAIX())
-      Diags.Report(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << T.str();
-
-    const Option &O = A->getOption();
-    Opts.EnableAIXExtendedAltivecABI = O.matches(OPT_mabi_EQ_vec_extabi);
   }
 
   if (Arg *A = Args.getLastArg(OPT_mabi_EQ_quadword_atomics)) {
@@ -2025,8 +2027,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   // If the user requested a flag that requires source locations available in
   // the backend, make sure that the backend tracks source location information.
-  if (NeedLocTracking && Opts.getDebugInfo() == codegenoptions::NoDebugInfo)
-    Opts.setDebugInfo(codegenoptions::LocTrackingOnly);
+  if (NeedLocTracking &&
+      Opts.getDebugInfo() == llvm::codegenoptions::NoDebugInfo)
+    Opts.setDebugInfo(llvm::codegenoptions::LocTrackingOnly);
 
   // Parse -fsanitize-recover= arguments.
   // FIXME: Report unrecoverable sanitizers incorrectly specified here.
@@ -2060,14 +2063,8 @@ GenerateDependencyOutputArgs(const DependencyOutputOptions &Opts,
                              SmallVectorImpl<const char *> &Args,
                              CompilerInvocation::StringAllocator SA) {
   const DependencyOutputOptions &DependencyOutputOpts = Opts;
-#define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(                             \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(...)                         \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING
 
@@ -2101,14 +2098,8 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   DependencyOutputOptions &DependencyOutputOpts = Opts;
-#define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(                             \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING(...)                         \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING
 
@@ -2224,14 +2215,8 @@ static void GenerateFileSystemArgs(const FileSystemOptions &Opts,
                                    CompilerInvocation::StringAllocator SA) {
   const FileSystemOptions &FileSystemOpts = Opts;
 
-#define FILE_SYSTEM_OPTION_WITH_MARSHALLING(                                   \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define FILE_SYSTEM_OPTION_WITH_MARSHALLING(...)                               \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
 }
@@ -2242,14 +2227,8 @@ static bool ParseFileSystemArgs(FileSystemOptions &Opts, const ArgList &Args,
 
   FileSystemOptions &FileSystemOpts = Opts;
 
-#define FILE_SYSTEM_OPTION_WITH_MARSHALLING(                                   \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define FILE_SYSTEM_OPTION_WITH_MARSHALLING(...)                               \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
 
@@ -2260,14 +2239,8 @@ static void GenerateMigratorArgs(const MigratorOptions &Opts,
                                  SmallVectorImpl<const char *> &Args,
                                  CompilerInvocation::StringAllocator SA) {
   const MigratorOptions &MigratorOpts = Opts;
-#define MIGRATOR_OPTION_WITH_MARSHALLING(                                      \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define MIGRATOR_OPTION_WITH_MARSHALLING(...)                                  \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef MIGRATOR_OPTION_WITH_MARSHALLING
 }
@@ -2278,14 +2251,8 @@ static bool ParseMigratorArgs(MigratorOptions &Opts, const ArgList &Args,
 
   MigratorOptions &MigratorOpts = Opts;
 
-#define MIGRATOR_OPTION_WITH_MARSHALLING(                                      \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define MIGRATOR_OPTION_WITH_MARSHALLING(...)                                  \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef MIGRATOR_OPTION_WITH_MARSHALLING
 
@@ -2296,14 +2263,8 @@ void CompilerInvocation::GenerateDiagnosticArgs(
     const DiagnosticOptions &Opts, SmallVectorImpl<const char *> &Args,
     StringAllocator SA, bool DefaultDiagColor) {
   const DiagnosticOptions *DiagnosticOpts = &Opts;
-#define DIAG_OPTION_WITH_MARSHALLING(                                          \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define DIAG_OPTION_WITH_MARSHALLING(...)                                      \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef DIAG_OPTION_WITH_MARSHALLING
 
@@ -2387,14 +2348,8 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   // "DiagnosticOpts->". Let's provide the expected variable name and type.
   DiagnosticOptions *DiagnosticOpts = &Opts;
 
-#define DIAG_OPTION_WITH_MARSHALLING(                                          \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, *Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define DIAG_OPTION_WITH_MARSHALLING(...)                                      \
+  PARSE_OPTION_WITH_MARSHALLING(Args, *Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef DIAG_OPTION_WITH_MARSHALLING
 
@@ -2540,14 +2495,8 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
                                  CompilerInvocation::StringAllocator SA,
                                  bool IsHeader) {
   const FrontendOptions &FrontendOpts = Opts;
-#define FRONTEND_OPTION_WITH_MARSHALLING(                                      \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define FRONTEND_OPTION_WITH_MARSHALLING(...)                                  \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef FRONTEND_OPTION_WITH_MARSHALLING
 
@@ -2716,14 +2665,8 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   FrontendOptions &FrontendOpts = Opts;
 
-#define FRONTEND_OPTION_WITH_MARSHALLING(                                      \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define FRONTEND_OPTION_WITH_MARSHALLING(...)                                  \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef FRONTEND_OPTION_WITH_MARSHALLING
 
@@ -2975,14 +2918,8 @@ static void GenerateHeaderSearchArgs(HeaderSearchOptions &Opts,
                                      SmallVectorImpl<const char *> &Args,
                                      CompilerInvocation::StringAllocator SA) {
   const HeaderSearchOptions *HeaderSearchOpts = &Opts;
-#define HEADER_SEARCH_OPTION_WITH_MARSHALLING(                                 \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define HEADER_SEARCH_OPTION_WITH_MARSHALLING(...)                             \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
 
@@ -3105,14 +3042,8 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   HeaderSearchOptions *HeaderSearchOpts = &Opts;
 
-#define HEADER_SEARCH_OPTION_WITH_MARSHALLING(                                 \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define HEADER_SEARCH_OPTION_WITH_MARSHALLING(...)                             \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef HEADER_SEARCH_OPTION_WITH_MARSHALLING
 
@@ -3227,7 +3158,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     Opts.AddSystemHeaderPrefix(
         A->getValue(), A->getOption().matches(OPT_system_header_prefix));
 
-  for (const auto *A : Args.filtered(OPT_ivfsoverlay))
+  for (const auto *A : Args.filtered(OPT_ivfsoverlay, OPT_vfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
 
   return Diags.getNumErrors() == NumErrorsBefore;
@@ -3358,14 +3289,8 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
 
   const LangOptions *LangOpts = &Opts;
 
-#define LANG_OPTION_WITH_MARSHALLING(                                          \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define LANG_OPTION_WITH_MARSHALLING(...)                                      \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
 
@@ -3681,14 +3606,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // "LangOpts->". Let's provide the expected variable name and type.
   LangOptions *LangOpts = &Opts;
 
-#define LANG_OPTION_WITH_MARSHALLING(                                          \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define LANG_OPTION_WITH_MARSHALLING(...)                                      \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
 
@@ -3806,9 +3725,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
 
-  Opts.ConvergentFunctions = Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
-                             Opts.SYCLIsDevice ||
-                             Args.hasArg(OPT_fconvergent_functions);
+  Opts.ConvergentFunctions = Args.hasArg(OPT_fconvergent_functions) ||
+                             Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
+                             Opts.SYCLIsDevice;
 
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
@@ -4188,14 +4107,8 @@ static void GeneratePreprocessorArgs(PreprocessorOptions &Opts,
                                      const CodeGenOptions &CodeGenOpts) {
   PreprocessorOptions *PreprocessorOpts = &Opts;
 
-#define PREPROCESSOR_OPTION_WITH_MARSHALLING(                                  \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define PREPROCESSOR_OPTION_WITH_MARSHALLING(...)                              \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef PREPROCESSOR_OPTION_WITH_MARSHALLING
 
@@ -4263,14 +4176,8 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
 
   PreprocessorOptions *PreprocessorOpts = &Opts;
 
-#define PREPROCESSOR_OPTION_WITH_MARSHALLING(                                  \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define PREPROCESSOR_OPTION_WITH_MARSHALLING(...)                              \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef PREPROCESSOR_OPTION_WITH_MARSHALLING
 
@@ -4363,14 +4270,8 @@ static void GeneratePreprocessorOutputArgs(
     CompilerInvocation::StringAllocator SA, frontend::ActionKind Action) {
   const PreprocessorOutputOptions &PreprocessorOutputOpts = Opts;
 
-#define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(                           \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(...)                       \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING
 
@@ -4390,14 +4291,8 @@ static bool ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
 
   PreprocessorOutputOptions &PreprocessorOutputOpts = Opts;
 
-#define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(                           \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING(...)                       \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef PREPROCESSOR_OUTPUT_OPTION_WITH_MARSHALLING
 
@@ -4412,14 +4307,8 @@ static void GenerateTargetArgs(const TargetOptions &Opts,
                                SmallVectorImpl<const char *> &Args,
                                CompilerInvocation::StringAllocator SA) {
   const TargetOptions *TargetOpts = &Opts;
-#define TARGET_OPTION_WITH_MARSHALLING(                                        \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define TARGET_OPTION_WITH_MARSHALLING(...)                                    \
+  GENERATE_OPTION_WITH_MARSHALLING(Args, SA, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef TARGET_OPTION_WITH_MARSHALLING
 
@@ -4437,14 +4326,8 @@ static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
 
   TargetOptions *TargetOpts = &Opts;
 
-#define TARGET_OPTION_WITH_MARSHALLING(                                        \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  PARSE_OPTION_WITH_MARSHALLING(                                               \
-      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
-      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#define TARGET_OPTION_WITH_MARSHALLING(...)                                    \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef TARGET_OPTION_WITH_MARSHALLING
 

@@ -49,7 +49,7 @@
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <cstdlib> // for std::abort
+#include <__verbose_abort>
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -64,11 +64,11 @@ namespace __expected {
 
 template <class _Err, class _Arg>
 _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
-#  ifndef _LIBCPP_NO_EXCEPTIONS
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_expected_access<_Err>(std::forward<_Arg>(__arg));
 #  else
   (void)__arg;
-  std::abort();
+  _LIBCPP_VERBOSE_ABORT("bad_expected_access was thrown in -fno-exceptions mode");
 #  endif
 }
 

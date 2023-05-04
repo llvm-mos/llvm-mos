@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_SYSCALL_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
 #include "x86_64/syscall.h"
@@ -18,6 +18,8 @@
 #include "aarch64/syscall.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/syscall.h"
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#include "riscv64/syscall.h"
 #endif
 
 namespace __llvm_libc {

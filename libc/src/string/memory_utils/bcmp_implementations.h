@@ -10,7 +10,8 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BCMP_IMPLEMENTATIONS_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/architectures.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY LIBC_LOOP_NOUNROLL
+#include "src/__support/macros/properties/architectures.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -166,12 +167,8 @@ LIBC_INLINE BcmpReturnType inline_bcmp(CPtr p1, CPtr p2, size_t count) {
   return inline_bcmp_x86(p1, p2, count);
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   return inline_bcmp_aarch64(p1, p2, count);
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-  return inline_bcmp_embedded_tiny(p1, p2, count);
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-  return inline_bcmp_embedded_tiny(p1, p2, count);
 #else
-#error "Unsupported platform"
+  return inline_bcmp_embedded_tiny(p1, p2, count);
 #endif
 }
 

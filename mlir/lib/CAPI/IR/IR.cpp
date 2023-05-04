@@ -141,6 +141,27 @@ void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
   unwrap(flags)->useLocalScope();
 }
 
+void mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags) {
+  unwrap(flags)->assumeVerified();
+}
+
+//===----------------------------------------------------------------------===//
+// Bytecode printing flags API.
+//===----------------------------------------------------------------------===//
+
+MlirBytecodeWriterConfig mlirBytecodeWriterConfigCreate() {
+  return wrap(new BytecodeWriterConfig());
+}
+
+void mlirBytecodeWriterConfigDestroy(MlirBytecodeWriterConfig config) {
+  delete unwrap(config);
+}
+
+void mlirBytecodeWriterConfigDesiredEmitVersion(MlirBytecodeWriterConfig flags,
+                                                int64_t version) {
+  unwrap(flags)->setDesiredBytecodeVersion(version);
+}
+
 //===----------------------------------------------------------------------===//
 // Location API.
 //===----------------------------------------------------------------------===//
@@ -319,7 +340,8 @@ static LogicalResult inferOperationTypes(OperationState &state) {
 
   if (succeeded(inferInterface->inferReturnTypes(
           context, state.location, state.operands,
-          state.attributes.getDictionary(context), state.regions, state.types)))
+          state.attributes.getDictionary(context), state.getRawProperties(),
+          state.regions, state.types)))
     return success();
 
   // Diagnostic emitted by interface.
@@ -362,6 +384,15 @@ MlirOperation mlirOperationCreate(MlirOperationState *state) {
 
   MlirOperation result = wrap(Operation::create(cppState));
   return result;
+}
+
+MlirOperation mlirOperationCreateParse(MlirContext context,
+                                       MlirStringRef sourceStr,
+                                       MlirStringRef sourceName) {
+
+  return wrap(
+      parseSourceString(unwrap(sourceStr), unwrap(context), unwrap(sourceName))
+          .release());
 }
 
 MlirOperation mlirOperationClone(MlirOperation op) {
@@ -497,7 +528,15 @@ void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
 void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
                                 void *userData) {
   detail::CallbackOstream stream(callback, userData);
-  writeBytecodeToFile(unwrap(op), stream);
+  // As no desired version is set, no failure can occur.
+  (void)writeBytecodeToFile(unwrap(op), stream);
+}
+
+MlirLogicalResult mlirOperationWriteBytecodeWithConfig(
+    MlirOperation op, MlirBytecodeWriterConfig config,
+    MlirStringCallback callback, void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  return wrap(writeBytecodeToFile(unwrap(op), stream, *unwrap(config)));
 }
 
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
@@ -736,6 +775,10 @@ MlirOpOperand mlirValueGetFirstUse(MlirValue value) {
   OpOperand *opOperand = cppValue.use_begin().getOperand();
 
   return wrap(opOperand);
+}
+
+void mlirValueReplaceAllUsesOfWith(MlirValue oldValue, MlirValue newValue) {
+  unwrap(oldValue).replaceAllUsesWith(unwrap(newValue));
 }
 
 //===----------------------------------------------------------------------===//

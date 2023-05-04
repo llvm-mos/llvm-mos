@@ -93,7 +93,7 @@ struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS aligned_storage
     };
 };
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>
@@ -102,15 +102,13 @@ template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::valu
 
 #endif
 
-#define _CREATE_ALIGNED_STORAGE_SPECIALIZATION(n) \
-template <size_t _Len>\
-struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS aligned_storage<_Len, n>\
-{\
-    struct _ALIGNAS(n) type\
-    {\
-        unsigned char __lx[(_Len + n - 1)/n * n];\
-    };\
-}
+#define _CREATE_ALIGNED_STORAGE_SPECIALIZATION(n)                                                                      \
+  template <size_t _Len>                                                                                               \
+  struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS aligned_storage<_Len, n> {                                   \
+    struct _ALIGNAS(n) type {                                                                                          \
+      unsigned char __lx[(_Len + n - 1) / n * n];                                                                      \
+    };                                                                                                                 \
+  }
 
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x1);
 _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x2);

@@ -318,6 +318,21 @@ public:
     : MachineTraceMetrics::Ensemble(mtm) {}
 };
 
+/// Pick only the current basic block for the trace and do not choose any
+/// predecessors/successors.
+class LocalEnsemble : public MachineTraceMetrics::Ensemble {
+  const char *getName() const override { return "Local"; }
+  const MachineBasicBlock *pickTracePred(const MachineBasicBlock *) override {
+    return nullptr;
+  };
+  const MachineBasicBlock *pickTraceSucc(const MachineBasicBlock *) override {
+    return nullptr;
+  };
+
+public:
+  LocalEnsemble(MachineTraceMetrics *MTM)
+      : MachineTraceMetrics::Ensemble(MTM) {}
+};
 } // end anonymous namespace
 
 // Select the preferred predecessor for MBB.
@@ -380,15 +395,19 @@ MinInstrCountEnsemble::pickTraceSucc(const MachineBasicBlock *MBB) {
 
 // Get an Ensemble sub-class for the requested trace strategy.
 MachineTraceMetrics::Ensemble *
-MachineTraceMetrics::getEnsemble(MachineTraceMetrics::Strategy strategy) {
-  assert(strategy < TS_NumStrategies && "Invalid trace strategy enum");
-  Ensemble *&E = Ensembles[strategy];
+MachineTraceMetrics::getEnsemble(MachineTraceStrategy strategy) {
+  assert(strategy < MachineTraceStrategy::TS_NumStrategies &&
+         "Invalid trace strategy enum");
+  Ensemble *&E = Ensembles[static_cast<size_t>(strategy)];
   if (E)
     return E;
 
   // Allocate new Ensemble on demand.
   switch (strategy) {
-  case TS_MinInstrCount: return (E = new MinInstrCountEnsemble(this));
+  case MachineTraceStrategy::TS_MinInstrCount:
+    return (E = new MinInstrCountEnsemble(this));
+  case MachineTraceStrategy::TS_Local:
+    return (E = new LocalEnsemble(this));
   default: llvm_unreachable("Invalid trace strategy enum");
   }
 }

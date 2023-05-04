@@ -750,7 +750,7 @@ void ARMInstPrinter::printMemBOption(const MCInst *MI, unsigned OpNum,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
   unsigned val = MI->getOperand(OpNum).getImm();
-  O << ARM_MB::MemBOptToString(val, STI.getFeatureBits()[ARM::HasV8Ops]);
+  O << ARM_MB::MemBOptToString(val, STI.hasFeature(ARM::HasV8Ops));
 }
 
 void ARMInstPrinter::printInstSyncBOption(const MCInst *MI, unsigned OpNum,
@@ -1386,7 +1386,7 @@ void ARMInstPrinter::printModImmOperand(const MCInst *MI, unsigned OpNum,
     break;
   }
 
-  int32_t Rotated = ARM_AM::rotr32(Bits, Rot);
+  int32_t Rotated = llvm::rotr<uint32_t>(Bits, Rot);
   if (ARM_AM::getSOImmVal(Rotated) == Op.getImm()) {
     // #rot has the least possible value
     O << "#" << markup("<imm:");

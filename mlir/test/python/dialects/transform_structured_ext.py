@@ -84,7 +84,7 @@ def testPad():
   # CHECK-DAG: padding_values = [4.200000e+01 : f32]
   # CHECK-DAG: padding_dimensions = [1]
   # CHECK-DAG: transpose_paddings = {{\[}}[1, 0]]
-  # (hoist_paddings and pack_paddings have default values)
+  # (pack_paddings has default values)
 
 @run
 def testScalarize():
@@ -188,7 +188,7 @@ def testTileExplicitLoopTypeAll():
                                   [], transform.AnyOpType.get())
   types = [
       transform.OperationType.get(x)
-      for x in ["scf.for", "scf.parallel", "scf.foreach_thread"]
+      for x in ["scf.for", "scf.parallel", "scf.forall"]
   ]
   with InsertionPoint(sequence.body):
     structured.TileOp(types, sequence.bodyTarget, sizes=[2, 3, 4])
@@ -196,7 +196,7 @@ def testTileExplicitLoopTypeAll():
   # CHECK-LABEL: TEST: testTileExplicitLoopTypeAll
   # CHECK: = transform.structured.tile
   # CHECK-SAME : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
-  # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.foreach_thread">
+  # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.forall">
 
 @run
 def testVectorize():

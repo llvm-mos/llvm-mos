@@ -15,7 +15,7 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTOPENACCTOLLVM
+#define GEN_PASS_DEF_CONVERTOPENACCTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -135,8 +135,18 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
       }
     }
 
-    builder.replaceOpWithNewOp<Op>(op, TypeRange(), convertedOperands,
-                                   op.getOperation()->getAttrs());
+    if constexpr (std::is_same_v<Op, acc::ParallelOp> ||
+                  std::is_same_v<Op, acc::DataOp>) {
+      auto newOp =
+          builder.create<Op>(op.getLoc(), TypeRange(), convertedOperands,
+                             op.getOperation()->getAttrs());
+      builder.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
+                                 newOp.getRegion().end());
+      builder.eraseOp(op);
+    } else {
+      builder.replaceOpWithNewOp<Op>(op, TypeRange(), convertedOperands,
+                                     op.getOperation()->getAttrs());
+    }
 
     return success();
   }
@@ -154,7 +164,9 @@ void mlir::populateOpenACCToLLVMConversionPatterns(
 
 namespace {
 struct ConvertOpenACCToLLVMPass
-    : public impl::ConvertOpenACCToLLVMBase<ConvertOpenACCToLLVMPass> {
+    : public impl::ConvertOpenACCToLLVMPassBase<ConvertOpenACCToLLVMPass> {
+  using Base::Base;
+
   void runOnOperation() override;
 };
 } // namespace
@@ -165,7 +177,9 @@ void ConvertOpenACCToLLVMPass::runOnOperation() {
 
   // Convert to OpenACC operations with LLVM IR dialect
   RewritePatternSet patterns(context);
-  LLVMTypeConverter converter(context);
+  LowerToLLVMOptions options(context);
+  options.useOpaquePointers = useOpaquePointers;
+  LLVMTypeConverter converter(context, options);
   populateOpenACCToLLVMConversionPatterns(converter, patterns);
 
   ConversionTarget target(*context);
@@ -237,9 +251,4 @@ void ConvertOpenACCToLLVMPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertOpenACCToLLVMPass() {
-  return std::make_unique<ConvertOpenACCToLLVMPass>();
 }

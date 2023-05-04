@@ -906,3 +906,37 @@ func.func @load_store_nontemporal(%input : memref<32xf32, affine_map<(d0) -> (d0
   memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_trivial_memory_space_cast(
+//  CHECK-SAME:     %[[arg:.*]]: memref<?xf32>
+//       CHECK:   return %[[arg]]
+func.func @fold_trivial_memory_space_cast(%arg : memref<?xf32>) -> memref<?xf32> {
+  %0 = memref.memory_space_cast %arg : memref<?xf32> to memref<?xf32>
+  return %0 : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_multiple_memory_space_cast(
+//  CHECK-SAME:     %[[arg:.*]]: memref<?xf32>
+//       CHECK:   %[[res:.*]] = memref.memory_space_cast %[[arg]] : memref<?xf32> to memref<?xf32, 2>
+//       CHECK:   return %[[res]]
+func.func @fold_multiple_memory_space_cast(%arg : memref<?xf32>) -> memref<?xf32, 2> {
+  %0 = memref.memory_space_cast %arg : memref<?xf32> to memref<?xf32, 1>
+  %1 = memref.memory_space_cast %0 : memref<?xf32, 1> to memref<?xf32, 2>
+  return %1 : memref<?xf32, 2>
+}
+
+// -----
+
+// CHECK-lABEL: func @ub_negative_alloc_size
+func.func private @ub_negative_alloc_size() -> memref<?x?x?xi1> {
+  %idx1 = index.constant 1
+  %c-2 = arith.constant -2 : index
+  %c15 = arith.constant 15 : index
+// CHECK:   %[[ALLOC:.*]] = memref.alloc(%c-2) : memref<15x?x1xi1>
+  %alloc = memref.alloc(%c15, %c-2, %idx1) : memref<?x?x?xi1>
+  return %alloc : memref<?x?x?xi1>
+}

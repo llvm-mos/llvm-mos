@@ -83,6 +83,8 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
   # Enable assertions in libstdc++.
   add_compile_definitions(_GLIBCXX_ASSERTIONS)
+  # Enable assertions in libc++.
+  add_compile_definitions(_LIBCPP_ENABLE_ASSERTIONS)
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -139,19 +141,21 @@ if(WIN32)
     set(LLVM_ON_WIN32 1)
     set(LLVM_ON_UNIX 0)
   endif(CYGWIN)
-else(WIN32)
-  if(FUCHSIA OR UNIX)
-    set(LLVM_ON_WIN32 0)
-    set(LLVM_ON_UNIX 1)
-    if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-      set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
-    else()
-      set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
-    endif()
-  else(FUCHSIA OR UNIX)
-    MESSAGE(SEND_ERROR "Unable to determine platform")
-  endif(FUCHSIA OR UNIX)
-endif(WIN32)
+elseif(FUCHSIA OR UNIX)
+  set(LLVM_ON_WIN32 0)
+  set(LLVM_ON_UNIX 1)
+  if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
+  else()
+    set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
+  endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Generic")
+  set(LLVM_ON_WIN32 0)
+  set(LLVM_ON_UNIX 0)
+  set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
+else()
+  MESSAGE(SEND_ERROR "Unable to determine platform")
+endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
@@ -494,6 +498,12 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
+  if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Enable standards-conforming preprocessor.
+    # https://learn.microsoft.com/en-us/cpp/build/reference/zc-preprocessor
+    append("/Zc:preprocessor" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif ()
+
   # Some projects use the __cplusplus preprocessor macro to check support for
   # a particular version of the C++ standard. When this option is not specified
   # explicitly, macro's value is "199711L" that implies C++98 Standard.
@@ -661,6 +671,10 @@ if (MSVC)
           # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
           # is fixed.
       -wd4709 # Suppress comma operator within array index expression
+
+      # We'd like this warning to be enabled, but it triggers from code in
+      # WinBase.h that we don't have control over.
+      -wd5105 # Suppress macro expansion producing 'defined' has undefined behavior
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
@@ -1088,7 +1102,7 @@ if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
   endif()
   file(TO_CMAKE_PATH "${clang_compiler_rt_file}" clang_compiler_rt_file)
   get_filename_component(clang_runtime_dir "${clang_compiler_rt_file}" DIRECTORY)
-  append("/libpath:${clang_runtime_dir}"
+  append("/libpath:\"${clang_runtime_dir}\""
     CMAKE_EXE_LINKER_FLAGS
     CMAKE_MODULE_LINKER_FLAGS
     CMAKE_SHARED_LINKER_FLAGS)

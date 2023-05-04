@@ -26,8 +26,6 @@
 #include <__functional/operations.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/iterator_traits.h>
-#include <__memory/destruct_n.h>
-#include <__memory/unique_ptr.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/is_arithmetic.h>
@@ -85,50 +83,41 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 unsigned __sort3(_ForwardIterator __x, _ForwardIte
 
 template <class _AlgPolicy, class _Compare, class _ForwardIterator>
 _LIBCPP_HIDE_FROM_ABI
-unsigned __sort4(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3, _ForwardIterator __x4,
+void __sort4(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3, _ForwardIterator __x4,
                  _Compare __c) {
   using _Ops   = _IterOps<_AlgPolicy>;
-  unsigned __r = std::__sort3<_AlgPolicy, _Compare>(__x1, __x2, __x3, __c);
+  std::__sort3<_AlgPolicy, _Compare>(__x1, __x2, __x3, __c);
   if (__c(*__x4, *__x3)) {
     _Ops::iter_swap(__x3, __x4);
-    ++__r;
     if (__c(*__x3, *__x2)) {
       _Ops::iter_swap(__x2, __x3);
-      ++__r;
       if (__c(*__x2, *__x1)) {
         _Ops::iter_swap(__x1, __x2);
-        ++__r;
       }
     }
   }
-  return __r;
 }
 
 // stable, 4-10 compares, 0-9 swaps
 
 template <class _AlgPolicy, class _Comp, class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI unsigned __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
-                                       _ForwardIterator __x4, _ForwardIterator __x5, _Comp __comp) {
+_LIBCPP_HIDE_FROM_ABI void __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
+                                   _ForwardIterator __x4, _ForwardIterator __x5, _Comp __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
 
-  unsigned __r = std::__sort4<_AlgPolicy, _Comp>(__x1, __x2, __x3, __x4, __comp);
+  std::__sort4<_AlgPolicy, _Comp>(__x1, __x2, __x3, __x4, __comp);
   if (__comp(*__x5, *__x4)) {
     _Ops::iter_swap(__x4, __x5);
-    ++__r;
     if (__comp(*__x4, *__x3)) {
       _Ops::iter_swap(__x3, __x4);
-      ++__r;
       if (__comp(*__x3, *__x2)) {
         _Ops::iter_swap(__x2, __x3);
-        ++__r;
         if (__comp(*__x2, *__x1)) {
           _Ops::iter_swap(__x1, __x2);
-          ++__r;
         }
       }
     }
   }
-  return __r;
 }
 
 // The comparator being simple is a prerequisite for using the branchless optimization.
@@ -140,7 +129,7 @@ template <class _Tp>
 struct __is_simple_comparator<less<_Tp>&> : true_type {};
 template <class _Tp>
 struct __is_simple_comparator<greater<_Tp>&> : true_type {};
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <>
 struct __is_simple_comparator<ranges::less&> : true_type {};
 template <>
@@ -285,7 +274,7 @@ void __insertion_sort(_BidirectionalIterator __first, _BidirectionalIterator __l
 
 // Sort the iterator range [__first, __last) using the comparator __comp using
 // the insertion sort algorithm.  Insertion sort has two loops, outer and inner.
-// The implementation below has not bounds check (unguarded) for the inner loop.
+// The implementation below has no bounds check (unguarded) for the inner loop.
 // Assumes that there is an element in the position (__first - 1) and that each
 // element in the input range is greater or equal to the element at __first - 1.
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
@@ -361,37 +350,6 @@ _LIBCPP_HIDE_FROM_ABI bool __insertion_sort_incomplete(
   return true;
 }
 
-template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI
-void __insertion_sort_move(_BidirectionalIterator __first1, _BidirectionalIterator __last1,
-                           typename iterator_traits<_BidirectionalIterator>::value_type* __first2, _Compare __comp) {
-  using _Ops = _IterOps<_AlgPolicy>;
-
-  typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
-  if (__first1 != __last1) {
-    __destruct_n __d(0);
-    unique_ptr<value_type, __destruct_n&> __h(__first2, __d);
-    value_type* __last2 = __first2;
-    ::new ((void*)__last2) value_type(_Ops::__iter_move(__first1));
-    __d.template __incr<value_type>();
-    for (++__last2; ++__first1 != __last1; ++__last2) {
-      value_type* __j2 = __last2;
-      value_type* __i2 = __j2;
-      if (__comp(*__first1, *--__i2)) {
-        ::new ((void*)__j2) value_type(std::move(*__i2));
-        __d.template __incr<value_type>();
-        for (--__j2; __i2 != __first2 && __comp(*__first1, *--__i2); --__j2)
-          *__j2 = std::move(*__i2);
-        *__j2 = _Ops::__iter_move(__first1);
-      } else {
-        ::new ((void*)__j2) value_type(_Ops::__iter_move(__first1));
-        __d.template __incr<value_type>();
-      }
-    }
-    __h.release();
-  }
-}
-
 template <class _AlgPolicy, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos(
     _RandomAccessIterator __first, _RandomAccessIterator __last, uint64_t& __left_bitset, uint64_t& __right_bitset) {
@@ -400,11 +358,11 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos(
   // Swap one pair on each iteration as long as both bitsets have at least one
   // element for swapping.
   while (__left_bitset != 0 && __right_bitset != 0) {
-    difference_type tz_left  = __libcpp_ctz(__left_bitset);
-    __left_bitset            = __libcpp_blsr(__left_bitset);
-    difference_type tz_right = __libcpp_ctz(__right_bitset);
-    __right_bitset           = __libcpp_blsr(__right_bitset);
-    _Ops::iter_swap(__first + tz_left, __last - tz_right);
+    difference_type __tz_left  = __libcpp_ctz(__left_bitset);
+    __left_bitset              = __libcpp_blsr(__left_bitset);
+    difference_type __tz_right = __libcpp_ctz(__right_bitset);
+    __right_bitset             = __libcpp_blsr(__right_bitset);
+    _Ops::iter_swap(__first + __tz_left, __last - __tz_right);
   }
 }
 
@@ -469,9 +427,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __bitset_partition_partial_blocks(
   // Record the comparison outcomes for the elements currently on the left side.
   if (__left_bitset == 0) {
     _RandomAccessIterator __iter = __first;
-    for (int j = 0; j < __l_size; j++) {
+    for (int __j = 0; __j < __l_size; __j++) {
       bool __comp_result = !__comp(*__iter, __pivot);
-      __left_bitset |= (static_cast<uint64_t>(__comp_result) << j);
+      __left_bitset |= (static_cast<uint64_t>(__comp_result) << __j);
       ++__iter;
     }
   }
@@ -479,9 +437,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __bitset_partition_partial_blocks(
   // side.
   if (__right_bitset == 0) {
     _RandomAccessIterator __iter = __lm1;
-    for (int j = 0; j < __r_size; j++) {
+    for (int __j = 0; __j < __r_size; __j++) {
       bool __comp_result = __comp(*__iter, __pivot);
-      __right_bitset |= (static_cast<uint64_t>(__comp_result) << j);
+      __right_bitset |= (static_cast<uint64_t>(__comp_result) << __j);
       --__iter;
     }
   }
@@ -501,9 +459,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos_within(
     while (__left_bitset != 0) {
       difference_type __tz_left = __detail::__block_size - 1 - __libcpp_clz(__left_bitset);
       __left_bitset &= (static_cast<uint64_t>(1) << __tz_left) - 1;
-      _RandomAccessIterator it = __first + __tz_left;
-      if (it != __lm1) {
-        _Ops::iter_swap(it, __lm1);
+      _RandomAccessIterator __it = __first + __tz_left;
+      if (__it != __lm1) {
+        _Ops::iter_swap(__it, __lm1);
       }
       --__lm1;
     }
@@ -514,9 +472,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos_within(
     while (__right_bitset != 0) {
       difference_type __tz_right = __detail::__block_size - 1 - __libcpp_clz(__right_bitset);
       __right_bitset &= (static_cast<uint64_t>(1) << __tz_right) - 1;
-      _RandomAccessIterator it = __lm1 - __tz_right;
-      if (it != __first) {
-        _Ops::iter_swap(it, __first);
+      _RandomAccessIterator __it = __lm1 - __tz_right;
+      if (__it != __first) {
+        _Ops::iter_swap(__it, __first);
       }
       ++__first;
     }

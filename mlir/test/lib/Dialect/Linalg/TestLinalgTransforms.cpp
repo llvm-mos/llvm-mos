@@ -17,7 +17,6 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -40,7 +39,7 @@ struct TestLinalgTransforms
 
   void getDependentDialects(DialectRegistry &registry) const override {
     // clang-format off
-    registry.insert<AffineDialect,
+    registry.insert<affine::AffineDialect,
                     bufferization::BufferizationDialect,
                     memref::MemRefDialect,
                     scf::SCFDialect,
@@ -127,10 +126,6 @@ struct TestLinalgTransforms
   Option<bool> testEraseUnnecessaryInputs{
       *this, "test-erase-unnecessary-inputs",
       llvm::cl::desc("Test patterns to erase unnecessary inputs"),
-      llvm::cl::init(false)};
-  Option<bool> testConvertToDestinationStylePatterns{
-      *this, "test-convert-to-destination-style-patterns",
-      llvm::cl::desc("Test patterns that convert ops to destination style"),
       llvm::cl::init(false)};
 };
 } // namespace
@@ -222,12 +217,6 @@ static void applyEraseUnnecessaryInputs(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyConvertToDestinationStylePatterns(Operation *rootOp) {
-  RewritePatternSet patterns(rootOp->getContext());
-  populateConvertToDestinationStylePatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
-}
-
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
   if (testPatterns)
@@ -254,8 +243,6 @@ void TestLinalgTransforms::runOnOperation() {
     return applyEraseUnusedOperandsAndResultsPatterns(getOperation());
   if (testEraseUnnecessaryInputs)
     return applyEraseUnnecessaryInputs(getOperation());
-  if (testConvertToDestinationStylePatterns)
-    applyConvertToDestinationStylePatterns(getOperation());
 }
 
 namespace mlir {

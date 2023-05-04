@@ -436,21 +436,25 @@ bool DataInitializationCompiler<DSV>::InitElement(
             DescribeElement(), designatorType->AsFortran());
       }
       auto folded{evaluate::Fold(context, std::move(converted->first))};
-      switch (GetImage().Add(
-          offsetSymbol.offset(), offsetSymbol.size(), folded, context)) {
-      case evaluate::InitialImage::Ok:
+      // Rewritten from a switch() in order to avoid getting complaints
+      // about a missing "default:" from some compilers and complaints
+      // about a redundant "default:" from others.
+      auto status{GetImage().Add(
+          offsetSymbol.offset(), offsetSymbol.size(), folded, context)};
+      if (status == evaluate::InitialImage::Ok) {
         return true;
-      case evaluate::InitialImage::NotAConstant:
+      } else if (status == evaluate::InitialImage::NotAConstant) {
         exprAnalyzer_.Say(
             "DATA statement value '%s' for '%s' is not a constant"_err_en_US,
             folded.AsFortran(), DescribeElement());
-        break;
-      case evaluate::InitialImage::OutOfRange:
+      } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
-        break;
-      default:
+      } else if (status == evaluate::InitialImage::SizeMismatch) {
+        exprAnalyzer_.Say(
+            "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
+            folded.AsFortran(), DescribeElement());
+      } else {
         CHECK(exprAnalyzer_.context().AnyFatalError());
-        break;
       }
     } else {
       exprAnalyzer_.context().Say(
@@ -565,7 +569,8 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
               if (auto extents{evaluate::GetConstantExtents(
                       foldingContext, component)}) {
                 if (auto extant{init.image.AsConstant(foldingContext, *dyType,
-                        *extents, false /*don't pad*/, componentOffset)}) {
+                        std::nullopt, *extents, false /*don't pad*/,
+                        componentOffset)}) {
                   initialized = !(*extant == *object->init());
                 }
               }
@@ -901,8 +906,8 @@ void ConstructInitializer(const Symbol &symbol,
       }
     } else if (auto symbolType{evaluate::DynamicType::From(symbol)}) {
       if (auto extents{evaluate::GetConstantExtents(context, symbol)}) {
-        mutableObject.set_init(
-            initialization.image.AsConstant(context, *symbolType, *extents));
+        mutableObject.set_init(initialization.image.AsConstant(
+            context, *symbolType, std::nullopt, *extents));
       } else {
         exprAnalyzer.Say(symbol.name(),
             "internal: unknown shape for '%s' while constructing initializer from DATA"_err_en_US,

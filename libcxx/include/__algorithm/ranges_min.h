@@ -20,13 +20,14 @@
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__type_traits/is_trivially_copyable.h>
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
@@ -61,10 +62,8 @@ struct __fn {
   range_value_t<_Rp> operator()(_Rp&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first = ranges::begin(__r);
     auto __last = ranges::end(__r);
-
     _LIBCPP_ASSERT(__first != __last, "range must contain at least one element");
-
-    if constexpr (forward_range<_Rp>) {
+    if constexpr (forward_range<_Rp> && !__is_cheap_to_copy<range_value_t<_Rp>>) {
       return *ranges::__min_element_impl(__first, __last, __comp, __proj);
     } else {
       range_value_t<_Rp> __result = *__first;
@@ -87,6 +86,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER > 17 &&
+#endif // _LIBCPP_STD_VER >= 20 &&
 
 #endif // _LIBCPP___ALGORITHM_RANGES_MIN_H

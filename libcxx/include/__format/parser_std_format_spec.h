@@ -28,13 +28,14 @@
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
 #include <__format/unicode.h>
+#include <__format/width_estimation_table.h>
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h> // iter_value_t
+#include <__type_traits/common_type.h>
+#include <__type_traits/is_trivially_copyable.h>
 #include <__variant/monostate.h>
-#include <bit>
 #include <cstdint>
 #include <string_view>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,7 +46,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __format_spec {
 
@@ -81,22 +82,33 @@ __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
   return _VSTD::__visit_format_arg(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
-        if constexpr (integral<_Type>) {
+        if constexpr (same_as<_Type, monostate>)
+          std::__throw_format_error("Argument index out of bounds");
+
+        // [format.string.std]/8
+        // If { arg-idopt } is used in a width or precision, the value of the
+        // corresponding formatting argument is used in its place. If the
+        // corresponding formatting argument is not of standard signed or unsigned
+        // integer type, or its value is negative for precision or non-positive for
+        // width, an exception of type format_error is thrown.
+        //
+        // When an integral is used in a format function, it is stored as one of
+        // the types checked below. Other integral types are promoted. For example,
+        // a signed char is stored as an int.
+        if constexpr (same_as<_Type, int> || same_as<_Type, unsigned int> || //
+                      same_as<_Type, long long> || same_as<_Type, unsigned long long>) {
           if constexpr (signed_integral<_Type>) {
             if (__arg < 0)
               std::__throw_format_error("A format-spec arg-id replacement shouldn't have a negative value");
           }
 
           using _CT = common_type_t<_Type, decltype(__format::__number_max)>;
-          if (static_cast<_CT>(__arg) >
-              static_cast<_CT>(__format::__number_max))
+          if (static_cast<_CT>(__arg) > static_cast<_CT>(__format::__number_max))
             std::__throw_format_error("A format-spec arg-id replacement exceeds the maximum supported value");
 
           return __arg;
-        } else if constexpr (same_as<_Type, monostate>)
-          std::__throw_format_error("Argument index out of bounds");
-        else
-          std::__throw_format_error("A format-spec arg-id replacement argument isn't an integral type");
+        } else
+          std::__throw_format_error("Replacement argument isn't a standard signed or unsigned integer type");
       },
       __format_arg);
 }
@@ -119,7 +131,7 @@ struct __fields {
   // formatters use the colon to mark the beginning of the
   // underlying-format-spec. To avoid parsing ambiguities these formatter
   // specializations prohibit the use of the colon as a fill character.
-  uint8_t __allow_colon_in_fill_ : 1 {false};
+  uint8_t __use_range_fill_ : 1 {false};
 };
 
 // By not placing this constant in the formatter class it's not duplicated for
@@ -140,9 +152,10 @@ inline constexpr __fields __fields_floating_point{
 inline constexpr __fields __fields_string{.__precision_ = true, .__type_ = true};
 inline constexpr __fields __fields_pointer{.__type_ = true};
 
-#  if _LIBCPP_STD_VER > 20
-inline constexpr __fields __fields_tuple{.__type_ = false, .__allow_colon_in_fill_ = true};
-inline constexpr __fields __fields_range{.__type_ = false, .__allow_colon_in_fill_ = true};
+#  if _LIBCPP_STD_VER >= 23
+inline constexpr __fields __fields_tuple{.__use_range_fill_ = true};
+inline constexpr __fields __fields_range{.__use_range_fill_ = true};
+inline constexpr __fields __fields_fill_align_width{};
 #  endif
 
 enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
@@ -199,6 +212,7 @@ struct __std {
 struct __chrono {
   __alignment __alignment_ : 3;
   bool __locale_specific_form_ : 1;
+  bool __hour_                 : 1;
   bool __weekday_name_ : 1;
   bool __weekday_              : 1;
   bool __day_of_year_          : 1;
@@ -276,7 +290,7 @@ public:
     if (__begin == __end)
       return __begin;
 
-    if (__parse_fill_align(__begin, __end, __fields.__allow_colon_in_fill_) && __begin == __end)
+    if (__parse_fill_align(__begin, __end, __fields.__use_range_fill_) && __begin == __end)
       return __begin;
 
     if (__fields.__sign_ && __parse_sign(__begin) && __begin == __end)
@@ -329,6 +343,7 @@ public:
         .__chrono_ =
             __chrono{.__alignment_            = __alignment_,
                      .__locale_specific_form_ = __locale_specific_form_,
+                     .__hour_                 = __hour_,
                      .__weekday_name_         = __weekday_name_,
                      .__weekday_              = __weekday_,
                      .__day_of_year_          = __day_of_year_,
@@ -348,6 +363,8 @@ public:
 
   // These flags are only used for formatting chrono. Since the struct has
   // padding space left it's added to this structure.
+  bool __hour_ : 1 {false};
+
   bool __weekday_name_ : 1 {false};
   bool __weekday_      : 1 {false};
 
@@ -356,7 +373,7 @@ public:
 
   bool __month_name_ : 1 {false};
 
-  uint8_t __reserved_1_ : 3 {0};
+  uint8_t __reserved_1_ : 2 {0};
   uint8_t __reserved_2_ : 6 {0};
   // These two flags are only used internally and not part of the
   // __parsed_specifications. Therefore put them at the end.
@@ -578,7 +595,7 @@ private:
     case 'x':
       __type_ = __type::__hexadecimal_lower_case;
       break;
-#  if _LIBCPP_STD_VER > 20
+#  if _LIBCPP_STD_VER >= 23
     case '?':
       __type_ = __type::__debug;
       break;
@@ -770,57 +787,6 @@ enum class __column_width_rounding { __down, __up };
 #  ifndef _LIBCPP_HAS_NO_UNICODE
 
 namespace __detail {
-
-/// Converts a code point to the column width.
-///
-/// The estimations are conforming to [format.string.general]/11
-///
-/// This version expects a value less than 0x1'0000, which is a 3-byte UTF-8
-/// character.
-_LIBCPP_HIDE_FROM_ABI constexpr int __column_width_3(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c < 0x10000, "Use __column_width_4 or __column_width for larger values");
-
-  // clang-format off
-  return 1 + (__c >= 0x1100 && (__c <= 0x115f ||
-             (__c >= 0x2329 && (__c <= 0x232a ||
-             (__c >= 0x2e80 && (__c <= 0x303e ||
-             (__c >= 0x3040 && (__c <= 0xa4cf ||
-             (__c >= 0xac00 && (__c <= 0xd7a3 ||
-             (__c >= 0xf900 && (__c <= 0xfaff ||
-             (__c >= 0xfe10 && (__c <= 0xfe19 ||
-             (__c >= 0xfe30 && (__c <= 0xfe6f ||
-             (__c >= 0xff00 && (__c <= 0xff60 ||
-             (__c >= 0xffe0 && (__c <= 0xffe6
-             ))))))))))))))))))));
-  // clang-format on
-}
-
-/// @overload
-///
-/// This version expects a value greater than or equal to 0x1'0000, which is a
-/// 4-byte UTF-8 character.
-_LIBCPP_HIDE_FROM_ABI constexpr int __column_width_4(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c >= 0x10000, "Use __column_width_3 or __column_width for smaller values");
-
-  // clang-format off
-  return 1 + (__c >= 0x1'f300 && (__c <= 0x1'f64f ||
-             (__c >= 0x1'f900 && (__c <= 0x1'f9ff ||
-             (__c >= 0x2'0000 && (__c <= 0x2'fffd ||
-             (__c >= 0x3'0000 && (__c <= 0x3'fffd
-             ))))))));
-  // clang-format on
-}
-
-/// @overload
-///
-/// The general case, accepting all values.
-_LIBCPP_HIDE_FROM_ABI constexpr int __column_width(uint32_t __c) noexcept {
-  if (__c < 0x10000)
-    return __detail::__column_width_3(__c);
-
-  return __detail::__column_width_4(__c);
-}
-
 template <contiguous_iterator _Iterator>
 _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_column_width_grapheme_clustering(
     _Iterator __first, _Iterator __last, size_t __maximum, __column_width_rounding __rounding) noexcept {
@@ -830,7 +796,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_colu
   __column_width_result<_Iterator> __result{0, __first};
   while (__result.__last_ != __last && __result.__width_ <= __maximum) {
     typename __unicode::__extended_grapheme_cluster_view<_CharT>::__cluster __cluster = __view.__consume();
-    int __width = __detail::__column_width(__cluster.__code_point_);
+    int __width = __width_estimation_table::__estimated_width(__cluster.__code_point_);
 
     // When the next entry would exceed the maximum width the previous width
     // might be returned. For example when a width of 100 is requested the
@@ -955,7 +921,7 @@ __estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __col
 
 } // namespace __format_spec
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

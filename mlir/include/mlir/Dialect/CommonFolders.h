@@ -24,14 +24,16 @@
 namespace mlir {
 /// Performs constant folding `calculate` with element-wise behavior on the two
 /// attributes in `operands` and returns the result if possible.
+/// Uses `resultType` for the type of the returned attribute.
 template <class AttrElementT,
           class ElementValueT = typename AttrElementT::ValueType,
           class CalculationT = function_ref<
               std::optional<ElementValueT>(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
+                                       Type resultType,
                                        const CalculationT &calculate) {
   assert(operands.size() == 2 && "binary op takes two operands");
-  if (!operands[0] || !operands[1])
+  if (!resultType || !operands[0] || !operands[1])
     return {};
 
   if (operands[0].isa<AttrElementT>() && operands[1].isa<AttrElementT>()) {
@@ -45,7 +47,7 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     if (!calRes)
       return {};
 
-    return AttrElementT::get(lhs.getType(), *calRes);
+    return AttrElementT::get(resultType, *calRes);
   }
 
   if (operands[0].isa<SplatElementsAttr>() &&
@@ -62,9 +64,10 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     if (!elementResult)
       return {};
 
-    return DenseElementsAttr::get(lhs.getType(), *elementResult);
-  } else if (operands[0].isa<ElementsAttr>() &&
-             operands[1].isa<ElementsAttr>()) {
+    return DenseElementsAttr::get(cast<ShapedType>(resultType), *elementResult);
+  }
+
+  if (operands[0].isa<ElementsAttr>() && operands[1].isa<ElementsAttr>()) {
     // Operands are ElementsAttr-derived; perform an element-wise fold by
     // expanding the values.
     auto lhs = operands[0].cast<ElementsAttr>();
@@ -83,9 +86,51 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
       elementResults.push_back(*elementResult);
     }
 
-    return DenseElementsAttr::get(lhs.getType(), elementResults);
+    return DenseElementsAttr::get(cast<ShapedType>(resultType), elementResults);
   }
   return {};
+}
+
+/// Performs constant folding `calculate` with element-wise behavior on the two
+/// attributes in `operands` and returns the result if possible.
+/// Uses the operand element type for the element type of the returned
+/// attribute.
+template <class AttrElementT,
+          class ElementValueT = typename AttrElementT::ValueType,
+          class CalculationT = function_ref<
+              std::optional<ElementValueT>(ElementValueT, ElementValueT)>>
+Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
+                                       const CalculationT &calculate) {
+  assert(operands.size() == 2 && "binary op takes two operands");
+  auto getResultType = [](Attribute attr) -> Type {
+    if (auto typed = attr.dyn_cast_or_null<TypedAttr>())
+      return typed.getType();
+    return {};
+  };
+
+  Type lhsType = getResultType(operands[0]);
+  Type rhsType = getResultType(operands[1]);
+  if (!lhsType || !rhsType)
+    return {};
+  if (lhsType != rhsType)
+    return {};
+
+  return constFoldBinaryOpConditional<AttrElementT, ElementValueT,
+                                      CalculationT>(operands, lhsType,
+                                                    calculate);
+}
+
+template <class AttrElementT,
+          class ElementValueT = typename AttrElementT::ValueType,
+          class CalculationT =
+              function_ref<ElementValueT(ElementValueT, ElementValueT)>>
+Attribute constFoldBinaryOp(ArrayRef<Attribute> operands, Type resultType,
+                            const CalculationT &calculate) {
+  return constFoldBinaryOpConditional<AttrElementT>(
+      operands, resultType,
+      [&](ElementValueT a, ElementValueT b) -> std::optional<ElementValueT> {
+        return calculate(a, b);
+      });
 }
 
 template <class AttrElementT,
@@ -144,7 +189,7 @@ Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
         return {};
       elementResults.push_back(*elementResult);
     }
-    return DenseElementsAttr::get(op.getType(), elementResults);
+    return DenseElementsAttr::get(op.getShapedType(), elementResults);
   }
   return {};
 }
@@ -188,7 +233,7 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
         calculate(op.getSplatValue<ElementValueT>(), castStatus);
     if (!castStatus)
       return {};
-    return DenseElementsAttr::get(resType, elementResult);
+    return DenseElementsAttr::get(cast<ShapedType>(resType), elementResult);
   }
   if (operands[0].isa<ElementsAttr>()) {
     // Operand is ElementsAttr-derived; perform an element-wise fold by
@@ -205,7 +250,7 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
       elementResults.push_back(elt);
     }
 
-    return DenseElementsAttr::get(resType, elementResults);
+    return DenseElementsAttr::get(cast<ShapedType>(resType), elementResults);
   }
   return {};
 }

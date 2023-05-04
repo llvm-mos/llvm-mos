@@ -19,13 +19,16 @@
 
 namespace mlir {
 class OpBuilder;
+namespace func {
+class FuncOp;
+}
 
 namespace bufferization {
 
 class AnalysisState;
 class BufferizableOpInterface;
 
-/// Specify fine-grain relationship between buffers to enable more analysis.
+/// Specifies a fine-grain relationship between buffers to enable more analysis.
 enum class BufferRelation {
   Unknown,
   // TODO: ResultContainsOperand,
@@ -33,13 +36,65 @@ enum class BufferRelation {
   Equivalent
 };
 
+/// A maybe aliasing OpOperand. If `isDefinite` is `true`, the OpOperand is
+/// guaranteed to alias at runtime.
+struct AliasingOpOperand {
+  AliasingOpOperand(OpOperand *opOperand, BufferRelation relation,
+                    bool isDefinite = true)
+      : opOperand(opOperand), relation(relation), isDefinite(isDefinite) {}
+
+  OpOperand *opOperand;
+  BufferRelation relation;
+  bool isDefinite;
+};
+
+/// A maybe aliasing OpResult. If `isDefinite` is `true`, the OpResult is
+/// guaranteed to alias at runtime.
+struct AliasingOpResult {
+  AliasingOpResult(OpResult opResult, BufferRelation relation,
+                   bool isDefinite = true)
+      : opResult(opResult), relation(relation), isDefinite(isDefinite) {}
+
+  OpResult opResult;
+  BufferRelation relation;
+  bool isDefinite;
+};
+
+template <typename T> class AliasList {
+public:
+  /// Create an empty list of aliases.
+  AliasList() = default;
+
+  /// Create a list of aliases.
+  AliasList(std::initializer_list<T> elems) {
+    for (T alias : elems)
+      addAlias(alias);
+  }
+
+  /// Create a list of aliases.
+  AliasList(SmallVector<T> &&aliases) : aliases(std::move(aliases)) {}
+
+  ArrayRef<T> getAliases() const { return aliases; }
+
+  size_t getNumAliases() const { return aliases.size(); }
+
+  void addAlias(T alias) { aliases.push_back(alias); }
+
+  auto begin() const { return aliases.begin(); }
+  auto end() const { return aliases.end(); }
+
+private:
+  /// The list of aliases.
+  SmallVector<T> aliases;
+};
+
 /// A list of possible aliasing OpOperands. This list models the runtime
 /// aliasing relationship for an OpResult.
-using AliasingOpOperandList = SmallVector<OpOperand *>;
+using AliasingOpOperandList = AliasList<AliasingOpOperand>;
 
 /// A list of possible aliasing OpResults. This list models the runtime
 /// aliasing relationship for an OpOperand.
-using AliasingOpResultList = SmallVector<OpResult>;
+using AliasingOpResultList = AliasList<AliasingOpResult>;
 
 class OpFilter {
 public:
@@ -198,6 +253,11 @@ struct BufferizationOptions {
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
   /// Tensor -> MemRef type converter.
+  /// Parameters: Value, memory space, func op, bufferization options
+  using FunctionArgTypeConverterFn =
+      std::function<BaseMemRefType(TensorType, Attribute memorySpace,
+                                   func::FuncOp, const BufferizationOptions &)>;
+  /// Tensor -> MemRef type converter.
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       Value, Attribute memorySpace, const BufferizationOptions &)>;
@@ -261,7 +321,8 @@ struct BufferizationOptions {
   /// OpOperands out-of-place.
   bool enforceAliasingInvariants = true;
 
-  /// This flag controls buffer types on function signatures.
+  /// This function controls buffer types on function signatures. Sets
+  /// `functionArgTypeConverterFn` and `inferFunctionResultLayout` accordingly.
   ///
   /// * InferLayoutMap: All function parameter types have a fully dynamic layout
   ///   map, but function result types are inferred from the body of the
@@ -274,13 +335,25 @@ struct BufferizationOptions {
   ///   additional buffer allocs and copies because layout maps cannot be casted
   ///   away.
   ///
-  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
-  ///
   /// Note: Inferred layout maps may not be desireable when interacting with
   /// external functions, because the generated function signatures will be less
   /// predictable.
-  LayoutMapOption functionBoundaryTypeConversion =
-      LayoutMapOption::InferLayoutMap;
+  void setFunctionBoundaryTypeConversion(LayoutMapOption layoutMapOption);
+
+  /// Type converter from tensors to memrefs. This type converter is used to
+  /// determine bufferized function argument types. By default, a type
+  /// converter that returns a memref type with a fully dynamic layout map is
+  /// used.
+  ///
+  /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
+  FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;
+
+  /// If true, function result types are inferred from the body of the function.
+  /// Otherwise, function result type is determined by
+  /// `functionArgTypeConverterFn`.
+  ///
+  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
+  bool inferFunctionResultLayout = true;
 
   /// Type converter from tensors to memrefs. This type converter is used if no
   /// memref type could be inferred during bufferization. By default, a type

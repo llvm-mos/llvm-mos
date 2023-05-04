@@ -48,12 +48,15 @@ namespace llvm {
 
 /// ByteSwap_16 - This function returns a byte-swapped representation of
 /// the 16-bit argument.
+LLVM_DEPRECATED("use llvm::byteswap instead", "llvm::byteswap")
 inline uint16_t ByteSwap_16(uint16_t value) { return llvm::byteswap(value); }
 
 /// This function returns a byte-swapped representation of the 32-bit argument.
+LLVM_DEPRECATED("use llvm::byteswap instead", "llvm::byteswap")
 inline uint32_t ByteSwap_32(uint32_t value) { return llvm::byteswap(value); }
 
 /// This function returns a byte-swapped representation of the 64-bit argument.
+LLVM_DEPRECATED("use llvm::byteswap instead", "llvm::byteswap")
 inline uint64_t ByteSwap_64(uint64_t value) { return llvm::byteswap(value); }
 
 namespace sys {
@@ -103,7 +106,7 @@ inline double getSwappedBytes(double C) {
 }
 
 template <typename T>
-inline std::enable_if_t<std::is_enum<T>::value, T> getSwappedBytes(T C) {
+inline std::enable_if_t<std::is_enum_v<T>, T> getSwappedBytes(T C) {
   return static_cast<T>(
       llvm::byteswap(static_cast<std::underlying_type_t<T>>(C)));
 }

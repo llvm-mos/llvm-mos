@@ -14,14 +14,14 @@
 # in various configurations.
 #
 env:
-    LLVM_HEAD_VERSION: "16"
+    LLVM_HEAD_VERSION: "17"
 steps:
   - label: "Building clang"
     commands:
       - "mkdir install"
       - "cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=install -DLLVM_ENABLE_PROJECTS=\"clang;compiler-rt\""
       - "ninja -C build install-clang install-clang-resource-headers"
-      - "buildkite-agent artifact upload 'install/**/*'"
+      - "buildkite-agent artifact upload --debug 'install/**/*'"
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"

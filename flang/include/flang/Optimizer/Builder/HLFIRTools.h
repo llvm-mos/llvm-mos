@@ -29,9 +29,18 @@ class AssociateOp;
 class ElementalOp;
 class YieldElementOp;
 
+/// Is this an SSA value type for the value of a Fortran procedure
+/// designator ?
+inline bool isFortranProcedureValue(mlir::Type type) {
+  return type.isa<fir::BoxProcType>() ||
+         (type.isa<mlir::TupleType>() &&
+          fir::isCharacterProcedureTuple(type, /*acceptRawFunc=*/false));
+}
+
 /// Is this an SSA value type for the value of a Fortran expression?
 inline bool isFortranValueType(mlir::Type type) {
-  return type.isa<hlfir::ExprType>() || fir::isa_trivial(type);
+  return type.isa<hlfir::ExprType>() || fir::isa_trivial(type) ||
+         isFortranProcedureValue(type);
 }
 
 /// Is this the value of a Fortran expression in an SSA value form?
@@ -77,6 +86,10 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
+
+  /// Is this entity a procedure designator?
+  bool isProcedure() const { return isFortranProcedureValue(getType()); }
+
   /// Is this an array or an assumed ranked entity?
   bool isArray() const { return getRank() != 0; }
 
@@ -166,6 +179,11 @@ public:
     if (auto loadOp = base.getDefiningOp<fir::LoadOp>())
       base = loadOp.getMemref();
     return base.getDefiningOp<fir::FortranVariableOpInterface>();
+  }
+
+  bool isOptional() const {
+    auto varIface = getIfVariableInterface();
+    return varIface ? varIface.isOptional() : false;
   }
 
   // Get the entity as an mlir SSA value containing all the shape, type
@@ -276,6 +294,12 @@ genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
 genBounds(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape);
 
+/// Generate lower bounds from a shape. If \p shape is null or is a fir.shape,
+/// the returned vector will contain \p rank ones.
+llvm::SmallVector<mlir::Value> genLowerbounds(mlir::Location loc,
+                                              fir::FirOpBuilder &builder,
+                                              mlir::Value shape, unsigned rank);
+
 /// Compute fir.shape<> (no lower bounds) for an entity.
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity);
@@ -295,6 +319,11 @@ mlir::Value genLBound(mlir::Location loc, fir::FirOpBuilder &builder,
 llvm::SmallVector<mlir::Value> getIndexExtents(mlir::Location loc,
                                                fir::FirOpBuilder &builder,
                                                mlir::Value shape);
+
+/// Return explicit extents. If the base is a fir.box, this won't read it to
+/// return the extents and will instead return an empty vector.
+llvm::SmallVector<mlir::Value>
+getExplicitExtentsFromShape(mlir::Value shape, fir::FirOpBuilder &builder);
 
 /// Read length parameters into result if this entity has any.
 void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -357,9 +386,10 @@ std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
                  const hlfir::Entity &entity, mlir::Type targetType);
 
-std::pair<fir::BoxValue, std::optional<hlfir::CleanupFunction>>
+std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
              const hlfir::Entity &entity, mlir::Type targetType);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

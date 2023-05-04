@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -43,6 +44,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -6205,9 +6207,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_LOAD) || OpNum > 0;
     bool FoldedStore =
         isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_STORE);
-    MaybeAlign MinAlign =
-        decodeMaybeAlign((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT);
-    if (MinAlign && Alignment < *MinAlign)
+    if (Alignment < Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
       return nullptr;
     bool NarrowToMOV32rm = false;
     if (Size) {
@@ -9598,7 +9598,8 @@ enum MachineOutlinerClass {
   MachineOutlinerTailCall
 };
 
-outliner::OutlinedFunction X86InstrInfo::getOutliningCandidateInfo(
+std::optional<outliner::OutlinedFunction>
+X86InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize =
       std::accumulate(RepeatedSequenceLocs[0].front(),
@@ -9631,7 +9632,7 @@ outliner::OutlinedFunction X86InstrInfo::getOutliningCandidateInfo(
         C.getMF()->getFrameInstructions();
 
     if (CFICount > 0 && CFICount != CFIInstructions.size())
-      return outliner::OutlinedFunction();
+      return std::nullopt;
   }
 
   // FIXME: Use real size in bytes for call and ret instructions.
@@ -9646,7 +9647,7 @@ outliner::OutlinedFunction X86InstrInfo::getOutliningCandidateInfo(
   }
 
   if (CFICount > 0)
-    return outliner::OutlinedFunction();
+    return std::nullopt;
 
   for (outliner::Candidate &C : RepeatedSequenceLocs)
     C.setCallInfo(MachineOutlinerDefault, 1);
@@ -9678,31 +9679,14 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
 }
 
 outliner::InstrType
-X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags) const {
+X86InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,  unsigned Flags) const {
   MachineInstr &MI = *MIT;
-  // Don't allow debug values to impact outlining type.
-  if (MI.isDebugInstr() || MI.isIndirectDebugValue())
-    return outliner::InstrType::Invisible;
 
-  // At this point, KILL instructions don't really tell us much so we can go
-  // ahead and skip over them.
-  if (MI.isKill())
-    return outliner::InstrType::Invisible;
-
-  // Is this a tail call? If yes, we can outline as a tail call.
-  if (isTailCall(MI))
+  // Is this a terminator for a basic block?
+  if (MI.isTerminator())
+    // TargetInstrInfo::getOutliningType has already filtered out anything
+    // that would break this, so we can allow it here.
     return outliner::InstrType::Legal;
-
-  // Is this the terminator of a basic block?
-  if (MI.isTerminator() || MI.isReturn()) {
-
-    // Does its parent have any successors in its MachineFunction?
-    if (MI.getParent()->succ_empty())
-      return outliner::InstrType::Legal;
-
-    // It does, so we can't tail call it.
-    return outliner::InstrType::Illegal;
-  }
 
   // Don't outline anything that modifies or reads from the stack pointer.
   //
@@ -9724,15 +9708,9 @@ X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags
       MI.getDesc().hasImplicitDefOfPhysReg(X86::RIP))
     return outliner::InstrType::Illegal;
 
-  // Positions can't safely be outlined.
-  if (MI.isPosition())
+  // Don't outline CFI instructions.
+  if (MI.isCFIInstruction())
     return outliner::InstrType::Illegal;
-
-  // Make sure none of the operands of this instruction do anything tricky.
-  for (const MachineOperand &MOP : MI.operands())
-    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
-        MOP.isTargetIndex())
-      return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;
 }
@@ -9770,6 +9748,142 @@ X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
   }
 
   return It;
+}
+
+bool X86InstrInfo::getMachineCombinerPatterns(
+    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    bool DoRegPressureReduce) const {
+  unsigned Opc = Root.getOpcode();
+  switch (Opc) {
+  default:
+    return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
+                                                       DoRegPressureReduce);
+  case X86::VPDPWSSDrr:
+  case X86::VPDPWSSDrm:
+  case X86::VPDPWSSDYrr:
+  case X86::VPDPWSSDYrm: {
+    Patterns.push_back(MachineCombinerPattern::DPWSSD);
+    return true;
+  }
+  case X86::VPDPWSSDZ128r:
+  case X86::VPDPWSSDZ128m:
+  case X86::VPDPWSSDZ256r:
+  case X86::VPDPWSSDZ256m:
+  case X86::VPDPWSSDZr:
+  case X86::VPDPWSSDZm: {
+    if (Subtarget.hasBWI())
+      Patterns.push_back(MachineCombinerPattern::DPWSSD);
+    return true;
+  }
+  }
+}
+
+static void
+genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
+                             SmallVectorImpl<MachineInstr *> &InsInstrs,
+                             SmallVectorImpl<MachineInstr *> &DelInstrs,
+                             DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+  MachineFunction *MF = Root.getMF();
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+
+  unsigned Opc = Root.getOpcode();
+  unsigned AddOpc = 0;
+  unsigned MaddOpc = 0;
+  switch (Opc) {
+  default:
+    assert(false && "It should not reach here");
+    break;
+  // vpdpwssd xmm2,xmm3,xmm1
+  // -->
+  // vpmaddwd xmm3,xmm3,xmm1
+  // vpaddd xmm2,xmm2,xmm3
+  case X86::VPDPWSSDrr:
+    MaddOpc = X86::VPMADDWDrr;
+    AddOpc = X86::VPADDDrr;
+    break;
+  case X86::VPDPWSSDrm:
+    MaddOpc = X86::VPMADDWDrm;
+    AddOpc = X86::VPADDDrr;
+    break;
+  case X86::VPDPWSSDZ128r:
+    MaddOpc = X86::VPMADDWDZ128rr;
+    AddOpc = X86::VPADDDZ128rr;
+    break;
+  case X86::VPDPWSSDZ128m:
+    MaddOpc = X86::VPMADDWDZ128rm;
+    AddOpc = X86::VPADDDZ128rr;
+    break;
+  // vpdpwssd ymm2,ymm3,ymm1
+  // -->
+  // vpmaddwd ymm3,ymm3,ymm1
+  // vpaddd ymm2,ymm2,ymm3
+  case X86::VPDPWSSDYrr:
+    MaddOpc = X86::VPMADDWDYrr;
+    AddOpc = X86::VPADDDYrr;
+    break;
+  case X86::VPDPWSSDYrm:
+    MaddOpc = X86::VPMADDWDYrm;
+    AddOpc = X86::VPADDDYrr;
+    break;
+  case X86::VPDPWSSDZ256r:
+    MaddOpc = X86::VPMADDWDZ256rr;
+    AddOpc = X86::VPADDDZ256rr;
+    break;
+  case X86::VPDPWSSDZ256m:
+    MaddOpc = X86::VPMADDWDZ256rm;
+    AddOpc = X86::VPADDDZ256rr;
+    break;
+  // vpdpwssd zmm2,zmm3,zmm1
+  // -->
+  // vpmaddwd zmm3,zmm3,zmm1
+  // vpaddd zmm2,zmm2,zmm3
+  case X86::VPDPWSSDZr:
+    MaddOpc = X86::VPMADDWDZrr;
+    AddOpc = X86::VPADDDZrr;
+    break;
+  case X86::VPDPWSSDZm:
+    MaddOpc = X86::VPMADDWDZrm;
+    AddOpc = X86::VPADDDZrr;
+    break;
+  }
+  // Create vpmaddwd.
+  const TargetRegisterClass *RC =
+      RegInfo.getRegClass(Root.getOperand(0).getReg());
+  Register NewReg = RegInfo.createVirtualRegister(RC);
+  MachineInstr *Madd = Root.getMF()->CloneMachineInstr(&Root);
+  Madd->setDesc(TII.get(MaddOpc));
+  Madd->untieRegOperand(1);
+  Madd->removeOperand(1);
+  Madd->getOperand(0).setReg(NewReg);
+  InstrIdxForVirtReg.insert(std::make_pair(NewReg, 0));
+  // Create vpaddd.
+  Register DstReg = Root.getOperand(0).getReg();
+  bool IsKill = Root.getOperand(1).isKill();
+  MachineInstr *Add =
+      BuildMI(*MF, MIMetadata(Root), TII.get(AddOpc), DstReg)
+          .addReg(Root.getOperand(1).getReg(), getKillRegState(IsKill))
+          .addReg(Madd->getOperand(0).getReg(), getKillRegState(true));
+  InsInstrs.push_back(Madd);
+  InsInstrs.push_back(Add);
+  DelInstrs.push_back(&Root);
+}
+
+void X86InstrInfo::genAlternativeCodeSequence(
+    MachineInstr &Root, MachineCombinerPattern Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+  switch (Pattern) {
+  default:
+    // Reassociate instructions.
+    TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
+                                                DelInstrs, InstrIdxForVirtReg);
+    return;
+  case MachineCombinerPattern::DPWSSD:
+    genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
+                                 InstrIdxForVirtReg);
+    return;
+  }
 }
 
 #define GET_INSTRINFO_HELPERS

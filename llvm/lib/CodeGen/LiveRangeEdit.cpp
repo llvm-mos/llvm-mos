@@ -84,7 +84,7 @@ void LiveRangeEdit::scanRemattable() {
   for (VNInfo *VNI : getParent().valnos) {
     if (VNI->isUnused())
       continue;
-    unsigned Original = VRM->getOriginal(getReg());
+    Register Original = VRM->getOriginal(getReg());
     LiveInterval &OrigLI = LIS.getInterval(Original);
     VNInfo *OrigVNI = OrigLI.getVNInfoAt(VNI->def);
     if (!OrigVNI)
@@ -187,11 +187,9 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM, VNInfo *OrigVNI,
 
 SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
-                                         unsigned DestReg,
-                                         const Remat &RM,
+                                         Register DestReg, const Remat &RM,
                                          const TargetRegisterInfo &tri,
-                                         bool Late,
-                                         unsigned SubIdx,
+                                         bool Late, unsigned SubIdx,
                                          MachineInstr *ReplaceIndexMI) {
   assert(RM.OrigMI && "Invalid remat");
   TII.reMaterialize(MBB, MI, DestReg, SubIdx, *RM.OrigMI, tri);
@@ -312,7 +310,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
   LLVM_DEBUG(dbgs() << "Deleting dead def " << Idx << '\t' << *MI);
 
   // Collect virtual registers to be erased after MI is gone.
-  SmallVector<unsigned, 8> RegsToErase;
+  SmallVector<Register, 8> RegsToErase;
   bool ReadsPhysRegs = false;
   bool isOrigDef = false;
   Register Dest;

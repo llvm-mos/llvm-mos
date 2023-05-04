@@ -15,10 +15,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 
@@ -145,8 +142,8 @@ void llvm::EntryExitInstrumenterPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<llvm::EntryExitInstrumenterPass> *>(this)
       ->printPipeline(OS, MapClassName2PassName);
-  OS << "<";
+  OS << '<';
   if (PostInlining)
     OS << "post-inline";
-  OS << ">";
+  OS << '>';
 }

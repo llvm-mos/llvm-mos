@@ -62,6 +62,7 @@ class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
 enum class MachineCombinerPattern;
+enum class MachineTraceStrategy;
 
 template <class T> class SmallVectorImpl;
 
@@ -1228,6 +1229,13 @@ public:
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
 
+  /// When calculate the latency of the root instruction, accumulate the
+  /// latency of the sequence to the root latency.
+  /// \param Root - Instruction that could be combined with one of its operands
+  virtual bool accumulateInstrSeqToRootLatency(MachineInstr &Root) const {
+    return true;
+  }
+
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
   void reassociateOps(MachineInstr &Root, MachineInstr &Prev,
@@ -1256,6 +1264,9 @@ public:
 
   /// Return true when a target supports MachineCombiner.
   virtual bool useMachineCombiner() const { return false; }
+
+  /// Return a strategy that MachineCombiner must use when creating traces.
+  virtual MachineTraceStrategy getMachineCombinerTraceStrategy() const;
 
   /// Return true if the given SDNode can be copied during scheduling
   /// even if it has glue.
@@ -1968,8 +1979,9 @@ public:
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
-  /// information for a set of outlining candidates.
-  virtual outliner::OutlinedFunction getOutliningCandidateInfo(
+  /// information for a set of outlining candidates. Returns std::nullopt if the
+  /// candidates are not suitable for outlining.
+  virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
@@ -1981,12 +1993,19 @@ public:
   virtual void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const;
 
-  /// Returns how or if \p MI should be outlined.
+protected:
+  /// Target-dependent implementation for getOutliningTypeImpl.
   virtual outliner::InstrType
-  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
     llvm_unreachable(
-        "Target didn't implement TargetInstrInfo::getOutliningType!");
+        "Target didn't implement TargetInstrInfo::getOutliningTypeImpl!");
   }
+
+public:
+  /// Returns how or if \p MIT should be outlined. \p Flags is the
+  /// target-specific information returned by isMBBSafeToOutlineFrom.
+  outliner::InstrType
+  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const;
 
   /// Optional target hook that returns true if \p MBB is safe to outline from,
   /// and returns any target-specific information in \p Flags.

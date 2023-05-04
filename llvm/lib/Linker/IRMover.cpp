@@ -409,6 +409,10 @@ class IRLinker {
   std::vector<GlobalValue *> Worklist;
   std::vector<std::pair<GlobalValue *, Value*>> RAUWWorklist;
 
+  /// Set of globals with eagerly copied metadata that may require remapping.
+  /// This remapping is performed after metadata linking.
+  DenseSet<GlobalObject *> UnmappedMetadata;
+
   void maybeAdd(GlobalValue *GV) {
     if (ValuesToLink.insert(GV).second)
       Worklist.push_back(GV);
@@ -750,8 +754,11 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
 
   if (auto *NewGO = dyn_cast<GlobalObject>(NewGV)) {
     // Metadata for global variables and function declarations is copied eagerly.
-    if (isa<GlobalVariable>(SGV) || SGV->isDeclaration())
+    if (isa<GlobalVariable>(SGV) || SGV->isDeclaration()) {
       NewGO->copyMetadata(cast<GlobalObject>(SGV), 0);
+      if (SGV->isDeclaration() && NewGO->hasMetadata())
+        UnmappedMetadata.insert(NewGO);
+    }
   }
 
   // Remove these copied constants in case this stays a declaration, since
@@ -1056,6 +1063,10 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   // as well.
   if (Function *F = dyn_cast<Function>(NewGV))
     if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F)) {
+      // Note: remangleIntrinsicFunction does not copy metadata and as such
+      // F should not occur in the set of objects with unmapped metadata.
+      // If this assertion fails then remangleIntrinsicFunction needs updating.
+      assert(!UnmappedMetadata.count(F) && "intrinsic has unmapped metadata");
       NewGV->eraseFromParent();
       NewGV = *Remangled;
       NeedsRenaming = false;
@@ -1628,6 +1639,13 @@ Error IRLinker::run() {
   // are properly remapped.
   linkNamedMDNodes();
 
+  // Clean up any global objects with potentially unmapped metadata.
+  // Specifically declarations which did not become definitions.
+  for (GlobalObject *NGO : UnmappedMetadata) {
+    if (NGO->isDeclaration())
+      Mapper.remapGlobalObjectMetadata(*NGO);
+  }
+
   if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
     // Append the module inline asm string.
     DstM.appendModuleInlineAsm(adjustInlineAsm(SrcM->getModuleInlineAsm(),
@@ -1648,15 +1666,16 @@ Error IRLinker::run() {
 
   // Reorder the globals just added to the destination module to match their
   // original order in the source module.
-  Module::GlobalListType &Globals = DstM.getGlobalList();
   for (GlobalVariable &GV : SrcM->globals()) {
     if (GV.hasAppendingLinkage())
       continue;
     Value *NewValue = Mapper.mapValue(GV);
     if (NewValue) {
       auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
-      if (NewGV)
-        Globals.splice(Globals.end(), Globals, NewGV->getIterator());
+      if (NewGV) {
+        NewGV->removeFromParent();
+        DstM.insertGlobalVariable(NewGV);
+      }
     }
   }
 

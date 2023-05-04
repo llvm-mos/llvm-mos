@@ -1,16 +1,15 @@
-; When EXPENSIVE_CHECKS are enabled, the machine verifier appears between each
-; pass. Ignore it with 'grep -v'.
+; UNSUPPORTED: expensive_checks
 ; RUN: llc -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1 %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
 ; RUN:   -amdgpu-load-store-vectorizer -amdgpu-enable-pre-ra-optimizations -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1-OPTS %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1-OPTS %s
 ; RUN: llc -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
 ; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
-; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
+; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts
 
@@ -37,10 +36,11 @@
 ; GCN-O0-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O0-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O0-NEXT:    AMDGPU Inline All Functions
-; GCN-O0-NEXT:    CallGraph Construction
-; GCN-O0-NEXT:    Call Graph SCC Pass Manager
-; GCN-O0-NEXT:      Inliner for always_inline functions
-; GCN-O0-NEXT:    A No-Op Barrier Pass
+; GCN-O0-NEXT:    Inliner for always_inline functions
+; GCN-O0-NEXT:      FunctionPass Manager
+; GCN-O0-NEXT:        Dominator Tree Construction
+; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O0-NEXT:        Function Alias Analysis Results
 ; GCN-O0-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:    FunctionPass Manager
@@ -50,6 +50,7 @@
 ; GCN-O0-NEXT:      Expand vector predication intrinsics
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
+; GCN-O0-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O0-NEXT:    AMDGPU Attributor
 ; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        Cycle Info Analysis
@@ -64,8 +65,8 @@
 ; GCN-O0-NEXT:        Remove unreachable blocks from the CFG
 ; GCN-O0-NEXT:        Post-Dominator Tree Construction
 ; GCN-O0-NEXT:        Dominator Tree Construction
-; GCN-O0-NEXT:        Natural Loop Information
-; GCN-O0-NEXT:        Legacy Divergence Analysis
+; GCN-O0-NEXT:        Cycle Info Analysis
+; GCN-O0-NEXT:        Uniformity Analysis
 ; GCN-O0-NEXT:        Unify divergent function exit nodes
 ; GCN-O0-NEXT:        Lazy Value Information Analysis
 ; GCN-O0-NEXT:        Lower SwitchInst's to branches
@@ -78,27 +79,27 @@
 ; GCN-O0-NEXT:        Detect single entry single exit regions
 ; GCN-O0-NEXT:        Region Pass Manager
 ; GCN-O0-NEXT:          Structurize control flow
-; GCN-O0-NEXT:        Post-Dominator Tree Construction
-; GCN-O0-NEXT:        Natural Loop Information
-; GCN-O0-NEXT:        Legacy Divergence Analysis
+; GCN-O0-NEXT:        Cycle Info Analysis
+; GCN-O0-NEXT:        Uniformity Analysis
 ; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O0-NEXT:        Function Alias Analysis Results
 ; GCN-O0-NEXT:        Memory SSA
 ; GCN-O0-NEXT:        AMDGPU Annotate Uniform Values
+; GCN-O0-NEXT:        Natural Loop Information
 ; GCN-O0-NEXT:        SI annotate control flow
-; GCN-O0-NEXT:        Post-Dominator Tree Construction
-; GCN-O0-NEXT:        Legacy Divergence Analysis
+; GCN-O0-NEXT:        Cycle Info Analysis
+; GCN-O0-NEXT:        Uniformity Analysis
 ; GCN-O0-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O0-NEXT:        LCSSA Verifier
 ; GCN-O0-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O0-NEXT:      DummyCGSCCPass
 ; GCN-O0-NEXT:      FunctionPass Manager
+; GCN-O0-NEXT:        Prepare callbr
 ; GCN-O0-NEXT:        Safe Stack instrumentation pass
 ; GCN-O0-NEXT:        Insert stack protectors
 ; GCN-O0-NEXT:        Dominator Tree Construction
-; GCN-O0-NEXT:        Post-Dominator Tree Construction
-; GCN-O0-NEXT:        Natural Loop Information
-; GCN-O0-NEXT:        Legacy Divergence Analysis
+; GCN-O0-NEXT:        Cycle Info Analysis
+; GCN-O0-NEXT:        Uniformity Analysis
 ; GCN-O0-NEXT:        Assignment Tracking Analysis
 ; GCN-O0-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
@@ -186,10 +187,11 @@
 ; GCN-O1-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O1-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O1-NEXT:    AMDGPU Inline All Functions
-; GCN-O1-NEXT:    CallGraph Construction
-; GCN-O1-NEXT:    Call Graph SCC Pass Manager
-; GCN-O1-NEXT:      Inliner for always_inline functions
-; GCN-O1-NEXT:    A No-Op Barrier Pass
+; GCN-O1-NEXT:    Inliner for always_inline functions
+; GCN-O1-NEXT:      FunctionPass Manager
+; GCN-O1-NEXT:        Dominator Tree Construction
+; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:    FunctionPass Manager
@@ -198,11 +200,11 @@
 ; GCN-O1-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      SROA
-; GCN-O1-NEXT:      Post-Dominator Tree Construction
-; GCN-O1-NEXT:      Natural Loop Information
-; GCN-O1-NEXT:      Legacy Divergence Analysis
+; GCN-O1-NEXT:      Cycle Info Analysis
+; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      AMDGPU IR optimizations
 ; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      Canonicalize natural loops
 ; GCN-O1-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-NEXT:      Loop Pass Manager
@@ -230,6 +232,7 @@
 ; GCN-O1-NEXT:      Expand reduction intrinsics
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      TLS Variable Hoist
+; GCN-O1-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-NEXT:    AMDGPU Attributor
 ; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        Cycle Info Analysis
@@ -250,14 +253,14 @@
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        Flatten the CFG
 ; GCN-O1-NEXT:        Dominator Tree Construction
-; GCN-O1-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-NEXT:        Natural Loop Information
-; GCN-O1-NEXT:        Legacy Divergence Analysis
+; GCN-O1-NEXT:        Cycle Info Analysis
+; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
+; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        Code sinking
-; GCN-O1-NEXT:        Legacy Divergence Analysis
+; GCN-O1-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-NEXT:        Lazy Value Information Analysis
 ; GCN-O1-NEXT:        Lower SwitchInst's to branches
@@ -270,29 +273,31 @@
 ; GCN-O1-NEXT:        Detect single entry single exit regions
 ; GCN-O1-NEXT:        Region Pass Manager
 ; GCN-O1-NEXT:          Structurize control flow
-; GCN-O1-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-NEXT:        Natural Loop Information
-; GCN-O1-NEXT:        Legacy Divergence Analysis
+; GCN-O1-NEXT:        Cycle Info Analysis
+; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        Memory SSA
 ; GCN-O1-NEXT:        AMDGPU Annotate Uniform Values
+; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        SI annotate control flow
-; GCN-O1-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-NEXT:        Legacy Divergence Analysis
+; GCN-O1-NEXT:        Cycle Info Analysis
+; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O1-NEXT:        LCSSA Verifier
 ; GCN-O1-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O1-NEXT:      DummyCGSCCPass
 ; GCN-O1-NEXT:      FunctionPass Manager
+; GCN-O1-NEXT:        Prepare callbr
 ; GCN-O1-NEXT:        Safe Stack instrumentation pass
 ; GCN-O1-NEXT:        Insert stack protectors
 ; GCN-O1-NEXT:        Dominator Tree Construction
-; GCN-O1-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-NEXT:        Natural Loop Information
-; GCN-O1-NEXT:        Legacy Divergence Analysis
+; GCN-O1-NEXT:        Cycle Info Analysis
+; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
+; GCN-O1-NEXT:        Natural Loop Information
+; GCN-O1-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-NEXT:        Branch Probability Analysis
 ; GCN-O1-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-NEXT:        Lazy Branch Probability Analysis
@@ -458,10 +463,11 @@
 ; GCN-O1-OPTS-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O1-OPTS-NEXT:    AMDGPU Inline All Functions
-; GCN-O1-OPTS-NEXT:    CallGraph Construction
-; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
-; GCN-O1-OPTS-NEXT:      Inliner for always_inline functions
-; GCN-O1-OPTS-NEXT:    A No-Op Barrier Pass
+; GCN-O1-OPTS-NEXT:    Inliner for always_inline functions
+; GCN-O1-OPTS-NEXT:      FunctionPass Manager
+; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
@@ -489,8 +495,8 @@
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Nary reassociation
 ; GCN-O1-OPTS-NEXT:      Early CSE
-; GCN-O1-OPTS-NEXT:      Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:      Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      AMDGPU IR optimizations
 ; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
@@ -520,6 +526,7 @@
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      TLS Variable Hoist
 ; GCN-O1-OPTS-NEXT:      Early CSE
+; GCN-O1-OPTS-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Attributor
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
@@ -546,14 +553,14 @@
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        Flatten the CFG
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Natural Loop Information
-; GCN-O1-OPTS-NEXT:        Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        Code sinking
-; GCN-O1-OPTS-NEXT:        Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-OPTS-NEXT:        Lazy Value Information Analysis
 ; GCN-O1-OPTS-NEXT:        Lower SwitchInst's to branches
@@ -566,29 +573,31 @@
 ; GCN-O1-OPTS-NEXT:        Detect single entry single exit regions
 ; GCN-O1-OPTS-NEXT:        Region Pass Manager
 ; GCN-O1-OPTS-NEXT:          Structurize control flow
-; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Natural Loop Information
-; GCN-O1-OPTS-NEXT:        Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        Memory SSA
 ; GCN-O1-OPTS-NEXT:        AMDGPU Annotate Uniform Values
+; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        SI annotate control flow
-; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O1-OPTS-NEXT:        LCSSA Verifier
 ; GCN-O1-OPTS-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O1-OPTS-NEXT:      DummyCGSCCPass
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
+; GCN-O1-OPTS-NEXT:        Prepare callbr
 ; GCN-O1-OPTS-NEXT:        Safe Stack instrumentation pass
 ; GCN-O1-OPTS-NEXT:        Insert stack protectors
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Natural Loop Information
-; GCN-O1-OPTS-NEXT:        Legacy Divergence Analysis
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
+; GCN-O1-OPTS-NEXT:        Natural Loop Information
+; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-OPTS-NEXT:        Lazy Branch Probability Analysis
@@ -762,10 +771,11 @@
 ; GCN-O2-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O2-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O2-NEXT:    AMDGPU Inline All Functions
-; GCN-O2-NEXT:    CallGraph Construction
-; GCN-O2-NEXT:    Call Graph SCC Pass Manager
-; GCN-O2-NEXT:      Inliner for always_inline functions
-; GCN-O2-NEXT:    A No-Op Barrier Pass
+; GCN-O2-NEXT:    Inliner for always_inline functions
+; GCN-O2-NEXT:      FunctionPass Manager
+; GCN-O2-NEXT:        Dominator Tree Construction
+; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:    FunctionPass Manager
@@ -793,8 +803,8 @@
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
 ; GCN-O2-NEXT:      Nary reassociation
 ; GCN-O2-NEXT:      Early CSE
-; GCN-O2-NEXT:      Post-Dominator Tree Construction
-; GCN-O2-NEXT:      Legacy Divergence Analysis
+; GCN-O2-NEXT:      Cycle Info Analysis
+; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      AMDGPU IR optimizations
 ; GCN-O2-NEXT:      Canonicalize natural loops
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
@@ -824,6 +834,7 @@
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      TLS Variable Hoist
 ; GCN-O2-NEXT:      Early CSE
+; GCN-O2-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O2-NEXT:    AMDGPU Attributor
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Cycle Info Analysis
@@ -850,14 +861,14 @@
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        Flatten the CFG
 ; GCN-O2-NEXT:        Dominator Tree Construction
-; GCN-O2-NEXT:        Post-Dominator Tree Construction
-; GCN-O2-NEXT:        Natural Loop Information
-; GCN-O2-NEXT:        Legacy Divergence Analysis
+; GCN-O2-NEXT:        Cycle Info Analysis
+; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        AMDGPU IR late optimizations
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
+; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        Code sinking
-; GCN-O2-NEXT:        Legacy Divergence Analysis
+; GCN-O2-NEXT:        Post-Dominator Tree Construction
 ; GCN-O2-NEXT:        Unify divergent function exit nodes
 ; GCN-O2-NEXT:        Lazy Value Information Analysis
 ; GCN-O2-NEXT:        Lower SwitchInst's to branches
@@ -870,30 +881,32 @@
 ; GCN-O2-NEXT:        Detect single entry single exit regions
 ; GCN-O2-NEXT:        Region Pass Manager
 ; GCN-O2-NEXT:          Structurize control flow
-; GCN-O2-NEXT:        Post-Dominator Tree Construction
-; GCN-O2-NEXT:        Natural Loop Information
-; GCN-O2-NEXT:        Legacy Divergence Analysis
+; GCN-O2-NEXT:        Cycle Info Analysis
+; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        Memory SSA
 ; GCN-O2-NEXT:        AMDGPU Annotate Uniform Values
+; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        SI annotate control flow
-; GCN-O2-NEXT:        Post-Dominator Tree Construction
-; GCN-O2-NEXT:        Legacy Divergence Analysis
+; GCN-O2-NEXT:        Cycle Info Analysis
+; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O2-NEXT:        LCSSA Verifier
 ; GCN-O2-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O2-NEXT:      Analysis if a function is memory bound
 ; GCN-O2-NEXT:      DummyCGSCCPass
 ; GCN-O2-NEXT:      FunctionPass Manager
+; GCN-O2-NEXT:        Prepare callbr
 ; GCN-O2-NEXT:        Safe Stack instrumentation pass
 ; GCN-O2-NEXT:        Insert stack protectors
 ; GCN-O2-NEXT:        Dominator Tree Construction
-; GCN-O2-NEXT:        Post-Dominator Tree Construction
-; GCN-O2-NEXT:        Natural Loop Information
-; GCN-O2-NEXT:        Legacy Divergence Analysis
+; GCN-O2-NEXT:        Cycle Info Analysis
+; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
+; GCN-O2-NEXT:        Natural Loop Information
+; GCN-O2-NEXT:        Post-Dominator Tree Construction
 ; GCN-O2-NEXT:        Branch Probability Analysis
 ; GCN-O2-NEXT:        Assignment Tracking Analysis
 ; GCN-O2-NEXT:        Lazy Branch Probability Analysis
@@ -1069,10 +1082,11 @@
 ; GCN-O3-NEXT:      Early propagate attributes from kernels to functions
 ; GCN-O3-NEXT:    AMDGPU Lower Intrinsics
 ; GCN-O3-NEXT:    AMDGPU Inline All Functions
-; GCN-O3-NEXT:    CallGraph Construction
-; GCN-O3-NEXT:    Call Graph SCC Pass Manager
-; GCN-O3-NEXT:      Inliner for always_inline functions
-; GCN-O3-NEXT:    A No-Op Barrier Pass
+; GCN-O3-NEXT:    Inliner for always_inline functions
+; GCN-O3-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:        Dominator Tree Construction
+; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:    FunctionPass Manager
@@ -1103,8 +1117,8 @@
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Nary reassociation
 ; GCN-O3-NEXT:      Early CSE
-; GCN-O3-NEXT:      Post-Dominator Tree Construction
-; GCN-O3-NEXT:      Legacy Divergence Analysis
+; GCN-O3-NEXT:      Cycle Info Analysis
+; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      AMDGPU IR optimizations
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Canonicalize natural loops
@@ -1141,6 +1155,7 @@
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Global Value Numbering
+; GCN-O3-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O3-NEXT:    AMDGPU Attributor
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Cycle Info Analysis
@@ -1167,14 +1182,14 @@
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        Flatten the CFG
 ; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        Legacy Divergence Analysis
+; GCN-O3-NEXT:        Cycle Info Analysis
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        AMDGPU IR late optimizations
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
+; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Code sinking
-; GCN-O3-NEXT:        Legacy Divergence Analysis
+; GCN-O3-NEXT:        Post-Dominator Tree Construction
 ; GCN-O3-NEXT:        Unify divergent function exit nodes
 ; GCN-O3-NEXT:        Lazy Value Information Analysis
 ; GCN-O3-NEXT:        Lower SwitchInst's to branches
@@ -1187,30 +1202,32 @@
 ; GCN-O3-NEXT:        Detect single entry single exit regions
 ; GCN-O3-NEXT:        Region Pass Manager
 ; GCN-O3-NEXT:          Structurize control flow
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        Legacy Divergence Analysis
+; GCN-O3-NEXT:        Cycle Info Analysis
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        Memory SSA
 ; GCN-O3-NEXT:        AMDGPU Annotate Uniform Values
+; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        SI annotate control flow
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Legacy Divergence Analysis
+; GCN-O3-NEXT:        Cycle Info Analysis
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O3-NEXT:        LCSSA Verifier
 ; GCN-O3-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:      Analysis if a function is memory bound
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:        Prepare callbr
 ; GCN-O3-NEXT:        Safe Stack instrumentation pass
 ; GCN-O3-NEXT:        Insert stack protectors
 ; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        Legacy Divergence Analysis
+; GCN-O3-NEXT:        Cycle Info Analysis
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
+; GCN-O3-NEXT:        Natural Loop Information
+; GCN-O3-NEXT:        Post-Dominator Tree Construction
 ; GCN-O3-NEXT:        Branch Probability Analysis
 ; GCN-O3-NEXT:        Assignment Tracking Analysis
 ; GCN-O3-NEXT:        Lazy Branch Probability Analysis

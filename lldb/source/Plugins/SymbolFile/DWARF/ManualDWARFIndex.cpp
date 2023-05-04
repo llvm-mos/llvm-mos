@@ -208,6 +208,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     case DW_TAG_enumeration_type:
     case DW_TAG_inlined_subroutine:
     case DW_TAG_namespace:
+    case DW_TAG_imported_declaration:
     case DW_TAG_string_type:
     case DW_TAG_structure_type:
     case DW_TAG_subprogram:
@@ -354,6 +355,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       break;
 
     case DW_TAG_namespace:
+    case DW_TAG_imported_declaration:
       if (name)
         set.namespaces.Insert(ConstString(name), ref);
       break;
@@ -399,7 +401,6 @@ void ManualDWARFIndex::GetGlobalVariables(
 
 void ManualDWARFIndex::GetGlobalVariables(
     DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
-  lldbassert(!unit.GetSymbolFileDWARF().GetDwoNum());
   Index();
   m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
 }
@@ -537,7 +538,10 @@ enum DataID {
   kDataIDEnd = 255u,
 
 };
-constexpr uint32_t CURRENT_CACHE_VERSION = 1;
+
+// Version 2 changes the encoding of DIERef objects used in the DWARF manual
+// index name tables. See DIERef class for details.
+constexpr uint32_t CURRENT_CACHE_VERSION = 2;
 
 bool ManualDWARFIndex::IndexSet::Decode(const DataExtractor &data,
                                         lldb::offset_t *offset_ptr) {

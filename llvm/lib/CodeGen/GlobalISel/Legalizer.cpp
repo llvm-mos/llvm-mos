@@ -177,7 +177,8 @@ Legalizer::MFResult
 Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
                                    ArrayRef<GISelChangeObserver *> AuxObservers,
                                    LostDebugLocObserver &LocObserver,
-                                   MachineIRBuilder &MIRBuilder, GISelKnownBits *KB) {
+                                   MachineIRBuilder &MIRBuilder,
+                                   GISelKnownBits *KB) {
   MIRBuilder.setMF(MF);
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -343,9 +344,12 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   if (VerifyDebugLocs > DebugLocVerifyLevel::None)
     AuxObservers.push_back(&LocObserver);
 
+  // This allows Known Bits Analysis in the legalizer.
+  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+
   const LegalizerInfo &LI = *MF.getSubtarget().getLegalizerInfo();
-  MFResult Result =
-      legalizeMachineFunction(MF, LI, AuxObservers, LocObserver, *MIRBuilder, KB);
+  MFResult Result = legalizeMachineFunction(MF, LI, AuxObservers, LocObserver,
+                                            *MIRBuilder, KB);
 
   if (Result.FailedOn) {
     reportGISelFailure(MF, TPC, MORE, "gisel-legalize",

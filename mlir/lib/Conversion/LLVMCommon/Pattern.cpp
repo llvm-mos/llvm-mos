@@ -72,14 +72,14 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
   auto [strides, offset] = getStridesAndOffset(type);
 
   MemRefDescriptor memRefDescriptor(memRefDesc);
-  Value base = memRefDescriptor.alignedPtr(rewriter, loc);
+  // Use a canonical representation of the start address so that later
+  // optimizations have a longer sequence of instructions to CSE.
+  // If we don't do that we would sprinkle the memref.offset in various
+  // position of the different address computations.
+  Value base =
+      memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(), type);
 
   Value index;
-  if (offset != 0) // Skip if offset is zero.
-    index = ShapedType::isDynamic(offset)
-                ? memRefDescriptor.offset(rewriter, loc)
-                : createIndexConstant(rewriter, loc, offset);
-
   for (int i = 0, e = indices.size(); i < e; ++i) {
     Value increment = indices[i];
     if (strides[i] != 1) { // Skip if stride is 1.
@@ -112,8 +112,10 @@ bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
   auto elementType = type.getElementType();
   auto structElementType = typeConverter->convertType(elementType);
-  return getTypeConverter()->getPointerType(structElementType,
-                                            type.getMemorySpaceAsInt());
+  auto addressSpace = getTypeConverter()->getMemRefAddressSpace(type);
+  if (failed(addressSpace))
+    return {};
+  return getTypeConverter()->getPointerType(structElementType, *addressSpace);
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
@@ -230,18 +232,27 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
          "expected as may original types as operands");
 
   // Find operands of unranked memref type and store them.
-  SmallVector<UnrankedMemRefDescriptor, 4> unrankedMemrefs;
-  for (unsigned i = 0, e = operands.size(); i < e; ++i)
-    if (origTypes[i].isa<UnrankedMemRefType>())
+  SmallVector<UnrankedMemRefDescriptor> unrankedMemrefs;
+  SmallVector<unsigned> unrankedAddressSpaces;
+  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
+    if (auto memRefType = origTypes[i].dyn_cast<UnrankedMemRefType>()) {
       unrankedMemrefs.emplace_back(operands[i]);
+      FailureOr<unsigned> addressSpace =
+          getTypeConverter()->getMemRefAddressSpace(memRefType);
+      if (failed(addressSpace))
+        return failure();
+      unrankedAddressSpaces.emplace_back(*addressSpace);
+    }
+  }
 
   if (unrankedMemrefs.empty())
     return success();
 
   // Compute allocation sizes.
-  SmallVector<Value, 4> sizes;
+  SmallVector<Value> sizes;
   UnrankedMemRefDescriptor::computeSizes(builder, loc, *getTypeConverter(),
-                                         unrankedMemrefs, sizes);
+                                         unrankedMemrefs, unrankedAddressSpaces,
+                                         sizes);
 
   // Get frequently used types.
   MLIRContext *context = builder.getContext();
@@ -276,7 +287,8 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
             ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
                   .getResult()
             : builder.create<LLVM::AllocaOp>(loc, getVoidPtrType(),
-                                             getVoidType(), allocationSize,
+                                             IntegerType::get(getContext(), 8),
+                                             allocationSize,
                                              /*alignment=*/0);
     Value source = desc.memRefDescPtr(builder, loc);
     builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, zero);
@@ -317,7 +329,7 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   SmallVector<Type> resultTypes;
   if (numResults != 0) {
     resultTypes.push_back(
-        typeConverter.packFunctionResults(op->getResultTypes()));
+        typeConverter.packOperationResults(op->getResultTypes()));
     if (!resultTypes.back())
       return failure();
   }

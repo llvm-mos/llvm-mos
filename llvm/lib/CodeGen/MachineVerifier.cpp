@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -71,7 +72,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -95,19 +95,19 @@ namespace {
 
     Pass *const PASS;
     const char *Banner;
-    const MachineFunction *MF;
-    const TargetMachine *TM;
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    const MachineRegisterInfo *MRI;
-    const RegisterBankInfo *RBI;
+    const MachineFunction *MF = nullptr;
+    const TargetMachine *TM = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const MachineRegisterInfo *MRI = nullptr;
+    const RegisterBankInfo *RBI = nullptr;
 
-    unsigned foundErrors;
+    unsigned foundErrors = 0;
 
     // Avoid querying the MachineFunctionProperties for each operand.
-    bool isFunctionRegBankSelected;
-    bool isFunctionSelected;
-    bool isFunctionTracksDebugUserValues;
+    bool isFunctionRegBankSelected = false;
+    bool isFunctionSelected = false;
+    bool isFunctionTracksDebugUserValues = false;
 
     using RegVector = SmallVector<Register, 16>;
     using RegMaskVector = SmallVector<const uint32_t *, 4>;
@@ -115,8 +115,8 @@ namespace {
     using RegMap = DenseMap<Register, const MachineInstr *>;
     using BlockSet = SmallPtrSet<const MachineBasicBlock *, 8>;
 
-    const MachineInstr *FirstNonPHI;
-    const MachineInstr *FirstTerminator;
+    const MachineInstr *FirstNonPHI = nullptr;
+    const MachineInstr *FirstTerminator = nullptr;
     BlockSet FunctionBlocks;
 
     BitVector regsReserved;
@@ -208,10 +208,10 @@ namespace {
     }
 
     // Analysis information if available
-    LiveVariables *LiveVars;
-    LiveIntervals *LiveInts;
-    LiveStacks *LiveStks;
-    SlotIndexes *Indexes;
+    LiveVariables *LiveVars = nullptr;
+    LiveIntervals *LiveInts = nullptr;
+    LiveStacks *LiveStks = nullptr;
+    SlotIndexes *Indexes = nullptr;
 
     void visitMachineFunctionBefore();
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);
@@ -296,6 +296,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addUsedIfAvailable<LiveStacks>();
       AU.addUsedIfAvailable<LiveVariables>();
+      AU.addUsedIfAvailable<SlotIndexes>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -627,8 +628,11 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
       if (isAllocatable(LI.PhysReg) && !MBB->isEHPad() &&
-          MBB->getIterator() != MBB->getParent()->begin()) {
-        report("MBB has allocatable live-in, but isn't entry or landing-pad.", MBB);
+          MBB->getIterator() != MBB->getParent()->begin() &&
+          !MBB->isInlineAsmBrIndirectTarget()) {
+        report("MBB has allocatable live-in, but isn't entry, landing-pad, or "
+               "inlineasm-br-indirect-target.",
+               MBB);
         report_context(LI.PhysReg);
       }
     }
@@ -1744,6 +1748,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_ASSERT_ALIGN: {
     if (MI->getOperand(2).getImm() < 1)
       report("alignment immediate must be >= 1", MI);
+    break;
+  }
+  case TargetOpcode::G_CONSTANT_POOL: {
+    if (!MI->getOperand(1).isCPI())
+      report("Src operand 1 must be a constant pool index", MI);
+    if (!MRI->getType(MI->getOperand(0).getReg()).isPointer())
+      report("Dst operand 0 must be a pointer", MI);
     break;
   }
   default:

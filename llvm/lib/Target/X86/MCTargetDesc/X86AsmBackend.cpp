@@ -127,7 +127,7 @@ class X86AsmBackend : public MCAsmBackend {
   MCInst PrevInst;
   MCBoundaryAlignFragment *PendingBA = nullptr;
   std::pair<MCFragment *, size_t> PrevInstPosition;
-  bool CanPadInst;
+  bool CanPadInst = false;
 
   uint8_t determinePaddingPrefix(const MCInst &Inst) const;
   bool isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const;
@@ -754,7 +754,7 @@ bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 void X86AsmBackend::relaxInstruction(MCInst &Inst,
                                      const MCSubtargetInfo &STI) const {
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
-  bool Is16BitMode = STI.getFeatureBits()[X86::Is16Bit];
+  bool Is16BitMode = STI.hasFeature(X86::Is16Bit);
   unsigned RelaxedOp = getRelaxedOpcode(Inst, Is16BitMode);
 
   if (RelaxedOp == Inst.getOpcode()) {
@@ -773,7 +773,7 @@ void X86AsmBackend::relaxInstruction(MCInst &Inst,
 static bool isFullyRelaxed(const MCRelaxableFragment &RF) {
   auto &Inst = RF.getInst();
   auto &STI = *RF.getSubtargetInfo();
-  bool Is16BitMode = STI.getFeatureBits()[X86::Is16Bit];
+  bool Is16BitMode = STI.hasFeature(X86::Is16Bit);
   return getRelaxedOpcode(Inst, Is16BitMode) == Inst.getOpcode();
 }
 
@@ -796,8 +796,7 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
   const unsigned MaxPossiblePad = std::min(15 - OldSize, RemainingSize);
   const unsigned RemainingPrefixSize = [&]() -> unsigned {
     SmallString<15> Code;
-    raw_svector_ostream VecOS(Code);
-    Emitter.emitPrefix(RF.getInst(), VecOS, STI);
+    Emitter.emitPrefix(RF.getInst(), Code, STI);
     assert(Code.size() < 15 && "The number of prefixes must be less than 15.");
 
     // TODO: It turns out we need a decent amount of plumbing for the target
@@ -844,8 +843,7 @@ bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
 
   SmallVector<MCFixup, 4> Fixups;
   SmallString<15> Code;
-  raw_svector_ostream VecOS(Code);
-  Emitter.encodeInstruction(Relaxed, VecOS, Fixups, *RF.getSubtargetInfo());
+  Emitter.encodeInstruction(Relaxed, Code, Fixups, *RF.getSubtargetInfo());
   const unsigned OldSize = RF.getContents().size();
   const unsigned NewSize = Code.size();
   assert(NewSize >= OldSize && "size decrease during relaxation?");
@@ -1001,11 +999,11 @@ unsigned X86AsmBackend::getMaximumNopSize(const MCSubtargetInfo &STI) const {
     return 4;
   if (!STI.hasFeature(X86::FeatureNOPL) && !STI.hasFeature(X86::Is64Bit))
     return 1;
-  if (STI.getFeatureBits()[X86::TuningFast7ByteNOP])
+  if (STI.hasFeature(X86::TuningFast7ByteNOP))
     return 7;
-  if (STI.getFeatureBits()[X86::TuningFast15ByteNOP])
+  if (STI.hasFeature(X86::TuningFast15ByteNOP))
     return 15;
-  if (STI.getFeatureBits()[X86::TuningFast11ByteNOP])
+  if (STI.hasFeature(X86::TuningFast11ByteNOP))
     return 11;
   // FIXME: handle 32-bit mode
   // 15-bytes is the longest single NOP instruction, but 10-bytes is
@@ -1054,7 +1052,7 @@ bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   };
 
   const char(*Nops)[11] =
-      STI->getFeatureBits()[X86::Is16Bit] ? Nops16Bit : Nops32Bit;
+      STI->hasFeature(X86::Is16Bit) ? Nops16Bit : Nops32Bit;
 
   uint64_t MaxNopLength = (uint64_t)getMaximumNopSize(*STI);
 

@@ -171,16 +171,19 @@ public:
   /// Returns true if this VPValue is defined by a recipe.
   bool hasDefiningRecipe() const { return getDefiningRecipe(); }
 
+  /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
+  bool isLiveIn() const { return !hasDefiningRecipe(); }
+
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
   /// inside a VPlan.
   Value *getLiveInIRValue() {
-    assert(!hasDefiningRecipe() &&
+    assert(isLiveIn() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
   const Value *getLiveInIRValue() const {
-    assert(!hasDefiningRecipe() &&
+    assert(isLiveIn() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
   }
@@ -346,11 +349,11 @@ public:
     VPWidenMemoryInstructionSC,
     VPWidenSC,
     VPWidenSelectSC,
-
-    // Phi-like recipes. Need to be kept together.
+    // START: Phi-like recipes. Need to be kept together.
     VPBlendSC,
     VPPredInstPHISC,
-    // Header-phi recipes. Need to be kept together.
+    // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
+    // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
     VPFirstOrderRecurrencePHISC,
@@ -358,8 +361,11 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
+    // END: Phi-like recipes
     VPFirstPHISC = VPBlendSC,
     VPFirstHeaderPHISC = VPCanonicalIVPHISC,
+    VPLastHeaderPHISC = VPReductionPHISC,
     VPLastPHISC = VPReductionPHISC,
   };
 

@@ -614,7 +614,7 @@ func.func @same_enclosing_repetitive_region(%2: tensor<320xf32>,
   %c0 = arith.constant 0 : index
   %cst = arith.constant -0.000000e+00 : f32
   %c320 = arith.constant 320 : index
-  %4 = scf.foreach_thread (%arg0) in (%c320) shared_outs(%arg1 = %2) -> (tensor<320xf32>) {
+  %4 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %2) -> (tensor<320xf32>) {
     // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
     %5 = tensor.extract_slice %3[%arg0, 0] [1, 10240] [1, 1]  : tensor<320x10240xf32> to tensor<1x10240xf32>
     // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
@@ -624,7 +624,7 @@ func.func @same_enclosing_repetitive_region(%2: tensor<320xf32>,
     // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
     %8 = linalg.fill ins(%cst : f32) outs(%7 : tensor<1xf32>) -> tensor<1xf32>
 
-    scf.foreach_thread.perform_concurrently {
+    scf.forall.in_parallel {
       // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
       tensor.parallel_insert_slice %8 into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
     }
@@ -707,11 +707,11 @@ func.func @read_of_bbarg_in_repetitive_region(
   scf.for %iv = %a to %b step %c {
     // Must bufferize out-of-place because definition of read is in a different
     // repetitive region.
-    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["false"]}
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true"]}
     %2 = tensor.extract_slice %t[0][4][1] : tensor<10xf32> to tensor<4xf32>
     %3 = tensor.extract %2[%a] : tensor<4xf32>
     vector.print %3 : f32
-    // CHECK: tensor.insert {{.*}} {__inplace_operands_attr__ = ["none", "true", "none"]}
+    // CHECK: tensor.insert {{.*}} {__inplace_operands_attr__ = ["none", "false", "none"]}
     %4 = tensor.insert %cst into %2[%a] : tensor<4xf32>
     %5 = tensor.extract %4[%a] : tensor<4xf32>
     vector.print %5 : f32

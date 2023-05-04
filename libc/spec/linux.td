@@ -58,6 +58,22 @@ def Linux : StandardSpec<"Linux"> {
       ]
   >;
 
+  HeaderSpec Sched = HeaderSpec<
+      "sched.h",
+      [
+        Macro<"SCHED_OTHER">,
+        Macro<"SCHED_FIFO">,
+        Macro<"SCHED_RR">,
+        Macro<"SCHED_BATCH">,
+        Macro<"SCHED_ISO">,
+        Macro<"SCHED_IDLE">,
+        Macro<"SCHED_DEADLINE">,
+      ],
+      [], // Types
+      [], // Enumerations
+      []  // Functions
+  >;
+
   HeaderSpec SysMMan = HeaderSpec<
       "sys/mman.h",
       [Macro<"MAP_ANONYMOUS">]
@@ -92,6 +108,19 @@ def Linux : StandardSpec<"Linux"> {
           ]
         >,
       ]
+  >;
+
+  HeaderSpec SysSocket = HeaderSpec<
+      "sys/socket.h",
+      [
+        Macro<"AF_UNSPEC">,
+        Macro<"AF_LOCAL">,
+        Macro<"AF_INET">,
+        Macro<"AF_INET6">,
+      ],
+      [], // Types
+      [], // Enumerations
+      []  // Functions
   >;
 
   HeaderSpec SysTime = HeaderSpec<
@@ -155,6 +184,7 @@ def Linux : StandardSpec<"Linux"> {
     SysMMan,
     SysPrctl,
     SysRandom,
+    SysSocket,
     SysTime,
     Signal,
   ];

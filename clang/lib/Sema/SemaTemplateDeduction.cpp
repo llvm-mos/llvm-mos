@@ -756,11 +756,8 @@ private:
       SmallVector<UnexpandedParameterPack, 2> Unexpanded;
       S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
       for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
-        UnexpandedParameterPack U = Unexpanded[I];
-        if (U.first.is<const SubstTemplateTypeParmPackType *>() ||
-            U.first.is<const SubstNonTypeTemplateParmPackExpr *>())
-          continue;
-        auto [Depth, Index] = getDepthAndIndex(U);
+        unsigned Depth, Index;
+        std::tie(Depth, Index) = getDepthAndIndex(Unexpanded[I]);
         if (Depth == Info.getDeducedDepth())
           AddPack(Index);
       }
@@ -1616,7 +1613,9 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       llvm_unreachable("Type nodes handled above");
 
     case Type::Auto:
-      // FIXME: Implement deduction in dependent case.
+      // FIXME: It's not clear whether we should deduce the template arguments
+      // of a constrained deduced type. For now we treat them as a non-deduced
+      // context.
       if (P->isDependentType())
         return Sema::TDK_Success;
       [[fallthrough]];
@@ -3592,11 +3591,28 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   DeclContext *Owner = FunctionTemplate->getDeclContext();
   if (FunctionTemplate->getFriendObjectKind())
     Owner = FunctionTemplate->getLexicalDeclContext();
+  FunctionDecl *FD = FunctionTemplate->getTemplatedDecl();
+  // additional check for inline friend, 
+  // ```
+  //   template <class F1> int foo(F1 X);
+  //   template <int A1> struct A {
+  //     template <class F1> friend int foo(F1 X) { return A1; }
+  //   };
+  //   template struct A<1>;
+  //   int a = foo(1.0);
+  // ```
+  const FunctionDecl *FDFriend;
+  if (FD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None &&
+      FD->isDefined(FDFriend, /*CheckForPendingFriendDefinition*/ true) &&
+      FDFriend->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None) {
+    FD = const_cast<FunctionDecl *>(FDFriend);
+    Owner = FD->getLexicalDeclContext();
+  }
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
       /*Final=*/false);
   Specialization = cast_or_null<FunctionDecl>(
-      SubstDecl(FunctionTemplate->getTemplatedDecl(), Owner, SubstArgs));
+      SubstDecl(FD, Owner, SubstArgs));
   if (!Specialization || Specialization->isInvalidDecl())
     return TDK_SubstitutionFailure;
 
@@ -5282,8 +5298,8 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   //   function parameters that positionally correspond between the two
   //   templates are not of the same type, neither template is more specialized
   //   than the other.
-  if (!TemplateParameterListsAreEqual(
-          TPL1, TPL2, false, Sema::TPL_TemplateMatch, SourceLocation(), true))
+  if (!TemplateParameterListsAreEqual(TPL1, TPL2, false,
+                                      Sema::TPL_TemplateParamsEquivalent))
     return nullptr;
 
   for (unsigned i = 0; i < NumParams1; ++i)
@@ -5640,8 +5656,8 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   // function parameters that positionally correspond between the two
   // templates are not of the same type, neither template is more specialized
   // than the other.
-  if (!S.TemplateParameterListsAreEqual(
-          TPL1, TPL2, false, Sema::TPL_TemplateMatch, SourceLocation(), true))
+  if (!S.TemplateParameterListsAreEqual(TPL1, TPL2, false,
+                                        Sema::TPL_TemplateParamsEquivalent))
     return nullptr;
 
   if (!TemplateArgumentListAreEqual(S.getASTContext())(P1, P2))

@@ -22,10 +22,11 @@ define i32 @unhandled_value(i32 %arg1) {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: blockaddress is not implemented in the LLVM dialect
+; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_constant, %bb1) since blockaddress(...) is unsupported
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled instruction: ret ptr blockaddress(@unhandled_constant, %bb1)
 define ptr @unhandled_constant() {
+  br label %bb1
 bb1:
   ret ptr blockaddress(@unhandled_constant, %bb1)
 }
@@ -33,12 +34,13 @@ bb1:
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: blockaddress is not implemented in the LLVM dialect
+; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_global, %bb1) since blockaddress(...) is unsupported
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled global variable: @private = private global ptr blockaddress(@unhandled_global, %bb1)
 @private = private global ptr blockaddress(@unhandled_global, %bb1)
 
 define void @unhandled_global() {
+  br label %bb1
 bb1:
   ret void
 }
@@ -48,34 +50,12 @@ bb1:
 declare void @llvm.gcroot(ptr %arg1, ptr %arg2)
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled intrinsic: call void @llvm.gcroot(ptr %arg1, ptr %arg2)
-define void @unhandled_intrinsic(ptr %arg1, ptr %arg2) {
-  call void @llvm.gcroot(ptr %arg1, ptr %arg2)
+; CHECK-SAME: error: unhandled intrinsic: call void @llvm.gcroot(ptr %arg1, ptr null)
+define void @unhandled_intrinsic() gc "example" {
+  %arg1 = alloca ptr
+  call void @llvm.gcroot(ptr %arg1, ptr null)
   ret void
 }
-
-; // -----
-
-; CHECK: warning: unhandled metadata: !0 = !{!"unknown metadata"} on br i1 %arg1, label %bb1, label %bb2, !prof !0
-define i64 @unhandled_metadata(i1 %arg1, i64 %arg2) {
-entry:
-  br i1 %arg1, label %bb1, label %bb2, !prof !0
-bb1:
-  ret i64 %arg2
-bb2:
-  ret i64 %arg2
-}
-
-!0 = !{!"unknown metadata"}
-
-; // -----
-
-; CHECK: warning: unhandled function metadata: !0 = !{!"unknown metadata"} on define void @unhandled_func_metadata(i1 %arg1, i64 %arg2) !prof !0
-define void @unhandled_func_metadata(i1 %arg1, i64 %arg2) !prof !0 {
-  ret void
-}
-
-!0 = !{!"unknown metadata"}
 
 ; // -----
 
@@ -102,43 +82,10 @@ define void @dropped_instruction(i64 %arg1) {
 
 ; // -----
 
-; global_ctors requires the appending linkage type.
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled global variable: @llvm.global_ctors
-@llvm.global_ctors = global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
-
-define void @foo() {
-  ret void
-}
-
-; // -----
-
 ; global_dtors with non-null data fields cannot be represented in MLIR.
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled global variable: @llvm.global_dtors
 @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr @foo }]
-
-define void @foo() {
-  ret void
-}
-
-; // -----
-
-; global_ctors without a data field should not be imported.
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled global variable: @llvm.global_ctors
-@llvm.global_ctors = appending global [1 x { i32, ptr }] [{ i32, ptr } { i32 0, ptr @foo }]
-
-define void @foo() {
-  ret void
-}
-
-; // -----
-
-; global_dtors with a wrong argument order should not be imported.
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled global variable: @llvm.global_dtors
-@llvm.global_dtors = appending global [1 x { ptr, i32, ptr }] [{ ptr, i32, ptr } { ptr @foo, i32 0, ptr null }]
 
 define void @foo() {
   ret void
@@ -160,73 +107,6 @@ define dso_local void @tbaa(ptr %0) {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unsupported TBAA node format: !0 = !{!1, i64 0, i64 0}
-define dso_local void @tbaa(ptr %0) {
-  store i8 1, ptr %0, align 4, !tbaa !2
-  ret void
-}
-
-!0 = !{!"Simple C/C++ TBAA"}
-!1 = !{!"omnipotent char", !0, i64 0}
-!2 = !{!1, i64 0, i64 0}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: operand '1' must be MDNode: !1 = !{!"omnipotent char", i64 0, i64 0}
-define dso_local void @tbaa(ptr %0) {
-  store i8 1, ptr %0, align 4, !tbaa !2
-  ret void
-}
-
-!0 = !{!"Simple C/C++ TBAA"}
-!1 = !{!"omnipotent char", i64 0, i64 0}
-!2 = !{!1, !1, i64 0}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: missing member offset: !1 = !{!"agg_t", !2, i64 0, !2}
-define dso_local void @tbaa(ptr %0) {
-  store i8 1, ptr %0, align 4, !tbaa !3
-  ret void
-}
-
-!0 = !{!"Simple C/C++ TBAA"}
-!1 = !{!"omnipotent char", !0, i64 0}
-!2 = !{!"agg_t", !1, i64 0, !1}
-!3 = !{!2, !1, i64 0}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: operand '4' must be ConstantInt: !1 = !{!"agg_t", !2, i64 0, !2, double 1.000000e+00}
-define dso_local void @tbaa(ptr %0) {
-  store i8 1, ptr %0, align 4, !tbaa !3
-  ret void
-}
-
-!0 = !{!"Simple C/C++ TBAA"}
-!1 = !{!"omnipotent char", !0, i64 0}
-!2 = !{!"agg_t", !1, i64 0, !1, double 1.0}
-!3 = !{!2, !1, i64 0}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: operand '3' must be ConstantInt: !0 = !{!1, !1, i64 0, double 1.000000e+00}
-define dso_local void @tbaa(ptr %0) {
-  store i8 1, ptr %0, align 4, !tbaa !2
-  ret void
-}
-
-!0 = !{!"Simple C/C++ TBAA"}
-!1 = !{!"omnipotent char", !0, i64 0}
-!2 = !{!1, !1, i64 0, double 1.0}
-
-; // -----
-
-; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unsupported TBAA node format: !0 = !{!1, !1, i64 0, i64 4}
 define dso_local void @tbaa(ptr %0) {
   store i32 1, ptr %0, align 4, !tbaa !2
@@ -241,25 +121,14 @@ define dso_local void @tbaa(ptr %0) {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unsupported access group node: !0 = !{}
+; CHECK-SAME: warning: expected an access group node to be empty and distinct
+; CHECK:      error: unsupported access group node: !0 = !{}
 define void @access_group(ptr %arg1) {
   %1 = load i32, ptr %arg1, !llvm.access.group !0
   ret void
 }
 
 !0 = !{}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: unsupported access group node: !1 = distinct !{!"unsupported access group"}
-define void @access_group(ptr %arg1) {
-  %1 = load i32, ptr %arg1, !llvm.access.group !0
-  ret void
-}
-
-!0 = !{!1}
-!1 = distinct !{!"unsupported access group"}
 
 ; // -----
 
@@ -441,66 +310,19 @@ end:
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected non-empty profiling metadata node
-; CHECK:      warning: unhandled metadata: !0 = !{}
-define void @cond_br(i1 %arg) {
+; CHECK-SAME: warning: could not lookup access group
+define void @unused_access_group(ptr %arg) {
 entry:
-  br i1 %arg, label %bb1, label %bb2, !prof !0
-bb1:
-  ret void
-bb2:
+  %0 = load i32, ptr %arg, !llvm.access.group !0
+  br label %end, !llvm.loop !1
+end:
   ret void
 }
 
-!0 = !{}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected profiling metadata node to have a string identifier
-; CHECK:      import-failure.ll:{{.*}} warning: unhandled metadata: !0 = !{i32 64}
-define void @cond_br(i1 %arg) {
-entry:
-  br i1 %arg, label %bb1, label %bb2, !prof !0
-bb1:
-  ret void
-bb2:
-  ret void
-}
-
-!0 = !{i32 64}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected function_entry_count to hold a single i64 value
-; CHECK:      warning: unhandled function metadata: !0 = !{!"function_entry_count"}
-define void @cond_br(i1 %arg) !prof !0 {
-entry:
-  br i1 %arg, label %bb1, label %bb2
-bb1:
-  ret void
-bb2:
-  ret void
-}
-
-!0 = !{!"function_entry_count"}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected function_entry_count to hold a single i64 value
-; CHECK:      warning: unhandled function metadata: !0 = !{!"function_entry_count", !"string"}
-define void @cond_br(i1 %arg) !prof !0 {
-entry:
-  br i1 %arg, label %bb1, label %bb2
-bb1:
-  ret void
-bb2:
-  ret void
-}
-
-!0 = !{!"function_entry_count", !"string"}
+!0 = distinct !{}
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.parallel_accesses", !0, !3}
+!3 = distinct !{}
 
 ; // -----
 
@@ -521,42 +343,26 @@ bb2:
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: unknown profiling metadata node unknown_prof_type
-; CHECK:      warning: unhandled metadata: !0 = !{!"unknown_prof_type"}
-define void @cond_br(i1 %arg) {
-entry:
-  br i1 %arg, label %bb1, label %bb2, !prof !0
-bb1:
-  ret void
-bb2:
+; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata !0)
+define void @unused_scope() {
+  call void @llvm.experimental.noalias.scope.decl(metadata !0)
   ret void
 }
 
-!0 = !{!"unknown_prof_type"}
+declare void @llvm.experimental.noalias.scope.decl(metadata)
+
+!0 = !{!1}
+!1 = !{!1, !2}
+!2 = distinct !{!2, !"The domain"}
 
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected branch weights to be integers
-; CHECK:      warning: unhandled metadata: !0 = !{!"branch_weights", !"foo"}
-define void @cond_br(i1 %arg) {
-entry:
-  br i1 %arg, label %bb1, label %bb2, !prof !0
-bb1:
-  ret void
-bb2:
-  ret void
-}
-
-!0 = !{!"branch_weights", !"foo"}
+; CHECK-SAME: error: cannot translate data layout: i8:8:8:8
+target datalayout = "e-i8:8:8:8"
 
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: warning: llvm.func does not support branch weights
-; CHECK:      import-failure.ll:{{.*}} warning: unhandled function metadata: !0 = !{!"branch_weights", i32 64}
-define void @cond_br(i1 %arg) !prof !0 {
-  ret void
-}
-
-!0 = !{!"branch_weights", i32 64}
+; CHECK-SAME: warning: unhandled data layout token: ni:42
+target datalayout = "e-ni:42-i64:64"

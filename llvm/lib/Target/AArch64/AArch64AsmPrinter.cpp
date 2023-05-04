@@ -531,14 +531,14 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
 
     if (HasMatchAllTag) {
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::UBFMXri)
-                                       .addReg(AArch64::X16)
+                                       .addReg(AArch64::X17)
                                        .addReg(Reg)
                                        .addImm(56)
                                        .addImm(63),
                                    *STI);
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSXri)
                                        .addReg(AArch64::XZR)
-                                       .addReg(AArch64::X16)
+                                       .addReg(AArch64::X17)
                                        .addImm(MatchAllTag)
                                        .addImm(0),
                                    *STI);
@@ -1254,7 +1254,9 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     default: llvm_unreachable("Unexpected opcode");
     case AArch64::FMOVH0:
-      FMov.setOpcode(AArch64::FMOVWHr);
+      FMov.setOpcode(STI->hasFullFP16() ? AArch64::FMOVWHr : AArch64::FMOVWSr);
+      if (!STI->hasFullFP16())
+        DestReg = (AArch64::S0 + (DestReg - AArch64::H0));
       FMov.addOperand(MCOperand::createReg(DestReg));
       FMov.addOperand(MCOperand::createReg(AArch64::WZR));
       break;

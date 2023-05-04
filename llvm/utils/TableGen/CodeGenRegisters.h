@@ -15,6 +15,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
 #define LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
 
+#include "CodeGenHwModes.h"
 #include "InfoByHwMode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -33,8 +34,11 @@
 #include <cassert>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <list>
 #include <map>
+#include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -42,7 +46,6 @@
 namespace llvm {
 
   class CodeGenRegBank;
-  template <typename T, typename Vector, typename Set> class SetVector;
 
   /// Used to encode a step in a register lane mask transformation.
   /// Mask the bits specified in Mask, then rotate them Rol bits to the left
@@ -148,14 +151,15 @@ namespace llvm {
   };
 
   /// CodeGenRegister - Represents a register definition.
-  struct CodeGenRegister {
+  class CodeGenRegister {
+  public:
     Record *TheDef;
     unsigned EnumValue;
     std::vector<int64_t> CostPerUse;
-    bool CoveredBySubRegs;
-    bool HasDisjunctSubRegs;
-    bool Artificial;
-    bool Constant;
+    bool CoveredBySubRegs = true;
+    bool HasDisjunctSubRegs = false;
+    bool Artificial = true;
+    bool Constant = false;
 
     // Map SubRegIndex -> Register.
     typedef std::map<CodeGenSubRegIndex *, CodeGenRegister *,

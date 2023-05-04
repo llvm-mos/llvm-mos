@@ -11,6 +11,7 @@
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/scope.h"
@@ -187,7 +188,7 @@ bool DerivedTypeSpec::HasDefaultInitialization(bool ignoreAllocatable) const {
 }
 
 bool DerivedTypeSpec::HasDestruction() const {
-  if (!typeSymbol().get<DerivedTypeDetails>().finals().empty()) {
+  if (!FinalsForDerivedTypeInstantiation(*this).empty()) {
     return true;
   }
   DirectComponentIterator components{*this};
@@ -365,9 +366,8 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     }
     newScope.set_instantiationContext(contextMessage);
   }
-  // Instantiate every non-parameter symbol from the original derived
+  // Instantiate nearly every non-parameter symbol from the original derived
   // type's scope into the new instance.
-  newScope.AddSourceRange(typeScope.sourceRange());
   auto restorer2{foldingContext.messages().SetContext(contextMessage)};
   if (PlumbPDTInstantiationDepth(&containingScope) > 100) {
     foldingContext.messages().Say(
@@ -793,6 +793,11 @@ std::string DeclTypeSpec::AsFortran() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
+}
+
+bool IsInteroperableIntrinsicType(const DeclTypeSpec &type) {
+  auto dyType{evaluate::DynamicType::From(type)};
+  return dyType && IsInteroperableIntrinsicType(*dyType);
 }
 
 } // namespace Fortran::semantics

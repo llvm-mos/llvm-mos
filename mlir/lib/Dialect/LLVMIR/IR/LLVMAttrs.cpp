@@ -42,10 +42,10 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
-                   DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-                   DILexicalBlockAttr, DILexicalBlockFileAttr,
-                   DILocalVariableAttr, DISubprogramAttr, DISubrangeAttr,
+  return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
+                   DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
+                   DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
+                   DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
                    DISubroutineTypeAttr>(attr);
 }
 
@@ -55,7 +55,7 @@ bool DINodeAttr::classof(Attribute attr) {
 
 bool DIScopeAttr::classof(Attribute attr) {
   return llvm::isa<DICompileUnitAttr, DICompositeTypeAttr, DIFileAttr,
-                   DILexicalBlockFileAttr, DILocalScopeAttr>(attr);
+                   DILocalScopeAttr, DINamespaceAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -63,7 +63,8 @@ bool DIScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DILocalScopeAttr::classof(Attribute attr) {
-  return llvm::isa<DILexicalBlockAttr, DISubprogramAttr>(attr);
+  return llvm::isa<DILexicalBlockAttr, DILexicalBlockFileAttr,
+                   DISubprogramAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -71,25 +72,8 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
-  return llvm::isa<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
+  return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
-}
-
-//===----------------------------------------------------------------------===//
-// DISubroutineTypeAttr
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-DISubroutineTypeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                             unsigned int callingConventions,
-                             ArrayRef<DITypeAttr> types) {
-  ArrayRef<DITypeAttr> argumentTypes =
-      types.empty() ? types : types.drop_front();
-  if (llvm::any_of(argumentTypes, [](DITypeAttr type) {
-        return type.isa<DIVoidResultTypeAttr>();
-      }))
-    return emitError() << "expected subroutine to have non-void argument types";
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

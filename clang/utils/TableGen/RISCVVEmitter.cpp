@@ -57,9 +57,6 @@ struct SemaRecord {
   // Suffix of overloaded intrinsic name.
   SmallVector<PrototypeDescriptor> OverloadedSuffix;
 
-  // BitMask for supported policies.
-  uint16_t PolicyBitMask;
-
   // Number of field, large than 1 if it's segment load/store.
   unsigned NF;
 
@@ -368,32 +365,27 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
       }
     }
   }
-  OS << "#if defined(__riscv_zvfh)\n";
+
   for (int Log2LMUL : Log2LMULs) {
     auto T = TypeCache.computeType(BasicType::Float16, Log2LMUL,
                                    PrototypeDescriptor::Vector);
     if (T)
       printType(*T);
   }
-  OS << "#endif\n";
 
-  OS << "#if (__riscv_v_elen_fp >= 32)\n";
   for (int Log2LMUL : Log2LMULs) {
     auto T = TypeCache.computeType(BasicType::Float32, Log2LMUL,
                                    PrototypeDescriptor::Vector);
     if (T)
       printType(*T);
   }
-  OS << "#endif\n";
 
-  OS << "#if (__riscv_v_elen_fp >= 64)\n";
   for (int Log2LMUL : Log2LMULs) {
     auto T = TypeCache.computeType(BasicType::Float64, Log2LMUL,
                                    PrototypeDescriptor::Vector);
     if (T)
       printType(*T);
   }
-  OS << "#endif\n\n";
 
   OS << "#define __riscv_v_intrinsic_overloading 1\n";
 
@@ -641,6 +633,7 @@ void RVVEmitter::createRVVIntrinsics(
       RVVRequire RequireExt = StringSwitch<RVVRequire>(RequiredFeature)
                                   .Case("RV64", RVV_REQ_RV64)
                                   .Case("FullMultiply", RVV_REQ_FullMultiply)
+                                  .Case("Xsfvcp", RVV_REQ_Xsfvcp)
                                   .Default(RVV_REQ_None);
       assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");
       SR.RequiredExtensions |= RequireExt;

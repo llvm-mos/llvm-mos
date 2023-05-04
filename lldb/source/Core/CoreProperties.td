@@ -135,6 +135,10 @@ let Definition = "debugger" in {
     Global,
     DefaultFalse,
     Desc<"Whether to use an external editor or not.">;
+  def ExternalEditor: Property<"external-editor", "String">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"External editor to use when use-external-editor is enabled.">;
   def UseColor: Property<"use-color", "Boolean">,
     Global,
     DefaultTrue,
@@ -193,7 +197,7 @@ let Definition = "debugger" in {
     Desc<"When displaying suggestion in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
   def DWIMPrintVerbosity: Property<"dwim-print-verbosity", "Enum">,
     Global,
-    DefaultEnumValue<"eDWIMPrintVerbosityExpression">,
+    DefaultEnumValue<"eDWIMPrintVerbosityNone">,
     EnumValues<"OptionEnumValues(g_dwim_print_verbosities)">,
     Desc<"The verbosity level used by dwim-print.">;
 }

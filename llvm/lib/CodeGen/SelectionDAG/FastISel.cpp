@@ -59,6 +59,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -95,7 +96,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -454,8 +454,7 @@ bool FastISel::selectBinaryOp(const User *I, unsigned ISDOpcode) {
   if (!TLI.isTypeLegal(VT)) {
     // MVT::i1 is special. Allow AND, OR, or XOR because they
     // don't require additional zeroing, which makes them easy.
-    if (VT == MVT::i1 && (ISDOpcode == ISD::AND || ISDOpcode == ISD::OR ||
-                          ISDOpcode == ISD::XOR))
+    if (VT == MVT::i1 && ISD::isBitwiseLogicOp(ISDOpcode))
       VT = TLI.getTypeToTransformTo(I->getContext(), VT);
     else
       return false;

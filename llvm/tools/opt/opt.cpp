@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BreakpointPrinter.h"
 #include "NewPMDriver.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -42,7 +41,6 @@
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
@@ -51,6 +49,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -68,12 +67,12 @@ static codegen::RegisterCodeGenFlags CFG;
 static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
     "Optimizations available (use '-passes=' for the new pass manager)"));
 
-static cl::opt<bool> EnableNewPassManager(
-    "enable-new-pm",
-    cl::desc("Enable the new pass manager, translating "
-             "'opt -foo' to 'opt -passes=foo'. This is strictly for the new PM "
-             "migration, use '-passes=' when possible."),
-    cl::init(true));
+static cl::opt<bool> EnableLegacyPassManager(
+    "bugpoint-enable-legacy-pm",
+    cl::desc(
+        "Enable the legacy pass manager. This is strictly for bugpoint "
+        "due to it not working with the new PM, please do not use otherwise."),
+    cl::init(false));
 
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
@@ -203,10 +202,6 @@ static cl::opt<bool> VerifyDebugInfoPreserve(
     cl::desc("Start the pipeline with collecting and end it with checking of "
              "debug info preservation."));
 
-static cl::opt<bool>
-PrintBreakpoints("print-breakpoints-for-testing",
-                 cl::desc("Print select breakpoints location for testing"));
-
 static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
@@ -278,15 +273,6 @@ static cl::opt<std::string> RemarksFormat(
 static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
-
-static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
-  // Add the pass to the pass manager...
-  PM.add(P);
-
-  // If we are verifying all of the intermediate steps, add the verifier...
-  if (VerifyEach)
-    PM.add(createVerifierPass());
-}
 
 //===----------------------------------------------------------------------===//
 // CodeGen-related helper functions.
@@ -368,7 +354,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "verify-safepoint-ir",
       "atomic-expand",
       "expandvp",
-      "hardware-loops",
       "mve-tail-predication",
       "interleaved-access",
       "global-merge",
@@ -393,7 +378,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expand-large-div-rem",
       "structurizecfg",
       "fix-irreducible",
-      "expand-large-fp-convert"
+      "expand-large-fp-convert",
+      "callbrprepare",
   };
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
@@ -445,6 +431,7 @@ int main(int argc, char **argv) {
   initializeExpandMemCmpPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
+  initializeCallBrPreparePass(Registry);
   initializeCodeGenPreparePass(Registry);
   initializeAtomicExpandPass(Registry);
   initializeRewriteSymbolsLegacyPassPass(Registry);
@@ -462,7 +449,6 @@ int main(int argc, char **argv) {
   initializeExpandVectorPredicationPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
-  initializeHardwareLoopsPass(Registry);
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
@@ -485,11 +471,8 @@ int main(int argc, char **argv) {
 
   LLVMContext Context;
 
-  // If `-passes=` is specified, use NPM.
-  // If `-enable-new-pm` is specified and there are no codegen passes, use NPM.
-  // e.g. `-enable-new-pm -sroa` will use NPM.
-  // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
-  const bool UseNPM = (EnableNewPassManager && !shouldForceLegacyPM()) ||
+  // TODO: remove shouldForceLegacyPM().
+  const bool UseNPM = (!EnableLegacyPassManager && !shouldForceLegacyPM()) ||
                       PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
@@ -671,9 +654,8 @@ int main(int argc, char **argv) {
 
   if (UseNPM) {
     if (legacy::debugPassSpecified()) {
-      errs()
-          << "-debug-pass does not work with the new PM, either use "
-             "-debug-pass-manager, or use the legacy PM (-enable-new-pm=0)\n";
+      errs() << "-debug-pass does not work with the new PM, either use "
+                "-debug-pass-manager, or use the legacy PM\n";
       return 1;
     }
     auto NumOLevel = OptLevelO0 + OptLevelO1 + OptLevelO2 + OptLevelO3 +
@@ -781,26 +763,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::unique_ptr<legacy::FunctionPassManager> FPasses;
-
-  if (PrintBreakpoints) {
-    // Default to standard output.
-    if (!Out) {
-      if (OutputFilename.empty())
-        OutputFilename = "-";
-
-      std::error_code EC;
-      Out = std::make_unique<ToolOutputFile>(OutputFilename, EC,
-                                              sys::fs::OF_None);
-      if (EC) {
-        errs() << EC.message() << '\n';
-        return 1;
-      }
-    }
-    Passes.add(createBreakpointPrinter(Out->os()));
-    NoOutput = true;
-  }
-
   if (TM) {
     // FIXME: We should dyn_cast this when supported.
     auto &LTM = static_cast<LLVMTargetMachine &>(*TM);
@@ -811,21 +773,18 @@ int main(int argc, char **argv) {
   // Create a new optimization pass for each one specified on the command line
   for (unsigned i = 0; i < PassList.size(); ++i) {
     const PassInfo *PassInf = PassList[i];
-    Pass *P = nullptr;
-    if (PassInf->getNormalCtor())
-      P = PassInf->getNormalCtor()();
-    else
+    if (PassInf->getNormalCtor()) {
+      Pass *P = PassInf->getNormalCtor()();
+      if (P) {
+        // Add the pass to the pass manager.
+        Passes.add(P);
+        // If we are verifying all of the intermediate steps, add the verifier.
+        if (VerifyEach)
+          Passes.add(createVerifierPass());
+      }
+    } else
       errs() << argv[0] << ": cannot create pass: "
              << PassInf->getPassName() << "\n";
-    if (P)
-      addPass(Passes, P);
-  }
-
-  if (FPasses) {
-    FPasses->doInitialization();
-    for (Function &F : *M)
-      FPasses->run(F);
-    FPasses->doFinalization();
   }
 
   // Check that the module is well formed on completion of optimization
@@ -912,7 +871,7 @@ int main(int argc, char **argv) {
     exportDebugifyStats(DebugifyExport, Passes.getDebugifyStatsMap());
 
   // Declare success.
-  if (!NoOutput || PrintBreakpoints)
+  if (!NoOutput)
     Out->keep();
 
   if (RemarksFile)

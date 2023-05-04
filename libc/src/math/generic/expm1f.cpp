@@ -16,7 +16,8 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/cpu_features.h"
+#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #include <errno.h>
 
@@ -68,7 +69,8 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
           if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
             return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
 
-          errno = ERANGE;
+          fputil::set_errno_if_required(ERANGE);
+          fputil::raise_except_if_required(FE_OVERFLOW);
         }
         return x + static_cast<float>(FPBits::inf());
       }

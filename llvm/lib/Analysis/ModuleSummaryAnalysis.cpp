@@ -80,6 +80,8 @@ static cl::opt<std::string> ModuleSummaryDotFile(
     "module-summary-dot-file", cl::Hidden, cl::value_desc("filename"),
     cl::desc("File to emit dot graph of new summary into"));
 
+extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
+
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
@@ -477,7 +479,9 @@ static void computeFunctionSummary(
       }
     }
   }
-  Index.addBlockCount(F.size());
+
+  if (PSI->hasPartialSampleProfile() && ScalePartialSampleProfileWorkingSetSize)
+    Index.addBlockCount(F.size());
 
   std::vector<ValueInfo> Refs;
   if (IsThinLTO) {
@@ -583,12 +587,17 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
                              VTableFuncList &VTableFuncs) {
   // First check if this is a function pointer.
   if (I->getType()->isPointerTy()) {
-    auto Fn = dyn_cast<Function>(I->stripPointerCasts());
-    // We can disregard __cxa_pure_virtual as a possible call target, as
-    // calls to pure virtuals are UB.
-    if (Fn && Fn->getName() != "__cxa_pure_virtual")
-      VTableFuncs.push_back({Index.getOrInsertValueInfo(Fn), StartingOffset});
-    return;
+    auto C = I->stripPointerCasts();
+    auto A = dyn_cast<GlobalAlias>(C);
+    if (isa<Function>(C) || (A && isa<Function>(A->getAliasee()))) {
+      auto GV = dyn_cast<GlobalValue>(C);
+      assert(GV);
+      // We can disregard __cxa_pure_virtual as a possible call target, as
+      // calls to pure virtuals are UB.
+      if (GV && GV->getName() != "__cxa_pure_virtual")
+        VTableFuncs.push_back({Index.getOrInsertValueInfo(GV), StartingOffset});
+      return;
+    }
   }
 
   // Walk through the elements in the constant struct or array and recursively

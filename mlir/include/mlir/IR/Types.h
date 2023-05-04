@@ -122,6 +122,9 @@ public:
   bool isIndex() const;
   bool isFloat8E5M2() const;
   bool isFloat8E4M3FN() const;
+  bool isFloat8E5M2FNUZ() const;
+  bool isFloat8E4M3FNUZ() const;
+  bool isFloat8E4M3B11FNUZ() const;
   bool isBF16() const;
   bool isF16() const;
   bool isF32() const;
@@ -385,6 +388,7 @@ struct CastInfo<
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
     if constexpr (std::is_base_of_v<To, From>) {
+      (void)ty;
       return true;
     } else {
       return To::classof(ty);

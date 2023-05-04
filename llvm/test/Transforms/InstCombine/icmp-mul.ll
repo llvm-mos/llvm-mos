@@ -133,12 +133,36 @@ define i1 @ult_rem_zero(i8 %x) {
   ret i1 %b
 }
 
+; Same as above, but with nsw flag too.
+; This used to not optimize due to nsw being prioritized too much.
+define i1 @ult_rem_zero_nsw(i8 %x) {
+; CHECK-LABEL: @ult_rem_zero_nsw(
+; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %a = mul nuw nsw i8 %x, 7
+  %b = icmp ult i8 %a, 21
+  ret i1 %b
+}
+
 define i1 @ult_rem_nz(i8 %x) {
 ; CHECK-LABEL: @ult_rem_nz(
 ; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul nuw i8 %x, 5
+  %b = icmp ult i8 %a, 21
+  ret i1 %b
+}
+
+; Same as above, but with nsw flag too.
+; This used to not optimize due to nsw being prioritized too much.
+define i1 @ult_rem_nz_nsw(i8 %x) {
+; CHECK-LABEL: @ult_rem_nz_nsw(
+; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[X:%.*]], 5
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %a = mul nuw nsw i8 %x, 5
   %b = icmp ult i8 %a, 21
   ret i1 %b
 }
@@ -185,12 +209,36 @@ define i1 @ugt_rem_zero(i8 %x) {
   ret i1 %b
 }
 
+; Same as above, but with nsw flag too.
+; This used to not optimize due to nsw being prioritized too much.
+define i1 @ugt_rem_zero_nsw(i8 %x) {
+; CHECK-LABEL: @ugt_rem_zero_nsw(
+; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %a = mul nuw nsw i8 %x, 7
+  %b = icmp ugt i8 %a, 21
+  ret i1 %b
+}
+
 define i1 @ugt_rem_nz(i8 %x) {
 ; CHECK-LABEL: @ugt_rem_nz(
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[X:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul nuw i8 %x, 5
+  %b = icmp ugt i8 %a, 21
+  ret i1 %b
+}
+
+; Same as above, but with nsw flag too.
+; This used to not optimize due to nsw being prioritized too much.
+define i1 @ugt_rem_nz_nsw(i8 %x) {
+; CHECK-LABEL: @ugt_rem_nz_nsw(
+; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %a = mul nuw nsw i8 %x, 5
   %b = icmp ugt i8 %a, 21
   ret i1 %b
 }
@@ -946,9 +994,7 @@ define i1 @splat_mul_known_lz(i32 %x) {
 
 define i1 @splat_mul_unknown_lz(i32 %x) {
 ; CHECK-LABEL: @splat_mul_unknown_lz(
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i128
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i128 [[Z]], 18446744078004518913
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i128 [[M]], 39614081257132168796771975168
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i32 %x to i128

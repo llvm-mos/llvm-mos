@@ -81,7 +81,7 @@ public:
   llvm::StringRef name() const;
   llvm::StringRef qualifiedName() const;
   // The preferred header for this symbol (e.g. the suggested insertion).
-  Header header() const;
+  std::optional<Header> header() const;
   // Some symbols may be provided by multiple headers.
   llvm::SmallVector<Header> headers() const;
 
@@ -108,7 +108,7 @@ public:
 
 private:
   using NSSymbolMap = llvm::DenseMap<llvm::StringRef, unsigned>;
-  NSSymbolMap *namespaceSymbols(const NamespaceDecl *D);
+  NSSymbolMap *namespaceSymbols(const DeclContext *DC, Lang L);
   llvm::DenseMap<const DeclContext *, NSSymbolMap *> NamespaceCache;
 };
 

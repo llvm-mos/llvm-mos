@@ -1353,7 +1353,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
     if (ST.hasGFX90AInsts())
       Atomic.legalFor({{S64, LocalPtr}});
-    if (ST.hasGFX940Insts())
+    if (ST.hasAtomicDsPkAdd16Insts())
       Atomic.legalFor({{V2S16, LocalPtr}});
   }
   if (ST.hasAtomicFaddInsts())
@@ -1580,7 +1580,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         const LLT &EltTy = Ty.getElementType();
         if (EltTy.getSizeInBits() < 8 || EltTy.getSizeInBits() > 512)
           return true;
-        if (!isPowerOf2_32(EltTy.getSizeInBits()))
+        if (!llvm::has_single_bit<uint32_t>(EltTy.getSizeInBits()))
           return true;
       }
       return false;
@@ -1628,8 +1628,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Builder.widenScalarIf(
       [=](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[BigTyIdx];
-        return !isPowerOf2_32(Ty.getSizeInBits()) &&
-          Ty.getSizeInBits() % 16 != 0;
+        return Ty.getSizeInBits() % 16 != 0;
       },
       [=](const LegalityQuery &Query) {
         // Pick the next power of 2, or a multiple of 64 over 128.
@@ -1861,7 +1860,8 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   // For code object version 5, private_base and shared_base are passed through
   // implicit kernargs.
-  if (AMDGPU::getCodeObjectVersion(*MF.getFunction().getParent()) >= 5) {
+  if (AMDGPU::getCodeObjectVersion(*MF.getFunction().getParent()) >=
+      AMDGPU::AMDHSA_COV5) {
     AMDGPUTargetLowering::ImplicitParameter Param =
         AS == AMDGPUAS::LOCAL_ADDRESS ? AMDGPUTargetLowering::SHARED_BASE
                                       : AMDGPUTargetLowering::PRIVATE_BASE;
@@ -2278,13 +2278,15 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(MachineInstr &MI,
   }
   MachineInstrBuilder K0, K1;
   if (SrcLT == S64) {
-    K0 = B.buildFConstant(S64,
-                          BitsToDouble(UINT64_C(/*2^-32*/ 0x3df0000000000000)));
-    K1 = B.buildFConstant(S64,
-                          BitsToDouble(UINT64_C(/*-2^32*/ 0xc1f0000000000000)));
+    K0 = B.buildFConstant(
+        S64, llvm::bit_cast<double>(UINT64_C(/*2^-32*/ 0x3df0000000000000)));
+    K1 = B.buildFConstant(
+        S64, llvm::bit_cast<double>(UINT64_C(/*-2^32*/ 0xc1f0000000000000)));
   } else {
-    K0 = B.buildFConstant(S32, BitsToFloat(UINT32_C(/*2^-32*/ 0x2f800000)));
-    K1 = B.buildFConstant(S32, BitsToFloat(UINT32_C(/*-2^32*/ 0xcf800000)));
+    K0 = B.buildFConstant(
+        S32, llvm::bit_cast<float>(UINT32_C(/*2^-32*/ 0x2f800000)));
+    K1 = B.buildFConstant(
+        S32, llvm::bit_cast<float>(UINT32_C(/*-2^32*/ 0xcf800000)));
   }
 
   auto Mul = B.buildFMul(SrcLT, Trunc, K0, Flags);
@@ -2484,7 +2486,8 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   else
     MIB.addGlobalAddress(GV, Offset + 12, GAFlags + 1);
 
-  B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
+  if (!B.getMRI()->getRegClassOrNull(PCReg))
+    B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
 
   if (PtrTy.getSizeInBits() == 32)
     B.buildExtract(DstReg, PCReg, 0);
@@ -2540,7 +2543,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
       // allocated ones. They all share the same offset.
       if (B.getDataLayout().getTypeAllocSize(Ty).isZero()) {
         // Adjust alignment for that dynamic shared memory array.
-        MFI->setDynLDSAlign(B.getDataLayout(), *cast<GlobalVariable>(GV));
+        MFI->setDynLDSAlign(MF.getFunction(), *cast<GlobalVariable>(GV));
         LLT S32 = LLT::scalar(32);
         auto Sz =
             B.buildIntrinsic(Intrinsic::amdgcn_groupstaticsize, {S32}, false);
@@ -2836,7 +2839,8 @@ bool AMDGPULegalizerInfo::legalizeFFloor(MachineInstr &MI,
   // shouldn't matter?
   Register ModSrc = stripAnySourceMods(OrigSrc, MRI);
 
-  auto Const = B.buildFConstant(S64, BitsToDouble(0x3fefffffffffffff));
+  auto Const =
+      B.buildFConstant(S64, llvm::bit_cast<double>(0x3fefffffffffffff));
 
   Register Min = MRI.createGenericVirtualRegister(S64);
 
@@ -2895,15 +2899,18 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
 // the outer loop going over parts of the result, the outer loop should go
 // over parts of one of the factors. This should result in instruction
 // selection that makes full use of S_ADDC_U32 instructions.
-void AMDGPULegalizerInfo::buildMultiply(
-    LegalizerHelper &Helper, MutableArrayRef<Register> Accum,
-    ArrayRef<Register> Src0, ArrayRef<Register> Src1,
-    bool UsePartialMad64_32, bool SeparateOddAlignedProducts) const {
+void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
+                                        MutableArrayRef<Register> Accum,
+                                        ArrayRef<Register> Src0,
+                                        ArrayRef<Register> Src1,
+                                        bool UsePartialMad64_32,
+                                        bool SeparateOddAlignedProducts) const {
   // Use (possibly empty) vectors of S1 registers to represent the set of
   // carries from one pair of positions to the next.
   using Carry = SmallVector<Register, 2>;
 
   MachineIRBuilder &B = Helper.MIRBuilder;
+  GISelKnownBits &KB = *Helper.getKnownBits();
 
   const LLT S1 = LLT::scalar(1);
   const LLT S32 = LLT::scalar(32);
@@ -2922,6 +2929,12 @@ void AMDGPULegalizerInfo::buildMultiply(
       Zero64 = B.buildConstant(S64, 0).getReg(0);
     return Zero64;
   };
+
+  SmallVector<bool, 2> Src0KnownZeros, Src1KnownZeros;
+  for (unsigned i = 0; i < Src0.size(); ++i) {
+    Src0KnownZeros.push_back(KB.getKnownBits(Src0[i]).isZero());
+    Src1KnownZeros.push_back(KB.getKnownBits(Src1[i]).isZero());
+  }
 
   // Merge the given carries into the 32-bit LocalAccum, which is modified
   // in-place.
@@ -2985,9 +2998,14 @@ void AMDGPULegalizerInfo::buildMultiply(
         if (LocalAccum.size() == 1 &&
             (!UsePartialMad64_32 || !CarryIn.empty())) {
           do {
+            // Skip multiplication if one of the operands is 0
             unsigned j1 = DstIndex - j0;
+            if (Src0KnownZeros[j0] || Src1KnownZeros[j1]) {
+              ++j0;
+              continue;
+            }
             auto Mul = B.buildMul(S32, Src0[j0], Src1[j1]);
-            if (!LocalAccum[0]) {
+            if (!LocalAccum[0] || KB.getKnownBits(LocalAccum[0]).isZero()) {
               LocalAccum[0] = Mul.getReg(0);
             } else {
               if (CarryIn.empty()) {
@@ -3027,12 +3045,17 @@ void AMDGPULegalizerInfo::buildMultiply(
 
           do {
             unsigned j1 = DstIndex - j0;
+            if (Src0KnownZeros[j0] || Src1KnownZeros[j1]) {
+              ++j0;
+              continue;
+            }
             auto Mad = B.buildInstr(AMDGPU::G_AMDGPU_MAD_U64_U32, {S64, S1},
                                     {Src0[j0], Src1[j1], Tmp});
             Tmp = Mad.getReg(0);
             if (!HaveSmallAccum)
               CarryOut.push_back(Mad.getReg(1));
             HaveSmallAccum = false;
+
             ++j0;
           } while (j0 <= DstIndex);
 
@@ -3175,7 +3198,6 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   B.buildMergeLikeInstr(DstReg, AccumRegs);
   MI.eraseFromParent();
   return true;
-
 }
 
 // Legalize ctlz/cttz to ffbh/ffbl instead of the default legalization to
@@ -3437,7 +3459,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM32Impl(MachineIRBuilder &B,
   // Initial estimate of inv(y).
   auto FloatY = B.buildUITOFP(S32, Y);
   auto RcpIFlag = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {FloatY});
-  auto Scale = B.buildFConstant(S32, BitsToFloat(0x4f7ffffe));
+  auto Scale = B.buildFConstant(S32, llvm::bit_cast<float>(0x4f7ffffe));
   auto ScaledY = B.buildFMul(S32, RcpIFlag, Scale);
   auto Z = B.buildFPTOUI(S32, ScaledY);
 
@@ -3487,21 +3509,23 @@ static std::pair<Register, Register> emitReciprocalU64(MachineIRBuilder &B,
   auto CvtLo = B.buildUITOFP(S32, Unmerge.getReg(0));
   auto CvtHi = B.buildUITOFP(S32, Unmerge.getReg(1));
 
-  auto Mad = B.buildFMAD(S32, CvtHi, // 2**32
-                         B.buildFConstant(S32, BitsToFloat(0x4f800000)), CvtLo);
+  auto Mad = B.buildFMAD(
+      S32, CvtHi, // 2**32
+      B.buildFConstant(S32, llvm::bit_cast<float>(0x4f800000)), CvtLo);
 
   auto Rcp = B.buildInstr(AMDGPU::G_AMDGPU_RCP_IFLAG, {S32}, {Mad});
-  auto Mul1 =
-      B.buildFMul(S32, Rcp, B.buildFConstant(S32, BitsToFloat(0x5f7ffffc)));
+  auto Mul1 = B.buildFMul(
+      S32, Rcp, B.buildFConstant(S32, llvm::bit_cast<float>(0x5f7ffffc)));
 
   // 2**(-32)
-  auto Mul2 =
-      B.buildFMul(S32, Mul1, B.buildFConstant(S32, BitsToFloat(0x2f800000)));
+  auto Mul2 = B.buildFMul(
+      S32, Mul1, B.buildFConstant(S32, llvm::bit_cast<float>(0x2f800000)));
   auto Trunc = B.buildIntrinsicTrunc(S32, Mul2);
 
   // -(2**32)
-  auto Mad2 = B.buildFMAD(S32, Trunc,
-                          B.buildFConstant(S32, BitsToFloat(0xcf800000)), Mul1);
+  auto Mad2 = B.buildFMAD(
+      S32, Trunc, B.buildFConstant(S32, llvm::bit_cast<float>(0xcf800000)),
+      Mul1);
 
   auto ResultLo = B.buildFPTOUI(S32, Mad2);
   auto ResultHi = B.buildFPTOUI(S32, Trunc);
@@ -3852,10 +3876,9 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
 
 // Enable or disable FP32 denorm mode. When 'Enable' is true, emit instructions
 // to enable denorm mode. When 'Enable' is false, disable denorm mode.
-static void toggleSPDenormMode(bool Enable,
-                               MachineIRBuilder &B,
+static void toggleSPDenormMode(bool Enable, MachineIRBuilder &B,
                                const GCNSubtarget &ST,
-                               AMDGPU::SIModeRegisterDefaults Mode) {
+                               SIModeRegisterDefaults Mode) {
   // Set SP denorm mode to this value.
   unsigned SPDenormMode =
     Enable ? FP_DENORM_FLUSH_NONE : Mode.fpDenormModeSPValue();
@@ -3890,7 +3913,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  AMDGPU::SIModeRegisterDefaults Mode = MFI->getMode();
+  SIModeRegisterDefaults Mode = MFI->getMode();
 
   uint16_t Flags = MI.getFlags();
 
@@ -4046,7 +4069,7 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
 
   auto C0 = B.buildConstant(S32, 0x6f800000);
   auto C1 = B.buildConstant(S32, 0x2f800000);
-  auto C2 = B.buildConstant(S32, FloatToBits(1.0f));
+  auto C2 = B.buildConstant(S32, llvm::bit_cast<uint32_t>(1.0f));
 
   auto CmpRes = B.buildFCmp(CmpInst::FCMP_OGT, S1, Abs, C0, Flags);
   auto Sel = B.buildSelect(S32, CmpRes, C1, C2, Flags);
@@ -4232,7 +4255,7 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
 std::pair<Register, unsigned>
 AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
                                         Register OrigOffset) const {
-  const unsigned MaxImm = 4095;
+  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset();
   Register BaseReg;
   unsigned ImmOffset;
   const LLT S32 = LLT::scalar(32);
@@ -4245,13 +4268,14 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   if (MRI.getType(BaseReg).isPointer())
     BaseReg = B.buildPtrToInt(MRI.getType(OrigOffset), BaseReg).getReg(0);
 
-  // If the immediate value is too big for the immoffset field, put the value
-  // and -4096 into the immoffset field so that the value that is copied/added
-  // for the voffset field is a multiple of 4096, and it stands more chance
-  // of being CSEd with the copy/add for another similar load/store.
-  // However, do not do that rounding down to a multiple of 4096 if that is a
-  // negative number, as it appears to be illegal to have a negative offset
-  // in the vgpr, even if adding the immediate offset makes it positive.
+  // If the immediate value is too big for the immoffset field, put only bits
+  // that would normally fit in the immoffset field. The remaining value that
+  // is copied/added for the voffset field is a large power of 2, and it
+  // stands more chance of being CSEd with the copy/add for another similar
+  // load/store.
+  // However, do not do that rounding down if that is a negative
+  // number, as it appears to be illegal to have a negative offset in the
+  // vgpr, even if adding the immediate offset makes it positive.
   unsigned Overflow = ImmOffset & ~MaxImm;
   ImmOffset -= Overflow;
   if ((int32_t)Overflow < 0) {
@@ -4901,7 +4925,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       MRI->getType(MI.getOperand(ArgOffset + Intr->GradientStart).getReg());
   LLT AddrTy =
       MRI->getType(MI.getOperand(ArgOffset + Intr->CoordStart).getReg());
-  const bool IsG16 = GradTy == S16;
+  const bool IsG16 =
+      ST.hasG16() ? (BaseOpcode->Gradients && GradTy == S16) : GradTy == S16;
   const bool IsA16 = AddrTy == S16;
   const bool IsD16 = Ty.getScalarType() == S16;
 
@@ -4972,6 +4997,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     return false;
   }
 
+  const unsigned NSAMaxSize = ST.getNSAMaxSize();
+  const unsigned HasPartialNSA = ST.hasPartialNSAEncoding();
+
   if (IsA16 || IsG16) {
     if (Intr->NumVAddrs > 1) {
       SmallVector<Register, 4> PackedRegs;
@@ -4982,9 +5010,19 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       // See also below in the non-a16 branch
       const bool UseNSA = ST.hasNSAEncoding() &&
                           PackedRegs.size() >= ST.getNSAThreshold(MF) &&
-                          PackedRegs.size() <= ST.getNSAMaxSize();
+                          (PackedRegs.size() <= NSAMaxSize || HasPartialNSA);
+      const bool UsePartialNSA =
+          UseNSA && HasPartialNSA && PackedRegs.size() > NSAMaxSize;
 
-      if (!UseNSA && PackedRegs.size() > 1) {
+      if (UsePartialNSA) {
+        // Pack registers that would go over NSAMaxSize into last VAddr register
+        LLT PackedAddrTy =
+            LLT::fixed_vector(2 * (PackedRegs.size() - NSAMaxSize + 1), 16);
+        auto Concat = B.buildConcatVectors(
+            PackedAddrTy, ArrayRef(PackedRegs).slice(NSAMaxSize - 1));
+        PackedRegs[NSAMaxSize - 1] = Concat.getReg(0);
+        PackedRegs.resize(NSAMaxSize);
+      } else if (!UseNSA && PackedRegs.size() > 1) {
         LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), 16);
         auto Concat = B.buildConcatVectors(PackedAddrTy, PackedRegs);
         PackedRegs[0] = Concat.getReg(0);
@@ -5020,16 +5058,22 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     // SIShrinkInstructions will convert NSA encodings to non-NSA after register
     // allocation when possible.
     //
-    // TODO: we can actually allow partial NSA where the final register is a
-    // contiguous set of the remaining addresses.
-    // This could help where there are more addresses than supported.
+    // Partial NSA is allowed on GFX11 where the final register is a contiguous
+    // set of the remaining addresses.
     const bool UseNSA = ST.hasNSAEncoding() &&
                         CorrectedNumVAddrs >= ST.getNSAThreshold(MF) &&
-                        CorrectedNumVAddrs <= ST.getNSAMaxSize();
+                        (CorrectedNumVAddrs <= NSAMaxSize || HasPartialNSA);
+    const bool UsePartialNSA =
+        UseNSA && HasPartialNSA && CorrectedNumVAddrs > NSAMaxSize;
 
-    if (!UseNSA && Intr->NumVAddrs > 1)
+    if (UsePartialNSA) {
+      convertImageAddrToPacked(B, MI,
+                               ArgOffset + Intr->VAddrStart + NSAMaxSize - 1,
+                               Intr->NumVAddrs - NSAMaxSize + 1);
+    } else if (!UseNSA && Intr->NumVAddrs > 1) {
       convertImageAddrToPacked(B, MI, ArgOffset + Intr->VAddrStart,
                                Intr->NumVAddrs);
+    }
   }
 
   int Flags = 0;
@@ -5290,7 +5334,7 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
 
   const Module *M = B.getMF().getFunction().getParent();
   unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <=3)
+  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
     return legalizeTrapHsaQueuePtr(MI, MRI, B);
 
   return ST.supportsGetDoorbellID() ?
@@ -5311,7 +5355,8 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
 
   Register SGPR01(AMDGPU::SGPR0_SGPR1);
   // For code object version 5, queue_ptr is passed through implicit kernarg.
-  if (AMDGPU::getCodeObjectVersion(*MF.getFunction().getParent()) >= 5) {
+  if (AMDGPU::getCodeObjectVersion(*MF.getFunction().getParent()) >=
+      AMDGPU::AMDHSA_COV5) {
     AMDGPUTargetLowering::ImplicitParameter Param =
         AMDGPUTargetLowering::QUEUE_PTR;
     uint64_t Offset =

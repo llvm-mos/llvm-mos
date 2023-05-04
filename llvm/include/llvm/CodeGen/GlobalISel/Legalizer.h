@@ -76,8 +76,7 @@ public:
   legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
                           ArrayRef<GISelChangeObserver *> AuxObservers,
                           LostDebugLocObserver &LocObserver,
-                          MachineIRBuilder &MIRBuilder,
-                          GISelKnownBits *KB = nullptr);
+                          MachineIRBuilder &MIRBuilder, GISelKnownBits *KB);
 };
 } // End namespace llvm.
 

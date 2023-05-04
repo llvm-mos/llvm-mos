@@ -24,7 +24,6 @@
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
 #include "kmp_dispatch.h"
-#include <cstdio>
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
@@ -551,6 +550,14 @@ static void __kmp_init_allocator() {
   __kmp_init_target_mem();
 }
 static void __kmp_fini_allocator() { __kmp_fini_memkind(); }
+
+/* ------------------------------------------------------------------------ */
+
+#if ENABLE_LIBOMPTARGET
+static void __kmp_init_omptarget() {
+  __kmp_init_target_task();
+}
+#endif
 
 /* ------------------------------------------------------------------------ */
 
@@ -5445,21 +5452,10 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         __kmp_initialize_info(team->t.t_threads[f], team, f,
                               __kmp_gtid_from_tid(f, team));
 
-      if (level) { // set th_task_state for new threads in nested hot team
-        // __kmp_initialize_info() no longer zeroes th_task_state, so we should
-        // only need to set the th_task_state for the new threads. th_task_state
-        // for primary thread will not be accurate until after this in
-        // __kmp_fork_call(), so we look to the primary thread's memo_stack to
-        // get the correct value.
-        for (f = old_nproc; f < team->t.t_nproc; ++f)
-          team->t.t_threads[f]->th.th_task_state =
-              team->t.t_threads[0]->th.th_task_state_memo_stack[level];
-      } else { // set th_task_state for new threads in non-nested hot team
-        // copy primary thread's state
-        kmp_uint8 old_state = team->t.t_threads[0]->th.th_task_state;
-        for (f = old_nproc; f < team->t.t_nproc; ++f)
-          team->t.t_threads[f]->th.th_task_state = old_state;
-      }
+      // set th_task_state for new threads in hot team with older thread's state
+      kmp_uint8 old_state = team->t.t_threads[old_nproc - 1]->th.th_task_state;
+      for (f = old_nproc; f < team->t.t_nproc; ++f)
+        team->t.t_threads[f]->th.th_task_state = old_state;
 
 #ifdef KMP_DEBUG
       for (f = 0; f < team->t.t_nproc; ++f) {
@@ -6917,12 +6913,11 @@ void __kmp_unregister_library(void) {
     // File did not open. Try the temporary file.
     use_shm = false;
     KMP_DEBUG_ASSERT(temp_reg_status_file_name);
-    FILE *tf = fopen(temp_reg_status_file_name, O_RDONLY);
-    if (!tf) {
+    fd1 = open(temp_reg_status_file_name, O_RDONLY);
+    if (fd1 == -1) {
       // give it up now.
       return;
     }
-    fd1 = fileno(tf);
   }
   char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
   if (data1 != MAP_FAILED) {
@@ -7053,6 +7048,11 @@ static void __kmp_do_serial_initialize(void) {
 #endif
 
   __kmp_validate_locks();
+
+#if ENABLE_LIBOMPTARGET
+  /* Initialize functions from libomptarget */
+  __kmp_init_omptarget();
+#endif
 
   /* Initialize internal memory allocator */
   __kmp_init_allocator();

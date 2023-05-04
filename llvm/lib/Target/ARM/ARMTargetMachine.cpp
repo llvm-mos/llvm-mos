@@ -242,7 +242,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
     if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
          TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
          TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF) &&
+         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
+         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
         !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
       this->Options.EABIVersion = EABI::GNU;
     else
@@ -481,7 +482,7 @@ bool ARMPassConfig::addPreISel() {
   }
 
   if (TM->getOptLevel() != CodeGenOpt::None) {
-    addPass(createHardwareLoopsPass());
+    addPass(createHardwareLoopsLegacyPass());
     addPass(createMVETailPredicationPass());
     // FIXME: IR passes can delete address-taken basic blocks, deleting
     // corresponding blockaddresses. ARMConstantPoolConstant holds references to

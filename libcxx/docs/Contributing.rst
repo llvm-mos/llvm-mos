@@ -31,7 +31,7 @@ Pre-commit check list
 Before committing or creating a review, please go through this check-list to make
 sure you don't forget anything:
 
-- Do you have tests for every public class and/or function you're adding or modifying?
+- Do you have :ref:`tests <testing>` for every public class and/or function you're adding or modifying?
 - Did you update the synopsis of the relevant headers?
 - Did you update the relevant files to track implementation status (in ``docs/Status/``)?
 - Did you mark all functions and type declarations with the :ref:`proper visibility macro <visibility-macros>`?
@@ -162,8 +162,7 @@ Below is a short description of the most interesting CI builds [#]_:
 * ``ARM`` tests libc++ on various Linux ARM platforms.
 * ``AIX`` tests libc++ on AIX.
 
-.. [#] Not all all steps are listed: steps are added and removed when the need
-   arises.
+.. [#] Not all steps are listed: steps are added and removed when the need arises.
 .. [#] Clang modules are not the same as C++20's modules.
 
 Infrastructure
@@ -194,7 +193,7 @@ your system.
 run-buildbot
 ~~~~~~~~~~~~
 
-Contains the buld script executed on Buildkite. This script can be executed
+Contains the build script executed on Buildkite. This script can be executed
 locally or inside ``run-buildbot-container``. The script must be called with
 the target to test. For example, ``run-buildbot generic-cxx20`` will build
 libc++ and test it using C++20.

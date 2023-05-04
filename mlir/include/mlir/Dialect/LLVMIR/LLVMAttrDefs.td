@@ -9,9 +9,8 @@
 #ifndef LLVMIR_ATTRDEFS
 #define LLVMIR_ATTRDEFS
 
+include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/IR/AttrTypeBase.td"
-include "mlir/Dialect/LLVMIR/LLVMEnums.td"
-include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -28,15 +27,6 @@ class LLVM_Attr<string name, string attrMnemonic,
 def CConvAttr : LLVM_Attr<"CConv", "cconv"> {
   let parameters = (ins "CConv":$CallingConv);
   let assemblyFormat = "`<` $CallingConv `>`";
-}
-
-//===----------------------------------------------------------------------===//
-// FastmathFlagsAttr
-//===----------------------------------------------------------------------===//
-
-def LLVM_FastmathFlagsAttr :
-    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -95,8 +85,9 @@ def LoopUnrollAttr : LLVM_Attr<"LoopUnroll", "loop_unroll"> {
     OptionalParameter<"IntegerAttr">:$count,
     OptionalParameter<"BoolAttr">:$runtimeDisable,
     OptionalParameter<"BoolAttr">:$full,
-    OptionalParameter<"LoopAnnotationAttr">:$followup,
-    OptionalParameter<"LoopAnnotationAttr">:$followupRemainder
+    OptionalParameter<"LoopAnnotationAttr">:$followupUnrolled,
+    OptionalParameter<"LoopAnnotationAttr">:$followupRemainder,
+    OptionalParameter<"LoopAnnotationAttr">:$followupAll
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -167,6 +158,32 @@ def LoopPipelineAttr : LLVM_Attr<"LoopPipeline", "loop_pipeline"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def LoopPeeledAttr : LLVM_Attr<"LoopPeeled", "loop_peeled"> {
+  let description = [{
+    This attribute defines pipelining specific loop annotations that map to
+    the "!llvm.loop.peeled" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"IntegerAttr">:$count
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LoopUnswitchAttr : LLVM_Attr<"LoopUnswitch", "loop_unswitch"> {
+  let description = [{
+    This attribute defines pipelining specific loop annotations that map to
+    the "!llvm.loop.unswitch" metadata.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"BoolAttr">:$partialDisable
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
   let description = [{
     This attributes encapsulates "loop metadata". It is meant to decorate
@@ -185,7 +202,10 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopLICMAttr">:$licm,
     OptionalParameter<"LoopDistributeAttr">:$distribute,
     OptionalParameter<"LoopPipelineAttr">:$pipeline,
+    OptionalParameter<"LoopPeeledAttr">:$peeled,
+    OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
+    OptionalParameter<"BoolAttr">:$isVectorized,
     OptionalArrayRefParameter<"SymbolRefAttr">:$parallelAccesses
   );
 
@@ -231,11 +251,11 @@ def LLVM_DITagParameter : LLVM_DIParameter<
 >;
 
 //===----------------------------------------------------------------------===//
-// DIVoidResultTypeAttr
+// DINullTypeAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_DIVoidResultTypeAttr : LLVM_Attr<"DIVoidResultType", "di_void_result_type",
-                                          /*traits=*/[], "DITypeAttr"> {
+def LLVM_DINullTypeAttr : LLVM_Attr<"DINullType", "di_null_type",
+                                    /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins);
 }
 
@@ -273,7 +293,7 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
   let parameters = (ins
     LLVM_DILanguageParameter:$sourceLanguage,
     "DIFileAttr":$file,
-    "StringAttr":$producer,
+    OptionalParameter<"StringAttr">:$producer,
     "bool":$isOptimized,
     "DIEmissionKind":$emissionKind
   );
@@ -288,7 +308,7 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
                                          /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"uint32_t">:$line,
     OptionalParameter<"DIScopeAttr">:$scope,
@@ -310,7 +330,7 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
   let parameters = (ins
     LLVM_DITagParameter:$tag,
     OptionalParameter<"StringAttr">:$name,
-    "DITypeAttr":$baseType,
+    OptionalParameter<"DITypeAttr">:$baseType,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
     OptionalParameter<"uint64_t">:$offsetInBits
@@ -349,7 +369,7 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
       "DIScopeAttr":$scope, "DIFileAttr":$file, "unsigned":$line,
       "unsigned":$column
     ), [{
-      return $_get(file.getContext(), scope, file, line, column);
+      return $_get(scope.getContext(), scope, file, line, column);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -370,7 +390,7 @@ def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_
     AttrBuilderWithInferredContext<(ins
       "DIScopeAttr":$scope, "DIFileAttr":$file, "unsigned":$discriminator
     ), [{
-      return $_get(file.getContext(), scope, file, discriminator);
+      return $_get(scope.getContext(), scope, file, discriminator);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -384,7 +404,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
                                          /*traits=*/[], "DINodeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$arg,
@@ -397,7 +417,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
       "unsigned":$line, "unsigned":$arg, "unsigned":$alignInBits,
       "DITypeAttr":$type
     ), [{
-      MLIRContext *ctx = file.getContext();
+      MLIRContext *ctx = scope.getContext();
       return $_get(ctx, scope, StringAttr::get(ctx, name), file, line,
                    arg, alignInBits, type);
     }]>
@@ -412,9 +432,9 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       /*traits=*/[], "DIScopeAttr"> {
   let parameters = (ins
-    "DICompileUnitAttr":$compileUnit,
+    OptionalParameter<"DICompileUnitAttr">:$compileUnit,
     "DIScopeAttr":$scope,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"StringAttr">:$linkageName,
     "DIFileAttr":$file,
     OptionalParameter<"unsigned">:$line,
@@ -435,6 +455,21 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                    scopeLine, subprogramFlags, type);
     }]>
   ];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DINamespaceAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
+                                      /*traits=*/[], "DIScopeAttr"> {
+  let parameters = (ins
+    OptionalParameter<"StringAttr">:$name,
+    OptionalParameter<"DIScopeAttr">:$scope,
+    "bool":$exportSymbols
+  );
 
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -470,7 +505,6 @@ def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_typ
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
-  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

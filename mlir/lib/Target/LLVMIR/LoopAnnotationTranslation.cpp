@@ -15,12 +15,11 @@ using namespace mlir::LLVM::detail;
 namespace {
 /// Helper class that keeps the state of one attribute to metadata conversion.
 struct LoopAnnotationConversion {
-  LoopAnnotationConversion(LoopAnnotationAttr attr,
-                           ModuleTranslation &moduleTranslation, Operation *op,
-                           LoopAnnotationTranslation &loopAnnotationTranslation)
-      : attr(attr), moduleTranslation(moduleTranslation), op(op),
-        loopAnnotationTranslation(loopAnnotationTranslation),
-        ctx(moduleTranslation.getLLVMContext()) {}
+  LoopAnnotationConversion(LoopAnnotationAttr attr, Operation *op,
+                           LoopAnnotationTranslation &loopAnnotationTranslation,
+                           llvm::LLVMContext &ctx)
+      : attr(attr), op(op),
+        loopAnnotationTranslation(loopAnnotationTranslation), ctx(ctx) {}
 
   /// Converts this struct's loop annotation into a corresponding LLVMIR
   /// metadata representation.
@@ -29,6 +28,7 @@ struct LoopAnnotationConversion {
   /// Conversion functions for different payload attribute kinds.
   void addUnitNode(StringRef name);
   void addUnitNode(StringRef name, BoolAttr attr);
+  void addI32NodeWithVal(StringRef name, uint32_t val);
   void convertBoolNode(StringRef name, BoolAttr attr, bool negated = false);
   void convertI32Node(StringRef name, IntegerAttr attr);
   void convertFollowupNode(StringRef name, LoopAnnotationAttr attr);
@@ -41,9 +41,10 @@ struct LoopAnnotationConversion {
   void convertLoopOptions(LoopLICMAttr options);
   void convertLoopOptions(LoopDistributeAttr options);
   void convertLoopOptions(LoopPipelineAttr options);
+  void convertLoopOptions(LoopPeeledAttr options);
+  void convertLoopOptions(LoopUnswitchAttr options);
 
   LoopAnnotationAttr attr;
-  ModuleTranslation &moduleTranslation;
   Operation *op;
   LoopAnnotationTranslation &loopAnnotationTranslation;
   llvm::LLVMContext &ctx;
@@ -61,6 +62,14 @@ void LoopAnnotationConversion::addUnitNode(StringRef name, BoolAttr attr) {
     addUnitNode(name);
 }
 
+void LoopAnnotationConversion::addI32NodeWithVal(StringRef name, uint32_t val) {
+  llvm::Constant *cstValue = llvm::ConstantInt::get(
+      llvm::IntegerType::get(ctx, /*NumBits=*/32), val, /*isSigned=*/false);
+  metadataNodes.push_back(
+      llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name),
+                              llvm::ConstantAsMetadata::get(cstValue)}));
+}
+
 void LoopAnnotationConversion::convertBoolNode(StringRef name, BoolAttr attr,
                                                bool negated) {
   if (!attr)
@@ -76,12 +85,7 @@ void LoopAnnotationConversion::convertI32Node(StringRef name,
                                               IntegerAttr attr) {
   if (!attr)
     return;
-  uint32_t val = attr.getInt();
-  llvm::Constant *cstValue = llvm::ConstantInt::get(
-      llvm::IntegerType::get(ctx, /*NumBits=*/32), val, /*isSigned=*/false);
-  metadataNodes.push_back(
-      llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name),
-                              llvm::ConstantAsMetadata::get(cstValue)}));
+  addI32NodeWithVal(name, attr.getInt());
 }
 
 void LoopAnnotationConversion::convertFollowupNode(StringRef name,
@@ -89,7 +93,8 @@ void LoopAnnotationConversion::convertFollowupNode(StringRef name,
   if (!attr)
     return;
 
-  llvm::MDNode *node = loopAnnotationTranslation.translate(attr, op);
+  llvm::MDNode *node =
+      loopAnnotationTranslation.translateLoopAnnotation(attr, op);
 
   metadataNodes.push_back(
       llvm::MDNode::get(ctx, {llvm::MDString::get(ctx, name), node}));
@@ -122,9 +127,12 @@ void LoopAnnotationConversion::convertLoopOptions(LoopUnrollAttr options) {
   convertBoolNode("llvm.loop.unroll.runtime.disable",
                   options.getRuntimeDisable());
   addUnitNode("llvm.loop.unroll.full", options.getFull());
-  convertFollowupNode("llvm.loop.unroll.followup", options.getFollowup());
+  convertFollowupNode("llvm.loop.unroll.followup_unrolled",
+                      options.getFollowupUnrolled());
   convertFollowupNode("llvm.loop.unroll.followup_remainder",
                       options.getFollowupRemainder());
+  convertFollowupNode("llvm.loop.unroll.followup_all",
+                      options.getFollowupAll());
 }
 
 void LoopAnnotationConversion::convertLoopOptions(
@@ -169,6 +177,15 @@ void LoopAnnotationConversion::convertLoopOptions(LoopPipelineAttr options) {
                  options.getInitiationinterval());
 }
 
+void LoopAnnotationConversion::convertLoopOptions(LoopPeeledAttr options) {
+  convertI32Node("llvm.loop.peeled.count", options.getCount());
+}
+
+void LoopAnnotationConversion::convertLoopOptions(LoopUnswitchAttr options) {
+  addUnitNode("llvm.loop.unswitch.partial.disable",
+              options.getPartialDisable());
+}
+
 llvm::MDNode *LoopAnnotationConversion::convert() {
 
   // Reserve operand 0 for loop id self reference.
@@ -177,6 +194,9 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
 
   addUnitNode("llvm.loop.disable_nonforced", attr.getDisableNonforced());
   addUnitNode("llvm.loop.mustprogress", attr.getMustProgress());
+  // "isvectorized" is encoded as an i32 value.
+  if (BoolAttr isVectorized = attr.getIsVectorized())
+    addI32NodeWithVal("llvm.loop.isvectorized", isVectorized.getValue());
 
   if (auto options = attr.getVectorize())
     convertLoopOptions(options);
@@ -192,6 +212,10 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
     convertLoopOptions(options);
   if (auto options = attr.getPipeline())
     convertLoopOptions(options);
+  if (auto options = attr.getPeeled())
+    convertLoopOptions(options);
+  if (auto options = attr.getUnswitch())
+    convertLoopOptions(options);
 
   ArrayRef<SymbolRefAttr> parallelAccessGroups = attr.getParallelAccesses();
   if (!parallelAccessGroups.empty()) {
@@ -200,7 +224,7 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
         llvm::MDString::get(ctx, "llvm.loop.parallel_accesses"));
     for (SymbolRefAttr accessGroupRef : parallelAccessGroups)
       parallelAccess.push_back(
-          moduleTranslation.getAccessGroup(*op, accessGroupRef));
+          loopAnnotationTranslation.getAccessGroup(op, accessGroupRef));
     metadataNodes.push_back(llvm::MDNode::get(ctx, parallelAccess));
   }
 
@@ -211,7 +235,8 @@ llvm::MDNode *LoopAnnotationConversion::convert() {
   return loopMD;
 }
 
-llvm::MDNode *LoopAnnotationTranslation::translate(LoopAnnotationAttr attr,
+llvm::MDNode *
+LoopAnnotationTranslation::translateLoopAnnotation(LoopAnnotationAttr attr,
                                                    Operation *op) {
   if (!attr)
     return nullptr;
@@ -221,9 +246,47 @@ llvm::MDNode *LoopAnnotationTranslation::translate(LoopAnnotationAttr attr,
     return loopMD;
 
   loopMD =
-      LoopAnnotationConversion(attr, moduleTranslation, op, *this).convert();
+      LoopAnnotationConversion(attr, op, *this, this->llvmModule.getContext())
+          .convert();
   // Store a map from this Attribute to the LLVM metadata in case we
   // encounter it again.
   mapLoopMetadata(attr, loopMD);
   return loopMD;
+}
+
+LogicalResult LoopAnnotationTranslation::createAccessGroupMetadata() {
+  mlirModule->walk([&](LLVM::MetadataOp metadatas) {
+    metadatas.walk([&](LLVM::AccessGroupMetadataOp op) {
+      llvm::MDNode *accessGroup =
+          llvm::MDNode::getDistinct(llvmModule.getContext(), {});
+      accessGroupMetadataMapping.insert({op, accessGroup});
+    });
+  });
+  return success();
+}
+
+llvm::MDNode *
+LoopAnnotationTranslation::getAccessGroup(Operation *op,
+                                          SymbolRefAttr accessGroupRef) const {
+  auto metadataName = accessGroupRef.getRootReference();
+  auto accessGroupName = accessGroupRef.getLeafReference();
+  auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
+      op->getParentOp(), metadataName);
+  auto *accessGroupOp =
+      SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
+  return accessGroupMetadataMapping.lookup(accessGroupOp);
+}
+
+llvm::MDNode *
+LoopAnnotationTranslation::getAccessGroups(AccessGroupOpInterface op) const {
+  ArrayAttr accessGroupRefs = op.getAccessGroupsOrNull();
+  if (!accessGroupRefs || accessGroupRefs.empty())
+    return nullptr;
+
+  SmallVector<llvm::Metadata *> groupMDs;
+  for (SymbolRefAttr groupRef : accessGroupRefs.getAsRange<SymbolRefAttr>())
+    groupMDs.push_back(getAccessGroup(op, groupRef));
+  if (groupMDs.size() == 1)
+    return llvm::cast<llvm::MDNode>(groupMDs.front());
+  return llvm::MDNode::get(llvmModule.getContext(), groupMDs);
 }

@@ -19,9 +19,9 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -192,6 +192,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
     case OPT_export_dynamic_symbol_list:
     case OPT_just_symbols:
     case OPT_library_path:
+    case OPT_remap_inputs_file:
     case OPT_retain_symbols_file:
     case OPT_rpath:
     case OPT_script:

@@ -1231,7 +1231,8 @@ namespace {
 
       // We recreated a local declaration, but not by instantiating it. There
       // may be pending dependent diagnostics to produce.
-      if (auto *DC = dyn_cast<DeclContext>(Old); DC && DC->isDependentContext())
+      if (auto *DC = dyn_cast<DeclContext>(Old);
+          DC && DC->isDependentContext() && DC->isFunctionOrMethod())
         SemaRef.PerformDependentDiagnostics(DC, TemplateArgs);
     }
 
@@ -1271,6 +1272,12 @@ namespace {
                           bool AllowInjectedClassName = false);
 
     const LoopHintAttr *TransformLoopHintAttr(const LoopHintAttr *LH);
+    const NoInlineAttr *TransformStmtNoInlineAttr(const Stmt *OrigS,
+                                                  const Stmt *InstS,
+                                                  const NoInlineAttr *A);
+    const AlwaysInlineAttr *
+    TransformStmtAlwaysInlineAttr(const Stmt *OrigS, const Stmt *InstS,
+                                  const AlwaysInlineAttr *A);
 
     ExprResult TransformPredefinedExpr(PredefinedExpr *E);
     ExprResult TransformDeclRefExpr(DeclRefExpr *E);
@@ -1342,6 +1349,7 @@ namespace {
 
       CXXMethodDecl *MD = Result.getAs<LambdaExpr>()->getCallOperator();
       for (ParmVarDecl *PVD : MD->parameters()) {
+        assert(PVD && "null in a parameter list");
         if (!PVD->hasDefaultArg())
           continue;
         Expr *UninstExpr = PVD->getUninstantiatedDefaultArg();
@@ -1765,6 +1773,20 @@ TemplateInstantiator::TransformLoopHintAttr(const LoopHintAttr *LH) {
   // non-type template parameter.
   return LoopHintAttr::CreateImplicit(getSema().Context, LH->getOption(),
                                       LH->getState(), TransformedExpr, *LH);
+}
+const NoInlineAttr *TemplateInstantiator::TransformStmtNoInlineAttr(
+    const Stmt *OrigS, const Stmt *InstS, const NoInlineAttr *A) {
+  if (!A || getSema().CheckNoInlineAttr(OrigS, InstS, *A))
+    return nullptr;
+
+  return A;
+}
+const AlwaysInlineAttr *TemplateInstantiator::TransformStmtAlwaysInlineAttr(
+    const Stmt *OrigS, const Stmt *InstS, const AlwaysInlineAttr *A) {
+  if (!A || getSema().CheckAlwaysInlineAttr(OrigS, InstS, *A))
+    return nullptr;
+
+  return A;
 }
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(

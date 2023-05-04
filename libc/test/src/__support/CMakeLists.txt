@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_support_unittests)
+add_custom_target(libc_support_unittests)
 
 add_libc_unittest(
   blockstore_test
@@ -40,6 +40,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.__support.str_to_float
     libc.src.__support.uint128
+    libc.src.errno.errno
 )
 
 add_libc_unittest(

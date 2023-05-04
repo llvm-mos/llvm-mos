@@ -36,12 +36,18 @@ add_llvm_library(omptarget.rtl.cuda.nextgen SHARED
   LINK_LIBS PRIVATE
   elf_common
   MemoryManager
+  OMPT
   PluginInterface
   ${OPENMP_PTHREAD_LIB}
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports,-z,defs"
 
   NO_INSTALL_RPATH
 )
+
+if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  target_link_libraries(omptarget.rtl.cuda.nextgen PRIVATE
+  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports,-z,defs")
+endif()
+
 
 if(LIBOMPTARGET_DEP_CUDA_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Building CUDA plugin linked against libcuda")
@@ -51,7 +57,6 @@ else()
   target_include_directories(omptarget.rtl.cuda.nextgen PRIVATE ../../plugins/cuda/dynamic_cuda)
   target_sources(omptarget.rtl.cuda.nextgen PRIVATE ../../plugins/cuda/dynamic_cuda/cuda.cpp)
 endif()
-add_dependencies(omptarget.rtl.cuda.nextgen omptarget.devicertl.nvptx)
 
 # Define debug prefix. TODO: This should be automatized in the Debug.h but it
 # requires changing the original plugins.

@@ -45,6 +45,10 @@ def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
 
+def StructSchedParam : NamedType<"struct sched_param">;
+def StructSchedParamPtr : PtrType<StructSchedParam>;
+def ConstStructSchedParamPtr : ConstType<StructSchedParamPtr>;
+
 def ExecArgvT : NamedType<"__exec_argv_t">;
 def ExecEnvpT : NamedType<"__exec_envp_t">;
 
@@ -545,6 +549,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<ConstCharPtr>]
         >,
         FunctionSpec<
+          "swab",
+          RetValSpec<VoidType>,
+          [ArgSpec<ConstVoidRestrictedPtr>, ArgSpec<VoidPtr>, ArgSpec<SSizeTType>]
+        >,
+        FunctionSpec<
           "symlink",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
@@ -623,6 +632,61 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<ConstCharPtr>]
         >,
     ]
+  >;
+
+  HeaderSpec Sched = HeaderSpec<
+      "sched.h",
+      [], // Macros
+      [PidT, TimeTType, StructTimeSpec, StructSchedParam], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+            "sched_yield",
+            RetValSpec<IntType>,
+            [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+            "sched_setparam",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<ConstStructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_getparam",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<StructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_setscheduler",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>]
+        >,
+
+        FunctionSpec<
+            "sched_getscheduler",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<IntType>, ArgSpec<ConstStructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_get_priority_min",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+
+        FunctionSpec<
+            "sched_get_priority_max",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+
+        FunctionSpec<
+            "sched_rr_get_interval",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<StructTimeSpecPtr>]
+        >,
+      ]
   >;
 
   HeaderSpec String = HeaderSpec<
@@ -796,6 +860,35 @@ def POSIX : StandardSpec<"POSIX"> {
             [ArgSpec<StructUtsNamePtr>]
         >,
     ]
+  >;
+
+  HeaderSpec ArpaInet = HeaderSpec<
+      "arpa/inet.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "htonl",
+              RetValSpec<UInt32Type>,
+              [ArgSpec<UInt32Type>]
+          >,
+          FunctionSpec<
+              "htons",
+              RetValSpec<UInt16Type>,
+              [ArgSpec<UInt16Type>]
+          >,
+          FunctionSpec<
+              "ntohl",
+              RetValSpec<UInt32Type>,
+              [ArgSpec<UInt32Type>]
+          >,
+          FunctionSpec<
+              "ntohs",
+              RetValSpec<UInt16Type>,
+              [ArgSpec<UInt16Type>]
+          >,
+      ]
   >;
 
   HeaderSpec PThread = HeaderSpec<
@@ -1029,6 +1122,11 @@ def POSIX : StandardSpec<"POSIX"> {
               RetValSpec<IntType>,
               [ArgSpec<FILEPtr>]
           >,
+          FunctionSpec<
+              "getchar_unlocked",
+              RetValSpec<IntType>,
+              [ArgSpec<VoidType>]
+          >,
       ]
   >;
 
@@ -1260,11 +1358,13 @@ def POSIX : StandardSpec<"POSIX"> {
   >;
 
   let Headers = [
+    ArpaInet,
     CType,
     Dirent,
     Errno,
     FCntl,
     PThread,
+    Sched,
     Signal,
     Spawn,
     StdIO,

@@ -655,10 +655,6 @@ def warn_pragma_debug_missing_command : Warning<
   "missing debug command">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
-def warn_pragma_debug_missing_argument : Warning<
-  "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
-def warn_pragma_debug_unexpected_argument : Warning<
-  "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unknown_module : Warning<
   "unknown module '%0'">, InGroup<IgnoredPragmas>;
 // #pragma module
@@ -945,4 +941,15 @@ def err_dep_source_scanner_unexpected_tokens_at_import : Error<
 
 }
 
+def err_pp_double_begin_pragma_unsafe_buffer_usage :
+Error<"already inside '#pragma unsafe_buffer_usage'">;
+
+def err_pp_unmatched_end_begin_pragma_unsafe_buffer_usage :
+Error<"not currently inside '#pragma unsafe_buffer_usage'">;
+
+def err_pp_unclosed_pragma_unsafe_buffer_usage :
+Error<"'#pragma unsafe_buffer_usage' was not ended">;
+
+def err_pp_pragma_unsafe_buffer_usage_syntax :
+Error<"Expected 'begin' or 'end'">;
 }

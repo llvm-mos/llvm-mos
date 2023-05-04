@@ -30,13 +30,13 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
@@ -165,7 +165,7 @@ static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
   for (MachineMemOperand *OldMMO : SrcMI.memoperands()) {
     MachinePointerInfo NewPtrInfo(OldMMO->getPointerInfo());
     if (const PseudoSourceValue *PSV =
-            NewPtrInfo.V.dyn_cast<const PseudoSourceValue *>()) {
+            dyn_cast_if_present<const PseudoSourceValue *>(NewPtrInfo.V)) {
       switch (PSV->kind()) {
       case PseudoSourceValue::Stack:
         NewPtrInfo.V = PSVMgr.getStack();
@@ -372,6 +372,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
   DstMF->setHasEHScopes(SrcMF->hasEHScopes());
   DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
+  DstMF->setIsOutlined(SrcMF->isOutlined());
 
   if (!SrcMF->getLandingPads().empty() ||
       !SrcMF->getCodeViewAnnotations().empty() ||

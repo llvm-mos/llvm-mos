@@ -13,6 +13,10 @@
 
 class SBBreakpointListImpl;
 
+namespace lldb_private {
+class ScriptInterpreter;
+}
+
 namespace lldb {
 
 class LLDB_API SBBreakpoint {
@@ -22,7 +26,9 @@ public:
 
   SBBreakpoint(const lldb::SBBreakpoint &rhs);
 
+#ifndef SWIG
   SBBreakpoint(const lldb::BreakpointSP &bp_sp);
+#endif
 
   ~SBBreakpoint();
 
@@ -92,7 +98,9 @@ public:
 
   const char *GetQueueName() const;
 
+#ifndef SWIG
   void SetCallback(SBBreakpointHitCallback callback, void *baton);
+#endif
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 
@@ -150,6 +158,8 @@ private:
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
   friend class SBTarget;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb::BreakpointSP GetSP() const;
 

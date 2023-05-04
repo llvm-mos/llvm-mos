@@ -1,10 +1,12 @@
 # This file sets up a CMakeCache for the second stage of a Fuchsia toolchain build.
 
+option(FUCHSIA_ENABLE_LLDB "Enable LLDB")
+
 set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
-set(LLVM_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;lld;llvm;polly" CACHE STRING "")
+set(_FUCHSIA_ENABLE_PROJECTS "bolt;clang;clang-tools-extra;lld;llvm;polly")
 set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
 set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
@@ -23,9 +25,14 @@ set(LLVM_INCLUDE_DOCS OFF CACHE BOOL "")
 set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "")
 set(LLVM_STATIC_LINK_CXX_STDLIB ON CACHE BOOL "")
 set(LLVM_USE_RELATIVE_PATHS_IN_FILES ON CACHE BOOL "")
+set(LLDB_ENABLE_CURSES OFF CACHE BOOL "")
+set(LLDB_ENABLE_LIBEDIT OFF CACHE BOOL "")
 
 if(WIN32)
   set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
+else()
+  set(LLVM_TOOL_LLVM_DRIVER_BUILD ON CACHE BOOL "")
+  set(LLVM_DRIVER_TARGET llvm-driver)
 endif()
 
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
@@ -88,14 +95,13 @@ if(WIN32 OR LLVM_WINSYSROOT)
       ${LLVM_WINSYSROOT})
     string(REPLACE ";" " " WINDOWS_COMPILER_FLAGS "${WINDOWS_COMPILER_FLAGS}")
     set(WINDOWS_LINK_FLAGS
-        /vfsoverlay:${LLVM_VFSOVERLAY}
-        # TODO: On Windows, linker is invoked by cmake instead of the clang-cl driver,
-        # so we have to manually set the libpath. We use clang-cl driver if we can
-        # and remove these libpath flags.
-        -libpath:"${LLVM_WINSYSROOT}/VC/Tools/MSVC/14.34.31933/lib/x64"
-        -libpath:"${LLVM_WINSYSROOT}/VC/Tools/MSVC/14.34.31933/atlmfc/lib/x64"
-        -libpath:"${LLVM_WINSYSROOT}/Windows Kits/10/Lib/10.0.19041.0/ucrt/x64"
-        -libpath:"${LLVM_WINSYSROOT}/Windows Kits/10/Lib/10.0.19041.0/um/x64")
+      # TODO: lld-link has a bug that it cannot infer the machine type
+      # correctly when /winsysroot is set while Windows libraries search paths
+      # are not explicitly defined.
+      # Explicitly set the machine type for now.
+      /machine:X64
+      /vfsoverlay:${LLVM_VFSOVERLAY}
+      /winsysroot:${LLVM_WINSYSROOT})
     string(REPLACE ";" " " WINDOWS_LINK_FLAGS "${WINDOWS_LINK_FLAGS}")
   endif()
 
@@ -200,7 +206,7 @@ if(FUCHSIA_SDK)
     set(BUILTINS_${target}_CMAKE_SYSROOT ${FUCHSIA_${target}_SYSROOT} CACHE PATH "")
   endforeach()
 
-  foreach(target x86_64-unknown-fuchsia;aarch64-unknown-fuchsia)
+  foreach(target x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia)
     # Set the per-target runtimes options.
     list(APPEND RUNTIME_TARGETS "${target}")
     set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Fuchsia CACHE STRING "")
@@ -272,12 +278,12 @@ if(FUCHSIA_SDK)
 
   set(LLVM_RUNTIME_MULTILIBS "asan;noexcept;compat;asan+noexcept;hwasan;hwasan+noexcept" CACHE STRING "")
 
-  set(LLVM_RUNTIME_MULTILIB_asan_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_compat_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_asan+noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_hwasan_TARGETS "aarch64-unknown-fuchsia" CACHE STRING "")
-  set(LLVM_RUNTIME_MULTILIB_hwasan+noexcept_TARGETS "aarch64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_asan_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_compat_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_asan+noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_hwasan_TARGETS "aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_hwasan+noexcept_TARGETS "aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
 endif()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")
@@ -293,6 +299,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-cxxfilt
   llvm-debuginfod-find
   llvm-dlltool
+  ${LLVM_DRIVER_TARGET}
   llvm-dwarfdump
   llvm-dwp
   llvm-ifs
@@ -321,7 +328,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   scan-build-py
   CACHE STRING "")
 
-set(LLVM_DISTRIBUTION_COMPONENTS
+set(LLVM_Toolchain_DISTRIBUTION_COMPONENTS
   clang
   lld
   clang-apply-replacements
@@ -338,3 +345,19 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   runtimes
   ${LLVM_TOOLCHAIN_TOOLS}
   CACHE STRING "")
+
+set(_FUCHSIA_DISTRIBUTIONS Toolchain)
+
+if(FUCHSIA_ENABLE_LLDB)
+  list(APPEND _FUCHSIA_ENABLE_PROJECTS lldb)
+  list(APPEND _FUCHSIA_DISTRIBUTIONS Debugger)
+  set(LLVM_Debugger_DISTRIBUTION_COMPONENTS
+    lldb
+    liblldb
+    lldb-server
+    lldb-argdumper
+    CACHE STRING "")
+endif()
+
+set(LLVM_DISTRIBUTIONS ${_FUCHSIA_DISTRIBUTIONS} CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS ${_FUCHSIA_ENABLE_PROJECTS} CACHE STRING "")

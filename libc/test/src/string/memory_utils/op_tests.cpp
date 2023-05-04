@@ -21,6 +21,18 @@
 
 namespace __llvm_libc {
 
+template <typename T> struct has_head_tail {
+  template <typename C> static char sfinae(decltype(&C::head_tail));
+  template <typename C> static uint16_t sfinae(...);
+  static constexpr bool value = sizeof(sfinae<T>(0)) == sizeof(char);
+};
+
+template <typename T> struct has_loop_and_tail {
+  template <typename C> static char sfinae(decltype(&C::loop_and_tail));
+  template <typename C> static uint16_t sfinae(...);
+  static constexpr bool value = sizeof(sfinae<T>(0)) == sizeof(char);
+};
+
 // Allocates two Buffer and extracts two spans out of them, one
 // aligned and one misaligned. Tests are run on both spans.
 struct Buffers {
@@ -119,24 +131,23 @@ using MemsetImplementations = testing::TypeList<
     builtin::Memset<64>,
 #endif
 #ifdef LLVM_LIBC_HAS_UINT64
-    generic::Memset<8, 8>,  //
-    generic::Memset<16, 8>, //
-    generic::Memset<32, 8>, //
-    generic::Memset<64, 8>, //
+    generic::Memset<uint64_t>, generic::Memset<cpp::array<uint64_t, 2>>,
 #endif
 #ifdef __AVX512F__
-    generic::Memset<64, 64>, // prevents warning about avx512f
+    generic::Memset<uint8x64_t>, generic::Memset<cpp::array<uint8x64_t, 2>>,
 #endif
-    generic::Memset<1, 1>,   //
-    generic::Memset<2, 1>,   //
-    generic::Memset<2, 2>,   //
-    generic::Memset<4, 2>,   //
-    generic::Memset<4, 4>,   //
-    generic::Memset<16, 16>, //
-    generic::Memset<32, 16>, //
-    generic::Memset<64, 16>, //
-    generic::Memset<32, 32>, //
-    generic::Memset<64, 32>  //
+#ifdef __AVX__
+    generic::Memset<uint8x32_t>, generic::Memset<cpp::array<uint8x32_t, 2>>,
+#endif
+#ifdef __SSE2__
+    generic::Memset<uint8x16_t>, generic::Memset<cpp::array<uint8x16_t, 2>>,
+#endif
+    generic::Memset<uint32_t>, generic::Memset<cpp::array<uint32_t, 2>>, //
+    generic::Memset<uint16_t>, generic::Memset<cpp::array<uint16_t, 2>>, //
+    generic::Memset<uint8_t>, generic::Memset<cpp::array<uint8_t, 2>>,   //
+    generic::MemsetSequence<uint8_t, uint8_t>,                           //
+    generic::MemsetSequence<uint16_t, uint8_t>,                          //
+    generic::MemsetSequence<uint32_t, uint16_t, uint8_t>                 //
     >;
 
 // Adapt CheckMemset signature to op implementation signatures.
@@ -162,7 +173,8 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       }
     }
   }
-  { // Test head tail operations from kSize to 2 * kSize.
+  if constexpr (has_head_tail<Impl>::value) {
+    // Test head tail operations from kSize to 2 * kSize.
     static constexpr auto HeadTailImpl = SetAdaptor<Impl::head_tail>;
     Buffer DstBuffer(2 * kSize);
     for (size_t size = kSize; size < 2 * kSize; ++size) {
@@ -171,7 +183,8 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       ASSERT_TRUE(CheckMemset<HeadTailImpl>(dst, value, size));
     }
   }
-  { // Test loop operations from kSize to 3 * kSize.
+  if constexpr (has_loop_and_tail<Impl>::value) {
+    // Test loop operations from kSize to 3 * kSize.
     if constexpr (kSize > 1) {
       static constexpr auto LoopImpl = SetAdaptor<Impl::loop_and_tail>;
       Buffer DstBuffer(3 * kSize);

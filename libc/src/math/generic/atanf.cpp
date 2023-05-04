@@ -9,6 +9,7 @@
 #include "src/math/atanf.h"
 #include "math_utils.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/inv_trigf_utils.h"
 
 namespace __llvm_libc {
@@ -21,7 +22,7 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
 
   if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
     if (xbits.is_inf())
-      return opt_barrier(sign ? -M_MATH_PI_2 : M_MATH_PI_2);
+      return static_cast<float>(opt_barrier(sign ? -M_MATH_PI_2 : M_MATH_PI_2));
     else
       return x;
   }
@@ -51,7 +52,7 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
     }
   }
 
-  return atan_eval(x);
+  return static_cast<float>(atan_eval(x));
 }
 
 } // namespace __llvm_libc

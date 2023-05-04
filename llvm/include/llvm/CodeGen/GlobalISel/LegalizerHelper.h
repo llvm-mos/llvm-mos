@@ -60,6 +60,7 @@ private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
   const TargetLowering &TLI;
+  GISelKnownBits *KB;
 
 public:
   enum LegalizeResult {
@@ -78,6 +79,7 @@ public:
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
   const TargetLowering &getTargetLowering() const { return TLI; }
+  GISelKnownBits *getKnownBits() const { return KB; }
 
   LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
                   MachineIRBuilder &B);
@@ -329,6 +331,9 @@ public:
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
 
+  /// Equalize source and destination vector sizes of G_SHUFFLE_VECTOR.
+  LegalizeResult equalizeVectorShuffleLengths(MachineInstr &MI);
+
   LegalizeResult reduceLoadStoreWidth(GLoadStore &MI, unsigned TypeIdx,
                                       LLT NarrowTy);
 
@@ -364,6 +369,7 @@ public:
   LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                         LLT CastTy);
 
+  LegalizeResult lowerFConstant(MachineInstr &MI);
   LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerLoad(GAnyLoad &MI);
   LegalizeResult lowerStore(GStore &MI);

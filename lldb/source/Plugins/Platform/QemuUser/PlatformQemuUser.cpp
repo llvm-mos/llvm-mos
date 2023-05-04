@@ -41,8 +41,9 @@ public:
   }
 
   llvm::StringRef GetArchitecture() {
-    return m_collection_sp->GetPropertyAtIndexAsString(
-        nullptr, ePropertyArchitecture, "");
+    return m_collection_sp
+        ->GetPropertyAtIndexAsString(nullptr, ePropertyArchitecture)
+        .value_or("");
   }
 
   FileSpec GetEmulatorPath() {
@@ -98,7 +99,7 @@ void PlatformQemuUser::DebuggerInitialize(Debugger &debugger) {
           debugger, ConstString(GetPluginNameStatic()))) {
     PluginManager::CreateSettingForPlatformPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the qemu-user platform plugin."),
+        "Properties for the qemu-user platform plugin.",
         /*is_global_property=*/true);
   }
 }

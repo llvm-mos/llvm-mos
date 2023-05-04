@@ -18,6 +18,8 @@ include "flang/Optimizer/HLFIR/HLFIROpBase.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
+include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
@@ -123,14 +125,48 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     Assign rhs to lhs following Fortran intrinsic assignments rules.
     The operation deals with inserting a temporary if the lhs and rhs
     may overlap.
+    The optional "realloc" flag allows indicating that this assignment
+    has the Fortran 95 semantics for assignments to a whole allocatable.
+    In such case, the left hand side must be an allocatable that may be
+    unallocated or allocated with a different type and shape than the right
+    hand side. It will be allocated or re-allocated as needed during the
+    assignment.
+    When "realloc" is set and this is a character assignment, the optional
+    flag "keep_lhs_length_if_realloc" indicates that the character
+    left hand side should retain its length after the assignment. If the
+    right hand side has a different length, truncation and padding will
+    occur. This covers the case of explicit and assumed length character
+    allocatables.
+    Otherwise, the left hand side will be allocated or reallocated to match the
+    right hand side length if they differ. This covers the case of deferred
+    length character allocatables.
   }];
 
   let arguments = (ins AnyFortranEntity:$rhs,
-                   Arg<AnyFortranVariable, "", [MemWrite]>:$lhs);
+                   Arg<AnyFortranVariable, "", [MemWrite]>:$lhs,
+                   UnitAttr:$realloc,
+                   UnitAttr:$keep_lhs_length_if_realloc);
 
   let assemblyFormat = [{
-    $rhs `to` $lhs attr-dict `:` type(operands)
+    $rhs `to` $lhs (`realloc` $realloc^)?
+    (`keep_lhs_len` $keep_lhs_length_if_realloc^)?
+    attr-dict `:` type(operands)
   }];
+
+  let extraClassDeclaration = [{
+    /// Does this assignment have the Fortran 95 semantics of assignments
+    /// to a whole allocatable?
+    bool isAllocatableAssignment() {
+      return getRealloc();
+    }
+    /// Is the assignment left hand side a whole allocatable character
+    /// that should retain its length after the assignment?
+    bool mustKeepLhsLengthInAllocatableAssignment() {
+      return getKeepLhsLengthIfRealloc();
+    }
+  }];
+
+  let hasVerifier = 1;
 }
 
 def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
@@ -215,6 +251,51 @@ def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def hlfir_ParentComponentOp : hlfir_Op<"parent_comp", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+  let summary = "Designate the parent component of a variable";
+
+  let description = [{
+    This operation represents a Fortran component reference where the
+    component name is a parent type of the variable's derived type.
+    These component references cannot be represented with an hlfir.designate
+    because the parent type names are not embedded in fir.type<> types
+    as opposed to the actual component names.
+
+    The operands are as follow:
+      - memref is a derived type variable whose parent component is being
+        designated.
+      - shape is the shape of memref and the result and must be provided if
+        memref is an array. Parent component reference lower bounds are ones,
+        so the provided shape must be a fir.shape.
+      - typeparams are the type parameters of the parent component type if any.
+        It is a subset of memref type parameters.
+    The parent component type and name is reflected in the result type.
+  }];
+
+  let arguments = (ins AnyFortranVariable:$memref,
+                   Optional<AnyShapeType>:$shape,
+                   Variadic<AnyIntegerType>:$typeparams);
+
+  let extraClassDeclaration = [{
+    // Implement FortranVariableInterface interface. Parent components have
+    // no attributes (pointer, allocatable or contiguous can only be added
+    // to regular components).
+    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
+      return std::nullopt;
+    }
+  }];
+
+  let results = (outs AnyFortranVariable);
+
+  let assemblyFormat = [{
+    $memref (`shape` $shape^)? (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let summary = "concatenate characters";
   let description = [{
@@ -254,6 +335,97 @@ def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
   }];
 
   let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
+}
+
+def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "SUM transformational intrinsic";
+  let description = [{
+    Sums the elements of an array, optionally along a particular dimension,
+    optionally if a mask is true.
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalArrayObject:$array,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_MatmulOp : hlfir_Op<"matmul",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "MATMUL transformational intrinsic";
+  let description = [{
+    Matrix multiplication
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalOrLogicalArrayObject:$lhs,
+    AnyFortranNumericalOrLogicalArrayObject:$rhs,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $lhs $rhs attr-dict `:` functional-type(operands, results)
+  }];
+
+  // MATMUL(TRANSPOSE(...), ...) => hlfir.matmul_transpose
+  let hasCanonicalizeMethod = 1;
+
+  let hasVerifier = 1;
+}
+
+def hlfir_TransposeOp : hlfir_Op<"transpose", []> {
+  let summary = "TRANSPOSE transformational intrinsic";
+  let description = [{
+    Transpose a rank 2 array
+  }];
+
+  let arguments = (ins AnyFortranArrayObject:$array);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_MatmulTransposeOp : hlfir_Op<"matmul_transpose",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "Optimized MATMUL(TRANSPOSE(...), ...)";
+  let description = [{
+    Matrix multiplication where the left hand side is transposed
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalOrLogicalArrayObject:$lhs,
+    AnyFortranNumericalOrLogicalArrayObject:$rhs,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $lhs $rhs attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
 }
 
 def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
@@ -589,6 +761,57 @@ def hlfir_CopyOutOp : hlfir_Op<"copy_out", []> {
     $temp `,` $was_copied (`to` $var^)?
     attr-dict `:` functional-type(operands, results)
   }];
+}
+
+def hlfir_ShapeOfOp : hlfir_Op<"shape_of", [Pure]> {
+  let summary = "Get the shape of a hlfir.expr";
+  let description = [{
+    Gets the runtime shape of a hlfir.expr. In lowering to FIR, the
+    hlfir.shape_of operation will be replaced by an fir.shape.
+    It is not valid to request the shape of a hlfir.expr which has no shape.
+  }];
+
+  let arguments = (ins hlfir_ExprType:$expr);
+
+  let results = (outs fir_ShapeType);
+
+  let hasVerifier = 1;
+
+  // If all extents are known at compile time, the hlfir.shape_of can be
+  // immediately folded into a fir.shape operation. This makes information
+  // available sooner to inform bufferization decisions
+  let hasCanonicalizeMethod = 1;
+
+  let extraClassDeclaration = [{
+    std::size_t getRank();
+  }];
+
+  let assemblyFormat = [{
+    $expr attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$expr)>];
+}
+
+def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
+  let summary = "Get an extent value from a fir.shape";
+  let description = [{
+    Gets an extent value from a fir.shape. The dimension argument uses C style
+    indexing and so should be between 0 and 1 less than the rank of the shape
+  }];
+
+  let arguments = (ins fir_ShapeType:$shape,
+                       IndexAttr:$dim);
+
+  let results = (outs Index);
+
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $shape attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Value":$shape, "unsigned":$dim)>];
 }
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TBAABuilder.h"
+#include "flang/Optimizer/CodeGen/TBAABuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -140,7 +141,7 @@ SymbolRefAttr TBAABuilder::getDataAccessTag(Type baseFIRType,
   return getAnyDataAccessTag();
 }
 
-void TBAABuilder::attachTBAATag(Operation *op, Type baseFIRType,
+void TBAABuilder::attachTBAATag(AliasAnalysisOpInterface op, Type baseFIRType,
                                 Type accessFIRType, GEPOp gep) {
   if (!enableTBAA)
     return;
@@ -159,9 +160,10 @@ void TBAABuilder::attachTBAATag(Operation *op, Type baseFIRType,
   else
     tbaaTagSym = getDataAccessTag(baseFIRType, accessFIRType, gep);
 
-  if (tbaaTagSym)
-    op->setAttr(LLVMDialect::getTBAAAttrName(),
-                ArrayAttr::get(op->getContext(), tbaaTagSym));
+  if (!tbaaTagSym)
+    return;
+
+  op.setTBAATags(ArrayAttr::get(op->getContext(), tbaaTagSym));
 }
 
 } // namespace fir

@@ -38,9 +38,12 @@ public:
   virtual void handleFixableVariable(const VarDecl *Variable,
                                      FixItList &&List) = 0;
 
+  /// Returns a reference to the `Preprocessor`:
+  virtual bool isSafeBufferOptOut(const SourceLocation &Loc) const = 0;
+
   /// Returns the text indicating that the user needs to provide input there:
   virtual std::string
-  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
+  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") const {
     std::string s = std::string("<# ");
     s += HintTextToUser;
     s += " #>";
@@ -50,7 +53,8 @@ public:
 
 // This function invokes the analysis and allows the caller to react to it
 // through the handler class.
-void checkUnsafeBufferUsage(const Decl *D, UnsafeBufferUsageHandler &Handler);
+void checkUnsafeBufferUsage(const Decl *D, UnsafeBufferUsageHandler &Handler,
+                            bool EmitFixits);
 
 namespace internal {
 // Tests if any two `FixItHint`s in `FixIts` conflict.  Two `FixItHint`s

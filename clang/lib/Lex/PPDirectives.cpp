@@ -902,8 +902,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
       // If we have a module import syntax, we shouldn't include a header to
       // make a particular module visible. Let the caller know they should
       // suggest an import instead.
-      if (getLangOpts().ObjC || getLangOpts().CPlusPlusModules ||
-          getLangOpts().ModulesTS)
+      if (getLangOpts().ObjC || getLangOpts().CPlusPlusModules)
         return nullptr;
 
       // If this is an accessible, non-textual header of M's top-level module
@@ -1178,6 +1177,10 @@ void Preprocessor::HandleDirective(Token &Result) {
 
   switch (Result.getKind()) {
   case tok::eod:
+    // Ignore the null directive with regards to the multiple-include
+    // optimization, i.e. allow the null directive to appear outside of the
+    // include guard and still enable the multiple-include optimization.
+    CurPPLexer->MIOpt.SetReadToken(ReadAnyTokensBeforeDirective);
     return;   // null directive.
   case tok::code_completion:
     setCodeCompletionReached();
@@ -1186,8 +1189,12 @@ void Preprocessor::HandleDirective(Token &Result) {
                                     CurPPLexer->getConditionalStackDepth() > 0);
     return;
   case tok::numeric_constant:  // # 7  GNU line marker directive.
-    if (getLangOpts().AsmPreprocessor)
-      break;  // # 4 is not a preprocessor directive in .S files.
+    // In a .S file "# 4" may be a comment so don't treat it as a preprocessor
+    // directive. However do permit it in the predefines file, as we use line
+    // markers to mark the builtin macros as being in a system header.
+    if (getLangOpts().AsmPreprocessor &&
+        SourceMgr.getFileID(SavedHash.getLocation()) != getPredefinesFileID())
+      break;
     return HandleDigitDirective(Result);
   default:
     IdentifierInfo *II = Result.getIdentifierInfo();
@@ -2640,7 +2647,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
   SmallVector<IdentifierInfo*, 32> Parameters;
 
   while (true) {
-    LexUnexpandedToken(Tok);
+    LexUnexpandedNonComment(Tok);
     switch (Tok.getKind()) {
     case tok::r_paren:
       // Found the end of the parameter list.
@@ -2661,7 +2668,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
       }
 
       // Lex the token after the identifier.
-      LexUnexpandedToken(Tok);
+      LexUnexpandedNonComment(Tok);
       if (Tok.isNot(tok::r_paren)) {
         Diag(Tok, diag::err_pp_missing_rparen_in_macro_def);
         return true;
@@ -2695,7 +2702,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
       Parameters.push_back(II);
 
       // Lex the token after the identifier.
-      LexUnexpandedToken(Tok);
+      LexUnexpandedNonComment(Tok);
 
       switch (Tok.getKind()) {
       default:          // #define X(A B
@@ -2711,7 +2718,7 @@ bool Preprocessor::ReadMacroParameterList(MacroInfo *MI, Token &Tok) {
         Diag(Tok, diag::ext_named_variadic_macro);
 
         // Lex the token after the identifier.
-        LexUnexpandedToken(Tok);
+        LexUnexpandedNonComment(Tok);
         if (Tok.isNot(tok::r_paren)) {
           Diag(Tok, diag::err_pp_missing_rparen_in_macro_def);
           return true;

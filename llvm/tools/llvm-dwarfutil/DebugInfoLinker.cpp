@@ -41,7 +41,7 @@ class ObjFileAddressMap : public AddressesMap {
 public:
   ObjFileAddressMap(DWARFContext &Context, const Options &Options,
                     object::ObjectFile &ObjFile)
-      : Opts(Options), Context(Context) {
+      : Opts(Options) {
     // Remember addresses of existing text sections.
     for (const object::SectionRef &Sect : ObjFile.sections()) {
       if (!Sect.isText())
@@ -70,8 +70,8 @@ public:
   // should be renamed into has valid address ranges
   bool hasValidRelocs() override { return !DWARFAddressRanges.empty(); }
 
-  bool isLiveSubprogram(const DWARFDie &DIE,
-                        CompileUnit::DIEInfo &Info) override {
+  std::optional<int64_t>
+  getSubprogramRelocAdjustment(const DWARFDie &DIE) override {
     assert((DIE.getTag() == dwarf::DW_TAG_subprogram ||
             DIE.getTag() == dwarf::DW_TAG_label) &&
            "Wrong type of input die");
@@ -80,18 +80,16 @@ public:
             dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc))) {
       if (!isDeadAddress(*LowPC, DIE.getDwarfUnit()->getVersion(),
                          Opts.Tombstone,
-                         DIE.getDwarfUnit()->getAddressByteSize())) {
-        Info.AddrAdjust = 0;
-        Info.InDebugMap = true;
-        return true;
-      }
+                         DIE.getDwarfUnit()->getAddressByteSize()))
+        // Relocation value for the linked binary is 0.
+        return 0;
     }
 
-    return false;
+    return std::nullopt;
   }
 
-  bool isLiveVariable(const DWARFDie &DIE,
-                      CompileUnit::DIEInfo &Info) override {
+  std::optional<int64_t>
+  getVariableRelocAdjustment(const DWARFDie &DIE) override {
     assert((DIE.getTag() == dwarf::DW_TAG_variable ||
             DIE.getTag() == dwarf::DW_TAG_constant) &&
            "Wrong type of input die");
@@ -114,11 +112,9 @@ public:
                                      DIE.getDwarfUnit()->getAddressByteSize()));
             });
 
-        if (HasLiveAddresses) {
-          Info.AddrAdjust = 0;
-          Info.InDebugMap = true;
-          return true;
-        }
+        if (HasLiveAddresses)
+          // Relocation value for the linked binary is 0.
+          return 0;
       }
     } else {
       // FIXME: missing DW_AT_location is OK here, but other errors should be
@@ -126,7 +122,7 @@ public:
       consumeError(Loc.takeError());
     }
 
-    return false;
+    return std::nullopt;
   }
 
   bool applyValidRelocs(MutableArrayRef<char>, uint64_t, bool) override {
@@ -137,30 +133,6 @@ public:
   RangesTy &getValidAddressRanges() override { return DWARFAddressRanges; };
 
   void clear() override { DWARFAddressRanges.clear(); }
-
-  llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t StartOffset,
-                                               uint64_t EndOffset) override {
-    // No relocations in linked binary. Return just address value.
-
-    const char *AddrPtr =
-        Context.getDWARFObj().getAddrSection().Data.data() + StartOffset;
-    support::endianness Endianess =
-        Context.getDWARFObj().isLittleEndian() ? support::little : support::big;
-
-    assert(EndOffset > StartOffset);
-    switch (EndOffset - StartOffset) {
-    case 1:
-      return *AddrPtr;
-    case 2:
-      return support::endian::read16(AddrPtr, Endianess);
-    case 4:
-      return support::endian::read32(AddrPtr, Endianess);
-    case 8:
-      return support::endian::read64(AddrPtr, Endianess);
-    }
-
-    llvm_unreachable("relocateIndexedAddr unhandled case!");
-  }
 
 protected:
   // returns true if specified address range is inside address ranges
@@ -231,7 +203,6 @@ private:
   RangesTy DWARFAddressRanges;
   AddressRanges TextAddressRanges;
   const Options &Opts;
-  DWARFContext &Context;
 };
 
 static bool knownByDWARFUtil(StringRef SecName) {

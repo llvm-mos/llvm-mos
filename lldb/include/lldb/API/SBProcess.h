@@ -36,7 +36,9 @@ public:
 
   const lldb::SBProcess &operator=(const lldb::SBProcess &rhs);
 
+#ifndef SWIG
   SBProcess(const lldb::ProcessSP &process_sp);
+#endif
 
   ~SBProcess();
 
@@ -65,11 +67,13 @@ public:
 
   size_t GetAsyncProfileData(char *dst, size_t dst_len) const;
 
+#ifndef SWIG
   void ReportEventState(const lldb::SBEvent &event, FILE *out) const;
+#endif
 
   void ReportEventState(const lldb::SBEvent &event, SBFile file) const;
 
-  void ReportEventState(const lldb::SBEvent &event, FileSP file) const;
+  void ReportEventState(const lldb::SBEvent &event, FileSP BORROWED) const;
 
   void AppendEventStateReport(const lldb::SBEvent &event,
                               lldb::SBCommandReturnObject &result);
@@ -182,12 +186,20 @@ public:
   ///   The stop event corresponding to stop ID.
   lldb::SBEvent GetStopEventForStopID(uint32_t stop_id);
 
+  /// If the process is a scripted process, changes its state to the new state.
+  /// No-op otherwise.
+  ///
+  /// \param [in] new_state
+  ///   The new state that the scripted process should be set to.
+  ///
+  void ForceScriptedState(StateType new_state);
+
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
                      lldb::SBError &error);
 
-  size_t ReadCStringFromMemory(addr_t addr, void *buf, size_t size,
+  size_t ReadCStringFromMemory(addr_t addr, void *char_buf, size_t size,
                                lldb::SBError &error);
 
   uint64_t ReadUnsignedFromMemory(addr_t addr, uint32_t byte_size,

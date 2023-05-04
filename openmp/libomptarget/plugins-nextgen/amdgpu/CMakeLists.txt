@@ -82,15 +82,19 @@ add_llvm_library(omptarget.rtl.amdgpu.nextgen SHARED
   PRIVATE
   elf_common
   MemoryManager
+  OMPT
   PluginInterface
   ${LIBOMPTARGET_DEP_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
   ${LDFLAGS_UNDEFINED}
 
   NO_INSTALL_RPATH
 )
-add_dependencies(omptarget.rtl.amdgpu.nextgen omptarget.devicertl.amdgpu)
+
+if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  target_link_libraries(omptarget.rtl.amdgpu.nextgen PRIVATE
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
+endif()
 
 target_include_directories(
   omptarget.rtl.amdgpu.nextgen

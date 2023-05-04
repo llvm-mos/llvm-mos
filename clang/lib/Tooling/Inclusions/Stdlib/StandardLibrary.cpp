@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -61,7 +62,9 @@ static int countSymbols(Lang Language) {
 #include "CSymbolMap.inc"
     break;
   case Lang::CXX:
+#include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
+#include "StdTsSymbolMap.inc"
     break;
   }
 #undef SYMBOL
@@ -118,7 +121,8 @@ static int initialize(Lang Language) {
     }
     Mapping->SymbolNames[SymIndex] = {
         QName.data(), NSLen, static_cast<unsigned int>(QName.size() - NSLen)};
-    Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
+    if (!HeaderName.empty())
+       Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
 
     NSSymbolMap &NSSymbols = AddNS(QName.take_front(NSLen));
     NSSymbols.try_emplace(QName.drop_front(NSLen), SymIndex);
@@ -129,7 +133,9 @@ static int initialize(Lang Language) {
 #include "CSymbolMap.inc"
     break;
   case Lang::CXX:
+#include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
+#include "StdTsSymbolMap.inc"
     break;
   }
 #undef SYMBOL
@@ -201,8 +207,11 @@ std::optional<Symbol> Symbol::named(llvm::StringRef Scope, llvm::StringRef Name,
   }
   return std::nullopt;
 }
-Header Symbol::header() const {
-  return Header(getMappingPerLang(Language)->SymbolHeaderIDs[ID][0], Language);
+std::optional<Header> Symbol::header() const {
+  const auto& Headers = getMappingPerLang(Language)->SymbolHeaderIDs[ID];
+  if (Headers.empty())
+    return std::nullopt;
+  return Header(Headers.front(), Language);
 }
 llvm::SmallVector<Header> Symbol::headers() const {
   llvm::SmallVector<Header> Results;
@@ -213,21 +222,14 @@ llvm::SmallVector<Header> Symbol::headers() const {
 
 Recognizer::Recognizer() { ensureInitialized(); }
 
-NSSymbolMap *Recognizer::namespaceSymbols(const NamespaceDecl *D) {
-  if (!D)
-    return nullptr;
-  Lang Language;
-  if (D->getLangOpts().CPlusPlus)
-    Language = Lang::CXX;
-  else if (D->getLangOpts().C11)
-    Language = Lang::C;
-  else
-    return nullptr;
+NSSymbolMap *Recognizer::namespaceSymbols(const DeclContext *DC, Lang L) {
+  if (DC->isTranslationUnit()) // global scope.
+    return getMappingPerLang(L)->NamespaceSymbols->lookup("");
 
-  auto It = NamespaceCache.find(D);
+  auto It = NamespaceCache.find(DC);
   if (It != NamespaceCache.end())
     return It->second;
-
+  const NamespaceDecl *D = llvm::cast<NamespaceDecl>(DC);
   NSSymbolMap *Result = [&]() -> NSSymbolMap * {
     if (D->isAnonymousNamespace())
       return nullptr;
@@ -237,24 +239,35 @@ NSSymbolMap *Recognizer::namespaceSymbols(const NamespaceDecl *D) {
          ND = llvm::dyn_cast_or_null<NamespaceDecl>(ND->getParent()))
       if (!ND->isInlineNamespace() && !ND->isAnonymousNamespace())
         Scope = ND->getName().str() + "::" + Scope;
-    return getMappingPerLang(Language)->NamespaceSymbols->lookup(Scope);
+    return getMappingPerLang(L)->NamespaceSymbols->lookup(Scope);
   }();
   NamespaceCache.try_emplace(D, Result);
   return Result;
 }
 
 std::optional<Symbol> Recognizer::operator()(const Decl *D) {
+  Lang L;
+  if (D->getLangOpts().CPlusPlus) {
+    L = Lang::CXX;
+  } else if (D->getLangOpts().C11) {
+    L = Lang::C;
+  } else {
+    return std::nullopt; // not a supported language.
+  }
+
   // If D is std::vector::iterator, `vector` is the outer symbol to look up.
   // We keep all the candidate DCs as some may turn out to be anon enums.
   // Do this resolution lazily as we may turn out not to have a std namespace.
   llvm::SmallVector<const DeclContext *> IntermediateDecl;
   const DeclContext *DC = D->getDeclContext();
-  while (DC && !DC->isNamespace()) {
+  if (!DC) // The passed D is a TranslationUnitDecl!
+    return std::nullopt;
+  while (!DC->isNamespace() && !DC->isTranslationUnit()) {
     if (NamedDecl::classofKind(DC->getDeclKind()))
       IntermediateDecl.push_back(DC);
     DC = DC->getParent();
   }
-  NSSymbolMap *Symbols = namespaceSymbols(cast_or_null<NamespaceDecl>(DC));
+  NSSymbolMap *Symbols = namespaceSymbols(DC, L);
   if (!Symbols)
     return std::nullopt;
 
@@ -277,7 +290,7 @@ std::optional<Symbol> Recognizer::operator()(const Decl *D) {
   auto It = Symbols->find(Name);
   if (It == Symbols->end())
     return std::nullopt;
-  return Symbol(It->second, D->getLangOpts().CPlusPlus? Lang::CXX : Lang::C);
+  return Symbol(It->second, L);
 }
 
 } // namespace stdlib

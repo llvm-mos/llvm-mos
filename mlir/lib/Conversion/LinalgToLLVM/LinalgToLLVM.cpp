@@ -41,7 +41,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTLINALGTOLLVM
+#define GEN_PASS_DEF_CONVERTLINALGTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -78,7 +78,10 @@ void mlir::populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
 
 namespace {
 struct ConvertLinalgToLLVMPass
-    : public impl::ConvertLinalgToLLVMBase<ConvertLinalgToLLVMPass> {
+    : public impl::ConvertLinalgToLLVMPassBase<ConvertLinalgToLLVMPass> {
+
+  using Base::Base;
+
   void runOnOperation() override;
 };
 } // namespace
@@ -88,7 +91,9 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
 
   // Convert to the LLVM IR dialect using the converter defined above.
   RewritePatternSet patterns(&getContext());
-  LLVMTypeConverter converter(&getContext());
+  LowerToLLVMOptions options(&getContext());
+  options.useOpaquePointers = useOpaquePointers;
+  LLVMTypeConverter converter(&getContext(), options);
   populateLinalgToLLVMConversionPatterns(converter, patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
 
@@ -96,8 +101,4 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
   target.addLegalOp<ModuleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertLinalgToLLVMPass() {
-  return std::make_unique<ConvertLinalgToLLVMPass>();
 }

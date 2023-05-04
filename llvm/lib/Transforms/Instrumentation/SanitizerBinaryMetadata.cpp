@@ -32,19 +32,19 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <array>
 #include <cstdint>
+#include <memory>
 
 using namespace llvm;
 
@@ -90,6 +90,11 @@ cl::opt<bool> ClWeakCallbacks(
     "sanitizer-metadata-weak-callbacks",
     cl::desc("Declare callbacks extern weak, and only call if non-null."),
     cl::Hidden, cl::init(true));
+cl::opt<bool>
+    ClNoSanitize("sanitizer-metadata-nosanitize-attr",
+                 cl::desc("Mark some metadata features uncovered in functions "
+                          "with associated no_sanitize attributes."),
+                 cl::Hidden, cl::init(true));
 
 cl::opt<bool> ClEmitCovered("sanitizer-metadata-covered",
                             cl::desc("Emit PCs for covered functions."),
@@ -121,11 +126,15 @@ transformOptionsFromCl(SanitizerBinaryMetadataOptions &&Opts) {
 
 class SanitizerBinaryMetadata {
 public:
-  SanitizerBinaryMetadata(Module &M, SanitizerBinaryMetadataOptions Opts)
+  SanitizerBinaryMetadata(Module &M, SanitizerBinaryMetadataOptions Opts,
+                          std::unique_ptr<SpecialCaseList> Ignorelist)
       : Mod(M), Options(transformOptionsFromCl(std::move(Opts))),
-        TargetTriple(M.getTargetTriple()), IRB(M.getContext()) {
+        Ignorelist(std::move(Ignorelist)), TargetTriple(M.getTargetTriple()),
+        IRB(M.getContext()) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
+    assert(!(TargetTriple.isNVPTX() || TargetTriple.isAMDGPU()) &&
+           "Device targets are not supported");
   }
 
   bool run();
@@ -168,6 +177,7 @@ private:
 
   Module &Mod;
   const SanitizerBinaryMetadataOptions Options;
+  std::unique_ptr<SpecialCaseList> Ignorelist;
   const Triple TargetTriple;
   IRBuilder<> IRB;
   BumpPtrAllocator Alloc;
@@ -216,8 +226,8 @@ bool SanitizerBinaryMetadata::run() {
             (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
             /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
-    Constant *CtorData = nullptr;
-    Constant *DtorData = nullptr;
+    Constant *CtorComdatKey = nullptr;
+    Constant *DtorComdatKey = nullptr;
     if (TargetTriple.supportsCOMDAT()) {
       // Use COMDAT to deduplicate constructor/destructor function. The COMDAT
       // key needs to be a non-local linkage.
@@ -225,11 +235,14 @@ bool SanitizerBinaryMetadata::run() {
       Dtor->setComdat(Mod.getOrInsertComdat(Dtor->getName()));
       Ctor->setLinkage(GlobalValue::ExternalLinkage);
       Dtor->setLinkage(GlobalValue::ExternalLinkage);
-      CtorData = Ctor;
-      DtorData = Dtor;
+      // DSOs should _not_ call another constructor/destructor!
+      Ctor->setVisibility(GlobalValue::HiddenVisibility);
+      Dtor->setVisibility(GlobalValue::HiddenVisibility);
+      CtorComdatKey = Ctor;
+      DtorComdatKey = Dtor;
     }
-    appendToGlobalCtors(Mod, Ctor, kCtorDtorPriority, CtorData);
-    appendToGlobalDtors(Mod, Dtor, kCtorDtorPriority, DtorData);
+    appendToGlobalCtors(Mod, Ctor, kCtorDtorPriority, CtorComdatKey);
+    appendToGlobalDtors(Mod, Dtor, kCtorDtorPriority, DtorComdatKey);
   }
 
   return true;
@@ -239,6 +252,8 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
   if (F.empty())
     return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return;
+  if (Ignorelist && Ignorelist->inSection("metadata", "fun", F.getName()))
     return;
   // Don't touch available_externally functions, their actual body is elsewhere.
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
@@ -258,6 +273,8 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
         RequiresCovered |= runOn(I, MIS, MDB, FeatureMask);
   }
 
+  if (ClNoSanitize && F.hasFnAttribute("no_sanitize_thread"))
+    FeatureMask &= ~kSanitizerBinaryMetadataAtomics;
   if (F.isVarArg())
     FeatureMask &= ~kSanitizerBinaryMetadataUAR;
   if (FeatureMask & kSanitizerBinaryMetadataUAR) {
@@ -452,12 +469,20 @@ Twine SanitizerBinaryMetadata::getSectionEnd(StringRef SectionSuffix) {
 } // namespace
 
 SanitizerBinaryMetadataPass::SanitizerBinaryMetadataPass(
-    SanitizerBinaryMetadataOptions Opts)
-    : Options(std::move(Opts)) {}
+    SanitizerBinaryMetadataOptions Opts, ArrayRef<std::string> IgnorelistFiles)
+    : Options(std::move(Opts)), IgnorelistFiles(std::move(IgnorelistFiles)) {}
 
 PreservedAnalyses
 SanitizerBinaryMetadataPass::run(Module &M, AnalysisManager<Module> &AM) {
-  SanitizerBinaryMetadata Pass(M, Options);
+  std::unique_ptr<SpecialCaseList> Ignorelist;
+  if (!IgnorelistFiles.empty()) {
+    Ignorelist = SpecialCaseList::createOrDie(IgnorelistFiles,
+                                              *vfs::getRealFileSystem());
+    if (Ignorelist->inSection("metadata", "src", M.getSourceFileName()))
+      return PreservedAnalyses::all();
+  }
+
+  SanitizerBinaryMetadata Pass(M, Options, std::move(Ignorelist));
   if (Pass.run())
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

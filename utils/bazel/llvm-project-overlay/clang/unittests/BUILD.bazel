@@ -29,6 +29,7 @@ cc_test(
         "//clang:tooling",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingAnnotations",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
@@ -186,6 +187,7 @@ cc_test(
         "//clang:sema",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -203,6 +205,7 @@ cc_test(
         allow_empty = False,
     ),
     copts = ["$(STACK_FRAME_UNLIMITED)"],
+    features = ["-layering_check"],  # #include "../../lib/Format/TokenAnalyzer.h"
     shard_count = 20,
     deps = [
         "//clang:basic",
@@ -235,6 +238,7 @@ cc_test(
         "//clang:sema",
         "//clang:serialization",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -255,6 +259,7 @@ cc_test(
     deps = [
         "//clang:ast",
         "//clang:basic",
+        "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
         "//clang:sema",
@@ -386,10 +391,13 @@ cc_test(
     ),
     deps = [
         ":static_analyzer_test_headers",
+        "//clang:analysis",
+        "//clang:ast",
         "//clang:basic",
         "//clang:frontend",
         "//clang:static_analyzer_core",
         "//clang:static_analyzer_frontend",
+        "//clang:testing",
         "//clang:tooling",
         "//llvm:Support",
         "//llvm:config",
@@ -413,6 +421,7 @@ cc_test(
         "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
+        "//clang:driver",
         "//clang:format",
         "//clang:frontend",
         "//clang:lex",
@@ -424,7 +433,9 @@ cc_test(
         "//clang:tooling_inclusions",
         "//clang:tooling_refactoring",
         "//clang:transformer",
+        "//llvm:MC",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingAnnotations",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
@@ -473,6 +484,7 @@ cc_test(
         "//clang:tooling",
         "//clang:tooling_syntax",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -519,7 +531,7 @@ cc_test(
         "libclang/TestUtils.h",
     ],
     args = select({
-        "@bazel_tools//src/conditions:windows": [
+        "@platforms//os:windows": [
             # Need to disable the VFS tests that don't use Windows friendly
             # paths. These are also disabled on Windows in the CMake build.
             "--gtest_filter=-*VirtualFileOverlay*",

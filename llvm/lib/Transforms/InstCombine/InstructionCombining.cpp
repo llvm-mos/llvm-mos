@@ -33,8 +33,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
-#include "llvm-c/Initialization.h"
-#include "llvm-c/Transforms/InstCombine.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -78,7 +76,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
@@ -129,7 +126,6 @@ DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
 
 // FIXME: these limits eventually should be as low as 2.
-static constexpr unsigned InstCombineDefaultMaxIterations = 1000;
 #ifndef NDEBUG
 static constexpr unsigned InstCombineDefaultInfiniteLoopThreshold = 100;
 #else
@@ -143,11 +139,6 @@ EnableCodeSinking("instcombine-code-sinking", cl::desc("Enable code sinking"),
 static cl::opt<unsigned> MaxSinkNumUsers(
     "instcombine-max-sink-users", cl::init(32),
     cl::desc("Maximum number of undroppable users for instruction sinking"));
-
-static cl::opt<unsigned> LimitMaxIterations(
-    "instcombine-max-iterations",
-    cl::desc("Limit the maximum number of instruction combining iterations"),
-    cl::init(InstCombineDefaultMaxIterations));
 
 static cl::opt<unsigned> InfiniteLoopDetectionThreshold(
     "instcombine-infinite-loop-threshold",
@@ -201,6 +192,10 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
         SimplifyAndSetOp);
   }
   return std::nullopt;
+}
+
+bool InstCombiner::isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
+  return TTI.isValidAddrSpaceCast(FromAS, ToAS);
 }
 
 Value *InstCombinerImpl::EmitGEPOffset(User *GEP) {
@@ -1033,63 +1028,39 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   return SelectInst::Create(X, TVal, FVal);
 }
 
-static Constant *constantFoldOperationIntoSelectOperand(
-    Instruction &I, SelectInst *SI, Value *SO) {
-  auto *ConstSO = dyn_cast<Constant>(SO);
-  if (!ConstSO)
-    return nullptr;
-
+static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
+                                                        SelectInst *SI,
+                                                        bool IsTrueArm) {
   SmallVector<Constant *> ConstOps;
   for (Value *Op : I.operands()) {
-    if (Op == SI)
-      ConstOps.push_back(ConstSO);
-    else if (auto *C = dyn_cast<Constant>(Op))
-      ConstOps.push_back(C);
-    else
-      llvm_unreachable("Operands should be select or constant");
+    CmpInst::Predicate Pred;
+    Constant *C = nullptr;
+    if (Op == SI) {
+      C = dyn_cast<Constant>(IsTrueArm ? SI->getTrueValue()
+                                       : SI->getFalseValue());
+    } else if (match(SI->getCondition(),
+                     m_ICmp(Pred, m_Specific(Op), m_Constant(C))) &&
+               Pred == (IsTrueArm ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+               isGuaranteedNotToBeUndefOrPoison(C)) {
+      // Pass
+    } else {
+      C = dyn_cast<Constant>(Op);
+    }
+    if (C == nullptr)
+      return nullptr;
+
+    ConstOps.push_back(C);
   }
+
   return ConstantFoldInstOperands(&I, ConstOps, I.getModule()->getDataLayout());
 }
 
-static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
-                                             InstCombiner::BuilderTy &Builder) {
-  if (auto *Cast = dyn_cast<CastInst>(&I))
-    return Builder.CreateCast(Cast->getOpcode(), SO, I.getType());
-
-  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-    assert(canConstantFoldCallTo(II, cast<Function>(II->getCalledOperand())) &&
-           "Expected constant-foldable intrinsic");
-    Intrinsic::ID IID = II->getIntrinsicID();
-    if (II->arg_size() == 1)
-      return Builder.CreateUnaryIntrinsic(IID, SO);
-
-    // This works for real binary ops like min/max (where we always expect the
-    // constant operand to be canonicalized as op1) and unary ops with a bonus
-    // constant argument like ctlz/cttz.
-    // TODO: Handle non-commutative binary intrinsics as below for binops.
-    assert(II->arg_size() == 2 && "Expected binary intrinsic");
-    assert(isa<Constant>(II->getArgOperand(1)) && "Expected constant operand");
-    return Builder.CreateBinaryIntrinsic(IID, SO, II->getArgOperand(1));
-  }
-
-  if (auto *EI = dyn_cast<ExtractElementInst>(&I))
-    return Builder.CreateExtractElement(SO, EI->getIndexOperand());
-
-  assert(I.isBinaryOp() && "Unexpected opcode for select folding");
-
-  // Figure out if the constant is the left or the right argument.
-  bool ConstIsRHS = isa<Constant>(I.getOperand(1));
-  Constant *ConstOperand = cast<Constant>(I.getOperand(ConstIsRHS));
-
-  Value *Op0 = SO, *Op1 = ConstOperand;
-  if (!ConstIsRHS)
-    std::swap(Op0, Op1);
-
-  Value *NewBO = Builder.CreateBinOp(cast<BinaryOperator>(&I)->getOpcode(), Op0,
-                                     Op1, SO->getName() + ".op");
-  if (auto *NewBOI = dyn_cast<Instruction>(NewBO))
-    NewBOI->copyIRFlags(&I);
-  return NewBO;
+static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
+                                             Value *NewOp, InstCombiner &IC) {
+  Instruction *Clone = I.clone();
+  Clone->replaceUsesOfWith(SI, NewOp);
+  IC.InsertNewInstBefore(Clone, *SI);
+  return Clone;
 }
 
 Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
@@ -1122,56 +1093,17 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
       return nullptr;
   }
 
-  // Test if a CmpInst instruction is used exclusively by a select as
-  // part of a minimum or maximum operation. If so, refrain from doing
-  // any other folding. This helps out other analyses which understand
-  // non-obfuscated minimum and maximum idioms, such as ScalarEvolution
-  // and CodeGen. And in this case, at least one of the comparison
-  // operands has at least one user besides the compare (the select),
-  // which would often largely negate the benefit of folding anyway.
-  if (auto *CI = dyn_cast<CmpInst>(SI->getCondition())) {
-    if (CI->hasOneUse()) {
-      Value *Op0 = CI->getOperand(0), *Op1 = CI->getOperand(1);
-
-      // FIXME: This is a hack to avoid infinite looping with min/max patterns.
-      //        We have to ensure that vector constants that only differ with
-      //        undef elements are treated as equivalent.
-      auto areLooselyEqual = [](Value *A, Value *B) {
-        if (A == B)
-          return true;
-
-        // Test for vector constants.
-        Constant *ConstA, *ConstB;
-        if (!match(A, m_Constant(ConstA)) || !match(B, m_Constant(ConstB)))
-          return false;
-
-        // TODO: Deal with FP constants?
-        if (!A->getType()->isIntOrIntVectorTy() || A->getType() != B->getType())
-          return false;
-
-        // Compare for equality including undefs as equal.
-        auto *Cmp = ConstantExpr::getCompare(ICmpInst::ICMP_EQ, ConstA, ConstB);
-        const APInt *C;
-        return match(Cmp, m_APIntAllowUndef(C)) && C->isOne();
-      };
-
-      if ((areLooselyEqual(TV, Op0) && areLooselyEqual(FV, Op1)) ||
-          (areLooselyEqual(FV, Op0) && areLooselyEqual(TV, Op1)))
-        return nullptr;
-    }
-  }
-
   // Make sure that one of the select arms constant folds successfully.
-  Value *NewTV = constantFoldOperationIntoSelectOperand(Op, SI, TV);
-  Value *NewFV = constantFoldOperationIntoSelectOperand(Op, SI, FV);
+  Value *NewTV = constantFoldOperationIntoSelectOperand(Op, SI, /*IsTrueArm*/ true);
+  Value *NewFV = constantFoldOperationIntoSelectOperand(Op, SI, /*IsTrueArm*/ false);
   if (!NewTV && !NewFV)
     return nullptr;
 
   // Create an instruction for the arm that did not fold.
   if (!NewTV)
-    NewTV = foldOperationIntoSelectOperand(Op, TV, Builder);
+    NewTV = foldOperationIntoSelectOperand(Op, SI, TV, *this);
   if (!NewFV)
-    NewFV = foldOperationIntoSelectOperand(Op, FV, Builder);
+    NewFV = foldOperationIntoSelectOperand(Op, SI, FV, *this);
   return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
@@ -1263,6 +1195,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   PHINode *NewPN = PHINode::Create(I.getType(), PN->getNumIncomingValues());
   InsertNewInstBefore(NewPN, *PN);
   NewPN->takeName(PN);
+  NewPN->setDebugLoc(PN->getDebugLoc());
 
   // If we are going to have to insert a new computation, do so right before the
   // predecessor's terminator.
@@ -1291,6 +1224,10 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     replaceInstUsesWith(*User, NewPN);
     eraseInstFromFunction(*User);
   }
+
+  replaceAllDbgUsesWith(const_cast<PHINode &>(*PN),
+                        const_cast<PHINode &>(*NewPN),
+                        const_cast<PHINode &>(*PN), DT);
   return replaceInstUsesWith(I, NewPN);
 }
 
@@ -1301,12 +1238,57 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
   auto *Phi0 = dyn_cast<PHINode>(BO.getOperand(0));
   auto *Phi1 = dyn_cast<PHINode>(BO.getOperand(1));
   if (!Phi0 || !Phi1 || !Phi0->hasOneUse() || !Phi1->hasOneUse() ||
-      Phi0->getNumOperands() != 2 || Phi1->getNumOperands() != 2)
+      Phi0->getNumOperands() != Phi1->getNumOperands())
     return nullptr;
 
   // TODO: Remove the restriction for binop being in the same block as the phis.
   if (BO.getParent() != Phi0->getParent() ||
       BO.getParent() != Phi1->getParent())
+    return nullptr;
+
+  // Fold if there is at least one specific constant value in phi0 or phi1's
+  // incoming values that comes from the same block and this specific constant
+  // value can be used to do optimization for specific binary operator.
+  // For example:
+  // %phi0 = phi i32 [0, %bb0], [%i, %bb1]
+  // %phi1 = phi i32 [%j, %bb0], [0, %bb1]
+  // %add = add i32 %phi0, %phi1
+  // ==>
+  // %add = phi i32 [%j, %bb0], [%i, %bb1]
+  Constant *C = ConstantExpr::getBinOpIdentity(BO.getOpcode(), BO.getType(),
+                                               /*AllowRHSConstant*/ false);
+  if (C) {
+    SmallVector<Value *, 4> NewIncomingValues;
+    auto CanFoldIncomingValuePair = [&](std::tuple<Use &, Use &> T) {
+      auto &Phi0Use = std::get<0>(T);
+      auto &Phi1Use = std::get<1>(T);
+      if (Phi0->getIncomingBlock(Phi0Use) != Phi1->getIncomingBlock(Phi1Use))
+        return false;
+      Value *Phi0UseV = Phi0Use.get();
+      Value *Phi1UseV = Phi1Use.get();
+      if (Phi0UseV == C)
+        NewIncomingValues.push_back(Phi1UseV);
+      else if (Phi1UseV == C)
+        NewIncomingValues.push_back(Phi0UseV);
+      else
+        return false;
+      return true;
+    };
+
+    if (all_of(zip(Phi0->operands(), Phi1->operands()),
+               CanFoldIncomingValuePair)) {
+      PHINode *NewPhi =
+          PHINode::Create(Phi0->getType(), Phi0->getNumOperands());
+      assert(NewIncomingValues.size() == Phi0->getNumOperands() &&
+             "The number of collected incoming values should equal the number "
+             "of the original PHINode operands!");
+      for (unsigned I = 0; I < Phi0->getNumOperands(); I++)
+        NewPhi->addIncoming(NewIncomingValues[I], Phi0->getIncomingBlock(I));
+      return NewPhi;
+    }
+  }
+
+  if (Phi0->getNumOperands() != 2 || Phi1->getNumOperands() != 2)
     return nullptr;
 
   // Match a pair of incoming constants for one of the predecessor blocks.
@@ -1372,28 +1354,6 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
       return NewPhi;
   }
   return nullptr;
-}
-
-/// Given a pointer type and a constant offset, determine whether or not there
-/// is a sequence of GEP indices into the pointed type that will land us at the
-/// specified offset. If so, fill them into NewIndices and return the resultant
-/// element type, otherwise return null.
-static Type *findElementAtOffset(PointerType *PtrTy, int64_t IntOffset,
-                                 SmallVectorImpl<Value *> &NewIndices,
-                                 const DataLayout &DL) {
-  // Only used by visitGEPOfBitcast(), which is skipped for opaque pointers.
-  Type *Ty = PtrTy->getNonOpaquePointerElementType();
-  if (!Ty->isSized())
-    return nullptr;
-
-  APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), IntOffset);
-  SmallVector<APInt> Indices = DL.getGEPIndicesForOffset(Ty, Offset);
-  if (!Offset.isZero())
-    return nullptr;
-
-  for (const APInt &Index : Indices)
-    NewIndices.push_back(ConstantInt::get(PtrTy->getContext(), Index));
-  return Ty;
 }
 
 static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
@@ -1748,9 +1708,9 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     // TODO: Allow arbitrary shuffles by shuffling after binop?
     //       That might be legal, but we have to deal with poison.
     if (LShuf->isSelect() &&
-        !is_contained(LShuf->getShuffleMask(), UndefMaskElem) &&
+        !is_contained(LShuf->getShuffleMask(), PoisonMaskElem) &&
         RShuf->isSelect() &&
-        !is_contained(RShuf->getShuffleMask(), UndefMaskElem)) {
+        !is_contained(RShuf->getShuffleMask(), PoisonMaskElem)) {
       // Example:
       // LHS = shuffle V1, V2, <0, 5, 6, 3>
       // RHS = shuffle V2, V1, <0, 5, 6, 3>
@@ -1991,50 +1951,9 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
     return nullptr;
 
-  if (Src->getResultElementType() == GEP.getSourceElementType() &&
-      Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
-      Src->hasOneUse()) {
-    Value *GO1 = GEP.getOperand(1);
-    Value *SO1 = Src->getOperand(1);
-
-    if (LI) {
-      // Try to reassociate loop invariant GEP chains to enable LICM.
-      if (Loop *L = LI->getLoopFor(GEP.getParent())) {
-        // Reassociate the two GEPs if SO1 is variant in the loop and GO1 is
-        // invariant: this breaks the dependence between GEPs and allows LICM
-        // to hoist the invariant part out of the loop.
-        if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
-          // The swapped GEPs are inbounds if both original GEPs are inbounds
-          // and the sign of the offsets is the same. For simplicity, only
-          // handle both offsets being non-negative.
-          bool IsInBounds = Src->isInBounds() && GEP.isInBounds() &&
-                            isKnownNonNegative(SO1, DL, 0, &AC, &GEP, &DT) &&
-                            isKnownNonNegative(GO1, DL, 0, &AC, &GEP, &DT);
-          // Put NewSrc at same location as %src.
-          Builder.SetInsertPoint(cast<Instruction>(Src));
-          Value *NewSrc = Builder.CreateGEP(GEP.getSourceElementType(),
-                                            Src->getPointerOperand(), GO1,
-                                            Src->getName(), IsInBounds);
-          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
-              GEP.getSourceElementType(), NewSrc, {SO1});
-          NewGEP->setIsInBounds(IsInBounds);
-          return NewGEP;
-        }
-      }
-    }
-  }
-
-  // Note that if our source is a gep chain itself then we wait for that
-  // chain to be resolved before we perform this transformation.  This
-  // avoids us creating a TON of code in some cases.
-  if (auto *SrcGEP = dyn_cast<GEPOperator>(Src->getOperand(0)))
-    if (SrcGEP->getNumOperands() == 2 && shouldMergeGEPs(*Src, *SrcGEP))
-      return nullptr;   // Wait until our source is folded to completion.
-
   // For constant GEPs, use a more general offset-based folding approach.
-  // Only do this for opaque pointers, as the result element type may change.
   Type *PtrTy = Src->getType()->getScalarType();
-  if (PtrTy->isOpaquePointerTy() && GEP.hasAllConstantIndices() &&
+  if (GEP.hasAllConstantIndices() &&
       (Src->hasOneUse() || Src->hasAllConstantIndices())) {
     // Split Src into a variable part and a constant suffix.
     gep_type_iterator GTI = gep_type_begin(*Src);
@@ -2077,13 +1996,11 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       // If both GEP are constant-indexed, and cannot be merged in either way,
       // convert them to a GEP of i8.
       if (Src->hasAllConstantIndices())
-        return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
-            ? GetElementPtrInst::CreateInBounds(
-                Builder.getInt8Ty(), Src->getOperand(0),
-                Builder.getInt(OffsetOld), GEP.getName())
-            : GetElementPtrInst::Create(
-                Builder.getInt8Ty(), Src->getOperand(0),
-                Builder.getInt(OffsetOld), GEP.getName());
+        return replaceInstUsesWith(
+            GEP, Builder.CreateGEP(
+                     Builder.getInt8Ty(), Src->getOperand(0),
+                     Builder.getInt(OffsetOld), "",
+                     isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))));
       return nullptr;
     }
 
@@ -2100,13 +2017,9 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       IsInBounds &= Idx.isNonNegative() == ConstIndices[0].isNonNegative();
     }
 
-    return IsInBounds
-               ? GetElementPtrInst::CreateInBounds(Src->getSourceElementType(),
-                                                   Src->getOperand(0), Indices,
-                                                   GEP.getName())
-               : GetElementPtrInst::Create(Src->getSourceElementType(),
-                                           Src->getOperand(0), Indices,
-                                           GEP.getName());
+    return replaceInstUsesWith(
+        GEP, Builder.CreateGEP(Src->getSourceElementType(), Src->getOperand(0),
+                               Indices, "", IsInBounds));
   }
 
   if (Src->getResultElementType() != GEP.getSourceElementType())
@@ -2160,118 +2073,10 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   }
 
   if (!Indices.empty())
-    return isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))
-               ? GetElementPtrInst::CreateInBounds(
-                     Src->getSourceElementType(), Src->getOperand(0), Indices,
-                     GEP.getName())
-               : GetElementPtrInst::Create(Src->getSourceElementType(),
-                                           Src->getOperand(0), Indices,
-                                           GEP.getName());
-
-  return nullptr;
-}
-
-// Note that we may have also stripped an address space cast in between.
-Instruction *InstCombinerImpl::visitGEPOfBitcast(BitCastInst *BCI,
-                                                 GetElementPtrInst &GEP) {
-  // With opaque pointers, there is no pointer element type we can use to
-  // adjust the GEP type.
-  PointerType *SrcType = cast<PointerType>(BCI->getSrcTy());
-  if (SrcType->isOpaque())
-    return nullptr;
-
-  Type *GEPEltType = GEP.getSourceElementType();
-  Type *SrcEltType = SrcType->getNonOpaquePointerElementType();
-  Value *SrcOp = BCI->getOperand(0);
-
-  // GEP directly using the source operand if this GEP is accessing an element
-  // of a bitcasted pointer to vector or array of the same dimensions:
-  // gep (bitcast <c x ty>* X to [c x ty]*), Y, Z --> gep X, Y, Z
-  // gep (bitcast [c x ty]* X to <c x ty>*), Y, Z --> gep X, Y, Z
-  auto areMatchingArrayAndVecTypes = [](Type *ArrTy, Type *VecTy,
-                                        const DataLayout &DL) {
-    auto *VecVTy = cast<FixedVectorType>(VecTy);
-    return ArrTy->getArrayElementType() == VecVTy->getElementType() &&
-           ArrTy->getArrayNumElements() == VecVTy->getNumElements() &&
-           DL.getTypeAllocSize(ArrTy) == DL.getTypeAllocSize(VecTy);
-  };
-  if (GEP.getNumOperands() == 3 &&
-      ((GEPEltType->isArrayTy() && isa<FixedVectorType>(SrcEltType) &&
-        areMatchingArrayAndVecTypes(GEPEltType, SrcEltType, DL)) ||
-       (isa<FixedVectorType>(GEPEltType) && SrcEltType->isArrayTy() &&
-        areMatchingArrayAndVecTypes(SrcEltType, GEPEltType, DL)))) {
-
-    // Create a new GEP here, as using `setOperand()` followed by
-    // `setSourceElementType()` won't actually update the type of the
-    // existing GEP Value. Causing issues if this Value is accessed when
-    // constructing an AddrSpaceCastInst
-    SmallVector<Value *, 8> Indices(GEP.indices());
-    Value *NGEP =
-        Builder.CreateGEP(SrcEltType, SrcOp, Indices, "", GEP.isInBounds());
-    NGEP->takeName(&GEP);
-
-    // Preserve GEP address space to satisfy users
-    if (NGEP->getType()->getPointerAddressSpace() != GEP.getAddressSpace())
-      return new AddrSpaceCastInst(NGEP, GEP.getType());
-
-    return replaceInstUsesWith(GEP, NGEP);
-  }
-
-  // See if we can simplify:
-  //   X = bitcast A* to B*
-  //   Y = gep X, <...constant indices...>
-  // into a gep of the original struct. This is important for SROA and alias
-  // analysis of unions. If "A" is also a bitcast, wait for A/X to be merged.
-  unsigned OffsetBits = DL.getIndexTypeSizeInBits(GEP.getType());
-  APInt Offset(OffsetBits, 0);
-
-  // If the bitcast argument is an allocation, The bitcast is for convertion
-  // to actual type of allocation. Removing such bitcasts, results in having
-  // GEPs with i8* base and pure byte offsets. That means GEP is not aware of
-  // struct or array hierarchy.
-  // By avoiding such GEPs, phi translation and MemoryDependencyAnalysis have
-  // a better chance to succeed.
-  if (!isa<BitCastInst>(SrcOp) && GEP.accumulateConstantOffset(DL, Offset) &&
-      !isAllocationFn(SrcOp, &TLI)) {
-    // If this GEP instruction doesn't move the pointer, just replace the GEP
-    // with a bitcast of the real input to the dest type.
-    if (!Offset) {
-      // If the bitcast is of an allocation, and the allocation will be
-      // converted to match the type of the cast, don't touch this.
-      if (isa<AllocaInst>(SrcOp)) {
-        // See if the bitcast simplifies, if so, don't nuke this GEP yet.
-        if (Instruction *I = visitBitCast(*BCI)) {
-          if (I != BCI) {
-            I->takeName(BCI);
-            I->insertInto(BCI->getParent(), BCI->getIterator());
-            replaceInstUsesWith(*BCI, I);
-          }
-          return &GEP;
-        }
-      }
-
-      if (SrcType->getPointerAddressSpace() != GEP.getAddressSpace())
-        return new AddrSpaceCastInst(SrcOp, GEP.getType());
-      return new BitCastInst(SrcOp, GEP.getType());
-    }
-
-    // Otherwise, if the offset is non-zero, we need to find out if there is a
-    // field at Offset in 'A's type.  If so, we can pull the cast through the
-    // GEP.
-    SmallVector<Value *, 8> NewIndices;
-    if (findElementAtOffset(SrcType, Offset.getSExtValue(), NewIndices, DL)) {
-      Value *NGEP = Builder.CreateGEP(SrcEltType, SrcOp, NewIndices, "",
-                                      GEP.isInBounds());
-
-      if (NGEP->getType() == GEP.getType())
-        return replaceInstUsesWith(GEP, NGEP);
-      NGEP->takeName(&GEP);
-
-      if (NGEP->getType()->getPointerAddressSpace() != GEP.getAddressSpace())
-        return new AddrSpaceCastInst(NGEP, GEP.getType());
-      return new BitCastInst(NGEP, GEP.getType());
-    }
-  }
+    return replaceInstUsesWith(
+        GEP, Builder.CreateGEP(
+                 Src->getSourceElementType(), Src->getOperand(0), Indices, "",
+                 isMergedGEPInBounds(*Src, *cast<GEPOperator>(&GEP))));
 
   return nullptr;
 }
@@ -2496,192 +2301,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // We do not handle pointer-vector geps here.
   if (GEPType->isVectorTy())
     return nullptr;
-
-  // Handle gep(bitcast x) and gep(gep x, 0, 0, 0).
-  Value *StrippedPtr = PtrOp->stripPointerCasts();
-  PointerType *StrippedPtrTy = cast<PointerType>(StrippedPtr->getType());
-
-  // TODO: The basic approach of these folds is not compatible with opaque
-  // pointers, because we can't use bitcasts as a hint for a desirable GEP
-  // type. Instead, we should perform canonicalization directly on the GEP
-  // type. For now, skip these.
-  if (StrippedPtr != PtrOp && !StrippedPtrTy->isOpaque()) {
-    bool HasZeroPointerIndex = false;
-    Type *StrippedPtrEltTy = StrippedPtrTy->getNonOpaquePointerElementType();
-
-    if (auto *C = dyn_cast<ConstantInt>(GEP.getOperand(1)))
-      HasZeroPointerIndex = C->isZero();
-
-    // Transform: GEP (bitcast [10 x i8]* X to [0 x i8]*), i32 0, ...
-    // into     : GEP [10 x i8]* X, i32 0, ...
-    //
-    // Likewise, transform: GEP (bitcast i8* X to [0 x i8]*), i32 0, ...
-    //           into     : GEP i8* X, ...
-    //
-    // This occurs when the program declares an array extern like "int X[];"
-    if (HasZeroPointerIndex) {
-      if (auto *CATy = dyn_cast<ArrayType>(GEPEltType)) {
-        // GEP (bitcast i8* X to [0 x i8]*), i32 0, ... ?
-        if (CATy->getElementType() == StrippedPtrEltTy) {
-          // -> GEP i8* X, ...
-          SmallVector<Value *, 8> Idx(drop_begin(GEP.indices()));
-          GetElementPtrInst *Res = GetElementPtrInst::Create(
-              StrippedPtrEltTy, StrippedPtr, Idx, GEP.getName());
-          Res->setIsInBounds(GEP.isInBounds());
-          if (StrippedPtrTy->getAddressSpace() == GEP.getAddressSpace())
-            return Res;
-          // Insert Res, and create an addrspacecast.
-          // e.g.,
-          // GEP (addrspacecast i8 addrspace(1)* X to [0 x i8]*), i32 0, ...
-          // ->
-          // %0 = GEP i8 addrspace(1)* X, ...
-          // addrspacecast i8 addrspace(1)* %0 to i8*
-          return new AddrSpaceCastInst(Builder.Insert(Res), GEPType);
-        }
-
-        if (auto *XATy = dyn_cast<ArrayType>(StrippedPtrEltTy)) {
-          // GEP (bitcast [10 x i8]* X to [0 x i8]*), i32 0, ... ?
-          if (CATy->getElementType() == XATy->getElementType()) {
-            // -> GEP [10 x i8]* X, i32 0, ...
-            // At this point, we know that the cast source type is a pointer
-            // to an array of the same type as the destination pointer
-            // array.  Because the array type is never stepped over (there
-            // is a leading zero) we can fold the cast into this GEP.
-            if (StrippedPtrTy->getAddressSpace() == GEP.getAddressSpace()) {
-              GEP.setSourceElementType(XATy);
-              return replaceOperand(GEP, 0, StrippedPtr);
-            }
-            // Cannot replace the base pointer directly because StrippedPtr's
-            // address space is different. Instead, create a new GEP followed by
-            // an addrspacecast.
-            // e.g.,
-            // GEP (addrspacecast [10 x i8] addrspace(1)* X to [0 x i8]*),
-            //   i32 0, ...
-            // ->
-            // %0 = GEP [10 x i8] addrspace(1)* X, ...
-            // addrspacecast i8 addrspace(1)* %0 to i8*
-            SmallVector<Value *, 8> Idx(GEP.indices());
-            Value *NewGEP =
-                Builder.CreateGEP(StrippedPtrEltTy, StrippedPtr, Idx,
-                                  GEP.getName(), GEP.isInBounds());
-            return new AddrSpaceCastInst(NewGEP, GEPType);
-          }
-        }
-      }
-    } else if (GEP.getNumOperands() == 2 && !IsGEPSrcEleScalable) {
-      // Skip if GEP source element type is scalable. The type alloc size is
-      // unknown at compile-time.
-      // Transform things like: %t = getelementptr i32*
-      // bitcast ([2 x i32]* %str to i32*), i32 %V into:  %t1 = getelementptr [2
-      // x i32]* %str, i32 0, i32 %V; bitcast
-      if (StrippedPtrEltTy->isArrayTy() &&
-          DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType()) ==
-              DL.getTypeAllocSize(GEPEltType)) {
-        Type *IdxType = DL.getIndexType(GEPType);
-        Value *Idx[2] = {Constant::getNullValue(IdxType), GEP.getOperand(1)};
-        Value *NewGEP = Builder.CreateGEP(StrippedPtrEltTy, StrippedPtr, Idx,
-                                          GEP.getName(), GEP.isInBounds());
-
-        // V and GEP are both pointer types --> BitCast
-        return CastInst::CreatePointerBitCastOrAddrSpaceCast(NewGEP, GEPType);
-      }
-
-      // Transform things like:
-      // %V = mul i64 %N, 4
-      // %t = getelementptr i8* bitcast (i32* %arr to i8*), i32 %V
-      // into:  %t1 = getelementptr i32* %arr, i32 %N; bitcast
-      if (GEPEltType->isSized() && StrippedPtrEltTy->isSized()) {
-        // Check that changing the type amounts to dividing the index by a scale
-        // factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
-        uint64_t SrcSize =
-            DL.getTypeAllocSize(StrippedPtrEltTy).getFixedValue();
-        if (ResSize && SrcSize % ResSize == 0) {
-          Value *Idx = GEP.getOperand(1);
-          unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
-          uint64_t Scale = SrcSize / ResSize;
-
-          // Earlier transforms ensure that the index has the right type
-          // according to Data Layout, which considerably simplifies the
-          // logic by eliminating implicit casts.
-          assert(Idx->getType() == DL.getIndexType(GEPType) &&
-                 "Index type does not match the Data Layout preferences");
-
-          bool NSW;
-          if (Value *NewIdx = Descale(Idx, APInt(BitWidth, Scale), NSW)) {
-            // Successfully decomposed Idx as NewIdx * Scale, form a new GEP.
-            // If the multiplication NewIdx * Scale may overflow then the new
-            // GEP may not be "inbounds".
-            Value *NewGEP =
-                Builder.CreateGEP(StrippedPtrEltTy, StrippedPtr, NewIdx,
-                                  GEP.getName(), GEP.isInBounds() && NSW);
-
-            // The NewGEP must be pointer typed, so must the old one -> BitCast
-            return CastInst::CreatePointerBitCastOrAddrSpaceCast(NewGEP,
-                                                                 GEPType);
-          }
-        }
-      }
-
-      // Similarly, transform things like:
-      // getelementptr i8* bitcast ([100 x double]* X to i8*), i32 %tmp
-      //   (where tmp = 8*tmp2) into:
-      // getelementptr [100 x double]* %arr, i32 0, i32 %tmp2; bitcast
-      if (GEPEltType->isSized() && StrippedPtrEltTy->isSized() &&
-          StrippedPtrEltTy->isArrayTy()) {
-        // Check that changing to the array element type amounts to dividing the
-        // index by a scale factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
-        uint64_t ArrayEltSize =
-            DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType())
-                .getFixedValue();
-        if (ResSize && ArrayEltSize % ResSize == 0) {
-          Value *Idx = GEP.getOperand(1);
-          unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
-          uint64_t Scale = ArrayEltSize / ResSize;
-
-          // Earlier transforms ensure that the index has the right type
-          // according to the Data Layout, which considerably simplifies
-          // the logic by eliminating implicit casts.
-          assert(Idx->getType() == DL.getIndexType(GEPType) &&
-                 "Index type does not match the Data Layout preferences");
-
-          bool NSW;
-          if (Value *NewIdx = Descale(Idx, APInt(BitWidth, Scale), NSW)) {
-            // Successfully decomposed Idx as NewIdx * Scale, form a new GEP.
-            // If the multiplication NewIdx * Scale may overflow then the new
-            // GEP may not be "inbounds".
-            Type *IndTy = DL.getIndexType(GEPType);
-            Value *Off[2] = {Constant::getNullValue(IndTy), NewIdx};
-
-            Value *NewGEP =
-                Builder.CreateGEP(StrippedPtrEltTy, StrippedPtr, Off,
-                                  GEP.getName(), GEP.isInBounds() && NSW);
-            // The NewGEP must be pointer typed, so must the old one -> BitCast
-            return CastInst::CreatePointerBitCastOrAddrSpaceCast(NewGEP,
-                                                                 GEPType);
-          }
-        }
-      }
-    }
-  }
-
-  // addrspacecast between types is canonicalized as a bitcast, then an
-  // addrspacecast. To take advantage of the below bitcast + struct GEP, look
-  // through the addrspacecast.
-  Value *ASCStrippedPtrOp = PtrOp;
-  if (auto *ASC = dyn_cast<AddrSpaceCastInst>(PtrOp)) {
-    //   X = bitcast A addrspace(1)* to B addrspace(1)*
-    //   Y = addrspacecast A addrspace(1)* to B addrspace(2)*
-    //   Z = gep Y, <...constant indices...>
-    // Into an addrspacecasted GEP of the struct.
-    if (auto *BC = dyn_cast<BitCastInst>(ASC->getOperand(0)))
-      ASCStrippedPtrOp = BC;
-  }
-
-  if (auto *BCI = dyn_cast<BitCastInst>(ASCStrippedPtrOp))
-    if (Instruction *I = visitGEPOfBitcast(BCI, GEP))
-      return I;
 
   if (!GEP.isInBounds()) {
     unsigned IdxWidth =
@@ -3243,10 +2862,10 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   // Compute the number of leading bits we can ignore.
   // TODO: A better way to determine this would use ComputeNumSignBits().
   for (const auto &C : SI.cases()) {
-    LeadingKnownZeros = std::min(
-        LeadingKnownZeros, C.getCaseValue()->getValue().countLeadingZeros());
-    LeadingKnownOnes = std::min(
-        LeadingKnownOnes, C.getCaseValue()->getValue().countLeadingOnes());
+    LeadingKnownZeros =
+        std::min(LeadingKnownZeros, C.getCaseValue()->getValue().countl_zero());
+    LeadingKnownOnes =
+        std::min(LeadingKnownOnes, C.getCaseValue()->getValue().countl_one());
   }
 
   unsigned NewWidth = Known.getBitWidth() - std::max(LeadingKnownZeros, LeadingKnownOnes);
@@ -3965,6 +3584,17 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   return Changed;
 }
 
+// Check if any direct or bitcast user of this value is a shuffle instruction.
+static bool isUsedWithinShuffleVector(Value *V) {
+  for (auto *U : V->users()) {
+    if (isa<ShuffleVectorInst>(U))
+      return true;
+    else if (match(U, m_BitCast(m_Specific(V))) && isUsedWithinShuffleVector(U))
+      return true;
+  }
+  return false;
+}
+
 Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   Value *Op0 = I.getOperand(0);
 
@@ -4014,8 +3644,14 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     return BestValue;
   };
 
-  if (match(Op0, m_Undef()))
+  if (match(Op0, m_Undef())) {
+    // Don't fold freeze(undef/poison) if it's used as a vector operand in
+    // a shuffle. This may improve codegen for shuffles that allow
+    // unspecified inputs.
+    if (isUsedWithinShuffleVector(&I))
+      return nullptr;
     return replaceInstUsesWith(I, getUndefReplacement(I.getType()));
+  }
 
   Constant *C;
   if (match(Op0, m_Constant(C)) && C->containsUndefOrPoisonElement()) {
@@ -4226,23 +3862,6 @@ bool InstCombinerImpl::run() {
 
     if (!DebugCounter::shouldExecute(VisitCounter))
       continue;
-
-    // Instruction isn't dead, see if we can constant propagate it.
-    if (!I->use_empty() &&
-        (I->getNumOperands() == 0 || isa<Constant>(I->getOperand(0)))) {
-      if (Constant *C = ConstantFoldInstruction(I, DL, &TLI)) {
-        LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << *I
-                          << '\n');
-
-        // Add operands to the worklist.
-        replaceInstUsesWith(*I, C);
-        ++NumConstProp;
-        if (isInstructionTriviallyDead(I, &TLI))
-          eraseInstFromFunction(*I);
-        MadeIRChange = true;
-        continue;
-      }
-    }
 
     // See if we can trivially sink this instruction to its user if we can
     // prove that the successor is not executed more frequently than our block.
@@ -4584,7 +4203,6 @@ static bool combineInstructionsOverFunction(
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
     ProfileSummaryInfo *PSI, unsigned MaxIterations, LoopInfo *LI) {
   auto &DL = F.getParent()->getDataLayout();
-  MaxIterations = std::min(MaxIterations, LimitMaxIterations.getValue());
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.
@@ -4601,13 +4219,6 @@ static bool combineInstructionsOverFunction(
   bool MadeIRChange = false;
   if (ShouldLowerDbgDeclare)
     MadeIRChange = LowerDbgDeclare(F);
-  // LowerDbgDeclare calls RemoveRedundantDbgInstrs, but LowerDbgDeclare will
-  // almost never return true when running an assignment tracking build. Take
-  // this opportunity to do some clean up for assignment tracking builds too.
-  if (!MadeIRChange && isAssignmentTrackingEnabled(*F.getParent())) {
-    for (auto &BB : F)
-      RemoveRedundantDbgInstrs(&BB);
-  }
 
   // Iterate while there is work to do.
   unsigned Iteration = 0;
@@ -4646,10 +4257,17 @@ static bool combineInstructionsOverFunction(
   return MadeIRChange;
 }
 
-InstCombinePass::InstCombinePass() : MaxIterations(LimitMaxIterations) {}
+InstCombinePass::InstCombinePass(InstCombineOptions Opts) : Options(Opts) {}
 
-InstCombinePass::InstCombinePass(unsigned MaxIterations)
-    : MaxIterations(MaxIterations) {}
+void InstCombinePass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<InstCombinePass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  OS << "max-iterations=" << Options.MaxIterations << ";";
+  OS << (Options.UseLoopInfo ? "" : "no-") << "use-loop-info";
+  OS << '>';
+}
 
 PreservedAnalyses InstCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
@@ -4659,7 +4277,11 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
+  // TODO: Only use LoopInfo when the option is set. This requires that the
+  //       callers in the pass pipeline explicitly set the option.
   auto *LI = AM.getCachedResult<LoopAnalysis>(F);
+  if (!LI && Options.UseLoopInfo)
+    LI = &AM.getResult<LoopAnalysis>(F);
 
   auto *AA = &AM.getResult<AAManager>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
@@ -4669,7 +4291,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, PSI, MaxIterations, LI))
+                                       BFI, PSI, Options.MaxIterations, LI))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -4752,18 +4374,10 @@ void llvm::initializeInstCombine(PassRegistry &Registry) {
   initializeInstructionCombiningPassPass(Registry);
 }
 
-void LLVMInitializeInstCombine(LLVMPassRegistryRef R) {
-  initializeInstructionCombiningPassPass(*unwrap(R));
-}
-
 FunctionPass *llvm::createInstructionCombiningPass() {
   return new InstructionCombiningPass();
 }
 
 FunctionPass *llvm::createInstructionCombiningPass(unsigned MaxIterations) {
   return new InstructionCombiningPass(MaxIterations);
-}
-
-void LLVMAddInstructionCombiningPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createInstructionCombiningPass());
 }

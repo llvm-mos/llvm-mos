@@ -39,14 +39,15 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <vector>
 
@@ -1028,7 +1029,15 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
 }
 
 static char getSymbolNMTypeChar(TapiFile &Obj, basic_symbol_iterator I) {
-  return 's';
+  auto Type = cantFail(Obj.getSymbolType(I->getRawDataRefImpl()));
+  switch (Type) {
+  case SymbolRef::ST_Data:
+    return 'd';
+  case SymbolRef::ST_Function:
+    return 't';
+  default:
+    return 's';
+  }
 }
 
 static char getSymbolNMTypeChar(WasmObjectFile &Obj, basic_symbol_iterator I) {
@@ -1945,26 +1954,39 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, StringRef Filename) {
   return true;
 }
 
-static void dumpArchiveMap(Archive *A, StringRef Filename) {
-  Archive::symbol_iterator I = A->symbol_begin();
-  Archive::symbol_iterator E = A->symbol_end();
-  if (I != E) {
-    outs() << "Archive map\n";
-    for (; I != E; ++I) {
-      Expected<Archive::Child> C = I->getMember();
-      if (!C) {
-        error(C.takeError(), Filename);
-        break;
-      }
-      Expected<StringRef> FileNameOrErr = C->getName();
-      if (!FileNameOrErr) {
-        error(FileNameOrErr.takeError(), Filename);
-        break;
-      }
-      StringRef SymName = I->getName();
-      outs() << SymName << " in " << FileNameOrErr.get() << "\n";
+static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
+                            StringRef Filename) {
+  for (auto I : map) {
+    Expected<Archive::Child> C = I.getMember();
+    if (!C) {
+      error(C.takeError(), Filename);
+      break;
     }
-    outs() << "\n";
+    Expected<StringRef> FileNameOrErr = C->getName();
+    if (!FileNameOrErr) {
+      error(FileNameOrErr.takeError(), Filename);
+      break;
+    }
+    StringRef SymName = I.getName();
+    outs() << SymName << " in " << FileNameOrErr.get() << "\n";
+  }
+
+  outs() << "\n";
+}
+
+static void dumpArchiveMap(Archive *A, StringRef Filename) {
+  auto Map = A->symbols();
+  if (!Map.empty()) {
+    outs() << "Archive map\n";
+    printArchiveMap(Map, Filename);
+  }
+
+  auto ECMap = A->ec_symbols();
+  if (!ECMap) {
+    warn(ECMap.takeError(), Filename);
+  } else if (!ECMap->empty()) {
+    outs() << "Archive EC map\n";
+    printArchiveMap(*ECMap, Filename);
   }
 }
 
@@ -2286,7 +2308,7 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   printExportSymbolList(SymbolList);
 }
 
-int llvm_nm_main(int argc, char **argv) {
+int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);

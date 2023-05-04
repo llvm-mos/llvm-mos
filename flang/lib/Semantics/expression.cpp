@@ -312,7 +312,9 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
 void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
   // Fold subscript expressions and check for an empty triplet.
   Shape lb{GetLBOUNDs(foldingContext_, ref.base())};
+  CHECK(lb.size() >= ref.subscript().size());
   Shape ub{GetUBOUNDs(foldingContext_, ref.base())};
+  CHECK(ub.size() >= ref.subscript().size());
   bool anyPossiblyEmptyDim{false};
   int dim{0};
   for (Subscript &ss : ref.subscript()) {
@@ -564,10 +566,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
     std::optional<DataRef> dataRef{ExtractDataRef(std::move(result))};
     if (!dataRef) {
       dataRef = ExtractDataRef(std::move(result), /*intoSubstring=*/true);
-      if (!dataRef) {
-        dataRef = ExtractDataRef(std::move(result),
-            /*intoSubstring=*/false, /*intoComplexPart=*/true);
-      }
+    }
+    if (!dataRef) {
+      dataRef = ExtractDataRef(std::move(result),
+          /*intoSubstring=*/false, /*intoComplexPart=*/true);
     }
     if (dataRef && !CheckDataRef(*dataRef)) {
       result.reset();
@@ -594,23 +596,24 @@ int ExpressionAnalyzer::AnalyzeKindParam(
   if (!kindParam) {
     return defaultKind;
   }
-  return common::visit(
+  std::int64_t kind{common::visit(
       common::visitors{
-          [](std::uint64_t k) { return static_cast<int>(k); },
+          [](std::uint64_t k) { return static_cast<std::int64_t>(k); },
           [&](const parser::Scalar<
               parser::Integer<parser::Constant<parser::Name>>> &n) {
             if (MaybeExpr ie{Analyze(n)}) {
-              if (std::optional<std::int64_t> i64{ToInt64(*ie)}) {
-                int iv = *i64;
-                if (iv == *i64) {
-                  return iv;
-                }
-              }
+              return ToInt64(*ie).value_or(defaultKind);
             }
-            return defaultKind;
+            return static_cast<std::int64_t>(defaultKind);
           },
       },
-      kindParam->u);
+      kindParam->u)};
+  if (kind != static_cast<int>(kind)) {
+    Say("Unsupported type kind value (%jd)"_err_en_US,
+        static_cast<std::intmax_t>(kind));
+    kind = defaultKind;
+  }
+  return static_cast<int>(kind);
 }
 
 // Common handling of parser::IntLiteralConstant and SignedIntLiteralConstant
@@ -655,7 +658,7 @@ struct IntTypeVisitor {
   }
   ExpressionAnalyzer &analyzer;
   parser::CharBlock digits;
-  int kind;
+  std::int64_t kind;
   bool isDefaultKind;
   bool isNegated;
 };
@@ -1811,6 +1814,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   if (!spec.scope() || !typeSymbol.has<semantics::DerivedTypeDetails>()) {
     return std::nullopt; // error recovery
   }
+  const semantics::Scope &scope{context_.FindScope(typeName)};
+  const semantics::Scope *pureContext{FindPureProcedureContaining(scope)};
   const auto &typeDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
   const Symbol *parentComponent{typeDetails.GetParentComponent(*spec.scope())};
 
@@ -1936,41 +1941,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
       unavailable.insert(symbol->name());
       if (value) {
-        if (symbol->has<semantics::ProcEntityDetails>()) {
-          CHECK(IsPointer(*symbol));
-        } else if (symbol->has<semantics::ObjectEntityDetails>()) {
-          // C1594(4)
-          if (const auto *pureProc{FindPureProcedureContaining(innermost)}) {
-            if (const Symbol *pointer{FindPointerComponent(*symbol)}) {
-              if (const Symbol *object{
-                      FindExternallyVisibleObject(*value, *pureProc)}) {
-                if (auto *msg{Say(expr.source,
-                        "Externally visible object '%s' may not be "
-                        "associated with pointer component '%s' in a "
-                        "pure procedure"_err_en_US,
-                        object->name(), pointer->name())}) {
-                  msg->Attach(object->name(), "Object declaration"_en_US)
-                      .Attach(pointer->name(), "Pointer declaration"_en_US);
-                }
-              }
-            }
-          }
-        } else if (symbol->has<semantics::TypeParamDetails>()) {
+        if (symbol->has<semantics::TypeParamDetails>()) {
           Say(expr.source,
-              "Type parameter '%s' may not appear as a component "
-              "of a structure constructor"_err_en_US,
+              "Type parameter '%s' may not appear as a component of a structure constructor"_err_en_US,
               symbol->name());
-          continue;
-        } else {
-          Say(expr.source,
-              "Component '%s' is neither a procedure pointer "
-              "nor a data object"_err_en_US,
-              symbol->name());
-          continue;
         }
-        if (IsPointer(*symbol)) {
+        if (!(symbol->has<semantics::ProcEntityDetails>() ||
+                symbol->has<semantics::ObjectEntityDetails>())) {
+          continue; // recovery
+        }
+        if (IsPointer(*symbol)) { // C7104, C7105, C1594(4)
           semantics::CheckStructConstructorPointerComponent(
-              GetFoldingContext(), *symbol, *value, innermost); // C7104, C7105
+              GetFoldingContext(), *symbol, *value, innermost);
           result.Add(*symbol, Fold(std::move(*value)));
           continue;
         }
@@ -2005,6 +1987,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                 *symbol);
             continue;
           }
+        } else if (const Symbol * pointer{FindPointerComponent(*symbol)};
+                   pointer && pureContext) { // C1594(4)
+          if (const Symbol *
+              visible{semantics::FindExternallyVisibleObject(
+                  *value, *pureContext)}) {
+            Say(expr.source,
+                "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                visible->name(), symbol->name(), pointer->name());
+          }
         }
         if (MaybeExpr converted{ConvertToType(*symbol, std::move(*value))}) {
           if (auto componentShape{GetShape(GetFoldingContext(), *symbol)}) {
@@ -2022,8 +2013,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                         "component", "value")};
                 if (checked && *checked && GetRank(*componentShape) > 0 &&
                     GetRank(*valueShape) == 0 &&
-                    !IsExpandableScalar(*converted, GetFoldingContext(),
-                        *componentShape, true /*admit PURE call*/)) {
+                    (IsDeferredShape(*symbol) ||
+                        !IsExpandableScalar(*converted, GetFoldingContext(),
+                            *componentShape, true /*admit PURE call*/))) {
                   AttachDeclaration(
                       Say(expr.source,
                           "Scalar value cannot be expanded to shape of array component '%s'"_err_en_US,
@@ -2527,6 +2519,11 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     resolution = pair.first;
     dueToAmbiguity = pair.second;
     if (resolution) {
+      if (context_.GetPPCBuiltinsScope() &&
+          resolution->name().ToString().rfind("__ppc_", 0) == 0) {
+        semantics::CheckPPCIntrinsic(
+            *symbol, *resolution, arguments, GetFoldingContext());
+      }
       // re-resolve name to the specific procedure
       name.symbol = const_cast<Symbol *>(resolution);
     }
@@ -2874,8 +2871,38 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     ActualArguments &arguments) {
   bool treatExternalAsImplicit{IsExternalCalledImplicitly(callSite, proc)};
   const Symbol *procSymbol{proc.GetSymbol()};
-  auto chars{characteristics::Procedure::Characterize(
-      proc, context_.foldingContext())};
+  std::optional<characteristics::Procedure> chars;
+  if (procSymbol && procSymbol->has<semantics::ProcEntityDetails>() &&
+      procSymbol->owner().IsGlobal()) {
+    // Unknown global external, implicit interface; assume
+    // characteristics from the actual arguments, and check
+    // for consistency with other references.
+    chars = characteristics::Procedure::FromActuals(
+        proc, arguments, context_.foldingContext());
+    if (chars && procSymbol) {
+      // Ensure calls over implicit interfaces are consistent
+      auto name{procSymbol->name()};
+      if (auto iter{implicitInterfaces_.find(name)};
+          iter != implicitInterfaces_.end()) {
+        std::string whyNot;
+        if (!chars->IsCompatibleWith(iter->second.second, &whyNot)) {
+          if (auto *msg{Say(callSite,
+                  "Reference to the procedure '%s' has an implicit interface that is distinct from another reference: %s"_warn_en_US,
+                  name, whyNot)}) {
+            msg->Attach(
+                iter->second.first, "previous reference to '%s'"_en_US, name);
+          }
+        }
+      } else {
+        implicitInterfaces_.insert(
+            std::make_pair(name, std::make_pair(callSite, *chars)));
+      }
+    }
+  }
+  if (!chars) {
+    chars = characteristics::Procedure::Characterize(
+        proc, context_.foldingContext());
+  }
   bool ok{true};
   if (chars) {
     if (treatExternalAsImplicit && !chars->CanBeCalledViaImplicitInterface()) {
@@ -3409,7 +3436,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
     if (expr.typedExpr) {
       return expr.typedExpr->v;
     }
-    if (!wasIterativelyAnalyzing) {
+    if (!wasIterativelyAnalyzing && !context_.anyDefinedIntrinsicOperator()) {
       iterativelyAnalyzingSubexpressions_ = true;
       result = IterativelyAnalyzeSubexpressions(expr);
     }
@@ -4035,18 +4062,16 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     auto restorer{context_.GetContextualMessages().DiscardMessages()};
     if (const Symbol *symbol{scope.FindSymbol(oprName)}) {
       ExpressionAnalyzer::AdjustActuals noAdjustment;
-      auto pair{context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true)};
-      if (pair.first) {
-        proc = pair.first;
-      } else {
-        context_.EmitGenericResolutionError(*symbol, pair.second, true);
-      }
+      proc =
+          context_.ResolveGeneric(*symbol, actuals_, noAdjustment, true).first;
     }
     for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
       const Symbol *generic{nullptr};
       if (const Symbol *binding{FindBoundOp(oprName, i, generic, true)}) {
-        if (const Symbol *resolution{
-                GetBindingResolution(GetType(i), *binding)}) {
+        if (CheckAccessibleSymbol(scope, DEREF(generic))) {
+          // ignore inaccessible type-bound ASSIGNMENT(=) generic
+        } else if (const Symbol *
+            resolution{GetBindingResolution(GetType(i), *binding)}) {
           proc = resolution;
         } else {
           proc = binding;

@@ -1129,6 +1129,11 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 /// It should be transformed to:
 ///  %0 = insertvalue { i8, i32 } undef, i8 %y, 0
 Instruction *InstCombinerImpl::visitInsertValueInst(InsertValueInst &I) {
+  if (Value *V = simplifyInsertValueInst(
+          I.getAggregateOperand(), I.getInsertedValueOperand(), I.getIndices(),
+          SQ.getWithInstruction(&I)))
+    return replaceInstUsesWith(I, V);
+
   bool IsRedundant = false;
   ArrayRef<unsigned int> FirstIndices = I.getIndices();
 
@@ -1339,7 +1344,7 @@ static Instruction *foldInsEltIntoIdentityShuffle(InsertElementInst &InsElt) {
       // (demanded elements analysis may unset it later).
       return nullptr;
     } else {
-      assert(OldMask[i] == UndefMaskElem &&
+      assert(OldMask[i] == PoisonMaskElem &&
              "Unexpected shuffle mask element for identity shuffle");
       NewMask[i] = IdxC;
     }
@@ -2140,7 +2145,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
                                 ConstantExpr::getShuffleVector(IdC, C, Mask);
 
   bool MightCreatePoisonOrUB =
-      is_contained(Mask, UndefMaskElem) &&
+      is_contained(Mask, PoisonMaskElem) &&
       (Instruction::isIntDivRem(BOpcode) || Instruction::isShift(BOpcode));
   if (MightCreatePoisonOrUB)
     NewC = InstCombiner::getSafeVectorConstantForBinop(BOpcode, NewC, true);
@@ -2154,7 +2159,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
   // If we already made a safe constant, then there's no danger.
-  if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
+  if (is_contained(Mask, PoisonMaskElem) && !MightCreatePoisonOrUB)
     NewBO->dropPoisonGeneratingFlags();
   return NewBO;
 }
@@ -2189,7 +2194,7 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
       cast<FixedVectorType>(Shuf.getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts, 0);
   for (unsigned i = 0; i != NumMaskElts; ++i)
-    if (Mask[i] == UndefMaskElem)
+    if (Mask[i] == PoisonMaskElem)
       NewMask[i] = Mask[i];
 
   return new ShuffleVectorInst(NewIns, NewMask);
@@ -2274,7 +2279,7 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   // mask element, the result is undefined, but it is not poison or undefined
   // behavior. That is not necessarily true for div/rem/shift.
   bool MightCreatePoisonOrUB =
-      is_contained(Mask, UndefMaskElem) &&
+      is_contained(Mask, PoisonMaskElem) &&
       (Instruction::isIntDivRem(BOpc) || Instruction::isShift(BOpc));
   if (MightCreatePoisonOrUB)
     NewC = InstCombiner::getSafeVectorConstantForBinop(BOpc, NewC,
@@ -2325,7 +2330,7 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
     NewI->andIRFlags(B1);
     if (DropNSW)
       NewI->setHasNoSignedWrap(false);
-    if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
+    if (is_contained(Mask, PoisonMaskElem) && !MightCreatePoisonOrUB)
       NewI->dropPoisonGeneratingFlags();
   }
   return replaceInstUsesWith(Shuf, NewBO);
@@ -2361,7 +2366,7 @@ static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
       SrcType->getScalarSizeInBits() / DestType->getScalarSizeInBits();
   ArrayRef<int> Mask = Shuf.getShuffleMask();
   for (unsigned i = 0, e = Mask.size(); i != e; ++i) {
-    if (Mask[i] == UndefMaskElem)
+    if (Mask[i] == PoisonMaskElem)
       continue;
     uint64_t LSBIndex = IsBigEndian ? (i + 1) * TruncRatio - 1 : i * TruncRatio;
     assert(LSBIndex <= INT32_MAX && "Overflowed 32-bits");
@@ -2547,7 +2552,7 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   for (unsigned i = 0; i != NumElts; ++i) {
     int ExtractMaskElt = Shuf.getMaskValue(i);
     int MaskElt = Mask[i];
-    NewMask[i] = ExtractMaskElt == UndefMaskElem ? ExtractMaskElt : MaskElt;
+    NewMask[i] = ExtractMaskElt == PoisonMaskElem ? ExtractMaskElt : MaskElt;
   }
   return new ShuffleVectorInst(X, Y, NewMask);
 }
@@ -2713,7 +2718,8 @@ static Instruction *foldIdentityPaddedShuffles(ShuffleVectorInst &Shuf) {
 // splatting the first element of the result of the BinOp
 Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
   if (!match(SVI.getOperand(1), m_Undef()) ||
-      !match(SVI.getShuffleMask(), m_ZeroMask()))
+      !match(SVI.getShuffleMask(), m_ZeroMask()) ||
+      !SVI.getOperand(0)->hasOneUse())
     return nullptr;
 
   Value *Op0 = SVI.getOperand(0);
@@ -2930,7 +2936,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       unsigned SrcElemsPerTgtElem = TgtElemBitWidth / SrcElemBitWidth;
       assert(SrcElemsPerTgtElem);
       BegIdx /= SrcElemsPerTgtElem;
-      bool BCAlreadyExists = NewBCs.find(CastSrcTy) != NewBCs.end();
+      bool BCAlreadyExists = NewBCs.contains(CastSrcTy);
       auto *NewBC =
           BCAlreadyExists
               ? NewBCs[CastSrcTy]

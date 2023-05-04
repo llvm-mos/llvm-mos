@@ -93,6 +93,7 @@ tools = [
     ToolSubst('merge-fdata', unresolved='fatal'),
     ToolSubst('llvm-readobj', unresolved='fatal'),
     ToolSubst('llvm-dwp', unresolved='fatal'),
+    ToolSubst('split-file', unresolved='fatal'),
 ]
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
@@ -109,4 +110,4 @@ llvm_config.feature_config(
         ('--targets-built', calculate_arch_features)
      ])
 
-config.targets = frozenset(config.targets_to_build.split())
+config.targets = frozenset(config.targets_to_build.split(';'))

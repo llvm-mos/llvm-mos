@@ -355,6 +355,18 @@ defm relax: BB<"relax",
   "Enable target-specific relaxations if supported (default)",
   "Disable target-specific relaxations">;
 
+defm relax_gp: BB<"relax-gp",
+  "Enable global pointer relaxation",
+  "Disable global pointer relaxation (default)">;
+
+defm remap_inputs: EEq<"remap-inputs",
+  "Remap input files matching <from-glob> to <to-file>">,
+  MetaVarName<"<from-glob>=<to-file>">;
+
+def remap_inputs_file: JJ<"remap-inputs-file=">,
+  HelpText<"Each line contains 'from-glob=to-file'. An input file matching <from-glob> is remapped to <to-file>">,
+  MetaVarName<"<file>">;
+
 defm reproduce:
   EEq<"reproduce",
      "Write tar file containing inputs and command to reproduce link">;
@@ -558,6 +570,8 @@ def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
+def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
+  HelpText<"Codegen optimization level for LTO">;
 def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,

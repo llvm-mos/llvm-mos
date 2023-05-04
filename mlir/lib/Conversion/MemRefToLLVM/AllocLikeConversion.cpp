@@ -59,11 +59,12 @@ static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
                                  MemRefType memRefType, Type elementPtrType,
                                  LLVMTypeConverter &typeConverter) {
   auto allocatedPtrTy = allocatedPtr.getType().cast<LLVM::LLVMPointerType>();
-  if (allocatedPtrTy.getAddressSpace() != memRefType.getMemorySpaceAsInt())
+  unsigned memrefAddrSpace = *typeConverter.getMemRefAddressSpace(memRefType);
+  if (allocatedPtrTy.getAddressSpace() != memrefAddrSpace)
     allocatedPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
         loc,
         typeConverter.getPointerType(allocatedPtrTy.getElementType(),
-                                     memRefType.getMemorySpaceAsInt()),
+                                     memrefAddrSpace),
         allocatedPtr);
 
   if (!typeConverter.useOpaquePointers())
@@ -127,7 +128,7 @@ bool AllocationOpLLVMLowering::isMemRefSizeMultipleOf(
     const DataLayout *defaultLayout) const {
   uint64_t sizeDivisor = getMemRefEltSizeInBytes(type, op, defaultLayout);
   for (unsigned i = 0, e = type.getRank(); i < e; i++) {
-    if (ShapedType::isDynamic(type.getDimSize(i)))
+    if (type.isDynamicDim(i))
       continue;
     sizeDivisor = sizeDivisor * type.getDimSize(i);
   }

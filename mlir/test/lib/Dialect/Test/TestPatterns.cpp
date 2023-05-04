@@ -86,15 +86,13 @@ public:
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    // Exercise OperationFolder API for a single-result operation that is folded
-    // upon construction. The operation being created through the folder has an
-    // in-place folder, and it should be still present in the output.
-    // Furthermore, the folder should not crash when attempting to recover the
-    // (unchanged) operation result.
-    OperationFolder folder(op->getContext());
-    Value result = folder.create<TestOpInPlaceFold>(
-        rewriter, op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0),
-        rewriter.getI32IntegerAttr(0));
+    // Exercise createOrFold API for a single-result operation that is folded
+    // upon construction. The operation being created has an in-place folder,
+    // and it should be still present in the output. Furthermore, the folder
+    // should not crash when attempting to recover the (unchanged) operation
+    // result.
+    Value result = rewriter.createOrFold<TestOpInPlaceFold>(
+        op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0));
     assert(result);
     rewriter.replaceOp(op, result);
     return success();
@@ -256,11 +254,19 @@ public:
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     mlir::RewritePatternSet patterns(ctx);
-    patterns.add<InsertSameOp, ReplaceWithNewOp, EraseOp>(ctx);
+    patterns.add<
+        // clang-format off
+        InsertSameOp,
+        ReplaceWithNewOp,
+        EraseOp,
+        ChangeBlockOp,
+        ImplicitChangeOp
+        // clang-format on
+        >(ctx);
     SmallVector<Operation *> ops;
     getOperation()->walk([&](Operation *op) {
       StringRef opName = op->getName().getStringRef();
-      if (opName == "test.insert_same_op" ||
+      if (opName == "test.insert_same_op" || opName == "test.change_block_op" ||
           opName == "test.replace_with_new_op" || opName == "test.erase_op") {
         ops.push_back(op);
       }
@@ -342,7 +348,7 @@ private:
     }
   };
 
-  // Remove an operation may introduce the re-visiting of its opreands.
+  // Remove an operation may introduce the re-visiting of its operands.
   class EraseOp : public RewritePattern {
   public:
     EraseOp(MLIRContext *context)
@@ -350,6 +356,55 @@ private:
     LogicalResult matchAndRewrite(Operation *op,
                                   PatternRewriter &rewriter) const override {
       rewriter.eraseOp(op);
+      return success();
+    }
+  };
+
+  // The following two patterns test RewriterBase::replaceAllUsesWith.
+  //
+  // That function replaces all usages of a Block (or a Value) with another one
+  // *and tracks these changes in the rewriter.* The GreedyPatternRewriteDriver
+  // with GreedyRewriteStrictness::AnyOp uses that tracking to construct its
+  // worklist: when an op is modified, it is added to the worklist. The two
+  // patterns below make the tracking observable: ChangeBlockOp replaces all
+  // usages of a block and that pattern is applied because the corresponding ops
+  // are put on the initial worklist (see above). ImplicitChangeOp does an
+  // unrelated change but ops of the corresponding type are *not* on the initial
+  // worklist, so the effect of the second pattern is only visible if the
+  // tracking and subsequent adding to the worklist actually works.
+
+  // Replace all usages of the first successor with the second successor.
+  class ChangeBlockOp : public RewritePattern {
+  public:
+    ChangeBlockOp(MLIRContext *context)
+        : RewritePattern("test.change_block_op", /*benefit=*/1, context) {}
+    LogicalResult matchAndRewrite(Operation *op,
+                                  PatternRewriter &rewriter) const override {
+      if (op->getNumSuccessors() < 2)
+        return failure();
+      Block *firstSuccessor = op->getSuccessor(0);
+      Block *secondSuccessor = op->getSuccessor(1);
+      if (firstSuccessor == secondSuccessor)
+        return failure();
+      // This is the function being tested:
+      rewriter.replaceAllUsesWith(firstSuccessor, secondSuccessor);
+      // Using the following line instead would make the test fail:
+      // firstSuccessor->replaceAllUsesWith(secondSuccessor);
+      return success();
+    }
+  };
+
+  // Changes the successor to the parent block.
+  class ImplicitChangeOp : public RewritePattern {
+  public:
+    ImplicitChangeOp(MLIRContext *context)
+        : RewritePattern("test.implicit_change_op", /*benefit=*/1, context) {}
+    LogicalResult matchAndRewrite(Operation *op,
+                                  PatternRewriter &rewriter) const override {
+      if (op->getNumSuccessors() < 1 || op->getSuccessor(0) == op->getBlock())
+        return failure();
+      rewriter.updateRootInPlace(
+          op, [&]() { op->setSuccessor(op->getBlock(), 0); });
       return success();
     }
   };
@@ -379,7 +434,8 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
       SmallVector<Type, 2> inferredReturnTypes;
       if (succeeded(OpTy::inferReturnTypes(
               context, std::nullopt, values, op->getAttrDictionary(),
-              op->getRegions(), inferredReturnTypes))) {
+              op->getPropertiesStorage(), op->getRegions(),
+              inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());
         // TODO: Expand to regions.
         OpTy::build(b, state, values, op->getAttrs());
@@ -1536,7 +1592,7 @@ struct TestMergeSingleBlockOps
     Block &innerBlock = op.getRegion().front();
     TerminatorOp innerTerminator =
         cast<TerminatorOp>(innerBlock.getTerminator());
-    rewriter.mergeBlockBefore(&innerBlock, op);
+    rewriter.inlineBlockBefore(&innerBlock, op);
     rewriter.eraseOp(innerTerminator);
     rewriter.eraseOp(op);
     rewriter.updateRootInPlace(op, [] {});

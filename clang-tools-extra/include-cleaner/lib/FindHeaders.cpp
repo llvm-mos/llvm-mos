@@ -10,18 +10,21 @@
 #include "TypesInternal.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <string>
+#include <optional>
 #include <utility>
 
 namespace clang::include_cleaner {
@@ -82,16 +85,99 @@ llvm::StringRef symbolName(const Symbol &S) {
   llvm_unreachable("unhandled Symbol kind!");
 }
 
+Hints isPublicHeader(const FileEntry *FE, const PragmaIncludes &PI) {
+  if (PI.isPrivate(FE) || !PI.isSelfContained(FE))
+    return Hints::None;
+  return Hints::PublicHeader;
+}
+
+llvm::SmallVector<Hinted<Header>>
+hintedHeadersForStdHeaders(llvm::ArrayRef<tooling::stdlib::Header> Headers,
+                           const SourceManager &SM, const PragmaIncludes *PI) {
+  llvm::SmallVector<Hinted<Header>> Results;
+  for (const auto &H : Headers) {
+    Results.emplace_back(H, Hints::PublicHeader);
+    if (!PI)
+      continue;
+    for (const auto *Export : PI->getExporters(H, SM.getFileManager()))
+      Results.emplace_back(Header(Export), isPublicHeader(Export, *PI));
+  }
+  // StandardLibrary returns headers in preference order, so only mark the
+  // first.
+  if (!Results.empty())
+    Results.front().Hint |= Hints::PreferredHeader;
+  return Results;
+}
+
+// Symbol to header mapping for std::move and std::remove, based on number of
+// parameters.
+std::optional<tooling::stdlib::Header>
+headerForAmbiguousStdSymbol(const NamedDecl *ND) {
+  if (!ND->isInStdNamespace())
+    return {};
+  const auto *FD = ND->getAsFunction();
+  if (!FD)
+    return std::nullopt;
+  llvm::StringRef FName = symbolName(*ND);
+  if (FName == "move") {
+    if (FD->getNumParams() == 1)
+      // move(T&& t)
+      return tooling::stdlib::Header::named("<utility>");
+    if (FD->getNumParams() == 3)
+      // move(InputIt first, InputIt last, OutputIt dest);
+      return tooling::stdlib::Header::named("<algorithm>");
+  } else if (FName == "remove") {
+    if (FD->getNumParams() == 1)
+      // remove(const char*);
+      return tooling::stdlib::Header::named("<cstdio>");
+    if (FD->getNumParams() == 3)
+      // remove(ForwardIt first, ForwardIt last, const T& value);
+      return tooling::stdlib::Header::named("<algorithm>");
+  }
+  return std::nullopt;
+}
+
+// Special-case symbols without proper locations, like the ambiguous standard
+// library symbols (e.g. std::move) or builtin declarations.
+std::optional<llvm::SmallVector<Hinted<Header>>>
+headersForSpecialSymbol(const Symbol &S, const SourceManager &SM,
+                        const PragmaIncludes *PI) {
+  // Our special casing logic only deals with decls, so bail out early for
+  // macros.
+  if (S.kind() != Symbol::Declaration)
+    return std::nullopt;
+  const auto *ND = llvm::cast<NamedDecl>(&S.declaration());
+  // We map based on names, so again bail out early if there are no names.
+  if (!ND)
+    return std::nullopt;
+  auto *II = ND->getIdentifier();
+  if (!II)
+    return std::nullopt;
+
+  // Check first for symbols that are part of our stdlib mapping. As we have
+  // header names for those.
+  if (auto Header = headerForAmbiguousStdSymbol(ND)) {
+    return applyHints(hintedHeadersForStdHeaders({*Header}, SM, PI),
+                      Hints::CompleteSymbol);
+  }
+
+  // Now check for builtin symbols, we shouldn't suggest any headers for ones
+  // without any headers.
+  if (auto ID = II->getBuiltinID()) {
+    const char *BuiltinHeader =
+        ND->getASTContext().BuiltinInfo.getHeaderName(ID);
+    if (!BuiltinHeader)
+      return llvm::SmallVector<Hinted<Header>>{};
+    // FIXME: Use the header mapping for builtins with a known header.
+  }
+  return std::nullopt;
+}
+
 } // namespace
 
 llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
                                               const SourceManager &SM,
                                               const PragmaIncludes *PI) {
-  auto IsPublicHeader = [&PI](const FileEntry *FE) {
-    return (PI->isPrivate(FE) || !PI->isSelfContained(FE))
-               ? Hints::None
-               : Hints::PublicHeader;
-  };
   llvm::SmallVector<Hinted<Header>> Results;
   switch (Loc.kind()) {
   case SymbolLocation::Physical: {
@@ -102,11 +188,11 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
     if (!PI)
       return {{FE, Hints::PublicHeader}};
     while (FE) {
-      Hints CurrentHints = IsPublicHeader(FE);
+      Hints CurrentHints = isPublicHeader(FE, *PI);
       Results.emplace_back(FE, CurrentHints);
       // FIXME: compute transitive exporter headers.
       for (const auto *Export : PI->getExporters(FE, SM.getFileManager()))
-        Results.emplace_back(Export, IsPublicHeader(Export));
+        Results.emplace_back(Export, isPublicHeader(Export, *PI));
 
       if (auto Verbatim = PI->getPublic(FE); !Verbatim.empty()) {
         Results.emplace_back(Verbatim,
@@ -123,16 +209,7 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
     return Results;
   }
   case SymbolLocation::Standard: {
-    for (const auto &H : Loc.standard().headers()) {
-      Results.emplace_back(H, Hints::PublicHeader);
-      for (const auto *Export : PI->getExporters(H, SM.getFileManager()))
-        Results.emplace_back(Header(Export), IsPublicHeader(Export));
-    }
-    // StandardLibrary returns headers in preference order, so only mark the
-    // first.
-    if (!Results.empty())
-      Results.front().Hint |= Hints::PreferredHeader;
-    return Results;
+    return hintedHeadersForStdHeaders(Loc.standard().headers(), SM, PI);
   }
   }
   llvm_unreachable("unhandled SymbolLocation kind!");
@@ -145,8 +222,12 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
   // reached through different traversals, deduplicate those into a single
   // Header by merging their hints.
   llvm::SmallVector<Hinted<Header>> Headers;
-  for (auto &Loc : locateSymbol(S))
-    Headers.append(applyHints(findHeaders(Loc, SM, PI), Loc.Hint));
+  if (auto SpecialHeaders = headersForSpecialSymbol(S, SM, PI)) {
+    Headers = std::move(*SpecialHeaders);
+  } else {
+    for (auto &Loc : locateSymbol(S))
+      Headers.append(applyHints(findHeaders(Loc, SM, PI), Loc.Hint));
+  }
   // If two Headers probably refer to the same file (e.g. Verbatim(foo.h) and
   // Physical(/path/to/foo.h), we won't deduplicate them or merge their hints
   llvm::stable_sort(

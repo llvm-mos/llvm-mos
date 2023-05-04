@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
 
@@ -49,7 +50,8 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
         return x;
       if (fputil::get_round() == FE_UPWARD)
         return static_cast<float>(FPBits(FPBits::MIN_SUBNORMAL));
-      errno = ERANGE;
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;
     }
     // x >= 89 or nan
@@ -60,7 +62,8 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
           return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
 
-        errno = ERANGE;
+        fputil::set_errno_if_required(ERANGE);
+        fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
       return x + static_cast<float>(FPBits::inf());

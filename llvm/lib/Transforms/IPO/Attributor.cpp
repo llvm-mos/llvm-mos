@@ -18,7 +18,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -36,7 +35,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -223,7 +221,7 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
   return InstanceInfoAA.isAssumedUniqueForAnalysis();
 }
 
-Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
+Constant *AA::getInitialValueForObj(Attributor &A, Value &Obj, Type &Ty,
                                     const TargetLibraryInfo *TLI,
                                     const DataLayout &DL,
                                     AA::RangeTy *RangePtr) {
@@ -234,17 +232,31 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
   if (!GV)
     return nullptr;
-  if (!GV->hasLocalLinkage() && !(GV->isConstant() && GV->hasInitializer()))
-    return nullptr;
-  if (!GV->hasInitializer())
-    return UndefValue::get(&Ty);
+
+  bool UsedAssumedInformation = false;
+  Constant *Initializer = nullptr;
+  if (A.hasGlobalVariableSimplificationCallback(*GV)) {
+    auto AssumedGV = A.getAssumedInitializerFromCallBack(
+        *GV, /* const AbstractAttribute *AA */ nullptr, UsedAssumedInformation);
+    Initializer = *AssumedGV;
+    if (!Initializer)
+      return nullptr;
+  } else {
+    if (!GV->hasLocalLinkage() && !(GV->isConstant() && GV->hasInitializer()))
+      return nullptr;
+    if (!GV->hasInitializer())
+      return UndefValue::get(&Ty);
+
+    if (!Initializer)
+      Initializer = GV->getInitializer();
+  }
 
   if (RangePtr && !RangePtr->offsetOrSizeAreUnknown()) {
     APInt Offset = APInt(64, RangePtr->Offset);
-    return ConstantFoldLoadFromConst(GV->getInitializer(), &Ty, Offset, DL);
+    return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
 
-  return ConstantFoldLoadFromUniformValue(GV->getInitializer(), &Ty);
+  return ConstantFoldLoadFromUniformValue(Initializer, &Ty);
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {
@@ -396,6 +408,18 @@ static bool getPotentialCopiesOfMemoryValue(
         NullOnly = false;
     };
 
+    auto AdjustWrittenValueType = [&](const AAPointerInfo::Access &Acc,
+                                      Value &V) {
+      Value *AdjV = AA::getWithType(V, *I.getType());
+      if (!AdjV) {
+        LLVM_DEBUG(dbgs() << "Underlying object written but stored value "
+                             "cannot be converted to read type: "
+                          << *Acc.getRemoteInst() << " : " << *I.getType()
+                          << "\n";);
+      }
+      return AdjV;
+    };
+
     auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
       if ((IsLoad && !Acc.isWriteOrAssumption()) || (!IsLoad && !Acc.isRead()))
         return true;
@@ -417,7 +441,10 @@ static bool getPotentialCopiesOfMemoryValue(
       if (IsLoad) {
         assert(isa<LoadInst>(I) && "Expected load or store instruction only!");
         if (!Acc.isWrittenValueUnknown()) {
-          NewCopies.push_back(Acc.getWrittenValue());
+          Value *V = AdjustWrittenValueType(Acc, *Acc.getWrittenValue());
+          if (!V)
+            return false;
+          NewCopies.push_back(V);
           NewCopyOrigins.push_back(Acc.getRemoteInst());
           return true;
         }
@@ -428,7 +455,10 @@ static bool getPotentialCopiesOfMemoryValue(
                             << *Acc.getRemoteInst() << "\n";);
           return false;
         }
-        NewCopies.push_back(SI->getValueOperand());
+        Value *V = AdjustWrittenValueType(Acc, *SI->getValueOperand());
+        if (!V)
+          return false;
+        NewCopies.push_back(V);
         NewCopyOrigins.push_back(SI);
       } else {
         assert(isa<StoreInst>(I) && "Expected load or store instruction only!");
@@ -465,7 +495,7 @@ static bool getPotentialCopiesOfMemoryValue(
     if (IsLoad && !HasBeenWrittenTo && !Range.isUnassigned()) {
       const DataLayout &DL = A.getDataLayout();
       Value *InitialValue =
-          AA::getInitialValueForObj(Obj, *I.getType(), TLI, DL, &Range);
+          AA::getInitialValueForObj(A, Obj, *I.getType(), TLI, DL, &Range);
       if (!InitialValue) {
         LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
                              "underlying object, abort!\n");
@@ -576,7 +606,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
                        const AbstractAttribute &QueryingAA,
                        const AA::InstExclusionSetTy *ExclusionSet,
                        std::function<bool(const Function &F)> GoBackwardsCB) {
-  LLVM_DEBUG({
+  DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
     dbgs() << "[AA] isPotentiallyReachable @" << ToFn.getName() << " from "
            << FromI << " [GBCB: " << bool(GoBackwardsCB) << "][#ExS: "
            << (ExclusionSet ? std::to_string(ExclusionSet->size()) : "none")
@@ -1881,7 +1911,7 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*Fn);
   const auto *LivenessAA =
-      (CheckBBLivenessOnly || CheckPotentiallyDead)
+      CheckPotentiallyDead
           ? nullptr
           : &(getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE));
 
@@ -1969,11 +1999,9 @@ void Attributor::runTillFixpoint() {
                       dbgs() << "[Attributor] InvalidAA: " << *InvalidAA
                              << " has " << InvalidAA->Deps.size()
                              << " required & optional dependences\n");
-      while (!InvalidAA->Deps.empty()) {
-        const auto &Dep = InvalidAA->Deps.back();
-        InvalidAA->Deps.pop_back();
-        AbstractAttribute *DepAA = cast<AbstractAttribute>(Dep.getPointer());
-        if (Dep.getInt() == unsigned(DepClassTy::OPTIONAL)) {
+      for (auto &DepIt : InvalidAA->Deps) {
+        AbstractAttribute *DepAA = cast<AbstractAttribute>(DepIt.getPointer());
+        if (DepIt.getInt() == unsigned(DepClassTy::OPTIONAL)) {
           DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
                           dbgs() << " - recompute: " << *DepAA);
           Worklist.insert(DepAA);
@@ -1988,16 +2016,16 @@ void Attributor::runTillFixpoint() {
         else
           ChangedAAs.push_back(DepAA);
       }
+      InvalidAA->Deps.clear();
     }
 
     // Add all abstract attributes that are potentially dependent on one that
     // changed to the work list.
-    for (AbstractAttribute *ChangedAA : ChangedAAs)
-      while (!ChangedAA->Deps.empty()) {
-        Worklist.insert(
-            cast<AbstractAttribute>(ChangedAA->Deps.back().getPointer()));
-        ChangedAA->Deps.pop_back();
-      }
+    for (AbstractAttribute *ChangedAA : ChangedAAs) {
+      for (auto &DepIt : ChangedAA->Deps)
+        Worklist.insert(cast<AbstractAttribute>(DepIt.getPointer()));
+      ChangedAA->Deps.clear();
+    }
 
     LLVM_DEBUG(dbgs() << "[Attributor] #Iteration: " << IterationCounter
                       << ", Worklist+Dependent size: " << Worklist.size()
@@ -2068,11 +2096,9 @@ void Attributor::runTillFixpoint() {
       NumAttributesTimedOut++;
     }
 
-    while (!ChangedAA->Deps.empty()) {
-      ChangedAAs.push_back(
-          cast<AbstractAttribute>(ChangedAA->Deps.back().getPointer()));
-      ChangedAA->Deps.pop_back();
-    }
+    for (auto &DepIt : ChangedAA->Deps)
+      ChangedAAs.push_back(cast<AbstractAttribute>(DepIt.getPointer()));
+    ChangedAA->Deps.clear();
   }
 
   LLVM_DEBUG({
@@ -2156,14 +2182,18 @@ ChangeStatus Attributor::manifestAttributes() {
 
   (void)NumFinalAAs;
   if (NumFinalAAs != DG.SyntheticRoot.Deps.size()) {
-    for (unsigned u = NumFinalAAs; u < DG.SyntheticRoot.Deps.size(); ++u)
+    auto DepIt = DG.SyntheticRoot.Deps.begin();
+    for (unsigned u = 0; u < NumFinalAAs; ++u)
+      ++DepIt;
+    for (unsigned u = NumFinalAAs; u < DG.SyntheticRoot.Deps.size();
+         ++u, ++DepIt) {
       errs() << "Unexpected abstract attribute: "
-             << cast<AbstractAttribute>(DG.SyntheticRoot.Deps[u].getPointer())
-             << " :: "
-             << cast<AbstractAttribute>(DG.SyntheticRoot.Deps[u].getPointer())
+             << cast<AbstractAttribute>(DepIt->getPointer()) << " :: "
+             << cast<AbstractAttribute>(DepIt->getPointer())
                     ->getIRPosition()
                     .getAssociatedValue()
              << "\n";
+    }
     llvm_unreachable("Expected the final number of abstract attributes to "
                      "remain unchanged!");
   }
@@ -2499,9 +2529,9 @@ ChangeStatus Attributor::run() {
 }
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
-  TimeTraceScope TimeScope(
-      AA.getName() + std::to_string(AA.getIRPosition().getPositionKind()) +
-      "::updateAA");
+  TimeTraceScope TimeScope("updateAA", [&]() {
+    return AA.getName() + std::to_string(AA.getIRPosition().getPositionKind());
+  });
   assert(Phase == AttributorPhase::UPDATE &&
          "We can update AA only in the update stage!");
 
@@ -3126,7 +3156,7 @@ void Attributor::rememberDependences() {
             DI.DepClass == DepClassTy::OPTIONAL) &&
            "Expected required or optional dependence (1 bit)!");
     auto &DepAAs = const_cast<AbstractAttribute &>(*DI.FromAA).Deps;
-    DepAAs.push_back(AbstractAttribute::DepTy(
+    DepAAs.insert(AbstractAttribute::DepTy(
         const_cast<AbstractAttribute *>(DI.ToAA), unsigned(DI.DepClass)));
   }
 }
@@ -3176,6 +3206,10 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function might be "no-recurse".
   getOrCreateAAFor<AANoRecurse>(FPos);
 
+  // Every function can be "non-convergent".
+  if (F.hasFnAttribute(Attribute::Convergent))
+    getOrCreateAAFor<AANonConvergent>(FPos);
+
   // Every function might be "readnone/readonly/writeonly/...".
   getOrCreateAAFor<AAMemoryBehavior>(FPos);
 
@@ -3223,6 +3257,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Every function with pointer return type might be marked
       // dereferenceable.
       getOrCreateAAFor<AADereferenceable>(RetPos);
+    } else if (AttributeFuncs::isNoFPClassCompatibleType(ReturnType)) {
+      getOrCreateAAFor<AANoFPClass>(RetPos);
     }
   }
 
@@ -3267,6 +3303,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
       // Every argument with pointer type might be privatizable (or promotable)
       getOrCreateAAFor<AAPrivatizablePtr>(ArgPos);
+    } else if (AttributeFuncs::isNoFPClassCompatibleType(Arg.getType())) {
+      getOrCreateAAFor<AANoFPClass>(ArgPos);
     }
   }
 
@@ -3295,11 +3333,13 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       return true;
 
     if (!Callee->getReturnType()->isVoidTy() && !CB.use_empty()) {
-
       IRPosition CBRetPos = IRPosition::callsite_returned(CB);
       bool UsedAssumedInformation = false;
       getAssumedSimplified(CBRetPos, nullptr, UsedAssumedInformation,
                            AA::Intraprocedural);
+
+      if (AttributeFuncs::isNoFPClassCompatibleType(Callee->getReturnType()))
+        getOrCreateAAFor<AANoFPClass>(CBInstPos);
     }
 
     for (int I = 0, E = CB.arg_size(); I < E; ++I) {
@@ -3319,8 +3359,14 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Every call site argument might be marked "noundef".
       getOrCreateAAFor<AANoUndef>(CBArgPos);
 
-      if (!CB.getArgOperand(I)->getType()->isPointerTy())
+      Type *ArgTy = CB.getArgOperand(I)->getType();
+
+      if (!ArgTy->isPointerTy()) {
+        if (AttributeFuncs::isNoFPClassCompatibleType(ArgTy))
+          getOrCreateAAFor<AANoFPClass>(CBArgPos);
+
         continue;
+      }
 
       // Call site argument attribute "non-null".
       getOrCreateAAFor<AANonNull>(CBArgPos);
@@ -3694,11 +3740,11 @@ template <> struct GraphTraits<AADepGraphNode *> {
   using EdgeRef = PointerIntPair<AADepGraphNode *, 1>;
 
   static NodeRef getEntryNode(AADepGraphNode *DGN) { return DGN; }
-  static NodeRef DepGetVal(DepTy &DT) { return DT.getPointer(); }
+  static NodeRef DepGetVal(const DepTy &DT) { return DT.getPointer(); }
 
   using ChildIteratorType =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
-  using ChildEdgeIteratorType = TinyPtrVector<DepTy>::iterator;
+      mapped_iterator<AADepGraphNode::DepSetTy::iterator, decltype(&DepGetVal)>;
+  using ChildEdgeIteratorType = AADepGraphNode::DepSetTy::iterator;
 
   static ChildIteratorType child_begin(NodeRef N) { return N->child_begin(); }
 
@@ -3710,7 +3756,7 @@ struct GraphTraits<AADepGraph *> : public GraphTraits<AADepGraphNode *> {
   static NodeRef getEntryNode(AADepGraph *DG) { return DG->GetEntryNode(); }
 
   using nodes_iterator =
-      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
+      mapped_iterator<AADepGraphNode::DepSetTy::iterator, decltype(&DepGetVal)>;
 
   static nodes_iterator nodes_begin(AADepGraph *DG) { return DG->begin(); }
 
@@ -3730,98 +3776,3 @@ template <> struct DOTGraphTraits<AADepGraph *> : public DefaultDOTGraphTraits {
 };
 
 } // end namespace llvm
-
-namespace {
-
-struct AttributorLegacyPass : public ModulePass {
-  static char ID;
-
-  AttributorLegacyPass() : ModulePass(ID) {
-    initializeAttributorLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    AnalysisGetter AG;
-    SetVector<Function *> Functions;
-    for (Function &F : M)
-      Functions.insert(&F);
-
-    CallGraphUpdater CGUpdater;
-    BumpPtrAllocator Allocator;
-    InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-    return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
-                                    /* DeleteFns*/ true,
-                                    /* IsModulePass */ true);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    // FIXME: Think about passes we will preserve and add them here.
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
-
-struct AttributorCGSCCLegacyPass : public CallGraphSCCPass {
-  static char ID;
-
-  AttributorCGSCCLegacyPass() : CallGraphSCCPass(ID) {
-    initializeAttributorCGSCCLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnSCC(CallGraphSCC &SCC) override {
-    if (skipSCC(SCC))
-      return false;
-
-    SetVector<Function *> Functions;
-    for (CallGraphNode *CGN : SCC)
-      if (Function *Fn = CGN->getFunction())
-        if (!Fn->isDeclaration())
-          Functions.insert(Fn);
-
-    if (Functions.empty())
-      return false;
-
-    AnalysisGetter AG;
-    CallGraph &CG = const_cast<CallGraph &>(SCC.getCallGraph());
-    CallGraphUpdater CGUpdater;
-    CGUpdater.initialize(CG, SCC);
-    Module &M = *Functions.back()->getParent();
-    BumpPtrAllocator Allocator;
-    InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-    return runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater,
-                                    /* DeleteFns */ false,
-                                    /* IsModulePass */ false);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    // FIXME: Think about passes we will preserve and add them here.
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    CallGraphSCCPass::getAnalysisUsage(AU);
-  }
-};
-
-} // end anonymous namespace
-
-Pass *llvm::createAttributorLegacyPass() { return new AttributorLegacyPass(); }
-Pass *llvm::createAttributorCGSCCLegacyPass() {
-  return new AttributorCGSCCLegacyPass();
-}
-
-char AttributorLegacyPass::ID = 0;
-char AttributorCGSCCLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(AttributorLegacyPass, "attributor",
-                      "Deduce and propagate attributes", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(AttributorLegacyPass, "attributor",
-                    "Deduce and propagate attributes", false, false)
-INITIALIZE_PASS_BEGIN(AttributorCGSCCLegacyPass, "attributor-cgscc",
-                      "Deduce and propagate attributes (CGSCC pass)", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(AttributorCGSCCLegacyPass, "attributor-cgscc",
-                    "Deduce and propagate attributes (CGSCC pass)", false,
-                    false)

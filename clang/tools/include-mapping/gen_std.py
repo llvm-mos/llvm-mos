@@ -39,6 +39,7 @@ import argparse
 import datetime
 import os
 import sys
+import re
 
 
 CODE_PREFIX = """\
@@ -170,6 +171,69 @@ def AdditionalHeadersForIOSymbols(symbol):
   return headers
 
 
+def GetCCompatibilitySymbols(symbol):
+   # C++ form of the C standard headers.
+  c_compat_headers = {
+    "<cassert>",
+    "<cctype>",
+    "<cerrno>",
+    "<cfenv>",
+    "<cfloat>",
+    "<cinttypes>",
+    "<climits>",
+    "<clocale>",
+    "<cmath>",
+    "<csetjmp>",
+    "<csignal>",
+    "<cstdarg>",
+    "<cstddef>",
+    "<cstdint>",
+    "<cstdio>",
+    "<cstdlib>",
+    "<cstring>",
+    "<ctime>",
+    "<cuchar>",
+    "<cwchar>",
+    "<cwctype>",
+  }
+  # C++ [support.c.headers.other] 17.14.7
+  #    ..., behaves as if each name placed in the standard library namespace by
+  #    the corresponding <cname> header is placed within the global namespace
+  #    scope, except for the functions described in [sf.cmath], the
+  #    std​::​lerp function overloads ([c.math.lerp]), the declaration of
+  #    std​::​byte ([cstddef.syn]), and the functions and function templates
+  #    described in [support.types.byteops].
+  exception_symbols = {
+    "(assoc_)?laguerre[f|l]?",
+    "(assoc_|sph_)?legendre[f|l]?",
+    "beta[f|l]?",
+    "(comp_)?ellint_[1-3][f|l]?",
+    "(cyl_|sph_)?bessel_[i-k][f|l]?",
+    "(cyl_|sph_)?neumann[f|l]?",
+    "expint[f|l]?",
+    "hermite[f|l]?",
+    "riemann_zeta[f|l]?",
+    "lerp",
+    "byte",
+  }
+  assert(len(symbol.headers) == 1)
+  header = symbol.headers[0]
+  if header not in c_compat_headers:
+    return []
+  if any(re.fullmatch(x, symbol.name) for x in exception_symbols):
+    return []
+
+  # Introduce two more entries, both in the global namespace, one using the
+  # C++-compat header and another using the C header.
+  results = []
+  if symbol.namespace != None:
+    # avoid printing duplicated entries, for C macros!
+    results.append(cppreference_parser.Symbol(symbol.name, None, [header]))
+  c_header = "<" + header[2:-1] +  ".h>" # <cstdio> => <stdio.h>
+  results.append(cppreference_parser.Symbol(symbol.name, None, [c_header]))
+  return results
+
+
 def main():
   args = ParseArg()
   if args.symbols == 'cpp':
@@ -181,17 +245,20 @@ def main():
       # We don't index std literal operators (e.g.
       # std::literals::chrono_literals::operator""d), these symbols can't be
       # accessed by std::<symbol_name>.
-      # FIXME: index std::placeholders symbols, placeholders.html page is
-      # different (which contains one entry for _1, _2, ..., _N), we need special
-      # handling.
+      #
+      # std::placeholders symbols are handled manually in StdSpecialSymbolMap.inc
       (symbol_index_root, "chrono.html", "std::chrono::"),
+      (symbol_index_root, "execution.html", "std::execution::"),
+      (symbol_index_root, "numbers.html", "std::numbers::"),
       (symbol_index_root, "filesystem.html", "std::filesystem::"),
       (symbol_index_root, "pmr.html", "std::pmr::"),
+      (symbol_index_root, "ranges.html", "std::ranges::"),
       (symbol_index_root, "regex_constants.html", "std::regex_constants::"),
       (symbol_index_root, "this_thread.html", "std::this_thread::"),
       # Zombie symbols that were available from the Standard Library, but are
       # removed in the following standards.
       (symbol_index_root, "zombie_names.html", "std::"),
+      (symbol_index_root, "macro.html", None),
     ]
   elif args.symbols == 'c':
     page_root = os.path.join(args.cppreference, "en", "c")
@@ -211,11 +278,14 @@ def main():
   print(CODE_PREFIX % (args.symbols.upper(), cppreference_modified_date))
   for symbol in symbols:
     if len(symbol.headers) == 1:
-      # SYMBOL(unqualified_name, namespace, header)
-      symbol.headers.extend(AdditionalHeadersForIOSymbols(symbol))
-      for header in symbol.headers:
-        print("SYMBOL(%s, %s, %s)" % (symbol.name, symbol.namespace,
-                                      header))
+      augmented_symbols = [symbol]
+      augmented_symbols.extend(GetCCompatibilitySymbols(symbol))
+      for s in augmented_symbols:
+        s.headers.extend(AdditionalHeadersForIOSymbols(s))
+        for header in s.headers:
+          # SYMBOL(unqualified_name, namespace, header)
+          print("SYMBOL(%s, %s, %s)" % (s.name, s.namespace,
+                                        header))
     elif len(symbol.headers) == 0:
       sys.stderr.write("No header found for symbol %s\n" % symbol.name)
     else:

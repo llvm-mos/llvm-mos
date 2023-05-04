@@ -126,9 +126,9 @@ namespace llvm {
     /// operand 1 is the target address.
     NT_BRIND,
 
-    /// Return with a flag operand. Operand 0 is the chain operand, operand
+    /// Return with a glue operand. Operand 0 is the chain operand, operand
     /// 1 is the number of bytes of stack to pop.
-    RET_FLAG,
+    RET_GLUE,
 
     /// Return from interrupt. Operand 0 is the number of bytes to pop.
     IRET,
@@ -1046,6 +1046,8 @@ namespace llvm {
 
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+    bool preferABDSToABSWithNSW(EVT VT) const override;
+
     /// Return true if the target has native support for
     /// the specified value type and it is 'desirable' to use the type for the
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
@@ -1057,6 +1059,13 @@ namespace llvm {
     /// i16 is legal, but undesirable since i16 instruction encodings are longer
     /// and some i16 instructions are slow.
     bool IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const override;
+
+    /// Return prefered fold type, Abs if this is a vector, AddAnd if its an
+    /// integer, None otherwise.
+    TargetLowering::AndOrSETCCFoldKind
+    isDesirableToCombineLogicOpOfSETCC(const SDNode *LogicOp,
+                                       const SDNode *SETCC0,
+                                       const SDNode *SETCC1) const override;
 
     /// Return the newly negated expression if the cost is not expensive and
     /// set the cost in \p Cost to indicate that if it is cheaper or neutral to
@@ -1088,8 +1097,6 @@ namespace llvm {
 
     bool isCtlzFast() const override;
 
-    bool hasBitPreservingFPLogic(EVT VT) const override;
-
     bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
       // If the pair to store is a mixture of float and int values, we will
       // save two bitwise instructions and one float-to-int instruction and
@@ -1119,7 +1126,7 @@ namespace llvm {
         unsigned OldShiftOpcode, unsigned NewShiftOpcode,
         SelectionDAG &DAG) const override;
 
-    bool preferScalarizeSplat(unsigned Opc) const override;
+    bool preferScalarizeSplat(SDNode *N) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
@@ -1345,10 +1352,10 @@ namespace llvm {
     bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                     EVT VT) const override;
 
-    /// Return true if it's profitable to narrow
-    /// operations of type VT1 to VT2. e.g. on x86, it's profitable to narrow
-    /// from i32 to i8 but not from i32 to i16.
-    bool isNarrowingProfitable(EVT VT1, EVT VT2) const override;
+    /// Return true if it's profitable to narrow operations of type SrcVT to
+    /// DestVT. e.g. on x86, it's profitable to narrow from i32 to i8 but not
+    /// from i32 to i16.
+    bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override;
 
     bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
                                               EVT VT) const override;
@@ -1570,7 +1577,7 @@ namespace llvm {
       LegalFPImmediates.push_back(Imm);
     }
 
-    SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+    SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
