@@ -10,8 +10,10 @@
 #ifndef _PSTL_PARALLEL_BACKEND_UTILS_H
 #define _PSTL_PARALLEL_BACKEND_UTILS_H
 
-#include <iterator>
-#include <utility>
+#include <__assert>
+#include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
+
 #include "utils.h"
 
 #include "pstl_config.h"
@@ -55,7 +57,7 @@ struct __serial_move_merge
         constexpr bool __same_move_seq = std::is_same<_MoveSequenceX, _MoveSequenceY>::value;
 
         auto __n = _M_nmerge;
-        _PSTL_ASSERT(__n > 0);
+        _LIBCPP_ASSERT(__n > 0, "");
 
         auto __nx = __xe - __xs;
         //auto __ny = __ye - __ys;

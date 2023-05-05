@@ -10,7 +10,6 @@
 #include "PECallFrameInfo.h"
 #include "WindowsMiniDump.h"
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -25,6 +24,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
@@ -90,14 +90,13 @@ public:
   }
 
   llvm::Triple::EnvironmentType ABI() const {
-    return (llvm::Triple::EnvironmentType)m_collection_sp
-        ->GetPropertyAtIndexAsEnumeration(nullptr, ePropertyABI)
-        .value_or(llvm::Triple::UnknownEnvironment);
+    return GetPropertyAtIndexAs<llvm::Triple::EnvironmentType>(
+        ePropertyABI, llvm::Triple::UnknownEnvironment);
   }
 
   OptionValueDictionary *ModuleABIMap() const {
     return m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
-        nullptr, ePropertyModuleABIMap);
+        ePropertyModuleABIMap);
   }
 };
 
@@ -166,7 +165,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
     auto raw_data = coff_obj.getData();
     LLDB_SCOPED_TIMERF(
         "Calculating module crc32 %s with size %" PRIu64 " KiB",
-        FileSpec(coff_obj.getFileName()).GetLastPathComponent().AsCString(),
+        FileSpec(coff_obj.getFileName()).GetFilename().AsCString(),
         static_cast<lldb::offset_t>(raw_data.size()) / 1024);
     gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
   }
@@ -295,7 +294,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   const auto *map = GetGlobalPluginProperties().ModuleABIMap();
   if (map->GetNumValues() > 0) {
     // Step 1: Try with the exact file name.
-    auto name = file.GetLastPathComponent();
+    auto name = file.GetFilename();
     module_env_option = map->GetValueForKey(name);
     if (!module_env_option) {
       // Step 2: Try with the file name in lowercase.

@@ -117,8 +117,6 @@ void InitOmptLibomp() {
   DP("OMPT: Exit InitOmptLibomp\n");
 }
 
-#endif // OMPT_SUPPORT
-
 extern "C" {
 /// Used for connecting libomptarget with a plugin
 void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
@@ -135,3 +133,9 @@ void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
   DP("OMPT: Leave ompt_libomptarget_connect\n");
 }
 }
+#else
+extern "C" {
+/// Dummy definition when OMPT is disabled
+void ompt_libomptarget_connect() {}
+}
+#endif // OMPT_SUPPORT

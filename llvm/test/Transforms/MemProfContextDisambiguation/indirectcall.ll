@@ -44,12 +44,15 @@
 ;;   return 0;
 ;; }
 ;;
-;; Code compiled with -mllvm -memprof-min-lifetime-cold-threshold=5 so that the
+;; Code compiled with -mllvm -memprof-ave-lifetime-cold-threshold=5 so that the
 ;; memory freed after sleep(10) results in cold lifetimes.
 ;;
 ;; Compiled without optimization to prevent inlining and devirtualization.
 ;;
 ;; The IR was then reduced using llvm-reduce with the expected FileCheck input.
+
+;; -stats requires asserts
+; REQUIRES: asserts
 
 ; RUN: opt -passes=memprof-context-disambiguation \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \

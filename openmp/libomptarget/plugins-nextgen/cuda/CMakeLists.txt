@@ -36,12 +36,15 @@ add_llvm_library(omptarget.rtl.cuda.nextgen SHARED
   LINK_LIBS PRIVATE
   elf_common
   MemoryManager
-  OMPT
   PluginInterface
   ${OPENMP_PTHREAD_LIB}
 
   NO_INSTALL_RPATH
 )
+
+if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+  target_link_libraries(omptarget.rtl.cuda.nextgen PRIVATE OMPT)
+endif()
 
 if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
   target_link_libraries(omptarget.rtl.cuda.nextgen PRIVATE

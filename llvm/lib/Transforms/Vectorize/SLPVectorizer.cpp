@@ -2490,7 +2490,7 @@ private:
 
   /// \returns a vector from a collection of scalars in \p VL. if \p Root is not
   /// specified, the starting vector value is poison.
-  Value *gather(ArrayRef<Value *> VL, Value *Root = nullptr);
+  Value *gather(ArrayRef<Value *> VL, Value *Root);
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
@@ -6598,9 +6598,9 @@ protected:
   /// Smart shuffle instruction emission, walks through shuffles trees and
   /// tries to find the best matching vector for the actual shuffle
   /// instruction.
-  template <typename ShuffleBuilderTy>
-  static Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
-                              ShuffleBuilderTy &Builder) {
+  template <typename T, typename ShuffleBuilderTy>
+  static T createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
+                         ShuffleBuilderTy &Builder) {
     assert(V1 && "Expected at least one vector value.");
     if (V2)
       Builder.resizeToMatch(V1, V2);
@@ -6699,21 +6699,21 @@ protected:
             isa<ShuffleVectorInst>(Op1) &&
             cast<ShuffleVectorInst>(Op1)->getShuffleMask() ==
                 ArrayRef(CombinedMask1))))
-        return Op1;
+        return Builder.createIdentity(Op1);
       return Builder.createShuffleVector(
           Op1, Op1 == Op2 ? PoisonValue::get(Op1->getType()) : Op2,
           CombinedMask1);
     }
     if (isa<PoisonValue>(V1))
-      return PoisonValue::get(FixedVectorType::get(
-          cast<VectorType>(V1->getType())->getElementType(), Mask.size()));
+      return Builder.createPoison(
+          cast<VectorType>(V1->getType())->getElementType(), Mask.size());
     SmallVector<int> NewMask(Mask.begin(), Mask.end());
     bool IsIdentity = peekThroughShuffles(V1, NewMask, /*SinglePermute=*/true);
     assert(V1 && "Expected non-null value after looking through shuffles.");
 
     if (!IsIdentity)
       return Builder.createShuffleVector(V1, NewMask);
-    return V1;
+    return Builder.createIdentity(V1);
   }
 };
 } // namespace
@@ -6923,6 +6923,90 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     return Cost;
   }
 
+  class ShuffleCostBuilder {
+    const TargetTransformInfo &TTI;
+
+    static bool isEmptyOrIdentity(ArrayRef<int> Mask, unsigned VF) {
+      int Limit = 2 * VF;
+      return Mask.empty() ||
+             (VF == Mask.size() &&
+              all_of(Mask, [Limit](int Idx) { return Idx < Limit; }) &&
+              ShuffleVectorInst::isIdentityMask(Mask));
+    }
+
+  public:
+    ShuffleCostBuilder(const TargetTransformInfo &TTI) : TTI(TTI) {}
+    ~ShuffleCostBuilder() = default;
+    InstructionCost createShuffleVector(Value *V1, Value *,
+                                        ArrayRef<int> Mask) const {
+      // Empty mask or identity mask are free.
+      unsigned VF =
+          cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
+      if (isEmptyOrIdentity(Mask, VF))
+        return TTI::TCC_Free;
+      return TTI.getShuffleCost(
+          TTI::SK_PermuteTwoSrc,
+          FixedVectorType::get(
+              cast<VectorType>(V1->getType())->getElementType(), Mask.size()),
+          Mask);
+    }
+    InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask) const {
+      // Empty mask or identity mask are free.
+      if (isEmptyOrIdentity(Mask, Mask.size()))
+        return TTI::TCC_Free;
+      return TTI.getShuffleCost(
+          TTI::SK_PermuteSingleSrc,
+          FixedVectorType::get(
+              cast<VectorType>(V1->getType())->getElementType(), Mask.size()),
+          Mask);
+    }
+    InstructionCost createIdentity(Value *) const { return TTI::TCC_Free; }
+    InstructionCost createPoison(Type *Ty, unsigned VF) const {
+      return TTI::TCC_Free;
+    }
+    void resizeToMatch(Value *&, Value *&) const {}
+  };
+
+  /// Smart shuffle instruction emission, walks through shuffles trees and
+  /// tries to find the best matching vector for the actual shuffle
+  /// instruction.
+  InstructionCost
+  createShuffle(const PointerUnion<Value *, const TreeEntry *> &P1,
+                const PointerUnion<Value *, const TreeEntry *> &P2,
+                ArrayRef<int> Mask) {
+    ShuffleCostBuilder Builder(TTI);
+    Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
+    unsigned CommonVF = 0;
+    if (!V1) {
+      const TreeEntry *E = P1.get<const TreeEntry *>();
+      unsigned VF = E->getVectorFactor();
+      if (V2) {
+        unsigned V2VF = cast<FixedVectorType>(V2->getType())->getNumElements();
+        if (V2VF != VF && V2VF == E->Scalars.size())
+          VF = E->Scalars.size();
+      } else if (!P2.isNull()) {
+        const TreeEntry *E2 = P2.get<const TreeEntry *>();
+        if (E->Scalars.size() == E2->Scalars.size())
+          CommonVF = VF = E->Scalars.size();
+      }
+      V1 = Constant::getNullValue(
+          FixedVectorType::get(E->Scalars.front()->getType(), VF));
+    }
+    if (!V2 && !P2.isNull()) {
+      const TreeEntry *E = P2.get<const TreeEntry *>();
+      unsigned VF = E->getVectorFactor();
+      unsigned V1VF = cast<FixedVectorType>(V1->getType())->getNumElements();
+      if (!CommonVF && V1VF == E->Scalars.size())
+        CommonVF = E->Scalars.size();
+      if (CommonVF)
+        VF = CommonVF;
+      V2 = Constant::getNullValue(
+          FixedVectorType::get(E->Scalars.front()->getType(), VF));
+    }
+    return BaseShuffleAnalysis::createShuffle<InstructionCost>(V1, V2, Mask,
+                                                               Builder);
+  }
+
 public:
   ShuffleCostEstimator(TargetTransformInfo &TTI,
                        ArrayRef<Value *> VectorizedVals, BoUpSLP &R,
@@ -7053,19 +7137,10 @@ public:
     if (all_of(CommonMask, [=](int Idx) { return Idx < Limit; }) &&
         ShuffleVectorInst::isIdentityMask(CommonMask))
       return Cost;
-    Type *ScalarTy;
-    if (auto *V = InVectors.front().dyn_cast<Value *>())
-      ScalarTy = cast<VectorType>(V->getType())->getElementType();
-    else
-      ScalarTy = InVectors.front()
-                     .get<const TreeEntry *>()
-                     ->Scalars.front()
-                     ->getType();
     return Cost +
-           TTI.getShuffleCost(InVectors.size() == 2 ? TTI::SK_PermuteTwoSrc
-                                                    : TTI::SK_PermuteSingleSrc,
-                              FixedVectorType::get(ScalarTy, CommonMask.size()),
-                              CommonMask);
+           createShuffle(InVectors.front(),
+                         InVectors.size() == 2 ? InVectors.back() : nullptr,
+                         CommonMask);
   }
 
   ~ShuffleCostEstimator() {
@@ -8876,9 +8951,11 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
           LastInst = I;
         continue;
       }
-      assert(isVectorLikeInstWithConstOps(LastInst) &&
-             isVectorLikeInstWithConstOps(I) &&
-             "Expected vector-like insts only.");
+      assert(((E->getOpcode() == Instruction::GetElementPtr &&
+               !isa<GetElementPtrInst>(I)) ||
+              (isVectorLikeInstWithConstOps(LastInst) &&
+               isVectorLikeInstWithConstOps(I))) &&
+             "Expected vector-like or non-GEP in GEP node insts only.");
       if (!DT->isReachableFromEntry(LastInst->getParent())) {
         LastInst = I;
         continue;
@@ -8940,7 +9017,12 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       (doesNotNeedToSchedule(E->Scalars) ||
        all_of(E->Scalars, isVectorLikeInstWithConstOps))) {
     Instruction *InsertInst;
-    if (all_of(E->Scalars, [](Value *V) {
+    if ((E->getOpcode() == Instruction::GetElementPtr &&
+         any_of(E->Scalars,
+                [](Value *V) {
+                  return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
+                })) ||
+        all_of(E->Scalars, [](Value *V) {
           return !isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V);
         }))
       InsertInst = FindLastInst();
@@ -9172,6 +9254,10 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
       }
       return Vec;
     }
+    Value *createIdentity(Value *V) { return V; }
+    Value *createPoison(Type *Ty, unsigned VF) {
+      return PoisonValue::get(FixedVectorType::get(Ty, VF));
+    }
     /// Resizes 2 input vector to match the sizes, if the they are not equal
     /// yet. The smallest vector is resized to the size of the larger vector.
     void resizeToMatch(Value *&V1, Value *&V2) {
@@ -9204,7 +9290,8 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
     assert(V1 && "Expected at least one vector value.");
     ShuffleIRBuilder ShuffleBuilder(Builder, R.GatherShuffleExtractSeq,
                                     R.CSEBlocks);
-    return BaseShuffleAnalysis::createShuffle(V1, V2, Mask, ShuffleBuilder);
+    return BaseShuffleAnalysis::createShuffle<Value *>(V1, V2, Mask,
+                                                       ShuffleBuilder);
   }
 
   /// Transforms mask \p CommonMask per given \p Mask to make proper set after
@@ -9344,6 +9431,10 @@ public:
     inversePermutation(Order, NewMask);
     add(V1, NewMask);
   }
+  Value *gather(ArrayRef<Value *> VL, Value *Root = nullptr) {
+    return R.gather(VL, Root);
+  }
+  Value *createFreeze(Value *V) { return Builder.CreateFreeze(V); }
   /// Finalize emission of the shuffles.
   /// \param Action the action (if any) to be performed before final applying of
   /// the \p ExtMask mask.
@@ -9818,7 +9909,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     if (!all_of(GatheredScalars, PoisonValue::classof)) {
       SmallVector<int> BVMask(GatheredScalars.size(), PoisonMaskElem);
       TryPackScalars(GatheredScalars, BVMask, /*IsRootPoison=*/true);
-      Value *BV = gather(GatheredScalars);
+      Value *BV = ShuffleBuilder.gather(GatheredScalars);
       ShuffleBuilder.add(BV, BVMask);
     }
     if (all_of(NonConstants, [=](Value *V) {
@@ -9832,13 +9923,13 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
           E->ReuseShuffleIndices, E->Scalars.size(),
           [&](Value *&Vec, SmallVectorImpl<int> &Mask) {
             TryPackScalars(NonConstants, Mask, /*IsRootPoison=*/false);
-            Vec = gather(NonConstants, Vec);
+            Vec = ShuffleBuilder.gather(NonConstants, Vec);
           });
   } else if (!allConstant(GatheredScalars)) {
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    Vec = gather(GatheredScalars);
+    Vec = ShuffleBuilder.gather(GatheredScalars);
     ShuffleBuilder.add(Vec, ReuseMask);
     Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   } else {
@@ -9848,13 +9939,13 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
       if (!isa<PoisonValue>(V))
         Mask[I] = I;
     }
-    Vec = gather(E->Scalars);
+    Vec = ShuffleBuilder.gather(E->Scalars);
     ShuffleBuilder.add(Vec, Mask);
     Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   }
 
   if (NeedFreeze)
-    Vec = Builder.CreateFreeze(Vec);
+    Vec = ShuffleBuilder.createFreeze(Vec);
   return Vec;
 }
 
@@ -12808,7 +12899,7 @@ public:
   HorizontalReduction() = default;
 
   /// Try to find a reduction tree.
-  bool matchAssociativeReduction(Instruction *Root,
+  bool matchAssociativeReduction(BoUpSLP &R, Instruction *Root,
                                  ScalarEvolution &SE, const DataLayout &DL,
                                  const TargetLibraryInfo &TLI) {
     RdxKind = HorizontalReduction::getRdxKind(Root);
@@ -12837,11 +12928,10 @@ public:
     // Checks if the operands of the \p TreeN instruction are also reduction
     // operations or should be treated as reduced values or an extra argument,
     // which is not part of the reduction.
-    auto &&CheckOperands = [this, IsCmpSelMinMax,
-                            BB](Instruction *TreeN,
-                                SmallVectorImpl<Value *> &ExtraArgs,
-                                SmallVectorImpl<Value *> &PossibleReducedVals,
-                                SmallVectorImpl<Instruction *> &ReductionOps) {
+    auto CheckOperands = [&](Instruction *TreeN,
+                             SmallVectorImpl<Value *> &ExtraArgs,
+                             SmallVectorImpl<Value *> &PossibleReducedVals,
+                             SmallVectorImpl<Instruction *> &ReductionOps) {
       for (int I = getFirstOperandIndex(TreeN),
                End = getNumberOfOperands(TreeN);
            I < End; ++I) {
@@ -12856,10 +12946,14 @@ public:
         }
         // If the edge is not an instruction, or it is different from the main
         // reduction opcode or has too many uses - possible reduced value.
+        // Also, do not try to reduce const values, if the operation is not
+        // foldable.
         if (!EdgeInst || getRdxKind(EdgeInst) != RdxKind ||
             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
-            !isVectorizable(RdxKind, EdgeInst)) {
+            !isVectorizable(RdxKind, EdgeInst) ||
+            (R.isAnalyzedReductionRoot(EdgeInst) &&
+             all_of(EdgeInst->operands(), Constant::classof))) {
           PossibleReducedVals.push_back(EdgeVal);
           continue;
         }
@@ -13143,9 +13237,11 @@ public:
           allConstant(Candidates)) {
         Value *Res = Candidates.front();
         ++VectorizedVals.try_emplace(Candidates.front(), 0).first->getSecond();
-        for (Value *V : ArrayRef(Candidates).drop_front()) {
-          Res = createOp(Builder, RdxKind, Res, V, "const.rdx", ReductionOps);
-          ++VectorizedVals.try_emplace(V, 0).first->getSecond();
+        for (Value *VC : ArrayRef(Candidates).drop_front()) {
+          Res = createOp(Builder, RdxKind, Res, VC, "const.rdx", ReductionOps);
+          ++VectorizedVals.try_emplace(VC, 0).first->getSecond();
+          if (auto *ResI = dyn_cast<Instruction>(Res))
+            V.analyzedReductionRoot(ResI);
         }
         VectorizedTree = GetNewVectorizedTree(VectorizedTree, Res);
         continue;
@@ -13982,8 +14078,8 @@ static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
 ///  r *= v1 + v2 + v3 + v4
 /// In such a case start looking for a tree rooted in the first '+'.
 /// \Returns the new root if found, which may be nullptr if not an instruction.
-static Instruction *tryGetScondaryReductionRoot(PHINode *Phi,
-                                                Instruction *Root) {
+static Instruction *tryGetSecondaryReductionRoot(PHINode *Phi,
+                                                 Instruction *Root) {
   assert((isa<BinaryOperator>(Root) || isa<SelectInst>(Root) ||
           isa<IntrinsicInst>(Root)) &&
          "Expected binop, select, or intrinsic for reduction matching");
@@ -13998,16 +14094,43 @@ static Instruction *tryGetScondaryReductionRoot(PHINode *Phi,
   return nullptr;
 }
 
+/// \p Returns the first operand of \p I that does not match \p Phi. If
+/// operand is not an instruction it returns nullptr.
+static Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi) {
+  Value *Op0 = nullptr;
+  Value *Op1 = nullptr;
+  if (!matchRdxBop(I, Op0, Op1))
+    return nullptr;
+  return dyn_cast<Instruction>(Op0 == Phi ? Op1 : Op0);
+}
+
+/// \Returns true if \p I is a candidate instruction for reduction vectorization.
+static bool isReductionCandidate(Instruction *I) {
+  bool IsSelect = match(I, m_Select(m_Value(), m_Value(), m_Value()));
+  Value *B0 = nullptr, *B1 = nullptr;
+  bool IsBinop = matchRdxBop(I, B0, B1);
+  return IsBinop || IsSelect;
+}
+
 bool SLPVectorizerPass::vectorizeHorReduction(
     PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R, TargetTransformInfo *TTI,
     SmallVectorImpl<WeakTrackingVH> &PostponedInsts) {
   if (!ShouldVectorizeHor)
     return false;
-  if (!isa<BinaryOperator>(Root))
-    P = nullptr;
+  bool TryOperandsAsNewSeeds = P && isa<BinaryOperator>(Root);
 
   if (Root->getParent() != BB || isa<PHINode>(Root))
     return false;
+
+  // If we can find a secondary reduction root, use that instead.
+  auto SelectRoot = [&]() {
+    if (TryOperandsAsNewSeeds && isReductionCandidate(Root) &&
+        HorizontalReduction::getRdxKind(Root) != RecurKind::None)
+      if (Instruction *NewRoot = tryGetSecondaryReductionRoot(P, Root))
+        return NewRoot;
+    return Root;
+  };
+
   // Start analysis starting from Root instruction. If horizontal reduction is
   // found, try to vectorize it. If it is not a horizontal reduction or
   // vectorization is not possible or not effective, and currently analyzed
@@ -14020,28 +14143,32 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   // If a horizintal reduction was not matched or vectorized we collect
   // instructions for possible later attempts for vectorization.
   std::queue<std::pair<Instruction *, unsigned>> Stack;
-  Stack.emplace(Root, 0);
+  Stack.emplace(SelectRoot(), 0);
   SmallPtrSet<Value *, 8> VisitedInstrs;
   bool Res = false;
-  auto &&TryToReduce = [this, TTI, &P, &R](Instruction *Inst, Value *&B0,
-                                           Value *&B1) -> Value * {
+  auto &&TryToReduce = [this, TTI, &R](Instruction *Inst) -> Value * {
     if (R.isAnalyzedReductionRoot(Inst))
       return nullptr;
-    bool IsBinop = matchRdxBop(Inst, B0, B1);
-    bool IsSelect = match(Inst, m_Select(m_Value(), m_Value(), m_Value()));
-    if (IsBinop || IsSelect) {
-      assert((!P || is_contained(P->operands(), Inst)) &&
-             "Phi needs to use the binary operator");
-      if (P && HorizontalReduction::getRdxKind(Inst) != RecurKind::None)
-        if (Instruction *NewRoot = tryGetScondaryReductionRoot(P, Inst))
-          Inst = NewRoot;
-
-      HorizontalReduction HorRdx;
-      if (HorRdx.matchAssociativeReduction(Inst, *SE, *DL, *TLI))
-        return HorRdx.tryToReduce(R, TTI, *TLI);
-    }
-    return nullptr;
+    if (!isReductionCandidate(Inst))
+      return nullptr;
+    HorizontalReduction HorRdx;
+    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
+      return nullptr;
+    return HorRdx.tryToReduce(R, TTI, *TLI);
   };
+  auto TryAppendToPostponedInsts = [&](Instruction *FutureSeed) {
+    if (TryOperandsAsNewSeeds && FutureSeed == Root) {
+      FutureSeed = getNonPhiOperand(Root, P);
+      if (!FutureSeed)
+        return false;
+    }
+    // Do not collect CmpInst or InsertElementInst/InsertValueInst as their
+    // analysis is done separately.
+    if (!isa<CmpInst, InsertElementInst, InsertValueInst>(FutureSeed))
+      PostponedInsts.push_back(FutureSeed);
+    return true;
+  };
+
   while (!Stack.empty()) {
     Instruction *Inst;
     unsigned Level;
@@ -14052,37 +14179,19 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     // iteration while stack was populated before that happened.
     if (R.isDeleted(Inst))
       continue;
-    Value *B0 = nullptr, *B1 = nullptr;
-    if (Value *V = TryToReduce(Inst, B0, B1)) {
+    if (Value *VectorizedV = TryToReduce(Inst)) {
       Res = true;
-      // Set P to nullptr to avoid re-analysis of phi node in
-      // matchAssociativeReduction function unless this is the root node.
-      P = nullptr;
-      if (auto *I = dyn_cast<Instruction>(V)) {
+      if (auto *I = dyn_cast<Instruction>(VectorizedV)) {
         // Try to find another reduction.
         Stack.emplace(I, Level);
         continue;
       }
     } else {
-      bool IsBinop = B0 && B1;
-      if (P && IsBinop) {
-        Inst = dyn_cast<Instruction>(B0);
-        if (Inst == P)
-          Inst = dyn_cast<Instruction>(B1);
-        if (!Inst) {
-          // Set P to nullptr to avoid re-analysis of phi node in
-          // matchAssociativeReduction function unless this is the root node.
-          P = nullptr;
-          continue;
-        }
+      // We could not vectorize `Inst` so try to use it as a future seed.
+      if (!TryAppendToPostponedInsts(Inst)) {
+        assert(Stack.empty() && "Expected empty stack");
+        break;
       }
-      // Set P to nullptr to avoid re-analysis of phi node in
-      // matchAssociativeReduction function unless this is the root node.
-      P = nullptr;
-      // Do not collect CmpInst or InsertElementInst/InsertValueInst as their
-      // analysis is done separately.
-      if (!isa<CmpInst, InsertElementInst, InsertValueInst>(Inst))
-        PostponedInsts.push_back(Inst);
     }
 
     // Try to vectorize operands.
@@ -14283,18 +14392,74 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
   return IsCompatibility;
 }
 
+bool SLPVectorizerPass::vectorizeCmpInsts(ArrayRef<CmpInst *> CmpInsts,
+                                          BasicBlock *BB, BoUpSLP &R) {
+  bool Changed = false;
+  // Try to find reductions first.
+  for (Instruction *I : CmpInsts) {
+    if (R.isDeleted(I))
+      continue;
+    for (Value *Op : I->operands())
+      if (auto *RootOp = dyn_cast<Instruction>(Op))
+        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
+  }
+  // Try to vectorize operands as vector bundles.
+  for (Instruction *I : CmpInsts) {
+    if (R.isDeleted(I))
+      continue;
+    Changed |= tryToVectorize(I, R);
+  }
+  // Try to vectorize list of compares.
+  // Sort by type, compare predicate, etc.
+  auto CompareSorter = [&](Value *V, Value *V2) {
+    return compareCmp<false>(V, V2, *TLI,
+                             [&R](Instruction *I) { return R.isDeleted(I); });
+  };
+
+  auto AreCompatibleCompares = [&](Value *V1, Value *V2) {
+    if (V1 == V2)
+      return true;
+    return compareCmp<true>(V1, V2, *TLI,
+                            [&R](Instruction *I) { return R.isDeleted(I); });
+  };
+
+  SmallVector<Value *> Vals(CmpInsts.begin(), CmpInsts.end());
+  Changed |= tryToVectorizeSequence<Value>(
+      Vals, CompareSorter, AreCompatibleCompares,
+      [this, &R](ArrayRef<Value *> Candidates, bool LimitForRegisterSize) {
+        // Exclude possible reductions from other blocks.
+        bool ArePossiblyReducedInOtherBlock = any_of(Candidates, [](Value *V) {
+          return any_of(V->users(), [V](User *U) {
+            auto *Select = dyn_cast<SelectInst>(U);
+            return Select &&
+                   Select->getParent() != cast<Instruction>(V)->getParent();
+          });
+        });
+        if (ArePossiblyReducedInOtherBlock)
+          return false;
+        return tryToVectorizeList(Candidates, R, LimitForRegisterSize);
+      },
+      /*LimitForRegisterSize=*/true, R);
+  return Changed;
+}
+
 bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
                                                     BasicBlock *BB, BoUpSLP &R,
                                                     bool AtTerminator) {
+  assert(all_of(Instructions,
+                [](auto *I) {
+                  return isa<CmpInst, InsertElementInst, InsertValueInst>(I);
+                }) &&
+         "This function only accepts Cmp and Insert instructions");
   bool OpsChanged = false;
-  SmallVector<Instruction *, 4> PostponedCmps;
+  SmallVector<CmpInst *, 4> PostponedCmps;
   SmallVector<WeakTrackingVH> PostponedInsts;
   // pass1 - try to vectorize reductions only
   for (auto *I : reverse(Instructions)) {
     if (R.isDeleted(I))
       continue;
     if (isa<CmpInst>(I)) {
-      PostponedCmps.push_back(I);
+      PostponedCmps.push_back(cast<CmpInst>(I));
       continue;
     }
     OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
@@ -14313,52 +14478,7 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
   OpsChanged |= tryToVectorize(PostponedInsts, R);
 
   if (AtTerminator) {
-    // Try to find reductions first.
-    for (Instruction *I : PostponedCmps) {
-      if (R.isDeleted(I))
-        continue;
-      for (Value *Op : I->operands())
-        if (auto *RootOp = dyn_cast<Instruction>(Op))
-          OpsChanged |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
-    }
-    // Try to vectorize operands as vector bundles.
-    for (Instruction *I : PostponedCmps) {
-      if (R.isDeleted(I))
-        continue;
-      OpsChanged |= tryToVectorize(I, R);
-    }
-    // Try to vectorize list of compares.
-    // Sort by type, compare predicate, etc.
-    auto CompareSorter = [&](Value *V, Value *V2) {
-      return compareCmp<false>(V, V2, *TLI,
-                               [&R](Instruction *I) { return R.isDeleted(I); });
-    };
-
-    auto AreCompatibleCompares = [&](Value *V1, Value *V2) {
-      if (V1 == V2)
-        return true;
-      return compareCmp<true>(V1, V2, *TLI,
-                              [&R](Instruction *I) { return R.isDeleted(I); });
-    };
-
-    SmallVector<Value *> Vals(PostponedCmps.begin(), PostponedCmps.end());
-    OpsChanged |= tryToVectorizeSequence<Value>(
-        Vals, CompareSorter, AreCompatibleCompares,
-        [this, &R](ArrayRef<Value *> Candidates, bool LimitForRegisterSize) {
-          // Exclude possible reductions from other blocks.
-          bool ArePossiblyReducedInOtherBlock =
-              any_of(Candidates, [](Value *V) {
-                return any_of(V->users(), [V](User *U) {
-                  return isa<SelectInst>(U) &&
-                         cast<SelectInst>(U)->getParent() !=
-                             cast<Instruction>(V)->getParent();
-                });
-              });
-          if (ArePossiblyReducedInOtherBlock)
-            return false;
-          return tryToVectorizeList(Candidates, R, LimitForRegisterSize);
-        },
-        /*LimitForRegisterSize=*/true, R);
+    OpsChanged |= vectorizeCmpInsts(PostponedCmps, BB, R);
     Instructions.clear();
   } else {
     Instructions.clear();

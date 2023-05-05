@@ -996,7 +996,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       return false;
 
     // TODO: Should images get their own address space?
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
 
     if (RsrcIntr->IsImage)
       Info.align.reset();
@@ -1086,7 +1086,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
@@ -1133,7 +1133,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
 
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad |
                   MachineMemOperand::MODereferenceable;
@@ -1325,7 +1325,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
@@ -5761,6 +5761,35 @@ SDValue SITargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   unsigned InsNumElts = InsVT.getVectorNumElements();
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
   SDLoc SL(Op);
+
+  if (EltVT.getScalarSizeInBits() == 16 && IdxVal % 2 == 0) {
+    // Insert 32-bit registers at a time.
+    assert(InsNumElts % 2 == 0 && "expect legal vector types");
+
+    unsigned VecNumElts = VecVT.getVectorNumElements();
+    EVT NewVecVT =
+        EVT::getVectorVT(*DAG.getContext(), MVT::i32, VecNumElts / 2);
+    EVT NewInsVT = InsNumElts == 2 ? MVT::i32
+                                   : EVT::getVectorVT(*DAG.getContext(),
+                                                      MVT::i32, InsNumElts / 2);
+
+    Vec = DAG.getNode(ISD::BITCAST, SL, NewVecVT, Vec);
+    Ins = DAG.getNode(ISD::BITCAST, SL, NewInsVT, Ins);
+
+    for (unsigned I = 0; I != InsNumElts / 2; ++I) {
+      SDValue Elt;
+      if (InsNumElts == 2) {
+        Elt = Ins;
+      } else {
+        Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Ins,
+                          DAG.getConstant(I, SL, MVT::i32));
+      }
+      Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, SL, NewVecVT, Vec, Elt,
+                        DAG.getConstant(IdxVal / 2 + I, SL, MVT::i32));
+    }
+
+    return DAG.getNode(ISD::BITCAST, SL, VecVT, Vec);
+  }
 
   for (unsigned I = 0; I != InsNumElts; ++I) {
     SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT, Ins,

@@ -10,6 +10,7 @@
 #ifndef _PSTL_ALGORITHM_IMPL_H
 #define _PSTL_ALGORITHM_IMPL_H
 
+#include <__assert>
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -1326,7 +1327,7 @@ __brick_unique(_RandomAccessIterator __first,
                _RandomAccessIterator __last,
                _BinaryPredicate __pred,
                /*is_vector=*/std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial");
+  // TODO: vectorize
   return std::unique(__first, __last, __pred);
 }
 
@@ -2088,7 +2089,7 @@ _RandomAccessIterator __brick_partition(
     _RandomAccessIterator __last,
     _UnaryPredicate __pred,
     /*is_vector=*/std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial");
+  // TODO: vectorize
   return std::partition(__first, __last, __pred);
 }
 
@@ -2194,7 +2195,7 @@ _RandomAccessIterator __brick_stable_partition(
     _RandomAccessIterator __last,
     _UnaryPredicate __pred,
     /*__is_vector=*/std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial");
+  // TODO: vectorize
   return std::stable_partition(__first, __last, __pred);
 }
 
@@ -2893,7 +2894,7 @@ _RandomAccessIterator3 __brick_merge(
     _RandomAccessIterator3 __d_first,
     _Compare __comp,
     /* __is_vector = */ std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial");
+  // TODO: vectorize
   return std::merge(__first1, __last1, __first2, __last2, __d_first, __comp);
 }
 
@@ -2971,7 +2972,7 @@ void __brick_inplace_merge(
     _RandomAccessIterator __last,
     _Compare __comp,
     /* __is_vector = */ std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial")
+  // TODO: vectorize
   std::inplace_merge(__first, __middle, __last, __comp);
 }
 
@@ -3093,8 +3094,8 @@ bool __pattern_includes(
         __first2,
         __last2,
         [__first1, __last1, __first2, __last2, &__comp](_RandomAccessIterator2 __i, _RandomAccessIterator2 __j) {
-          _PSTL_ASSERT(__j > __i);
-          //_PSTL_ASSERT(__j - __i > 1);
+          _LIBCPP_ASSERT(__j > __i, "");
+          //_LIBCPP_ASSERT(__j - __i > 1, "");
 
           // 1. moving boundaries to "consume" subsequence of equal elements
           auto __is_equal = [&__comp](_RandomAccessIterator2 __a, _RandomAccessIterator2 __b) -> bool {
@@ -3117,8 +3118,8 @@ bool __pattern_includes(
           // 2. testing is __a subsequence of the second range included into the first range
           auto __b = std::lower_bound(__first1, __last1, *__i, __comp);
 
-          _PSTL_ASSERT(!__comp(*(__last1 - 1), *__b));
-          _PSTL_ASSERT(!__comp(*(__j - 1), *__i));
+          _LIBCPP_ASSERT(!__comp(*(__last1 - 1), *__b), "");
+          _LIBCPP_ASSERT(!__comp(*(__j - 1), *__i), "");
           return !std::includes(__b, __last1, __i, __j, __comp);
         });
   });
@@ -3335,7 +3336,7 @@ _OutputIterator __parallel_set_union_op(
   }
 
   const auto __m2 = __left_bound_seq_2 - __first2;
-  _PSTL_ASSERT(__m1 == 0 || __m2 == 0);
+  _LIBCPP_ASSERT(__m1 == 0 || __m2 == 0, "");
   if (__m2 > __set_algo_cut_off) {
     auto __res_or = __result;
     __result += __m2; // we know proper offset due to [first2; left_bound_seq_2) < [first1; last1)
@@ -3409,7 +3410,7 @@ _OutputIterator __brick_set_union(
     _OutputIterator __result,
     _Compare __comp,
     /*__is_vector=*/std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial");
+  // TODO: vectorize
   return std::set_union(__first1, __last1, __first2, __last2, __result, __comp);
 }
 
@@ -3500,7 +3501,7 @@ _RandomAccessIterator3 __brick_set_intersection(
     _RandomAccessIterator3 __result,
     _Compare __comp,
     /*__is_vector=*/std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial");
+  // TODO: vectorize
   return std::set_intersection(__first1, __last1, __first2, __last2, __result, __comp);
 }
 
@@ -3636,7 +3637,7 @@ _RandomAccessIterator3 __brick_set_difference(
     _RandomAccessIterator3 __result,
     _Compare __comp,
     /*__is_vector=*/std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial");
+  // TODO: vectorize
   return std::set_difference(__first1, __last1, __first2, __last2, __result, __comp);
 }
 
@@ -3774,7 +3775,7 @@ _RandomAccessIterator3 __brick_set_symmetric_difference(
     _RandomAccessIterator3 __result,
     _Compare __comp,
     /*__is_vector=*/std::true_type) noexcept {
-  _PSTL_PRAGMA_MESSAGE("Vectorized algorithm unimplemented, redirected to serial");
+  // TODO: vectorize
   return std::set_symmetric_difference(__first1, __last1, __first2, __last2, __result, __comp);
 }
 
@@ -4067,13 +4068,7 @@ std::pair<_ForwardIterator1, _ForwardIterator2> __mismatch_serial(
     _ForwardIterator2 __first2,
     _ForwardIterator2 __last2,
     _BinaryPredicate __pred) {
-#if defined(_PSTL_CPP14_2RANGE_MISMATCH_EQUAL_PRESENT)
   return std::mismatch(__first1, __last1, __first2, __last2, __pred);
-#else
-  for (; __first1 != __last1 && __first2 != __last2 && __pred(*__first1, *__first2); ++__first1, ++__first2) {
-  }
-  return std::make_pair(__first1, __first2);
-#endif
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2, class _Predicate>

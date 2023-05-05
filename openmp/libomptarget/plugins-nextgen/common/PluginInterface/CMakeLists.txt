@@ -60,8 +60,11 @@ target_link_libraries(PluginInterface
     ${llvm_libs}
     elf_common
     MemoryManager
-    OMPT
 )
+
+if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+  target_link_libraries(PluginInterface PUBLIC OMPT)
+endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginInterface PRIVATE

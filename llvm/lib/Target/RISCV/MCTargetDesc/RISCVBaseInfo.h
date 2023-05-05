@@ -242,6 +242,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_LSB00,
   OPERAND_UIMM8,
   OPERAND_UIMM8_LSB000,
+  OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM12,
@@ -410,7 +411,7 @@ enum ABI {
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
 // not supported for the given TT and FeatureBits combination.
-ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
+ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);

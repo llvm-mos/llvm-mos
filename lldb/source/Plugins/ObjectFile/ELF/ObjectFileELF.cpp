@@ -13,7 +13,6 @@
 #include <optional>
 #include <unordered_map>
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RangeMap.h"
@@ -623,7 +623,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
             if (!gnu_debuglink_crc) {
               LLDB_SCOPED_TIMERF(
                   "Calculating module crc32 %s with size %" PRIu64 " KiB",
-                  file.GetLastPathComponent().AsCString(),
+                  file.GetFilename().AsCString(),
                   (length - file_offset) / 1024);
 
               // For core files - which usually don't happen to have a
