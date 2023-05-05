@@ -1123,14 +1123,16 @@ void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
   if (DefIdx < TiedMax)
     UseMO.TiedTo = DefIdx + 1;
   else {
+    const TargetInstrInfo *TII = nullptr;
+    (void)TII;
+    if (const MachineFunction *MF = getMFIfAvailable(*this))
+      TII = MF->getSubtarget().getInstrInfo();
     // Inline asm can use the group descriptors to find tied operands,
     // statepoint tied operands are trivial to match (1-1 reg def with reg use),
     // but on normal instruction, the tied def must be within the first TiedMax
     // operands.
     assert((isInlineAsm() || getOpcode() == TargetOpcode::STATEPOINT ||
-            (getMF() &&
-             getMF()->getSubtarget().getInstrInfo()->hasCustomTiedOperands(
-                 getOpcode()))) &&
+            (TII && TII->hasCustomTiedOperands(getOpcode()))) &&
            "DefIdx out of range");
     UseMO.TiedTo = TiedMax;
   }
@@ -1143,8 +1145,9 @@ void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
 /// Defs are tied to uses and vice versa. Returns the index of the tied operand
 /// which must exist.
 unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
-  const TargetInstrInfo *TII =
-      getMF() ? getMF()->getSubtarget().getInstrInfo() : nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  if (const MachineFunction *MF = getMFIfAvailable(*this))
+    TII = MF->getSubtarget().getInstrInfo();
   const MachineOperand &MO = getOperand(OpIdx);
   assert(MO.isTied() && "Operand isn't tied");
 
