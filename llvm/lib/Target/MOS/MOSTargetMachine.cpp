@@ -136,6 +136,16 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         return false;
       });
 
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, ModulePassManager &PM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (Name == "mos-nonreentrant") {
+          PM.addPass(MOSNonReentrantPass());
+          return true;
+        }
+        return false;
+      });
+
   PB.registerLateLoopOptimizationsEPCallback(
       [](LoopPassManager &PM, OptimizationLevel Level) {
         if (Level != OptimizationLevel::O0) {

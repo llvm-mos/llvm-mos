@@ -13,11 +13,17 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSNORECURSE_H
 #define LLVM_LIB_TARGET_MOS_MOSNORECURSE_H
 
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
 ModulePass *createMOSNonReentrantPass();
+
+struct MOSNonReentrantPass : PassInfoMixin<MOSNonReentrantPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
 
 } // end namespace llvm
 

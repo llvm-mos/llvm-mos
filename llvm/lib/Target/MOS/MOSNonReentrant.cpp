@@ -24,6 +24,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -34,24 +35,25 @@ using namespace llvm;
 
 namespace {
 
-struct MOSNonReentrant : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
+struct MOSNonReentrantImpl {
+  CallGraph &CG;
   SmallPtrSet<const CallGraphNode *, 8> Reentrant;
   SmallPtrSet<const CallGraphNode *, 8> ReachableFromCurrentNorecurseInterrupt;
   SmallPtrSet<const CallGraphNode *, 8> ReachableFromOtherNorecurseInterrupt;
   bool HasInterrupts = false;
 
-  MOSNonReentrant() : ModulePass(ID) {
+  MOSNonReentrantImpl(CallGraph &CG) : CG(CG) {
     initializeMOSNonReentrantPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnModule(Module &M) override;
-  void getAnalysisUsage(AnalysisUsage &Info) const override;
+  bool run(Module &M);
 
   bool runOnSCC(CallGraphSCC &SCC);
   void markReentrant(const CallGraphNode &CGN);
   void visitNorecurseInterrupt(const CallGraphNode &CGN);
 };
+
+} // namespace
 
 static bool callsSelf(const CallGraphNode &N) {
   for (const CallGraphNode::CallRecord &CR : N)
@@ -60,10 +62,8 @@ static bool callsSelf(const CallGraphNode &N) {
   return false;
 }
 
-bool MOSNonReentrant::runOnModule(Module &M) {
+bool MOSNonReentrantImpl::run(Module &M) {
   LLVM_DEBUG(dbgs() << "**** MOS NonReentrant Pass ****\n");
-
-  CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
   // For the conservative recursion analysis, any external call may call any
   // externally-callable function so add an edge from the calls-external node
@@ -131,12 +131,7 @@ bool MOSNonReentrant::runOnModule(Module &M) {
   return Changed;
 }
 
-void MOSNonReentrant::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<CallGraphWrapperPass>();
-  AU.addPreserved<CallGraphWrapperPass>();
-}
-
-bool MOSNonReentrant::runOnSCC(CallGraphSCC &SCC) {
+bool MOSNonReentrantImpl::runOnSCC(CallGraphSCC &SCC) {
   // All nodes in SCCs with more than one node may be recursive. It's not
   // certain since CFG analysis is conservative, but there's no more
   // information to be gleaned from looking at the call graph, and other
@@ -166,7 +161,7 @@ bool MOSNonReentrant::runOnSCC(CallGraphSCC &SCC) {
   return true;
 }
 
-void MOSNonReentrant::markReentrant(const CallGraphNode &CGN) {
+void MOSNonReentrantImpl::markReentrant(const CallGraphNode &CGN) {
   if (Reentrant.contains(&CGN))
     return;
   Reentrant.insert(&CGN);
@@ -175,7 +170,7 @@ void MOSNonReentrant::markReentrant(const CallGraphNode &CGN) {
     markReentrant(*CallRecord.second);
 }
 
-void MOSNonReentrant::visitNorecurseInterrupt(const CallGraphNode &CGN) {
+void MOSNonReentrantImpl::visitNorecurseInterrupt(const CallGraphNode &CGN) {
   if (Reentrant.contains(&CGN))
     return;
   if (ReachableFromCurrentNorecurseInterrupt.contains(&CGN))
@@ -193,7 +188,42 @@ void MOSNonReentrant::visitNorecurseInterrupt(const CallGraphNode &CGN) {
   for (const auto &CallRecord : CGN)
     visitNorecurseInterrupt(*CallRecord.second);
 }
+
+namespace {
+
+struct MOSNonReentrant : public ModulePass {
+  static char ID; // Pass identification, replacement for typeid
+
+  MOSNonReentrant() : ModulePass(ID) {
+    initializeMOSNonReentrantPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override;
+  void getAnalysisUsage(AnalysisUsage &Info) const override;
+};
+
 } // namespace
+
+bool MOSNonReentrant::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "**** MOS NonReentrant Pass ****\n");
+
+  CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
+  return MOSNonReentrantImpl(CG).run(M);
+}
+
+void MOSNonReentrant::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<CallGraphWrapperPass>();
+  AU.addPreserved<CallGraphWrapperPass>();
+}
+
+PreservedAnalyses MOSNonReentrantPass::run(Module &M,
+                                           ModuleAnalysisManager &AM) {
+  LLVM_DEBUG(dbgs() << "**** MOS NonReentrant Pass ****\n");
+
+  CallGraph &CG = AM.getResult<CallGraphAnalysis>(M);
+  bool Changed = MOSNonReentrantImpl(CG).run(M);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
 
 char MOSNonReentrant::ID = 0;
 
