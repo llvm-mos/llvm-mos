@@ -64,7 +64,7 @@ define i32 @nested_loop(ptr %ar, i32 %n, i32 %m, i32 %o) {
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_014:%.*]] = phi i32 [ [[MUL:%.*]], [[FOR_BODY4]] ], [ [[SUB]], [[FOR_BODY4_PREHEADER]] ]
 ; CHECK-NEXT:    [[CNT_113:%.*]] = phi i32 [ [[INC]], [[FOR_BODY4]] ], [ [[CNT_016]], [[FOR_BODY4_PREHEADER]] ]
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[CNT_113]], 1
+; CHECK-NEXT:    [[INC]] = add i32 [[CNT_113]], 1
 ; CHECK-NEXT:    [[MUL]] = shl nsw i32 [[J_014]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[MUL]], [[M]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY4]], label [[FOR_COND_CLEANUP3_LOOPEXIT]]
