@@ -11,47 +11,95 @@ jobs:
     strategy:
       matrix:
         os: [windows-2019, macos-latest, ubuntu-20.04]
-    env:
-      LLVM_REPO: ${{ github.repository }}
     steps:
-      - name: Install Ubuntu tools
-        if: startsWith(matrix.os, 'ubuntu')
-        run: sudo apt-get -y install ninja-build
-      - name: Install Windows tools
+      - name: Setup Windows
         if: startsWith(matrix.os, 'windows')
-        run: choco install ninja
-      - name: Add Windows development tools to path
-        if: startsWith(matrix.os, 'windows')
-        uses: ilammy/msvc-dev-cmd@v1.4.1
-      - name: Install MacOS tools
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          brew update
-          brew install ninja
-      - name: Check out source code
-        uses: actions/checkout@v2
+        uses: llvm/actions/setup-windows@main
         with:
-          repository: llvm-mos/continuous-release
-      - name: Inject slug/short variables
-        uses: rlespinasse/github-slug-action@v3.x
-      - name: Configure with cmake
-        run: >-
-          cmake 
-          -DLLVM_MOS_GIT_URL=https://www.github.com/${{ env.LLVM_REPO }}.git 
-          -DLLVM_MOS_GIT_TAG=${{ github.sha }} 
-          -DLLVM_MOS_RELEASE_SLUG=${{ env.GITHUB_REF_SLUG }} 
-          -DLLVM_MOS_TEST_SUITE_ENABLED=No
-          -DCMAKE_BUILD_TYPE=MinSizeRel
-          -G Ninja
-          -S . 
-          -B build
-      - name: Build with cmake
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+          arch: amd64
+      # On Windows, starting with win19/20220814.1, cmake choose the 32-bit
+      # python3.10.6 libraries instead of the 64-bit libraries when building
+      # lldb.  Using this setup-python action to make 3.10 the default
+      # python fixes this.
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+
+      # actions/checkout deletes any existing files in the new git directory,
+      # so this needs to either run before ccache-action or it has to use
+      # clean: false.
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure POSIX
+        if: ${{!startsWith(matrix.os, 'windows')}}
         run: |
+          mkdir build
           cd build
-          cmake --build . --target ship --verbose
+          cmake \
+            -GNinja \
+            -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/llvm-mos \
+            -C../clang/cmake/caches/MOS.cmake \
+            ../llvm
+
+      - name: Configure Windows
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          mkdir build
+          cd build
+          cmake `
+            -GNinja `
+            -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/llvm-mos `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
+            -C../clang/cmake/caches/MOS.cmake `
+            ../llvm
+
+      - name: Build
+        run: cd build; ninja distribution
+
+      - name: Install
+        run: cd build; ninja install-distribution-stripped
+
+      - name: Archive Linux
+        if: startsWith(matrix.os, 'ubuntu')
+        run: tar -cJvf llvm-mos-linux-main.tar.xz llvm-mos
+      - name: Archive Windows
+        if: startsWith(matrix.os, 'windows')
+        run: 7z a llvm-mos-windows-main.7z llvm-mos
+      - name: Archive macOS
+        if: startsWith(matrix.os, 'macos')
+        run: tar -cJvf llvm-mos-darwin-main.tar.xz llvm-mos
+
+      - name: Release Linux
+        if: startsWith(matrix.os, 'ubuntu')
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          body: "Internal compiler build for Linux"
+          tag_name: llvm-mos-linux-main
+          files: llvm-mos-linux-main.tar.xz
+
+      - name: Release macOS
+        if: startsWith(matrix.os, 'macos')
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          body: "Internal compiler build for macOS"
+          tag_name: llvm-mos-darwin-main
+          files: llvm-mos-darwin-main.tar.xz
+
+      - name: Release Windows
+        if: startsWith(matrix.os, 'windows')
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          body: "Internal compiler build for Windows"
+          tag_name: llvm-mos-windows-main
+          files: llvm-mos-windows-main.7z
   dispatch-sdk:
     needs: package
     runs-on: ubuntu-latest
