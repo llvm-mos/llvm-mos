@@ -445,11 +445,7 @@ bool MOSLegalizerInfo::legalizeSExt(LegalizerHelper &Helper,
   LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-
-  LLT DstTy = MRI.getType(Dst);
-  LLT SrcTy = MRI.getType(Src);
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
 
   if (SrcTy == S1) {
     auto NegOne = Builder.buildConstant(DstTy, -1);
@@ -491,9 +487,7 @@ bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-
+  auto [Dst, Src] = MI.getFirst2Regs();
   LLT DstTy = MRI.getType(Dst);
 
   assert(MRI.getType(Src) == LLT::scalar(1));
@@ -529,9 +523,8 @@ bool MOSLegalizerInfo::legalizeAddSub(LegalizerHelper &Helper,
   auto &Builder = Helper.MIRBuilder;
   LLT S8 = LLT::scalar(8);
 
-  Register Dst = MI.getOperand(0).getReg();
+  auto [Dst, Src] = MI.getFirst2Regs();
   assert(MRI.getType(Dst).isByteSized());
-  Register Src = MI.getOperand(1).getReg();
 
   auto RHSConst =
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
@@ -685,9 +678,7 @@ bool MOSLegalizerInfo::legalizeShiftRotate(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  Register AmtReg = MI.getOperand(2).getReg();
+  auto [Dst, Src, AmtReg] = MI.getFirst3Regs();
 
   bool IsRotate = MI.getOpcode() == G_ROTL || MI.getOpcode() == G_ROTR;
 
@@ -909,11 +900,7 @@ bool MOSLegalizerInfo::legalizeLshrEShlE(LegalizerHelper &Helper,
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
 
-  Register Dst = MI.getOperand(0).getReg();
-  Register CarryOut = MI.getOperand(1).getReg();
-  Register Src = MI.getOperand(2).getReg();
-  Register CarryIn = MI.getOperand(3).getReg();
-
+  auto [Dst, CarryOut, Src, CarryIn] = MI.getFirst4Regs();
   LLT Ty = MRI.getType(Dst);
   if (Ty == S8)
     return true;
@@ -1275,17 +1262,12 @@ bool MOSLegalizerInfo::legalizeSelect(LegalizerHelper &Helper,
                                       MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-#ifndef NDEBUG
   LLT P = LLT::pointer(0, 16);
-#endif
+  (void)P;
   LLT S16 = LLT::scalar(16);
 
-  Register Dst = MI.getOperand(0).getReg();
-#ifndef NDEBUG
-  Register Test = MI.getOperand(1).getReg();
-#endif
-  Register LHS = MI.getOperand(2).getReg();
-  Register RHS = MI.getOperand(3).getReg();
+  auto [Dst, Test, LHS, RHS] = MI.getFirst4Regs();
+  (void)Test;
 
   assert(MRI.getType(Dst) == P);
   assert(MRI.getType(Test) == LLT::scalar(1));
@@ -1325,9 +1307,7 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
                                       MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  Register Result = MI.getOperand(0).getReg();
-  Register Base = MI.getOperand(1).getReg();
-  Register Offset = MI.getOperand(2).getReg();
+  auto [Result, Base, Offset] = MI.getFirst3Regs();
 
   MachineInstr *GlobalBase = getOpcodeDef(G_GLOBAL_VALUE, Base, MRI);
   auto ConstOffset = getIConstantVRegValWithLookThrough(Offset, MRI);

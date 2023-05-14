@@ -102,10 +102,7 @@ void removePredecessorFromPhis(MachineBasicBlock *MBB,
 MachineFunction::reverse_iterator
 MOSLowerSelect::lowerSelect(MachineInstr &MI) {
   assert(MI.getOpcode() == MOS::G_SELECT);
-  Register Dst = MI.getOperand(0).getReg();
-  Register Tst = MI.getOperand(1).getReg();
-  Register TrueValue = MI.getOperand(2).getReg();
-  Register FalseValue = MI.getOperand(3).getReg();
+  auto [Dst, Tst, TrueValue, FalseValue] = MI.getFirst4Regs();
 
   MachineIRBuilder Builder(MI);
   MachineBasicBlock &MBB = Builder.getMBB();

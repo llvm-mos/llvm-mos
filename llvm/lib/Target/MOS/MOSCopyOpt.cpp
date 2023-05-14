@@ -120,8 +120,7 @@ static bool findLdImm(MachineInstr &MI,
                       SmallVectorImpl<MachineInstr *> &LdImms) {
   const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
   const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
+  auto [Dst, Src] = MI.getFirst2Regs();
   return findReachingDefs(MI, LdImms, [&](MachineInstr &Def) {
     if (!Def.isMoveImmediate())
       return false;
@@ -225,8 +224,7 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
       if (!MI.isCopy())
         continue;
 
-      Register Dst = MI.getOperand(0).getReg();
-      Register Src = MI.getOperand(1).getReg();
+      auto [Dst, Src] = MI.getFirst2Regs();
 
       if (!MOS::Imag16RegClass.contains(Dst) && Dst != MOS::C &&
           Dst != MOS::V && TRI.copyCost(Dst, Src, STI) <= 4)

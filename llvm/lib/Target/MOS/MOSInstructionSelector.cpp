@@ -1467,9 +1467,7 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   const MachineRegisterInfo &MRI = *Builder.getMRI();
 
-  Register Dst = MI.getOperand(0).getReg();
-  Register Lo = MI.getOperand(1).getReg();
-  Register Hi = MI.getOperand(2).getReg();
+  auto [Dst, Lo, Hi] = MI.getFirst3Regs();
 
   auto LoConst = getIConstantVRegValWithLookThrough(Lo, MRI);
   auto HiConst = getIConstantVRegValWithLookThrough(Hi, MRI);
@@ -1490,10 +1488,7 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectLshrShlE(MachineInstr &MI) {
-  Register Dst = MI.getOperand(0).getReg();
-  Register CarryOut = MI.getOperand(1).getReg();
-  Register Src = MI.getOperand(2).getReg();
-  Register CarryIn = MI.getOperand(3).getReg();
+  auto [Dst, CarryOut, Src, CarryIn] = MI.getFirst4Regs();
 
   unsigned ShiftOpcode, RotateOpcode;
   switch (MI.getOpcode()) {
@@ -1542,11 +1537,7 @@ bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
-  Register Result = MI.getOperand(0).getReg();
-  Register CarryOut = MI.getOperand(1).getReg();
-  Register L = MI.getOperand(2).getReg();
-  Register R = MI.getOperand(3).getReg();
-  Register CarryIn = MI.getOperand(4).getReg();
+  auto [Result, CarryOut, L, R, CarryIn] = MI.getFirst5Regs();
 
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();
@@ -1666,9 +1657,7 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
-  Register Lo = MI.getOperand(0).getReg();
-  Register Hi = MI.getOperand(1).getReg();
-  Register Src = MI.getOperand(2).getReg();
+  auto [Lo, Hi, Src] = MI.getFirst3Regs();
 
   MachineIRBuilder Builder(MI);
 
