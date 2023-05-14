@@ -1537,7 +1537,11 @@ bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
-  auto [Result, CarryOut, L, R, CarryIn] = MI.getFirst5Regs();
+  Register Result = MI.getOperand(0).getReg();
+  Register CarryOut = MI.getOperand(1).getReg();
+  Register L = MI.getOperand(2).getReg();
+  Register R = MI.getOperand(3).getReg();
+  Register CarryIn = MI.getOperand(4).getReg();
 
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();

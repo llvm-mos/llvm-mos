@@ -120,7 +120,8 @@ static bool findLdImm(MachineInstr &MI,
                       SmallVectorImpl<MachineInstr *> &LdImms) {
   const TargetRegisterInfo &TRI = *MI.getMF()->getSubtarget().getRegisterInfo();
   const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
-  auto [Dst, Src] = MI.getFirst2Regs();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
   return findReachingDefs(MI, LdImms, [&](MachineInstr &Def) {
     if (!Def.isMoveImmediate())
       return false;
