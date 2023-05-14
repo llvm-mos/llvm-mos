@@ -197,6 +197,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .unsupported();
 
   getActionDefinitionsBuilder(G_PTR_ADD).customFor({{P, S16}}).unsupported();
+  getActionDefinitionsBuilder(G_PTRMASK).customFor({{P, S16}}).unsupported();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX}).lower();
 
@@ -370,6 +371,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeAbs(Helper, MRI, MI);
   case G_PTR_ADD:
     return legalizePtrAdd(Helper, MRI, MI);
+  case G_PTRMASK:
+    return legalizePtrMask(Helper, MRI, MI);
   case G_UADDO:
   case G_SADDO:
   case G_USUBO:
@@ -1353,6 +1356,20 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
   auto PtrVal = Builder.buildPtrToInt(S16, Base);
   auto Sum = Builder.buildAdd(S16, PtrVal, Offset);
   Builder.buildIntToPtr(Result, Sum);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizePtrMask(LegalizerHelper &Helper,
+                                       MachineRegisterInfo &MRI,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLT S16 = LLT::scalar(16);
+
+  auto [Result, Base, Mask] = MI.getFirst3Regs();
+
+  Builder.buildIntToPtr(
+      Result, Builder.buildAnd(S16, Builder.buildPtrToInt(S16, Base), Mask));
   MI.eraseFromParent();
   return true;
 }

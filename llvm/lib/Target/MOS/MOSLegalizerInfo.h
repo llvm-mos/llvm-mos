@@ -64,6 +64,8 @@ private:
                    MachineInstr &MI) const;
   bool legalizePtrAdd(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
+  bool legalizePtrMask(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                       MachineInstr &MI) const;
   bool legalizeAddSubO(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
   bool legalizeSubE(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
