@@ -27,6 +27,21 @@ def Has65CE02 : Predicate<"Subtarget->has65CE02()">,
   let PredicateName = "Feature65CE02";
 }
 
+def HasHUC6280 : Predicate<"Subtarget->hasHUC6280()">,
+               AssemblerPredicate<(all_of FeatureHUC6280), "FeatureHUC6280"> {
+  let PredicateName = "FeatureHUC6280";
+}
+
+def HasR65C02 : Predicate<"Subtarget->hasR65C02()">,
+               AssemblerPredicate<(all_of FeatureR65C02), "FeatureR65C02"> {
+  let PredicateName = "FeatureR65C02";
+}
+
+def HasW65C02 : Predicate<"Subtarget->hasW65C02()">,
+               AssemblerPredicate<(all_of FeatureW65C02), "FeatureW65C02"> {
+  let PredicateName = "FeatureW65C02";
+}
+
 def HasW65816 : Predicate<"Subtarget->hasW65816()">,
                 AssemblerPredicate<(all_of FeatureW65816), "FeatureW65816"> {
   let PredicateName = "FeatureW65816";
@@ -45,7 +60,7 @@ class Inst<string asmstr> : Instruction {
   let Namespace = "MOS";
 
   // None of the MC instructions are considered to have any output operands.
-  // Side-effects of the MC instructiosn
+  // Side-effects of the MC instructions
   let OutOperandList = (outs);
 
   let AsmString = asmstr;
@@ -57,7 +72,7 @@ class Inst<string asmstr> : Instruction {
   let mayStore = true;
   let hasSideEffects = true;
 
-  field bits<32> SoftFail = 0;
+  field bits<56> SoftFail = 0;
   let DecoderNamespace = "MOS";
 }
 
@@ -135,13 +150,13 @@ def addr24 : Operand<i32> {
   let EncoderMethod = "encodeImm<MOS::Addr24, 1>";
 }
 
-/// This operand will only match a value from 256 to 65536 inclusive.
+/// This operand will only match a value from 256 to 65535 inclusive.
 def imm8to16 : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8To16">;
   let EncoderMethod = "encodeImm<MOS::Addr16, 1>";
 }
 
-/// This operand will only match a value from 65536 to 16777216 inclusive.
+/// This operand will only match a value from 65536 to 16777215 inclusive.
 def imm16To24 : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm16To24">;
   let EncoderMethod = "encodeImm<MOS::Addr24, 1>";
@@ -302,7 +317,6 @@ def IndirectStackPointerY : AddressingMode {
   let InOperandList = (ins addr8:$param);
 }
 
-
 /// An unsized MOS instruction, to which an addressing mode may be applied.
 class InstAddressMode<string asmstr, Opcode op = DefaultOpcode,
                       AddressingMode mode = Implicit> : Inst<asmstr> {
@@ -360,6 +374,88 @@ class Inst32<string opcodestr, Opcode op = DefaultOpcode,
   let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
+/// A 24 bit immediate prefixed HuC6280 instruction.
+/// Always an 8 bit opcode, an 8 bit immediate and an 8 bit operand.
+class InstImmediate24<string opcodestr, Opcode op = DefaultOpcode,
+             AddressingMode mode = Implicit> :
+    InstAddressMode<opcodestr, op, mode> {
+  let Size = 3;
+  bits<8> imm;
+  bits<8> param;
+  bits<24> Inst;
+
+  Opcode opcode = op;
+  let InOperandList = !con((ins imm8:$imm), mode.InOperandList);
+  string OperandsStr;
+  let OperandsStr = "#$imm , " # mode.OperandsStr;
+
+  let Inst{7-0} = opcode.op;
+  let Inst{15-8} = imm;
+  let Inst{23-16} = param;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
+/// A 32 bit immediate prefixed HuC6280 instruction.
+/// Always an 8 bit opcode, an 8 bit immediate and a 16 bit operand.
+class InstImmediate32<string opcodestr, Opcode op = DefaultOpcode,
+             AddressingMode mode = Implicit> :
+    InstAddressMode<opcodestr, op, mode> {
+  let Size = 4;
+  bits<8> imm;
+  bits<16> param;
+  bits<32> Inst;
+
+  Opcode opcode = op;
+  let InOperandList = !con((ins imm8:$imm), mode.InOperandList);
+  string OperandsStr;
+  let OperandsStr = "#$imm , " # mode.OperandsStr;
+
+  let Inst{7-0} = opcode.op;
+  let Inst{15-8} = imm;
+  let Inst{31-16} = param;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
+/// A R65C02 bit branch instruction.
+class InstBranchBit<string opcodestr, Opcode op = DefaultOpcode> :
+    Inst<opcodestr> {
+  let Size = 3;
+  bits<24> Inst;
+  bits<8> source;
+  bits<8> location;
+
+  Opcode opcode = op;
+  let InOperandList = (ins addr8:$source, pcrel8:$location);
+  string OperandsStr;
+  let OperandsStr = "$source , $location";
+
+  let Inst{7-0} = opcode.op;
+  let Inst{15-8} = source;
+  let Inst{23-16} = location;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
+/// A HuC6280 block instruction.
+class InstHuCBlockMove<string opcodestr, Opcode op = DefaultOpcode> :
+    Inst<opcodestr> {
+  let Size = 7;
+  bits<56> Inst;
+  bits<16> bsource;
+  bits<16> bdest;
+  bits<16> blength;
+
+  Opcode opcode = op;
+  let InOperandList = (ins addr16:$bsource, addr16:$bdest, imm16:$blength);
+  string OperandsStr;
+  let OperandsStr = "$bsource , $bdest , #$blength";
+
+  let Inst{7-0} = opcode.op;
+  let Inst{23-8} = bsource;
+  let Inst{39-24} = bdest;
+  let Inst{55-40} = blength;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
 /// Some one-byte opcodes tend to have fixed lower 4 bits, and vary in the
 /// higher four bits.
 class InstNybble<string asmstr, bits<4> low = 0, bits<4> high = 0> :
@@ -374,6 +470,8 @@ class InstLow0<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x0, high>;
 class InstLow2<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x2, high>;
 /// Instructions where the low nybble is 0x3.
 class InstLow3<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x3, high>;
+/// Instructions where the low nybble is 0x4.
+class InstLow4<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x4, high>;
 /// Instructions where the low nybble is 0x8.
 class InstLow8<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0x8, high>;
 /// Instructions where the low nybble is 0xa.
