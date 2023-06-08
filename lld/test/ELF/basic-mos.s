@@ -32,6 +32,10 @@
 # RUN: ld.lld %t.o.65ce02 -o %t.65ce02
 # RUN: llvm-readobj --file-headers --sections -l %t.65ce02 | FileCheck %s -check-prefixes=CHECK,65CE02
 
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=moshuc6280 %s -o %t.o.huc6280
+# RUN: ld.lld %t.o.huc6280 -o %t.huc6280
+# RUN: llvm-readobj --file-headers --sections -l %t.huc6280 | FileCheck %s -check-prefixes=CHECK,huc6280
+
 # returns with 42 in accumulator
 .globl _start
 _start:
@@ -74,6 +78,12 @@ _start:
 // R65C02-NEXT:    EF_MOS_ARCH_6502_BCD (0x2)
 // R65C02-NEXT:    EF_MOS_ARCH_65C02 (0x8)
 // R65C02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
+// HUC6280-NEXT: Flags [
+// HUC6280-NEXT:   EF_MOS_ARCH_6502 (0x1)
+// HUC6280-NEXT:   EF_MOS_ARCH_6502_BCD (0x2)
+// HUC6280-NEXT:   EF_MOS_ARCH_65C02 (0x8)
+// HUC6280-NEXT:   EF_MOS_ARCH_HUC6280 (0x800)
+// HUC6280-NEXT:   EF_MOS_ARCH_R65C02 (0x10)
 // W65C02-NEXT:  Flags [
 // W65C02-NEXT:    EF_MOS_ARCH_6502 (0x1)
 // W65C02-NEXT:    EF_MOS_ARCH_6502_BCD (0x2)

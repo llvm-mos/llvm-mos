@@ -52,6 +52,11 @@ def Feature65CE02
                        "The new and modified instructions present on "
                        "65ce02 and variants">;
 
+def FeatureHUC6280
+    : SubtargetFeature<"mos-insns-huc6280", "HasHUC6280Insns", "true",
+                       "The new and modified instructions present on "
+                       "HuC6280">;
+
 def FeatureSWEET16
     : SubtargetFeature<"mos-insns-sweet16", "HasSWEET16Insns", "true",
                         "The SWEET16 instruction set">;
@@ -110,6 +115,11 @@ def Family65CE02
       "Commodore 65CE02",
       FamilyW65C02.Implies#[Feature65CE02]>;
 
+def FamilyHUC6280
+    : Family<"moshuc6280",
+      "Hudson Soft HuC6280",
+      FamilyR65C02.Implies#[FeatureHUC6280]>;
+
 def FamilySWEET16
     : Family<"mossweet16",
       "MOS 6502 compatible with SWEET16 virtual machine support",
@@ -139,4 +149,5 @@ def : Device<"mosr65c02", FamilyR65C02>;
 def : Device<"mosw65c02", FamilyW65C02>;
 def : Device<"mosw65816", FamilyW65816>;
 def : Device<"mosw65el02", Family65EL02>;
+def : Device<"moshuc6280", FamilyHUC6280>;
 def : Device<"mossweet16", FamilySWEET16>;

@@ -120,6 +120,7 @@ private:
   bool HasW65816Insns = false;
   bool Has65EL02Insns = false;
   bool Has65CE02Insns = false;
+  bool HasHUC6280Insns = false;
   bool HasSWEET16Insns = false;
 
   bool LongRegisterNames = false;

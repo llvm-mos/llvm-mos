@@ -6,6 +6,7 @@
 ; RUN: sed -e 's/__mos_target_cpu/mosw65816/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,W65816 %s
 ; RUN: sed -e 's/__mos_target_cpu/mosw65el02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65EL02 %s
 ; RUN: sed -e 's/__mos_target_cpu/mos65ce02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65CE02 %s
+; RUN: sed -e 's/__mos_target_cpu/moshuc6280/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,HUC6280 %s
 
 ; CHECK:        Machine: EM_MOS (0x1966)
 ; 6502:         Flags [
@@ -51,6 +52,12 @@
 ; 65CE02-NEXT:    EF_MOS_ARCH_65CE02 (0x400)
 ; 65CE02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
 ; 65CE02-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
+; HUC6280:      Flags [
+; HUC6280-NEXT:   EF_MOS_ARCH_6502 (0x1)
+; HUC6280-NEXT:   EF_MOS_ARCH_6502_BCD (0x2)
+; HUC6280-NEXT:   EF_MOS_ARCH_65C02 (0x8)
+; HUC6280-NEXT:   EF_MOS_ARCH_HUC6280 (0x800)
+; HUC6280-NEXT:   EF_MOS_ARCH_R65C02 (0x10)
 ; CHECK-NEXT:   ]
 
 define void @func0() #0 {

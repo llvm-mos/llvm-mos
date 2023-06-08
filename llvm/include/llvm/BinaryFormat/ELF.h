@@ -521,6 +521,7 @@ enum : unsigned {
   EF_MOS_ARCH_W65816 = 0x00000100, // 65816 instructions
   EF_MOS_ARCH_65EL02 = 0x00000200, // 65EL02 instructions
   EF_MOS_ARCH_65CE02 = 0x00000400,  // 65CE02 instructions
+  EF_MOS_ARCH_HUC6280 = 0x00000800,  // HuC6280 instructions
   EF_MOS_ARCH_SWEET16 = 0x00010000  // SWEET16 instructions
 };
 
