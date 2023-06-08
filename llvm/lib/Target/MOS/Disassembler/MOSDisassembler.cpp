@@ -163,7 +163,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   // First attempt to decode 16-bit immediate 65816 instructions.
   if (Has65816) {
     if ((MLow || XLow) && Bytes.size() >= 3) {
-      uint32_t Insn = 0;
+      uint64_t Insn = 0;
       DecodeStatus Result = MCDisassembler::Fail;
       for (size_t Byte : seq(0, 3)) {
         Insn |= Bytes[Byte] << (8 * Byte);
@@ -193,13 +193,13 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 
   // Otherwise decode from the normal tables.
   for (size_t InsnSize : seq_inclusive(1, 7)) {
-    uint32_t Insn = 0;
+    uint64_t Insn = 0;
     DecodeStatus Result = MCDisassembler::Fail;
     if (Bytes.size() < InsnSize) {
       return MCDisassembler::Fail;
     }
     for (size_t Byte : seq((size_t)0, InsnSize)) {
-      Insn |= Bytes[Byte] << (8 * Byte);
+      Insn |= ((uint64_t) Bytes[Byte]) << (8 * Byte);
     }
     if (STI.getFeatureBits()[MOS::Feature65CE02]) {
       Result = decodeInstruction(getDecoderTable65CE02(InsnSize), Instr, Insn,
