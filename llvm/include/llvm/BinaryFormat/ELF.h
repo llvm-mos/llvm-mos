@@ -516,8 +516,8 @@ enum : unsigned {
   EF_MOS_ARCH_6502_BCD = 0x00000002, // BCD support, including CLD and SED
   EF_MOS_ARCH_6502X = 0x00000004, // "Illegal" NMOS 6502 instructions
   EF_MOS_ARCH_65C02 = 0x00000008, // Core 65C02 instruction set
-  EF_MOS_ARCH_R65C02 = 0x00000010, // Rockwell and WDC extended 65C02 insns
-  EF_MOS_ARCH_W65C02 = 0x00000020, // WDC only 65C02 instructions
+  EF_MOS_ARCH_R65C02 = 0x00000010, // Rockwell extensions to 65C02 insns
+  EF_MOS_ARCH_W65C02 = 0x00000020, // WDC extensions to 65C02 insns
   EF_MOS_ARCH_W65816 = 0x00000100, // 65816 instructions
   EF_MOS_ARCH_65EL02 = 0x00000200, // 65EL02 instructions
   EF_MOS_ARCH_65CE02 = 0x00000400,  // 65CE02 instructions

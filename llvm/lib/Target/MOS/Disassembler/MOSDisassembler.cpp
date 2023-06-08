@@ -78,8 +78,21 @@ const uint8_t *getDecoderTable(size_t Size) {
     return DecoderTableMOS24;
   case 4:
     return DecoderTableMOS32;
+  case 7:
+    return DecoderTableMOS56;
   default:
-    llvm_unreachable("instruction size must be between 1 and 3 bytes");
+    llvm_unreachable("instruction size must be between 1 and 4, or 7 bytes");
+  }
+}
+
+const uint8_t *getDecoderTableR65C02(size_t Size) {
+  switch (Size) {
+  case 2:
+    return DecoderTabler65c0216;
+  case 3:
+    return DecoderTabler65c0224;
+  default:
+    llvm_unreachable("instruction size must be between 2 and 3 bytes");
   }
 }
 
@@ -165,6 +178,12 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     if (STI.getFeatureBits()[MOS::Feature65CE02]) {
       Result = decodeInstruction(getDecoderTable65CE02(InsnSize), Instr, Insn,
                                  Address, this, STI);
+    }
+    if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::FeatureR65C02]) {
+        Result = decodeInstruction(getDecoderTableR65C02(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
     }
     if (Result == MCDisassembler::Fail) {
       Result = decodeInstruction(getDecoderTable(InsnSize), Instr, Insn,

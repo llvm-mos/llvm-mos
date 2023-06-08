@@ -269,6 +269,7 @@ def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
 
 let Predicates = [HasR65C02] in {
 
+let DecoderNamespace = "r65c02" in {
 /// Branch Bit Reset
 def BBR0_ZeroPage : InstBranchBit<"bbr0", Opcode<0x0f>>;
 def BBR1_ZeroPage : InstBranchBit<"bbr1", Opcode<0x1f>>;
@@ -308,6 +309,7 @@ def SMB4_ZeroPage : Inst16<"smb4", Opcode<0xc7>, ZeroPage>;
 def SMB5_ZeroPage : Inst16<"smb5", Opcode<0xd7>, ZeroPage>;
 def SMB6_ZeroPage : Inst16<"smb6", Opcode<0xe7>, ZeroPage>;
 def SMB7_ZeroPage : Inst16<"smb7", Opcode<0xf7>, ZeroPage>;
+}
 
 } // Predicates = [HasR65C02]
 

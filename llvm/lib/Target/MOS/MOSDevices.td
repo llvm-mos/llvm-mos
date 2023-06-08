@@ -100,10 +100,11 @@ def FamilyW65C02
       "WDC 65C02",
       FamilyR65C02.Implies#[FeatureW65C02]>;
 
+// The WDC 65816 implements WDC 65C02 opcodes, but not Rockwell ones.
 def FamilyW65816
     : Family<"mosw65816",
       "WDC 65816",
-      FamilyW65C02.Implies#[FeatureW65816]>;
+      Family65C02.Implies#[FeatureW65C02, FeatureW65816]>;
 
 def Family65EL02
     : Family<"mos65el02",
