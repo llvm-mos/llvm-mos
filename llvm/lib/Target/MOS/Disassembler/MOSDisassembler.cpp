@@ -87,6 +87,18 @@ getDecoderTable(size_t Size) {
 }
 
 std::optional<const uint8_t*>
+getDecoderTable6502X(size_t Size) {
+  switch (Size) {
+  case 2:
+    return DecoderTable6502x16;
+  case 3:
+    return DecoderTable6502x24;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<const uint8_t*>
 getDecoderTableR65C02(size_t Size) {
   switch (Size) {
   case 2:
@@ -196,6 +208,12 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     if (Result == MCDisassembler::Fail) {
       if (STI.getFeatureBits()[MOS::FeatureR65C02]) {
         Result = decodeInstruction(getDecoderTableR65C02(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
+    }
+    if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::Feature6502X]) {
+        Result = decodeInstruction(getDecoderTable6502X(InsnSize), Instr, Insn,
                                   Address, this, STI);
       }
     }

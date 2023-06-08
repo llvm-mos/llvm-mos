@@ -17,6 +17,11 @@ def Has6502 : Predicate<"Subtarget->has6502()">,
   let PredicateName = "Feature6502";
 }
 
+def Has6502X : Predicate<"Subtarget->has6502X()">,
+               AssemblerPredicate<(all_of Feature6502X), "Feature6502X"> {
+  let PredicateName = "Feature6502X";
+}
+
 def Has65C02 : Predicate<"Subtarget->has65C02()">,
                AssemblerPredicate<(all_of Feature65C02), "Feature65C02"> {
   let PredicateName = "Feature65C02";
@@ -660,6 +665,34 @@ multiclass CC0_Regular< bits<3> aaa, string OpcodeStr = "nop"> {
   def _ZeroPage : Inst16<OpcodeStr, OpcodeC0<aaa, 0b001>, ZeroPage>;
 
   def _Absolute : Inst24<OpcodeStr, OpcodeC0<aaa, 0b011>, Absolute>;
+}
+
+/// Matching CC1_NoImmediate, but with cc = 11. Common match for 6502X.
+multiclass CC3_NoImmediate<bits<3> aaa, string OpcodeStr = "nop"> {
+  def _IndexedIndirect :
+    Inst16<OpcodeStr, OpcodeC3< aaa, 0b000>, IndexedIndirect>;
+
+  def _ZeroPage :
+    Inst16<OpcodeStr, OpcodeC3< aaa, 0b001>, ZeroPage>;
+
+  /// "The only irregularity is the absence of the nonsensical immediate STA
+  /// instruction."
+  /// skip immediate instruction types here for 0b010
+
+  def _Absolute :
+    Inst24<OpcodeStr, OpcodeC3<aaa, 0b011>, Absolute>;
+
+  def _IndirectIndexed :
+    Inst16<OpcodeStr, OpcodeC3<aaa, 0b100>, IndirectIndexed>;
+
+  def _ZeroPageX :
+    Inst16<OpcodeStr, OpcodeC3<aaa, 0b101>, ZeroPageX>;
+
+  def _AbsoluteY :
+    Inst24<OpcodeStr, OpcodeC3<aaa, 0b110>, AbsoluteY>;
+
+  def _AbsoluteX :
+    Inst24<OpcodeStr, OpcodeC3<aaa, 0b111>, AbsoluteX>;
 }
 
 /// "The conditional branch instructions all have the form xxy10000. The flag

@@ -219,6 +219,59 @@ def NOP_Implied: InstLowA<"nop", 0b1110>;
 
 } // Predicates = [Has6502]
 
+let Predicates = [Has6502X] in {
+
+let DecoderNamespace = "6502x" in {
+/// Opcode naming and order follows the "NMOS 6510 Unintended Opcodes" eBook.
+
+defm SLO : CC3_NoImmediate<0b000, "slo">;
+defm RLA : CC3_NoImmediate<0b001, "rla">;
+defm SRE : CC3_NoImmediate<0b010, "sre">;
+defm RRA : CC3_NoImmediate<0b011, "rra">;
+
+def SAX_IndexedIndirect : Inst16<"sax", OpcodeC3<0b100, 0b000>, IndexedIndirect>;
+def SAX_ZeroPage : Inst16<"sax", OpcodeC3<0b100, 0b001>, ZeroPage>;
+def SAX_Absolute : Inst24<"sax", OpcodeC3<0b100, 0b011>, Absolute>;
+def SAX_ZeroPageY : Inst16<"sax", OpcodeC3<0b100, 0b101>, ZeroPageY>;
+
+def LAX_IndexedIndirect : Inst16<"lax", OpcodeC3<0b101, 0b000>, IndexedIndirect>;
+def LAX_ZeroPage : Inst16<"lax", OpcodeC3<0b101, 0b001>, ZeroPage>;
+def LAX_Absolute : Inst24<"lax", OpcodeC3<0b101, 0b011>, Absolute>;
+def LAX_IndirectIndexed : Inst16<"lax", OpcodeC3<0b101, 0b100>, IndirectIndexed>;
+def LAX_ZeroPageY : Inst16<"lax", OpcodeC3<0b101, 0b101>, ZeroPageY>;
+def LAX_AbsoluteY : Inst24<"lax", OpcodeC3<0b101, 0b111>, AbsoluteY>;
+
+defm DCP : CC3_NoImmediate<0b110, "dcp">;
+defm ISC : CC3_NoImmediate<0b111, "isc">;
+
+def ANC_Immediate: Inst16<"anc", OpcodeC3<0b001, 0b010>, Immediate>;
+def ALR_Immediate: Inst16<"alr", OpcodeC3<0b010, 0b010>, Immediate>;
+def ARR_Immediate: Inst16<"arr", OpcodeC3<0b011, 0b010>, Immediate>;
+def SBX_Immediate: Inst16<"sbx", OpcodeC3<0b110, 0b010>, Immediate>;
+
+def LAS_AbsoluteY : Inst24<"las", OpcodeC3<0b101, 0b110>, AbsoluteY>;
+
+def NOP_Immediate: Inst16<"nop", OpcodeC2<0b000, 0b110>, Immediate>;
+def NOP_ZeroPage: Inst16<"nop", OpcodeC0<0b000, 0b001>, ZeroPage>;
+def NOP_ZeroPageX: Inst16<"nop", OpcodeC0<0b000, 0b101>, ZeroPageX>;
+def NOP_AbsoluteX: Inst24<"nop", OpcodeC0<0b000, 0b111>, AbsoluteX>;
+
+def SHA_IndirectIndexed : Inst16<"sha", OpcodeC3<0b100, 0b100>, IndirectIndexed>;
+def SHA_AbsoluteY : Inst24<"sha", OpcodeC3<0b100, 0b111>, AbsoluteY>;
+
+def SHX_AbsoluteY : Inst24<"shx", OpcodeC2<0b100, 0b111>, AbsoluteY>;
+
+def SHY_AbsoluteX : Inst24<"shy", OpcodeC0<0b100, 0b111>, AbsoluteX>;
+
+def TAS_AbsoluteY : Inst24<"tas", OpcodeC3<0b100, 0b110>, AbsoluteY>;
+
+def ANE_Immediate: Inst16<"ane", OpcodeC3<0b100, 0b010>, Immediate>;
+
+def LAX_Immediate: Inst16<"lax", OpcodeC3<0b101, 0b010>, Immediate>;
+}
+
+} // Predicates = [Has6502X]
+
 let Predicates = [Has65C02] in {
 
 /// Single-byte opcodes

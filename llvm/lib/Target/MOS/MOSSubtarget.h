@@ -98,6 +98,7 @@ public:
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
   bool has6502() const { return Has6502Insns; }
+  bool has6502X() const { return Has6502XInsns; }
   bool has65C02() const { return Has65C02Insns; }
   bool has65CE02() const { return Has65CE02Insns; }
   bool hasHUC6280() const { return HasHUC6280Insns; }
