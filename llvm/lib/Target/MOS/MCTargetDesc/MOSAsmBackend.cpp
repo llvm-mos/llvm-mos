@@ -316,15 +316,25 @@ static bool visitRelaxableOperand(const MCInst &Inst,
          Visit(Inst.getOperand(0), RelaxTo, BankRelax);
 }
 
+static bool isImmediateBankRelaxable(const MCSubtargetInfo &STI,
+                                     int64_t Imm, bool BankRelax) {
+  if (BankRelax)
+    return Imm >= 0 && Imm <= UINT16_MAX;
+  // On HuC6280, the zero page is redirected to 0x2000.
+  if (STI.hasFeature(MOS::FeatureHUC6280))
+    return Imm >= 0x2000 && Imm < 0x2100;
+  return Imm >= 0 && Imm <= UCHAR_MAX;
+}
+
 void MOSAsmBackend::relaxForImmediate(MCInst &Inst,
                                       const MCSubtargetInfo &STI) {
   // Two steps are required for zero-bank relaxation on 65816.
   while (visitRelaxableOperand(
       Inst, STI,
-      [&Inst](const MCOperand &Operand, unsigned RelaxTo, bool BankRelax) {
+      [&Inst, &STI](const MCOperand &Operand, unsigned RelaxTo, bool BankRelax) {
         int64_t Imm;
         if (!Operand.evaluateAsConstantImm(Imm) ||
-            (Imm >= 0 && Imm <= (BankRelax ? UINT16_MAX : UCHAR_MAX))) {
+            isImmediateBankRelaxable(STI, Imm, BankRelax)) {
           // If the expression evaluates cleanly to an 8-bit value
           // (or 16-bit for bank relaxation), then it doesn't need relaxation.
           return false;
