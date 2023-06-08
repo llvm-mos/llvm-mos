@@ -65,7 +65,8 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSDisassembler() {
 
 #include "MOSGenDisassemblerTables.inc"
 
-const uint8_t *getDecoderTable(size_t Size) {
+std::optional<const uint8_t*>
+getDecoderTable(size_t Size) {
   // Suppress unused variable warning for generated function.
   (void)Check;
 
@@ -81,22 +82,24 @@ const uint8_t *getDecoderTable(size_t Size) {
   case 7:
     return DecoderTableMOS56;
   default:
-    llvm_unreachable("instruction size must be between 1 and 4, or 7 bytes");
+    return std::nullopt;
   }
 }
 
-const uint8_t *getDecoderTableR65C02(size_t Size) {
+std::optional<const uint8_t*>
+getDecoderTableR65C02(size_t Size) {
   switch (Size) {
   case 2:
     return DecoderTabler65c0216;
   case 3:
     return DecoderTabler65c0224;
   default:
-    llvm_unreachable("instruction size must be between 2 and 3 bytes");
+    return std::nullopt;
   }
 }
 
-const uint8_t *getDecoderTable65CE02(size_t Size) {
+std::optional<const uint8_t*>
+getDecoderTable65CE02(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTable65ce028;
@@ -105,8 +108,19 @@ const uint8_t *getDecoderTable65CE02(size_t Size) {
   case 3:
     return DecoderTable65ce0224;
   default:
-    llvm_unreachable("instruction size must be between 1 and 3 bytes");
+    return std::nullopt;
   }
+}
+
+template <typename InsnType>
+static DecodeStatus decodeInstruction(std::optional<const uint8_t*> DecodeTable, MCInst &MI,
+                                      InsnType insn, uint64_t Address,
+                                      const MCDisassembler *DisAsm,
+                                      const MCSubtargetInfo &STI) {
+  if (!DecodeTable.has_value())
+    return MCDisassembler::Fail;
+  
+  return decodeInstruction(DecodeTable.value(), MI, insn, Address, DisAsm, STI);
 }
 
 std::optional<MCDisassembler::DecodeStatus>
@@ -166,7 +180,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   // Otherwise decode from the normal tables.
-  for (size_t InsnSize : seq_inclusive(1, 4)) {
+  for (size_t InsnSize : seq_inclusive(1, 7)) {
     uint32_t Insn = 0;
     DecodeStatus Result = MCDisassembler::Fail;
     if (Bytes.size() < InsnSize) {
