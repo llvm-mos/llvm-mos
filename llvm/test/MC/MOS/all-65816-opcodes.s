@@ -58,9 +58,33 @@
  	jmp	($eaea,x)               ; CHECK: encoding: [0x7c,0xea,0xea]
  	jsr	($eaea,x)               ; CHECK: encoding: [0xfc,0xea,0xea]
  	jsl	$eaeaea                 ; CHECK: encoding: [0x22,0xea,0xea,0xea]
- 	rtl                         ; CHECK: encoding: [0x6b]
+ 	rtl                             ; CHECK: encoding: [0x6b]
 
  	ldx	#$eaea                  ; CHECK: encoding: [0xa2,0xea,0xea]
  	ldy	#$eaea                  ; CHECK: encoding: [0xa0,0xea,0xea]
  	cpy	#$eaea                  ; CHECK: encoding: [0xc0,0xea,0xea]
  	cpx	#$eaea                  ; CHECK: encoding: [0xe0,0xea,0xea]
+
+	mvn	#$ea, #$ea              ; CHECK: encoding: [0x54,0xea,0xea]
+	mvp	#$ea, #$ea              ; CHECK: encoding: [0x44,0xea,0xea]
+
+	pea	$eaea                   ; CHECK: encoding: [0xf4,0xea,0xea]
+	pei	($ea)                   ; CHECK: encoding: [0xd4,0xea]
+	per	$eaea                   ; CHECK: encoding: [0x62,0xea,0xea]
+	phb                             ; CHECK: encoding: [0x8b]
+	phd                             ; CHECK: encoding: [0x0b]
+	phk                             ; CHECK: encoding: [0x4b]
+	plb                             ; CHECK: encoding: [0xab]
+	pld                             ; CHECK: encoding: [0x2b]
+
+	tcd                             ; CHECK: encoding: [0x5b]
+	tcs                             ; CHECK: encoding: [0x1b]
+	tdc                             ; CHECK: encoding: [0x7b]
+	tsc                             ; CHECK: encoding: [0x3b]
+	txy                             ; CHECK: encoding: [0x9b]
+	tyx                             ; CHECK: encoding: [0xbb]
+
+	xba                             ; CHECK: encoding: [0xeb]
+	xce                             ; CHECK: encoding: [0xfb]
+
+	wdm #$ea                        ; CHECK: encoding: [0x42,0xea]

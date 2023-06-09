@@ -550,6 +550,47 @@ def JML_Indirect16 : Inst24<"jml", OpcodeC0<0b110, 0b111>, Indirect16>;
 def JSR_IndexedIndirect16 :
   Inst24<"jsr", OpcodeC0<0b111, 0b111>, IndexedIndirect16>;
 
+/// Memory moves
+/// MVN MVP
+/// 54  44
+
+def MVN_816MemoryMove : Inst816MemoryMove<"mvn", Opcode<0x54>>; // Move Negative
+def MVP_816MemoryMove : Inst816MemoryMove<"mvp", Opcode<0x44>>; // Move Positive
+
+/// Stack manipulation instructions
+/// PEA PEI PER PHB PHD PHK PLB PLD
+/// F4  D4  62  8B  0B  4B  AB  2B
+
+def PEA_Implied : Inst24<"pea", Opcode<0xF4>, Absolute>;
+def PEI_Implied : Inst16<"pei", Opcode<0xD4>, Indirect>;
+def PER_Implied : Inst24<"per", Opcode<0x62>, Relative16>;
+
+def PHB_Implied : InstLowB<"phb", 0b1000>;
+def PHD_Implied : InstLowB<"phd", 0b0000>;
+def PHK_Implied : InstLowB<"phk", 0b0100>;
+def PLB_Implied : InstLowB<"plb", 0b1010>;
+def PLD_Implied : InstLowB<"pld", 0b0010>;
+
+/// Register transfer instructions
+/// TCD TCS TDC TSC TXY TYX
+/// 5B  1B  7B  3B  9B  BB
+
+def TCD_Implied : InstLowB<"tcd", 0b0101>;
+def TCS_Implied : InstLowB<"tcs", 0b0001>;
+def TDC_Implied : InstLowB<"tdc", 0b0111>;
+def TSC_Implied : InstLowB<"tsc", 0b0011>;
+def TXY_Implied : InstLowB<"txy", 0b1001>;
+def TYX_Implied : InstLowB<"tyx", 0b1011>;
+
+/// Register exchange instructions
+/// XBA XCE
+/// EB  FB
+
+def XBA_Implied : InstLowB<"xba", 0b1110>;
+def XCE_Implied : InstLowB<"xce", 0b1111>;
+
+def WDM_Immediate : Inst16<"wdm", Opcode<0x42>, Immediate>;
+
 } // Predicates = [HasW65816]
 
 // Operand type for basic block and function labels.

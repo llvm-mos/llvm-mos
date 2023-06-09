@@ -461,6 +461,25 @@ class InstHuCBlockMove<string opcodestr, Opcode op = DefaultOpcode> :
   let AsmString = opcodestr # " " # OperandsStr;
 }
 
+/// A 65816 memory move instruction.
+class Inst816MemoryMove<string opcodestr, Opcode op = DefaultOpcode> :
+    Inst<opcodestr> {
+  let Size = 3;
+  bits<24> Inst;
+  bits<8> sourceBank;
+  bits<8> destinationBank;
+
+  Opcode opcode = op;
+  let InOperandList = (ins imm8:$sourceBank, imm8:$destinationBank);
+  string OperandsStr;
+  let OperandsStr = "#$sourceBank , #$destinationBank";
+
+  let Inst{7-0} = opcode.op;
+  let Inst{15-8} = sourceBank;
+  let Inst{23-16} = destinationBank;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
 /// Some one-byte opcodes tend to have fixed lower 4 bits, and vary in the
 /// higher four bits.
 class InstNybble<string asmstr, bits<4> low = 0, bits<4> high = 0> :
