@@ -34,7 +34,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mos -mcpu=moshuc6280 %s -o %t.o.huc6280
 # RUN: ld.lld %t.o.huc6280 -o %t.huc6280
-# RUN: llvm-readobj --file-headers --sections -l %t.huc6280 | FileCheck %s -check-prefixes=CHECK,huc6280
+# RUN: llvm-readobj --file-headers --sections -l %t.huc6280 | FileCheck %s -check-prefixes=CHECK,HUC6280
 
 # returns with 42 in accumulator
 .globl _start
