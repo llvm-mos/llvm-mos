@@ -219,10 +219,11 @@ def NOP_Implied: InstLowA<"nop", 0b1110>;
 
 } // Predicates = [Has6502]
 
-let Predicates = [Has6502X] in {
+/// Opcode naming and order follows the "NMOS 6510 Unintended Opcodes" eBook.
+
+let Predicates = [Has6502XOrDTV] in {
 
 let DecoderNamespace = "6502x" in {
-/// Opcode naming and order follows the "NMOS 6510 Unintended Opcodes" eBook.
 
 defm SLO : CC3_NoImmediate<0b000, "slo">;
 defm RLA : CC3_NoImmediate<0b001, "rla">;
@@ -244,17 +245,25 @@ def LAX_AbsoluteY : Inst24<"lax", OpcodeC3<0b101, 0b111>, AbsoluteY>;
 defm DCP : CC3_NoImmediate<0b110, "dcp">;
 defm ISC : CC3_NoImmediate<0b111, "isc">;
 
-def ANC_Immediate: Inst16<"anc", OpcodeC3<0b001, 0b010>, Immediate>;
 def ALR_Immediate: Inst16<"alr", OpcodeC3<0b010, 0b010>, Immediate>;
 def ARR_Immediate: Inst16<"arr", OpcodeC3<0b011, 0b010>, Immediate>;
+
+def ANE_Immediate: Inst16<"ane", OpcodeC3<0b100, 0b010>, Immediate>;
+
+def LAX_Immediate: Inst16<"lax", OpcodeC3<0b101, 0b010>, Immediate>;
+
+}
+
+} // Predicates = [Has6502XOrDTV]
+
+let Predicates = [Has6502X] in {
+
+let DecoderNamespace = "6502x" in {
+
+def ANC_Immediate: Inst16<"anc", OpcodeC3<0b001, 0b010>, Immediate>;
 def SBX_Immediate: Inst16<"sbx", OpcodeC3<0b110, 0b010>, Immediate>;
 
 def LAS_AbsoluteY : Inst24<"las", OpcodeC3<0b101, 0b110>, AbsoluteY>;
-
-def NOP_Immediate: Inst16<"nop", OpcodeC2<0b000, 0b110>, Immediate>;
-def NOP_ZeroPage: Inst16<"nop", OpcodeC0<0b000, 0b001>, ZeroPage>;
-def NOP_ZeroPageX: Inst16<"nop", OpcodeC0<0b000, 0b101>, ZeroPageX>;
-def NOP_AbsoluteX: Inst24<"nop", OpcodeC0<0b000, 0b111>, AbsoluteX>;
 
 def SHA_IndirectIndexed : Inst16<"sha", OpcodeC3<0b100, 0b100>, IndirectIndexed>;
 def SHA_AbsoluteY : Inst24<"sha", OpcodeC3<0b100, 0b111>, AbsoluteY>;
@@ -265,12 +274,26 @@ def SHY_AbsoluteX : Inst24<"shy", OpcodeC0<0b100, 0b111>, AbsoluteX>;
 
 def TAS_AbsoluteY : Inst24<"tas", OpcodeC3<0b100, 0b110>, AbsoluteY>;
 
-def ANE_Immediate: Inst16<"ane", OpcodeC3<0b100, 0b010>, Immediate>;
+def NOP_Immediate: Inst16<"nop", OpcodeC2<0b000, 0b110>, Immediate>;
+def NOP_ZeroPage: Inst16<"nop", OpcodeC0<0b000, 0b001>, ZeroPage>;
+def NOP_ZeroPageX: Inst16<"nop", OpcodeC0<0b000, 0b101>, ZeroPageX>;
+def NOP_AbsoluteX: Inst24<"nop", OpcodeC0<0b000, 0b111>, AbsoluteX>;
 
-def LAX_Immediate: Inst16<"lax", OpcodeC3<0b101, 0b010>, Immediate>;
 }
 
 } // Predicates = [Has6502X]
+
+let Predicates = [Has65DTV02] in {
+
+let DecoderNamespace = "65dtv02" in {
+
+def BRA_Relative_DTV02 : Inst16<"bra", Opcode<0x12>, Relative>;
+def SAC_Immediate : Inst16<"sac", Opcode<0x32>, Immediate>;
+def SIR_Immediate : Inst16<"sir", Opcode<0x42>, Immediate>;
+
+}
+
+} // Predicates = [Has65DTV02]
 
 let Predicates = [Has65C02] in {
 
@@ -459,6 +482,17 @@ def TYS_Implied: InstLowB<"tys", 0b0010>; /// Transfer Y reg. to Stack pointer h
 }
 
 } // Predicates = [Has65CE02]
+
+let Predicates = [Has4510] in {
+
+let DecoderNamespace = "65ce02" in {
+
+def MAP_Implied: Inst8<"map", Opcode<0x5c>>;
+// TODO: Add NOP -> EOM alias.
+
+}
+
+} // Predicates = [Has4510]
 
 let Predicates = [HasHUC6280] in {
 

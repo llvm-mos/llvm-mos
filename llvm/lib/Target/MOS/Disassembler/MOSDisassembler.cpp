@@ -95,6 +95,19 @@ getDecoderTable6502X(size_t Size) {
 }
 
 std::optional<const uint8_t*>
+getDecoderTable65DTV02(size_t Size) {
+  // Suppress unused variable warning for generated function.
+  (void)Check;
+
+  switch (Size) {
+  case 2:
+    return DecoderTable65dtv0216;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<const uint8_t*>
 getDecoderTableR65C02(size_t Size) {
   switch (Size) {
   case 2:
@@ -279,6 +292,12 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     if (Result == MCDisassembler::Fail) {
       if (STI.getFeatureBits()[MOS::FeatureR65C02]) {
         Result = decodeInstruction(getDecoderTableR65C02(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
+    }
+    if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::Feature65DTV02]) {
+        Result = decodeInstruction(getDecoderTable65DTV02(InsnSize), Instr, Insn,
                                   Address, this, STI);
       }
     }
