@@ -28,18 +28,18 @@
 
 include "MOSInstrFormats.td"
 
-let Predicates = [Has6502] in {
-
-defm ORA : CC1_All<0b000, "ora">;
-defm AND : CC1_All<0b001, "and">;
-defm EOR : CC1_All<0b010, "eor">;
-defm ADC : CC1_All<0b011, "adc">;
-defm LDA : CC1_All<0b101, "lda">;
-defm CMP : CC1_All<0b110, "cmp">;
-defm SBC : CC1_All<0b111, "sbc">;
+defm ORA : CC1_All<0b000, "ora", [Has6502]>;
+defm AND : CC1_All<0b001, "and", [Has6502]>;
+defm EOR : CC1_All<0b010, "eor", [Has6502]>;
+defm ADC : CC1_All<0b011, "adc", [Has6502]>;
+defm LDA : CC1_All<0b101, "lda", [Has6502]>;
+defm CMP : CC1_All<0b110, "cmp", [Has6502]>;
+defm SBC : CC1_All<0b111, "sbc", [Has6502]>;
 
 /// The STA # instruction would be nonsensical, so skip it.
-defm STA : CC1_NoImmediate<0b100, "sta">;
+defm STA : CC1_NoImmediate<0b100, "sta", [Has6502]>;
+
+let Predicates = [Has6502] in {
 
 /// CC2 regular instructions
 defm ASL : CC2_Shift<0b000, "asl">;
@@ -428,14 +428,14 @@ def CPZ_Absolute : Inst24<"cpz", OpcodeC0<0b110, 0b111>, Absolute>;
 /// Loads, Stores, Pushes, Pulls and Transfers
 
 def LDA_IndirectZeroPageZ : Inst16<"lda", OpcodeC2<0b101, 0b100>, IndirectZeroPageZ>;
-def LDA_IndirectStackPointerY : Inst16<"lda", Opcode<0xe2>, IndirectStackPointerY>;
+def LDA_IndirectStackRelativeY_CE02 : Inst16<"lda", Opcode<0xe2>, IndirectStackRelativeY>;
 
 def LDZ_Immediate : Inst16<"ldz", OpcodeC3<0b101, 0b000>, Immediate>;
 def LDZ_Absolute : Inst24<"ldz", OpcodeC3<0b101, 0b010>, Absolute>;
 def LDZ_AbsoluteX : Inst24<"ldz", OpcodeC3<0b101, 0b110>, AbsoluteX>;
 
 def STA_IndirectZeroPageZ : Inst16<"sta", Opcode<0x92>, IndirectZeroPageZ>;
-def STA_IndirectStackPointerY : Inst16<"sta", Opcode<0x82>, IndirectStackPointerY>;
+def STA_IndirectStackRelativeY_CE02 : Inst16<"sta", Opcode<0x82>, IndirectStackRelativeY>;
 def STX_AbsoluteY : Inst24<"stx", Opcode<0x9b>, AbsoluteY>;
 def STY_AbsoluteX : Inst24<"sty", Opcode<0x8b>, AbsoluteX>;
 
@@ -462,6 +462,7 @@ def TYS_Implied: InstLowB<"tys", 0b0010>; /// Transfer Y reg. to Stack pointer h
 
 let Predicates = [HasHUC6280] in {
 
+let DecoderNamespace = "huc6280" in {
 /// Swap, Clear Registers
 def SXY_Implied : InstLow2<"sxy", 0b0000>; /// Swap X and Y
 def SAX_Implied : InstLow2<"sax", 0b0010>; /// Swap A and X
@@ -499,10 +500,11 @@ def BSR_Relative : Inst16<"bsr", Opcode<0x44>, Relative>;
 def CSL_Implied : InstLow4<"csl", 0b0101>; /// Set CPU Clock Low
 def CSH_Implied : InstLow4<"csh", 0b1101>; /// Set CPU Clock High
 def SET_Implied : InstLow4<"set", 0b1111>; /// Set T Flag
+}
 
 }
 
-let Predicates = [HasW65816] in {
+let Predicates = [HasW65816Or65EL02] in {
 
 /// Direct P flag set/reset with mask immediate
 /// SEP REP
@@ -519,6 +521,39 @@ def LDX_Immediate16 : Inst24<"ldx", OpcodeC2<0b101, 0b000>, Immediate16> {
   let DecoderNamespace = "MOSXLow";
 }
 
+/// 16-bit indexed-indirect jumps
+/// JSR
+/// FC
+
+def JSR_IndexedIndirect16 :
+  Inst24<"jsr", OpcodeC0<0b111, 0b111>, IndexedIndirect16>;
+
+/// Stack manipulation instructions
+/// PEA PEI
+/// F4  D4
+
+def PEA_Absolute : Inst24<"pea", Opcode<0xF4>, Absolute>;
+def PEI_Indirect : Inst16<"pei", Opcode<0xD4>, Indirect>;
+
+/// Register transfer instructions
+/// TXY TYX
+/// 9B  BB
+
+def TXY_Implied : InstLowB<"txy", 0b1001>;
+def TYX_Implied : InstLowB<"tyx", 0b1011>;
+
+/// Register exchange instructions
+/// XBA XCE
+/// EB  FB
+
+def XBA_Implied : InstLowB<"xba", 0b1110>;
+def XCE_Implied : InstLowB<"xce", 0b1111>;
+
+} // Predicates = [HasW65816Or65EL02]
+
+let Predicates = [HasW65816] in {
+
+let DecoderNamespace = "w65816" in {
 /// Unconditional relative branch instruction
 /// BRL
 /// 82
@@ -543,13 +578,6 @@ def RTL_Implied : Inst8<"rtl", OpcodeC3<0b011, 0b010>>;
 /// DC
 def JML_Indirect16 : Inst24<"jml", OpcodeC0<0b110, 0b111>, Indirect16>;
 
-/// 16-bit indexed-indirect jumps
-/// JSR
-/// FC
-
-def JSR_IndexedIndirect16 :
-  Inst24<"jsr", OpcodeC0<0b111, 0b111>, IndexedIndirect16>;
-
 /// Memory moves
 /// MVN MVP
 /// 54  44
@@ -558,13 +586,10 @@ def MVN_816MemoryMove : Inst816MemoryMove<"mvn", Opcode<0x54>>; // Move Negative
 def MVP_816MemoryMove : Inst816MemoryMove<"mvp", Opcode<0x44>>; // Move Positive
 
 /// Stack manipulation instructions
-/// PEA PEI PER PHB PHD PHK PLB PLD
-/// F4  D4  62  8B  0B  4B  AB  2B
+/// PER PHB PHD PHK PLB PLD
+/// 62  8B  0B  4B  AB  2B
 
-def PEA_Absolute : Inst24<"pea", Opcode<0xF4>, Absolute>;
-def PEI_Indirect : Inst16<"pei", Opcode<0xD4>, Indirect>;
 def PER_Relative16 : Inst24<"per", Opcode<0x62>, Relative16>;
-
 def PHB_Implied : InstLowB<"phb", 0b1000>;
 def PHD_Implied : InstLowB<"phd", 0b0000>;
 def PHK_Implied : InstLowB<"phk", 0b0100>;
@@ -572,26 +597,66 @@ def PLB_Implied : InstLowB<"plb", 0b1010>;
 def PLD_Implied : InstLowB<"pld", 0b0010>;
 
 /// Register transfer instructions
-/// TCD TCS TDC TSC TXY TYX
-/// 5B  1B  7B  3B  9B  BB
+/// TCD TCS TDC TSC
+/// 5B  1B  7B  3B
 
 def TCD_Implied : InstLowB<"tcd", 0b0101>;
 def TCS_Implied : InstLowB<"tcs", 0b0001>;
 def TDC_Implied : InstLowB<"tdc", 0b0111>;
 def TSC_Implied : InstLowB<"tsc", 0b0011>;
-def TXY_Implied : InstLowB<"txy", 0b1001>;
-def TYX_Implied : InstLowB<"tyx", 0b1011>;
-
-/// Register exchange instructions
-/// XBA XCE
-/// EB  FB
-
-def XBA_Implied : InstLowB<"xba", 0b1110>;
-def XCE_Implied : InstLowB<"xce", 0b1111>;
 
 def WDM_Immediate : Inst16<"wdm", Opcode<0x42>, Immediate>;
+}
 
 } // Predicates = [HasW65816]
+
+let Predicates = [Has65EL02] in {
+
+let DecoderNamespace = "65el02" in {
+def NXT_Implied : InstLow2<"nxt", 0b0000>;
+def ENT_Implied : InstLow2<"ent", 0b0010>;
+def NXA_Implied : InstLow2<"nxa", 0b0100>;
+
+def REA_Absolute : Inst24<"rea", Opcode<0x44>, Absolute>;
+def REI_Indirect : Inst16<"rei", Opcode<0x54>, Indirect>;
+
+def PER_Relative : Inst16<"per", Opcode<0x62>, Relative>;
+def RER_Relative : Inst16<"rer", Opcode<0x82>, Relative>;
+
+def RHI_Implied : InstLowB<"rhi", 0b0000>;
+def RHX_Implied : InstLowB<"rhx", 0b0001>;
+def RLI_Implied : InstLowB<"rli", 0b0010>;
+def RLX_Implied : InstLowB<"rlx", 0b0011>;
+def RHA_Implied : InstLowB<"rha", 0b0100>;
+def RHY_Implied : InstLowB<"rhy", 0b0101>;
+def RLA_Implied : InstLowB<"rla", 0b0110>;
+def RLY_Implied : InstLowB<"rly", 0b0111>;
+def TXR_Implied : InstLowB<"txr", 0b1000>;
+def TRX_Implied : InstLowB<"trx", 0b1010>;
+
+def TXI_Implied : Inst8<"txi", Opcode<0x5C>>;
+def TIX_Implied : Inst8<"tix", Opcode<0xDC>>;
+
+def MUL_ZeroPage_EL02  : Inst16<"mul", Opcode<0x0F>, ZeroPage>;
+def MUL_ZeroPageX_EL02 : Inst16<"mul", Opcode<0x1F>, ZeroPageX>;
+def MUL_Absolute_EL02  : Inst24<"mul", Opcode<0x2F>, Absolute>;
+def MUL_AbsoluteX_EL02 : Inst24<"mul", Opcode<0x3F>, AbsoluteX>;
+def DIV_ZeroPage_EL02  : Inst16<"div", Opcode<0x4F>, ZeroPage>;
+def DIV_ZeroPageX_EL02 : Inst16<"div", Opcode<0x5F>, ZeroPageX>;
+def DIV_Absolute_EL02  : Inst24<"div", Opcode<0x6F>, Absolute>;
+def DIV_AbsoluteX_EL02 : Inst24<"div", Opcode<0x7F>, AbsoluteX>;
+
+def ZEA_Implied : Inst8<"zea", Opcode<0x8F>>;
+def SEA_Implied : Inst8<"sea", Opcode<0x9F>>;
+def TDA_Implied : Inst8<"tda", Opcode<0xAF>>;
+def TAD_Implied : Inst8<"tad", Opcode<0xBF>>;
+def PLD_Implied_EL02 : Inst8<"pld", Opcode<0xCF>>;
+def PHD_Implied_EL02 : Inst8<"phd", Opcode<0xDF>>;
+def MMU_Immediate : Inst16<"mmu", Opcode<0xEF>, Immediate>;
+
+}
+
+} // Predicates = [Has65EL02]
 
 // Operand type for basic block and function labels.
 def label : Operand<OtherVT>;

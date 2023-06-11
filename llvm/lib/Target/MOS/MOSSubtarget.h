@@ -105,6 +105,7 @@ public:
   bool hasR65C02() const { return HasR65C02Insns; }
   bool hasW65C02() const { return HasW65C02Insns; }
   bool hasW65816() const { return HasW65816Insns; }
+  bool has65EL02() const { return Has65EL02Insns; }
   bool staticStack() const { return StaticStack; }
 
 private:

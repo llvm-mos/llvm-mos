@@ -149,6 +149,6 @@ def : Device<"mos65ce02", Family65CE02>;
 def : Device<"mosr65c02", FamilyR65C02>;
 def : Device<"mosw65c02", FamilyW65C02>;
 def : Device<"mosw65816", FamilyW65816>;
-def : Device<"mosw65el02", Family65EL02>;
+def : Device<"mos65el02", Family65EL02>;
 def : Device<"moshuc6280", FamilyHUC6280>;
 def : Device<"mossweet16", FamilySWEET16>;

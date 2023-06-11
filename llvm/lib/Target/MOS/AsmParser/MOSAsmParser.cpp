@@ -611,6 +611,7 @@ public:
             .CaseLower("y", "y")
             .CaseLower("z", "z")
             .CaseLower("sp", "sp")
+            .CaseLower("rp", "rp")
             .Default(nullptr);
     if (LowerStr != nullptr) {
       Operands.push_back(MOSOperand::createToken(LowerStr, S));
