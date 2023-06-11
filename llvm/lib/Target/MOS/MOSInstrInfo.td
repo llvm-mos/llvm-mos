@@ -561,9 +561,9 @@ def MVP_816MemoryMove : Inst816MemoryMove<"mvp", Opcode<0x44>>; // Move Positive
 /// PEA PEI PER PHB PHD PHK PLB PLD
 /// F4  D4  62  8B  0B  4B  AB  2B
 
-def PEA_Implied : Inst24<"pea", Opcode<0xF4>, Absolute>;
-def PEI_Implied : Inst16<"pei", Opcode<0xD4>, Indirect>;
-def PER_Implied : Inst24<"per", Opcode<0x62>, Relative16>;
+def PEA_Absolute : Inst24<"pea", Opcode<0xF4>, Absolute>;
+def PEI_Indirect : Inst16<"pei", Opcode<0xD4>, Indirect>;
+def PER_Relative16 : Inst24<"per", Opcode<0x62>, Relative16>;
 
 def PHB_Implied : InstLowB<"phb", 0b1000>;
 def PHD_Implied : InstLowB<"phd", 0b0000>;
