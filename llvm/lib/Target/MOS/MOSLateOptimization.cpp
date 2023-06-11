@@ -59,6 +59,8 @@ bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
 }
 
 static bool definesNZ(const MachineInstr &MI, Register Val) {
+  if (MI.getOpcode() == MOS::CL)
+    return false;
   if (MI.getOpcode() == MOS::STImag8)
     return false;
   if (MI.definesRegister(Val))
@@ -101,6 +103,7 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
         ClobbersNZ = false;
       else
         switch (J.getOpcode()) {
+        case MOS::CL:
         case MOS::CLV:
         case MOS::LDCImm:
         case MOS::STImag8:
