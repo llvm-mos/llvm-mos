@@ -62,6 +62,16 @@ def Has65EL02 : Predicate<"Subtarget->has65EL02()">,
   let PredicateName = "Feature65EL02";
 }
 
+def Has65DTV02 : Predicate<"Subtarget->has65DTV02()">,
+                AssemblerPredicate<(all_of Feature65DTV02), "6502 (C64DTV)"> {
+  let PredicateName = "Feature65DTV02";
+}
+
+def Has4510 : Predicate<"Subtarget->has4510()">,
+                AssemblerPredicate<(all_of Feature4510), "4510"> {
+  let PredicateName = "Feature4510";
+}
+
 /// These instruction format definitions exist, thanks to Neil Parker's
 /// analysis of the 65xx instruction set, at:
 /// http://nparker.llx.com/a2/opcodes.html

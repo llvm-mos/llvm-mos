@@ -31,6 +31,8 @@ std::string mos::getMOSTargetCPU(const ArgList &Args) {
         .Cases("mos65el02", "65el02", "mos65el02")
         .Cases("moshuc6280", "huc6280", "moshuc6280")
         .Cases("mossweet16", "sweet16", "mossweet16")
+        .Cases("mos65dtv02", "65dtv02", "mos65dtv02")
+        .Cases("mos4510", "4510", "mos4510")
         .Default("");
   }
 

@@ -36,6 +36,14 @@
 # RUN: ld.lld %t.o.huc6280 -o %t.huc6280
 # RUN: llvm-readobj --file-headers --sections -l %t.huc6280 | FileCheck %s -check-prefixes=CHECK,HUC6280
 
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65dtv02 %s -o %t.o.65dtv02
+# RUN: ld.lld %t.o.65dtv02 -o %t.65dtv02
+# RUN: llvm-readobj --file-headers --sections -l %t.65dtv02 | FileCheck %s -check-prefixes=CHECK,65DTV02
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos4510 %s -o %t.o.4510
+# RUN: ld.lld %t.o.4510 -o %t.4510
+# RUN: llvm-readobj --file-headers --sections -l %t.4510 | FileCheck %s -check-prefixes=CHECK,4510
+
 # returns with 42 in accumulator
 .globl _start
 _start:
@@ -101,7 +109,6 @@ _start:
 // 65EL02-NEXT:    EF_MOS_ARCH_6502_BCD (0x2)
 // 65EL02-NEXT:    EF_MOS_ARCH_65C02 (0x8)
 // 65EL02-NEXT:    EF_MOS_ARCH_65EL02 (0x200)
-// 65EL02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
 // 65EL02-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
 // 65CE02-NEXT:  Flags [
 // 65CE02-NEXT:    EF_MOS_ARCH_6502 (0x1)
@@ -109,7 +116,17 @@ _start:
 // 65CE02-NEXT:    EF_MOS_ARCH_65C02 (0x8)
 // 65CE02-NEXT:    EF_MOS_ARCH_65CE02 (0x400)
 // 65CE02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
-// 65CE02-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
+// 65DTV02-NEXT: Flags [
+// 65DTV02-NEXT:   EF_MOS_ARCH_6502 (0x1)
+// 65DTV02-NEXT:   EF_MOS_ARCH_6502_BCD (0x2)
+// 65DTV02-NEXT:   EF_MOS_ARCH_65DTV02 (0x1000)
+//  4510-NEXT:   Flags [
+//  4510-NEXT:    EF_MOS_ARCH_4510 (0x2000)
+//  4510-NEXT:    EF_MOS_ARCH_6502 (0x1)
+//  4510-NEXT:    EF_MOS_ARCH_6502_BCD (0x2)
+//  4510-NEXT:    EF_MOS_ARCH_65C02 (0x8)
+//  4510-NEXT:    EF_MOS_ARCH_65CE02 (0x400)
+//  4510-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   HeaderSize: 52
 // CHECK-NEXT:   ProgramHeaderEntrySize: 32
