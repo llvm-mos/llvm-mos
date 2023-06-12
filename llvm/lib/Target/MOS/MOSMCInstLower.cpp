@@ -561,6 +561,21 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::TYA_Implied);
       return;
     }
+  case MOS::CL: {
+    switch (MI->getOperand(0).getReg()) {
+    default:
+      llvm_unreachable("Unexpected register.");
+    case MOS::A:
+      OutMI.setOpcode(MOS::CLA_Implied);
+      return;
+    case MOS::X:
+      OutMI.setOpcode(MOS::CLX_Implied);
+      return;
+    case MOS::Y:
+      OutMI.setOpcode(MOS::CLY_Implied);
+      return;
+    }
+  }
   }
 
   // Handle any real instructions that weren't generated from a pseudo.

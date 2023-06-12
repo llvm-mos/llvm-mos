@@ -1031,12 +1031,17 @@ void MOSInstrInfo::expandLDImm16Remat(MachineIRBuilder &Builder) const {
 void MOSInstrInfo::expandLDZ(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
   Register DestReg = MI.getOperand(0).getReg();
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   if (MOS::Imag8RegClass.contains(DestReg)) {
     MI.setDesc(Builder.getTII().get(MOS::STZImag8));
   } else if (MOS::GPRRegClass.contains(DestReg)) {
-    MI.setDesc(Builder.getTII().get(MOS::LDImm));
-    MI.addOperand(MachineOperand::CreateImm(0));
+    if (STI.hasHUC6280()) {
+      MI.setDesc(Builder.getTII().get(MOS::CL));
+    } else {
+      MI.setDesc(Builder.getTII().get(MOS::LDImm));
+      MI.addOperand(MachineOperand::CreateImm(0));
+    }
   } else {
     llvm_unreachable("Unexpected register class for LDZ.");
   }

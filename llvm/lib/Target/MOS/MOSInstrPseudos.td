@@ -88,7 +88,7 @@ def LDImm16Remat : MOSPseudo {
   let isReMaterializable = true;
 }
 
-// Expands to LDImm 0 for GPR or STZImag8 for Imag8.
+// Load zero into GPR.
 def LDZ : MOSPseudo {
   let Predicates = [Has65C02];
   dag OutOperandList = (outs Anyi8:$dst);

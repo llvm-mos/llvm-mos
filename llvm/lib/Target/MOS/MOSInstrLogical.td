@@ -322,6 +322,13 @@ def LDCImm : MOSImmediateLoad<Cc, i1imm>;
 // LDA imm, LDX imm, LDY imm
 def LDImm : MOSImmediateLoad<GPR, imm8>;
 
+// CLA, CLX, CLY
+let Predicates = [HasHUC6280] in {
+  def CL : MOSImmediateLoad<GPR, imm8> {
+    dag InOperandList = (ins);
+  }
+}
+
 //===---------------------------------------------------------------------===//
 // Comparison Instructions
 //===---------------------------------------------------------------------===//
