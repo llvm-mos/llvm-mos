@@ -52,6 +52,11 @@ def Feature65CE02
                        "The new and modified instructions present on "
                        "65ce02 and variants">;
 
+def FeatureHUC6280
+    : SubtargetFeature<"mos-insns-huc6280", "HasHUC6280Insns", "true",
+                       "The new and modified instructions present on "
+                       "HuC6280">;
+
 def FeatureSWEET16
     : SubtargetFeature<"mos-insns-sweet16", "HasSWEET16Insns", "true",
                         "The SWEET16 instruction set">;
@@ -95,10 +100,11 @@ def FamilyW65C02
       "WDC 65C02",
       FamilyR65C02.Implies#[FeatureW65C02]>;
 
+// The WDC 65816 implements WDC 65C02 opcodes, but not Rockwell ones.
 def FamilyW65816
     : Family<"mosw65816",
       "WDC 65816",
-      FamilyW65C02.Implies#[FeatureW65816]>;
+      Family65C02.Implies#[FeatureW65C02, FeatureW65816]>;
 
 def Family65EL02
     : Family<"mos65el02",
@@ -109,6 +115,11 @@ def Family65CE02
     : Family<"mos65ce02",
       "Commodore 65CE02",
       FamilyW65C02.Implies#[Feature65CE02]>;
+
+def FamilyHUC6280
+    : Family<"moshuc6280",
+      "Hudson Soft HuC6280",
+      FamilyR65C02.Implies#[FeatureHUC6280]>;
 
 def FamilySWEET16
     : Family<"mossweet16",
@@ -139,4 +150,5 @@ def : Device<"mosr65c02", FamilyR65C02>;
 def : Device<"mosw65c02", FamilyW65C02>;
 def : Device<"mosw65816", FamilyW65816>;
 def : Device<"mosw65el02", Family65EL02>;
+def : Device<"moshuc6280", FamilyHUC6280>;
 def : Device<"mossweet16", FamilySWEET16>;

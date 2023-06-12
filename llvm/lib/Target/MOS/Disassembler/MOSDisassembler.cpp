@@ -65,7 +65,8 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSDisassembler() {
 
 #include "MOSGenDisassemblerTables.inc"
 
-const uint8_t *getDecoderTable(size_t Size) {
+std::optional<const uint8_t*>
+getDecoderTable(size_t Size) {
   // Suppress unused variable warning for generated function.
   (void)Check;
 
@@ -78,12 +79,39 @@ const uint8_t *getDecoderTable(size_t Size) {
     return DecoderTableMOS24;
   case 4:
     return DecoderTableMOS32;
+  case 7:
+    return DecoderTableMOS56;
   default:
-    llvm_unreachable("instruction size must be between 1 and 3 bytes");
+    return std::nullopt;
   }
 }
 
-const uint8_t *getDecoderTable65CE02(size_t Size) {
+std::optional<const uint8_t*>
+getDecoderTable6502X(size_t Size) {
+  switch (Size) {
+  case 2:
+    return DecoderTable6502x16;
+  case 3:
+    return DecoderTable6502x24;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<const uint8_t*>
+getDecoderTableR65C02(size_t Size) {
+  switch (Size) {
+  case 2:
+    return DecoderTabler65c0216;
+  case 3:
+    return DecoderTabler65c0224;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<const uint8_t*>
+getDecoderTable65CE02(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTable65ce028;
@@ -92,8 +120,19 @@ const uint8_t *getDecoderTable65CE02(size_t Size) {
   case 3:
     return DecoderTable65ce0224;
   default:
-    llvm_unreachable("instruction size must be between 1 and 3 bytes");
+    return std::nullopt;
   }
+}
+
+template <typename InsnType>
+static DecodeStatus decodeInstruction(std::optional<const uint8_t*> DecodeTable, MCInst &MI,
+                                      InsnType insn, uint64_t Address,
+                                      const MCDisassembler *DisAsm,
+                                      const MCSubtargetInfo &STI) {
+  if (!DecodeTable.has_value())
+    return MCDisassembler::Fail;
+  
+  return decodeInstruction(DecodeTable.value(), MI, insn, Address, DisAsm, STI);
 }
 
 std::optional<MCDisassembler::DecodeStatus>
@@ -124,7 +163,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   // First attempt to decode 16-bit immediate 65816 instructions.
   if (Has65816) {
     if ((MLow || XLow) && Bytes.size() >= 3) {
-      uint32_t Insn = 0;
+      uint64_t Insn = 0;
       DecodeStatus Result = MCDisassembler::Fail;
       for (size_t Byte : seq(0, 3)) {
         Insn |= Bytes[Byte] << (8 * Byte);
@@ -153,18 +192,30 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   // Otherwise decode from the normal tables.
-  for (size_t InsnSize : seq_inclusive(1, 4)) {
-    uint32_t Insn = 0;
+  for (size_t InsnSize : seq_inclusive(1, 7)) {
+    uint64_t Insn = 0;
     DecodeStatus Result = MCDisassembler::Fail;
     if (Bytes.size() < InsnSize) {
       return MCDisassembler::Fail;
     }
     for (size_t Byte : seq((size_t)0, InsnSize)) {
-      Insn |= Bytes[Byte] << (8 * Byte);
+      Insn |= ((uint64_t) Bytes[Byte]) << (8 * Byte);
     }
     if (STI.getFeatureBits()[MOS::Feature65CE02]) {
       Result = decodeInstruction(getDecoderTable65CE02(InsnSize), Instr, Insn,
                                  Address, this, STI);
+    }
+    if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::FeatureR65C02]) {
+        Result = decodeInstruction(getDecoderTableR65C02(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
+    }
+    if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::Feature6502X]) {
+        Result = decodeInstruction(getDecoderTable6502X(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
     }
     if (Result == MCDisassembler::Fail) {
       Result = decodeInstruction(getDecoderTable(InsnSize), Instr, Insn,

@@ -15,6 +15,7 @@
 #include "MOSRegisterInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -648,14 +649,13 @@ public:
     */
     // First, the mnemonic goes on the stack.
     Operands.push_back(MOSOperand::createToken(Mnemonic, NameLoc));
-    bool FirstTime = true;
+    AsmToken::TokenKind RightHandSide = AsmToken::Eof;
     while (getLexer().isNot(AsmToken::EndOfStatement)) {
       if (getLexer().is(AsmToken::Hash)) {
         eatThatToken(Operands);
         if (!tryParseExpr(Operands,
                           "immediate operand must be an expression evaluating "
                           "to a value between 0 and 255 inclusive")) {
-          FirstTime = false;
           continue;
         }
       }
@@ -663,7 +663,7 @@ public:
         eatThatToken(Operands);
         if (!tryParseExpr(Operands,
                           "expression expected after left parenthesis")) {
-          FirstTime = false;
+          RightHandSide = AsmToken::RParen;
           continue;
         }
       }
@@ -671,9 +671,14 @@ public:
           getLexer().is(AsmToken::LBrac)) {
         eatThatToken(Operands);
         if (!tryParseExpr(Operands, "expression expected after left bracket")) {
-          FirstTime = false;
+          RightHandSide = AsmToken::RBrac;
           continue;
         }
+      }
+      if (RightHandSide != AsmToken::Eof && getLexer().is(RightHandSide)) {
+        eatThatToken(Operands);
+        RightHandSide = AsmToken::Eof;
+        continue;
       }
       // I don't know what llvm has against commas, but for some reason
       // TableGen makes an effort to ignore them during parsing.  So,
@@ -690,11 +695,9 @@ public:
         continue;
       }
 
-      if (FirstTime && !tryParseExpr(Operands, "expression expected")) {
-        FirstTime = false;
+      if (!tryParseExpr(Operands, "expression expected")) {
         continue;
       }
-      FirstTime = false;
 
       // Okay then, you're a token.  Hope you're happy.
       eatThatToken(Operands);

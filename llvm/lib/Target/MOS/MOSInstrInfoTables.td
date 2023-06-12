@@ -53,6 +53,7 @@ def : ZPIRE< ASL_ZeroPage, ASL_Absolute >;
 def : ZPIRE< ASL_ZeroPageX, ASL_AbsoluteX >;
 
 def : ZPIRE< BIT_ZeroPage, BIT_Absolute >;
+def : ZPIRE< BIT_ZeroPageX, BIT_AbsoluteX >;
 
 def : ZPIRE< CMP_ZeroPage, CMP_Absolute >;
 def : ZBIRE< CMP_Absolute, CMP_AbsoluteLong >;
@@ -115,6 +116,13 @@ def : ZPIRE< STY_ZeroPage, STY_Absolute >;
 
 def : ZPIRE< STZ_ZeroPage, STZ_Absolute >;
 def : ZPIRE< STZ_ZeroPageX, STZ_AbsoluteX >;
+
+def : ZPIRE< TRB_ZeroPage, TRB_Absolute >;
+
+def : ZPIRE< TSB_ZeroPage, TSB_Absolute >;
+
+def : ZPIRE< TST_ZeroPage, TST_Absolute >;
+def : ZPIRE< TST_ZeroPageX, TST_AbsoluteX >;
 
 /// ---------------------------------------------------------------------------
 /// The MOS zero page instruction lowering table.

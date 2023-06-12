@@ -61,6 +61,8 @@ unsigned makeEFlags(const FeatureBitset &Features) {
     ELFArch |= ELF::EF_MOS_ARCH_W65C02;
   if (Features[MOS::FeatureW65816])
     ELFArch |= ELF::EF_MOS_ARCH_W65816;
+  if (Features[MOS::FeatureHUC6280])
+    ELFArch |= ELF::EF_MOS_ARCH_HUC6280;
   return ELFArch;
 }
 } // namespace MOS_MC

@@ -6,6 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65816 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,W65816
 # RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65el02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65EL02
 # RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65ce02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65CE02
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=moshuc6280 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,HUC6280
 
 # returns with 42 in accumulator
 .globl _start
@@ -40,7 +41,6 @@ _start:
 // W65816-NEXT:    EF_MOS_ARCH_6502 (0x1)
 // W65816-NEXT:    EF_MOS_ARCH_6502_BCD (0x2)
 // W65816-NEXT:    EF_MOS_ARCH_65C02 (0x8)
-// W65816-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
 // W65816-NEXT:    EF_MOS_ARCH_W65816 (0x100)
 // W65816-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
 // 65EL02:      Flags [
@@ -57,4 +57,10 @@ _start:
 // 65CE02-NEXT:    EF_MOS_ARCH_65CE02 (0x400)
 // 65CE02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
 // 65CE02-NEXT:    EF_MOS_ARCH_W65C02 (0x20)
+// HUC6280:     Flags [
+// HUC6280-NEXT:   EF_MOS_ARCH_6502 (0x1)
+// HUC6280-NEXT:   EF_MOS_ARCH_6502_BCD (0x2)
+// HUC6280-NEXT:   EF_MOS_ARCH_65C02 (0x8)
+// HUC6280-NEXT:   EF_MOS_ARCH_HUC6280 (0x800)
+// HUC6280-NEXT:   EF_MOS_ARCH_R65C02 (0x10)
 // CHECK-NEXT:   ]
