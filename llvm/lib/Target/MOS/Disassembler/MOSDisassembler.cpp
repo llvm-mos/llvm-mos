@@ -77,10 +77,6 @@ getDecoderTable(size_t Size) {
     return DecoderTableMOS16;
   case 3:
     return DecoderTableMOS24;
-  case 4:
-    return DecoderTableMOS32;
-  case 7:
-    return DecoderTableMOS56;
   default:
     return std::nullopt;
   }
@@ -93,6 +89,19 @@ getDecoderTable6502X(size_t Size) {
     return DecoderTable6502x16;
   case 3:
     return DecoderTable6502x24;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<const uint8_t*>
+getDecoderTable65DTV02(size_t Size) {
+  // Suppress unused variable warning for generated function.
+  (void)Check;
+
+  switch (Size) {
+  case 2:
+    return DecoderTable65dtv0216;
   default:
     return std::nullopt;
   }
@@ -119,6 +128,63 @@ getDecoderTable65CE02(size_t Size) {
     return DecoderTable65ce0216;
   case 3:
     return DecoderTable65ce0224;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<const uint8_t*>
+getDecoderTableHUC6280(size_t Size) {
+  // Suppress unused variable warning for generated function.
+  (void)Check;
+
+  switch (Size) {
+  case 1:
+    return DecoderTablehuc62808;
+  case 2:
+    return DecoderTablehuc628016;
+  case 3:
+    return DecoderTablehuc628024;
+  case 4:
+    return DecoderTablehuc628032;
+  case 7:
+    return DecoderTablehuc628056;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<const uint8_t*>
+getDecoderTableW65816(size_t Size) {
+  // Suppress unused variable warning for generated function.
+  (void)Check;
+
+  switch (Size) {
+  case 1:
+    return DecoderTablew658168;
+  case 2:
+    return DecoderTablew6581616;
+  case 3:
+    return DecoderTablew6581624;
+  case 4:
+    return DecoderTablew6581632;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<const uint8_t*>
+getDecoderTable65EL02(size_t Size) {
+  // Suppress unused variable warning for generated function.
+  (void)Check;
+
+  switch (Size) {
+  case 1:
+    return DecoderTable65el028;
+  case 2:
+    return DecoderTable65el0216;
+  case 3:
+    return DecoderTable65el0224;
   default:
     return std::nullopt;
   }
@@ -206,8 +272,32 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                  Address, this, STI);
     }
     if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::Feature65EL02]) {
+        Result = decodeInstruction(getDecoderTable65EL02(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
+    }
+    if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::FeatureW65816]) {
+        Result = decodeInstruction(getDecoderTableW65816(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
+    }
+    if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::FeatureHUC6280]) {
+        Result = decodeInstruction(getDecoderTableHUC6280(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
+    }
+    if (Result == MCDisassembler::Fail) {
       if (STI.getFeatureBits()[MOS::FeatureR65C02]) {
         Result = decodeInstruction(getDecoderTableR65C02(InsnSize), Instr, Insn,
+                                  Address, this, STI);
+      }
+    }
+    if (Result == MCDisassembler::Fail) {
+      if (STI.getFeatureBits()[MOS::Feature65DTV02]) {
+        Result = decodeInstruction(getDecoderTable65DTV02(InsnSize), Instr, Insn,
                                   Address, this, STI);
       }
     }

@@ -61,6 +61,15 @@ def FeatureSWEET16
     : SubtargetFeature<"mos-insns-sweet16", "HasSWEET16Insns", "true",
                         "The SWEET16 instruction set">;
 
+def Feature65DTV02
+    : SubtargetFeature<"mos-insns-65dtv02", "Has65DTV02Insns", "true",
+                       "The new and modified instructions present on "
+                       "the C64DTV's 6502 variant">;
+
+def Feature4510
+    : SubtargetFeature<"mos-insns-4510", "Has4510Insns", "true",
+                        "The new instructions present on CSG 4510">;
+
 // A feature set aggregates features, grouping them. We don't want to create a
 // new member in MOSSubtarget (to store a value) for each set because we do not
 // care if the set is supported, only the subfeatures inside the set. We fix
@@ -109,12 +118,12 @@ def FamilyW65816
 def Family65EL02
     : Family<"mos65el02",
       "65EL02 virtual machine",
-      FamilyW65C02.Implies#[Feature65EL02]>;
+      Family65C02.Implies#[FeatureW65C02, Feature65EL02]>;
 
 def Family65CE02
     : Family<"mos65ce02",
       "Commodore 65CE02",
-      FamilyW65C02.Implies#[Feature65CE02]>;
+      FamilyR65C02.Implies#[Feature65CE02]>;
 
 def FamilyHUC6280
     : Family<"moshuc6280",
@@ -125,6 +134,16 @@ def FamilySWEET16
     : Family<"mossweet16",
       "MOS 6502 compatible with SWEET16 virtual machine support",
       [FeatureSWEET16]>;
+
+def Family65DTV02
+    : Family<"mos65dtv02",
+      "The C64DTV's 6502 variant",
+      Family6502.Implies#[Feature65DTV02]>;
+
+def Family4510
+    : Family<"mos4510",
+      "CSG 4510",
+      Family65CE02.Implies#[Feature4510]>;
 
 //===---------------------------------------------------------------------===//
 // MOS Families
@@ -149,6 +168,8 @@ def : Device<"mos65ce02", Family65CE02>;
 def : Device<"mosr65c02", FamilyR65C02>;
 def : Device<"mosw65c02", FamilyW65C02>;
 def : Device<"mosw65816", FamilyW65816>;
-def : Device<"mosw65el02", Family65EL02>;
+def : Device<"mos65el02", Family65EL02>;
 def : Device<"moshuc6280", FamilyHUC6280>;
 def : Device<"mossweet16", FamilySWEET16>;
+def : Device<"mos65dtv02", Family65DTV02>;
+def : Device<"mos4510", Family4510>;

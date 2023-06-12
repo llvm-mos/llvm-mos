@@ -100,11 +100,14 @@ public:
   bool has6502() const { return Has6502Insns; }
   bool has6502X() const { return Has6502XInsns; }
   bool has65C02() const { return Has65C02Insns; }
-  bool has65CE02() const { return Has65CE02Insns; }
-  bool hasHUC6280() const { return HasHUC6280Insns; }
   bool hasR65C02() const { return HasR65C02Insns; }
   bool hasW65C02() const { return HasW65C02Insns; }
   bool hasW65816() const { return HasW65816Insns; }
+  bool has65EL02() const { return Has65EL02Insns; }
+  bool has65CE02() const { return Has65CE02Insns; }
+  bool hasHUC6280() const { return HasHUC6280Insns; }
+  bool has65DTV02() const { return Has65DTV02Insns; }
+  bool has4510() const { return Has4510Insns; }
   bool staticStack() const { return StaticStack; }
 
 private:
@@ -126,6 +129,8 @@ private:
   bool Has65CE02Insns = false;
   bool HasHUC6280Insns = false;
   bool HasSWEET16Insns = false;
+  bool Has65DTV02Insns = false;
+  bool Has4510Insns = false;
 
   bool LongRegisterNames = false;
   bool StaticStack = false;

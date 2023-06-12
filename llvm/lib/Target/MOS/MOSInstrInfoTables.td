@@ -124,6 +124,11 @@ def : ZPIRE< TSB_ZeroPage, TSB_Absolute >;
 def : ZPIRE< TST_ZeroPage, TST_Absolute >;
 def : ZPIRE< TST_ZeroPageX, TST_AbsoluteX >;
 
+def : ZPIRE< MUL_ZeroPage_EL02, MUL_Absolute_EL02 >;
+def : ZPIRE< MUL_ZeroPageX_EL02, MUL_AbsoluteX_EL02 >;
+def : ZPIRE< DIV_ZeroPage_EL02, DIV_Absolute_EL02 >;
+def : ZPIRE< DIV_ZeroPageX_EL02, DIV_AbsoluteX_EL02 >;
+
 /// ---------------------------------------------------------------------------
 /// The MOS zero page instruction lowering table.
 class MOSRelaxationTable : GenericTable {

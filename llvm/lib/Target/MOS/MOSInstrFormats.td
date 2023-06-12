@@ -13,43 +13,68 @@
 /// Predicates. Useful for limiting instructions to particular hardware modes
 /// or particular hardware implementations.
 def Has6502 : Predicate<"Subtarget->has6502()">,
-              AssemblerPredicate<(all_of Feature6502), "Feature6502"> {
+              AssemblerPredicate<(all_of Feature6502), "6502"> {
   let PredicateName = "Feature6502";
 }
 
 def Has6502X : Predicate<"Subtarget->has6502X()">,
-               AssemblerPredicate<(all_of Feature6502X), "Feature6502X"> {
+               AssemblerPredicate<(all_of Feature6502X), "6502X"> {
   let PredicateName = "Feature6502X";
 }
 
 def Has65C02 : Predicate<"Subtarget->has65C02()">,
-               AssemblerPredicate<(all_of Feature65C02), "Feature65C02"> {
+               AssemblerPredicate<(all_of Feature65C02), "65C02"> {
   let PredicateName = "Feature65C02";
 }
 
 def Has65CE02 : Predicate<"Subtarget->has65CE02()">,
-               AssemblerPredicate<(all_of Feature65CE02), "Feature65CE02"> {
+               AssemblerPredicate<(all_of Feature65CE02), "65CE02"> {
   let PredicateName = "Feature65CE02";
 }
 
 def HasHUC6280 : Predicate<"Subtarget->hasHUC6280()">,
-               AssemblerPredicate<(all_of FeatureHUC6280), "FeatureHUC6280"> {
+               AssemblerPredicate<(all_of FeatureHUC6280), "HuC6280"> {
   let PredicateName = "FeatureHUC6280";
 }
 
 def HasR65C02 : Predicate<"Subtarget->hasR65C02()">,
-               AssemblerPredicate<(all_of FeatureR65C02), "FeatureR65C02"> {
+               AssemblerPredicate<(all_of FeatureR65C02), "R65C02"> {
   let PredicateName = "FeatureR65C02";
 }
 
 def HasW65C02 : Predicate<"Subtarget->hasW65C02()">,
-               AssemblerPredicate<(all_of FeatureW65C02), "FeatureW65C02"> {
+               AssemblerPredicate<(all_of FeatureW65C02), "W65C02"> {
   let PredicateName = "FeatureW65C02";
 }
 
+def HasW65816Or65EL02 : Predicate<"(Subtarget->hasW65816() || Subtarget->has65EL02())">,
+                AssemblerPredicate<(any_of FeatureW65816, Feature65EL02), "W65816 or 65EL02"> {
+  let PredicateName = "FeatureW65816Or65EL02";
+}
+
 def HasW65816 : Predicate<"Subtarget->hasW65816()">,
-                AssemblerPredicate<(all_of FeatureW65816), "FeatureW65816"> {
+                AssemblerPredicate<(all_of FeatureW65816), "W65816"> {
   let PredicateName = "FeatureW65816";
+}
+
+def Has65EL02 : Predicate<"Subtarget->has65EL02()">,
+                AssemblerPredicate<(all_of Feature65EL02), "65EL02"> {
+  let PredicateName = "Feature65EL02";
+}
+
+def Has6502XOrDTV : Predicate<"(Subtarget->has6502X() || Subtarget->has65DTV02())">,
+                AssemblerPredicate<(any_of Feature6502X, Feature65DTV02), "6502X (C64DTV subset)"> {
+  let PredicateName = "Feature6502XOrDTV";
+}
+
+def Has65DTV02 : Predicate<"Subtarget->has65DTV02()">,
+                AssemblerPredicate<(all_of Feature65DTV02), "6502 (C64DTV)"> {
+  let PredicateName = "Feature65DTV02";
+}
+
+def Has4510 : Predicate<"Subtarget->has4510()">,
+                AssemblerPredicate<(all_of Feature4510), "4510"> {
+  let PredicateName = "Feature4510";
 }
 
 /// These instruction format definitions exist, thanks to Neil Parker's
@@ -317,8 +342,23 @@ def IndirectZeroPageZ : AddressingMode {
   let InOperandList = (ins addr8:$param);
 }
 
-def IndirectStackPointerY : AddressingMode {
+def StackRelative : AddressingMode {
+  let OperandsStr = "$param , sp";
+  let InOperandList = (ins addr8:$param);
+}
+
+def IndirectStackRelativeY : AddressingMode {
   let OperandsStr = "( $param , sp ) , y";
+  let InOperandList = (ins addr8:$param);
+}
+
+def RStackRelative : AddressingMode {
+  let OperandsStr = "$param , rp";
+  let InOperandList = (ins addr8:$param);
+}
+
+def IndirectRStackRelativeY : AddressingMode {
+  let OperandsStr = "( $param , rp ) , y";
   let InOperandList = (ins addr8:$param);
 }
 
@@ -510,7 +550,7 @@ class InstLowB<string asmstr, bits<4> high = 0> : InstNybble<asmstr, 0xb, high>;
 /// OpcodeC1 class instructions
 /// "Because the cc = 01 instructions are relatively regular, we sketch them
 /// out first."
-multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop"> {
+multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop", list<Predicate> preds = []> {
 /// For cc = 01, then the meaning of bbb is:
 /// 000	(zero page,X)
 /// 001	zero page
@@ -520,66 +560,92 @@ multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop"> {
 /// 101	zero page,X
 /// 110	absolute,Y
 /// 111	absolute,X
-  def _IndexedIndirect :
-    Inst16<OpcodeStr, OpcodeC1< aaa, 0b000>, IndexedIndirect>;
+  let Predicates = preds in {
+    def _IndexedIndirect :
+      Inst16<OpcodeStr, OpcodeC1< aaa, 0b000>, IndexedIndirect>;
 
-  def _ZeroPage :
-    Inst16<OpcodeStr, OpcodeC1< aaa, 0b001>, ZeroPage>;
+    def _ZeroPage :
+      Inst16<OpcodeStr, OpcodeC1< aaa, 0b001>, ZeroPage>;
 
-  /// "The only irregularity is the absence of the nonsensical immediate STA
-  /// instruction."
-  /// skip immediate instruction types here for 0b010
+    /// "The only irregularity is the absence of the nonsensical immediate STA
+    /// instruction."
+    /// skip immediate instruction types here for 0b010
 
-  def _Absolute :
-    Inst24<OpcodeStr, OpcodeC1<aaa, 0b011>, Absolute>;
+    def _Absolute :
+      Inst24<OpcodeStr, OpcodeC1<aaa, 0b011>, Absolute>;
 
-  def _IndirectIndexed :
-    Inst16<OpcodeStr, OpcodeC1<aaa, 0b100>, IndirectIndexed>;
+    def _IndirectIndexed :
+      Inst16<OpcodeStr, OpcodeC1<aaa, 0b100>, IndirectIndexed>;
 
-  def _ZeroPageX :
-    Inst16<OpcodeStr, OpcodeC1<aaa, 0b101>, ZeroPageX>;
+    def _ZeroPageX :
+      Inst16<OpcodeStr, OpcodeC1<aaa, 0b101>, ZeroPageX>;
 
-  def _AbsoluteY :
-    Inst24<OpcodeStr, OpcodeC1<aaa, 0b110>, AbsoluteY>;
+    def _AbsoluteY :
+      Inst24<OpcodeStr, OpcodeC1<aaa, 0b110>, AbsoluteY>;
 
-  def _AbsoluteX :
-    Inst24<OpcodeStr, OpcodeC1<aaa, 0b111>, AbsoluteX>;
+    def _AbsoluteX :
+      Inst24<OpcodeStr, OpcodeC1<aaa, 0b111>, AbsoluteX>;
+  }
 
 /// For cc = 10 on 65816, then the meaning of bbb is:
 /// 100	(zero page)
 /// For cc = 11 on 65816, then the meaning of bbb is:
+/// 000 (stack pointer)
 /// 001	[zero page]
 /// 011	absolute long
+/// 100 (stack pointer),Y
 /// 101	[zero page],Y
 /// 111	absolute long,X
-  let Predicates = [HasW65816] in {
-    def _Indirect :
-      Inst16<OpcodeStr, OpcodeC2<aaa, 0b100>, Indirect>;
+  let Predicates = preds # [HasW65816Or65EL02] in {
+    def _StackRelative :
+      Inst16<OpcodeStr, OpcodeC3<aaa, 0b000>, StackRelative>;
 
-    def _IndirectLong :
-      Inst16<OpcodeStr, OpcodeC3<aaa, 0b001>, IndirectLong>;
+    def _IndirectStackRelativeY :
+      Inst16<OpcodeStr, OpcodeC3<aaa, 0b100>, IndirectStackRelativeY>;
+  }
+  
+  let Predicates = preds # [HasW65816] in {
+    let DecoderNamespace = "w65816" in {
+      def _Indirect :
+        Inst16<OpcodeStr, OpcodeC2<aaa, 0b100>, Indirect>;
 
-    def _AbsoluteLong :
-      Inst32<OpcodeStr, OpcodeC3<aaa, 0b011>, AbsoluteLong>;
+      def _IndirectLong :
+        Inst16<OpcodeStr, OpcodeC3<aaa, 0b001>, IndirectLong>;
 
-    def _IndirectIndexedLong :
-      Inst16<OpcodeStr, OpcodeC3<aaa, 0b101>, IndirectIndexedLong>;
+      def _AbsoluteLong :
+        Inst32<OpcodeStr, OpcodeC3<aaa, 0b011>, AbsoluteLong>;
 
-    def _AbsoluteXLong :
-      Inst32<OpcodeStr, OpcodeC3<aaa, 0b111>, AbsoluteXLong>;
+      def _IndirectIndexedLong :
+        Inst16<OpcodeStr, OpcodeC3<aaa, 0b101>, IndirectIndexedLong>;
+
+      def _AbsoluteXLong :
+        Inst32<OpcodeStr, OpcodeC3<aaa, 0b111>, AbsoluteXLong>;
+    }
+  }
+
+  let Predicates = preds # [Has65EL02] in {
+    let DecoderNamespace = "65el02" in {
+      def _RStackRelative :
+        Inst16<OpcodeStr, OpcodeC3<aaa, 0b001>, RStackRelative>;
+
+      def _RIndirectStackRelativeY :
+        Inst16<OpcodeStr, OpcodeC3<aaa, 0b101>, IndirectRStackRelativeY>;
+    }
   }
 }
 
 /// All cc=01 instruction types, for the majority of opcodes where cc == 01.
-multiclass CC1_All<bits<3> aaa, string OpcodeStr = "nop"> :
-    CC1_NoImmediate<aaa, OpcodeStr> {
+multiclass CC1_All<bits<3> aaa, string OpcodeStr = "nop", list<Predicate> preds = []> :
+    CC1_NoImmediate<aaa, OpcodeStr, preds> {
   // handle immediate CC1 instruction types here for opcodes that fit the
   // CC1 pattern
-  def _Immediate : Inst16<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate>;
+  def _Immediate : Inst16<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate> {
+    let Predicates = preds;
+  }
 
   // 16-bit immediate operand on 65816 when M flag is low.
   def _Immediate16 : Inst24<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate16> {
-    let Predicates = [HasW65816];
+    let Predicates = preds # [HasW65816];
     let DecoderNamespace = "MOSMLow";
   }
 }
@@ -677,7 +743,7 @@ multiclass CC0_Regular< bits<3> aaa, string OpcodeStr = "nop"> {
 
   // 16-bit immediate operand on 65816 when X flag is low.
   def _Immediate16 : Inst24<OpcodeStr, OpcodeC0<aaa, 0b000>, Immediate16> {
-    let Predicates = [HasW65816];
+    let Predicates = [HasW65816Or65EL02];
     let DecoderNamespace = "MOSXLow";
   }
 
