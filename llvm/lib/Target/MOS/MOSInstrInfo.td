@@ -486,11 +486,10 @@ def TYS_Implied: InstLowB<"tys", 0b0010>; /// Transfer Y reg. to Stack pointer h
 let Predicates = [Has4510] in {
 
 let DecoderNamespace = "65ce02" in {
-
 def MAP_Implied: Inst8<"map", Opcode<0x5c>>;
-// TODO: Add NOP -> EOM alias.
-
 }
+
+def : MnemonicAlias<"eom", "nop">;
 
 } // Predicates = [Has4510]
 
