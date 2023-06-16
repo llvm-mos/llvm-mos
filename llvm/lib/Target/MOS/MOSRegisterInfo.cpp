@@ -809,6 +809,10 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       // TXA
       return 3;
     }
+    if (STI.hasW65816Or65EL02()) {
+      // TXY, TYX
+      return 3;
+    }
     // May need to pha/pla around; avg cost 4
     return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
   }

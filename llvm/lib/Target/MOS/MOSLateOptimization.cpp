@@ -19,6 +19,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSRegisterInfo.h"
+#include "MOSSubtarget.h"
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -70,6 +71,7 @@ static bool definesNZ(const MachineInstr &MI, Register Val) {
     return false;
   case MOS::TA:
   case MOS::T_A:
+  case MOS::TX:
   case MOS::LDImag8:
     return MI.getOperand(1).getReg() == Val;
   }
@@ -127,6 +129,7 @@ void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
   auto &MBB = *MI.getParent();
   const auto &MRI = MBB.getParent()->getRegInfo();
   const auto *TRI = MRI.getTargetRegisterInfo();
+  const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
   Register Val = MI.getOperand(1).getReg();
 
   LivePhysRegs PhysRegs;
@@ -211,8 +214,11 @@ void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
   case MOS::X:
   case MOS::Y: {
     MachineInstrBuilder Access;
+    auto OtherReg = Val == MOS::X ? MOS::Y : MOS::X;
     if (PhysRegs.available(MRI, MOS::A))
       Access = Builder.buildInstr(MOS::T_A, {MOS::A}, {Val});
+    else if (PhysRegs.available(MRI, OtherReg) && STI.hasW65816Or65EL02())
+      Access = Builder.buildInstr(MOS::TX, {OtherReg}, {Val});
     else
       Access = Builder.buildInstr(MOS::CMPImm, {MOS::C}, {Val, INT64_C(0)});
     Access.addDef(MOS::NZ, RegState::Implicit);
@@ -226,6 +232,7 @@ void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
 bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
   const auto &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
   const auto *TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+  const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
 
   bool Changed = false;
 
@@ -273,6 +280,14 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
         Load = &LoadA;
         MI.setDesc(TII.get(MOS::TA));
         MI.getOperand(1).ChangeToRegister(MOS::A, /*isDef=*/false);
+      } else if (STI.hasW65816Or65EL02()) {
+        if (Dst == MOS::X && LoadY.MI && LoadY.Val == Val) {
+          MI.setDesc(TII.get(MOS::TX));
+          MI.getOperand(1).ChangeToRegister(MOS::Y, /*isDef=*/false);
+        } else if (Dst == MOS::Y && LoadX.MI && LoadX.Val == Val) {
+          MI.setDesc(TII.get(MOS::TX));
+          MI.getOperand(1).ChangeToRegister(MOS::X, /*isDef=*/false);
+        }
       }
       break;
     }

@@ -406,6 +406,11 @@ def TA : MOSTransfer<XY, Ac>;
 // TXA, TYA
 def T_A : MOSTransfer<Ac, XY>;
 
+let Predicates = [HasW65816Or65EL02] in {
+// TXY, TYX
+def TX : MOSTransfer<XY, XY>;
+}
+
 //===---------------------------------------------------------------------===//
 // Stack Instructions
 //===---------------------------------------------------------------------===//

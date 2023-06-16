@@ -110,6 +110,8 @@ public:
   bool has4510() const { return Has4510Insns; }
   bool staticStack() const { return StaticStack; }
 
+  bool hasW65816Or65EL02() const { return HasW65816Insns || Has65EL02Insns; }
+
 private:
   /// The ELF e_flags architecture features.
   unsigned EFlags = 0;
