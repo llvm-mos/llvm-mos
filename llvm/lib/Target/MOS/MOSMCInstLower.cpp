@@ -478,6 +478,20 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         return;
       }
     }
+  case MOS::TX:
+    switch (MI->getOperand(0).getReg()) {
+    default:
+      llvm_unreachable("Unexpected register.");
+    case MOS::X:
+      assert(MI->getOperand(1).getReg() == MOS::Y);
+      OutMI.setOpcode(MOS::TYX_Implied);
+      return;
+    case MOS::Y:
+      assert(MI->getOperand(1).getReg() == MOS::X);
+      OutMI.setOpcode(MOS::TXY_Implied);
+      return;
+    }
+
   case MOS::PH:
   case MOS::PL: {
     switch (MI->getOperand(0).getReg()) {

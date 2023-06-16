@@ -464,6 +464,7 @@ static bool isTargetCopy(MachineInstr &MI) {
   case MOS::STImag8:
   case MOS::TA:
   case MOS::T_A:
+  case MOS::TX:
     return true;
   default:
     return false;
@@ -543,6 +544,10 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
     } else if (IsClass(DestReg, MOS::AcRegClass)) {
       assert(MOS::XYRegClass.contains(SrcReg));
       Builder.buildInstr(MOS::T_A).addDef(DestReg).addUse(SrcReg);
+    } else if (STI.hasW65816Or65EL02()) {
+      assert(MOS::XYRegClass.contains(SrcReg));
+      assert(MOS::XYRegClass.contains(DestReg));
+      Builder.buildInstr(MOS::TX).addDef(DestReg).addUse(SrcReg);
     } else {
       copyPhysRegImpl(Builder, DestReg,
                       getRegWithVal(Builder, SrcReg, MOS::AcRegClass));
