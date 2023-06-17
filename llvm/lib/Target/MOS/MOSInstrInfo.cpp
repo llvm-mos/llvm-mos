@@ -444,7 +444,7 @@ void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MCRegister SrcReg, bool KillSrc) const {
   MachineIRBuilder Builder(MBB, MI);
   Builder.setDebugLoc(DL);
-  copyPhysRegImpl(Builder, DestReg, SrcReg);
+  copyPhysRegImpl(Builder, DestReg, SrcReg, false, KillSrc);
 }
 
 static Register createVReg(MachineIRBuilder &Builder,
@@ -516,7 +516,8 @@ unsigned MOSInstrInfo::findCustomTiedOperandIdx(const MachineInstr &MI,
 }
 
 void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
-                                   Register SrcReg, bool Force) const {
+                                   Register SrcReg, bool Force,
+                                   bool KillSrc) const {
   if (!Force && isCopyRedundant(Builder, DestReg, SrcReg))
     return;
 
@@ -548,6 +549,12 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
       Builder.buildInstr(MOS::TX).addDef(DestReg).addUse(SrcReg);
+    } else if (STI.hasHUC6280() && KillSrc) {
+      // The HuC6280 does not have an X->Y or Y->X transfer function, but if
+      // the source register is being killed, it can be modeled using a swap.
+      assert(MOS::XYRegClass.contains(SrcReg));
+      assert(MOS::XYRegClass.contains(DestReg));
+      Builder.buildInstr(MOS::SWAP).addDef(DestReg).addUse(SrcReg, RegState::Kill);
     } else {
       copyPhysRegImpl(Builder, DestReg,
                       getRegWithVal(Builder, SrcReg, MOS::AcRegClass));

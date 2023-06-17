@@ -508,7 +508,44 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::TXY_Implied);
       return;
     }
-
+  case MOS::SWAP:
+    switch (MI->getOperand(0).getReg()) {
+    default:
+      llvm_unreachable("Unexpected register.");
+    case MOS::A:
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::X:
+        OutMI.setOpcode(MOS::SAX_Implied);
+        return;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::SAY_Implied);
+        return;
+      }
+    case MOS::X:
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::A:
+        OutMI.setOpcode(MOS::SAX_Implied);
+        return;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::SXY_Implied);
+        return;
+      }
+    case MOS::Y:
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::A:
+        OutMI.setOpcode(MOS::SAY_Implied);
+        return;
+      case MOS::X:
+        OutMI.setOpcode(MOS::SXY_Implied);
+        return;
+      }
+    }
   case MOS::PH:
   case MOS::PL: {
     switch (MI->getOperand(0).getReg()) {

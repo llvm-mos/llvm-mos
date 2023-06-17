@@ -425,6 +425,16 @@ let Predicates = [HasW65816Or65EL02] in {
 def TX : MOSTransfer<XY, XY>;
 }
 
+let Predicates = [HasHUC6280] in {
+// SAX, SAY, SXY
+def SWAP : MOSLogicalInstr {
+  dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins GPR:$src);
+
+  let isAsCheapAsAMove = true;
+}
+}
+
 //===---------------------------------------------------------------------===//
 // Stack Instructions
 //===---------------------------------------------------------------------===//
