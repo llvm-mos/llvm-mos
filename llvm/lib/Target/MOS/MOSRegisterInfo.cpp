@@ -706,6 +706,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 
       // INC zp = (2 bytes + 5 cycles)
       // INXY = (1 bytes + 2 cycles)
+      if (STI.has65C02() && is_contained(Order, MOS::A))
+        RegScores[MOS::A] += 4;
       if (is_contained(Order, MOS::X))
         RegScores[MOS::X] += 4;
       if (is_contained(Order, MOS::Y))

@@ -449,6 +449,17 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     switch (MI->getOperand(0).getReg()) {
     default:
       llvm_unreachable("Unexpected register.");
+    case MOS::A:
+      switch (MI->getOpcode()) {
+      default:
+        llvm_unreachable("Inconsistent opcode.");
+      case MOS::DE:
+        OutMI.setOpcode(MOS::DEC_Accumulator);
+        return;
+      case MOS::IN:
+        OutMI.setOpcode(MOS::INC_Accumulator);
+        return;
+      }
     case MOS::X:
       switch (MI->getOpcode()) {
       default:

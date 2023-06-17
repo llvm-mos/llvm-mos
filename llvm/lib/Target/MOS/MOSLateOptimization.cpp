@@ -295,6 +295,11 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
     // Try to replace with IN_ or DE_.
     if (!Load) {
       switch (Dst) {
+      case MOS::A:
+        if (STI.has65C02())
+          if (LoadA.MI && std::abs(LoadA.Val - Val) == 1)
+            Load = &LoadA;
+        break;
       case MOS::X:
         if (LoadX.MI && std::abs(LoadX.Val - Val) == 1)
           Load = &LoadX;

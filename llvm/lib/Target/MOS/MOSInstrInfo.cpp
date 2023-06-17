@@ -1054,6 +1054,7 @@ void MOSInstrInfo::expandLDZ(MachineIRBuilder &Builder) const {
 
 void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
   const auto &TII = Builder.getTII();
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   auto &MI = *Builder.getInsertPt();
   Register R = MI.getOperand(0).getReg();
@@ -1062,6 +1063,11 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
 
   switch (R) {
   case MOS::A: {
+    if (STI.has65C02()) {
+      MI.setDesc(TII.get(IsInc ? MOS::IN : MOS::DE));
+      return;
+    }
+
     Builder.buildInstr(MOS::LDCImm).addDef(MOS::C).addImm(0);
     auto Instr = Builder.buildInstr(MOS::ADCImm)
                      .addDef(MOS::A)

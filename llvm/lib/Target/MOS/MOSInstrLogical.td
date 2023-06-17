@@ -355,8 +355,8 @@ let mayLoad = true in {
 
 multiclass MOSIncDec {
   def NAME : MOSLogicalInstr {
-    dag OutOperandList = (outs XY:$dst);
-    dag InOperandList = (ins XY:$src);
+    dag OutOperandList = (outs GPR:$dst);
+    dag InOperandList = (ins GPR:$src);
     let Constraints = "$src = $dst";
   }
 
