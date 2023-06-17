@@ -873,6 +873,8 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   // Post RA
   case MOS::INC:
   case MOS::DEC:
+  case MOS::IncCMOS:
+  case MOS::DecCMOS:
     expandIncDec(Builder);
     break;
   case MOS::IncPtr:
@@ -1054,12 +1056,28 @@ void MOSInstrInfo::expandLDZ(MachineIRBuilder &Builder) const {
 
 void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
   const auto &TII = Builder.getTII();
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   auto &MI = *Builder.getInsertPt();
   Register R = MI.getOperand(0).getReg();
-  bool IsInc = MI.getOpcode() == MOS::INC;
-  assert(IsInc || MI.getOpcode() == MOS::DEC);
+  bool IsInc = MI.getOpcode() == MOS::INC || MI.getOpcode() == MOS::IncCMOS;
+  assert(IsInc || MI.getOpcode() == MOS::DEC || MI.getOpcode() == MOS::DecCMOS);
+  bool IsCMOS = MI.getOpcode() == MOS::IncCMOS || MI.getOpcode() == MOS::DecCMOS;
 
+  // GPRs on CMOS 6502.
+  if (STI.has65C02()) {
+    switch (R) {
+    case MOS::A:
+    case MOS::X:
+    case MOS::Y:
+      MI.setDesc(TII.get(IsInc ? MOS::IN_CMOS : MOS::DE_CMOS));
+      return;
+    }
+  } else if (IsCMOS) {
+    llvm_unreachable("Unexpected CMOS pseudoinstruction on non-CMOS subtarget.");
+  }
+
+  // GPRs on NMOS 6502.
   switch (R) {
   case MOS::A: {
     Builder.buildInstr(MOS::LDCImm).addDef(MOS::C).addImm(0);
@@ -1074,17 +1092,17 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
       Instr.addDef(MOS::NZ, RegState::Implicit);
 
     MI.eraseFromParent();
-    break;
+    return;
   }
   case MOS::X:
   case MOS::Y:
     MI.setDesc(TII.get(IsInc ? MOS::IN : MOS::DE));
-    break;
-  default:
-    assert(MOS::Imag8RegClass.contains(R));
-    MI.setDesc(TII.get(IsInc ? MOS::INCImag8 : MOS::DECImag8));
-    break;
+    return;
   }
+
+  // Imaginary registers.
+  assert(MOS::Imag8RegClass.contains(R));
+  MI.setDesc(TII.get(IsInc ? MOS::INCImag8 : MOS::DECImag8));
 }
 
 void MOSInstrInfo::expandIncDecPtr(MachineIRBuilder &Builder) const {

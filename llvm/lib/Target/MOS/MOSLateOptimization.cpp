@@ -295,6 +295,11 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
     // Try to replace with IN_ or DE_.
     if (!Load) {
       switch (Dst) {
+      case MOS::A:
+        if (STI.has65C02())
+          if (LoadA.MI && std::abs(LoadA.Val - Val) == 1)
+            Load = &LoadA;
+        break;
       case MOS::X:
         if (LoadX.MI && std::abs(LoadX.Val - Val) == 1)
           Load = &LoadX;
@@ -306,7 +311,10 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       }
 
       if (Load) {
-        MI.setDesc(TII.get(Val > Load->Val ? MOS::IN : MOS::DE));
+        if (STI.has65C02())
+          MI.setDesc(TII.get(Val > Load->Val ? MOS::IN_CMOS : MOS::DE_CMOS));
+        else
+          MI.setDesc(TII.get(Val > Load->Val ? MOS::IN : MOS::DE));
         MI.getOperand(1).ChangeToRegister(Dst, /*isDef=*/false, /*isImp=*/false,
                                           /*isKill=*/true);
         MI.tieOperands(0, 1);

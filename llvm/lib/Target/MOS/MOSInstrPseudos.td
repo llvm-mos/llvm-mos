@@ -120,6 +120,28 @@ def DEC : MOSPseudo {
   let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, -1))];
 }
 
+let Predicates = [Has65C02] in {
+  // As the 65C02 allows incrementing any register with INC/DEC only,
+  // separate pseudos are defined which do not define C or V.
+
+  def IncCMOS : MOSPseudo {
+    dag OutOperandList = (outs Anyi8:$dst);
+    dag InOperandList = (ins Anyi8:$src);
+
+    let Constraints = "$dst = $src";
+    let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, 1))];
+    let isAdd = true;
+  }
+
+  def DecCMOS : MOSPseudo {
+    dag OutOperandList = (outs Anyi8:$dst);
+    dag InOperandList = (ins Anyi8:$src);
+
+    let Constraints = "$dst = $src";
+    let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, -1))];
+  }
+}
+
 class MOSIncDecPtr : MOSPseudo {
   dag InOperandList = (ins Imag16:$src);
   let Defs = [C, V];

@@ -502,6 +502,8 @@ bool referencedByIncDec(Register Reg, const MachineRegisterInfo &MRI) {
       break;
     case MOS::INC:
     case MOS::DEC:
+    case MOS::IncCMOS:
+    case MOS::DecCMOS:
     case MOS::IncMB:
     case MOS::DecMB:
       return true;
@@ -698,6 +700,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 
     case MOS::INC:
     case MOS::DEC:
+    case MOS::IncCMOS:
+    case MOS::DecCMOS:
     case MOS::IncMB:
     case MOS::DecMB:
       // The first operand to DecMB is scratch.
@@ -706,6 +710,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 
       // INC zp = (2 bytes + 5 cycles)
       // INXY = (1 bytes + 2 cycles)
+      if (STI.has65C02() && is_contained(Order, MOS::A))
+        RegScores[MOS::A] += 4;
       if (is_contained(Order, MOS::X))
         RegScores[MOS::X] += 4;
       if (is_contained(Order, MOS::Y))
