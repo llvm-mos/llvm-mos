@@ -554,7 +554,12 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
       // the source register is being killed, it can be modeled using a swap.
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
-      Builder.buildInstr(MOS::SWAP).addDef(DestReg).addUse(SrcReg, RegState::Kill);
+      // The Dst (=> Src) value is not relevant to modeling a copy with a swap.
+      Builder.buildInstr(MOS::SWAP)
+        .addDef(DestReg)
+        .addDef(SrcReg)
+        .addUse(SrcReg, RegState::Kill)
+        .addUse(DestReg, RegState::Kill | RegState::Undef);
     } else {
       copyPhysRegImpl(Builder, DestReg,
                       getRegWithVal(Builder, SrcReg, MOS::AcRegClass));

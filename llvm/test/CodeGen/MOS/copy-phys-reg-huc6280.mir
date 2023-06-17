@@ -9,7 +9,7 @@ body: |
     ; CHECK-LABEL: name: xy_to_xy_src_killed
     ; CHECK: liveins: $x
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $y = SWAP killed $x
+    ; CHECK-NEXT: $y, $x = SWAP killed $x, killed undef $y
     $y = COPY killed $x
 ...
 ---
