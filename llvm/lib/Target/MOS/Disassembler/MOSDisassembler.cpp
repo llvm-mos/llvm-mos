@@ -34,13 +34,13 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 namespace {
 /// A disassembler class for MOS.
 class MOSDisassembler : public MCDisassembler {
-  bool Has65816 = false;
+  bool Has65816RegisterWidths = false;
   mutable bool MLow = false;
   mutable bool XLow = false;
 
 public:
   MOSDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
-      : MCDisassembler(STI, Ctx), Has65816(STI.hasFeature(MOS::FeatureW65816)) {
+      : MCDisassembler(STI, Ctx), Has65816RegisterWidths(STI.hasFeature(MOS::FeatureW65816) || STI.hasFeature(MOS::Feature65EL02)) {
   }
   std::optional<MCDisassembler::DecodeStatus>
   onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
@@ -207,7 +207,7 @@ MOSDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
                                raw_ostream &CStream) const {
   // 16-bit flags for decoding immediates are set based on the occurrence of
   // mapping symbols $ml, $mh, $xl, $xh.
-  if (Has65816) {
+  if (Has65816RegisterWidths) {
     if (Symbol.Name.startswith("$ml"))
       MLow = true;
     else if (Symbol.Name.startswith("$mh"))
@@ -227,7 +227,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   Size = 0;
 
   // First attempt to decode 16-bit immediate 65816 instructions.
-  if (Has65816) {
+  if (Has65816RegisterWidths) {
     if ((MLow || XLow) && Bytes.size() >= 3) {
       uint64_t Insn = 0;
       DecodeStatus Result = MCDisassembler::Fail;
