@@ -331,6 +331,13 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
   return TailMBB;
 }
 
+static unsigned chooseInc8Opcode(const MOSSubtarget &STI, bool IsDec) {
+  if (STI.has65C02()) {
+    return IsDec ? MOS::DecCMOS : MOS::IncCMOS;
+  }
+  return IsDec ? MOS::DEC : MOS::INC;
+}
+
 // Returns an IncMB that is safe to fold into the given CMPTermZ.
 static MachineInstr *findCMPTermZMBInc(MachineInstr &MI) {
   const TargetRegisterInfo *TRI = MI.getMF()->getSubtarget().getRegisterInfo();
@@ -365,6 +372,8 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
           MachineFunctionProperties::Property::NoVRegs))
     return MBB;
 
+  const MOSSubtarget &STI = MBB->getParent()->getSubtarget<MOSSubtarget>();
+
   // If this instruction will be folded into a later CMPTermZMB, then defer
   // expanding it.
   if (MI.getOpcode() == MOS::IncMB && MI.getNumExplicitDefs() > 1) {
@@ -397,7 +406,7 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   }
   MachineInstrBuilder First;
   if (MI.getOperand(FirstUseIdx).isReg()) {
-    First = Builder.buildInstr(IsDec ? MOS::DEC : MOS::INC)
+    First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
                 .add(MI.getOperand(FirstDefIdx))
                 .add(MI.getOperand(FirstUseIdx));
     ++FirstDefIdx;
@@ -463,6 +472,7 @@ static MachineBasicBlock *emitCMPTermZMB(MachineInstr &MI,
           MachineFunctionProperties::Property::NoVRegs))
     return MBB;
   const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
+  const MOSSubtarget &STI = MBB->getParent()->getSubtarget<MOSSubtarget>();
 
   if (MI.getNumExplicitOperands() - 1 == 1) {
     MI.setDesc(TII.get(MOS::CMPTermZ));
@@ -517,7 +527,7 @@ static MachineBasicBlock *emitCMPTermZMB(MachineInstr &MI,
   MachineIRBuilder Builder(*MBB, MBB->end());
   Builder.setDebugLoc(MI.getDebugLoc());
   if (Inc)
-    Builder.buildInstr(MOS::INC, {Reg}, {Reg});
+    Builder.buildInstr(chooseInc8Opcode(STI, false), {Reg}, {Reg});
   auto Cmp = Builder.buildInstr(MOS::CMPTermZ, {MOS::C}, {Reg});
   Cmp->getOperand(0).setIsDead();
   TII.insertBranch(*MBB, TBB, nullptr, Cond, Builder.getDL());

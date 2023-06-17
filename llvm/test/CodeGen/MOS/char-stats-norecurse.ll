@@ -119,8 +119,7 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    lda (__rc2),y
 ; CMOS-NEXT:    tax
 ; CMOS-NEXT:    lda __rc4
-; CMOS-NEXT:    clc
-; CMOS-NEXT:    adc #1
+; CMOS-NEXT:    inc
 ; CMOS-NEXT:    bne .LBB0_4
 ; CMOS-NEXT:  ; %bb.3: ; %while.body
 ; CMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1

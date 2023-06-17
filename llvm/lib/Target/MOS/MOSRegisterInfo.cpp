@@ -502,6 +502,8 @@ bool referencedByIncDec(Register Reg, const MachineRegisterInfo &MRI) {
       break;
     case MOS::INC:
     case MOS::DEC:
+    case MOS::IncCMOS:
+    case MOS::DecCMOS:
     case MOS::IncMB:
     case MOS::DecMB:
       return true;
@@ -698,6 +700,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 
     case MOS::INC:
     case MOS::DEC:
+    case MOS::IncCMOS:
+    case MOS::DecCMOS:
     case MOS::IncMB:
     case MOS::DecMB:
       // The first operand to DecMB is scratch.

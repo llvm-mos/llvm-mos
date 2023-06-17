@@ -444,7 +444,9 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     }
   }
   case MOS::DE:
+  case MOS::DE_CMOS:
   case MOS::IN:
+  case MOS::IN_CMOS:
   case MOS::TA:
     switch (MI->getOperand(0).getReg()) {
     default:
@@ -453,10 +455,10 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       switch (MI->getOpcode()) {
       default:
         llvm_unreachable("Inconsistent opcode.");
-      case MOS::DE:
+      case MOS::DE_CMOS:
         OutMI.setOpcode(MOS::DEC_Accumulator);
         return;
-      case MOS::IN:
+      case MOS::IN_CMOS:
         OutMI.setOpcode(MOS::INC_Accumulator);
         return;
       }
@@ -465,9 +467,11 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Inconsistent opcode.");
       case MOS::DE:
+      case MOS::DE_CMOS:
         OutMI.setOpcode(MOS::DEX_Implied);
         return;
       case MOS::IN:
+      case MOS::IN_CMOS:
         OutMI.setOpcode(MOS::INX_Implied);
         return;
       case MOS::TA:
@@ -479,9 +483,11 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       default:
         llvm_unreachable("Inconsistent opcode.");
       case MOS::DE:
+      case MOS::DE_CMOS:
         OutMI.setOpcode(MOS::DEY_Implied);
         return;
       case MOS::IN:
+      case MOS::IN_CMOS:
         OutMI.setOpcode(MOS::INY_Implied);
         return;
       case MOS::TA:

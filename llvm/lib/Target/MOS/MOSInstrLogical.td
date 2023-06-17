@@ -355,9 +355,16 @@ let mayLoad = true in {
 
 multiclass MOSIncDec {
   def NAME : MOSLogicalInstr {
+    dag OutOperandList = (outs XY:$dst);
+    dag InOperandList = (ins XY:$src);
+    let Constraints = "$src = $dst";
+  }
+
+  def _CMOS : MOSLogicalInstr {
     dag OutOperandList = (outs GPR:$dst);
     dag InOperandList = (ins GPR:$src);
     let Constraints = "$src = $dst";
+    let Predicates = [Has65C02];
   }
 
   def CImag8 : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPage) addr8:$dst)> {
