@@ -645,7 +645,7 @@ multiclass CC1_All<bits<3> aaa, string OpcodeStr = "nop", list<Predicate> preds 
 
   // 16-bit immediate operand on 65816 when M flag is low.
   def _Immediate16 : Inst24<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate16> {
-    let Predicates = preds # [HasW65816];
+    let Predicates = preds # [HasW65816Or65EL02];
     let DecoderNamespace = "MOSMLow";
   }
 }
