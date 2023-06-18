@@ -92,7 +92,7 @@ static T unwrapOrError(Expected<T> EO, Ts &&...Args) {
 }
 
 static Regex PRGROMRegex("^__prg_rom(.*)_(lma|offset)$");
-static Regex ROMRegex("^__rom(.*)_(lma|position)$");
+static Regex ROMRegex("^__rom(.*)_(lma|offset)$");
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
       }
     } else if (Platform == MLBPlatform::PCE) {
       std::map<uint32_t, StringRef> ROMLMABanks;
-      DenseMap<StringRef, uint32_t> ROMBankPositions;
+      DenseMap<StringRef, uint32_t> ROMBankOffsets;
       SmallVector<StringRef> Matches;
       for (const ELFSymbolRef Sym : O->symbols()) {
         StringRef Name = unwrapOrError(Sym.getName(), O->getFileName());
@@ -226,8 +226,8 @@ int main(int argc, char **argv) {
           if (Matches[2] == "lma") {
             ROMLMABanks[Value] = Matches[1];
           } else {
-            assert(Matches[2] == "position");
-            ROMBankPositions[Matches[1]] = Value;
+            assert(Matches[2] == "offset");
+            ROMBankOffsets[Matches[1]] = Value;
           }
         }
       }
@@ -255,12 +255,12 @@ int main(int argc, char **argv) {
           --UB;
           uint32_t BankLMA = UB->first;
           StringRef Bank = UB->second;
-          const auto PositionIt = ROMBankPositions.find(Bank);
-          if (PositionIt == ROMBankPositions.end())
+          const auto OffsetIt = ROMBankOffsets.find(Bank);
+          if (OffsetIt == ROMBankOffsets.end())
             return false;
-          uint32_t Position = PositionIt->second;
+          uint32_t Offset = OffsetIt->second;
           
-          OS << formatv("PcePrgRom:{0}:{1}\n", BoundsStr((Address - BankLMA) + Position, Size), Name);
+          OS << formatv("PcePrgRom:{0}:{1}\n", BoundsStr(Address - BankLMA + Offset, Size), Name);
           return true;
         };
         if (TryROM())
