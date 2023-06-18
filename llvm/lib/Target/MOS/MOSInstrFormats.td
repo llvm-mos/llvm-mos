@@ -141,7 +141,6 @@ def imm8 : imm8at<1>;
 def imm8at2 : imm8at<2>;
 
 /// This operand will only match a value from 0 to 65535 inclusive.
-/// Only 16-bit variants and virtual instructions should need this.
 class imm16at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm16">;
   let EncoderMethod = "encodeImm<MOS::Imm16, " # offset # ">";
@@ -174,6 +173,7 @@ class addr8at<int offset> : Operand<i32> {
   let Type = i8;
 }
 def addr8 : addr8at<1>;
+def addr8at2 : addr8at<2>;
 
 class addr16at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr16Operand<"Addr16">;
@@ -183,6 +183,7 @@ class addr16at<int offset> : Operand<i32> {
   let Type = i16;
 }
 def addr16 : addr16at<1>;
+def addr16at2 : addr16at<2>;
 def addr16at3 : addr16at<3>;
 
 class addr24at<int offset> : Operand<i32> {
@@ -373,6 +374,26 @@ def RStackRelative : AddressingMode {
 def IndirectRStackRelativeY : AddressingMode {
   let OperandsStr = "( $param , rp ) , y";
   let InOperandList = (ins addr8:$param);
+}
+
+def ZeroPageAt2 : AddressingMode {
+  let OperandsStr = "$param";
+  let InOperandList = (ins addr8at2:$param);
+}
+
+def ZeroPageXAt2 : AddressingMode {
+  let OperandsStr = "$param , x";
+  let InOperandList = (ins addr8at2:$param);
+}
+
+def AbsoluteAt2 : AddressingMode {
+  let OperandsStr = "$param";
+  let InOperandList = (ins addr16at2:$param);
+}
+
+def AbsoluteXAt2 : AddressingMode {
+  let OperandsStr = "$param , x";
+  let InOperandList = (ins addr16at2:$param);
 }
 
 /// An unsized MOS instruction, to which an addressing mode may be applied.

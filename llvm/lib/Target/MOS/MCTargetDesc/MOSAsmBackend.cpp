@@ -312,8 +312,8 @@ static bool visitRelaxableOperand(const MCInst &Inst,
   bool BankRelax = false;
   unsigned RelaxTo = MOSAsmBackend::relaxInstructionTo(Inst, STI, BankRelax);
 
-  return RelaxTo && Inst.getNumOperands() == 1 &&
-         Visit(Inst.getOperand(0), RelaxTo, BankRelax);
+  return RelaxTo && Inst.getNumOperands() <= 2 &&
+         Visit(Inst.getOperand(Inst.getNumOperands() - 1), RelaxTo, BankRelax);
 }
 
 static bool isImmediateBankRelaxable(const MCSubtargetInfo &STI,

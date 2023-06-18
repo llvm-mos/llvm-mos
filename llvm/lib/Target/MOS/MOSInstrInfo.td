@@ -521,10 +521,10 @@ def TIA_HuCBlockMove : InstHuCBlockMove<"tia", Opcode<0xE3>>; /// Transfer Incre
 def TAI_HuCBlockMove : InstHuCBlockMove<"tai", Opcode<0xF3>>; /// Transfer Alternate Increment
 
 /// Test
-def TST_ZeroPage : InstImmediate24<"tst", Opcode<0x83>, ZeroPage>; // Test Immediate with Zero Page
-def TST_Absolute : InstImmediate32<"tst", Opcode<0x93>, Absolute>; // Test Immediate with Absolute
-def TST_ZeroPageX : InstImmediate24<"tst", Opcode<0xA3>, ZeroPageX>; // Test Immediate with Zero Page, X
-def TST_AbsoluteX : InstImmediate32<"tst", Opcode<0xB3>, AbsoluteX>; // Test Immediate with Absolute, X
+def TST_ZeroPage : InstImmediate24<"tst", Opcode<0x83>, ZeroPageAt2>; // Test Immediate with Zero Page
+def TST_Absolute : InstImmediate32<"tst", Opcode<0x93>, AbsoluteAt2>; // Test Immediate with Absolute
+def TST_ZeroPageX : InstImmediate24<"tst", Opcode<0xA3>, ZeroPageXAt2>; // Test Immediate with Zero Page, X
+def TST_AbsoluteX : InstImmediate32<"tst", Opcode<0xB3>, AbsoluteXAt2>; // Test Immediate with Absolute, X
 
 /// Relative Branch
 def BSR_Relative : Inst16<"bsr", Opcode<0x44>, Relative>;
