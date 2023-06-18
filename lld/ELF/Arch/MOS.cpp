@@ -96,6 +96,7 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_MOS_ADDR24_BANK:
     *loc = static_cast<unsigned char>(val >> 16);
     break;
+  case R_MOS_IMM16:
   case R_MOS_ADDR16:
   case R_MOS_ADDR24_SEGMENT:
     write16le(loc, static_cast<unsigned short>(val));
