@@ -242,6 +242,13 @@ def BITAbs : MOSLogicalInstr, PseudoInstExpansion<(BIT_ZeroPage addr8:$r)> {
   let mayLoad = true;
 }
 
+def BITImm : MOSLogicalInstr, PseudoInstExpansion<(BIT_Immediate imm8:$r)> {
+  let Predicates = [Has65C02];
+
+  dag OutOperandList = (outs Vc:$v);
+  dag InOperandList = (ins Ac:$l, imm8:$r);
+}
+
 //===---------------------------------------------------------------------===//
 // Control Flow Instructions
 //===---------------------------------------------------------------------===//
