@@ -254,10 +254,15 @@ int main(int argc, char **argv) {
 
           if (Group == 0x00) {
             // 0x00XXXXXX, bank 00-7F - card ROM bank addresses
-            if (Bank >= 0x80)
+            if (Bank >= 0x00 && Bank <= 0x7F) {
+              Type = "PcePrgRom";
+              DefaultOffset = Bank * 0x2000;
+            } else if (Bank >= 0xF8 && Bank <= 0xFB) {
+              Type = "PceWorkRam";
+              DefaultOffset = (Bank - 0xF8) * 0x2000;
+            } else {
               return false;
-            Type = "PcePrgRom";
-            DefaultOffset = Bank * 0x2000;
+            }
           } else if (Group == 0x01) {
             // 0x01XXXXXX, bank 00-EF - card RAM bank addresses
             if (Bank >= 0x80 && Bank <= 0x87) {
@@ -313,12 +318,6 @@ int main(int argc, char **argv) {
         };
         if (TryCard())
           continue;
-
-        // 0x00XXXXXX, bank F8-FB - console RAM bank addresses
-        if ((Address & 0x00FC0000) == 0x00F80000) {
-          OS << formatv("PceWorkRam:{0}:{1}\n", BoundsStr((Address & 0x1FFF) | ((Address & 0x30000) >> 3), Size), Name);
-          continue;
-        }
 
         // 0x00XXXXXX, bank F7 - CD backup RAM bank address
         if ((Address & 0x00FF0000) == 0x00F70000) {
