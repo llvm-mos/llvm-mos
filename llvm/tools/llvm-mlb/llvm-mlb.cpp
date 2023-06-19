@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -92,7 +93,7 @@ static T unwrapOrError(Expected<T> EO, Ts &&...Args) {
 }
 
 static Regex PRGROMRegex("^__prg_rom(.*)_(lma|offset)$");
-static Regex ROMRegex("^__rom(.*)_(lma|offset)$");
+static Regex VBankRegex("^__(.*_vbank.*)_(lma|offset)$");
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
@@ -179,7 +180,7 @@ int main(int argc, char **argv) {
         if (Type == SymbolRef::ST_Unknown)
           if (Name.startswith("__") && !Name.startswith("__rc"))
             continue;
-
+        
         const auto TryPRGRom = [&]() {
           if ((Address & 0xffff) < 0x8000)
             return false;
@@ -216,18 +217,18 @@ int main(int argc, char **argv) {
         OS << formatv("G:{0}:{1}\n", BoundsStr(Address, Size), Name);
       }
     } else if (Platform == MLBPlatform::PCE) {
-      std::map<uint32_t, StringRef> ROMLMABanks;
-      DenseMap<StringRef, uint32_t> ROMBankOffsets;
+      std::map<uint32_t, StringRef> VBankLMABanks;
+      DenseMap<StringRef, uint32_t> VBankBankOffsets;
       SmallVector<StringRef> Matches;
       for (const ELFSymbolRef Sym : O->symbols()) {
         StringRef Name = unwrapOrError(Sym.getName(), O->getFileName());
-        if (ROMRegex.match(Name, &Matches)) {
+        if (VBankRegex.match(Name, &Matches)) {
           uint32_t Value = unwrapOrError(Sym.getValue(), O->getFileName());
           if (Matches[2] == "lma") {
-            ROMLMABanks[Value] = Matches[1];
+            VBankLMABanks[Value] = Matches[1];
           } else {
             assert(Matches[2] == "offset");
-            ROMBankOffsets[Matches[1]] = Value;
+            VBankBankOffsets[Matches[1]] = Value;
           }
         }
       }
@@ -244,31 +245,89 @@ int main(int argc, char **argv) {
           if (Name.startswith("__") && !Name.startswith("__rc"))
             continue;
 
-        // 0x01xxxxxx - ROM bank addresses
-        const auto TryROM = [&]() {
-          if ((Address & 0xFF000000) != 0x01000000)
+        const auto TryCard = [&]() {
+          uint8_t Group = Address >> 24;
+          uint8_t Bank = (Address >> 16) & 0xFF;
+          int32_t DefaultOffset = -1; // Default offset.
+          SmallString<32> Type;
+          fprintf(stderr, "%08lX\n", Address);
+
+          if (Group == 0x00) {
+            // 0x00XXXXXX, bank 00-7F - card ROM bank addresses
+            if (Bank >= 0x80)
+              return false;
+            Type = "PcePrgRom";
+            DefaultOffset = Bank * 0x2000;
+          } else if (Group == 0x01) {
+            // 0x01XXXXXX, bank 00-EF - card RAM bank addresses
+            if (Bank >= 0x80 && Bank <= 0x87) {
+              Type = "PceCdromRam";
+              DefaultOffset = (Bank - 0x80) * 0x2000;
+            } else if (Bank >= 0x68 && Bank <= 0x7F) {
+              Type = "PceCardRam";
+              DefaultOffset = (Bank - 0x68) * 0x2000;
+            } else if (Bank >= 0x40 && Bank <= 0x5F) {
+              Type = "PceCardRam";
+              DefaultOffset = (Bank - 0x40) * 0x2000;
+            } else {
+              return false;
+            }
+          } else if (Group <= 0x11) {
+            fprintf(stderr, "a\n");
+            // (0x02-0x11)XXXXXX, bank 40-7F - card ROM bank address (SF2 mapper)
+            if (Bank < 0x40 || Bank >= 0x80)
+              return false;
+            Type = "PcePrgRom";
+            DefaultOffset = (Group * 64 + (Bank - 0x40)) * 0x2000;
+            fprintf(stderr, "b %08X\n", DefaultOffset);
+          } else {
             return false;
+          }
+
           // Convert LMA to ROM position.
-          auto UB = ROMLMABanks.upper_bound(Address);
-          if (UB == ROMLMABanks.begin())
-            return false;
-          --UB;
-          uint32_t BankLMA = UB->first;
-          StringRef Bank = UB->second;
-          const auto OffsetIt = ROMBankOffsets.find(Bank);
-          if (OffsetIt == ROMBankOffsets.end())
-            return false;
-          uint32_t Offset = OffsetIt->second;
+          uint32_t BankLMA;
+          uint32_t Offset;
+          auto UB = VBankLMABanks.upper_bound(Address);
+          bool UBValid = false;
+          if (UB != VBankLMABanks.begin()) {
+            --UB;
+            BankLMA = UB->first;
+            UBValid = (BankLMA & 0xFFFF0000) == (Address & 0xFFFF0000);
+          }
+          if (UBValid) {
+            StringRef Bank = UB->second;
+            const auto OffsetIt = VBankBankOffsets.find(Bank);
+            if (OffsetIt == VBankBankOffsets.end())
+              return false;
+            Offset = OffsetIt->second;
+          } else {
+            // VBanks not used; guess the LMA and offset.
+            if (DefaultOffset < 0)
+              return false;
+            BankLMA = Address & 0xFFFFE000;
+            Offset = DefaultOffset;
+          }
           
-          OS << formatv("PcePrgRom:{0}:{1}\n", BoundsStr(Address - BankLMA + Offset, Size), Name);
+          OS << formatv("{0}:{1}:{2}\n", Type, BoundsStr(Address - BankLMA + Offset, Size), Name);
           return true;
         };
-        if (TryROM())
+        if (TryCard())
           continue;
 
-        // 0x0000xxxx - PCE addresses
-        if ((Address & 0xFFFF0000) == 0x00000000) {
-          OS << formatv("PceMemory:{0}:{1}\n", BoundsStr(Address, Size), Name);
+        // 0x00XXXXXX, bank F8-FB - console RAM bank addresses
+        if ((Address & 0x00FC0000) == 0x00F80000) {
+          OS << formatv("PceWorkRam:{0}:{1}\n", BoundsStr((Address & 0x1FFF) | ((Address & 0x30000) >> 3), Size), Name);
+          continue;
+        }
+
+        // 0x00XXXXXX, bank F7 - CD backup RAM bank address
+        if ((Address & 0x00FF0000) == 0x00F70000) {
+          OS << formatv("PceSaveRam:{0}:{1}\n", BoundsStr(Address & 0x1FFF, Size), Name);
+          continue;
+        }
+        // 0x00XXXXXX, bank FF - I/O address
+        if ((Address & 0x00FF0000) == 0x00FF0000) {
+          OS << formatv("PceMemory:{0}:{1}\n", BoundsStr(Address & 0x1FFF, Size), Name);
           continue;
         }
 
