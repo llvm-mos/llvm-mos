@@ -250,10 +250,9 @@ int main(int argc, char **argv) {
           uint8_t Bank = (Address >> 16) & 0xFF;
           int32_t DefaultOffset = -1; // Default offset.
           SmallString<32> Type;
-          fprintf(stderr, "%08lX\n", Address);
 
           if (Group == 0x00) {
-            // 0x00XXXXXX, bank 00-7F - card ROM bank addresses
+            // 0x00XXXXXX - base PC Engine bank addresses
             if (Bank >= 0x00 && Bank <= 0x7F) {
               Type = "PcePrgRom";
               DefaultOffset = Bank * 0x2000;
@@ -264,7 +263,7 @@ int main(int argc, char **argv) {
               return false;
             }
           } else if (Group == 0x01) {
-            // 0x01XXXXXX, bank 00-EF - card RAM bank addresses
+            // 0x01XXXXXX - card/CD-ROM RAM bank addresses
             if (Bank >= 0x80 && Bank <= 0x87) {
               Type = "PceCdromRam";
               DefaultOffset = (Bank - 0x80) * 0x2000;
@@ -278,13 +277,11 @@ int main(int argc, char **argv) {
               return false;
             }
           } else if (Group <= 0x11) {
-            fprintf(stderr, "a\n");
             // (0x02-0x11)XXXXXX, bank 40-7F - card ROM bank address (SF2 mapper)
             if (Bank < 0x40 || Bank >= 0x80)
               return false;
             Type = "PcePrgRom";
             DefaultOffset = (Group * 64 + (Bank - 0x40)) * 0x2000;
-            fprintf(stderr, "b %08X\n", DefaultOffset);
           } else {
             return false;
           }
@@ -319,13 +316,13 @@ int main(int argc, char **argv) {
         if (TryCard())
           continue;
 
-        // 0x00XXXXXX, bank F7 - CD backup RAM bank address
-        if ((Address & 0x00FF0000) == 0x00F70000) {
+        // 0x00F7XXXX - CD backup RAM bank address
+        if ((Address & 0xFFFF0000) == 0x00F70000) {
           OS << formatv("PceSaveRam:{0}:{1}\n", BoundsStr(Address & 0x1FFF, Size), Name);
           continue;
         }
-        // 0x00XXXXXX, bank FF - I/O address
-        if ((Address & 0x00FF0000) == 0x00FF0000) {
+        // 0x00FFXXXX - I/O address
+        if ((Address & 0xFFFF0000) == 0x00FF0000) {
           OS << formatv("PceMemory:{0}:{1}\n", BoundsStr(Address & 0x1FFF, Size), Name);
           continue;
         }
