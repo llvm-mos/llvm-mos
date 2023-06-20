@@ -953,6 +953,7 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
 }
 
 void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
   auto &MI = *Builder.getInsertPt();
   Register DestReg = MI.getOperand(0).getReg();
   int64_t Val = MI.getOperand(1).getImm();
@@ -975,9 +976,13 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
     break;
   case MOS::V:
     if (Val) {
-      auto Instr = Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
-                       .addUse(MOS::A, RegState::Undef)
-                       .addExternalSymbol("__set_v");
+      auto Instr = STI.has65C02()
+        ? Builder.buildInstr(MOS::BITImm, {MOS::V}, {})
+                      .addUse(MOS::A, RegState::Undef)
+                      .addImm(0xFF)
+        : Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
+                      .addUse(MOS::A, RegState::Undef)
+                      .addExternalSymbol("__set_v");
       Instr->getOperand(1).setIsUndef();
       MI.eraseFromParent();
       return;
