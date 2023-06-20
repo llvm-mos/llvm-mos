@@ -842,7 +842,7 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
         getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
     Register DestReg8 =
         getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
-    const int BitCost = STI.has65C02() ? 4 : 8;
+    const int BitCost = STI.has65C02() ? 4 : 7;
 
     if (SrcReg8) {
       SrcReg = SrcReg8;
@@ -863,10 +863,10 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
 
       if (StackRegClass.contains(SrcReg)) {
         // PHA; PLA; BNE; BIT setv; JMP; CLV
-        return 22 + BitCost;
+        return 23 + BitCost;
       }
       // [PHA]; COPY; BNE; BIT setv; JMP; CLV; [PLA]
-      return 15 + BitCost + copyCost(MOS::A, SrcReg, STI);
+      return 16 + BitCost + copyCost(MOS::A, SrcReg, STI);
     }
     if (DestReg8) {
       DestReg = DestReg8;
@@ -881,7 +881,7 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       return Cost;
     }
     // BIT setv; BR; CLV;
-    return 7 + BitCost;
+    return 8 + BitCost;
   }
 
   llvm_unreachable("Unexpected physical register copy.");
