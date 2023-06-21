@@ -1285,15 +1285,23 @@ MemoryRegionCommand *ScriptParser::readMemoryRegionCommand(StringRef tok) {
   if (isFull == -1)
     return nullptr;
 
+  Expr regionStart = nullptr;
+  Expr regionLength = nullptr;
   expect("(");
   StringRef name = next();
+  if (consume(",")) {
+    regionStart = readExpr();
+    if (consume(",")) {
+      regionLength = readExpr();
+    }
+  }
   expect(")");
   auto iter = script->memoryRegions.find(name);
   if (iter == script->memoryRegions.end()) {
     setError("memory region '" + name + "' is not defined");
     return nullptr;
   }
-  return make<MemoryRegionCommand>(iter->second, isFull);
+  return make<MemoryRegionCommand>(iter->second, isFull, regionStart, regionLength);
 }
 
 static std::optional<uint64_t> parseFlag(StringRef tok) {

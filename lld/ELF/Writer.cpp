@@ -33,6 +33,7 @@
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
+#include <algorithm>
 #include <climits>
 
 #define DEBUG_TYPE "lld"
@@ -2937,9 +2938,9 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
       uint64_t regionEnd = regionBegin + regionLength;
       auto buf = WritableMemoryBuffer::getNewMemBuffer(regionLength);
 
-      // The last LMA to write. This is maintianed as the high watermark of all
+      // The last LMA to write. This is maintained as the high watermark of all
       // LMAs collected so far.
-      uint64_t regionWriteEnd = mem->full ? regionEnd : regionBegin;
+      uint64_t regionAreaEnd = mem->full ? regionEnd : regionBegin;
 
       {
         parallel::TaskGroup tg;
@@ -2960,7 +2961,7 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
           // If the section is wholly contained by the region, just write it
           // directly to the buffer.
           if (lmaBegin >= regionBegin && lmaEnd <= regionEnd) {
-            regionWriteEnd = std::max(regionWriteEnd, lmaEnd);
+            regionAreaEnd = std::max(regionAreaEnd, lmaEnd);
             sec->writeTo<ELFT>(
                 reinterpret_cast<uint8_t *>(buf->getBufferStart() +
                                             (lmaBegin - regionBegin)),
@@ -2991,9 +2992,19 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
         }
       }
 
-      // Now that all overlapping output sections have been placed, write out
-      // the region.
-      os.write(buf->getBufferStart(), regionWriteEnd - regionBegin);
+      uint64_t regionWriteStart = 0;
+      uint64_t regionWriteLength = regionAreaEnd - regionBegin;
+      // Apply additional restrictions, if present.
+      if (mem->start != nullptr) {
+        regionWriteStart = std::min(mem->start().getValue(), regionWriteLength);
+        regionWriteLength -= regionWriteStart;
+      }
+      if (mem->length != nullptr)
+        regionWriteLength = std::min(mem->length().getValue(), regionWriteLength);
+
+      if (regionWriteLength > 0) {
+        os.write(buf->getBufferStart() + regionWriteStart, regionWriteLength);
+      }
     } else {
       error("unexpected command type");
       return;
