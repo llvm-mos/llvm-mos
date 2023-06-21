@@ -96,6 +96,8 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     return ELF::R_MOS_FK_DATA_8;
   case MOS::AddrAsciz:
     return ELF::R_MOS_ADDR_ASCIZ;
+  case MOS::Imm16:
+    return ELF::R_MOS_IMM16;
 
   default:
     llvm_unreachable("invalid fixup kind!");

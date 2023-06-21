@@ -130,67 +130,81 @@ class Addr16Operand<string name> : MOSAsmOperand<name>;
 class Addr24Operand<string name> : MOSAsmOperand<name>;
 
 /// This operand will only match a value from 0 to 255 inclusive.
-def imm8 : Operand<i32> {
+class imm8at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8">;
-  let EncoderMethod = "encodeImm<MOS::Imm8, 1>";
+  let EncoderMethod = "encodeImm<MOS::Imm8, " # offset # ">";
   let OperandType = "OPERAND_IMM8";
   let OperandNamespace = "MOSOp";
   let Type = i8;
 }
+def imm8 : imm8at<1>;
+def imm8at2 : imm8at<2>;
 
 /// This operand will only match a value from 0 to 65535 inclusive.
-/// Only 16-bit variants and virtual instructions should need this.
-def imm16 : Operand<i32> {
+class imm16at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm16">;
-  let EncoderMethod = "encodeImm<MOS::Imm16, 1>";
+  let EncoderMethod = "encodeImm<MOS::Imm16, " # offset # ">";
 }
+def imm16 : imm16at<1>;
+def imm16at5 : imm16at<5>;
 
 /// An 8-bit pc-relative reference, for branch instructions.
-def pcrel8 : Operand<i32> {
+class pcrel8at<int offset> : Operand<i32> {
   let ParserMatchClass = PCRelativeOperand<"PCRel8">;
-  let EncoderMethod = "encodeImm<MOS::PCRel8, 1>";
+  let EncoderMethod = "encodeImm<MOS::PCRel8, " # offset # ">";
   let PrintMethod = "printBranchOperand";
   let OperandType = "OPERAND_PCREL";
 }
+def pcrel8 : pcrel8at<1>;
+def pcrel8at2 : pcrel8at<2>;
 
 /// An 16-bit pc-relative reference, for 65816 BRL instruction.
-def pcrel16 : Operand<i32> {
+class pcrel16at<int offset> : Operand<i32> {
   let ParserMatchClass = PCRelativeOperand<"PCRel16">;
-  let EncoderMethod = "encodeImm<MOS::PCRel16, 1>";
+  let EncoderMethod = "encodeImm<MOS::PCRel16, " # offset # ">";
 }
+def pcrel16 : pcrel16at<1>;
 
-def addr8 : Operand<i32> {
+class addr8at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr8Operand<"Addr8">;
-  let EncoderMethod = "encodeImm<MOS::Addr8, 1>";
+  let EncoderMethod = "encodeImm<MOS::Addr8, " # offset # ">";
   let OperandType = "OPERAND_ADDR8";
   let OperandNamespace = "MOSOp";
   let Type = i8;
 }
+def addr8 : addr8at<1>;
+def addr8at2 : addr8at<2>;
 
-def addr16 : Operand<i32> {
+class addr16at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr16Operand<"Addr16">;
-  let EncoderMethod = "encodeImm<MOS::Addr16, 1>";
+  let EncoderMethod = "encodeImm<MOS::Addr16, " # offset # ">";
   let OperandType = "OPERAND_ADDR16";
   let OperandNamespace = "MOSOp";
   let Type = i16;
 }
+def addr16 : addr16at<1>;
+def addr16at2 : addr16at<2>;
+def addr16at3 : addr16at<3>;
 
-def addr24 : Operand<i32> {
+class addr24at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr24Operand<"Addr24">;
-  let EncoderMethod = "encodeImm<MOS::Addr24, 1>";
+  let EncoderMethod = "encodeImm<MOS::Addr24, " # offset # ">";
 }
+def addr24 : addr24at<1>;
 
 /// This operand will only match a value from 256 to 65535 inclusive.
-def imm8to16 : Operand<i32> {
+class imm8To16at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8To16">;
-  let EncoderMethod = "encodeImm<MOS::Addr16, 1>";
+  let EncoderMethod = "encodeImm<MOS::Addr16, " # offset # ">";
 }
+def imm8To16 : imm8To16at<1>;
 
 /// This operand will only match a value from 65536 to 16777215 inclusive.
-def imm16To24 : Operand<i32> {
+class imm16To24at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm16To24">;
-  let EncoderMethod = "encodeImm<MOS::Addr24, 1>";
+  let EncoderMethod = "encodeImm<MOS::Addr24, " # offset # ">";
 }
+def imm16To24 : imm16To24at<1>;
 
 /// All non-virtual MOS opcodes are 8 bits long.
 class Opcode<bits<8> opcode = 0> {
@@ -362,6 +376,26 @@ def IndirectRStackRelativeY : AddressingMode {
   let InOperandList = (ins addr8:$param);
 }
 
+def ZeroPageAt2 : AddressingMode {
+  let OperandsStr = "$param";
+  let InOperandList = (ins addr8at2:$param);
+}
+
+def ZeroPageXAt2 : AddressingMode {
+  let OperandsStr = "$param , x";
+  let InOperandList = (ins addr8at2:$param);
+}
+
+def AbsoluteAt2 : AddressingMode {
+  let OperandsStr = "$param";
+  let InOperandList = (ins addr16at2:$param);
+}
+
+def AbsoluteXAt2 : AddressingMode {
+  let OperandsStr = "$param , x";
+  let InOperandList = (ins addr16at2:$param);
+}
+
 /// An unsized MOS instruction, to which an addressing mode may be applied.
 class InstAddressMode<string asmstr, Opcode op = DefaultOpcode,
                       AddressingMode mode = Implicit> : Inst<asmstr> {
@@ -470,7 +504,7 @@ class InstBranchBit<string opcodestr, Opcode op = DefaultOpcode> :
   bits<8> location;
 
   Opcode opcode = op;
-  let InOperandList = (ins addr8:$source, pcrel8:$location);
+  let InOperandList = (ins addr8:$source, pcrel8at2:$location);
   string OperandsStr;
   let OperandsStr = "$source , $location";
 
@@ -490,7 +524,7 @@ class InstHuCBlockMove<string opcodestr, Opcode op = DefaultOpcode> :
   bits<16> blength;
 
   Opcode opcode = op;
-  let InOperandList = (ins addr16:$bsource, addr16:$bdest, imm16:$blength);
+  let InOperandList = (ins addr16:$bsource, addr16at3:$bdest, imm16at5:$blength);
   string OperandsStr;
   let OperandsStr = "$bsource , $bdest , #$blength";
 
@@ -510,7 +544,7 @@ class Inst816MemoryMove<string opcodestr, Opcode op = DefaultOpcode> :
   bits<8> destinationBank;
 
   Opcode opcode = op;
-  let InOperandList = (ins imm8:$sourceBank, imm8:$destinationBank);
+  let InOperandList = (ins imm8:$sourceBank, imm8at2:$destinationBank);
   string OperandsStr;
   let OperandsStr = "#$sourceBank , #$destinationBank";
 
