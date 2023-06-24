@@ -120,7 +120,8 @@ public:
 
 private:
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
-                       Register SrcReg, bool Force = false) const;
+                       Register SrcReg, bool Force = false,
+                       bool KillSrc = false) const;
 
   Register getRegWithVal(MachineIRBuilder &Builder, Register Val,
                          const TargetRegisterClass &RC) const;

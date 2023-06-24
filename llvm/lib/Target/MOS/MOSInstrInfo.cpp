@@ -444,7 +444,7 @@ void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MCRegister SrcReg, bool KillSrc) const {
   MachineIRBuilder Builder(MBB, MI);
   Builder.setDebugLoc(DL);
-  copyPhysRegImpl(Builder, DestReg, SrcReg);
+  copyPhysRegImpl(Builder, DestReg, SrcReg, false, KillSrc);
 }
 
 static Register createVReg(MachineIRBuilder &Builder,
@@ -516,7 +516,8 @@ unsigned MOSInstrInfo::findCustomTiedOperandIdx(const MachineInstr &MI,
 }
 
 void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
-                                   Register SrcReg, bool Force) const {
+                                   Register SrcReg, bool Force,
+                                   bool KillSrc) const {
   if (!Force && isCopyRedundant(Builder, DestReg, SrcReg))
     return;
 
@@ -548,6 +549,24 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
       Builder.buildInstr(MOS::TX).addDef(DestReg).addUse(SrcReg);
+    } else if (STI.hasHUC6280() && KillSrc) {
+      // The HuC6280 does not have an X->Y or Y->X transfer function, but if
+      // the source register is being killed, it can be modeled using a swap.
+      assert(MOS::XYRegClass.contains(SrcReg));
+      assert(MOS::XYRegClass.contains(DestReg));
+      // The Dst (=> Src) value is not relevant to modeling a copy with a swap.
+      Builder.buildInstr(MOS::SWAP)
+        .addDef(DestReg)
+        .addDef(SrcReg)
+        .addUse(SrcReg, RegState::Kill)
+        .addUse(DestReg, RegState::Kill | RegState::Undef);
+    } else if (STI.has65C02()) {
+      // The 65C02 can emit a PHX/PLY or PHY/PLX pair.
+      assert(MOS::XYRegClass.contains(SrcReg));
+      assert(MOS::XYRegClass.contains(DestReg));
+      Builder.buildInstr(MOS::PH_CMOS, {}, {SrcReg});
+      Builder.buildInstr(MOS::PL_CMOS, {DestReg}, {})
+          .addDef(MOS::NZ, RegState::Implicit);
     } else {
       copyPhysRegImpl(Builder, DestReg,
                       getRegWithVal(Builder, SrcReg, MOS::AcRegClass));
@@ -593,8 +612,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
               STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
 
           if (StackRegClass.contains(SrcReg)) {
-            Builder.buildInstr(MOS::PH, {}, {SrcReg});
-            Builder.buildInstr(MOS::PL, {SrcReg}, {})
+            Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
+            Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});

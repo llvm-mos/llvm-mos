@@ -110,6 +110,8 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
         case MOS::LDCImm:
         case MOS::STImag8:
         case MOS::PH:
+        case MOS::PH_CMOS:
+        case MOS::SWAP:
           ClobbersNZ = false;
           break;
         }

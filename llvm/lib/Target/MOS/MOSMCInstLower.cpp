@@ -508,29 +508,68 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::TXY_Implied);
       return;
     }
-
-  case MOS::PH:
-  case MOS::PL: {
+  case MOS::SWAP:
     switch (MI->getOperand(0).getReg()) {
     default:
       llvm_unreachable("Unexpected register.");
     case MOS::A:
-      OutMI.setOpcode(MI->getOpcode() == MOS::PH ? MOS::PHA_Implied
-                                                 : MOS::PLA_Implied);
-      return;
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::X:
+        OutMI.setOpcode(MOS::SAX_Implied);
+        return;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::SAY_Implied);
+        return;
+      }
     case MOS::X:
-      OutMI.setOpcode(MI->getOpcode() == MOS::PH ? MOS::PHX_Implied
-                                                 : MOS::PLX_Implied);
-      return;
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::A:
+        OutMI.setOpcode(MOS::SAX_Implied);
+        return;
+      case MOS::Y:
+        OutMI.setOpcode(MOS::SXY_Implied);
+        return;
+      }
     case MOS::Y:
-      OutMI.setOpcode(MI->getOpcode() == MOS::PH ? MOS::PHY_Implied
-                                                 : MOS::PLY_Implied);
+      switch (MI->getOperand(1).getReg()) {
+      default:
+        llvm_unreachable("Unexpected register.");
+      case MOS::A:
+        OutMI.setOpcode(MOS::SAY_Implied);
+        return;
+      case MOS::X:
+        OutMI.setOpcode(MOS::SXY_Implied);
+        return;
+      }
+    }
+  case MOS::PH:
+  case MOS::PH_CMOS:
+  case MOS::PL:
+  case MOS::PL_CMOS: {
+    bool IsPush = MI->getOpcode() == MOS::PH || MI->getOpcode() == MOS::PH_CMOS;
+    switch (MI->getOperand(0).getReg()) {
+    case MOS::A:
+      OutMI.setOpcode(IsPush ? MOS::PHA_Implied : MOS::PLA_Implied);
       return;
     case MOS::P:
-      OutMI.setOpcode(MI->getOpcode() == MOS::PH ? MOS::PHP_Implied
-                                                 : MOS::PLP_Implied);
+      OutMI.setOpcode(IsPush ? MOS::PHP_Implied : MOS::PLP_Implied);
       return;
     }
+    if (MI->getOpcode() == MOS::PH_CMOS || MI->getOpcode() == MOS::PL_CMOS) {
+      switch (MI->getOperand(0).getReg()) {
+      case MOS::X:
+        OutMI.setOpcode(IsPush ? MOS::PHX_Implied : MOS::PLX_Implied);
+        return;
+      case MOS::Y:
+        OutMI.setOpcode(IsPush ? MOS::PHY_Implied : MOS::PLY_Implied);
+        return;
+      }
+    }
+    llvm_unreachable("Unexpected register.");
   }
   case MOS::STAbsIdx: {
     bool ZP = canUseZeroPageIdx(MI->getOperand(0));

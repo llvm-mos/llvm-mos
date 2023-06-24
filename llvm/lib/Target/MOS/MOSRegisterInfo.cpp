@@ -123,9 +123,11 @@ static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
   for (const MachineInstr &MI : make_range(Begin, End)) {
     switch (MI.getOpcode()) {
     case MOS::PH:
+    case MOS::PH_CMOS:
       ++PushCount;
       break;
     case MOS::PL:
+    case MOS::PL_CMOS:
       if (!PushCount)
         return false;
       --PushCount;
@@ -171,14 +173,14 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
         (Reg == MOS::A || STI.has65C02()) && pushPullBalanced(I, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(MOS::PH, {}, {Reg});
+      Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {Reg});
     else
       Builder.buildInstr(MOS::STImag8, {Save}, {Reg});
 
     Builder.setInsertPt(MBB, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(MOS::PL, {Reg}, {});
+      Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {Reg}, {});
     else
       Builder.buildInstr(MOS::LDImag8, {Reg}, {Save});
     break;
@@ -815,12 +817,26 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       // TXA
       return 3;
     }
+
+    // X<->Y copies
     if (STI.hasW65816Or65EL02()) {
       // TXY, TYX
       return 3;
     }
-    // May need to pha/pla around; avg cost 4
-    return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
+    int XYCopyCost;
+    if (STI.has65C02()) {
+      // PHX/PLY, PHY/PLX
+      XYCopyCost = 9;
+    } else {
+      // May need to PHA/PLA around; avg cost 4
+      XYCopyCost = 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
+    }
+    if (STI.hasHUC6280()) {
+      // SXY can be used, but only if the source register is killed. As such,
+      // average the cost.
+      XYCopyCost = (XYCopyCost + 4) / 2;
+    }
+    return XYCopyCost;
   }
   if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
     // STImag8
@@ -831,7 +847,7 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     return 5;
   }
   if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    // May need to pha/pla around; avg cost 4
+    // May need to PHA/PLA around; avg cost 4
     return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
   }
   if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {

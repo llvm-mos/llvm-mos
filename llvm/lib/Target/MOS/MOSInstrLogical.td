@@ -425,22 +425,49 @@ let Predicates = [HasW65816Or65EL02] in {
 def TX : MOSTransfer<XY, XY>;
 }
 
+let Predicates = [HasHUC6280] in {
+// SAX, SAY, SXY
+def SWAP : MOSLogicalInstr {
+  dag OutOperandList = (outs GPR:$dst2, GPR:$dst1);
+  dag InOperandList = (ins GPR:$src1, GPR:$src2);
+  let Constraints = "$src1 = $dst1, $src2 = $dst2";
+
+  let isAsCheapAsAMove = true;
+}
+}
+
 //===---------------------------------------------------------------------===//
 // Stack Instructions
 //===---------------------------------------------------------------------===//
 
 // PHA, PHP
 def PH : MOSLogicalInstr {
-  dag InOperandList = (ins AXYP:$src);
+  dag InOperandList = (ins AP:$src);
 
   let mayStore = true;
 }
 
 // PLA, PLP
 def PL : MOSLogicalInstr {
-  dag OutOperandList = (outs AXYP:$dst);
+  dag OutOperandList = (outs AP:$dst);
 
   let mayLoad = true;
+}
+
+let Predicates = [Has65C02] in {
+  // PHA, PHP
+  def PH_CMOS : MOSLogicalInstr {
+    dag InOperandList = (ins AXYP:$src);
+
+    let mayStore = true;
+  }
+
+  // PLA, PLX, PLY, PLP
+  def PL_CMOS : MOSLogicalInstr {
+    dag OutOperandList = (outs AXYP:$dst);
+
+    let mayLoad = true;
+  }
 }
 
 //===---------------------------------------------------------------------===//
