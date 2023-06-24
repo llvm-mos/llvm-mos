@@ -564,8 +564,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
       // The 65C02 can emit a PHX/PLY or PHY/PLX pair.
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
-      Builder.buildInstr(MOS::PH, {}, {SrcReg});
-      Builder.buildInstr(MOS::PL, {DestReg}, {})
+      Builder.buildInstr(MOS::PH_CMOS, {}, {SrcReg});
+      Builder.buildInstr(MOS::PL_CMOS, {DestReg}, {})
           .addDef(MOS::NZ, RegState::Implicit);
     } else {
       copyPhysRegImpl(Builder, DestReg,
@@ -612,8 +612,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
               STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
 
           if (StackRegClass.contains(SrcReg)) {
-            Builder.buildInstr(MOS::PH, {}, {SrcReg});
-            Builder.buildInstr(MOS::PL, {SrcReg}, {})
+            Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
+            Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});

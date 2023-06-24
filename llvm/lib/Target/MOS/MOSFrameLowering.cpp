@@ -117,7 +117,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
-    Builder.buildInstr(MOS::PH, {}, {Reg});
+    Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {Reg});
   }
 
   // Record that the frame pointer is killed by these instructions.
@@ -190,7 +190,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
-    Builder.buildInstr(MOS::PL, {Reg}, {});
+    Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {Reg}, {});
     if (Reg != CI.getReg())
       Builder.buildCopy(CI.getReg(), Reg);
   }

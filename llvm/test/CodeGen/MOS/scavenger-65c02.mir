@@ -6,9 +6,11 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_y
-    ; CHECK: PH $y
+    ; CHECK: liveins: $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: PH_CMOS $y
     ; CHECK-NEXT: dead $y = LDImm 42
-    ; CHECK-NEXT: $y = PL
+    ; CHECK-NEXT: $y = PL_CMOS
     ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $y
     %0:yc = LDImm 42
     RTS implicit $a, implicit $x, implicit $y
@@ -19,13 +21,15 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_y_around_phy
-    ; CHECK: $rc17 = STImag8 $y
+    ; CHECK: liveins: $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc17 = STImag8 $y
     ; CHECK-NEXT: $y = LDImm 42
-    ; CHECK-NEXT: PH killed $y
+    ; CHECK-NEXT: PH_CMOS killed $y
     ; CHECK-NEXT: $y = LDImag8 $rc17
     ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $y
     %0:yc = LDImm 42
-    PH %0
+    PH_CMOS %0
     RTS implicit $a, implicit $x, implicit $y
 ...
 ---
@@ -34,10 +38,12 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_y_around_ply
-    ; CHECK: $rc17 = STImag8 $y
-    ; CHECK-NEXT: dead $y = PL
+    ; CHECK: liveins: $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc17 = STImag8 $y
+    ; CHECK-NEXT: dead $y = PL_CMOS
     ; CHECK-NEXT: $y = LDImag8 $rc17
     ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $y
-    %0:yc = PL
+    %0:yc = PL_CMOS
     RTS implicit $a, implicit $x, implicit $y
 ...
