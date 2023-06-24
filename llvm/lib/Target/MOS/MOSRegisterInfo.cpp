@@ -832,7 +832,7 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     if (STI.hasHUC6280()) {
       // SXY can be used, but only if the source register is killed. As such,
       // average the cost.
-      XYCopyCost = (XYCopyCost + 3) / 2;
+      XYCopyCost = (XYCopyCost + 4) / 2;
     }
     return XYCopyCost;
   }
