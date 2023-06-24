@@ -21,7 +21,7 @@ body: |
     ; CHECK-LABEL: name: xy_to_xy_src_alive
     ; CHECK: liveins: $x
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[T_A:%[0-9]+]]:ac = T_A $x
-    ; CHECK-NEXT: $y = TA [[T_A]]
+    ; CHECK-NEXT: PH $x
+    ; CHECK-NEXT: $y = PL implicit-def $nz
     $y = COPY $x
 ...

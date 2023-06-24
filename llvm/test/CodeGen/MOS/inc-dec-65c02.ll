@@ -86,10 +86,8 @@ define i32 @dec_i32(i32 %a) {
 ; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB5_6
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    pha
-; CHECK-NEXT:    txa
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    pla
+; CHECK-NEXT:    phx
+; CHECK-NEXT:    ply
 ; CHECK-NEXT:    dex
 ; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB5_5

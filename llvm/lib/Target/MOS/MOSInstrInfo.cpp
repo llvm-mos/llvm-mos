@@ -560,6 +560,13 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         .addDef(SrcReg)
         .addUse(SrcReg, RegState::Kill)
         .addUse(DestReg, RegState::Kill | RegState::Undef);
+    } else if (STI.has65C02()) {
+      // The 65C02 can emit a PHX/PLY or PHY/PLX pair.
+      assert(MOS::XYRegClass.contains(SrcReg));
+      assert(MOS::XYRegClass.contains(DestReg));
+      Builder.buildInstr(MOS::PH, {}, {SrcReg});
+      Builder.buildInstr(MOS::PL, {DestReg}, {})
+          .addDef(MOS::NZ, RegState::Implicit);
     } else {
       copyPhysRegImpl(Builder, DestReg,
                       getRegWithVal(Builder, SrcReg, MOS::AcRegClass));

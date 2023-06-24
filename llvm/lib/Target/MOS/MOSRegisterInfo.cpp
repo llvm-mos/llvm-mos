@@ -815,12 +815,26 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       // TXA
       return 3;
     }
+
+    // X<->Y copies
     if (STI.hasW65816Or65EL02()) {
       // TXY, TYX
       return 3;
     }
-    // May need to pha/pla around; avg cost 4
-    return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
+    int XYCopyCost;
+    if (STI.has65C02()) {
+      // PHX/PLY, PHY/PLX
+      XYCopyCost = 8;
+    } else {
+      // May need to PHA/PLA around; avg cost 4
+      XYCopyCost = 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
+    }
+    if (STI.hasHUC6280()) {
+      // SXY can be used, but only if the source register is killed. As such,
+      // average the cost.
+      XYCopyCost = (XYCopyCost + 3) / 2;
+    }
+    return XYCopyCost;
   }
   if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
     // STImag8
@@ -831,7 +845,7 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     return 5;
   }
   if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    // May need to pha/pla around; avg cost 4
+    // May need to PHA/PLA around; avg cost 4
     return 4 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
   }
   if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
