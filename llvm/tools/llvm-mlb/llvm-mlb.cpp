@@ -44,17 +44,6 @@ namespace {
       cl::NotHidden,
       cl::cat(MLBCategory));
 
-  enum class MLBOutputFormat {
-    MLB
-  };
-
-  cl::opt<MLBOutputFormat> OutputFormat(
-      "format", cl::desc(""),
-      cl::init(MLBOutputFormat::MLB),
-      cl::values(clEnumValN(MLBOutputFormat::MLB, "MLB", "Mesen Label File.")),
-      cl::NotHidden,
-      cl::cat(MLBCategory));
-
   cl::list<std::string> ClInputFilenames(cl::Positional, cl::OneOrMore,
                                     cl::desc("<input ELF files>"),
                                     cl::cat(MLBCategory));

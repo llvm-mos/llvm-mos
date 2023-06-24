@@ -2,6 +2,13 @@
 # RUN: llvm-mlb --platform=PCE %t.elf
 # RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
 # RUN:   --input-file %t.mlb %s
+# RUN: yaml2obj %s -o %t.pce.elf
+# RUN: llvm-mlb %t.pce.elf
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.mlb %s
+# RUN: llvm-mlb -o %t.custom.mlb %t.pce.elf
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.custom.mlb %s
 
 --- !ELF
 FileHeader:
