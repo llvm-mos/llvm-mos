@@ -1,7 +1,17 @@
 # RUN: yaml2obj %s -o %t.elf
+# RUN: llvm-mlb --platform=NES %t.elf
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.mlb %s
 # RUN: llvm-mlb %t.elf
 # RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
 # RUN:   --input-file %t.mlb %s
+# RUN: yaml2obj %s -o %t.nes.elf
+# RUN: llvm-mlb %t.nes.elf
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.mlb %s
+# RUN: llvm-mlb -o %t.custom.mlb %t.nes.elf
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.custom.mlb %s
 
 --- !ELF
 FileHeader:

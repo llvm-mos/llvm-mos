@@ -1,0 +1,85 @@
+# RUN: yaml2obj %s -o %t.elf
+# RUN: llvm-mlb --platform=PCE %t.elf
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.mlb %s
+# RUN: yaml2obj %s -o %t.pce.elf
+# RUN: llvm-mlb %t.pce.elf
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.mlb %s
+# RUN: llvm-mlb -o %t.custom.mlb %t.pce.elf
+# RUN: FileCheck --match-full-lines --implicit-check-not {{.}} \
+# RUN:   --input-file %t.custom.mlb %s
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Symbols:
+# CHECK-NOT: PceMemory:1234:__internal_abs
+  - Name:  __internal_abs
+    Index: SHN_ABS
+    Value: 0x00FF1234
+# CHECK: PceWorkRam:1235-1236:two_byte
+  - Name:  two_byte
+    Index: SHN_ABS
+    Value: 0x00F83235
+    Size:  2
+# CHECK: PceWorkRam:34:__rc5
+  - Name:  __rc5
+    Index: SHN_ABS
+    Value: 0x00F82034
+# CHECK: PceMemory:0:io_port_0
+  - Name:  io_port_0
+    Index: SHN_ABS
+    Value: 0x00FF0000
+# CHECK: PcePrgRom:0:prg_rom_0_0
+  - Name:  prg_rom_0_0
+    Index: SHN_ABS
+    Value: 0x0000e000
+# CHECK: PcePrgRom:1fff:prg_rom_0_1fff
+  - Name:  prg_rom_0_1fff
+    Index: SHN_ABS
+    Value: 0x0000ffff
+# CHECK: PcePrgRom:2000:prg_rom_1_0
+  - Name:  prg_rom_1_0
+    Index: SHN_ABS
+    Value: 0x0001e000
+# CHECK: PcePrgRom:100000:prg_rom_128_0
+  - Name:  prg_rom_128_0
+    Index: SHN_ABS
+    Value: 0x0240e000
+# CHECK: PcePrgRom:180000:prg_rom_192_0
+  - Name:  prg_rom_192_0
+    Index: SHN_ABS
+    Value: 0x0340e000
+# CHECK: PceWorkRam:3fff:work_ram_1_1fff
+  - Name:  work_ram_1_1fff
+    Index: SHN_ABS
+    Value: 0x00f93fff
+# CHECK: PceCardRam:0:card_ram40_0
+  - Name:  card_ram40_0
+    Index: SHN_ABS
+    Value: 0x01404000
+# CHECK: PceCardRam:0:card_ram68_0
+  - Name:  card_ram68_0
+    Index: SHN_ABS
+    Value: 0x01684000
+# CHECK: PceCdromRam:0:cdrom_ram_0
+  - Name:  cdrom_ram_0
+    Index: SHN_ABS
+    Value: 0x01804000
+# CHECK: PceSaveRam:0:save_ram_0
+  - Name:  save_ram_0
+    Index: SHN_ABS
+    Value: 0x00F76000
+# CHECK: PcePrgRom:8123:prg_rom_vbank1_123
+  - Name:  __rom_vbank1_lma
+    Index: SHN_ABS
+    Value: 0x00044000
+  - Name:  __rom_vbank1_offset
+    Index: SHN_ABS
+    Value: 0x8000
+  - Name:  prg_rom_vbank1_123
+    Index: SHN_ABS
+    Value: 0x00044123
