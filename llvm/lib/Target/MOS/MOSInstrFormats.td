@@ -621,7 +621,7 @@ multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop", list<Predicate
       Inst24<OpcodeStr, OpcodeC1<aaa, 0b111>, AbsoluteX>;
   }
 
-/// For cc = 10 on 65816, then the meaning of bbb is:
+/// For cc = 10 on 65C02 and 65816, then the meaning of bbb is:
 /// 100	(zero page)
 /// For cc = 11 on 65816, then the meaning of bbb is:
 /// 000 (stack pointer)
@@ -637,12 +637,14 @@ multiclass CC1_NoImmediate<bits<3> aaa, string OpcodeStr = "nop", list<Predicate
     def _IndirectStackRelativeY :
       Inst16<OpcodeStr, OpcodeC3<aaa, 0b100>, IndirectStackRelativeY>;
   }
+
+  let Predicates = preds # [Has65C02] in {
+    def _Indirect :
+      Inst16<OpcodeStr, OpcodeC2<aaa, 0b100>, Indirect>;
+  }
   
   let Predicates = preds # [HasW65816] in {
     let DecoderNamespace = "w65816" in {
-      def _Indirect :
-        Inst16<OpcodeStr, OpcodeC2<aaa, 0b100>, Indirect>;
-
       def _IndirectLong :
         Inst16<OpcodeStr, OpcodeC3<aaa, 0b001>, IndirectLong>;
 
