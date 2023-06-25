@@ -840,10 +840,14 @@ int MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
   }
   if (AreClasses(MOS::Imag8RegClass, MOS::GPRRegClass)) {
     // STImag8
+    if (STI.hasHUC6280())
+      return 6;
     return 5;
   }
   if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
     // LDImag8
+    if (STI.hasHUC6280())
+      return 6;
     return 5;
   }
   if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
