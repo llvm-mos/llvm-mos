@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSMCAsmInfo.h"
+#include "MOSMCTargetDesc.h"
 
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -22,8 +24,20 @@ MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   SeparatorString = "\n";
   CommentString = ";";
   DollarIsHexPrefix = true;
-  MaxInstLength = 3;
+  // Maximum instruction length across all supported subtargets.
+  MaxInstLength = 7;
   SupportsDebugInformation = true;
+}
+
+unsigned MOSMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
+  if (!STI)
+    return MaxInstLength;
+
+  if (STI->hasFeature(MOS::FeatureHUC6280))
+    return 7;
+  if (STI->hasFeature(MOS::FeatureW65816))
+    return 4;
+  return 3;
 }
 
 } //  namespace llvm

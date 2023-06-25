@@ -23,6 +23,8 @@ class Triple;
 class MOSMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
+
+  unsigned getMaxInstLength(const MCSubtargetInfo *STI) const override;
 };
 
 } // end namespace llvm
