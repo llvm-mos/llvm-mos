@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOS.h"
+#include "clang/Basic/MacroBuilder.h"
 
 using namespace clang::targets;
 
@@ -165,4 +166,10 @@ bool MOSTargetInfo::isValidCPUName(StringRef Name) const {
 
 void MOSTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+}
+
+void MOSTargetInfo::getTargetDefines(const LangOptions &Opts,
+                                     MacroBuilder &Builder) const {
+  Builder.defineMacro("__mos__");
+  Builder.defineMacro("__ELF__");
 }
