@@ -537,9 +537,10 @@ let Predicates = [Has65C02] in {
 //===---------------------------------------------------------------------===//
 
 let Predicates = [HasHUC6280] in {
-  // TII abs, abs, imm16
+  // (TII, TDD) abs, abs, imm16
   def HuCMemcpy : MOSLogicalInstr {
-    dag InOperandList = (ins addr16:$source, addr16:$dest, imm16:$length);
+    dag InOperandList = (ins addr16:$source, addr16:$dest, imm16:$length,
+                         imm8:$descending);
 
     let mayLoad = true;
     let mayStore = true;

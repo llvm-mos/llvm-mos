@@ -631,15 +631,26 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::TYA_Implied);
       return;
     }
-  case MOS::HuCMemcpy:
-    OutMI.setOpcode(MOS::TII_HuCBlockMove);
+  case MOS::HuCMemcpy: {
+    uint8_t Descending = MI->getOperand(3).getImm();
+    OutMI.setOpcode(Descending ? MOS::TDD_HuCBlockMove
+                               : MOS::TII_HuCBlockMove);
     for (auto I = 0; I < 3; I++) {
       MCOperand Val;
       if (!lowerOperand(MI->getOperand(I), Val))
         llvm_unreachable("Failed to lower operand");
       OutMI.addOperand(Val);
     }
+    if (Descending) {
+      // TDD expects the *last* address, not the first.
+      for (auto I = 0; I < 2; I++) {
+        OutMI.getOperand(I).setImm(
+          OutMI.getOperand(I).getImm() + OutMI.getOperand(2).getImm() - 1
+        );
+      }
+    }
     return;
+  }
   case MOS::CL: {
     switch (MI->getOperand(0).getReg()) {
     default:

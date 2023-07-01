@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -1705,10 +1706,25 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
 
   bool IsSet = MI.getOpcode() == MOS::G_MEMSET;
   bool IsInline = MI.getOpcode() == MOS::G_MEMCPY_INLINE;
-  // TODO: memcpy() lowering emits all loads first, then all stores; this
-  // causes zero page register spills for sizes larger than 3. Ideally,
-  // the size limit for memcpy() should be ~half that of memset(), or 6.
-  uint32_t SizeLimit = IsInline ? UINT16_MAX : (IsSet ? 12 : 3);
+  uint32_t SizeLimit;
+  if (IsInline) {
+    SizeLimit = UINT16_MAX;
+  } else {
+    MachineFunction *MF = MI.getParent()->getParent();
+    if (MF && MF->getFunction().hasMinSize()) {
+      // Copies:
+      // => inline LDA/STA: 6n bytes
+      // => memcpy(): ~23 bytes
+      // Sets:
+      // => inline LDA/STA: 2 + 3n bytes
+      // => __memset(): ~21? bytes
+      SizeLimit = IsSet ? 6 : 3;
+    } else if (!MF || MF->getFunction().hasOptSize()) {
+      SizeLimit = IsSet ? 8 : 4;
+    } else {
+      SizeLimit = IsSet ? 16 : 8;
+    }
+  }
   
   // Try lowering, keeping in mind the size limit.
   if (IsInline) {
@@ -1717,7 +1733,6 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
     Result = Helper.lowerMemCpyFamily(MI, SizeLimit);
   }
   if (Result == LegalizerHelper::Legalized) {
-    MI.eraseFromParent();
     return true;
   }
 
