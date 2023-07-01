@@ -86,6 +86,8 @@ private:
   bool selectIndirectIndexedAddressing(LegalizerHelper &Helper,
                                        MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const;
+  bool legalizeMemOp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                     MachineInstr &MI) const;
 
   // Control Flow
   bool legalizeBrCond(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

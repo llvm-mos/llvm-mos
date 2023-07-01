@@ -533,6 +533,20 @@ let Predicates = [Has65C02] in {
 }
 
 //===---------------------------------------------------------------------===//
+// HuC Block Copy Instructions
+//===---------------------------------------------------------------------===//
+
+let Predicates = [HasHUC6280] in {
+  // TII abs, abs, imm16
+  def HuCMemcpy : MOSLogicalInstr {
+    dag InOperandList = (ins addr16:$source, addr16:$dest, imm16:$length);
+
+    let mayLoad = true;
+    let mayStore = true;
+  }
+}
+
+//===---------------------------------------------------------------------===//
 // Addition/Subtraction Patterns
 //===---------------------------------------------------------------------===//
 

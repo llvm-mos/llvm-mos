@@ -28,14 +28,17 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -46,6 +49,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include <cstdio>
 
 using namespace llvm;
 using namespace TargetOpcode;
@@ -262,7 +266,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).custom();
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET, G_MEMCPY_INLINE})
+      .custom();
 
   // Control Flow
 
@@ -389,6 +394,11 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeLoad(Helper, MRI, MI);
   case G_STORE:
     return legalizeStore(Helper, MRI, MI);
+  case G_MEMCPY:
+  case G_MEMCPY_INLINE:
+  case G_MEMMOVE:
+  case G_MEMSET:
+    return legalizeMemOp(Helper, MRI, MI);
 
   // Control Flow
   case G_BRCOND:
@@ -1684,6 +1694,41 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
       .addMemOperand(*MI.memoperands_begin());
   MI.eraseFromParent();
   return true;
+}
+
+bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
+                                     MachineRegisterInfo &MRI,
+                                     MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LostDebugLocObserver LocObserver("");
+  LegalizerHelper::LegalizeResult Result;
+
+  bool IsSet = MI.getOpcode() == MOS::G_MEMSET;
+  bool IsInline = MI.getOpcode() == MOS::G_MEMCPY_INLINE;
+  // TODO: memcpy() lowering emits all loads first, then all stores; this
+  // causes zero page register spills for sizes larger than 3. Ideally,
+  // the size limit for memcpy() should be ~half that of memset(), or 6.
+  uint32_t SizeLimit = IsInline ? UINT16_MAX : (IsSet ? 12 : 3);
+  
+  // Try lowering, keeping in mind the size limit.
+  if (IsInline) {
+    Result = Helper.lowerMemcpyInline(MI);
+  } else {
+    Result = Helper.lowerMemCpyFamily(MI, SizeLimit);
+  }
+  if (Result == LegalizerHelper::Legalized) {
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Try emitting a libcall.
+  Result = createMemLibcall(Builder, MRI, MI, LocObserver);
+  if (Result == LegalizerHelper::Legalized) {
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
