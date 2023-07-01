@@ -33,12 +33,22 @@ void abort_message(const char* format, ...)
     // formatting into the variable-sized buffer fails.
 #if !defined(NDEBUG) || !defined(LIBCXXABI_BAREMETAL)
     {
+#if defined(__mos__)
+        // Use printf() while fprintf() is not implemented.
+        printf("libc++abi: ");
+        va_list list;
+        va_start(list, format);
+        vprintf(format, list);
+        va_end(list);
+        printf("\n");
+#else
         fprintf(stderr, "libc++abi: ");
         va_list list;
         va_start(list, format);
         vfprintf(stderr, format, list);
         va_end(list);
         fprintf(stderr, "\n");
+#endif
     }
 #endif
 

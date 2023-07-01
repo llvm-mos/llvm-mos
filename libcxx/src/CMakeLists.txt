@@ -64,6 +64,11 @@ set(LIBCXX_SOURCES
   verbose_abort.cpp
   )
 
+if (LIBCXX_TARGETING_MOS)
+  # ryu tables are over 64 KB
+  list(FILTER LIBCXX_SOURCES EXCLUDE REGEX "^(include/)?ryu/")
+endif()
+
 if (LIBCXX_ENABLE_DEBUG_MODE OR LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS)
   list(APPEND LIBCXX_SOURCES
     debug.cpp

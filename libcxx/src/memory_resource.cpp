@@ -450,7 +450,11 @@ void* monotonic_buffer_resource::do_allocate(size_t bytes, size_t align) {
   const size_t footer_size  = sizeof(__chunk_footer);
   const size_t footer_align = alignof(__chunk_footer);
 
+#if defined(__mos__)
+  auto previous_allocation_size = [&]() -> unsigned int {
+#else
   auto previous_allocation_size = [&]() {
+#endif
     if (__chunks_ != nullptr)
       return __chunks_->__allocation_size();
 

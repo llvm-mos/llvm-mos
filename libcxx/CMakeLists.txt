@@ -44,6 +44,8 @@ else()
   set(LIBCXX_TARGETING_MSVC OFF)
 endif()
 
+set(LIBCXX_TARGETING_MOS OFF CACHE BOOL "")
+
 #===============================================================================
 # Setup CMake Options
 #===============================================================================

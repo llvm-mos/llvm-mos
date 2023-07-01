@@ -101,7 +101,7 @@ seed_seq::generate(_RandomAccessIterator __first, _RandomAccessIterator __last)
                          : (__n - 1) / 2;
         const size_t __p = (__n - __t) / 2;
         const size_t __q = __p + __t;
-        const size_t __m = _VSTD::max(__s + 1, __n);
+        const size_t __m = _VSTD::max(static_cast<size_t>(__s + 1), __n);
         // __k = 0;
         {
             result_type __r = 1664525 * _Tp(__first[0] ^ __first[__p]

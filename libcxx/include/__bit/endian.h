@@ -20,14 +20,14 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 enum class endian {
-  little = 0xDEAD,
-  big = 0xFACE,
+  little = (int) 0xDEAD,
+  big = (int) 0xFACE,
 #  if defined(_LIBCPP_LITTLE_ENDIAN)
   native = little
 #  elif defined(_LIBCPP_BIG_ENDIAN)
   native = big
 #  else
-  native = 0xCAFE
+  native = (int) 0xCAFE
 #  endif
 };
 
