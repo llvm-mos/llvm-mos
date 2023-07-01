@@ -86,6 +86,8 @@ public:
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
 
+  bool useAA() const override { return true; }
+
   // Subtarget feature getters.
   // See MOS.td for details.
   bool hasTinyEncoding() const { return HasTinyEncoding; }
