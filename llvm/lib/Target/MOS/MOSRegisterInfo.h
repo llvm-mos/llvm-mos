@@ -13,6 +13,8 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H
 #define LLVM_LIB_TARGET_MOS_MOSREGISTERINFO_H
 
+#include "MOSCycleCost.h"
+
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -90,8 +92,8 @@ public:
     return Imag8SymbolNames[Reg].c_str();
   }
 
-  int copyCost(Register DestReg, Register SrcReg,
-               const MOSSubtarget &STI) const;
+  MOSCycleCost copyCost(Register DestReg, Register SrcReg,
+                        const MOSSubtarget &STI) const;
 
 private:
   void reserveAllSubregs(BitVector *Reserved, Register Reg) const;
