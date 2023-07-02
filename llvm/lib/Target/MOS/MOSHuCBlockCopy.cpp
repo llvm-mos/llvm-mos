@@ -118,6 +118,16 @@ enum RegionOverlap {
   RO_DoesNotOverlap
 };
 
+static bool isRepeatingBytePattern(uint64_t Value, uint32_t Bytes) {
+  // Support variants like 0x01010101, 0x02020202...
+  for (uint32_t I = 1; I < Bytes; I++) {
+    if (((Value >> (I * 8)) & 0xFF) != (Value & 0xFF)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool MOSHuCBlockCopy::runOnMachineFunction(MachineFunction &MF) {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   if (!STI.hasHUC6280())
@@ -183,32 +193,21 @@ bool MOSHuCBlockCopy::runOnMachineFunction(MachineFunction &MF) {
           }
           IsLoadStorePair = true;
         } else {
-          // This could also be a large constant store.
-          Src = getConstantOperand(MRI, MI, 0);
+          // Also lower large constant stores.
+          Register SrcReg = MI.getOperand(0).getReg();
+          uint32_t SrcBytes = MRI.getType(SrcReg).getSizeInBytes();
+
+          DstReg = MI.getOperand(1).getReg();
+          Dst = getConstantOperand(MRI, MI, 1);
+          Src = getConstantOperand(MRI, MI, 0, true);
+          Len = MachineOperand::CreateImm(SrcBytes);
           IsSet = true;
-          if (!Src.has_value())
+
+          if (!Src.has_value() || !MRI.getType(SrcReg).isScalar())
             continue;
           auto SrcValue = getUInt64FromConstantOper(Src.value());
-          if (!SrcValue.has_value())
+          if (!isRepeatingBytePattern(SrcValue.value(), SrcBytes))
             continue;
-          uint32_t SrcBytes = MRI.getType(MI.getOperand(0).getReg())
-                                 .getSizeInBytes();
-          uint32_t DstBytes = MRI.getType(DstReg).getSizeInBytes();
-          if (SrcValue.value() != 0) {
-            if (SrcBytes != DstBytes)
-              continue;
-            bool MismatchFound = false;
-            // Support variants like 0x01010101, 0x02020202...
-            for (uint32_t I = 1; I < SrcBytes; I++) {
-              if (((SrcValue.value() >> (I * 8)) & 0xFF)
-                  != (SrcValue.value() & 0xFF)) {
-                MismatchFound = true;
-                break;
-              }
-            }
-            if (MismatchFound)
-              continue;
-          }
         }
       } else {
         continue;
