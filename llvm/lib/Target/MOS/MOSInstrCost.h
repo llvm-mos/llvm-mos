@@ -28,8 +28,8 @@ public:
 
   MOSInstrCost() : Bytes(0), Cycles(0) {}
 
-  MOSInstrCost(int32_t Bytes, int32_t Cycles, int Multiplier = 256)
-    : Bytes(Bytes * Multiplier), Cycles(Cycles * Multiplier) {}
+  MOSInstrCost(int32_t Bytes, int32_t Cycles)
+    : MOSInstrCost(Bytes, Cycles, 256) {}
 
   friend MOSInstrCost operator+(MOSInstrCost Left,
                                 const MOSInstrCost& Right) {
@@ -68,6 +68,9 @@ public:
   static Mode getModeFor(const MachineFunction &MF);
 
 private:
+  MOSInstrCost(int32_t Bytes, int32_t Cycles, int Multiplier)
+    : Bytes(Bytes * Multiplier), Cycles(Cycles * Multiplier) {}
+
   int32_t Bytes, Cycles;
 };
 
