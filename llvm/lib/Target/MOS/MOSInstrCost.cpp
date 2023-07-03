@@ -1,4 +1,4 @@
-//===-- MOSCycleCost.cpp - MOS Cycle Cost structure -------------*- C++ -*-===//
+//===-- MOSInstrCost.cpp - MOS Instruction Cost structure -------*- C++ -*-===//
 //
 // Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains additional helpers for the MOSCycleCost class.
+// This file contains additional helpers for the MOSInstrCost class.
 //
 //===----------------------------------------------------------------------===//
 
-#include "MOSCycleCost.h"
+#include "MOSInstrCost.h"
 
 #include "llvm/IR/Function.h"
 
@@ -18,23 +18,23 @@ using namespace llvm;
 
 namespace llvm {
 
-int64_t MOSCycleCost::value(MOSCycleCostMode Mode) const {
+int64_t MOSInstrCost::value(MOSInstrCostMode Mode) const {
   switch (Mode) {
-  case MOSCycleCostMode::PreferBytes:
+  case MOSInstrCostMode::PreferBytes:
     return ((int64_t) Bytes << 32) + Cycles;
-  case MOSCycleCostMode::PreferCycles:
+  case MOSInstrCostMode::PreferCycles:
     return ((int64_t) Cycles << 32) + Bytes;
-  case MOSCycleCostMode::Average:
+  case MOSInstrCostMode::Average:
     return Bytes + Cycles;
   }
 }
 
-MOSCycleCostMode getMOSCycleCostModeFor(const MachineFunction &MF) {
+MOSInstrCostMode getMOSInstrCostModeFor(const MachineFunction &MF) {
   if (MF.getFunction().hasMinSize())
-    return MOSCycleCostMode::PreferBytes;
+    return MOSInstrCostMode::PreferBytes;
   if (MF.getFunction().hasOptSize() || MF.getFunction().hasOptNone())
-    return MOSCycleCostMode::Average;
-  return MOSCycleCostMode::PreferCycles;
+    return MOSInstrCostMode::Average;
+  return MOSInstrCostMode::PreferCycles;
 }
 
 } // namespace llvm

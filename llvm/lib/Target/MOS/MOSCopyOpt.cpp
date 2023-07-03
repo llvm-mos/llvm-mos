@@ -15,7 +15,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
-#include "MOSCycleCost.h"
+#include "MOSInstrCost.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
@@ -180,7 +180,7 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
-  auto CostMode = getMOSCycleCostModeFor(MF);
+  auto CostMode = getMOSInstrCostModeFor(MF);
 
   LLVM_DEBUG(dbgs() << MF.getName() << "\n");
 
@@ -228,7 +228,7 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       auto [Dst, Src] = MI.getFirst2Regs();
-      auto LdImmCostVal = MOSCycleCost(2, 2).value(CostMode);
+      auto LdImmCostVal = MOSInstrCost(2, 2).value(CostMode);
 
       if (!MOS::Imag16RegClass.contains(Dst) && Dst != MOS::C &&
           Dst != MOS::V &&

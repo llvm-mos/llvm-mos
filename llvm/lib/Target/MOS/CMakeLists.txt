@@ -25,7 +25,7 @@ add_llvm_target(MOSCodeGen
   MOSCallingConv.cpp
   MOSCombiner.cpp
   MOSCopyOpt.cpp
-  MOSCycleCost.cpp
+  MOSInstrCost.cpp
   MOSFrameLowering.cpp
   MOSISelLowering.cpp
   MOSIndexIV.cpp
