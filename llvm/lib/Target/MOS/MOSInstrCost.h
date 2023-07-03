@@ -18,14 +18,14 @@
 
 namespace llvm {
 
-enum class MOSInstrCostMode {
-  PreferBytes,
-  PreferCycles,
-  Average
-};
-
 class MOSInstrCost {
 public:
+  enum class Mode {
+    PreferBytes,
+    PreferCycles,
+    Average
+  };
+
   MOSInstrCost() : Bytes(0), Cycles(0) {}
 
   MOSInstrCost(int32_t Bytes, int32_t Cycles, int Multiplier = 256)
@@ -63,13 +63,13 @@ public:
     return MOSInstrCost(Left.Bytes / Right, Left.Cycles / Right, 1);
   }
 
-  int64_t value(MOSInstrCostMode Mode = MOSInstrCostMode::Average) const;
+  int64_t value(Mode Mode = Mode::Average) const;
+
+  static Mode getModeFor(const MachineFunction &MF);
 
 private:
   int32_t Bytes, Cycles;
 };
-
-MOSInstrCostMode getMOSInstrCostModeFor(const MachineFunction &MF);
 
 } // namespace llvm
 

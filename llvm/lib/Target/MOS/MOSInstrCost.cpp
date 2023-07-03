@@ -18,23 +18,23 @@ using namespace llvm;
 
 namespace llvm {
 
-int64_t MOSInstrCost::value(MOSInstrCostMode Mode) const {
+int64_t MOSInstrCost::value(Mode Mode) const {
   switch (Mode) {
-  case MOSInstrCostMode::PreferBytes:
+  case Mode::PreferBytes:
     return ((int64_t) Bytes << 32) + Cycles;
-  case MOSInstrCostMode::PreferCycles:
+  case Mode::PreferCycles:
     return ((int64_t) Cycles << 32) + Bytes;
-  case MOSInstrCostMode::Average:
+  case Mode::Average:
     return Bytes + Cycles;
   }
 }
 
-MOSInstrCostMode getMOSInstrCostModeFor(const MachineFunction &MF) {
+MOSInstrCost::Mode MOSInstrCost::getModeFor(const MachineFunction &MF) {
   if (MF.getFunction().hasMinSize())
-    return MOSInstrCostMode::PreferBytes;
+    return Mode::PreferBytes;
   if (MF.getFunction().hasOptSize() || MF.getFunction().hasOptNone())
-    return MOSInstrCostMode::Average;
-  return MOSInstrCostMode::PreferCycles;
+    return Mode::Average;
+  return Mode::PreferCycles;
 }
 
 } // namespace llvm

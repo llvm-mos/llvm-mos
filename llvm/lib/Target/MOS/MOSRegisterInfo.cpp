@@ -625,7 +625,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   const auto &TRI = *STI.getRegisterInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   DenseMap<Register, MOSInstrCost> RegScores;
-  auto CostMode = getMOSInstrCostModeFor(MF);
+  auto CostMode = MOSInstrCost::getModeFor(MF);
 
   DenseMap<Register, int> OriginalIndex;
   for (const auto &R : enumerate(Order))

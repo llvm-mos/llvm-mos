@@ -180,7 +180,7 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
-  auto CostMode = getMOSInstrCostModeFor(MF);
+  auto CostMode = MOSInstrCost::getModeFor(MF);
 
   LLVM_DEBUG(dbgs() << MF.getName() << "\n");
 
