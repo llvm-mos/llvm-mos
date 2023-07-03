@@ -15,6 +15,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSInstrCost.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
@@ -179,6 +180,7 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
   const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const MOSRegisterInfo &TRI = *STI.getRegisterInfo();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
+  auto CostMode = MOSInstrCost::getModeFor(MF);
 
   LLVM_DEBUG(dbgs() << MF.getName() << "\n");
 
@@ -198,7 +200,7 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "Found candidate: " << printReg(NewSrc, &TRI)
                         << '\n');
 
-      if (TRI.copyCost(Dst, NewSrc, STI) > TRI.copyCost(Dst, Src, STI)) {
+      if (TRI.copyCost(Dst, NewSrc, STI).value(CostMode) > TRI.copyCost(Dst, Src, STI).value(CostMode)) {
         LLVM_DEBUG(dbgs() << "New copy is more expensive.\n");
         continue;
       }
@@ -226,9 +228,11 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       auto [Dst, Src] = MI.getFirst2Regs();
+      auto LdImmCostVal = MOSInstrCost(2, 2).value(CostMode);
 
       if (!MOS::Imag16RegClass.contains(Dst) && Dst != MOS::C &&
-          Dst != MOS::V && TRI.copyCost(Dst, Src, STI) <= 4)
+          Dst != MOS::V &&
+          TRI.copyCost(Dst, Src, STI).value(CostMode) <= LdImmCostVal)
         continue;
 
       SmallVector<MachineInstr *> LdImms;
