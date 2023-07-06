@@ -1769,7 +1769,7 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
 }
 
 static std::optional<uint64_t>
-getUInt64FromConstantOper(MachineOperand &Operand) {
+getUInt64FromConstantOper(const MachineOperand &Operand) {
   if (Operand.isImm())
     return Operand.getImm();
   if (Operand.isCImm())
@@ -1777,8 +1777,10 @@ getUInt64FromConstantOper(MachineOperand &Operand) {
   return std::nullopt;
 }
 
-static MachineOperand offsetMachineOperand(MachineOperand Operand,
+static MachineOperand offsetMachineOperand(MachineOperand &Operand,
                                            int64_t Offset) {
+  if (Offset == 0)
+    return Operand;
   if (Operand.isImm())
     return MachineOperand::CreateImm(Operand.getImm() + Offset);
   if (Operand.isCImm())
@@ -1792,12 +1794,21 @@ static MachineOperand offsetMachineOperand(MachineOperand Operand,
   llvm_unreachable("Unsupported machine operand type!");
 }
 
-enum RegionOverlap {
-  RO_Unknown,
-  RO_MayOverlapBefore, /* Src < Dst */
-  RO_MayOverlapAfter, /* Src > Dst */
-  RO_DoesNotOverlap
-};
+template<typename T>
+static inline int compareNumbers(T A, T B) {
+  return A < B ? -1 : (A > B ? 1 : 0);
+}
+
+static int compareOperandLocations(const MachineOperand &A,
+                                   const MachineOperand &B) {
+  if (A.isImm() && B.isImm())
+    return compareNumbers(A.getImm(), B.getImm());
+  if (A.isGlobal() && B.isGlobal())
+    if (A.getGlobal()->getGlobalIdentifier() ==
+        B.getGlobal()->getGlobalIdentifier())
+      return compareNumbers(A.getOffset(), B.getOffset());
+  return -2;
+}
 
 bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
                                        MachineRegisterInfo &MRI,
@@ -1805,14 +1816,8 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   MachineFunction &MF = Builder.getMF();
 
-  Register DstReg = 0;
-  std::optional<MachineOperand> Src = std::nullopt;
-  std::optional<MachineOperand> Dst = std::nullopt;
-  std::optional<MachineOperand> Len = std::nullopt;
   bool IsSet = MI.getOpcode() == MOS::G_MEMSET;
   bool IsInline = MI.getOpcode() == MOS::G_MEMCPY_INLINE;
-  RegionOverlap Overlap = RO_Unknown;
-  uint8_t Descending = 0;
   
   // Match supported combinations.
   if (MI.getOpcode() != MOS::G_MEMCPY
@@ -1823,21 +1828,11 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
   }
 
   Register SrcReg = MI.getOperand(1).getReg();
-  DstReg = MI.getOperand(0).getReg();
-  Dst = matchAbsoluteAddressing(MRI, MI.getOperand(0).getReg());
-  Src = matchAbsoluteAddressing(MRI, MI.getOperand(1).getReg());
-  Len = matchAbsoluteAddressing(MRI, MI.getOperand(2).getReg());
-  if (MI.getOpcode() != MOS::G_MEMMOVE) {
-    Overlap = RO_DoesNotOverlap;
-  }  
-  if (IsSet) {
-    auto SrcValue = getUInt64FromConstantOper(Src.value());
-    if (!SrcValue.has_value())
-      return false;
-    if (MRI.getType(SrcReg).getSizeInBytes() != 1)
-      return false;
-  }
-
+  Register DstReg = MI.getOperand(0).getReg();
+  auto Dst = matchAbsoluteAddressing(MRI, MI.getOperand(0).getReg());
+  auto Src = matchAbsoluteAddressing(MRI, MI.getOperand(1).getReg());
+  auto Len = matchAbsoluteAddressing(MRI, MI.getOperand(2).getReg());
+  uint8_t Descending = 0;
   if (!Src.has_value() || !Dst.has_value() || !Len.has_value())
     return false;
 
@@ -1846,16 +1841,20 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     // Skip using it unless -Os, -Oz is set.
     if (!MF.getFunction().hasOptSize())
       return false;
-  } else if (Overlap == RO_Unknown) {
-    auto SrcValue = getUInt64FromConstantOper(Src.value());
-    auto DstValue = getUInt64FromConstantOper(Dst.value());
-    if (!SrcValue.has_value() || !DstValue.has_value())
-      return false;
-    
-    Overlap = *SrcValue < *DstValue ? RO_MayOverlapBefore : RO_MayOverlapAfter;
-  }
 
-  Descending = Overlap == RO_MayOverlapBefore;
+    auto SrcValue = getUInt64FromConstantOper(Src.value());
+    if (!SrcValue.has_value())
+      return false;
+    if (MRI.getType(SrcReg).getSizeInBytes() != 1)
+      return false;
+  }
+  if (MI.getOpcode() == MOS::G_MEMMOVE) {
+    int OperandOrder = compareOperandLocations(Src.value(), Dst.value());
+    if (OperandOrder == -2)
+      return false;
+    if (OperandOrder == -1)
+      Descending = 1;
+  }
 
   // On HuC platforms, block copies can be emitted, and sets can be done
   // with them too. However, some requirements have to be considered:
@@ -1930,20 +1929,23 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     Len = offsetMachineOperand(Len.value(), -1);
   }
 
+  // Note that Descending transfers must be done in backwards order.
   if (KnownLen <= BytesPerTransfer) {
+    uint64_t AdjOfs = Descending ? (KnownLen - 1) : 0;
     Builder.buildInstr(MOS::HuCMemcpy)
-        .add(Src.value()).add(Dst.value()).add(Len.value())
-        .addImm(Descending);
+      .add(offsetMachineOperand(Src.value(), AdjOfs))
+      .add(offsetMachineOperand(Dst.value(), AdjOfs))
+      .add(Len.value())
+      .addImm(Descending);
   } else {
     for (uint64_t TOfs = 0; TOfs < KnownLen; TOfs += BytesPerTransfer) {
       uint64_t TLen = std::min(KnownLen - TOfs, BytesPerTransfer);
-      // Descending transfers must be done in backwards order.
-      uint64_t AdjTOfs = Descending ? (KnownLen - TOfs - TLen) : TOfs;
+      uint64_t AdjTOfs = Descending ? (KnownLen - TOfs - 1) : TOfs;
       Builder.buildInstr(MOS::HuCMemcpy)
-          .add(offsetMachineOperand(Src.value(), AdjTOfs))
-          .add(offsetMachineOperand(Dst.value(), AdjTOfs))
-          .add(MachineOperand::CreateImm(TLen))
-          .addImm(Descending);
+        .add(offsetMachineOperand(Src.value(), AdjTOfs))
+        .add(offsetMachineOperand(Dst.value(), AdjTOfs))
+        .add(MachineOperand::CreateImm(TLen))
+        .addImm(Descending);
     }
   }
 

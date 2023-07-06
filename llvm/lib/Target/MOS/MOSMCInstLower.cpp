@@ -641,14 +641,6 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         llvm_unreachable("Failed to lower operand");
       OutMI.addOperand(Val);
     }
-    if (Descending) {
-      // TDD expects the *last* address, not the first.
-      for (auto I = 0; I < 2; I++) {
-        OutMI.getOperand(I).setImm(
-          OutMI.getOperand(I).getImm() + OutMI.getOperand(2).getImm() - 1
-        );
-      }
-    }
     return;
   }
   case MOS::CL: {
