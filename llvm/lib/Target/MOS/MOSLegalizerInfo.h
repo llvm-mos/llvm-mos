@@ -78,6 +78,8 @@ private:
                      MachineInstr &MI) const;
   bool selectAddressingMode(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                             MachineInstr &MI) const;
+  std::optional<MachineOperand>
+  matchAbsoluteAddressing(MachineRegisterInfo &MRI, Register Addr) const;
   bool tryAbsoluteAddressing(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                              MachineInstr &MI) const;
   bool tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,

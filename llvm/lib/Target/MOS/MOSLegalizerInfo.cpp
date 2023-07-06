@@ -51,6 +51,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdio>
+#include <optional>
 
 using namespace llvm;
 using namespace TargetOpcode;
@@ -1502,6 +1503,44 @@ bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
     return true;
   return selectIndirectIndexedAddressing(Helper, MRI, MI);
 }
+
+std::optional<MachineOperand>
+MOSLegalizerInfo::matchAbsoluteAddressing(MachineRegisterInfo &MRI,
+                                          Register Addr) const {
+  int64_t Offset = 0;
+
+  while (true) {
+    if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
+      return MachineOperand::CreateImm(Offset +
+                                       ConstAddr->Value.getSExtValue());
+    }
+    if (const MachineInstr *GVAddr = getOpcodeDef(G_GLOBAL_VALUE, Addr, MRI)) {
+      const MachineOperand &GV = GVAddr->getOperand(1);
+      return MachineOperand::CreateGA(GV.getGlobal(),
+                                      GV.getOffset() + Offset);
+    }
+    if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
+      const MachineOperand &FI = FIAddr->getOperand(1);
+      if (willBeStaticallyAllocated(FI)) {
+        return MachineOperand::CreateFI(FI.getIndex(),
+                                        FI.getOffset() + Offset);
+      }
+    }
+    if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
+      Register Base = PtrAddAddr->getOperand(1).getReg();
+      Register NewOffset = PtrAddAddr->getOperand(2).getReg();
+      auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI);
+      if (!ConstOffset)
+        return std::nullopt;
+      Offset += ConstOffset->Value.getSExtValue();
+      Addr = Base;
+      continue;
+    }
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
 bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
                                              MachineRegisterInfo &MRI,
                                              MachineInstr &MI) const {
@@ -1511,50 +1550,27 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
   assert(IsLoad || MI.getOpcode() == G_STORE);
 
   Register Addr = MI.getOperand(1).getReg();
-  int64_t Offset = 0;
-
   unsigned Opcode = IsLoad ? MOS::G_LOAD_ABS : MOS::G_STORE_ABS;
+  auto Operand = matchAbsoluteAddressing(MRI, Addr);
 
-  while (true) {
-    if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
-      Helper.Observer.changingInstr(MI);
-      MI.setDesc(Builder.getTII().get(Opcode));
-      MI.getOperand(1).ChangeToImmediate(Offset +
-                                         ConstAddr->Value.getSExtValue());
-      Helper.Observer.changedInstr(MI);
-      return true;
+  if (Operand.has_value()) {
+    Helper.Observer.changingInstr(MI);
+    MI.setDesc(Builder.getTII().get(Opcode));
+    if (Operand->isImm()) {
+      MI.getOperand(1).ChangeToImmediate(Operand->getImm());
+    } else if (Operand->isGlobal()) {
+      MI.getOperand(1).ChangeToGA(Operand->getGlobal(),
+                                  Operand->getOffset());
+    } else if (Operand->isFI()) {
+      MI.getOperand(1).ChangeToFrameIndex(Operand->getIndex(),
+                                          Operand->getOffset());
+    } else {
+      llvm_unreachable("Unsupported matchAbsoluteAddressing() operand!");
     }
-    if (const MachineInstr *GVAddr = getOpcodeDef(G_GLOBAL_VALUE, Addr, MRI)) {
-      Helper.Observer.changingInstr(MI);
-      MI.setDesc(Builder.getTII().get(Opcode));
-      const MachineOperand &GV = GVAddr->getOperand(1);
-      MI.getOperand(1).ChangeToGA(GV.getGlobal(), GV.getOffset() + Offset);
-      Helper.Observer.changedInstr(MI);
-      return true;
-    }
-    if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
-      const MachineOperand &FI = FIAddr->getOperand(1);
-      if (willBeStaticallyAllocated(FI)) {
-        Helper.Observer.changingInstr(MI);
-        MI.setDesc(Builder.getTII().get(Opcode));
-        MI.getOperand(1).ChangeToFrameIndex(FI.getIndex(),
-                                            FI.getOffset() + Offset);
-        Helper.Observer.changedInstr(MI);
-        return true;
-      }
-    }
-    if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
-      Register Base = PtrAddAddr->getOperand(1).getReg();
-      Register NewOffset = PtrAddAddr->getOperand(2).getReg();
-      auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI);
-      if (!ConstOffset)
-        return false;
-      Offset += ConstOffset->Value.getSExtValue();
-      Addr = Base;
-      continue;
-    }
-    return false;
+    Helper.Observer.changedInstr(MI);
+    return true;
   }
+  
   return false;
 }
 
@@ -1752,41 +1768,6 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
   return false;
 }
 
-static std::optional<MachineOperand>
-getConstantOperand(MachineRegisterInfo &MRI, MachineInstr &StartMI,
-                   int OpIdx, bool FullyConstant = false) {
-  Register VReg = StartMI.getOperand(OpIdx).getReg();
-  MachineInstr *MI;
-
-  while ((MI = MRI.getVRegDef(VReg))) {
-    switch (MI->getOpcode()) {
-    case TargetOpcode::COPY:
-      VReg = MI->getOperand(1).getReg();
-      if (VReg.isPhysical())
-        return std::nullopt;
-      break;
-    case TargetOpcode::G_INTTOPTR:
-      VReg = MI->getOperand(1).getReg();
-      break;
-    case TargetOpcode::G_GLOBAL_VALUE:
-    case TargetOpcode::G_CONSTANT: {
-      auto Op = MI->getOperand(1);
-      // MOSMCInstLower does not support CImmediates.
-      if (Op.getType() == MachineOperand::MO_CImmediate) {
-        return MachineOperand::CreateImm(Op.getCImm()->getZExtValue());    
-      }
-      if (FullyConstant && !Op.isImm())
-        return std::nullopt;
-      return MI->getOperand(1);
-    }
-    default:
-      return std::nullopt;
-    }
-  }
-
-  return std::nullopt;
-}
-
 static std::optional<uint64_t>
 getUInt64FromConstantOper(MachineOperand &Operand) {
   if (Operand.isImm())
@@ -1804,6 +1785,9 @@ static MachineOperand offsetMachineOperand(MachineOperand Operand,
     return MachineOperand::CreateCImm(Operand.getCImm() + Offset);
   if (Operand.isGlobal())
     return MachineOperand::CreateGA(Operand.getGlobal(),
+                                    Operand.getOffset() + Offset);
+  if (Operand.isFI())
+    return MachineOperand::CreateFI(Operand.getIndex(),
                                     Operand.getOffset() + Offset);
   llvm_unreachable("Unsupported machine operand type!");
 }
@@ -1831,30 +1815,27 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
   uint8_t Descending = 0;
   
   // Match supported combinations.
-  if (MI.getOpcode() == MOS::G_MEMCPY
-    || MI.getOpcode() == MOS::G_MEMCPY_INLINE
-    || MI.getOpcode() == MOS::G_MEMSET) {
-    Register SrcReg = MI.getOperand(1).getReg();
-    DstReg = MI.getOperand(0).getReg();
-    Dst = getConstantOperand(MRI, MI, 0);
-    Src = getConstantOperand(MRI, MI, 1);
-    Len = getConstantOperand(MRI, MI, 2);
-    Overlap = RO_DoesNotOverlap;
-    
-    if (IsSet) {
-      auto SrcValue = getUInt64FromConstantOper(Src.value());
-      if (!SrcValue.has_value())
-        return false;
-      if (MRI.getType(SrcReg).getSizeInBytes() != 1)
-        return false;
-    }
-  } else if (MI.getOpcode() == MOS::G_MEMMOVE) {
-    DstReg = MI.getOperand(0).getReg();
-    Dst = getConstantOperand(MRI, MI, 0, true);
-    Src = getConstantOperand(MRI, MI, 1, true);
-    Len = getConstantOperand(MRI, MI, 2, true);
-  } else {
+  if (MI.getOpcode() != MOS::G_MEMCPY
+    && MI.getOpcode() != MOS::G_MEMCPY_INLINE
+    && MI.getOpcode() != MOS::G_MEMMOVE
+    && MI.getOpcode() != MOS::G_MEMSET) {
     return false;
+  }
+
+  Register SrcReg = MI.getOperand(1).getReg();
+  DstReg = MI.getOperand(0).getReg();
+  Dst = matchAbsoluteAddressing(MRI, MI.getOperand(0).getReg());
+  Src = matchAbsoluteAddressing(MRI, MI.getOperand(1).getReg());
+  Len = matchAbsoluteAddressing(MRI, MI.getOperand(2).getReg());
+  if (MI.getOpcode() != MOS::G_MEMMOVE) {
+    Overlap = RO_DoesNotOverlap;
+  }  
+  if (IsSet) {
+    auto SrcValue = getUInt64FromConstantOper(Src.value());
+    if (!SrcValue.has_value())
+      return false;
+    if (MRI.getType(SrcReg).getSizeInBytes() != 1)
+      return false;
   }
 
   if (!Src.has_value() || !Dst.has_value() || !Len.has_value())
