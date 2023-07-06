@@ -306,7 +306,7 @@ body: |
     ; CHECK-NEXT: G_MEMSET [[GV]](p0), [[C]](s8), [[C1]](s16), 0 :: (store (s32) into @a)
     ; CHECK-NEXT: RTS implicit [[GV]](p0)
     %1:_(p0) = G_GLOBAL_VALUE @a
-    %0:_(s32) = G_CONSTANT i32 16843009
+    %0:_(s32) = G_CONSTANT i32 16843009 ; 0x01010101
     G_STORE %0:_(s32), %1:_(p0) :: (store (s32) into @a); example.c:11:3
     RTS implicit %1
 ...

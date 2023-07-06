@@ -681,7 +681,6 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
 
   switch (MO.getType()) {
   default:
-  printf("Oper %d\n", MO.getType());
     LLVM_DEBUG(dbgs() << "Operand: " << MO << "\n");
     report_fatal_error("Operand type not implemented.");
   case MachineOperand::MO_RegisterMask:
