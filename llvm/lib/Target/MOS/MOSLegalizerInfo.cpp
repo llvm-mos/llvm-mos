@@ -268,7 +268,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).custom();
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET, G_MEMCPY_INLINE})
-      .custom();
+                              .custom();
 
   // Control Flow
 
@@ -1815,29 +1815,18 @@ enum RegionOverlap {
   RO_DoesNotOverlap
 };
 
-static bool isRepeatingBytePattern(uint64_t Value, uint32_t Bytes) {
-  // Support variants like 0x01010101, 0x02020202...
-  for (uint32_t I = 1; I < Bytes; I++) {
-    if (((Value >> (I * 8)) & 0xFF) != (Value & 0xFF)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
                                        MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const {
-  MachineInstr *MIPrev;
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   MachineFunction &MF = Builder.getMF();
 
-  std::optional<MachineOperand> Src = std::nullopt;
   Register DstReg = 0;
+  std::optional<MachineOperand> Src = std::nullopt;
   std::optional<MachineOperand> Dst = std::nullopt;
   std::optional<MachineOperand> Len = std::nullopt;
-  bool IsLoadStorePair = false;
-  bool IsSet = false;
+  bool IsSet = MI.getOpcode() == MOS::G_MEMSET;
+  bool IsInline = MI.getOpcode() == MOS::G_MEMCPY_INLINE;
   RegionOverlap Overlap = RO_Unknown;
   uint8_t Descending = 0;
   
@@ -1852,8 +1841,7 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     Len = getConstantOperand(MRI, MI, 2);
     Overlap = RO_DoesNotOverlap;
     
-    if (MI.getOpcode() == MOS::G_MEMSET) {
-      IsSet = true;
+    if (IsSet) {
       auto SrcValue = getUInt64FromConstantOper(Src.value());
       if (!SrcValue.has_value())
         return false;
@@ -1865,39 +1853,6 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     Dst = getConstantOperand(MRI, MI, 0, true);
     Src = getConstantOperand(MRI, MI, 1, true);
     Len = getConstantOperand(MRI, MI, 2, true);
-  } else if (MI.getOpcode() == MOS::G_STORE) {
-    Register TmpReg = MI.getOperand(0).getReg();
-    // Setting Dst/Len is safe here, as Src will only be set later.
-    DstReg = MI.getOperand(1).getReg();
-    Dst = getConstantOperand(MRI, MI, 1);
-    Len = MachineOperand::CreateImm(MRI.getType(TmpReg)
-                                        .getSizeInBytes());
-    MIPrev = MI.getPrevNode();
-    // InstCombinePass combines 16/32/64-bit memcpy() calls into
-    // a load/store pair; cover those.
-    if (MIPrev && MIPrev->getOpcode() == MOS::G_LOAD
-        && MIPrev->getOperand(0).getReg() == TmpReg) {
-      if (MRI.getType(MIPrev->getOperand(1).getReg()).isPointer()) {
-        Src = getConstantOperand(MRI, *MIPrev, 1);
-      }
-      IsLoadStorePair = true;
-    } else {
-      // Also lower large constant stores.
-      Register SrcReg = MI.getOperand(0).getReg();
-      uint32_t SrcBytes = MRI.getType(SrcReg).getSizeInBytes();
-
-      DstReg = MI.getOperand(1).getReg();
-      Dst = getConstantOperand(MRI, MI, 1);
-      Src = getConstantOperand(MRI, MI, 0, true);
-      Len = MachineOperand::CreateImm(SrcBytes);
-      IsSet = true;
-
-      if (!Src.has_value() || !MRI.getType(SrcReg).isScalar())
-        return false;
-      auto SrcValue = getUInt64FromConstantOper(Src.value());
-      if (!isRepeatingBytePattern(SrcValue.value(), SrcBytes))
-        return false;
-    }
   } else {
     return false;
   }
@@ -1962,6 +1917,8 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     SizeMin = 5;
     SizeMax = BytesPerTransfer * 5;
   }
+  if (IsInline)
+    SizeMax = UINT16_MAX;
   uint64_t KnownLen = UINT16_MAX;
 
   // If we require IRQ-safe chunks, the length has to be known.
@@ -2010,9 +1967,6 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
   }
 
   MI.eraseFromParent();
-  if (IsLoadStorePair) {
-    MIPrev->eraseFromParent();
-  }
   return true;
 }
 

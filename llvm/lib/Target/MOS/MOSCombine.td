@@ -44,10 +44,24 @@ def cmpz_zero : GICombineRule<
           [{ return matchCMPZZero(*${root}, MRI, ${matchinfo}); }]),
   (apply [{  return applyCMPZZero(*${root}, MRI, B, Observer, ${matchinfo});}])>;
 
+def load_store_to_memcpy_matchdata : GIDefMatchData<"MachineInstr*">;
+def load_store_to_memcpy : GICombineRule<
+  (defs root:$root, load_store_to_memcpy_matchdata:$matchinfo),
+  (match (wip_match_opcode G_STORE):$root,
+          [{ return matchLoadStoreToMemcpy(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{  return applyLoadStoreToMemcpy(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+
+def store_to_memset_matchdata : GIDefMatchData<"uint8_t">;
+def store_to_memset : GICombineRule<
+  (defs root:$root, store_to_memset_matchdata:$matchinfo),
+  (match (wip_match_opcode G_STORE):$root,
+          [{ return matchStoreToMemset(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{  return applyStoreToMemset(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+
 def MOSCombinerHelper: GICombinerHelper<
     "MOSGenCombinerHelper",
     [all_combines, fold_global_offset, sbc_equal, extract_low_bit, uaddo_1,
-     cmpz_zero]> {
+     cmpz_zero, load_store_to_memcpy, store_to_memset]> {
   let DisableRuleOption = "moscombiner-disable-rule";
   let StateClass = "MOSCombinerHelperState";
   let AdditionalArguments = [];
