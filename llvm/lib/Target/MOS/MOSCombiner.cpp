@@ -337,7 +337,7 @@ static bool isRepeatingBytePattern(uint64_t Value, uint32_t Bytes) {
   return true;
 }
 
-  // G_LOAD/G_STORE pair => G_MEMCPY_INLINE
+// G_LOAD/G_STORE pair => G_MEMCPY_INLINE
 bool MOSCombinerHelperState::matchLoadStoreToMemcpy(
     MachineInstr &MI, MachineRegisterInfo &MRI,
     MachineInstr *&MIPrev) const {
@@ -350,7 +350,11 @@ bool MOSCombinerHelperState::matchLoadStoreToMemcpy(
   if (MIPrev && MIPrev->getOpcode() == MOS::G_LOAD
       && MIPrev->getOperand(0).getReg() == StoreSrcReg) {
     if (MRI.getType(MIPrev->getOperand(1).getReg()).isPointer()) {
-      return true;
+      auto *SrcMemOperand = MIPrev->memoperands()[0];
+      auto *DstMemOperand = MI.memoperands()[0];
+      if (SrcMemOperand->isUnordered() && DstMemOperand->isUnordered()) {
+        return true;
+      }
     }
   }
   
