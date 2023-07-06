@@ -20,6 +20,7 @@
 #include "MOSLegalizerInfo.h"
 #include "MOSSubtarget.h"
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -50,9 +51,11 @@ using namespace llvm;
 class MOSCombinerHelperState {
 protected:
   CombinerHelper &Helper;
+  AAResults *AA;
 
 public:
-  MOSCombinerHelperState(CombinerHelper &Helper) : Helper(Helper) {}
+  MOSCombinerHelperState(CombinerHelper &Helper, AAResults *AA)
+    : Helper(Helper), AA(AA) {}
 
   // G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
   // GLOBAL_VALUE @x + (y_const + z_const)
@@ -353,7 +356,9 @@ bool MOSCombinerHelperState::matchLoadStoreToMemcpy(
       auto *SrcMemOperand = MIPrev->memoperands()[0];
       auto *DstMemOperand = MI.memoperands()[0];
       if (SrcMemOperand->isUnordered() && DstMemOperand->isUnordered()) {
-        return true;
+        if (!MI.mayAlias(AA, *MIPrev, true)) {
+          return true;
+        }
       }
     }
   }
@@ -452,15 +457,17 @@ namespace {
 class MOSCombinerInfo : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
+  AAResults *AA;
   MOSGenCombinerHelperRuleConfig GeneratedRuleCfg;
 
 public:
   MOSCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                  GISelKnownBits *KB, MachineDominatorTree *MDT)
+                  GISelKnownBits *KB, MachineDominatorTree *MDT,
+                  AAResults *AA)
       : CombinerInfo(/*AllowIllegalOps*/ true,
                      /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
-        KB(KB), MDT(MDT) {
+        KB(KB), MDT(MDT), AA(AA) {
     if (!GeneratedRuleCfg.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
@@ -475,7 +482,7 @@ bool MOSCombinerInfo::combine(GISelChangeObserver &Observer, MachineInstr &MI,
   bool IsPreLegalize = !MI.getMF()->getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
   CombinerHelper Helper(Observer, B, IsPreLegalize, KB, MDT, LI);
-  MOSGenCombinerHelper Generated(GeneratedRuleCfg, Helper);
+  MOSGenCombinerHelper Generated(GeneratedRuleCfg, Helper, AA);
   return Generated.tryCombineAll(Observer, MI, B);
 }
 
@@ -510,6 +517,8 @@ void MOSCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineDominatorTree>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
+  AU.addRequired<AAResultsWrapperPass>();
+
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -534,7 +543,9 @@ bool MOSCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
-  MOSCombinerInfo PCInfo(EnableOpt, F.hasOptSize(), F.hasMinSize(), KB, MDT);
+  AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MOSCombinerInfo PCInfo(EnableOpt, F.hasOptSize(), F.hasMinSize(), KB, MDT,
+                         AA);
   Combiner C(PCInfo, TPC);
   return C.combineMachineInstrs(MF, CSEInfo);
 }

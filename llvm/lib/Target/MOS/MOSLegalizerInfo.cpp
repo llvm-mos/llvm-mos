@@ -1850,6 +1850,7 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
   }
   if (MI.getOpcode() == MOS::G_MEMMOVE) {
     int OperandOrder = compareOperandLocations(Src.value(), Dst.value());
+    // TODO: Handle case when two G_MEMMOVE destinations cannot alias.
     if (OperandOrder == -2)
       return false;
     if (OperandOrder == -1)
