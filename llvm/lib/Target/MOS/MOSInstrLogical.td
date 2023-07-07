@@ -98,6 +98,7 @@ let isAdd = true in {
     }
     def ADCIndir :
         MOSAddSub, PseudoInstExpansion<(ADC_Indirect addr8:$addr)> {
+      let Predicates = [Has65C02];
       dag InOperandList = (ins Ac:$l, Imag16:$addr, Cc:$carryin);
     }
     def ADCIndirIdx :
@@ -117,6 +118,7 @@ let mayLoad = true in {
   }
   def SBCIndir :
       MOSAddSub, PseudoInstExpansion<(SBC_Indirect addr8:$addr)> {
+    let Predicates = [Has65C02];
     dag InOperandList = (ins Ac:$l, Imag16:$addr, Cc:$carryin);
   }
   def SBCIndirIdx :
@@ -367,6 +369,7 @@ let mayLoad = true in {
   def CMPAbs : MOSCMP { dag InOperandList = (ins GPR:$l, addr16:$addr); }
   def CMPAbsIdx : MOSCMP { dag InOperandList = (ins Ac:$l, addr16:$addr, XY:$idx); }
   def CMPIndir : MOSCMP, PseudoInstExpansion<(CMP_Indirect addr8:$addr)> {
+    let Predicates = [Has65C02];
     dag InOperandList = (ins Ac:$l, Imag16:$addr);
   }
   def CMPIndirIdx : MOSCMP, PseudoInstExpansion<(CMP_IndirectIndexed addr8:$addr)> {
@@ -515,6 +518,7 @@ def LDYAbsIdx : MOSLoadIndexed<Yc, Xc>;
 
 // LDA (zp)
 def LDIndir : MOSLoad, PseudoInstExpansion<(LDA_Indirect addr8:$addr)> {
+  let Predicates = [Has65C02];
   dag OutOperandList = (outs Ac:$dst);
   dag InOperandList = (ins Imag16:$addr);
 }
@@ -539,6 +543,7 @@ def STAbsIdx : MOSStore {
 
 // STA (zp)
 def STIndir : MOSStore, PseudoInstExpansion<(STA_Indirect addr8:$addr)> {
+  let Predicates = [Has65C02];
   dag InOperandList = (ins Ac:$src, Imag16:$addr);
 }
 

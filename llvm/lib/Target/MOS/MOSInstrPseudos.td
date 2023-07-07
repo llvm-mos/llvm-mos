@@ -265,6 +265,7 @@ let mayLoad = true in {
     dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
   }
   def CMPTermIndir : MOSCMPTerm {
+    let Predicates = [Has65C02];
     dag InOperandList = (ins Ac:$l, Imag16:$addr);
   }
   def CMPTermIndirIdx : MOSCMPTerm {

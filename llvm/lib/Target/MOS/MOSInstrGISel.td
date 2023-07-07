@@ -71,6 +71,7 @@ def G_LOAD_ABS_IDX : MOSGenericInstruction {
 // Generalized 8-bit load using the indirect addressing mode. Additionally
 // expects a MachineMemOperand.
 def G_LOAD_INDIR : MOSGenericInstruction {
+  let Predicates = [Has65C02];
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins ptype1:$base);
   let mayLoad = true;
@@ -106,6 +107,7 @@ def G_STORE_ABS_IDX : MOSGenericInstruction {
 // Generalized 8-bit store using the indirect addressing mode. Additionally
 // expects a MachineMemOperand.
 def G_STORE_INDIR : MOSGenericInstruction {
+  let Predicates = [Has65C02];
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$src, ptype1:$base);
   let mayStore = true;
