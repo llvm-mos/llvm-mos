@@ -1556,17 +1556,8 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
   if (Operand.has_value()) {
     Helper.Observer.changingInstr(MI);
     MI.setDesc(Builder.getTII().get(Opcode));
-    if (Operand->isImm()) {
-      MI.getOperand(1).ChangeToImmediate(Operand->getImm());
-    } else if (Operand->isGlobal()) {
-      MI.getOperand(1).ChangeToGA(Operand->getGlobal(),
-                                  Operand->getOffset());
-    } else if (Operand->isFI()) {
-      MI.getOperand(1).ChangeToFrameIndex(Operand->getIndex(),
-                                          Operand->getOffset());
-    } else {
-      llvm_unreachable("Unsupported matchAbsoluteAddressing() operand!");
-    }
+    MI.removeOperand(1);
+    MI.addOperand(*Operand);
     Helper.Observer.changedInstr(MI);
     return true;
   }
@@ -1718,8 +1709,6 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
                                      MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
-  LostDebugLocObserver LocObserver("");
-  LegalizerHelper::LegalizeResult Result;
 
   // Special handling for HuC6280 block copy extensions.
   if (STI.hasHUC6280())
@@ -1748,6 +1737,8 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
     }
   }
 
+  LegalizerHelper::LegalizeResult Result;
+
   // Try lowering, keeping in mind the size limit.
   if (IsInline) {
     Result = Helper.lowerMemcpyInline(MI);
@@ -1759,6 +1750,7 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
   }
 
   // Try emitting a libcall.
+  LostDebugLocObserver LocObserver("");
   Result = createMemLibcall(Builder, MRI, MI, LocObserver);
   if (Result == LegalizerHelper::Legalized) {
     MI.eraseFromParent();
@@ -1799,15 +1791,16 @@ static inline int compareNumbers(T A, T B) {
   return A < B ? -1 : (A > B ? 1 : 0);
 }
 
-static int compareOperandLocations(const MachineOperand &A,
-                                   const MachineOperand &B) {
+static std::optional<int>
+compareOperandLocations(const MachineOperand &A,
+                        const MachineOperand &B) {
   if (A.isImm() && B.isImm())
     return compareNumbers(A.getImm(), B.getImm());
   if (A.isGlobal() && B.isGlobal())
     if (A.getGlobal()->getGlobalIdentifier() ==
         B.getGlobal()->getGlobalIdentifier())
       return compareNumbers(A.getOffset(), B.getOffset());
-  return -2;
+  return std::nullopt;
 }
 
 bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
@@ -1827,12 +1820,12 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     return false;
   }
 
-  Register SrcReg = MI.getOperand(1).getReg();
   Register DstReg = MI.getOperand(0).getReg();
-  auto Dst = matchAbsoluteAddressing(MRI, MI.getOperand(0).getReg());
-  auto Src = matchAbsoluteAddressing(MRI, MI.getOperand(1).getReg());
+  auto Dst = matchAbsoluteAddressing(MRI, DstReg);
+  Register SrcReg = MI.getOperand(1).getReg();
+  auto Src = matchAbsoluteAddressing(MRI, SrcReg);
   auto Len = matchAbsoluteAddressing(MRI, MI.getOperand(2).getReg());
-  uint8_t Descending = 0;
+  bool Descending = 0;
   if (!Src.has_value() || !Dst.has_value() || !Len.has_value())
     return false;
 
@@ -1849,11 +1842,11 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
       return false;
   }
   if (MI.getOpcode() == MOS::G_MEMMOVE) {
-    int OperandOrder = compareOperandLocations(Src.value(), Dst.value());
+    auto OperandOrder = compareOperandLocations(Src.value(), Dst.value());
     // TODO: Handle case when two G_MEMMOVE destinations cannot alias.
-    if (OperandOrder == -2)
+    if (!OperandOrder.has_value())
       return false;
-    if (OperandOrder == -1)
+    if (OperandOrder.value() == -1)
       Descending = 1;
   }
 
