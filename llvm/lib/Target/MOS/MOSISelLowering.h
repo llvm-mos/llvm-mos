@@ -67,6 +67,16 @@ public:
 
   bool isZExtFree(Type *SrcTy, Type *DstTy) const override;
 
+  EVT getOptimalMemOpType(const MemOp &Op,
+                          const AttributeList &FuncAttributes) const override {
+    return MVT::i8;
+  }
+
+  LLT getOptimalMemOpLLT(const MemOp &Op,
+                         const AttributeList &FuncAttributes) const override {
+    return LLT::scalar(8);
+  }
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;

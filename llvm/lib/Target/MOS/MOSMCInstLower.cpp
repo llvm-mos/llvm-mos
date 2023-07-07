@@ -631,6 +631,18 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::TYA_Implied);
       return;
     }
+  case MOS::HuCMemcpy: {
+    uint8_t Descending = MI->getOperand(3).getImm();
+    OutMI.setOpcode(Descending ? MOS::TDD_HuCBlockMove
+                               : MOS::TII_HuCBlockMove);
+    for (auto I = 0; I < 3; I++) {
+      MCOperand Val;
+      if (!lowerOperand(MI->getOperand(I), Val))
+        llvm_unreachable("Failed to lower operand");
+      OutMI.addOperand(Val);
+    }
+    return;
+  }
   case MOS::CL: {
     switch (MI->getOperand(0).getReg()) {
     default:
@@ -717,6 +729,7 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
       case MOSOp::OPERAND_ADDR8:
         return 256;
         break;
+      case MOSOp::OPERAND_IMM16:
       case MOSOp::OPERAND_ADDR16:
         return 65536;
         break;

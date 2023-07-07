@@ -144,6 +144,9 @@ def imm8at2 : imm8at<2>;
 class imm16at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm16">;
   let EncoderMethod = "encodeImm<MOS::Imm16, " # offset # ">";
+  let OperandType = "OPERAND_IMM16";
+  let OperandNamespace = "MOSOp";
+  let Type = i16;
 }
 def imm16 : imm16at<1>;
 def imm16at5 : imm16at<5>;

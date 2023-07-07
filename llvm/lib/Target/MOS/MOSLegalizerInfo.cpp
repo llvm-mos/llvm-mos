@@ -28,14 +28,18 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -262,7 +266,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).custom();
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET, G_MEMCPY_INLINE})
+                              .custom();
 
   // Control Flow
 
@@ -389,6 +394,11 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeLoad(Helper, MRI, MI);
   case G_STORE:
     return legalizeStore(Helper, MRI, MI);
+  case G_MEMCPY:
+  case G_MEMCPY_INLINE:
+  case G_MEMMOVE:
+  case G_MEMSET:
+    return legalizeMemOp(Helper, MRI, MI);
 
   // Control Flow
   case G_BRCOND:
@@ -1491,6 +1501,44 @@ bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
     return true;
   return selectIndirectIndexedAddressing(Helper, MRI, MI);
 }
+
+std::optional<MachineOperand>
+MOSLegalizerInfo::matchAbsoluteAddressing(MachineRegisterInfo &MRI,
+                                          Register Addr) const {
+  int64_t Offset = 0;
+
+  while (true) {
+    if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
+      return MachineOperand::CreateImm(Offset +
+                                       ConstAddr->Value.getSExtValue());
+    }
+    if (const MachineInstr *GVAddr = getOpcodeDef(G_GLOBAL_VALUE, Addr, MRI)) {
+      const MachineOperand &GV = GVAddr->getOperand(1);
+      return MachineOperand::CreateGA(GV.getGlobal(),
+                                      GV.getOffset() + Offset);
+    }
+    if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
+      const MachineOperand &FI = FIAddr->getOperand(1);
+      if (willBeStaticallyAllocated(FI)) {
+        return MachineOperand::CreateFI(FI.getIndex(),
+                                        FI.getOffset() + Offset);
+      }
+    }
+    if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
+      Register Base = PtrAddAddr->getOperand(1).getReg();
+      Register NewOffset = PtrAddAddr->getOperand(2).getReg();
+      auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI);
+      if (!ConstOffset)
+        return std::nullopt;
+      Offset += ConstOffset->Value.getSExtValue();
+      Addr = Base;
+      continue;
+    }
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
 bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
                                              MachineRegisterInfo &MRI,
                                              MachineInstr &MI) const {
@@ -1500,50 +1548,18 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
   assert(IsLoad || MI.getOpcode() == G_STORE);
 
   Register Addr = MI.getOperand(1).getReg();
-  int64_t Offset = 0;
-
   unsigned Opcode = IsLoad ? MOS::G_LOAD_ABS : MOS::G_STORE_ABS;
+  auto Operand = matchAbsoluteAddressing(MRI, Addr);
 
-  while (true) {
-    if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
-      Helper.Observer.changingInstr(MI);
-      MI.setDesc(Builder.getTII().get(Opcode));
-      MI.getOperand(1).ChangeToImmediate(Offset +
-                                         ConstAddr->Value.getSExtValue());
-      Helper.Observer.changedInstr(MI);
-      return true;
-    }
-    if (const MachineInstr *GVAddr = getOpcodeDef(G_GLOBAL_VALUE, Addr, MRI)) {
-      Helper.Observer.changingInstr(MI);
-      MI.setDesc(Builder.getTII().get(Opcode));
-      const MachineOperand &GV = GVAddr->getOperand(1);
-      MI.getOperand(1).ChangeToGA(GV.getGlobal(), GV.getOffset() + Offset);
-      Helper.Observer.changedInstr(MI);
-      return true;
-    }
-    if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
-      const MachineOperand &FI = FIAddr->getOperand(1);
-      if (willBeStaticallyAllocated(FI)) {
-        Helper.Observer.changingInstr(MI);
-        MI.setDesc(Builder.getTII().get(Opcode));
-        MI.getOperand(1).ChangeToFrameIndex(FI.getIndex(),
-                                            FI.getOffset() + Offset);
-        Helper.Observer.changedInstr(MI);
-        return true;
-      }
-    }
-    if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
-      Register Base = PtrAddAddr->getOperand(1).getReg();
-      Register NewOffset = PtrAddAddr->getOperand(2).getReg();
-      auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI);
-      if (!ConstOffset)
-        return false;
-      Offset += ConstOffset->Value.getSExtValue();
-      Addr = Base;
-      continue;
-    }
-    return false;
+  if (Operand.has_value()) {
+    Helper.Observer.changingInstr(MI);
+    MI.setDesc(Builder.getTII().get(Opcode));
+    MI.removeOperand(1);
+    MI.addOperand(*Operand);
+    Helper.Observer.changedInstr(MI);
+    return true;
   }
+  
   return false;
 }
 
@@ -1682,6 +1698,273 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
       .addUse(Addr)
       .addUse(Index)
       .addMemOperand(*MI.memoperands_begin());
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
+                                     MachineRegisterInfo &MRI,
+                                     MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+
+  // Special handling for HuC6280 block copy extensions.
+  if (STI.hasHUC6280())
+    if (tryHuCBlockCopy(Helper, MRI, MI))
+      return true;
+
+  bool IsSet = MI.getOpcode() == MOS::G_MEMSET;
+  bool IsInline = MI.getOpcode() == MOS::G_MEMCPY_INLINE;
+  uint32_t SizeLimit;
+  if (IsInline) {
+    SizeLimit = UINT16_MAX;
+  } else {
+    MachineFunction *MF = MI.getParent()->getParent();
+    if (MF && MF->getFunction().hasMinSize()) {
+      // Copies:
+      // => inline LDA/STA: 6n bytes
+      // => memcpy(): ~23 bytes
+      // Sets:
+      // => inline LDA/STA: 2 + 3n bytes
+      // => __memset(): ~21? bytes
+      SizeLimit = IsSet ? 6 : 3;
+    } else if (!MF || MF->getFunction().hasOptSize()) {
+      SizeLimit = IsSet ? 8 : 4;
+    } else {
+      SizeLimit = IsSet ? 16 : 8;
+    }
+  }
+
+  LegalizerHelper::LegalizeResult Result;
+
+  // Try lowering, keeping in mind the size limit.
+  if (IsInline) {
+    Result = Helper.lowerMemcpyInline(MI);
+  } else {
+    Result = Helper.lowerMemCpyFamily(MI, SizeLimit);
+  }
+  if (Result == LegalizerHelper::Legalized) {
+    return true;
+  }
+
+  // Try emitting a libcall.
+  LostDebugLocObserver LocObserver("");
+  Result = createMemLibcall(Builder, MRI, MI, LocObserver);
+  if (Result == LegalizerHelper::Legalized) {
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
+static std::optional<uint64_t>
+getUInt64FromConstantOper(const MachineOperand &Operand) {
+  if (Operand.isImm())
+    return Operand.getImm();
+  if (Operand.isCImm())
+    return Operand.getCImm()->getZExtValue();
+  return std::nullopt;
+}
+
+static MachineOperand offsetMachineOperand(MachineOperand &Operand,
+                                           int64_t Offset) {
+  if (Offset == 0)
+    return Operand;
+  if (Operand.isImm())
+    return MachineOperand::CreateImm(Operand.getImm() + Offset);
+  if (Operand.isCImm())
+    return MachineOperand::CreateCImm(Operand.getCImm() + Offset);
+  if (Operand.isGlobal())
+    return MachineOperand::CreateGA(Operand.getGlobal(),
+                                    Operand.getOffset() + Offset);
+  if (Operand.isFI())
+    return MachineOperand::CreateFI(Operand.getIndex(),
+                                    Operand.getOffset() + Offset);
+  llvm_unreachable("Unsupported machine operand type!");
+}
+
+template<typename T>
+static inline int compareNumbers(T A, T B) {
+  return A < B ? -1 : (A > B ? 1 : 0);
+}
+
+static std::optional<int>
+compareOperandLocations(const MachineOperand &A,
+                        const MachineOperand &B) {
+  if (A.isImm() && B.isImm())
+    return compareNumbers(A.getImm(), B.getImm());
+  if (A.isGlobal() && B.isGlobal())
+    if (A.getGlobal()->getGlobalIdentifier() ==
+        B.getGlobal()->getGlobalIdentifier())
+      return compareNumbers(A.getOffset(), B.getOffset());
+  return std::nullopt;
+}
+
+bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
+                                       MachineRegisterInfo &MRI,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  MachineFunction &MF = Builder.getMF();
+
+  bool IsSet = MI.getOpcode() == MOS::G_MEMSET;
+  bool IsInline = MI.getOpcode() == MOS::G_MEMCPY_INLINE;
+  
+  // Match supported combinations.
+  if (MI.getOpcode() != MOS::G_MEMCPY
+    && MI.getOpcode() != MOS::G_MEMCPY_INLINE
+    && MI.getOpcode() != MOS::G_MEMMOVE
+    && MI.getOpcode() != MOS::G_MEMSET) {
+    return false;
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  auto Dst = matchAbsoluteAddressing(MRI, DstReg);
+  Register SrcReg = MI.getOperand(1).getReg();
+  auto Src = matchAbsoluteAddressing(MRI, SrcReg);
+  auto Len = matchAbsoluteAddressing(MRI, MI.getOperand(2).getReg());
+  bool Descending = false;
+  if (!Src.has_value() || !Dst.has_value() || !Len.has_value())
+    return false;
+
+  if (IsSet) {
+    // A TII-based memory set is always slower than the alternative.
+    // Skip using it unless -Os, -Oz is set.
+    if (!MF.getFunction().hasOptSize())
+      return false;
+
+    auto SrcValue = getUInt64FromConstantOper(Src.value());
+    if (!SrcValue.has_value())
+      return false;
+    if (MRI.getType(SrcReg).getSizeInBytes() != 1)
+      return false;
+  }
+  if (MI.getOpcode() == MOS::G_MEMMOVE) {
+    auto OperandOrder = compareOperandLocations(Src.value(), Dst.value());
+    // TODO: Handle case when two G_MEMMOVE destinations cannot alias.
+    if (!OperandOrder.has_value())
+      return false;
+    if (OperandOrder.value() == -1)
+      Descending = true;
+  }
+
+  // On HuC platforms, block copies can be emitted, and sets can be done
+  // with them too. However, some requirements have to be considered:
+  // 1) The source, destination, and length have to be constant; however,
+  //    they can be opaque constants (such as symbols).
+  // 2) A block copy instruction stalls all interrupts until it completes.
+  //    As such, one instruction should only do some amount of transfers,
+  //    to prevent stalling video interrupts mid-execution.
+  // Each transfer is 7 bytes and (17 + 6n) cycles, where n is the length
+  // of the transfer in bytes.
+  bool HuCIrqSafeBlockCopies = true; // TODO
+  uint64_t BytesPerTransfer = HuCIrqSafeBlockCopies ? 16 : UINT16_MAX;
+  uint64_t SizeMin, SizeMax;
+  // Note that non-indexed LDA/STA memory calls are 1 cycle slower on
+  // HuC6280 compared to other 6502 derivatives.
+  if (MF.getFunction().hasMinSize()) {
+    // Copies:
+    // => inline LDA/STA: 6n bytes
+    // => TII: 7 bytes
+    // => memcpy(): ~23 bytes
+    // Sets:
+    // => inline LDA/STA: 2 + 3n bytes
+    // => (LDA/STA|STZ)/TII: 3-5 + 7 bytes
+    // => __memset(): ~21? bytes
+    SizeMin = IsSet ? 5 : 2;
+    SizeMax = IsSet ? (BytesPerTransfer * 2 + 1)
+                    : (BytesPerTransfer * 3);
+  } else if (MF.getFunction().hasOptSize()) {
+    // Try to strike a balance.
+    SizeMin = IsSet ? 5 : 4;
+    SizeMax = IsSet ? (BytesPerTransfer * 3 + 1)
+                    : (BytesPerTransfer * 4);
+  } else {
+    // Copies:
+    // => inline LDA/STA: 10n cycles
+    // => TII: 17 + 6n cycles
+    // Sets:
+    // => inline LDA/STA: 2 + 5n cycles
+    // => (LDA/STA|STZ)/TII: 22-24 + 6n cycles
+    SizeMin = 5;
+    SizeMax = BytesPerTransfer * 5;
+  }
+  if (IsInline)
+    SizeMax = UINT16_MAX;
+  uint64_t KnownLen = UINT16_MAX;
+
+  // If we require IRQ-safe chunks, the length has to be known.
+  auto LenValue = getUInt64FromConstantOper(Len.value());
+  if (LenValue.has_value()) {
+    KnownLen = LenValue.value();
+    if (KnownLen < SizeMin || KnownLen > SizeMax) {
+      return false;
+    }
+  } else if (BytesPerTransfer < UINT16_MAX || Descending) {
+    return false;
+  }
+
+  auto DstPointerInfo = MI.memoperands()[0]->getPointerInfo();
+  auto SrcPointerInfo = MI.memoperands()[IsSet ? 0 : 1]->getPointerInfo();
+  
+  // Proceed with the custom lowering.
+  if (IsSet) {
+    // Emit a G_STORE, then set Src = Dst, Dst = Dst + 1, Len = Len - 1.
+    auto StoreReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
+    Builder.buildConstant(StoreReg,
+                          getUInt64FromConstantOper(Src.value())
+                            .value() & 0xFF);
+    Builder.buildStore(StoreReg, DstReg,
+                       *MF.getMachineMemOperand(SrcPointerInfo,
+                                                MachineMemOperand::MOStore,
+                                                1, Align(1)));
+
+    Src = Dst;
+    Dst = offsetMachineOperand(Dst.value(), 1);
+    DstPointerInfo = DstPointerInfo.getWithOffset(1);
+    Len = offsetMachineOperand(Len.value(), -1);
+    KnownLen -= 1;
+  }
+
+  // Note that Descending transfers must be done in backwards order.
+  if (KnownLen <= BytesPerTransfer) {
+    uint64_t AdjOfs = Descending ? (KnownLen - 1) : 0;
+    Builder.buildInstr(MOS::HuCMemcpy)
+      .add(offsetMachineOperand(Src.value(), AdjOfs))
+      .add(offsetMachineOperand(Dst.value(), AdjOfs))
+      .add(Len.value())
+      .addImm(Descending)
+      .addMemOperand(MF.getMachineMemOperand(SrcPointerInfo,
+                                             MachineMemOperand::MOLoad,
+                                             1, Align(1)))
+      .addMemOperand(MF.getMachineMemOperand(DstPointerInfo,
+                                             MachineMemOperand::MOStore,
+                                             1, Align(1)));
+  } else {
+    // Transfer Offset
+    for (uint64_t TOfs = 0; TOfs < KnownLen; TOfs += BytesPerTransfer) {
+      // Transfer Length
+      uint64_t TLen = std::min(KnownLen - TOfs, BytesPerTransfer);
+      // Adjusted Transfer Offset (opcode)
+      uint64_t AdjTOfs = Descending ? (KnownLen - TOfs - 1) : TOfs;
+      // Adjusted Transfer Offset (memory)
+      uint64_t AdjTOfsMO = Descending ? (KnownLen - TOfs - TLen) : TOfs;
+      Builder.buildInstr(MOS::HuCMemcpy)
+        .add(offsetMachineOperand(Src.value(), AdjTOfs))
+        .add(offsetMachineOperand(Dst.value(), AdjTOfs))
+        .add(MachineOperand::CreateImm(TLen))
+        .addImm(Descending)
+        .addMemOperand(MF.getMachineMemOperand(SrcPointerInfo
+                                               .getWithOffset(AdjTOfsMO),
+                                               MachineMemOperand::MOLoad,
+                                               1, Align(1)))
+        .addMemOperand(MF.getMachineMemOperand(DstPointerInfo
+                                               .getWithOffset(AdjTOfsMO),
+                                               MachineMemOperand::MOStore,
+                                               1, Align(1)));
+    }
+  }
+
   MI.eraseFromParent();
   return true;
 }
