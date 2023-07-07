@@ -638,6 +638,9 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
     return true;
   }
 
+  MOSInstrCost INCzp = MOSInstrCost(2, STI.hasHUC6280() ? 6 : 5);
+  MOSInstrCost ASLzp = MOSInstrCost(2, STI.hasHUC6280() ? 6 : 5);
+
   SmallSet<const MachineInstr *, 32> Visited;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
     if (!Visited.insert(&MI).second)
@@ -686,7 +689,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
       // ASL zp = 7
       // ASL a = 3
       if (is_contained(Order, MOS::A))
-        RegScores[MOS::A] += MOSInstrCost(2, 5) - MOSInstrCost(1, 2);
+        RegScores[MOS::A] += ASLzp - MOSInstrCost(1, 2);
       break;
 
     case MOS::CMPTermZ: {
@@ -697,7 +700,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
       // CMPTermZ ZP best case: 0 (elided)
       // CMPTermZ ZP worst case: 14 (INC DEC)
       // Splitting the difference: 7
-      MOSInstrCost CMPTermZZP = MOSInstrCost(2, 5) * 2 / 2;
+      MOSInstrCost CMPTermZZP = INCzp * 2 / 2;
       if (is_contained(Order, MOS::A))
         RegScores[MOS::A] += CMPTermZZP - CMPTermZGPR;
       if (is_contained(Order, MOS::X))
@@ -719,13 +722,13 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 
       // INC zp = (2 bytes + 5 cycles)
       // INXY = (1 bytes + 2 cycles)
-      MOSInstrCost INC = MOSInstrCost(2, 5) - MOSInstrCost(1, 2);
+      MOSInstrCost INXY = MOSInstrCost(1, 2);
       if (STI.has65C02() && is_contained(Order, MOS::A))
-        RegScores[MOS::A] += INC;
+        RegScores[MOS::A] += INCzp - INXY;
       if (is_contained(Order, MOS::X))
-        RegScores[MOS::X] += INC;
+        RegScores[MOS::X] += INCzp - INXY;
       if (is_contained(Order, MOS::Y))
-        RegScores[MOS::Y] += INC;
+        RegScores[MOS::Y] += INCzp - INXY;
       break;
     }
     }
@@ -870,7 +873,8 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     Register DestReg8 =
         getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
     // BIT imm (65C02), BIT abs
-    const MOSInstrCost BitCost = STI.has65C02() ? MOSInstrCost(2, 2) : MOSInstrCost(3, 4);
+    const MOSInstrCost BitCost = STI.has65C02() ? MOSInstrCost(2, 2)
+                                  : MOSInstrCost(3, STI.hasHUC6280() ? 5 : 4);
 
     if (SrcReg8) {
       SrcReg = SrcReg8;

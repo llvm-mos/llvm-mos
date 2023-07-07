@@ -269,6 +269,7 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
     return false;
 
   // Does it pay off to fold the access? Depends on the number of users.
+  const auto &STI = Dst.getMF()->getSubtarget<MOSSubtarget>();
   const auto &MRI = Dst.getMF()->getRegInfo();
   const auto Users = MRI.use_nodbg_instructions(Src.getOperand(0).getReg());
   const auto NumUsers = std::distance(Users.begin(), Users.end());
@@ -281,18 +282,26 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
   // the load/store. However, for each reference past the first, we pay an
   // overhead for using the addressing over the imaginary addressing mode. This
   // cost is: Absolute: 1 byte, 1 cycle Absolute Indexed: 1 byte, 1.5 cycles
-  // Indirect Indexed: 2.5 cycles
+  // Indirect: 2 cycles Indirect Indexed: 2.5 cycles
   // So, it pays off to fold k references of each addressing mode if:
   // Absolute: k*(1+1) < (2+3) = 5; 2k < 5; k < 2.5; k <= 2
   // Absolute Indexed: k*(1+1.5) < 5; 2.5k < 5; k <= 1
+  // Indirect: k*(0+2) < 5; 2k < 5; k <= 2
   // Indirect Indexed: k*(0+2.5) < 5; 2.5k < 5; k <= 1
+  //
+  // For HuC6280, we have different timings, so:
+  // Absolute: k*(1+2) < (2+3) = 5; k <= 1
+  // Absolute Indexed: k*(1+2.5) < 5; 3.5k < 5; k <= 1
+  // Indirect: k*(0+4) < 5; 4k < 5; k <= 1
+  // Indirect Indexed: k*(0+4.5) < 5; 4.5k < 5; k <= 1
   int MaxNumUsers;
   switch (Src.getOpcode()) {
   default:
     MaxNumUsers = 1;
     break;
+  case MOS::G_LOAD_INDIR:
   case MOS::G_LOAD_ABS:
-    MaxNumUsers = 2;
+    MaxNumUsers = STI.hasHUC6280() ? 1 : 2;
   }
   if (NumUsers > MaxNumUsers)
     return false;
