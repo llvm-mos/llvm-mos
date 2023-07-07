@@ -50,8 +50,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include <cstdio>
-#include <optional>
 
 using namespace llvm;
 using namespace TargetOpcode;
@@ -1825,7 +1823,7 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
   Register SrcReg = MI.getOperand(1).getReg();
   auto Src = matchAbsoluteAddressing(MRI, SrcReg);
   auto Len = matchAbsoluteAddressing(MRI, MI.getOperand(2).getReg());
-  bool Descending = 0;
+  bool Descending = false;
   if (!Src.has_value() || !Dst.has_value() || !Len.has_value())
     return false;
 
@@ -1847,7 +1845,7 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     if (!OperandOrder.has_value())
       return false;
     if (OperandOrder.value() == -1)
-      Descending = 1;
+      Descending = true;
   }
 
   // On HuC platforms, block copies can be emitted, and sets can be done
@@ -1906,6 +1904,9 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     return false;
   }
 
+  auto DstPointerInfo = MI.memoperands()[0]->getPointerInfo();
+  auto SrcPointerInfo = MI.memoperands()[IsSet ? 0 : 1]->getPointerInfo();
+  
   // Proceed with the custom lowering.
   if (IsSet) {
     // Emit a G_STORE, then set Src = Dst, Dst = Dst + 1, Len = Len - 1.
@@ -1914,13 +1915,15 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
                           getUInt64FromConstantOper(Src.value())
                             .value() & 0xFF);
     Builder.buildStore(StoreReg, DstReg,
-                       *MF.getMachineMemOperand(MachinePointerInfo(),
+                       *MF.getMachineMemOperand(SrcPointerInfo,
                                                 MachineMemOperand::MOStore,
                                                 1, Align(1)));
 
     Src = Dst;
     Dst = offsetMachineOperand(Dst.value(), 1);
+    DstPointerInfo = DstPointerInfo.getWithOffset(1);
     Len = offsetMachineOperand(Len.value(), -1);
+    KnownLen -= 1;
   }
 
   // Note that Descending transfers must be done in backwards order.
@@ -1930,16 +1933,35 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
       .add(offsetMachineOperand(Src.value(), AdjOfs))
       .add(offsetMachineOperand(Dst.value(), AdjOfs))
       .add(Len.value())
-      .addImm(Descending);
+      .addImm(Descending)
+      .addMemOperand(MF.getMachineMemOperand(SrcPointerInfo,
+                                             MachineMemOperand::MOLoad,
+                                             1, Align(1)))
+      .addMemOperand(MF.getMachineMemOperand(DstPointerInfo,
+                                             MachineMemOperand::MOStore,
+                                             1, Align(1)));
   } else {
+    // Transfer Offset
     for (uint64_t TOfs = 0; TOfs < KnownLen; TOfs += BytesPerTransfer) {
+      // Transfer Length
       uint64_t TLen = std::min(KnownLen - TOfs, BytesPerTransfer);
+      // Adjusted Transfer Offset (opcode)
       uint64_t AdjTOfs = Descending ? (KnownLen - TOfs - 1) : TOfs;
+      // Adjusted Transfer Offset (memory)
+      uint64_t AdjTOfsMO = Descending ? (KnownLen - TOfs - TLen) : TOfs;
       Builder.buildInstr(MOS::HuCMemcpy)
         .add(offsetMachineOperand(Src.value(), AdjTOfs))
         .add(offsetMachineOperand(Dst.value(), AdjTOfs))
         .add(MachineOperand::CreateImm(TLen))
-        .addImm(Descending);
+        .addImm(Descending)
+        .addMemOperand(MF.getMachineMemOperand(SrcPointerInfo
+                                               .getWithOffset(AdjTOfsMO),
+                                               MachineMemOperand::MOLoad,
+                                               1, Align(1)))
+        .addMemOperand(MF.getMachineMemOperand(DstPointerInfo
+                                               .getWithOffset(AdjTOfsMO),
+                                               MachineMemOperand::MOStore,
+                                               1, Align(1)));
     }
   }
 
