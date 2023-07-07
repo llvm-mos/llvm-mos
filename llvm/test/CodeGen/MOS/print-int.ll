@@ -96,8 +96,7 @@ define void @print_int(i8 zeroext %x) local_unnamed_addr #0 {
 ; CMOS-NEXT:    sty __rc3
 ; CMOS-NEXT:    jsr __udivmodqi4
 ; CMOS-NEXT:    tax
-; CMOS-NEXT:    ldy #0
-; CMOS-NEXT:    lda (__rc20),y
+; CMOS-NEXT:    lda (__rc20)
 ; CMOS-NEXT:    sta __rc20
 ; CMOS-NEXT:    txa
 ; CMOS-NEXT:    jsr print_int

@@ -919,6 +919,7 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::CMPTermImag8:
   case MOS::CMPTermAbs:
   case MOS::CMPTermIndir:
+  case MOS::CMPTermIndirIdx:
   case MOS::CMPTermIdx:
     expandCMPTerm(Builder);
     break;
@@ -1171,6 +1172,9 @@ void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
     MI.setDesc(Builder.getTII().get(MOS::CMPAbsIdx));
     break;
   case MOS::CMPTermIndir:
+    MI.setDesc(Builder.getTII().get(MOS::CMPIndir));
+    break;
+  case MOS::CMPTermIndirIdx:
     MI.setDesc(Builder.getTII().get(MOS::CMPIndirIdx));
     break;
   }

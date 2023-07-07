@@ -103,7 +103,6 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    asl
 ; CMOS-NEXT:    sta __rc2
 ; CMOS-NEXT:    lda #0
-; CMOS-NEXT:    tay
 ; CMOS-NEXT:    rol
 ; CMOS-NEXT:    sta __rc3
 ; CMOS-NEXT:    lda #mos16lo(.Lchar_stats_sstk)
@@ -113,9 +112,9 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    lda #mos16hi(.Lchar_stats_sstk)
 ; CMOS-NEXT:    adc __rc3
 ; CMOS-NEXT:    sta __rc3
-; CMOS-NEXT:    lda (__rc2),y
+; CMOS-NEXT:    lda (__rc2)
 ; CMOS-NEXT:    sta __rc4
-; CMOS-NEXT:    iny
+; CMOS-NEXT:    ldy #1
 ; CMOS-NEXT:    lda (__rc2),y
 ; CMOS-NEXT:    tax
 ; CMOS-NEXT:    lda __rc4
@@ -126,10 +125,8 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    inx
 ; CMOS-NEXT:  .LBB0_4: ; %while.body
 ; CMOS-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CMOS-NEXT:    ldy #0
-; CMOS-NEXT:    sta (__rc2),y
+; CMOS-NEXT:    sta (__rc2)
 ; CMOS-NEXT:    txa
-; CMOS-NEXT:    iny
 ; CMOS-NEXT:    sta (__rc2),y
 ; CMOS-NEXT:    bra .LBB0_1
 ; CMOS-NEXT:  .LBB0_5: ; %while.end
