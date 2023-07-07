@@ -100,8 +100,16 @@ name: cmptermindir
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: cmptermindir
+    ; CHECK: $c = CMPIndir $a, $rs1, implicit-def $nz
+    $c = CMPTermIndir $a, $rs1, implicit-def $nz
+...
+---
+name: cmptermindiridx
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: cmptermindiridx
     ; CHECK: $c = CMPIndirIdx $a, $rs1, $y, implicit-def $nz
-    $c = CMPTermIndir $a, $rs1, $y, implicit-def $nz
+    $c = CMPTermIndirIdx $a, $rs1, $y, implicit-def $nz
 ...
 ---
 name: br_c

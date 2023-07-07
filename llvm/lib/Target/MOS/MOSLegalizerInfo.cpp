@@ -1499,7 +1499,7 @@ bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
     return true;
   if (tryAbsoluteIndexedAddressing(Helper, MRI, MI))
     return true;
-  return selectIndirectIndexedAddressing(Helper, MRI, MI);
+  return selectIndirectAddressing(Helper, MRI, MI);
 }
 
 std::optional<MachineOperand>
@@ -1649,11 +1649,12 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
   return false;
 }
 
-bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
-                                                       MachineRegisterInfo &MRI,
-                                                       MachineInstr &MI) const {
+bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,
+                                                MachineRegisterInfo &MRI,
+                                                MachineInstr &MI) const {
   LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   bool IsLoad = MI.getOpcode() == G_LOAD;
   assert(IsLoad || MI.getOpcode() == G_STORE);
@@ -1691,8 +1692,18 @@ bool MOSLegalizerInfo::selectIndirectIndexedAddressing(LegalizerHelper &Helper,
     }
   }
 
-  if (!Index)
-    Index = Builder.buildConstant(LLT::scalar(8), 0).getReg(0);
+  if (!Index) {
+    if (STI.has65C02()) {
+      Opcode = IsLoad ? MOS::G_LOAD_INDIR : MOS::G_STORE_INDIR;
+      Builder.buildInstr(Opcode)
+          .add(MI.getOperand(0))
+          .addUse(Addr)
+          .addMemOperand(*MI.memoperands_begin());
+      MI.eraseFromParent();
+      return true;
+    }
+    Index = Builder.buildConstant(S8, 0).getReg(0);
+  }
   Builder.buildInstr(Opcode)
       .add(MI.getOperand(0))
       .addUse(Addr)
