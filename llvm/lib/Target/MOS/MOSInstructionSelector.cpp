@@ -282,7 +282,7 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
   // the load/store. However, for each reference past the first, we pay an
   // overhead for using the addressing over the imaginary addressing mode. This
   // cost is: Absolute: 1 byte, 1 cycle Absolute Indexed: 1 byte, 1.5 cycles
-  // Indirect Indexed: 2.5 cycles
+  // Indirect: 2 cycles Indirect Indexed: 2.5 cycles
   // So, it pays off to fold k references of each addressing mode if:
   // Absolute: k*(1+1) < (2+3) = 5; 2k < 5; k < 2.5; k <= 2
   // Absolute Indexed: k*(1+1.5) < 5; 2.5k < 5; k <= 1
