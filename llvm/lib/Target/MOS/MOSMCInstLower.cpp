@@ -725,6 +725,9 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
       switch (MO.getParent()->getDesc().operands()[Idx].OperandType) {
       default:
         llvm_unreachable("Unexpected operand type.");
+      case MOSOp::OPERAND_IMM3:
+        return 8;
+        break;
       case MOSOp::OPERAND_IMM8:
       case MOSOp::OPERAND_ADDR8:
         return 256;

@@ -129,6 +129,14 @@ class Addr16Operand<string name> : MOSAsmOperand<name>;
 /// A 24-bit address.
 class Addr24Operand<string name> : MOSAsmOperand<name>;
 
+/// This operand will only match a value from 0 to 7 inclusive.
+def imm3 : Operand<i32> {
+  let ParserMatchClass = ImmediateAsmOperand<"Imm3">;
+  let OperandType = "OPERAND_IMM3";
+  let OperandNamespace = "MOSOp";
+  let Type = i8;
+}
+
 /// This operand will only match a value from 0 to 255 inclusive.
 class imm8at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8">;
@@ -499,21 +507,45 @@ class InstImmediate32<string opcodestr, Opcode op = DefaultOpcode,
 }
 
 /// A R65C02 bit branch instruction.
-class InstBranchBit<string opcodestr, Opcode op = DefaultOpcode> :
+class InstBitBranch<string opcodestr, Opcode op = DefaultOpcode> :
     Inst<opcodestr> {
   let Size = 3;
   bits<24> Inst;
+  bits<3> tbit;
   bits<8> source;
   bits<8> location;
 
   Opcode opcode = op;
-  let InOperandList = (ins addr8:$source, pcrel8at2:$location);
+  let InOperandList = (ins imm3:$tbit, addr8:$source, pcrel8at2:$location);
   string OperandsStr;
-  let OperandsStr = "$source , $location";
+  let OperandsStr = "$tbit , $source , $location";
 
-  let Inst{7-0} = opcode.op;
+  let Inst{7} = opcode.op{7};
+  let Inst{6-4} = tbit;
+  let Inst{3-0} = opcode.op{3-0};
   let Inst{15-8} = source;
   let Inst{23-16} = location;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
+/// A R65C02 bit modify instruction.
+class InstBitModify<string opcodestr, Opcode op = DefaultOpcode,
+                    AddressingMode mode = Implicit> :
+    InstAddressMode<opcodestr, op, mode> {
+  let Size = 2;
+  bits<8> param;
+  bits<16> Inst;
+  bits<3> tbit;
+
+  Opcode opcode = op;
+  let InOperandList = !con((ins imm3:$tbit), mode.InOperandList);
+  string OperandsStr;
+  let OperandsStr = "$tbit , " # mode.OperandsStr;
+
+  let Inst{7} = opcode.op{7};
+  let Inst{6-4} = tbit;
+  let Inst{3-0} = opcode.op{3-0};
+  let Inst{15-8} = param;
   let AsmString = opcodestr # " " # OperandsStr;
 }
 

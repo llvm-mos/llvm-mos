@@ -77,7 +77,8 @@ enum OperandType : unsigned {
   OPERAND_IMM8 = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_ADDR8,
   OPERAND_ADDR16,
-  OPERAND_IMM16
+  OPERAND_IMM16,
+  OPERAND_IMM3
 };
 
 } // namespace MOSOp

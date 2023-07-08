@@ -133,6 +133,7 @@ public:
     return Reg;
   }
 
+  bool isImm3() const { return isImmediate<0, 0x8 - 1>(); }
   bool isImm8() const { return isImmediate<0, 0x100 - 1>(); }
   bool isImm16() const { return isImmediate<0, 0x10000 - 1>(); }
   bool isImm24() const { return isImmediate<0, 0x1000000 - 1>(); }
