@@ -288,7 +288,8 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
 
     // Add the unconditional branch from IfFalseMBB to TailMBB.
     Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
-    Builder.buildInstr(STI.has65C02() ? MOS::BRA : MOS::JMP).addMBB(TailMBB);
+    Builder.buildInstr((STI.has65C02() || STI.has65DTV02())
+                       ? MOS::BRA : MOS::JMP).addMBB(TailMBB);
     for (const auto &LiveIn : IfFalseMBB->liveins())
       IfTrueMBB->addLiveIn(LiveIn);
 

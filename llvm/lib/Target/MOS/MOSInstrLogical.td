@@ -284,12 +284,13 @@ class MOSUnconditionalBranch : MOSBranch {
   let isBarrier = true;
 }
 
-def BRA : MOSUnconditionalBranch, PseudoInstExpansion<(BRA_Relative pcrel8:$tgt)> {
-  let Predicates = [Has65C02];
+def BRA : MOSUnconditionalBranch {
+  let Predicates = [Has65C02OrDTV];
 
   let InOperandList = (ins label:$tgt);
   let Pattern = [(br bb:$tgt)];
 }
+
 def JMP : MOSUnconditionalBranch, PseudoInstExpansion<(JMP_Absolute addr16:$tgt)> {
   let InOperandList = (ins label:$tgt);
   let Pattern = [(br bb:$tgt)];
