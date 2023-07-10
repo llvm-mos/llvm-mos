@@ -67,6 +67,11 @@ def Has6502XOrDTV : Predicate<"(Subtarget->has6502X() || Subtarget->has65DTV02()
   let PredicateName = "Feature6502XOrDTV";
 }
 
+def Has65C02OrDTV : Predicate<"(Subtarget->has65C02() || Subtarget->has65DTV02())">,
+                AssemblerPredicate<(any_of Feature65C02, Feature65DTV02), "65C02 or C64DTV"> {
+  let PredicateName = "Feature65C02OrDTV";
+}
+
 def Has65DTV02 : Predicate<"Subtarget->has65DTV02()">,
                 AssemblerPredicate<(all_of Feature65DTV02), "6502 (C64DTV)"> {
   let PredicateName = "Feature65DTV02";

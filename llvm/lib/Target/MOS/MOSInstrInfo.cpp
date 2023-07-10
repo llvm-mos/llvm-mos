@@ -409,10 +409,11 @@ unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // Add unconditional branch if necessary.
   if (UBB) {
-    // For 65C02, assume BRA and relax into JMP in insertIndirectBranch if
-    // necessary.
+    // For 65C02/65DTV02, assume BRA and relax into JMP in
+    // insertIndirectBranch if necessary.
     auto JMP =
-        Builder.buildInstr(STI.has65C02() ? MOS::BRA : MOS::JMP).addMBB(UBB);
+        Builder.buildInstr((STI.has65C02() || STI.has65DTV02())
+                           ? MOS::BRA : MOS::JMP).addMBB(UBB);
     ++NumAdded;
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(*JMP);

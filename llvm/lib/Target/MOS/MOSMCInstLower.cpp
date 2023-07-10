@@ -252,6 +252,20 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Tgt);
     return;
   }
+  case MOS::BRA: {
+    const auto &STI = MI->getMF()->getSubtarget<MOSSubtarget>();
+    if (STI.has65C02())
+      OutMI.setOpcode(MOS::BRA_Relative);
+    else if (STI.has65DTV02())
+      OutMI.setOpcode(MOS::BRA_Relative_DTV02);
+    else
+      llvm_unreachable("Failed to lower instruction");
+    MCOperand Tgt;
+    if (!lowerOperand(MI->getOperand(0), Tgt))
+      llvm_unreachable("Failed to lower operand");
+    OutMI.addOperand(Tgt);
+    return;
+  }
   case MOS::CMPImm:
   case MOS::CMPImag8:
   case MOS::CMPAbs:
