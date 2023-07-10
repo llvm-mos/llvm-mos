@@ -346,46 +346,49 @@ def STZ_AbsoluteX : Inst24<"stz", OpcodeC2<0b100, 0b111>, AbsoluteX>;
 let Predicates = [HasR65C02] in {
 
 let DecoderNamespace = "r65c02" in {
-/// Branch Bit Reset
-def BBR0_ZeroPage : InstBranchBit<"bbr0", Opcode<0x0f>>;
-def BBR1_ZeroPage : InstBranchBit<"bbr1", Opcode<0x1f>>;
-def BBR2_ZeroPage : InstBranchBit<"bbr2", Opcode<0x2f>>;
-def BBR3_ZeroPage : InstBranchBit<"bbr3", Opcode<0x3f>>;
-def BBR4_ZeroPage : InstBranchBit<"bbr4", Opcode<0x4f>>;
-def BBR5_ZeroPage : InstBranchBit<"bbr5", Opcode<0x5f>>;
-def BBR6_ZeroPage : InstBranchBit<"bbr6", Opcode<0x6f>>;
-def BBR7_ZeroPage : InstBranchBit<"bbr7", Opcode<0x7f>>;
-
-/// Branch Bit Set
-def BBS0_ZeroPage : InstBranchBit<"bbs0", Opcode<0x8f>>;
-def BBS1_ZeroPage : InstBranchBit<"bbs1", Opcode<0x9f>>;
-def BBS2_ZeroPage : InstBranchBit<"bbs2", Opcode<0xaf>>;
-def BBS3_ZeroPage : InstBranchBit<"bbs3", Opcode<0xbf>>;
-def BBS4_ZeroPage : InstBranchBit<"bbs4", Opcode<0xcf>>;
-def BBS5_ZeroPage : InstBranchBit<"bbs5", Opcode<0xdf>>;
-def BBS6_ZeroPage : InstBranchBit<"bbs6", Opcode<0xef>>;
-def BBS7_ZeroPage : InstBranchBit<"bbs7", Opcode<0xff>>;
-
-/// Reset Memory Bit
-def RMB0_ZeroPage : Inst16<"rmb0", Opcode<0x07>, ZeroPage>;
-def RMB1_ZeroPage : Inst16<"rmb1", Opcode<0x17>, ZeroPage>;
-def RMB2_ZeroPage : Inst16<"rmb2", Opcode<0x27>, ZeroPage>;
-def RMB3_ZeroPage : Inst16<"rmb3", Opcode<0x37>, ZeroPage>;
-def RMB4_ZeroPage : Inst16<"rmb4", Opcode<0x47>, ZeroPage>;
-def RMB5_ZeroPage : Inst16<"rmb5", Opcode<0x57>, ZeroPage>;
-def RMB6_ZeroPage : Inst16<"rmb6", Opcode<0x67>, ZeroPage>;
-def RMB7_ZeroPage : Inst16<"rmb7", Opcode<0x77>, ZeroPage>;
-
-/// Set Memory Bit
-def SMB0_ZeroPage : Inst16<"smb0", Opcode<0x87>, ZeroPage>;
-def SMB1_ZeroPage : Inst16<"smb1", Opcode<0x97>, ZeroPage>;
-def SMB2_ZeroPage : Inst16<"smb2", Opcode<0xa7>, ZeroPage>;
-def SMB3_ZeroPage : Inst16<"smb3", Opcode<0xb7>, ZeroPage>;
-def SMB4_ZeroPage : Inst16<"smb4", Opcode<0xc7>, ZeroPage>;
-def SMB5_ZeroPage : Inst16<"smb5", Opcode<0xd7>, ZeroPage>;
-def SMB6_ZeroPage : Inst16<"smb6", Opcode<0xe7>, ZeroPage>;
-def SMB7_ZeroPage : Inst16<"smb7", Opcode<0xf7>, ZeroPage>;
+/// Bit manipulation/branching instructions
+def RMB_ZeroPage : InstBitModify<"rmb", Opcode<0x07>, ZeroPage>;
+def SMB_ZeroPage : InstBitModify<"smb", Opcode<0x87>, ZeroPage>;
+def BBR_ZeroPage : InstBitBranch<"bbr", Opcode<0x0f>>;
+def BBS_ZeroPage : InstBitBranch<"bbs", Opcode<0x8f>>;
 }
+
+/// Bit manipulation/branching instructions - aliases
+def BBR0_ZeroPage : InstAlias<"bbr0 $source, $location", (BBR_ZeroPage 0, addr8:$source, pcrel8at2:$location)>;
+def BBR1_ZeroPage : InstAlias<"bbr1 $source, $location", (BBR_ZeroPage 1, addr8:$source, pcrel8at2:$location)>;
+def BBR2_ZeroPage : InstAlias<"bbr2 $source, $location", (BBR_ZeroPage 2, addr8:$source, pcrel8at2:$location)>;
+def BBR3_ZeroPage : InstAlias<"bbr3 $source, $location", (BBR_ZeroPage 3, addr8:$source, pcrel8at2:$location)>;
+def BBR4_ZeroPage : InstAlias<"bbr4 $source, $location", (BBR_ZeroPage 4, addr8:$source, pcrel8at2:$location)>;
+def BBR5_ZeroPage : InstAlias<"bbr5 $source, $location", (BBR_ZeroPage 5, addr8:$source, pcrel8at2:$location)>;
+def BBR6_ZeroPage : InstAlias<"bbr6 $source, $location", (BBR_ZeroPage 6, addr8:$source, pcrel8at2:$location)>;
+def BBR7_ZeroPage : InstAlias<"bbr7 $source, $location", (BBR_ZeroPage 7, addr8:$source, pcrel8at2:$location)>;
+
+def BBS0_ZeroPage : InstAlias<"bbs0 $source, $location", (BBS_ZeroPage 0, addr8:$source, pcrel8at2:$location)>;
+def BBS1_ZeroPage : InstAlias<"bbs1 $source, $location", (BBS_ZeroPage 1, addr8:$source, pcrel8at2:$location)>;
+def BBS2_ZeroPage : InstAlias<"bbs2 $source, $location", (BBS_ZeroPage 2, addr8:$source, pcrel8at2:$location)>;
+def BBS3_ZeroPage : InstAlias<"bbs3 $source, $location", (BBS_ZeroPage 3, addr8:$source, pcrel8at2:$location)>;
+def BBS4_ZeroPage : InstAlias<"bbs4 $source, $location", (BBS_ZeroPage 4, addr8:$source, pcrel8at2:$location)>;
+def BBS5_ZeroPage : InstAlias<"bbs5 $source, $location", (BBS_ZeroPage 5, addr8:$source, pcrel8at2:$location)>;
+def BBS6_ZeroPage : InstAlias<"bbs6 $source, $location", (BBS_ZeroPage 6, addr8:$source, pcrel8at2:$location)>;
+def BBS7_ZeroPage : InstAlias<"bbs7 $source, $location", (BBS_ZeroPage 7, addr8:$source, pcrel8at2:$location)>;
+
+def RMB0_ZeroPage : InstAlias<"rmb0 $source", (RMB_ZeroPage 0, addr8:$source)>;
+def RMB1_ZeroPage : InstAlias<"rmb1 $source", (RMB_ZeroPage 1, addr8:$source)>;
+def RMB2_ZeroPage : InstAlias<"rmb2 $source", (RMB_ZeroPage 2, addr8:$source)>;
+def RMB3_ZeroPage : InstAlias<"rmb3 $source", (RMB_ZeroPage 3, addr8:$source)>;
+def RMB4_ZeroPage : InstAlias<"rmb4 $source", (RMB_ZeroPage 4, addr8:$source)>;
+def RMB5_ZeroPage : InstAlias<"rmb5 $source", (RMB_ZeroPage 5, addr8:$source)>;
+def RMB6_ZeroPage : InstAlias<"rmb6 $source", (RMB_ZeroPage 6, addr8:$source)>;
+def RMB7_ZeroPage : InstAlias<"rmb7 $source", (RMB_ZeroPage 7, addr8:$source)>;
+
+def SMB0_ZeroPage : InstAlias<"smb0 $source", (SMB_ZeroPage 0, addr8:$source)>;
+def SMB1_ZeroPage : InstAlias<"smb1 $source", (SMB_ZeroPage 1, addr8:$source)>;
+def SMB2_ZeroPage : InstAlias<"smb2 $source", (SMB_ZeroPage 2, addr8:$source)>;
+def SMB3_ZeroPage : InstAlias<"smb3 $source", (SMB_ZeroPage 3, addr8:$source)>;
+def SMB4_ZeroPage : InstAlias<"smb4 $source", (SMB_ZeroPage 4, addr8:$source)>;
+def SMB5_ZeroPage : InstAlias<"smb5 $source", (SMB_ZeroPage 5, addr8:$source)>;
+def SMB6_ZeroPage : InstAlias<"smb6 $source", (SMB_ZeroPage 6, addr8:$source)>;
+def SMB7_ZeroPage : InstAlias<"smb7 $source", (SMB_ZeroPage 7, addr8:$source)>;
 
 } // Predicates = [HasR65C02]
 
