@@ -22,6 +22,7 @@ MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
 
   PointerWidth = 16;
   PointerAlign = 8;
+  ShortAlign = 8;
   IntWidth = 16;
   IntAlign = 8;
   LongAlign = 8;
