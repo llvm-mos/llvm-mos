@@ -13,8 +13,8 @@
 #include "MOSRegisterInfo.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
-#include "MOSInstrCost.h"
 #include "MOSFrameLowering.h"
+#include "MOSInstrCost.h"
 #include "MOSInstrInfo.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSSubtarget.h"
@@ -734,8 +734,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
   }
 
-  SmallVector<std::pair<Register, MOSInstrCost>> RegsAndScores(RegScores.begin(),
-                                                      RegScores.end());
+  SmallVector<std::pair<Register, MOSInstrCost>> RegsAndScores(
+      RegScores.begin(), RegScores.end());
   sort(RegsAndScores, [&](const std::pair<Register, MOSInstrCost> &A,
                           const std::pair<Register, MOSInstrCost> &B) {
     auto AVal = A.second.value(CostMode);
@@ -812,7 +812,7 @@ void MOSRegisterInfo::reserveAllSubregs(BitVector *Reserved,
 }
 
 MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
-                              const MOSSubtarget &STI) const {
+                                       const MOSSubtarget &STI) const {
   if (DestReg == SrcReg)
     return MOSInstrCost();
 
@@ -843,7 +843,8 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       XYCopyCost = MOSInstrCost(1, 3) + MOSInstrCost(1, 4);
     } else {
       // May need to PHA/PLA around.
-      XYCopyCost = MOSInstrCost(2, 7) / 2 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
+      XYCopyCost = MOSInstrCost(2, 7) / 2 + copyCost(DestReg, MOS::A, STI) +
+                   copyCost(MOS::A, SrcReg, STI);
     }
     if (STI.hasHUC6280()) {
       // SXY can be used, but only if the source register is killed. As such,
@@ -862,7 +863,8 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
   }
   if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
     // May need to PHA/PLA around.
-    return MOSInstrCost(2, 7) / 2 + copyCost(DestReg, MOS::A, STI) + copyCost(MOS::A, SrcReg, STI);
+    return MOSInstrCost(2, 7) / 2 + copyCost(DestReg, MOS::A, STI) +
+           copyCost(MOS::A, SrcReg, STI);
   }
   if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
     return copyCost(MOS::RC0, MOS::RC1, STI) * 2;
@@ -872,9 +874,9 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
         getMatchingSuperReg(SrcReg, MOS::sublsb, &MOS::Anyi8RegClass);
     Register DestReg8 =
         getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
-    // BIT imm (65C02), BIT abs
-    const MOSInstrCost BitCost = STI.has65C02() ? MOSInstrCost(2, 2)
-                                  : MOSInstrCost(3, STI.hasHUC6280() ? 5 : 4);
+    // BIT imm (HUC6280), BIT abs
+    const MOSInstrCost BitCost =
+        STI.hasHUC6280() ? MOSInstrCost(2, 2) : MOSInstrCost(3, 4);
 
     if (SrcReg8) {
       SrcReg = SrcReg8;
@@ -895,19 +897,12 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
 
       if (StackRegClass.contains(SrcReg)) {
         // PHA; PLA; BNE; BIT setv; JMP; CLV
-        return MOSInstrCost(1, 3)
-          + MOSInstrCost(1, 4)
-          + MOSInstrCost(1, 3)
-          + BitCost
-          + MOSInstrCost(3, 3)
-          + MOSInstrCost(1, 3);
-      }          
+        return MOSInstrCost(1, 3) + MOSInstrCost(1, 4) + MOSInstrCost(1, 3) +
+               BitCost + MOSInstrCost(3, 3) + MOSInstrCost(1, 3);
+      }
       // [PHA]; COPY; BNE; BIT setv; JMP; CLV; [PLA]
-      return copyCost(MOS::A, SrcReg, STI)
-        + MOSInstrCost(1, 3)
-        + BitCost
-        + MOSInstrCost(3, 3)
-        + MOSInstrCost(1, 3);
+      return copyCost(MOS::A, SrcReg, STI) + MOSInstrCost(1, 3) + BitCost +
+             MOSInstrCost(3, 3) + MOSInstrCost(1, 3);
     }
     if (DestReg8) {
       DestReg = DestReg8;

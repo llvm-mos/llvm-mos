@@ -997,8 +997,8 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
     break;
   case MOS::V:
     if (Val) {
-      auto Instr = STI.has65C02()
-        ? Builder.buildInstr(MOS::BITImm, {MOS::V}, {})
+      auto Instr = STI.hasHUC6280()
+        ? Builder.buildInstr(MOS::BITImmHUC6280, {MOS::V}, {})
                       .addUse(MOS::A, RegState::Undef)
                       .addImm(0xFF)
         : Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
