@@ -583,6 +583,10 @@ def LDQ_AbsoluteX : Inst4202NegNeg16<"ldq", Opcode<0xbd>, AbsoluteX>;
 def DEQ_AbsoluteX : Inst4202NegNeg16<"deq", Opcode<0xde>, AbsoluteX>;
 def INQ_AbsoluteX : Inst4202NegNeg16<"inq", Opcode<0xfe>, AbsoluteX>;
 
+def LDQ_AbsoluteY : Inst4202NegNeg16<"ldq", Opcode<0xb9>, AbsoluteY>;
+def LDQ_IndirectIndexed : Inst4202NegNeg8<"ldq", Opcode<0xb1>, IndirectIndexed>;
+def LDQ_IndirectStackRelativeY : Inst4202NegNeg8<"ldq", Opcode<0xe2>, IndirectStackRelativeY>;
+
 } // Predicates = [Has45GS02]
 
 let Predicates = [HasHUC6280] in {
