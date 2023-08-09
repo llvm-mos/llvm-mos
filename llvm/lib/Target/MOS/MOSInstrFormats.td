@@ -578,8 +578,8 @@ class Inst4502FlatIndirectZ<string opcodestr, Opcode op = DefaultOpcode> :
   let AsmString = opcodestr # " " # OperandsStr;
 }
 
-/// 45GS02 base page quad instruction (NEG NEG prefix)
-class Inst4202BasePageQuad<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = ZeroPageX> :
+/// 45GS02: prefixes opcode with NEG NEG and expects an 8-bit operand
+class Inst4202NegNeg8<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = ZeroPageX> :
     Inst<opcodestr> {
   let Size = 4;
   bits<32> Inst;
@@ -595,22 +595,20 @@ class Inst4202BasePageQuad<string opcodestr, Opcode op = DefaultOpcode, Addressi
 }
 
 /// 45GS02 base page quad instruction (NEG NEG prefix)
-class Inst4202QuadAbsoluteX<string opcodestr, Opcode op = DefaultOpcode> :
+class Inst4202NegNeg16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = AbsoluteX> :
     Inst<opcodestr> {
   let Size = 5;
   bits<40> Inst;
-  bits<16> address;
+  bits<16> param;
 
   Opcode opcode = op;
-  let InOperandList = (ins addr16:$address);
-  string OperandsStr;
-  let OperandsStr = "$address , x";
+  let InOperandList = mode.InOperandList;
 
   let Inst{7-0} = 0x42;  // NEG
   let Inst{15-8} = 0x42; // NEG
   let Inst{23-16} = opcode.op;
-  let Inst{39-24} = address;
-  let AsmString = opcodestr # " " # OperandsStr;
+  let Inst{39-24} = param;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
 /// A five byte 45GS02 absolute quad "Q" register operation (NEG NEG prefix)

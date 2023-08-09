@@ -78,3 +78,8 @@
 	ldq $eaea, x				; CHECK: encoding: [0x42,0x42,0xbd,0xea,0xea]
 	deq $eaea, x				; CHECK: encoding: [0x42,0x42,0xde,0xea,0xea]
 	inq $eaea, x				; CHECK: encoding: [0x42,0x42,0xfe,0xea,0xea]
+
+	; Y indexed quad (NEG NEG prefix)
+	; b1 ldq (zp), y
+	; e2 ldq (zp, s), y
+	; b9 ldq abs16, y
