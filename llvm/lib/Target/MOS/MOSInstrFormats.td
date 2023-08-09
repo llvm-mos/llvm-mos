@@ -633,23 +633,21 @@ class Inst4502AbsQuad<string opcodestr, Opcode op = DefaultOpcode> :
 }
 
 /// A five byte 45GS02 Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix)
-class Inst4502IndirectQuad<string opcodestr, Opcode op = DefaultOpcode> :
+class Inst4502NegNegNop8<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = IndirectLong> :
     Inst<opcodestr> {
   let Size = 5;
   bits<40> Inst;
   bits<8> param;
 
   Opcode opcode = op;
-  let InOperandList = (ins addr8:$param);
-  string OperandsStr;
-  let OperandsStr = "[ $param ]";
+  let InOperandList = mode.InOperandList;
 
   let Inst{7-0} = 0x42;  // NEG
   let Inst{15-8} = 0x42; // NEG
   let Inst{23-16} = 0xea;// NOP
   let Inst{31-24} = opcode.op;
   let Inst{39-32} = param;
-  let AsmString = opcodestr # " " # OperandsStr;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
 /// A HuC6280 block instruction.

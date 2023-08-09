@@ -510,14 +510,14 @@ def CMP_FlatIndirectZeroPageZ : Inst4502Nop16<"cmp", Opcode<0xd2>, IndirectIndex
 def SBC_FlatIndirectZeroPageZ : Inst4502Nop16<"sbc", Opcode<0xf2>, IndirectIndexedLongZ>;
 
 /// Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix, 5 bytes)
-def ORQ_IndirectLong : Inst4502IndirectQuad<"orq", Opcode<0x12>>;
-def ANDQ_IndirectLong : Inst4502IndirectQuad<"andq", Opcode<0x32>>;
-def EORQ_IndirectLong : Inst4502IndirectQuad<"eorq", Opcode<0x52>>;
-def ADCQ_IndirectLong : Inst4502IndirectQuad<"adcq", Opcode<0x72>>;
-def STQ_IndirectLong : Inst4502IndirectQuad<"stq", Opcode<0x92>>;
-def LDQ_IndirectLong : Inst4502IndirectQuad<"ldq", Opcode<0xb2>>;
-def CPQ_IndirectLong : Inst4502IndirectQuad<"cpq", Opcode<0xd2>>;
-def SBCQ_IndirectLong : Inst4502IndirectQuad<"sbcq", Opcode<0xf2>>;
+def ORQ_IndirectLong : Inst4502NegNegNop8<"orq", Opcode<0x12>, IndirectLong>;
+def ANDQ_IndirectLong : Inst4502NegNegNop8<"andq", Opcode<0x32>, IndirectLong>;
+def EORQ_IndirectLong : Inst4502NegNegNop8<"eorq", Opcode<0x52>, IndirectLong>;
+def ADCQ_IndirectLong : Inst4502NegNegNop8<"adcq", Opcode<0x72>, IndirectLong>;
+def STQ_IndirectLong : Inst4502NegNegNop8<"stq", Opcode<0x92>, IndirectLong>;
+def LDQ_IndirectLong : Inst4502NegNegNop8<"ldq", Opcode<0xb2>, IndirectLong>;
+def CPQ_IndirectLong : Inst4502NegNegNop8<"cpq", Opcode<0xd2>, IndirectLong>;
+def SBCQ_IndirectLong : Inst4502NegNegNop8<"sbcq", Opcode<0xf2>, IndirectLong>;
 
 /// Q pseudo register quad mode, e.g. `orq $eaea` (NEG NEG prefix, 5 bytes)
 def ORQ_Absolute : Inst4202NegNeg16<"orq", Opcode<0x0d>, Absolute>;
