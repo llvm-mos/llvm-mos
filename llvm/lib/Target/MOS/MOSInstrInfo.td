@@ -498,17 +498,18 @@ def : MnemonicAlias<"eom", "nop">;
 
 let Predicates = [Has45GS02] in {
 
-/// Flat memory addressing mode (zp pointer treated as 32-bit), e.g. `ora [$ea], z` (NOP prefix)
-def ORA_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"ora", Opcode<0x12>>;
-def AND_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"and", Opcode<0x32>>;
-def EOR_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"eor", Opcode<0x52>>;
-def ADC_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"adc", Opcode<0x72>>;
-def STA_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"sta", Opcode<0x92>>;
-def LDA_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"lda", Opcode<0xb2>>;
-def CMP_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"cmp", Opcode<0xd2>>;
-def SBC_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"sbc", Opcode<0xf2>>;
+/// Flat memory addressing mode (zp pointer treated as 32-bit), e.g. `ora [$ea], z`
+/// (NOP prefix, 3 bytes)
+def ORA_FlatIndirectZeroPageZ : Inst4502Nop16<"ora", Opcode<0x12>, IndirectIndexedLongZ>;
+def AND_FlatIndirectZeroPageZ : Inst4502Nop16<"and", Opcode<0x32>, IndirectIndexedLongZ>;
+def EOR_FlatIndirectZeroPageZ : Inst4502Nop16<"eor", Opcode<0x52>, IndirectIndexedLongZ>;
+def ADC_FlatIndirectZeroPageZ : Inst4502Nop16<"adc", Opcode<0x72>, IndirectIndexedLongZ>;
+def STA_FlatIndirectZeroPageZ : Inst4502Nop16<"sta", Opcode<0x92>, IndirectIndexedLongZ>;
+def LDA_FlatIndirectZeroPageZ : Inst4502Nop16<"lda", Opcode<0xb2>, IndirectIndexedLongZ>;
+def CMP_FlatIndirectZeroPageZ : Inst4502Nop16<"cmp", Opcode<0xd2>, IndirectIndexedLongZ>;
+def SBC_FlatIndirectZeroPageZ : Inst4502Nop16<"sbc", Opcode<0xf2>, IndirectIndexedLongZ>;
 
-/// Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix)
+/// Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix, 5 bytes)
 def ORQ_IndirectLong : Inst4502IndirectQuad<"orq", Opcode<0x12>>;
 def ANDQ_IndirectLong : Inst4502IndirectQuad<"andq", Opcode<0x32>>;
 def EORQ_IndirectLong : Inst4502IndirectQuad<"eorq", Opcode<0x52>>;

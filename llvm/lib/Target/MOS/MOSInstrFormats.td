@@ -372,6 +372,11 @@ def IndirectIndexedLong : AddressingMode {
   let InOperandList = (ins addr8:$param);
 }
 
+def IndirectIndexedLongZ : AddressingMode {
+  let OperandsStr = "[ $param ] , z";
+  let InOperandList = (ins addr8:$param);
+}
+
 def IndirectZeroPageZ : AddressingMode {
   let OperandsStr = "( $param ) , z";
   let InOperandList = (ins addr8:$param);
@@ -559,23 +564,20 @@ class InstBitModify<string opcodestr, Opcode op = DefaultOpcode,
   let AsmString = opcodestr # " " # OperandsStr;
 }
 
-/// Three byte 45GS02 long, indirect and indexed address mode instruction (NOP prefix)
-/// By preceding the opcode with NOP, the zp address is interpreted as a 32 bit pointer
-class Inst4502FlatIndirectZ<string opcodestr, Opcode op = DefaultOpcode> :
+/// Three byte 45GS02 NOP prefixed command with 8-bit operand (flat memory access)
+class Inst4502Nop16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = IndirectIndexedLongZ> :
     Inst<opcodestr> {
   let Size = 3;
   bits<24> Inst;
-  bits<8> address;
+  bits<8> param;
 
   Opcode opcode = op;
-  let InOperandList = (ins addr8:$address);
-  string OperandsStr;
-  let OperandsStr = "[ $address ] , z";
+  let InOperandList = mode.InOperandList;
 
   let Inst{7-0} = 0xea; // NOP
   let Inst{15-8} = opcode.op;
-  let Inst{23-16} = address;
-  let AsmString = opcodestr # " " # OperandsStr;
+  let Inst{23-16} = param;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
 /// 45GS02: prefixes opcode with NEG NEG and expects an 8-bit operand
