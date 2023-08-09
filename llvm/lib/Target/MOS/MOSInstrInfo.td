@@ -498,6 +498,22 @@ def : MnemonicAlias<"eom", "nop">;
 
 let Predicates = [Has45GS02] in {
 
+def ORQ_Absolute : Inst4502AbsQuad<"orq", Opcode<0x0d>>;
+def ASLQ_Absolute : Inst4502AbsQuad<"aslq", Opcode<0x0e>>;
+def BITQ_Absolute : Inst4502AbsQuad<"bitq", Opcode<0x2c>>;
+def ANDQ_Absolute : Inst4502AbsQuad<"andq", Opcode<0x2d>>;
+def ROLQ_Absolute : Inst4502AbsQuad<"rolq", Opcode<0x2e>>;
+def EORQ_Absolute : Inst4502AbsQuad<"eorq", Opcode<0x4d>>;
+def LSRQ_Absolute : Inst4502AbsQuad<"lsrq", Opcode<0x4e>>;
+def ADCQ_Absolute : Inst4502AbsQuad<"adcq", Opcode<0x6d>>;
+def RORQ_Absolute : Inst4502AbsQuad<"rorq", Opcode<0x6e>>;
+def STQ_Absolute : Inst4502AbsQuad<"stq", Opcode<0x8d>>;
+def LDQ_Absolute : Inst4502AbsQuad<"ldq", Opcode<0xad>>;
+def CPQ_Absolute : Inst4502AbsQuad<"cpq", Opcode<0xcd>>;
+def DEQ_Absolute : Inst4502AbsQuad<"deq", Opcode<0xce>>;
+def SBCQ_Absolute : Inst4502AbsQuad<"sbcq", Opcode<0xed>>;
+def INQ_Absolute : Inst4502AbsQuad<"inq", Opcode<0xee>>;
+
 } // Predicates = [Has45GS02]
 
 let Predicates = [HasHUC6280] in {
