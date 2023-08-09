@@ -510,9 +510,9 @@ def SBC_FlatIndirectZeroPageZ : Inst4502FlatIndirectZ<"sbc", Opcode<0xf2>>;
 
 /// Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix)
 def ORQ_Indirect : Inst4502IndirectQuad<"orq", Opcode<0x12>>;
-def ANDQ_Indirect : Inst4502IndirectQuad<"and", Opcode<0x32>>;
-def EORQ_Indirect : Inst4502IndirectQuad<"eor", Opcode<0x52>>;
-def ADCQ_Indirect : Inst4502IndirectQuad<"adc", Opcode<0x72>>;
+def ANDQ_Indirect : Inst4502IndirectQuad<"andq", Opcode<0x32>>;
+def EORQ_Indirect : Inst4502IndirectQuad<"eorq", Opcode<0x52>>;
+def ADCQ_Indirect : Inst4502IndirectQuad<"adcq", Opcode<0x72>>;
 def STQ_Indirect : Inst4502IndirectQuad<"stq", Opcode<0x92>>;
 def LDQ_Indirect : Inst4502IndirectQuad<"ldq", Opcode<0xb2>>;
 def CPQ_Indirect : Inst4502IndirectQuad<"cpq", Opcode<0xd2>>;

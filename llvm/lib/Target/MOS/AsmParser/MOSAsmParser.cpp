@@ -637,8 +637,8 @@ public:
     mnemonic [(]expr[),xy]*
     mnemonic a
 
-    65816 only:
-    mnemonic [(]expr[),sxy]*
+    65816 and 45GS02 only:
+    mnemonic [(]expr[),sxyz]*
     mnemonic \[ expr \]
 
     Any constant may be prefixed by a $, indicating that it is a hex constant.
@@ -669,7 +669,8 @@ public:
           continue;
         }
       }
-      if (STI.hasFeature(MOS::FeatureW65816) &&
+      if ((STI.hasFeature(MOS::FeatureW65816) ||
+           STI.hasFeature(MOS::Feature45GS02)) &&
           getLexer().is(AsmToken::LBrac)) {
         eatThatToken(Operands);
         if (!tryParseExpr(Operands, "expression expected after left bracket")) {
