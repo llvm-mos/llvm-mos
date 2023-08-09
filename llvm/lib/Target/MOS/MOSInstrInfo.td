@@ -535,7 +535,7 @@ def DEQ_Absolute : Inst4502AbsQuad<"deq", Opcode<0xce>>;
 def SBCQ_Absolute : Inst4502AbsQuad<"sbcq", Opcode<0xed>>;
 def INQ_Absolute : Inst4502AbsQuad<"inq", Opcode<0xee>>;
 
-/// Base page quad instructions, e.g. `orq $ea` (NEG NEG prefix)
+/// Base page quad instructions, e.g. `orq $ea` (NEG NEG prefix, 4 bytes)
 def ORQ_BasePage : Inst4502BasepageQuad<"orq", Opcode<0x05>>;
 def ASLQ_BasePage : Inst4502BasepageQuad<"aslq", Opcode<0x06>>;
 def BITQ_BasePage : Inst4502BasepageQuad<"bitq", Opcode<0x24>>;
@@ -552,6 +552,16 @@ def CPQ_BasePage : Inst4502BasepageQuad<"cpq", Opcode<0xc5>>;
 def DEQ_BasePage : Inst4502BasepageQuad<"deq", Opcode<0xc6>>;
 def SBCQ_BasePage : Inst4502BasepageQuad<"sbcq", Opcode<0xe5>>;
 def INQ_BasePage : Inst4502BasepageQuad<"inq", Opcode<0xe6>>;
+
+/// Indirect quad instructions e.g. `orq ($eq)` (NEG NEG prefix, 4 bytes)
+def ORQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"orq", Opcode<0x12>>;
+def ANDQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"andq", Opcode<0x32>>;
+def EORQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"eorq", Opcode<0x52>>;
+def ADCQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"adcq", Opcode<0x72>>;
+def STQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"stq", Opcode<0x92>>;
+def LDQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"ldq", Opcode<0xb2>>;
+def CPQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"cpq", Opcode<0xd2>>;
+def SBCQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"sbcq", Opcode<0xf2>>;
 
 } // Predicates = [Has45GS02]
 

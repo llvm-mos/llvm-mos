@@ -40,6 +40,16 @@
 	cpq [$ab]					; CHECK: encoding: [0x42,0x42,0xea,0xd2,0xab]
 	sbcq [$ab]					; CHECK: encoding: [0x42,0x42,0xea,0xf2,0xab]
 
+	; Indirect quad instructions (32-bit pointer, NEG NEG prefix)
+	orq ($ab)					; CHECK: encoding: [0x42,0x42,0x12,0xab]
+	andq ($ab)					; CHECK: encoding: [0x42,0x42,0x32,0xab]
+	eorq ($ab)					; CHECK: encoding: [0x42,0x42,0x52,0xab]
+	adcq ($ab)					; CHECK: encoding: [0x42,0x42,0x72,0xab]
+	stq ($ab)					; CHECK: encoding: [0x42,0x42,0x92,0xab]
+	ldq ($ab)					; CHECK: encoding: [0x42,0x42,0xb2,0xab]
+	cpq ($ab)					; CHECK: encoding: [0x42,0x42,0xd2,0xab]
+	sbcq ($ab)					; CHECK: encoding: [0x42,0x42,0xf2,0xab]
+
 	; Flat memory access where operand is interpreted as a 32-bit address
 	ora	[$ab], z				; CHECK: encoding: [0xea,0x12,0xab]
 	and	[$ab], z				; CHECK: encoding: [0xea,0x32,0xab]
@@ -49,3 +59,12 @@
 	lda	[$ab], z				; CHECK: encoding: [0xea,0xb2,0xab]
 	cmp	[$ab], z				; CHECK: encoding: [0xea,0xd2,0xab]
 	sbc	[$ab], z				; CHECK: encoding: [0xea,0xf2,0xab]
+
+	; 16 aslq zp, x
+	; 36 rolq zp, x
+	; 54 asrq zp, x
+	; 56 lsrq zp, x
+	; 76 rorq zp, x
+	; b5 ldq zp, x
+	; d6 deq zp, x
+	; f6 inq zp, x
