@@ -559,7 +559,26 @@ class InstBitModify<string opcodestr, Opcode op = DefaultOpcode,
   let AsmString = opcodestr # " " # OperandsStr;
 }
 
-/// A five byte 45GS02 absolute quad "Q" register operation (prefixes opcode with NEG NEG)
+/// A three byte 45GS02 long, indirect and indexed address mode instruction (NOP prefix)
+/// By preceding the opcode with NOP, the zp address is interpreted as a 32 bit pointer
+class Inst4502FlatIndirectZ<string opcodestr, Opcode op = DefaultOpcode> :
+    Inst<opcodestr> {
+  let Size = 3;
+  bits<24> Inst;
+  bits<8> address;
+
+  Opcode opcode = op;
+  let InOperandList = (ins addr8:$address);
+  string OperandsStr;
+  let OperandsStr = "[ $address ] , z";
+
+  let Inst{7-0} = 0xea; // NOP
+  let Inst{15-8} = opcode.op;
+  let Inst{23-16} = address;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
+/// A five byte 45GS02 absolute quad "Q" register operation (NEG NEG prefix)
 class Inst4502AbsQuad<string opcodestr, Opcode op = DefaultOpcode> :
     Inst<opcodestr> {
   let Size = 5;
@@ -575,6 +594,26 @@ class Inst4502AbsQuad<string opcodestr, Opcode op = DefaultOpcode> :
   let Inst{15-8} = 0x42; // NEG
   let Inst{23-16} = opcode.op;
   let Inst{39-24} = address;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
+/// A five byte 45GS02 indirect quad "Q" register operation (NEG NEG NOP prefix)
+class Inst4502IndirectQuad<string opcodestr, Opcode op = DefaultOpcode> :
+    Inst<opcodestr> {
+  let Size = 5;
+  bits<40> Inst;
+  bits<8> param;
+
+  Opcode opcode = op;
+  let InOperandList = (ins addr8:$param);
+  string OperandsStr;
+  let OperandsStr = "[ $param ]";
+
+  let Inst{7-0} = 0x42;  // NEG
+  let Inst{15-8} = 0x42; // NEG
+  let Inst{23-16} = 0xea;// NOP
+  let Inst{31-24} = opcode.op;
+  let Inst{39-32} = param;
   let AsmString = opcodestr # " " # OperandsStr;
 }
 
