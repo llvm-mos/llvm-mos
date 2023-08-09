@@ -524,7 +524,8 @@ enum : unsigned {
   EF_MOS_ARCH_HUC6280 = 0x00000800,  // HuC6280 instructions
   EF_MOS_ARCH_65DTV02 = 0x00001000,  // C64DTV 6502 instructions
   EF_MOS_ARCH_4510 = 0x00002000,  // CSG 4510 instructions
-  EF_MOS_ARCH_SWEET16 = 0x00010000  // SWEET16 instructions
+  EF_MOS_ARCH_SWEET16 = 0x00010000,  // SWEET16 instructions
+  EF_MOS_ARCH_45GS02 = 0x00020000  // 45GS02 instructions
 };
 
 // ELF Relocation types for AVR

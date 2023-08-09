@@ -82,6 +82,11 @@ def Has4510 : Predicate<"Subtarget->has4510()">,
   let PredicateName = "Feature4510";
 }
 
+def Has45GS02 : Predicate<"Subtarget->has45GS02()">,
+                AssemblerPredicate<(all_of Feature45GS02), "45GS02"> {
+  let PredicateName = "Feature45GS02";
+}
+
 /// These instruction format definitions exist, thanks to Neil Parker's
 /// analysis of the 65xx instruction set, at:
 /// http://nparker.llx.com/a2/opcodes.html

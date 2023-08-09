@@ -496,6 +496,10 @@ def : MnemonicAlias<"eom", "nop">;
 
 } // Predicates = [Has4510]
 
+let Predicates = [Has45GS02] in {
+
+} // Predicates = [Has45GS02]
+
 let Predicates = [HasHUC6280] in {
 
 let DecoderNamespace = "huc6280" in {

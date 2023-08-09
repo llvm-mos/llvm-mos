@@ -135,6 +135,7 @@ private:
   bool HasSWEET16Insns = false;
   bool Has65DTV02Insns = false;
   bool Has4510Insns = false;
+  bool Has45GS02Insns = false;
 
   bool LongRegisterNames = false;
   bool StaticStack = false;
