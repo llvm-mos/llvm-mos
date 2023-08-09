@@ -1,5 +1,5 @@
 ; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mos45gs02 < %s | FileCheck %s
-	; Absolute quad instructions
+	; Absolute quad instructions (NEG NEG prefix)
 	orq $eaea                   ; CHECK: encoding: [0x42,0x42,0x0d,0xea,0xea]
 	aslq $eaea                  ; CHECK: encoding: [0x42,0x42,0x0e,0xea,0xea]
 	bitq $eaea                  ; CHECK: encoding: [0x42,0x42,0x2c,0xea,0xea]
@@ -17,14 +17,6 @@
 	inq	$eaea                   ; CHECK: encoding: [0x42,0x42,0xee,0xea,0xea]
 
 	; Base page quad instructions (NEG NEG prefix)
-	; 05 orq zp           06 aslq zp
-	; 24 bitq zp          25 andq zp          26 rolq zp
-	; 44 asrq zp          45 eorq zp          46 lsrq zp
-	; 65 adcq zp          66 rorq zp
-	; 85 stq zp
-	; a5 ldq zp
-	; c5 cpq zp           c6 deq zp
-	; e5 sbcq zp          e6 inq zp
 	orq $ea                   ; CHECK: encoding: [0x42,0x42,0x05,0xea]
 	aslq $ea                  ; CHECK: encoding: [0x42,0x42,0x06,0xea]
 	bitq $ea                  ; CHECK: encoding: [0x42,0x42,0x24,0xea]
@@ -52,7 +44,7 @@
 	sbcq [$ab]					; HECK: encoding: [0x42,0x42,0xea,0xf2,0xab]
 
 	; Flat memory access where operand is interpreted as a 32-bit address
-	ora	[$ab] , z				; HECK: encoding: [0xea,0x12,0xab]
+	; ora	[$ab] , z				; HECK: encoding: [0xea,0x12,0xab]
 	; and	[$ab],z				; HECK: encoding: [0xea,0x32,0xab]
 	; eor	[$ab],z				; HECK: encoding: [0xea,0x52,0xab]
 	; adc	[$ab],z				; HECK: encoding: [0xea,0x72,0xab]
