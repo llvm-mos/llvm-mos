@@ -518,22 +518,22 @@ def LDQ_IndirectLong : Inst4502IndirectQuad<"ldq", Opcode<0xb2>>;
 def CPQ_IndirectLong : Inst4502IndirectQuad<"cpq", Opcode<0xd2>>;
 def SBCQ_IndirectLong : Inst4502IndirectQuad<"sbcq", Opcode<0xf2>>;
 
-/// Q pseudo register quad mode, e.g. `orq $eaea` (NEG NEG prefix)
-def ORQ_Absolute : Inst4502AbsQuad<"orq", Opcode<0x0d>>;
-def ASLQ_Absolute : Inst4502AbsQuad<"aslq", Opcode<0x0e>>;
-def BITQ_Absolute : Inst4502AbsQuad<"bitq", Opcode<0x2c>>;
-def ANDQ_Absolute : Inst4502AbsQuad<"andq", Opcode<0x2d>>;
-def ROLQ_Absolute : Inst4502AbsQuad<"rolq", Opcode<0x2e>>;
-def EORQ_Absolute : Inst4502AbsQuad<"eorq", Opcode<0x4d>>;
-def LSRQ_Absolute : Inst4502AbsQuad<"lsrq", Opcode<0x4e>>;
-def ADCQ_Absolute : Inst4502AbsQuad<"adcq", Opcode<0x6d>>;
-def RORQ_Absolute : Inst4502AbsQuad<"rorq", Opcode<0x6e>>;
-def STQ_Absolute : Inst4502AbsQuad<"stq", Opcode<0x8d>>;
-def LDQ_Absolute : Inst4502AbsQuad<"ldq", Opcode<0xad>>;
-def CPQ_Absolute : Inst4502AbsQuad<"cpq", Opcode<0xcd>>;
-def DEQ_Absolute : Inst4502AbsQuad<"deq", Opcode<0xce>>;
-def SBCQ_Absolute : Inst4502AbsQuad<"sbcq", Opcode<0xed>>;
-def INQ_Absolute : Inst4502AbsQuad<"inq", Opcode<0xee>>;
+/// Q pseudo register quad mode, e.g. `orq $eaea` (NEG NEG prefix, 5 bytes)
+def ORQ_Absolute : Inst4202NegNeg16<"orq", Opcode<0x0d>, Absolute>;
+def ASLQ_Absolute : Inst4202NegNeg16<"aslq", Opcode<0x0e>, Absolute>;
+def BITQ_Absolute : Inst4202NegNeg16<"bitq", Opcode<0x2c>, Absolute>;
+def ANDQ_Absolute : Inst4202NegNeg16<"andq", Opcode<0x2d>, Absolute>;
+def ROLQ_Absolute : Inst4202NegNeg16<"rolq", Opcode<0x2e>, Absolute>;
+def EORQ_Absolute : Inst4202NegNeg16<"eorq", Opcode<0x4d>, Absolute>;
+def LSRQ_Absolute : Inst4202NegNeg16<"lsrq", Opcode<0x4e>, Absolute>;
+def ADCQ_Absolute : Inst4202NegNeg16<"adcq", Opcode<0x6d>, Absolute>;
+def RORQ_Absolute : Inst4202NegNeg16<"rorq", Opcode<0x6e>, Absolute>;
+def STQ_Absolute : Inst4202NegNeg16<"stq", Opcode<0x8d>, Absolute>;
+def LDQ_Absolute : Inst4202NegNeg16<"ldq", Opcode<0xad>, Absolute>;
+def CPQ_Absolute : Inst4202NegNeg16<"cpq", Opcode<0xcd>, Absolute>;
+def DEQ_Absolute : Inst4202NegNeg16<"deq", Opcode<0xce>, Absolute>;
+def SBCQ_Absolute : Inst4202NegNeg16<"sbcq", Opcode<0xed>, Absolute>;
+def INQ_Absolute : Inst4202NegNeg16<"inq", Opcode<0xee>, Absolute>;
 
 /// Base page quad instructions, e.g. `orq $ea` (NEG NEG prefix, 4 bytes)
 def ORQ_BasePage : Inst4202NegNeg8<"orq", Opcode<0x05>, ZeroPage>;
