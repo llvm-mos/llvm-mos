@@ -536,22 +536,22 @@ def SBCQ_Absolute : Inst4502AbsQuad<"sbcq", Opcode<0xed>>;
 def INQ_Absolute : Inst4502AbsQuad<"inq", Opcode<0xee>>;
 
 /// Base page quad instructions, e.g. `orq $ea` (NEG NEG prefix, 4 bytes)
-def ORQ_BasePage : Inst4502BasepageQuad<"orq", Opcode<0x05>>;
-def ASLQ_BasePage : Inst4502BasepageQuad<"aslq", Opcode<0x06>>;
-def BITQ_BasePage : Inst4502BasepageQuad<"bitq", Opcode<0x24>>;
-def ANDQ_BasePage : Inst4502BasepageQuad<"andq", Opcode<0x25>>;
-def ROLQ_BasePage : Inst4502BasepageQuad<"rolq", Opcode<0x26>>;
-def ASRQ_BasePage : Inst4502BasepageQuad<"asrq", Opcode<0x44>>;
-def EORQ_BasePage : Inst4502BasepageQuad<"eorq", Opcode<0x45>>;
-def LSRQ_BasePage : Inst4502BasepageQuad<"lsrq", Opcode<0x46>>;
-def ADCQ_BasePage : Inst4502BasepageQuad<"adcq", Opcode<0x65>>;
-def RORQ_BasePage : Inst4502BasepageQuad<"rorq", Opcode<0x66>>;
-def STQ_BasePage : Inst4502BasepageQuad<"stq", Opcode<0x85>>;
-def LDQ_BasePage : Inst4502BasepageQuad<"ldq", Opcode<0xa5>>;
-def CPQ_BasePage : Inst4502BasepageQuad<"cpq", Opcode<0xc5>>;
-def DEQ_BasePage : Inst4502BasepageQuad<"deq", Opcode<0xc6>>;
-def SBCQ_BasePage : Inst4502BasepageQuad<"sbcq", Opcode<0xe5>>;
-def INQ_BasePage : Inst4502BasepageQuad<"inq", Opcode<0xe6>>;
+def ORQ_BasePage : Inst4502Quad4<"orq", Opcode<0x05>, ZeroPage>;
+def ASLQ_BasePage : Inst4502Quad4<"aslq", Opcode<0x06>, ZeroPage>;
+def BITQ_BasePage : Inst4502Quad4<"bitq", Opcode<0x24>, ZeroPage>;
+def ANDQ_BasePage : Inst4502Quad4<"andq", Opcode<0x25>, ZeroPage>;
+def ROLQ_BasePage : Inst4502Quad4<"rolq", Opcode<0x26>, ZeroPage>;
+def ASRQ_BasePage : Inst4502Quad4<"asrq", Opcode<0x44>, ZeroPage>;
+def EORQ_BasePage : Inst4502Quad4<"eorq", Opcode<0x45>, ZeroPage>;
+def LSRQ_BasePage : Inst4502Quad4<"lsrq", Opcode<0x46>, ZeroPage>;
+def ADCQ_BasePage : Inst4502Quad4<"adcq", Opcode<0x65>, ZeroPage>;
+def RORQ_BasePage : Inst4502Quad4<"rorq", Opcode<0x66>, ZeroPage>;
+def STQ_BasePage : Inst4502Quad4<"stq", Opcode<0x85>, ZeroPage>;
+def LDQ_BasePage : Inst4502Quad4<"ldq", Opcode<0xa5>, ZeroPage>;
+def CPQ_BasePage : Inst4502Quad4<"cpq", Opcode<0xc5>, ZeroPage>;
+def DEQ_BasePage : Inst4502Quad4<"deq", Opcode<0xc6>, ZeroPage>;
+def SBCQ_BasePage : Inst4502Quad4<"sbcq", Opcode<0xe5>, ZeroPage>;
+def INQ_BasePage : Inst4502Quad4<"inq", Opcode<0xe6>, ZeroPage>;
 
 /// Indirect quad instructions e.g. `orq ($eq)` (NEG NEG prefix, 4 bytes)
 def ORQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"orq", Opcode<0x12>>;

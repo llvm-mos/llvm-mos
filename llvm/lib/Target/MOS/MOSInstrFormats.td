@@ -579,22 +579,18 @@ class Inst4502FlatIndirectZ<string opcodestr, Opcode op = DefaultOpcode> :
 }
 
 /// A four byte 45GS02 base page quad instruction (NEG NEG prefix)
-class Inst4502BasepageQuad<string opcodestr, Opcode op = DefaultOpcode> :
+class Inst4502Quad4<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = ZeroPage> :
     Inst<opcodestr> {
   let Size = 4;
+  bits<8> param;
   bits<32> Inst;
-  bits<8> address;
-
+  let InOperandList = mode.InOperandList;
   Opcode opcode = op;
-  let InOperandList = (ins addr8:$address);
-  string OperandsStr;
-  let OperandsStr = "$address";
-
   let Inst{7-0} = 0x42;  // NEG
   let Inst{15-8} = 0x42; // NEG
   let Inst{23-16} = opcode.op;
-  let Inst{31-24} = address;
-  let AsmString = opcodestr # " " # OperandsStr;
+  let Inst{31-24} = param;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
 /// 45GS02 base page quad instruction (NEG NEG prefix)
