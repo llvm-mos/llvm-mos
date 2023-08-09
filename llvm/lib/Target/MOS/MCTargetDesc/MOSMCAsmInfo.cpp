@@ -37,6 +37,8 @@ unsigned MOSMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
     return 7;
   if (STI->hasFeature(MOS::FeatureW65816))
     return 4;
+  if (STI->hasFeature(MOS::Feature45GS02))
+    return 5;
   return 3;
 }
 
