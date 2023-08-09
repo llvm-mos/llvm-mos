@@ -613,25 +613,6 @@ class Inst4202NegNeg16<string opcodestr, Opcode op = DefaultOpcode, AddressingMo
   let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
-/// A five byte 45GS02 absolute quad "Q" register operation (NEG NEG prefix)
-class Inst4502AbsQuad<string opcodestr, Opcode op = DefaultOpcode> :
-    Inst<opcodestr> {
-  let Size = 5;
-  bits<40> Inst;
-  bits<16> address;
-
-  Opcode opcode = op;
-  let InOperandList = (ins addr16:$address);
-  string OperandsStr;
-  let OperandsStr = "$address";
-
-  let Inst{7-0} = 0x42;  // NEG
-  let Inst{15-8} = 0x42; // NEG
-  let Inst{23-16} = opcode.op;
-  let Inst{39-24} = address;
-  let AsmString = opcodestr # " " # OperandsStr;
-}
-
 /// A five byte 45GS02 Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix)
 class Inst4502NegNegNop8<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = IndirectLong> :
     Inst<opcodestr> {
