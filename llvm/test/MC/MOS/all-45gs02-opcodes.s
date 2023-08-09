@@ -60,11 +60,12 @@
 	cmp	[$ab], z				; CHECK: encoding: [0xea,0xd2,0xab]
 	sbc	[$ab], z				; CHECK: encoding: [0xea,0xf2,0xab]
 
-	; 16 aslq zp, x
-	; 36 rolq zp, x
-	; 54 asrq zp, x
-	; 56 lsrq zp, x
-	; 76 rorq zp, x
-	; b5 ldq zp, x
-	; d6 deq zp, x
-	; f6 inq zp, x
+	; Base page quad, X indexed (NEG NEG prefix)
+	aslq $ab, x					; CHECK: encoding: [0x42,0x42,0x16,0xab]
+	rolq $ab, x					; CHECK: encoding: [0x42,0x42,0x36,0xab]
+	asrq $ab, x					; CHECK: encoding: [0x42,0x42,0x54,0xab]
+	lsrq $ab, x					; CHECK: encoding: [0x42,0x42,0x56,0xab]
+	rorq $ab, x					; CHECK: encoding: [0x42,0x42,0x76,0xab]
+	ldq $ab, x					; CHECK: encoding: [0x42,0x42,0xb5,0xab]
+	deq $ab, x					; CHECK: encoding: [0x42,0x42,0xd6,0xab]
+	inq $ab, x					; CHECK: encoding: [0x42,0x42,0xf6,0xab]

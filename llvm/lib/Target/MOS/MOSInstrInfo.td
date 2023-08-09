@@ -563,6 +563,16 @@ def LDQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"ldq", Opcode<0xb2>>;
 def CPQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"cpq", Opcode<0xd2>>;
 def SBCQ_IndirectBasePage : Inst4502IndirectQuadBasePage<"sbcq", Opcode<0xf2>>;
 
+/// BasePage quad indexed instructions e.g. `orq $ea, x` (NEG NEG prefix, 4 bytes)
+def ASLQ_BasePageX : Inst4202BasePageQuadX<"aslq", Opcode<0x16>>;
+def ROLQ_BasePageX : Inst4202BasePageQuadX<"rolq", Opcode<0x36>>;
+def ASRQ_BasePageX : Inst4202BasePageQuadX<"asrq", Opcode<0x54>>;
+def LSRQ_BasePageX : Inst4202BasePageQuadX<"lsrq", Opcode<0x56>>;
+def RORQ_BasePageX : Inst4202BasePageQuadX<"rorq", Opcode<0x76>>;
+def LDQ_BasePageX : Inst4202BasePageQuadX<"ldq", Opcode<0xb5>>;
+def DEQ_BasePageX : Inst4202BasePageQuadX<"deq", Opcode<0xd6>>;
+def INQ_BasePageX : Inst4202BasePageQuadX<"inq", Opcode<0xf6>>;
+
 } // Predicates = [Has45GS02]
 
 let Predicates = [HasHUC6280] in {

@@ -597,6 +597,25 @@ class Inst4502BasepageQuad<string opcodestr, Opcode op = DefaultOpcode> :
   let AsmString = opcodestr # " " # OperandsStr;
 }
 
+/// 45GS02 base page quad instruction (NEG NEG prefix)
+class Inst4202BasePageQuadX<string opcodestr, Opcode op = DefaultOpcode> :
+    Inst<opcodestr> {
+  let Size = 4;
+  bits<32> Inst;
+  bits<8> address;
+
+  Opcode opcode = op;
+  let InOperandList = (ins addr8:$address);
+  string OperandsStr;
+  let OperandsStr = "$address , x";
+
+  let Inst{7-0} = 0x42;  // NEG
+  let Inst{15-8} = 0x42; // NEG
+  let Inst{23-16} = opcode.op;
+  let Inst{31-24} = address;
+  let AsmString = opcodestr # " " # OperandsStr;
+}
+
 /// A four byte 45GS02 indirect quad instruction (NEG NEG prefix)
 class Inst4502IndirectQuadBasePage<string opcodestr, Opcode op = DefaultOpcode> :
     Inst<opcodestr> {
