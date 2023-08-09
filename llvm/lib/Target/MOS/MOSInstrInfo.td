@@ -553,9 +553,6 @@ def DEQ_BasePage : Inst4502BasepageQuad<"deq", Opcode<0xc6>>;
 def SBCQ_BasePage : Inst4502BasepageQuad<"sbcq", Opcode<0xe5>>;
 def INQ_BasePage : Inst4502BasepageQuad<"inq", Opcode<0xe6>>;
 
-
-
-
 } // Predicates = [Has45GS02]
 
 let Predicates = [HasHUC6280] in {
