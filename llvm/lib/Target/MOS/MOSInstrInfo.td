@@ -573,6 +573,15 @@ def LDQ_BasePageX : Inst4202BasePageQuadX<"ldq", Opcode<0xb5>>;
 def DEQ_BasePageX : Inst4202BasePageQuadX<"deq", Opcode<0xd6>>;
 def INQ_BasePageX : Inst4202BasePageQuadX<"inq", Opcode<0xf6>>;
 
+/// Absolute quad indexed instructions e.g. `orq $eaea, x` (NEG NEG prefix, 5 bytes)
+def ASLQ_AbsoluteX : Inst4202QuadAbsoluteX<"aslq", Opcode<0x1e>>;
+def ROLQ_AbsoluteX : Inst4202QuadAbsoluteX<"rolq", Opcode<0x3e>>;
+def LSRQ_AbsoluteX : Inst4202QuadAbsoluteX<"lsrq", Opcode<0x5e>>;
+def RORQ_AbsoluteX : Inst4202QuadAbsoluteX<"rorq", Opcode<0x7e>>;
+def LDQ_AbsoluteX : Inst4202QuadAbsoluteX<"ldq", Opcode<0xbd>>;
+def DEQ_AbsoluteX : Inst4202QuadAbsoluteX<"deq", Opcode<0xde>>;
+def INQ_AbsoluteX : Inst4202QuadAbsoluteX<"inq", Opcode<0xfe>>;
+
 } // Predicates = [Has45GS02]
 
 let Predicates = [HasHUC6280] in {
