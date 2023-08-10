@@ -110,6 +110,7 @@ public:
   bool hasHUC6280() const { return HasHUC6280Insns; }
   bool has65DTV02() const { return Has65DTV02Insns; }
   bool has4510() const { return Has4510Insns; }
+  bool has45GS02() const { return Has45GS02Insns; }
   bool staticStack() const { return StaticStack; }
 
   bool hasW65816Or65EL02() const { return HasW65816Insns || Has65EL02Insns; }
