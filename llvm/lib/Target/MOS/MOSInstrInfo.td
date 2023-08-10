@@ -498,6 +498,8 @@ def : MnemonicAlias<"eom", "nop">;
 
 let Predicates = [Has45GS02] in {
 
+let DecoderNamespace = "45gs02" in {
+
 /// Flat memory addressing mode (zp pointer treated as 32-bit), e.g. `ora [$ea], z`
 /// (NOP prefix, 3 bytes)
 def ORA_FlatIndirectZeroPageZ : Inst4502Nop16<"ora", Opcode<0x12>, IndirectIndexedLongZ>;
@@ -586,7 +588,7 @@ def INQ_AbsoluteX : Inst4202NegNeg16<"inq", Opcode<0xfe>, AbsoluteX>;
 def LDQ_AbsoluteY : Inst4202NegNeg16<"ldq", Opcode<0xb9>, AbsoluteY>;
 def LDQ_IndirectIndexed : Inst4202NegNeg8<"ldq", Opcode<0xb1>, IndirectIndexed>;
 def LDQ_IndirectStackRelativeY : Inst4202NegNeg8<"ldq", Opcode<0xe2>, IndirectStackRelativeY>;
-
+}
 } // Predicates = [Has45GS02]
 
 let Predicates = [HasHUC6280] in {
