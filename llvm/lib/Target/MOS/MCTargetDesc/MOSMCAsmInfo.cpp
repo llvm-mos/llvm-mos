@@ -35,10 +35,10 @@ unsigned MOSMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
 
   if (STI->hasFeature(MOS::FeatureHUC6280))
     return 7;
-  if (STI->hasFeature(MOS::FeatureW65816))
-    return 4;
   if (STI->hasFeature(MOS::Feature45GS02))
     return 5;
+  if (STI->hasFeature(MOS::FeatureW65816))
+    return 4;
   return 3;
 }
 
