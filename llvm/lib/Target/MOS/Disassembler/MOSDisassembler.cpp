@@ -232,7 +232,27 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              raw_ostream &CStream) const {
   Size = 0;
 
-  // First attempt to decode 16-bit immediate 65816 instructions.
+  // Check for 45GS02 extended mnemonics (5, 4, or 3 bytes)
+  if (STI.getFeatureBits()[MOS::Feature45GS02]) {
+    for (size_t i : seq_inclusive(0, 2)) {
+      size_t InsnSize = 5 - i;
+      uint64_t Insn = 0;
+      if (Bytes.size() < InsnSize) {
+        continue;
+      }
+      for (size_t Byte : seq((size_t)0, InsnSize)) {
+        Insn |= ((uint64_t)Bytes[Byte]) << (8 * Byte);
+      }
+      DecodeStatus Result = decodeInstruction(getDecoderTable45GS02(InsnSize),
+                                              Instr, Insn, Address, this, STI);
+      if (Result != MCDisassembler::Fail) {
+        Size = InsnSize;
+        return Result;
+      }
+    }
+  }
+
+  // Attempt to decode 16-bit immediate 65816 instructions.
   if (Has65816RegisterWidths) {
     if ((MLow || XLow) && Bytes.size() >= 3) {
       uint64_t Insn = 0;
@@ -271,11 +291,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return MCDisassembler::Fail;
     }
     for (size_t Byte : seq((size_t)0, InsnSize)) {
-      Insn |= ((uint64_t) Bytes[Byte]) << (8 * Byte);
-    }
-    if (STI.getFeatureBits()[MOS::Feature45GS02]) {
-      Result = decodeInstruction(getDecoderTable45GS02(InsnSize), Instr, Insn,
-                                 Address, this, STI);
+      Insn |= ((uint64_t)Bytes[Byte]) << (8 * Byte);
     }
     if (Result == MCDisassembler::Fail) {
       if (STI.getFeatureBits()[MOS::Feature65CE02]) {
