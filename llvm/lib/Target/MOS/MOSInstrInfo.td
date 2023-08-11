@@ -496,6 +496,101 @@ def : MnemonicAlias<"eom", "nop">;
 
 } // Predicates = [Has4510]
 
+let Predicates = [Has45GS02] in {
+
+let DecoderNamespace = "45gs02" in {
+
+/// Flat memory addressing mode (zp pointer treated as 32-bit), e.g. `ora [$ea], z`
+/// (NOP prefix, 3 bytes)
+def ORA_FlatIndirectZeroPageZ : Inst4502Nop16<"ora", Opcode<0x12>, IndirectIndexedLongZ>;
+def AND_FlatIndirectZeroPageZ : Inst4502Nop16<"and", Opcode<0x32>, IndirectIndexedLongZ>;
+def EOR_FlatIndirectZeroPageZ : Inst4502Nop16<"eor", Opcode<0x52>, IndirectIndexedLongZ>;
+def ADC_FlatIndirectZeroPageZ : Inst4502Nop16<"adc", Opcode<0x72>, IndirectIndexedLongZ>;
+def STA_FlatIndirectZeroPageZ : Inst4502Nop16<"sta", Opcode<0x92>, IndirectIndexedLongZ>;
+def LDA_FlatIndirectZeroPageZ : Inst4502Nop16<"lda", Opcode<0xb2>, IndirectIndexedLongZ>;
+def CMP_FlatIndirectZeroPageZ : Inst4502Nop16<"cmp", Opcode<0xd2>, IndirectIndexedLongZ>;
+def SBC_FlatIndirectZeroPageZ : Inst4502Nop16<"sbc", Opcode<0xf2>, IndirectIndexedLongZ>;
+
+/// Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix, 5 bytes)
+def ORQ_IndirectLong : Inst4502NegNegNop8<"orq", Opcode<0x12>, IndirectLong>;
+def ANDQ_IndirectLong : Inst4502NegNegNop8<"andq", Opcode<0x32>, IndirectLong>;
+def EORQ_IndirectLong : Inst4502NegNegNop8<"eorq", Opcode<0x52>, IndirectLong>;
+def ADCQ_IndirectLong : Inst4502NegNegNop8<"adcq", Opcode<0x72>, IndirectLong>;
+def STQ_IndirectLong : Inst4502NegNegNop8<"stq", Opcode<0x92>, IndirectLong>;
+def LDQ_IndirectLong : Inst4502NegNegNop8<"ldq", Opcode<0xb2>, IndirectLong>;
+def CPQ_IndirectLong : Inst4502NegNegNop8<"cpq", Opcode<0xd2>, IndirectLong>;
+def SBCQ_IndirectLong : Inst4502NegNegNop8<"sbcq", Opcode<0xf2>, IndirectLong>;
+
+/// Q pseudo register quad mode, e.g. `orq $eaea` (NEG NEG prefix, 5 bytes)
+def ORQ_Absolute : Inst4202NegNeg16<"orq", Opcode<0x0d>, Absolute>;
+def ASLQ_Absolute : Inst4202NegNeg16<"aslq", Opcode<0x0e>, Absolute>;
+def BITQ_Absolute : Inst4202NegNeg16<"bitq", Opcode<0x2c>, Absolute>;
+def ANDQ_Absolute : Inst4202NegNeg16<"andq", Opcode<0x2d>, Absolute>;
+def ROLQ_Absolute : Inst4202NegNeg16<"rolq", Opcode<0x2e>, Absolute>;
+def EORQ_Absolute : Inst4202NegNeg16<"eorq", Opcode<0x4d>, Absolute>;
+def LSRQ_Absolute : Inst4202NegNeg16<"lsrq", Opcode<0x4e>, Absolute>;
+def ADCQ_Absolute : Inst4202NegNeg16<"adcq", Opcode<0x6d>, Absolute>;
+def RORQ_Absolute : Inst4202NegNeg16<"rorq", Opcode<0x6e>, Absolute>;
+def STQ_Absolute : Inst4202NegNeg16<"stq", Opcode<0x8d>, Absolute>;
+def LDQ_Absolute : Inst4202NegNeg16<"ldq", Opcode<0xad>, Absolute>;
+def CPQ_Absolute : Inst4202NegNeg16<"cpq", Opcode<0xcd>, Absolute>;
+def DEQ_Absolute : Inst4202NegNeg16<"deq", Opcode<0xce>, Absolute>;
+def SBCQ_Absolute : Inst4202NegNeg16<"sbcq", Opcode<0xed>, Absolute>;
+def INQ_Absolute : Inst4202NegNeg16<"inq", Opcode<0xee>, Absolute>;
+
+/// Base page quad instructions, e.g. `orq $ea` (NEG NEG prefix, 4 bytes)
+def ORQ_BasePage : Inst4202NegNeg8<"orq", Opcode<0x05>, ZeroPage>;
+def ASLQ_BasePage : Inst4202NegNeg8<"aslq", Opcode<0x06>, ZeroPage>;
+def BITQ_BasePage : Inst4202NegNeg8<"bitq", Opcode<0x24>, ZeroPage>;
+def ANDQ_BasePage : Inst4202NegNeg8<"andq", Opcode<0x25>, ZeroPage>;
+def ROLQ_BasePage : Inst4202NegNeg8<"rolq", Opcode<0x26>, ZeroPage>;
+def ASRQ_BasePage : Inst4202NegNeg8<"asrq", Opcode<0x44>, ZeroPage>;
+def EORQ_BasePage : Inst4202NegNeg8<"eorq", Opcode<0x45>, ZeroPage>;
+def LSRQ_BasePage : Inst4202NegNeg8<"lsrq", Opcode<0x46>, ZeroPage>;
+def ADCQ_BasePage : Inst4202NegNeg8<"adcq", Opcode<0x65>, ZeroPage>;
+def RORQ_BasePage : Inst4202NegNeg8<"rorq", Opcode<0x66>, ZeroPage>;
+def STQ_BasePage : Inst4202NegNeg8<"stq", Opcode<0x85>, ZeroPage>;
+def LDQ_BasePage : Inst4202NegNeg8<"ldq", Opcode<0xa5>, ZeroPage>;
+def CPQ_BasePage : Inst4202NegNeg8<"cpq", Opcode<0xc5>, ZeroPage>;
+def DEQ_BasePage : Inst4202NegNeg8<"deq", Opcode<0xc6>, ZeroPage>;
+def SBCQ_BasePage : Inst4202NegNeg8<"sbcq", Opcode<0xe5>, ZeroPage>;
+def INQ_BasePage : Inst4202NegNeg8<"inq", Opcode<0xe6>, ZeroPage>;
+
+/// Indirect quad instructions e.g. `orq ($eq)` (NEG NEG prefix, 4 bytes)
+def ORQ_Indirect : Inst4202NegNeg8<"orq", Opcode<0x12>, Indirect>;
+def ANDQ_Indirect : Inst4202NegNeg8<"andq", Opcode<0x32>, Indirect>;
+def EORQ_Indirect : Inst4202NegNeg8<"eorq", Opcode<0x52>, Indirect>;
+def ADCQ_Indirect : Inst4202NegNeg8<"adcq", Opcode<0x72>, Indirect>;
+def STQ_Indirect : Inst4202NegNeg8<"stq", Opcode<0x92>, Indirect>;
+def LDQ_Indirect : Inst4202NegNeg8<"ldq", Opcode<0xb2>, Indirect>;
+def CPQ_Indirect : Inst4202NegNeg8<"cpq", Opcode<0xd2>, Indirect>;
+def SBCQ_Indirect : Inst4202NegNeg8<"sbcq", Opcode<0xf2>, Indirect>;
+
+/// BasePage quad indexed instructions e.g. `orq $ea, x` (NEG NEG prefix, 4 bytes)
+def ASLQ_BasePageX : Inst4202NegNeg8<"aslq", Opcode<0x16>, ZeroPageX>;
+def ROLQ_BasePageX : Inst4202NegNeg8<"rolq", Opcode<0x36>, ZeroPageX>;
+def ASRQ_BasePageX : Inst4202NegNeg8<"asrq", Opcode<0x54>, ZeroPageX>;
+def LSRQ_BasePageX : Inst4202NegNeg8<"lsrq", Opcode<0x56>, ZeroPageX>;
+def RORQ_BasePageX : Inst4202NegNeg8<"rorq", Opcode<0x76>, ZeroPageX>;
+def LDQ_BasePageX : Inst4202NegNeg8<"ldq", Opcode<0xb5>, ZeroPageX>;
+def DEQ_BasePageX : Inst4202NegNeg8<"deq", Opcode<0xd6>, ZeroPageX>;
+def INQ_BasePageX : Inst4202NegNeg8<"inq", Opcode<0xf6>, ZeroPageX>;
+
+/// Absolute quad indexed instructions e.g. `orq $eaea, x` (NEG NEG prefix, 5 bytes)
+def ASLQ_AbsoluteX : Inst4202NegNeg16<"aslq", Opcode<0x1e>, AbsoluteX>;
+def ROLQ_AbsoluteX : Inst4202NegNeg16<"rolq", Opcode<0x3e>, AbsoluteX>;
+def LSRQ_AbsoluteX : Inst4202NegNeg16<"lsrq", Opcode<0x5e>, AbsoluteX>;
+def RORQ_AbsoluteX : Inst4202NegNeg16<"rorq", Opcode<0x7e>, AbsoluteX>;
+def LDQ_AbsoluteX : Inst4202NegNeg16<"ldq", Opcode<0xbd>, AbsoluteX>;
+def DEQ_AbsoluteX : Inst4202NegNeg16<"deq", Opcode<0xde>, AbsoluteX>;
+def INQ_AbsoluteX : Inst4202NegNeg16<"inq", Opcode<0xfe>, AbsoluteX>;
+
+def LDQ_AbsoluteY : Inst4202NegNeg16<"ldq", Opcode<0xb9>, AbsoluteY>;
+def LDQ_IndirectIndexed : Inst4202NegNeg8<"ldq", Opcode<0xb1>, IndirectIndexed>;
+def LDQ_IndirectStackRelativeY : Inst4202NegNeg8<"ldq", Opcode<0xe2>, IndirectStackRelativeY>;
+}
+} // Predicates = [Has45GS02]
+
 let Predicates = [HasHUC6280] in {
 
 let DecoderNamespace = "huc6280" in {

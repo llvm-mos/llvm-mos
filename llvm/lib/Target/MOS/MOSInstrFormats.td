@@ -82,6 +82,11 @@ def Has4510 : Predicate<"Subtarget->has4510()">,
   let PredicateName = "Feature4510";
 }
 
+def Has45GS02 : Predicate<"Subtarget->has45GS02()">,
+                AssemblerPredicate<(all_of Feature45GS02), "45GS02"> {
+  let PredicateName = "Feature45GS02";
+}
+
 /// These instruction format definitions exist, thanks to Neil Parker's
 /// analysis of the 65xx instruction set, at:
 /// http://nparker.llx.com/a2/opcodes.html
@@ -367,6 +372,11 @@ def IndirectIndexedLong : AddressingMode {
   let InOperandList = (ins addr8:$param);
 }
 
+def IndirectIndexedLongZ : AddressingMode {
+  let OperandsStr = "[ $param ] , z";
+  let InOperandList = (ins addr8:$param);
+}
+
 def IndirectZeroPageZ : AddressingMode {
   let OperandsStr = "( $param ) , z";
   let InOperandList = (ins addr8:$param);
@@ -552,6 +562,73 @@ class InstBitModify<string opcodestr, Opcode op = DefaultOpcode,
   let Inst{3-0} = opcode.op{3-0};
   let Inst{15-8} = param;
   let AsmString = opcodestr # " " # OperandsStr;
+}
+
+/// Three byte 45GS02 NOP prefixed command with 8-bit operand (flat memory access)
+class Inst4502Nop16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = IndirectIndexedLongZ> :
+    Inst<opcodestr> {
+  let Size = 3;
+  bits<24> Inst;
+  bits<8> param;
+
+  Opcode opcode = op;
+  let InOperandList = mode.InOperandList;
+
+  let Inst{7-0} = 0xea; // NOP
+  let Inst{15-8} = opcode.op;
+  let Inst{23-16} = param;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
+}
+
+/// 45GS02: prefixes opcode with NEG NEG and expects an 8-bit operand
+class Inst4202NegNeg8<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = ZeroPageX> :
+    Inst<opcodestr> {
+  let Size = 4;
+  bits<32> Inst;
+  bits<8> param;
+
+  Opcode opcode = op;
+  let InOperandList = mode.InOperandList;
+  let Inst{7-0} = 0x42;  // NEG
+  let Inst{15-8} = 0x42; // NEG
+  let Inst{23-16} = opcode.op;
+  let Inst{31-24} = param;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
+}
+
+/// 45GS02 base page quad instruction (NEG NEG prefix)
+class Inst4202NegNeg16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = AbsoluteX> :
+    Inst<opcodestr> {
+  let Size = 5;
+  bits<40> Inst;
+  bits<16> param;
+
+  Opcode opcode = op;
+  let InOperandList = mode.InOperandList;
+
+  let Inst{7-0} = 0x42;  // NEG
+  let Inst{15-8} = 0x42; // NEG
+  let Inst{23-16} = opcode.op;
+  let Inst{39-24} = param;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
+}
+
+/// A five byte 45GS02 Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix)
+class Inst4502NegNegNop8<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = IndirectLong> :
+    Inst<opcodestr> {
+  let Size = 5;
+  bits<40> Inst;
+  bits<8> param;
+
+  Opcode opcode = op;
+  let InOperandList = mode.InOperandList;
+
+  let Inst{7-0} = 0x42;  // NEG
+  let Inst{15-8} = 0x42; // NEG
+  let Inst{23-16} = 0xea;// NOP
+  let Inst{31-24} = opcode.op;
+  let Inst{39-32} = param;
+  let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
 /// A HuC6280 block instruction.

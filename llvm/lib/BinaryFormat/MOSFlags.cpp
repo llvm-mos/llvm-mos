@@ -28,7 +28,8 @@ static const EnumEntry<unsigned> ElfHeaderMOSFlagsEntries[] = {
     ENUM_ENT(EF_MOS_ARCH_HUC6280, "moshuc6280"),
     ENUM_ENT(EF_MOS_ARCH_SWEET16, "mossweet16"),
     ENUM_ENT(EF_MOS_ARCH_65DTV02, "mos65dtv02"),
-    ENUM_ENT(EF_MOS_ARCH_4510, "mos4510")};
+    ENUM_ENT(EF_MOS_ARCH_4510, "mos4510"),
+    ENUM_ENT(EF_MOS_ARCH_45GS02, "mos45gs02")};
 const ArrayRef<EnumEntry<unsigned>> ElfHeaderMOSFlags{ElfHeaderMOSFlagsEntries};
 
 std::string makeEFlagsString(unsigned EFlags) {

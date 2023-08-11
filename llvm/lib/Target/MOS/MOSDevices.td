@@ -70,6 +70,10 @@ def Feature4510
     : SubtargetFeature<"mos-insns-4510", "Has4510Insns", "true",
                         "The new instructions present on CSG 4510">;
 
+def Feature45GS02
+    : SubtargetFeature<"mos-insns-45gs02", "Has45GS02Insns", "true",
+                        "The new instructions present on 45GS02">;
+
 // A feature set aggregates features, grouping them. We don't want to create a
 // new member in MOSSubtarget (to store a value) for each set because we do not
 // care if the set is supported, only the subfeatures inside the set. We fix
@@ -145,6 +149,11 @@ def Family4510
       "CSG 4510",
       Family65CE02.Implies#[Feature4510]>;
 
+def Family45GS02
+    : Family<"mos45gs02",
+      "45GS02",
+      Family4510.Implies#[Feature45GS02]>;
+
 //===---------------------------------------------------------------------===//
 // MOS Families
 //===---------------------------------------------------------------------===//
@@ -173,3 +182,4 @@ def : Device<"moshuc6280", FamilyHUC6280>;
 def : Device<"mossweet16", FamilySWEET16>;
 def : Device<"mos65dtv02", Family65DTV02>;
 def : Device<"mos4510", Family4510>;
+def : Device<"mos45gs02", Family45GS02>;
