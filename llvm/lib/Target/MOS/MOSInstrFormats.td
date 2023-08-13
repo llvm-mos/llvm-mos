@@ -596,6 +596,20 @@ class Inst4202NegNeg8<string opcodestr, Opcode op = DefaultOpcode, AddressingMod
   let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
+/// 45GS02: prefixes opcode with NEG NEG; no operand
+class Inst4202NegNegImplicit<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = Implicit> :
+    Inst<opcodestr> {
+  let Size = 3;
+  bits<24> Inst;
+  let InOperandList = mode.InOperandList;
+
+  Opcode opcode = op;
+  let Inst{7-0} = 0x42;  // NEG
+  let Inst{15-8} = 0x42; // NEG
+  let Inst{23-16} = opcode.op;
+  let AsmString = opcodestr;
+}
+
 /// 45GS02 base page quad instruction (NEG NEG prefix)
 class Inst4202NegNeg16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = AbsoluteX> :
     Inst<opcodestr> {
