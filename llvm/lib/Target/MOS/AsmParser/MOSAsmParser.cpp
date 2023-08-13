@@ -652,7 +652,8 @@ public:
     // First, the mnemonic goes on the stack.
     Operands.push_back(MOSOperand::createToken(Mnemonic, NameLoc));
     AsmToken::TokenKind RightHandSide = AsmToken::Eof;
-    while (getLexer().isNot(AsmToken::EndOfStatement)) {
+    while (getLexer().isNot(AsmToken::EndOfStatement) &&
+           getLexer().isNot(AsmToken::Eof)) {
       if (getLexer().is(AsmToken::Hash)) {
         eatThatToken(Operands);
         if (!tryParseExpr(Operands,
