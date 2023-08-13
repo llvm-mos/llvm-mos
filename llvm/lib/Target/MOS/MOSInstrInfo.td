@@ -500,7 +500,7 @@ let Predicates = [Has45GS02] in {
 
 let DecoderNamespace = "45gs02" in {
 
-/// Q seudo register implicit (NEG NEG predix, 3 bytes)
+/// Q pseudo register implicit (NEG NEG prefix, 3 bytes)
 def ASLQ_Implicit : Inst4202NegNegImplicit<"aslq", Opcode<0x0a>, Implicit>;
 def ASRQ_Implicit : Inst4202NegNegImplicit<"asrq", Opcode<0x43>, Implicit>;
 def DEQ_Implicit : Inst4202NegNegImplicit<"deq", Opcode<0x3a>, Implicit>;
@@ -593,8 +593,8 @@ def LSRQ_AbsoluteX : Inst4202NegNeg16<"lsrq", Opcode<0x5e>, AbsoluteX>;
 def RORQ_AbsoluteX : Inst4202NegNeg16<"rorq", Opcode<0x7e>, AbsoluteX>;
 def DEQ_AbsoluteX : Inst4202NegNeg16<"deq", Opcode<0xde>, AbsoluteX>;
 def INQ_AbsoluteX : Inst4202NegNeg16<"inq", Opcode<0xfe>, AbsoluteX>;
-
 }
+
 def : MnemonicAlias<"cpq", "cmpq">; // Allow ACME "cpq" style
 
 } // Predicates = [Has45GS02]
