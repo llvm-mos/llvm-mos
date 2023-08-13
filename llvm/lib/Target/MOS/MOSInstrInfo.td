@@ -595,6 +595,8 @@ def DEQ_AbsoluteX : Inst4202NegNeg16<"deq", Opcode<0xde>, AbsoluteX>;
 def INQ_AbsoluteX : Inst4202NegNeg16<"inq", Opcode<0xfe>, AbsoluteX>;
 
 }
+def : MnemonicAlias<"cpq", "cmpq">; // Allow ACME "cpq" style
+
 } // Predicates = [Has45GS02]
 
 let Predicates = [HasHUC6280] in {
