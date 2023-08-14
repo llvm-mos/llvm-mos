@@ -35,10 +35,9 @@ using namespace llvm;
 MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
                                      const MOSSubtarget &STI)
     : TargetLowering(TM) {
-  // This is only used for CallLowering to determine how to split large
-  // primitive types for the calling convention. All need to be split to 8 bits,
-  // so that's all that we report here. The register class is irrelevant.
+  addRegisterClass(MVT::i1, &MOS::Anyi1RegClass);
   addRegisterClass(MVT::i8, &MOS::Anyi8RegClass);
+  addRegisterClass(MVT::i16, &MOS::Imag16RegClass);
   computeRegisterProperties(STI.getRegisterInfo());
 
   // The memset intrinsic takes an char, while the C memset takes an int. These
@@ -60,6 +59,24 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(MOS::RS0);
 
   setMaximumJumpTableSize(std::min(256u, getMaximumJumpTableSize()));
+}
+
+MVT MOSTargetLowering::getRegisterType(MVT VT) const {
+  // Even though a 16-bit register is available, it's not actually an integer
+  // register, so split to 8 bits instead.
+  if (VT.getSizeInBits() > 8)
+    return MVT::i8;
+  return TargetLowering::getRegisterType(VT);
+}
+
+unsigned
+MOSTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
+                                   std::optional<MVT> RegisterVT) const {
+  // Even though a 16-bit register is available, it's not actually an integer
+  // register, so split to 8 bits instead.
+  if (VT.getSizeInBits() > 8)
+    return VT.getSizeInBits() / 8;
+  return TargetLowering::getNumRegisters(Context, VT, RegisterVT);
 }
 
 MVT MOSTargetLowering::getRegisterTypeForCallingConv(
@@ -288,8 +305,9 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
 
     // Add the unconditional branch from IfFalseMBB to TailMBB.
     Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
-    Builder.buildInstr((STI.has65C02() || STI.has65DTV02())
-                       ? MOS::BRA : MOS::JMP).addMBB(TailMBB);
+    Builder
+        .buildInstr((STI.has65C02() || STI.has65DTV02()) ? MOS::BRA : MOS::JMP)
+        .addMBB(TailMBB);
     for (const auto &LiveIn : IfFalseMBB->liveins())
       IfTrueMBB->addLiveIn(LiveIn);
 

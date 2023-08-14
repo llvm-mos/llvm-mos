@@ -41,6 +41,24 @@
     ; CHECK-NEXT: RTS
   }
 
+  define void @args_i1(i1 %first, i1 zeroext %second, i1 signext %third) {
+  ; CHECK-LABEL: name: args_i1
+  entry:
+  ; CHECK-LABEL: entry:
+    ; CHECK-NEXT: liveins: $a, $x, $rc2
+    ; CHECK:      %3:_(s8) = COPY $a
+    ; CHECK-NEXT: %0:_(s1) = G_TRUNC %3(s8)
+    ; CHECK-NEXT: %4:_(s8) = COPY $x
+    ; CHECK-NEXT: %5:_(s8) = G_ASSERT_ZEXT %4, 1
+    ; CHECK-NEXT: %1:_(s1) = G_TRUNC %5(s8)
+    ; CHECK-NEXT: %6:_(s8) = COPY $rc2
+    ; CHECK-NEXT: %7:_(s8) = G_ASSERT_SEXT %6, 1
+    ; CHECK-NEXT: %2:_(s1) = G_TRUNC %7(s8)
+
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
   define void @args_ptr(i8* %first, i16* %second) {
   ; CHECK-LABEL: name: args_ptr
   entry:
@@ -140,38 +158,67 @@
     ; CHECK-NEXT: RTS
   }
 
+  define void @call_args_i1() {
+  ; CHECK-LABEL: name: call_args_i1
+  entry:
+  ; CHECK-LABEL: entry:
+
+    call void @args_i1(i1 1, i1 0, i1 1)
+
+    ; CHECK:      %0:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %1:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: %2:_(s8) = G_ANYEXT %0(s1)
+    ; CHECK-NEXT: $a = COPY %2(s8)
+    ; CHECK-NEXT: %3:_(s8) = G_ZEXT %1(s1)
+    ; CHECK-NEXT: $x = COPY %3(s8)
+    ; CHECK-NEXT: %4:_(s8) = G_SEXT %0(s1)
+    ; CHECK-NEXT: $rc2 = COPY %4(s8)
+    ; CHECK-NEXT: JSR @args_i1, mos_csr, implicit $a, implicit $x, implicit $rc2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
   define void @call_args_variable(i8* %ptr) {
   ; CHECK-LABEL: name: call_args_variable
   entry:
     ; CHECK: %0:_(p0) = COPY $rs1
 
-    call void (i8, ...) @args_variable(i8 1, i16 2, i8* %ptr)
+    call void (i8, ...) @args_variable(i8 1, i16 2, i8* %ptr, i1 false, i1 zeroext true, i1 signext false)
 
-    ; CHECK-NEXT: %1:_(s8) = G_CONSTANT i8 1
+    ; CHECK:      %1:_(s8) = G_CONSTANT i8 1
     ; CHECK-NEXT: %2:_(s16) = G_CONSTANT i16 2
-
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 4, 0, implicit-def $rs0, implicit $rs0
-
-    ; CHECK-NEXT: %3:_(s8), %4:_(s8) = G_UNMERGE_VALUES %2(s16)
-
-    ; CHECK-NEXT: %5:_(p0) = COPY $rs0
-    ; CHECK-NEXT: %6:_(s16) = G_CONSTANT i16 0
-    ; CHECK-NEXT: %7:_(p0) = G_PTR_ADD %5, %6(s16)
-    ; CHECK-NEXT: G_STORE %3(s8), %7(p0) :: (store (s8) into stack)
-
-    ; CHECK-NEXT: %8:_(s16) = G_CONSTANT i16 1
-    ; CHECK-NEXT: %9:_(p0) = G_PTR_ADD %5, %8(s16)
-    ; CHECK-NEXT: G_STORE %4(s8), %9(p0) :: (store (s8) into stack + 1)
-
-    ; CHECK-NEXT: %10:_(s16) = G_CONSTANT i16 2
-    ; CHECK-NEXT: %11:_(p0) = G_PTR_ADD %5, %10(s16)
-    ; CHECK-NEXT: G_STORE %0(p0), %11(p0) :: (store (p0) into stack + 2, align 1)
-
+    ; CHECK-NEXT: %3:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %4:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 7, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: %5:_(s8), %6:_(s8) = G_UNMERGE_VALUES %2(s16)
+    ; CHECK-NEXT: %7:_(p0) = COPY $rs0
+    ; CHECK-NEXT: %8:_(s16) = G_CONSTANT i16 0
+    ; CHECK-NEXT: %9:_(p0) = G_PTR_ADD %7, %8(s16)
+    ; CHECK-NEXT: G_STORE %5(s8), %9(p0) :: (store (s8) into stack)
+    ; CHECK-NEXT: %10:_(s16) = G_CONSTANT i16 1
+    ; CHECK-NEXT: %11:_(p0) = G_PTR_ADD %7, %10(s16)
+    ; CHECK-NEXT: G_STORE %6(s8), %11(p0) :: (store (s8) into stack + 1)
+    ; CHECK-NEXT: %12:_(s16) = G_CONSTANT i16 2
+    ; CHECK-NEXT: %13:_(p0) = G_PTR_ADD %7, %12(s16)
+    ; CHECK-NEXT: G_STORE %0(p0), %13(p0) :: (store (p0) into stack + 2, align 1)
+    ; CHECK-NEXT: %14:_(s16) = G_CONSTANT i16 4
+    ; CHECK-NEXT: %15:_(p0) = G_PTR_ADD %7, %14(s16)
+    ; CHECK-NEXT: %16:_(s8) = G_ANYEXT %3(s1)
+    ; CHECK-NEXT: G_STORE %16(s8), %15(p0) :: (store (s1) into stack + 4)
+    ; CHECK-NEXT: %17:_(s16) = G_CONSTANT i16 5
+    ; CHECK-NEXT: %18:_(p0) = G_PTR_ADD %7, %17(s16)
+    ; CHECK-NEXT: %19:_(s8) = G_ZEXT %4(s1)
+    ; CHECK-NEXT: G_STORE %19(s8), %18(p0) :: (store (s1) into stack + 5)
+    ; CHECK-NEXT: %20:_(s16) = G_CONSTANT i16 6
+    ; CHECK-NEXT: %21:_(p0) = G_PTR_ADD %7, %20(s16)
+    ; CHECK-NEXT: %22:_(s8) = G_SEXT %3(s1)
+    ; CHECK-NEXT: G_STORE %22(s8), %21(p0) :: (store (s1) into stack + 6)
     ; CHECK-NEXT: $a = COPY %1(s8)
-
     ; CHECK-NEXT: JSR @args_variable, mos_csr, implicit $a
-
-    ; CHECK-NEXT: ADJCALLSTACKUP 4, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: ADJCALLSTACKUP 7, 0, implicit-def $rs0, implicit $rs0
 
     ret void
     ; CHECK-NEXT: RTS

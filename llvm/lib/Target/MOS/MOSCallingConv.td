@@ -56,6 +56,8 @@
 
 let Entry = 1 in {
 def CC_MOS : CallingConv<[
+  CCIfType<[i1], CCPromoteToType<i8>>,
+
   // Pointers are preferentially assigned to imaginary registers so indirect
   // addressing modes work without additional copying.
   //
@@ -75,6 +77,8 @@ def CC_MOS : CallingConv<[
 // Calling convention for the variable section of a variadic function call.
 // Named arguments in such functions still use the above calling convention.
 def CC_MOS_VarArgs : CallingConv<[
+  CCIfType<[i1], CCPromoteToType<i8>>,
+
   // All values are passed directly on the stack.
   CCAssignToStack<0, 1>,
 ]>;

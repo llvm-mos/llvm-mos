@@ -83,19 +83,11 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign VA) override {
-    switch (VA.getLocVT().getSizeInBits()) {
-    default:
-      report_fatal_error("Not yet implemented.");
-    case 8:
-    case 16:
-      break;
-    }
-
     // Ensure that the physical remains alive until control flow leaves the
     // current function.
     MIB.addUse(PhysReg, RegState::Implicit);
-
-    MIRBuilder.buildCopy(PhysReg, ValVReg);
+    Register ExtReg = extendRegister(ValVReg, VA);
+    MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
@@ -103,7 +95,8 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
     MachineFunction &MF = MIRBuilder.getMF();
     auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, MemTy,
                                         inferAlignFromPtrInfo(MF, MPO));
-    MIRBuilder.buildStore(ValVReg, Addr, *MMO);
+    Register ExtReg = extendRegister(ValVReg, VA);
+    MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 };
 

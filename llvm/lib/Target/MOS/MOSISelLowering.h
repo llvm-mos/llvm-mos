@@ -41,6 +41,12 @@ public:
     return !Fn->getFnAttribute("no-jump-tables").getValueAsBool();
   }
 
+  MVT getRegisterType(MVT VT) const override;
+
+  unsigned
+  getNumRegisters(LLVMContext &Context, EVT VT,
+                  std::optional<MVT> RegisterVT = std::nullopt) const override;
+
   unsigned getNumRegistersForInlineAsm(LLVMContext &Context,
                                        EVT VT) const override;
 

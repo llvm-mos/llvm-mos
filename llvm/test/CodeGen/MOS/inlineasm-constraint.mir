@@ -148,6 +148,46 @@
     ; CHECK-NEXT: RTS
   }
 
+  define void @clobber_c() {
+  ; CHECK-LABEL: name: clobber_c
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "", "~{c}"()
+    ; CHECK-NEXT: INLINEASM &"", {{.*}} /* sideeffect attdialect */, {{.*}} /* clobber */, implicit-def early-clobber $c
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
+  define void @clobber_a() {
+  ; CHECK-LABEL: name: clobber_a
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "", "~{a}"()
+    ; CHECK-NEXT: INLINEASM &"", {{.*}} /* sideeffect attdialect */, {{.*}} /* clobber */, implicit-def early-clobber $a
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
+  define void @clobber_rc0() {
+  ; CHECK-LABEL: name: clobber_rc0
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "", "~{rc0}"()
+    ; CHECK-NEXT: INLINEASM &"", {{.*}} /* sideeffect attdialect */, {{.*}} /* clobber */, implicit-def early-clobber $rc0
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
+  define void @clobber_rs0() {
+  ; CHECK-LABEL: name: clobber_rs0
+  entry:
+  ; CHECK-LABEL: entry:
+    call void asm sideeffect "", "~{rs0}"()
+    ; CHECK-NEXT: INLINEASM &"", {{.*}} /* sideeffect attdialect */, {{.*}} /* clobber */, implicit-def early-clobber $rs0
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+
   define void @constraint_c() {
   ; CHECK-LABEL: name: constraint_c
   entry:

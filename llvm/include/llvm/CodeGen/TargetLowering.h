@@ -1575,7 +1575,7 @@ public:
   virtual uint64_t getByValTypeAlignment(Type *Ty, const DataLayout &DL) const;
 
   /// Return the type of registers that this ValueType will eventually require.
-  MVT getRegisterType(MVT VT) const {
+  virtual MVT getRegisterType(MVT VT) const {
     assert((unsigned)VT.SimpleTy < std::size(RegisterTypeForVT));
     return RegisterTypeForVT[VT.SimpleTy];
   }
