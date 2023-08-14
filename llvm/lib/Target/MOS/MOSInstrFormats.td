@@ -344,11 +344,6 @@ def Indirect : AddressingMode {
   let InOperandList = (ins addr8:$param);
 }
 
-def IndirectAt3 : AddressingMode {
-  let OperandsStr = "( $param )";
-  let InOperandList = (ins addr8at3:$param);
-}
-
 def Indirect16 : AddressingMode {
   let OperandsStr = "( $param )";
   let InOperandList = (ins addr16:$param);
@@ -412,11 +407,6 @@ def IndirectRStackRelativeY : AddressingMode {
 def ZeroPageAt2 : AddressingMode {
   let OperandsStr = "$param";
   let InOperandList = (ins addr8at2:$param);
-}
-
-def ZeroPageAt3 : AddressingMode {
-  let OperandsStr = "$param";
-  let InOperandList = (ins addr8at3:$param);
 }
 
 def ZeroPageXAt2 : AddressingMode {
