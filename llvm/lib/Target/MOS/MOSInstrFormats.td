@@ -195,6 +195,8 @@ class addr8at<int offset> : Operand<i32> {
 }
 def addr8 : addr8at<1>;
 def addr8at2 : addr8at<2>;
+def addr8at3 : addr8at<3>;
+def addr8at4 : addr8at<4>;
 
 class addr16at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr16Operand<"Addr16">;
@@ -564,7 +566,7 @@ class InstBitModify<string opcodestr, Opcode op = DefaultOpcode,
   let AsmString = opcodestr # " " # OperandsStr;
 }
 
-/// Three byte 45GS02 NOP prefixed command with 8-bit operand (flat memory access)
+/// 45GS02: NOP prefixed opcode with 8-bit address operand (flat memory access)
 class Inst4502Nop16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = IndirectIndexedLongZ> :
     Inst<opcodestr> {
   let Size = 3;
@@ -572,7 +574,7 @@ class Inst4502Nop16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode 
   bits<8> param;
 
   Opcode opcode = op;
-  let InOperandList = mode.InOperandList;
+  let InOperandList = (ins addr8at2:$param);
 
   let Inst{7-0} = 0xea; // NOP
   let Inst{15-8} = opcode.op;
@@ -580,15 +582,15 @@ class Inst4502Nop16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode 
   let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
-/// 45GS02: prefixes opcode with NEG NEG and expects an 8-bit operand
-class Inst4202NegNeg8<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = ZeroPageX> :
+/// 45GS02: NEG NEG prefixed opcode with 8-bit address operand
+class Inst4502NegNeg8<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = ZeroPageX> :
     Inst<opcodestr> {
   let Size = 4;
   bits<32> Inst;
   bits<8> param;
 
   Opcode opcode = op;
-  let InOperandList = mode.InOperandList;
+  let InOperandList = (ins addr8at3:$param);
   let Inst{7-0} = 0x42;  // NEG
   let Inst{15-8} = 0x42; // NEG
   let Inst{23-16} = opcode.op;
@@ -596,8 +598,8 @@ class Inst4202NegNeg8<string opcodestr, Opcode op = DefaultOpcode, AddressingMod
   let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
-/// 45GS02: prefixes opcode with NEG NEG; no operand
-class Inst4202NegNegImplicit<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = Implicit> :
+/// 45GS02: NEG NEG prefixed opcode; no operand
+class Inst4502NegNegImplicit<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = Implicit> :
     Inst<opcodestr> {
   let Size = 3;
   bits<24> Inst;
@@ -610,15 +612,15 @@ class Inst4202NegNegImplicit<string opcodestr, Opcode op = DefaultOpcode, Addres
   let AsmString = opcodestr;
 }
 
-/// 45GS02 base page quad instruction (NEG NEG prefix)
-class Inst4202NegNeg16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = AbsoluteX> :
+/// 45GS02: NEG NEG prefixed opcode with 16-bit address operand
+class Inst4502NegNeg16<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = AbsoluteX> :
     Inst<opcodestr> {
   let Size = 5;
   bits<40> Inst;
   bits<16> param;
 
   Opcode opcode = op;
-  let InOperandList = mode.InOperandList;
+  let InOperandList = (ins addr16at3:$param);
 
   let Inst{7-0} = 0x42;  // NEG
   let Inst{15-8} = 0x42; // NEG
@@ -627,7 +629,7 @@ class Inst4202NegNeg16<string opcodestr, Opcode op = DefaultOpcode, AddressingMo
   let AsmString = opcodestr # " " # mode.OperandsStr;
 }
 
-/// A five byte 45GS02 Q pseudo register quad mode, e.g. `orq [$ea]` (NEG NEG NOP prefix)
+/// 45GS02: NEG NEG NOP prefixed opcode with 8-bit address operand
 class Inst4502NegNegNop8<string opcodestr, Opcode op = DefaultOpcode, AddressingMode mode = IndirectLong> :
     Inst<opcodestr> {
   let Size = 5;
@@ -635,7 +637,7 @@ class Inst4502NegNegNop8<string opcodestr, Opcode op = DefaultOpcode, Addressing
   bits<8> param;
 
   Opcode opcode = op;
-  let InOperandList = mode.InOperandList;
+  let InOperandList = (ins addr8at4:$param);
 
   let Inst{7-0} = 0x42;  // NEG
   let Inst{15-8} = 0x42; // NEG
