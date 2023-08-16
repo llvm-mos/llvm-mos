@@ -196,6 +196,7 @@ void MOSTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   Builder.defineMacro("__mos__");
   Builder.defineMacro("__ELF__");
+  Builder.defineMacro("__SOFTFP__");
 
   // Generate instruction feature set macros.
   const auto &CPUDefines = llvm::StringSwitch<std::vector<std::string>>(CPUName)
