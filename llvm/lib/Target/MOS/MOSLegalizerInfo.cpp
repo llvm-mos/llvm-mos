@@ -243,8 +243,6 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_FDIV,
                                G_FMA,
                                G_FREM,
-                               G_FPEXT,
-                               G_FPTRUNC,
                                G_FPOW,
                                G_FEXP,
                                G_FEXP2,
@@ -267,13 +265,15 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_INTRINSIC_ROUNDEVEN})
       .libcallFor({S32, S64});
 
-  getActionDefinitionsBuilder(G_FCONSTANT)
-      .customFor({S32, S64});
+  getActionDefinitionsBuilder(G_FPEXT).libcallFor({{S64, S32}});
+  getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{S32, S64}});
+
+  getActionDefinitionsBuilder(G_FCONSTANT).customFor({S32, S64});
 
   setFCmpLibcallsGNU();
 
-  getActionDefinitionsBuilder(G_FCMP)
-      .customForCartesianProduct({S1}, {S32, S64});
+  getActionDefinitionsBuilder(G_FCMP).customForCartesianProduct({S1},
+                                                                {S32, S64});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .libcallForCartesianProduct({S32, S64}, {S32, S64})
@@ -297,7 +297,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD}).custom();
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET, G_MEMCPY_INLINE})
-                              .custom();
+      .custom();
 
   // Control Flow
 
@@ -1550,14 +1550,12 @@ MOSLegalizerInfo::matchAbsoluteAddressing(MachineRegisterInfo &MRI,
     }
     if (const MachineInstr *GVAddr = getOpcodeDef(G_GLOBAL_VALUE, Addr, MRI)) {
       const MachineOperand &GV = GVAddr->getOperand(1);
-      return MachineOperand::CreateGA(GV.getGlobal(),
-                                      GV.getOffset() + Offset);
+      return MachineOperand::CreateGA(GV.getGlobal(), GV.getOffset() + Offset);
     }
     if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
       const MachineOperand &FI = FIAddr->getOperand(1);
       if (willBeStaticallyAllocated(FI)) {
-        return MachineOperand::CreateFI(FI.getIndex(),
-                                        FI.getOffset() + Offset);
+        return MachineOperand::CreateFI(FI.getIndex(), FI.getOffset() + Offset);
       }
     }
     if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
@@ -1595,7 +1593,7 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
     Helper.Observer.changedInstr(MI);
     return true;
   }
-  
+
   return false;
 }
 
@@ -1831,14 +1829,12 @@ static MachineOperand offsetMachineOperand(MachineOperand &Operand,
   llvm_unreachable("Unsupported machine operand type!");
 }
 
-template<typename T>
-static inline int compareNumbers(T A, T B) {
+template <typename T> static inline int compareNumbers(T A, T B) {
   return A < B ? -1 : (A > B ? 1 : 0);
 }
 
-static std::optional<int>
-compareOperandLocations(const MachineOperand &A,
-                        const MachineOperand &B) {
+static std::optional<int> compareOperandLocations(const MachineOperand &A,
+                                                  const MachineOperand &B) {
   if (A.isImm() && B.isImm())
     return compareNumbers(A.getImm(), B.getImm());
   if (A.isGlobal() && B.isGlobal())
@@ -1856,12 +1852,11 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
 
   bool IsSet = MI.getOpcode() == MOS::G_MEMSET;
   bool IsInline = MI.getOpcode() == MOS::G_MEMCPY_INLINE;
-  
+
   // Match supported combinations.
-  if (MI.getOpcode() != MOS::G_MEMCPY
-    && MI.getOpcode() != MOS::G_MEMCPY_INLINE
-    && MI.getOpcode() != MOS::G_MEMMOVE
-    && MI.getOpcode() != MOS::G_MEMSET) {
+  if (MI.getOpcode() != MOS::G_MEMCPY &&
+      MI.getOpcode() != MOS::G_MEMCPY_INLINE &&
+      MI.getOpcode() != MOS::G_MEMMOVE && MI.getOpcode() != MOS::G_MEMSET) {
     return false;
   }
 
@@ -1919,13 +1914,11 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
     // => (LDA/STA|STZ)/TII: 3-5 + 7 bytes
     // => __memset(): ~21? bytes
     SizeMin = IsSet ? 5 : 2;
-    SizeMax = IsSet ? (BytesPerTransfer * 2 + 1)
-                    : (BytesPerTransfer * 3);
+    SizeMax = IsSet ? (BytesPerTransfer * 2 + 1) : (BytesPerTransfer * 3);
   } else if (MF.getFunction().hasOptSize()) {
     // Try to strike a balance.
     SizeMin = IsSet ? 5 : 4;
-    SizeMax = IsSet ? (BytesPerTransfer * 3 + 1)
-                    : (BytesPerTransfer * 4);
+    SizeMax = IsSet ? (BytesPerTransfer * 3 + 1) : (BytesPerTransfer * 4);
   } else {
     // Copies:
     // => inline LDA/STA: 10n cycles
@@ -1953,18 +1946,17 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
 
   auto DstPointerInfo = MI.memoperands()[0]->getPointerInfo();
   auto SrcPointerInfo = MI.memoperands()[IsSet ? 0 : 1]->getPointerInfo();
-  
+
   // Proceed with the custom lowering.
   if (IsSet) {
     // Emit a G_STORE, then set Src = Dst, Dst = Dst + 1, Len = Len - 1.
     auto StoreReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
-    Builder.buildConstant(StoreReg,
-                          getUInt64FromConstantOper(Src.value())
-                            .value() & 0xFF);
+    Builder.buildConstant(
+        StoreReg, getUInt64FromConstantOper(Src.value()).value() & 0xFF);
     Builder.buildStore(StoreReg, DstReg,
                        *MF.getMachineMemOperand(SrcPointerInfo,
-                                                MachineMemOperand::MOStore,
-                                                1, Align(1)));
+                                                MachineMemOperand::MOStore, 1,
+                                                Align(1)));
 
     Src = Dst;
     Dst = offsetMachineOperand(Dst.value(), 1);
@@ -1977,16 +1969,14 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
   if (KnownLen <= BytesPerTransfer) {
     uint64_t AdjOfs = Descending ? (KnownLen - 1) : 0;
     Builder.buildInstr(MOS::HuCMemcpy)
-      .add(offsetMachineOperand(Src.value(), AdjOfs))
-      .add(offsetMachineOperand(Dst.value(), AdjOfs))
-      .add(Len.value())
-      .addImm(Descending)
-      .addMemOperand(MF.getMachineMemOperand(SrcPointerInfo,
-                                             MachineMemOperand::MOLoad,
-                                             1, Align(1)))
-      .addMemOperand(MF.getMachineMemOperand(DstPointerInfo,
-                                             MachineMemOperand::MOStore,
-                                             1, Align(1)));
+        .add(offsetMachineOperand(Src.value(), AdjOfs))
+        .add(offsetMachineOperand(Dst.value(), AdjOfs))
+        .add(Len.value())
+        .addImm(Descending)
+        .addMemOperand(MF.getMachineMemOperand(
+            SrcPointerInfo, MachineMemOperand::MOLoad, 1, Align(1)))
+        .addMemOperand(MF.getMachineMemOperand(
+            DstPointerInfo, MachineMemOperand::MOStore, 1, Align(1)));
   } else {
     // Transfer Offset
     for (uint64_t TOfs = 0; TOfs < KnownLen; TOfs += BytesPerTransfer) {
@@ -1997,18 +1987,16 @@ bool MOSLegalizerInfo::tryHuCBlockCopy(LegalizerHelper &Helper,
       // Adjusted Transfer Offset (memory)
       uint64_t AdjTOfsMO = Descending ? (KnownLen - TOfs - TLen) : TOfs;
       Builder.buildInstr(MOS::HuCMemcpy)
-        .add(offsetMachineOperand(Src.value(), AdjTOfs))
-        .add(offsetMachineOperand(Dst.value(), AdjTOfs))
-        .add(MachineOperand::CreateImm(TLen))
-        .addImm(Descending)
-        .addMemOperand(MF.getMachineMemOperand(SrcPointerInfo
-                                               .getWithOffset(AdjTOfsMO),
-                                               MachineMemOperand::MOLoad,
-                                               1, Align(1)))
-        .addMemOperand(MF.getMachineMemOperand(DstPointerInfo
-                                               .getWithOffset(AdjTOfsMO),
-                                               MachineMemOperand::MOStore,
-                                               1, Align(1)));
+          .add(offsetMachineOperand(Src.value(), AdjTOfs))
+          .add(offsetMachineOperand(Dst.value(), AdjTOfs))
+          .add(MachineOperand::CreateImm(TLen))
+          .addImm(Descending)
+          .addMemOperand(
+              MF.getMachineMemOperand(SrcPointerInfo.getWithOffset(AdjTOfsMO),
+                                      MachineMemOperand::MOLoad, 1, Align(1)))
+          .addMemOperand(
+              MF.getMachineMemOperand(DstPointerInfo.getWithOffset(AdjTOfsMO),
+                                      MachineMemOperand::MOStore, 1, Align(1)));
     }
   }
 
@@ -2137,8 +2125,7 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
 // Legalize floating-point comparisons to libcalls.
 bool MOSLegalizerInfo::legalizeFCmp(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const
-{
+                                    MachineInstr &MI) const {
   assert(MRI.getType(MI.getOperand(2).getReg()) ==
              MRI.getType(MI.getOperand(3).getReg()) &&
          "Mismatched operands for G_FCMP");
@@ -2153,9 +2140,9 @@ bool MOSLegalizerInfo::legalizeFCmp(LegalizerHelper &Helper,
   LLVMContext &Ctx = Builder.getMF().getFunction().getContext();
 
   if (Libcalls.empty()) {
-    assert((Predicate == CmpInst::FCMP_TRUE ||
-            Predicate == CmpInst::FCMP_FALSE) &&
-           "Predicate needs libcalls, but none specified");
+    assert(
+        (Predicate == CmpInst::FCMP_TRUE || Predicate == CmpInst::FCMP_FALSE) &&
+        "Predicate needs libcalls, but none specified");
     Builder.buildConstant(OriginalResult,
                           Predicate == CmpInst::FCMP_TRUE ? 1 : 0);
     MI.eraseFromParent();
@@ -2169,10 +2156,10 @@ bool MOSLegalizerInfo::legalizeFCmp(LegalizerHelper &Helper,
   SmallVector<Register, 2> Results;
   for (auto Libcall : Libcalls) {
     auto LibcallResult = MRI.createGenericVirtualRegister(LLT::scalar(32));
-    auto Status = createLibcall(Builder, Libcall.LibcallID,
-                                {LibcallResult, RetTy, 0},
-                                {{MI.getOperand(2).getReg(), ArgTy, 0},
-                                 {MI.getOperand(3).getReg(), ArgTy, 0}});
+    auto Status =
+        createLibcall(Builder, Libcall.LibcallID, {LibcallResult, RetTy, 0},
+                      {{MI.getOperand(2).getReg(), ArgTy, 0},
+                       {MI.getOperand(3).getReg(), ArgTy, 0}});
 
     if (Status != LegalizerHelper::Legalized)
       return false;
@@ -2211,8 +2198,7 @@ bool MOSLegalizerInfo::legalizeFCmp(LegalizerHelper &Helper,
 // Convert floating-point constants into their binary integer equivalents.
 bool MOSLegalizerInfo::legalizeFConst(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
-                                      MachineInstr &MI) const
-{
+                                      MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   LLVMContext &Ctx = Builder.getMF().getFunction().getContext();
 
