@@ -2205,6 +2205,7 @@ bool MOSLegalizerInfo::legalizeFConst(LegalizerHelper &Helper,
   // Convert to integer constants, while preserving the binary representation.
   auto AsInteger = MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
   Builder.buildConstant(MI.getOperand(0), *ConstantInt::get(Ctx, AsInteger));
+  MI.eraseFromParent();
   return true;
 }
 
