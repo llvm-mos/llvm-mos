@@ -13,8 +13,11 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSLEGALIZERINFO_H
 #define LLVM_LIB_TARGET_MOS_MOSLEGALIZERINFO_H
 
+#include "llvm/ADT/IndexedMap.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 
@@ -106,6 +109,12 @@ private:
   bool legalizeVAStart(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
 
+  // Floating Point Operations
+  bool legalizeFCmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
+  bool legalizeFConst(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
+
   // Other Operations
   bool legalizeDynStackAlloc(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                              MachineInstr &MI) const;
@@ -113,6 +122,35 @@ private:
                       MachineInstr &MI) const;
 
   bool preferZext() const override { return true; }
+
+  struct FCmpLibcallInfo {
+    // Which libcall this is.
+    RTLIB::Libcall LibcallID;
+
+    // The predicate to be used when comparing the value returned by the
+    // function with a relevant constant (currently hard-coded to zero). This is
+    // necessary because often the libcall will return e.g. a value greater than
+    // 0 to represent 'true' and anything negative to represent 'false', or
+    // maybe 0 to represent 'true' and non-zero for 'false'. If no comparison is
+    // needed, this should be CmpInst::BAD_ICMP_PREDICATE.
+    CmpInst::Predicate Predicate;
+  };
+  using FCmpLibcallsList = SmallVector<FCmpLibcallInfo, 2>;
+
+  // Map from each FCmp predicate to the corresponding libcall infos. A FCmp
+  // instruction may be lowered to one or two libcalls, which is why we need a
+  // list. If two libcalls are needed, their results will be OR'ed.
+  using FCmpLibcallsMapTy = IndexedMap<FCmpLibcallsList>;
+
+  FCmpLibcallsMapTy FCmp32Libcalls;
+  FCmpLibcallsMapTy FCmp64Libcalls;
+
+  // Set up the floating-point comparison libcalls (GNU-compatible).
+  void setFCmpLibcallsGNU();
+
+  // Get the libcall(s) corresponding to \p Predicate for operands of \p Size
+  // bits.
+  FCmpLibcallsList getFCmpLibcalls(CmpInst::Predicate, unsigned Size) const;
 };
 
 } // namespace llvm
