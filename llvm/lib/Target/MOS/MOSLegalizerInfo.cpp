@@ -237,20 +237,38 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   // Floating Point Operations
 
+  // TODO: G_FNEG and G_FABS?
+
   getActionDefinitionsBuilder({G_FADD,       G_FSUB,
                                G_FMUL,       G_FDIV,
-                               G_FMA,        G_FPOW,
-                               G_FREM,       G_FCOS,
+                               G_FMA,        G_FREM,
+                               G_FCEIL,      G_FFLOOR,
+                               G_FSQRT,      G_FRINT,
+                               G_FNEARBYINT, G_INTRINSIC_ROUNDEVEN,
+                               G_FPEXT,      G_FPTRUNC})
+      .libcallFor({S32, S64});
+
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .customFor({S32, S64});
+
+  setFCmpLibcallsGNU();
+
+  getActionDefinitionsBuilder(G_FCMP)
+      .customForCartesianProduct({S1}, {S32, S64});
+
+  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+      .libcallForCartesianProduct({S32, S64}, {S32, S64})
+      .minScalar(0, S32);
+
+  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+      .libcallForCartesianProduct({S32, S64}, {S32, S64})
+      .minScalar(1, S32);
+
+  getActionDefinitionsBuilder({G_FPOW,       G_FCOS,
                                G_FSIN,       G_FLOG10,
                                G_FLOG,       G_FLOG2,
                                G_FEXP,       G_FEXP2,
-                               G_FCEIL,      G_FFLOOR,
-                               G_FMINNUM,    G_FMAXNUM,
-                               G_FSQRT,      G_FRINT,
-                               G_FNEARBYINT, G_INTRINSIC_ROUNDEVEN,
-                               G_FPEXT,      G_FPTRUNC,
-                               G_FPTOSI,     G_FPTOUI,
-                               G_SITOFP,     G_UITOFP})
+                               G_FMINNUM,    G_FMAXNUM})
       .unsupported();
 
   // Memory Operations
@@ -411,6 +429,12 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeVAArg(Helper, MRI, MI);
   case G_VASTART:
     return legalizeVAStart(Helper, MRI, MI);
+
+  // Floating Point
+  case G_FCMP:
+    return legalizeFCmp(Helper, MRI, MI);
+  case G_FCONSTANT:
+    return legalizeFConst(Helper, MRI, MI);
 
   // Other Operations
   case G_DYN_STACKALLOC:
@@ -2098,6 +2122,94 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
   return true;
 }
 
+// Legalize floating-point comparisons to libcalls.
+bool MOSLegalizerInfo::legalizeFCmp(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const
+{
+  assert(MRI.getType(MI.getOperand(2).getReg()) ==
+             MRI.getType(MI.getOperand(3).getReg()) &&
+         "Mismatched operands for G_FCMP");
+  auto OpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
+
+  auto OriginalResult = MI.getOperand(0).getReg();
+  auto Predicate =
+      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  auto Libcalls = getFCmpLibcalls(Predicate, OpSize);
+
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLVMContext &Ctx = Builder.getMF().getFunction().getContext();
+
+  if (Libcalls.empty()) {
+    assert((Predicate == CmpInst::FCMP_TRUE ||
+            Predicate == CmpInst::FCMP_FALSE) &&
+           "Predicate needs libcalls, but none specified");
+    Builder.buildConstant(OriginalResult,
+                          Predicate == CmpInst::FCMP_TRUE ? 1 : 0);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  assert((OpSize == 32 || OpSize == 64) && "Unsupported operand size");
+  auto *ArgTy = OpSize == 32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
+  auto *RetTy = Type::getInt32Ty(Ctx);
+
+  SmallVector<Register, 2> Results;
+  for (auto Libcall : Libcalls) {
+    auto LibcallResult = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    auto Status = createLibcall(Builder, Libcall.LibcallID,
+                                {LibcallResult, RetTy, 0},
+                                {{MI.getOperand(2).getReg(), ArgTy, 0},
+                                 {MI.getOperand(3).getReg(), ArgTy, 0}});
+
+    if (Status != LegalizerHelper::Legalized)
+      return false;
+
+    auto ProcessedResult =
+        Libcalls.size() == 1
+            ? OriginalResult
+            : MRI.createGenericVirtualRegister(MRI.getType(OriginalResult));
+
+    // We have a result, but we need to transform it into a proper 1-bit 0 or
+    // 1, taking into account the different peculiarities of the values
+    // returned by the comparison functions.
+    CmpInst::Predicate ResultPred = Libcall.Predicate;
+    if (ResultPred == CmpInst::BAD_ICMP_PREDICATE) {
+      // We have a nice 0 or 1, and we just need to truncate it back to 1 bit
+      // to keep the types consistent.
+      Builder.buildTrunc(ProcessedResult, LibcallResult);
+    } else {
+      // We need to compare against 0.
+      assert(CmpInst::isIntPredicate(ResultPred) && "Unsupported predicate");
+      auto Zero = Builder.buildConstant(LLT::scalar(32), 0);
+      Builder.buildICmp(ResultPred, ProcessedResult, LibcallResult, Zero);
+    }
+    Results.push_back(ProcessedResult);
+  }
+
+  if (Results.size() != 1) {
+    assert(Results.size() == 2 && "Unexpected number of results");
+    Builder.buildOr(OriginalResult, Results[0], Results[1]);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// Convert floating-point constants into their binary integer equivalents.
+bool MOSLegalizerInfo::legalizeFConst(LegalizerHelper &Helper,
+                                      MachineRegisterInfo &MRI,
+                                      MachineInstr &MI) const
+{
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  LLVMContext &Ctx = Builder.getMF().getFunction().getContext();
+
+  // Convert to integer constants, while preserving the binary representation.
+  auto AsInteger = MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
+  Builder.buildConstant(MI.getOperand(0), *ConstantInt::get(Ctx, AsInteger));
+  return true;
+}
+
 bool MOSLegalizerInfo::legalizeDynStackAlloc(LegalizerHelper &Helper,
                                              MachineRegisterInfo &MRI,
                                              MachineInstr &MI) const {
@@ -2140,4 +2252,55 @@ bool MOSLegalizerInfo::legalizeFreeze(LegalizerHelper &Helper,
   MI.setDesc(Helper.MIRBuilder.getTII().get(COPY));
   Helper.Observer.changedInstr(MI);
   return true;
+}
+
+void MOSLegalizerInfo::setFCmpLibcallsGNU() {
+  // FCMP_TRUE and FCMP_FALSE don't need libcalls, they should be
+  // default-initialized.
+  FCmp32Libcalls.resize(CmpInst::LAST_FCMP_PREDICATE + 1);
+  FCmp32Libcalls[CmpInst::FCMP_OEQ] = {{RTLIB::OEQ_F32, CmpInst::ICMP_EQ}};
+  FCmp32Libcalls[CmpInst::FCMP_OGE] = {{RTLIB::OGE_F32, CmpInst::ICMP_SGE}};
+  FCmp32Libcalls[CmpInst::FCMP_OGT] = {{RTLIB::OGT_F32, CmpInst::ICMP_SGT}};
+  FCmp32Libcalls[CmpInst::FCMP_OLE] = {{RTLIB::OLE_F32, CmpInst::ICMP_SLE}};
+  FCmp32Libcalls[CmpInst::FCMP_OLT] = {{RTLIB::OLT_F32, CmpInst::ICMP_SLT}};
+  FCmp32Libcalls[CmpInst::FCMP_ORD] = {{RTLIB::UO_F32, CmpInst::ICMP_EQ}};
+  FCmp32Libcalls[CmpInst::FCMP_UGE] = {{RTLIB::OLT_F32, CmpInst::ICMP_SGE}};
+  FCmp32Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F32, CmpInst::ICMP_SGT}};
+  FCmp32Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F32, CmpInst::ICMP_SLE}};
+  FCmp32Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F32, CmpInst::ICMP_SLT}};
+  FCmp32Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F32, CmpInst::ICMP_NE}};
+  FCmp32Libcalls[CmpInst::FCMP_UNO] = {{RTLIB::UO_F32, CmpInst::ICMP_NE}};
+  FCmp32Libcalls[CmpInst::FCMP_ONE] = {{RTLIB::OGT_F32, CmpInst::ICMP_SGT},
+                                       {RTLIB::OLT_F32, CmpInst::ICMP_SLT}};
+  FCmp32Libcalls[CmpInst::FCMP_UEQ] = {{RTLIB::OEQ_F32, CmpInst::ICMP_EQ},
+                                       {RTLIB::UO_F32, CmpInst::ICMP_NE}};
+
+  FCmp64Libcalls.resize(CmpInst::LAST_FCMP_PREDICATE + 1);
+  FCmp64Libcalls[CmpInst::FCMP_OEQ] = {{RTLIB::OEQ_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_OGE] = {{RTLIB::OGE_F64, CmpInst::ICMP_SGE}};
+  FCmp64Libcalls[CmpInst::FCMP_OGT] = {{RTLIB::OGT_F64, CmpInst::ICMP_SGT}};
+  FCmp64Libcalls[CmpInst::FCMP_OLE] = {{RTLIB::OLE_F64, CmpInst::ICMP_SLE}};
+  FCmp64Libcalls[CmpInst::FCMP_OLT] = {{RTLIB::OLT_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_ORD] = {{RTLIB::UO_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_UGE] = {{RTLIB::OLT_F64, CmpInst::ICMP_SGE}};
+  FCmp64Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F64, CmpInst::ICMP_SGT}};
+  FCmp64Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F64, CmpInst::ICMP_SLE}};
+  FCmp64Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F64, CmpInst::ICMP_NE}};
+  FCmp64Libcalls[CmpInst::FCMP_UNO] = {{RTLIB::UO_F64, CmpInst::ICMP_NE}};
+  FCmp64Libcalls[CmpInst::FCMP_ONE] = {{RTLIB::OGT_F64, CmpInst::ICMP_SGT},
+                                       {RTLIB::OLT_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_UEQ] = {{RTLIB::OEQ_F64, CmpInst::ICMP_EQ},
+                                       {RTLIB::UO_F64, CmpInst::ICMP_NE}};
+}
+
+MOSLegalizerInfo::FCmpLibcallsList
+MOSLegalizerInfo::getFCmpLibcalls(CmpInst::Predicate Predicate,
+                                  unsigned Size) const {
+  assert(CmpInst::isFPPredicate(Predicate) && "Unsupported FCmp predicate");
+  if (Size == 32)
+    return FCmp32Libcalls[Predicate];
+  if (Size == 64)
+    return FCmp64Libcalls[Predicate];
+  llvm_unreachable("Unsupported size for FCmp predicate");
 }
