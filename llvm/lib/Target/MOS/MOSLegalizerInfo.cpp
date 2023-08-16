@@ -265,6 +265,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_INTRINSIC_ROUNDEVEN})
       .libcallFor({S32, S64});
 
+  getActionDefinitionsBuilder(G_FCOPYSIGN).lower();
+
   getActionDefinitionsBuilder(G_FPEXT).libcallFor({{S64, S32}});
   getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{S32, S64}});
 
