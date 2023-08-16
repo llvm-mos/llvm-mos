@@ -237,15 +237,34 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   // Floating Point Operations
 
-  // TODO: G_FNEG and G_FABS?
-
-  getActionDefinitionsBuilder({G_FADD,       G_FSUB,
-                               G_FMUL,       G_FDIV,
-                               G_FMA,        G_FREM,
-                               G_FCEIL,      G_FFLOOR,
-                               G_FSQRT,      G_FRINT,
-                               G_FNEARBYINT, G_INTRINSIC_ROUNDEVEN,
-                               G_FPEXT,      G_FPTRUNC})
+  getActionDefinitionsBuilder({G_FADD,
+                               G_FSUB,
+                               G_FMUL,
+                               G_FDIV,
+                               G_FMA,
+                               G_FREM,
+                               G_FPEXT,
+                               G_FPTRUNC,
+                               G_FPOW,
+                               G_FEXP,
+                               G_FEXP2,
+                               G_FLOG,
+                               G_FLOG2,
+                               G_FABS,
+                               G_FMINNUM,
+                               G_FMAXNUM,
+                               G_FCEIL,
+                               G_FCOS,
+                               G_FSIN,
+                               G_FSQRT,
+                               G_FFLOOR,
+                               G_FRINT,
+                               G_FNEARBYINT,
+                               G_INTRINSIC_ROUND,
+                               G_INTRINSIC_TRUNC,
+                               G_FMINIMUM,
+                               G_FMAXIMUM,
+                               G_INTRINSIC_ROUNDEVEN})
       .libcallFor({S32, S64});
 
   getActionDefinitionsBuilder(G_FCONSTANT)
@@ -263,13 +282,6 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .libcallForCartesianProduct({S32, S64}, {S32, S64})
       .minScalar(1, S32);
-
-  getActionDefinitionsBuilder({G_FPOW,       G_FCOS,
-                               G_FSIN,       G_FLOG10,
-                               G_FLOG,       G_FLOG2,
-                               G_FEXP,       G_FEXP2,
-                               G_FMINNUM,    G_FMAXNUM})
-      .unsupported();
 
   // Memory Operations
 
