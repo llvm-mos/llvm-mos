@@ -157,7 +157,9 @@ using ::perror _LIBCPP_USING_IF_EXISTS;
 
 using ::fopen _LIBCPP_USING_IF_EXISTS;
 using ::freopen _LIBCPP_USING_IF_EXISTS;
+#ifndef _LIBCPP_HAS_NO_REMOVE
 using ::remove _LIBCPP_USING_IF_EXISTS;
+#endif
 using ::rename _LIBCPP_USING_IF_EXISTS;
 using ::tmpfile _LIBCPP_USING_IF_EXISTS;
 using ::tmpnam _LIBCPP_USING_IF_EXISTS;

@@ -42,6 +42,17 @@ class _LIBCPP_TYPE_VIS unsynchronized_pool_resource : public memory_resource {
     void __do_deallocate(memory_resource* __upstream, void* __p, size_t __bytes, size_t __align);
   };
 
+#if defined(__mos__)
+  static const size_t __min_blocks_per_chunk = 16;
+  static const size_t __min_bytes_per_chunk  = 256;
+  static const size_t __max_blocks_per_chunk = (size_t(1) << 10);
+  static const size_t __max_bytes_per_chunk  = (size_t(1) << 15);
+
+  static const int __log2_smallest_block_size      = 3;
+  static const size_t __smallest_block_size        = 8;
+  static const size_t __default_largest_block_size = (size_t(1) << 10);
+  static const size_t __max_largest_block_size     = (size_t(1) << 15);
+#else
   static const size_t __min_blocks_per_chunk = 16;
   static const size_t __min_bytes_per_chunk  = 1024;
   static const size_t __max_blocks_per_chunk = (size_t(1) << 20);
@@ -51,6 +62,7 @@ class _LIBCPP_TYPE_VIS unsynchronized_pool_resource : public memory_resource {
   static const size_t __smallest_block_size        = 8;
   static const size_t __default_largest_block_size = (size_t(1) << 20);
   static const size_t __max_largest_block_size     = (size_t(1) << 30);
+#endif
 
   size_t __pool_block_size(int __i) const;
   int __log2_pool_block_size(int __i) const;

@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FIXME: This file does not compile correctly under LLVM-MOS.
+#if !defined(__mos__)
+
 #if defined(__MVS__)
 // As part of monotonic clock support on z/OS we need macro _LARGE_TIME_API
 // to be defined before any system header to include definition of struct timespec64.
@@ -252,3 +255,5 @@ steady_clock::now() noexcept
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif

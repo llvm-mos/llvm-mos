@@ -27,7 +27,7 @@ public:
   MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &);
 
   void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {}
+                        MacroBuilder &Builder) const override;
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
 

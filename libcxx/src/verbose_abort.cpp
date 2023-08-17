@@ -35,7 +35,11 @@ void __libcpp_verbose_abort(char const* format, ...) {
   {
     va_list list;
     va_start(list, format);
+#if defined(__mos__)
+    std::vprintf(format, list);
+#else
     std::vfprintf(stderr, format, list);
+#endif /* deifned(__mos__) */
     va_end(list);
   }
 

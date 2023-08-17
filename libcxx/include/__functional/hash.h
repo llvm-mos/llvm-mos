@@ -51,6 +51,20 @@ template <class _Size, size_t = sizeof(_Size)*__CHAR_BIT__>
 struct __murmur2_or_cityhash;
 
 template <class _Size>
+struct __murmur2_or_cityhash<_Size, 16>
+{
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+    _Size operator()(const void* __key, _Size __len) const {
+      // TODO: This is a stub implementation. Implement something better.
+      _Size hash = __len;
+      const unsigned char* __data = static_cast<const unsigned char*>(__key);
+      for (; __len; __data++, __len--)
+        hash = (hash << 1) + *__data;
+      return hash;
+    }
+};
+
+template <class _Size>
 struct __murmur2_or_cityhash<_Size, 32>
 {
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK

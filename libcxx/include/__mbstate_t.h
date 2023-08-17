@@ -35,6 +35,8 @@
 #   include_next <wchar.h> // fall back to the C standard provider of mbstate_t
 #elif __has_include_next(<uchar.h>)
 #   include_next <uchar.h> // <uchar.h> is also required to make mbstate_t visible
+#elif defined(__mos__) && __has_include_next(<wchar.h>)
+#   include_next <wchar.h> // on MOS, we do provide a stub <wchar.h>
 #else
 #   error "We don't know how to get the definition of mbstate_t without <wchar.h> on your platform."
 #endif

@@ -1167,6 +1167,13 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 #  endif
 
+#  if defined(__mos__)
+#    define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#    define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+// error: target of using declaration conflicts with declaration already in scope
+#    define _LIBCPP_HAS_NO_REMOVE
+#  endif
+
 #  if __has_attribute(__init_priority__)
 #    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
 #  else

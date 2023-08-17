@@ -65,6 +65,9 @@ template<typename T>
 inline void throw_helper(const string& msg) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw T(msg);
+#elif defined(__mos__)
+    printf("%s\n", msg.c_str());
+    _VSTD::abort();
 #else
     fprintf(stderr, "%s\n", msg.c_str());
     _VSTD::abort();
@@ -78,6 +81,8 @@ inline void throw_from_string_out_of_range(const string& func) {
 inline void throw_from_string_invalid_arg(const string& func) {
     throw_helper<invalid_argument>(func + ": no conversion");
 }
+
+#if !defined(__mos__)
 
 // as_integer
 
@@ -287,6 +292,10 @@ long double stold(const wstring& str, size_t* idx) {
     return as_float<long double>("stold", str, idx);
 }
 #endif // !_LIBCPP_HAS_NO_WIDE_CHARACTERS
+
+#else
+}  // unnamed namespace
+#endif // !defined(__mos__)
 
 // to_string
 
