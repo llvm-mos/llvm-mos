@@ -72,11 +72,11 @@ body: |
     ; CHECK-NEXT: [[COPY29:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY30:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY31:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY1]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY2]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY3]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY4]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY17]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
     ; CHECK-NEXT: $rc5 = COPY [[DEF]](s8)
     ; CHECK-NEXT: $rc6 = COPY [[COPY18]](s8)
     ; CHECK-NEXT: $rc7 = COPY [[COPY19]](s8)
@@ -120,7 +120,7 @@ body: |
     ; CHECK-NEXT: $x = COPY [[COPY38]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY39]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY40]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY49]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
     ; CHECK-NEXT: $rc5 = COPY [[COPY50]](s8)
     ; CHECK-NEXT: $rc6 = COPY [[COPY51]](s8)
     ; CHECK-NEXT: $rc7 = COPY [[COPY52]](s8)
@@ -159,7 +159,7 @@ body: |
     ; CHECK-NEXT: [[COPY94:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY95:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY96:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY65]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY66]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY67]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY68]](s8)
@@ -203,7 +203,7 @@ body: |
     ; CHECK-NEXT: [[COPY127:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY128:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY97]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY98]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY99]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY100]](s8)
@@ -211,7 +211,7 @@ body: |
     ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
     ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
     ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY113]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
     ; CHECK-NEXT: $rc9 = COPY [[COPY114]](s8)
     ; CHECK-NEXT: $rc10 = COPY [[COPY115]](s8)
     ; CHECK-NEXT: $rc11 = COPY [[COPY116]](s8)
@@ -258,7 +258,7 @@ body: |
     ; CHECK-NEXT: $x = COPY [[COPY138]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY139]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY140]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY145]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
     ; CHECK-NEXT: $rc5 = COPY [[COPY146]](s8)
     ; CHECK-NEXT: $rc6 = COPY [[COPY147]](s8)
     ; CHECK-NEXT: $rc7 = COPY [[COPY148]](s8)
@@ -340,7 +340,7 @@ body: |
     ; CHECK-NEXT: [[COPY222:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY223:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY224:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY193]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY194]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY195]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY196]](s8)
@@ -375,7 +375,7 @@ body: |
     ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
     ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
     ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY113]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
     ; CHECK-NEXT: $rc9 = COPY [[COPY114]](s8)
     ; CHECK-NEXT: $rc10 = COPY [[COPY115]](s8)
     ; CHECK-NEXT: $rc11 = COPY [[COPY116]](s8)
@@ -402,7 +402,7 @@ body: |
     ; CHECK-NEXT: [[COPY255:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY256:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY97]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY98]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY99]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY100]](s8)
@@ -457,7 +457,7 @@ body: |
     ; CHECK-NEXT: $x = COPY [[COPY270]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY271]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY272]](s8)
-    ; CHECK-NEXT: $rc4 = COPY [[COPY273]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[COPY]](s8)
     ; CHECK-NEXT: $rc5 = COPY [[COPY274]](s8)
     ; CHECK-NEXT: $rc6 = COPY [[COPY275]](s8)
     ; CHECK-NEXT: $rc7 = COPY [[COPY276]](s8)
@@ -582,7 +582,7 @@ body: |
     ; CHECK-NEXT: [[COPY382:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY383:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY384:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY353]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY354]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY355]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY356]](s8)
@@ -617,7 +617,7 @@ body: |
     ; CHECK-NEXT: $rc5 = COPY [[C]](s8)
     ; CHECK-NEXT: $rc6 = COPY [[C]](s8)
     ; CHECK-NEXT: $rc7 = COPY [[C]](s8)
-    ; CHECK-NEXT: $rc8 = COPY [[COPY113]](s8)
+    ; CHECK-NEXT: $rc8 = COPY [[COPY]](s8)
     ; CHECK-NEXT: $rc9 = COPY [[COPY114]](s8)
     ; CHECK-NEXT: $rc10 = COPY [[COPY115]](s8)
     ; CHECK-NEXT: $rc11 = COPY [[COPY116]](s8)
@@ -663,7 +663,7 @@ body: |
     ; CHECK-NEXT: [[COPY415:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY416:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: $a = COPY [[COPY97]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY98]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY99]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[COPY100]](s8)
@@ -881,8 +881,7 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: trunc_anyext
     ; CHECK: [[COPY:%[0-9]+]]:_(s1) = COPY $c
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s1) = COPY [[COPY]](s1)
-    ; CHECK-NEXT: RTS implicit [[COPY1]](s1)
+    ; CHECK-NEXT: RTS implicit [[COPY]](s1)
     %1:_(s1) = COPY $c
     %2:_(s8) = G_ANYEXT %1
     %3:_(s1) = G_TRUNC %2
@@ -896,7 +895,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: RTS implicit [[COPY1]](s8), implicit [[DEF]](s8)
+    ; CHECK-NEXT: RTS implicit [[COPY]](s8), implicit [[DEF]](s8)
     %1:_(s8) = COPY $a
     %2:_(s16) = G_ANYEXT %1
     %3:_(s8), %4:_(s8) = G_UNMERGE_VALUES %2
@@ -1234,7 +1233,7 @@ body: |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY2]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY3]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY4]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[DEF]](s8)
@@ -1339,7 +1338,7 @@ body: |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: $a = COPY [[COPY2]](s8)
+    ; CHECK-NEXT: $a = COPY [[COPY]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY3]](s8)
     ; CHECK-NEXT: $rc2 = COPY [[COPY4]](s8)
     ; CHECK-NEXT: $rc3 = COPY [[DEF]](s8)

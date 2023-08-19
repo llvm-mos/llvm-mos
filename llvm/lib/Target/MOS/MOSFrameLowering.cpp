@@ -18,6 +18,7 @@
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"

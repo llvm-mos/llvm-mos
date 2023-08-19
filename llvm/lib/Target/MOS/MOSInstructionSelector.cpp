@@ -22,8 +22,8 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -48,12 +48,6 @@ using namespace MIPatternMatch;
 
 #define DEBUG_TYPE "mos-isel"
 
-namespace llvm {
-namespace MOS {
-extern RegisterBank AnyRegBank;
-} // namespace MOS
-} // namespace llvm
-
 namespace {
 
 #define GET_GLOBALISEL_PREDICATE_BITSET
@@ -66,7 +60,7 @@ public:
                          MOSRegisterBankInfo &RBI);
 
   void setupMF(MachineFunction &MF, GISelKnownBits *KB,
-               CodeGenCoverage &CovInfo, ProfileSummaryInfo *PSI,
+               CodeGenCoverage *CovInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI, AAResults *AA) override;
 
   bool select(MachineInstr &MI) override;
@@ -147,7 +141,7 @@ MOSInstructionSelector::MOSInstructionSelector(const MOSTargetMachine &TM,
 }
 
 void MOSInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
-                                     CodeGenCoverage &CovInfo,
+                                     CodeGenCoverage *CovInfo,
                                      ProfileSummaryInfo *PSI,
                                      BlockFrequencyInfo *BFI, AAResults *AA) {
   InstructionSelector::setupMF(MF, KB, CovInfo, PSI, BFI, AA);
@@ -372,8 +366,7 @@ struct FoldedLdIndir_match {
   AAResults *AA;
 
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    const MachineInstr *LdIndir =
-        getOpcodeDef(MOS::G_LOAD_INDIR, Reg, MRI);
+    const MachineInstr *LdIndir = getOpcodeDef(MOS::G_LOAD_INDIR, Reg, MRI);
     if (!LdIndir || !shouldFoldMemAccess(Tgt, *LdIndir, AA))
       return false;
     Addr = LdIndir->getOperand(1).getReg();
@@ -381,8 +374,7 @@ struct FoldedLdIndir_match {
   }
 };
 inline FoldedLdIndir_match m_FoldedLdIndir(const MachineInstr &Tgt,
-                                                 Register &Addr,
-                                                 AAResults *AA) {
+                                           Register &Addr, AAResults *AA) {
   return {Tgt, Addr, AA};
 }
 
@@ -499,18 +491,16 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
 
   Register IndirAddr;
   if (MI.getOpcode() == MOS::G_ADD) {
-    Success =
-        mi_match(Dst, MRI,
-                 m_GAdd(m_Reg(LHS),
-                        m_all_of(m_MInstr(Load),
-                                 m_FoldedLdIndir(MI, IndirAddr, AA))));
+    Success = mi_match(
+        Dst, MRI,
+        m_GAdd(m_Reg(LHS),
+               m_all_of(m_MInstr(Load), m_FoldedLdIndir(MI, IndirAddr, AA))));
     Opcode = MOS::ADCIndir;
   } else {
-    Success =
-        mi_match(Dst, MRI,
-                 m_GSub(m_Reg(LHS),
-                        m_all_of(m_MInstr(Load),
-                                 m_FoldedLdIndir(MI, IndirAddr, AA))));
+    Success = mi_match(
+        Dst, MRI,
+        m_GSub(m_Reg(LHS),
+               m_all_of(m_MInstr(Load), m_FoldedLdIndir(MI, IndirAddr, AA))));
     Opcode = MOS::SBCIndir;
   }
   if (Success) {
@@ -654,27 +644,24 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   Register IndirAddr;
   switch (MI.getOpcode()) {
   case MOS::G_AND:
-    Success =
-        mi_match(Dst, MRI,
-                 m_GAnd(m_Reg(LHS),
-                        m_all_of(m_MInstr(Load),
-                                 m_FoldedLdIndir(MI, IndirAddr, AA))));
+    Success = mi_match(
+        Dst, MRI,
+        m_GAnd(m_Reg(LHS),
+               m_all_of(m_MInstr(Load), m_FoldedLdIndir(MI, IndirAddr, AA))));
     Opcode = MOS::ANDIndir;
     break;
   case MOS::G_XOR:
-    Success =
-        mi_match(Dst, MRI,
-                 m_GXor(m_Reg(LHS),
-                        m_all_of(m_MInstr(Load),
-                                 m_FoldedLdIndir(MI, IndirAddr, AA))));
+    Success = mi_match(
+        Dst, MRI,
+        m_GXor(m_Reg(LHS),
+               m_all_of(m_MInstr(Load), m_FoldedLdIndir(MI, IndirAddr, AA))));
     Opcode = MOS::EORIndir;
     break;
   case MOS::G_OR:
-    Success =
-        mi_match(Dst, MRI,
-                 m_GOr(m_Reg(LHS),
-                       m_all_of(m_MInstr(Load),
-                                m_FoldedLdIndir(MI, IndirAddr, AA))));
+    Success = mi_match(
+        Dst, MRI,
+        m_GOr(m_Reg(LHS),
+              m_all_of(m_MInstr(Load), m_FoldedLdIndir(MI, IndirAddr, AA))));
     Opcode = MOS::ORAIndir;
     break;
   }
@@ -685,8 +672,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
                      .addUse(IndirAddr)
                      .cloneMemRefs(*Load);
     if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-      llvm_unreachable(
-          "Could not constrain indirect logical instruction.");
+      llvm_unreachable("Could not constrain indirect logical instruction.");
     MI.eraseFromParent();
     return true;
   }
@@ -941,12 +927,13 @@ struct CMPTermIndirIdx_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPTermIndirIdx operation. Flag is the
-// physical (N or Z) register corresponding to the output by which the G_SBC
+// Match one of the outputs of a G_SBC to a CMPTermIndirIdx operation. Flag is
+// the physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
 inline CMPTermIndirIdx_match m_CMPTermIndirIdx(Register &LHS, Register &Addr,
                                                Register &Idx, Register &Flag,
-                                               MachineInstr *&Load, AAResults *AA) {
+                                               MachineInstr *&Load,
+                                               AAResults *AA) {
   return {LHS, Addr, Idx, Flag, Load, AA};
 }
 
@@ -997,15 +984,17 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
                   .cloneMemRefs(*Load);
   }
   Register RegAddr;
-  if (!Compare && mi_match(CondReg, MRI,
-                           m_CMPTermIndir(LHS, RegAddr, Flag, Load, AA))) {
+  if (!Compare &&
+      mi_match(CondReg, MRI, m_CMPTermIndir(LHS, RegAddr, Flag, Load, AA))) {
     Compare = Builder.buildInstr(MOS::CMPTermIndir, {S1}, {LHS, RegAddr})
                   .cloneMemRefs(*Load);
   }
-  if (!Compare && mi_match(CondReg, MRI,
-                           m_CMPTermIndirIdx(LHS, RegAddr, Idx, Flag, Load, AA))) {
-    Compare = Builder.buildInstr(MOS::CMPTermIndirIdx, {S1}, {LHS, RegAddr, Idx})
-                  .cloneMemRefs(*Load);
+  if (!Compare &&
+      mi_match(CondReg, MRI,
+               m_CMPTermIndirIdx(LHS, RegAddr, Idx, Flag, Load, AA))) {
+    Compare =
+        Builder.buildInstr(MOS::CMPTermIndirIdx, {S1}, {LHS, RegAddr, Idx})
+            .cloneMemRefs(*Load);
   }
   Register RHS;
   if (!Compare && mi_match(CondReg, MRI, m_CMPTermImag8(LHS, RHS, Flag)))
@@ -1096,8 +1085,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     Register RegAddr;
     if (!Instr &&
         mi_match(MI.getOperand(6).getReg(), MRI,
-                 m_all_of(m_MInstr(Load),
-                          m_FoldedLdIndir(MI, RegAddr, AA)))) {
+                 m_all_of(m_MInstr(Load), m_FoldedLdIndir(MI, RegAddr, AA)))) {
       Instr = Builder
                   .buildInstr(MOS::CMPIndir, {MI.getOperand(1)},
                               {MI.getOperand(5), RegAddr})
@@ -1955,7 +1943,7 @@ bool MOSInstructionSelector::selectAll(MachineInstrSpan MIS) {
         continue;
       if (MRI.getRegClassOrNull(MO.getReg()))
         continue;
-      MRI.setRegBank(Reg, MOS::AnyRegBank);
+      MRI.setRegBank(Reg, RBI.getRegBank(MOS::AnyRegBankID));
     }
 
   // Select instructions in reverse block order.

@@ -59,7 +59,7 @@ MOSRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 }
 
 void MOSRegisterBankInfo::applyMappingImpl(
-    const OperandsMapper &OpdMapper) const {
+    MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   applyDefaultMapping(OpdMapper);
 }
 

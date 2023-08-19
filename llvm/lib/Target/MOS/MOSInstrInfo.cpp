@@ -51,7 +51,7 @@ bool MOSInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
-    return false;
+    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
   case MOS::LDImm16:
     return true;
   }
@@ -703,21 +703,22 @@ none:
 }
 
 const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
+                                                     const TargetInstrInfo &TII,
                                                      unsigned FoldIdx) const {
   const MachineFunction &MF = *MI.getMF();
   const MOSFrameLowering &TFL =
       *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
   if (!TFL.usesStaticStack(MF))
-    return TargetInstrInfo::canFoldCopy(MI, FoldIdx);
+    return TargetInstrInfo::canFoldCopy(MI, TII, FoldIdx);
 
   Register FoldReg = MI.getOperand(FoldIdx).getReg();
   if (MOS::GPRRegClass.contains(FoldReg) ||
       MOS::GPR_LSBRegClass.contains(FoldReg))
-    return TargetInstrInfo::canFoldCopy(MI, FoldIdx);
+    return TargetInstrInfo::canFoldCopy(MI, TII, FoldIdx);
   if (FoldReg.isVirtual()) {
     const auto *RC = MI.getMF()->getRegInfo().getRegClass(FoldReg);
     if (RC == &MOS::GPRRegClass || RC == &MOS::GPR_LSBRegClass)
-      return TargetInstrInfo::canFoldCopy(MI, FoldIdx);
+      return TargetInstrInfo::canFoldCopy(MI, TII, FoldIdx);
   }
   return nullptr;
 }

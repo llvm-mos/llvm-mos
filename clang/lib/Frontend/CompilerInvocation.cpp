@@ -1589,7 +1589,7 @@ void CompilerInvocation::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   }
 
   if (Opts.AssumeNonReentrant)
-    GenerateArg(Args, OPT_fnonreentrant, SA);
+    GenerateArg(Consumer, OPT_fnonreentrant);
 }
 
 bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,

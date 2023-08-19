@@ -26,10 +26,10 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    stx __rc2
 ; NMOS-NEXT:    ldx __rc21
 ; NMOS-NEXT:    stx __rc3
-; NMOS-NEXT:    lda #0
 ; NMOS-NEXT:    ldx #2
 ; NMOS-NEXT:    stx __rc4
-; NMOS-NEXT:    tax
+; NMOS-NEXT:    ldx #0
+; NMOS-NEXT:    txa
 ; NMOS-NEXT:    jsr __memset
 ; NMOS-NEXT:    jmp .LBB0_2
 ; NMOS-NEXT:  .LBB0_1: ; %while.body

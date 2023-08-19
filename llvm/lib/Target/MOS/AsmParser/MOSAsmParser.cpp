@@ -14,6 +14,7 @@
 #include "MOS.h"
 #include "MOSRegisterInfo.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCAssembler.h"

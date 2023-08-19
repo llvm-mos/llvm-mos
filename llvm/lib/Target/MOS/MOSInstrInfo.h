@@ -83,6 +83,7 @@ public:
                            Register VReg) const override;
 
   const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
+                                         const TargetInstrInfo &TII,
                                          unsigned FoldIdx) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,

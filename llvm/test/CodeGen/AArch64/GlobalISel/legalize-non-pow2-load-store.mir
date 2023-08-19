@@ -89,7 +89,7 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[C]]
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[COPY3]], [[C]]
@@ -130,7 +130,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[C1]]
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY [[AND]](s64)
@@ -166,7 +166,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[DEF]](s64)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[DEF]], [[C]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[C1]]
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY [[AND]](s64)

@@ -58,11 +58,9 @@ def store_to_memset : GICombineRule<
           [{ return matchStoreToMemset(*${root}, MRI, ${matchinfo}); }]),
   (apply [{  return applyStoreToMemset(*${root}, MRI, B, Observer, ${matchinfo});}])>;
 
-def MOSCombinerHelper: GICombinerHelper<
-    "MOSGenCombinerHelper",
-    [all_combines, fold_global_offset, sbc_equal, extract_low_bit, uaddo_1,
-     cmpz_zero, load_store_to_memcpy, store_to_memset]> {
-  let DisableRuleOption = "moscombiner-disable-rule";
-  let StateClass = "MOSCombinerHelperState";
-  let AdditionalArguments = [];
+def MOSCombinerHelper
+    : GICombinerHelper<"MOSCombinerImpl",
+                        [all_combines, fold_global_offset, sbc_equal,
+                        extract_low_bit, uaddo_1, cmpz_zero,
+                        load_store_to_memcpy, store_to_memset]> {
 }

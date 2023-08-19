@@ -26,6 +26,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
@@ -326,6 +327,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).custom();
 
+  getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).lower();
+
   getActionDefinitionsBuilder(G_FREEZE)
       .customFor({S1, S8, P})
       .widenScalarToNextMultipleOf(0, 8)
@@ -340,7 +343,7 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                          MachineInstr &MI) const {
   LLT P = LLT::pointer(0, 16);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
-  switch (MI.getIntrinsicID()) {
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   case Intrinsic::trap: {
     auto &Ctx = MI.getMF()->getFunction().getContext();
     auto *RetTy = Type::getVoidTy(Ctx);

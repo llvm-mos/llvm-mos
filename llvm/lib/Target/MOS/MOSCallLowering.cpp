@@ -65,7 +65,7 @@ struct MOSValueAssigner : CallLowering::ValueAssigner {
 
     if (getAssignFn(!Info.IsFixed)(ValNo, ValVT, LocVT, LocInfo, Flags, State))
       return true;
-    StackOffset = State.getNextStackOffset();
+    StackSize = State.getStackSize();
     return false;
   }
 };
@@ -351,7 +351,7 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (F.isVarArg()) {
     auto *FuncInfo = MF.getInfo<MOSFunctionInfo>();
     FuncInfo->VarArgsStackIndex = MF.getFrameInfo().CreateFixedObject(
-        /*Size=*/1, Assigner.StackOffset, /*IsImmutable=*/true);
+        /*Size=*/1, Assigner.StackSize, /*IsImmutable=*/true);
   }
 
   return true;
@@ -412,7 +412,7 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Insert the call once the outgoing arguments are in place.
   MIRBuilder.insertInstr(Call);
 
-  uint64_t StackSize = ArgsAssigner.StackOffset;
+  uint64_t StackSize = ArgsAssigner.StackSize;
 
   if (!Info.OrigRet.Ty->isVoidTy()) {
     // Copy the return value from its physical location into a virtual register.
@@ -422,7 +422,7 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                        MIRBuilder, Info.CallConv,
                                        Info.IsVarArg))
       return false;
-    StackSize = std::max(StackSize, RetAssigner.StackOffset);
+    StackSize = std::max(StackSize, RetAssigner.StackSize);
   }
 
   // Now that the size of the argument stack region is known, the setup call

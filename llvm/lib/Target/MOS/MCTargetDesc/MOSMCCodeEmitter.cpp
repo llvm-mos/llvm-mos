@@ -25,6 +25,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -37,16 +38,14 @@ using namespace llvm;
 
 namespace llvm {
 
-void MOSMCCodeEmitter::emitInstruction(uint64_t Val, unsigned Size,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &OS) const {
+static void emitLittleEndian(uint64_t Val, unsigned Size, SmallVectorImpl<char> &CB) {
   for (int64_t I = 0; I < Size; ++I) {
-    OS << (char)(Val & 0xff);
+    CB.push_back((char)(Val & 0xff));
     Val = Val >> 8;
   }
 }
 
-void MOSMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void MOSMCCodeEmitter::encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
@@ -56,7 +55,7 @@ void MOSMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   assert(Size > 0 && "Instruction size cannot be zero");
 
   uint64_t BinaryOpCode = getBinaryCodeForInstr(MI, Fixups, STI);
-  emitInstruction(BinaryOpCode, Size, STI, OS);
+  emitLittleEndian(BinaryOpCode, Size, CB);
 }
 
 template <MOS::Fixups Fixup, unsigned Offset>

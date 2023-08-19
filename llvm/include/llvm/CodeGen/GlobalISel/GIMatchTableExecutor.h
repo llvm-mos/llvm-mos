@@ -497,7 +497,8 @@ public:
   virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,
                        CodeGenCoverage *covinfo = nullptr,
                        ProfileSummaryInfo *psi = nullptr,
-                       BlockFrequencyInfo *bfi = nullptr, AAResults *aa) {
+                       BlockFrequencyInfo *bfi = nullptr,
+                       AAResults *aa = nullptr) {
     CoverageInfo = covinfo;
     KB = kb;
     MF = &mf;

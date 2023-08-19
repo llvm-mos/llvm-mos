@@ -173,26 +173,26 @@ define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-NEXT:    str r2, [sp] @ 4-byte Spill
 ; CHECK-NEXT:  .LBB2_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str r1, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    asrs r2, r4, #31
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    mov r2, r1
 ; CHECK-NEXT:    ldr r1, [r1]
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    str r2, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    asrs r2, r4, #31
 ; CHECK-NEXT:    muls r1, r3, r1
 ; CHECK-NEXT:    adds r4, r4, r1
 ; CHECK-NEXT:    adc.w r1, r2, r1, asr #31
 ; CHECK-NEXT:    adds.w r2, r4, #-2147483648
 ; CHECK-NEXT:    ldrd r2, r4, [r8]
-; CHECK-NEXT:    adc r5, r1, #0
+; CHECK-NEXT:    adc r1, r1, #0
 ; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    smull r4, r2, r4, r9
-; CHECK-NEXT:    asrs r1, r5, #31
-; CHECK-NEXT:    str r5, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    subs r4, r5, r4
-; CHECK-NEXT:    sbcs r1, r2
-; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    asr.w r12, r1, #31
+; CHECK-NEXT:    subs r4, r1, r4
+; CHECK-NEXT:    sbc.w r1, r12, r2
 ; CHECK-NEXT:    adds.w r10, r4, #-2147483648
+; CHECK-NEXT:    ldr r4, [r5, #-4]
 ; CHECK-NEXT:    adc r1, r1, #0
-; CHECK-NEXT:    ldr r4, [r2, #-4]
 ; CHECK-NEXT:    muls r4, r3, r4
 ; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    adds.w r12, r4, #-2147483648

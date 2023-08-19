@@ -77,6 +77,9 @@ static cl::opt<bool> UserSinkCommonInsts(
     "sink-common-insts", cl::Hidden, cl::init(false),
     cl::desc("Sink common instructions (default = false)"));
 
+static cl::opt<bool> UserSpeculateBlocks(
+    "speculate-blocks", cl::Hidden, cl::init(false),
+    cl::desc("Speculatively execute blocks (default = false)"));
 
 STATISTIC(NumSimpl, "Number of blocks simplified");
 
@@ -323,6 +326,8 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.HoistCommonInsts = UserHoistCommonInsts;
   if (UserSinkCommonInsts.getNumOccurrences())
     Options.SinkCommonInsts = UserSinkCommonInsts;
+  if (UserSpeculateBlocks.getNumOccurrences())
+    Options.SpeculateBlocks = UserSpeculateBlocks;
 }
 
 SimplifyCFGPass::SimplifyCFGPass() {

@@ -2007,7 +2007,7 @@ void tools::addMOSCodeGenArgs(llvm::opt::ArgStringList &CmdArgs) {
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-phi-node-folding-threshold=0");
   CmdArgs.push_back("-mllvm");
-  CmdArgs.push_back("-two-entry-phi-node-folding-threshold=0");
+  CmdArgs.push_back("-speculate-blocks=0");
 
   // The 6502 has no alignment requirements, so this simplifies the ASM backend
   // and saves space.

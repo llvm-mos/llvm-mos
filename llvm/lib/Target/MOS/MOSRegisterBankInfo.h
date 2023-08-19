@@ -31,7 +31,8 @@ public:
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
 
-  void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
+  void applyMappingImpl(MachineIRBuilder &Builder,
+                        const OperandsMapper &OpdMapper) const override;
 
   const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
                                              LLT Ty) const override;

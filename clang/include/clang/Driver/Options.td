@@ -3080,9 +3080,11 @@ def fstatic_stack : Flag<["-"], "fstatic-stack">, Group<f_Group>,
   HelpText<"Statically allocates stack frames whenever possible.">;
 def fno_static_stack : Flag<["-"], "fno-static-stack">, Group<f_Group>,
   HelpText<"Always use a dynamic stack pointer.">;
-def fnonreentrant : Flag<["-"], "fnonreentrant">, Flags<[CC1Option]>, Group<f_Group>,
+def fnonreentrant : Flag<["-"], "fnonreentrant">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
   HelpText<"Assume that at most one invocation of a function can be active simultaneously">;
 def freentrant : Flag<["-"], "freentrant">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the default reentrant C function semantics">;
 defm diagnostics_show_line_numbers : BoolFOption<"diagnostics-show-line-numbers",
   DiagnosticOpts<"ShowLineNumbers">, DefaultTrue,

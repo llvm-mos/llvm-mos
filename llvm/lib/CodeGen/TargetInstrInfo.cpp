@@ -442,7 +442,7 @@ MachineInstr &TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
 // the register class to use.
 const TargetRegisterClass *
 TargetInstrInfo::canFoldCopy(const MachineInstr &MI, const TargetInstrInfo &TII,
-                             unsigned FoldIdx) {
+                             unsigned FoldIdx) const {
   assert(TII.isCopyInstr(MI) && "MI must be a COPY instruction");
   if (MI.getNumOperands() != 2)
     return nullptr;
