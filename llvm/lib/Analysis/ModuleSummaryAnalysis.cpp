@@ -93,7 +93,7 @@ extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 // instruction in it takes an address of any basic block, because instruction
 // can only take an address of basic block located in the same function.
 static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
-                         SetVector<ValueInfo> &RefEdges,
+                         SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
                          SmallPtrSet<const User *, 8> &Visited) {
   bool HasBlockAddress = false;
   SmallVector<const User *, 32> Worklist;
@@ -144,9 +144,12 @@ static bool isNonRenamableLocal(const GlobalValue &GV) {
 
 /// Determine whether this call has all constant integer arguments (excluding
 /// "this") and summarize it to VCalls or ConstVCalls as appropriate.
-static void addVCallToSet(DevirtCallSite Call, GlobalValue::GUID Guid,
-                          SetVector<FunctionSummary::VFuncId> &VCalls,
-                          SetVector<FunctionSummary::ConstVCall> &ConstVCalls) {
+static void addVCallToSet(
+    DevirtCallSite Call, GlobalValue::GUID Guid,
+    SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
+        &VCalls,
+    SetVector<FunctionSummary::ConstVCall,
+              std::vector<FunctionSummary::ConstVCall>> &ConstVCalls) {
   std::vector<uint64_t> Args;
   // Start from the second argument to skip the "this" pointer.
   for (auto &Arg : drop_begin(Call.CB.args())) {
@@ -163,11 +166,18 @@ static void addVCallToSet(DevirtCallSite Call, GlobalValue::GUID Guid,
 /// If this intrinsic call requires that we add information to the function
 /// summary, do so via the non-constant reference arguments.
 static void addIntrinsicToSummary(
-    const CallInst *CI, SetVector<GlobalValue::GUID> &TypeTests,
-    SetVector<FunctionSummary::VFuncId> &TypeTestAssumeVCalls,
-    SetVector<FunctionSummary::VFuncId> &TypeCheckedLoadVCalls,
-    SetVector<FunctionSummary::ConstVCall> &TypeTestAssumeConstVCalls,
-    SetVector<FunctionSummary::ConstVCall> &TypeCheckedLoadConstVCalls,
+    const CallInst *CI,
+    SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> &TypeTests,
+    SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
+        &TypeTestAssumeVCalls,
+    SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
+        &TypeCheckedLoadVCalls,
+    SetVector<FunctionSummary::ConstVCall,
+              std::vector<FunctionSummary::ConstVCall>>
+        &TypeTestAssumeConstVCalls,
+    SetVector<FunctionSummary::ConstVCall,
+              std::vector<FunctionSummary::ConstVCall>>
+        &TypeCheckedLoadConstVCalls,
     DominatorTree &DT) {
   switch (CI->getCalledFunction()->getIntrinsicID()) {
   case Intrinsic::type_test:
@@ -198,6 +208,7 @@ static void addIntrinsicToSummary(
     break;
   }
 
+  case Intrinsic::type_checked_load_relative:
   case Intrinsic::type_checked_load: {
     auto *TypeMDVal = cast<MetadataAsValue>(CI->getArgOperand(2));
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
@@ -265,13 +276,17 @@ static void computeFunctionSummary(
   unsigned NumInsts = 0;
   // Map from callee ValueId to profile count. Used to accumulate profile
   // counts for all static calls to a given callee.
-  MapVector<ValueInfo, CalleeInfo> CallGraphEdges;
-  SetVector<ValueInfo> RefEdges, LoadRefEdges, StoreRefEdges;
-  SetVector<GlobalValue::GUID> TypeTests;
-  SetVector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
-      TypeCheckedLoadVCalls;
-  SetVector<FunctionSummary::ConstVCall> TypeTestAssumeConstVCalls,
-      TypeCheckedLoadConstVCalls;
+  MapVector<ValueInfo, CalleeInfo, DenseMap<ValueInfo, unsigned>,
+            std::vector<std::pair<ValueInfo, CalleeInfo>>>
+      CallGraphEdges;
+  SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges, LoadRefEdges,
+      StoreRefEdges;
+  SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> TypeTests;
+  SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
+      TypeTestAssumeVCalls, TypeCheckedLoadVCalls;
+  SetVector<FunctionSummary::ConstVCall,
+            std::vector<FunctionSummary::ConstVCall>>
+      TypeTestAssumeConstVCalls, TypeCheckedLoadConstVCalls;
   ICallPromotionAnalysis ICallAnalysis;
   SmallPtrSet<const User *, 8> Visited;
 
@@ -283,6 +298,10 @@ static void computeFunctionSummary(
 
   std::vector<CallsiteInfo> Callsites;
   std::vector<AllocInfo> Allocs;
+
+#ifndef NDEBUG
+  DenseSet<const CallBase *> CallsThatMayHaveMemprofSummary;
+#endif
 
   bool HasInlineAsmMaybeReferencingInternal = false;
   bool HasIndirBranchToBlockAddress = false;
@@ -427,6 +446,10 @@ static void computeFunctionSummary(
               .updateHotness(getHotness(Candidate.Count, PSI));
       }
 
+      // Summarize memprof related metadata. This is only needed for ThinLTO.
+      if (!IsThinLTO)
+        continue;
+
       // TODO: Skip indirect calls for now. Need to handle these better, likely
       // by creating multiple Callsites, one per target, then speculatively
       // devirtualize while applying clone info in the ThinLTO backends. This
@@ -436,6 +459,14 @@ static void computeFunctionSummary(
       // summaries to instructions.
       if (!CalledFunction)
         continue;
+
+      // Ensure we keep this analysis in sync with the handling in the ThinLTO
+      // backend (see MemProfContextDisambiguation::applyImport). Save this call
+      // so that we can skip it in checking the reverse case later.
+      assert(mayHaveMemprofSummary(CB));
+#ifndef NDEBUG
+      CallsThatMayHaveMemprofSummary.insert(CB);
+#endif
 
       // Compute the list of stack ids first (so we can trim them from the stack
       // ids on any MIBs).
@@ -486,7 +517,7 @@ static void computeFunctionSummary(
   std::vector<ValueInfo> Refs;
   if (IsThinLTO) {
     auto AddRefEdges = [&](const std::vector<const Instruction *> &Instrs,
-                           SetVector<ValueInfo> &Edges,
+                           SetVector<ValueInfo, std::vector<ValueInfo>> &Edges,
                            SmallPtrSet<const User *, 8> &Cache) {
       for (const auto *I : Instrs) {
         Cache.erase(I);
@@ -545,6 +576,25 @@ static void computeFunctionSummary(
         ForceSummaryEdgesCold == FunctionSummary::FSHT_All
             ? CalleeInfo::HotnessType::Cold
             : CalleeInfo::HotnessType::Critical);
+
+#ifndef NDEBUG
+  // Make sure that all calls we decided could not have memprof summaries get a
+  // false value for mayHaveMemprofSummary, to ensure that this handling remains
+  // in sync with the ThinLTO backend handling.
+  if (IsThinLTO) {
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
+          continue;
+        // We already checked these above.
+        if (CallsThatMayHaveMemprofSummary.count(CB))
+          continue;
+        assert(!mayHaveMemprofSummary(CB));
+      }
+    }
+  }
+#endif
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport = NonRenamableLocal ||
@@ -672,7 +722,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    DenseSet<GlobalValue::GUID> &CantBePromoted,
                                    const Module &M,
                                    SmallVectorImpl<MDNode *> &Types) {
-  SetVector<ValueInfo> RefEdges;
+  SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
   bool NonRenamableLocal = isNonRenamableLocal(V);
@@ -750,10 +800,14 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   assert(PSI);
   bool EnableSplitLTOUnit = false;
+  bool UnifiedLTO = false;
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("EnableSplitLTOUnit")))
     EnableSplitLTOUnit = MD->getZExtValue();
-  ModuleSummaryIndex Index(/*HaveGVs=*/true, EnableSplitLTOUnit);
+  if (auto *MD =
+          mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("UnifiedLTO")))
+    UnifiedLTO = MD->getZExtValue();
+  ModuleSummaryIndex Index(/*HaveGVs=*/true, EnableSplitLTOUnit, UnifiedLTO);
 
   // Identify the local values in the llvm.used and llvm.compiler.used sets,
   // which should not be exported as they would then require renaming and
@@ -1042,3 +1096,36 @@ ImmutablePass *llvm::createImmutableModuleSummaryIndexWrapperPass(
 
 INITIALIZE_PASS(ImmutableModuleSummaryIndexWrapperPass, "module-summary-info",
                 "Module summary info", false, true)
+
+bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
+  if (!CB)
+    return false;
+  if (CB->isDebugOrPseudoInst())
+    return false;
+  auto *CI = dyn_cast<CallInst>(CB);
+  auto *CalledValue = CB->getCalledOperand();
+  auto *CalledFunction = CB->getCalledFunction();
+  if (CalledValue && !CalledFunction) {
+    CalledValue = CalledValue->stripPointerCasts();
+    // Stripping pointer casts can reveal a called function.
+    CalledFunction = dyn_cast<Function>(CalledValue);
+  }
+  // Check if this is an alias to a function. If so, get the
+  // called aliasee for the checks below.
+  if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
+    assert(!CalledFunction &&
+           "Expected null called function in callsite for alias");
+    CalledFunction = dyn_cast<Function>(GA->getAliaseeObject());
+  }
+  // Check if this is a direct call to a known function or a known
+  // intrinsic, or an indirect call with profile data.
+  if (CalledFunction) {
+    if (CI && CalledFunction->isIntrinsic())
+      return false;
+  } else {
+    // TODO: For now skip indirect calls. See comments in
+    // computeFunctionSummary for what is needed to handle this.
+    return false;
+  }
+  return true;
+}

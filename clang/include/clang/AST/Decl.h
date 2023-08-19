@@ -452,6 +452,8 @@ public:
     return hasCachedLinkage();
   }
 
+  bool isPlaceholderVar(const LangOptions &LangOpts) const;
+
   /// Looks through UsingDecls and ObjCCompatibleAliasDecls for
   /// the underlying named decl.
   NamedDecl *getUnderlyingDecl() {
@@ -2378,6 +2380,21 @@ public:
     return getConstexprKind() == ConstexprSpecKind::Consteval;
   }
 
+  void setBodyContainsImmediateEscalatingExpressions(bool Set) {
+    FunctionDeclBits.BodyContainsImmediateEscalatingExpression = Set;
+  }
+
+  bool BodyContainsImmediateEscalatingExpressions() const {
+    return FunctionDeclBits.BodyContainsImmediateEscalatingExpression;
+  }
+
+  bool isImmediateEscalating() const;
+
+  // The function is a C++ immediate function.
+  // This can be either a consteval function, or an immediate escalating
+  // function containing an immediate escalating expression.
+  bool isImmediateFunction() const;
+
   /// Whether the instantiation of this function is pending.
   /// This bit is set when the decision to instantiate this function is made
   /// and unset if and when the function body is created. That leaves out
@@ -3710,6 +3727,7 @@ public:
     return getExtInfo()->TemplParamLists[i];
   }
 
+  using TypeDecl::printName;
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 
   void setTemplateParameterListsInfo(ASTContext &Context,
@@ -4324,6 +4342,7 @@ class TopLevelStmtDecl : public Decl {
   friend class ASTDeclWriter;
 
   Stmt *Statement = nullptr;
+  bool IsSemiMissing = false;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
       : Decl(TopLevelStmt, DC, L), Statement(S) {}
@@ -4337,6 +4356,12 @@ public:
   SourceRange getSourceRange() const override LLVM_READONLY;
   Stmt *getStmt() { return Statement; }
   const Stmt *getStmt() const { return Statement; }
+  void setStmt(Stmt *S) {
+    assert(IsSemiMissing && "Operation supported for printing values only!");
+    Statement = S;
+  }
+  bool isSemiMissing() const { return IsSemiMissing; }
+  void setSemiMissing(bool Missing = true) { IsSemiMissing = Missing; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TopLevelStmt; }

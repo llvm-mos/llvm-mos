@@ -717,7 +717,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   void onInitializeSROAArg(AllocaInst *Arg) override {
     assert(Arg != nullptr &&
            "Should not initialize SROA costs for null value.");
-    SROAArgCosts[Arg] = 0;
+    auto SROAArgCost = TTI.getCallerAllocaCost(&CandidateCall, Arg);
+    SROACostSavings += SROAArgCost;
+    SROAArgCosts[Arg] = SROAArgCost;
   }
 
   void onAggregateSROAUse(AllocaInst *SROAArg) override {
@@ -1191,7 +1193,12 @@ private:
               InstrCost);
   }
 
-  void onInitializeSROAArg(AllocaInst *Arg) override { SROACosts[Arg] = 0; }
+  void onInitializeSROAArg(AllocaInst *Arg) override {
+    auto SROAArgCost = TTI.getCallerAllocaCost(&CandidateCall, Arg);
+    SROACosts[Arg] = SROAArgCost;
+    SROACostSavingOpportunities += SROAArgCost;
+  }
+
   void onAggregateSROAUse(AllocaInst *Arg) override {
     SROACosts.find(Arg)->second += InstrCost;
     SROACostSavingOpportunities += InstrCost;
@@ -1976,14 +1983,27 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
     }
   }
 
+  auto isImplicitNullCheckCmp = [](const CmpInst &I) {
+    for (auto *User : I.users())
+      if (auto *Instr = dyn_cast<Instruction>(User))
+        if (!Instr->getMetadata(LLVMContext::MD_make_implicit))
+          return false;
+    return true;
+  };
+
   // If the comparison is an equality comparison with null, we can simplify it
   // if we know the value (argument) can't be null
-  if (I.isEquality() && isa<ConstantPointerNull>(I.getOperand(1)) &&
-      isKnownNonNullInCallee(I.getOperand(0))) {
-    bool IsNotEqual = I.getPredicate() == CmpInst::ICMP_NE;
-    SimplifiedValues[&I] = IsNotEqual ? ConstantInt::getTrue(I.getType())
-                                      : ConstantInt::getFalse(I.getType());
-    return true;
+  if (I.isEquality() && isa<ConstantPointerNull>(I.getOperand(1))) {
+    if (isKnownNonNullInCallee(I.getOperand(0))) {
+      bool IsNotEqual = I.getPredicate() == CmpInst::ICMP_NE;
+      SimplifiedValues[&I] = IsNotEqual ? ConstantInt::getTrue(I.getType())
+                                        : ConstantInt::getFalse(I.getType());
+      return true;
+    }
+    // Implicit null checks act as unconditional branches and their comparisons
+    // should be treated as simplified and free of cost.
+    if (isImplicitNullCheckCmp(I))
+      return true;
   }
   return handleSROA(I.getOperand(0), isa<ConstantPointerNull>(I.getOperand(1)));
 }
@@ -2265,6 +2285,7 @@ bool CallAnalyzer::visitBranchInst(BranchInst &BI) {
   // inliner more regular and predictable. Interestingly, conditional branches
   // which will fold away are also free.
   return BI.isUnconditional() || isa<ConstantInt>(BI.getCondition()) ||
+         BI.getMetadata(LLVMContext::MD_make_implicit) ||
          isa_and_nonnull<ConstantInt>(
              SimplifiedValues.lookup(BI.getCondition()));
 }
@@ -2666,9 +2687,7 @@ InlineResult CallAnalyzer::analyze() {
   // basic blocks in a breadth-first order as we insert live successors. To
   // accomplish this, prioritizing for small iterations because we exit after
   // crossing our threshold, we use a small-size optimized SetVector.
-  typedef SetVector<BasicBlock *, SmallVector<BasicBlock *, 16>,
-                    SmallPtrSet<BasicBlock *, 16>>
-      BBSetVector;
+  typedef SmallSetVector<BasicBlock *, 16> BBSetVector;
   BBSetVector BBWorklist;
   BBWorklist.insert(&F.getEntryBlock());
 
@@ -2787,16 +2806,14 @@ LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(dbgs()); }
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(
-    Function *Caller, Function *Callee, TargetTransformInfo &TTI,
+    Function *Caller, Function *Callee,
     function_ref<const TargetLibraryInfo &(Function &)> &GetTLI) {
   // Note that CalleeTLI must be a copy not a reference. The legacy pass manager
   // caches the most recently created TLI in the TargetLibraryInfoWrapperPass
   // object, and always returns the same object (which is overwritten on each
   // GetTLI call). Therefore we copy the first result.
   auto CalleeTLI = GetTLI(*Callee);
-  return (IgnoreTTIInlineCompatible ||
-          TTI.areInlineCompatible(Caller, Callee)) &&
-         GetTLI(*Caller).areInlineCompatible(CalleeTLI,
+  return GetTLI(*Caller).areInlineCompatible(CalleeTLI,
                                              InlineCallerSupersetNoBuiltin) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
@@ -2912,6 +2929,12 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
                                      " address space");
     }
 
+  // Never inline functions with conflicting target attributes.
+  Function *Caller = Call.getCaller();
+  if (!IgnoreTTIInlineCompatible &&
+      !CalleeTTI.areInlineCompatible(Caller, Callee))
+    return InlineResult::failure("conflicting target attributes");
+
   // Calls to functions with always-inline attributes should be inlined
   // whenever possible.
   if (Call.hasFnAttr(Attribute::AlwaysInline)) {
@@ -2926,8 +2949,12 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
-  Function *Caller = Call.getCaller();
-  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
+  // FIXME: functionsHaveCompatibleAttributes below checks for compatibilities
+  // of different kinds of function attributes -- sanitizer-related ones,
+  // checkDenormMode, no-builtin-memcpy, etc.  It's unclear if we really want
+  // the always-inline attribute to take precedence over these different types
+  // of function attributes.
+  if (!functionsHaveCompatibleAttributes(Caller, Callee, GetTLI))
     return InlineResult::failure("conflicting attributes");
 
   // Don't inline this call if the caller has the optnone attribute.

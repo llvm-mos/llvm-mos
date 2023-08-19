@@ -97,26 +97,36 @@ public:
           Declaration(Declaration) {}
   };
 
+  using FragmentIterator = std::vector<Fragment>::iterator;
+  using ConstFragmentIterator = std::vector<Fragment>::const_iterator;
+
   const std::vector<Fragment> &getFragments() const { return Fragments; }
 
-  // Add a new Fragment to the beginning of the Fragments.
-  DeclarationFragments &appendFront(StringRef Spelling, FragmentKind Kind,
-                                    StringRef PreciseIdentifier = "",
-                                    const Decl *Declaration = nullptr) {
-    Fragments.emplace(Fragments.begin(), Spelling, Kind, PreciseIdentifier,
-                      Declaration);
+  FragmentIterator begin() { return Fragments.begin(); }
+
+  FragmentIterator end() { return Fragments.end(); }
+
+  ConstFragmentIterator cbegin() const { return Fragments.cbegin(); }
+
+  ConstFragmentIterator cend() const { return Fragments.cend(); }
+
+  // Add a new Fragment at an arbitrary offset.
+  DeclarationFragments &insert(FragmentIterator It, StringRef Spelling,
+                               FragmentKind Kind,
+                               StringRef PreciseIdentifier = "",
+                               const Decl *Declaration = nullptr) {
+    Fragments.insert(It,
+                     Fragment(Spelling, Kind, PreciseIdentifier, Declaration));
     return *this;
   }
 
-  DeclarationFragments &appendFront(DeclarationFragments &&Other) {
-    Fragments.insert(Fragments.begin(),
-                     std::make_move_iterator(Other.Fragments.begin()),
+  DeclarationFragments &insert(FragmentIterator It,
+                               DeclarationFragments &&Other) {
+    Fragments.insert(It, std::make_move_iterator(Other.Fragments.begin()),
                      std::make_move_iterator(Other.Fragments.end()));
     Other.Fragments.clear();
     return *this;
   }
-
-  void removeLast() { Fragments.pop_back(); }
 
   /// Append a new Fragment to the end of the Fragments.
   ///
@@ -163,8 +173,25 @@ public:
   /// Get the corresponding FragmentKind from string \p S.
   static FragmentKind parseFragmentKindFromString(StringRef S);
 
+  static DeclarationFragments
+  getExceptionSpecificationString(ExceptionSpecificationType ExceptionSpec);
+
+  static DeclarationFragments getStructureTypeFragment(const RecordDecl *Decl);
+
 private:
   std::vector<Fragment> Fragments;
+};
+
+class AccessControl {
+public:
+  AccessControl(std::string Access) : Access(Access) {}
+
+  const std::string &getAccess() const { return Access; }
+
+  bool empty() const { return Access.empty(); }
+
+private:
+  std::string Access;
 };
 
 /// Store function signature information with DeclarationFragments of the
@@ -209,6 +236,29 @@ private:
 /// A factory class to build DeclarationFragments for different kinds of Decl.
 class DeclarationFragmentsBuilder {
 public:
+  /// Build FunctionSignature for a function-like declaration \c FunctionT like
+  /// FunctionDecl, ObjCMethodDecl, or CXXMethodDecl.
+  ///
+  /// The logic and implementation of building a signature for a FunctionDecl,
+  /// CXXMethodDecl, and ObjCMethodDecl are exactly the same, but they do not
+  /// share a common base. This template helps reuse the code.
+  template <typename FunctionT>
+  static FunctionSignature getFunctionSignature(const FunctionT *Function);
+
+  static AccessControl getAccessControl(const Decl *Decl) {
+    switch (Decl->getAccess()) {
+    case AS_public:
+      return AccessControl("public");
+    case AS_private:
+      return AccessControl("private");
+    case AS_protected:
+      return AccessControl("protected");
+    case AS_none:
+      return AccessControl("none");
+    }
+    llvm_unreachable("Unhandled access control");
+  }
+
   /// Build DeclarationFragments for a variable declaration VarDecl.
   static DeclarationFragments getFragmentsForVar(const VarDecl *);
 
@@ -228,6 +278,19 @@ public:
 
   /// Build DeclarationFragments for a struct record declaration RecordDecl.
   static DeclarationFragments getFragmentsForStruct(const RecordDecl *);
+
+  static DeclarationFragments getFragmentsForCXXClass(const CXXRecordDecl *);
+
+  static DeclarationFragments
+  getFragmentsForSpecialCXXMethod(const CXXMethodDecl *);
+
+  static DeclarationFragments getFragmentsForCXXMethod(const CXXMethodDecl *);
+
+  static DeclarationFragments
+  getFragmentsForConversionFunction(const CXXConversionDecl *);
+
+  static DeclarationFragments
+  getFragmentsForOverloadedOperator(const CXXMethodDecl *);
 
   /// Build DeclarationFragments for an Objective-C category declaration
   /// ObjCCategoryDecl.
@@ -273,15 +336,6 @@ public:
   /// Build a sub-heading for macro \p Name.
   static DeclarationFragments getSubHeadingForMacro(StringRef Name);
 
-  /// Build FunctionSignature for a function-like declaration \c FunctionT like
-  /// FunctionDecl or ObjCMethodDecl.
-  ///
-  /// The logic and implementation of building a signature for a FunctionDecl
-  /// and an ObjCMethodDecl are exactly the same, but they do not share a common
-  /// base. This template helps reuse the code.
-  template <typename FunctionT>
-  static FunctionSignature getFunctionSignature(const FunctionT *);
-
 private:
   DeclarationFragmentsBuilder() = delete;
 
@@ -305,6 +359,24 @@ private:
   /// ParmVarDecl.
   static DeclarationFragments getFragmentsForParam(const ParmVarDecl *);
 };
+
+template <typename FunctionT>
+FunctionSignature
+DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {
+  FunctionSignature Signature;
+
+  DeclarationFragments ReturnType, After;
+  ReturnType
+      .append(getFragmentsForType(Function->getReturnType(),
+                                  Function->getASTContext(), After))
+      .append(std::move(After));
+  Signature.setReturnType(ReturnType);
+
+  for (const auto *Param : Function->parameters())
+    Signature.addParameter(Param->getName(), getFragmentsForParam(Param));
+
+  return Signature;
+}
 
 } // namespace extractapi
 } // namespace clang

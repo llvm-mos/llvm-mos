@@ -132,8 +132,7 @@ public:
   bool isTriviallyReMaterializable(const MachineInstr &MI) const {
     return MI.getOpcode() == TargetOpcode::IMPLICIT_DEF ||
            (MI.getDesc().isRematerializable() &&
-            (isReallyTriviallyReMaterializable(MI) ||
-             isReallyTriviallyReMaterializableGeneric(MI)));
+            isReallyTriviallyReMaterializable(MI));
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
@@ -149,10 +148,7 @@ protected:
   /// predicate must return false if the instruction has any side effects other
   /// than producing a value, or if it requres any address registers that are
   /// not always available.
-  /// Requirements must be check as stated in isTriviallyReMaterializable() .
-  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const {
-    return false;
-  }
+  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const;
 
   /// This method commutes the operands of the given machine instruction MI.
   /// The operands to be commuted are specified by their indices OpIdx1 and
@@ -186,13 +182,6 @@ protected:
   static bool fixCommutedOpIndices(unsigned &ResultIdx1, unsigned &ResultIdx2,
                                    unsigned CommutableOpIdx1,
                                    unsigned CommutableOpIdx2);
-
-private:
-  /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is
-  /// set and the target hook isReallyTriviallyReMaterializable returns false,
-  /// this function does target-independent tests to determine if the
-  /// instruction is really trivially rematerializable.
-  bool isReallyTriviallyReMaterializableGeneric(const MachineInstr &MI) const;
 
 public:
   /// These methods return the opcode of the frame setup/destroy instructions
@@ -1006,6 +995,10 @@ public:
     return false;
   }
 
+  /// Return an index for MachineJumpTableInfo if \p insn is an indirect jump
+  /// using a jump table, otherwise -1.
+  virtual int getJumpTableIndex(const MachineInstr &MI) const { return -1; }
+
 protected:
   /// Target-dependent implementation for IsCopyInstr.
   /// If the specific machine instruction is a instruction that moves/copies
@@ -1039,6 +1032,16 @@ public:
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     }
     return isCopyInstrImpl(MI);
+  }
+
+  bool isFullCopyInstr(const MachineInstr &MI) const {
+    auto DestSrc = isCopyInstr(MI);
+    if (!DestSrc)
+      return false;
+
+    const MachineOperand *DestRegOp = DestSrc->Destination;
+    const MachineOperand *SrcRegOp = DestSrc->Source;
+    return !DestRegOp->getSubReg() && !SrcRegOp->getSubReg();
   }
 
   /// If the specific machine instruction is an instruction that adds an
@@ -1150,7 +1153,12 @@ public:
   // If the COPY instruction in MI can be folded to a stack operation, return
   // the register class to use.
   virtual const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
+                                                 const TargetInstrInfo &TII,
                                                  unsigned FoldIdx) const;
+
+  /// This function defines the logic to lower COPY instruction to
+  /// target specific instruction(s).
+  void lowerCopy(MachineInstr *MI, const TargetRegisterInfo *TRI) const;
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in \p Root. All potential patterns are
@@ -1956,6 +1964,13 @@ public:
     return false;
   }
 
+  /// Allows targets to use appropriate copy instruction while spilitting live
+  /// range of a register in register allocation.
+  virtual unsigned getLiveRangeSplitOpcode(Register Reg,
+                                           const MachineFunction &MF) const {
+    return TargetOpcode::COPY;
+  }
+
   /// During PHI eleimination lets target to make necessary checks and
   /// insert the copy to the PHI destination register in a target specific
   /// manner.
@@ -2131,6 +2146,9 @@ public:
                                         int64_t &Offset) const {
     return false;
   }
+
+  // Get the call frame size just before MI.
+  unsigned getCallFrameSizeAt(MachineInstr &MI) const;
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;

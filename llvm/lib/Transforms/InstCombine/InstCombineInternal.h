@@ -16,6 +16,7 @@
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -72,6 +73,10 @@ public:
                      BFI, PSI, DL, LI) {}
 
   virtual ~InstCombinerImpl() = default;
+
+  /// Perform early cleanup and prepare the InstCombine worklist.
+  bool prepareWorklist(Function &F,
+                       ReversePostOrderTraversal<BasicBlock *> &RPOT);
 
   /// Run the combiner over the entire worklist until it is empty.
   ///
@@ -329,8 +334,7 @@ private:
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
   Instruction *matchSAddSubSat(IntrinsicInst &MinMax1);
   Instruction *foldNot(BinaryOperator &I);
-
-  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
+  Instruction *foldBinOpOfDisplacedShifts(BinaryOperator &I);
 
   /// Determine if a pair of casts can be replaced by a single cast.
   ///
@@ -388,16 +392,18 @@ private:
   Instruction *foldAndOrOfSelectUsingImpliedCond(Value *Op, SelectInst &SI,
                                                  bool IsAnd);
 
+  Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
+
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
     auto &Ctx = InsertAt->getContext();
-    new StoreInst(ConstantInt::getTrue(Ctx),
-                  PoisonValue::get(Type::getInt1PtrTy(Ctx)),
-                  InsertAt);
+    auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
+                             PoisonValue::get(PointerType::getUnqual(Ctx)),
+                             /*isVolatile*/ false, Align(1));
+    InsertNewInstBefore(SI, *InsertAt);
   }
-
 
   /// Combiner aware instruction erasure.
   ///
@@ -411,12 +417,11 @@ public:
 
     // Make sure that we reprocess all operands now that we reduced their
     // use counts.
-    for (Use &Operand : I.operands())
-      if (auto *Inst = dyn_cast<Instruction>(Operand))
-        Worklist.add(Inst);
-
+    SmallVector<Value *> Ops(I.operands());
     Worklist.remove(&I);
     I.eraseFromParent();
+    for (Value *Op : Ops)
+      Worklist.handleUseCountDecrement(Op);
     MadeIRChange = true;
     return nullptr; // Don't do anything with FI
   }
@@ -449,6 +454,18 @@ public:
   // efficiently reorganized.
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
                                         Value *RHS);
+
+  // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
+  //    -> (logic_shift (Binop1 (Binop2 X, inv_logic_shift(C1, C)), Y), C)
+  // (Binop1 (Binop2 (logic_shift X, Amt), Mask), (logic_shift Y, Amt))
+  //    -> (BinOp (logic_shift (BinOp X, Y)), Mask)
+  Instruction *foldBinOpShiftWithShift(BinaryOperator &I);
+
+  /// Tries to simplify binops of select and cast of the select condition.
+  ///
+  /// (Binop (cast C), (select C, T, F))
+  ///    -> (select C, C0, C1)
+  Instruction *foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I);
 
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
@@ -524,6 +541,8 @@ public:
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
 
   Instruction *foldAddWithConstant(BinaryOperator &Add);
+
+  Instruction *foldSquareSumInts(BinaryOperator &I);
 
   /// Try to rotate an operation below a PHI node, using PHI nodes for
   /// its operands.
@@ -636,6 +655,8 @@ public:
                             SelectPatternFlavor SPF2, Value *C);
   Instruction *foldSelectInstWithICmp(SelectInst &SI, ICmpInst *ICI);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, ICmpInst &ICI);
+  bool replaceInInstruction(Value *V, Value *Old, Value *New,
+                            unsigned Depth = 0);
 
   Value *insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                          bool isSigned, bool Inside);
@@ -652,10 +673,16 @@ public:
 
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
-  /// Returns a value X such that Val = X * Scale, or null if none.
-  ///
-  /// If the multiplication is known not to overflow then NoSignedWrap is set.
-  Value *Descale(Value *Val, APInt Scale, bool &NoSignedWrap);
+  bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
+
+  bool removeInstructionsBeforeUnreachable(Instruction &I);
+  void addDeadEdge(BasicBlock *From, BasicBlock *To,
+                   SmallVectorImpl<BasicBlock *> &Worklist);
+  void handleUnreachableFrom(Instruction *I,
+                             SmallVectorImpl<BasicBlock *> &Worklist);
+  void handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
+  void handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
+  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 };
 
 class Negator final {

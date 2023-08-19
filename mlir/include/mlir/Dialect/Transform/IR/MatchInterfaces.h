@@ -42,7 +42,7 @@ public:
            "SingleOpMatchOpTrait is only available on operations with "
            "MatchOpInterface");
     Value operandHandle = cast<OpTy>(op).getOperandHandle();
-    if (!operandHandle.getType().isa<TransformHandleTypeInterface>()) {
+    if (!isa<TransformHandleTypeInterface>(operandHandle.getType())) {
       return op->emitError() << "SingleOpMatchOpTrait requires the op handle "
                                 "to be of TransformHandleTypeInterface";
     }
@@ -50,18 +50,19 @@ public:
     return success();
   }
 
-  DiagnosedSilenceableFailure apply(TransformResults &results,
+  DiagnosedSilenceableFailure apply(TransformRewriter &rewriter,
+                                    TransformResults &results,
                                     TransformState &state) {
     Value operandHandle = cast<OpTy>(this->getOperation()).getOperandHandle();
-    ArrayRef<Operation *> payload = state.getPayloadOps(operandHandle);
-    if (payload.size() != 1) {
+    auto payload = state.getPayloadOps(operandHandle);
+    if (!llvm::hasSingleElement(payload)) {
       return emitDefiniteFailure(this->getOperation()->getLoc())
              << "SingleOpMatchOpTrait requires the operand handle to point to "
                 "a single payload op";
     }
 
     return cast<OpTy>(this->getOperation())
-        .matchOperation(payload[0], results, state);
+        .matchOperation(*payload.begin(), results, state);
   }
 
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
@@ -82,7 +83,7 @@ public:
            "MatchOpInterface");
 
     Value operandHandle = cast<OpTy>(op).getOperandHandle();
-    if (!operandHandle.getType().isa<TransformValueHandleTypeInterface>()) {
+    if (!isa<TransformValueHandleTypeInterface>(operandHandle.getType())) {
       return op->emitError() << "SingleValueMatchOpTrait requires an operand "
                                 "of TransformValueHandleTypeInterface";
     }
@@ -90,7 +91,8 @@ public:
     return success();
   }
 
-  DiagnosedSilenceableFailure apply(TransformResults &results,
+  DiagnosedSilenceableFailure apply(TransformRewriter &rewriter,
+                                    TransformResults &results,
                                     TransformState &state) {
     Value operandHandle = cast<OpTy>(this->getOperation()).getOperandHandle();
     ValueRange payload = state.getPayloadValues(operandHandle);

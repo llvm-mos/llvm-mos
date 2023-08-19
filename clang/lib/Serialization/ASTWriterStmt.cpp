@@ -42,6 +42,7 @@ namespace clang {
           Code(serialization::STMT_NULL_PTR), AbbrevToUse(0) {}
 
     ASTStmtWriter(const ASTStmtWriter&) = delete;
+    ASTStmtWriter &operator=(const ASTStmtWriter &) = delete;
 
     uint64_t Emit() {
       assert(Code != serialization::STMT_NULL_PTR &&
@@ -316,7 +317,10 @@ void ASTStmtWriter::VisitGCCAsmStmt(GCCAsmStmt *S) {
     Record.AddStmt(S->getClobberStringLiteral(I));
 
   // Labels
-  for (auto *E : S->labels()) Record.AddStmt(E);
+  for (unsigned I = 0, N = S->getNumLabels(); I != N; ++I) {
+    Record.AddIdentifierRef(S->getLabelIdentifier(I));
+    Record.AddStmt(S->getLabelExpr(I));
+  }
 
   Code = serialization::STMT_GCCASM;
 }
@@ -593,6 +597,7 @@ void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
   bool HasFunctionName = E->getFunctionName() != nullptr;
   Record.push_back(HasFunctionName);
   Record.push_back(E->getIdentKind()); // FIXME: stable encoding
+  Record.push_back(E->isTransparent());
   Record.AddSourceLocation(E->getLocation());
   if (HasFunctionName)
     Record.AddStmt(E->getFunctionName());
@@ -608,6 +613,7 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
   Record.push_back(E->hadMultipleCandidates());
   Record.push_back(E->refersToEnclosingVariableOrCapture());
   Record.push_back(E->isNonOdrUse());
+  Record.push_back(E->isImmediateEscalating());
 
   if (E->hasTemplateKWAndArgsInfo()) {
     unsigned NumTemplateArgs = E->getNumTemplateArgs();
@@ -619,7 +625,8 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
   if ((!E->hasTemplateKWAndArgsInfo()) && (!E->hasQualifier()) &&
       (E->getDecl() == E->getFoundDecl()) &&
       nk == DeclarationName::Identifier &&
-      !E->refersToEnclosingVariableOrCapture() && !E->isNonOdrUse()) {
+      !E->refersToEnclosingVariableOrCapture() && !E->isNonOdrUse() &&
+      !E->isImmediateEscalating()) {
     AbbrevToUse = Writer.getDeclRefExprAbbrev();
   }
 
@@ -1224,6 +1231,7 @@ void ASTStmtWriter::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   VisitExpr(E);
 
   Record.push_back(E->getNumAssocs());
+  Record.push_back(E->isExprPredicate());
   Record.push_back(E->ResultIndex);
   Record.AddSourceLocation(E->getGenericLoc());
   Record.AddSourceLocation(E->getDefaultLoc());
@@ -1595,6 +1603,7 @@ void ASTStmtWriter::VisitCXXConstructExpr(CXXConstructExpr *E) {
   Record.push_back(E->isStdInitListInitialization());
   Record.push_back(E->requiresZeroInitialization());
   Record.push_back(E->getConstructionKind()); // FIXME: stable encoding
+  Record.push_back(E->isImmediateEscalating());
   Record.AddSourceLocation(E->getLocation());
   Record.AddDeclRef(E->getConstructor());
   Record.AddSourceRange(E->getParenOrBraceRange());
@@ -2226,6 +2235,7 @@ void ASTStmtWriter::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   Record.writeOMPChildren(E->Data);
   Record.AddSourceLocation(E->getBeginLoc());
   Record.AddSourceLocation(E->getEndLoc());
+  Record.writeEnum(E->getMappedDirective());
 }
 
 void ASTStmtWriter::VisitOMPLoopBasedDirective(OMPLoopBasedDirective *D) {

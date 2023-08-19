@@ -85,7 +85,6 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -500,10 +499,7 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
   // Any redeclarations of D that we haven't checked for comments yet?
   // We can't use DenseMap::iterator directly since it'd get invalid.
   auto LastCheckedRedecl = [this, CanonicalD]() -> const Decl * {
-    auto LookupRes = CommentlessRedeclChains.find(CanonicalD);
-    if (LookupRes != CommentlessRedeclChains.end())
-      return LookupRes->second;
-    return nullptr;
+    return CommentlessRedeclChains.lookup(CanonicalD);
   }();
 
   for (const auto Redecl : D->redecls()) {
@@ -1153,6 +1149,13 @@ ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
   return Inits->Initializers;
 }
 
+void ASTContext::setCurrentNamedModule(Module *M) {
+  assert(M->isModulePurview());
+  assert(!CurrentCXXNamedModule &&
+         "We should set named module for ASTContext for only once");
+  CurrentCXXNamedModule = M;
+}
+
 ExternCContextDecl *ASTContext::getExternCContextDecl() const {
   if (!ExternCContext)
     ExternCContext = ExternCContextDecl::Create(*this, getTranslationUnitDecl());
@@ -1517,11 +1520,7 @@ ASTContext::setTemplateOrSpecializationInfo(VarDecl *Inst,
 
 NamedDecl *
 ASTContext::getInstantiatedFromUsingDecl(NamedDecl *UUD) {
-  auto Pos = InstantiatedFromUsingDecl.find(UUD);
-  if (Pos == InstantiatedFromUsingDecl.end())
-    return nullptr;
-
-  return Pos->second;
+  return InstantiatedFromUsingDecl.lookup(UUD);
 }
 
 void
@@ -1540,11 +1539,7 @@ ASTContext::setInstantiatedFromUsingDecl(NamedDecl *Inst, NamedDecl *Pattern) {
 
 UsingEnumDecl *
 ASTContext::getInstantiatedFromUsingEnumDecl(UsingEnumDecl *UUD) {
-  auto Pos = InstantiatedFromUsingEnumDecl.find(UUD);
-  if (Pos == InstantiatedFromUsingEnumDecl.end())
-    return nullptr;
-
-  return Pos->second;
+  return InstantiatedFromUsingEnumDecl.lookup(UUD);
 }
 
 void ASTContext::setInstantiatedFromUsingEnumDecl(UsingEnumDecl *Inst,
@@ -1555,12 +1550,7 @@ void ASTContext::setInstantiatedFromUsingEnumDecl(UsingEnumDecl *Inst,
 
 UsingShadowDecl *
 ASTContext::getInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst) {
-  llvm::DenseMap<UsingShadowDecl*, UsingShadowDecl*>::const_iterator Pos
-    = InstantiatedFromUsingShadowDecl.find(Inst);
-  if (Pos == InstantiatedFromUsingShadowDecl.end())
-    return nullptr;
-
-  return Pos->second;
+  return InstantiatedFromUsingShadowDecl.lookup(Inst);
 }
 
 void
@@ -1571,12 +1561,7 @@ ASTContext::setInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst,
 }
 
 FieldDecl *ASTContext::getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field) {
-  llvm::DenseMap<FieldDecl *, FieldDecl *>::iterator Pos
-    = InstantiatedFromUnnamedFieldDecl.find(Field);
-  if (Pos == InstantiatedFromUnnamedFieldDecl.end())
-    return nullptr;
-
-  return Pos->second;
+  return InstantiatedFromUnnamedFieldDecl.lookup(Field);
 }
 
 void ASTContext::setInstantiatedFromUnnamedFieldDecl(FieldDecl *Inst,
@@ -1683,11 +1668,11 @@ const llvm::fltSemantics &ASTContext::getFloatTypeSemantics(QualType T) const {
   case BuiltinType::Ibm128:
     return Target->getIbm128Format();
   case BuiltinType::LongDouble:
-    if (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice)
+    if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
       return AuxTarget->getLongDoubleFormat();
     return Target->getLongDoubleFormat();
   case BuiltinType::Float128:
-    if (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice)
+    if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
       return AuxTarget->getFloat128Format();
     return Target->getFloat128Format();
   }
@@ -2013,7 +1998,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = 16;
     else if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector)
       // Adjust the alignment for fixed-length RVV vectors.
-      Align = 64;
+      Align = std::min<unsigned>(64, Width);
     break;
   }
 
@@ -2133,7 +2118,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
         Width = Target->getBFloat16Width();
         Align = Target->getBFloat16Align();
       } else if ((getLangOpts().SYCLIsDevice ||
-                  (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice)) &&
+                  (getLangOpts().OpenMP &&
+                   getLangOpts().OpenMPIsTargetDevice)) &&
                  AuxTarget->hasBFloat16Type()) {
         Width = AuxTarget->getBFloat16Width();
         Align = AuxTarget->getBFloat16Align();
@@ -2142,11 +2128,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     case BuiltinType::Float16:
     case BuiltinType::Half:
       if (Target->hasFloat16Type() || !getLangOpts().OpenMP ||
-          !getLangOpts().OpenMPIsDevice) {
+          !getLangOpts().OpenMPIsTargetDevice) {
         Width = Target->getHalfWidth();
         Align = Target->getHalfAlign();
       } else {
-        assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
+        assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
                "Expected OpenMP device compilation.");
         Width = AuxTarget->getHalfWidth();
         Align = AuxTarget->getHalfAlign();
@@ -2165,7 +2151,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = Target->getIbm128Align();
       break;
     case BuiltinType::LongDouble:
-      if (getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
+      if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
           (Target->getLongDoubleWidth() != AuxTarget->getLongDoubleWidth() ||
            Target->getLongDoubleAlign() != AuxTarget->getLongDoubleAlign())) {
         Width = AuxTarget->getLongDoubleWidth();
@@ -2177,11 +2163,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       break;
     case BuiltinType::Float128:
       if (Target->hasFloat128Type() || !getLangOpts().OpenMP ||
-          !getLangOpts().OpenMPIsDevice) {
+          !getLangOpts().OpenMPIsTargetDevice) {
         Width = Target->getFloat128Width();
         Align = Target->getFloat128Align();
       } else {
-        assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
+        assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
                "Expected OpenMP device compilation.");
         Width = AuxTarget->getFloat128Width();
         Align = AuxTarget->getFloat128Align();
@@ -2859,10 +2845,8 @@ bool ASTContext::hasUniqueObjectRepresentations(
   if (Ty->isPointerType())
     return true;
 
-  if (Ty->isMemberPointerType()) {
-    const auto *MPT = Ty->getAs<MemberPointerType>();
+  if (const auto *MPT = Ty->getAs<MemberPointerType>())
     return !ABI->getMemberPointerInfo(MPT).HasPadding;
-  }
 
   if (Ty->isRecordType()) {
     const RecordDecl *Record = Ty->castAs<RecordType>()->getDecl();
@@ -3014,7 +2998,7 @@ TypeSourceInfo *ASTContext::CreateTypeSourceInfo(QualType T,
 
   auto *TInfo =
     (TypeSourceInfo*)BumpAlloc.Allocate(sizeof(TypeSourceInfo) + DataSize, 8);
-  new (TInfo) TypeSourceInfo(T);
+  new (TInfo) TypeSourceInfo(T, DataSize);
   return TInfo;
 }
 
@@ -4038,8 +4022,8 @@ QualType ASTContext::getWebAssemblyExternrefType() const {
 /// getScalableVectorType - Return the unique reference to a scalable vector
 /// type of the specified element type and size. VectorType must be a built-in
 /// type.
-QualType ASTContext::getScalableVectorType(QualType EltTy,
-                                           unsigned NumElts) const {
+QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
+                                           unsigned NumFields) const {
   if (Target->hasAArch64SVETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
@@ -4063,15 +4047,15 @@ QualType ASTContext::getScalableVectorType(QualType EltTy,
     uint64_t EltTySize = getTypeSize(EltTy);
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
                         IsFP)                                                  \
-    if (!EltTy->isBooleanType() &&                                             \
-        ((EltTy->hasIntegerRepresentation() &&                                 \
-          EltTy->hasSignedIntegerRepresentation() == IsSigned) ||              \
-         (EltTy->hasFloatingRepresentation() && IsFP)) &&                      \
-        EltTySize == ElBits && NumElts == NumEls)                              \
-      return SingletonId;
+  if (!EltTy->isBooleanType() &&                                               \
+      ((EltTy->hasIntegerRepresentation() &&                                   \
+        EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
+       (EltTy->hasFloatingRepresentation() && IsFP)) &&                        \
+      EltTySize == ElBits && NumElts == NumEls && NumFields == NF)             \
+    return SingletonId;
 #define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
-    if (EltTy->isBooleanType() && NumElts == NumEls)                           \
-      return SingletonId;
+  if (EltTy->isBooleanType() && NumElts == NumEls)                             \
+    return SingletonId;
 #include "clang/Basic/RISCVVTypes.def"
   }
   return QualType();
@@ -4158,8 +4142,8 @@ QualType ASTContext::getExtVectorType(QualType vecType,
   assert(vecType->isBuiltinType() || vecType->isDependentType() ||
          (vecType->isBitIntType() &&
           // Only support _BitInt elements with byte-sized power of 2 NumBits.
-          llvm::isPowerOf2_32(vecType->getAs<BitIntType>()->getNumBits()) &&
-          vecType->getAs<BitIntType>()->getNumBits() >= 8));
+          llvm::isPowerOf2_32(vecType->castAs<BitIntType>()->getNumBits()) &&
+          vecType->castAs<BitIntType>()->getNumBits() >= 8));
 
   // Check if we've already instantiated a vector of this type.
   llvm::FoldingSetNodeID ID;
@@ -6344,8 +6328,8 @@ bool ASTContext::isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const {
     return true;
 
   llvm::FoldingSetNodeID XCEID, YCEID;
-  XCE->Profile(XCEID, *this, /*Canonical=*/true);
-  YCE->Profile(YCEID, *this, /*Canonical=*/true);
+  XCE->Profile(XCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true);
+  YCE->Profile(YCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true);
   return XCEID == YCEID;
 }
 
@@ -6710,13 +6694,8 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     // ConceptDecl wouldn't be the same if their constraint expression differs.
     if (const auto *ConceptX = dyn_cast<ConceptDecl>(X)) {
       const auto *ConceptY = cast<ConceptDecl>(Y);
-      const Expr *XCE = ConceptX->getConstraintExpr();
-      const Expr *YCE = ConceptY->getConstraintExpr();
-      assert(XCE && YCE && "ConceptDecl without constraint expression?");
-      llvm::FoldingSetNodeID XID, YID;
-      XCE->Profile(XID, *this, /*Canonical=*/true);
-      YCE->Profile(YID, *this, /*Canonical=*/true);
-      if (XID != YID)
+      if (!isSameConstraintExpr(ConceptX->getConstraintExpr(),
+                                ConceptY->getConstraintExpr()))
         return false;
     }
 
@@ -9482,7 +9461,7 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
 
 /// getSVETypeSize - Return SVE vector or predicate register size.
 static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty) {
-  assert(Ty->isVLSTBuiltinType() && "Invalid SVE Type");
+  assert(Ty->isSveVLSBuiltinType() && "Invalid SVE Type");
   if (Ty->getKind() == BuiltinType::SveBool ||
       Ty->getKind() == BuiltinType::SveCount)
     return (Context.getLangOpts().VScaleMin * 128) / Context.getCharWidth();
@@ -9576,7 +9555,14 @@ bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
 static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
   assert(Ty->isRVVVLSBuiltinType() && "Invalid RVV Type");
   auto VScale = Context.getTargetInfo().getVScaleRange(Context.getLangOpts());
-  return VScale ? VScale->first * llvm::RISCV::RVVBitsPerBlock : 0;
+  if (!VScale)
+    return 0;
+
+  ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(Ty);
+
+  uint64_t EltSize = Context.getTypeSize(Info.ElementType);
+  uint64_t MinElts = Info.EC.getKnownMinValue();
+  return VScale->first * MinElts * EltSize;
 }
 
 bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
@@ -9589,14 +9575,10 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
-        // Predicates have the same representation as uint8 so we also have to
-        // check the kind to make these types incompatible.
-        if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector)
+        if (VT->getVectorKind() == VectorType::RVVFixedLengthDataVector ||
+            VT->getVectorKind() == VectorType::GenericVector)
           return FirstType->isRVVVLSBuiltinType() &&
-                 VT->getElementType().getCanonicalType() ==
-                     FirstType->getRVVEltType(*this);
-        if (VT->getVectorKind() == VectorType::GenericVector)
-          return getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&
+                 getTypeSize(SecondType) == getRVVTypeSize(*this, BT) &&
                  hasSameType(VT->getElementType(),
                              getBuiltinVectorTypeInfo(BT).ElementType);
       }
@@ -9618,6 +9600,9 @@ bool ASTContext::areLaxCompatibleRVVTypes(QualType FirstType,
   auto IsLaxCompatible = [this](QualType FirstType, QualType SecondType) {
     const auto *BT = FirstType->getAs<BuiltinType>();
     if (!BT)
+      return false;
+
+    if (!BT->isRVVVLSBuiltinType())
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();
@@ -10041,6 +10026,9 @@ static bool sameObjCTypeArgs(ASTContext &ctx,
     return false;
 
   ObjCTypeParamList *typeParams = iface->getTypeParamList();
+  if (!typeParams)
+    return false;
+
   for (unsigned i = 0, n = lhsArgs.size(); i != n; ++i) {
     if (ctx.hasSameType(lhsArgs[i], rhsArgs[i]))
       continue;
@@ -11442,6 +11430,17 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     Type = Context.getScalableVectorType(ElementType, NumElements);
     break;
   }
+  case 'Q': {
+    switch (*Str++) {
+    case 'a': {
+      Type = Context.SveCountTy;
+      break;
+    }
+    default:
+      llvm_unreachable("Unexpected target builtin type");
+    }
+    break;
+  }
   case 'V': {
     char *End;
     unsigned NumElements = strtoul(Str, &End, 10);
@@ -11919,6 +11918,10 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
 
   if (VD->isThisDeclarationADefinition() == VarDecl::DeclarationOnly &&
       !isMSStaticDataMemberInlineDefinition(VD))
+    return false;
+
+  // Variables in other module units shouldn't be forced to be emitted.
+  if (VD->isInAnotherModuleUnit())
     return false;
 
   // Variables that can be needed in other TUs are required.
@@ -13574,16 +13577,17 @@ operator<<(const StreamingDiagnostic &DB,
 }
 
 bool ASTContext::mayExternalize(const Decl *D) const {
-  bool IsStaticVar =
-      isa<VarDecl>(D) && cast<VarDecl>(D)->getStorageClass() == SC_Static;
+  bool IsInternalVar =
+      isa<VarDecl>(D) &&
+      basicGVALinkageForVariable(*this, cast<VarDecl>(D)) == GVA_Internal;
   bool IsExplicitDeviceVar = (D->hasAttr<CUDADeviceAttr>() &&
                               !D->getAttr<CUDADeviceAttr>()->isImplicit()) ||
                              (D->hasAttr<CUDAConstantAttr>() &&
                               !D->getAttr<CUDAConstantAttr>()->isImplicit());
-  // CUDA/HIP: static managed variables need to be externalized since it is
+  // CUDA/HIP: managed variables need to be externalized since it is
   // a declaration in IR, therefore cannot have internal linkage. Kernels in
   // anonymous name space needs to be externalized to avoid duplicate symbols.
-  return (IsStaticVar &&
+  return (IsInternalVar &&
           (D->hasAttr<HIPManagedAttr>() || IsExplicitDeviceVar)) ||
          (D->hasAttr<CUDAGlobalAttr>() &&
           basicGVALinkageForFunction(*this, cast<FunctionDecl>(D)) ==

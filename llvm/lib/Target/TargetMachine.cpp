@@ -21,6 +21,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
@@ -37,6 +38,16 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
       O0WantsFastISel(false), DefaultOptions(Options), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+bool TargetMachine::isLargeData() const {
+  if (getTargetTriple().getArch() != Triple::x86_64)
+    return false;
+  // Large data under the large code model still needs to be thought about, so
+  // restrict this to medium.
+  if (getCodeModel() != CodeModel::Medium)
+    return false;
+  return true;
+}
 
 bool TargetMachine::isPositionIndependent() const {
   return getRelocationModel() == Reloc::PIC_;
@@ -66,6 +77,20 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
 /// Returns the code generation relocation model. The choices are static, PIC,
 /// and dynamic-no-pic.
 Reloc::Model TargetMachine::getRelocationModel() const { return RM; }
+
+uint64_t TargetMachine::getMaxCodeSize() const {
+  switch (getCodeModel()) {
+  case CodeModel::Tiny:
+    return llvm::maxUIntN(10);
+  case CodeModel::Small:
+  case CodeModel::Kernel:
+  case CodeModel::Medium:
+    return llvm::maxUIntN(31);
+  case CodeModel::Large:
+    return llvm::maxUIntN(64);
+  }
+  llvm_unreachable("Unhandled CodeModel enum");
+}
 
 /// Get the IR-specified TLS model for Var.
 static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {

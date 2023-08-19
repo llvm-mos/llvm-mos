@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -563,6 +565,11 @@ public:
   /// Returns the offset for this symbol within the underlying addressable.
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
+  void setOffset(orc::ExecutorAddrDiff NewOffset) {
+    assert(NewOffset < getBlock().getSize() && "Offset out of range");
+    Offset = NewOffset;
+  }
+
   /// Returns the address of this symbol.
   orc::ExecutorAddr getAddress() const { return Base->getAddress() + Offset; }
 
@@ -616,7 +623,7 @@ public:
     this->S = static_cast<uint8_t>(S);
   }
 
-  /// Check wehther the given target flags are set for this Symbol.
+  /// Check whether the given target flags are set for this Symbol.
   bool hasTargetFlags(TargetFlagsType Flags) const {
     return static_cast<TargetFlagsType>(TargetFlags) & Flags;
   }
@@ -660,11 +667,6 @@ private:
   }
 
   void setBlock(Block &B) { Base = &B; }
-
-  void setOffset(orc::ExecutorAddrDiff NewOffset) {
-    assert(NewOffset <= MaxOffset && "Offset out of range");
-    Offset = NewOffset;
-  }
 
   static constexpr uint64_t MaxOffset = (1ULL << 59) - 1;
 
@@ -984,11 +986,18 @@ public:
 
   using GetEdgeKindNameFunction = const char *(*)(Edge::Kind);
 
+  LinkGraph(std::string Name, const Triple &TT, SubtargetFeatures Features,
+            unsigned PointerSize, support::endianness Endianness,
+            GetEdgeKindNameFunction GetEdgeKindName)
+      : Name(std::move(Name)), TT(TT), Features(std::move(Features)),
+        PointerSize(PointerSize), Endianness(Endianness),
+        GetEdgeKindName(std::move(GetEdgeKindName)) {}
+
   LinkGraph(std::string Name, const Triple &TT, unsigned PointerSize,
             support::endianness Endianness,
             GetEdgeKindNameFunction GetEdgeKindName)
-      : Name(std::move(Name)), TT(TT), PointerSize(PointerSize),
-        Endianness(Endianness), GetEdgeKindName(std::move(GetEdgeKindName)) {}
+      : LinkGraph(std::move(Name), TT, SubtargetFeatures(), PointerSize,
+                  Endianness, GetEdgeKindName) {}
 
   LinkGraph(const LinkGraph &) = delete;
   LinkGraph &operator=(const LinkGraph &) = delete;
@@ -1001,6 +1010,9 @@ public:
 
   /// Returns the target triple for this Graph.
   const Triple &getTargetTriple() const { return TT; }
+
+  /// Return the subtarget features for this Graph.
+  const SubtargetFeatures &getFeatures() const { return Features; }
 
   /// Returns the pointer size for use in this graph.
   unsigned getPointerSize() const { return PointerSize; }
@@ -1507,6 +1519,7 @@ private:
 
   std::string Name;
   Triple TT;
+  SubtargetFeatures Features;
   unsigned PointerSize;
   support::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
@@ -1838,6 +1851,30 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
 
 Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
                          const Edge &E);
+
+/// Creates a new pointer block in the given section and returns an
+/// Anonymous symobl pointing to it.
+///
+/// The pointer block will have the following default values:
+///   alignment: PointerSize
+///   alignment-offset: 0
+///   address: highest allowable
+using AnonymousPointerCreator = unique_function<Expected<Symbol &>(
+    LinkGraph &G, Section &PointerSection, Symbol *InitialTarget,
+    uint64_t InitialAddend)>;
+
+/// Get target-specific AnonymousPointerCreator
+AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
+
+/// Create a jump stub that jumps via the pointer at the given symbol and
+/// an anonymous symbol pointing to it. Return the anonymous symbol.
+///
+/// The stub block will be created by createPointerJumpStubBlock.
+using PointerJumpStubCreator = unique_function<Expected<Symbol &>(
+    LinkGraph &G, Section &StubSection, Symbol &PointerSymbol)>;
+
+/// Get target-specific PointerJumpStubCreator
+PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT);
 
 /// Base case for edge-visitors where the visitor-list is empty.
 inline void visitEdge(LinkGraph &G, Block *B, Edge &E) {}

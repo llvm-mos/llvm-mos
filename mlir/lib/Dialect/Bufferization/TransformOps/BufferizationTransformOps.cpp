@@ -12,9 +12,8 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/FunctionInterfaces.h"
@@ -24,11 +23,35 @@ using namespace mlir::bufferization;
 using namespace mlir::transform;
 
 //===----------------------------------------------------------------------===//
+// BufferLoopHoistingOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::BufferLoopHoistingOp::applyToOne(
+    TransformRewriter &rewriter, Operation *target,
+    ApplyToEachResultList &results, TransformState &state) {
+  bufferization::hoistBuffersFromLoops(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::BufferLoopHoistingOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
 // OneShotBufferizeOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult transform::OneShotBufferizeOp::verify() {
+  if (getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
+    return emitOpError() << "unsupported memcpy op";
+  return success();
+}
+
 DiagnosedSilenceableFailure
-transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
+transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
+                                     TransformResults &transformResults,
                                      TransformState &state) {
   OneShotBufferizationOptions options;
   options.allowReturnAllocs = getAllowReturnAllocs();
@@ -40,8 +63,21 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
   if (getFunctionBoundaryTypeConversion().has_value())
     options.setFunctionBoundaryTypeConversion(
         *getFunctionBoundaryTypeConversion());
+  if (getMemcpyOp() == "memref.copy") {
+    options.memCpyFn = [](OpBuilder &b, Location loc, Value from, Value to) {
+      b.create<memref::CopyOp>(loc, from, to);
+      return success();
+    };
+  } else if (getMemcpyOp() == "linalg.copy") {
+    options.memCpyFn = [](OpBuilder &b, Location loc, Value from, Value to) {
+      b.create<linalg::CopyOp>(loc, from, to);
+      return success();
+    };
+  } else {
+    llvm_unreachable("invalid copy op");
+  }
 
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+  auto payloadOps = state.getPayloadOps(getTarget());
   for (Operation *target : payloadOps) {
     if (!isa<ModuleOp, FunctionOpInterface>(target))
       return emitSilenceableError() << "expected module or function target";
@@ -59,7 +95,7 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
 
   // This transform op is currently restricted to ModuleOps and function ops.
   // Such ops are modified in-place.
-  transformResults.set(getTransformed().cast<OpResult>(), payloadOps);
+  transformResults.set(cast<OpResult>(getTransformed()), payloadOps);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -73,15 +109,13 @@ void transform::EliminateEmptyTensorsOp::getEffects(
   modifiesPayload(effects);
 }
 
-DiagnosedSilenceableFailure
-transform::EliminateEmptyTensorsOp::apply(TransformResults &transformResults,
-                                          TransformState &state) {
-  IRRewriter rewriter(getContext());
+DiagnosedSilenceableFailure transform::EliminateEmptyTensorsOp::apply(
+    transform::TransformRewriter &rewriter, TransformResults &transformResults,
+    TransformState &state) {
   OneShotBufferizationOptions options;
   options.allowReturnAllocs = true;
 
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
-  for (Operation *target : payloadOps) {
+  for (Operation *target : state.getPayloadOps(getTarget())) {
     OneShotAnalysisState state(target, options);
     if (failed(analyzeOp(target, state)))
       return mlir::emitSilenceableFailure(target->getLoc())
@@ -98,11 +132,9 @@ transform::EliminateEmptyTensorsOp::apply(TransformResults &transformResults,
 // EmptyTensorToAllocTensorOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure
-EmptyTensorToAllocTensorOp::applyToOne(tensor::EmptyOp target,
-                                       ApplyToEachResultList &results,
-                                       transform::TransformState &state) {
-  IRRewriter rewriter(target->getContext());
+DiagnosedSilenceableFailure EmptyTensorToAllocTensorOp::applyToOne(
+    transform::TransformRewriter &rewriter, tensor::EmptyOp target,
+    ApplyToEachResultList &results, transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
   auto alloc = rewriter.replaceOpWithNewOp<bufferization::AllocTensorOp>(
       target, target.getType(), target.getDynamicSizes());
@@ -124,8 +156,6 @@ public:
   using Base::Base;
 
   void init() {
-    declareDependentDialect<pdl::PDLDialect>();
-
     declareGeneratedDialect<bufferization::BufferizationDialect>();
     declareGeneratedDialect<memref::MemRefDialect>();
 

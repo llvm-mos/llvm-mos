@@ -66,7 +66,7 @@ MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::OneShotAnalysisState)
 using namespace mlir;
 using namespace mlir::bufferization;
 
-static bool isaTensor(Type t) { return t.isa<TensorType>(); }
+static bool isaTensor(Type t) { return isa<TensorType>(t); }
 
 //===----------------------------------------------------------------------===//
 // Bufferization-specific attribute manipulation.
@@ -79,17 +79,22 @@ static bool isaTensor(Type t) { return t.isa<TensorType>(); }
 /// Attribute marker to specify op operands that bufferize in-place.
 constexpr StringLiteral kInPlaceOperandsAttrName = "__inplace_operands_attr__";
 
+constexpr StringLiteral kOpResultAliasSetAttrName =
+    "__opresult_alias_set_attr__";
+
+constexpr StringLiteral kBbArgAliasSetAttrName = "__bbarg_alias_set_attr__";
+
 /// Mark whether OpOperand will be bufferized inplace.
 static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
   Operation *op = opOperand.getOwner();
   SmallVector<StringRef> inPlaceVector;
   if (auto attr = op->getAttr(kInPlaceOperandsAttrName)) {
     inPlaceVector = SmallVector<StringRef>(llvm::to_vector<4>(
-        attr.cast<ArrayAttr>().getAsValueRange<StringAttr>()));
+        cast<ArrayAttr>(attr).getAsValueRange<StringAttr>()));
   } else {
     inPlaceVector = SmallVector<StringRef>(op->getNumOperands(), "none");
     for (OpOperand &opOperand : op->getOpOperands())
-      if (opOperand.get().getType().isa<TensorType>())
+      if (isa<TensorType>(opOperand.get().getType()))
         inPlaceVector[opOperand.getOperandNumber()] = "false";
   }
   inPlaceVector[opOperand.getOperandNumber()] = inPlace ? "true" : "false";
@@ -107,12 +112,12 @@ OneShotAnalysisState::OneShotAnalysisState(
   // Set up alias sets.
   op->walk([&](Operation *op) {
     for (Value v : op->getResults())
-      if (v.getType().isa<TensorType>())
+      if (isa<TensorType>(v.getType()))
         createAliasInfoEntry(v);
     for (Region &r : op->getRegions())
       for (Block &b : r.getBlocks())
         for (auto bbArg : b.getArguments())
-          if (bbArg.getType().isa<TensorType>())
+          if (isa<TensorType>(bbArg.getType()))
             createAliasInfoEntry(bbArg);
   });
 
@@ -121,7 +126,7 @@ OneShotAnalysisState::OneShotAnalysisState(
     if (!options.isOpAllowed(bufferizableOp))
       return WalkResult::skip();
     for (OpOperand &opOperand : bufferizableOp->getOpOperands())
-      if (opOperand.get().getType().isa<TensorType>())
+      if (isa<TensorType>(opOperand.get().getType()))
         if (bufferizableOp.mustBufferizeInPlace(opOperand, *this))
           bufferizeInPlace(opOperand);
     return WalkResult::advance();
@@ -159,8 +164,8 @@ void OneShotAnalysisState::bufferizeInPlace(OpOperand &operand) {
   if (inplaceBufferized.contains(&operand))
     return;
   inplaceBufferized.insert(&operand);
-  for (AliasingOpResult alias : getAliasingOpResults(operand))
-    aliasInfo.unionSets(alias.opResult, operand.get());
+  for (AliasingValue alias : getAliasingValues(operand))
+    aliasInfo.unionSets(alias.value, operand.get());
   ++statNumTensorInPlace;
 }
 
@@ -181,19 +186,20 @@ void OneShotAnalysisState::createAliasInfoEntry(Value v) {
 // the IR.
 void OneShotAnalysisState::gatherYieldedTensors(Operation *op) {
   op->walk([&](Operation *returnOp) {
-    if (!isRegionReturnLike(returnOp) || !getOptions().isOpAllowed(returnOp))
+    if (!isa<RegionBranchTerminatorOpInterface>(returnOp) ||
+        !getOptions().isOpAllowed(returnOp))
       return WalkResult::advance();
 
     for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
       Value returnVal = returnValOperand.get();
       // Skip non-tensor values.
-      if (!returnVal.getType().isa<TensorType>())
+      if (!isa<TensorType>(returnVal.getType()))
         continue;
 
       // Add all aliases of the returned value. But only the ones that are in
       // the same block.
       applyOnAliases(returnVal, [&](Value v) {
-        if (auto bbArg = v.dyn_cast<BlockArgument>()) {
+        if (auto bbArg = dyn_cast<BlockArgument>(v)) {
           if (bbArg.getOwner()->getParentOp() == returnOp->getParentOp())
             yieldedTensors.insert(bbArg);
           return;
@@ -217,7 +223,7 @@ void OneShotAnalysisState::gatherUndefinedTensorUses(Operation *op) {
 
     // Check all tensor OpResults.
     for (OpResult opResult : op->getOpResults()) {
-      if (!opResult.getType().isa<TensorType>())
+      if (!isa<TensorType>(opResult.getType()))
         continue;
 
       // If there is no preceding definition, the tensor contents are
@@ -255,14 +261,10 @@ bool OneShotAnalysisState::isValueWritten(Value value) const {
 
 bool OneShotAnalysisState::isWritable(Value value) const {
   // TODO: Out-of-place bufferized value could be considered writable.
-  if (auto bufferizableOp = getOptions().dynCastBufferizableOp(value))
-    return bufferizableOp.isWritable(value, *this);
-
   // Query BufferizableOpInterface to see if the BlockArgument is writable.
-  if (auto bbArg = value.dyn_cast<BlockArgument>())
-    if (auto bufferizableOp =
-            getOptions().dynCastBufferizableOp(bbArg.getOwner()->getParentOp()))
-      return bufferizableOp.isWritable(bbArg, *this);
+  if (auto bufferizableOp =
+          getOptions().dynCastBufferizableOp(getOwnerOfValue(value)))
+    return bufferizableOp.isWritable(value, *this);
 
   // Not a bufferizable op: The conservative answer is "not writable".
   return false;
@@ -381,13 +383,14 @@ static bool happensBefore(Operation *a, Operation *b,
 ///    regions. I.e., we can rule out a RaW conflict if READ happensBefore WRITE
 ///    or WRITE happensBefore DEF. (Checked in `hasReadAfterWriteInterference`.)
 ///
-bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
-                       const SetVector<Value> &definitions,
-                       const AnalysisState &state) {
+static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
+                              const SetVector<Value> &definitions,
+                              AnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
   for (Value def : definitions) {
-    Region *rRead = getEnclosingRepetitiveRegion(uRead->getOwner(), options);
-    Region *rDef = getEnclosingRepetitiveRegion(def, options);
+    Region *rRead =
+        state.getEnclosingRepetitiveRegion(uRead->getOwner(), options);
+    Region *rDef = state.getEnclosingRepetitiveRegion(def, options);
 
     // READ and DEF are in the same repetitive region. `happensBefore` can be
     // used to rule out RaW conflicts due to op ordering.
@@ -431,12 +434,12 @@ static void annotateConflict(OpOperand *uRead, OpOperand *uConflictingWrite,
       id + "[READ: " + std::to_string(uRead->getOperandNumber()) + "]";
   readingOp->setAttr(readAttr, b.getUnitAttr());
 
-  if (auto opResult = definition.dyn_cast<OpResult>()) {
+  if (auto opResult = dyn_cast<OpResult>(definition)) {
     std::string defAttr =
         id + "[DEF: result " + std::to_string(opResult.getResultNumber()) + "]";
     opResult.getDefiningOp()->setAttr(defAttr, b.getUnitAttr());
   } else {
-    auto bbArg = definition.cast<BlockArgument>();
+    auto bbArg = cast<BlockArgument>(definition);
     std::string defAttr =
         id + "[DEF: bbArg " + std::to_string(bbArg.getArgNumber()) + "]";
     bbArg.getOwner()->getParentOp()->setAttr(defAttr, b.getUnitAttr());
@@ -539,6 +542,22 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         }
       }
 
+      // Two equivalent operands of the same op are not conflicting if the op
+      // bufferizes to element-wise access. I.e., all loads at a position happen
+      // before all stores to the same position.
+      if (conflictingWritingOp == readingOp &&
+          state.areEquivalentBufferizedValues(uRead->get(),
+                                              uConflictingWrite->get())) {
+        if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
+          if (bufferizableOp.bufferizesToElementwiseAccess(state)) {
+            LLVM_DEBUG(
+                llvm::dbgs()
+                << "  no conflict: op bufferizes to element-wise access\n");
+            continue;
+          }
+        }
+      }
+
       // No conflict if the op interface says so.
       if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
         if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state)) {
@@ -581,7 +600,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
             continue;
           }
         } else {
-          auto bbArg = definition.cast<BlockArgument>();
+          auto bbArg = cast<BlockArgument>(definition);
           Block *block = bbArg.getOwner();
           if (!block->findAncestorOpInBlock(*conflictingWritingOp)) {
             LLVM_DEBUG(llvm::dbgs() << "    no conflict: definition is bbArg "
@@ -594,10 +613,9 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
 
         // No conflict if the conflicting write and the definition are the same
         // use.
-        AliasingOpResultList aliases =
-            state.getAliasingOpResults(*uConflictingWrite);
+        AliasingValueList aliases = state.getAliasingValues(*uConflictingWrite);
         if (aliases.getNumAliases() == 1 &&
-            aliases.getAliases()[0].opResult == definition) {
+            aliases.getAliases()[0].value == definition) {
           LLVM_DEBUG(llvm::dbgs()
                      << "    no conflict: definition and write are same\n");
           continue;
@@ -654,9 +672,9 @@ static void getAliasingReads(DenseSet<OpOperand *> &res, Value root,
       // there would then be no flow of data from the extract_slice operand to
       // its result's uses.)
       if (!state.bufferizesToMemoryWrite(use)) {
-        AliasingOpResultList aliases = state.getAliasingOpResults(use);
-        if (llvm::any_of(aliases, [&](AliasingOpResult a) {
-              return state.isValueRead(a.opResult);
+        AliasingValueList aliases = state.getAliasingValues(use);
+        if (llvm::any_of(aliases, [&](AliasingValue a) {
+              return state.isValueRead(a.value);
             }))
           res.insert(&use);
       }
@@ -700,9 +718,9 @@ static bool wouldCreateReadAfterWriteInterference(
   DenseSet<OpOperand *> usesRead, usesWrite;
   getAliasingReads(usesRead, operand.get(), state);
   getAliasingInplaceWrites(usesWrite, operand.get(), state);
-  for (AliasingOpResult alias : state.getAliasingOpResults(operand)) {
-    getAliasingReads(usesRead, alias.opResult, state);
-    getAliasingInplaceWrites(usesWrite, alias.opResult, state);
+  for (AliasingValue alias : state.getAliasingValues(operand)) {
+    getAliasingReads(usesRead, alias.value, state);
+    getAliasingInplaceWrites(usesWrite, alias.value, state);
   }
   if (!checkConsistencyOnly && state.bufferizesToMemoryWrite(operand))
     usesWrite.insert(&operand);
@@ -715,12 +733,12 @@ static void annotateNonWritableTensor(Value value) {
   static int64_t counter = 0;
   OpBuilder b(value.getContext());
   std::string id = "W_" + std::to_string(counter++);
-  if (auto opResult = value.dyn_cast<OpResult>()) {
+  if (auto opResult = dyn_cast<OpResult>(value)) {
     std::string attr = id + "[NOT-WRITABLE: result " +
                        std::to_string(opResult.getResultNumber()) + "]";
     opResult.getDefiningOp()->setAttr(attr, b.getUnitAttr());
   } else {
-    auto bbArg = value.cast<BlockArgument>();
+    auto bbArg = cast<BlockArgument>(value);
     std::string attr = id + "[NOT-WRITABLE: bbArg " +
                        std::to_string(bbArg.getArgNumber()) + "]";
     bbArg.getOwner()->getParentOp()->setAttr(attr, b.getUnitAttr());
@@ -740,8 +758,8 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
     // Collect writes of all aliases of OpOperand and OpResult.
     DenseSet<OpOperand *> usesWrite;
     getAliasingInplaceWrites(usesWrite, operand.get(), state);
-    for (AliasingOpResult alias : state.getAliasingOpResults(operand))
-      getAliasingInplaceWrites(usesWrite, alias.opResult, state);
+    for (AliasingValue alias : state.getAliasingValues(operand))
+      getAliasingInplaceWrites(usesWrite, alias.value, state);
     foundWrite = !usesWrite.empty();
   }
 
@@ -758,8 +776,8 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
     }
   };
   state.applyOnAliases(operand.get(), checkReadOnly);
-  for (AliasingOpResult alias : state.getAliasingOpResults(operand))
-    state.applyOnAliases(alias.opResult, checkReadOnly);
+  for (AliasingValue alias : state.getAliasingValues(operand))
+    state.applyOnAliases(alias.value, checkReadOnly);
   if (foundReadOnly) {
     LLVM_DEBUG(llvm::dbgs() << "=> NOT WRITABLE\n");
     return true;
@@ -775,15 +793,15 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
 // Find the values that define the contents of the given value.
 const llvm::SetVector<Value> &
 OneShotAnalysisState::findDefinitionsCached(Value value) {
-  if (!cachedDefinitions.count(value)) {
-    cachedDefinitions[value] = findValueInReverseUseDefChain(
-        value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
-        /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
-  }
+  if (!cachedDefinitions.count(value))
+    cachedDefinitions[value] = findDefinitions(value);
   return cachedDefinitions[value];
 }
 
-void OneShotAnalysisState::resetCache() { cachedDefinitions.clear(); }
+void OneShotAnalysisState::resetCache() {
+  AnalysisState::resetCache();
+  cachedDefinitions.clear();
+}
 
 /// Determine if `operand` can be bufferized in-place.
 static LogicalResult
@@ -812,7 +830,7 @@ LogicalResult
 OneShotAnalysisState::analyzeSingleOp(Operation *op,
                                       const DominanceInfo &domInfo) {
   for (OpOperand &opOperand : op->getOpOperands())
-    if (opOperand.get().getType().isa<TensorType>())
+    if (isa<TensorType>(opOperand.get().getType()))
       if (failed(bufferizableInPlaceAnalysisImpl(opOperand, *this, domInfo)))
         return failure();
   return success();
@@ -831,7 +849,7 @@ static void equivalenceAnalysis(SmallVector<Operation *> &ops,
   for (Operation *op : ops) {
     if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op)) {
       for (OpResult opResult : op->getOpResults()) {
-        if (!opResult.getType().isa<TensorType>())
+        if (!isa<TensorType>(opResult.getType()))
           continue;
         AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
         if (aliases.getNumAliases() == 0)
@@ -861,8 +879,8 @@ static void equivalenceAnalysis(SmallVector<Operation *> &ops,
         // allocation, it is a definite, equivalent alias. E.g.:
         //
         // aliasingOpOperands(%r) = {(%t0, EQUIV, MAYBE), (%t1, EQUIV, MAYBE)}
-        // aliasingOpResults(%t0) = {(%r, EQUIV, MAYBE)}
-        // aliasingOpResults(%t1) = {(%r, EQUIV, MAYBE)}
+        // aliasingValues(%t0) = {(%r, EQUIV, MAYBE)}
+        // aliasingValues(%t1) = {(%r, EQUIV, MAYBE)}
         // %r = arith.select %c, %t0, %t1 : tensor<?xf32>
         //
         // If %t0 and %t1 are equivalent, it is safe to union the equivalence
@@ -928,29 +946,48 @@ LogicalResult OneShotAnalysisState::analyzeOp(Operation *op,
   return success();
 }
 
-/// Assert that the current bufferization decisions are consistent.
-static LogicalResult checkAliasInfoConsistency(Operation *op,
-                                               const DominanceInfo &domInfo,
-                                               OneShotAnalysisState &state) {
+/// Perform various checks on the input IR to see if it contains IR constructs
+/// that are unsupported by One-Shot Bufferize.
+static LogicalResult
+checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
+                                 OneShotAnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
 
+  // Note: This walk cannot be combined with the one below because interface
+  // methods of invalid/unsupported ops may be called during the second walk.
+  // (On ops different from `op`.)
   WalkResult walkResult = op->walk([&](BufferizableOpInterface op) {
     // Skip ops that are not in the filter.
     if (!options.isOpAllowed(op.getOperation()))
       return WalkResult::advance();
 
-    // Input IR may not contain any ToMemrefOps. These are not supported because
-    // the analysis cannot follow the data flow through memrefs.
-    if (isa<ToMemrefOp>(op.getOperation())) {
-      op->emitError("to_memref ops are not supported by One-Shot Analysis");
-      return WalkResult::interrupt();
+    // Check for unsupported unstructured control flow.
+    if (!op.supportsUnstructuredControlFlow()) {
+      for (Region &r : op->getRegions()) {
+        if (r.getBlocks().size() > 1) {
+          op->emitOpError("op or BufferizableOpInterface implementation does "
+                          "not support unstructured control flow, but at least "
+                          "one region has multiple blocks");
+          return WalkResult::interrupt();
+        }
+      }
     }
+
+    return WalkResult::advance();
+  });
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  walkResult = op->walk([&](BufferizableOpInterface op) {
+    // Skip ops that are not in the filter.
+    if (!options.isOpAllowed(op.getOperation()))
+      return WalkResult::advance();
 
     // Input IR may not contain any ToTensorOps without the "restrict"
     // attribute. Such tensors may alias any other tensor, which is currently
     // not handled in the analysis.
     if (auto toTensorOp = dyn_cast<ToTensorOp>(op.getOperation())) {
-      if (!toTensorOp.getRestrict()) {
+      if (!toTensorOp.getRestrict() && !toTensorOp->getUses().empty()) {
         op->emitError("to_tensor ops without `restrict` are not supported by "
                       "One-Shot Analysis");
         return WalkResult::interrupt();
@@ -958,7 +995,7 @@ static LogicalResult checkAliasInfoConsistency(Operation *op,
     }
 
     for (OpOperand &opOperand : op->getOpOperands()) {
-      if (opOperand.get().getType().isa<TensorType>()) {
+      if (isa<TensorType>(opOperand.get().getType())) {
         if (wouldCreateReadAfterWriteInterference(
                 opOperand, domInfo, state,
                 /*checkConsistencyOnly=*/true)) {
@@ -984,8 +1021,57 @@ annotateOpsWithBufferizationMarkers(Operation *op,
   // Add __inplace_operands_attr__.
   op->walk([&](Operation *op) {
     for (OpOperand &opOperand : op->getOpOperands())
-      if (opOperand.get().getType().isa<TensorType>())
+      if (isa<TensorType>(opOperand.get().getType()))
         setInPlaceOpOperand(opOperand, state.isInPlace(opOperand));
+  });
+}
+
+static void annotateOpsWithAliasSets(Operation *op,
+                                     const OneShotAnalysisState &state) {
+  AsmState asmState(op);
+  Builder b(op->getContext());
+  // Helper function to build an array attribute of aliasing SSA value strings.
+  auto buildAliasesArray = [&](Value v) {
+    SmallVector<Attribute> aliases;
+    state.applyOnAliases(v, [&](Value alias) {
+      std::string buffer;
+      llvm::raw_string_ostream stream(buffer);
+      alias.printAsOperand(stream, asmState);
+      aliases.push_back(b.getStringAttr(stream.str()));
+    });
+    return b.getArrayAttr(aliases);
+  };
+
+  op->walk([&](Operation *op) {
+    // Build alias set array for every OpResult.
+    SmallVector<Attribute> opResultAliasSets;
+    for (OpResult opResult : op->getOpResults()) {
+      if (llvm::isa<TensorType>(opResult.getType())) {
+        opResultAliasSets.push_back(buildAliasesArray(opResult));
+      }
+    }
+    if (!opResultAliasSets.empty())
+      op->setAttr(kOpResultAliasSetAttrName, b.getArrayAttr(opResultAliasSets));
+
+    // Build alias set array for every BlockArgument.
+    SmallVector<Attribute> regionAliasSets;
+    bool hasTensorBbArg = false;
+    for (Region &r : op->getRegions()) {
+      SmallVector<Attribute> blockAliasSets;
+      for (Block &block : r.getBlocks()) {
+        SmallVector<Attribute> bbArgAliasSets;
+        for (BlockArgument bbArg : block.getArguments()) {
+          if (llvm::isa<TensorType>(bbArg.getType())) {
+            bbArgAliasSets.push_back(buildAliasesArray(bbArg));
+            hasTensorBbArg = true;
+          }
+        }
+        blockAliasSets.push_back(b.getArrayAttr(bbArgAliasSets));
+      }
+      regionAliasSets.push_back(b.getArrayAttr(blockAliasSets));
+    }
+    if (hasTensorBbArg)
+      op->setAttr(kBbArgAliasSetAttrName, b.getArrayAttr(regionAliasSets));
   });
 }
 
@@ -1024,19 +1110,19 @@ static LogicalResult assertNoAllocsReturned(Operation *op,
   LogicalResult status = success();
   DominanceInfo domInfo(op);
   op->walk([&](Operation *returnOp) {
-    if (!isRegionReturnLike(returnOp) ||
+    if (!isa<RegionBranchTerminatorOpInterface>(returnOp) ||
         !state.getOptions().isOpAllowed(returnOp))
       return WalkResult::advance();
 
     for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
       Value returnVal = returnValOperand.get();
       // Skip non-tensor values.
-      if (!returnVal.getType().isa<TensorType>())
+      if (!isa<TensorType>(returnVal.getType()))
         continue;
 
       bool foundEquivValue = false;
       state.applyOnEquivalenceClass(returnVal, [&](Value equivVal) {
-        if (auto bbArg = equivVal.dyn_cast<BlockArgument>()) {
+        if (auto bbArg = dyn_cast<BlockArgument>(equivVal)) {
           Operation *definingOp = bbArg.getOwner()->getParentOp();
           if (definingOp->isProperAncestor(returnOp))
             foundEquivValue = true;
@@ -1071,7 +1157,7 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   DominanceInfo domInfo(op);
   const OneShotBufferizationOptions &options = state.getOptions();
 
-  if (failed(checkAliasInfoConsistency(op, domInfo, state)))
+  if (failed(checkPreBufferizationAssumptions(op, domInfo, state)))
     return failure();
 
   // If the analysis fails, just return.
@@ -1103,6 +1189,8 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   // Annotate operations if we only want to report the analysis.
   if (options.testAnalysisOnly)
     annotateOpsWithBufferizationMarkers(op, state);
+  if (options.dumpAliasSets)
+    annotateOpsWithAliasSets(op, state);
 
   return success(!failedAnalysis);
 }

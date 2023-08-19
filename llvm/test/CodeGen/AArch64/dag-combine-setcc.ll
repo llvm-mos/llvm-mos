@@ -226,8 +226,6 @@ define i1 @combine_setcc_ne_vecreduce_and_v32i1(<32 x i8> %a) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    uminv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    bic w0, w8, w9
@@ -249,8 +247,6 @@ define i1 @combine_setcc_ne_vecreduce_and_v64i1(<64 x i8> %a) {
 ; CHECK-NEXT:    bic v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    uminv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    bic w0, w8, w9
@@ -344,11 +340,9 @@ define [2 x i64] @PR58675(i128 %a.addr, i128 %b.addr) {
 ; CHECK-NEXT:  .LBB20_1: // %do.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmp x0, x8
+; CHECK-NEXT:    sbcs xzr, x1, x9
 ; CHECK-NEXT:    csel x10, x0, x8, lo
-; CHECK-NEXT:    cmp x1, x9
-; CHECK-NEXT:    csel x8, x0, x8, lo
 ; CHECK-NEXT:    csel x11, x1, x9, lo
-; CHECK-NEXT:    csel x10, x10, x8, eq
 ; CHECK-NEXT:    subs x8, x2, x10
 ; CHECK-NEXT:    sbc x9, x3, x11
 ; CHECK-NEXT:    cmp x3, x11

@@ -36,7 +36,6 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/LTO/SummaryBasedOptimizations.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -45,14 +44,16 @@
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -415,29 +416,14 @@ public:
     if (EntryPath.empty())
       return;
 
-    // Write to a temporary to avoid race condition
-    SmallString<128> TempFilename;
-    SmallString<128> CachePath(EntryPath);
-    llvm::sys::path::remove_filename(CachePath);
-    sys::path::append(TempFilename, CachePath, "Thin-%%%%%%.tmp.o");
-
-    if (auto Err = handleErrors(
-            llvm::writeFileAtomically(TempFilename, EntryPath,
-                                      OutputBuffer.getBuffer()),
-            [](const llvm::AtomicFileWriteError &E) {
-              std::string ErrorMsgBuffer;
-              llvm::raw_string_ostream S(ErrorMsgBuffer);
-              E.log(S);
-
-              if (E.Error ==
-                  llvm::atomic_write_error::failed_to_create_uniq_file) {
-                errs() << "Error: " << ErrorMsgBuffer << "\n";
-                report_fatal_error("ThinLTO: Can't get a temporary file");
-              }
-            })) {
-      // FIXME
-      consumeError(std::move(Err));
-    }
+    if (auto Err = llvm::writeToOutput(
+            EntryPath, [&OutputBuffer](llvm::raw_ostream &OS) -> llvm::Error {
+              OS << OutputBuffer.getBuffer();
+              return llvm::Error::success();
+            }))
+      report_fatal_error(llvm::formatv("ThinLTO: Can't write file {0}: {1}",
+                                       EntryPath,
+                                       toString(std::move(Err)).c_str()));
   }
 };
 
@@ -452,11 +438,6 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
                      bool DisableCodeGen, StringRef SaveTempsDir,
                      bool Freestanding, unsigned OptLevel, unsigned count,
                      bool DebugPassManager) {
-  // See comment at call to updateVCallVisibilityInIndex() for why
-  // WholeProgramVisibilityEnabledInLTO is false.
-  updatePublicTypeTestCalls(TheModule,
-                            /* WholeProgramVisibilityEnabledInLTO */ false);
-
   // "Benchmark"-like optimization: single-source case
   bool SingleModule = (ModuleMap.size() == 1);
 
@@ -487,13 +468,18 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   // Save internalized bitcode
   saveTempBitcode(TheModule, SaveTempsDir, count, ".2.internalized.bc");
 
-  if (!SingleModule) {
+  if (!SingleModule)
     crossImportIntoModule(TheModule, Index, ModuleMap, ImportList,
                           ClearDSOLocalOnDeclarations);
 
-    // Save temps: after cross-module import.
-    saveTempBitcode(TheModule, SaveTempsDir, count, ".3.imported.bc");
-  }
+  // Do this after any importing so that imported code is updated.
+  // See comment at call to updateVCallVisibilityInIndex() for why
+  // WholeProgramVisibilityEnabledInLTO is false.
+  updatePublicTypeTestCalls(TheModule,
+                            /* WholeProgramVisibilityEnabledInLTO */ false);
+
+  // Save temps: after cross-module import.
+  saveTempBitcode(TheModule, SaveTempsDir, count, ".3.imported.bc");
 
   optimizeModule(TheModule, TM, OptLevel, Freestanding, DebugPassManager,
                  &Index);
@@ -648,11 +634,12 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
 
 namespace {
 struct IsExported {
-  const StringMap<FunctionImporter::ExportSetTy> &ExportLists;
+  const DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists;
   const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols;
 
-  IsExported(const StringMap<FunctionImporter::ExportSetTy> &ExportLists,
-             const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols)
+  IsExported(
+      const DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists,
+      const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols)
       : ExportLists(ExportLists), GUIDPreservedSymbols(GUIDPreservedSymbols) {}
 
   bool operator()(StringRef ModuleIdentifier, ValueInfo VI) const {
@@ -701,7 +688,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries;
+  DenseMap<StringRef, GVSummaryMapTy> ModuleToDefinedGVSummaries;
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Convert the preserved symbols set from string to GUID
@@ -719,8 +706,8 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
-  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
@@ -754,7 +741,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
   auto ModuleCount = Index.modulePaths().size();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
+  DenseMap<StringRef, GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Convert the preserved symbols set from string to GUID
@@ -771,8 +758,8 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
-  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
@@ -794,7 +781,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
+  DenseMap<StringRef, GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Convert the preserved symbols set from string to GUID
@@ -811,8 +798,8 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
-  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
@@ -832,7 +819,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
+  DenseMap<StringRef, GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Convert the preserved symbols set from string to GUID
@@ -849,8 +836,8 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
-  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
@@ -885,7 +872,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
+  DenseMap<StringRef, GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Compute "dead" symbols, we don't want to import/export these!
@@ -896,8 +883,8 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
-  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
@@ -1047,7 +1034,7 @@ void ThinLTOCodeGenerator::run() {
   auto ModuleCount = Modules.size();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
+  DenseMap<StringRef, GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Convert the preserved symbols set from string to GUID, this is needed for
@@ -1093,8 +1080,8 @@ void ThinLTOCodeGenerator::run() {
 
   // Collect the import/export lists for all modules from the call-graph in the
   // combined index.
-  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
-  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(*Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);

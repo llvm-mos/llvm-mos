@@ -653,10 +653,11 @@ void FuchsiaHandleChecker::reportBug(SymbolRef Sym, ExplodedNode *ErrorNode,
   if (Type.isSuppressOnSink()) {
     const ExplodedNode *AcquireNode = getAcquireSite(ErrorNode, Sym, C);
     if (AcquireNode) {
+      const Stmt *S = AcquireNode->getStmtForDiagnostics();
+      assert(S && "Statement cannot be null.");
       PathDiagnosticLocation LocUsedForUniqueing =
           PathDiagnosticLocation::createBegin(
-              AcquireNode->getStmtForDiagnostics(), C.getSourceManager(),
-              AcquireNode->getLocationContext());
+              S, C.getSourceManager(), AcquireNode->getLocationContext());
 
       R = std::make_unique<PathSensitiveBugReport>(
           Type, Msg, ErrorNode, LocUsedForUniqueing,
@@ -686,11 +687,10 @@ void FuchsiaHandleChecker::printState(raw_ostream &Out, ProgramStateRef State,
 
   if (!StateMap.isEmpty()) {
     Out << Sep << "FuchsiaHandleChecker :" << NL;
-    for (HStateMapTy::iterator I = StateMap.begin(), E = StateMap.end(); I != E;
-         ++I) {
-      I.getKey()->dumpToStream(Out);
+    for (const auto &[Sym, HandleState] : StateMap) {
+      Sym->dumpToStream(Out);
       Out << " : ";
-      I.getData().dump(Out);
+      HandleState.dump(Out);
       Out << NL;
     }
   }

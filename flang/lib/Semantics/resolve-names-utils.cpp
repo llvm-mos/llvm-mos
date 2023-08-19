@@ -614,7 +614,8 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
     msg = "Variable '%s' in common block with BIND attribute"
           " is not allowed in an equivalence set"_err_en_US;
   } else if (const auto *type{symbol.GetType()}) {
-    if (const auto *derived{type->AsDerived()}) {
+    const auto *derived{type->AsDerived()};
+    if (derived && !derived->IsVectorType()) {
       if (const auto *comp{FindUltimateComponent(
               *derived, IsAllocatableOrPointer)}) { // C8106
         msg = IsPointer(*comp)
@@ -916,6 +917,7 @@ void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
     if (!dummyArg) {
       newDetails.add_alternateReturn();
     } else if (Symbol *copy{newScope.CopySymbol(*dummyArg)}) {
+      copy->set(Symbol::Flag::Implicit, false);
       newDetails.add_dummyArg(*copy);
       mappings->symbolMap[dummyArg] = copy;
     }

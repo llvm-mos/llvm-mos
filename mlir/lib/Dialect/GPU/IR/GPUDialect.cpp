@@ -28,6 +28,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/StringSaver.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -42,20 +45,68 @@ int64_t GPUBlockMappingAttr::getMappingId() const {
   return static_cast<int64_t>(getBlock());
 }
 
+bool GPUBlockMappingAttr::isLinearMapping() const {
+  return getMappingId() >= static_cast<int64_t>(MappingId::LinearDim0);
+}
+
+int64_t GPUBlockMappingAttr::getRelativeIndex() const {
+  return isLinearMapping()
+             ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
+             : getMappingId();
+}
+
+int64_t GPUWarpgroupMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getWarpgroup());
+}
+
+bool GPUWarpgroupMappingAttr::isLinearMapping() const {
+  return getMappingId() >= static_cast<int64_t>(MappingId::LinearDim0);
+}
+
+int64_t GPUWarpgroupMappingAttr::getRelativeIndex() const {
+  return isLinearMapping()
+             ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
+             : getMappingId();
+}
+
 int64_t GPUWarpMappingAttr::getMappingId() const {
   return static_cast<int64_t>(getWarp());
 }
 
-int64_t GPULinearIdMappingAttr::getMappingId() const {
-  return static_cast<int64_t>(getLinearId());
+bool GPUWarpMappingAttr::isLinearMapping() const {
+  return getMappingId() >= static_cast<int64_t>(MappingId::LinearDim0);
+}
+
+int64_t GPUWarpMappingAttr::getRelativeIndex() const {
+  return isLinearMapping()
+             ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
+             : getMappingId();
 }
 
 int64_t GPUThreadMappingAttr::getMappingId() const {
   return static_cast<int64_t>(getThread());
 }
 
+bool GPUThreadMappingAttr::isLinearMapping() const {
+  return getMappingId() >= static_cast<int64_t>(MappingId::LinearDim0);
+}
+
+int64_t GPUThreadMappingAttr::getRelativeIndex() const {
+  return isLinearMapping()
+             ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
+             : getMappingId();
+}
+
 int64_t GPUMemorySpaceMappingAttr::getMappingId() const {
   return static_cast<int64_t>(getAddressSpace());
+}
+
+bool GPUMemorySpaceMappingAttr::isLinearMapping() const {
+  llvm_unreachable("GPUMemorySpaceMappingAttr does not support linear mapping");
+}
+
+int64_t GPUMemorySpaceMappingAttr::getRelativeIndex() const {
+  llvm_unreachable("GPUMemorySpaceMappingAttr does not support relative index");
 }
 
 //===----------------------------------------------------------------------===//
@@ -146,6 +197,9 @@ struct GPUInlinerInterface : public DialectInlinerInterface {
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
+  addTypes<SparseDnTensorHandleType>();
+  addTypes<SparseSpMatHandleType>();
+  addTypes<SparseSpGEMMOpHandleType>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/IR/GPUOps.cpp.inc"
@@ -155,6 +209,19 @@ void GPUDialect::initialize() {
 #include "mlir/Dialect/GPU/IR/GPUOpsAttributes.cpp.inc"
       >();
   addInterfaces<GPUInlinerInterface>();
+}
+
+static std::string getSparseHandleKeyword(SparseHandleKind kind) {
+  switch (kind) {
+  case SparseHandleKind::DnTensor:
+    return "sparse.dntensor_handle";
+  case SparseHandleKind::SpMat:
+    return "sparse.spmat_handle";
+  case SparseHandleKind::SpGEMMOp:
+    return "sparse.spgemmop_handle";
+  }
+  llvm_unreachable("unknown sparse handle kind");
+  return "";
 }
 
 Type GPUDialect::parseType(DialectAsmParser &parser) const {
@@ -200,13 +267,29 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
                                      shape, elementType, operand);
   }
 
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::DnTensor))
+    return SparseDnTensorHandleType::get(context);
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::SpMat))
+    return SparseSpMatHandleType::get(context);
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::SpGEMMOp))
+    return SparseSpGEMMOpHandleType::get(context);
+
   parser.emitError(parser.getNameLoc(), "unknown gpu type: " + keyword);
   return Type();
 }
-
+// TODO: print refined type here. Notice that should be corresponding to the
+// parser
 void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
+      .Case<SparseDnTensorHandleType>([&](Type) {
+        os << getSparseHandleKeyword(SparseHandleKind::DnTensor);
+      })
+      .Case<SparseSpMatHandleType>(
+          [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::SpMat); })
+      .Case<SparseSpGEMMOpHandleType>([&](Type) {
+        os << getSparseHandleKeyword(SparseHandleKind::SpGEMMOp);
+      })
       .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {
         os << "mma_matrix<";
         auto shape = fragTy.getShape();
@@ -220,7 +303,7 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
 
 LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
                                                    NamedAttribute attr) {
-  if (!attr.getValue().isa<UnitAttr>() ||
+  if (!llvm::isa<UnitAttr>(attr.getValue()) ||
       attr.getName() != getContainerModuleAttrName())
     return success();
 
@@ -243,12 +326,22 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
             LaunchFuncOp::getKernelAttrName(launchOp->getName())))
       return success();
 
-    // Check that `launch_func` refers to a well-formed GPU kernel module.
-    StringAttr kernelModuleName = launchOp.getKernelModuleName();
-    auto kernelModule = module.lookupSymbol<GPUModuleOp>(kernelModuleName);
+    // Check that `launch_func` refers to a well-formed GPU kernel container.
+    StringAttr kernelContainerName = launchOp.getKernelModuleName();
+    Operation *kernelContainer = module.lookupSymbol(kernelContainerName);
+    if (!kernelContainer)
+      return launchOp.emitOpError()
+             << "kernel container '" << kernelContainerName.getValue()
+             << "' is undefined";
+
+    // If the container is a GPU binary op return success.
+    if (isa<BinaryOp>(kernelContainer))
+      return success();
+
+    auto kernelModule = dyn_cast<GPUModuleOp>(kernelContainer);
     if (!kernelModule)
       return launchOp.emitOpError()
-             << "kernel module '" << kernelModuleName.getValue()
+             << "kernel module '" << kernelContainerName.getValue()
              << "' is undefined";
 
     // Check that `launch_func` refers to a well-formed kernel function.
@@ -368,14 +461,14 @@ static LogicalResult verifyAttributions(Operation *op,
                                         ArrayRef<BlockArgument> attributions,
                                         gpu::AddressSpace memorySpace) {
   for (Value v : attributions) {
-    auto type = v.getType().dyn_cast<MemRefType>();
+    auto type = llvm::dyn_cast<MemRefType>(v.getType());
     if (!type)
       return op->emitOpError() << "expected memref type in attribution";
 
     // We can only verify the address space if it hasn't already been lowered
     // from the AddressSpaceAttr to a target-specific numeric value.
     auto addressSpace =
-        type.getMemorySpace().dyn_cast_or_null<gpu::AddressSpaceAttr>();
+        llvm::dyn_cast_or_null<gpu::AddressSpaceAttr>(type.getMemorySpace());
     if (!addressSpace)
       continue;
     if (addressSpace.getValue() != memorySpace)
@@ -395,7 +488,7 @@ static bool verifyReduceOpAndType(gpu::AllReduceOperation opName,
   return (opName != gpu::AllReduceOperation::AND &&
           opName != gpu::AllReduceOperation::OR &&
           opName != gpu::AllReduceOperation::XOR) ||
-         resType.isa<IntegerType>();
+         llvm::isa<IntegerType>(resType);
 }
 
 LogicalResult gpu::AllReduceOp::verifyRegions() {
@@ -431,6 +524,27 @@ LogicalResult gpu::AllReduceOp::verifyRegions() {
   return success();
 }
 
+static bool canMakeGroupOpUniform(Operation *op) {
+  auto launchOp = dyn_cast<gpu::LaunchOp>(op->getParentOp());
+  if (!launchOp)
+    return false;
+
+  Region &body = launchOp.getBody();
+  assert(!body.empty() && "Invalid region");
+
+  // Only convert ops in gpu::launch entry block for now.
+  return op->getBlock() == &body.front();
+}
+
+OpFoldResult gpu::AllReduceOp::fold(FoldAdaptor /*adaptor*/) {
+  if (!getUniform() && canMakeGroupOpUniform(*this)) {
+    setUniform(true);
+    return getResult();
+  }
+
+  return nullptr;
+}
+
 // TODO: Support optional custom attributes (without dialect prefix).
 static ParseResult parseAllReduceOperation(AsmParser &parser,
                                            AllReduceOperationAttr &attr) {
@@ -462,6 +576,15 @@ LogicalResult gpu::SubgroupReduceOp::verify() {
                        << "` accumulator is only compatible with Integer type";
   }
   return success();
+}
+
+OpFoldResult gpu::SubgroupReduceOp::fold(FoldAdaptor /*adaptor*/) {
+  if (!getUniform() && canMakeGroupOpUniform(*this)) {
+    setUniform(true);
+    return getResult();
+  }
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -875,13 +998,45 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   auto kernelSymbol =
       SymbolRefAttr::get(kernelModule.getNameAttr(),
                          {SymbolRefAttr::get(kernelFunc.getNameAttr())});
-  result.addAttribute(getKernelAttrName(result.name), kernelSymbol);
-  SmallVector<int32_t, 9> segmentSizes(9, 1);
-  segmentSizes.front() = asyncDependencies.size();
-  segmentSizes[segmentSizes.size() - 2] = dynamicSharedMemorySize ? 1 : 0;
-  segmentSizes.back() = static_cast<int32_t>(kernelOperands.size());
-  result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(segmentSizes));
+
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.kernel = kernelSymbol;
+  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
+  // Initialize the segment sizes to 1.
+  for (auto &sz : prop.operandSegmentSizes)
+    sz = 1;
+  prop.operandSegmentSizes[0] = asyncDependencies.size();
+  prop.operandSegmentSizes[segmentSizesLen - 3] =
+      dynamicSharedMemorySize ? 1 : 0;
+  prop.operandSegmentSizes[segmentSizesLen - 2] =
+      static_cast<int32_t>(kernelOperands.size());
+  prop.operandSegmentSizes[segmentSizesLen - 1] = 0;
+}
+
+void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
+                         SymbolRefAttr kernel, KernelDim3 gridSize,
+                         KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
+                         ValueRange kernelOperands, Value asyncObject) {
+  // Add grid and block sizes as op operands, followed by the data operands.
+  result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
+                      getBlockSize.y, getBlockSize.z});
+  if (dynamicSharedMemorySize)
+    result.addOperands(dynamicSharedMemorySize);
+  result.addOperands(kernelOperands);
+  if (asyncObject)
+    result.addOperands(asyncObject);
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.kernel = kernel;
+  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
+  // Initialize the segment sizes to 1.
+  for (auto &sz : prop.operandSegmentSizes)
+    sz = 1;
+  prop.operandSegmentSizes[0] = 0;
+  prop.operandSegmentSizes[segmentSizesLen - 3] =
+      dynamicSharedMemorySize ? 1 : 0;
+  prop.operandSegmentSizes[segmentSizesLen - 2] =
+      static_cast<int32_t>(kernelOperands.size());
+  prop.operandSegmentSizes[segmentSizesLen - 1] = asyncObject ? 1 : 0;
 }
 
 StringAttr LaunchFuncOp::getKernelModuleName() {
@@ -922,6 +1077,22 @@ LogicalResult LaunchFuncOp::verify() {
                        "' attribute");
 
   return success();
+}
+
+static ParseResult parseLaunchDimType(OpAsmParser &parser, Type &dimTy) {
+  if (succeeded(parser.parseOptionalColon())) {
+    if (parser.parseType(dimTy))
+      return failure();
+  } else {
+    dimTy = IndexType::get(parser.getContext());
+  }
+  return success();
+}
+
+static void printLaunchDimType(OpAsmPrinter &printer, Operation *op,
+                               Type dimTy) {
+  if (!dimTy.isIndex())
+    printer << ": " << dimTy;
 }
 
 static ParseResult parseLaunchFuncOperands(
@@ -1156,7 +1327,7 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
         size_t attributionIndex = pair.index();
         DictionaryAttr attrs;
         if (attributes && attributionIndex < attributes.size())
-          attrs = attributes[attributionIndex].cast<DictionaryAttr>();
+          attrs = llvm::cast<DictionaryAttr>(attributes[attributionIndex]);
         if (attrs)
           p.printOptionalAttrDict(attrs.getValue());
       });
@@ -1191,10 +1362,10 @@ void GPUFuncOp::print(OpAsmPrinter &p) {
 
 static DictionaryAttr getAttributionAttrs(GPUFuncOp op, unsigned index,
                                           StringAttr attrName) {
-  auto allAttrs = op->getAttr(attrName).dyn_cast_or_null<ArrayAttr>();
+  auto allAttrs = llvm::dyn_cast_or_null<ArrayAttr>(op->getAttr(attrName));
   if (!allAttrs || index >= allAttrs.size())
     return DictionaryAttr();
-  return allAttrs[index].cast<DictionaryAttr>();
+  return llvm::cast<DictionaryAttr>(allAttrs[index]);
 }
 
 DictionaryAttr GPUFuncOp::getworkgroupAttributionAttrs(unsigned index) {
@@ -1208,7 +1379,7 @@ DictionaryAttr GPUFuncOp::getPrivateAttributionAttrs(unsigned index) {
 static void setAttributionAttrs(GPUFuncOp op, unsigned index,
                                 DictionaryAttr value, StringAttr attrName) {
   MLIRContext *ctx = op.getContext();
-  auto allAttrs = op->getAttr(attrName).dyn_cast_or_null<ArrayAttr>();
+  auto allAttrs = llvm::dyn_cast_or_null<ArrayAttr>(op->getAttr(attrName));
   SmallVector<Attribute> elements;
   if (allAttrs)
     elements.append(allAttrs.begin(), allAttrs.end());
@@ -1349,7 +1520,7 @@ static LogicalResult verifyKnownLaunchSizeAttr(gpu::GPUFuncOp op,
   auto maybeAttr = op->getAttr(attrName);
   if (!maybeAttr)
     return success();
-  auto array = maybeAttr.dyn_cast<DenseI32ArrayAttr>();
+  auto array = llvm::dyn_cast<DenseI32ArrayAttr>(maybeAttr);
   if (!array)
     return op.emitOpError(attrName + " must be a dense i32 array");
   if (array.size() != 3)
@@ -1395,18 +1566,41 @@ LogicalResult gpu::ReturnOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name) {
+                        StringRef name, ArrayAttr targets) {
   ensureTerminator(*result.addRegion(), builder, result.location);
   result.attributes.push_back(builder.getNamedAttr(
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+
+  if (targets)
+    result.getOrAddProperties<Properties>().targets = targets;
+}
+
+void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
+                        StringRef name, ArrayRef<Attribute> targets) {
+  build(builder, result, name,
+        targets.size() > 0 ? builder.getArrayAttr(targets) : ArrayAttr());
 }
 
 ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr nameAttr;
+  ArrayAttr targetsAttr;
+
   if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes) ||
-      // If module attributes are present, parse them.
-      parser.parseOptionalAttrDictWithKeyword(result.attributes))
+                             result.attributes))
+    return failure();
+
+  // Parse the optional array of target attributes.
+  OptionalParseResult targetsAttrResult =
+      parser.parseOptionalAttribute(targetsAttr, Type{});
+  if (targetsAttrResult.has_value()) {
+    if (failed(*targetsAttrResult)) {
+      return failure();
+    }
+    result.getOrAddProperties<Properties>().targets = targetsAttr;
+  }
+
+  // If module attributes are present, parse them.
+  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
     return failure();
 
   // Parse the module body.
@@ -1422,11 +1616,71 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
 void GPUModuleOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {mlir::SymbolTable::getSymbolAttrName()});
+
+  if (Attribute attr = getTargetsAttr()) {
+    p << ' ';
+    p.printAttribute(attr);
+    p << ' ';
+  }
+
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getAttrs(),
+      {mlir::SymbolTable::getSymbolAttrName(), getTargetsAttrName()});
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
+}
+
+bool GPUModuleOp::hasTarget(Attribute target) {
+  if (ArrayAttr targets = getTargetsAttr())
+    return llvm::count(targets.getValue(), target);
+  return false;
+}
+
+void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
+  ArrayAttr &targetsAttr = getProperties().targets;
+  SmallVector<Attribute> targetsVector(targets);
+  targetsAttr = ArrayAttr::get(getContext(), targetsVector);
+}
+
+//===----------------------------------------------------------------------===//
+// GPUBinaryOp
+//===----------------------------------------------------------------------===//
+void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
+                     Attribute offloadingHandler, ArrayAttr objects) {
+  auto &properties = result.getOrAddProperties<Properties>();
+  result.attributes.push_back(builder.getNamedAttr(
+      SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+  properties.objects = objects;
+  if (offloadingHandler)
+    properties.offloadingHandler = offloadingHandler;
+  else
+    properties.offloadingHandler = builder.getAttr<SelectObjectAttr>(nullptr);
+}
+
+void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
+                     Attribute offloadingHandler, ArrayRef<Attribute> objects) {
+  build(builder, result, name, offloadingHandler,
+        objects.size() > 0 ? builder.getArrayAttr(objects) : ArrayAttr());
+}
+
+static ParseResult parseOffloadingHandler(OpAsmParser &parser,
+                                          Attribute &offloadingHandler) {
+  if (succeeded(parser.parseOptionalLess())) {
+    if (parser.parseAttribute(offloadingHandler))
+      return failure();
+    if (parser.parseGreater())
+      return failure();
+  }
+  if (!offloadingHandler)
+    offloadingHandler = parser.getBuilder().getAttr<SelectObjectAttr>(nullptr);
+  return success();
+}
+
+static void printOffloadingHandler(OpAsmPrinter &printer, Operation *op,
+                                   Attribute offloadingHandler) {
+  if (offloadingHandler != SelectObjectAttr::get(op->getContext(), nullptr))
+    printer << '<' << offloadingHandler << '>';
 }
 
 //===----------------------------------------------------------------------===//
@@ -1492,23 +1746,12 @@ void MemcpyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // GPU_SubgroupMmaLoadMatrixOp
 //===----------------------------------------------------------------------===//
 
-/// Return true if the last dimension of the MemRefType has unit stride. Also
-/// return true for memrefs with no strides.
-static bool isLastMemrefDimUnitStride(MemRefType type) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-  if (failed(getStridesAndOffset(type, strides, offset))) {
-    return false;
-  }
-  return strides.back() == 1;
-}
-
 LogicalResult SubgroupMmaLoadMatrixOp::verify() {
   auto srcType = getSrcMemref().getType();
   auto resType = getRes().getType();
-  auto resMatrixType = resType.cast<gpu::MMAMatrixType>();
+  auto resMatrixType = llvm::cast<gpu::MMAMatrixType>(resType);
   auto operand = resMatrixType.getOperand();
-  auto srcMemrefType = srcType.cast<MemRefType>();
+  auto srcMemrefType = llvm::cast<MemRefType>(srcType);
 
   if (!isLastMemrefDimUnitStride(srcMemrefType))
     return emitError(
@@ -1528,8 +1771,8 @@ LogicalResult SubgroupMmaLoadMatrixOp::verify() {
 LogicalResult SubgroupMmaStoreMatrixOp::verify() {
   auto srcType = getSrc().getType();
   auto dstType = getDstMemref().getType();
-  auto srcMatrixType = srcType.cast<gpu::MMAMatrixType>();
-  auto dstMemrefType = dstType.cast<MemRefType>();
+  auto srcMatrixType = llvm::cast<gpu::MMAMatrixType>(srcType);
+  auto dstMemrefType = llvm::cast<MemRefType>(dstType);
 
   if (!isLastMemrefDimUnitStride(dstMemrefType))
     return emitError(
@@ -1549,9 +1792,9 @@ LogicalResult SubgroupMmaStoreMatrixOp::verify() {
 LogicalResult SubgroupMmaComputeOp::verify() {
   enum OperandMap { A, B, C };
   SmallVector<MMAMatrixType, 3> opTypes;
-  opTypes.push_back(getOpA().getType().cast<MMAMatrixType>());
-  opTypes.push_back(getOpB().getType().cast<MMAMatrixType>());
-  opTypes.push_back(getOpC().getType().cast<MMAMatrixType>());
+  opTypes.push_back(llvm::cast<MMAMatrixType>(getOpA().getType()));
+  opTypes.push_back(llvm::cast<MMAMatrixType>(getOpB().getType()));
+  opTypes.push_back(llvm::cast<MMAMatrixType>(getOpC().getType()));
 
   if (!opTypes[A].getOperand().equals("AOp") ||
       !opTypes[B].getOperand().equals("BOp") ||
@@ -1658,7 +1901,7 @@ void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllocOp::verify() {
-  auto memRefType = getMemref().getType().cast<MemRefType>();
+  auto memRefType = llvm::cast<MemRefType>(getMemref().getType());
 
   if (static_cast<int64_t>(getDynamicSizes().size()) !=
       memRefType.getNumDynamicDims())
@@ -1685,11 +1928,11 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
 
   LogicalResult matchAndRewrite(memref::DimOp dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto index = dimOp.getIndex().getDefiningOp<arith::ConstantIndexOp>();
+    std::optional<int64_t> index = dimOp.getConstantIndex();
     if (!index)
       return failure();
 
-    auto memrefType = dimOp.getSource().getType().dyn_cast<MemRefType>();
+    auto memrefType = llvm::dyn_cast<MemRefType>(dimOp.getSource().getType());
     if (!memrefType || !memrefType.isDynamicDim(index.value()))
       return failure();
 
@@ -1711,6 +1954,74 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyDimOfAllocOp>(context);
 }
 
+//===----------------------------------------------------------------------===//
+// GPU select object attribute
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                              Attribute target) {
+  // Check `target`, it can be null, an integer attr or a GPU Target attribute.
+  if (target) {
+    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(target)) {
+      if (intAttr.getInt() < 0) {
+        return emitError() << "The object index must be positive.";
+      }
+    } else if (!(::mlir::isa<TargetAttrInterface>(target))) {
+      return emitError()
+             << "The target attribute must be a GPU Target attribute.";
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPU target options
+//===----------------------------------------------------------------------===//
+
+TargetOptions::TargetOptions(StringRef toolkitPath,
+                             ArrayRef<std::string> linkFiles,
+                             StringRef cmdOptions,
+                             CompilationTarget compilationTarget)
+    : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
+                    cmdOptions, compilationTarget) {}
+
+TargetOptions::TargetOptions(TypeID typeID, StringRef toolkitPath,
+                             ArrayRef<std::string> linkFiles,
+                             StringRef cmdOptions,
+                             CompilationTarget compilationTarget)
+    : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
+      cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
+      typeID(typeID) {}
+
+TypeID TargetOptions::getTypeID() const { return typeID; }
+
+StringRef TargetOptions::getToolkitPath() const { return toolkitPath; }
+
+ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
+
+StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeCmdOptions() const {
+  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
+  llvm::StringSaver stringSaver(options.first);
+#ifdef _WIN32
+  llvm::cl::TokenizeWindowsCommandLine(cmdOptions, stringSaver, options.second,
+                                       /*MarkEOLs=*/false);
+#else
+  llvm::cl::TokenizeGNUCommandLine(cmdOptions, stringSaver, options.second,
+                                   /*MarkEOLs=*/false);
+#endif // _WIN32
+  return options;
+}
+
+TargetOptions::CompilationTarget TargetOptions::getCompilationTarget() const {
+  return compilationTarget;
+}
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)
+
 #include "mlir/Dialect/GPU/IR/GPUOpInterfaces.cpp.inc"
 #include "mlir/Dialect/GPU/IR/GPUOpsEnums.cpp.inc"
 
@@ -1719,3 +2030,5 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/IR/GPUOps.cpp.inc"
+
+#include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.cpp.inc"

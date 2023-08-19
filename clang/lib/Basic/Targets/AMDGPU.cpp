@@ -17,7 +17,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-
 using namespace clang;
 using namespace clang::targets;
 
@@ -244,6 +243,9 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+  CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
+  ReadOnlyFeatures.insert("image-insts");
+  HalfArgsAndReturns = true;
 }
 
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
@@ -314,7 +316,10 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
 
+  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE__", Twine(WavefrontSize));
+  // ToDo: deprecate this macro for naming consistency.
   Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize));
+  Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 }
 
 void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {

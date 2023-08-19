@@ -59,8 +59,8 @@ LangStandard::Kind standardFromOpts(const LangOptions &LO) {
       return LangStandard::lang_cxx11;
     return LangStandard::lang_cxx98;
   }
-  if (LO.C2x)
-    return LangStandard::lang_c2x;
+  if (LO.C23)
+    return LangStandard::lang_c23;
   // C17 has no new features, so treat {C11,C17} as C17.
   if (LO.C11)
     return LangStandard::lang_c17;
@@ -314,7 +314,7 @@ std::optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
        llvm::make_range(HS.search_dir_begin(), HS.search_dir_end())) {
     switch (DL.getLookupType()) {
     case DirectoryLookup::LT_NormalDir: {
-      Path = DL.getDir()->getName();
+      Path = DL.getDirRef()->getName();
       llvm::sys::path::append(Path, ProbeHeader);
       llvm::vfs::Status Stat;
       if (!HS.getFileMgr().getNoncachedStatValue(Path, Stat) &&

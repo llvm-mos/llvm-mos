@@ -49,15 +49,15 @@ static OpFoldResult getCollapsedOutputDimFromInputShape(
       map.getResults().front().cast<AffineDimExpr>().getPosition();
   unsigned endPos = map.getResults().back().cast<AffineDimExpr>().getPosition();
   AffineExpr expr;
-  SmallVector<Value, 2> dynamicDims;
+  SmallVector<OpFoldResult> dynamicDims;
   for (auto dim : llvm::seq_inclusive(startPos, endPos)) {
     dynamicDims.push_back(builder.createOrFold<tensor::DimOp>(loc, src, dim));
     AffineExpr currExpr = builder.getAffineSymbolExpr(dim - startPos);
     expr = (expr ? expr * currExpr : currExpr);
   }
-  return affine::applyMapToValues(
+  return affine::makeComposedFoldedAffineApply(
       builder, loc, AffineMap::get(0, endPos - startPos + 1, expr),
-      dynamicDims)[0];
+      dynamicDims);
 }
 
 /// Given the `src` of a collapsing reshape op and its reassociation maps,
@@ -102,12 +102,13 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
            "dimensions");
     linearizedStaticDim *= d.value();
   }
-  Value sourceDim = builder.create<tensor::DimOp>(loc, src, sourceDimPos);
-  return affine::applyMapToValues(
+  OpFoldResult sourceDim =
+      builder.create<tensor::DimOp>(loc, src, sourceDimPos).getResult();
+  return affine::makeComposedFoldedAffineApply(
       builder, loc,
       AffineMap::get(
           0, 1, builder.getAffineSymbolExpr(0).floorDiv(linearizedStaticDim)),
-      sourceDim)[0];
+      sourceDim);
 }
 
 /// Given the `src` of an expanding reshape op, the reassociation maps and the
@@ -130,7 +131,8 @@ getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                                     ArrayRef<int64_t> dstStaticShape,
                                     ArrayRef<AffineMap> reassocation) {
   return dstStaticShape.size() >
-                 static_cast<size_t>(src.getType().cast<ShapedType>().getRank())
+                 static_cast<size_t>(
+                     llvm::cast<ShapedType>(src.getType()).getRank())
              ? getExpandedOutputShapeFromInputShape(
                    builder, loc, src, dstStaticShape, reassocation)
              : getCollapsedOutputShapeFromInputShape(
@@ -173,25 +175,17 @@ struct ReifyPadOp
       }
 
       // Shape along each dimension is source dim + low pad + high pad.
-      SmallVector<Value> mapOperands;
+      SmallVector<OpFoldResult> mapOperands;
       mapOperands.push_back(
           b.createOrFold<tensor::DimOp>(loc, padOp.getSource(), dim));
-      AffineExpr expr = b.getAffineDimExpr(0);
-      unsigned numSymbols = 0;
-      auto addOpFoldResult = [&](OpFoldResult valueOrAttr) {
-        if (Value v = valueOrAttr.dyn_cast<Value>()) {
-          expr = expr + b.getAffineSymbolExpr(numSymbols++);
-          mapOperands.push_back(v);
-          return;
-        }
-        int64_t staticValue =
-            valueOrAttr.get<Attribute>().cast<IntegerAttr>().getInt();
-        expr = expr + staticValue;
-      };
-      addOpFoldResult(lowPad[dim]);
-      addOpFoldResult(highPad[dim]);
-      shapes.push_back(affine::applyMapToValues(
-          b, loc, AffineMap::get(1, numSymbols, expr), mapOperands)[0]);
+      mapOperands.push_back(lowPad[dim]);
+      mapOperands.push_back(highPad[dim]);
+      AffineExpr expr = b.getAffineDimExpr(0) + b.getAffineSymbolExpr(0) +
+                        b.getAffineSymbolExpr(1);
+      shapes.push_back(getValueOrCreateConstantIndexOp(
+          b, loc,
+          affine::makeComposedFoldedAffineApply(
+              b, loc, AffineMap::get(1, 2, expr), mapOperands)));
     }
     reifiedReturnShapes.emplace_back(std::move(shapes));
     return success();

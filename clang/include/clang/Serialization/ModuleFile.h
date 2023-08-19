@@ -61,13 +61,15 @@ enum ModuleKind {
 
 /// The input file info that has been loaded from an AST file.
 struct InputFileInfo {
+  std::string FilenameAsRequested;
   std::string Filename;
   uint64_t ContentHash;
   off_t StoredSize;
   time_t StoredTime;
   bool Overridden;
   bool Transient;
-  bool TopLevelModuleMap;
+  bool TopLevel;
+  bool ModuleMap;
 };
 
 /// The input file that has been loaded from this AST file, along with
@@ -164,6 +166,9 @@ public:
   /// Whether this precompiled header is a relocatable PCH file.
   bool RelocatablePCH = false;
 
+  /// Whether this module file is a standard C++ module.
+  bool StandardCXXModule = false;
+
   /// Whether timestamps are included in this module file.
   bool HasTimestamps = false;
 
@@ -193,7 +198,7 @@ public:
 
   /// The memory buffer that stores the data associated with
   /// this AST file, owned by the InMemoryModuleCache.
-  llvm::MemoryBuffer *Buffer;
+  llvm::MemoryBuffer *Buffer = nullptr;
 
   /// The size of this file, in bits.
   uint64_t SizeInBits = 0;

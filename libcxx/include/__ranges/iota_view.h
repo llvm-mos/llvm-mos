@@ -27,8 +27,8 @@
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/unreachable_sentinel.h>
-#include <__ranges/copyable_box.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/movable_box.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_nothrow_copy_constructible.h>
@@ -319,8 +319,8 @@ namespace ranges {
         : __value_(std::move(__value)), __bound_sentinel_(std::move(__bound_sentinel)) {
       // Validate the precondition if possible.
       if constexpr (totally_ordered_with<_Start, _BoundSentinel>) {
-        _LIBCPP_ASSERT(ranges::less_equal()(__value_, __bound_sentinel_),
-                       "Precondition violated: value is greater than bound.");
+        _LIBCPP_ASSERT_UNCATEGORIZED(ranges::less_equal()(__value_, __bound_sentinel_),
+                                     "Precondition violated: value is greater than bound.");
       }
     }
 
@@ -336,7 +336,7 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(__iterator __first, __sentinel __last)
-      requires(!same_as<_Start, _BoundSentinel> && !same_as<_Start, unreachable_sentinel_t>)
+      requires(!same_as<_Start, _BoundSentinel> && !same_as<_BoundSentinel, unreachable_sentinel_t>)
     : iota_view(std::move(__first.__value_), std::move(__last.__bound_sentinel_)) {}
 
     _LIBCPP_HIDE_FROM_ABI

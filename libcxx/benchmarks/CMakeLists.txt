@@ -1,8 +1,3 @@
-if (CMAKE_VERSION VERSION_LESS 3.17)
-  message(WARNING "The libc++ benchmarks won't be available because the version of CMake is too old to support them.")
-  return()
-endif()
-
 include(ExternalProject)
 include(CheckCXXCompilerFlag)
 
@@ -159,12 +154,14 @@ endfunction()
 set(BENCHMARK_TESTS
     algorithms.partition_point.bench.cpp
     algorithms/equal.bench.cpp
+    algorithms/find.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
     algorithms/min.bench.cpp
     algorithms/min_max_element.bench.cpp
     algorithms/pop_heap.bench.cpp
+    algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp
     algorithms/ranges_make_heap.bench.cpp
     algorithms/ranges_make_heap_then_sort_heap.bench.cpp
@@ -196,6 +193,7 @@ set(BENCHMARK_TESTS
     std_format_spec_string_unicode.bench.cpp
     string.bench.cpp
     stringstream.bench.cpp
+    system_error.bench.cpp
     to_chars.bench.cpp
     unordered_set_operations.bench.cpp
     util_smartptr.bench.cpp

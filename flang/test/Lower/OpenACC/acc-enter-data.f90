@@ -18,26 +18,22 @@ subroutine acc_enter_data
   !$acc enter data create(a)
 !CHECK: %[[ONE:.*]] = arith.constant 1 : index
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[C10]], %[[ONE]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
-!CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[C10]], %[[ONE]] : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[EXTENT_C10]], %[[ONE]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
-!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[EXTENT_C10]], %[[ONE]] : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc enter data create(a) if(.true.)
 !CHECK: %[[ONE:.*]] = arith.constant 1 : index
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[C10]], %[[ONE]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
-!CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[C10]], %[[ONE]] : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[EXTENT_C10]], %[[ONE]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
-!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[EXTENT_C10]], %[[ONE]] : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: [[IF1:%.*]] = arith.constant true
 !CHECK: acc.enter_data if([[IF1]]) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
@@ -45,13 +41,11 @@ subroutine acc_enter_data
   !$acc enter data create(a) if(ifCondition)
 !CHECK: %[[ONE:.*]] = arith.constant 1 : index
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[C10]], %[[ONE]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
-!CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[C10]], %[[ONE]] : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[EXTENT_C10]], %[[ONE]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
-!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[EXTENT_C10]], %[[ONE]] : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXTENT_C10]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: [[IFCOND:%.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
 !CHECK: [[IF2:%.*]] = fir.convert [[IFCOND]] : (!fir.logical<4>) -> i1
@@ -78,7 +72,7 @@ subroutine acc_enter_data
 !CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
 !CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%{{.*}} : index)
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%{{.*}} : index)
-!CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[C]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = 8 : i64, name = "c", structured = false}
+!CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[C]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = #acc<data_clause acc_create_zero>, name = "c", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc enter data copyin(a) create(b) attach(d)
@@ -266,6 +260,7 @@ end subroutine
 ! Test lowering of array section for non default lower bound.
 subroutine acc_enter_data_non_default_lb()
   integer :: a(0:9)
+  integer :: b(11:20)
 
 !CHECK-LABEL: func.func @_QPacc_enter_data_non_default_lb() {
 !CHECK: %[[BASELB:.*]] = arith.constant 0 : index
@@ -306,6 +301,14 @@ subroutine acc_enter_data_non_default_lb()
 !CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
 !CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[BASELB]] : index)
 !CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xi32>> {name = "a(4:)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xi32>>)
+
+  !$acc enter data create(b)
+!CHECK: %[[ONE:.*]] = arith.constant 1 : index 
+!CHECK: %[[LB:.*]] = arith.constant 0 : index 
+!CHECK: %[[UB:.*]] = arith.subi %c10{{.*}}, %[[ONE]] : index 
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%c10{{.*}} : index) stride(%[[ONE]] : index) startIdx(%c11{{.*}} : index) 
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%1 : !fir.ref<!fir.array<10xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xi32>> {name = "b", structured = false} 
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xi32>>)
 
 end subroutine
@@ -598,9 +601,8 @@ subroutine acc_enter_data_derived_type()
 !CHECK: %[[C10:.*]] = arith.constant 10 : index
 !CHECK: %[[C1:.*]] = arith.constant 1 : index
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[C10]], %[[C1]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[C1]] : index
-!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[C10]], %[[C1]] : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 !CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "a%array", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
 
@@ -655,9 +657,8 @@ subroutine acc_enter_data_derived_type()
 !CHECK: %[[C10:.*]] = arith.constant 10 : index
 !CHECK: %[[C1:.*]] = arith.constant 1 : index
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[C10]], %[[C1]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[C1]] : index
-!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[C10]], %[[C1]] : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 !CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "b%d%array", structured = false}
 
   !$acc enter data create(c%data)
@@ -687,9 +688,8 @@ subroutine acc_enter_data_derived_type()
 !CHECK: %[[C10:.*]] = arith.constant 10 : index
 !CHECK: %[[C1:.*]] = arith.constant 1 : index
 !CHECK: %[[LB:.*]] = arith.constant 0 : index
-!CHECK: %[[LBEXT:.*]] = arith.addi %[[C10]], %[[C1]] : index
-!CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[C1]] : index
-!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[UB:.*]] = arith.subi %[[C10]], %[[C1]] : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 !CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "d%d(1_8)%array", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
 

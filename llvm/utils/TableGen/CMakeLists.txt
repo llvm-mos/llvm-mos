@@ -60,7 +60,10 @@ add_tablegen(llvm-tblgen LLVM
   ExegesisEmitter.cpp
   FastISelEmitter.cpp
   GICombinerEmitter.cpp
+  GlobalISelCombinerMatchTableEmitter.cpp
   GlobalISelEmitter.cpp
+  GlobalISelMatchTable.cpp
+  GlobalISelMatchTableExecutorEmitter.cpp
   InfoByHwMode.cpp
   InstrInfoEmitter.cpp
   InstrDocsEmitter.cpp
@@ -86,6 +89,9 @@ add_tablegen(llvm-tblgen LLVM
   X86RecognizableInstr.cpp
   WebAssemblyDisassemblerEmitter.cpp
   $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
+
+  DEPENDS
+  intrinsics_gen # via llvm-min-tablegen
   )
 target_link_libraries(llvm-tblgen PRIVATE LLVMTableGenGlobalISel)
 set_target_properties(llvm-tblgen PROPERTIES FOLDER "Tablegenning")

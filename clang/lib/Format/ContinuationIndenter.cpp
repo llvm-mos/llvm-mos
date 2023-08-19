@@ -357,11 +357,14 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (Current.MustBreakBefore ||
       (Current.is(TT_InlineASMColon) &&
        (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_Always ||
-        Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline))) {
+        (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline &&
+         Style.ColumnLimit > 0)))) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingBrace &&
-      Current.closesBlockOrBlockTypeList(Style)) {
+      (Current.closesBlockOrBlockTypeList(Style) ||
+       (Current.is(tok::r_brace) &&
+        Current.isBlockIndentedInitRBrace(Style)))) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
@@ -614,10 +617,10 @@ unsigned ContinuationIndenter::addTokenToState(LineState &State, bool Newline,
   assert(!State.Stack.empty());
   State.NoContinuation = false;
 
-  if ((Current.is(TT_ImplicitStringLiteral) &&
-       (!Previous.Tok.getIdentifierInfo() ||
-        Previous.Tok.getIdentifierInfo()->getPPKeywordID() ==
-            tok::pp_not_keyword))) {
+  if (Current.is(TT_ImplicitStringLiteral) &&
+      (!Previous.Tok.getIdentifierInfo() ||
+       Previous.Tok.getIdentifierInfo()->getPPKeywordID() ==
+           tok::pp_not_keyword)) {
     unsigned EndColumn =
         SourceMgr.getSpellingColumnNumber(Current.WhitespaceRange.getEnd());
     if (Current.LastNewlineOffset != 0) {
@@ -748,7 +751,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
       Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
       !(Current.MacroParent && Previous.MacroParent) &&
-      (Current.isNot(TT_LineComment) || Previous.is(BK_BracedInit))) {
+      (Current.isNot(TT_LineComment) ||
+       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
   }
@@ -1125,7 +1129,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
            Style.IndentWidth;
   }
 
-  if (NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) {
+  if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
+      (Style.isVerilog() && Keywords.isVerilogBegin(*NextNonComment))) {
     if (Current.NestingLevel == 0 ||
         (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
          State.NextToken->is(TT_LambdaLBrace))) {
@@ -1165,12 +1170,23 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
-      Current.is(tok::r_paren) && State.Stack.size() > 1) {
+      (Current.is(tok::r_paren) ||
+       (Current.is(tok::r_brace) &&
+        Current.MatchingParen->is(BK_BracedInit))) &&
+      State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())
     return State.Stack[State.Stack.size() - 2].LastSpace;
+  // Field labels in a nested type should be aligned to the brace. For example
+  // in ProtoBuf:
+  //   optional int32 b = 2 [(foo_options) = {aaaaaaaaaaaaaaaaaaa: 123,
+  //                                          bbbbbbbbbbbbbbbbbbbbbbbb:"baz"}];
+  // For Verilog, a quote following a brace is treated as an identifier.  And
+  // Both braces and colons get annotated as TT_DictLiteral.  So we have to
+  // check.
   if (Current.is(tok::identifier) && Current.Next &&
+      (!Style.isVerilog() || Current.Next->is(tok::colon)) &&
       (Current.Next->is(TT_DictLiteral) ||
        ((Style.Language == FormatStyle::LK_Proto ||
          Style.Language == FormatStyle::LK_TextProto) &&
@@ -1421,6 +1437,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack) {
       CurrentState.AvoidBinPacking = true;
       CurrentState.BreakBeforeParameter =
+          Style.ColumnLimit > 0 &&
           Style.PackConstructorInitializers != FormatStyle::PCIS_NextLine &&
           Style.PackConstructorInitializers != FormatStyle::PCIS_NextLineOnly;
     } else {

@@ -508,6 +508,7 @@ void LookupResult::resolveKind() {
   llvm::SmallDenseMap<QualType, unsigned, 16> UniqueTypes;
 
   bool Ambiguous = false;
+  bool ReferenceToPlaceHolderVariable = false;
   bool HasTag = false, HasFunction = false;
   bool HasFunctionTemplate = false, HasUnresolved = false;
   const NamedDecl *HasNonFunction = nullptr;
@@ -546,7 +547,7 @@ void LookupResult::resolveKind() {
 
     // For non-type declarations, check for a prior lookup result naming this
     // canonical declaration.
-    if (!ExistingI) {
+    if (!D->isPlaceholderVar(getSema().getLangOpts()) && !ExistingI) {
       auto UniqueResult = Unique.insert(std::make_pair(D, I));
       if (!UniqueResult.second) {
         // We've seen this entity before.
@@ -590,7 +591,11 @@ void LookupResult::resolveKind() {
           Decls[I] = Decls[--N];
           continue;
         }
-
+        if (D->isPlaceholderVar(getSema().getLangOpts()) &&
+            getContextForScopeMatching(D) ==
+                getContextForScopeMatching(Decls[I])) {
+          ReferenceToPlaceHolderVariable = true;
+        }
         Ambiguous = true;
       }
       HasNonFunction = D;
@@ -630,7 +635,9 @@ void LookupResult::resolveKind() {
   if (HasNonFunction && (HasFunction || HasUnresolved))
     Ambiguous = true;
 
-  if (Ambiguous)
+  if (Ambiguous && ReferenceToPlaceHolderVariable)
+    setAmbiguous(LookupResult::AmbiguousReferenceToPlaceholderVariable);
+  else if (Ambiguous)
     setAmbiguous(LookupResult::AmbiguousReference);
   else if (HasUnresolved)
     ResultKind = LookupResult::FoundUnresolvedValue;
@@ -933,9 +940,11 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         }
       }
 
-      if (DeclareRISCVVBuiltins || DeclareRISCVVectorBuiltins) {
+      if (DeclareRISCVVBuiltins || DeclareRISCVSiFiveVectorBuiltins) {
         if (!RVIntrinsicManager)
           RVIntrinsicManager = CreateRISCVIntrinsicManager(*this);
+
+        RVIntrinsicManager->InitIntrinsicList();
 
         if (RVIntrinsicManager->CreateIntrinsicIfFound(R, II, PP))
           return true;
@@ -1877,14 +1886,14 @@ bool Sema::isModuleVisible(const Module *M, bool ModulePrivate) {
   if (LookupModules.empty())
     return false;
 
+  // If our lookup set contains the module, it's visible.
+  if (LookupModules.count(M))
+    return true;
+
   // The global module fragments are visible to its corresponding module unit.
   // So the global module fragment should be visible if the its corresponding
   // module unit is visible.
-  if (M->isGlobalModule())
-    M = M->getTopLevelModule();
-
-  // If our lookup set contains the module, it's visible.
-  if (LookupModules.count(M))
+  if (M->isGlobalModule() && LookupModules.count(M->getTopLevelModule()))
     return true;
 
   // For a module-private query, that's everywhere we get to look.
@@ -1905,14 +1914,11 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   Module *DeclModule = SemaRef.getOwningModule(D);
   assert(DeclModule && "hidden decl has no owning module");
 
-  // Entities in module map modules are reachable only if they're visible.
-  if (DeclModule->isModuleMapModule())
+  // Entities in header like modules are reachable only if they're visible.
+  if (DeclModule->isHeaderLikeModule())
     return false;
 
-  // If D comes from a module and SemaRef doesn't own a module, it implies D
-  // comes from another TU. In case SemaRef owns a module, we could judge if D
-  // comes from another TU by comparing the module unit.
-  if (SemaRef.isModuleUnitOfCurrentTU(DeclModule))
+  if (!D->isInAnotherModuleUnit())
     return true;
 
   // [module.reach]/p3:
@@ -2427,8 +2433,9 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     bool oldVal;
     DeclContext *Context;
     // Set flag in DeclContext informing debugger that we're looking for qualified name
-    QualifiedLookupInScope(DeclContext *ctx) : Context(ctx) {
-      oldVal = ctx->setUseQualifiedLookup();
+    QualifiedLookupInScope(DeclContext *ctx)
+        : oldVal(ctx->shouldUseQualifiedLookup()), Context(ctx) {
+      ctx->setUseQualifiedLookup();
     }
     ~QualifiedLookupInScope() {
       Context->setUseQualifiedLookup(oldVal);
@@ -2855,6 +2862,18 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
         F.erase();
     }
     F.done();
+    break;
+  }
+
+  case LookupResult::AmbiguousReferenceToPlaceholderVariable: {
+    Diag(NameLoc, diag::err_using_placeholder_variable) << Name << LookupRange;
+    DeclContext *DC = nullptr;
+    for (auto *D : Result) {
+      Diag(D->getLocation(), diag::note_reference_placeholder) << D;
+      if (DC != nullptr && DC != D->getDeclContext())
+        break;
+      DC = D->getDeclContext();
+    }
     break;
   }
 
@@ -3892,14 +3911,12 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
                    "bad export context");
             // .. are attached to a named module M, do not appear in the
             // translation unit containing the point of the lookup..
-            if (!isModuleUnitOfCurrentTU(FM) &&
+            if (D->isInAnotherModuleUnit() &&
                 llvm::any_of(AssociatedClasses, [&](auto *E) {
                   // ... and have the same innermost enclosing non-inline
                   // namespace scope as a declaration of an associated entity
                   // attached to M
-                  if (!E->hasOwningModule() ||
-                      E->getOwningModule()->getTopLevelModuleName() !=
-                          FM->getTopLevelModuleName())
+                  if (E->getOwningModule() != FM)
                     return false;
                   // TODO: maybe this could be cached when generating the
                   // associated namespaces / entities.
@@ -4153,22 +4170,21 @@ private:
     // Enumerate all of the results in this context.
     for (DeclContextLookupResult R :
          Load ? Ctx->lookups()
-              : Ctx->noload_lookups(/*PreserveInternalState=*/false)) {
-      for (auto *D : R) {
-        if (auto *ND = Result.getAcceptableDecl(D)) {
-          // Rather than visit immediately, we put ND into a vector and visit
-          // all decls, in order, outside of this loop. The reason is that
-          // Consumer.FoundDecl() may invalidate the iterators used in the two
-          // loops above.
-          DeclsToVisit.push_back(ND);
-        }
-      }
-    }
+              : Ctx->noload_lookups(/*PreserveInternalState=*/false))
+      for (auto *D : R)
+        // Rather than visit immediately, we put ND into a vector and visit
+        // all decls, in order, outside of this loop. The reason is that
+        // Consumer.FoundDecl() and LookupResult::getAcceptableDecl(D)
+        // may invalidate the iterators used in the two
+        // loops above.
+        DeclsToVisit.push_back(D);
 
-    for (auto *ND : DeclsToVisit) {
-      Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);
-      Visited.add(ND);
-    }
+    for (auto *D : DeclsToVisit)
+      if (auto *ND = Result.getAcceptableDecl(D)) {
+        Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);
+        Visited.add(ND);
+      }
+
     DeclsToVisit.clear();
 
     // Traverse using directives for qualified name lookup.
@@ -5681,10 +5697,10 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
 /// suggesting the addition of a #include of the specified file.
 static std::string getHeaderNameForHeader(Preprocessor &PP, const FileEntry *E,
                                           llvm::StringRef IncludingFile) {
-  bool IsSystem = false;
+  bool IsAngled = false;
   auto Path = PP.getHeaderSearchInfo().suggestPathToFileForDiagnostics(
-      E, IncludingFile, &IsSystem);
-  return (IsSystem ? '<' : '"') + Path + (IsSystem ? '>' : '"');
+      E, IncludingFile, &IsAngled);
+  return (IsAngled ? '<' : '"') + Path + (IsAngled ? '>' : '"');
 }
 
 void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,

@@ -183,6 +183,29 @@ protected:
   }
 
 public:
+  /// Return iterator range covering def operands.
+  iterator_range<MCInst::iterator> defOperands(MCInst &Inst) const {
+    return make_range(Inst.begin(),
+                      Inst.begin() + Info->get(Inst.getOpcode()).getNumDefs());
+  }
+
+  iterator_range<MCInst::const_iterator> defOperands(const MCInst &Inst) const {
+    return make_range(Inst.begin(),
+                      Inst.begin() + Info->get(Inst.getOpcode()).getNumDefs());
+  }
+
+  /// Return iterator range covering prime use operands.
+  iterator_range<MCInst::iterator> useOperands(MCInst &Inst) const {
+    return make_range(Inst.begin() + Info->get(Inst.getOpcode()).getNumDefs(),
+                      Inst.begin() + MCPlus::getNumPrimeOperands(Inst));
+  }
+
+  iterator_range<MCInst::const_iterator> useOperands(const MCInst &Inst) const {
+    return make_range(Inst.begin() + Info->get(Inst.getOpcode()).getNumDefs(),
+                      Inst.begin() + MCPlus::getNumPrimeOperands(Inst));
+  }
+
+public:
   class InstructionIterator {
   public:
     using iterator_category = std::bidirectional_iterator_tag;
@@ -313,9 +336,12 @@ public:
     initSizeMap();
   }
 
-  /// Create and return target-specific MC symbolizer for the \p Function.
+  /// Create and return a target-specific MC symbolizer for the \p Function.
+  /// When \p CreateNewSymbols is set, the symbolizer can create new symbols
+  /// e.g. for jump table references.
   virtual std::unique_ptr<MCSymbolizer>
-  createTargetSymbolizer(BinaryFunction &Function) const {
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols = true) const {
     return nullptr;
   }
 
@@ -408,7 +434,7 @@ public:
   }
 
   /// Check whether we support inverting this branch
-  virtual bool isUnsupportedBranch(unsigned Opcode) const { return false; }
+  virtual bool isUnsupportedBranch(const MCInst &Inst) const { return false; }
 
   /// Return true of the instruction is of pseudo kind.
   bool isPseudo(const MCInst &Inst) const {
@@ -603,6 +629,12 @@ public:
   }
 
   virtual bool isPacked(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Returns true if First/Second is a AUIPC/JALR call pair.
+  virtual bool isRISCVCall(const MCInst &First, const MCInst &Second) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -2005,6 +2037,10 @@ MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *,
                                           const MCInstrInfo *,
                                           const MCRegisterInfo *);
+
+MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *,
+                                        const MCInstrInfo *,
+                                        const MCRegisterInfo *);
 
 } // namespace bolt
 } // namespace llvm

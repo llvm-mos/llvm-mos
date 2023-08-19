@@ -441,12 +441,15 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
 }
 
 void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
-  DP << "call to " << demangle(getFunctionName().str())
-     << " marked \"dontcall-";
+  DP << "call to " << demangle(getFunctionName()) << " marked \"dontcall-";
   if (getSeverity() == DiagnosticSeverity::DS_Error)
     DP << "error\"";
   else
     DP << "warn\"";
   if (!getNote().empty())
     DP << ": " << getNote();
+}
+
+void DiagnosticInfoMachineFunctionSplit::print(DiagnosticPrinter &DP) const {
+  DP << "-fsplit-machine-functions is not valid for " << TargetTriple;
 }

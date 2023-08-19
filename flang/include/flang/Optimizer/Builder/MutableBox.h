@@ -131,8 +131,8 @@ void genInlinedAllocation(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::ValueRange lenParams, llvm::StringRef allocName,
                           bool mustBeHeap = false);
 
-void genInlinedDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
-                          const fir::MutableBoxValue &box);
+mlir::Value genInlinedDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 const fir::MutableBoxValue &box);
 
 /// When the MutableBoxValue was passed as a fir.ref<fir.box> to a call that may
 /// have modified it, update the MutableBoxValue according to the
@@ -167,6 +167,12 @@ mlir::Value genIsAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
 mlir::Value genIsNotAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
                                               mlir::Location loc,
                                               const fir::MutableBoxValue &box);
+
+/// Generate an unallocated box of the given \p boxTy
+/// and store it into a temporary storage.
+/// Return address of the temporary storage.
+mlir::Value genNullBoxStorage(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type boxTy);
 
 } // namespace fir::factory
 

@@ -27,8 +27,16 @@ class AffineMap;
 class FloatType;
 class IndexType;
 class IntegerType;
+class MemRefType;
+class RankedTensorType;
 class StringAttr;
 class TypeRange;
+
+namespace detail {
+struct FunctionTypeStorage;
+struct IntegerTypeStorage;
+struct TupleTypeStorage;
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // FloatType
@@ -42,6 +50,7 @@ public:
   static FloatType getBF16(MLIRContext *ctx);
   static FloatType getF16(MLIRContext *ctx);
   static FloatType getF32(MLIRContext *ctx);
+  static FloatType getTF32(MLIRContext *ctx);
   static FloatType getF64(MLIRContext *ctx);
   static FloatType getF80(MLIRContext *ctx);
   static FloatType getF128(MLIRContext *ctx);
@@ -58,6 +67,7 @@ public:
   unsigned getWidth();
 
   /// Return the width of the mantissa of this type.
+  /// The width includes the integer bit.
   unsigned getFPMantissaWidth();
 
   /// Get or create a new FloatType with bitwidth scaled by `scale`.
@@ -95,6 +105,17 @@ public:
   TensorType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                        Type elementType) const;
 
+  // Make sure that base class overloads are visible.
+  using ShapedType::Trait<TensorType>::clone;
+
+  /// Return a clone of this type with the given new shape and element type.
+  /// The returned type is ranked, even if this type is unranked.
+  RankedTensorType clone(ArrayRef<int64_t> shape, Type elementType) const;
+
+  /// Return a clone of this type with the given new shape. The returned type
+  /// is ranked, even if this type is unranked.
+  RankedTensorType clone(ArrayRef<int64_t> shape) const;
+
   /// Return true if the specified element type is ok in a tensor.
   static bool isValidElementType(Type type);
 
@@ -102,7 +123,7 @@ public:
   static bool classof(Type type);
 
   /// Allow implicit conversion to ShapedType.
-  operator ShapedType() const { return cast<ShapedType>(); }
+  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -131,6 +152,17 @@ public:
   BaseMemRefType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                            Type elementType) const;
 
+  // Make sure that base class overloads are visible.
+  using ShapedType::Trait<BaseMemRefType>::clone;
+
+  /// Return a clone of this type with the given new shape and element type.
+  /// The returned type is ranked, even if this type is unranked.
+  MemRefType clone(ArrayRef<int64_t> shape, Type elementType) const;
+
+  /// Return a clone of this type with the given new shape. The returned type
+  /// is ranked, even if this type is unranked.
+  MemRefType clone(ArrayRef<int64_t> shape) const;
+
   /// Return true if the specified element type is ok in a memref.
   static bool isValidElementType(Type type);
 
@@ -145,7 +177,7 @@ public:
   unsigned getMemorySpaceAsInt() const;
 
   /// Allow implicit conversion to ShapedType.
-  operator ShapedType() const { return cast<ShapedType>(); }
+  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
 };
 
 } // namespace mlir
@@ -282,17 +314,25 @@ public:
   /// Build from another VectorType.
   explicit Builder(VectorType other)
       : shape(other.getShape()), elementType(other.getElementType()),
-        numScalableDims(other.getNumScalableDims()) {}
+        scalableDims(other.getScalableDims()) {}
 
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
-          unsigned numScalableDims = 0)
-      : shape(shape), elementType(elementType),
-        numScalableDims(numScalableDims) {}
+          unsigned numScalableDims = 0, ArrayRef<bool> scalableDims = {})
+      : shape(shape), elementType(elementType) {
+    if (scalableDims.empty())
+      scalableDims = SmallVector<bool>(shape.size(), false);
+    else
+      this->scalableDims = scalableDims;
+  }
 
   Builder &setShape(ArrayRef<int64_t> newShape,
-                    unsigned newNumScalableDims = 0) {
-    numScalableDims = newNumScalableDims;
+                    ArrayRef<bool> newIsScalableDim = {}) {
+    if (newIsScalableDim.empty())
+      scalableDims = SmallVector<bool>(shape.size(), false);
+    else
+      scalableDims = newIsScalableDim;
+
     shape = newShape;
     return *this;
   }
@@ -305,12 +345,15 @@ public:
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
     assert(pos < shape.size() && "overflow");
-    if (pos >= shape.size() - numScalableDims)
-      numScalableDims--;
     if (storage.empty())
       storage.append(shape.begin(), shape.end());
+    if (storageScalableDims.empty())
+      storageScalableDims.append(scalableDims.begin(), scalableDims.end());
     storage.erase(storage.begin() + pos);
+    storageScalableDims.erase(storageScalableDims.begin() + pos);
     shape = {storage.data(), storage.size()};
+    scalableDims =
+        ArrayRef<bool>(storageScalableDims.data(), storageScalableDims.size());
     return *this;
   }
 
@@ -320,7 +363,7 @@ public:
   operator Type() {
     if (shape.empty())
       return elementType;
-    return VectorType::get(shape, elementType, numScalableDims);
+    return VectorType::get(shape, elementType, scalableDims);
   }
 
 private:
@@ -328,7 +371,9 @@ private:
   // Owning shape data for copy-on-write operations.
   SmallVector<int64_t> storage;
   Type elementType;
-  unsigned numScalableDims;
+  ArrayRef<bool> scalableDims;
+  // Owning scalableDims data for copy-on-write operations.
+  SmallVector<bool> storageScalableDims;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of
@@ -367,20 +412,21 @@ SliceVerificationResult isRankReducedType(ShapedType originalType,
 //===----------------------------------------------------------------------===//
 
 inline bool BaseMemRefType::classof(Type type) {
-  return type.isa<MemRefType, UnrankedMemRefType>();
+  return llvm::isa<MemRefType, UnrankedMemRefType>(type);
 }
 
 inline bool BaseMemRefType::isValidElementType(Type type) {
   return type.isIntOrIndexOrFloat() ||
-         type.isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>() ||
-         type.isa<MemRefElementTypeInterface>();
+         llvm::isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>(
+             type) ||
+         llvm::isa<MemRefElementTypeInterface>(type);
 }
 
 inline bool FloatType::classof(Type type) {
-  return type
-      .isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
-           Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type, Float16Type,
-           Float32Type, Float64Type, Float80Type, Float128Type>();
+  return llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
+                   Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type,
+                   Float16Type, FloatTF32Type, Float32Type, Float64Type,
+                   Float80Type, Float128Type>(type);
 }
 
 inline FloatType FloatType::getFloat8E5M2(MLIRContext *ctx) {
@@ -411,6 +457,10 @@ inline FloatType FloatType::getF16(MLIRContext *ctx) {
   return Float16Type::get(ctx);
 }
 
+inline FloatType FloatType::getTF32(MLIRContext *ctx) {
+  return FloatTF32Type::get(ctx);
+}
+
 inline FloatType FloatType::getF32(MLIRContext *ctx) {
   return Float32Type::get(ctx);
 }
@@ -428,7 +478,7 @@ inline FloatType FloatType::getF128(MLIRContext *ctx) {
 }
 
 inline bool TensorType::classof(Type type) {
-  return type.isa<RankedTensorType, UnrankedTensorType>();
+  return llvm::isa<RankedTensorType, UnrankedTensorType>(type);
 }
 
 //===----------------------------------------------------------------------===//
@@ -485,8 +535,12 @@ AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                           MLIRContext *context);
 
-/// Return true if the layout for `t` is compatible with strided semantics.
+/// Return "true" if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
+
+/// Return "true" if the last dimension of the given type has a static unit
+/// stride. Also return "true" for types with no strides.
+bool isLastMemrefDimUnitStride(MemRefType type);
 
 } // namespace mlir
 

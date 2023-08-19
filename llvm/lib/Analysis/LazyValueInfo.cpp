@@ -876,10 +876,14 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
   // condition itself?  This shows up with idioms like e.g. select(a > 5, a, 5).
   // TODO: We could potentially refine an overdefined true value above.
   Value *Cond = SI->getCondition();
-  TrueVal = intersect(TrueVal,
-                      getValueFromCondition(SI->getTrueValue(), Cond, true));
-  FalseVal = intersect(FalseVal,
-                       getValueFromCondition(SI->getFalseValue(), Cond, false));
+  // If the value is undef, a different value may be chosen in
+  // the select condition.
+  if (isGuaranteedNotToBeUndefOrPoison(Cond, AC)) {
+    TrueVal = intersect(TrueVal,
+                        getValueFromCondition(SI->getTrueValue(), Cond, true));
+    FalseVal = intersect(
+        FalseVal, getValueFromCondition(SI->getFalseValue(), Cond, false));
+  }
 
   ValueLatticeElement Result = TrueVal;
   Result.mergeIn(FalseVal);
@@ -1745,7 +1749,7 @@ getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
   Constant *Res = nullptr;
   if (Val.isConstant()) {
     Res = ConstantFoldCompareInstOperands(Pred, Val.getConstant(), C, DL, TLI);
-    if (ConstantInt *ResCI = dyn_cast<ConstantInt>(Res))
+    if (ConstantInt *ResCI = dyn_cast_or_null<ConstantInt>(Res))
       return ResCI->isZero() ? LazyValueInfo::False : LazyValueInfo::True;
     return LazyValueInfo::Unknown;
   }
@@ -1787,14 +1791,14 @@ getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
       Res = ConstantFoldCompareInstOperands(ICmpInst::ICMP_NE,
                                             Val.getNotConstant(), C, DL,
                                             TLI);
-      if (Res->isNullValue())
+      if (Res && Res->isNullValue())
         return LazyValueInfo::False;
     } else if (Pred == ICmpInst::ICMP_NE) {
       // !C1 != C -> true iff C1 == C.
       Res = ConstantFoldCompareInstOperands(ICmpInst::ICMP_NE,
                                             Val.getNotConstant(), C, DL,
                                             TLI);
-      if (Res->isNullValue())
+      if (Res && Res->isNullValue())
         return LazyValueInfo::True;
     }
     return LazyValueInfo::Unknown;

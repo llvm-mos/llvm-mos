@@ -992,8 +992,8 @@ TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineVsInline) {
 
 TEST_F(StructuralEquivalenceRecordContextTest, NamespaceInlineTopLevel) {
   auto Decls =
-      makeNamedDecls("inline namespace A { class X; } }",
-                     "inline namespace B { class X; } }", Lang_CXX17, "X");
+      makeNamedDecls("inline namespace A { class X; }",
+                     "inline namespace B { class X; }", Lang_CXX17, "X");
   EXPECT_TRUE(testStructuralMatch(Decls));
 }
 
@@ -1141,6 +1141,18 @@ TEST_F(StructuralEquivalenceObjCCategoryTest, CategoriesWithDifferentNames) {
                                        "@interface A @end @interface A(Y) @end",
                                        Lang_OBJC, objcCategoryDecl());
   EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceObjCCategoryTest, CategoriesWithoutInterfaces) {
+  auto t = makeDecls<ObjCCategoryDecl>("                  @interface A(X) @end",
+                                       "@interface A @end @interface A(X) @end",
+                                       Lang_OBJC, objcCategoryDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+
+  auto t2 = makeDecls<ObjCCategoryDecl>("@interface A(X) @end",
+                                        "@interface A(X) @end",
+                                        Lang_OBJC, objcCategoryDecl());
+  EXPECT_TRUE(testStructuralMatch(t2));
 }
 
 TEST_F(StructuralEquivalenceObjCCategoryTest, CategoryAndExtension) {

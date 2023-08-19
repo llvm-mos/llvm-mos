@@ -147,7 +147,7 @@ struct alignas(8) GlobalValueSummaryInfo {
     StringRef Name;
   } U;
 
-  GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
+  inline GlobalValueSummaryInfo(bool HaveGVs);
 
   /// List of global value summary structures for a particular value held
   /// in the GlobalValueMap. Requires a vector in the case of multiple
@@ -337,7 +337,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
 }
 
 // Allocation type assigned to an allocation reached by a given context.
-// More can be added but initially this is just noncold and cold.
+// More can be added, now this is cold, notcold and hot.
 // Values should be powers of two so that they can be ORed, in particular to
 // track allocations that have different behavior with different calling
 // contexts.
@@ -345,7 +345,8 @@ enum class AllocationType : uint8_t {
   None = 0,
   NotCold = 1,
   Cold = 2,
-  All = 3 // This should always be set to the OR of all values.
+  Hot = 4,
+  All = 7 // This should always be set to the OR of all values.
 };
 
 /// Summary of a single MIB in a memprof metadata on allocations.
@@ -573,6 +574,8 @@ public:
 
   friend class ModuleSummaryIndex;
 };
+
+GlobalValueSummaryInfo::GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
 
 /// Alias summary information.
 class AliasSummary : public GlobalValueSummary {
@@ -1305,6 +1308,9 @@ private:
   /// Indicates that summary-based synthetic entry count propagation has run
   bool HasSyntheticEntryCounts = false;
 
+  /// Indicates that we linked with allocator supporting hot/cold new operators.
+  bool WithSupportsHotColdNew = false;
+
   /// Indicates that distributed backend should skip compilation of the
   /// module. Flag is suppose to be set by distributed ThinLTO indexing
   /// when it detected that the module is not needed during the final
@@ -1320,6 +1326,9 @@ private:
 
   // True if the index was created for a module compiled with -fsplit-lto-unit.
   bool EnableSplitLTOUnit;
+
+  // True if the index was created for a module compiled with -funified-lto
+  bool UnifiedLTO;
 
   // True if some of the modules were compiled with -fsplit-lto-unit and
   // some were not. Set when the combined index is created during the thin link.
@@ -1366,9 +1375,10 @@ private:
 
 public:
   // See HaveGVs variable comment.
-  ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false)
-      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit), Saver(Alloc),
-        BlockCount(0) {}
+  ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
+                     bool UnifiedLTO = false)
+      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
+        UnifiedLTO(UnifiedLTO), Saver(Alloc), BlockCount(0) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
@@ -1513,6 +1523,9 @@ public:
   bool hasSyntheticEntryCounts() const { return HasSyntheticEntryCounts; }
   void setHasSyntheticEntryCounts() { HasSyntheticEntryCounts = true; }
 
+  bool withSupportsHotColdNew() const { return WithSupportsHotColdNew; }
+  void setWithSupportsHotColdNew() { WithSupportsHotColdNew = true; }
+
   bool skipModuleByDistributedBackend() const {
     return SkipModuleByDistributedBackend;
   }
@@ -1522,6 +1535,9 @@ public:
 
   bool enableSplitLTOUnit() const { return EnableSplitLTOUnit; }
   void setEnableSplitLTOUnit() { EnableSplitLTOUnit = true; }
+
+  bool hasUnifiedLTO() const { return UnifiedLTO; }
+  void setUnifiedLTO() { UnifiedLTO = true; }
 
   bool partiallySplitLTOUnits() const { return PartiallySplitLTOUnits; }
   void setPartiallySplitLTOUnits() { PartiallySplitLTOUnits = true; }
@@ -1714,6 +1730,13 @@ public:
 
   /// Return module entry for module with the given \p ModPath.
   ModuleInfo *getModule(StringRef ModPath) {
+    auto It = ModulePathStringTable.find(ModPath);
+    assert(It != ModulePathStringTable.end() && "Module not registered");
+    return &*It;
+  }
+
+  /// Return module entry for module with the given \p ModPath.
+  const ModuleInfo *getModule(StringRef ModPath) const {
     auto It = ModulePathStringTable.find(ModPath);
     assert(It != ModulePathStringTable.end() && "Module not registered");
     return &*It;

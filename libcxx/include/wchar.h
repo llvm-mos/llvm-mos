@@ -116,6 +116,8 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #  pragma GCC system_header
 #endif
 
+// We define this here to support older versions of glibc <wchar.h> that do
+// not define this for clang.
 #ifdef __cplusplus
 #define __CORRECT_ISO_CPP_WCHAR_H_PROTO
 #endif
@@ -184,7 +186,7 @@ size_t mbsnrtowcs(wchar_t *__restrict __dst, const char **__restrict __src,
                   size_t __nmc, size_t __len, mbstate_t *__restrict __ps);
 size_t wcsnrtombs(char *__restrict __dst, const wchar_t **__restrict __src,
                   size_t __nwc, size_t __len, mbstate_t *__restrict __ps);
-}  // extern "C"
+} // extern "C"
 #endif  // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
 
 #endif // _LIBCPP_WCHAR_H

@@ -71,6 +71,8 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
       continue;
+    if (!loop->isAncestor(user))
+      continue;
     return false;
   }
   return true;
@@ -86,7 +88,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
         [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 
     func.walk([&](vector::TransferReadOp transferRead) {
-      if (!transferRead.getShapedType().isa<MemRefType>())
+      if (!isa<MemRefType>(transferRead.getShapedType()))
         return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: "
@@ -133,12 +135,14 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
                         << "\n");
 
       // Approximate aliasing by checking that:
-      //   1. indices are the same,
+      //   1. indices, vector type and permutation map are the same (i.e., the
+      //      transfer_read/transfer_write ops are matching),
       //   2. no other operations in the loop access the same memref except
       //      for transfer_read/transfer_write accessing statically disjoint
       //      slices.
-      if (transferRead.getIndices() != transferWrite.getIndices() &&
-          transferRead.getVectorType() == transferWrite.getVectorType())
+      if (transferRead.getIndices() != transferWrite.getIndices() ||
+          transferRead.getVectorType() != transferWrite.getVectorType() ||
+          transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();
 
       // TODO: may want to memoize this information for performance but it

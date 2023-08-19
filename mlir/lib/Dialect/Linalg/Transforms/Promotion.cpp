@@ -55,15 +55,15 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
     alignmentAttr = b.getI64IntegerAttr(alignment.value());
 
   // Static buffer.
-  if (auto cst = allocSize.getDefiningOp<arith::ConstantIndexOp>()) {
+  if (std::optional<int64_t> cst = getConstantIntValue(allocSize)) {
     auto staticBufferType =
         MemRefType::get(width * cst.value(), b.getIntegerType(8));
     if (options.useAlloca) {
-      return b.createOrFold<memref::AllocaOp>(staticBufferType, ValueRange{},
-                                              alignmentAttr);
+      return b.create<memref::AllocaOp>(staticBufferType, ValueRange{},
+                                        alignmentAttr);
     }
-    return b.createOrFold<memref::AllocOp>(staticBufferType, ValueRange{},
-                                           alignmentAttr);
+    return b.create<memref::AllocOp>(staticBufferType, ValueRange{},
+                                     alignmentAttr);
   }
 
   // Fallback dynamic buffer.
@@ -86,8 +86,8 @@ static std::optional<Value> defaultAllocBufferCallBack(
     std::optional<unsigned> alignment, DataLayout &layout) {
   ShapedType viewType = subView.getType();
   ImplicitLocOpBuilder b(subView.getLoc(), builder);
-  auto zero = b.createOrFold<arith::ConstantIndexOp>(0);
-  auto one = b.createOrFold<arith::ConstantIndexOp>(1);
+  auto zero = b.create<arith::ConstantIndexOp>(0);
+  auto one = b.create<arith::ConstantIndexOp>(1);
 
   Value allocSize = one;
   for (const auto &size : llvm::enumerate(boundingSubViewSize))
@@ -229,7 +229,7 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     // to look for the bound.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
     Value size;
-    if (auto attr = rangeValue.size.dyn_cast<Attribute>()) {
+    if (auto attr = llvm::dyn_cast_if_present<Attribute>(rangeValue.size)) {
       size = getValueOrCreateConstantIndexOp(b, loc, rangeValue.size);
     } else {
       Value materializedSize =
@@ -292,9 +292,9 @@ promoteSubViews(ImplicitLocOpBuilder &b,
             })
             .Case([&](ComplexType t) {
               Value tmp;
-              if (auto et = t.getElementType().dyn_cast<FloatType>())
+              if (auto et = dyn_cast<FloatType>(t.getElementType()))
                 tmp = b.create<arith::ConstantOp>(FloatAttr::get(et, 0.0));
-              else if (auto et = t.getElementType().cast<IntegerType>())
+              else if (auto et = cast<IntegerType>(t.getElementType()))
                 tmp = b.create<arith::ConstantOp>(IntegerAttr::get(et, 0));
               return b.create<complex::CreateOp>(t, tmp, tmp);
             })

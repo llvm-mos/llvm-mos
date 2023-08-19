@@ -1492,7 +1492,7 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts,
     return false;
   } else if (LangOpts.DollarIdents && '$' == C) {
     return true;
-  } else if (LangOpts.CPlusPlus || LangOpts.C2x) {
+  } else if (LangOpts.CPlusPlus || LangOpts.C23) {
     // A non-leading codepoint must have the XID_Continue property.
     // XIDContinueRanges doesn't contains characters also in XIDStartRanges,
     // so we need to check both tables.
@@ -1521,7 +1521,7 @@ static bool isAllowedInitiallyIDChar(uint32_t C, const LangOptions &LangOpts,
   if (LangOpts.AsmPreprocessor) {
     return false;
   }
-  if (LangOpts.CPlusPlus || LangOpts.C2x) {
+  if (LangOpts.CPlusPlus || LangOpts.C23) {
     static const llvm::sys::UnicodeCharSet XIDStartChars(XIDStartRanges);
     if (XIDStartChars.contains(C))
       return true;
@@ -1952,14 +1952,14 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   }
 
   // If we have a digit separator, continue.
-  if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C2x)) {
+  if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C23)) {
     unsigned NextSize;
     char Next = getCharAndSizeNoWarn(CurPtr + Size, NextSize, LangOpts);
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
         Diag(CurPtr, LangOpts.CPlusPlus
                          ? diag::warn_cxx11_compat_digit_separator
-                         : diag::warn_c2x_compat_digit_separator);
+                         : diag::warn_c23_compat_digit_separator);
       CurPtr = ConsumeChar(CurPtr, Size, Result);
       CurPtr = ConsumeChar(CurPtr, NextSize, Result);
       return LexNumericConstant(Result, CurPtr);
@@ -2009,53 +2009,11 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   }
 
   // C++11 [lex.ext]p10, [usrlit.suffix]p1: A program containing a ud-suffix
-  // that does not start with an underscore is ill-formed. As a conforming
-  // extension, we treat all such suffixes as if they had whitespace before
-  // them. We assume a suffix beginning with a UCN or UTF-8 character is more
-  // likely to be a ud-suffix than a macro, however, and accept that.
-  if (!Consumed) {
-    bool IsUDSuffix = false;
-    if (C == '_')
-      IsUDSuffix = true;
-    else if (IsStringLiteral && LangOpts.CPlusPlus14) {
-      // In C++1y, we need to look ahead a few characters to see if this is a
-      // valid suffix for a string literal or a numeric literal (this could be
-      // the 'operator""if' defining a numeric literal operator).
-      const unsigned MaxStandardSuffixLength = 3;
-      char Buffer[MaxStandardSuffixLength] = { C };
-      unsigned Consumed = Size;
-      unsigned Chars = 1;
-      while (true) {
-        unsigned NextSize;
-        char Next = getCharAndSizeNoWarn(CurPtr + Consumed, NextSize, LangOpts);
-        if (!isAsciiIdentifierContinue(Next)) {
-          // End of suffix. Check whether this is on the allowed list.
-          const StringRef CompleteSuffix(Buffer, Chars);
-          IsUDSuffix =
-              StringLiteralParser::isValidUDSuffix(LangOpts, CompleteSuffix);
-          break;
-        }
-
-        if (Chars == MaxStandardSuffixLength)
-          // Too long: can't be a standard suffix.
-          break;
-
-        Buffer[Chars++] = Next;
-        Consumed += NextSize;
-      }
-    }
-
-    if (!IsUDSuffix) {
-      if (!isLexingRawMode())
-        Diag(CurPtr, LangOpts.MSVCCompat
-                         ? diag::ext_ms_reserved_user_defined_literal
-                         : diag::ext_reserved_user_defined_literal)
-            << FixItHint::CreateInsertion(getSourceLocation(CurPtr), " ");
-      return CurPtr;
-    }
-
+  // that does not start with an underscore is ill-formed. We assume a suffix
+  // beginning with a UCN or UTF-8 character is more likely to be a ud-suffix
+  // than a macro, however, and accept that.
+  if (!Consumed)
     CurPtr = ConsumeChar(CurPtr, Size, Result);
-  }
 
   Result.setFlag(Token::HasUDSuffix);
   while (true) {
@@ -3484,9 +3442,14 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
   if (LangOpts.AsmPreprocessor)
     return CodePoint;
 
-  // C99 6.4.3p2: A universal character name shall not specify a character whose
-  //   short identifier is less than 00A0 other than 0024 ($), 0040 (@), or
-  //   0060 (`), nor one in the range D800 through DFFF inclusive.)
+  // C23 6.4.3p2: A universal character name shall not designate a code point
+  // where the hexadecimal value is:
+  // - in the range D800 through DFFF inclusive; or
+  // - greater than 10FFFF.
+  // A universal-character-name outside the c-char-sequence of a character
+  // constant, or the s-char-sequence of a string-literal shall not designate
+  // a control character or a character in the basic character set.
+
   // C++11 [lex.charset]p2: If the hexadecimal value for a
   //   universal-character-name corresponds to a surrogate code point (in the
   //   range 0xD800-0xDFFF, inclusive), the program is ill-formed. Additionally,
@@ -3496,9 +3459,6 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
   //   ranges 0x00-0x1F or 0x7F-0x9F, both inclusive) or to a character in the
   //   basic source character set, the program is ill-formed.
   if (CodePoint < 0xA0) {
-    if (CodePoint == 0x24 || CodePoint == 0x40 || CodePoint == 0x60)
-      return CodePoint;
-
     // We don't use isLexingRawMode() here because we need to warn about bad
     // UCNs even when skipping preprocessing tokens in a #if block.
     if (Result && PP) {
@@ -3728,7 +3688,7 @@ LexStart:
     return LexNumericConstant(Result, CurPtr);
 
   // Identifier (e.g., uber), or
-  // UTF-8 (C2x/C++17) or UTF-16 (C11/C++11) character literal, or
+  // UTF-8 (C23/C++17) or UTF-16 (C11/C++11) character literal, or
   // UTF-8 or UTF-16 string literal (C11/C++11).
   case 'u':
     // Notify MIOpt that we read a non-whitespace/non-comment token.
@@ -3764,7 +3724,7 @@ LexStart:
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
                                            SizeTmp2, Result),
                                tok::utf8_string_literal);
-        if (Char2 == '\'' && (LangOpts.CPlusPlus17 || LangOpts.C2x))
+        if (Char2 == '\'' && (LangOpts.CPlusPlus17 || LangOpts.C23))
           return LexCharConstant(
               Result, ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
                                   SizeTmp2, Result),
@@ -4222,9 +4182,7 @@ LexStart:
     if (LangOpts.Digraphs && Char == '>') {
       Kind = tok::r_square; // ':>' -> ']'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
-    } else if ((LangOpts.CPlusPlus ||
-                LangOpts.DoubleSquareBracketAttributes) &&
-               Char == ':') {
+    } else if (Char == ':') {
       Kind = tok::coloncolon;
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
     } else {
@@ -4441,8 +4399,7 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setLiteralData(TokPtr);
     return true;
   }
-  if (Result.is(tok::colon) &&
-      (LangOpts.CPlusPlus || LangOpts.DoubleSquareBracketAttributes)) {
+  if (Result.is(tok::colon)) {
     // Convert consecutive colons to 'tok::coloncolon'.
     if (*BufferPtr == ':') {
       assert(DepDirectives.front().Tokens[NextDepDirectiveTokenIndex].is(

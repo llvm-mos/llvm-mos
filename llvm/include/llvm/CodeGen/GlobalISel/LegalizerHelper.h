@@ -358,6 +358,7 @@ public:
   LegalizeResult narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult narrowScalarFLDEXP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   /// Perform Bitcast legalize action on G_EXTRACT_VECTOR_ELT.
   LegalizeResult bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
@@ -401,6 +402,8 @@ public:
   LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
+  LegalizeResult lowerStackSave(MachineInstr &MI);
+  LegalizeResult lowerStackRestore(MachineInstr &MI);
   LegalizeResult lowerExtract(MachineInstr &MI);
   LegalizeResult lowerInsert(MachineInstr &MI);
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);

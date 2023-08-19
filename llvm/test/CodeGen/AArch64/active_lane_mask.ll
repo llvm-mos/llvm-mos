@@ -152,10 +152,11 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i32(i32 %index, i32 %TC) {
 ; CHECK-LABEL: lane_mask_nxv32i1_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    index z0.s, #0, #1
 ; CHECK-NEXT:    mov z3.s, w0
 ; CHECK-NEXT:    mov z1.d, z0.d
@@ -175,7 +176,6 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i32(i32 %index, i32 %TC) {
 ; CHECK-NEXT:    cmphi p3.s, p0/z, z4.s, z5.s
 ; CHECK-NEXT:    uqadd z5.s, z6.s, z3.s
 ; CHECK-NEXT:    incw z1.s, all, mul #4
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p4.s, p0/z, z4.s, z5.s
 ; CHECK-NEXT:    uqadd z0.s, z0.s, z3.s
 ; CHECK-NEXT:    uqadd z1.s, z1.s, z3.s
@@ -187,7 +187,6 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i32(i32 %index, i32 %TC) {
 ; CHECK-NEXT:    cmphi p4.s, p0/z, z4.s, z1.s
 ; CHECK-NEXT:    uqadd z0.s, z2.s, z3.s
 ; CHECK-NEXT:    uqadd z1.s, z6.s, z3.s
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p5.s, p0/z, z4.s, z0.s
 ; CHECK-NEXT:    cmphi p0.s, p0/z, z4.s, z1.s
 ; CHECK-NEXT:    uzp1 p3.h, p3.h, p4.h
@@ -207,10 +206,13 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i64(i64 %index, i64 %TC) {
 ; CHECK-LABEL: lane_mask_nxv32i1_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    index z0.d, #0, #1
 ; CHECK-NEXT:    mov z3.d, x0
 ; CHECK-NEXT:    mov z1.d, z0.d
@@ -236,16 +238,13 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i64(i64 %index, i64 %TC) {
 ; CHECK-NEXT:    uqadd z6.d, z7.d, z3.d
 ; CHECK-NEXT:    mov z25.d, z2.d
 ; CHECK-NEXT:    incd z24.d, all, mul #4
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov z26.d, z5.d
 ; CHECK-NEXT:    cmphi p4.d, p0/z, z4.d, z6.d
 ; CHECK-NEXT:    uqadd z6.d, z24.d, z3.d
 ; CHECK-NEXT:    incd z25.d, all, mul #4
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p5.d, p0/z, z4.d, z6.d
 ; CHECK-NEXT:    uqadd z6.d, z25.d, z3.d
 ; CHECK-NEXT:    incd z26.d, all, mul #4
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p6.d, p0/z, z4.d, z6.d
 ; CHECK-NEXT:    uqadd z6.d, z26.d, z3.d
 ; CHECK-NEXT:    uzp1 p2.s, p2.s, p3.s
@@ -278,7 +277,6 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i64(i64 %index, i64 %TC) {
 ; CHECK-NEXT:    cmphi p6.d, p0/z, z4.d, z1.d
 ; CHECK-NEXT:    uqadd z0.d, z25.d, z3.d
 ; CHECK-NEXT:    uqadd z1.d, z26.d, z3.d
-; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    cmphi p7.d, p0/z, z4.d, z0.d
 ; CHECK-NEXT:    cmphi p0.d, p0/z, z4.d, z1.d
 ; CHECK-NEXT:    uzp1 p5.s, p5.s, p6.s
@@ -317,6 +315,16 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i8(i8 %index, i8 %TC) {
   ret <vscale x 32 x i1> %active.lane.mask
 }
 
+; UTC_ARGS: --disable
+; This test exists to protect against a compiler crash caused by an attempt to
+; convert (via changeVectorElementType) an MVT into an EVT, which is impossible.
+; The test's output is large and not relevant so check lines have been disabled.
+define <vscale x 64 x i1> @lane_mask_nxv64i1_i64(i64 %index, i64 %TC) {
+; CHECK-LABEL: lane_mask_nxv64i1_i64:
+  %active.lane.mask = call <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv64i1.i64(i64 %index, i64 %TC)
+  ret <vscale x 64 x i1> %active.lane.mask
+}
+; UTC_ARGS: --enable
 
 ; == Fixed width ==
 
@@ -411,9 +419,9 @@ define <2 x i1> @lane_mask_v2i1_i64(i64 %index, i64 %TC) {
 define <16 x i1> @lane_mask_v16i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v16i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI23_0
+; CHECK-NEXT:    adrp x8, .LCPI24_0
 ; CHECK-NEXT:    dup v1.16b, w0
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI23_0]
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI24_0]
 ; CHECK-NEXT:    uqadd v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    dup v1.16b, w1
 ; CHECK-NEXT:    cmhi v0.16b, v1.16b, v0.16b
@@ -425,10 +433,10 @@ define <16 x i1> @lane_mask_v16i1_i8(i8 %index, i8 %TC) {
 define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v8i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI24_0
+; CHECK-NEXT:    adrp x8, .LCPI25_0
 ; CHECK-NEXT:    dup v0.8b, w0
 ; CHECK-NEXT:    dup v2.8b, w1
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI24_0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI25_0]
 ; CHECK-NEXT:    uqadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    cmhi v0.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    ret
@@ -439,11 +447,11 @@ define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v4i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI25_0
+; CHECK-NEXT:    adrp x8, .LCPI26_0
 ; CHECK-NEXT:    dup v0.4h, w0
 ; CHECK-NEXT:    movi d2, #0xff00ff00ff00ff
 ; CHECK-NEXT:    dup v3.4h, w1
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI25_0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI26_0]
 ; CHECK-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NEXT:    bic v3.4h, #255, lsl #8
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
@@ -457,11 +465,11 @@ define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 define <2 x i1> @lane_mask_v2i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_v2i1_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI26_0
+; CHECK-NEXT:    adrp x8, .LCPI27_0
 ; CHECK-NEXT:    movi d0, #0x0000ff000000ff
 ; CHECK-NEXT:    dup v1.2s, w0
 ; CHECK-NEXT:    dup v3.2s, w1
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI26_0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI27_0]
 ; CHECK-NEXT:    and v1.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    add v1.2s, v1.2s, v2.2s
 ; CHECK-NEXT:    umin v1.2s, v1.2s, v0.2s
@@ -485,7 +493,7 @@ entry:
 define <vscale x 4 x i1> @lane_mask_nxv4i1_imm5() {
 ; CHECK-LABEL: lane_mask_nxv4i1_imm5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -506,7 +514,7 @@ entry:
 define <vscale x 16 x i1> @lane_mask_nxv16i1_imm10() {
 ; CHECK-LABEL: lane_mask_nxv16i1_imm10:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    mov w8, #10 // =0xa
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -531,6 +539,7 @@ declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32, i32)
 declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32, i32)
 declare <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i32(i32, i32)
 
+declare <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv64i1.i64(i64, i64)
 declare <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i64(i64, i64)
 declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64, i64)
 declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64, i64)

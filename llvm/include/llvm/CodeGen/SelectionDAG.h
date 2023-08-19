@@ -747,8 +747,6 @@ public:
                                 unsigned TargetFlags = 0) {
     return getConstantPool(C, VT, Align, Offset, true, TargetFlags);
   }
-  SDValue getTargetIndex(int Index, EVT VT, int64_t Offset = 0,
-                         unsigned TargetFlags = 0);
   // When generating a branch to a BB, we don't in general know enough
   // to provide debug info for the BB at that time, so keep this one around.
   SDValue getBasicBlock(MachineBasicBlock *MBB);
@@ -948,6 +946,44 @@ public:
   /// integer type VT, by either zero-extending or truncating it.
   SDValue getZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
 
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by either any/sign/zero-extending (depending on IsAny /
+  /// IsSigned) or truncating it.
+  SDValue getExtOrTrunc(SDValue Op, const SDLoc &DL,
+                        EVT VT, unsigned Opcode) {
+    switch(Opcode) {
+      case ISD::ANY_EXTEND:
+        return getAnyExtOrTrunc(Op, DL, VT);
+      case ISD::ZERO_EXTEND:
+        return getZExtOrTrunc(Op, DL, VT);
+      case ISD::SIGN_EXTEND:
+        return getSExtOrTrunc(Op, DL, VT);
+    }
+    llvm_unreachable("Unsupported opcode");
+  }
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by either sign/zero-extending (depending on IsSigned) or
+  /// truncating it.
+  SDValue getExtOrTrunc(bool IsSigned, SDValue Op, const SDLoc &DL, EVT VT) {
+    return IsSigned ? getSExtOrTrunc(Op, DL, VT) : getZExtOrTrunc(Op, DL, VT);
+  }
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either any-extending or truncating it.
+  SDValue getBitcastedAnyExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either sign-extending or truncating it.
+  SDValue getBitcastedSExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
+
+  /// Convert Op, which must be of integer type, to the
+  /// integer type VT, by first bitcasting (from potential vector) to
+  /// corresponding scalar type then either zero-extending or truncating it.
+  SDValue getBitcastedZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
+
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.
   SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
@@ -1065,6 +1101,9 @@ public:
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
                     bool ConstantFold = true);
+
+  SDValue getElementCount(const SDLoc &DL, EVT VT, ElementCount EC,
+                          bool ConstantFold = true);
 
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.
   SDValue getGLOBAL_OFFSET_TABLE(EVT VT) {
@@ -1579,6 +1618,11 @@ public:
                            ISD::MemIndexType IndexType,
                            bool IsTruncating = false);
 
+  SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr, EVT MemVT,
+                      MachineMemOperand *MMO);
+  SDValue getSetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr, EVT MemVT,
+                      MachineMemOperand *MMO);
+
   /// Construct a node to track a Value* through the backend.
   SDValue getSrcValue(const Value *v);
 
@@ -1984,13 +2028,36 @@ public:
     OFK_Always,
   };
 
-  /// Determine if the result of the addition of 2 node can overflow.
-  OverflowKind computeOverflowKind(SDValue N0, SDValue N1) const;
+  /// Determine if the result of the signed addition of 2 nodes can overflow.
+  OverflowKind computeOverflowForSignedAdd(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the unsigned addition of 2 nodes can overflow.
+  OverflowKind computeOverflowForUnsignedAdd(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the addition of 2 nodes can overflow.
+  OverflowKind computeOverflowForAdd(bool IsSigned, SDValue N0,
+                                     SDValue N1) const {
+    return IsSigned ? computeOverflowForSignedAdd(N0, N1)
+                    : computeOverflowForUnsignedAdd(N0, N1);
+  }
+
+  /// Determine if the result of the signed sub of 2 nodes can overflow.
+  OverflowKind computeOverflowForSignedSub(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the unsigned sub of 2 nodes can overflow.
+  OverflowKind computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the sub of 2 nodes can overflow.
+  OverflowKind computeOverflowForSub(bool IsSigned, SDValue N0,
+                                     SDValue N1) const {
+    return IsSigned ? computeOverflowForSignedSub(N0, N1)
+                    : computeOverflowForUnsignedSub(N0, N1);
+  }
 
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set.
-  bool isKnownToBeAPowerOfTwo(SDValue Val) const;
+  bool isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth = 0) const;
 
   /// Return the number of times the sign bit of the register is replicated into
   /// the other bits. We know that at least 1 bit is always equal to the sign
@@ -2098,7 +2165,7 @@ public:
   bool isKnownNeverZeroFloat(SDValue Op) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
-  bool isKnownNeverZero(SDValue Op) const;
+  bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
 
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the
@@ -2317,6 +2384,22 @@ public:
       return true;
     }
   }
+
+  /// Check if the provided node is save to speculatively executed given its
+  /// current arguments. So, while `udiv` the opcode is not safe to
+  /// speculatively execute, a given `udiv` node may be if the denominator is
+  /// known nonzero.
+  bool isSafeToSpeculativelyExecuteNode(const SDNode *N) const {
+    switch (N->getOpcode()) {
+    case ISD::UDIV:
+      return isKnownNeverZero(N->getOperand(1));
+    default:
+      return isSafeToSpeculativelyExecute(N->getOpcode());
+    }
+  }
+
+  SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr, SDValue InChain,
+                                const SDLoc &DLoc);
 
 private:
   void InsertNode(SDNode *N);

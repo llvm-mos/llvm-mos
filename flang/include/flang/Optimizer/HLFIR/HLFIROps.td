@@ -28,8 +28,14 @@ class hlfir_Op<string mnemonic, list<Trait> traits>
   : Op<hlfir_Dialect, mnemonic, traits>;
 
 
-
+// DeclareOp can be lowered to EmboxOp, EmboxCharOp, ReboxOp, etc and so could
+// generate code. All of the operations it can generate are modelled with
+// NoMemoryEffect. However, if hlfir.declare is given NoMemoryEffect, it can be
+// removed by dead code elimination if the value result is unused. Information
+// from the delclare operation can be used to generate debug information so we
+// don't want to remove it as dead code
 def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
+    MemoryEffects<[MemWrite<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable and produce an SSA value that can be used as a variable in HLFIR operations";
 
@@ -140,16 +146,29 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     Otherwise, the left hand side will be allocated or reallocated to match the
     right hand side length if they differ. This covers the case of deferred
     length character allocatables.
+    The optional "temporary_lhs" flag indicates that the LHS is a compiler
+    generated temporary. In this case the temporary is initialized if needed
+    (e.g. the LHS is of derived type with allocatable/pointer components),
+    and the assignment is done without LHS (or its subobjects) finalization
+    and with automatic allocation.
+    If "temporary_lhs" and "keep_lhs_length_if_realloc" are both set,
+    this assign operation denotes special case of character allocatable
+    LHS with explicit length. The LHS that must preserve its length
+    during the assignment regardless of the the RHS's length or/and
+    allocation status. This assign operation will be lowered into a call
+    to AssignExplicitLengthCharacter().
   }];
 
   let arguments = (ins AnyFortranEntity:$rhs,
                    Arg<AnyFortranVariable, "", [MemWrite]>:$lhs,
                    UnitAttr:$realloc,
-                   UnitAttr:$keep_lhs_length_if_realloc);
+                   UnitAttr:$keep_lhs_length_if_realloc,
+                   UnitAttr:$temporary_lhs);
 
   let assemblyFormat = [{
     $rhs `to` $lhs (`realloc` $realloc^)?
     (`keep_lhs_len` $keep_lhs_length_if_realloc^)?
+    (`temporary_lhs` $temporary_lhs^)?
     attr-dict `:` type(operands)
   }];
 
@@ -164,13 +183,17 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     bool mustKeepLhsLengthInAllocatableAssignment() {
       return getKeepLhsLengthIfRealloc();
     }
+    /// Is the assignment's left hand side a compiler generated temporary?
+    bool isTemporaryLHS() {
+      return getTemporaryLhs();
+    }
   }];
 
   let hasVerifier = 1;
 }
 
 def hlfir_DesignateOp : hlfir_Op<"designate", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>, NoMemoryEffect]> {
   let summary = "Designate a Fortran variable";
 
   let description = [{
@@ -317,6 +340,70 @@ def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let hasVerifier = 1;
 }
 
+def hlfir_AllOp : hlfir_Op<"all", []> {
+  let summary = "ALL transformational intrinsic";
+  let description = [{
+    Takes a logical array MASK as argument, optionally along a particular dimension,
+    and returns true if all elements of MASK are true.
+  }];
+
+  let arguments = (ins
+    AnyFortranLogicalArrayObject:$mask,
+    Optional<AnyIntegerType>:$dim
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $mask  (`dim` $dim^)?  attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_AnyOp : hlfir_Op<"any", []> {
+  let summary = "ANY transformational intrinsic";
+  let description = [{
+    Takes a logical array MASK as argument, optionally along a particular dimension,
+    and returns true if any element of MASK is true.
+  }];
+
+  let arguments = (ins
+    AnyFortranLogicalArrayObject:$mask,
+    Optional<AnyIntegerType>:$dim
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $mask  (`dim` $dim^)?  attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_CountOp : hlfir_Op<"count", [AttrSizedOperandSegments]> {
+  let summary = "COUNT transformational intrinsic";
+  let description = [{
+    Takes a logical and counts the number of true values.
+  }];
+
+  let arguments = (ins
+    AnyFortranLogicalArrayObject:$mask,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyIntegerType>:$kind
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $mask  (`dim` $dim^)? (`kind` $kind^)?  attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+
 def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "PRODUCT transformational intrinsic";
@@ -333,7 +420,7 @@ def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
   );
 
-  let results = (outs hlfir_ExprType);
+  let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
     $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
@@ -362,6 +449,24 @@ def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
   let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
 }
 
+def hlfir_GetLengthOp : hlfir_Op<"get_length", [Pure]> {
+  let summary = "get the length of a character entity";
+  let description = [{
+    Get the length of character entity represented as hlfir.expr.
+  }];
+
+  let arguments = (ins AnyScalarOrArrayCharacterExpr:$expr);
+  let results = (outs Index);
+
+  let assemblyFormat = [{
+    $expr attr-dict `:` functional-type(operands, results)
+  }];
+
+  // If character length is know via the type, then the operation
+  // may be immediately canonicalized into arith::ConstantOp.
+  let hasCanonicalizeMethod = 1;
+}
+
 def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "SUM transformational intrinsic";
@@ -378,10 +483,33 @@ def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
   );
 
-  let results = (outs hlfir_ExprType);
+  let results = (outs AnyFortranValue);
 
   let assemblyFormat = [{
     $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def hlfir_DotProductOp : hlfir_Op<"dot_product",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "DOT_PRODUCT transformational intrinsic";
+  let description = [{
+    Dot product of two vectors
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalOrLogicalArrayObject:$lhs,
+    AnyFortranNumericalOrLogicalArrayObject:$rhs,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $lhs $rhs attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -571,7 +699,54 @@ def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndR
   let assemblyFormat = "$val attr-dict `:` type($val)";
 }
 
-def hlfir_ElementalOp : hlfir_Op<"elemental", []> {
+def hlfir_ElementalOpInterface : OpInterface<"ElementalOpInterface"> {
+  let description = [{
+    Interface for the operation holding a region with elemental computation.
+    It is used as a common interface bewteen hlfir.elemental and hlfir.elemental_addr.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/"Return the one based elemental indices.",
+      /*retTy=*/"mlir::Block::BlockArgListType",
+      /*methodName=*/"getIndices",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the element entity being computed",
+      /*retTy=*/"mlir::Value",
+      /*methodName=*/"getElementEntity",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Get element cleanup region, if any.",
+      /*retTy=*/"mlir::Region*",
+      /*methodName=*/"getElementCleanup",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Get elemental region.",
+      /*retTy=*/"mlir::Region&",
+      /*methodName=*/"getElementalRegion",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Must this elemental operation be evaluated in order?",
+      /*retTy=*/"bool",
+      /*methodName=*/"isOrdered",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+  ];
+
+  let cppNamespace = "hlfir";
+}
+
+def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects, hlfir_ElementalOpInterface, AttrSizedOperandSegments]> {
   let summary = "elemental expression";
   let description = [{
     Represent an elemental expression as a function of the indices.
@@ -583,6 +758,16 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", []> {
 
     The shape and typeparams operands represent the extents and type
     parameters of the resulting array value.
+
+    The optional mold is an entity carrying the information about
+    the dynamic type of the polymorphic result. Note that the shape
+    of the mold does not necessarily match the shape of the result,
+    for example, the result of `merge(poly_scalar1, poly_scalar2, mask_array)`
+    will have the shape of `mask_array` and the dynamic type of `poly_scalar*`.
+
+    The unordered attribute can be set to allow out of order processing
+    of the indices. This is safe only if the operations in the body
+    of the elemental do not have side effects.
 
 
     Example: Y + X,  with Integer :: X(10, 20), Y(10,20)
@@ -602,14 +787,17 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", []> {
 
   let arguments = (ins
     AnyShapeType:$shape,
-    Variadic<AnyIntegerType>:$typeparams
+    Optional<AnyPolymorphicObject>:$mold,
+    Variadic<AnyIntegerType>:$typeparams,
+    OptionalAttr<UnitAttr>:$unordered
   );
 
   let results = (outs hlfir_ExprType);
   let regions = (region SizedRegion<1>:$region);
 
   let assemblyFormat = [{
-    $shape (`typeparams` $typeparams^)?
+    $shape (`mold` $mold^)? (`typeparams` $typeparams^)?
+    (`unordered` $unordered^)?
     attr-dict `:` functional-type(operands, results)
     $region
     }];
@@ -617,20 +805,32 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", []> {
   let extraClassDeclaration = [{
       mlir::Block *getBody() { return &getRegion().front(); }
 
-      // Get the indices iterating over the shape.
+      /// Get the indices iterating over the shape.
       mlir::Block::BlockArgListType getIndices() {
        return getBody()->getArguments();
       }
+      /// ElementalOpInterface implementation.
+
+      mlir::Region& getElementalRegion() { return getRegion(); }
+      mlir::Value getElementEntity();
+      mlir::Region* getElementCleanup() { return nullptr; }
+
+      /// Must this elemental be evaluated in order?
+      bool isOrdered() { return !getUnordered(); }
   }];
 
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$shape,
-      CArg<"mlir::ValueRange", "{}">:$typeparams)>];
+      CArg<"mlir::Value", "{}">:$mold,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"bool", "false">:$isUnordered)>
+  ];
 
+  let hasVerifier = 1;
 }
 
-def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator, HasParent<"ElementalOp">]> {
+def hlfir_YieldElementOp : hlfir_Op<"yield_element", [Terminator, HasParent<"ElementalOp">, Pure]> {
   let summary = "Yield the elemental value in an ElementalOp";
   let description = [{
     Yield the element value of the current elemental expression iteration
@@ -648,9 +848,17 @@ def hlfir_ApplyOp : hlfir_Op<"apply", [NoMemoryEffect, AttrSizedOperandSegments]
   let description = [{
     Given an hlfir.expr array value, hlfir.apply allow retrieving
     the value for an element given one based indices.
+
     When hlfir.apply is used on an hlfir.elemental, and if the hlfir.elemental
     operation evaluation can be moved to the location of the hlfir.apply, it is
     as if the hlfir.elemental body was evaluated given the hlfir.apply indices.
+    Therefore, apply operations on hlfir.elemental expressions should be located
+    such that evaluating the hlfir.elemental at the position of the hlfir.apply
+    operation produces the same result as evaluating the hlfir.elemental at its
+    location in the instruction stream. Attention should be paid to
+    hlfir.elemental memory side effects (in practice these are unlikely).
+    "10.1.4 Evaluation of operations" says that expression evaluation shall not
+    impact/be impacted by other expression evaluation in the statement.
   }];
 
   let arguments = (ins hlfir_ExprType:$expr,
@@ -695,14 +903,14 @@ def hlfir_NullOp : hlfir_Op<"null", [NoMemoryEffect, fir_FortranVariableOpInterf
   }];
 }
 
-def hlfir_DestroyOp : hlfir_Op<"destroy", []> {
+def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
   let summary = "Mark the last use of an hlfir.expr";
   let description = [{
     Mark the last use of an hlfir.expr. This will be the point at which the
     buffer of an hlfir.expr, if any, will be deallocated if it was heap
     allocated.
     It is not required to create an hlfir.destroy operation for and hlfir.expr
-    created inside an hlfir.elemental an returned in the hlfir.yield_element.
+    created inside an hlfir.elemental and returned in the hlfir.yield_element.
     The last use of such expression is implicit and an hlfir.destroy could
     not be emitted after the hlfir.yield_element since it is a terminator.
 
@@ -891,6 +1099,11 @@ def hlfir_OrderedAssignmentTreeOpInterface : OpInterface<"OrderedAssignmentTreeO
   let extraClassDeclaration = [{
     /// Interface verifier imlementation.
     mlir::LogicalResult verifyImpl();
+
+    mlir::Block* getSubTreeBlock() {
+      mlir::Region* region = getSubTreeRegion();
+      return region && !region->empty()? &region->front() : nullptr;
+    }
   }];
 
   let verify = [{
@@ -965,7 +1178,8 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTre
 
 def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp",
     "ElementalAddrOp", "ForallOp", "ForallMaskOp", "WhereOp", "ElseWhereOp"]>,
-    SingleBlockImplicitTerminator<"fir::FirEndOp">]> {
+    SingleBlockImplicitTerminator<"fir::FirEndOp">, RecursivelySpeculatable,
+        RecursiveMemoryEffects]> {
 
   let summary = "Yield a value or variable inside a forall, where or region assignment";
 
@@ -994,7 +1208,7 @@ def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp"
   let assemblyFormat = "$entity attr-dict `:` type($entity) custom<YieldOpCleanup>($cleanup)";
 }
 
-def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">, RecursiveMemoryEffects, RecursivelySpeculatable]> {
+def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">, RecursiveMemoryEffects, RecursivelySpeculatable, hlfir_ElementalOpInterface]> {
   let summary = "Yield the address of a vector subscripted variable inside an hlfir.region_assign";
   let description = [{
     Special terminator node for the left-hand side region of an hlfir.region_assign
@@ -1034,17 +1248,19 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
 
   let arguments = (ins
     fir_ShapeType:$shape,
-    Variadic<AnyIntegerType>:$typeparams);
+    Variadic<AnyIntegerType>:$typeparams,
+    OptionalAttr<UnitAttr>:$unordered
+  );
 
   let regions = (region  SizedRegion<1>:$body,
                          MaxSizedRegion<1>:$cleanup);
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$shape)>
+    OpBuilder<(ins "mlir::Value":$shape, CArg<"bool", "false">:$isUnordered)>
   ];
 
   let assemblyFormat = [{
-    $shape (`typeparams` $typeparams^)?
+    $shape (`typeparams` $typeparams^)? (`unordered` $unordered^)?
     attr-dict `:` type(operands) $body
     custom<YieldOpCleanup>($cleanup)}];
 
@@ -1052,6 +1268,20 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
     mlir::Region::BlockArgListType getIndices() {
       return getBody().getArguments();
     }
+
+    /// Return the hlfir::YieldOp terminator of the operation
+    /// body. It yields the variable element address.
+    /// This should only be called once the ElementalAddrOp has been built.
+    hlfir::YieldOp getYieldOp();
+
+    /// ElementalOpInterface implementation.
+
+    mlir::Region& getElementalRegion() { return getBody(); }
+    mlir::Value getElementEntity();
+    mlir::Region* getElementCleanup();
+
+    /// Must this elemental be evaluated in order?
+    bool isOrdered() { return !getUnordered(); }
   }];
 
   let hasVerifier = 1;
@@ -1093,6 +1323,13 @@ def hlfir_ForallOp : hlfir_Op<"forall", [hlfir_OrderedAssignmentTreeOpInterface]
 
     A Fortran forall with several indices is represented as a nest
     of hlfir.forall.
+
+    All the regions contained in the hlfir.forall must only contain
+    code that is pure from a Fortran point of view, except for the
+    assignment effect of the hlfir.region_assign.
+    This matches Fortran constraint C1037, but requires the outer
+    controls to be evaluated outside of the hlfir.forall (these
+    controls may have side effects as per Fortran 2018 10.1.4 section).
 
     Example: FORALL(I=1:10) X(I) = FOO(I)
     ```
@@ -1301,6 +1538,31 @@ def hlfir_ForallIndexOp : hlfir_Op<"forall_index", [fir_FortranVariableOpInterfa
   }];
 
   let hasCanonicalizeMethod = 1;
+}
+
+def hlfir_CharExtremumOp : hlfir_Op<"char_extremum", []> {
+  let summary = "Find max/min from given character strings";
+  let description = [{
+    Find the lexicographical minimum or maximum of two or more character 
+    strings of the same character kind and return the string with the lexicographical 
+    minimum or maximum number of characters. Example:
+
+    %0 = hlfir.char_extremum min, %arg0, %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,20>>) -> !hlfir.expr<!fir.char<1,10>>
+  }];
+
+  let arguments = (ins hlfir_CharExtremumPredicateAttr:$predicate,
+                  Variadic<AnyScalarCharacterEntity>:$strings
+  );
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+    $predicate `,` $strings attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "hlfir::CharExtremumPredicate":$predicate, "mlir::ValueRange":$strings)>];
+
+  let hasVerifier = 1;
 }
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

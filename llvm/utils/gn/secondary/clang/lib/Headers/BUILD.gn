@@ -22,6 +22,13 @@ clang_tablegen("arm_sve") {
   output_name = "arm_sve.h"
 }
 
+# Generate arm_sme_draft_spec_subject_to_change.h
+clang_tablegen("arm_sme_draft_spec_subject_to_change") {
+  args = [ "-gen-arm-sme-header" ]
+  td_file = "//clang/include/clang/Basic/arm_sme.td"
+  output_name = "arm_sme_draft_spec_subject_to_change.h"
+}
+
 # Generate arm_bf16.h
 clang_tablegen("arm_bf16") {
   args = [ "-gen-arm-bf16" ]
@@ -58,6 +65,7 @@ copy("tablegen_headers") {
     ":arm_fp16",
     ":arm_mve",
     ":arm_neon",
+    ":arm_sme_draft_spec_subject_to_change",
     ":arm_sve",
     ":riscv_vector",
   ]
@@ -133,6 +141,7 @@ copy("Headers") {
     "avxifmaintrin.h",
     "avxintrin.h",
     "avxneconvertintrin.h",
+    "avxvnniint16intrin.h",
     "avxvnniint8intrin.h",
     "avxvnniintrin.h",
     "bmi2intrin.h",
@@ -178,6 +187,11 @@ copy("Headers") {
     "keylockerintrin.h",
     "larchintrin.h",
     "limits.h",
+    "llvm_libc_wrappers/ctype.h",
+    "llvm_libc_wrappers/inttypes.h",
+    "llvm_libc_wrappers/stdio.h",
+    "llvm_libc_wrappers/stdlib.h",
+    "llvm_libc_wrappers/string.h",
     "lwpintrin.h",
     "lzcntintrin.h",
     "mm3dnow.h",
@@ -205,6 +219,7 @@ copy("Headers") {
     "ppc_wrappers/immintrin.h",
     "ppc_wrappers/mm_malloc.h",
     "ppc_wrappers/mmintrin.h",
+    "ppc_wrappers/nmmintrin.h",
     "ppc_wrappers/pmmintrin.h",
     "ppc_wrappers/smmintrin.h",
     "ppc_wrappers/tmmintrin.h",
@@ -222,8 +237,11 @@ copy("Headers") {
     "s390intrin.h",
     "serializeintrin.h",
     "sgxintrin.h",
+    "sha512intrin.h",
     "shaintrin.h",
     "sifive_vector.h",
+    "sm3intrin.h",
+    "sm4intrin.h",
     "smmintrin.h",
     "stdalign.h",
     "stdarg.h",

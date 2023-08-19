@@ -1278,40 +1278,40 @@ bool PPCAsmParser::MatchRegisterName(MCRegister &RegNo, int64_t &IntVal) {
   } else if (Name.equals_insensitive("vrsave")) {
     RegNo = PPC::VRSAVE;
     IntVal = 256;
-  } else if (Name.startswith_insensitive("r") &&
+  } else if (Name.starts_with_insensitive("r") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = isPPC64() ? XRegs[IntVal] : RRegs[IntVal];
-  } else if (Name.startswith_insensitive("f") &&
+  } else if (Name.starts_with_insensitive("f") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = FRegs[IntVal];
-  } else if (Name.startswith_insensitive("vs") &&
+  } else if (Name.starts_with_insensitive("vs") &&
              !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
     RegNo = VSRegs[IntVal];
-  } else if (Name.startswith_insensitive("v") &&
+  } else if (Name.starts_with_insensitive("v") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = VRegs[IntVal];
-  } else if (Name.startswith_insensitive("cr") &&
+  } else if (Name.starts_with_insensitive("cr") &&
              !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = CRRegs[IntVal];
-  } else if (Name.startswith_insensitive("acc") &&
+  } else if (Name.starts_with_insensitive("acc") &&
              !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = ACCRegs[IntVal];
-  } else if (Name.startswith_insensitive("wacc_hi") &&
+  } else if (Name.starts_with_insensitive("wacc_hi") &&
              !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = ACCRegs[IntVal];
-  } else if (Name.startswith_insensitive("wacc") &&
+  } else if (Name.starts_with_insensitive("wacc") &&
              !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = WACCRegs[IntVal];
-  } else if (Name.startswith_insensitive("dmrrowp") &&
+  } else if (Name.starts_with_insensitive("dmrrowp") &&
              !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = DMRROWpRegs[IntVal];
-  } else if (Name.startswith_insensitive("dmrrow") &&
+  } else if (Name.starts_with_insensitive("dmrrow") &&
              !Name.substr(6).getAsInteger(10, IntVal) && IntVal < 64) {
     RegNo = DMRROWRegs[IntVal];
-  } else if (Name.startswith_insensitive("dmrp") &&
+  } else if (Name.starts_with_insensitive("dmrp") &&
              !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 4) {
     RegNo = DMRROWpRegs[IntVal];
-  } else if (Name.startswith_insensitive("dmr") &&
+  } else if (Name.starts_with_insensitive("dmr") &&
              !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = DMRRegs[IntVal];
   } else
@@ -1544,28 +1544,58 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   Operands.push_back(PPCOperand::CreateFromMCExpr(EVal, S, E, isPPC64()));
 
   // Check whether this is a TLS call expression
-  bool TLSCall = false;
-  if (const MCSymbolRefExpr *Ref = dyn_cast<MCSymbolRefExpr>(EVal))
-    TLSCall = Ref->getSymbol().getName() == "__tls_get_addr";
+  const char TlsGetAddr[] = "__tls_get_addr";
+  bool TlsCall = false;
+  const MCExpr *TlsCallAddend = nullptr;
+  if (auto *Ref = dyn_cast<MCSymbolRefExpr>(EVal)) {
+    TlsCall = Ref->getSymbol().getName() == TlsGetAddr;
+  } else if (auto *Bin = dyn_cast<MCBinaryExpr>(EVal);
+             Bin && Bin->getOpcode() == MCBinaryExpr::Add) {
+    if (auto *Ref = dyn_cast<MCSymbolRefExpr>(Bin->getLHS())) {
+      TlsCall = Ref->getSymbol().getName() == TlsGetAddr;
+      TlsCallAddend = Bin->getRHS();
+    }
+  }
 
-  if (TLSCall && getLexer().is(AsmToken::LParen)) {
+  if (TlsCall && parseOptionalToken(AsmToken::LParen)) {
     const MCExpr *TLSSym;
-
-    Parser.Lex(); // Eat the '('.
-    S = Parser.getTok().getLoc();
+    const SMLoc S2 = Parser.getTok().getLoc();
     if (ParseExpression(TLSSym))
-      return Error(S, "invalid TLS call expression");
-    if (getLexer().isNot(AsmToken::RParen))
-      return Error(Parser.getTok().getLoc(), "missing ')'");
+      return Error(S2, "invalid TLS call expression");
     E = Parser.getTok().getLoc();
-    Parser.Lex(); // Eat the ')'.
+    if (parseToken(AsmToken::RParen, "expected ')'"))
+      return true;
+    // PPC32 allows bl __tls_get_addr[+a](x@tlsgd)@plt+b. Parse "@plt[+b]".
+    if (!isPPC64() && parseOptionalToken(AsmToken::At)) {
+      AsmToken Tok = getTok();
+      if (!(parseOptionalToken(AsmToken::Identifier) &&
+            Tok.getString().compare_insensitive("plt") == 0))
+        return Error(Tok.getLoc(), "expected 'plt'");
+      EVal = MCSymbolRefExpr::create(TlsGetAddr, MCSymbolRefExpr::VK_PLT,
+                                     getContext());
+      if (parseOptionalToken(AsmToken::Plus)) {
+        const MCExpr *Addend = nullptr;
+        SMLoc EndLoc;
+        if (parsePrimaryExpr(Addend, EndLoc))
+          return true;
+        if (TlsCallAddend) // __tls_get_addr+a(x@tlsgd)@plt+b
+          TlsCallAddend =
+              MCBinaryExpr::createAdd(TlsCallAddend, Addend, getContext());
+        else // __tls_get_addr(x@tlsgd)@plt+b
+          TlsCallAddend = Addend;
+      }
+      if (TlsCallAddend)
+        EVal = MCBinaryExpr::createAdd(EVal, TlsCallAddend, getContext());
+      // Add a __tls_get_addr operand with addend a, b, or a+b.
+      Operands.back() = PPCOperand::CreateFromMCExpr(
+          EVal, S, Parser.getTok().getLoc(), false);
+    }
 
     Operands.push_back(PPCOperand::CreateFromMCExpr(TLSSym, S, E, isPPC64()));
   }
 
   // Otherwise, check for D-form memory operands
-  if (!TLSCall && getLexer().is(AsmToken::LParen)) {
-    Parser.Lex(); // Eat the '('.
+  if (!TlsCall && parseOptionalToken(AsmToken::LParen)) {
     S = Parser.getTok().getLoc();
 
     int64_t IntVal;

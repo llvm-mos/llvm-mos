@@ -10,7 +10,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_getcpucount.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 
 #include <sched.h>
 #include <sys/syscall.h>
@@ -19,7 +19,7 @@ TEST(LlvmLibcSchedCpuCountTest, SmokeTest) {
   cpu_set_t mask;
   libc_errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  pid_t tid = __llvm_libc::syscall_impl(SYS_gettid);
+  pid_t tid = __llvm_libc::syscall_impl<pid_t>(SYS_gettid);
   ASSERT_GT(tid, pid_t(0));
   ASSERT_THAT(__llvm_libc::sched_getaffinity(tid, sizeof(cpu_set_t), &mask),
               Succeeds(0));

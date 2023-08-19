@@ -37,6 +37,7 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
+#include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsMips.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
@@ -917,11 +918,6 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
   std::string Result;
   if (PointerType *PTyp = dyn_cast<PointerType>(Ty)) {
     Result += "p" + utostr(PTyp->getAddressSpace());
-    // Opaque pointer doesn't have pointee type information, so we just mangle
-    // address space for opaque pointer.
-    if (!PTyp->isOpaque())
-      Result += getMangledTypeStr(PTyp->getNonOpaquePointerElementType(),
-                                  HasUnnamedType);
   } else if (ArrayType *ATyp = dyn_cast<ArrayType>(Ty)) {
     Result += "a" + utostr(ATyp->getNumElements()) +
               getMangledTypeStr(ATyp->getElementType(), HasUnnamedType);
@@ -1099,6 +1095,9 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_I4:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 4));
     return;
+  case IIT_AARCH64_SVCOUNT:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::AArch64Svcount, 0));
+    return;
   case IIT_I8:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 8));
     return;
@@ -1164,22 +1163,17 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_EXTERNREF:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
     return;
   case IIT_FUNCREF:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 20));
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 8));
     return;
   case IIT_PTR:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 0));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
-  case IIT_ANYPTR: {  // [ANYPTR addrspace, subtype]
+  case IIT_ANYPTR: // [ANYPTR addrspace]
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer,
                                              Infos[NextElt++]));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
-  }
   case IIT_ARG: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Argument, ArgInfo));
@@ -1207,24 +1201,6 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::SameVecWidthArgument,
                                              ArgInfo));
-    return;
-  }
-  case IIT_PTR_TO_ARG: {
-    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::PtrToArgument,
-                                             ArgInfo));
-    return;
-  }
-  case IIT_PTR_TO_ELT: {
-    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::PtrToElt, ArgInfo));
-    return;
-  }
-  case IIT_ANYPTR_TO_ELT: {
-    unsigned short ArgNo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
-    unsigned short RefNo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
-    OutputTable.push_back(
-        IITDescriptor::get(IITDescriptor::AnyPtrToElt, ArgNo, RefNo));
     return;
   }
   case IIT_VEC_OF_ANYPTRS_TO_ELT: {
@@ -1340,6 +1316,8 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Double: return Type::getDoubleTy(Context);
   case IITDescriptor::Quad: return Type::getFP128Ty(Context);
   case IITDescriptor::PPCQuad: return Type::getPPC_FP128Ty(Context);
+  case IITDescriptor::AArch64Svcount:
+    return TargetExtType::get(Context, "aarch64.svcount");
 
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.Integer_Width);
@@ -1347,8 +1325,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return VectorType::get(DecodeFixedType(Infos, Tys, Context),
                            D.Vector_Width);
   case IITDescriptor::Pointer:
-    return PointerType::get(DecodeFixedType(Infos, Tys, Context),
-                            D.Pointer_AddressSpace);
+    return PointerType::get(Context, D.Pointer_AddressSpace);
   case IITDescriptor::Struct: {
     SmallVector<Type *, 8> Elts;
     for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
@@ -1391,18 +1368,6 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return VectorType::get(EltTy, VTy->getElementCount());
     return EltTy;
   }
-  case IITDescriptor::PtrToArgument: {
-    Type *Ty = Tys[D.getArgumentNumber()];
-    return PointerType::getUnqual(Ty);
-  }
-  case IITDescriptor::PtrToElt: {
-    Type *Ty = Tys[D.getArgumentNumber()];
-    VectorType *VTy = dyn_cast<VectorType>(Ty);
-    if (!VTy)
-      llvm_unreachable("Expected an argument of Vector Type");
-    Type *EltTy = VTy->getElementType();
-    return PointerType::getUnqual(EltTy);
-  }
   case IITDescriptor::VecElementArgument: {
     Type *Ty = Tys[D.getArgumentNumber()];
     if (VectorType *VTy = dyn_cast<VectorType>(Ty))
@@ -1416,9 +1381,6 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return VectorType::getInteger(VTy);
   }
   case IITDescriptor::VecOfAnyPtrsToElt:
-    // Return the overloaded type (which determines the pointers address space)
-    return Tys[D.getOverloadArgNumber()];
-  case IITDescriptor::AnyPtrToElt:
     // Return the overloaded type (which determines the pointers address space)
     return Tys[D.getOverloadArgNumber()];
   }
@@ -1514,6 +1476,9 @@ static bool matchIntrinsicType(
     case IITDescriptor::Quad: return !Ty->isFP128Ty();
     case IITDescriptor::PPCQuad: return !Ty->isPPC_FP128Ty();
     case IITDescriptor::Integer: return !Ty->isIntegerTy(D.Integer_Width);
+    case IITDescriptor::AArch64Svcount:
+      return !isa<TargetExtType>(Ty) ||
+             cast<TargetExtType>(Ty)->getName() != "aarch64.svcount";
     case IITDescriptor::Vector: {
       VectorType *VT = dyn_cast<VectorType>(Ty);
       return !VT || VT->getElementCount() != D.Vector_Width ||
@@ -1522,33 +1487,7 @@ static bool matchIntrinsicType(
     }
     case IITDescriptor::Pointer: {
       PointerType *PT = dyn_cast<PointerType>(Ty);
-      if (!PT || PT->getAddressSpace() != D.Pointer_AddressSpace)
-        return true;
-      if (!PT->isOpaque()) {
-        /* Manually consume a pointer to empty struct descriptor, which is
-         * used for externref. We don't want to enforce that the struct is
-         * anonymous in this case. (This renders externref intrinsics
-         * non-unique, but this will go away with opaque pointers anyway.) */
-        if (Infos.front().Kind == IITDescriptor::Struct &&
-            Infos.front().Struct_NumElements == 0) {
-          Infos = Infos.slice(1);
-          return false;
-        }
-        return matchIntrinsicType(PT->getNonOpaquePointerElementType(), Infos,
-                                  ArgTys, DeferredChecks, IsDeferredCheck);
-      }
-      // Consume IIT descriptors relating to the pointer element type.
-      // FIXME: Intrinsic type matching of nested single value types or even
-      // aggregates doesn't work properly with opaque pointers but hopefully
-      // doesn't happen in practice.
-      while (Infos.front().Kind == IITDescriptor::Pointer ||
-             Infos.front().Kind == IITDescriptor::Vector)
-        Infos = Infos.slice(1);
-      assert((Infos.front().Kind != IITDescriptor::Argument ||
-              Infos.front().getArgumentKind() == IITDescriptor::AK_MatchType) &&
-             "Unsupported polymorphic pointer type with opaque pointer");
-      Infos = Infos.slice(1);
-      return false;
+      return !PT || PT->getAddressSpace() != D.Pointer_AddressSpace;
     }
 
     case IITDescriptor::Struct: {
@@ -1646,50 +1585,6 @@ static bool matchIntrinsicType(
       return matchIntrinsicType(EltTy, Infos, ArgTys, DeferredChecks,
                                 IsDeferredCheck);
     }
-    case IITDescriptor::PtrToArgument: {
-      if (D.getArgumentNumber() >= ArgTys.size())
-        return IsDeferredCheck || DeferCheck(Ty);
-      Type * ReferenceType = ArgTys[D.getArgumentNumber()];
-      PointerType *ThisArgType = dyn_cast<PointerType>(Ty);
-      return (!ThisArgType ||
-              !ThisArgType->isOpaqueOrPointeeTypeMatches(ReferenceType));
-    }
-    case IITDescriptor::PtrToElt: {
-      if (D.getArgumentNumber() >= ArgTys.size())
-        return IsDeferredCheck || DeferCheck(Ty);
-      VectorType * ReferenceType =
-        dyn_cast<VectorType> (ArgTys[D.getArgumentNumber()]);
-      PointerType *ThisArgType = dyn_cast<PointerType>(Ty);
-
-      if (!ThisArgType || !ReferenceType)
-        return true;
-      return !ThisArgType->isOpaqueOrPointeeTypeMatches(
-          ReferenceType->getElementType());
-    }
-    case IITDescriptor::AnyPtrToElt: {
-      unsigned RefArgNumber = D.getRefArgNumber();
-      if (RefArgNumber >= ArgTys.size()) {
-        if (IsDeferredCheck)
-          return true;
-        // If forward referencing, already add the pointer type and
-        // defer the checks for later.
-        ArgTys.push_back(Ty);
-        return DeferCheck(Ty);
-      }
-
-      if (!IsDeferredCheck) {
-        assert(D.getOverloadArgNumber() == ArgTys.size() &&
-               "Table consistency error");
-        ArgTys.push_back(Ty);
-      }
-
-      auto *ReferenceType = dyn_cast<VectorType>(ArgTys[RefArgNumber]);
-      auto *ThisArgType = dyn_cast<PointerType>(Ty);
-      if (!ThisArgType || !ReferenceType)
-        return true;
-      return !ThisArgType->isOpaqueOrPointeeTypeMatches(
-          ReferenceType->getElementType());
-    }
     case IITDescriptor::VecOfAnyPtrsToElt: {
       unsigned RefArgNumber = D.getRefArgNumber();
       if (RefArgNumber >= ArgTys.size()) {
@@ -1715,12 +1610,7 @@ static bool matchIntrinsicType(
       if (!ThisArgVecTy || !ReferenceType ||
           (ReferenceType->getElementCount() != ThisArgVecTy->getElementCount()))
         return true;
-      PointerType *ThisArgEltTy =
-          dyn_cast<PointerType>(ThisArgVecTy->getElementType());
-      if (!ThisArgEltTy)
-        return true;
-      return !ThisArgEltTy->isOpaqueOrPointeeTypeMatches(
-          ReferenceType->getElementType());
+      return !ThisArgVecTy->getElementType()->isPointerTy();
     }
     case IITDescriptor::VecElementArgument: {
       if (D.getArgumentNumber() >= ArgTys.size())
@@ -1989,7 +1879,7 @@ void Function::allocHungoffUselist() {
   setNumHungOffUseOperands(3);
 
   // Initialize the uselist with placeholder operands to allow traversal.
-  auto *CPN = ConstantPointerNull::get(Type::getInt1PtrTy(getContext(), 0));
+  auto *CPN = ConstantPointerNull::get(PointerType::get(getContext(), 0));
   Op<0>().set(CPN);
   Op<1>().set(CPN);
   Op<2>().set(CPN);
@@ -2001,8 +1891,7 @@ void Function::setHungoffOperand(Constant *C) {
     allocHungoffUselist();
     Op<Idx>().set(C);
   } else if (getNumOperands()) {
-    Op<Idx>().set(
-        ConstantPointerNull::get(Type::getInt1PtrTy(getContext(), 0)));
+    Op<Idx>().set(ConstantPointerNull::get(PointerType::get(getContext(), 0)));
   }
 }
 

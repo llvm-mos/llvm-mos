@@ -453,7 +453,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                            "Not eligible for Tail Call\n"));
   }
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getStackSize();
   SmallVector<std::pair<unsigned, SDValue>, 16> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
@@ -907,7 +907,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
     if (RegSaveAreaSizePlusPadding > 0) {
       // The offset to saved register area should be 8 byte aligned.
-      int RegAreaStart = HEXAGON_LRFP_SIZE + CCInfo.getNextStackOffset();
+      int RegAreaStart = HEXAGON_LRFP_SIZE + CCInfo.getStackSize();
       if (!(RegAreaStart % 8))
         RegAreaStart = (RegAreaStart + 7) & -8;
 
@@ -922,7 +922,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
     } else {
       // This will point to the next argument passed via stack, when
       // there is no saved register area.
-      int Offset = HEXAGON_LRFP_SIZE + CCInfo.getNextStackOffset();
+      int Offset = HEXAGON_LRFP_SIZE + CCInfo.getStackSize();
       int FI = MFI.CreateFixedObject(Hexagon_PointerSize, Offset, true);
       HMFI.setRegSavedAreaStartFrameIndex(FI);
       HMFI.setVarArgsFrameIndex(FI);
@@ -932,7 +932,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
   if (IsVarArg && !Subtarget.isEnvironmentMusl()) {
     // This will point to the next argument passed via stack.
-    int Offset = HEXAGON_LRFP_SIZE + CCInfo.getNextStackOffset();
+    int Offset = HEXAGON_LRFP_SIZE + CCInfo.getStackSize();
     int FI = MFI.CreateFixedObject(Hexagon_PointerSize, Offset, true);
     HMFI.setVarArgsFrameIndex(FI);
   }
@@ -1628,14 +1628,14 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     ISD::UADDO,   ISD::SSUBO,   ISD::USUBO,   ISD::SMUL_LOHI, ISD::UMUL_LOHI,
     // Logical/bit:
     ISD::AND,     ISD::OR,      ISD::XOR,     ISD::ROTL,    ISD::ROTR,
-    ISD::CTPOP,   ISD::CTLZ,    ISD::CTTZ,
+    ISD::CTPOP,   ISD::CTLZ,    ISD::CTTZ,    ISD::BSWAP,   ISD::BITREVERSE,
     // Floating point arithmetic/math functions:
     ISD::FADD,    ISD::FSUB,    ISD::FMUL,    ISD::FMA,     ISD::FDIV,
     ISD::FREM,    ISD::FNEG,    ISD::FABS,    ISD::FSQRT,   ISD::FSIN,
     ISD::FCOS,    ISD::FPOW,    ISD::FLOG,    ISD::FLOG2,
     ISD::FLOG10,  ISD::FEXP,    ISD::FEXP2,   ISD::FCEIL,   ISD::FTRUNC,
     ISD::FRINT,   ISD::FNEARBYINT,            ISD::FROUND,  ISD::FFLOOR,
-    ISD::FMINNUM, ISD::FMAXNUM, ISD::FSINCOS,
+    ISD::FMINNUM, ISD::FMAXNUM, ISD::FSINCOS, ISD::FLDEXP,
     // Misc:
     ISD::BR_CC,   ISD::SELECT_CC,             ISD::ConstantPool,
     // Vector:
@@ -1701,8 +1701,11 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::OR,  NativeVT, Legal);
     setOperationAction(ISD::XOR, NativeVT, Legal);
 
-    if (NativeVT.getVectorElementType() != MVT::i1)
+    if (NativeVT.getVectorElementType() != MVT::i1) {
       setOperationAction(ISD::SPLAT_VECTOR, NativeVT, Legal);
+      setOperationAction(ISD::BSWAP,        NativeVT, Legal);
+      setOperationAction(ISD::BITREVERSE,   NativeVT, Legal);
+    }
   }
 
   for (MVT VT : {MVT::v8i8, MVT::v4i16, MVT::v2i32}) {
@@ -1728,6 +1731,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, VT, Custom);
   }
 
+  // Normalize integer compares to EQ/GT/UGT
   for (MVT VT : {MVT::v2i16, MVT::v4i8, MVT::v8i8, MVT::v2i32, MVT::v4i16,
                  MVT::v2i32}) {
     setCondCodeAction(ISD::SETNE,  VT, Expand);
@@ -1737,6 +1741,14 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setCondCodeAction(ISD::SETULE, VT, Expand);
     setCondCodeAction(ISD::SETUGE, VT, Expand);
     setCondCodeAction(ISD::SETULT, VT, Expand);
+  }
+
+  // Normalize boolean compares to [U]LE/[U]LT
+  for (MVT VT : {MVT::i1, MVT::v2i1, MVT::v4i1, MVT::v8i1}) {
+    setCondCodeAction(ISD::SETGE,  VT, Expand);
+    setCondCodeAction(ISD::SETGT,  VT, Expand);
+    setCondCodeAction(ISD::SETUGE, VT, Expand);
+    setCondCodeAction(ISD::SETUGT, VT, Expand);
   }
 
   // Custom-lower bitcasts from i8 to v8i1.
@@ -3240,7 +3252,7 @@ HexagonTargetLowering::LowerUAddSubO(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
 
   if (CY) {
-    uint32_t VY = CY->getZExtValue();
+    uint64_t VY = CY->getZExtValue();
     assert(VY != 0 && "This should have been folded");
     // X +/- 1
     if (VY != 1)
@@ -3835,11 +3847,6 @@ Value *HexagonTargetLowering::emitLoadLinked(IRBuilderBase &Builder,
                                    : Intrinsic::hexagon_L4_loadd_locked;
   Function *Fn = Intrinsic::getDeclaration(M, IntID);
 
-  auto PtrTy = cast<PointerType>(Addr->getType());
-  PointerType *NewPtrTy =
-      Builder.getIntNTy(SZ)->getPointerTo(PtrTy->getAddressSpace());
-  Addr = Builder.CreateBitCast(Addr, NewPtrTy);
-
   Value *Call = Builder.CreateCall(Fn, Addr, "larx");
 
   return Builder.CreateBitCast(Call, ValueTy);
@@ -3861,8 +3868,6 @@ Value *HexagonTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
                                    : Intrinsic::hexagon_S4_stored_locked;
   Function *Fn = Intrinsic::getDeclaration(M, IntID);
 
-  unsigned AS = Addr->getType()->getPointerAddressSpace();
-  Addr = Builder.CreateBitCast(Addr, CastTy->getPointerTo(AS));
   Val = Builder.CreateBitCast(Val, CastTy);
 
   Value *Call = Builder.CreateCall(Fn, {Addr, Val}, "stcx");

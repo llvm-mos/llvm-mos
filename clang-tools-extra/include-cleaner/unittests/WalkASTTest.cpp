@@ -252,6 +252,35 @@ TEST(WalkAST, FunctionTemplates) {
                        "auto x = [] { ^foo<int>(); };"),
               ElementsAre(Decl::FunctionTemplate));
 }
+TEST(WalkAST, TemplateSpecializationsFromUsingDecl) {
+  // Class templates
+  testWalk(R"cpp(
+namespace ns {
+template<class T> class $ambiguous^Z {};      // primary template
+template<class T> class $ambiguous^Z<T*> {};  // partial specialization
+template<> class $ambiguous^Z<int> {};        // full specialization
+}
+  )cpp",
+           "using ns::^Z;");
+
+  // Var templates
+  testWalk(R"cpp(
+namespace ns {
+template<class T> T $ambiguous^foo;      // primary template
+template<class T> T $ambiguous^foo<T*>;  // partial specialization
+template<> int* $ambiguous^foo<int>;     // full specialization
+}
+  )cpp",
+           "using ns::^foo;");
+  // Function templates, no partial template specializations.
+  testWalk(R"cpp(
+namespace ns {
+template<class T> void $ambiguous^function(T);  // primary template
+template<> void $ambiguous^function(int);       // full specialization
+}
+  )cpp",
+           "using ns::^function;");
+}
 
 TEST(WalkAST, Alias) {
   testWalk(R"cpp(
@@ -339,6 +368,34 @@ TEST(WalkAST, TemplateNames) {
       template <template <typename> typename> struct X {};
       X<^S> x;)cpp");
   testWalk("template<typename T> struct $explicit^S { S(T); };", "^S s(42);");
+}
+
+TEST(WalkAST, NestedTypes) {
+  testWalk(R"cpp(
+      struct Base { typedef int $implicit^a; };
+      struct Derived : public Base {};)cpp",
+           "void fun() { Derived::^a x; }");
+  testWalk(R"cpp(
+      struct Base { using $implicit^a = int; };
+      struct Derived : public Base {};)cpp",
+           "void fun() { Derived::^a x; }");
+  testWalk(R"cpp(
+      struct ns { struct a {}; };
+      struct Base : public ns { using ns::$implicit^a; };
+      struct Derived : public Base {};)cpp",
+           "void fun() { Derived::^a x; }");
+  testWalk(R"cpp(
+      struct Base { struct $implicit^a {}; };
+      struct Derived : public Base {};)cpp",
+           "void fun() { Derived::^a x; }");
+  testWalk("struct Base { struct $implicit^a {}; };",
+           "struct Derived : public Base { ^a x; };");
+  testWalk(R"cpp(
+      struct Base { struct $implicit^a {}; };
+      struct Derived : public Base {};
+      struct SoDerived : public Derived {};
+      )cpp",
+           "void fun() { SoDerived::Derived::^a x; }");
 }
 
 TEST(WalkAST, MemberExprs) {
@@ -452,5 +509,14 @@ TEST(WalkAST, Enums) {
   testWalk("enum class E : int {};", "enum class ^E : int ;");
 }
 
+TEST(WalkAST, InitializerList) {
+  testWalk(R"cpp(
+       namespace std {
+        template <typename T> struct $implicit^initializer_list {};
+       })cpp",
+           R"cpp(
+       const char* s = "";
+       auto sx = ^{s};)cpp");
+}
 } // namespace
 } // namespace clang::include_cleaner

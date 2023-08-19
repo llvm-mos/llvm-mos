@@ -63,7 +63,7 @@ public:
     llvm::sort(V);
   }
 
-  size_t blockToIndex(BasicBlock *BB) const {
+  size_t blockToIndex(BasicBlock const *BB) const {
     auto *I = llvm::lower_bound(V, BB);
     assert(I != V.end() && *I == BB && "BasicBlockNumberng: Unknown block");
     return I - V.begin();
@@ -112,10 +112,11 @@ class SuspendCrossingInfo {
   }
 
   /// Compute the BlockData for the current function in one iteration.
-  /// Returns whether the BlockData changes in this iteration.
   /// Initialize - Whether this is the first iteration, we can optimize
   /// the initial case a little bit by manual loop switch.
-  template <bool Initialize = false> bool computeBlockData();
+  /// Returns whether the BlockData changes in this iteration.
+  template <bool Initialize = false>
+  bool computeBlockData(const ReversePostOrderTraversal<Function *> &RPOT);
 
 public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -223,12 +224,14 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
 }
 #endif
 
-template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
-  const size_t N = Mapping.size();
+template <bool Initialize>
+bool SuspendCrossingInfo::computeBlockData(
+    const ReversePostOrderTraversal<Function *> &RPOT) {
   bool Changed = false;
 
-  for (size_t I = 0; I < N; ++I) {
-    auto &B = Block[I];
+  for (const BasicBlock *BB : RPOT) {
+    auto BBNo = Mapping.blockToIndex(BB);
+    auto &B = Block[BBNo];
 
     // We don't need to count the predecessors when initialization.
     if constexpr (!Initialize)
@@ -261,7 +264,7 @@ template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
     }
 
     if (B.Suspend) {
-      // If block S is a suspend block, it should kill all of the blocks it
+      // If block B is a suspend block, it should kill all of the blocks it
       // consumes.
       B.Kills |= B.Consumes;
     } else if (B.End) {
@@ -273,8 +276,8 @@ template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
     } else {
       // This is reached when B block it not Suspend nor coro.end and it
       // need to make sure that it is not in the kill set.
-      B.KillLoop |= B.Kills[I];
-      B.Kills.reset(I);
+      B.KillLoop |= B.Kills[BBNo];
+      B.Kills.reset(BBNo);
     }
 
     if constexpr (!Initialize) {
@@ -282,9 +285,6 @@ template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
       Changed |= B.Changed;
     }
   }
-
-  if constexpr (Initialize)
-    return true;
 
   return Changed;
 }
@@ -325,9 +325,11 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
       markSuspendBlock(Save);
   }
 
-  computeBlockData</*Initialize=*/true>();
-
-  while (computeBlockData())
+  // It is considered to be faster to use RPO traversal for forward-edges
+  // dataflow analysis.
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  computeBlockData</*Initialize=*/true>(RPOT);
+  while (computeBlockData</*Initialize*/ false>(RPOT))
     ;
 
   LLVM_DEBUG(dump());
@@ -990,18 +992,8 @@ static StringRef solveTypeName(Type *Ty) {
     return "__floating_type_";
   }
 
-  if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
-    if (PtrTy->isOpaque())
-      return "PointerType";
-    Type *PointeeTy = PtrTy->getNonOpaquePointerElementType();
-    auto Name = solveTypeName(PointeeTy);
-    if (Name == "UnknownType")
-      return "PointerType";
-    SmallString<16> Buffer;
-    Twine(Name + "_Ptr").toStringRef(Buffer);
-    auto *MDName = MDString::get(Ty->getContext(), Buffer.str());
-    return MDName->getString();
-  }
+  if (Ty->isPointerTy())
+    return "PointerType";
 
   if (Ty->isStructTy()) {
     if (!cast<StructType>(Ty)->hasName())
@@ -1873,6 +1865,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             if (LdInst->getPointerOperandType() != LdInst->getType())
               break;
             CurDef = LdInst->getPointerOperand();
+            if (!isa<AllocaInst, LoadInst>(CurDef))
+              break;
             DIs = FindDbgDeclareUses(CurDef);
           }
         }
@@ -1888,7 +1882,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
                              &*Builder.GetInsertPoint());
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
-          coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame);
+          coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame,
+                                 true /*IsEntryPoint*/);
         }
       }
 
@@ -2438,15 +2433,13 @@ static bool localAllocaNeedsStackSave(CoroAllocaAllocInst *AI) {
 static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
                               SmallVectorImpl<Instruction*> &DeadInsts) {
   for (auto *AI : LocalAllocas) {
-    auto M = AI->getModule();
     IRBuilder<> Builder(AI);
 
     // Save the stack depth.  Try to avoid doing this if the stackrestore
     // is going to immediately precede a return or something.
     Value *StackSave = nullptr;
     if (localAllocaNeedsStackSave(AI))
-      StackSave = Builder.CreateCall(
-                            Intrinsic::getDeclaration(M, Intrinsic::stacksave));
+      StackSave = Builder.CreateStackSave();
 
     // Allocate memory.
     auto Alloca = Builder.CreateAlloca(Builder.getInt8Ty(), AI->getSize());
@@ -2464,9 +2457,7 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
         auto FI = cast<CoroAllocaFreeInst>(U);
         if (StackSave) {
           Builder.SetInsertPoint(FI);
-          Builder.CreateCall(
-                    Intrinsic::getDeclaration(M, Intrinsic::stackrestore),
-                             StackSave);
+          Builder.CreateStackRestore(StackSave);
         }
       }
       DeadInsts.push_back(cast<Instruction>(U));
@@ -2599,10 +2590,7 @@ static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
   IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
-  // swifterror arguments are required to have pointer-to-pointer type,
-  // so create a pointer-typed alloca with opaque pointers.
-  auto ValueTy = ArgTy->isOpaque() ? PointerType::getUnqual(F.getContext())
-                                   : ArgTy->getNonOpaquePointerElementType();
+  auto ValueTy = PointerType::getUnqual(F.getContext());
 
   // Reduce to the alloca case:
 
@@ -2831,7 +2819,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
 
 void coro::salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableIntrinsic *DVI, bool OptimizeFrame) {
+    DbgVariableIntrinsic *DVI, bool OptimizeFrame, bool IsEntryPoint) {
   Function *F = DVI->getFunction();
   IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
@@ -2877,31 +2865,40 @@ void coro::salvageDebugInfo(
   if (!Storage)
     return;
 
-  // Store a pointer to the coroutine frame object in an alloca so it
-  // is available throughout the function when producing unoptimized
-  // code. Extending the lifetime this way is correct because the
-  // variable has been declared by a dbg.declare intrinsic.
-  //
-  // Avoid to create the alloca would be eliminated by optimization
-  // passes and the corresponding dbg.declares would be invalid.
-  if (!OptimizeFrame)
-    if (auto *Arg = dyn_cast<Argument>(Storage)) {
-      auto &Cached = ArgToAllocaMap[Arg];
-      if (!Cached) {
-        Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
-                                      Arg->getName() + ".debug");
-        Builder.CreateStore(Storage, Cached);
-      }
-      Storage = Cached;
-      // FIXME: LLVM lacks nuanced semantics to differentiate between
-      // memory and direct locations at the IR level. The backend will
-      // turn a dbg.declare(alloca, ..., DIExpression()) into a memory
-      // location. Thus, if there are deref and offset operations in the
-      // expression, we need to add a DW_OP_deref at the *start* of the
-      // expression to first load the contents of the alloca before
-      // adjusting it with the expression.
-      Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+  auto *StorageAsArg = dyn_cast<Argument>(Storage);
+  const bool IsSwiftAsyncArg =
+      StorageAsArg && StorageAsArg->hasAttribute(Attribute::SwiftAsync);
+
+  // Swift async arguments are described by an entry value of the ABI-defined
+  // register containing the coroutine context.
+  // For the EntryPoint funclet, don't use EntryValues. This funclet can be
+  // inlined, which would remove the guarantee that this intrinsic targets an
+  // Argument.
+  if (IsSwiftAsyncArg && !IsEntryPoint && !Expr->isEntryValue())
+    Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
+
+  // If the coroutine frame is an Argument, store it in an alloca to improve
+  // its availability (e.g. registers may be clobbered).
+  // Avoid this if optimizations are enabled (they would remove the alloca) or
+  // if the value is guaranteed to be available through other means (e.g. swift
+  // ABI guarantees).
+  if (StorageAsArg && !OptimizeFrame && !IsSwiftAsyncArg) {
+    auto &Cached = ArgToAllocaMap[StorageAsArg];
+    if (!Cached) {
+      Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
+                                    Storage->getName() + ".debug");
+      Builder.CreateStore(Storage, Cached);
     }
+    Storage = Cached;
+    // FIXME: LLVM lacks nuanced semantics to differentiate between
+    // memory and direct locations at the IR level. The backend will
+    // turn a dbg.declare(alloca, ..., DIExpression()) into a memory
+    // location. Thus, if there are deref and offset operations in the
+    // expression, we need to add a DW_OP_deref at the *start* of the
+    // expression to first load the contents of the alloca before
+    // adjusting it with the expression.
+    Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+  }
 
   DVI->replaceVariableLocationOp(OriginalStorage, Storage);
   DVI->setExpression(Expr);

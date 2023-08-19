@@ -392,8 +392,8 @@ void MetadataStreamerYamlV2::emitHiddenKernelArgs(const Function &Func,
   if (HiddenArgNumBytes >= 24)
     emitKernelArg(DL, Int64Ty, Align(8), ValueKind::HiddenGlobalOffsetZ);
 
-  auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
-                                      AMDGPUAS::GLOBAL_ADDRESS);
+  auto Int8PtrTy =
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (HiddenArgNumBytes >= 32) {
     // We forbid the use of features requiring hostcall when compiling OpenCL
@@ -824,7 +824,7 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
                   Args);
 
   auto Int8PtrTy =
-      Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (HiddenArgNumBytes >= 32) {
     // We forbid the use of features requiring hostcall when compiling OpenCL
@@ -943,11 +943,12 @@ void MetadataStreamerMsgPackV3::end() {
 void MetadataStreamerMsgPackV3::emitKernel(const MachineFunction &MF,
                                            const SIProgramInfo &ProgramInfo) {
   auto &Func = MF.getFunction();
+  if (Func.getCallingConv() != CallingConv::AMDGPU_KERNEL &&
+      Func.getCallingConv() != CallingConv::SPIR_KERNEL)
+    return;
+
   auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
-
-  assert(Func.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-         Func.getCallingConv() == CallingConv::SPIR_KERNEL);
 
   auto Kernels =
       getRootMetadata("amdhsa.kernels").getArray(/*Convert=*/true);
@@ -1043,7 +1044,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
 
   Offset += 6; // Reserved.
   auto Int8PtrTy =
-      Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (M->getNamedMetadata("llvm.printf.fmts")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,

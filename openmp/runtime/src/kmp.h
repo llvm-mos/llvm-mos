@@ -690,10 +690,12 @@ extern size_t __kmp_affin_mask_size;
 #define KMP_CPU_ISSET(i, mask) (mask)->is_set(i)
 #define KMP_CPU_CLR(i, mask) (mask)->clear(i)
 #define KMP_CPU_ZERO(mask) (mask)->zero()
+#define KMP_CPU_ISEMPTY(mask) (mask)->empty()
 #define KMP_CPU_COPY(dest, src) (dest)->copy(src)
 #define KMP_CPU_AND(dest, src) (dest)->bitwise_and(src)
 #define KMP_CPU_COMPLEMENT(max_bit_number, mask) (mask)->bitwise_not()
 #define KMP_CPU_UNION(dest, src) (dest)->bitwise_or(src)
+#define KMP_CPU_EQUAL(dest, src) (dest)->is_equal(src)
 #define KMP_CPU_ALLOC(ptr) (ptr = __kmp_affinity_dispatch->allocate_mask())
 #define KMP_CPU_FREE(ptr) __kmp_affinity_dispatch->deallocate_mask(ptr)
 #define KMP_CPU_ALLOC_ON_STACK(ptr) KMP_CPU_ALLOC(ptr)
@@ -730,6 +732,8 @@ public:
     virtual void clear(int i) {}
     // Zero out entire mask
     virtual void zero() {}
+    // Check whether mask is empty
+    virtual bool empty() const { return true; }
     // Copy src into this mask
     virtual void copy(const Mask *src) {}
     // this &= rhs
@@ -738,6 +742,8 @@ public:
     virtual void bitwise_or(const Mask *rhs) {}
     // this = ~this
     virtual void bitwise_not() {}
+    // this == rhs
+    virtual bool is_equal(const Mask *rhs) const { return false; }
     // API for iterating over an affinity mask
     // for (int i = mask->begin(); i != mask->end(); i = mask->next(i))
     virtual int begin() const { return 0; }
@@ -798,6 +804,31 @@ private:
 typedef KMPAffinity::Mask kmp_affin_mask_t;
 extern KMPAffinity *__kmp_affinity_dispatch;
 
+class kmp_affinity_raii_t {
+  kmp_affin_mask_t *mask;
+  bool restored;
+
+public:
+  kmp_affinity_raii_t(const kmp_affin_mask_t *new_mask = nullptr)
+      : restored(false) {
+    if (KMP_AFFINITY_CAPABLE()) {
+      KMP_CPU_ALLOC(mask);
+      KMP_ASSERT(mask != NULL);
+      __kmp_get_system_affinity(mask, /*abort_on_error=*/true);
+      if (new_mask)
+        __kmp_set_system_affinity(new_mask, /*abort_on_error=*/true);
+    }
+  }
+  void restore() {
+    if (!restored && KMP_AFFINITY_CAPABLE()) {
+      __kmp_set_system_affinity(mask, /*abort_on_error=*/true);
+      KMP_CPU_FREE(mask);
+    }
+    restored = true;
+  }
+  ~kmp_affinity_raii_t() { restore(); }
+};
+
 // Declare local char buffers with this size for printing debug and info
 // messages, using __kmp_affinity_print_mask().
 #define KMP_AFFIN_MASK_PRINT_LEN 1024
@@ -841,7 +872,10 @@ typedef struct kmp_affinity_flags_t {
   unsigned respect : 2;
   unsigned reset : 1;
   unsigned initialized : 1;
-  unsigned reserved : 25;
+  unsigned core_types_gran : 1;
+  unsigned core_effs_gran : 1;
+  unsigned omp_places : 1;
+  unsigned reserved : 22;
 } kmp_affinity_flags_t;
 KMP_BUILD_ASSERT(sizeof(kmp_affinity_flags_t) == 4);
 
@@ -870,6 +904,7 @@ typedef struct kmp_affinity_t {
   enum affinity_type type;
   kmp_hw_t gran;
   int gran_levels;
+  kmp_affinity_attrs_t core_attr_gran;
   int compact;
   int offset;
   kmp_affinity_flags_t flags;
@@ -884,9 +919,11 @@ typedef struct kmp_affinity_t {
 
 #define KMP_AFFINITY_INIT(env)                                                 \
   {                                                                            \
-    nullptr, affinity_default, KMP_HW_UNKNOWN, -1, 0, 0,                       \
-        {TRUE, FALSE, TRUE, affinity_respect_mask_default, FALSE, FALSE}, 0,   \
-        nullptr, nullptr, nullptr, 0, nullptr, env                             \
+    nullptr, affinity_default, KMP_HW_UNKNOWN, -1, KMP_AFFINITY_ATTRS_UNKNOWN, \
+        0, 0,                                                                  \
+        {TRUE,  FALSE, TRUE, affinity_respect_mask_default, FALSE, FALSE,      \
+         FALSE, FALSE, FALSE},                                                 \
+        0, nullptr, nullptr, nullptr, 0, nullptr, env                          \
   }
 
 extern enum affinity_top_method __kmp_affinity_top_method;
@@ -1120,7 +1157,7 @@ extern void __kmp_init_target_task();
 #endif /* KMP_MAX_NTH */
 
 #ifdef PTHREAD_STACK_MIN
-#define KMP_MIN_STKSIZE PTHREAD_STACK_MIN
+#define KMP_MIN_STKSIZE ((size_t)PTHREAD_STACK_MIN)
 #else
 #define KMP_MIN_STKSIZE ((size_t)(32 * 1024))
 #endif
@@ -2487,6 +2524,63 @@ typedef struct {
   } ed;
 } kmp_event_t;
 
+#if OMPX_TASKGRAPH
+// Initial number of allocated nodes while recording
+#define INIT_MAPSIZE 50
+
+typedef struct kmp_taskgraph_flags { /*This needs to be exactly 32 bits */
+  unsigned nowait : 1;
+  unsigned re_record : 1;
+  unsigned reserved : 30;
+} kmp_taskgraph_flags_t;
+
+/// Represents a TDG node
+typedef struct kmp_node_info {
+  kmp_task_t *task; // Pointer to the actual task
+  kmp_int32 *successors; // Array of the succesors ids
+  kmp_int32 nsuccessors; // Number of succesors of the node
+  std::atomic<kmp_int32>
+      npredecessors_counter; // Number of predessors on the fly
+  kmp_int32 npredecessors; // Total number of predecessors
+  kmp_int32 successors_size; // Number of allocated succesors ids
+  kmp_taskdata_t *parent_task; // Parent implicit task
+} kmp_node_info_t;
+
+/// Represent a TDG's current status
+typedef enum kmp_tdg_status {
+  KMP_TDG_NONE = 0,
+  KMP_TDG_RECORDING = 1,
+  KMP_TDG_READY = 2
+} kmp_tdg_status_t;
+
+/// Structure that contains a TDG
+typedef struct kmp_tdg_info {
+  kmp_int32 tdg_id; // Unique idenfifier of the TDG
+  kmp_taskgraph_flags_t tdg_flags; // Flags related to a TDG
+  kmp_int32 map_size; // Number of allocated TDG nodes
+  kmp_int32 num_roots; // Number of roots tasks int the TDG
+  kmp_int32 *root_tasks; // Array of tasks identifiers that are roots
+  kmp_node_info_t *record_map; // Array of TDG nodes
+  kmp_tdg_status_t tdg_status =
+      KMP_TDG_NONE; // Status of the TDG (recording, ready...)
+  std::atomic<kmp_int32> num_tasks; // Number of TDG nodes
+  kmp_bootstrap_lock_t
+      graph_lock; // Protect graph attributes when updated via taskloop_recur
+  // Taskloop reduction related
+  void *rec_taskred_data; // Data to pass to __kmpc_task_reduction_init or
+                          // __kmpc_taskred_init
+  kmp_int32 rec_num_taskred;
+} kmp_tdg_info_t;
+
+extern int __kmp_tdg_dot;
+extern kmp_int32 __kmp_max_tdgs;
+extern kmp_tdg_info_t **__kmp_global_tdgs;
+extern kmp_int32 __kmp_curr_tdg_idx;
+extern kmp_int32 __kmp_successors_size;
+extern std::atomic<kmp_int32> __kmp_tdg_task_id;
+extern kmp_int32 __kmp_num_tdg;
+#endif
+
 #ifdef BUILD_TIED_TASK_STACK
 
 /* Tied Task stack definitions */
@@ -2534,7 +2628,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned complete : 1; /* 1==complete, 0==not complete   */
   unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
+#if OMPX_TASKGRAPH
+  unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
+  unsigned reserved31 : 6; /* reserved for library use */
+#else
   unsigned reserved31 : 7; /* reserved for library use */
+#endif
 
 } kmp_tasking_flags_t;
 
@@ -2583,6 +2682,10 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
   kmp_event_t td_allow_completion_event;
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
+#endif
+#if OMPX_TASKGRAPH
+  bool is_taskgraph = 0; // whether the task is within a TDG
+  kmp_tdg_info_t *tdg; // used to associate task with a TDG
 #endif
   kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata
@@ -4124,6 +4227,20 @@ KMP_EXPORT void __kmpc_init_nest_lock_with_hint(ident_t *loc, kmp_int32 gtid,
                                                 void **user_lock,
                                                 uintptr_t hint);
 
+#if OMPX_TASKGRAPH
+// Taskgraph's Record & Replay mechanism
+// __kmp_tdg_is_recording: check whether a given TDG is recording
+// status: the tdg's current status
+static inline bool __kmp_tdg_is_recording(kmp_tdg_status_t status) {
+  return status == KMP_TDG_RECORDING;
+}
+
+KMP_EXPORT kmp_int32 __kmpc_start_record_task(ident_t *loc, kmp_int32 gtid,
+                                              kmp_int32 input_flags,
+                                              kmp_int32 tdg_id);
+KMP_EXPORT void __kmpc_end_record_task(ident_t *loc, kmp_int32 gtid,
+                                       kmp_int32 input_flags, kmp_int32 tdg_id);
+#endif
 /* Interface to fast scalable reduce methods routines */
 
 KMP_EXPORT kmp_int32 __kmpc_reduce_nowait(

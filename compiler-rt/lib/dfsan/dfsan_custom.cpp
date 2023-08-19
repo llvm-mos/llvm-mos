@@ -535,6 +535,36 @@ SANITIZER_INTERFACE_ATTRIBUTE size_t __dfso_strlen(const char *s,
   return ret;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE size_t __dfsw_strnlen(const char *s,
+                                                    size_t maxlen,
+                                                    dfsan_label s_label,
+                                                    dfsan_label maxlen_label,
+                                                    dfsan_label *ret_label) {
+  size_t ret = strnlen(s, maxlen);
+  if (flags().strict_data_dependencies) {
+    *ret_label = 0;
+  } else {
+    size_t full_len = strlen(s);
+    size_t covered_len = maxlen > (full_len + 1) ? (full_len + 1) : maxlen;
+    *ret_label = dfsan_union(maxlen_label, dfsan_read_label(s, covered_len));
+  }
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE size_t __dfso_strnlen(
+    const char *s, size_t maxlen, dfsan_label s_label, dfsan_label maxlen_label,
+    dfsan_label *ret_label, dfsan_origin s_origin, dfsan_origin maxlen_origin,
+    dfsan_origin *ret_origin) {
+  size_t ret = __dfsw_strnlen(s, maxlen, s_label, maxlen_label, ret_label);
+  if (!flags().strict_data_dependencies) {
+    size_t full_len = strlen(s);
+    size_t covered_len = maxlen > (full_len + 1) ? (full_len + 1) : maxlen;
+    dfsan_origin o = dfsan_read_origin_of_first_taint(s, covered_len);
+    *ret_origin = o ? o : maxlen_origin;
+  }
+  return ret;
+}
+
 static void *dfsan_memmove(void *dest, const void *src, size_t n) {
   dfsan_label *sdest = shadow_for(dest);
   const dfsan_label *ssrc = shadow_for(src);
@@ -645,6 +675,37 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strcat(
   size_t dest_len = strlen(dest);
   char *ret = strcat(dest, src);
   size_t src_len = strlen(src);
+  dfsan_mem_origin_transfer(dest + dest_len, src, src_len);
+  dfsan_mem_shadow_transfer(dest + dest_len, src, src_len);
+  *ret_label = dest_label;
+  *ret_origin = dest_origin;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strncat(
+    char *dest, const char *src, size_t num, dfsan_label dest_label,
+    dfsan_label src_label, dfsan_label num_label, dfsan_label *ret_label) {
+  size_t src_len = strlen(src);
+  src_len = src_len < num ? src_len : num;
+  size_t dest_len = strlen(dest);
+
+  char *ret = strncat(dest, src, num);
+  dfsan_mem_shadow_transfer(dest + dest_len, src, src_len);
+  *ret_label = dest_label;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strncat(
+    char *dest, const char *src, size_t num, dfsan_label dest_label,
+    dfsan_label src_label, dfsan_label num_label, dfsan_label *ret_label,
+    dfsan_origin dest_origin, dfsan_origin src_origin, dfsan_origin num_origin,
+    dfsan_origin *ret_origin) {
+  size_t src_len = strlen(src);
+  src_len = src_len < num ? src_len : num;
+  size_t dest_len = strlen(dest);
+
+  char *ret = strncat(dest, src, num);
+
   dfsan_mem_origin_transfer(dest + dest_len, src, src_len);
   dfsan_mem_shadow_transfer(dest + dest_len, src, src_len);
   *ret_label = dest_label;

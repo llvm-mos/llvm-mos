@@ -274,7 +274,7 @@ don't find anyone present, chances are they happen to be off that day.
     - English, Romanian
   * - Aaron Ballman (he/him)
     - Clang internals; frontend attributes; clang-tidy; clang-query; AST matchers
-    - Monthly, 2nd Monday of the month at 10:00am Eastern and again at 2:00pm Eastern, for 30 minutes (will run longer as needed).
+    - Monthly, 2nd Monday and 3rd Friday of the month at 10:00am Eastern and again at 2:00pm Eastern, for 60 minutes.
       `ics <https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics>`__
       `gcal <https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com>`__
     - `GoogleMeet <https://meet.google.com/xok-iqne-gmi>`__
@@ -407,7 +407,6 @@ can be better.
    BugpointRedesign
    Proposals/TestSuite
    Proposals/VariableNames
-   Proposals/VectorizationPlan
    Proposals/VectorPredication
 
 :doc:`Proposals/GitHubMove`
@@ -421,9 +420,6 @@ can be better.
 
 :doc:`Proposals/VariableNames`
    Proposal to change the variable names coding standard.
-
-:doc:`Proposals/VectorizationPlan`
-   Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.
 
 :doc:`Proposals/VectorPredication`
    Proposal for predicated vector instructions in LLVM.

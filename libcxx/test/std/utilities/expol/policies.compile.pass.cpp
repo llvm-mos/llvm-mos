@@ -18,7 +18,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// REQUIRES: with-pstl
+// UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 #include <execution>
 #include <type_traits>
@@ -47,4 +47,6 @@ int main(int, char**) {
 #if TEST_STD_VER >= 20
   use(std::execution::unseq);
 #endif
+
+  return 0;
 }

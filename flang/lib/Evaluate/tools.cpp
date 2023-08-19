@@ -1158,7 +1158,7 @@ std::optional<Expr<SomeType>> DataConstantConversionExtension(
 bool IsAllocatableOrPointerObject(
     const Expr<SomeType> &expr, FoldingContext &context) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
-  return (sym && semantics::IsAllocatableOrPointer(*sym)) ||
+  return (sym && semantics::IsAllocatableOrPointer(sym->GetUltimate())) ||
       evaluate::IsObjectPointer(expr, context);
 }
 
@@ -1272,16 +1272,21 @@ bool IsVariableName(const Symbol &original) {
           ultimate.has<AssocEntityDetails>());
 }
 
-bool IsPureProcedure(const Symbol &original) {
+static bool IsPureProcedureImpl(
+    const Symbol &original, semantics::UnorderedSymbolSet &set) {
   // An ENTRY is pure if its containing subprogram is
   const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
+  if (set.find(symbol) != set.end()) {
+    return true;
+  }
+  set.emplace(symbol);
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (procDetails->procInterface()) {
       // procedure with a pure interface
-      return IsPureProcedure(*procDetails->procInterface());
+      return IsPureProcedureImpl(*procDetails->procInterface(), set);
     }
   } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
-    return IsPureProcedure(details->symbol());
+    return IsPureProcedureImpl(details->symbol(), set);
   } else if (!IsProcedure(symbol)) {
     return false;
   }
@@ -1293,7 +1298,7 @@ bool IsPureProcedure(const Symbol &original) {
         if (&*ref == &symbol) {
           return false; // error recovery, recursion is caught elsewhere
         }
-        if (IsFunction(*ref) && !IsPureProcedure(*ref)) {
+        if (IsFunction(*ref) && !IsPureProcedureImpl(*ref, set)) {
           return false;
         }
         if (ref->GetUltimate().attrs().test(Attr::VOLATILE)) {
@@ -1306,6 +1311,11 @@ bool IsPureProcedure(const Symbol &original) {
   return symbol.attrs().test(Attr::PURE) ||
       (symbol.attrs().test(Attr::ELEMENTAL) &&
           !symbol.attrs().test(Attr::IMPURE));
+}
+
+bool IsPureProcedure(const Symbol &original) {
+  semantics::UnorderedSymbolSet set;
+  return IsPureProcedureImpl(original, set);
 }
 
 bool IsPureProcedure(const Scope &scope) {
@@ -1555,15 +1565,25 @@ bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
 }
 
 bool IsBuiltinCPtr(const Symbol &symbol) {
-  if (const DeclTypeSpec *declType = symbol.GetType())
-    if (const DerivedTypeSpec *derived = declType->AsDerived())
+  if (const DeclTypeSpec *declType = symbol.GetType()) {
+    if (const DerivedTypeSpec *derived = declType->AsDerived()) {
       return IsIsoCType(derived);
+    }
+  }
   return false;
 }
 
 bool IsIsoCType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "c_ptr") ||
       IsBuiltinDerivedType(derived, "c_funptr");
+}
+
+bool IsEventType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "event_type");
+}
+
+bool IsLockType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "lock_type");
 }
 
 bool IsTeamType(const DerivedTypeSpec *derived) {
@@ -1575,8 +1595,7 @@ bool IsBadCoarrayType(const DerivedTypeSpec *derived) {
 }
 
 bool IsEventTypeOrLockType(const DerivedTypeSpec *derivedTypeSpec) {
-  return IsBuiltinDerivedType(derivedTypeSpec, "event_type") ||
-      IsBuiltinDerivedType(derivedTypeSpec, "lock_type");
+  return IsEventType(derivedTypeSpec) || IsLockType(derivedTypeSpec);
 }
 
 int CountLenParameters(const DerivedTypeSpec &type) {

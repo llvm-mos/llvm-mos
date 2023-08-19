@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/IR/ParserUtils.h"
+
+#include "SPIRVParsingUtils.h"
+
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
@@ -164,19 +166,19 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
     return type;
 
   // Check other allowed types
-  if (auto t = type.dyn_cast<FloatType>()) {
+  if (auto t = llvm::dyn_cast<FloatType>(type)) {
     if (type.isBF16()) {
       parser.emitError(typeLoc, "cannot use 'bf16' to compose SPIR-V types");
       return Type();
     }
-  } else if (auto t = type.dyn_cast<IntegerType>()) {
+  } else if (auto t = llvm::dyn_cast<IntegerType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
                        "only 1/8/16/32/64-bit integer type allowed but found ")
           << type;
       return Type();
     }
-  } else if (auto t = type.dyn_cast<VectorType>()) {
+  } else if (auto t = llvm::dyn_cast<VectorType>(type)) {
     if (t.getRank() != 1) {
       parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
       return Type();
@@ -203,7 +205,7 @@ static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  if (auto t = type.dyn_cast<VectorType>()) {
+  if (auto t = llvm::dyn_cast<VectorType>(type)) {
     if (t.getRank() != 1) {
       parser.emitError(typeLoc, "only 1-D vector allowed but found ") << t;
       return Type();
@@ -216,7 +218,7 @@ static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
       return Type();
     }
 
-    if (!t.getElementType().isa<FloatType>()) {
+    if (!llvm::isa<FloatType>(t.getElementType())) {
       parser.emitError(typeLoc, "matrix columns' elements must be of "
                                 "Float type, got ")
           << t.getElementType();
@@ -239,7 +241,7 @@ static Type parseAndVerifySampledImageType(SPIRVDialect const &dialect,
   if (parser.parseType(type))
     return Type();
 
-  if (!type.isa<ImageType>()) {
+  if (!llvm::isa<ImageType>(type)) {
     parser.emitError(typeLoc,
                      "sampled image must be composed using image type, got ")
         << type;
@@ -318,11 +320,48 @@ static Type parseArrayType(SPIRVDialect const &dialect,
   return ArrayType::get(elementType, count, stride);
 }
 
-// cooperative-matrix-type ::= `!spirv.coopmatrix` `<` element-type ',' scope
-// ','
-//                                                   rows ',' columns>`
+// cooperative-matrix-type ::=
+//   `!spirv.coopmatrix` `<` rows `x` columns `x` element-type `,`
+//                           scope `,` use `>`
 static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
                                        DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  SmallVector<int64_t, 2> dims;
+  SMLoc countLoc = parser.getCurrentLocation();
+  if (parser.parseDimensionList(dims, /*allowDynamic=*/false))
+    return {};
+
+  if (dims.size() != 2) {
+    parser.emitError(countLoc, "expected row and column count");
+    return {};
+  }
+
+  auto elementTy = parseAndVerifyType(dialect, parser);
+  if (!elementTy)
+    return {};
+
+  Scope scope;
+  if (parser.parseComma() ||
+      spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
+    return {};
+
+  CooperativeMatrixUseKHR use;
+  if (parser.parseComma() ||
+      spirv::parseEnumKeywordAttr(use, parser, "use <id>"))
+    return {};
+
+  if (parser.parseGreater())
+    return {};
+
+  return CooperativeMatrixType::get(elementTy, dims[0], dims[1], scope, use);
+}
+
+// nv-cooperative-matrix-type ::=
+//   `!spirv.NV.coopmatrix` `<` rows `x` columns `x` element-type `,` scope `>`
+static Type parseCooperativeMatrixNVType(SPIRVDialect const &dialect,
+                                         DialectAsmParser &parser) {
   if (parser.parseLess())
     return Type();
 
@@ -341,7 +380,8 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
     return Type();
 
   Scope scope;
-  if (parser.parseComma() || parseEnumKeywordAttr(scope, parser, "scope <id>"))
+  if (parser.parseComma() ||
+      spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
     return Type();
 
   if (parser.parseGreater())
@@ -372,10 +412,11 @@ static Type parseJointMatrixType(SPIRVDialect const &dialect,
     return Type();
   MatrixLayout matrixLayout;
   if (parser.parseComma() ||
-      parseEnumKeywordAttr(matrixLayout, parser, "matrixLayout <id>"))
+      spirv::parseEnumKeywordAttr(matrixLayout, parser, "matrixLayout <id>"))
     return Type();
   Scope scope;
-  if (parser.parseComma() || parseEnumKeywordAttr(scope, parser, "scope <id>"))
+  if (parser.parseComma() ||
+      spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
     return Type();
   if (parser.parseGreater())
     return Type();
@@ -788,6 +829,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseArrayType(*this, parser);
   if (keyword == "coopmatrix")
     return parseCooperativeMatrixType(*this, parser);
+  if (keyword == "NV.coopmatrix")
+    return parseCooperativeMatrixNVType(*this, parser);
   if (keyword == "jointmatrix")
     return parseJointMatrixType(*this, parser);
   if (keyword == "image")
@@ -890,8 +933,14 @@ static void print(StructType type, DialectAsmPrinter &os) {
     structContext.remove(type.getIdentifier());
 }
 
+static void print(CooperativeMatrixType type, DialectAsmPrinter &os) {
+  os << "coopmatrix<" << type.getRows() << "x" << type.getColumns() << "x"
+     << type.getElementType() << ", " << type.getScope() << ", "
+     << type.getUse() << ">";
+}
+
 static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {
-  os << "coopmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
+  os << "NV.coopmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
   os << type.getElementType() << ", " << stringifyScope(type.getScope());
   os << ">";
 }
@@ -910,9 +959,10 @@ static void print(MatrixType type, DialectAsmPrinter &os) {
 
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
-      .Case<ArrayType, CooperativeMatrixNVType, JointMatrixINTELType,
-            PointerType, RuntimeArrayType, ImageType, SampledImageType,
-            StructType, MatrixType>([&](auto type) { print(type, os); })
+      .Case<ArrayType, CooperativeMatrixType, CooperativeMatrixNVType,
+            JointMatrixINTELType, PointerType, RuntimeArrayType, ImageType,
+            SampledImageType, StructType, MatrixType>(
+          [&](auto type) { print(type, os); })
       .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
 }
 
@@ -939,12 +989,12 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   Attribute attr = attribute.getValue();
 
   if (symbol == spirv::getEntryPointABIAttrName()) {
-    if (!attr.isa<spirv::EntryPointABIAttr>()) {
+    if (!llvm::isa<spirv::EntryPointABIAttr>(attr)) {
       return op->emitError("'")
              << symbol << "' attribute must be an entry point ABI attribute";
     }
   } else if (symbol == spirv::getTargetEnvAttrName()) {
-    if (!attr.isa<spirv::TargetEnvAttr>())
+    if (!llvm::isa<spirv::TargetEnvAttr>(attr))
       return op->emitError("'") << symbol << "' must be a spirv::TargetEnvAttr";
   } else {
     return op->emitError("found unsupported '")
@@ -965,7 +1015,7 @@ static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
     return emitError(loc, "found unsupported '")
            << symbol << "' attribute on region argument";
 
-  auto varABIAttr = attr.dyn_cast<spirv::InterfaceVarABIAttr>();
+  auto varABIAttr = llvm::dyn_cast<spirv::InterfaceVarABIAttr>(attr);
   if (!varABIAttr)
     return emitError(loc, "'")
            << symbol << "' must be a spirv::InterfaceVarABIAttr";

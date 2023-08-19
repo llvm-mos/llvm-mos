@@ -40,8 +40,10 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<PrintPreprocessedAction>();
   case ParseSyntaxOnly:
     return std::make_unique<ParseSyntaxOnlyAction>();
-  case EmitMLIR:
-    return std::make_unique<EmitMLIRAction>();
+  case EmitFIR:
+    return std::make_unique<EmitFIRAction>();
+  case EmitHLFIR:
+    return std::make_unique<EmitHLFIRAction>();
   case EmitLLVM:
     return std::make_unique<EmitLLVMAction>();
   case EmitLLVMBitcode:
@@ -104,9 +106,8 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
     clang::driver::getDriverOptTable().printHelp(
         llvm::outs(), "flang-new -fc1 [options] file...",
         "LLVM 'Flang' Compiler",
-        /*Include=*/clang::driver::options::FC1Option,
-        /*Exclude=*/llvm::opt::DriverFlag::HelpHidden,
-        /*ShowAllAliases=*/false);
+        /*ShowHidden=*/false, /*ShowAllAliases=*/false,
+        llvm::opt::Visibility(clang::driver::options::FC1Option));
     return true;
   }
 

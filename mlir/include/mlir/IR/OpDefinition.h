@@ -20,6 +20,7 @@
 #define MLIR_IR_OPDEFINITION_H
 
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/ODSSupport.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
@@ -269,15 +270,35 @@ public:
   void dump() const { llvm::errs() << *this << "\n"; }
 };
 
+// Temporarily exit the MLIR namespace to add casting support as later code in
+// this uses it. The CastInfo must come after the OpFoldResult definition and
+// before any cast function calls depending on CastInfo.
+
+} // namespace mlir
+
+namespace llvm {
+
+// Allow llvm::cast style functions.
+template <typename To>
+struct CastInfo<To, mlir::OpFoldResult>
+    : public CastInfo<To, mlir::OpFoldResult::PointerUnion> {};
+
+template <typename To>
+struct CastInfo<To, const mlir::OpFoldResult>
+    : public CastInfo<To, const mlir::OpFoldResult::PointerUnion> {};
+
+} // namespace llvm
+
+namespace mlir {
+
 /// Allow printing to a stream.
 inline raw_ostream &operator<<(raw_ostream &os, OpFoldResult ofr) {
-  if (Value value = ofr.dyn_cast<Value>())
+  if (Value value = llvm::dyn_cast_if_present<Value>(ofr))
     value.print(os);
   else
-    ofr.dyn_cast<Attribute>().print(os);
+    llvm::dyn_cast_if_present<Attribute>(ofr).print(os);
   return os;
 }
-
 /// Allow printing to a stream.
 inline raw_ostream &operator<<(raw_ostream &os, OpState op) {
   op.print(os, OpPrintingFlags().useLocalScope());
@@ -294,6 +315,8 @@ namespace OpTrait {
 // corresponding trait classes.  This avoids them being template
 // instantiated/duplicated.
 namespace impl {
+LogicalResult foldCommutative(Operation *op, ArrayRef<Attribute> operands,
+                              SmallVectorImpl<OpFoldResult> &results);
 OpFoldResult foldIdempotent(Operation *op);
 OpFoldResult foldInvolution(Operation *op);
 LogicalResult verifyZeroOperands(Operation *op);
@@ -1128,7 +1151,13 @@ public:
 
 /// This class adds property that the operation is commutative.
 template <typename ConcreteType>
-class IsCommutative : public TraitBase<ConcreteType, IsCommutative> {};
+class IsCommutative : public TraitBase<ConcreteType, IsCommutative> {
+public:
+  static LogicalResult foldTrait(Operation *op, ArrayRef<Attribute> operands,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+    return impl::foldCommutative(op, operands, results);
+  }
+};
 
 /// This class adds property that the operation is an involution.
 /// This means a unary to unary operation "f" that satisfies f(f(x)) = x
@@ -1302,7 +1331,7 @@ struct HasParent {
 /// relationship is not always known statically. For such cases, we need
 /// a per-op-instance specification to divide the operands into logical groups
 /// or segments. This can be modeled by attributes. The attribute will be named
-/// as `operand_segment_sizes`.
+/// as `operandSegmentSizes`.
 ///
 /// This trait verifies the attribute for specifying operand segments has
 /// the correct type (1D vector) and values (non-negative), etc.
@@ -1310,9 +1339,7 @@ template <typename ConcreteType>
 class AttrSizedOperandSegments
     : public TraitBase<ConcreteType, AttrSizedOperandSegments> {
 public:
-  static StringRef getOperandSegmentSizeAttr() {
-    return "operand_segment_sizes";
-  }
+  static StringRef getOperandSegmentSizeAttr() { return "operandSegmentSizes"; }
 
   static LogicalResult verifyTrait(Operation *op) {
     return ::mlir::OpTrait::impl::verifyOperandSizeAttr(
@@ -1325,7 +1352,7 @@ template <typename ConcreteType>
 class AttrSizedResultSegments
     : public TraitBase<ConcreteType, AttrSizedResultSegments> {
 public:
-  static StringRef getResultSegmentSizeAttr() { return "result_segment_sizes"; }
+  static StringRef getResultSegmentSizeAttr() { return "resultSegmentSizes"; }
 
   static LogicalResult verifyTrait(Operation *op) {
     return ::mlir::OpTrait::impl::verifyResultSizeAttr(
@@ -1554,7 +1581,7 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
     return failure();
 
   if (OpFoldResult result = Trait::foldTrait(op, operands)) {
-    if (result.template dyn_cast<Value>() != op->getResult(0))
+    if (llvm::dyn_cast_if_present<Value>(result) != op->getResult(0))
       results.push_back(result);
     return success();
   }
@@ -1888,21 +1915,16 @@ private:
                        SmallVectorImpl<OpFoldResult> &results) {
     OpFoldResult result;
     if constexpr (has_fold_adaptor_single_result_v<ConcreteOpT>) {
-      if constexpr (hasProperties()) {
-        result = cast<ConcreteOpT>(op).fold(typename ConcreteOpT::FoldAdaptor(
-            operands, op->getAttrDictionary(),
-            cast<ConcreteOpT>(op).getProperties(), op->getRegions()));
-      } else {
-        result = cast<ConcreteOpT>(op).fold(typename ConcreteOpT::FoldAdaptor(
-            operands, op->getAttrDictionary(), {}, op->getRegions()));
-      }
+      result = cast<ConcreteOpT>(op).fold(
+          typename ConcreteOpT::FoldAdaptor(operands, cast<ConcreteOpT>(op)));
     } else {
       result = cast<ConcreteOpT>(op).fold(operands);
     }
 
     // If the fold failed or was in-place, try to fold the traits of the
     // operation.
-    if (!result || result.template dyn_cast<Value>() == op->getResult(0)) {
+    if (!result ||
+        llvm::dyn_cast_if_present<Value>(result) == op->getResult(0)) {
       if (succeeded(op_definition_impl::foldTraits<Traits<ConcreteType>...>(
               op, operands, results)))
         return success();
@@ -1917,18 +1939,9 @@ private:
                                 SmallVectorImpl<OpFoldResult> &results) {
     auto result = LogicalResult::failure();
     if constexpr (has_fold_adaptor_v<ConcreteOpT>) {
-      if constexpr (hasProperties()) {
-        result = cast<ConcreteOpT>(op).fold(
-            typename ConcreteOpT::FoldAdaptor(
-                operands, op->getAttrDictionary(),
-                cast<ConcreteOpT>(op).getProperties(), op->getRegions()),
-            results);
-      } else {
-        result = cast<ConcreteOpT>(op).fold(
-            typename ConcreteOpT::FoldAdaptor(operands, op->getAttrDictionary(),
-                                              {}, op->getRegions()),
-            results);
-      }
+      result = cast<ConcreteOpT>(op).fold(
+          typename ConcreteOpT::FoldAdaptor(operands, cast<ConcreteOpT>(op)),
+          results);
     } else {
       result = cast<ConcreteOpT>(op).fold(operands, results);
     }
@@ -2060,6 +2073,16 @@ protected:
   static typename InterfaceBase::Concept *getInterfaceFor(Operation *op) {
     OperationName name = op->getName();
 
+#ifndef NDEBUG
+    // Check that the current interface isn't an unresolved promise for the
+    // given operation.
+    if (Dialect *dialect = name.getDialect()) {
+      dialect_extension_detail::handleUseOfUndefinedPromisedInterface(
+          *dialect, ConcreteType::getInterfaceID(),
+          llvm::getTypeName<ConcreteType>());
+    }
+#endif
+
     // Access the raw interface from the operation info.
     if (std::optional<RegisteredOperationName> rInfo =
             name.getRegisteredInfo()) {
@@ -2081,21 +2104,6 @@ protected:
   friend InterfaceBase;
 };
 
-//===----------------------------------------------------------------------===//
-// CastOpInterface utilities
-//===----------------------------------------------------------------------===//
-
-// These functions are out-of-line implementations of the methods in
-// CastOpInterface, which avoids them being template instantiated/duplicated.
-namespace impl {
-/// Attempt to fold the given cast operation.
-LogicalResult foldCastInterfaceOp(Operation *op,
-                                  ArrayRef<Attribute> attrOperands,
-                                  SmallVectorImpl<OpFoldResult> &foldResults);
-/// Attempt to verify the given cast operation.
-LogicalResult verifyCastInterfaceOp(
-    Operation *op, function_ref<bool(TypeRange, TypeRange)> areCastCompatible);
-} // namespace impl
 } // namespace mlir
 
 namespace llvm {
@@ -2117,7 +2125,6 @@ struct DenseMapInfo<T,
   }
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
-
 } // namespace llvm
 
 #endif

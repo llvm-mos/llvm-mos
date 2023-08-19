@@ -9,10 +9,10 @@
 #include "lldb/Expression/REPL.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Thread.h"
@@ -22,7 +22,9 @@
 
 using namespace lldb_private;
 
-REPL::REPL(LLVMCastKind kind, Target &target) : m_target(target), m_kind(kind) {
+char REPL::ID;
+
+REPL::REPL(Target &target) : m_target(target) {
   // Make sure all option values have sane defaults
   Debugger &debugger = m_target.GetDebugger();
   debugger.SetShowProgress(false);
@@ -55,14 +57,14 @@ lldb::REPLSP REPL::Create(Status &err, lldb::LanguageType language,
 }
 
 std::string REPL::GetSourcePath() {
-  ConstString file_basename = GetSourceFileBasename();
+  llvm::StringRef file_basename = GetSourceFileBasename();
   FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir();
   if (tmpdir_file_spec) {
     tmpdir_file_spec.SetFilename(file_basename);
     m_repl_source_path = tmpdir_file_spec.GetPath();
   } else {
     tmpdir_file_spec = FileSpec("/tmp");
-    tmpdir_file_spec.AppendPathComponent(file_basename.GetStringRef());
+    tmpdir_file_spec.AppendPathComponent(file_basename);
   }
 
   return tmpdir_file_spec.GetPath();
@@ -115,10 +117,11 @@ const char *REPL::IOHandlerGetFixIndentationCharacters() {
   return (m_enable_auto_indent ? GetAutoIndentCharacters() : nullptr);
 }
 
-ConstString REPL::IOHandlerGetControlSequence(char ch) {
+llvm::StringRef REPL::IOHandlerGetControlSequence(char ch) {
+  static constexpr llvm::StringLiteral control_sequence(":quit\n");
   if (ch == 'd')
-    return ConstString(":quit\n");
-  return ConstString();
+    return control_sequence;
+  return {};
 }
 
 const char *REPL::IOHandlerGetCommandPrefix() { return ":"; }

@@ -51,8 +51,8 @@ E: andrey.churbanov@intel.com
 D: OpenMP runtime library
 
 N: Johannes Doerfert
-E: jdoerfert@anl.gov
-D: OpenMP target offloading
+E: jdoerfert@llnl.gov
+D: OpenMP target offloading, OpenMP-Opt, Attributor
 
 N: Greg Clayton
 E: clayborg@gmail.com
@@ -135,9 +135,13 @@ N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: DWARF Parser
 
-N: Michael Kuperstein
-E: mkuper@google.com
+N: Florian Hahn
+E: flo@fhahn.com
 D: Loop Vectorizer
+
+N: Alexey Bataev
+E: a.bataev@outlook.com
+D: SLP Vectorizer
 
 N: Sergei Larin
 E: slarin@codeaurora.org
@@ -156,8 +160,8 @@ N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
 
-N: Dylan McKay
-E: me@dylanmckay.io
+N: Ben Shi
+E: 2283975856@qq.com, powerman1st@163.com
 D: AVR Backend
 
 N: Kazushi Marukawa

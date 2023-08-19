@@ -14,9 +14,9 @@
 #include <string>
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
@@ -215,9 +215,9 @@ void IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
     io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(request);
     break;
   case Completion::Expression:
-    CommandCompletions::InvokeCommonCompletionCallbacks(
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
-        CommandCompletions::eVariablePathCompletion, request, nullptr);
+        lldb::eVariablePathCompletion, request, nullptr);
     break;
   }
 }

@@ -190,6 +190,42 @@ class SME_ZA_Tile_TwoPred_TwoVec_Pat<string name, SDPatternOperator intrinsic, O
     : Pat<(intrinsic imm_ty:$tile, (pg_ty PPR3bAny:$Pn), (pg_ty PPR3bAny:$Pm), vt:$Zn, vt:$Zm),
           (!cast<Instruction>(name # _PSEUDO) $tile, $Pn, $Pm, $Zn, $Zm)>;
 
+
+//===----------------------------------------------------------------------===//
+// SME smstart/smstop
+//===----------------------------------------------------------------------===//
+
+// SME defines three pstate fields to set or clear PSTATE.SM, PSTATE.ZA, or
+// both fields:
+//
+//   MSR SVCRSM, #<imm1>
+//   MSR SVCRZA, #<imm1>
+//   MSR SVCRSMZA, #<imm1>
+//
+// It's tricky to using the existing pstate operand defined in
+// AArch64SystemOperands.td since it only encodes 5 bits including op1;op2,
+// when these fields are also encoded in CRm[3:1].
+def MSRpstatesvcrImm1
+  : PstateWriteSimple<(ins svcr_op:$pstatefield, timm0_1:$imm), "msr",
+                      "\t$pstatefield, $imm">,
+    Sched<[WriteSys]> {
+  bits<3> pstatefield;
+  bit imm;
+  let Inst{18-16} = 0b011; // op1
+  let Inst{11-9} = pstatefield;
+  let Inst{8} = imm;
+  let Inst{7-5} = 0b011; // op2
+}
+
+def : InstAlias<"smstart",    (MSRpstatesvcrImm1 0b011, 0b1)>;
+def : InstAlias<"smstart sm", (MSRpstatesvcrImm1 0b001, 0b1)>;
+def : InstAlias<"smstart za", (MSRpstatesvcrImm1 0b010, 0b1)>;
+
+def : InstAlias<"smstop",     (MSRpstatesvcrImm1 0b011, 0b0)>;
+def : InstAlias<"smstop sm",  (MSRpstatesvcrImm1 0b001, 0b0)>;
+def : InstAlias<"smstop za",  (MSRpstatesvcrImm1 0b010, 0b0)>;
+
+
 //===----------------------------------------------------------------------===//
 // SME Outer Products
 //===----------------------------------------------------------------------===//
@@ -1309,30 +1345,30 @@ multiclass sve2_int_perm_sel_p<string asm, SDPatternOperator op> {
                   (!cast<Instruction>(NAME # _D) PNRAny:$Pd,
                       PNRAny:$Pn, PPR64:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_1:$imm), 0>;
 
-  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPRAny:$Pm),
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPR8:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
             (!cast<Instruction>(NAME # _B) $Pn, $Pm, $idx, 0)>;
-  def : Pat<(nxv8i1 (op (nxv8i1 PPRAny:$Pn), (nxv8i1 PPRAny:$Pm),
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv8i1 PPR16:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
             (!cast<Instruction>(NAME # _H) $Pn, $Pm, $idx, 0)>;
-  def : Pat<(nxv4i1 (op (nxv4i1 PPRAny:$Pn), (nxv4i1 PPRAny:$Pm),
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv4i1 PPR32:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
             (!cast<Instruction>(NAME # _S) $Pn, $Pm, $idx, 0)>;
-  def : Pat<(nxv2i1 (op (nxv2i1 PPRAny:$Pn), (nxv2i1 PPRAny:$Pm),
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv2i1 PPR64:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
             (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, 0)>;
 
   let AddedComplexity = 1 in {
-    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPRAny:$Pm),
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPR8:$Pm),
                (i32 (tileslice8 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm)))),
               (!cast<Instruction>(NAME # _B) $Pn, $Pm, $idx, $imm)>;
-    def : Pat<(nxv8i1 (op (nxv8i1 PPRAny:$Pn), (nxv8i1 PPRAny:$Pm),
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv8i1 PPR16:$Pm),
                (i32 (tileslice16 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_7:$imm)))),
               (!cast<Instruction>(NAME # _H) $Pn, $Pm, $idx, $imm)>;
-    def : Pat<(nxv4i1 (op (nxv4i1 PPRAny:$Pn), (nxv4i1 PPRAny:$Pm),
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv4i1 PPR32:$Pm),
                (i32 (tileslice32 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_3:$imm)))),
               (!cast<Instruction>(NAME # _S) $Pn, $Pm, $idx, $imm)>;
-    def : Pat<(nxv2i1 (op (nxv2i1 PPRAny:$Pn), (nxv2i1 PPRAny:$Pm),
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv2i1 PPR64:$Pm),
                (i32 (tileslice64 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_1:$imm)))),
               (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, $imm)>;
   }

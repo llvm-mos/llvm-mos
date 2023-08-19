@@ -11,21 +11,28 @@
 
 #include "src/__support/StringUtil/message_mapper.h"
 
-#include "posix_signal_table.h"
-#include "stdc_signal_table.h"
+#include "posix_signals.h"
+#include "stdc_signals.h"
 
-#ifdef __linux__
-#include "linux/signal_table.h"
+#if defined(__linux__) || defined(__Fuchsia__)
+#define USE_LINUX_PLATFORM_SIGNALS 1
+#else
+#define USE_LINUX_PLATFORM_SIGNALS 0
+#endif
+
+#if USE_LINUX_PLATFORM_SIGNALS
+#include "linux_extension_signals.h"
 #endif
 
 namespace __llvm_libc::internal {
 
-#ifdef __linux__
-inline constexpr auto PLATFORM_SIGNALS =
-    STDC_SIGNALS + POSIX_SIGNALS + LINUX_SIGNALS;
-#else
-inline constexpr auto PLATFORM_SIGNALS = STDC_SIGNALS;
-#endif
+LIBC_INLINE_VAR constexpr auto PLATFORM_SIGNALS = []() {
+  if constexpr (USE_LINUX_PLATFORM_SIGNALS) {
+    return STDC_SIGNALS + POSIX_SIGNALS + LINUX_SIGNALS;
+  } else {
+    return STDC_SIGNALS;
+  }
+}();
 
 } // namespace __llvm_libc::internal
 

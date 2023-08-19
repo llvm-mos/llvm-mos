@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   ExpandOps.cpp
   ExpandStridedMetadata.cpp
   EmulateWideInt.cpp
+  EmulateNarrowType.cpp
   ExtractAddressComputations.cpp
   FoldMemRefAliasOps.cpp
   IndependenceTransforms.cpp
@@ -27,7 +28,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRBufferizationDialect
   MLIRDialectUtils
   MLIRFuncDialect
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface
   MLIRMemRefDialect

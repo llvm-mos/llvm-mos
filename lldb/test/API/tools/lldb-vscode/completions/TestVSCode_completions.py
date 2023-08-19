@@ -10,8 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
-
+class TestVSCode_completions(lldbvscode_testcase.VSCodeTestCaseBase):
     def verify_completions(self, actual_list, expected_list, not_expected_list=[]):
         for expected_item in expected_list:
             self.assertIn(expected_item, actual_list)
@@ -20,10 +19,10 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             self.assertNotIn(not_expected_item, actual_list)
 
     @skipIfWindows
-    @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @skipIfDarwin  # Skip this test for now until we can figure out why tings aren't working on build bots
     def test_completions(self):
         """
-            Tests the completion request at different breakpoints
+        Tests the completion request at different breakpoints
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
@@ -44,7 +43,13 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                     "label": "var -- vector<basic_string<char>> &",
                 }
             ],
-            [{"text": "var1", "label": "var1 -- int &"}],
+            [
+                {
+                    "text": "var",
+                    "label": "var -- Show variables for the current stack frame. Defaults to all arguments and local variables in scope. Names of argument, local, file static and file global variables can be specified.",
+                },
+                {"text": "var1", "label": "var1 -- int &"},
+            ],
         )
 
         # should see global keywords but not variables inside main
@@ -113,73 +118,33 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
         self.verify_completions(
             self.vscode.get_completions("foo1.v"),
-            [
-                {
-                    "text": "var1",
-                    "label": "foo1.var1 -- int"
-                }
-            ]
+            [{"text": "var1", "label": "foo1.var1 -- int"}],
         )
 
         self.verify_completions(
             self.vscode.get_completions("foo1.my_bar_object.v"),
-            [
-                {
-                    "text": "var1",
-                    "label": "foo1.my_bar_object.var1 -- int"
-                }
-            ]
+            [{"text": "var1", "label": "foo1.my_bar_object.var1 -- int"}],
         )
 
         self.verify_completions(
             self.vscode.get_completions("foo1.var1 + foo1.v"),
-            [
-                {
-                    "text": "var1",
-                    "label": "foo1.var1 -- int"
-                }
-            ]
+            [{"text": "var1", "label": "foo1.var1 -- int"}],
         )
 
         self.verify_completions(
             self.vscode.get_completions("foo1.var1 + v"),
-            [
-                {
-                    "text": "var1",
-                    "label": "var1 -- int &"
-                }
-            ]
+            [{"text": "var1", "label": "var1 -- int &"}],
         )
 
-        #should correctly handle spaces between objects and member operators
+        # should correctly handle spaces between objects and member operators
         self.verify_completions(
             self.vscode.get_completions("foo1 .v"),
-            [
-                {
-                    "text": "var1",
-                    "label": ".var1 -- int"
-                }
-            ],
-            [
-                {
-                    "text": "var2",
-                    "label": ".var2 -- int"
-                }
-            ]
+            [{"text": "var1", "label": ".var1 -- int"}],
+            [{"text": "var2", "label": ".var2 -- int"}],
         )
 
         self.verify_completions(
             self.vscode.get_completions("foo1 . v"),
-            [
-                {
-                    "text": "var1",
-                    "label": "var1 -- int"
-                }
-            ], 
-            [
-                {
-                    "text": "var2",
-                    "label": "var2 -- int"
-                }
-            ]
+            [{"text": "var1", "label": "var1 -- int"}],
+            [{"text": "var2", "label": "var2 -- int"}],
         )

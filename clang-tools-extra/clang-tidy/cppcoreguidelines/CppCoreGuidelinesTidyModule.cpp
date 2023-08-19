@@ -12,8 +12,12 @@
 #include "../misc/NonPrivateMemberVariablesInClassesCheck.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "../modernize/AvoidCArraysCheck.h"
+#include "../modernize/MacroToEnumCheck.h"
 #include "../modernize/UseDefaultMemberInitCheck.h"
 #include "../modernize/UseOverrideCheck.h"
+#include "../performance/NoexceptDestructorCheck.h"
+#include "../performance/NoexceptMoveConstructorCheck.h"
+#include "../performance/NoexceptSwapCheck.h"
 #include "../readability/MagicNumbersCheck.h"
 #include "AvoidCapturingLambdaCoroutinesCheck.h"
 #include "AvoidConstOrRefDataMembersCheck.h"
@@ -25,8 +29,10 @@
 #include "InterfacesGlobalInitCheck.h"
 #include "MacroUsageCheck.h"
 #include "MisleadingCaptureDefaultByValueCheck.h"
+#include "MissingStdForwardCheck.h"
 #include "NarrowingConversionsCheck.h"
 #include "NoMallocCheck.h"
+#include "NoSuspendWithLockCheck.h"
 #include "OwningMemoryCheck.h"
 #include "PreferMemberInitializerCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
@@ -73,13 +79,25 @@ public:
         "cppcoreguidelines-init-variables");
     CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
         "cppcoreguidelines-interfaces-global-init");
+    CheckFactories.registerCheck<modernize::MacroToEnumCheck>(
+        "cppcoreguidelines-macro-to-enum");
     CheckFactories.registerCheck<MacroUsageCheck>(
         "cppcoreguidelines-macro-usage");
     CheckFactories.registerCheck<MisleadingCaptureDefaultByValueCheck>(
         "cppcoreguidelines-misleading-capture-default-by-value");
+    CheckFactories.registerCheck<MissingStdForwardCheck>(
+        "cppcoreguidelines-missing-std-forward");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
+    CheckFactories.registerCheck<NoSuspendWithLockCheck>(
+        "cppcoreguidelines-no-suspend-with-lock");
+    CheckFactories.registerCheck<performance::NoexceptDestructorCheck>(
+        "cppcoreguidelines-noexcept-destructor");
+    CheckFactories.registerCheck<performance::NoexceptMoveConstructorCheck>(
+        "cppcoreguidelines-noexcept-move-operations");
+    CheckFactories.registerCheck<performance::NoexceptSwapCheck>(
+        "cppcoreguidelines-noexcept-swap");
     CheckFactories.registerCheck<misc::NonPrivateMemberVariablesInClassesCheck>(
         "cppcoreguidelines-non-private-member-variables-in-classes");
     CheckFactories.registerCheck<OwningMemoryCheck>(

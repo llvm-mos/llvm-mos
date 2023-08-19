@@ -66,14 +66,14 @@ private:
     case AffineExprKind::Constant:
       return expr.cast<AffineConstantExpr>().getValue();
     case AffineExprKind::DimId:
-      if (auto attr = operandConsts[expr.cast<AffineDimExpr>().getPosition()]
-                          .dyn_cast_or_null<IntegerAttr>())
+      if (auto attr = llvm::dyn_cast_or_null<IntegerAttr>(
+              operandConsts[expr.cast<AffineDimExpr>().getPosition()]))
         return attr.getInt();
       return std::nullopt;
     case AffineExprKind::SymbolId:
-      if (auto attr = operandConsts[numDims +
-                                    expr.cast<AffineSymbolExpr>().getPosition()]
-                          .dyn_cast_or_null<IntegerAttr>())
+      if (auto attr = llvm::dyn_cast_or_null<IntegerAttr>(
+              operandConsts[numDims +
+                            expr.cast<AffineSymbolExpr>().getPosition()]))
         return attr.getInt();
       return std::nullopt;
     }
@@ -111,6 +111,19 @@ AffineMap AffineMap::getMinorIdentityMap(unsigned dims, unsigned results,
   assert(dims >= results && "Dimension mismatch");
   auto id = AffineMap::getMultiDimIdentityMap(dims, context);
   return AffineMap::get(dims, 0, id.getResults().take_back(results), context);
+}
+
+AffineMap AffineMap::getFilteredIdentityMap(
+    MLIRContext *ctx, unsigned numDims,
+    llvm::function_ref<bool(AffineDimExpr)> keepDimFilter) {
+  auto identityMap = getMultiDimIdentityMap(numDims, ctx);
+
+  // Apply filter to results.
+  llvm::SmallBitVector dropDimResults(numDims);
+  for (auto [idx, resultExpr] : llvm::enumerate(identityMap.getResults()))
+    dropDimResults[idx] = !keepDimFilter(resultExpr.cast<AffineDimExpr>());
+
+  return identityMap.dropResults(dropDimResults);
 }
 
 bool AffineMap::isMinorIdentity() const {

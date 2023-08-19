@@ -215,44 +215,43 @@ bool EmulationStateARM::WritePseudoRegister(
 }
 
 bool EmulationStateARM::CompareState(EmulationStateARM &other_state,
-                                     Stream *out_stream) {
+                                     Stream &out_stream) {
   bool match = true;
 
   for (int i = 0; match && i < 17; ++i) {
     if (m_gpr[i] != other_state.m_gpr[i]) {
       match = false;
-      out_stream->Printf("r%d: 0x%x != 0x%x\n", i, m_gpr[i],
-                         other_state.m_gpr[i]);
+      out_stream.Printf("r%d: 0x%x != 0x%x\n", i, m_gpr[i],
+                        other_state.m_gpr[i]);
     }
   }
 
   for (int i = 0; match && i < 32; ++i) {
     if (m_vfp_regs.s_regs[i] != other_state.m_vfp_regs.s_regs[i]) {
       match = false;
-      out_stream->Printf("s%d: 0x%x != 0x%x\n", i, m_vfp_regs.s_regs[i],
-                         other_state.m_vfp_regs.s_regs[i]);
+      out_stream.Printf("s%d: 0x%x != 0x%x\n", i, m_vfp_regs.s_regs[i],
+                        other_state.m_vfp_regs.s_regs[i]);
     }
   }
 
   for (int i = 0; match && i < 16; ++i) {
     if (m_vfp_regs.d_regs[i] != other_state.m_vfp_regs.d_regs[i]) {
       match = false;
-      out_stream->Printf("d%d: 0x%" PRIx64 " != 0x%" PRIx64 "\n", i + 16,
-                         m_vfp_regs.d_regs[i],
-                         other_state.m_vfp_regs.d_regs[i]);
+      out_stream.Printf("d%d: 0x%" PRIx64 " != 0x%" PRIx64 "\n", i + 16,
+                        m_vfp_regs.d_regs[i], other_state.m_vfp_regs.d_regs[i]);
     }
   }
 
   // other_state is the expected state. If it has memory, check it.
   if (!other_state.m_memory.empty() && m_memory != other_state.m_memory) {
     match = false;
-    out_stream->Printf("memory does not match\n");
-    out_stream->Printf("got memory:\n");
+    out_stream.Printf("memory does not match\n");
+    out_stream.Printf("got memory:\n");
     for (auto p : m_memory)
-      out_stream->Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
-    out_stream->Printf("expected memory:\n");
+      out_stream.Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
+    out_stream.Printf("expected memory:\n");
     for (auto p : other_state.m_memory)
-      out_stream->Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
+      out_stream.Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
   }
 
   return match;
@@ -267,7 +266,7 @@ bool EmulationStateARM::LoadRegistersStateFromDictionary(
     OptionValueSP value_sp = reg_dict->GetValueForKey(sstr.GetString());
     if (value_sp.get() == nullptr)
       return false;
-    uint64_t reg_value = value_sp->GetUInt64Value().value_or(0);
+    uint64_t reg_value = value_sp->GetValueAs<uint64_t>().value_or(0);
     StorePseudoRegisterValue(first_reg + i, reg_value);
   }
 
@@ -296,7 +295,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
     if (value_sp.get() == nullptr)
       return false;
     else
-      start_address = value_sp->GetUInt64Value().value_or(0);
+      start_address = value_sp->GetValueAs<uint64_t>().value_or(0);
 
     value_sp = mem_dict->GetValueForKey(data_key);
     OptionValueArray *mem_array = value_sp->GetAsArray();
@@ -310,7 +309,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
       value_sp = mem_array->GetValueAtIndex(i);
       if (value_sp.get() == nullptr)
         return false;
-      uint64_t value = value_sp->GetUInt64Value().value_or(0);
+      uint64_t value = value_sp->GetValueAs<uint64_t>().value_or(0);
       StoreToPseudoAddress(address, value);
       address = address + 4;
     }
@@ -330,7 +329,8 @@ bool EmulationStateARM::LoadStateFromDictionary(
   value_sp = reg_dict->GetValueForKey(cpsr_name);
   if (value_sp.get() == nullptr)
     return false;
-  StorePseudoRegisterValue(dwarf_cpsr, value_sp->GetUInt64Value().value_or(0));
+  StorePseudoRegisterValue(dwarf_cpsr,
+                           value_sp->GetValueAs<uint64_t>().value_or(0));
 
   // Load s/d Registers
   // To prevent you giving both types in a state and overwriting

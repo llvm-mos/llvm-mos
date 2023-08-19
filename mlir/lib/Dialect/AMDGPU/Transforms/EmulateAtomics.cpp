@@ -53,7 +53,7 @@ enum class DataArgAction : unsigned char {
 
 // Fix up the fact that, when we're migrating from a general bugffer atomic
 // to a load or to a CAS, the number of openrands, and thus the number of
-// entries needed in operand_segment_sizes, needs to change. We use this method
+// entries needed in operandSegmentSizes, needs to change. We use this method
 // because we'd like to preserve unknown attributes on the atomic instead of
 // discarding them.
 static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
@@ -61,11 +61,11 @@ static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
                                      DataArgAction action) {
   newAttrs.reserve(attrs.size());
   for (NamedAttribute attr : attrs) {
-    if (attr.getName().getValue() != "operand_segment_sizes") {
+    if (attr.getName().getValue() != "operandSegmentSizes") {
       newAttrs.push_back(attr);
       continue;
     }
-    auto segmentAttr = attr.getValue().cast<DenseI32ArrayAttr>();
+    auto segmentAttr = cast<DenseI32ArrayAttr>(attr.getValue());
     MLIRContext *context = segmentAttr.getContext();
     DenseI32ArrayAttr newSegments;
     switch (action) {
@@ -128,7 +128,7 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
 
   Value prevLoadForCompare = prevLoad;
   Value atomicResForCompare = atomicRes;
-  if (auto floatDataTy = dataType.dyn_cast<FloatType>()) {
+  if (auto floatDataTy = dyn_cast<FloatType>(dataType)) {
     Type equivInt = rewriter.getIntegerType(floatDataTy.getWidth());
     prevLoadForCompare =
         rewriter.create<arith::BitcastOp>(loc, equivInt, prevLoad);
@@ -139,7 +139,7 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
       loc, arith::CmpIPredicate::eq, atomicResForCompare, prevLoadForCompare);
   rewriter.create<cf::CondBranchOp>(loc, canLeave, afterAtomic, ValueRange{},
                                     loopBlock, atomicRes);
-  rewriter.replaceOp(atomicOp, {});
+  rewriter.eraseOp(atomicOp);
   return success();
 }
 

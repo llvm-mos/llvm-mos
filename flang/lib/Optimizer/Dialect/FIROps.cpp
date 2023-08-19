@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -19,6 +20,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -126,9 +128,8 @@ static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
     parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
     return mlir::failure();
   }
-  result.addAttribute(
-      "operand_segment_sizes",
-      builder.getDenseI32ArrayAttr({typeparamsSize, shapeSize}));
+  result.addAttribute("operandSegmentSizes", builder.getDenseI32ArrayAttr(
+                                                 {typeparamsSize, shapeSize}));
   if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.addTypeToList(restype, result.types))
     return mlir::failure();
@@ -147,7 +148,7 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
     p << ", ";
     p.printOperand(sh);
   }
-  p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operand_segment_sizes"});
+  p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
 }
 
 //===----------------------------------------------------------------------===//
@@ -926,9 +927,12 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+bool fir::ConvertOp::isInteger(mlir::Type ty) {
+  return ty.isa<mlir::IntegerType, mlir::IndexType, fir::IntegerType>();
+}
+
 bool fir::ConvertOp::isIntegerCompatible(mlir::Type ty) {
-  return ty.isa<mlir::IntegerType, mlir::IndexType, fir::IntegerType,
-                fir::LogicalType>();
+  return isInteger(ty) || mlir::isa<fir::LogicalType>(ty);
 }
 
 bool fir::ConvertOp::isFloatCompatible(mlir::Type ty) {
@@ -941,13 +945,67 @@ bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
                 fir::TypeDescType>();
 }
 
+static std::optional<mlir::Type> getVectorElementType(mlir::Type ty) {
+  mlir::Type elemTy;
+  if (mlir::isa<fir::VectorType>(ty))
+    elemTy = mlir::dyn_cast<fir::VectorType>(ty).getEleTy();
+  else if (mlir::isa<mlir::VectorType>(ty))
+    elemTy = mlir::dyn_cast<mlir::VectorType>(ty).getElementType();
+  else
+    return std::nullopt;
+
+  // e.g. fir.vector<4:ui32> => mlir.vector<4xi32>
+  // e.g. mlir.vector<4xui32> => mlir.vector<4xi32>
+  if (elemTy.isUnsignedInteger()) {
+    elemTy = mlir::IntegerType::get(
+        ty.getContext(), mlir::dyn_cast<mlir::IntegerType>(elemTy).getWidth());
+  }
+  return elemTy;
+}
+
+static std::optional<uint64_t> getVectorLen(mlir::Type ty) {
+  if (mlir::isa<fir::VectorType>(ty))
+    return mlir::dyn_cast<fir::VectorType>(ty).getLen();
+  else if (mlir::isa<mlir::VectorType>(ty)) {
+    // fir.vector only supports 1-D vector
+    if (!(mlir::dyn_cast<mlir::VectorType>(ty).isScalable()))
+      return mlir::dyn_cast<mlir::VectorType>(ty).getShape()[0];
+  }
+
+  return std::nullopt;
+}
+
+bool fir::ConvertOp::areVectorsCompatible(mlir::Type inTy, mlir::Type outTy) {
+  if (!(mlir::isa<fir::VectorType>(inTy) &&
+        mlir::isa<mlir::VectorType>(outTy)) &&
+      !(mlir::isa<mlir::VectorType>(inTy) && mlir::isa<fir::VectorType>(outTy)))
+    return false;
+
+  // Only support integer, unsigned and real vector
+  // Both vectors must have the same element type
+  std::optional<mlir::Type> inElemTy = getVectorElementType(inTy);
+  std::optional<mlir::Type> outElemTy = getVectorElementType(outTy);
+  if (!inElemTy.has_value() || !outElemTy.has_value() ||
+      inElemTy.value() != outElemTy.value())
+    return false;
+
+  // Both vectors must have the same number of elements
+  std::optional<uint64_t> inLen = getVectorLen(inTy);
+  std::optional<uint64_t> outLen = getVectorLen(outTy);
+  if (!inLen.has_value() || !outLen.has_value() ||
+      inLen.value() != outLen.value())
+    return false;
+
+  return true;
+}
+
 bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
   if (inType == outType)
     return true;
   return (isPointerCompatible(inType) && isPointerCompatible(outType)) ||
          (isIntegerCompatible(inType) && isIntegerCompatible(outType)) ||
-         (isIntegerCompatible(inType) && isFloatCompatible(outType)) ||
-         (isFloatCompatible(inType) && isIntegerCompatible(outType)) ||
+         (isInteger(inType) && isFloatCompatible(outType)) ||
+         (isFloatCompatible(inType) && isInteger(outType)) ||
          (isFloatCompatible(inType) && isFloatCompatible(outType)) ||
          (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
          (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
@@ -956,7 +1014,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
          (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
          (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
-         (fir::isPolymorphicType(inType) && outType.isa<BoxType>());
+         (fir::isPolymorphicType(inType) && outType.isa<BoxType>()) ||
+         areVectorsCompatible(inType, outType);
 }
 
 mlir::LogicalResult fir::ConvertOp::verify() {
@@ -2247,14 +2306,6 @@ static mlir::Type getBoxScalarEleTy(mlir::Type boxTy) {
   return eleTy;
 }
 
-/// Get the rank from a !fir.box type
-static unsigned getBoxRank(mlir::Type boxTy) {
-  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy);
-  if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
-    return seqTy.getDimension();
-  return 0;
-}
-
 /// Test if \p t1 and \p t2 are compatible character types (if they can
 /// represent the same type at runtime).
 static bool areCompatibleCharacterTypes(mlir::Type t1, mlir::Type t2) {
@@ -2274,9 +2325,9 @@ mlir::LogicalResult fir::ReboxOp::verify() {
   auto outBoxTy = getType();
   if (fir::isa_unknown_size_box(outBoxTy))
     return emitOpError("result type must not have unknown rank or type");
-  auto inputRank = getBoxRank(inputBoxTy);
+  auto inputRank = fir::getBoxRank(inputBoxTy);
   auto inputEleTy = getBoxScalarEleTy(inputBoxTy);
-  auto outRank = getBoxRank(outBoxTy);
+  auto outRank = fir::getBoxRank(outBoxTy);
   auto outEleTy = getBoxScalarEleTy(outBoxTy);
 
   if (auto sliceVal = getSlice()) {
@@ -3410,15 +3461,13 @@ void fir::IfOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
   }
 }
 
-// These 2 functions copied from scf.if implementation.
+// These 3 functions copied from scf.if implementation.
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
+/// during the flow of control.
 void fir::IfOp::getSuccessorRegions(
-    std::optional<unsigned> index, llvm::ArrayRef<mlir::Attribute> operands,
+    std::optional<unsigned> index,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (index) {
@@ -3427,26 +3476,32 @@ void fir::IfOp::getSuccessorRegions(
   }
 
   // Don't consider the else region if it is empty.
+  regions.push_back(mlir::RegionSuccessor(&getThenRegion()));
+
+  // Don't consider the else region if it is empty.
   mlir::Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    elseRegion = nullptr;
+    regions.push_back(mlir::RegionSuccessor());
+  else
+    regions.push_back(mlir::RegionSuccessor(elseRegion));
+}
 
-  // Otherwise, the successor is dependent on the condition.
-  bool condition;
-  if (auto condAttr = operands.front().dyn_cast_or_null<mlir::IntegerAttr>()) {
-    condition = condAttr.getValue().isOne();
-  } else {
-    // If the condition isn't constant, both regions may be executed.
-    regions.push_back(mlir::RegionSuccessor(&getThenRegion()));
-    // If the else region does not exist, it is not a viable successor.
-    if (elseRegion)
-      regions.push_back(mlir::RegionSuccessor(elseRegion));
-    return;
+void fir::IfOp::getEntrySuccessorRegions(
+    llvm::ArrayRef<mlir::Attribute> operands,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  FoldAdaptor adaptor(operands);
+  auto boolAttr =
+      mlir::dyn_cast_or_null<mlir::BoolAttr>(adaptor.getCondition());
+  if (!boolAttr || boolAttr.getValue())
+    regions.emplace_back(&getThenRegion());
+
+  // If the else region is empty, execution continues after the parent op.
+  if (!boolAttr || !boolAttr.getValue()) {
+    if (!getElseRegion().empty())
+      regions.emplace_back(&getElseRegion());
+    else
+      regions.emplace_back(getResults());
   }
-
-  // Add the successor regions using the condition.
-  regions.push_back(
-      mlir::RegionSuccessor(condition ? &getThenRegion() : elseRegion));
 }
 
 void fir::IfOp::getRegionInvocationBounds(
@@ -3756,6 +3811,17 @@ mlir::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
+}
+
+//===----------------------------------------------------------------------===//
+// FIROpsDialect
+//===----------------------------------------------------------------------===//
+
+void fir::FIROpsDialect::registerOpExternalInterfaces() {
+  // Attach default declare target interfaces to operations which can be marked
+  // as declare target.
+  fir::GlobalOp::attachInterface<
+      mlir::omp::DeclareTargetDefaultModel<fir::GlobalOp>>(*getContext());
 }
 
 // Tablegen operators

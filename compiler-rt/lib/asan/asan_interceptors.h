@@ -112,6 +112,14 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT___STRDUP 0
 #endif
 
+#if SANITIZER_GLIBC && ASAN_INTERCEPT_PTHREAD_CREATE
+# define ASAN_INTERCEPT_TIMEDJOIN 1
+# define ASAN_INTERCEPT_TRYJOIN 1
+#else
+# define ASAN_INTERCEPT_TIMEDJOIN 0
+# define ASAN_INTERCEPT_TRYJOIN 0
+#endif
+
 #if SANITIZER_LINUX &&                                                \
     (defined(__arm__) || defined(__aarch64__) || defined(__i386__) || \
      defined(__x86_64__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64)
@@ -157,6 +165,12 @@ DECLARE_REAL(char*, strstr, const char *s1, const char *s2)
 // OS X interceptors don't need to be initialized with INTERCEPT_FUNCTION.
 #    define ASAN_INTERCEPT_FUNC(name)
 #  endif  // SANITIZER_APPLE
+
+#define ASAN_INTERCEPTOR_ENTER(ctx, func)                                      \
+  AsanInterceptorContext _ctx = {#func};                                       \
+  ctx = (void *)&_ctx;                                                         \
+  (void) ctx;
+#define COMMON_INTERCEPT_FUNCTION(name) ASAN_INTERCEPT_FUNC(name)
 
 #endif  // !SANITIZER_FUCHSIA
 

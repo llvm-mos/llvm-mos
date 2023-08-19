@@ -158,17 +158,17 @@ int i3 = f1(f1(f1(&f1, &f1), f1(&f1, &f1), f1(f1(&f1, &f1), &f1)));
 
 namespace user_defined_literal {
 
-consteval int operator"" _test(unsigned long long i) {
+consteval int operator""_test(unsigned long long i) {
 // expected-note@-1+ {{declared here}}
   return 0;
 }
 
 int i = 0_test;
 
-auto ptr = &operator"" _test;
+auto ptr = &operator""_test;
 // expected-error@-1 {{take address}}
 
-consteval auto operator"" _test1(unsigned long long i) {
+consteval auto operator""_test1(unsigned long long i) {
   return &f_eval;
 }
 
@@ -250,13 +250,13 @@ auto l0 = [](int i) consteval {
   return f(i);
 };
 
-auto l1 = [](int i) constexpr {
-// expected-note@-1 {{declared here}}
+auto l1 = [](int i) constexpr { // expected-error{{cannot take address of immediate call operator}} \
+                                // expected-note {{declared here}}
   int t = f(i);
-// expected-error@-1 {{is not a constant expression}}
-// expected-note@-2 {{function parameter}}
-  return f(0);  
+  return f(0);
 };
+
+int(*test)(int)  = l1;
 
 }
 
@@ -761,7 +761,7 @@ struct S {
 };
 
 S s1; // expected-error {{call to consteval function 'NamespaceScopeConsteval::S::S' is not a constant expression}} \
-         expected-note {{subobject of type 'int' is not initialized}}
+         expected-note {{subobject 'Val' is not initialized}}
 
 template <typename Ty>
 struct T {
@@ -770,7 +770,7 @@ struct T {
 };
 
 T<int> t; // expected-error {{call to consteval function 'NamespaceScopeConsteval::T<int>::T' is not a constant expression}} \
-             expected-note {{subobject of type 'int' is not initialized}}
+             expected-note {{subobject 'Val' is not initialized}}
 
 } // namespace NamespaceScopeConsteval
 
@@ -840,13 +840,13 @@ void func() {
   copy<foo> fail1{good0}; // expected-error {{call to consteval function 'defaulted_special_member_template::copy<defaulted_special_member_template::foo>::copy' is not a constant expression}} \
                              expected-note {{in call to 'copy(good0)'}}
   fail1 = good0;          // expected-error {{call to consteval function 'defaulted_special_member_template::copy<defaulted_special_member_template::foo>::operator=' is not a constant expression}} \
-                             expected-note {{in call to '&fail1->operator=(good0)'}}
+                             expected-note {{in call to 'fail1.operator=(good0)'}}
 
   move<foo> good1;
   move<foo> fail2{static_cast<move<foo>&&>(good1)}; // expected-error {{call to consteval function 'defaulted_special_member_template::move<defaulted_special_member_template::foo>::move' is not a constant expression}} \
                                                        expected-note {{in call to 'move(good1)'}}
   fail2 = static_cast<move<foo>&&>(good1);          // expected-error {{call to consteval function 'defaulted_special_member_template::move<defaulted_special_member_template::foo>::operator=' is not a constant expression}} \
-                                                       expected-note {{in call to '&fail2->operator=(good1)'}}
+                                                       expected-note {{in call to 'fail2.operator=(good1)'}}
 }
 } // namespace defaulted_special_member_template
 
@@ -900,7 +900,7 @@ consteval int aConstevalFunction() { // expected-error {{consteval function neve
 namespace GH50055 {
 enum E {e1=0, e2=1};
 consteval int testDefaultArgForParam(E eParam = (E)-1) {
-// expected-error@-1 {{integer value -1 is outside the valid range of values [0, 1] for this enumeration type}}
+// expected-error@-1 {{integer value -1 is outside the valid range of values [0, 1] for the enumeration type 'E'}}
   return (int)eParam;
 }
 

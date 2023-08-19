@@ -149,15 +149,14 @@ public:
   /// The build directory of this module. This is the directory in
   /// which the module is notionally built, and relative to which its headers
   /// are found.
-  const DirectoryEntry *Directory = nullptr;
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr Directory;
 
   /// The presumed file name for the module map defining this module.
   /// Only non-empty when building from preprocessed source.
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  llvm::PointerUnion<const FileEntryRef::MapEntry *, const DirectoryEntry *>
-      Umbrella;
+  llvm::PointerUnion<FileEntryRef, DirectoryEntryRef> Umbrella;
 
   /// The module signature.
   ASTFileSignature Signature;
@@ -216,7 +215,7 @@ private:
   OptionalFileEntryRef ASTFile;
 
   /// The top-level headers associated with this module.
-  llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
+  llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
 
   /// top-level header filenames that aren't resolved to FileEntries yet.
   std::vector<std::string> TopHeaderNames;
@@ -242,9 +241,7 @@ public:
   struct Header {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
-    OptionalFileEntryRefDegradesToFileEntryPtr Entry;
-
-    explicit operator bool() { return Entry.has_value(); }
+    FileEntryRef Entry;
   };
 
   /// Information about a directory name as found in the module map
@@ -252,9 +249,7 @@ public:
   struct DirectoryName {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
-    const DirectoryEntry *Entry;
-
-    explicit operator bool() { return Entry; }
+    DirectoryEntryRef Entry;
   };
 
   /// The headers that are part of this module.
@@ -651,27 +646,30 @@ public:
     getTopLevelModule()->ASTFile = File;
   }
 
-  /// Retrieve the directory for which this module serves as the
-  /// umbrella.
-  DirectoryName getUmbrellaDir() const;
+  /// Retrieve the umbrella directory as written.
+  std::optional<DirectoryName> getUmbrellaDirAsWritten() const {
+    if (Umbrella && Umbrella.is<DirectoryEntryRef>())
+      return DirectoryName{UmbrellaAsWritten,
+                           UmbrellaRelativeToRootModuleDirectory,
+                           Umbrella.get<DirectoryEntryRef>()};
+    return std::nullopt;
+  }
 
-  /// Retrieve the header that serves as the umbrella header for this
-  /// module.
-  Header getUmbrellaHeader() const {
-    if (auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
+  /// Retrieve the umbrella header as written.
+  std::optional<Header> getUmbrellaHeaderAsWritten() const {
+    if (Umbrella && Umbrella.is<FileEntryRef>())
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-                    FileEntryRef(*ME)};
-    return Header{};
+                    Umbrella.get<FileEntryRef>()};
+    return std::nullopt;
   }
 
-  /// Determine whether this module has an umbrella directory that is
-  /// not based on an umbrella header.
-  bool hasUmbrellaDir() const {
-    return Umbrella && Umbrella.is<const DirectoryEntry *>();
-  }
+  /// Get the effective umbrella directory for this module: either the one
+  /// explicitly written in the module map file, or the parent of the umbrella
+  /// header.
+  OptionalDirectoryEntryRef getEffectiveUmbrellaDir() const;
 
   /// Add a top-level header associated with this module.
-  void addTopHeader(const FileEntry *File);
+  void addTopHeader(FileEntryRef File);
 
   /// Add a top-level header filename associated with this module.
   void addTopHeaderFilename(StringRef Filename) {
@@ -679,7 +677,7 @@ public:
   }
 
   /// The top-level headers associated with this module.
-  ArrayRef<const FileEntry *> getTopHeaders(FileManager &FileMgr);
+  ArrayRef<FileEntryRef> getTopHeaders(FileManager &FileMgr);
 
   /// Determine whether this module has declared its intention to
   /// directly use another module.
@@ -820,6 +818,11 @@ public:
                   VisibleCallback Vis = [](Module *) {},
                   ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
                                            StringRef) {});
+
+  /// Make transitive imports visible for [module.import]/7.
+  void makeTransitiveImportsVisible(
+      Module *M, SourceLocation Loc, VisibleCallback Vis = [](Module *) {},
+      ConflictCallback Cb = [](ArrayRef<Module *>, Module *, StringRef) {});
 
 private:
   /// Import locations for each visible module. Indexed by the module's

@@ -335,7 +335,12 @@ Retry:
 
   case tok::kw_asm: {
     for (const ParsedAttr &AL : CXX11Attrs)
-      Diag(AL.getRange().getBegin(), diag::warn_attribute_ignored) << AL;
+      // Could be relaxed if asm-related regular keyword attributes are
+      // added later.
+      (AL.isRegularKeywordAttribute()
+           ? Diag(AL.getRange().getBegin(), diag::err_keyword_not_allowed)
+           : Diag(AL.getRange().getBegin(), diag::warn_attribute_ignored))
+          << AL;
     // Prevent these from being interpreted as statement attributes later on.
     CXX11Attrs.clear();
     bool msAsm = false;
@@ -543,9 +548,22 @@ StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
     return ParseCaseStatement(StmtCtx, /*MissingCase=*/true, Expr);
   }
 
-  // Otherwise, eat the semicolon.
-  ExpectAndConsumeSemi(diag::err_expected_semi_after_expr);
-  return handleExprStmt(Expr, StmtCtx);
+  Token *CurTok = nullptr;
+  // If the semicolon is missing at the end of REPL input, consider if
+  // we want to do value printing. Note this is only enabled in C++ mode
+  // since part of the implementation requires C++ language features.
+  // Note we shouldn't eat the token since the callback needs it.
+  if (Tok.is(tok::annot_repl_input_end) && Actions.getLangOpts().CPlusPlus)
+    CurTok = &Tok;
+  else
+    // Otherwise, eat the semicolon.
+    ExpectAndConsumeSemi(diag::err_expected_semi_after_expr);
+
+  StmtResult R = handleExprStmt(Expr, StmtCtx);
+  if (CurTok && !R.isInvalid())
+    CurTok->setAnnotationValue(R.get());
+
+  return R;
 }
 
 /// ParseSEHTryBlockCommon
@@ -1056,8 +1074,8 @@ void Parser::DiagnoseLabelAtEndOfCompoundStatement() {
                   ? diag::warn_cxx20_compat_label_end_of_compound_statement
                   : diag::ext_cxx_label_end_of_compound_statement);
   } else {
-    Diag(Tok, getLangOpts().C2x
-                  ? diag::warn_c2x_compat_label_end_of_compound_statement
+    Diag(Tok, getLangOpts().C23
+                  ? diag::warn_c23_compat_label_end_of_compound_statement
                   : diag::ext_c_label_end_of_compound_statement);
   }
 }
@@ -1606,7 +1624,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   IfScope.Exit();
 
   // If the then or else stmt is invalid and the other is valid (and present),
-  // make turn the invalid one into a null stmt to avoid dropping the other
+  // turn the invalid one into a null stmt to avoid dropping the other
   // part.  If both are invalid, return error.
   if ((ThenStmt.isInvalid() && ElseStmt.isInvalid()) ||
       (ThenStmt.isInvalid() && ElseStmt.get() == nullptr) ||
@@ -1617,7 +1635,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 
   if (IsConsteval) {
     auto IsCompoundStatement = [](const Stmt *S) {
-      if (const auto *Outer = dyn_cast_or_null<AttributedStmt>(S))
+      if (const auto *Outer = dyn_cast_if_present<AttributedStmt>(S))
         S = Outer->getSubStmt();
       return isa_and_nonnull<clang::CompoundStmt>(S);
     };
@@ -1875,7 +1893,8 @@ StmtResult Parser::ParseDoStatement() {
   ExprResult Cond = ParseExpression();
   // Correct the typos in condition before closing the scope.
   if (Cond.isUsable())
-    Cond = Actions.CorrectDelayedTyposInExpr(Cond);
+    Cond = Actions.CorrectDelayedTyposInExpr(Cond, /*InitDecl=*/nullptr,
+                                             /*RecoverUncorrectedTypos=*/true);
   else {
     if (!Tok.isOneOf(tok::r_paren, tok::r_square, tok::r_brace))
       SkipUntil(tok::semi);
@@ -2035,15 +2054,15 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       Diag(Tok, diag::warn_gcc_variable_decl_in_for_loop);
     }
     DeclGroupPtrTy DG;
+    SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
     if (Tok.is(tok::kw_using)) {
       DG = ParseAliasDeclarationInInitStatement(DeclaratorContext::ForInit,
                                                 attrs);
+      FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
     } else {
       // In C++0x, "for (T NS:a" might not be a typo for ::
       bool MightBeForRangeStmt = getLangOpts().CPlusPlus;
       ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
-
-      SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       ParsedAttributes DeclSpecAttrs(AttrFactory);
       DG = ParseSimpleDeclaration(
           DeclaratorContext::ForInit, DeclEnd, attrs, DeclSpecAttrs, false,
@@ -2183,9 +2202,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     if (Tok.isNot(tok::semi)) {
       if (!SecondPart.isInvalid())
         Diag(Tok, diag::err_expected_semi_for);
-      else
-        // Skip until semicolon or rparen, don't consume it.
-        SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
+      SkipUntil(tok::r_paren, StopAtSemi | StopBeforeMatch);
     }
 
     if (Tok.is(tok::semi)) {

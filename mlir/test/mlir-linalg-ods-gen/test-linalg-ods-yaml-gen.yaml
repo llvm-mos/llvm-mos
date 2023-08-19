@@ -62,10 +62,8 @@ structured_op: !LinalgStructuredOpConfig
 
 # ODS-LABEL:  def Test1Op : LinalgStructuredBase_Op<"test1"
 
-#       ODS:  let summary = [{ Title. }];
-#  ODS-NEXT:  let description = [{
-#  ODS-NEXT:    Detailed description.
-#  ODS-NEXT:  }];
+#       ODS:  let summary = [{Title.}];
+#  ODS-NEXT:  let description = [{Detailed description.}];
 
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
@@ -91,7 +89,7 @@ structured_op: !LinalgStructuredOpConfig
 #  IMPL-NEXT:  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
 #  IMPL-NEXT:                                return attr.getName() == "cast"; });
 #  IMPL-NEXT:  if (castIter != attrs.end()) {
-#  IMPL-NEXT:    if (auto attr = castIter->getValue().dyn_cast<TypeFnAttr>())
+#  IMPL-NEXT:    if (auto attr = llvm::dyn_cast<TypeFnAttr>(castIter->getValue()))
 #  IMPL-NEXT:      castVal = attr.getValue();
 #  IMPL-NEXT:  }
 

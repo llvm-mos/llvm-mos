@@ -283,9 +283,6 @@ public:
   /// print the supported cpus for the current target
   unsigned PrintSupportedCPUs : 1;
 
-  /// Output time trace profile.
-  unsigned TimeTrace : 1;
-
   /// Show the -version text.
   unsigned ShowVersion : 1;
 
@@ -459,6 +456,12 @@ public:
   // ignore when extracting documentation.
   std::vector<std::string> ExtractAPIIgnoresFileList;
 
+  // Currently this is only used as part of the `-emit-symbol-graph`
+  // action.
+  // Location of output directory where symbol graph information would
+  // be dumped
+  std::string SymbolGraphOutputDir;
+
   /// Args to pass to the plugins
   std::map<std::string, std::vector<std::string>> PluginArgs;
 
@@ -513,16 +516,16 @@ public:
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
-        ShowStats(false), AppendStats(false), TimeTrace(false),
-        ShowVersion(false), FixWhatYouCan(false), FixOnlyWarnings(false),
-        FixAndRecompile(false), FixToTemporaries(false),
-        ARCMTMigrateEmitARCErrors(false), SkipFunctionBodies(false),
-        UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
-        ASTDumpDecls(false), ASTDumpLookups(false),
-        BuildingImplicitModule(false), BuildingImplicitModuleUsesLock(true),
-        ModulesEmbedAllFiles(false), IncludeTimestamps(true),
-        UseTemporary(true), AllowPCMWithCompilerErrors(false),
-        ModulesShareFileManager(true), TimeTraceGranularity(500) {}
+        ShowStats(false), AppendStats(false), ShowVersion(false),
+        FixWhatYouCan(false), FixOnlyWarnings(false), FixAndRecompile(false),
+        FixToTemporaries(false), ARCMTMigrateEmitARCErrors(false),
+        SkipFunctionBodies(false), UseGlobalModuleIndex(true),
+        GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
+        ASTDumpLookups(false), BuildingImplicitModule(false),
+        BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
+        IncludeTimestamps(true), UseTemporary(true),
+        AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
+        TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

@@ -15,7 +15,6 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -721,7 +720,7 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
           return false;
 
         // Signal number and signal name are required.
-        int signo;
+        uint64_t signo;
         if (!dict->GetValueForKeyAsInteger("signo", signo))
           return false;
 

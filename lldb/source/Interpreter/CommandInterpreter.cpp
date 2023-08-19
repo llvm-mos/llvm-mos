@@ -46,7 +46,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -616,9 +616,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          CommandCompletions::eSymbolCompletion |
-              CommandCompletions::eSourceFileCompletion,
-          false));
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
 
   if (break_regex_cmd_up) {
     bool success = true;
@@ -669,9 +667,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          CommandCompletions::eSymbolCompletion |
-              CommandCompletions::eSourceFileCompletion,
-          false));
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
 
   if (tbreak_regex_cmd_up) {
     bool success = true;
@@ -849,7 +845,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-list 0x<address>     // List around specified address\n"
           "_regexp-list -[<count>]      // List previous <count> lines\n"
           "_regexp-list                 // List subsequent lines",
-          CommandCompletions::eSourceFileCompletion, false));
+          lldb::eSourceFileCompletion, false));
   if (list_regex_cmd_up) {
     if (list_regex_cmd_up->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                            "source list --line %1") &&
@@ -1898,7 +1894,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   LLDB_LOGF(log, "Processing command: %s", command_line);
   LLDB_SCOPED_TIMERF("Processing command: %s.", command_line);
 
-  if (GetDebugger().InterruptRequested()) {
+  if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted initiating command")) {
     result.AppendError("... Interrupted");
     return false;
   }
@@ -3075,7 +3071,8 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   }
 
   std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
-  if (had_output && GetDebugger().InterruptRequested())
+  if (had_output && INTERRUPT_REQUESTED(GetDebugger(), 
+                                        "Interrupted dumping command output"))
     stream->Printf("\n... Interrupted.\n");
   stream->Flush();
 }

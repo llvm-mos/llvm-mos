@@ -15,7 +15,6 @@ static_library("Analysis") {
   sources = [
     "AliasAnalysis.cpp",
     "AliasAnalysisEvaluator.cpp",
-    "AliasAnalysisSummary.cpp",
     "AliasSetTracker.cpp",
     "Analysis.cpp",
     "AssumeBundleQueries.cpp",
@@ -82,7 +81,6 @@ static_library("Analysis") {
     "LoopPass.cpp",
     "LoopUnrollAnalyzer.cpp",
     "MLInlineAdvisor.cpp",
-    "MemDepPrinter.cpp",
     "MemDerefPrinter.cpp",
     "MemoryBuiltins.cpp",
     "MemoryDependenceAnalysis.cpp",

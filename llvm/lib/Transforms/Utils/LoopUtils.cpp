@@ -556,12 +556,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
       // Removes all incoming values from all other exiting blocks (including
       // duplicate values from an exiting block).
       // Nuke all entries except the zero'th entry which is the preheader entry.
-      // NOTE! We need to remove Incoming Values in the reverse order as done
-      // below, to keep the indices valid for deletion (removeIncomingValues
-      // updates getNumIncomingValues and shifts all values down into the
-      // operand being deleted).
-      for (unsigned i = 0, e = P.getNumIncomingValues() - 1; i != e; ++i)
-        P.removeIncomingValue(e - i, false);
+      P.removeIncomingValueIf([](unsigned Idx) { return Idx != 0; },
+                              /* DeletePHIIfEmpty */ false);
 
       assert((P.getNumIncomingValues() == 1 &&
               P.getIncomingBlock(PredIndex) == Preheader) &&
@@ -641,18 +637,17 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
       }
 
     // After the loop has been deleted all the values defined and modified
-    // inside the loop are going to be unavailable.
-    // Since debug values in the loop have been deleted, inserting an undef
-    // dbg.value truncates the range of any dbg.value before the loop where the
-    // loop used to be. This is particularly important for constant values.
+    // inside the loop are going to be unavailable. Values computed in the
+    // loop will have been deleted, automatically causing their debug uses
+    // be be replaced with undef. Loop invariant values will still be available.
+    // Move dbg.values out the loop so that earlier location ranges are still
+    // terminated and loop invariant assignments are preserved.
     Instruction *InsertDbgValueBefore = ExitBlock->getFirstNonPHI();
     assert(InsertDbgValueBefore &&
            "There should be a non-PHI instruction in exit block, else these "
            "instructions will have no parent.");
-    for (auto *DVI : DeadDebugInst) {
-      DVI->setKillLocation();
+    for (auto *DVI : DeadDebugInst)
       DVI->moveBefore(InsertDbgValueBefore);
-    }
   }
 
   // Remove the block from the reference counting scheme, so that we can
@@ -769,7 +764,7 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   // exit blocks.  If that happened, we need to rebuild LCSSA on the outermost
   // loop which might have a had a block removed.
   if (OutermostLoop != L)
-    formLCSSARecursively(*OutermostLoop, DT, &LI);
+    formLCSSARecursively(*OutermostLoop, DT, &LI, &SE);
 }
 
 
@@ -909,6 +904,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
     return Intrinsic::minnum;
   case RecurKind::FMax:
     return Intrinsic::maxnum;
+  case RecurKind::FMinimum:
+    return Intrinsic::minimum;
+  case RecurKind::FMaximum:
+    return Intrinsic::maximum;
   }
 }
 
@@ -928,11 +927,14 @@ CmpInst::Predicate llvm::getMinMaxReductionPredicate(RecurKind RK) {
     return CmpInst::FCMP_OLT;
   case RecurKind::FMax:
     return CmpInst::FCMP_OGT;
+  // We do not add FMinimum/FMaximum recurrence kind here since there is no
+  // equivalent predicate which compares signed zeroes according to the
+  // semantics of the intrinsics (llvm.minimum/maximum).
   }
 }
 
-Value *llvm::createSelectCmpOp(IRBuilderBase &Builder, Value *StartVal,
-                               RecurKind RK, Value *Left, Value *Right) {
+Value *llvm::createAnyOfOp(IRBuilderBase &Builder, Value *StartVal,
+                           RecurKind RK, Value *Left, Value *Right) {
   if (auto VTy = dyn_cast<VectorType>(Left->getType()))
     StartVal = Builder.CreateVectorSplat(VTy->getElementCount(), StartVal);
   Value *Cmp =
@@ -943,7 +945,8 @@ Value *llvm::createSelectCmpOp(IRBuilderBase &Builder, Value *StartVal,
 Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
-  if (Ty->isIntOrIntVectorTy()) {
+  if (Ty->isIntOrIntVectorTy() ||
+      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum)) {
     // TODO: Add float minnum/maxnum support when FMF nnan is set.
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
     return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
@@ -1021,14 +1024,14 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
 }
 
-Value *llvm::createSelectCmpTargetReduction(IRBuilderBase &Builder,
-                                            const TargetTransformInfo *TTI,
-                                            Value *Src,
-                                            const RecurrenceDescriptor &Desc,
-                                            PHINode *OrigPhi) {
-  assert(RecurrenceDescriptor::isSelectCmpRecurrenceKind(
-             Desc.getRecurrenceKind()) &&
-         "Unexpected reduction kind");
+Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder,
+                                        const TargetTransformInfo *TTI,
+                                        Value *Src,
+                                        const RecurrenceDescriptor &Desc,
+                                        PHINode *OrigPhi) {
+  assert(
+      RecurrenceDescriptor::isAnyOfRecurrenceKind(Desc.getRecurrenceKind()) &&
+      "Unexpected reduction kind");
   Value *InitVal = Desc.getRecurrenceStartValue();
   Value *NewVal = nullptr;
 
@@ -1094,6 +1097,10 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
     return Builder.CreateFPMaxReduce(Src);
   case RecurKind::FMin:
     return Builder.CreateFPMinReduce(Src);
+  case RecurKind::FMinimum:
+    return Builder.CreateFPMinimumReduce(Src);
+  case RecurKind::FMaximum:
+    return Builder.CreateFPMaximumReduce(Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }
@@ -1110,8 +1117,8 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
   B.setFastMathFlags(Desc.getFastMathFlags());
 
   RecurKind RK = Desc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isSelectCmpRecurrenceKind(RK))
-    return createSelectCmpTargetReduction(B, TTI, Src, Desc, OrigPhi);
+  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+    return createAnyOfTargetReduction(B, TTI, Src, Desc, OrigPhi);
 
   return createSimpleTargetReduction(B, TTI, Src, RK);
 }
@@ -1629,7 +1636,7 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
                                   Loop *TheLoop, Instruction *Loc,
                                   SCEVExpander &Exp) {
   LLVMContext &Ctx = Loc->getContext();
-  Type *PtrArithTy = Type::getInt8PtrTy(Ctx, CG->AddressSpace);
+  Type *PtrArithTy = PointerType::get(Ctx, CG->AddressSpace);
 
   Value *Start = nullptr, *End = nullptr;
   LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
@@ -1682,20 +1689,12 @@ Value *llvm::addRuntimeChecks(
     const PointerBounds &A = Check.first, &B = Check.second;
     // Check if two pointers (A and B) conflict where conflict is computed as:
     // start(A) <= end(B) && start(B) <= end(A)
-    unsigned AS0 = A.Start->getType()->getPointerAddressSpace();
-    unsigned AS1 = B.Start->getType()->getPointerAddressSpace();
 
-    assert((AS0 == B.End->getType()->getPointerAddressSpace()) &&
-           (AS1 == A.End->getType()->getPointerAddressSpace()) &&
+    assert((A.Start->getType()->getPointerAddressSpace() ==
+            B.End->getType()->getPointerAddressSpace()) &&
+           (B.Start->getType()->getPointerAddressSpace() ==
+            A.End->getType()->getPointerAddressSpace()) &&
            "Trying to bounds check pointers with different address spaces");
-
-    Type *PtrArithTy0 = Type::getInt8PtrTy(Ctx, AS0);
-    Type *PtrArithTy1 = Type::getInt8PtrTy(Ctx, AS1);
-
-    Value *Start0 = ChkBuilder.CreateBitCast(A.Start, PtrArithTy0, "bc");
-    Value *Start1 = ChkBuilder.CreateBitCast(B.Start, PtrArithTy1, "bc");
-    Value *End0 = ChkBuilder.CreateBitCast(A.End, PtrArithTy1, "bc");
-    Value *End1 = ChkBuilder.CreateBitCast(B.End, PtrArithTy0, "bc");
 
     // [A|B].Start points to the first accessed byte under base [A|B].
     // [A|B].End points to the last accessed byte, plus one.
@@ -1705,8 +1704,8 @@ Value *llvm::addRuntimeChecks(
     // bound0 = (B.Start < A.End)
     // bound1 = (A.Start < B.End)
     //  IsConflict = bound0 & bound1
-    Value *Cmp0 = ChkBuilder.CreateICmpULT(Start0, End1, "bound0");
-    Value *Cmp1 = ChkBuilder.CreateICmpULT(Start1, End0, "bound1");
+    Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, B.End, "bound0");
+    Value *Cmp1 = ChkBuilder.CreateICmpULT(B.Start, A.End, "bound1");
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
     if (MemoryRuntimeCheck) {
       IsConflict =

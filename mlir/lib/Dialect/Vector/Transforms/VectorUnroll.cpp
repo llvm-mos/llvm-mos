@@ -18,10 +18,13 @@
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
 #include <numeric>
 #include <optional>
 
-#define DEBUG_TYPE "vector-unrolling"
+#define DEBUG_TYPE "vector-unroll"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -138,24 +141,47 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
 /// std::nullopt if the op shouldn't be or cannot be unrolled.
 static std::optional<SmallVector<int64_t>>
 getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
-  if (options.filterConstraint && failed(options.filterConstraint(op)))
+  LDBG("");
+  LDBG("Get unroll shape for op " << op->getName().getStringRef());
+  if (options.filterConstraint && failed(options.filterConstraint(op))) {
+    LDBG("--no filter constraint -> BAIL");
     return std::nullopt;
+  }
   assert(options.nativeShape &&
          "vector unrolling expects the native shape or native"
          "shape call back function to be set");
   auto unrollableVectorOp = dyn_cast<VectorUnrollOpInterface>(op);
-  if (!unrollableVectorOp)
+  if (!unrollableVectorOp) {
+    LDBG("--not an unrollable op -> BAIL");
     return std::nullopt;
+  }
   auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
-  if (!maybeUnrollShape)
+  if (!maybeUnrollShape) {
+    LDBG("--could not get shape of op " << *op << " -> BAIL");
     return std::nullopt;
+  }
+  LLVM_DEBUG(
+      llvm::interleaveComma(*maybeUnrollShape, DBGS() << "--vector op shape: ");
+      llvm::dbgs() << "\n";);
+
   std::optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
-  if (!targetShape)
+  if (!targetShape) {
+    LDBG("--no unrolling target shape defined " << *op << "-> SKIP");
     return std::nullopt;
+  }
+  LLVM_DEBUG(llvm::interleaveComma(*targetShape, DBGS() << "--target shape: ");
+             llvm::dbgs() << "\n";);
+
   auto maybeShapeRatio = computeShapeRatio(*maybeUnrollShape, *targetShape);
-  if (!maybeShapeRatio ||
-      llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
+  if (!maybeShapeRatio) {
+    LDBG("--could not compute integral shape ratio -> BAIL");
     return std::nullopt;
+  }
+  if (llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; })) {
+    LDBG("--no unrolling needed -> SKIP");
+    return std::nullopt;
+  }
+  LDBG("--found an integral shape ratio to unroll to -> SUCCESS");
   return targetShape;
 }
 
@@ -316,7 +342,7 @@ struct UnrollContractionPattern
     auto targetShape = getTargetShape(options, contractOp);
     if (!targetShape)
       return failure();
-    auto dstVecType = contractOp.getResultType().cast<VectorType>();
+    auto dstVecType = cast<VectorType>(contractOp.getResultType());
     SmallVector<int64_t> originalSize = *contractOp.getShapeForUnroll();
 
     Location loc = contractOp.getLoc();
@@ -491,7 +517,7 @@ struct UnrollElementwisePattern : public RewritePattern {
     auto targetShape = getTargetShape(options, op);
     if (!targetShape)
       return failure();
-    auto dstVecType = op->getResult(0).getType().cast<VectorType>();
+    auto dstVecType = cast<VectorType>(op->getResult(0).getType());
     SmallVector<int64_t> originalSize =
         *cast<VectorUnrollOpInterface>(op).getShapeForUnroll();
     SmallVector<int64_t> ratio = *computeShapeRatio(originalSize, *targetShape);
@@ -512,7 +538,7 @@ struct UnrollElementwisePattern : public RewritePattern {
           getVectorOffset(ratioStrides, i, *targetShape);
       SmallVector<Value> extractOperands;
       for (OpOperand &operand : op->getOpOperands()) {
-        auto vecType = operand.get().getType().template dyn_cast<VectorType>();
+        auto vecType = dyn_cast<VectorType>(operand.get().getType());
         if (!vecType) {
           extractOperands.push_back(operand.get());
           continue;

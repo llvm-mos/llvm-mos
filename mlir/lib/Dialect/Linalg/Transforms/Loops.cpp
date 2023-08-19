@@ -162,7 +162,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   SmallVector<SmallVector<Value>, 8> indexing;
   SmallVector<Value> outputBuffers;
   for (OpOperand *outputOperand : linalgOp.getDpsInitOperands()) {
-    if (!outputOperand->get().getType().isa<MemRefType>())
+    if (!isa<MemRefType>(outputOperand->get().getType()))
       continue;
     indexing.push_back(makeCanonicalAffineApplies(
         b, loc, linalgOp.getMatchingIndexingMap(outputOperand),
@@ -242,7 +242,7 @@ static FailureOr<LinalgLoops> linalgOpToLoopsImpl(RewriterBase &rewriter,
       return failure();
     // The induction variable is a block argument of the entry block of the
     // loop operation.
-    BlockArgument ivVal = iv.dyn_cast<BlockArgument>();
+    BlockArgument ivVal = dyn_cast<BlockArgument>(iv);
     if (!ivVal)
       return failure();
     loopSet.insert(ivVal.getOwner()->getParentOp());
@@ -312,8 +312,8 @@ struct FoldAffineOp : public RewritePattern {
 };
 
 template <typename LoopType>
-static void lowerLinalgToLoopsImpl(func::FuncOp funcOp) {
-  MLIRContext *context = funcOp.getContext();
+static void lowerLinalgToLoopsImpl(Operation *enclosingOp) {
+  MLIRContext *context = enclosingOp->getContext();
   RewritePatternSet patterns(context);
   patterns.add<LinalgRewritePattern<LoopType>>(context);
   memref::DimOp::getCanonicalizationPatterns(patterns, context);
@@ -321,7 +321,7 @@ static void lowerLinalgToLoopsImpl(func::FuncOp funcOp) {
   affine::AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   patterns.add<FoldAffineOp>(context);
   // Just apply the patterns greedily.
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(enclosingOp, std::move(patterns));
 }
 
 struct LowerToAffineLoops
@@ -352,18 +352,15 @@ struct LowerToParallelLoops
 
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createConvertLinalgToLoopsPass() {
+std::unique_ptr<Pass> mlir::createConvertLinalgToLoopsPass() {
   return std::make_unique<LowerToLoops>();
 }
 
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createConvertLinalgToParallelLoopsPass() {
+std::unique_ptr<Pass> mlir::createConvertLinalgToParallelLoopsPass() {
   return std::make_unique<LowerToParallelLoops>();
 }
 
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createConvertLinalgToAffineLoopsPass() {
+std::unique_ptr<Pass> mlir::createConvertLinalgToAffineLoopsPass() {
   return std::make_unique<LowerToAffineLoops>();
 }
 

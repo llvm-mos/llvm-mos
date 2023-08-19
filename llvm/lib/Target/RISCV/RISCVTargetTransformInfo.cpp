@@ -30,15 +30,16 @@ static cl::opt<unsigned> RVVRegisterWidthLMUL(
 static cl::opt<unsigned> SLPMaxVF(
     "riscv-v-slp-max-vf",
     cl::desc(
-        "Result used for getMaximumVF query which is used exclusively by "
-        "SLP vectorizer.  Defaults to 1 which disables SLP."),
-    cl::init(1), cl::Hidden);
+        "Overrides result used for getMaximumVF query which is used "
+        "exclusively by SLP vectorizer."),
+    cl::Hidden);
 
 InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) {
   // TODO: Here assume reciprocal throughput is 1 for LMUL_1, it is
   // implementation-defined.
   if (!VT.isVector())
     return InstructionCost::getInvalid();
+  unsigned DLenFactor = ST->getDLenFactor();
   unsigned Cost;
   if (VT.isScalableVector()) {
     unsigned LMul;
@@ -46,13 +47,13 @@ InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) {
     std::tie(LMul, Fractional) =
         RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(VT));
     if (Fractional)
-      Cost = 1;
+      Cost = LMul <= DLenFactor ? (DLenFactor / LMul) : 1;
     else
-      Cost = LMul;
+      Cost = (LMul * DLenFactor);
   } else {
-    Cost = VT.getSizeInBits() / ST->getRealMinVLen();
+    Cost = divideCeil(VT.getSizeInBits(), ST->getRealMinVLen() / DLenFactor);
   }
-  return std::max<unsigned>(Cost, 1);
+  return Cost;
 }
 
 InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
@@ -145,8 +146,8 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     Takes12BitImm = true;
     break;
   case Instruction::Mul:
-    // Negated power of 2 is a shift and a negate.
-    if (Imm.isNegatedPowerOf2())
+    // Power of 2 is a shift. Negated power of 2 is a shift and a negate.
+    if (Imm.isPowerOf2() || Imm.isNegatedPowerOf2())
       return TTI::TCC_Free;
     // FIXME: There is no MULI instruction.
     Takes12BitImm = true;
@@ -252,6 +253,22 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,  TTI::TargetCostKind CostKind) {
                              /*AddressSpace=*/0, CostKind);
 }
 
+static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
+                                        LLVMContext &C) {
+  assert((DataVT.getScalarSizeInBits() != 8 ||
+          DataVT.getVectorNumElements() <= 256) && "unhandled case in lowering");
+  MVT IndexVT = DataVT.changeTypeToInteger();
+  if (IndexVT.getScalarType().bitsGT(ST.getXLenVT()))
+    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+  return cast<VectorType>(EVT(IndexVT).getTypeForEVT(C));
+}
+
+/// Return the cost of a vrgather.vv instruction for the type VT.  vrgather.vv
+/// is generally quadratic in the number of vreg implied by LMUL.  Note that
+/// operand (index and possibly mask) are handled separately.
+InstructionCost RISCVTTIImpl::getVRGatherVVCost(MVT VT) {
+  return getLMULCost(VT) * getLMULCost(VT);
+}
 
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
@@ -298,10 +315,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         if (LT.first == 1 &&
             (LT.second.getScalarSizeInBits() != 8 ||
              LT.second.getVectorNumElements() <= 256)) {
-          VectorType *IdxTy = VectorType::get(IntegerType::getInt8Ty(Tp->getContext()),
-                                              Tp->getElementCount());
+          VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
           InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
-          return IndexCost + getLMULCost(LT.second);
+          return IndexCost + getVRGatherVVCost(LT.second);
         }
       }
       break;
@@ -317,11 +333,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
              LT.second.getVectorNumElements() <= 256)) {
           auto &C = Tp->getContext();
           auto EC = Tp->getElementCount();
-          VectorType *IdxTy = VectorType::get(IntegerType::getInt8Ty(C), EC);
+          VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
           VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
           InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
           InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
-          return 2 * IndexCost + 2 * getLMULCost(LT.second) + MaskCost;
+          return 2 * IndexCost + 2 * getVRGatherVVCost(LT.second) + MaskCost;
         }
       }
       break;
@@ -397,11 +413,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     return 2 * LT.first * getLMULCost(LT.second);
   case TTI::SK_Reverse: {
     // TODO: Cases to improve here:
-    // * LMUL > 1
+    // * Illegal vector types
     // * i64 on RV32
     // * i1 vector
-
-    // Most of the cost here is producing the vrgather index register
+    // At low LMUL, most of the cost is producing the vrgather index register.
+    // At high LMUL, the cost of the vrgather itself will dominate.
     // Example sequence:
     //   csrr a0, vlenb
     //   srli a0, a0, 3
@@ -410,14 +426,14 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     //   vid.v v9
     //   vrsub.vx v10, v9, a0
     //   vrgather.vv v9, v8, v10
-    unsigned LenCost = 3;
+    InstructionCost LenCost = 3;
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    if (Tp->getElementType()->isIntegerTy(1))
-      // Mask operation additionally required extend and truncate
-      return LT.first * (LenCost + 6);
-    return LT.first * (LenCost + 3);
+    InstructionCost GatherCost = 2 + getVRGatherVVCost(LT.second);
+    // Mask operation additionally required extend and truncate
+    InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
+    return LT.first * (LenCost + GatherCost + ExtendCost);
   }
   }
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
@@ -439,6 +455,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
+  if (isa<ScalableVectorType>(VecTy))
+    return InstructionCost::getInvalid();
   auto *FVTy = cast<FixedVectorType>(VecTy);
   InstructionCost MemCost =
       getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
@@ -459,7 +477,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       // it's getMemoryOpCost returns a really expensive cost for types like
       // <6 x i8>, which show up when doing interleaves of Factor=3 etc.
       // Should the memory op cost of these be cheaper?
-      if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, DL)) {
+      if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, Alignment,
+                                            AddressSpace, DL)) {
         InstructionCost LegalMemCost = getMemoryOpCost(
             Opcode, LegalFVTy, Alignment, AddressSpace, CostKind);
         return LT.first + LegalMemCost;
@@ -1200,15 +1219,15 @@ unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) {
 }
 
 InstructionCost
-RISCVTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                     bool IsUnsigned, FastMathFlags FMF,
+RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                     FastMathFlags FMF,
                                      TTI::TargetCostKind CostKind) {
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
+    return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   // Skip if scalar size of Ty is bigger than ELEN.
   if (Ty->getScalarSizeInBits() > ST->getELEN())
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
+    return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   if (Ty->getElementType()->isIntegerTy(1))
@@ -1586,6 +1605,55 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   }
 }
 
+// TODO: Deduplicate from TargetTransformInfoImplCRTPBase.
+InstructionCost RISCVTTIImpl::getPointersChainCost(
+    ArrayRef<const Value *> Ptrs, const Value *Base,
+    const TTI::PointersChainInfo &Info, Type *AccessTy,
+    TTI::TargetCostKind CostKind) {
+  InstructionCost Cost = TTI::TCC_Free;
+  // In the basic model we take into account GEP instructions only
+  // (although here can come alloca instruction, a value, constants and/or
+  // constant expressions, PHIs, bitcasts ... whatever allowed to be used as a
+  // pointer). Typically, if Base is a not a GEP-instruction and all the
+  // pointers are relative to the same base address, all the rest are
+  // either GEP instructions, PHIs, bitcasts or constants. When we have same
+  // base, we just calculate cost of each non-Base GEP as an ADD operation if
+  // any their index is a non-const.
+  // If no known dependecies between the pointers cost is calculated as a sum
+  // of costs of GEP instructions.
+  for (auto [I, V] : enumerate(Ptrs)) {
+    const auto *GEP = dyn_cast<GetElementPtrInst>(V);
+    if (!GEP)
+      continue;
+    if (Info.isSameBase() && V != Base) {
+      if (GEP->hasAllConstantIndices())
+        continue;
+      // If the chain is unit-stride and BaseReg + stride*i is a legal
+      // addressing mode, then presume the base GEP is sitting around in a
+      // register somewhere and check if we can fold the offset relative to
+      // it.
+      unsigned Stride = DL.getTypeStoreSize(AccessTy);
+      if (Info.isUnitStride() &&
+          isLegalAddressingMode(AccessTy,
+                                /* BaseGV */ nullptr,
+                                /* BaseOffset */ Stride * I,
+                                /* HasBaseReg */ true,
+                                /* Scale */ 0,
+                                GEP->getType()->getPointerAddressSpace()))
+        continue;
+      Cost += getArithmeticInstrCost(Instruction::Add, GEP->getType(), CostKind,
+                                     {TTI::OK_AnyValue, TTI::OP_None},
+                                     {TTI::OK_AnyValue, TTI::OP_None},
+                                     std::nullopt);
+    } else {
+      SmallVector<const Value *> Indices(GEP->indices());
+      Cost += getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
+                         Indices, AccessTy, CostKind);
+    }
+  }
+  return Cost;
+}
+
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                            TTI::UnrollingPreferences &UP,
                                            OptimizationRemarkEmitter *ORE) {
@@ -1683,12 +1751,19 @@ unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
 }
 
 unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
-  // This interface is currently only used by SLP.  Returning 1 (which is the
-  // default value for SLPMaxVF) disables SLP. We currently have a cost modeling
-  // problem w/ constant materialization which causes SLP to perform majorly
-  // unprofitable transformations.
-  // TODO: Figure out constant materialization cost modeling and remove.
-  return SLPMaxVF;
+  if (SLPMaxVF.getNumOccurrences())
+    return SLPMaxVF;
+
+  // Return how many elements can fit in getRegisterBitwidth.  This is the
+  // same routine as used in LoopVectorizer.  We should probably be
+  // accounting for whether we actually have instructions with the right
+  // lane type, but we don't have enough information to do that without
+  // some additional plumbing which hasn't been justified yet.
+  TypeSize RegWidth =
+    getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  // If no vector registers, or absurd element widths, disable
+  // vectorization by returning 1.
+  return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
 }
 
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,

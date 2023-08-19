@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_
 #define MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -95,7 +96,7 @@ template <typename T>
 inline RankedTensorType getRankedTensorType(T &&t) {
   assert(static_cast<bool>(std::forward<T>(t)) &&
          "getRankedTensorType got null argument");
-  return std::forward<T>(t).getType().template cast<RankedTensorType>();
+  return cast<RankedTensorType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to abbreviate casting `getType()`.
@@ -103,12 +104,22 @@ template <typename T>
 inline MemRefType getMemRefType(T &&t) {
   assert(static_cast<bool>(std::forward<T>(t)) &&
          "getMemRefType got null argument");
-  return std::forward<T>(t).getType().template cast<MemRefType>();
+  return cast<MemRefType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to get a sparse encoding attribute from a type.
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
+
+/// Convenience method to query whether a given DLT needs both position and
+/// coordinates array or only coordinates array.
+constexpr inline bool isDLTWithPos(DimLevelType dlt) {
+  return isCompressedWithHiDLT(dlt) || isCompressedDLT(dlt);
+}
+constexpr inline bool isDLTWithCrd(DimLevelType dlt) {
+  return isSingletonDLT(dlt) || isCompressedWithHiDLT(dlt) ||
+         isCompressedDLT(dlt);
+}
 
 /// Returns true iff the given sparse tensor encoding attribute has a trailing
 /// COO region starting at the given level.
@@ -129,15 +140,23 @@ RankedTensorType getCOOFromTypeWithOrdering(RankedTensorType src,
 
 RankedTensorType getCOOFromType(RankedTensorType src, bool ordered);
 
+/// Returns true iff MLIR operand has any sparse operand.
+inline bool hasAnySparseOperand(Operation *op) {
+  return llvm::any_of(op->getOperands().getTypes(), [](Type t) {
+    return getSparseTensorEncoding(t) != nullptr;
+  });
+}
+
+/// Returns true iff MLIR operand has any sparse result.
+inline bool hasAnySparseResult(Operation *op) {
+  return llvm::any_of(op->getResults().getTypes(), [](Type t) {
+    return getSparseTensorEncoding(t) != nullptr;
+  });
+}
+
 /// Returns true iff MLIR operand has any sparse operand or result.
 inline bool hasAnySparseOperandOrResult(Operation *op) {
-  bool anySparseIn = llvm::any_of(op->getOperands().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
-  bool anySparseOut = llvm::any_of(op->getResults().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
-  return anySparseIn || anySparseOut;
+  return hasAnySparseOperand(op) || hasAnySparseResult(op);
 }
 
 //

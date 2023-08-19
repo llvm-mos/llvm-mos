@@ -44,7 +44,7 @@ using namespace mlir::bufferization;
 static Value materializeToTensor(OpBuilder &builder, TensorType type,
                                  ValueRange inputs, Location loc) {
   assert(inputs.size() == 1);
-  assert(inputs[0].getType().isa<BaseMemRefType>());
+  assert(isa<BaseMemRefType>(inputs[0].getType()));
   return builder.create<bufferization::ToTensorOp>(loc, type, inputs[0]);
 }
 
@@ -66,11 +66,11 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
                               ValueRange inputs, Location loc) -> Value {
     assert(inputs.size() == 1 && "expected exactly one input");
 
-    if (auto inputType = inputs[0].getType().dyn_cast<MemRefType>()) {
+    if (auto inputType = dyn_cast<MemRefType>(inputs[0].getType())) {
       // MemRef to MemRef cast.
       assert(inputType != type && "expected different types");
       // Unranked to ranked and ranked to unranked casts must be explicit.
-      auto rankedDestType = type.dyn_cast<MemRefType>();
+      auto rankedDestType = dyn_cast<MemRefType>(type);
       if (!rankedDestType)
         return nullptr;
       FailureOr<Value> replacement =
@@ -80,7 +80,7 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
       return *replacement;
     }
 
-    if (inputs[0].getType().isa<TensorType>()) {
+    if (isa<TensorType>(inputs[0].getType())) {
       // Tensor to MemRef cast.
       return builder.create<bufferization::ToMemrefOp>(loc, type, inputs[0]);
     }
@@ -208,6 +208,7 @@ struct OneShotBufferizePass
       opt.analysisHeuristic = parseHeuristicOption(analysisHeuristic);
       opt.copyBeforeWrite = copyBeforeWrite;
       opt.createDeallocs = createDeallocs;
+      opt.dumpAliasSets = dumpAliasSets;
       opt.setFunctionBoundaryTypeConversion(
           parseLayoutMapOption(functionBoundaryTypeConversion));
       if (mustInferMemorySpace)
@@ -222,7 +223,7 @@ struct OneShotBufferizePass
           parseLayoutMapOption(unknownTypeConversion);
       opt.unknownTypeConverterFn = [=](Value value, Attribute memorySpace,
                                        const BufferizationOptions &options) {
-        auto tensorType = value.getType().cast<TensorType>();
+        auto tensorType = cast<TensorType>(value.getType());
         if (unknownTypeConversionOption == LayoutMapOption::IdentityLayoutMap)
           return bufferization::getMemRefTypeWithStaticIdentityLayout(
               tensorType, memorySpace);
@@ -268,15 +269,6 @@ struct OneShotBufferizePass
     this->numBufferDealloc = statistics.numBufferDealloc;
     this->numTensorInPlace = statistics.numTensorInPlace;
     this->numTensorOutOfPlace = statistics.numTensorOutOfPlace;
-
-    if (opt.testAnalysisOnly)
-      return;
-
-    OpPassManager cleanupPipeline("builtin.module");
-    cleanupPipeline.addPass(createCanonicalizerPass());
-    cleanupPipeline.addPass(createCSEPass());
-    cleanupPipeline.addPass(createLoopInvariantCodeMotionPass());
-    (void)runPipeline(cleanupPipeline, moduleOp);
   }
 
 private:
@@ -325,7 +317,7 @@ mlir::bufferization::createFinalizingBufferizePass() {
 // BufferizableOpInterface-based Bufferization
 //===----------------------------------------------------------------------===//
 
-static bool isaTensor(Type t) { return t.isa<TensorType>(); }
+static bool isaTensor(Type t) { return isa<TensorType>(t); }
 
 /// Return true if the given op has a tensor result or a tensor operand.
 static bool hasTensorSemantics(Operation *op) {
@@ -446,16 +438,9 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // Otherwise, we have to use a memref type with a fully dynamic layout map to
   // avoid copies. We are currently missing patterns for layout maps to
   // canonicalize away (or canonicalize to more precise layouts).
-  //
-  // FuncOps must be bufferized before their bodies, so add them to the worklist
-  // first.
   SmallVector<Operation *> worklist;
-  op->walk([&](func::FuncOp funcOp) {
-    if (hasTensorSemantics(funcOp))
-      worklist.push_back(funcOp);
-  });
   op->walk<WalkOrder::PostOrder>([&](Operation *op) {
-    if (hasTensorSemantics(op) && !isa<func::FuncOp>(op))
+    if (hasTensorSemantics(op))
       worklist.push_back(op);
   });
 
@@ -479,6 +464,15 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
     // Skip ops that no longer have tensor semantics.
     if (!hasTensorSemantics(nextOp))
       continue;
+    // Check for unsupported unstructured control flow.
+    if (!bufferizableOp.supportsUnstructuredControlFlow())
+      for (Region &r : nextOp->getRegions())
+        if (r.getBlocks().size() > 1)
+          return nextOp->emitOpError(
+              "op or BufferizableOpInterface implementation does not support "
+              "unstructured control flow, but at least one region has multiple "
+              "blocks");
+
     // Bufferize the op.
     LLVM_DEBUG(llvm::dbgs()
                << "//===-------------------------------------------===//\n"
@@ -541,6 +535,56 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   return success();
 }
 
+LogicalResult
+bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
+                                       const BufferizationOptions &options) {
+  OpBuilder::InsertionGuard g(rewriter);
+  auto bufferizableOp = options.dynCastBufferizableOp(block->getParentOp());
+  if (!bufferizableOp)
+    return failure();
+
+  // Compute the new signature.
+  SmallVector<Type> newTypes;
+  for (BlockArgument &bbArg : block->getArguments()) {
+    auto tensorType = dyn_cast<TensorType>(bbArg.getType());
+    if (!tensorType) {
+      newTypes.push_back(bbArg.getType());
+      continue;
+    }
+
+    FailureOr<BaseMemRefType> memrefType =
+        bufferization::getBufferType(bbArg, options);
+    if (failed(memrefType))
+      return failure();
+    newTypes.push_back(*memrefType);
+  }
+
+  // Change the type of all block arguments.
+  for (auto [bbArg, type] : llvm::zip(block->getArguments(), newTypes)) {
+    if (bbArg.getType() == type)
+      continue;
+
+    // Collect all uses of the bbArg.
+    SmallVector<OpOperand *> bbArgUses;
+    for (OpOperand &use : bbArg.getUses())
+      bbArgUses.push_back(&use);
+
+    // Change the bbArg type to memref.
+    bbArg.setType(type);
+
+    // Replace all uses of the original tensor bbArg.
+    rewriter.setInsertionPointToStart(block);
+    if (!bbArgUses.empty()) {
+      Value toTensorOp =
+          rewriter.create<bufferization::ToTensorOp>(bbArg.getLoc(), bbArg);
+      for (OpOperand *use : bbArgUses)
+        use->set(toTensorOp);
+    }
+  }
+
+  return success();
+}
+
 BufferizationOptions bufferization::getPartialBufferizationOptions() {
   BufferizationOptions options;
   options.allowUnknownOps = true;
@@ -549,7 +593,7 @@ BufferizationOptions bufferization::getPartialBufferizationOptions() {
   options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(
-        value.getType().cast<TensorType>(), memorySpace);
+        cast<TensorType>(value.getType()), memorySpace);
   };
   options.opFilter.allowDialect<BufferizationDialect>();
   return options;

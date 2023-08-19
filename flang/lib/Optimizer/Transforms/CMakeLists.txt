@@ -15,12 +15,15 @@ add_flang_library(FIRTransforms
   SimplifyIntrinsics.cpp
   AddDebugFoundation.cpp
   PolymorphicOpConversion.cpp
-  OpenACC/OpenACCDataOperandConversion.cpp
   LoopVersioning.cpp
+  OMPEarlyOutlining.cpp
+  OMPFunctionFiltering.cpp
+  OMPMarkDeclareTarget.cpp
 
   DEPENDS
   FIRDialect
   FIROptTransformsPassIncGen
+  HLFIROpsIncGen
 
   LINK_LIBS
   FIRBuilder

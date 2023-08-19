@@ -152,6 +152,9 @@ struct MemoryRegion {
   uint32_t negInvFlags;
   uint64_t curPos = 0;
 
+  uint64_t getOrigin() const { return origin().getValue(); }
+  uint64_t getLength() const { return length().getValue(); }
+
   bool compatibleWith(uint32_t secFlags) const {
     if ((secFlags & negFlags) || (~secFlags & negInvFlags))
       return false;
@@ -338,6 +341,7 @@ public:
 
   void addOrphanSections();
   void diagnoseOrphanHandling() const;
+  void diagnoseMissingSGSectionAddress() const;
   void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
@@ -355,6 +359,12 @@ public:
 
   // Used to handle INSERT AFTER statements.
   void processInsertCommands();
+
+  // Describe memory region usage.
+  void printMemoryUsage(raw_ostream &os);
+
+  // Verify memory/lma overflows.
+  void checkMemoryRegions() const;
 
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;

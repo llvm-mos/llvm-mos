@@ -20,7 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -428,8 +428,8 @@ public:
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, Register RegUnit) const {
-    for (MCRegUnitIterator Units(Reg, this); Units.isValid(); ++Units)
-      if (Register(*Units) == RegUnit)
+    for (MCRegUnit Unit : regunits(Reg))
+      if (Register(Unit) == RegUnit)
         return true;
     return false;
   }
@@ -554,6 +554,12 @@ public:
 
   /// Returns true if the register class is considered divergent.
   virtual bool isDivergentRegClass(const TargetRegisterClass *RC) const {
+    return false;
+  }
+
+  /// Returns true if the register is considered uniform.
+  virtual bool isUniformReg(const MachineRegisterInfo &MRI,
+                            const RegisterBankInfo &RBI, Register Reg) const {
     return false;
   }
 
@@ -1047,7 +1053,8 @@ public:
   /// the RegScavenger passed to eliminateFrameIndex. If this is true targets
   /// should scavengeRegisterBackwards in eliminateFrameIndex. New targets
   /// should prefer reverse scavenging behavior.
-  virtual bool supportsBackwardScavenger() const { return false; }
+  /// TODO: Remove this when all targets return true.
+  virtual bool eliminateFrameIndicesBackwards() const { return true; }
 
   /// This method must be overriden to eliminate abstract frame indices from
   /// instructions which may use them. The instruction referenced by the

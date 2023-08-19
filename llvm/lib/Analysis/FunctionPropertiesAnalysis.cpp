@@ -18,9 +18,24 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CommandLine.h"
 #include <deque>
 
 using namespace llvm;
+
+cl::opt<bool> EnableDetailedFunctionProperties(
+    "enable-detailed-function-properties", cl::Hidden, cl::init(false),
+    cl::desc("Whether or not to compute detailed function properties."));
+
+cl::opt<unsigned> BigBasicBlockInstructionThreshold(
+    "big-basic-block-instruction-threshold", cl::Hidden, cl::init(500),
+    cl::desc("The minimum number of instructions a basic block should contain "
+             "before being considered big."));
+
+cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
+    "medium-basic-block-instruction-threshold", cl::Hidden, cl::init(15),
+    cl::desc("The minimum number of instructions a basic block should contain "
+             "before being considered medium-sized."));
 
 namespace {
 int64_t getNrBlocksFromCond(const BasicBlock &BB) {
@@ -62,6 +77,52 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     }
   }
   TotalInstructionCount += Direction * BB.sizeWithoutDebug();
+
+  if (EnableDetailedFunctionProperties) {
+    unsigned SuccessorCount = succ_size(&BB);
+    if (SuccessorCount == 1)
+      BasicBlocksWithSingleSuccessor += Direction;
+    else if (SuccessorCount == 2)
+      BasicBlocksWithTwoSuccessors += Direction;
+    else if (SuccessorCount > 2)
+      BasicBlocksWithMoreThanTwoSuccessors += Direction;
+
+    unsigned PredecessorCount = pred_size(&BB);
+    if (PredecessorCount == 1)
+      BasicBlocksWithSinglePredecessor += Direction;
+    else if (PredecessorCount == 2)
+      BasicBlocksWithTwoPredecessors += Direction;
+    else if (PredecessorCount > 2)
+      BasicBlocksWithMoreThanTwoPredecessors += Direction;
+
+    if (TotalInstructionCount > BigBasicBlockInstructionThreshold)
+      BigBasicBlocks += Direction;
+    else if (TotalInstructionCount > MediumBasicBlockInstructionThreshold)
+      MediumBasicBlocks += Direction;
+    else
+      SmallBasicBlocks += Direction;
+
+    for (const Instruction &I : BB.instructionsWithoutDebug()) {
+      if (I.isCast())
+        CastInstructionCount += Direction;
+
+      if (I.getType()->isFloatTy())
+        FloatingPointInstructionCount += Direction;
+      else if (I.getType()->isIntegerTy())
+        IntegerInstructionCount += Direction;
+
+      for (unsigned int OperandIndex = 0; OperandIndex < I.getNumOperands();
+           ++OperandIndex) {
+        if (const Constant *C =
+                dyn_cast<Constant>(I.getOperand(OperandIndex))) {
+          if (C->getType()->isIntegerTy())
+            IntegerConstantCount += Direction;
+          else if (C->getType()->isFloatTy())
+            FloatingPointConstantCount += Direction;
+        }
+      }
+    }
+  }
 }
 
 void FunctionPropertiesInfo::updateAggregateStats(const Function &F,
@@ -82,13 +143,15 @@ void FunctionPropertiesInfo::updateAggregateStats(const Function &F,
 }
 
 FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
-    const Function &F, FunctionAnalysisManager &FAM) {
+    Function &F, FunctionAnalysisManager &FAM) {
+  return getFunctionPropertiesInfo(F, FAM.getResult<DominatorTreeAnalysis>(F),
+                                   FAM.getResult<LoopAnalysis>(F));
+}
+
+FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
+    const Function &F, const DominatorTree &DT, const LoopInfo &LI) {
 
   FunctionPropertiesInfo FPI;
-  // The const casts are due to the getResult API - there's no mutation of F.
-  const auto &LI = FAM.getResult<LoopAnalysis>(const_cast<Function &>(F));
-  const auto &DT =
-      FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(F));
   for (const auto &BB : F)
     if (DT.isReachableFromEntry(&BB))
       FPI.reIncludeBB(BB);
@@ -107,7 +170,31 @@ void FunctionPropertiesInfo::print(raw_ostream &OS) const {
      << "StoreInstCount: " << StoreInstCount << "\n"
      << "MaxLoopDepth: " << MaxLoopDepth << "\n"
      << "TopLevelLoopCount: " << TopLevelLoopCount << "\n"
-     << "TotalInstructionCount: " << TotalInstructionCount << "\n\n";
+     << "TotalInstructionCount: " << TotalInstructionCount << "\n";
+  if (EnableDetailedFunctionProperties) {
+    OS << "BasicBlocksWithSingleSuccessor: " << BasicBlocksWithSingleSuccessor
+       << "\n"
+       << "BasicBlocksWithTwoSuccessors: " << BasicBlocksWithTwoSuccessors
+       << "\n"
+       << "BasicBlocksWithMoreThanTwoSuccessors: "
+       << BasicBlocksWithMoreThanTwoSuccessors << "\n"
+       << "BasicBlocksWithSinglePredecessor: "
+       << BasicBlocksWithSinglePredecessor << "\n"
+       << "BasicBlocksWithTwoPredecessors: " << BasicBlocksWithTwoPredecessors
+       << "\n"
+       << "BasicBlocksWithMoreThanTwoPredecessors: "
+       << BasicBlocksWithMoreThanTwoPredecessors << "\n"
+       << "BigBasicBlocks: " << BigBasicBlocks << "\n"
+       << "MediumBasicBlocks: " << MediumBasicBlocks << "\n"
+       << "SmallBasicBlocks: " << SmallBasicBlocks << "\n"
+       << "CastInstructionCount: " << CastInstructionCount << "\n"
+       << "FloatingPointInstructionCount: " << FloatingPointInstructionCount
+       << "\n"
+       << "IntegerInstructionCount: " << IntegerInstructionCount << "\n"
+       << "IntegerConstantCount: " << IntegerConstantCount << "\n"
+       << "FloatingPointConstantCount: " << FloatingPointConstantCount << "\n";
+  }
+  OS << "\n";
 }
 
 AnalysisKey FunctionPropertiesAnalysis::Key;
@@ -127,7 +214,7 @@ FunctionPropertiesPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 FunctionPropertiesUpdater::FunctionPropertiesUpdater(
-    FunctionPropertiesInfo &FPI, const CallBase &CB)
+    FunctionPropertiesInfo &FPI, CallBase &CB)
     : FPI(FPI), CallSiteBB(*CB.getParent()), Caller(*CallSiteBB.getParent()) {
   assert(isa<CallInst>(CB) || isa<InvokeInst>(CB));
   // For BBs that are likely to change, we subtract from feature totals their
@@ -247,5 +334,13 @@ void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
 
   const auto &LI = FAM.getResult<LoopAnalysis>(const_cast<Function &>(Caller));
   FPI.updateAggregateStats(Caller, LI);
-  assert(FPI == FunctionPropertiesInfo::getFunctionPropertiesInfo(Caller, FAM));
+}
+
+bool FunctionPropertiesUpdater::isUpdateValid(Function &F,
+                                              const FunctionPropertiesInfo &FPI,
+                                              FunctionAnalysisManager &FAM) {
+  DominatorTree DT(F);
+  LoopInfo LI(DT);
+  auto Fresh = FunctionPropertiesInfo::getFunctionPropertiesInfo(F, DT, LI);
+  return FPI == Fresh;
 }

@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -38,9 +38,9 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
   bool changed = false;
   for (LinalgOp linalgOp : llvm::reverse(linalgOps)) {
     for (OpOperand &opOperand : linalgOp->getOpOperands()) {
-      if (opOperand.get().getType().isa<MemRefType>())
+      if (isa<MemRefType>(opOperand.get().getType()))
         continue;
-      if (opOperand.get().getType().isa<RankedTensorType>()) {
+      if (isa<RankedTensorType>(opOperand.get().getType())) {
         // Tile and Fuse tensor input.
         if (opOperand.getOperandNumber() >= linalgOp.getNumDpsInputs())
           continue;

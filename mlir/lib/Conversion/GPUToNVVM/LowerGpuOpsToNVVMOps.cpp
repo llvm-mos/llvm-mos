@@ -16,6 +16,7 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -231,6 +232,7 @@ struct LowerGpuOpsToNVVMOpsPass
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
     options.useOpaquePointers = useOpaquePointers;
+    options.useBarePtrCallConv = useBarePtrCallConv;
 
     // Apply in-dialect lowering. In-dialect lowering will replace
     // ops which need to be lowered further, which is not supported by a

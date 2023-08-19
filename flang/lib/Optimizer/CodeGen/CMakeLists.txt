@@ -23,11 +23,11 @@ add_flang_library(FIRCodeGen
   MLIRMathToFuncs
   MLIRMathToLLVM
   MLIRMathToLibm
-  MLIROpenACCToLLVM
   MLIROpenMPToLLVM
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
+  MLIRVectorToLLVM
 
   LINK_COMPONENTS
   AsmParser

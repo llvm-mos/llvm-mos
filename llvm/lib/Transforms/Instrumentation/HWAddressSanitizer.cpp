@@ -42,7 +42,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -134,7 +133,7 @@ static cl::opt<size_t> ClMaxLifetimes(
 static cl::opt<bool>
     ClUseAfterScope("hwasan-use-after-scope",
                     cl::desc("detect use after scope within function"),
-                    cl::Hidden, cl::init(false));
+                    cl::Hidden, cl::init(true));
 
 static cl::opt<bool> ClGenerateTagsWithCalls(
     "hwasan-generate-tags-with-calls",
@@ -337,8 +336,6 @@ private:
   Module &M;
   const StackSafetyGlobalInfo *SSI;
   Triple TargetTriple;
-  FunctionCallee HWAsanMemmove, HWAsanMemcpy, HWAsanMemset;
-  FunctionCallee HWAsanHandleVfork;
 
   /// This struct defines the shadow mapping using the rule:
   ///   shadow = (mem >> Scale) + Offset.
@@ -380,6 +377,7 @@ private:
   bool InstrumentStack;
   bool DetectUseAfterScope;
   bool UsePageAliases;
+  bool UseMatchAllCallback;
 
   std::optional<uint8_t> MatchAllTag;
 
@@ -390,6 +388,9 @@ private:
 
   FunctionCallee HwasanMemoryAccessCallback[2][kNumberOfAccessSizes];
   FunctionCallee HwasanMemoryAccessCallbackSized[2];
+
+  FunctionCallee HwasanMemmove, HwasanMemcpy, HwasanMemset;
+  FunctionCallee HwasanHandleVfork;
 
   FunctionCallee HwasanTagMemoryFunc;
   FunctionCallee HwasanGenerateTagFunc;
@@ -584,6 +585,7 @@ void HWAddressSanitizer::initializeModule() {
   } else if (CompileKernel) {
     MatchAllTag = 0xFF;
   }
+  UseMatchAllCallback = !CompileKernel && MatchAllTag.has_value();
 
   // If we don't have personality function support, fall back to landing pads.
   InstrumentLandingPads = ClInstrumentLandingPads.getNumOccurrences()
@@ -621,51 +623,73 @@ void HWAddressSanitizer::initializeModule() {
 
 void HWAddressSanitizer::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
+  const std::string MatchAllStr = UseMatchAllCallback ? "_match_all" : "";
+  FunctionType *HwasanMemoryAccessCallbackSizedFnTy,
+      *HwasanMemoryAccessCallbackFnTy, *HwasanMemTransferFnTy,
+      *HwasanMemsetFnTy;
+  if (UseMatchAllCallback) {
+    HwasanMemoryAccessCallbackSizedFnTy =
+        FunctionType::get(VoidTy, {IntptrTy, IntptrTy, Int8Ty}, false);
+    HwasanMemoryAccessCallbackFnTy =
+        FunctionType::get(VoidTy, {IntptrTy, Int8Ty}, false);
+    HwasanMemTransferFnTy = FunctionType::get(
+        Int8PtrTy, {Int8PtrTy, Int8PtrTy, IntptrTy, Int8Ty}, false);
+    HwasanMemsetFnTy = FunctionType::get(
+        Int8PtrTy, {Int8PtrTy, Int32Ty, IntptrTy, Int8Ty}, false);
+  } else {
+    HwasanMemoryAccessCallbackSizedFnTy =
+        FunctionType::get(VoidTy, {IntptrTy, IntptrTy}, false);
+    HwasanMemoryAccessCallbackFnTy =
+        FunctionType::get(VoidTy, {IntptrTy}, false);
+    HwasanMemTransferFnTy =
+        FunctionType::get(Int8PtrTy, {Int8PtrTy, Int8PtrTy, IntptrTy}, false);
+    HwasanMemsetFnTy =
+        FunctionType::get(Int8PtrTy, {Int8PtrTy, Int32Ty, IntptrTy}, false);
+  }
+
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
     const std::string EndingStr = Recover ? "_noabort" : "";
 
     HwasanMemoryAccessCallbackSized[AccessIsWrite] = M.getOrInsertFunction(
-        ClMemoryAccessCallbackPrefix + TypeStr + "N" + EndingStr,
-        FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false));
+        ClMemoryAccessCallbackPrefix + TypeStr + "N" + MatchAllStr + EndingStr,
+        HwasanMemoryAccessCallbackSizedFnTy);
 
     for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
          AccessSizeIndex++) {
       HwasanMemoryAccessCallback[AccessIsWrite][AccessSizeIndex] =
-          M.getOrInsertFunction(
-              ClMemoryAccessCallbackPrefix + TypeStr +
-                  itostr(1ULL << AccessSizeIndex) + EndingStr,
-              FunctionType::get(IRB.getVoidTy(), {IntptrTy}, false));
+          M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr +
+                                    itostr(1ULL << AccessSizeIndex) +
+                                    MatchAllStr + EndingStr,
+                                HwasanMemoryAccessCallbackFnTy);
     }
   }
-
-  HwasanTagMemoryFunc = M.getOrInsertFunction(
-      "__hwasan_tag_memory", IRB.getVoidTy(), Int8PtrTy, Int8Ty, IntptrTy);
-  HwasanGenerateTagFunc =
-      M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty);
-
-  HwasanRecordFrameRecordFunc = M.getOrInsertFunction(
-      "__hwasan_add_frame_record", IRB.getVoidTy(), Int64Ty);
-
-  ShadowGlobal = M.getOrInsertGlobal("__hwasan_shadow",
-                                     ArrayType::get(IRB.getInt8Ty(), 0));
 
   const std::string MemIntrinCallbackPrefix =
       (CompileKernel && !ClKasanMemIntrinCallbackPrefix)
           ? std::string("")
           : ClMemoryAccessCallbackPrefix;
-  HWAsanMemmove = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memmove",
-                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                        IRB.getInt8PtrTy(), IntptrTy);
-  HWAsanMemcpy = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memcpy",
-                                       IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                       IRB.getInt8PtrTy(), IntptrTy);
-  HWAsanMemset = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memset",
-                                       IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
-                                       IRB.getInt32Ty(), IntptrTy);
 
-  HWAsanHandleVfork =
-      M.getOrInsertFunction("__hwasan_handle_vfork", IRB.getVoidTy(), IntptrTy);
+  HwasanMemmove = M.getOrInsertFunction(
+      MemIntrinCallbackPrefix + "memmove" + MatchAllStr, HwasanMemTransferFnTy);
+  HwasanMemcpy = M.getOrInsertFunction(
+      MemIntrinCallbackPrefix + "memcpy" + MatchAllStr, HwasanMemTransferFnTy);
+  HwasanMemset = M.getOrInsertFunction(
+      MemIntrinCallbackPrefix + "memset" + MatchAllStr, HwasanMemsetFnTy);
+
+  HwasanTagMemoryFunc = M.getOrInsertFunction("__hwasan_tag_memory", VoidTy,
+                                              Int8PtrTy, Int8Ty, IntptrTy);
+  HwasanGenerateTagFunc =
+      M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty);
+
+  HwasanRecordFrameRecordFunc =
+      M.getOrInsertFunction("__hwasan_add_frame_record", VoidTy, Int64Ty);
+
+  ShadowGlobal =
+      M.getOrInsertGlobal("__hwasan_shadow", ArrayType::get(Int8Ty, 0));
+
+  HwasanHandleVfork =
+      M.getOrInsertFunction("__hwasan_handle_vfork", VoidTy, IntptrTy);
 }
 
 Value *HWAddressSanitizer::getOpaqueNoopCast(IRBuilder<> &IRB, Value *Val) {
@@ -837,8 +861,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   IRBuilder<> IRB(InsertBefore);
 
   Value *PtrLong = IRB.CreatePointerCast(Ptr, IntptrTy);
-  Value *PtrTag = IRB.CreateTrunc(IRB.CreateLShr(PtrLong, PointerTagShift),
-                                  IRB.getInt8Ty());
+  Value *PtrTag =
+      IRB.CreateTrunc(IRB.CreateLShr(PtrLong, PointerTagShift), Int8Ty);
   Value *AddrLong = untagPointer(IRB, PtrLong);
   Value *Shadow = memToShadow(AddrLong, IRB);
   Value *MemTag = IRB.CreateLoad(Int8Ty, Shadow);
@@ -887,7 +911,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   case Triple::x86_64:
     // The signal handler will find the data address in rdi.
     Asm = InlineAsm::get(
-        FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+        FunctionType::get(VoidTy, {PtrLong->getType()}, false),
         "int3\nnopl " +
             itostr(0x40 + (AccessInfo & HWASanAccessInfo::RuntimeMask)) +
             "(%rax)",
@@ -898,7 +922,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   case Triple::aarch64_be:
     // The signal handler will find the data address in x0.
     Asm = InlineAsm::get(
-        FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+        FunctionType::get(VoidTy, {PtrLong->getType()}, false),
         "brk #" + itostr(0x900 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
         "{x0}",
         /*hasSideEffects=*/true);
@@ -906,7 +930,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   case Triple::riscv64:
     // The signal handler will find the data address in x10.
     Asm = InlineAsm::get(
-        FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+        FunctionType::get(VoidTy, {PtrLong->getType()}, false),
         "ebreak\naddiw x0, x11, " +
             itostr(0x40 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
         "{x10}",
@@ -933,17 +957,22 @@ bool HWAddressSanitizer::ignoreMemIntrinsic(MemIntrinsic *MI) {
 void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
-    IRB.CreateCall(
-        isa<MemMoveInst>(MI) ? HWAsanMemmove : HWAsanMemcpy,
-        {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
-         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    SmallVector<Value *, 4> Args{
+        IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+        IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
+        IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)};
+
+    if (UseMatchAllCallback)
+      Args.emplace_back(ConstantInt::get(Int8Ty, *MatchAllTag));
+    IRB.CreateCall(isa<MemMoveInst>(MI) ? HwasanMemmove : HwasanMemcpy, Args);
   } else if (isa<MemSetInst>(MI)) {
-    IRB.CreateCall(
-        HWAsanMemset,
-        {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
-         IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
+    SmallVector<Value *, 4> Args{
+        IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+        IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
+        IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)};
+    if (UseMatchAllCallback)
+      Args.emplace_back(ConstantInt::get(Int8Ty, *MatchAllTag));
+    IRB.CreateCall(HwasanMemset, Args);
   }
   MI->eraseFromParent();
 }
@@ -963,19 +992,24 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
        *O.Alignment >= O.TypeStoreSize / 8)) {
     size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeStoreSize);
     if (InstrumentWithCalls) {
+      SmallVector<Value *, 2> Args{IRB.CreatePointerCast(Addr, IntptrTy)};
+      if (UseMatchAllCallback)
+        Args.emplace_back(ConstantInt::get(Int8Ty, *MatchAllTag));
       IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
-                     IRB.CreatePointerCast(Addr, IntptrTy));
+                     Args);
     } else if (OutlinedChecks) {
       instrumentMemAccessOutline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     } else {
       instrumentMemAccessInline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     }
   } else {
-    IRB.CreateCall(HwasanMemoryAccessCallbackSized[O.IsWrite],
-                   {IRB.CreatePointerCast(Addr, IntptrTy),
-                    IRB.CreateUDiv(IRB.CreateTypeSize(IntptrTy,
-                                                      O.TypeStoreSize),
-                                   ConstantInt::get(IntptrTy, 8))});
+    SmallVector<Value *, 3> Args{
+        IRB.CreatePointerCast(Addr, IntptrTy),
+        IRB.CreateUDiv(IRB.CreateTypeSize(IntptrTy, O.TypeStoreSize),
+                       ConstantInt::get(IntptrTy, 8))};
+    if (UseMatchAllCallback)
+      Args.emplace_back(ConstantInt::get(Int8Ty, *MatchAllTag));
+    IRB.CreateCall(HwasanMemoryAccessCallbackSized[O.IsWrite], Args);
   }
   untagPointerOperand(O.getInsn(), Addr);
 
@@ -988,7 +1022,7 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
   if (!UseShortGranules)
     Size = AlignedSize;
 
-  Tag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
+  Tag = IRB.CreateTrunc(Tag, Int8Ty);
   if (InstrumentWithCalls) {
     IRB.CreateCall(HwasanTagMemoryFunc,
                    {IRB.CreatePointerCast(AI, Int8PtrTy), Tag,
@@ -1126,8 +1160,7 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
     Function *ThreadPointerFunc =
         Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
     Value *SlotPtr = IRB.CreatePointerCast(
-        IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
-                               IRB.CreateCall(ThreadPointerFunc), 0x30),
+        IRB.CreateConstGEP1_32(Int8Ty, IRB.CreateCall(ThreadPointerFunc), 0x30),
         Ty->getPointerTo(0));
     return SlotPtr;
   }
@@ -1153,8 +1186,7 @@ Value *HWAddressSanitizer::getSP(IRBuilder<> &IRB) {
         M, Intrinsic::frameaddress,
         IRB.getInt8PtrTy(M->getDataLayout().getAllocaAddrSpace()));
     CachedSP = IRB.CreatePtrToInt(
-        IRB.CreateCall(GetStackPointerFn,
-                       {Constant::getNullValue(IRB.getInt32Ty())}),
+        IRB.CreateCall(GetStackPointerFn, {Constant::getNullValue(Int32Ty)}),
         IntptrTy);
   }
   return CachedSP;
@@ -1271,7 +1303,7 @@ bool HWAddressSanitizer::instrumentLandingPads(
   for (auto *LP : LandingPadVec) {
     IRBuilder<> IRB(LP->getNextNode());
     IRB.CreateCall(
-        HWAsanHandleVfork,
+        HwasanHandleVfork,
         {readRegister(IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp"
                                                                       : "sp")});
   }
@@ -1591,11 +1623,14 @@ void HWAddressSanitizer::instrumentGlobals() {
   Hasher.final(Hash);
   uint8_t Tag = Hash[0];
 
+  assert(TagMaskByte >= 16);
+
   for (GlobalVariable *GV : Globals) {
-    Tag &= TagMaskByte;
-    // Skip tag 0 in order to avoid collisions with untagged memory.
-    if (Tag == 0)
-      Tag = 1;
+    // Don't allow globals to be tagged with something that looks like a
+    // short-granule tag, otherwise we lose inter-granule overflow detection, as
+    // the fast path shadow-vs-address check succeeds.
+    if (Tag < 16 || Tag > TagMaskByte)
+      Tag = 16;
     instrumentGlobal(GV, Tag++);
   }
 }

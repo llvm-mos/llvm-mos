@@ -57,6 +57,7 @@ builtin_attr_type_mnemonics = {
     "mlir::Float8E4M3B11FNUZType": '"f8E4M3B11FNUZ"',
     "mlir::BFloat16Type": '"bf16"',
     "mlir::Float16Type": '"f16"',
+    "mlir::FloatTF32Type": '"tf32"',
     "mlir::Float32Type": '"f32"',
     "mlir::Float64Type": '"f64"',
     "mlir::Float80Type": '"f80"',
@@ -521,8 +522,7 @@ class InDirectRangeSynthProvider:
 
 
 class IPListRangeSynthProvider:
-    """Define an LLDB synthetic children provider for an IPList.
-    """
+    """Define an LLDB synthetic children provider for an IPList."""
 
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
@@ -575,8 +575,7 @@ class IPListRangeSynthProvider:
 
 
 class ValueSynthProvider:
-    """Define an LLDB synthetic children provider for Values.
-    """
+    """Define an LLDB synthetic children provider for Values."""
 
     def __init__(self, valobj, internal_dict):
         self.valobj = valobj
@@ -677,8 +676,7 @@ class ValueSynthProvider:
 
 
 def ValueSummaryProvider(valobj: lldb.SBValue, internal_dict):
-    """Define an LLDB summary provider for Values.
-    """
+    """Define an LLDB summary provider for Values."""
 
     index = valobj.GetChildMemberWithName("index").GetValueAsUnsigned()
     # Check if this is a block argument or not (block arguments have locations).

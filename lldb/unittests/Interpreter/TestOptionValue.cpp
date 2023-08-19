@@ -41,11 +41,11 @@ TEST(OptionValueString, DeepCopy) {
   ASSERT_TRUE(copy_sp);
   ASSERT_EQ(copy_sp->GetParent().get(), nullptr);
   ASSERT_TRUE(copy_sp->OptionWasSet());
-  ASSERT_EQ(copy_sp->GetStringValue(), "ab");
+  ASSERT_EQ(copy_sp->GetValueAs<llvm::StringRef>(), "ab");
 
   // Trigger the callback.
   copy_sp->SetValueFromString("c", eVarSetOperationAppend);
-  ASSERT_EQ(copy_sp->GetStringValue(), "abc");
+  ASSERT_EQ(copy_sp->GetValueAs<llvm::StringRef>(), "abc");
 }
 
 // Test an aggregate class.
@@ -67,15 +67,15 @@ TEST(OptionValueArgs, DeepCopy) {
   auto *args_copy_ptr = copy_sp->GetAsArgs();
   ASSERT_EQ(args_copy_ptr->GetSize(), 2U);
   ASSERT_EQ((*args_copy_ptr)[0]->GetParent(), copy_sp);
-  ASSERT_EQ((*args_copy_ptr)[0]->GetStringValue(), "A");
+  ASSERT_EQ((*args_copy_ptr)[0]->GetValueAs<llvm::StringRef>(), "A");
   ASSERT_EQ((*args_copy_ptr)[1]->GetParent(), copy_sp);
-  ASSERT_EQ((*args_copy_ptr)[1]->GetStringValue(), "B");
+  ASSERT_EQ((*args_copy_ptr)[1]->GetValueAs<llvm::StringRef>(), "B");
 
   // Trigger the callback.
   copy_sp->SetValueFromString("C", eVarSetOperationAppend);
   ASSERT_TRUE(args_copy_ptr);
   ASSERT_EQ(args_copy_ptr->GetSize(), 3U);
-  ASSERT_EQ((*args_copy_ptr)[2]->GetStringValue(), "C");
+  ASSERT_EQ((*args_copy_ptr)[2]->GetValueAs<llvm::StringRef>(), "C");
 }
 
 class TestProperties : public OptionValueProperties {
@@ -85,11 +85,10 @@ public:
     const bool is_global = false;
 
     auto dict_sp = std::make_shared<OptionValueDictionary>(1 << eTypeUInt64);
-    props_sp->AppendProperty(ConstString("dict"), "", is_global, dict_sp);
+    props_sp->AppendProperty("dict", "", is_global, dict_sp);
 
     auto file_list_sp = std::make_shared<OptionValueFileSpecList>();
-    props_sp->AppendProperty(ConstString("file-list"), "", is_global,
-                             file_list_sp);
+    props_sp->AppendProperty("file-list", "", is_global, file_list_sp);
     return props_sp;
   }
 
@@ -149,12 +148,12 @@ TEST(TestProperties, DeepCopy) {
   auto value_ptr = dict_copy_ptr->GetValueForKey("A");
   ASSERT_TRUE(value_ptr);
   ASSERT_EQ(value_ptr->GetParent().get(), dict_copy_ptr);
-  ASSERT_EQ(value_ptr->GetUInt64Value(), 1U);
+  ASSERT_EQ(value_ptr->GetValueAs<uint64_t>(), 1U);
 
   value_ptr = dict_copy_ptr->GetValueForKey("B");
   ASSERT_TRUE(value_ptr);
   ASSERT_EQ(value_ptr->GetParent().get(), dict_copy_ptr);
-  ASSERT_EQ(value_ptr->GetUInt64Value(), 2U);
+  ASSERT_EQ(value_ptr->GetValueAs<uint64_t>(), 2U);
 
   // Test the second child.
   auto file_list_copy_ptr = props_copy_ptr->GetFileList();

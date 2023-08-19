@@ -220,7 +220,7 @@ using TagDataLayout =
                                           // below)
                          llvm::BCBlob     // map from name to tag information
                          >;
-}; // namespace tag_block
+} // namespace tag_block
 
 namespace typedef_block {
 enum { TYPEDEF_DATA = 1 };
@@ -231,7 +231,7 @@ using TypedefDataLayout =
                                           // below)
                          llvm::BCBlob // map from name to typedef information
                          >;
-}; // namespace typedef_block
+} // namespace typedef_block
 
 namespace enum_constant_block {
 enum { ENUM_CONSTANT_DATA = 1 };
@@ -251,5 +251,37 @@ struct StoredObjCSelector {
 };
 } // namespace api_notes
 } // namespace clang
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
+  typedef DenseMapInfo<unsigned> UnsignedInfo;
+
+  static inline clang::api_notes::StoredObjCSelector getEmptyKey() {
+    return clang::api_notes::StoredObjCSelector{UnsignedInfo::getEmptyKey(),
+                                                {}};
+  }
+
+  static inline clang::api_notes::StoredObjCSelector getTombstoneKey() {
+    return clang::api_notes::StoredObjCSelector{UnsignedInfo::getTombstoneKey(),
+                                                {}};
+  }
+
+  static unsigned
+  getHashValue(const clang::api_notes::StoredObjCSelector &Selector) {
+    auto hash = llvm::hash_value(Selector.NumPieces);
+    hash = hash_combine(hash, Selector.Identifiers.size());
+    for (auto piece : Selector.Identifiers)
+      hash = hash_combine(hash, static_cast<unsigned>(piece));
+    // FIXME: Mix upper/lower 32-bit values together to produce
+    // unsigned rather than truncating.
+    return hash;
+  }
+
+  static bool isEqual(const clang::api_notes::StoredObjCSelector &LHS,
+                      const clang::api_notes::StoredObjCSelector &RHS) {
+    return LHS.NumPieces == RHS.NumPieces && LHS.Identifiers == RHS.Identifiers;
+  }
+};
+} // namespace llvm
 
 #endif

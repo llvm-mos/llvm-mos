@@ -28,6 +28,7 @@ set(ASAN_UNITTEST_COMMON_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/asan
   -I${COMPILER_RT_SOURCE_DIR}/lib/sanitizer_common/tests
+  -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS
   -fno-rtti
   -O2
   -Wno-format
@@ -273,6 +274,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
         $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
         $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+        $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
         $<TARGET_OBJECTS:RTLSanCommon.${arch}>
         $<TARGET_OBJECTS:RTUbsan.${arch}>
         $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>)
@@ -299,6 +301,7 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
       $<TARGET_OBJECTS:RTLSanCommon.${arch}>
       $<TARGET_OBJECTS:RTUbsan.${arch}>
       $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>

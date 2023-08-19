@@ -23,6 +23,7 @@
 #include "mlir/Dialect/Arith/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
+#include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -33,6 +34,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/TransformOps/FuncTransformOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
@@ -48,11 +50,13 @@
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
 #include "mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
 #include "mlir/Dialect/MemRef/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -66,6 +70,7 @@
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h"
 #include "mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
@@ -75,11 +80,14 @@
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/Dialect/Transform/PDLExtension/PDLExtension.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/Interfaces/CastInterfaces.h"
 
 namespace mlir {
 
@@ -88,10 +96,12 @@ inline void registerAllDialects(DialectRegistry &registry) {
   // clang-format off
   registry.insert<acc::OpenACCDialect,
                   affine::AffineDialect,
-                  arith::ArithDialect,
                   amdgpu::AMDGPUDialect,
                   amx::AMXDialect,
+                  arith::ArithDialect,
                   arm_neon::ArmNeonDialect,
+                  arm_sme::ArmSMEDialect,
+                  arm_sve::ArmSVEDialect,
                   async::AsyncDialect,
                   bufferization::BufferizationDialect,
                   cf::ControlFlowDialect,
@@ -102,38 +112,42 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   gpu::GPUDialect,
                   index::IndexDialect,
                   irdl::IRDLDialect,
-                  LLVM::LLVMDialect,
                   linalg::LinalgDialect,
+                  LLVM::LLVMDialect,
                   math::MathDialect,
                   memref::MemRefDialect,
                   ml_program::MLProgramDialect,
                   nvgpu::NVGPUDialect,
-                  scf::SCFDialect,
+                  NVVM::NVVMDialect,
                   omp::OpenMPDialect,
                   pdl::PDLDialect,
                   pdl_interp::PDLInterpDialect,
                   quant::QuantizationDialect,
-                  spirv::SPIRVDialect,
-                  arm_sve::ArmSVEDialect,
-                  vector::VectorDialect,
-                  NVVM::NVVMDialect,
                   ROCDL::ROCDLDialect,
+                  scf::SCFDialect,
                   shape::ShapeDialect,
                   sparse_tensor::SparseTensorDialect,
+                  spirv::SPIRVDialect,
                   tensor::TensorDialect,
-                  transform::TransformDialect,
                   tosa::TosaDialect,
+                  transform::TransformDialect,
+                  ub::UBDialect,
+                  vector::VectorDialect,
                   x86vector::X86VectorDialect>();
   // clang-format on
 
   // Register all dialect extensions.
   affine::registerTransformDialectExtension(registry);
   bufferization::registerTransformDialectExtension(registry);
+  func::registerTransformDialectExtension(registry);
   gpu::registerTransformDialectExtension(registry);
   linalg::registerTransformDialectExtension(registry);
   memref::registerTransformDialectExtension(registry);
+  nvgpu::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);
+  sparse_tensor::registerTransformDialectExtension(registry);
   tensor::registerTransformDialectExtension(registry);
+  transform::registerPDLExtension(registry);
   vector::registerTransformDialectExtension(registry);
 
   // Register all external models.
@@ -142,17 +156,20 @@ inline void registerAllDialects(DialectRegistry &registry) {
   arith::registerValueBoundsOpInterfaceExternalModels(registry);
   bufferization::func_ext::registerBufferizableOpInterfaceExternalModels(
       registry);
+  builtin::registerCastOpInterfaceExternalModels(registry);
   linalg::registerBufferizableOpInterfaceExternalModels(registry);
   linalg::registerTilingInterfaceExternalModels(registry);
   linalg::registerValueBoundsOpInterfaceExternalModels(registry);
   memref::registerBufferizableOpInterfaceExternalModels(registry);
   memref::registerRuntimeVerifiableOpInterfaceExternalModels(registry);
   memref::registerValueBoundsOpInterfaceExternalModels(registry);
+  memref::registerMemorySlotExternalModels(registry);
   scf::registerBufferizableOpInterfaceExternalModels(registry);
   scf::registerValueBoundsOpInterfaceExternalModels(registry);
   shape::registerBufferizableOpInterfaceExternalModels(registry);
   sparse_tensor::registerBufferizableOpInterfaceExternalModels(registry);
   tensor::registerBufferizableOpInterfaceExternalModels(registry);
+  tensor::registerFindPayloadReplacementOpInterfaceExternalModels(registry);
   tensor::registerInferTypeOpInterfaceExternalModels(registry);
   tensor::registerTilingInterfaceExternalModels(registry);
   tensor::registerValueBoundsOpInterfaceExternalModels(registry);

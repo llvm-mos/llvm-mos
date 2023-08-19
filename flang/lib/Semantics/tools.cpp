@@ -515,7 +515,15 @@ const Symbol *FindOverriddenBinding(const Symbol &symbol) {
     if (const DeclTypeSpec * parentType{FindParentTypeSpec(symbol.owner())}) {
       if (const DerivedTypeSpec * parentDerived{parentType->AsDerived()}) {
         if (const Scope * parentScope{parentDerived->typeSymbol().scope()}) {
-          return parentScope->FindComponent(symbol.name());
+          if (const Symbol *
+              overridden{parentScope->FindComponent(symbol.name())}) {
+            // 7.5.7.3 p1: only accessible bindings are overridden
+            if (!overridden->attrs().test(Attr::PRIVATE) ||
+                (FindModuleContaining(overridden->owner()) ==
+                    FindModuleContaining(symbol.owner()))) {
+              return overridden;
+            }
+          }
         }
       }
     }
@@ -642,21 +650,23 @@ bool HasDeclarationInitializer(const Symbol &symbol) {
   }
 }
 
-bool IsInitialized(
-    const Symbol &symbol, bool ignoreDataStatements, bool ignoreAllocatable) {
+bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements,
+    bool ignoreAllocatable, bool ignorePointer) {
   if (!ignoreAllocatable && IsAllocatable(symbol)) {
     return true;
   } else if (!ignoreDataStatements && symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (HasDeclarationInitializer(symbol)) {
     return true;
-  } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol) ||
-      IsPointer(symbol)) {
+  } else if (IsPointer(symbol)) {
+    return !ignorePointer;
+  } else if (IsNamedConstant(symbol) || IsFunctionResult(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (!object->isDummy() && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
-        return derived->HasDefaultInitialization(ignoreAllocatable);
+        return derived->HasDefaultInitialization(
+            ignoreAllocatable, ignorePointer);
       }
     }
   }
@@ -923,11 +933,12 @@ public:
   }
   bool operator()(const parser::CallStmt &stmt) {
     const auto &procedureDesignator{
-        std::get<parser::ProcedureDesignator>(stmt.v.t)};
+        std::get<parser::ProcedureDesignator>(stmt.call.t)};
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
       // TODO: also ensure that the procedure is, in fact, an intrinsic
       if (name->source == "move_alloc") {
-        const auto &args{std::get<std::list<parser::ActualArgSpec>>(stmt.v.t)};
+        const auto &args{
+            std::get<std::list<parser::ActualArgSpec>>(stmt.call.t)};
         if (!args.empty()) {
           const parser::ActualArg &actualArg{
               std::get<parser::ActualArg>(args.front().t)};
@@ -1053,6 +1064,18 @@ bool IsUnlimitedPolymorphic(const Symbol &symbol) {
 
 bool IsPolymorphicAllocatable(const Symbol &symbol) {
   return IsAllocatable(symbol) && IsPolymorphic(symbol);
+}
+
+const Scope *FindCUDADeviceContext(const Scope *scope) {
+  return !scope ? nullptr : FindScopeContaining(*scope, [](const Scope &s) {
+    return IsCUDADeviceContext(&s);
+  });
+}
+
+std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
+  const auto *object{
+      symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
+  return object ? object->cudaDataAttr() : std::nullopt;
 }
 
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
@@ -1580,6 +1603,42 @@ bool HasDefinedIo(common::DefinedIo which, const DerivedTypeSpec &derived,
               }
             }
           }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+void WarnOnDeferredLengthCharacterScalar(SemanticsContext &context,
+    const SomeExpr *expr, parser::CharBlock at, const char *what) {
+  if (context.languageFeatures().ShouldWarn(
+          common::UsageWarning::F202XAllocatableBreakingChange)) {
+    if (const Symbol *
+        symbol{evaluate::UnwrapWholeSymbolOrComponentDataRef(expr)}) {
+      const Symbol &ultimate{ResolveAssociations(*symbol)};
+      if (const DeclTypeSpec * type{ultimate.GetType()}; type &&
+          type->category() == DeclTypeSpec::Category::Character &&
+          type->characterTypeSpec().length().isDeferred() &&
+          IsAllocatable(ultimate) && ultimate.Rank() == 0) {
+        context.Say(at,
+            "The deferred length allocatable character scalar variable '%s' may be reallocated to a different length under the new Fortran 202X standard semantics for %s"_port_en_US,
+            symbol->name(), what);
+      }
+    }
+  }
+}
+
+bool CouldBeDataPointerValuedFunction(const Symbol *original) {
+  if (original) {
+    const Symbol &ultimate{original->GetUltimate()};
+    if (const Symbol * result{FindFunctionResult(ultimate)}) {
+      return IsPointer(*result) && !IsProcedure(*result);
+    }
+    if (const auto *generic{ultimate.detailsIf<GenericDetails>()}) {
+      for (const SymbolRef &ref : generic->specificProcs()) {
+        if (CouldBeDataPointerValuedFunction(&*ref)) {
+          return true;
         }
       }
     }

@@ -59,11 +59,11 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
       }
       unsigned firstInputIndex, lastInputIndex;
       if (region) {
-        firstInputIndex = inputs[0].cast<BlockArgument>().getArgNumber();
-        lastInputIndex = inputs.back().cast<BlockArgument>().getArgNumber();
+        firstInputIndex = cast<BlockArgument>(inputs[0]).getArgNumber();
+        lastInputIndex = cast<BlockArgument>(inputs.back()).getArgNumber();
       } else {
-        firstInputIndex = inputs[0].cast<OpResult>().getResultNumber();
-        lastInputIndex = inputs.back().cast<OpResult>().getResultNumber();
+        firstInputIndex = cast<OpResult>(inputs[0]).getResultNumber();
+        lastInputIndex = cast<OpResult>(inputs.back()).getResultNumber();
       }
       if (firstInputIndex > inputIndex || lastInputIndex < inputIndex) {
         output.push_back(inputValue);
@@ -83,7 +83,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   if (std::optional<unsigned> operandIndex =
           getOperandIndexIfPred(/*predIndex=*/std::nullopt)) {
     collectUnderlyingAddressValues(
-        branch.getSuccessorEntryOperands(regionIndex)[*operandIndex], maxDepth,
+        branch.getEntrySuccessorOperands(regionIndex)[*operandIndex], maxDepth,
         visited, output);
   }
   // Check branches from each child region.
@@ -91,15 +91,14 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   for (int i = 0, e = op->getNumRegions(); i != e; ++i) {
     if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(i)) {
       for (Block &block : op->getRegion(i)) {
-        Operation *term = block.getTerminator();
         // Try to determine possible region-branch successor operands for the
         // current region.
-        auto successorOperands =
-            getRegionBranchSuccessorOperands(term, regionIndex);
-        if (successorOperands) {
-          collectUnderlyingAddressValues((*successorOperands)[*operandIndex],
-                                         maxDepth, visited, output);
-        } else if (term->getNumSuccessors()) {
+        if (auto term = dyn_cast<RegionBranchTerminatorOpInterface>(
+                block.getTerminator())) {
+          collectUnderlyingAddressValues(
+              term.getSuccessorOperands(regionIndex)[*operandIndex], maxDepth,
+              visited, output);
+        } else if (block.getNumSuccessors()) {
           // Otherwise, if this terminator may exit the region we can't make
           // any assumptions about which values get passed.
           output.push_back(inputValue);
@@ -186,9 +185,9 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
   }
   --maxDepth;
 
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>())
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
     return collectUnderlyingAddressValues(arg, maxDepth, visited, output);
-  collectUnderlyingAddressValues(value.cast<OpResult>(), maxDepth, visited,
+  collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, visited,
                                  output);
 }
 
@@ -216,10 +215,10 @@ getAllocEffectFor(Value value,
                   Operation *&allocScopeOp) {
   // Try to get a memory effect interface for the parent operation.
   Operation *op;
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>())
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
     op = arg.getOwner()->getParentOp();
   else
-    op = value.cast<OpResult>().getOwner();
+    op = cast<OpResult>(value).getOwner();
   MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
   if (!interface)
     return failure();
@@ -305,7 +304,7 @@ AliasResult LocalAliasAnalysis::aliasImpl(Value lhs, Value rhs) {
     if (rhsParentOp->isProperAncestor(lhsAllocScope))
       return AliasResult::NoAlias;
     if (rhsParentOp == lhsAllocScope) {
-      BlockArgument rhsArg = rhs.dyn_cast<BlockArgument>();
+      BlockArgument rhsArg = dyn_cast<BlockArgument>(rhs);
       if (rhsArg && rhs.getParentBlock()->isEntryBlock())
         return AliasResult::NoAlias;
     }

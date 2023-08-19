@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ \
 // RUN:  -triple nvptx64-unknown-unknown -DCUA \
 // RUN:  -fopenmp-targets=nvptx64-nvidia-cuda -DCUDA -emit-llvm %s \
-// RUN:  -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc \
+// RUN:  -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc \
 // RUN:  -o - | FileCheck %s --check-prefix CHECK
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ \
@@ -103,16 +103,16 @@ int main()
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l32_kernel_environment)
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[E_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP3]], align 8
 // CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l32_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
-// CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void
@@ -396,7 +396,7 @@ int main()
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S2C1Ev
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -545,7 +545,7 @@ int main()
 // CHECK1-NEXT:    [[TMP4:%.*]] = sdiv exact i64 [[TMP3]], ptrtoint (ptr getelementptr (double, ptr null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP5:%.*]] = add nuw i64 [[TMP4]], 1
 // CHECK1-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], ptrtoint (ptr getelementptr (double, ptr null, i32 1) to i64)
-// CHECK1-NEXT:    [[TMP7:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP7:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP7]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca double, i64 [[TMP5]], align 8
 // CHECK1-NEXT:    store i64 [[TMP5]], ptr [[__VLA_EXPR0]], align 8
@@ -692,7 +692,7 @@ int main()
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
 // CHECK1-NEXT:    [[TMP55:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP55]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP55]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -704,7 +704,7 @@ int main()
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @{{reduction_size[.].+[.]}})
+// CHECK1-NEXT:    [[TMP3:%.*]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @{{reduction_size[.].+[.]}})
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP2]], i64 [[TMP4]]
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[TMP2]], [[TMP5]]
@@ -726,7 +726,7 @@ int main()
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @{{reduction_size[.].+[.]}})
+// CHECK1-NEXT:    [[TMP2:%.*]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @{{reduction_size[.].+[.]}})
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
@@ -783,7 +783,7 @@ int main()
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S2C2Ev
-// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK1-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

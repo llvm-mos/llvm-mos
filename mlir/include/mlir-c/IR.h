@@ -84,7 +84,18 @@ typedef struct MlirNamedAttribute MlirNamedAttribute;
 //===----------------------------------------------------------------------===//
 
 /// Creates an MLIR context and transfers its ownership to the caller.
+/// This sets the default multithreading option (enabled).
 MLIR_CAPI_EXPORTED MlirContext mlirContextCreate(void);
+
+/// Creates an MLIR context with an explicit setting of the multithreading
+/// setting and transfers its ownership to the caller.
+MLIR_CAPI_EXPORTED MlirContext
+mlirContextCreateWithThreading(bool threadingEnabled);
+
+/// Creates an MLIR context, setting the multithreading setting explicitly and
+/// pre-loading the dialects from the provided DialectRegistry.
+MLIR_CAPI_EXPORTED MlirContext mlirContextCreateWithRegistry(
+    MlirDialectRegistry registry, bool threadingEnabled);
 
 /// Checks if two contexts are equal.
 MLIR_CAPI_EXPORTED bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
@@ -143,6 +154,13 @@ mlirContextLoadAllAvailableDialects(MlirContext context);
 /// dialect.
 MLIR_CAPI_EXPORTED bool mlirContextIsRegisteredOperation(MlirContext context,
                                                          MlirStringRef name);
+
+/// Sets the thread pool of the context explicitly, enabling multithreading in
+/// the process. This API should be used to avoid re-creating thread pools in
+/// long-running applications that perform multiple compilations, see
+/// the C++ documentation for MLIRContext for details.
+MLIR_CAPI_EXPORTED void mlirContextSetThreadPool(MlirContext context,
+                                                 MlirLlvmThreadPool threadPool);
 
 //===----------------------------------------------------------------------===//
 // Dialect API.
@@ -515,6 +533,11 @@ MLIR_CAPI_EXPORTED MlirValue mlirOperationGetOperand(MlirOperation op,
 MLIR_CAPI_EXPORTED void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
                                                 MlirValue newValue);
 
+/// Replaces the operands of the operation.
+MLIR_CAPI_EXPORTED void mlirOperationSetOperands(MlirOperation op,
+                                                 intptr_t nOperands,
+                                                 MlirValue const *operands);
+
 /// Returns the number of results of the operation.
 MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumResults(MlirOperation op);
 
@@ -646,6 +669,10 @@ MLIR_CAPI_EXPORTED MlirRegion mlirOperationGetFirstRegion(MlirOperation op);
 /// operation.
 MLIR_CAPI_EXPORTED MlirRegion mlirRegionGetNextInOperation(MlirRegion region);
 
+/// Moves the entire content of the source region to the target region.
+MLIR_CAPI_EXPORTED void mlirRegionTakeBody(MlirRegion target,
+                                           MlirRegion source);
+
 //===----------------------------------------------------------------------===//
 // Block API.
 //===----------------------------------------------------------------------===//
@@ -719,6 +746,13 @@ MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
                                                   MlirType type,
                                                   MlirLocation loc);
 
+/// Inserts an argument of the specified type at a specified index to the block.
+/// Returns the newly added argument.
+MLIR_CAPI_EXPORTED MlirValue mlirBlockInsertArgument(MlirBlock block,
+                                                     intptr_t pos,
+                                                     MlirType type,
+                                                     MlirLocation loc);
+
 /// Returns `pos`-th argument of the block.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockGetArgument(MlirBlock block,
                                                   intptr_t pos);
@@ -767,6 +801,9 @@ MLIR_CAPI_EXPORTED intptr_t mlirOpResultGetResultNumber(MlirValue value);
 /// Returns the type of the value.
 MLIR_CAPI_EXPORTED MlirType mlirValueGetType(MlirValue value);
 
+/// Set the type of the value.
+MLIR_CAPI_EXPORTED void mlirValueSetType(MlirValue value, MlirType type);
+
 /// Prints the value to the standard error stream.
 MLIR_CAPI_EXPORTED void mlirValueDump(MlirValue value);
 
@@ -775,6 +812,12 @@ MLIR_CAPI_EXPORTED void mlirValueDump(MlirValue value);
 /// several times with consecutive chunks of the string.
 MLIR_CAPI_EXPORTED void
 mlirValuePrint(MlirValue value, MlirStringCallback callback, void *userData);
+
+/// Prints a value as an operand (i.e., the ValueID).
+MLIR_CAPI_EXPORTED void mlirValuePrintAsOperand(MlirValue value,
+                                                MlirOpPrintingFlags flags,
+                                                MlirStringCallback callback,
+                                                void *userData);
 
 /// Returns an op operand representing the first use of the value, or a null op
 /// operand if there are no uses.
@@ -819,6 +862,9 @@ MLIR_CAPI_EXPORTED MlirContext mlirTypeGetContext(MlirType type);
 /// Gets the type ID of the type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirTypeGetTypeID(MlirType type);
 
+/// Gets the dialect a type belongs to.
+MLIR_CAPI_EXPORTED MlirDialect mlirTypeGetDialect(MlirType type);
+
 /// Checks whether a type is null.
 static inline bool mlirTypeIsNull(MlirType type) { return !type.ptr; }
 
@@ -850,6 +896,9 @@ MLIR_CAPI_EXPORTED MlirType mlirAttributeGetType(MlirAttribute attribute);
 
 /// Gets the type id of the attribute.
 MLIR_CAPI_EXPORTED MlirTypeID mlirAttributeGetTypeID(MlirAttribute attribute);
+
+/// Gets the dialect of the attribute.
+MLIR_CAPI_EXPORTED MlirDialect mlirAttributeGetDialect(MlirAttribute attribute);
 
 /// Checks whether an attribute is null.
 static inline bool mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }

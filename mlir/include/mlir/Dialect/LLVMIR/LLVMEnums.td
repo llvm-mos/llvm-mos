@@ -272,7 +272,7 @@ def CConvEnum : LLVM_CEnumAttr<
 
 def CConv : DialectAttr<
     LLVM_Dialect,
-    CPred<"$_self.isa<::mlir::LLVM::CConvAttr>()">,
+    CPred<"::llvm::isa<::mlir::LLVM::CConvAttr>($_self)">,
     "LLVM Calling Convention specification"> {
   let storageType = "::mlir::LLVM::CConvAttr";
   let returnType = "::mlir::LLVM::cconv::CConv";
@@ -580,13 +580,38 @@ def LinkageEnum : LLVM_EnumAttr<
 
 def Linkage : DialectAttr<
     LLVM_Dialect,
-    CPred<"$_self.isa<::mlir::LLVM::LinkageAttr>()">,
+    CPred<"::llvm::isa<::mlir::LLVM::LinkageAttr>($_self)">,
     "LLVM Linkage specification"> {
   let storageType = "::mlir::LLVM::LinkageAttr";
   let returnType = "::mlir::LLVM::Linkage";
   let convertFromStorage = "$_self.getLinkage()";
   let constBuilderCall =
           "::mlir::LLVM::LinkageAttr::get($_builder.getContext(), $0)";
+}
+
+
+//===----------------------------------------------------------------------===//
+// Comdat
+//===----------------------------------------------------------------------===//
+
+def ComdatAny
+    : LLVM_EnumAttrCase<"Any", "any", "Any", 0>;
+def ComdatExactMatch
+    : LLVM_EnumAttrCase<"ExactMatch", "exactmatch", "ExactMatch", 1>;
+def ComdatLargest
+    : LLVM_EnumAttrCase<"Largest", "largest", "Largest", 2>;
+def ComdatNoDeduplicate
+    : LLVM_EnumAttrCase<"NoDeduplicate", "nodeduplicate", "NoDeduplicate", 3>;
+def ComdatSameSize
+    : LLVM_EnumAttrCase<"SameSize", "samesize", "SameSize", 4>;
+
+def Comdat : LLVM_EnumAttr<
+  "Comdat",
+  "::llvm::Comdat::SelectionKind",
+  "LLVM Comdat Types",
+  [ComdatAny, ComdatExactMatch, ComdatLargest,
+   ComdatNoDeduplicate, ComdatSameSize]> {
+  let cppNamespace = "::mlir::LLVM::comdat";
 }
 
 //===----------------------------------------------------------------------===//

@@ -26,8 +26,9 @@ include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.td"
 def OpenMP_Dialect : Dialect {
   let name = "omp";
   let cppNamespace = "::mlir::omp";
-  let dependentDialects = ["::mlir::LLVM::LLVMDialect"];
+  let dependentDialects = ["::mlir::LLVM::LLVMDialect, ::mlir::func::FuncDialect"];
   let useDefaultAttributePrinterParser = 1;
+  let usePropertiesForAttributes = 1;
 }
 
 // OmpCommon requires definition of OpenACC_Dialect.
@@ -44,9 +45,9 @@ class OpenMP_Attr<string name, string attrMnemonic,
   let mnemonic = attrMnemonic;
 }
 
-def IsDeviceAttr : OpenMP_Attr<"IsDevice", "isdevice"> {
+def VersionAttr : OpenMP_Attr<"Version", "version"> {
   let parameters = (ins
-    "bool":$is_device
+    "uint32_t":$version
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -62,7 +63,8 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
     DefaultValuedParameter<"bool", "false">:$assume_teams_oversubscription,
     DefaultValuedParameter<"bool", "false">:$assume_threads_oversubscription,
     DefaultValuedParameter<"bool", "false">:$assume_no_thread_state,
-    DefaultValuedParameter<"bool", "false">:$assume_no_nested_parallelism
+    DefaultValuedParameter<"bool", "false">:$assume_no_nested_parallelism,
+    DefaultValuedParameter<"uint32_t", "50">:$openmp_device_version
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -86,6 +88,52 @@ def IntLikeType : AnyTypeOf<[AnyInteger, Index]>;
 
 def OpenMP_PointerLikeType : TypeAlias<OpenMP_PointerLikeTypeInterface,
 	"OpenMP-compatible variable type">;
+
+//===----------------------------------------------------------------------===//
+//  2.12.7 Declare Target Directive
+//===----------------------------------------------------------------------===//
+
+def DeviceTypeAny : I32EnumAttrCase<"any", 0>;
+def DeviceTypeHost   : I32EnumAttrCase<"host", 1>;
+def DeviceTypeNoHost   : I32EnumAttrCase<"nohost", 2>;
+
+def DeclareTargetDeviceType : I32EnumAttr<
+    "DeclareTargetDeviceType",
+    "device_type clause",
+    [DeviceTypeAny, DeviceTypeHost, DeviceTypeNoHost]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+
+def DeclareTargetDeviceTypeAttr : EnumAttr<OpenMP_Dialect, DeclareTargetDeviceType,
+                                    "device_type"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+def CaptureClauseLink : I32EnumAttrCase<"to", 0>;
+def CaptureClauseTo   : I32EnumAttrCase<"link", 1>;
+
+def DeclareTargetCaptureClause : I32EnumAttr<
+    "DeclareTargetCaptureClause",
+    "capture clause",
+    [CaptureClauseLink, CaptureClauseTo]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+
+def DeclareTargetCaptureClauseAttr : EnumAttr<OpenMP_Dialect, DeclareTargetCaptureClause,
+                                    "capture_clause"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
+  let parameters = (ins
+    OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
+    OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 //===----------------------------------------------------------------------===//
 // 2.6 parallel Construct
@@ -140,6 +188,10 @@ def ParallelOp : OpenMP_Op<"parallel", [
   let builders = [
     OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
+  let extraClassDeclaration = [{
+    /// Returns the number of reduction variables.
+    unsigned getNumReductionVars() { return getReductionVars().size(); }
+  }];
   let assemblyFormat = [{
     oilist( `reduction` `(`
               custom<ReductionVarList>(
@@ -168,6 +220,66 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7 teams Construct
+//===----------------------------------------------------------------------===//
+def TeamsOp : OpenMP_Op<"teams", [
+              AttrSizedOperandSegments, RecursiveMemoryEffects,
+              ReductionClauseInterface]> {
+  let summary = "teams construct";
+  let description = [{
+    The teams construct defines a region of code that triggers the creation of a
+    league of teams. Once created, the number of teams remains constant for the
+    duration of its code region.
+
+    The optional $num_teams_upper and $num_teams_lower specify the limit on the
+    number of teams to be created. If only the upper bound is specified, it acts
+    as if the lower bound was set to the same value. It is not supported to set
+    $num_teams_lower if $num_teams_upper is not specified. They define a closed
+    range, where both the lower and upper bounds are included.
+
+    If the $if_expr is present and it evaluates to `false`, the number of teams
+    created is one.
+
+    The optional $thread_limit specifies the limit on the number of threads.
+
+    The $allocators_vars and $allocate_vars parameters are a variadic list of
+    values that specify the memory allocator to be used to obtain storage for
+    private values.
+  }];
+
+  let arguments = (ins Optional<AnyInteger>:$num_teams_lower,
+                       Optional<AnyInteger>:$num_teams_upper,
+                       Optional<I1>:$if_expr,
+                       Optional<AnyInteger>:$thread_limit,
+                       Variadic<AnyType>:$allocate_vars,
+                       Variadic<AnyType>:$allocators_vars,
+                       Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$reductions);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(
+      `num_teams` `(` ( $num_teams_lower^ `:` type($num_teams_lower) )? `to`
+                        $num_teams_upper `:` type($num_teams_upper) `)`
+    | `if` `(` $if_expr `)`
+    | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
+    | `reduction` `(`
+        custom<ReductionVarList>(
+          $reduction_vars, type($reduction_vars), $reductions
+        ) `)`
+    | `allocate` `(`
+        custom<AllocateAndAllocator>(
+          $allocate_vars, type($allocate_vars),
+          $allocators_vars, type($allocators_vars)
+        ) `)`
+    ) $region attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 def OMP_ScheduleModNone         : I32EnumAttrCase<"none", 0>;
@@ -930,19 +1042,20 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
 
   let arguments = (ins Optional<I1>:$if_expr,
                        Optional<AnyInteger>:$device,
-                       Variadic<AnyType>:$use_device_ptr,
-                       Variadic<AnyType>:$use_device_addr,
+                       Variadic<OpenMP_PointerLikeType>:$use_device_ptr,
+                       Variadic<OpenMP_PointerLikeType>:$use_device_addr,
                        Variadic<OpenMP_PointerLikeType>:$map_operands,
-                       I64ArrayAttr:$map_types);
+                       OptionalAttr<I64ArrayAttr>:$map_types);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
+    | `map`
+      `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
     | `use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
     | `use_device_addr` `(` $use_device_addr `:` type($use_device_addr) `)`)
-    `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
     $region attr-dict
   }];
 
@@ -1642,6 +1755,37 @@ def ReductionOp : OpenMP_Op<"reduction"> {
     $operand `,` $accumulator attr-dict `:` type($operand) `,` type($accumulator)
   }];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 8.2 requires directive
+//===----------------------------------------------------------------------===//
+
+// atomic_default_mem_order clause values not defined here because they can be
+// represented by the OMPC_MemoryOrder enumeration instead.
+def ClauseRequiresNone : I32BitEnumAttrCaseNone<"none">;
+def ClauseRequiresReverseOffload : I32BitEnumAttrCaseBit<"reverse_offload", 0>;
+def ClauseRequiresUnifiedAddress : I32BitEnumAttrCaseBit<"unified_address", 1>;
+def ClauseRequiresUnifiedSharedMemory
+    : I32BitEnumAttrCaseBit<"unified_shared_memory", 2>;
+def ClauseRequiresDynamicAllocators
+    : I32BitEnumAttrCaseBit<"dynamic_allocators", 3>;
+
+def ClauseRequires : I32BitEnumAttr<
+    "ClauseRequires",
+    "requires clauses",
+    [
+      ClauseRequiresNone,
+      ClauseRequiresReverseOffload,
+      ClauseRequiresUnifiedAddress,
+      ClauseRequiresUnifiedSharedMemory,
+      ClauseRequiresDynamicAllocators
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
+}
+def ClauseRequiresAttr :
+  EnumAttr<OpenMP_Dialect, ClauseRequires, "clause_requires"> {
 }
 
 #endif // OPENMP_OPS

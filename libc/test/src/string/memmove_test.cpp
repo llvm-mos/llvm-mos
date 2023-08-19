@@ -16,13 +16,15 @@
 using __llvm_libc::cpp::array;
 using __llvm_libc::cpp::span;
 
+namespace __llvm_libc {
+
 TEST(LlvmLibcMemmoveTest, MoveZeroByte) {
   char Buffer[] = {'a', 'b', 'y', 'z'};
   const char Expected[] = {'a', 'b', 'y', 'z'};
   void *const Dst = Buffer;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 0);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcMemmoveTest, DstAndSrcPointToSameAddress) {
@@ -31,7 +33,7 @@ TEST(LlvmLibcMemmoveTest, DstAndSrcPointToSameAddress) {
   void *const Dst = Buffer;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer, 1);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcMemmoveTest, DstStartsBeforeSrc) {
@@ -42,7 +44,7 @@ TEST(LlvmLibcMemmoveTest, DstStartsBeforeSrc) {
   void *const Dst = Buffer + 1;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 2);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcMemmoveTest, DstStartsAfterSrc) {
@@ -51,7 +53,7 @@ TEST(LlvmLibcMemmoveTest, DstStartsAfterSrc) {
   void *const Dst = Buffer + 2;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 1, 2);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 // e.g. `Dst` follow `src`.
@@ -64,7 +66,7 @@ TEST(LlvmLibcMemmoveTest, SrcFollowDst) {
   void *const Dst = Buffer + 1;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 2, 1);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
@@ -73,28 +75,30 @@ TEST(LlvmLibcMemmoveTest, DstFollowSrc) {
   void *const Dst = Buffer + 2;
   void *const Ret = __llvm_libc::memmove(Dst, Buffer + 1, 1);
   EXPECT_EQ(Ret, Dst);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
-static constexpr int kMaxSize = 512;
+// Adapt CheckMemmove signature to op implementation signatures.
+static inline void Adaptor(cpp::span<char> dst, cpp::span<char> src,
+                           size_t size) {
+  __llvm_libc::memmove(dst.begin(), src.begin(), size);
+}
 
 TEST(LlvmLibcMemmoveTest, SizeSweep) {
-  using LargeBuffer = array<char, 3 * kMaxSize>;
-  LargeBuffer GroundTruth;
-  __llvm_libc::Randomize(GroundTruth);
-  for (int Size = 0; Size < kMaxSize; ++Size) {
-    for (int Offset = -Size; Offset < Size; ++Offset) {
-      LargeBuffer Buffer = GroundTruth;
-      LargeBuffer Expected = GroundTruth;
-      size_t DstOffset = kMaxSize;
-      size_t SrcOffset = kMaxSize + Offset;
-      for (int I = 0; I < Size; ++I)
-        Expected[DstOffset + I] = GroundTruth[SrcOffset + I];
-      void *const Dst = Buffer.data() + DstOffset;
-      void *const Ret =
-          __llvm_libc::memmove(Dst, Buffer.data() + SrcOffset, Size);
-      EXPECT_EQ(Ret, Dst);
-      ASSERT_MEM_EQ(Buffer, Expected);
+  static constexpr int kMaxSize = 400;
+  static constexpr int kDenseOverlap = 15;
+  using LargeBuffer = array<char, 2 * kMaxSize + 1>;
+  LargeBuffer Buffer;
+  Randomize(Buffer);
+  for (int Size = 0; Size < kMaxSize; ++Size)
+    for (int Overlap = -1; Overlap < Size;) {
+      ASSERT_TRUE(CheckMemmove<Adaptor>(Buffer, Size, Overlap));
+      // Prevent quadratic behavior by skipping offset above kDenseOverlap.
+      if (Overlap > kDenseOverlap)
+        Overlap *= 2;
+      else
+        ++Overlap;
     }
-  }
 }
+
+} // namespace __llvm_libc

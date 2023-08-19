@@ -111,20 +111,22 @@ static void computeBackwardSlice(tensor::PadOp padOp,
                                  scf::ForOp outermostEnclosingForOp,
                                  SetVector<Operation *> &backwardSlice) {
   DominanceInfo domInfo(outermostEnclosingForOp);
-  auto filter = [&](Operation *op) {
+  BackwardSliceOptions sliceOptions;
+  sliceOptions.filter = [&](Operation *op) {
     return domInfo.dominates(outermostEnclosingForOp, op) &&
            !padOp->isProperAncestor(op);
   };
+  sliceOptions.inclusive = true;
+
   // First, add the ops required to compute the region to the backwardSlice.
   SetVector<Value> valuesDefinedAbove;
   getUsedValuesDefinedAbove(padOp.getRegion(), padOp.getRegion(),
                             valuesDefinedAbove);
   for (Value v : valuesDefinedAbove) {
-    getBackwardSlice(v, &backwardSlice, filter, /*inclusive=*/true);
+    getBackwardSlice(v, &backwardSlice, sliceOptions);
   }
   // Then, add the backward slice from padOp itself.
-  getBackwardSlice(padOp.getOperation(), &backwardSlice, filter,
-                   /*inclusive=*/true);
+  getBackwardSlice(padOp.getOperation(), &backwardSlice, sliceOptions);
 }
 
 //===----------------------------------------------------------------------===//
@@ -535,7 +537,7 @@ static Value buildLoopIterationCount(RewriterBase &rewriter, scf::ForOp outer,
 //   3. At the innermost loop level, create a InsertSliceOp.
 //   4. Iteratively pop and yield the result of the InsertSliceOp across the
 //      cloned loops.
-static PackingResult buildPackingLoopNestImpl(
+static FailureOr<PackingResult> buildPackingLoopNestImpl(
     RewriterBase &rewriter, IRMapping &bvm, tensor::PadOp opToHoist,
     ArrayRef<int64_t> transposeVector, RankedTensorType transposedTensorType,
     tensor::EmptyOp emptyOp, const HoistPaddingAnalysis &analysis) {
@@ -549,7 +551,7 @@ static PackingResult buildPackingLoopNestImpl(
   int paddedRank = paddedTensorType.getRank();
 
   // Step 0. Populate bvm with opToHoist.getSource if relevant.
-  BlockArgument bbArg = opToHoist.getSource().dyn_cast<BlockArgument>();
+  BlockArgument bbArg = dyn_cast<BlockArgument>(opToHoist.getSource());
   while (bbArg) {
     auto forOp = dyn_cast<scf::ForOp>(bbArg.getOwner()->getParentOp());
     if (!forOp)
@@ -558,7 +560,7 @@ static PackingResult buildPackingLoopNestImpl(
       break;
     OpOperand &operand = forOp.getOpOperandForRegionIterArg(bbArg);
     bvm.map(bbArg, operand.get());
-    bbArg = operand.get().dyn_cast<BlockArgument>();
+    bbArg = dyn_cast<BlockArgument>(operand.get());
   }
 
   // Step 1. iteratively clone loops and push `hoistedPackedTensor`.
@@ -621,7 +623,8 @@ static PackingResult buildPackingLoopNestImpl(
   sizes = SmallVector<OpFoldResult>(nPackedLoops, rewriter.getIndexAttr(1));
   for (int64_t sz : transposedTensorType.getShape()) {
     // TODO: go grab dims when needed, atm tensor::PadOp yields a static tensor.
-    assert(!ShapedType::isDynamic(sz) && "padded tensor needs static sizes");
+    if (ShapedType::isDynamic(sz))
+      return failure();
     sizes.push_back(rewriter.getIndexAttr(sz));
   }
   // strides = [1 .. 1].
@@ -753,9 +756,8 @@ static bool tracesBackToExpectedValue(tensor::ExtractSliceOp extractSliceOp,
     if (!destOp)
       break;
     LLVM_DEBUG(DBGS() << "--step dest op: " << destOp << "\n");
-    source =
-        destOp.getDpsInitOperand(source.cast<OpResult>().getResultNumber())
-            ->get();
+    source = destOp.getDpsInitOperand(cast<OpResult>(source).getResultNumber())
+                 ->get();
   }
   LLVM_DEBUG(DBGS() << "--final source: " << source << "\n");
   LLVM_DEBUG(DBGS() << "--expected source: " << expectedSource << "\n");

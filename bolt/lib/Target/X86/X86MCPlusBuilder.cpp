@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86InstrRelaxTables.h"
+#include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86MCSymbolizer.h"
 #include "bolt/Core/MCPlus.h"
@@ -50,10 +50,6 @@ static cl::opt<bool> X86StripRedundantAddressSize(
 
 namespace {
 
-unsigned getShortArithOpcode(unsigned Opcode) {
-  return X86::getShortOpcodeArith(Opcode);
-}
-
 bool isMOVSX64rm32(const MCInst &Inst) {
   return Inst.getOpcode() == X86::MOVSX64rm32;
 }
@@ -77,8 +73,9 @@ public:
       : MCPlusBuilder(Analysis, Info, RegInfo) {}
 
   std::unique_ptr<MCSymbolizer>
-  createTargetSymbolizer(BinaryFunction &Function) const override {
-    return std::make_unique<X86MCSymbolizer>(Function);
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<X86MCSymbolizer>(Function, CreateNewSymbols);
   }
 
   bool isBranch(const MCInst &Inst) const override {
@@ -270,7 +267,7 @@ public:
     case X86::PUSHFS16:
     case X86::PUSHGS16:
     case X86::PUSHSS16:
-    case X86::PUSHi16:
+    case X86::PUSH16i:
       return 2;
     case X86::PUSH32i8:
     case X86::PUSH32r:
@@ -284,7 +281,7 @@ public:
     case X86::PUSHFS32:
     case X86::PUSHGS32:
     case X86::PUSHSS32:
-    case X86::PUSHi32:
+    case X86::PUSH32i:
       return 4;
     case X86::PUSH64i32:
     case X86::PUSH64i8:
@@ -321,8 +318,8 @@ public:
     return false;
   }
 
-  bool isUnsupportedBranch(unsigned Opcode) const override {
-    switch (Opcode) {
+  bool isUnsupportedBranch(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
     default:
       return false;
     case X86::LOOP:
@@ -1148,13 +1145,9 @@ public:
       break;
     }
 
-    const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
-    for (int I = 0, E = MCII.getNumDefs(); I != E; ++I) {
-      const MCOperand &Operand = Inst.getOperand(I);
-      if (Operand.isReg() && Operand.getReg() == X86::RSP)
-        return true;
-    }
-    return false;
+    return any_of(defOperands(Inst), [](const MCOperand &Op) {
+      return Op.isReg() && Op.getReg() == X86::RSP;
+    });
   }
 
   bool
@@ -1287,19 +1280,11 @@ public:
 
     // If potential leak, check if it is not just writing to itself/sp/bp
     if (DoesLeak) {
-      for (int I = 0, E = NumDefs; I != E; ++I) {
-        const MCOperand &Operand = Inst.getOperand(I);
-        if (HasFramePointer && Operand.isReg() &&
-            SPBPAliases[Operand.getReg()]) {
-          DoesLeak = false;
-          break;
-        }
-        if (!HasFramePointer && Operand.isReg() &&
-            SPAliases[Operand.getReg()]) {
-          DoesLeak = false;
-          break;
-        }
-      }
+      DoesLeak = !any_of(defOperands(Inst), [&](const MCOperand &Operand) {
+        assert(Operand.isReg());
+        MCPhysReg Reg = Operand.getReg();
+        return HasFramePointer ? SPBPAliases[Reg] : SPAliases[Reg];
+      });
     }
     return DoesLeak;
   }
@@ -1726,7 +1711,7 @@ public:
       }
     } else {
       // If it's arithmetic instruction check if signed operand fits in 1 byte.
-      const unsigned ShortOpcode = getShortArithOpcode(OldOpcode);
+      const unsigned ShortOpcode = X86::getOpcodeForShortImmediateForm(OldOpcode);
       if (ShortOpcode != OldOpcode &&
           Inst.getOperand(MCPlus::getNumPrimeOperands(Inst) - 1).isImm()) {
         int64_t Imm =
@@ -1875,8 +1860,7 @@ public:
       }
 
       // Handle conditional branches and ignore indirect branches
-      if (!isUnsupportedBranch(I->getOpcode()) &&
-          getCondCode(*I) == X86::COND_INVALID) {
+      if (!isUnsupportedBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
         // Indirect branch
         return false;
       }
@@ -2478,6 +2462,8 @@ public:
     //
     // Only the following limited expression types are supported:
     //   Symbol + Addend
+    //   Symbol + Constant + Addend
+    //   Const + Addend
     //   Symbol
     uint64_t Addend = 0;
     MCSymbol *Symbol = nullptr;
@@ -2487,11 +2473,25 @@ public:
       assert(BinaryExpr->getOpcode() == MCBinaryExpr::Add &&
              "unexpected binary expression");
       const MCExpr *LHS = BinaryExpr->getLHS();
-      assert(LHS->getKind() == MCExpr::SymbolRef && "unexpected LHS");
-      Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LHS));
+      if (LHS->getKind() == MCExpr::Constant) {
+        Addend = cast<MCConstantExpr>(LHS)->getValue();
+      } else if (LHS->getKind() == MCExpr::Binary) {
+        const auto *LHSBinaryExpr = cast<MCBinaryExpr>(LHS);
+        assert(LHSBinaryExpr->getOpcode() == MCBinaryExpr::Add &&
+               "unexpected binary expression");
+        const MCExpr *LLHS = LHSBinaryExpr->getLHS();
+        assert(LLHS->getKind() == MCExpr::SymbolRef && "unexpected LLHS");
+        Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LLHS));
+        const MCExpr *RLHS = LHSBinaryExpr->getRHS();
+        assert(RLHS->getKind() == MCExpr::Constant && "unexpected RLHS");
+        Addend = cast<MCConstantExpr>(RLHS)->getValue();
+      } else {
+        assert(LHS->getKind() == MCExpr::SymbolRef && "unexpected LHS");
+        Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LHS));
+      }
       const MCExpr *RHS = BinaryExpr->getRHS();
       assert(RHS->getKind() == MCExpr::Constant && "unexpected RHS");
-      Addend = cast<MCConstantExpr>(RHS)->getValue();
+      Addend += cast<MCConstantExpr>(RHS)->getValue();
     } else {
       assert(ValueExpr->getKind() == MCExpr::SymbolRef && "unexpected value");
       Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(ValueExpr));
@@ -2560,8 +2560,8 @@ public:
     default: {
       switch (getPushSize(Inst)) {
 
-      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSHi16}}}; break;
-      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSHi32}}}; break;
+      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSH16i}}}; break;
+      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSH32i}}}; break;
       case 8: I = {8, false, {{CHECK8, X86::PUSH64i8},
                               {CHECK32, X86::PUSH64i32},
                               {NOCHECK, Inst.getOpcode()}}}; break;
@@ -3121,17 +3121,9 @@ public:
     // Check if the target address expression used in the original indirect call
     // uses the stack pointer, which we are going to clobber.
     static BitVector SPAliases(getAliases(X86::RSP));
-    bool UsesSP = false;
-    // Skip defs.
-    for (unsigned I = Info->get(CallInst.getOpcode()).getNumDefs(),
-                  E = MCPlus::getNumPrimeOperands(CallInst);
-         I != E; ++I) {
-      const MCOperand &Operand = CallInst.getOperand(I);
-      if (Operand.isReg() && SPAliases[Operand.getReg()]) {
-        UsesSP = true;
-        break;
-      }
-    }
+    bool UsesSP = any_of(useOperands(CallInst), [&](const MCOperand &Op) {
+      return Op.isReg() && SPAliases[Op.getReg()];
+    });
 
     InstructionListType Insts;
     MCPhysReg TempReg = getIntArgRegister(0);

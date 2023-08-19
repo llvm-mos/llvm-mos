@@ -568,7 +568,7 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
   return ASTUnit::LoadFromASTFile(
       std::string(ASTDumpPath.str()),
       CI.getPCHContainerOperations()->getRawReader(), ASTUnit::LoadEverything,
-      Diags, CI.getFileSystemOpts());
+      Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the
@@ -609,10 +609,10 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       new DiagnosticsEngine{DiagID, &*DiagOpts, DiagClient});
 
-  return std::unique_ptr<ASTUnit>(ASTUnit::LoadFromCommandLine(
-      CommandLineArgs.begin(), (CommandLineArgs.end()),
-      CI.getPCHContainerOperations(), Diags,
-      CI.getHeaderSearchOpts().ResourceDir));
+  return ASTUnit::LoadFromCommandLine(CommandLineArgs.begin(),
+                                      (CommandLineArgs.end()),
+                                      CI.getPCHContainerOperations(), Diags,
+                                      CI.getHeaderSearchOpts().ResourceDir);
 }
 
 llvm::Expected<InvocationListTy>

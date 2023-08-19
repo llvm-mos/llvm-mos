@@ -50,9 +50,7 @@ using namespace symbolize;
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -64,14 +62,9 @@ enum ID {
 #include "Opts.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -135,12 +128,33 @@ static void enableDebuginfod(LLVMSymbolizer &Symbolizer,
   HTTPClient::initialize();
 }
 
+static StringRef getSpaceDelimitedWord(StringRef &Source) {
+  const char kDelimiters[] = " \n\r";
+  const char *Pos = Source.data();
+  StringRef Result;
+  Pos += strspn(Pos, kDelimiters);
+  if (*Pos == '"' || *Pos == '\'') {
+    char Quote = *Pos;
+    Pos++;
+    const char *End = strchr(Pos, Quote);
+    if (!End)
+      return StringRef();
+    Result = StringRef(Pos, End - Pos);
+    Pos = End + 1;
+  } else {
+    int NameLength = strcspn(Pos, kDelimiters);
+    Result = StringRef(Pos, NameLength);
+    Pos += NameLength;
+  }
+  Source = StringRef(Pos, Source.end() - Pos);
+  return Result;
+}
+
 static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
                          StringRef InputString, Command &Cmd,
                          std::string &ModuleName, object::BuildID &BuildID,
                          uint64_t &ModuleOffset) {
-  const char kDelimiters[] = " \n\r";
-  ModuleName = "";
+  ModuleName = BinaryName;
   if (InputString.consume_front("CODE ")) {
     Cmd = Command::Code;
   } else if (InputString.consume_front("DATA ")) {
@@ -152,58 +166,57 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
     Cmd = Command::Code;
   }
 
-  const char *Pos;
-  // Skip delimiters and parse input filename (if needed).
-  if (BinaryName.empty() && BuildID.empty()) {
-    bool HasFilePrefix = false;
-    bool HasBuildIDPrefix = false;
-    while (true) {
-      if (InputString.consume_front("FILE:")) {
-        if (HasFilePrefix)
-          return false;
-        HasFilePrefix = true;
-        continue;
-      }
-      if (InputString.consume_front("BUILDID:")) {
-        if (HasBuildIDPrefix)
-          return false;
-        HasBuildIDPrefix = true;
-        continue;
-      }
-      break;
-    }
-    if (HasFilePrefix && HasBuildIDPrefix)
-      return false;
-
-    Pos = InputString.data();
-    Pos += strspn(Pos, kDelimiters);
-    if (*Pos == '"' || *Pos == '\'') {
-      char Quote = *Pos;
-      Pos++;
-      const char *End = strchr(Pos, Quote);
-      if (!End)
+  // Parse optional input file specification.
+  bool HasFilePrefix = false;
+  bool HasBuildIDPrefix = false;
+  while (!InputString.empty()) {
+    InputString = InputString.ltrim();
+    if (InputString.consume_front("FILE:")) {
+      if (HasFilePrefix || HasBuildIDPrefix)
+        // Input file specification prefix has already been seen.
         return false;
-      ModuleName = std::string(Pos, End - Pos);
-      Pos = End + 1;
-    } else {
-      int NameLength = strcspn(Pos, kDelimiters);
-      ModuleName = std::string(Pos, NameLength);
-      Pos += NameLength;
+      HasFilePrefix = true;
+      continue;
     }
-    if (HasBuildIDPrefix) {
-      BuildID = parseBuildID(ModuleName);
-      if (BuildID.empty())
+    if (InputString.consume_front("BUILDID:")) {
+      if (HasBuildIDPrefix || HasFilePrefix)
+        // Input file specification prefix has already been seen.
         return false;
-      ModuleName.clear();
+      HasBuildIDPrefix = true;
+      continue;
     }
-  } else {
-    Pos = InputString.data();
-    ModuleName = BinaryName.str();
+    break;
   }
+
+  if (HasBuildIDPrefix || HasFilePrefix) {
+    if (!BinaryName.empty() || !BuildID.empty())
+      // Input file has already been specified on the command line.
+      return false;
+    StringRef Name = getSpaceDelimitedWord(InputString);
+    if (Name.empty())
+      // Wrong name for module file.
+      return false;
+    if (HasBuildIDPrefix) {
+      BuildID = parseBuildID(Name);
+      if (BuildID.empty())
+        // Wrong format of BuildID hash.
+        return false;
+    } else {
+      ModuleName = Name;
+    }
+  } else if (BinaryName.empty() && BuildID.empty()) {
+    // No input file has been specified. If the input string contains at least
+    // two items, assume that the first item is a file name.
+    ModuleName = getSpaceDelimitedWord(InputString);
+    if (ModuleName.empty() || InputString.empty())
+      // No input filename has been specified.
+      return false;
+  }
+
   // Skip delimiters and parse module offset.
-  Pos += strspn(Pos, kDelimiters);
-  int OffsetLength = strcspn(Pos, kDelimiters);
-  StringRef Offset(Pos, OffsetLength);
+  InputString = InputString.ltrim();
+  int OffsetLength = InputString.find_first_of(" \n\r");
+  StringRef Offset = InputString.substr(0, OffsetLength);
   // GNU addr2line assumes the offset is hexadecimal and allows a redundant
   // "0x" or "0X" prefix; do the same for compatibility.
   if (IsAddr2Line)
@@ -382,8 +395,6 @@ static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symboliz
   Filter.finish();
 }
 
-ExitOnError ExitOnErr;
-
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
@@ -477,6 +488,20 @@ int main(int argc, char **argv) {
     Printer = std::make_unique<JSONPrinter>(outs(), Config);
   else
     Printer = std::make_unique<LLVMPrinter>(outs(), printError, Config);
+
+  // When an input file is specified, exit immediately if the file cannot be
+  // read. If getOrCreateModuleInfo succeeds, symbolizeInput will reuse the
+  // cached file handle.
+  if (auto *Arg = Args.getLastArg(OPT_obj_EQ); Arg) {
+    auto Status = Symbolizer.getOrCreateModuleInfo(Arg->getValue());
+    if (!Status) {
+      Request SymRequest = {Arg->getValue(), 0};
+      handleAllErrors(Status.takeError(), [&](const ErrorInfoBase &EI) {
+        Printer->printError(SymRequest, EI);
+      });
+      return EXIT_FAILURE;
+    }
+  }
 
   std::vector<std::string> InputAddresses = Args.getAllArgValues(OPT_INPUT);
   if (InputAddresses.empty()) {

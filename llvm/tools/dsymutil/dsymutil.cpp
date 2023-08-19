@@ -59,9 +59,7 @@ using namespace object;
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -73,14 +71,9 @@ enum ID {
 #include "Options.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -241,6 +234,24 @@ getAccelTableKind(opt::InputArgList &Args) {
   return DsymutilAccelTableKind::Default;
 }
 
+static Expected<DsymutilDWARFLinkerType>
+getDWARFLinkerType(opt::InputArgList &Args) {
+  if (opt::Arg *LinkerType = Args.getLastArg(OPT_linker)) {
+    StringRef S = LinkerType->getValue();
+    if (S == "apple")
+      return DsymutilDWARFLinkerType::Apple;
+    if (S == "llvm")
+      return DsymutilDWARFLinkerType::LLVM;
+    return make_error<StringError>("invalid DWARF linker type specified: '" +
+                                       S +
+                                       "'. Supported values are 'apple', "
+                                       "'llvm'.",
+                                   inconvertibleErrorCode());
+  }
+
+  return DsymutilDWARFLinkerType::Apple;
+}
+
 static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
   if (Args.hasArg(OPT_gen_reproducer))
     return ReproducerMode::GenerateOnExit;
@@ -330,6 +341,13 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     return AccelKind.takeError();
   }
 
+  if (Expected<DsymutilDWARFLinkerType> DWARFLinkerType =
+          getDWARFLinkerType(Args)) {
+    Options.LinkOpts.DWARFLinkerType = *DWARFLinkerType;
+  } else {
+    return DWARFLinkerType.takeError();
+  }
+
   if (opt::Arg *SymbolMap = Args.getLastArg(OPT_symbolmap))
     Options.SymbolMap = SymbolMap->getValue();
 
@@ -362,7 +380,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.Toolchain = Toolchain->getValue();
 
   if (Args.hasArg(OPT_assembly))
-    Options.LinkOpts.FileType = OutputFileType::Assembly;
+    Options.LinkOpts.FileType = DWARFLinker::OutputFileType::Assembly;
 
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOpts.Threads = atoi(NumThreads->getValue());
@@ -386,6 +404,9 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     else
       return FormatOrErr.takeError();
   }
+
+  Options.LinkOpts.RemarksKeepAll =
+      !Args.hasArg(OPT_remarks_drop_without_debug);
 
   if (Error E = verifyOptions(Options))
     return std::move(E);
@@ -751,10 +772,10 @@ int main(int argc, char **argv) {
             return;
           }
 
-          auto &TempFile = *(TempFiles.back().File);
-          OS = std::make_shared<raw_fd_ostream>(TempFile.FD,
+          MachOUtils::ArchAndFile &AF = TempFiles.back();
+          OS = std::make_shared<raw_fd_ostream>(AF.getFD(),
                                                 /*shouldClose*/ false);
-          OutputFile = TempFile.TmpName;
+          OutputFile = AF.getPath();
         } else {
           std::error_code EC;
           OS = std::make_shared<raw_fd_ostream>(
@@ -822,7 +843,8 @@ int main(int argc, char **argv) {
         uint64_t FileOffset =
             MagicAndCountSize + UniversalArchInfoSize * TempFiles.size();
         for (const auto &File : TempFiles) {
-          ErrorOr<vfs::Status> stat = Options.LinkOpts.VFS->status(File.path());
+          ErrorOr<vfs::Status> stat =
+              Options.LinkOpts.VFS->status(File.getPath());
           if (!stat)
             break;
           if (FileOffset > UINT32_MAX) {

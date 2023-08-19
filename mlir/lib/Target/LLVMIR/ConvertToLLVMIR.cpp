@@ -13,6 +13,8 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Target/LLVM/NVVM/Target.h"
+#include "mlir/Target/LLVM/ROCDL/Target.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
@@ -24,7 +26,7 @@ using namespace mlir;
 namespace mlir {
 void registerToLLVMIRTranslation() {
   TranslateFromMLIRRegistration registration(
-      "mlir-to-llvmir", "translate mlir to llvmir",
+      "mlir-to-llvmir", "Translate MLIR to LLVMIR",
       [](Operation *op, raw_ostream &output) {
         llvm::LLVMContext llvmContext;
         auto llvmModule = translateModuleToLLVMIR(op, llvmContext);
@@ -36,6 +38,8 @@ void registerToLLVMIRTranslation() {
       },
       [](DialectRegistry &registry) {
         registry.insert<DLTIDialect, func::FuncDialect>();
+        registerNVVMTarget(registry);
+        registerROCDLTarget(registry);
         registerAllToLLVMIRTranslations(registry);
       });
 }

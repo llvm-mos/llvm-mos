@@ -79,7 +79,7 @@ func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4:
       // CHECK: "test.payload"(%[[CAST_ARG6]], %[[CAST_ARG7]]) : (index, index) -> ()
       "test.payload"(%arg6, %arg7) : (index, index) -> ()
       omp.yield
-    }) {operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+    }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
     omp.terminator
   }
   return
@@ -328,7 +328,7 @@ llvm.func @_QPsimple_reduction(%arg0: !llvm.ptr<array<100 x i32>> {fir.bindc_nam
   %5 = llvm.zext %2 : i1 to i32
   llvm.store %5, %4 : !llvm.ptr<i32>
   omp.parallel   {
-    %6 = llvm.alloca %3 x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
+    %6 = llvm.alloca %3 x i32 {adapt.valuebyref, in_type = i32, operandSegmentSizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
     omp.wsloop   reduction(@eqv_reduction -> %4 : !llvm.ptr<i32>) for  (%arg1) : i32 = (%1) to (%0) inclusive step (%1) {
       llvm.store %arg1, %6 : !llvm.ptr<i32>
       %7 = llvm.load %6 : !llvm.ptr<i32>
@@ -341,5 +341,46 @@ llvm.func @_QPsimple_reduction(%arg0: !llvm.ptr<array<100 x i32>> {fir.bindc_nam
     }
     omp.terminator
   }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL:  @_QQmain
+llvm.func @_QQmain() {
+  %0 = llvm.mlir.constant(0 : index) : i64
+  %1 = llvm.mlir.constant(5 : index) : i64
+  %2 = llvm.mlir.constant(1 : index) : i64
+  %3 = llvm.mlir.constant(1 : i64) : i64
+  %4 = llvm.alloca %3 x i32 : (i64) -> !llvm.ptr<i32>
+// CHECK: omp.taskgroup
+  omp.taskgroup   {
+    %5 = llvm.trunc %2 : i64 to i32
+    llvm.br ^bb1(%5, %1 : i32, i64)
+  ^bb1(%6: i32, %7: i64):  // 2 preds: ^bb0, ^bb2
+    %8 = llvm.icmp "sgt" %7, %0 : i64
+    llvm.cond_br %8, ^bb2, ^bb3
+  ^bb2:  // pred: ^bb1
+    llvm.store %6, %4 : !llvm.ptr<i32>
+// CHECK: omp.task
+    omp.task   {
+// CHECK: llvm.call @[[CALL_FUNC:.*]]({{.*}}) :
+      llvm.call @_QFPdo_work(%4) : (!llvm.ptr<i32>) -> ()
+// CHECK: omp.terminator
+      omp.terminator
+    }
+    %9 = llvm.load %4 : !llvm.ptr<i32>
+    %10 = llvm.add %9, %5  : i32
+    %11 = llvm.sub %7, %2  : i64
+    llvm.br ^bb1(%10, %11 : i32, i64)
+  ^bb3:  // pred: ^bb1
+    llvm.store %6, %4 : !llvm.ptr<i32>
+// CHECK: omp.terminator
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK: @[[CALL_FUNC]]
+llvm.func @_QFPdo_work(%arg0: !llvm.ptr<i32> {fir.bindc_name = "i"}) {
   llvm.return
 }

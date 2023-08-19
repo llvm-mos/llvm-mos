@@ -12,9 +12,119 @@
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
-include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
+
+def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.memref.memref_to_llvm_type_converter",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                               ["getTypeConverterType"]>]> {
+  let description = [{
+    This operation provides an "LLVMTypeConverter" that lowers memref types to
+    LLVM types.
+
+    The type converter can be customized as follows:
+    - `use_aligned_alloc`: Use aligned_alloc in place of malloc for heap
+      allocations.
+    - `index_bitwidth`: Bitwidth of the index type, "0" indicates the size of a
+      machine word.
+    - `use_generic_functions`: Use generic allocation and deallocation functions
+      instead of the classic "malloc", "aligned_alloc" and "free" functions.
+    - `use_opaque_pointers`: Generate LLVM IR using opaque pointers instead of
+      typed pointers.
+    // TODO: the following two options don't really make sense for 
+    // memref_to_llvm_type_converter specifically.
+    // We should have a single to_llvm_type_converter.
+    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare 
+      pointers to the MemRef element types.
+    - `data-layout`: String description (LLVM format) of the data layout that is
+      expected on the produced module.
+  }];
+
+  let arguments = (ins
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_aligned_alloc,
+      DefaultValuedOptionalAttr<I64Attr, "64">:$index_bitwidth,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_generic_functions,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_opaque_pointers,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_bare_ptr_call_conv,
+      OptionalAttr<StrAttr>:$data_layout);
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyExpandOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.memref.expand_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to rewrite ops within the memref dialect.
+
+    - Converts `atomic_rmw` that cannot be lowered to a simple atomic op with
+      AtomicRMWOpLowering pattern, e.g. with "minf" or "maxf" attributes, to
+      `memref.generic_atomic_rmw` with the expanded code.
+    - Converts `memref.reshape` that has a target shape of a statically-known
+      size to `memref.reinterpret_cast`.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyExpandStridedMetadataPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.memref.expand_strided_metadata",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns for expanding memref operations that modify the metadata
+    (sizes, offset, strides) of a memref into easier to analyze constructs.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyExtractAddressComputationsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.memref.extract_address_computations",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns for extracting address computations from operations
+    with memory accesses such that these memory accesses use only a base
+    pointer.
+
+    For instance,
+    ```mlir
+    memref.load %base[%off0, ...]
+    ```
+
+    Will be rewritten in:
+    ```mlir
+    %new_base = memref.subview %base[%off0,...][1,...][1,...]
+    memref.load %new_base[%c0,...]
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldMemrefAliasOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.memref.fold_memref_alias_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns for folding memref aliasing ops (memref.subview) into
+    consumer load/store ops (affine.load, memref.load, nvgpu.ldmatrix,
+    vector.load, vector.transfer_read, affine.store, memref.store, etc.) and
+    other ops (e.g., memref.subview).
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyResolveRankedShapedTypeResultDimsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.memref.resolve_ranked_shaped_type_result_dims",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that resolve `memref.dim` operations with values that are
+    defined by operations that implement the `ReifyRankedShapedTypeOpInterface`,
+    in terms of shapes of its input operands.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
 
 def Transform_MemRefAllocOp : Transform_ConcreteOpType<"memref.alloc">;
 
@@ -43,55 +153,10 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
            ConfinedAttr<I64Attr, [IntPositive]>:$factor,
            UnitAttr:$skip_analysis);
 
-  let results = (outs PDL_Operation:$transformed);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
-}
-
-def MemRefExtractAddressComputationsOp :
-    Op<Transform_Dialect, "memref.extract_address_computations",
-       [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-        TransformEachOpTrait, TransformOpInterface]> {
-  let summary = "Extract address computations from memory accesses";
-  let description = [{
-    Transformation that extracts address computations from instructions
-    with memory accesses such that these memory accesses use only a base
-    pointer.
-
-    For instance,
-    ```mlir
-    memref.load %base[%off0, ...]
-    ```
-
-    Will be rewritten in:
-    ```mlir
-    %new_base = memref.subview %base[%off0,...][1,...][1,...]
-    memref.load %new_base[%c0,...]
-    ```
-
-    Note: The current implementation requires that the input operation
-    is "isolated from above".
-
-    #### Return modes
-
-    This operation produces `definiteFailure` if the extraction fails for any
-    reason.
-    The operation always returns the handle to the target op that is expected
-    to be isolated from above.
-  }];
-
-  let arguments = (ins PDL_Operation:$target);
-  let results = (outs PDL_Operation:$transformed);
-
-  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
-
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::Operation *target,
-        ::mlir::transform::ApplyToEachResultList &transformResults,
-        ::mlir::transform::TransformState &state);
-  }];
 }
 
 def MemRefMakeLoopIndependentOp
@@ -122,12 +187,14 @@ def MemRefMakeLoopIndependentOp
     This transform op consumes the target handle and produces a result handle.
   }];
 
-  let arguments = (ins PDL_Operation:$target, I64Attr:$num_loops);
-  let results = (outs PDL_Operation:$transformed);
-  let assemblyFormat = "$target attr-dict";
+  let arguments = (ins TransformHandleTypeInterface:$target, I64Attr:$num_loops);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+  let assemblyFormat =
+      "$target attr-dict `:` functional-type($target, $transformed)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
         ::mlir::Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);

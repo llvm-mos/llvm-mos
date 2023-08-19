@@ -133,15 +133,33 @@ static void renderRemarksHotnessOptions(const ArgList &Args,
                            "opt-remarks-hotness-threshold=" + A->getValue()));
 }
 
+static bool shouldIgnoreUnsupportedTargetFeature(const Arg &TargetFeatureArg,
+                                                 llvm::Triple T,
+                                                 StringRef Processor) {
+  // Warn no-cumode for AMDGCN processors not supporing WGP mode.
+  if (!T.isAMDGPU())
+    return false;
+  auto GPUKind = T.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Processor)
+                              : llvm::AMDGPU::parseArchR600(Processor);
+  auto GPUFeatures = T.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
+                                  : llvm::AMDGPU::getArchAttrR600(GPUKind);
+  if (GPUFeatures & llvm::AMDGPU::FEATURE_WGP)
+    return false;
+  return TargetFeatureArg.getOption().matches(options::OPT_mno_cumode);
+}
+
 void tools::addPathIfExists(const Driver &D, const Twine &Path,
                             ToolChain::path_list &Paths) {
   if (D.getVFS().exists(Path))
     Paths.push_back(Path.str());
 }
 
-void tools::handleTargetFeaturesGroup(const ArgList &Args,
+void tools::handleTargetFeaturesGroup(const Driver &D,
+                                      const llvm::Triple &Triple,
+                                      const ArgList &Args,
                                       std::vector<StringRef> &Features,
                                       OptSpecifier Group) {
+  std::set<StringRef> Warned;
   for (const Arg *A : Args.filtered(Group)) {
     StringRef Name = A->getOption().getName();
     A->claim();
@@ -150,9 +168,21 @@ void tools::handleTargetFeaturesGroup(const ArgList &Args,
     assert(Name.startswith("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
+    auto Proc = getCPUName(D, Args, Triple);
+    if (shouldIgnoreUnsupportedTargetFeature(*A, Triple, Proc)) {
+      if (Warned.count(Name) == 0) {
+        D.getDiags().Report(
+            clang::diag::warn_drv_unsupported_option_for_processor)
+            << A->getAsString(Args) << Proc;
+        Warned.insert(Name);
+      }
+      continue;
+    }
+
     bool IsNegative = Name.startswith("no-");
     if (IsNegative)
       Name = Name.substr(3);
+
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 }
@@ -269,22 +299,8 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
     else if (A.getOption().matches(options::OPT_Z_reserved_lib_cckext))
       TC.AddCCKextLibArgs(Args, CmdArgs);
-    else if (A.getOption().matches(options::OPT_z)) {
-      // Pass -z prefix for gcc linker compatibility.
-      A.claim();
-      A.render(Args, CmdArgs);
-    } else if (A.getOption().matches(options::OPT_b)) {
-      const llvm::Triple &T = TC.getTriple();
-      if (!T.isOSAIX()) {
-        TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
-            << A.getSpelling() << T.str();
-      }
-      // Pass -b prefix for AIX linker.
-      A.claim();
-      A.render(Args, CmdArgs);
-    } else {
+    else
       A.renderAsInput(Args, CmdArgs);
-    }
   }
 }
 
@@ -321,6 +337,7 @@ void tools::AddTargetFeature(const ArgList &Args,
 /// Get the (LLVM) name of the AMDGPU gpu we are targeting.
 static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
                                       const ArgList &Args) {
+  Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
     return llvm::StringSwitch<std::string>(GPUName)
@@ -333,9 +350,8 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
         .Case("aruba", "cayman")
         .Default(GPUName.str());
   }
-  if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    return getProcessorFromTargetID(T, A->getValue()).str();
-  }
+  if (MArch)
+    return getProcessorFromTargetID(T, MArch->getValue()).str();
   return "";
 }
 
@@ -463,12 +479,19 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
     return std::string(getWebAssemblyTargetCPU(Args));
+
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
+    return loongarch::getLoongArchTargetCPU(Args, T);
   }
 }
 
-static void getWebAssemblyTargetFeatures(const ArgList &Args,
+static void getWebAssemblyTargetFeatures(const Driver &D,
+                                         const llvm::Triple &Triple,
+                                         const ArgList &Args,
                                          std::vector<StringRef> &Features) {
-  handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
+  handleTargetFeaturesGroup(D, Triple, Args, Features,
+                            options::OPT_m_wasm_Features_Group);
 }
 
 void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -513,11 +536,11 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     x86::getX86TargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::hexagon:
-    hexagon::getHexagonTargetFeatures(D, Args, Features);
+    hexagon::getHexagonTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
-    getWebAssemblyTargetFeatures(Args, Features);
+    getWebAssemblyTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -606,6 +629,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                 PluginName + Suffix,
                             Plugin);
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginPrefix) + Plugin));
+  } else {
+    // Tell LLD to find and use .llvm.lto section in regular relocatable object
+    // files
+    if (Args.hasArg(options::OPT_ffat_lto_objects))
+      CmdArgs.push_back("--fat-lto-objects");
   }
 
   const char *PluginOptPrefix = IsOSAIX ? "-bplugin_opt:" : "-plugin-opt=";
@@ -655,8 +683,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(
         Twine(PluginOptPrefix) + "dwo_dir=" + Output.getFilename() + "_dwo"));
 
-  if (IsThinLTO)
+  if (IsThinLTO && !IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "thinlto"));
+  else if (IsThinLTO && IsOSAIX)
+    CmdArgs.push_back(Args.MakeArgString(Twine("-bdbg:thinlto")));
+
 
   StringRef Parallelism = getLTOParallelism(Args, D);
   if (!Parallelism.empty())
@@ -681,6 +712,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   if (IsOSAIX) {
+    if (!ToolChain.useIntegratedAs())
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-no-integrated-as=1"));
+
     // On AIX, clang assumes strict-dwarf is true if any debug option is
     // specified, unless it is told explicitly not to assume so.
     Arg *A = Args.getLastArg(options::OPT_g_Group);
@@ -714,13 +749,38 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-function-sections=0"));
 
+  bool DataSectionsTurnedOff = false;
   if (Args.hasFlag(options::OPT_fdata_sections, options::OPT_fno_data_sections,
-                   UseSeparateSections))
+                   UseSeparateSections)) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-data-sections=1"));
-  else if (Args.hasArg(options::OPT_fno_data_sections))
+  } else if (Args.hasArg(options::OPT_fno_data_sections)) {
+    DataSectionsTurnedOff = true;
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-data-sections=0"));
+  }
+
+  if (Args.hasArg(options::OPT_mxcoff_roptr) ||
+      Args.hasArg(options::OPT_mno_xcoff_roptr)) {
+    bool HasRoptr = Args.hasFlag(options::OPT_mxcoff_roptr,
+                                 options::OPT_mno_xcoff_roptr, false);
+    StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
+
+    if (!IsOSAIX)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << OptStr << ToolChain.getTriple().str();
+
+    if (HasRoptr) {
+      // The data sections option is on by default on AIX. We only need to error
+      // out when -fno-data-sections is specified explicitly to turn off data
+      // sections.
+      if (DataSectionsTurnedOff)
+        D.Diag(diag::err_roptr_requires_data_sections);
+
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-mxcoff-roptr"));
+    }
+  }
 
   // Pass an option to enable split machine functions.
   if (auto *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
@@ -739,16 +799,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                            "sample-profile=" + FName));
   }
 
-  auto *CSPGOGenerateArg = Args.getLastArg(options::OPT_fcs_profile_generate,
-                                           options::OPT_fcs_profile_generate_EQ,
-                                           options::OPT_fno_profile_generate);
-  if (CSPGOGenerateArg &&
-      CSPGOGenerateArg->getOption().matches(options::OPT_fno_profile_generate))
-    CSPGOGenerateArg = nullptr;
-
-  auto *ProfileUseArg = getLastProfileUseArg(Args);
-
-  if (CSPGOGenerateArg) {
+  if (auto *CSPGOGenerateArg = getLastCSProfileGenerateArg(Args)) {
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
                                          "cs-profile-generate"));
     if (CSPGOGenerateArg->getOption().matches(
@@ -761,7 +812,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
                              "cs-profile-path=default_%m.profraw"));
-  } else if (ProfileUseArg) {
+  } else if (auto *ProfileUseArg = getLastProfileUseArg(Args)) {
     SmallString<128> Path(
         ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue());
     if (Path.empty() || llvm::sys::fs::is_directory(Path))
@@ -911,12 +962,6 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC,
 void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,
                                          const llvm::opt::ArgList &Args,
                                          ArgStringList &CmdArgs) {
-  // NOTE: Generating executables by Flang is considered an "experimental"
-  // feature and hence this is guarded with a command line option.
-  // TODO: Make this work unconditionally once Flang is mature enough.
-  if (!Args.hasArg(options::OPT_flang_experimental_exec))
-    return;
-
   // Default to the <driver-path>/../lib directory. This works fine on the
   // platforms that we have tested so far. We will probably have to re-fine
   // this in the future. In particular, on some platforms, we may need to use
@@ -1212,11 +1257,11 @@ bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringLis
     return false;
 
   if (TC.getXRayArgs().needsXRayRt()) {
-    CmdArgs.push_back("-whole-archive");
+    CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray"));
     for (const auto &Mode : TC.getXRayArgs().modeList())
       CmdArgs.push_back(TC.getCompilerRTArgString(Args, Mode));
-    CmdArgs.push_back("-no-whole-archive");
+    CmdArgs.push_back("--no-whole-archive");
     return true;
   }
 
@@ -1253,26 +1298,27 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
     F += ".dwo";
   };
   if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
-    if (StringRef(A->getValue()) == "single")
+    if (StringRef(A->getValue()) == "single" && Output.isFilename())
       return Args.MakeArgString(Output.getFilename());
 
-  Arg *FinalOutput = Args.getLastArg(options::OPT_o);
-  if (FinalOutput && Args.hasArg(options::OPT_c)) {
-    SmallString<128> T(FinalOutput->getValue());
-    llvm::sys::path::remove_filename(T);
-    llvm::sys::path::append(T, llvm::sys::path::stem(FinalOutput->getValue()));
-    AddPostfix(T);
-    return Args.MakeArgString(T);
+  SmallString<128> T;
+  if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
+    T = A->getValue();
   } else {
-    // Use the compilation dir.
-    Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
-                             options::OPT_fdebug_compilation_dir_EQ);
-    SmallString<128> T(A ? A->getValue() : "");
-    SmallString<128> F(llvm::sys::path::stem(Input.getBaseInput()));
-    AddPostfix(F);
-    T += F;
-    return Args.MakeArgString(T);
+    Arg *FinalOutput = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o);
+    if (FinalOutput && Args.hasArg(options::OPT_c)) {
+      T = FinalOutput->getValue();
+      llvm::sys::path::remove_filename(T);
+      llvm::sys::path::append(T,
+                              llvm::sys::path::stem(FinalOutput->getValue()));
+      AddPostfix(T);
+      return Args.MakeArgString(T);
+    }
   }
+
+  T += llvm::sys::path::stem(Input.getBaseInput());
+  AddPostfix(T);
+  return Args.MakeArgString(T);
 }
 
 void tools::SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
@@ -1312,6 +1358,17 @@ void tools::claimNoWarnArgs(const ArgList &Args) {
   Args.ClaimAllArgs(options::OPT_flto_EQ);
   Args.ClaimAllArgs(options::OPT_flto);
   Args.ClaimAllArgs(options::OPT_fno_lto);
+}
+
+Arg *tools::getLastCSProfileGenerateArg(const ArgList &Args) {
+  auto *CSPGOGenerateArg = Args.getLastArg(options::OPT_fcs_profile_generate,
+                                           options::OPT_fcs_profile_generate_EQ,
+                                           options::OPT_fno_profile_generate);
+  if (CSPGOGenerateArg &&
+      CSPGOGenerateArg->getOption().matches(options::OPT_fno_profile_generate))
+    CSPGOGenerateArg = nullptr;
+
+  return CSPGOGenerateArg;
 }
 
 Arg *tools::getLastProfileUseArg(const ArgList &Args) {
@@ -1869,9 +1926,14 @@ SmallString<128> tools::getStatsFileName(const llvm::opt::ArgList &Args,
   return StatsFile;
 }
 
-void tools::addMultilibFlag(bool Enabled, const char *const Flag,
+void tools::addMultilibFlag(bool Enabled, const StringRef Flag,
                             Multilib::flags_list &Flags) {
-  Flags.push_back(std::string(Enabled ? "+" : "-") + Flag);
+  assert(Flag.front() == '-');
+  if (Enabled) {
+    Flags.push_back(Flag.str());
+  } else {
+    Flags.push_back(("!" + Flag.substr(1)).str());
+  }
 }
 
 void tools::addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
@@ -2421,10 +2483,10 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
           << LibOmpTargetName << ArchPrefix;
   }
 }
-void tools::addHIPRuntimeLibArgs(const ToolChain &TC,
+void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) {
-  if (Args.hasArg(options::OPT_hip_link) &&
+  if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
       !Args.hasArg(options::OPT_nostdlib) &&
       !Args.hasArg(options::OPT_no_hip_rt)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);

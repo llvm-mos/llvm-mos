@@ -72,7 +72,7 @@ def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 // V8, or when it is V9 but the V8 deprecated instructions are efficient enough
 // to use when appropriate.  In either of these cases, the instruction selector
 // will pick deprecated instructions.
-def UseDeprecatedInsts : Predicate<"Subtarget->useDeprecatedV8Instructions()">;
+def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 //===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
@@ -1741,6 +1741,22 @@ let hasSideEffects = 1 in {
   defm TADDCCTV : F3_12np<"taddcctv", 0b100010>;
   defm TSUBCCTV : F3_12np<"tsubcctv", 0b100011>;
 }
+}
+
+// Section A.11 - DONE and RETRY
+// Section A.47 - SAVED and RESTORED
+let Predicates = [HasV9], rs1 = 0, rs2 = 0 in {
+  let rd = 0 in
+    def DONE : F3_1<2, 0b111110, (outs), (ins), "done", []>;
+
+  let rd = 1 in
+    def RETRY : F3_1<2, 0b111110, (outs), (ins), "retry", []>;
+
+  let rd = 0 in
+    def SAVED : F3_1<2, 0b110001, (outs), (ins), "saved", []>;
+
+  let rd = 1 in
+    def RESTORED : F3_1<2, 0b110001, (outs), (ins), "restored", []>;
 }
 
 // Section A.42 - Prefetch Data

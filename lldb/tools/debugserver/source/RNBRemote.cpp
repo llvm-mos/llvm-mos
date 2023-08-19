@@ -3630,14 +3630,8 @@ static bool attach_failed_due_to_uid_mismatch (nub_process_t pid,
 // processes and step through to find the one we're looking for
 // (as process_does_not_exist() does).
 static bool process_is_already_being_debugged (nub_process_t pid) {
-  struct kinfo_proc kinfo;
-  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-  size_t len = sizeof(struct kinfo_proc);
-  if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) != 0) {
-    return false; // pid doesn't exist? well, it's not being debugged...
-  }
-  if (kinfo.kp_proc.p_flag & P_TRACED)
-    return true; // is being debugged already
+  if (DNBProcessIsBeingDebugged(pid) && DNBGetParentProcessID(pid) != getpid())
+    return true;
   else
     return false;
 }
@@ -5927,21 +5921,17 @@ rnb_err_t RNBRemote::HandlePacket_jThreadExtendedInfo(const char *p) {
   return SendPacket("OK");
 }
 
-//  This packet may be called in one of three ways:
-//
-//  jGetLoadedDynamicLibrariesInfos:{"image_count":40,"image_list_address":4295244704}
-//      Look for an array of the old dyld_all_image_infos style of binary infos
-//      at the image_list_address.
-//      This an array of {void* load_addr, void* mod_date, void* pathname}
+//  This packet may be called in one of two ways:
 //
 //  jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
-//      Use the new style (macOS 10.12, tvOS 10, iOS 10, watchOS 3) dyld SPI to
-//      get a list of all the
-//      libraries loaded
+//      Use the new dyld SPI to get a list of all the libraries loaded.
+//      If "report_load_commands":false" is present, only the dyld SPI
+//      provided information (load address, filepath) is returned.
+//      lldb can ask for the mach-o header/load command details in a
+//      separate packet.
 //
 //  jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
-//      Use the new style (macOS 10.12, tvOS 10, iOS 10, watchOS 3) dyld SPI to
-//      get the information
+//      Use the dyld SPI and Mach-O parsing in memory to get the information
 //      about the libraries loaded at these addresses.
 //
 rnb_err_t
@@ -5964,24 +5954,17 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
 
     std::vector<uint64_t> macho_addresses;
     bool fetch_all_solibs = false;
+    bool report_load_commands = true;
+    get_boolean_value_for_key_name_from_json("report_load_commands", p,
+                                             report_load_commands);
+
     if (get_boolean_value_for_key_name_from_json("fetch_all_solibs", p,
                                                  fetch_all_solibs) &&
         fetch_all_solibs) {
-      json_sp = DNBGetAllLoadedLibrariesInfos(pid);
+      json_sp = DNBGetAllLoadedLibrariesInfos(pid, report_load_commands);
     } else if (get_array_of_ints_value_for_key_name_from_json(
                    "solib_addresses", p, macho_addresses)) {
       json_sp = DNBGetLibrariesInfoForAddresses(pid, macho_addresses);
-    } else {
-      nub_addr_t image_list_address =
-          get_integer_value_for_key_name_from_json("image_list_address", p);
-      nub_addr_t image_count =
-          get_integer_value_for_key_name_from_json("image_count", p);
-
-      if (image_list_address != INVALID_NUB_ADDRESS &&
-          image_count != INVALID_NUB_ADDRESS) {
-        json_sp = DNBGetLoadedDynamicLibrariesInfos(pid, image_list_address,
-                                                    image_count);
-      }
     }
 
     if (json_sp.get()) {

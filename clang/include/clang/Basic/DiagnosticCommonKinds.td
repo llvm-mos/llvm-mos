@@ -56,7 +56,9 @@ def err_expected_string_literal : Error<"expected string literal "
   "%select{in %1|for diagnostic message in static_assert|"
           "for optional message in 'availability' attribute|"
           "for %select{language name|source container name|USR}1 in "
-          "'external_source_symbol' attribute}0">;
+          "'external_source_symbol' attribute|"
+          "as argument of '%1' attribute}0">;
+
 def err_invalid_string_udl : Error<
   "string literal with user-defined suffix cannot be used here">;
 def err_invalid_character_udl : Error<
@@ -121,7 +123,7 @@ def note_pragma_entered_here : Note<"#pragma entered here">;
 def note_decl_hiding_tag_type : Note<
   "%1 %0 is hidden by a non-type declaration of %0 here">;
 def err_attribute_not_type_attr : Error<
-  "%0 attribute cannot be applied to types">;
+  "%0%select{ attribute|}1 cannot be applied to types">;
 def err_enum_template : Error<"enumeration cannot be a template">;
 
 def warn_cxx20_compat_consteval : Warning<
@@ -132,10 +134,10 @@ def warn_missing_type_specifier : Warning<
   InGroup<ImplicitInt>, DefaultIgnore;
 
 def ext_c_empty_initializer : Extension<
-  "use of an empty initializer is a C2x extension">, InGroup<C2x>;
-def warn_c2x_compat_empty_initializer : Warning<
-  "use of an empty initializer is incompatible with C standards before C2x">,
-  InGroup<CPre2xCompat>, DefaultIgnore;
+  "use of an empty initializer is a C23 extension">, InGroup<C23>;
+def warn_c23_compat_empty_initializer : Warning<
+  "use of an empty initializer is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 }
 
 let CategoryName = "Nullability Issue" in {
@@ -175,6 +177,8 @@ def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
 def warn_attribute_ignored : Warning<"%0 attribute ignored">,
   InGroup<IgnoredAttributes>;
+def err_keyword_not_supported_on_target : Error<
+  "%0 is not supported on this target">;
 def err_use_of_tag_name_without_tag : Error<
   "must use '%1' tag to refer to type %0%select{| in this scope}2">;
 
@@ -221,12 +225,12 @@ def err_cxx23_size_t_suffix: Error<
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
-def ext_c2x_bitint_suffix : ExtWarn<
-  "'_BitInt' suffix for literals is a C2x extension">,
-  InGroup<C2x>;
-def warn_c2x_compat_bitint_suffix : Warning<
-  "'_BitInt' suffix for literals is incompatible with C standards before C2x">,
-  InGroup<CPre2xCompat>, DefaultIgnore;
+def ext_c23_bitint_suffix : ExtWarn<
+  "'_BitInt' suffix for literals is a C23 extension">,
+  InGroup<C23>;
+def warn_c23_compat_bitint_suffix : Warning<
+  "'_BitInt' suffix for literals is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def err_integer_literal_too_large : Error<
   "integer literal is too large to be represented in any %select{signed |}0"
   "integer type">;
@@ -303,7 +307,8 @@ def warn_slh_does_not_support_asm_goto : Warning<
 
 // Sema && Serialization
 def warn_dup_category_def : Warning<
-  "duplicate definition of category %1 on interface %0">;
+  "duplicate definition of category %1 on interface %0">,
+  InGroup<DiagGroup<"objc-duplicate-category-definition">>;
 
 // Targets
 
@@ -339,6 +344,9 @@ def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
+def warn_target_unrecognized_env : Warning<
+  "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
+  InGroup<InvalidCommandLineArgument>;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

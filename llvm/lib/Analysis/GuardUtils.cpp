@@ -19,6 +19,10 @@ bool llvm::isGuard(const User *U) {
   return match(U, m_Intrinsic<Intrinsic::experimental_guard>());
 }
 
+bool llvm::isWidenableCondition(const Value *V) {
+  return match(V, m_Intrinsic<Intrinsic::experimental_widenable_condition>());
+}
+
 bool llvm::isWidenableBranch(const User *U) {
   Value *Condition, *WidenableCondition;
   BasicBlock *GuardedBB, *DeoptBB;
@@ -32,12 +36,19 @@ bool llvm::isGuardAsWidenableBranch(const User *U) {
   if (!parseWidenableBranch(U, Condition, WidenableCondition, GuardedBB,
                             DeoptBB))
     return false;
-  for (auto &Insn : *DeoptBB) {
-    if (match(&Insn, m_Intrinsic<Intrinsic::experimental_deoptimize>()))
-      return true;
-    if (Insn.mayHaveSideEffects())
+  SmallPtrSet<const BasicBlock *, 2> Visited;
+  Visited.insert(DeoptBB);
+  do {
+    for (auto &Insn : *DeoptBB) {
+      if (match(&Insn, m_Intrinsic<Intrinsic::experimental_deoptimize>()))
+        return true;
+      if (Insn.mayHaveSideEffects())
+        return false;
+    }
+    DeoptBB = DeoptBB->getUniqueSuccessor();
+    if (!DeoptBB)
       return false;
-  }
+  } while (Visited.insert(DeoptBB).second);
   return false;
 }
 
@@ -103,4 +114,35 @@ bool llvm::parseWidenableBranch(User *U, Use *&C,Use *&WC,
     return true;
   }
   return false;
+}
+
+template <typename CallbackType>
+static void parseCondition(Value *Condition, CallbackType Callback) {
+  SmallVector<Value *, 4> Worklist(1, Condition);
+  SmallPtrSet<Value *, 4> Visited;
+  Visited.insert(Condition);
+  do {
+    Value *Check = Worklist.pop_back_val();
+    Value *LHS, *RHS;
+    if (match(Check, m_And(m_Value(LHS), m_Value(RHS)))) {
+      if (Visited.insert(LHS).second)
+        Worklist.push_back(LHS);
+      if (Visited.insert(RHS).second)
+        Worklist.push_back(RHS);
+      continue;
+    }
+    Callback(Check);
+  } while (!Worklist.empty());
+}
+
+void llvm::parseWidenableGuard(const User *U,
+                               llvm::SmallVectorImpl<Value *> &Checks) {
+  assert((isGuard(U) || isWidenableBranch(U)) && "Should be");
+  Value *Condition = isGuard(U) ? cast<IntrinsicInst>(U)->getArgOperand(0)
+                                : cast<BranchInst>(U)->getCondition();
+
+  parseCondition(Condition, [&](Value *Check) {
+    if (!isWidenableCondition(Check))
+      Checks.push_back(Check);
+  });
 }

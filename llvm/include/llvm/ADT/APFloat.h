@@ -184,6 +184,10 @@ struct APFloatBase {
     // This format's exponent bias is 11, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3B11FNUZ,
+    // Floating point number that occupies 32 bits or less of storage, providing
+    // improved range compared to half (16-bit) formats, at (potentially)
+    // greater throughput than single precision (32-bit) formats.
+    S_FloatTF32,
 
     S_x87DoubleExtended,
     S_MaxSemantics = S_x87DoubleExtended,
@@ -203,6 +207,7 @@ struct APFloatBase {
   static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
+  static const fltSemantics &FloatTF32() LLVM_READNONE;
   static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
@@ -484,6 +489,11 @@ public:
   /// return true.
   bool getExactInverse(APFloat *inv) const;
 
+  // If this is an exact power of two, return the exponent. If it's not an exact
+  // power of 2, return INT_MIN
+  LLVM_READONLY
+  int getExactLog2() const;
+
   /// Returns the exponent of the internal representation of the APFloat.
   ///
   /// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
@@ -605,6 +615,7 @@ private:
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
+  APInt convertFloatTF32APFloatToAPInt() const;
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
   void initFromHalfAPInt(const APInt &api);
@@ -619,6 +630,7 @@ private:
   void initFromFloat8E4M3FNAPInt(const APInt &api);
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
+  void initFromFloatTF32APInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
@@ -679,21 +691,14 @@ public:
   DoubleAPFloat(DoubleAPFloat &&RHS);
 
   DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
-
-  DoubleAPFloat &operator=(DoubleAPFloat &&RHS) {
-    if (this != &RHS) {
-      this->~DoubleAPFloat();
-      new (this) DoubleAPFloat(std::move(RHS));
-    }
-    return *this;
-  }
+  inline DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
 
   bool needsCleanup() const { return Floats != nullptr; }
 
-  APFloat &getFirst() { return Floats[0]; }
-  const APFloat &getFirst() const { return Floats[0]; }
-  APFloat &getSecond() { return Floats[1]; }
-  const APFloat &getSecond() const { return Floats[1]; }
+  inline APFloat &getFirst();
+  inline const APFloat &getFirst() const;
+  inline APFloat &getSecond();
+  inline const APFloat &getSecond() const;
 
   opStatus add(const DoubleAPFloat &RHS, roundingMode RM);
   opStatus subtract(const DoubleAPFloat &RHS, roundingMode RM);
@@ -746,6 +751,9 @@ public:
                 unsigned FormatMaxPadding, bool TruncateZero = true) const;
 
   bool getExactInverse(APFloat *inv) const;
+
+  LLVM_READONLY
+  int getExactLog2() const;
 
   friend DoubleAPFloat scalbn(const DoubleAPFloat &X, int Exp, roundingMode);
   friend DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
@@ -1316,6 +1324,11 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
   }
 
+  LLVM_READONLY
+  int getExactLog2() const {
+    APFLOAT_DISPATCH_ON_SEMANTICS(getExactLog2());
+  }
+
   friend hash_code hash_value(const APFloat &Arg);
   friend int ilogb(const APFloat &Arg) { return ilogb(Arg.getIEEE()); }
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
@@ -1407,6 +1420,27 @@ inline APFloat maximum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+// We want the following functions to be available in the header for inlining.
+// We cannot define them inline in the class definition of `DoubleAPFloat`
+// because doing so would instantiate `std::unique_ptr<APFloat[]>` before
+// `APFloat` is defined, and that would be undefined behavior.
+namespace detail {
+
+DoubleAPFloat &DoubleAPFloat::operator=(DoubleAPFloat &&RHS) {
+  if (this != &RHS) {
+    this->~DoubleAPFloat();
+    new (this) DoubleAPFloat(std::move(RHS));
+  }
+  return *this;
+}
+
+APFloat &DoubleAPFloat::getFirst() { return Floats[0]; }
+const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
+APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
+const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
+
+} // namespace detail
 
 } // namespace llvm
 

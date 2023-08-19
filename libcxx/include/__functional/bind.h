@@ -13,6 +13,9 @@
 #include <__config>
 #include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_reference_wrapper.h>
+#include <__type_traits/is_void.h>
 #include <cstddef>
 #include <tuple>
 
@@ -59,16 +62,16 @@ template <int _Np> struct __ph {};
 //
 // In practice, since placeholders are empty, `extern const` is almost impossible
 // to distinguish from `inline constexpr` from a usage stand point.
-_LIBCPP_FUNC_VIS extern const __ph<1>   _1;
-_LIBCPP_FUNC_VIS extern const __ph<2>   _2;
-_LIBCPP_FUNC_VIS extern const __ph<3>   _3;
-_LIBCPP_FUNC_VIS extern const __ph<4>   _4;
-_LIBCPP_FUNC_VIS extern const __ph<5>   _5;
-_LIBCPP_FUNC_VIS extern const __ph<6>   _6;
-_LIBCPP_FUNC_VIS extern const __ph<7>   _7;
-_LIBCPP_FUNC_VIS extern const __ph<8>   _8;
-_LIBCPP_FUNC_VIS extern const __ph<9>   _9;
-_LIBCPP_FUNC_VIS extern const __ph<10> _10;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<1>   _1;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<2>   _2;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<3>   _3;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<4>   _4;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<5>   _5;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<6>   _6;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<7>   _7;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<8>   _8;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<9>   _9;
+_LIBCPP_EXPORTED_FROM_ABI extern const __ph<10> _10;
 
 } // namespace placeholders
 
@@ -117,28 +120,20 @@ struct __mu_return2<true, _Ti, _Uj>
     typedef typename tuple_element<is_placeholder<_Ti>::value - 1, _Uj>::type type;
 };
 
-template <class _Ti, class _Uj>
+template <class _Ti, class _Uj, __enable_if_t<0 < is_placeholder<_Ti>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    0 < is_placeholder<_Ti>::value,
-    typename __mu_return2<0 < is_placeholder<_Ti>::value, _Ti, _Uj>::type
->::type
+typename __mu_return2<0 < is_placeholder<_Ti>::value, _Ti, _Uj>::type
 __mu(_Ti&, _Uj& __uj)
 {
     const size_t __indx = is_placeholder<_Ti>::value - 1;
     return _VSTD::forward<typename tuple_element<__indx, _Uj>::type>(_VSTD::get<__indx>(__uj));
 }
 
-template <class _Ti, class _Uj>
+template <class _Ti, class _Uj, __enable_if_t<!is_bind_expression<_Ti>::value &&
+                                              is_placeholder<_Ti>::value == 0 &&
+                                              !__is_reference_wrapper<_Ti>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    !is_bind_expression<_Ti>::value &&
-    is_placeholder<_Ti>::value == 0 &&
-    !__is_reference_wrapper<_Ti>::value,
-    _Ti&
->::type
+_Ti&
 __mu(_Ti& __ti, _Uj&)
 {
     return __ti;
@@ -326,28 +321,20 @@ public:
         : base(_VSTD::forward<_Gp>(__f),
                _VSTD::forward<_BA>(__bound_args)...) {}
 
-    template <class ..._Args>
+    template <class ..._Args, __enable_if_t<is_convertible<typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type,
+                                                           result_type>::value || is_void<_Rp>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-        typename enable_if
-        <
-            is_convertible<typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type,
-                           result_type>::value || is_void<_Rp>::value,
-            result_type
-        >::type
+        result_type
         operator()(_Args&& ...__args)
         {
             typedef __invoke_void_return_wrapper<_Rp> _Invoker;
             return _Invoker::__call(static_cast<base&>(*this), _VSTD::forward<_Args>(__args)...);
         }
 
-    template <class ..._Args>
+    template <class ..._Args, __enable_if_t<is_convertible<typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type,
+                                                           result_type>::value || is_void<_Rp>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-        typename enable_if
-        <
-            is_convertible<typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type,
-                           result_type>::value || is_void<_Rp>::value,
-            result_type
-        >::type
+        result_type
         operator()(_Args&& ...__args) const
         {
             typedef __invoke_void_return_wrapper<_Rp> _Invoker;

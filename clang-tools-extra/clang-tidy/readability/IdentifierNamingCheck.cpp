@@ -14,6 +14,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -396,7 +397,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
 
 IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
                                              ClangTidyContext *Context)
-    : RenamerClangTidyCheck(Name, Context), Context(Context), CheckName(Name),
+    : RenamerClangTidyCheck(Name, Context), Context(Context),
       GetConfigPerFile(Options.get("GetConfigPerFile", true)),
       IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)) {
 
@@ -1139,30 +1140,28 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (Decl->isAnonymousStructOrUnion())
       return SK_Invalid;
 
-    if (!Decl->getCanonicalDecl()->isThisDeclarationADefinition())
-      return SK_Invalid;
+    if (const auto *Definition = Decl->getDefinition()) {
+      if (Definition->isAbstract() && NamingStyles[SK_AbstractClass])
+        return SK_AbstractClass;
 
-    if (Decl->hasDefinition() && Decl->isAbstract() &&
-        NamingStyles[SK_AbstractClass])
-      return SK_AbstractClass;
+      if (Definition->isStruct() && NamingStyles[SK_Struct])
+        return SK_Struct;
 
-    if (Decl->isStruct() && NamingStyles[SK_Struct])
-      return SK_Struct;
+      if (Definition->isStruct() && NamingStyles[SK_Class])
+        return SK_Class;
 
-    if (Decl->isStruct() && NamingStyles[SK_Class])
-      return SK_Class;
+      if (Definition->isClass() && NamingStyles[SK_Class])
+        return SK_Class;
 
-    if (Decl->isClass() && NamingStyles[SK_Class])
-      return SK_Class;
+      if (Definition->isClass() && NamingStyles[SK_Struct])
+        return SK_Struct;
 
-    if (Decl->isClass() && NamingStyles[SK_Struct])
-      return SK_Struct;
+      if (Definition->isUnion() && NamingStyles[SK_Union])
+        return SK_Union;
 
-    if (Decl->isUnion() && NamingStyles[SK_Union])
-      return SK_Union;
-
-    if (Decl->isEnum() && NamingStyles[SK_Enum])
-      return SK_Enum;
+      if (Definition->isEnum() && NamingStyles[SK_Enum])
+        return SK_Enum;
+    }
 
     return SK_Invalid;
   }
@@ -1461,6 +1460,7 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
   if (Iter != NamingStylesCache.end())
     return Iter->getValue();
 
+  llvm::StringRef CheckName = getID();
   ClangTidyOptions Options = Context->getOptionsForFile(FileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
     auto It = NamingStylesCache.try_emplace(

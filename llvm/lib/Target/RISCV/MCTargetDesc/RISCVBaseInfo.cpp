@@ -27,6 +27,7 @@ extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 
 namespace RISCVSysReg {
 #define GET_SysRegsList_IMPL
+#define GET_SiFiveRegsList_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCVSysReg
 
@@ -294,5 +295,19 @@ float RISCVLoadFPImm::getFPImm(unsigned Imm) {
   uint32_t I = Sign << 31 | Exp << 23 | Mantissa << 21;
   return bit_cast<float>(I);
 }
+
+void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
+  OS << "{ra";
+  if (SlistEncode > 4) {
+    OS << ", s0";
+    if (SlistEncode == 15)
+      OS << "-s11";
+    else if (SlistEncode > 5 && SlistEncode <= 14)
+      OS << "-s" << (SlistEncode - 5);
+  }
+  OS << "}";
+}
+
+void RISCVZC::printSpimm(int64_t Spimm, raw_ostream &OS) { OS << Spimm; }
 
 } // namespace llvm

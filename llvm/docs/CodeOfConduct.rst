@@ -136,7 +136,7 @@ needed) email conduct@llvm.org.
 Code of Conduct Committee
 =========================
 
-The committee will consist of a mininum of 5 members and members are asked to
+The committee will consist of a minimum of 5 members and members are asked to
 serve at least a 1 year term. New committee members will be selected by the
 current committee and the LLVM Foundation Board of Directors.
 
@@ -160,6 +160,8 @@ The current committee members are:
 Transparency Reports
 ====================
 
+* `July 15, 2023 <https://llvm.org/coc-reports/2023-07-15-report.html>`_
+* `July 15, 2022 <https://llvm.org/coc-reports/2022-07-15-report.html>`_
 * `April 28, 2022 <https://llvm.org/coc-reports/2022-04-28-report.html>`_
 
 For details about what a Transparency Report is and what it contains, please see the :doc:`Response Guide<ResponseGuide>`.

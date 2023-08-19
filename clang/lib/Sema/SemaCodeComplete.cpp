@@ -2673,7 +2673,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
-    if (SemaRef.getLangOpts().C2x) {
+    if (SemaRef.getLangOpts().C23) {
       // nullptr
       Builder.AddResultTypeChunk("nullptr_t");
       Builder.AddTypedTextChunk("nullptr");
@@ -4533,7 +4533,7 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
   }
   bool SyntaxSupportsGuards = Syntax == AttributeCommonInfo::AS_GNU ||
                               Syntax == AttributeCommonInfo::AS_CXX11 ||
-                              Syntax == AttributeCommonInfo::AS_C2x;
+                              Syntax == AttributeCommonInfo::AS_C23;
 
   llvm::DenseSet<llvm::StringRef> FoundScopes;
   auto AddCompletions = [&](const ParsedAttrInfo &A) {
@@ -4547,7 +4547,7 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
       llvm::StringRef Name = S.NormalizedFullName;
       llvm::StringRef Scope;
       if ((Syntax == AttributeCommonInfo::AS_CXX11 ||
-           Syntax == AttributeCommonInfo::AS_C2x)) {
+           Syntax == AttributeCommonInfo::AS_C23)) {
         std::tie(Scope, Name) = Name.split("::");
         if (Name.empty()) // oops, unscoped
           std::swap(Name, Scope);
@@ -6601,7 +6601,7 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   // The "template" keyword can follow "::" in the grammar, but only
   // put it into the grammar if the nested-name-specifier is dependent.
   // FIXME: results is always empty, this appears to be dead.
-  if (!Results.empty() && NNS->isDependent())
+  if (!Results.empty() && NNS && NNS->isDependent())
     Results.AddResult("template");
 
   // If the scope is a concept-constrained type parameter, infer nested
@@ -8460,6 +8460,24 @@ void Sema::CodeCompleteObjCInterfaceDecl(Scope *S) {
                             Results.data(), Results.size());
 }
 
+void Sema::CodeCompleteObjCClassForwardDecl(Scope *S) {
+  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_ObjCClassForwardDecl);
+  Results.EnterNewScope();
+
+  if (CodeCompleter->includeGlobals()) {
+    // Add all classes.
+    AddInterfaceResults(Context.getTranslationUnitDecl(), CurContext, false,
+                        false, Results);
+  }
+
+  Results.ExitScope();
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
+}
+
 void Sema::CodeCompleteObjCSuperclass(Scope *S, IdentifierInfo *ClassName,
                                       SourceLocation ClassNameLoc) {
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
@@ -10030,11 +10048,11 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
         break;
       case llvm::sys::fs::file_type::regular_file: {
         // Only files that really look like headers. (Except in special dirs).
-        const bool IsHeader = Filename.endswith_insensitive(".h") ||
-                              Filename.endswith_insensitive(".hh") ||
-                              Filename.endswith_insensitive(".hpp") ||
-                              Filename.endswith_insensitive(".hxx") ||
-                              Filename.endswith_insensitive(".inc") ||
+        const bool IsHeader = Filename.ends_with_insensitive(".h") ||
+                              Filename.ends_with_insensitive(".hh") ||
+                              Filename.ends_with_insensitive(".hpp") ||
+                              Filename.ends_with_insensitive(".hxx") ||
+                              Filename.ends_with_insensitive(".inc") ||
                               (ExtensionlessHeaders && !Filename.contains('.'));
         if (!IsHeader)
           break;
@@ -10055,12 +10073,12 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       // header maps are not (currently) enumerable.
       break;
     case DirectoryLookup::LT_NormalDir:
-      AddFilesFromIncludeDir(IncludeDir.getDir()->getName(), IsSystem,
+      AddFilesFromIncludeDir(IncludeDir.getDirRef()->getName(), IsSystem,
                              DirectoryLookup::LT_NormalDir);
       break;
     case DirectoryLookup::LT_Framework:
-      AddFilesFromIncludeDir(IncludeDir.getFrameworkDir()->getName(), IsSystem,
-                             DirectoryLookup::LT_Framework);
+      AddFilesFromIncludeDir(IncludeDir.getFrameworkDirRef()->getName(),
+                             IsSystem, DirectoryLookup::LT_Framework);
       break;
     }
   };
@@ -10072,9 +10090,8 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
   using llvm::make_range;
   if (!Angled) {
     // The current directory is on the include path for "quoted" includes.
-    const FileEntry *CurFile = PP.getCurrentFileLexer()->getFileEntry();
-    if (CurFile && CurFile->getDir())
-      AddFilesFromIncludeDir(CurFile->getDir()->getName(), false,
+    if (auto CurFile = PP.getCurrentFileLexer()->getFileEntry())
+      AddFilesFromIncludeDir(CurFile->getDir().getName(), false,
                              DirectoryLookup::LT_NormalDir);
     for (const auto &D : make_range(S.quoted_dir_begin(), S.quoted_dir_end()))
       AddFilesFromDirLookup(D, false);

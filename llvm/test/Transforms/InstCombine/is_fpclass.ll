@@ -105,7 +105,7 @@ define <2 x i1> @test_class_isnan_v2f32(<2 x float> %x) {
   ret <2 x i1> %val
 }
 
-define i1 @test_class_isnan_f32_strict(float %x) {
+define i1 @test_class_isnan_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_isnan_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -331,7 +331,7 @@ define <2 x i1> @test_class_is_not_p0_n0_v2f32(<2 x float> %x) {
   ret <2 x i1> %val
 }
 
-define i1 @test_class_is_not_p0_n0_f32_strict(float %x) {
+define i1 @test_class_is_not_p0_n0_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_not_p0_n0_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 927) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -385,7 +385,7 @@ define i1 @test_class_is_not_p0_n0_psub_nsub_f32_dynamic(float %x) "denormal-fp-
   ret i1 %val
 }
 
-define i1 @test_class_is_p0_n0_f32_strict(float %x) {
+define i1 @test_class_is_p0_n0_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -565,7 +565,7 @@ define i1 @test_class_is_inf_or_nan_f32(float %x) {
   ret i1 %val
 }
 
-define i1 @test_class_is_pinf_f32_strict(float %x) {
+define i1 @test_class_is_pinf_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_pinf_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 512) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -574,7 +574,7 @@ define i1 @test_class_is_pinf_f32_strict(float %x) {
   ret i1 %val
 }
 
-define i1 @test_class_is_ninf_f32_strict(float %x) {
+define i1 @test_class_is_ninf_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_ninf_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 4) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -583,7 +583,7 @@ define i1 @test_class_is_ninf_f32_strict(float %x) {
   ret i1 %val
 }
 
-define i1 @test_class_is_inf_f32_strict(float %x) {
+define i1 @test_class_is_inf_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_inf_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 516) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -592,7 +592,7 @@ define i1 @test_class_is_inf_f32_strict(float %x) {
   ret i1 %val
 }
 
-define i1 @test_class_is_pinf_or_nan_f32_strict(float %x) {
+define i1 @test_class_is_pinf_or_nan_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_pinf_or_nan_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 515) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -601,7 +601,7 @@ define i1 @test_class_is_pinf_or_nan_f32_strict(float %x) {
   ret i1 %val
 }
 
-define i1 @test_class_is_ninf_or_nan_f32_strict(float %x) {
+define i1 @test_class_is_ninf_or_nan_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_ninf_or_nan_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 7) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -610,7 +610,7 @@ define i1 @test_class_is_ninf_or_nan_f32_strict(float %x) {
   ret i1 %val
 }
 
-define i1 @test_class_is_inf_or_nan_f32_strict(float %x) {
+define i1 @test_class_is_inf_or_nan_f32_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_inf_or_nan_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 519) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -851,7 +851,7 @@ define i1 @test_class_is_not_nan_nnan_src(float %x) {
   ret i1 %class
 }
 
-define i1 @test_class_is_not_nan_nnan_src_strict(float %x) {
+define i1 @test_class_is_not_nan_nnan_src_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_not_nan_nnan_src_strict(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -911,7 +911,7 @@ define i1 @test_class_is_not_inf_ninf_src(float %x) {
   ret i1 %class
 }
 
-define i1 @test_class_is_not_inf_ninf_src_strict(float %x) {
+define i1 @test_class_is_not_inf_ninf_src_strict(float %x) strictfp {
 ; CHECK-LABEL: @test_class_is_not_inf_ninf_src_strict(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -2073,7 +2073,7 @@ define i1 @test_class_fabs_posinf_negnormal_possubnormal_negzero_snan_strictfp(f
 ; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 661) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
-  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fabs = call float @llvm.fabs.f32(float %arg) strictfp
   %class = call i1 @llvm.is.fpclass.f32(float %fabs, i32 681) strictfp
   ret i1 %class
 }
@@ -2403,7 +2403,7 @@ define i1 @test_class_fneg_fabs_posinf_negnormal_possubnormal_negzero_snan_stric
 ; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 361) #[[ATTR6]]
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
-  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fabs = call float @llvm.fabs.f32(float %arg) strictfp
   %fneg.fabs = fneg float %fabs
   %class = call i1 @llvm.is.fpclass.f32(float %fneg.fabs, i32 681) strictfp
   ret i1 %class
@@ -2712,8 +2712,7 @@ define i1 @test_class_is_nan_assume_ord(float %x) {
 ; CHECK-LABEL: @test_class_is_nan_assume_ord(
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ord = fcmp ord float %x, 0.0
   call void @llvm.assume(i1 %ord)
@@ -2738,8 +2737,7 @@ define i1 @test_class_is_nan_assume_not_eq_pinf(float %x) {
 ; CHECK-LABEL: @test_class_is_nan_assume_not_eq_pinf(
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp oeq float [[X:%.*]], 0x7FF0000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ORD]])
-; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CLASS]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ord = fcmp oeq float %x, 0x7FF0000000000000
   call void @llvm.assume(i1 %ord)
@@ -2790,7 +2788,7 @@ define i1 @test_class_is_pzero_psub_pnorm_pinf_nan__ieee(float %arg) #0 {
 
 define i1 @test_class_is_psub_pnorm_pinf__ieee(float %arg) #0 {
 ; CHECK-LABEL: @test_class_is_psub_pnorm_pinf__ieee(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 896)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ogt float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 896)
@@ -2817,7 +2815,7 @@ define i1 @test_class_is_psub_pnorm_pinf_qnan__ieee(float %arg) #0 {
 
 define i1 @test_class_is_psub_pnorm_pinf_nan__ieee(float %arg) #0 {
 ; CHECK-LABEL: @test_class_is_psub_pnorm_pinf_nan__ieee(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 899)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ugt float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 899)
@@ -2853,7 +2851,7 @@ define i1 @test_class_is_pzero_pnorm_pinf_nan__ieee(float %arg) #0 {
 
 define i1 @test_class_is_nzero_pzero_psub_pnorm_pinf__ieee(float %arg) #0 {
 ; CHECK-LABEL: @test_class_is_nzero_pzero_psub_pnorm_pinf__ieee(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 992)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp oge float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 992)
@@ -2880,7 +2878,7 @@ define i1 @test_class_is_nzero_pzero_psub_pnorm_pinf_qnan__ieee(float %arg) #0 {
 
 define i1 @test_class_is_nzero_pzero_psub_pnorm_pinf_nan__ieee(float %arg) #0 {
 ; CHECK-LABEL: @test_class_is_nzero_pzero_psub_pnorm_pinf_nan__ieee(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 995)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uge float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 995)
@@ -2980,7 +2978,7 @@ define i1 @test_class_is_not_pzero_psub_pnorm_pinf_nan__ieee(float %arg) #0 {
 
 define i1 @test_class_is_not_psub_pnorm_pinf__ieee(float %arg) #0 {
 ; CHECK-LABEL: @test_class_is_not_psub_pnorm_pinf__ieee(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 127)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ule float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 127)
@@ -3007,7 +3005,7 @@ define i1 @test_class_is_not_psub_pnorm_pinf_qnan__ieee(float %arg) #0 {
 
 define i1 @test_class_is_not_psub_pnorm_pinf_nan__ieee(float %arg) #0 {
 ; CHECK-LABEL: @test_class_is_not_psub_pnorm_pinf_nan__ieee(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 124)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ole float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 124)
@@ -3070,7 +3068,7 @@ define i1 @test_class_is_not_nzero_pzero_psub_pnorm_pinf_qnan__ieee(float %arg) 
 
 define i1 @test_class_is_not_nzero_pzero_psub_pnorm_pinf_nan__ieee(float %arg) #0 {
 ; CHECK-LABEL: @test_class_is_not_nzero_pzero_psub_pnorm_pinf_nan__ieee(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 28)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp olt float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 28)
@@ -3209,7 +3207,7 @@ define i1 @test_class_is_psub_pnorm_pinf_nan__daz(float %arg) #1 {
 
 define i1 @test_class_is_pnorm_pinf__daz(float %arg) #1 {
 ; CHECK-LABEL: @test_class_is_pnorm_pinf__daz(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 768)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ogt float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 768)
@@ -3299,7 +3297,7 @@ define i1 @test_class_is_nsub_nzero_pzero_psub_pnorm_pinf_qnan__daz(float %arg) 
 
 define i1 @test_class_is_nsub_nzero_pzero_psub_pnorm_pinf_nan__daz(float %arg) #1 {
 ; CHECK-LABEL: @test_class_is_nsub_nzero_pzero_psub_pnorm_pinf_nan__daz(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 1011)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uge float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 1011)
@@ -3399,7 +3397,7 @@ define i1 @test_class_is_not_psub_pnorm_pinf_nan__daz(float %arg) #1 {
 
 define i1 @test_class_is_not_pnorm_pinf__daz(float %arg) #1 {
 ; CHECK-LABEL: @test_class_is_not_pnorm_pinf__daz(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 255)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ule float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 255)
@@ -3489,7 +3487,7 @@ define i1 @test_class_is_not_nsub_nzero_pzero_psub_pnorm_pinf_qnan__daz(float %a
 
 define i1 @test_class_is_not_nsub_nzero_pzero_psub_pnorm_pinf_nan__daz(float %arg) #1 {
 ; CHECK-LABEL: @test_class_is_not_nsub_nzero_pzero_psub_pnorm_pinf_nan__daz(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 12)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp olt float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 12)
@@ -3592,7 +3590,7 @@ define i1 @test_class_is_psub_pnorm_pinf_nan__dapz(float %arg) #2 {
 
 define i1 @test_class_is_pnorm_pinf__dapz(float %arg) #2 {
 ; CHECK-LABEL: @test_class_is_pnorm_pinf__dapz(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 768)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ogt float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 768)
@@ -3682,7 +3680,7 @@ define i1 @test_class_is_nsub_nzero_pzero_psub_pnorm_pinf_qnan__dapz(float %arg)
 
 define i1 @test_class_is_nsub_nzero_pzero_psub_pnorm_pinf_nan__dapz(float %arg) #2 {
 ; CHECK-LABEL: @test_class_is_nsub_nzero_pzero_psub_pnorm_pinf_nan__dapz(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 1011)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uge float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 1011)
@@ -3782,7 +3780,7 @@ define i1 @test_class_is_not_psub_pnorm_pinf_nan__dapz(float %arg) #2 {
 
 define i1 @test_class_is_not_pnorm_pinf__dapz(float %arg) #2 {
 ; CHECK-LABEL: @test_class_is_not_pnorm_pinf__dapz(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 255)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ule float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 255)
@@ -3872,7 +3870,7 @@ define i1 @test_class_is_not_nsub_nzero_pzero_psub_pnorm_pinf_qnan__dapz(float %
 
 define i1 @test_class_is_not_nsub_nzero_pzero_psub_pnorm_pinf_nan__dapz(float %arg) #2 {
 ; CHECK-LABEL: @test_class_is_not_nsub_nzero_pzero_psub_pnorm_pinf_nan__dapz(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG:%.*]], i32 12)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp olt float [[ARG:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f32(float %arg, i32 12)

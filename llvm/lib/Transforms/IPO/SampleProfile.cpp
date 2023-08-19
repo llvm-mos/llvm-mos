@@ -505,8 +505,7 @@ private:
 /// This pass reads profile data from the file specified by
 /// -sample-profile-file and annotates every affected function with the
 /// profile information found in that file.
-class SampleProfileLoader final
-    : public SampleProfileLoaderBaseImpl<BasicBlock> {
+class SampleProfileLoader final : public SampleProfileLoaderBaseImpl<Function> {
 public:
   SampleProfileLoader(
       StringRef Name, StringRef RemapName, ThinOrFullLTOPhase LTOPhase,
@@ -532,7 +531,6 @@ protected:
   bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I) override;
-  ErrorOr<uint64_t> getProbeWeight(const Instruction &I);
   const FunctionSamples *findCalleeFunctionSamples(const CallBase &I) const;
   const FunctionSamples *
   findFunctionSamples(const Instruction &I) const override;
@@ -628,9 +626,6 @@ protected:
   // External inline advisor used to replay inline decision from remarks.
   std::unique_ptr<InlineAdvisor> ExternalInlineAdvisor;
 
-  // A pseudo probe helper to correlate the imported sample counts.
-  std::unique_ptr<PseudoProbeManager> ProbeManager;
-
   // A helper to implement the sample profile matching algorithm.
   std::unique_ptr<SampleProfileMatcher> MatchingManager;
 
@@ -640,6 +635,50 @@ private:
   }
 };
 } // end anonymous namespace
+
+namespace llvm {
+template <>
+inline bool SampleProfileInference<Function>::isExit(const BasicBlock *BB) {
+  return succ_empty(BB);
+}
+
+template <>
+inline void SampleProfileInference<Function>::findUnlikelyJumps(
+    const std::vector<const BasicBlockT *> &BasicBlocks,
+    BlockEdgeMap &Successors, FlowFunction &Func) {
+  for (auto &Jump : Func.Jumps) {
+    const auto *BB = BasicBlocks[Jump.Source];
+    const auto *Succ = BasicBlocks[Jump.Target];
+    const Instruction *TI = BB->getTerminator();
+    // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
+    // In that case block Succ should be a landing pad
+    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
+      if (isa<InvokeInst>(TI)) {
+        Jump.IsUnlikely = true;
+      }
+    }
+    const Instruction *SuccTI = Succ->getTerminator();
+    // Check if the target block contains UnreachableInst and mark it unlikely
+    if (SuccTI->getNumSuccessors() == 0) {
+      if (isa<UnreachableInst>(SuccTI)) {
+        Jump.IsUnlikely = true;
+      }
+    }
+  }
+}
+
+template <>
+void SampleProfileLoaderBaseImpl<Function>::computeDominanceAndLoopInfo(
+    Function &F) {
+  DT.reset(new DominatorTree);
+  DT->recalculate(F);
+
+  PDT.reset(new PostDominatorTree(F));
+
+  LI.reset(new LoopInfo);
+  LI->analyze(*DT);
+}
+} // namespace llvm
 
 ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (FunctionSamples::ProfileIsProbeBased)
@@ -667,68 +706,6 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
         return 0;
 
   return getInstWeightImpl(Inst);
-}
-
-// Here use error_code to represent: 1) The dangling probe. 2) Ignore the weight
-// of non-probe instruction. So if all instructions of the BB give error_code,
-// tell the inference algorithm to infer the BB weight.
-ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
-  assert(FunctionSamples::ProfileIsProbeBased &&
-         "Profile is not pseudo probe based");
-  std::optional<PseudoProbe> Probe = extractProbe(Inst);
-  // Ignore the non-probe instruction. If none of the instruction in the BB is
-  // probe, we choose to infer the BB's weight.
-  if (!Probe)
-    return std::error_code();
-
-  const FunctionSamples *FS = findFunctionSamples(Inst);
-  // If none of the instruction has FunctionSample, we choose to return zero
-  // value sample to indicate the BB is cold. This could happen when the
-  // instruction is from inlinee and no profile data is found.
-  // FIXME: This should not be affected by the source drift issue as 1) if the
-  // newly added function is top-level inliner, it won't match the CFG checksum
-  // in the function profile or 2) if it's the inlinee, the inlinee should have
-  // a profile, otherwise it wouldn't be inlined. For non-probe based profile,
-  // we can improve it by adding a switch for profile-sample-block-accurate for
-  // block level counts in the future.
-  if (!FS)
-    return 0;
-
-  // For non-CS profile, If a direct call/invoke instruction is inlined in
-  // profile (findCalleeFunctionSamples returns non-empty result), but not
-  // inlined here, it means that the inlined callsite has no sample, thus the
-  // call instruction should have 0 count.
-  // For CS profile, the callsite count of previously inlined callees is
-  // populated with the entry count of the callees.
-  if (!FunctionSamples::ProfileIsCS)
-    if (const auto *CB = dyn_cast<CallBase>(&Inst))
-      if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
-        return 0;
-
-  const ErrorOr<uint64_t> &R = FS->findSamplesAt(Probe->Id, 0);
-  if (R) {
-    uint64_t Samples = R.get() * Probe->Factor;
-    bool FirstMark = CoverageTracker.markSamplesUsed(FS, Probe->Id, 0, Samples);
-    if (FirstMark) {
-      ORE->emit([&]() {
-        OptimizationRemarkAnalysis Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
-        Remark << "Applied " << ore::NV("NumSamples", Samples);
-        Remark << " samples from profile (ProbeId=";
-        Remark << ore::NV("ProbeId", Probe->Id);
-        Remark << ", Factor=";
-        Remark << ore::NV("Factor", Probe->Factor);
-        Remark << ", OriginalSamples=";
-        Remark << ore::NV("OriginalSamples", R.get());
-        Remark << ")";
-        return Remark;
-      });
-    }
-    LLVM_DEBUG(dbgs() << "    " << Probe->Id << ":" << Inst
-                      << " - weight: " << R.get() << " - factor: "
-                      << format("%0.2f", Probe->Factor) << ")\n");
-    return Samples;
-  }
-  return R;
 }
 
 /// Get the FunctionSamples for a call instruction.
@@ -1096,8 +1073,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
     DenseSet<GlobalValue::GUID> &InlinedGUIDs,
     const StringMap<Function *> &SymbolMap, uint64_t Threshold) {
 
-  // If ExternalInlineAdvisor wants to inline an external function
-  // make sure it's imported
+  // If ExternalInlineAdvisor(ReplayInlineAdvisor) wants to inline an external
+  // function make sure it's imported
   if (CB && getExternalInlineAdvisorShouldInline(*CB)) {
     // Samples may not exist for replayed function, if so
     // just add the direct GUID and move on
@@ -1110,7 +1087,13 @@ void SampleProfileLoader::findExternalInlineCandidate(
     Threshold = 0;
   }
 
-  assert(Samples && "expect non-null caller profile");
+  // In some rare cases, call instruction could be changed after being pushed
+  // into inline candidate queue, this is because earlier inlining may expose
+  // constant propagation which can change indirect call to direct call. When
+  // this happens, we may fail to find matching function samples for the
+  // candidate later, even if a match was found when the candidate was enqueued.
+  if (!Samples)
+    return;
 
   // For AutoFDO profile, retrieve candidate profiles by walking over
   // the nested inlinee profiles.
@@ -1636,7 +1619,12 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
         // Note that we have to do the merge right after processing function.
         // This allows OutlineFS's profile to be used for annotation during
         // top-down processing of functions' annotation.
-        FunctionSamples *OutlineFS = Reader->getOrCreateSamplesFor(*Callee);
+        FunctionSamples *OutlineFS = Reader->getSamplesFor(*Callee);
+        // If outlined function does not exist in the profile, add it to a
+        // separate map so that it does not rehash the original profile.
+        if (!OutlineFS)
+          OutlineFS = &OutlineFunctionSamples[
+              FunctionSamples::getCanonicalFnName(Callee->getName())];
         OutlineFS->merge(*FS, 1);
         // Set outlined profile to be synthetic to not bias the inliner.
         OutlineFS->SetContextSynthetic();
@@ -2069,6 +2057,16 @@ bool SampleProfileLoader::doInitialization(Module &M,
     if (Reader->profileIsPreInlined()) {
       if (!UsePreInlinerDecision.getNumOccurrences())
         UsePreInlinerDecision = true;
+    }
+
+    // Enable stale profile matching by default for probe-based profile.
+    // Currently the matching relies on if the checksum mismatch is detected,
+    // which is currently only available for pseudo-probe mode. Removing the
+    // checksum check could cause regressions for some cases, so further tuning
+    // might be needed if we want to enable it for all cases.
+    if (Reader->profileIsProbeBased() &&
+        !SalvageStaleProfile.getNumOccurrences()) {
+      SalvageStaleProfile = true;
     }
 
     if (!Reader->profileIsCS()) {
@@ -2578,8 +2576,24 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
 
   if (FunctionSamples::ProfileIsCS)
     Samples = ContextTracker->getBaseSamplesFor(F);
-  else
+  else {
     Samples = Reader->getSamplesFor(F);
+    // Try search in previously inlined functions that were split or duplicated
+    // into base.
+    if (!Samples) {
+      StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
+      auto It = OutlineFunctionSamples.find(CanonName);
+      if (It != OutlineFunctionSamples.end()) {
+        Samples = &It->second;
+      } else if (auto Remapper = Reader->getRemapper()) {
+        if (auto RemppedName = Remapper->lookUpNameInProfile(CanonName)) {
+          It = OutlineFunctionSamples.find(*RemppedName);
+          if (It != OutlineFunctionSamples.end())
+            Samples = &It->second;
+        }
+      }
+    }
+  }
 
   if (Samples && !Samples->empty())
     return emitAnnotations(F);

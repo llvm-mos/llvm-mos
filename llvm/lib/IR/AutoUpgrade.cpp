@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -28,6 +29,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/LLVMContext.h"
@@ -589,6 +592,71 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
   return false;
 }
 
+static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
+  return StringSwitch<Intrinsic::ID>(Name)
+      .Case("abs.bf16", Intrinsic::nvvm_abs_bf16)
+      .Case("abs.bf16x2", Intrinsic::nvvm_abs_bf16x2)
+      .Case("fma.rn.bf16", Intrinsic::nvvm_fma_rn_bf16)
+      .Case("fma.rn.bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
+      .Case("fma.rn.ftz_bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
+      .Case("fma.rn.ftz.bf16x2", Intrinsic::nvvm_fma_rn_ftz_bf16x2)
+      .Case("fma.rn.ftz.relu.bf16", Intrinsic::nvvm_fma_rn_ftz_relu_bf16)
+      .Case("fma.rn.ftz.relu.bf16x2", Intrinsic::nvvm_fma_rn_ftz_relu_bf16x2)
+      .Case("fma.rn.ftz_sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
+      .Case("fma.rn.ftz_sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
+      .Case("fma.rn.relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
+      .Case("fma.rn.relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
+      .Case("fma.rn.sat.bf16", Intrinsic::nvvm_fma_rn_sat_bf16)
+      .Case("fma.rn.sat.bf16x2", Intrinsic::nvvm_fma_rn_sat_bf16x2)
+      .Case("fmax.bf16", Intrinsic::nvvm_fmax_bf16)
+      .Case("fmax.bf16x2", Intrinsic::nvvm_fmax_bf16x2)
+      .Case("fmax.ftz.bf16", Intrinsic::nvvm_fmax_ftz_bf16)
+      .Case("fmax.ftz.bf16x2", Intrinsic::nvvm_fmax_ftz_bf16x2)
+      .Case("fmax.ftz.nan.bf16", Intrinsic::nvvm_fmax_ftz_nan_bf16)
+      .Case("fmax.ftz.nan.bf16x2", Intrinsic::nvvm_fmax_ftz_nan_bf16x2)
+      .Case("fmax.ftz.nan.xorsign.abs.bf16",
+            Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_bf16)
+      .Case("fmax.ftz.nan.xorsign.abs.bf16x2",
+            Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_bf16x2)
+      .Case("fmax.ftz.xorsign.abs.bf16",
+            Intrinsic::nvvm_fmax_ftz_xorsign_abs_bf16)
+      .Case("fmax.ftz.xorsign.abs.bf16x2",
+            Intrinsic::nvvm_fmax_ftz_xorsign_abs_bf16x2)
+      .Case("fmax.nan.bf16", Intrinsic::nvvm_fmax_nan_bf16)
+      .Case("fmax.nan.bf16x2", Intrinsic::nvvm_fmax_nan_bf16x2)
+      .Case("fmax.nan.xorsign.abs.bf16",
+            Intrinsic::nvvm_fmax_nan_xorsign_abs_bf16)
+      .Case("fmax.nan.xorsign.abs.bf16x2",
+            Intrinsic::nvvm_fmax_nan_xorsign_abs_bf16x2)
+      .Case("fmax.xorsign.abs.bf16", Intrinsic::nvvm_fmax_xorsign_abs_bf16)
+      .Case("fmax.xorsign.abs.bf16x2", Intrinsic::nvvm_fmax_xorsign_abs_bf16x2)
+      .Case("fmin.bf16", Intrinsic::nvvm_fmin_bf16)
+      .Case("fmin.bf16x2", Intrinsic::nvvm_fmin_bf16x2)
+      .Case("fmin.ftz.bf16", Intrinsic::nvvm_fmin_ftz_bf16)
+      .Case("fmin.ftz.bf16x2", Intrinsic::nvvm_fmin_ftz_bf16x2)
+      .Case("fmin.ftz.nan_bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
+      .Case("fmin.ftz.nan_bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
+      .Case("fmin.ftz.nan.xorsign.abs.bf16",
+            Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16)
+      .Case("fmin.ftz.nan.xorsign.abs.bf16x2",
+            Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16x2)
+      .Case("fmin.ftz.xorsign.abs.bf16",
+            Intrinsic::nvvm_fmin_ftz_xorsign_abs_bf16)
+      .Case("fmin.ftz.xorsign.abs.bf16x2",
+            Intrinsic::nvvm_fmin_ftz_xorsign_abs_bf16x2)
+      .Case("fmin.nan.bf16", Intrinsic::nvvm_fmin_nan_bf16)
+      .Case("fmin.nan.bf16x2", Intrinsic::nvvm_fmin_nan_bf16x2)
+      .Case("fmin.nan.xorsign.abs.bf16",
+            Intrinsic::nvvm_fmin_nan_xorsign_abs_bf16)
+      .Case("fmin.nan.xorsign.abs.bf16x2",
+            Intrinsic::nvvm_fmin_nan_xorsign_abs_bf16x2)
+      .Case("fmin.xorsign.abs.bf16", Intrinsic::nvvm_fmin_xorsign_abs_bf16)
+      .Case("fmin.xorsign.abs.bf16x2", Intrinsic::nvvm_fmin_xorsign_abs_bf16x2)
+      .Case("neg.bf16", Intrinsic::nvvm_neg_bf16)
+      .Case("neg.bf16x2", Intrinsic::nvvm_neg_bf16x2)
+      .Default(Intrinsic::not_intrinsic);
+}
+
 static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
@@ -829,16 +897,24 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name == "arm.cde.vcx3qa.predicated.v2i64.v4i1")
       return true;
 
-    if (Name == "amdgcn.alignbit") {
-      // Target specific intrinsic became redundant
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
-                                        {F->getReturnType()});
-      return true;
+    if (Name.consume_front("amdgcn.")) {
+      if (Name == "alignbit") {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
+                                          {F->getReturnType()});
+        return true;
+      }
+
+      if (Name.startswith("atomic.inc") || Name.startswith("atomic.dec")) {
+        // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
+        // new declaration.
+        NewFn = nullptr;
+        return true;
+      }
     }
 
     break;
   }
-
   case 'c': {
     if (Name.startswith("ctlz.") && F->arg_size() == 1) {
       rename(F);
@@ -937,32 +1013,6 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   case 'i':
   case 'l': {
-    bool IsLifetimeStart = Name.startswith("lifetime.start");
-    if (IsLifetimeStart || Name.startswith("invariant.start")) {
-      Intrinsic::ID ID = IsLifetimeStart ?
-        Intrinsic::lifetime_start : Intrinsic::invariant_start;
-      auto Args = F->getFunctionType()->params();
-      Type* ObjectPtr[1] = {Args[1]};
-      if (F->getName() != Intrinsic::getName(ID, ObjectPtr, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ObjectPtr);
-        return true;
-      }
-    }
-
-    bool IsLifetimeEnd = Name.startswith("lifetime.end");
-    if (IsLifetimeEnd || Name.startswith("invariant.end")) {
-      Intrinsic::ID ID = IsLifetimeEnd ?
-        Intrinsic::lifetime_end : Intrinsic::invariant_end;
-
-      auto Args = F->getFunctionType()->params();
-      Type* ObjectPtr[1] = {Args[IsLifetimeEnd ? 1 : 2]};
-      if (F->getName() != Intrinsic::getName(ID, ObjectPtr, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ObjectPtr);
-        return true;
-      }
-    }
     if (Name.startswith("invariant.group.barrier")) {
       // Rename invariant.group.barrier to launder.invariant.group
       auto Args = F->getFunctionType()->params();
@@ -977,70 +1027,21 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   case 'm': {
-    if (Name.startswith("masked.load.")) {
-      Type *Tys[] = { F->getReturnType(), F->arg_begin()->getType() };
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_load, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_load,
-                                          Tys);
-        return true;
-      }
-    }
-    if (Name.startswith("masked.store.")) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = { Args[0], Args[1] };
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_store, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_store,
-                                          Tys);
-        return true;
-      }
-    }
-    // Renaming gather/scatter intrinsics with no address space overloading
-    // to the new overload which includes an address space
-    if (Name.startswith("masked.gather.")) {
-      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_gather, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_gather, Tys);
-        return true;
-      }
-    }
-    if (Name.startswith("masked.scatter.")) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {Args[0], Args[1]};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_scatter, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_scatter, Tys);
-        return true;
-      }
-    }
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
     // the pointer args.
-    if (Name.startswith("memcpy.") && F->arg_size() == 5) {
-      rename(F);
-      // Get the types of dest, src, and len
-      ArrayRef<Type *> ParamTypes = F->getFunctionType()->params().slice(0, 3);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memcpy,
-                                        ParamTypes);
-      return true;
-    }
-    if (Name.startswith("memmove.") && F->arg_size() == 5) {
-      rename(F);
-      // Get the types of dest, src, and len
-      ArrayRef<Type *> ParamTypes = F->getFunctionType()->params().slice(0, 3);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memmove,
-                                        ParamTypes);
-      return true;
+    if (unsigned ID = StringSwitch<unsigned>(Name)
+                          .StartsWith("memcpy.", Intrinsic::memcpy)
+                          .StartsWith("memmove.", Intrinsic::memmove)
+                          .Default(0)) {
+      if (F->arg_size() == 5) {
+        rename(F);
+        // Get the types of dest, src, and len
+        ArrayRef<Type *> ParamTypes =
+            F->getFunctionType()->params().slice(0, 3);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ParamTypes);
+        return true;
+      }
     }
     if (Name.startswith("memset.") && F->arg_size() == 5) {
       rename(F);
@@ -1071,7 +1072,12 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                           {F->getReturnType()});
         return true;
       }
-
+      IID = ShouldUpgradeNVPTXBF16Intrinsic(Name);
+      if (IID != Intrinsic::not_intrinsic &&
+          !F->getReturnType()->getScalarType()->isBFloatTy()) {
+        NewFn = nullptr;
+        return true;
+      }
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
       // not to an intrinsic alone.  We expand them in UpgradeIntrinsicCall.
       //
@@ -1108,17 +1114,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
 
   case 'p':
-    if (Name == "prefetch") {
-      // Handle address space overloading.
-      Type *Tys[] = {F->arg_begin()->getType()};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::prefetch, Tys, F->getParent())) {
-        rename(F);
-        NewFn =
-            Intrinsic::getDeclaration(F->getParent(), Intrinsic::prefetch, Tys);
-        return true;
-      }
-    } else if (Name.startswith("ptr.annotation.") && F->arg_size() == 4) {
+    if (Name.startswith("ptr.annotation.") && F->arg_size() == 4) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(
           F->getParent(), Intrinsic::ptr_annotation,
@@ -1126,6 +1122,58 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       return true;
     }
     break;
+
+  case 'r': {
+    if (Name.consume_front("riscv.")) {
+      Intrinsic::ID ID;
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("aes32dsi", Intrinsic::riscv_aes32dsi)
+               .Case("aes32dsmi", Intrinsic::riscv_aes32dsmi)
+               .Case("aes32esi", Intrinsic::riscv_aes32esi)
+               .Case("aes32esmi", Intrinsic::riscv_aes32esmi)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (!F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .StartsWith("sm4ks", Intrinsic::riscv_sm4ks)
+               .StartsWith("sm4ed", Intrinsic::riscv_sm4ed)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
+            F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .StartsWith("sha256sig0", Intrinsic::riscv_sha256sig0)
+               .StartsWith("sha256sig1", Intrinsic::riscv_sha256sig1)
+               .StartsWith("sha256sum0", Intrinsic::riscv_sha256sum0)
+               .StartsWith("sha256sum1", Intrinsic::riscv_sha256sum1)
+               .StartsWith("sm3p0", Intrinsic::riscv_sm3p0)
+               .StartsWith("sm3p1", Intrinsic::riscv_sm3p1)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+      break; // No other 'riscv.*' intrinsics
+    }
+  } break;
 
   case 's':
     if (Name == "stackprotectorcheck") {
@@ -1250,15 +1298,15 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   LLVMContext &C = GV->getContext();
   IRBuilder<> IRB(C);
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
-                               IRB.getInt8PtrTy());
+                               IRB.getPtrTy());
   Constant *Init = GV->getInitializer();
   unsigned N = Init->getNumOperands();
   std::vector<Constant *> NewCtors(N);
   for (unsigned i = 0; i != N; ++i) {
     auto Ctor = cast<Constant>(Init->getOperand(i));
-    NewCtors[i] = ConstantStruct::get(
-        EltTy, Ctor->getAggregateElement(0u), Ctor->getAggregateElement(1),
-        Constant::getNullValue(IRB.getInt8PtrTy()));
+    NewCtors[i] = ConstantStruct::get(EltTy, Ctor->getAggregateElement(0u),
+                                      Ctor->getAggregateElement(1),
+                                      Constant::getNullValue(IRB.getPtrTy()));
   }
   Constant *NewInit = ConstantArray::get(ArrayType::get(EltTy, N), NewCtors);
 
@@ -2120,6 +2168,42 @@ static Value *UpgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   llvm_unreachable("Unknown function for ARM CallBase upgrade.");
 }
 
+static Value *UpgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
+                                         Function *F, IRBuilder<> &Builder) {
+  const bool IsInc = Name.startswith("atomic.inc.");
+  if (IsInc || Name.startswith("atomic.dec.")) {
+    if (CI->getNumOperands() != 6) // Malformed bitcode.
+      return nullptr;
+
+    AtomicRMWInst::BinOp RMWOp =
+        IsInc ? AtomicRMWInst::UIncWrap : AtomicRMWInst::UDecWrap;
+
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Val = CI->getArgOperand(1);
+    ConstantInt *OrderArg = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+    ConstantInt *VolatileArg = dyn_cast<ConstantInt>(CI->getArgOperand(4));
+
+    AtomicOrdering Order = AtomicOrdering::SequentiallyConsistent;
+    if (OrderArg && isValidAtomicOrdering(OrderArg->getZExtValue()))
+      Order = static_cast<AtomicOrdering>(OrderArg->getZExtValue());
+    if (Order == AtomicOrdering::NotAtomic ||
+        Order == AtomicOrdering::Unordered)
+      Order = AtomicOrdering::SequentiallyConsistent;
+
+    // The scope argument never really worked correctly. Use agent as the most
+    // conservative option which should still always produce the instruction.
+    SyncScope::ID SSID = F->getContext().getOrInsertSyncScopeID("agent");
+    AtomicRMWInst *RMW =
+        Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
+
+    if (!VolatileArg || !VolatileArg->isZero())
+      RMW->setVolatile(true);
+    return RMW;
+  }
+
+  llvm_unreachable("Unknown function for AMDGPU intrinsic upgrade.");
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -2150,9 +2234,11 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.startswith("arm.");
     if (IsARM)
       Name = Name.substr(4);
+    bool IsAMDGCN = Name.startswith("amdgcn.");
+    if (IsAMDGCN)
+      Name = Name.substr(7);
 
     if (IsX86 && Name.startswith("sse4a.movnt.")) {
-      Module *M = F->getParent();
       SmallVector<Metadata *, 1> Elts;
       Elts.push_back(
           ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
@@ -2170,7 +2256,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
           Builder.CreateExtractElement(Arg1, (uint64_t)0, "extractelement");
 
       StoreInst *SI = Builder.CreateAlignedStore(Extract, Addr, Align(1));
-      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
+      SI->setMetadata(LLVMContext::MD_nontemporal, Node);
 
       // Remove intrinsic.
       CI->eraseFromParent();
@@ -2179,7 +2265,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     if (IsX86 && (Name.startswith("avx.movnt.") ||
                   Name.startswith("avx512.storent."))) {
-      Module *M = F->getParent();
       SmallVector<Metadata *, 1> Elts;
       Elts.push_back(
           ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
@@ -2195,7 +2280,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       StoreInst *SI = Builder.CreateAlignedStore(
           Arg1, BC,
           Align(Arg1->getType()->getPrimitiveSizeInBits().getFixedValue() / 8));
-      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
+      SI->setMetadata(LLVMContext::MD_nontemporal, Node);
 
       // Remove intrinsic.
       CI->eraseFromParent();
@@ -3523,7 +3608,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (IsX86 && Name.startswith("avx512.cvtmask2")) {
       Rep = UpgradeMaskToInt(Builder, *CI);
     } else if (IsX86 && Name.endswith(".movntdqa")) {
-      Module *M = F->getParent();
       MDNode *Node = MDNode::get(
           C, ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
 
@@ -3535,7 +3619,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       LoadInst *LI = Builder.CreateAlignedLoad(
           CI->getType(), BC,
           Align(CI->getType()->getPrimitiveSizeInBits().getFixedValue() / 8));
-      LI->setMetadata(M->getMDKindID("nontemporal"), Node);
+      LI->setMetadata(LLVMContext::MD_nontemporal, Node);
       Rep = LI;
     } else if (IsX86 && (Name.startswith("fma.vfmadd.") ||
                          Name.startswith("fma.vfmsub.") ||
@@ -3965,13 +4049,38 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                     {Arg->getType()}),
           Arg, "ctpop");
       Rep = Builder.CreateTrunc(Popc, Builder.getInt32Ty(), "ctpop.trunc");
-    } else if (IsNVVM && Name == "h2f") {
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(
+    } else if (IsNVVM) {
+      if (Name == "h2f") {
+        Rep =
+            Builder.CreateCall(Intrinsic::getDeclaration(
                                    F->getParent(), Intrinsic::convert_from_fp16,
                                    {Builder.getFloatTy()}),
                                CI->getArgOperand(0), "h2f");
+      } else {
+        Intrinsic::ID IID = ShouldUpgradeNVPTXBF16Intrinsic(Name);
+        if (IID != Intrinsic::not_intrinsic &&
+            !F->getReturnType()->getScalarType()->isBFloatTy()) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+          SmallVector<Value *, 2> Args;
+          for (size_t I = 0; I < NewFn->arg_size(); ++I) {
+            Value *Arg = CI->getArgOperand(I);
+            Type *OldType = Arg->getType();
+            Type *NewType = NewFn->getArg(I)->getType();
+            Args.push_back((OldType->isIntegerTy() &&
+                            NewType->getScalarType()->isBFloatTy())
+                               ? Builder.CreateBitCast(Arg, NewType)
+                               : Arg);
+          }
+          Rep = Builder.CreateCall(NewFn, Args);
+          if (F->getReturnType()->isIntegerTy())
+            Rep = Builder.CreateBitCast(Rep, F->getReturnType());
+        }
+      }
     } else if (IsARM) {
       Rep = UpgradeARMIntrinsicCall(Name, CI, F, Builder);
+    } else if (IsAMDGCN) {
+      Rep = UpgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -4214,10 +4323,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     }
 
     // Create a new call with an added null annotation attribute argument.
-    NewCall = Builder.CreateCall(
-        NewFn,
-        {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
-         CI->getArgOperand(3), Constant::getNullValue(Builder.getInt8PtrTy())});
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   CI->getArgOperand(2), CI->getArgOperand(3),
+                                   Constant::getNullValue(Builder.getPtrTy())});
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
@@ -4230,14 +4339,68 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     // Create a new call with an added null annotation attribute argument.
-    NewCall = Builder.CreateCall(
-        NewFn,
-        {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
-         CI->getArgOperand(3), Constant::getNullValue(Builder.getInt8PtrTy())});
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   CI->getArgOperand(2), CI->getArgOperand(3),
+                                   Constant::getNullValue(Builder.getPtrTy())});
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
     return;
+
+  case Intrinsic::riscv_aes32dsi:
+  case Intrinsic::riscv_aes32dsmi:
+  case Intrinsic::riscv_aes32esi:
+  case Intrinsic::riscv_aes32esmi:
+  case Intrinsic::riscv_sm4ks:
+  case Intrinsic::riscv_sm4ed: {
+    // The last argument to these intrinsics used to be i8 and changed to i32.
+    // The type overload for sm4ks and sm4ed was removed.
+    Value *Arg2 = CI->getArgOperand(2);
+    if (Arg2->getType()->isIntegerTy(32) && !CI->getType()->isIntegerTy(64))
+      return;
+
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    if (CI->getType()->isIntegerTy(64)) {
+      Arg0 = Builder.CreateTrunc(Arg0, Builder.getInt32Ty());
+      Arg1 = Builder.CreateTrunc(Arg1, Builder.getInt32Ty());
+    }
+
+    Arg2 = ConstantInt::get(Type::getInt32Ty(C),
+                            cast<ConstantInt>(Arg2)->getZExtValue());
+
+    NewCall = Builder.CreateCall(NewFn, {Arg0, Arg1, Arg2});
+    Value *Res = NewCall;
+    if (Res->getType() != CI->getType())
+      Res = Builder.CreateIntCast(NewCall, CI->getType(), /*isSigned*/ true);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
+  case Intrinsic::riscv_sha256sig0:
+  case Intrinsic::riscv_sha256sig1:
+  case Intrinsic::riscv_sha256sum0:
+  case Intrinsic::riscv_sha256sum1:
+  case Intrinsic::riscv_sm3p0:
+  case Intrinsic::riscv_sm3p1: {
+    // The last argument to these intrinsics used to be i8 and changed to i32.
+    // The type overload for sm4ks and sm4ed was removed.
+    if (!CI->getType()->isIntegerTy(64))
+      return;
+
+    Value *Arg =
+        Builder.CreateTrunc(CI->getArgOperand(0), Builder.getInt32Ty());
+
+    NewCall = Builder.CreateCall(NewFn, Arg);
+    Value *Res =
+        Builder.CreateIntCast(NewCall, CI->getType(), /*isSigned*/ true);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
 
   case Intrinsic::x86_xop_vfrcz_ss:
   case Intrinsic::x86_xop_vfrcz_sd:
@@ -4379,22 +4542,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
   }
 
-  case Intrinsic::invariant_start:
-  case Intrinsic::invariant_end: {
-    SmallVector<Value *, 4> Args(CI->args());
-    NewCall = Builder.CreateCall(NewFn, Args);
-    break;
-  }
-  case Intrinsic::masked_load:
-  case Intrinsic::masked_store:
-  case Intrinsic::masked_gather:
-  case Intrinsic::masked_scatter: {
-    SmallVector<Value *, 4> Args(CI->args());
-    NewCall = Builder.CreateCall(NewFn, Args);
-    NewCall->copyMetadata(*CI);
-    break;
-  }
-
   case Intrinsic::memcpy:
   case Intrinsic::memmove:
   case Intrinsic::memset: {
@@ -4456,12 +4603,16 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
 }
 
 MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
+  const unsigned NumOperands = MD.getNumOperands();
+  if (NumOperands == 0)
+    return &MD; // Invalid, punt to a verifier error.
+
   // Check if the tag uses struct-path aware TBAA format.
-  if (isa<MDNode>(MD.getOperand(0)) && MD.getNumOperands() >= 3)
+  if (isa<MDNode>(MD.getOperand(0)) && NumOperands >= 3)
     return &MD;
 
   auto &Context = MD.getContext();
-  if (MD.getNumOperands() == 3) {
+  if (NumOperands == 3) {
     Metadata *Elts[] = {MD.getOperand(0), MD.getOperand(1)};
     MDNode *ScalarType = MDNode::get(Context, Elts);
     // Create a MDNode <ScalarType, ScalarType, offset 0, const>

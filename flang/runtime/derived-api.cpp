@@ -33,7 +33,9 @@ void RTNAME(Destroy)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noDestructionNeeded()) {
-        Destroy(descriptor, true, *derived);
+        // TODO: Pass source file & line information to the API
+        // so that a good Terminator can be passed
+        Destroy(descriptor, true, *derived, nullptr);
       }
     }
   }
@@ -154,6 +156,16 @@ bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
     parent = parent->GetParentType();
   }
   return false;
+}
+
+void RTNAME(DestroyWithoutFinalization)(const Descriptor &descriptor) {
+  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (!derived->noDestructionNeeded()) {
+        Destroy(descriptor, /*finalize=*/false, *derived, nullptr);
+      }
+    }
+  }
 }
 
 } // extern "C"

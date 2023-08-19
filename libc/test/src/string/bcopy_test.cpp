@@ -16,12 +16,14 @@
 using __llvm_libc::cpp::array;
 using __llvm_libc::cpp::span;
 
+namespace __llvm_libc {
+
 TEST(LlvmLibcBcopyTest, MoveZeroByte) {
   char Buffer[] = {'a', 'b', 'y', 'z'};
   const char Expected[] = {'a', 'b', 'y', 'z'};
   void *const Dst = Buffer;
   __llvm_libc::bcopy(Buffer + 2, Dst, 0);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcBcopyTest, DstAndSrcPointToSameAddress) {
@@ -29,7 +31,7 @@ TEST(LlvmLibcBcopyTest, DstAndSrcPointToSameAddress) {
   const char Expected[] = {'a', 'b'};
   void *const Dst = Buffer;
   __llvm_libc::bcopy(Buffer, Dst, 1);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcBcopyTest, DstStartsBeforeSrc) {
@@ -39,7 +41,7 @@ TEST(LlvmLibcBcopyTest, DstStartsBeforeSrc) {
   const char Expected[] = {'z', 'b', 'c', 'c', 'z'};
   void *const Dst = Buffer + 1;
   __llvm_libc::bcopy(Buffer + 2, Dst, 2);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcBcopyTest, DstStartsAfterSrc) {
@@ -47,7 +49,7 @@ TEST(LlvmLibcBcopyTest, DstStartsAfterSrc) {
   const char Expected[] = {'z', 'a', 'a', 'b', 'z'};
   void *const Dst = Buffer + 2;
   __llvm_libc::bcopy(Buffer + 1, Dst, 2);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 // e.g. `Dst` follow `src`.
@@ -59,7 +61,7 @@ TEST(LlvmLibcBcopyTest, SrcFollowDst) {
   const char Expected[] = {'z', 'b', 'b', 'z'};
   void *const Dst = Buffer + 1;
   __llvm_libc::bcopy(Buffer + 2, Dst, 1);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
 TEST(LlvmLibcBcopyTest, DstFollowSrc) {
@@ -67,26 +69,30 @@ TEST(LlvmLibcBcopyTest, DstFollowSrc) {
   const char Expected[] = {'z', 'a', 'a', 'z'};
   void *const Dst = Buffer + 2;
   __llvm_libc::bcopy(Buffer + 1, Dst, 1);
-  ASSERT_MEM_EQ(Buffer, Expected);
+  ASSERT_MEM_EQ(Buffer, testing::MemoryView(Expected));
 }
 
-static constexpr int kMaxSize = 512;
+// Adapt CheckMemmove signature to bcopy.
+static inline void Adaptor(cpp::span<char> dst, cpp::span<char> src,
+                           size_t size) {
+  __llvm_libc::bcopy(src.begin(), dst.begin(), size);
+}
 
 TEST(LlvmLibcBcopyTest, SizeSweep) {
-  using LargeBuffer = array<char, 3 * kMaxSize>;
-  LargeBuffer GroundTruth;
-  __llvm_libc::Randomize(GroundTruth);
-  for (int Size = 0; Size < kMaxSize; ++Size) {
-    for (int Offset = -Size; Offset < Size; ++Offset) {
-      LargeBuffer Buffer = GroundTruth;
-      LargeBuffer Expected = GroundTruth;
-      size_t DstOffset = kMaxSize;
-      size_t SrcOffset = kMaxSize + Offset;
-      for (int I = 0; I < Size; ++I)
-        Expected[DstOffset + I] = GroundTruth[SrcOffset + I];
-      void *const Dst = Buffer.data() + DstOffset;
-      __llvm_libc::bcopy(Buffer.data() + SrcOffset, Dst, Size);
-      ASSERT_MEM_EQ(Buffer, Expected);
+  static constexpr int kMaxSize = 400;
+  static constexpr int kDenseOverlap = 15;
+  using LargeBuffer = array<char, 2 * kMaxSize + 1>;
+  LargeBuffer Buffer;
+  Randomize(Buffer);
+  for (int Size = 0; Size < kMaxSize; ++Size)
+    for (int Overlap = -1; Overlap < Size;) {
+      ASSERT_TRUE(CheckMemmove<Adaptor>(Buffer, Size, Overlap));
+      // Prevent quadratic behavior by skipping offset above kDenseOverlap.
+      if (Overlap > kDenseOverlap)
+        Overlap *= 2;
+      else
+        ++Overlap;
     }
-  }
 }
+
+} // namespace __llvm_libc

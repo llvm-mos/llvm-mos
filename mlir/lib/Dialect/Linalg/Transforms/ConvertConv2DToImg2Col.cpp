@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -29,9 +30,10 @@ static bool hasAllOneValues(DenseIntElementsAttr attr) {
 }
 
 static Value createAdd(Location loc, Value x, Value y, OpBuilder &builder) {
-  bool isInt = x.getType().isa<IntegerType>();
-  if (isInt)
+  if (isa<IntegerType>(x.getType()))
     return builder.create<arith::AddIOp>(loc, x, y);
+  if (isa<ComplexType>(x.getType()))
+    return builder.create<complex::AddOp>(loc, x, y);
   return builder.create<arith::AddFOp>(loc, x, y);
 }
 
@@ -42,7 +44,9 @@ static Value createMul(Location loc, Value x, Value y, Type accType,
       convertScalarToDtype(builder, loc, x, accType, /*isUnsignedCast=*/false);
   Value yConvert =
       convertScalarToDtype(builder, loc, y, accType, /*isUnsignedCast=*/false);
-  if (accType.isa<IntegerType>())
+  if (isa<ComplexType>(accType))
+    return builder.create<complex::MulOp>(loc, xConvert, yConvert);
+  if (isa<IntegerType>(accType))
     return builder.create<arith::MulIOp>(loc, xConvert, yConvert);
   return builder.create<arith::MulFOp>(loc, xConvert, yConvert);
 }
@@ -68,15 +72,14 @@ static Value getConvolvedIndex(OpBuilder &b, Location loc, Value oIndex,
   AffineExpr oExpr, fExpr;
   bindSymbols(b.getContext(), oExpr, fExpr);
   AffineMap convMap = AffineMap::get(0, 2, stride * oExpr + fExpr);
-  return affine::makeComposedAffineApply(b, loc, convMap,
-                                         ValueRange{oIndex, fIndex});
+  return affine::makeComposedAffineApply(b, loc, convMap, {oIndex, fIndex});
 }
 
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
-  auto inputType = convOp.getInputs()[0].getType().cast<ShapedType>();
-  auto filterType = convOp.getInputs()[1].getType().cast<ShapedType>();
-  auto outputType = convOp.getOutputs()[0].getType().cast<ShapedType>();
+  auto inputType = cast<ShapedType>(convOp.getInputs()[0].getType());
+  auto filterType = cast<ShapedType>(convOp.getInputs()[1].getType());
+  auto outputType = cast<ShapedType>(convOp.getOutputs()[0].getType());
 
   if (!filterType.hasStaticShape())
     return rewriter.notifyMatchFailure(
@@ -112,7 +115,7 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
   // Reshape output and filter to the LHS and result of a (B)MNK matmul.
   SmallVector<ReassociationIndices> filterReassocIndices = {{0, 1, 2}, {3}};
   auto reshapedFilterType =
-      RankedTensorType::get({fh * fw * ic, oc}, inputType.getElementType());
+      RankedTensorType::get({fh * fw * ic, oc}, filterType.getElementType());
   Value reshapedFilter = rewriter.create<tensor::CollapseShapeOp>(
       loc, reshapedFilterType, filter, filterReassocIndices);
 
@@ -210,9 +213,9 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter,
                 linalg::DepthwiseConv2DNhwcHwcOp convOp) {
-  auto inputType = convOp.getInputs()[0].getType().cast<RankedTensorType>();
-  auto filterType = convOp.getInputs()[1].getType().cast<RankedTensorType>();
-  auto outputType = convOp.getOutputs()[0].getType().cast<RankedTensorType>();
+  auto inputType = cast<RankedTensorType>(convOp.getInputs()[0].getType());
+  auto filterType = cast<RankedTensorType>(convOp.getInputs()[1].getType());
+  auto outputType = cast<RankedTensorType>(convOp.getOutputs()[0].getType());
 
   if (!filterType.hasStaticShape())
     return rewriter.notifyMatchFailure(
@@ -230,7 +233,7 @@ rewriteInIm2Col(RewriterBase &rewriter,
   Location loc = convOp.getLoc();
 
   auto transposeOperand = [&](Value operand, ArrayRef<int64_t> indices) {
-    auto operandTensorType = operand.getType().cast<RankedTensorType>();
+    auto operandTensorType = cast<RankedTensorType>(operand.getType());
     auto nloops = indices.size();
     ArrayRef<int64_t> inputShape = operandTensorType.getShape();
 
@@ -272,7 +275,7 @@ rewriteInIm2Col(RewriterBase &rewriter,
   Value inputT = transposeOperand(input, {0, 3, 1, 2});
   Value filterT = transposeOperand(filter, {2, 0, 1});
   ArrayRef<int64_t> filterTShape =
-      filterT.getType().cast<RankedTensorType>().getShape();
+      cast<RankedTensorType>(filterT.getType()).getShape();
   ArrayRef<int64_t> outputShape = outputType.getShape();
 
   int n = outputShape[0];
@@ -360,9 +363,9 @@ rewriteInIm2Col(RewriterBase &rewriter,
 
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp) {
-  auto inputType = convOp.getInputs()[0].getType().cast<ShapedType>();
-  auto filterType = convOp.getInputs()[1].getType().cast<ShapedType>();
-  auto outputType = convOp.getOutputs()[0].getType().cast<ShapedType>();
+  auto inputType = cast<ShapedType>(convOp.getInputs()[0].getType());
+  auto filterType = cast<ShapedType>(convOp.getInputs()[1].getType());
+  auto outputType = cast<ShapedType>(convOp.getOutputs()[0].getType());
 
   if (!filterType.hasStaticShape())
     return rewriter.notifyMatchFailure(

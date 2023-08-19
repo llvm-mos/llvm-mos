@@ -45,6 +45,7 @@ set(sources
   X86FixupBWInsts.cpp
   X86FixupLEAs.cpp
   X86FixupInstTuning.cpp
+  X86FixupVectorConstants.cpp
   X86AvoidStoreForwardingBlocks.cpp
   X86DynAllocaExpander.cpp
   X86FixupSetCC.cpp
@@ -54,6 +55,7 @@ set(sources
   X86InstructionSelector.cpp
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
+  X86ISelLoweringCall.cpp
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
   X86InterleavedAccess.cpp
@@ -63,7 +65,6 @@ set(sources
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
   X86EvexToVex.cpp
-  X86KCFI.cpp
   X86LegalizerInfo.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp

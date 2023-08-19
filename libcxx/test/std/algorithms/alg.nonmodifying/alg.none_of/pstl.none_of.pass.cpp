@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: with-pstl
+// UNSUPPORTED: c++03, c++11, c++14
+
+// UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // <algorithm>
 
@@ -54,7 +56,7 @@ struct Test {
     // check that a large number of elements works
     std::vector<int> vec(100);
     std::fill(vec.begin(), vec.end(), 3);
-    assert(std::none_of(Iter(vec.data()), Iter(vec.data() + vec.size()), [](int i) { return i != 3; }));
+    assert(std::none_of(policy, Iter(vec.data()), Iter(vec.data() + vec.size()), [](int i) { return i != 3; }));
   }
 };
 

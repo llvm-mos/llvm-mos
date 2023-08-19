@@ -340,6 +340,7 @@ void test_strcat() {
   dfsan_origin dst_o = dfsan_get_origin((long)dst[0]);
   (void)dst_o;
   char *ret = strcat(p, src);
+
   ASSERT_LABEL(ret, k_label);
   ASSERT_EQ_ORIGIN(ret, p);
   assert(ret == dst);
@@ -367,6 +368,56 @@ void test_strcat() {
   ASSERT_LABEL(dst[11], j_label);
 }
 
+void test_strncat(int n) {
+  char src[] = "world";
+  int volatile x = 0; // buffer to ensure src and dst do not share origins
+  (void)x;
+  char dst[] = "hello \0    ";
+  int volatile y = 0; // buffer to ensure dst and p do not share origins
+  (void)y;
+  char *p = dst;
+  dfsan_set_label(k_label, &p, sizeof(p));
+  dfsan_set_label(i_label, src, sizeof(src));
+  dfsan_set_label(j_label, dst, sizeof(dst));
+  dfsan_origin dst_o = dfsan_get_origin((long)dst[0]);
+  (void)dst_o;
+  char *ret = strncat(p, src, n);
+
+  ASSERT_LABEL(ret, k_label);
+  ASSERT_EQ_ORIGIN(ret, p);
+  assert(ret == dst);
+  assert(strncmp(src, dst + 6, n) == 0);
+  // Origins are assigned for every 4 contiguous 4-aligned bytes. After
+  // appending src to dst, origins of src can overwrite origins of dst if their
+  // application adddresses are within [start_aligned_down, end_aligned_up).
+  // Other origins are not changed.
+  int pad = n % 4;
+  if (pad)
+    pad = 4 - pad;
+
+  char *start_aligned_down = (char *)(((size_t)(dst + 6)) & ~3UL);
+  char *end_aligned_up = (char *)(((size_t)(dst + 6 + n + pad)) & ~3UL);
+
+  for (int i = 0; i < 12; ++i) {
+    if (dst + i < start_aligned_down || dst + i >= end_aligned_up) {
+      ASSERT_INIT_ORIGIN(&dst[i], dst_o);
+    } else {
+      ASSERT_INIT_ORIGIN_EQ_ORIGIN(&dst[i], src[0]);
+    }
+  }
+  for (int i = 0; i < 6; ++i) {
+    ASSERT_LABEL(dst[i], j_label);
+  }
+  for (int i = 6; i < 6 + n; ++i) {
+    ASSERT_LABEL(dst[i], i_label);
+    assert(dfsan_get_label(dst[i]) == dfsan_get_label(src[i - 6]));
+  }
+  for (int i = 6 + n; i < strlen(dst); ++i) {
+    ASSERT_LABEL(dst[i], j_label);
+  }
+  ASSERT_LABEL(dst[11], j_label);
+}
+
 void test_strlen() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -378,6 +429,34 @@ void test_strlen() {
 #else
   ASSERT_LABEL(rv, i_label);
   ASSERT_EQ_ORIGIN(rv, str1[3]);
+#endif
+}
+
+void test_strnlen() {
+  char str1[] = "str1";
+  dfsan_set_label(i_label, &str1[3], 1);
+
+  int maxlen = 4;
+  dfsan_set_label(j_label, &maxlen, sizeof(maxlen));
+
+  int rv = strnlen(str1, maxlen);
+  assert(rv == 4);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
+#endif
+
+  maxlen = 2;
+  dfsan_set_label(j_label, &maxlen, sizeof(maxlen));
+  rv = strnlen(str1, maxlen);
+  assert(rv == 2);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, j_label);
+  ASSERT_EQ_ORIGIN(rv, maxlen);
 #endif
 }
 
@@ -2082,9 +2161,12 @@ int main(void) {
   test_strchr();
   test_strcmp();
   test_strcat();
+  test_strncat(5);
+  test_strncat(2);
   test_strcpy();
   test_strdup();
   test_strlen();
+  test_strnlen();
   test_strncasecmp();
   test_strncmp();
   test_strncpy();

@@ -1300,7 +1300,7 @@ define <11 x i64> @vand_vx_v11i64(<11 x i64> %va, i64 %b, <11 x i1> %m, i32 zero
 ; RV32-NEXT:    lui a1, 341
 ; RV32-NEXT:    addi a1, a1, 1365
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
+; RV32-NEXT:    vmv.v.x v0, a1
 ; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV32-NEXT:    vmerge.vxm v24, v24, a0, v0
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
@@ -1328,7 +1328,7 @@ define <11 x i64> @vand_vx_v11i64_unmasked(<11 x i64> %va, i64 %b, i32 zeroext %
 ; RV32-NEXT:    lui a1, 341
 ; RV32-NEXT:    addi a1, a1, 1365
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.s.x v0, a1
+; RV32-NEXT:    vmv.v.x v0, a1
 ; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV32-NEXT:    vmerge.vxm v16, v16, a0, v0
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma

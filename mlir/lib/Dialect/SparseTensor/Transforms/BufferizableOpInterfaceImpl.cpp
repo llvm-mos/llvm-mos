@@ -29,9 +29,7 @@ namespace {
 struct ConcatenateOpInterface
     : public BufferizableOpInterface::ExternalModel<
           ConcatenateOpInterface, sparse_tensor::ConcatenateOp> {
-  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
-    return true;
-  }
+  bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
@@ -43,8 +41,8 @@ struct ConcatenateOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 
@@ -57,7 +55,7 @@ struct ConcatenateOpInterface
 struct ConvertOpInterface
     : public BufferizableOpInterface::ExternalModel<ConvertOpInterface,
                                                     sparse_tensor::ConvertOp> {
-  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
+  bool bufferizesToAllocation(Operation *op, Value value) const {
     // ConvertOps may allocate. (Unless they convert between two identical
     // types, then they fold away.)
     return true;
@@ -73,8 +71,8 @@ struct ConvertOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 
@@ -97,8 +95,8 @@ struct LoadOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
   }
 };
@@ -112,15 +110,13 @@ struct NewOpInterface
     return false;
   }
 
-  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
-    return true;
-  }
+  bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
 };
 
 struct PackOpInterface
     : public BufferizableOpInterface::ExternalModel<PackOpInterface,
                                                     sparse_tensor::PackOp> {
-  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
+  bool bufferizesToAllocation(Operation *op, Value value) const {
     // PackOp reuses all the buffers instead of allocating new ones
     return false;
   }
@@ -135,8 +131,8 @@ struct PackOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     assert(op->getNumResults() == 1);
     // PackOp reuses the input tensors as values/coordinates instead of
     // creating new ones when packing into a COO format.
@@ -152,29 +148,33 @@ struct PackOpInterface
 struct UnpackOpInterface
     : public BufferizableOpInterface::ExternalModel<UnpackOpInterface,
                                                     sparse_tensor::UnpackOp> {
-  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
-    // We allocate and return unpacked memory if this is a batched unpack.
-    // When the number of batched levels equals to zero, we reuse the
-    // coordinates/values memref (and reallocation if the requested output size
-    // is larger than the actual size). Similar to InsertOp, reallocation is
-    // not considered to allocate a new piece of memory.
-    return llvm::cast<UnpackOp>(op).getNumBatchedLvls() != 0;
+  bool bufferizesToAllocation(Operation *op, Value value) const {
+    // The output buffer is pre-allocated by the user.
+    return false;
   }
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    return true;
+    // The first operand is the sparse tensor that we are unpacking.
+    return opOperand.getOperandNumber() == 0;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    return false;
+    // We write into the output operand.
+    assert(2 * (op->getNumOperands() - 1) == op->getNumResults());
+    return opOperand.getOperandNumber() > 0;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    // Conceptually, UnpackOp equals to a list of toCoordinates/toValueOp
-    return {};
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
+    assert(2 * (op->getNumOperands() - 1) == op->getNumResults());
+
+    if (opOperand.getOperandNumber() == 0)
+      return {};
+    // We write directly into the output tensors and returns them.
+    return {{op->getResult(opOperand.getOperandNumber() - 1),
+             BufferRelation::Equivalent}};
   }
 };
 
@@ -192,8 +192,8 @@ struct InsertOpInterface
     return true;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     // InsertOp returns an alias of its operand.
     assert(op->getNumResults() == 1);
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
@@ -213,8 +213,8 @@ struct NumberOfEntriesOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 };
@@ -235,8 +235,8 @@ struct ToCoordinatesBufferOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 };
@@ -256,8 +256,8 @@ struct ToCoordinatesOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 };
@@ -277,8 +277,8 @@ struct ToPositionsOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 };
@@ -298,8 +298,8 @@ struct ToValuesOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     return {};
   }
 };

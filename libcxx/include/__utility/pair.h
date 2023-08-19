@@ -13,9 +13,9 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/different_from.h>
 #include <__config>
-#include <__functional/unwrap_ref.h>
 #include <__fwd/array.h>
 #include <__fwd/get.h>
+#include <__fwd/pair.h>
 #include <__fwd/subrange.h>
 #include <__fwd/tuple.h>
 #include <__tuple/pair_like.h>
@@ -45,6 +45,7 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -54,6 +55,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -101,6 +105,20 @@ struct _LIBCPP_TEMPLATE_VIS pair
 
     _LIBCPP_HIDE_FROM_ABI
     pair& operator=(pair const& __p) {
+        first = __p.first;
+        second = __p.second;
+        return *this;
+    }
+
+    // Extension: This is provided in C++03 because it allows properly handling the
+    //            assignment to a pair containing references, which would be a hard
+    //            error otherwise.
+    template <class _U1, class _U2, class = __enable_if_t<
+        is_assignable<first_type&, _U1 const&>::value &&
+        is_assignable<second_type&, _U2 const&>::value
+    > >
+    _LIBCPP_HIDE_FROM_ABI
+    pair& operator=(pair<_U1, _U2> const& __p) {
         first = __p.first;
         second = __p.second;
         return *this;
@@ -670,14 +688,9 @@ struct common_type<pair<_T1, _T2>, pair<_U1, _U2>> {
 };
 #endif // _LIBCPP_STD_VER >= 23
 
-template <class _T1, class _T2>
+template <class _T1, class _T2, __enable_if_t<__is_swappable<_T1>::value && __is_swappable<_T2>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    __is_swappable<_T1>::value &&
-    __is_swappable<_T2>::value,
-    void
->::type
+void
 swap(pair<_T1, _T2>& __x, pair<_T1, _T2>& __y)
                      _NOEXCEPT_((__is_nothrow_swappable<_T1>::value &&
                                  __is_nothrow_swappable<_T2>::value))
@@ -878,5 +891,7 @@ constexpr _T1 const && get(pair<_T2, _T1> const&& __p) _NOEXCEPT
 #endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___UTILITY_PAIR_H

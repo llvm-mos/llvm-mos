@@ -166,6 +166,7 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,           P, Custom);
       setOperationAction(ISD::FMINNUM,        P, Custom);
       setOperationAction(ISD::FMAXNUM,        P, Custom);
+      setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
       // Custom-lower BUILD_VECTOR. The standard (target-independent)
@@ -3625,7 +3626,7 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       break;
     case HexagonISD::VINSERTW0:
       if (isUndef(Ops[1]))
-        return Ops[0];;
+        return Ops[0];
       break;
     case HexagonISD::VROR: {
       if (Ops[0].getOpcode() == HexagonISD::VROR) {

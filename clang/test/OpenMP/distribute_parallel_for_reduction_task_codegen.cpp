@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP12:%.*]] = sdiv exact i64 [[TMP11]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP13:%.*]] = add nuw i64 [[TMP12]], 1
 // CHECK1-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK1-NEXT:    [[TMP15:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP15:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP15]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i8, i64 [[TMP13]], align 16
 // CHECK1-NEXT:    store i64 [[TMP13]], ptr [[__VLA_EXPR0]], align 8
@@ -408,7 +408,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
 // CHECK1-NEXT:    [[TMP105:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP105]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP105]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -448,7 +448,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @{{reduction_size[.].+[.]}})
+// CHECK1-NEXT:    [[TMP3:%.*]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @{{reduction_size[.].+[.]}})
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP4]]
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[TMP2]], [[TMP5]]
@@ -470,7 +470,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @{{reduction_size[.].+[.]}})
+// CHECK1-NEXT:    [[TMP2:%.*]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @{{reduction_size[.].+[.]}})
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR1]], align 8

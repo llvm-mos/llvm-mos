@@ -1612,6 +1612,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
   setPrefLoopAlignment(Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
+  setPrefFunctionAlignment(Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
 
@@ -2417,7 +2418,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CallConv, isVarArg));
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getStackSize();
 
   // SPDiff is the byte offset of the call's argument area from the callee's.
   // Stores to callee stack arguments will be placed in FixedStackSlots offset
@@ -2660,13 +2661,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // those, the target's already in a register, so we don't need to do
     // anything extra.
     if (isa<GlobalAddressSDNode>(Callee)) {
-      // When generating execute-only code we use movw movt pair.
-      // Currently execute-only is only available for architectures that
-      // support movw movt, so we are safe to assume that.
       if (Subtarget->genExecuteOnly()) {
-        assert(Subtarget->useMovt() &&
-               "long-calls with execute-only requires movt and movw!");
-        ++NumMovwMovt;
+        if (Subtarget->useMovt())
+          ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
                              DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
       } else {
@@ -2685,13 +2682,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     } else if (ExternalSymbolSDNode *S=dyn_cast<ExternalSymbolSDNode>(Callee)) {
       const char *Sym = S->getSymbol();
 
-      // When generating execute-only code we use movw movt pair.
-      // Currently execute-only is only available for architectures that
-      // support movw movt, so we are safe to assume that.
       if (Subtarget->genExecuteOnly()) {
-        assert(Subtarget->useMovt() &&
-               "long-calls with execute-only requires movt and movw!");
-        ++NumMovwMovt;
+        if (Subtarget->useMovt())
+          ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
                              DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
       } else {
@@ -2857,6 +2850,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (isTailCall) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(ARMISD::TC_RETURN, dl, NodeTys, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
@@ -2912,7 +2906,7 @@ void ARMTargetLowering::HandleByVal(CCState *State, unsigned &Size,
   // all remained GPR regs. In that case we can't split parameter, we must
   // send it to stack. We also must set NCRN to R4, so waste all
   // remained registers.
-  const unsigned NSAAOffset = State->getNextStackOffset();
+  const unsigned NSAAOffset = State->getStackSize();
   if (NSAAOffset != 0 && Size > Excess) {
     while (State->AllocateReg(GPRArgRegs))
       ;
@@ -3078,7 +3072,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     SmallVector<CCValAssign, 16> ArgLocs;
     CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
     CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CalleeCC, isVarArg));
-    if (CCInfo.getNextStackOffset()) {
+    if (CCInfo.getStackSize()) {
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
       MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -3491,6 +3485,11 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
 }
 
 unsigned ARMTargetLowering::getJumpTableEncoding() const {
+  // If we don't have a 32-bit pc-relative branch instruction then the jump
+  // table consists of block addresses. Usually this is inline, but for
+  // execute-only it must be placed out-of-line.
+  if (Subtarget->genExecuteOnly() && !Subtarget->hasV8MBaselineOps())
+    return MachineJumpTableInfo::EK_BlockAddress;
   return MachineJumpTableInfo::EK_Inline;
 }
 
@@ -3955,9 +3954,12 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
   }
 
   // If we have T2 ops, we can materialize the address directly via movt/movw
-  // pair. This is always cheaper.
-  if (Subtarget->useMovt()) {
-    ++NumMovwMovt;
+  // pair. This is always cheaper. If need to generate Execute Only code, and we
+  // only have Thumb1 available, we can't use a constant pool and are forced to
+  // use immediate relocations.
+  if (Subtarget->useMovt() || Subtarget->genExecuteOnly()) {
+    if (Subtarget->useMovt())
+      ++NumMovwMovt;
     // FIXME: Once remat is capable of dealing with instructions with register
     // operands, expand this into two nodes.
     return DAG.getNode(ARMISD::Wrapper, dl, PtrVT,
@@ -4419,10 +4421,9 @@ void ARMTargetLowering::VarArgStyleRegisters(CCState &CCInfo, SelectionDAG &DAG,
   // the result of va_next.
   // If there is no regs to be stored, just point address after last
   // argument passed via stack.
-  int FrameIndex = StoreByValRegs(CCInfo, DAG, dl, Chain, nullptr,
-                                  CCInfo.getInRegsParamsCount(),
-                                  CCInfo.getNextStackOffset(),
-                                  std::max(4U, TotalArgRegsSaveSize));
+  int FrameIndex = StoreByValRegs(
+      CCInfo, DAG, dl, Chain, nullptr, CCInfo.getInRegsParamsCount(),
+      CCInfo.getStackSize(), std::max(4U, TotalArgRegsSaveSize));
   AFI->setVarArgsFrameIndex(FrameIndex);
 }
 
@@ -4657,7 +4658,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
 
   // varargs
   if (isVarArg && MFI.hasVAStart()) {
-    VarArgStyleRegisters(CCInfo, DAG, dl, Chain, CCInfo.getNextStackOffset(),
+    VarArgStyleRegisters(CCInfo, DAG, dl, Chain, CCInfo.getStackSize(),
                          TotalArgRegsSaveSize);
     if (AFI->isCmseNSEntryFunction()) {
       DiagnosticInfoUnsupported Diag(
@@ -4667,7 +4668,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
     }
   }
 
-  unsigned StackArgSize = CCInfo.getNextStackOffset();
+  unsigned StackArgSize = CCInfo.getStackSize();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   if (canGuaranteeTCO(CallConv, TailCallOpt)) {
     // The only way to guarantee a tail call is if the callee restores its
@@ -4679,7 +4680,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   }
   AFI->setArgumentStackSize(StackArgSize);
 
-  if (CCInfo.getNextStackOffset() > 0 && AFI->isCmseNSEntryFunction()) {
+  if (CCInfo.getStackSize() > 0 && AFI->isCmseNSEntryFunction()) {
     DiagnosticInfoUnsupported Diag(
         DAG.getMachineFunction().getFunction(),
         "secure entry function requires arguments on stack", dl.getDebugLoc());
@@ -7070,6 +7071,10 @@ SDValue ARMTargetLowering::LowerConstantFP(SDValue Op, SelectionDAG &DAG,
   // Prevent floating-point constants from using literal loads
   // when execute-only is enabled.
   if (ST->genExecuteOnly()) {
+    // We shouldn't trigger this for v6m execute-only
+    assert((!ST->isThumb1Only() || ST->hasV8MBaselineOps()) &&
+           "Unexpected architecture");
+
     // If we can represent the constant as an immediate, don't lower it
     if (isFPImmLegal(FPVal, VT))
       return Op;
@@ -10080,7 +10085,8 @@ void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
   assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
 
   if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
-      !Subtarget->isThumb1Only() && LD->isVolatile()) {
+      !Subtarget->isThumb1Only() && LD->isVolatile() &&
+      LD->getAlign() >= Subtarget->getDualLoadStoreAlignment()) {
     SDLoc dl(N);
     SDValue Result = DAG.getMemIntrinsicNode(
         ARMISD::LDRD, dl, DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
@@ -10137,7 +10143,8 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
   assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
 
   if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
-      !Subtarget->isThumb1Only() && ST->isVolatile()) {
+      !Subtarget->isThumb1Only() && ST->isVolatile() &&
+      ST->getAlign() >= Subtarget->getDualLoadStoreAlignment()) {
     SDNode *N = Op.getNode();
     SDLoc dl(N);
 
@@ -11479,6 +11486,11 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
   MF->insert(It, loopMBB);
   MF->insert(It, exitMBB);
 
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+  loopMBB->setCallFrameSize(CallFrameSize);
+  exitMBB->setCallFrameSize(CallFrameSize);
+
   // Transfer the remainder of BB and its successor edges to exitMBB.
   exitMBB->splice(exitMBB->begin(), BB,
                   std::next(MachineBasicBlock::iterator(MI)), BB->end());
@@ -11487,18 +11499,12 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
   // Load an immediate to varEnd.
   Register varEnd = MRI.createVirtualRegister(TRC);
   if (Subtarget->useMovt()) {
-    unsigned Vtmp = varEnd;
-    if ((LoopSize & 0xFFFF0000) != 0)
-      Vtmp = MRI.createVirtualRegister(TRC);
-    BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVi16 : ARM::MOVi16), Vtmp)
-        .addImm(LoopSize & 0xFFFF)
-        .add(predOps(ARMCC::AL));
-
-    if ((LoopSize & 0xFFFF0000) != 0)
-      BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVTi16 : ARM::MOVTi16), varEnd)
-          .addReg(Vtmp)
-          .addImm(LoopSize >> 16)
-          .add(predOps(ARMCC::AL));
+    BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVi32imm : ARM::MOVi32imm),
+            varEnd)
+        .addImm(LoopSize);
+  } else if (Subtarget->genExecuteOnly()) {
+    assert(IsThumb && "Non-thumb expected to have used movt");
+    BuildMI(BB, dl, TII->get(ARM::tMOVi32imm), varEnd).addImm(LoopSize);
   } else {
     MachineConstantPool *ConstantPool = MF->getConstantPool();
     Type *Int32Ty = Type::getInt32Ty(MF->getFunction().getContext());
@@ -11999,7 +12005,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     TpLoopBody->moveAfter(TpEntry);
     TpExit->moveAfter(TpLoopBody);
 
-    // Finally, remove the memcpy Psuedo Instruction
+    // Finally, remove the memcpy Pseudo Instruction
     MI.eraseFromParent();
 
     // Return the exit block as it may contain other instructions requiring a
@@ -12080,6 +12086,11 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineBasicBlock *sinkMBB  = F->CreateMachineBasicBlock(LLVM_BB);
     F->insert(It, copy0MBB);
     F->insert(It, sinkMBB);
+
+    // Set the call frame size on entry to the new basic blocks.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    copy0MBB->setCallFrameSize(CallFrameSize);
+    sinkMBB->setCallFrameSize(CallFrameSize);
 
     // Check whether CPSR is live past the tMOVCCr_pseudo.
     const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -20009,7 +20020,7 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       return;
 
     KnownBits KnownRHS = DAG.computeKnownBits(Op.getOperand(1), Depth+1);
-    Known = KnownBits::commonBits(Known, KnownRHS);
+    Known = Known.intersectWith(KnownRHS);
     return;
   }
   case ISD::INTRINSIC_W_CHAIN: {
@@ -20091,7 +20102,7 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       KnownOp1 = KnownBits::mul(
           KnownOp1, KnownBits::makeConstant(APInt(32, -1)));
 
-    Known = KnownBits::commonBits(KnownOp0, KnownOp1);
+    Known = KnownOp0.intersectWith(KnownOp1);
     break;
   }
   }
@@ -21444,7 +21455,6 @@ Value *ARMTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
         IsAcquire ? Intrinsic::arm_ldaexd : Intrinsic::arm_ldrexd;
     Function *Ldrex = Intrinsic::getDeclaration(M, Int);
 
-    Addr = Builder.CreateBitCast(Addr, Type::getInt8PtrTy(M->getContext()));
     Value *LoHi = Builder.CreateCall(Ldrex, Addr, "lohi");
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
@@ -21494,7 +21504,6 @@ Value *ARMTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
     Value *Hi = Builder.CreateTrunc(Builder.CreateLShr(Val, 32), Int32Ty, "hi");
     if (!Subtarget->isLittle())
       std::swap(Lo, Hi);
-    Addr = Builder.CreateBitCast(Addr, Type::getInt8PtrTy(M->getContext()));
     return Builder.CreateCall(Strex, {Lo, Hi, Addr});
   }
 
@@ -21630,8 +21639,8 @@ bool ARMTargetLowering::lowerInterleavedLoad(
 
   auto createLoadIntrinsic = [&](Value *BaseAddr) {
     if (Subtarget->hasNEON()) {
-      Type *Int8Ptr = Builder.getInt8PtrTy(LI->getPointerAddressSpace());
-      Type *Tys[] = {VecTy, Int8Ptr};
+      Type *PtrTy = Builder.getPtrTy(LI->getPointerAddressSpace());
+      Type *Tys[] = {VecTy, PtrTy};
       static const Intrinsic::ID LoadInts[3] = {Intrinsic::arm_neon_vld2,
                                                 Intrinsic::arm_neon_vld3,
                                                 Intrinsic::arm_neon_vld4};
@@ -21639,7 +21648,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
           Intrinsic::getDeclaration(LI->getModule(), LoadInts[Factor - 2], Tys);
 
       SmallVector<Value *, 2> Ops;
-      Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
+      Ops.push_back(BaseAddr);
       Ops.push_back(Builder.getInt32(LI->getAlign().value()));
 
       return Builder.CreateCall(VldnFunc, Ops, "vldN");
@@ -21648,14 +21657,13 @@ bool ARMTargetLowering::lowerInterleavedLoad(
              "expected interleave factor of 2 or 4 for MVE");
       Intrinsic::ID LoadInts =
           Factor == 2 ? Intrinsic::arm_mve_vld2q : Intrinsic::arm_mve_vld4q;
-      Type *VecEltTy =
-          VecTy->getElementType()->getPointerTo(LI->getPointerAddressSpace());
-      Type *Tys[] = {VecTy, VecEltTy};
+      Type *PtrTy = Builder.getPtrTy(LI->getPointerAddressSpace());
+      Type *Tys[] = {VecTy, PtrTy};
       Function *VldnFunc =
           Intrinsic::getDeclaration(LI->getModule(), LoadInts, Tys);
 
       SmallVector<Value *, 2> Ops;
-      Ops.push_back(Builder.CreateBitCast(BaseAddr, VecEltTy));
+      Ops.push_back(BaseAddr);
       return Builder.CreateCall(VldnFunc, Ops, "vldN");
     }
   };
@@ -21782,13 +21790,6 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
     // and sub-vector type to something legal.
     LaneLen /= NumStores;
     SubVecTy = FixedVectorType::get(SubVecTy->getElementType(), LaneLen);
-
-    // We will compute the pointer operand of each store from the original base
-    // address using GEPs. Cast the base address to a pointer to the scalar
-    // element type.
-    BaseAddr = Builder.CreateBitCast(
-        BaseAddr,
-        SubVecTy->getElementType()->getPointerTo(SI->getPointerAddressSpace()));
   }
 
   assert(isTypeLegal(EVT::getEVT(SubVecTy)) && "Illegal vstN vector type!");
@@ -21801,14 +21802,14 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
       static const Intrinsic::ID StoreInts[3] = {Intrinsic::arm_neon_vst2,
                                                  Intrinsic::arm_neon_vst3,
                                                  Intrinsic::arm_neon_vst4};
-      Type *Int8Ptr = Builder.getInt8PtrTy(SI->getPointerAddressSpace());
-      Type *Tys[] = {Int8Ptr, SubVecTy};
+      Type *PtrTy = Builder.getPtrTy(SI->getPointerAddressSpace());
+      Type *Tys[] = {PtrTy, SubVecTy};
 
       Function *VstNFunc = Intrinsic::getDeclaration(
           SI->getModule(), StoreInts[Factor - 2], Tys);
 
       SmallVector<Value *, 6> Ops;
-      Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
+      Ops.push_back(BaseAddr);
       append_range(Ops, Shuffles);
       Ops.push_back(Builder.getInt32(SI->getAlign().value()));
       Builder.CreateCall(VstNFunc, Ops);
@@ -21817,14 +21818,13 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
              "expected interleave factor of 2 or 4 for MVE");
       Intrinsic::ID StoreInts =
           Factor == 2 ? Intrinsic::arm_mve_vst2q : Intrinsic::arm_mve_vst4q;
-      Type *EltPtrTy = SubVecTy->getElementType()->getPointerTo(
-          SI->getPointerAddressSpace());
-      Type *Tys[] = {EltPtrTy, SubVecTy};
+      Type *PtrTy = Builder.getPtrTy(SI->getPointerAddressSpace());
+      Type *Tys[] = {PtrTy, SubVecTy};
       Function *VstNFunc =
           Intrinsic::getDeclaration(SI->getModule(), StoreInts, Tys);
 
       SmallVector<Value *, 6> Ops;
-      Ops.push_back(Builder.CreateBitCast(BaseAddr, EltPtrTy));
+      Ops.push_back(BaseAddr);
       append_range(Ops, Shuffles);
       for (unsigned F = 0; F < Factor; F++) {
         Ops.push_back(Builder.getInt32(F));
@@ -22060,13 +22060,11 @@ bool ARMTargetLowering::isComplexDeinterleavingOperationSupported(
 }
 
 Value *ARMTargetLowering::createComplexDeinterleavingIR(
-    Instruction *I, ComplexDeinterleavingOperation OperationType,
+    IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
     ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
     Value *Accumulator) const {
 
   FixedVectorType *Ty = cast<FixedVectorType>(InputA->getType());
-
-  IRBuilder<> B(I);
 
   unsigned TyWidth = Ty->getScalarSizeInBits() * Ty->getNumElements();
 
@@ -22092,9 +22090,9 @@ Value *ARMTargetLowering::createComplexDeinterleavingIR(
     }
 
     auto *LowerSplitInt = createComplexDeinterleavingIR(
-        I, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
+        B, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
     auto *UpperSplitInt = createComplexDeinterleavingIR(
-        I, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
+        B, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
 
     ArrayRef<int> JoinMask(&SplitSeqVec[0], Ty->getNumElements());
     return B.CreateShuffleVector(LowerSplitInt, UpperSplitInt, JoinMask);
