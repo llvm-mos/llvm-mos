@@ -15,48 +15,48 @@ def fold_global_offset_matchdata : GIDefMatchData<"std::pair<const MachineOperan
 def fold_global_offset : GICombineRule<
   (defs root:$root, fold_global_offset_matchdata:$matchinfo),
   (match (wip_match_opcode G_PTR_ADD):$root,
-          [{ return matchFoldGlobalOffset(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{  return applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+          [{ return matchFoldGlobalOffset(*${root}, ${matchinfo}); }]),
+  (apply [{  return applyFoldGlobalOffset(*${root}, ${matchinfo});}])>;
 
 def sbc_equal : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_SBC):$root,
-          [{ return matchSBCEqual(*${root}, MRI); }]),
-  (apply [{  return applySBCEqual(*${root}, MRI, B, Observer);}])>;
+          [{ return matchSBCEqual(*${root}); }]),
+  (apply [{  return applySBCEqual(*${root});}])>;
 
 def extract_low_bit_matchdata : GIDefMatchData<"MachineInstr*">;
 def extract_low_bit : GICombineRule<
   (defs root:$root, extract_low_bit_matchdata:$matchinfo),
   (match (wip_match_opcode G_TRUNC, G_ICMP):$root,
-          [{ return matchExtractLowBit(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{  return applyExtractLowBit(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+          [{ return matchExtractLowBit(*${root}, ${matchinfo}); }]),
+  (apply [{  return applyExtractLowBit(*${root}, ${matchinfo});}])>;
 
 def uaddo_1 : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_UADDO):$root,
-          [{ return matchUAddO1(*${root}, MRI); }]),
-  (apply [{  return applyUAddO1(*${root}, MRI, B, Observer);}])>;
+          [{ return matchUAddO1(*${root}); }]),
+  (apply [{  return applyUAddO1(*${root});}])>;
 
 def cmpz_zero_matchdata : GIDefMatchData<"MachineOperand*">;
 def cmpz_zero : GICombineRule<
   (defs root:$root, cmpz_zero_matchdata:$matchinfo),
   (match (wip_match_opcode G_CMPZ):$root,
-          [{ return matchCMPZZero(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{  return applyCMPZZero(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+          [{ return matchCMPZZero(*${root}, ${matchinfo}); }]),
+  (apply [{  return applyCMPZZero(*${root}, ${matchinfo});}])>;
 
 def load_store_to_memcpy_matchdata : GIDefMatchData<"MachineInstr*">;
 def load_store_to_memcpy : GICombineRule<
   (defs root:$root, load_store_to_memcpy_matchdata:$matchinfo),
   (match (wip_match_opcode G_STORE):$root,
-          [{ return matchLoadStoreToMemcpy(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{  return applyLoadStoreToMemcpy(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+          [{ return matchLoadStoreToMemcpy(*${root}, ${matchinfo}); }]),
+  (apply [{  return applyLoadStoreToMemcpy(*${root}, ${matchinfo});}])>;
 
 def store_to_memset_matchdata : GIDefMatchData<"uint8_t">;
 def store_to_memset : GICombineRule<
   (defs root:$root, store_to_memset_matchdata:$matchinfo),
   (match (wip_match_opcode G_STORE):$root,
-          [{ return matchStoreToMemset(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{  return applyStoreToMemset(*${root}, MRI, B, Observer, ${matchinfo});}])>;
+          [{ return matchStoreToMemset(*${root}, ${matchinfo}); }]),
+  (apply [{  return applyStoreToMemset(*${root}, ${matchinfo});}])>;
 
 def MOSCombinerHelper
     : GICombinerHelper<"MOSCombinerImpl",

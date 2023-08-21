@@ -84,49 +84,33 @@ public:
   // G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
   // GLOBAL_VALUE @x + (y_const + z_const)
   bool matchFoldGlobalOffset(
-      MachineInstr &MI, MachineRegisterInfo &MRI,
+      MachineInstr &MI,
       std::pair<const MachineOperand *, int64_t> &MatchInfo) const;
   // G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
   // GLOBAL_VALUE @x + (y_const + z_const)
   void applyFoldGlobalOffset(
-      MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
-      GISelChangeObserver &Observer,
+      MachineInstr &MI,
       std::pair<const MachineOperand *, int64_t> &MatchInfo) const;
 
-  bool matchSBCEqual(MachineInstr &MI, MachineRegisterInfo &MRI) const;
-  void applySBCEqual(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &B, GISelChangeObserver &Observer) const;
+  bool matchSBCEqual(MachineInstr &MI) const;
+  void applySBCEqual(MachineInstr &MI) const;
 
-  bool matchExtractLowBit(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineInstr *&Shift) const;
-  void applyExtractLowBit(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, GISelChangeObserver &Observer,
-                          MachineInstr *&Shift) const;
+  bool matchExtractLowBit(MachineInstr &MI, MachineInstr *&Shift) const;
+  void applyExtractLowBit(MachineInstr &MI, MachineInstr *&Shift) const;
 
-  bool matchUAddO1(MachineInstr &MI, MachineRegisterInfo &MRI) const;
-  void applyUAddO1(MachineInstr &MI, MachineRegisterInfo &MRI,
-                   MachineIRBuilder &B, GISelChangeObserver &Observer) const;
+  bool matchUAddO1(MachineInstr &MI) const;
+  void applyUAddO1(MachineInstr &MI) const;
 
-  bool matchCMPZZero(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineOperand *&Zero) const;
-  void applyCMPZZero(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &B, GISelChangeObserver &Observer,
-                     MachineOperand *&Zero) const;
+  bool matchCMPZZero(MachineInstr &MI, MachineOperand *&Zero) const;
+  void applyCMPZZero(MachineInstr &MI, MachineOperand *&Zero) const;
 
   // G_LOAD/G_STORE pair => G_MEMCPY_INLINE
-  bool matchLoadStoreToMemcpy(MachineInstr &MI, MachineRegisterInfo &MRI,
-                              MachineInstr *&MIPrev) const;
-  void applyLoadStoreToMemcpy(MachineInstr &MI, MachineRegisterInfo &MRI,
-                              MachineIRBuilder &B,
-                              GISelChangeObserver &Observer,
-                              MachineInstr *&MIPrev) const;
+  bool matchLoadStoreToMemcpy(MachineInstr &MI, MachineInstr *&MIPrev) const;
+  void applyLoadStoreToMemcpy(MachineInstr &MI, MachineInstr *&MIPrev) const;
 
   // G_STORE => G_MEMSET
-  bool matchStoreToMemset(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          uint8_t &Value) const;
-  void applyStoreToMemset(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, GISelChangeObserver &Observer,
-                          uint8_t &Value) const;
+  bool matchStoreToMemset(MachineInstr &MI, uint8_t &Value) const;
+  void applyStoreToMemset(MachineInstr &MI, uint8_t &Value) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -141,7 +125,8 @@ private:
 MOSCombinerImpl::MOSCombinerImpl(const MOSCombinerImplRuleConfig &RuleConfig,
                                  const MOSSubtarget &STI,
                                  GISelChangeObserver &Observer,
-                                 MachineIRBuilder &B, CombinerHelper &Helper, AAResults &AA)
+                                 MachineIRBuilder &B, CombinerHelper &Helper,
+                                 AAResults &AA)
     : Helper(Helper), RuleConfig(RuleConfig), STI(STI), MRI(*B.getMRI()),
       Observer(Observer), B(B), MF(B.getMF()), AA(AA),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -153,7 +138,7 @@ MOSCombinerImpl::MOSCombinerImpl(const MOSCombinerImplRuleConfig &RuleConfig,
 // G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
 // GLOBAL_VALUE @x + (y_const + z_const)
 bool MOSCombinerImpl::matchFoldGlobalOffset(
-    MachineInstr &MI, MachineRegisterInfo &MRI,
+    MachineInstr &MI,
     std::pair<const MachineOperand *, int64_t> &MatchInfo) const {
   using namespace TargetOpcode;
   assert(MI.getOpcode() == G_PTR_ADD);
@@ -175,8 +160,7 @@ bool MOSCombinerImpl::matchFoldGlobalOffset(
 // G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
 // GLOBAL_VALUE @x + (y_const + z_const)
 void MOSCombinerImpl::applyFoldGlobalOffset(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
-    GISelChangeObserver &Observer,
+    MachineInstr &MI,
     std::pair<const MachineOperand *, int64_t> &MatchInfo) const {
   using namespace TargetOpcode;
   assert(MI.getOpcode() == G_PTR_ADD);
@@ -189,8 +173,7 @@ void MOSCombinerImpl::applyFoldGlobalOffset(
   Observer.changedInstr(MI);
 }
 
-bool MOSCombinerImpl::matchSBCEqual(MachineInstr &MI,
-                                    MachineRegisterInfo &MRI) const {
+bool MOSCombinerImpl::matchSBCEqual(MachineInstr &MI) const {
   assert(MI.getOpcode() == MOS::G_SBC);
   Register LHS = MI.getOperand(5).getReg();
   Register RHS = MI.getOperand(6).getReg();
@@ -213,9 +196,7 @@ bool MOSCombinerImpl::matchSBCEqual(MachineInstr &MI,
   return ConstLHS->Value == ConstRHS->Value;
 }
 
-void MOSCombinerImpl::applySBCEqual(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                    MachineIRBuilder &B,
-                                    GISelChangeObserver &Observer) const {
+void MOSCombinerImpl::applySBCEqual(MachineInstr &MI) const {
   LLT S1 = LLT::scalar(1);
 
   B.setInstrAndDebugLoc(MI);
@@ -234,7 +215,6 @@ void MOSCombinerImpl::applySBCEqual(MachineInstr &MI, MachineRegisterInfo &MRI,
 }
 
 bool MOSCombinerImpl::matchExtractLowBit(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
                                          MachineInstr *&Shift) const {
   using namespace MIPatternMatch;
   Register Src;
@@ -279,9 +259,6 @@ bool MOSCombinerImpl::matchExtractLowBit(MachineInstr &MI,
 }
 
 void MOSCombinerImpl::applyExtractLowBit(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B,
-                                         GISelChangeObserver &Observer,
                                          MachineInstr *&Shift) const {
   assert(Shift->getOpcode() == MOS::G_LSHR);
   LLT S1 = LLT::scalar(1);
@@ -314,8 +291,7 @@ void MOSCombinerImpl::applyExtractLowBit(MachineInstr &MI,
 // Use of the overflow flag from an increment is better done on the 6502 by
 // comparing the result to zero, since this allows increment and decrement
 // operators instead of just ADC.
-bool MOSCombinerImpl::matchUAddO1(MachineInstr &MI,
-                                  MachineRegisterInfo &MRI) const {
+bool MOSCombinerImpl::matchUAddO1(MachineInstr &MI) const {
   if (MI.getOpcode() != MOS::G_UADDO)
     return false;
   std::optional<ValueAndVReg> Val =
@@ -325,9 +301,7 @@ bool MOSCombinerImpl::matchUAddO1(MachineInstr &MI,
   return true;
 }
 
-void MOSCombinerImpl::applyUAddO1(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                  MachineIRBuilder &B,
-                                  GISelChangeObserver &Observer) const {
+void MOSCombinerImpl::applyUAddO1(MachineInstr &MI) const {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   B.setInstrAndDebugLoc(MI);
   B.buildAdd(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
@@ -336,7 +310,7 @@ void MOSCombinerImpl::applyUAddO1(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-bool MOSCombinerImpl::matchCMPZZero(MachineInstr &MI, MachineRegisterInfo &MRI,
+bool MOSCombinerImpl::matchCMPZZero(MachineInstr &MI,
                                     MachineOperand *&Zero) const {
   if (MI.getOpcode() != MOS::G_CMPZ)
     return false;
@@ -352,9 +326,7 @@ bool MOSCombinerImpl::matchCMPZZero(MachineInstr &MI, MachineRegisterInfo &MRI,
   return false;
 }
 
-void MOSCombinerImpl::applyCMPZZero(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                    MachineIRBuilder &B,
-                                    GISelChangeObserver &Observer,
+void MOSCombinerImpl::applyCMPZZero(MachineInstr &MI,
                                     MachineOperand *&Zero) const {
   B.setInstrAndDebugLoc(MI);
   auto New = B.buildInstr(MOS::G_CMPZ);
@@ -378,7 +350,6 @@ static bool isRepeatingBytePattern(uint64_t Value, uint32_t Bytes) {
 
 // G_LOAD/G_STORE pair => G_MEMCPY_INLINE
 bool MOSCombinerImpl::matchLoadStoreToMemcpy(MachineInstr &MI,
-                                             MachineRegisterInfo &MRI,
                                              MachineInstr *&LoadMI) const {
   if (MI.getOpcode() != MOS::G_STORE)
     return false;
@@ -403,9 +374,6 @@ bool MOSCombinerImpl::matchLoadStoreToMemcpy(MachineInstr &MI,
 }
 
 void MOSCombinerImpl::applyLoadStoreToMemcpy(MachineInstr &MI,
-                                             MachineRegisterInfo &MRI,
-                                             MachineIRBuilder &B,
-                                             GISelChangeObserver &Observer,
                                              MachineInstr *&LoadMI) const {
   B.setInstrAndDebugLoc(MI);
 
@@ -425,7 +393,6 @@ void MOSCombinerImpl::applyLoadStoreToMemcpy(MachineInstr &MI,
 
 // G_STORE => G_MEMSET (large constant stores of repeating bytes)
 bool MOSCombinerImpl::matchStoreToMemset(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
                                          uint8_t &Value) const {
   if (MI.getOpcode() != MOS::G_STORE)
     return false;
@@ -452,9 +419,6 @@ bool MOSCombinerImpl::matchStoreToMemset(MachineInstr &MI,
 }
 
 void MOSCombinerImpl::applyStoreToMemset(MachineInstr &MI,
-                                         MachineRegisterInfo &MRI,
-                                         MachineIRBuilder &B,
-                                         GISelChangeObserver &Observer,
                                          uint8_t &Value) const {
   B.setInstrAndDebugLoc(MI);
 
