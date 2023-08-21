@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -49,7 +50,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void sinkSelectsToBranchUses(MachineFunction &MF);
-  MachineFunction::reverse_iterator lowerSelect(MachineInstr &MI);
+  MachineFunction::reverse_iterator lowerSelect(GSelect &MI);
   void moveAwayFromCalls(MachineFunction &MF);
 };
 
@@ -61,10 +62,10 @@ bool MOSLowerSelect::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (auto I = MF.rbegin(), E = MF.rend(); I != E; ++I) {
     for (MachineInstr &MBBI : mbb_reverse(*I)) {
-      if (MBBI.getOpcode() == MOS::G_SELECT) {
-        LLVM_DEBUG(dbgs() << "Lowering: " << MBBI);
+      if (auto *S = dyn_cast<GSelect>(&MBBI)) {
+        LLVM_DEBUG(dbgs() << "Lowering: " << S);
         Changed = true;
-        I = lowerSelect(MBBI);
+        I = lowerSelect(*S);
         break;
       }
     }
@@ -100,13 +101,11 @@ void removePredecessorFromPhis(MachineBasicBlock *MBB,
         Idx += 2;
 }
 
-MachineFunction::reverse_iterator
-MOSLowerSelect::lowerSelect(MachineInstr &MI) {
-  assert(MI.getOpcode() == MOS::G_SELECT);
+MachineFunction::reverse_iterator MOSLowerSelect::lowerSelect(GSelect &MI) {
   Register Dst = MI.getOperand(0).getReg();
-  Register Tst = MI.getOperand(1).getReg();
-  Register TrueValue = MI.getOperand(2).getReg();
-  Register FalseValue = MI.getOperand(3).getReg();
+  Register Tst = MI.getCondReg();
+  Register TrueValue = MI.getTrueReg();
+  Register FalseValue = MI.getFalseReg();
 
   MachineIRBuilder Builder(MI);
   MachineBasicBlock &MBB = Builder.getMBB();
@@ -129,13 +128,15 @@ MOSLowerSelect::lowerSelect(MachineInstr &MI) {
       if (MO.isReg() && MO.isUse())
         UsedRegs.insert(MO.getReg());
 
-    if (MBBI.getOpcode() == MOS::G_SELECT &&
-        MBBI.getOperand(1).getReg() == Tst &&
+    const auto *S = dyn_cast<GSelect>(&MBBI);
+    if (!S)
+      continue;
+    if (S->getCondReg() == Tst &&
         !UsedRegs.contains(MBBI.getOperand(0).getReg())) {
       LLVM_DEBUG(dbgs() << "Absorbing select with same test: " << MBBI);
       Dsts.push_back(MBBI.getOperand(0).getReg());
-      TrueValues.push_back(MBBI.getOperand(2).getReg());
-      FalseValues.push_back(MBBI.getOperand(3).getReg());
+      TrueValues.push_back(S->getTrueReg());
+      FalseValues.push_back(S->getFalseReg());
       SelectsToRemove.push_back(MBBI);
     }
   }

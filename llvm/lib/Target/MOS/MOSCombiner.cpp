@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -105,8 +106,8 @@ public:
   void applyCMPZZero(MachineInstr &MI, MachineOperand *&Zero) const;
 
   // G_LOAD/G_STORE pair => G_MEMCPY_INLINE
-  bool matchLoadStoreToMemcpy(MachineInstr &MI, MachineInstr *&MIPrev) const;
-  void applyLoadStoreToMemcpy(MachineInstr &MI, MachineInstr *&MIPrev) const;
+  bool matchLoadStoreToMemcpy(MachineInstr &MI, GLoad *&Load) const;
+  void applyLoadStoreToMemcpy(MachineInstr &MI, GLoad *&Load) const;
 
   // G_STORE => G_MEMSET
   bool matchStoreToMemset(MachineInstr &MI, uint8_t &Value) const;
@@ -140,14 +141,13 @@ MOSCombinerImpl::MOSCombinerImpl(const MOSCombinerImplRuleConfig &RuleConfig,
 bool MOSCombinerImpl::matchFoldGlobalOffset(
     MachineInstr &MI,
     std::pair<const MachineOperand *, int64_t> &MatchInfo) const {
+  const auto &Add = cast<GPtrAdd>(MI);
   using namespace TargetOpcode;
-  assert(MI.getOpcode() == G_PTR_ADD);
 
-  Register Base = MI.getOperand(1).getReg();
-  Register Offset = MI.getOperand(2).getReg();
-
-  MachineInstr *GlobalBase = getOpcodeDef(G_GLOBAL_VALUE, Base, MRI);
-  auto ConstOffset = getIConstantVRegValWithLookThrough(Offset, MRI);
+  MachineInstr *GlobalBase =
+      getOpcodeDef(G_GLOBAL_VALUE, Add.getBaseReg(), MRI);
+  auto ConstOffset =
+      getIConstantVRegValWithLookThrough(Add.getOffsetReg(), MRI);
 
   if (!GlobalBase || !ConstOffset)
     return false;
@@ -350,43 +350,36 @@ static bool isRepeatingBytePattern(uint64_t Value, uint32_t Bytes) {
 
 // G_LOAD/G_STORE pair => G_MEMCPY_INLINE
 bool MOSCombinerImpl::matchLoadStoreToMemcpy(MachineInstr &MI,
-                                             MachineInstr *&LoadMI) const {
-  if (MI.getOpcode() != MOS::G_STORE)
+                                             GLoad *&Load) const {
+  const auto *Store = dyn_cast<GStore>(&MI);
+  if (!Store)
     return false;
 
-  Register StoreSrcReg = MI.getOperand(0).getReg();
-  LoadMI = MI.getPrevNode();
-  if (!LoadMI || LoadMI->getOpcode() != MOS::G_LOAD)
+  Load = dyn_cast_or_null<GLoad>(MI.getPrevNode());
+  if (!Load)
     return false;
-  if (LoadMI->getOperand(0).getReg() != StoreSrcReg)
+  if (Load->getDstReg() != Store->getValueReg())
     return false;
-  if (!MRI.getType(LoadMI->getOperand(1).getReg()).isPointer())
+  if (!Load->isUnordered() || !Store->isUnordered())
     return false;
-
-  auto *SrcMemOperand = LoadMI->memoperands()[0];
-  auto *DstMemOperand = MI.memoperands()[0];
-  if (!SrcMemOperand->isUnordered() || !DstMemOperand->isUnordered())
-    return false;
-  if (MI.mayAlias(&AA, *LoadMI, true))
+  if (MI.mayAlias(&AA, *Load, true))
     return false;
 
   return true;
 }
 
 void MOSCombinerImpl::applyLoadStoreToMemcpy(MachineInstr &MI,
-                                             MachineInstr *&LoadMI) const {
+                                             GLoad *&Load) const {
+  const auto &Store = cast<GStore>(MI);
   B.setInstrAndDebugLoc(MI);
 
-  auto StoreSrcReg = MI.getOperand(0).getReg();
-  auto Length = MRI.getType(StoreSrcReg).getSizeInBytes();
-  auto *SrcMemOperand = LoadMI->memoperands()[0];
-  auto *DstMemOperand = MI.memoperands()[0];
-
-  B.buildInstr(MOS::G_MEMCPY_INLINE, {},
-               {MI.getOperand(1), LoadMI->getOperand(1),
-                B.buildConstant(LLT::scalar(16), Length)})
-      .addMemOperand(DstMemOperand)
-      .addMemOperand(SrcMemOperand);
+  B.buildInstr(
+       MOS::G_MEMCPY_INLINE, {},
+       {Store.getPointerReg(), Load->getPointerReg(),
+        B.buildConstant(LLT::scalar(16),
+                        MRI.getType(Store.getValueReg()).getSizeInBytes())})
+      .addMemOperand(&Store.getMMO())
+      .addMemOperand(&Load->getMMO());
 
   MI.eraseFromParent();
 }
@@ -394,19 +387,20 @@ void MOSCombinerImpl::applyLoadStoreToMemcpy(MachineInstr &MI,
 // G_STORE => G_MEMSET (large constant stores of repeating bytes)
 bool MOSCombinerImpl::matchStoreToMemset(MachineInstr &MI,
                                          uint8_t &Value) const {
-  if (MI.getOpcode() != MOS::G_STORE)
+  const auto *Store = dyn_cast<GStore>(&MI);
+  if (!Store)
     return false;
 
-  Register StoreSrcReg = MI.getOperand(0).getReg();
-  if (!MRI.getType(StoreSrcReg).isScalar())
+  LLT Ty = MRI.getType(Store->getValueReg());
+  if (!Ty.isScalar())
     return false;
 
-  uint32_t SrcBits = MRI.getType(StoreSrcReg).getSizeInBits();
+  uint32_t SrcBits = Ty.getSizeInBits();
   if ((SrcBits & 7) != 0 || SrcBits < 24)
     return false;
 
   uint32_t SrcBytes = SrcBits >> 3;
-  auto SrcValue = getIConstantVRegValWithLookThrough(StoreSrcReg, MRI);
+  auto SrcValue = getIConstantVRegValWithLookThrough(Store->getValueReg(), MRI);
   if (!SrcValue)
     return false;
 
@@ -420,15 +414,15 @@ bool MOSCombinerImpl::matchStoreToMemset(MachineInstr &MI,
 
 void MOSCombinerImpl::applyStoreToMemset(MachineInstr &MI,
                                          uint8_t &Value) const {
+  const auto &Store = cast<GStore>(MI);
   B.setInstrAndDebugLoc(MI);
 
-  auto StoreSrcReg = MI.getOperand(0).getReg();
-  auto Length = MRI.getType(StoreSrcReg).getSizeInBytes();
+  auto Length = MRI.getType(Store.getValueReg()).getSizeInBytes();
 
   B.buildInstr(MOS::G_MEMSET, {},
-               {MI.getOperand(1), B.buildConstant(LLT::scalar(8), Value),
+               {Store.getPointerReg(), B.buildConstant(LLT::scalar(8), Value),
                 B.buildConstant(LLT::scalar(16), Length), UINT64_C(0)})
-      .addMemOperand(MI.memoperands()[0]);
+      .addMemOperand(&Store.getMMO());
 
   MI.eraseFromParent();
 }

@@ -1,4 +1,4 @@
-//===-- MOSInstructionSelector.cpp - MOS Instruction Selector -------------===//
+//===-- MOSInstructionSelector.cpp - MOS Instruction Selector -------------===
 //
 // Part of LLVM-MOS, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,6 +23,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -1678,11 +1679,12 @@ bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
-  Register Result = MI.getOperand(0).getReg();
-  Register CarryOut = MI.getOperand(1).getReg();
-  Register L = MI.getOperand(2).getReg();
-  Register R = MI.getOperand(3).getReg();
-  Register CarryIn = MI.getOperand(4).getReg();
+  auto& Add = cast<GAddSubCarryInOut>(MI);
+  Register Result = Add.getDstReg();
+  Register CarryOut = Add.getCarryOutReg();
+  Register L = Add.getLHS().getReg();
+  Register R = Add.getRHS().getReg();
+  Register CarryIn = Add.getCarryInReg();
 
   MachineIRBuilder Builder(MI);
   auto &MRI = *Builder.getMRI();

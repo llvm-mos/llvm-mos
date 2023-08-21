@@ -26,7 +26,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
@@ -426,9 +425,9 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_SEXTLOAD:
   case G_ZEXTLOAD:
   case G_LOAD:
-    return legalizeLoad(Helper, MRI, MI);
+    return legalizeLoad(Helper, MRI, cast<GAnyLoad>(MI));
   case G_STORE:
-    return legalizeStore(Helper, MRI, MI);
+    return legalizeStore(Helper, MRI, cast<GStore>(MI));
   case G_MEMCPY:
   case G_MEMCPY_INLINE:
   case G_MEMMOVE:
@@ -1475,10 +1474,10 @@ bool MOSLegalizerInfo::legalizeSubE(LegalizerHelper &Helper,
 // allows the 16-bit loads to be reduced to a pair of 8-bit loads.
 bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
-  if (MI.getOpcode() == G_LOAD &&
-      MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(8))
-    return selectAddressingMode(Helper, MRI, MI);
+                                    GAnyLoad &MI) const {
+  if (auto *Load = dyn_cast<GLoad>(&MI))
+    if (MRI.getType(Load->getDstReg()) == LLT::scalar(8))
+      return selectAddressingMode(Helper, MRI, MI);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   Builder.setInsertPt(Builder.getMBB(), std::next(Builder.getInsertPt()));
@@ -1487,16 +1486,16 @@ bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   case MOS::G_SEXTLOAD:
     Tmp = MRI.createGenericVirtualRegister(MMO.getType());
-    Builder.buildSExt(MI.getOperand(0), Tmp);
+    Builder.buildSExt(MI.getDstReg(), Tmp);
     break;
   case MOS::G_ZEXTLOAD:
     Tmp = MRI.createGenericVirtualRegister(MMO.getType());
-    Builder.buildZExt(MI.getOperand(0), Tmp);
+    Builder.buildZExt(MI.getDstReg(), Tmp);
     break;
   default:
-    assert(MRI.getType(MI.getOperand(0).getReg()).isPointer());
+    assert(MRI.getType(MI.getDstReg()).isPointer());
     Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
-    Builder.buildIntToPtr(MI.getOperand(0), Tmp);
+    Builder.buildIntToPtr(MI.getDstReg(), Tmp);
     break;
   }
   Helper.Observer.changingInstr(MI);
@@ -1510,13 +1509,13 @@ bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
 // narrowed to 8 bits.
 bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
                                      MachineRegisterInfo &MRI,
-                                     MachineInstr &MI) const {
-  if (MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(8))
+                                     GStore &MI) const {
+  if (MRI.getType(MI.getValueReg()) == LLT::scalar(8))
     return selectAddressingMode(Helper, MRI, MI);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   Register Tmp =
-      Builder.buildPtrToInt(LLT::scalar(16), MI.getOperand(0)).getReg(0);
+      Builder.buildPtrToInt(LLT::scalar(16), MI.getValueReg()).getReg(0);
   Helper.Observer.changingInstr(MI);
   MI.getOperand(0).setReg(Tmp);
   Helper.Observer.changedInstr(MI);
@@ -1535,7 +1534,7 @@ static bool willBeStaticallyAllocated(const MachineOperand &MO) {
 
 bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
                                             MachineRegisterInfo &MRI,
-                                            MachineInstr &MI) const {
+                                            GLoadStore &MI) const {
   if (tryAbsoluteAddressing(Helper, MRI, MI))
     return true;
   if (tryAbsoluteIndexedAddressing(Helper, MRI, MI))
@@ -1563,14 +1562,14 @@ MOSLegalizerInfo::matchAbsoluteAddressing(MachineRegisterInfo &MRI,
         return MachineOperand::CreateFI(FI.getIndex(), FI.getOffset() + Offset);
       }
     }
-    if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
-      Register Base = PtrAddAddr->getOperand(1).getReg();
-      Register NewOffset = PtrAddAddr->getOperand(2).getReg();
-      auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI);
+    if (const auto *PtrAddAddr =
+            cast_if_present<GPtrAdd>(getOpcodeDef(G_PTR_ADD, Addr, MRI))) {
+      auto ConstOffset =
+          getIConstantVRegValWithLookThrough(PtrAddAddr->getOffsetReg(), MRI);
       if (!ConstOffset)
         return std::nullopt;
       Offset += ConstOffset->Value.getSExtValue();
-      Addr = Base;
+      Addr = PtrAddAddr->getBaseReg();
       continue;
     }
     return std::nullopt;
@@ -1580,15 +1579,11 @@ MOSLegalizerInfo::matchAbsoluteAddressing(MachineRegisterInfo &MRI,
 
 bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
                                              MachineRegisterInfo &MRI,
-                                             MachineInstr &MI) const {
+                                             GLoadStore &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  bool IsLoad = MI.getOpcode() == G_LOAD;
-  assert(IsLoad || MI.getOpcode() == G_STORE);
-
-  Register Addr = MI.getOperand(1).getReg();
-  unsigned Opcode = IsLoad ? MOS::G_LOAD_ABS : MOS::G_STORE_ABS;
-  auto Operand = matchAbsoluteAddressing(MRI, Addr);
+  unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS : MOS::G_STORE_ABS;
+  auto Operand = matchAbsoluteAddressing(MRI, MI.getPointerReg());
 
   if (Operand.has_value()) {
     Helper.Observer.changingInstr(MI);
@@ -1604,18 +1599,15 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
 
 bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                                     MachineRegisterInfo &MRI,
-                                                    MachineInstr &MI) const {
+                                                    GLoadStore &MI) const {
   LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  bool IsLoad = MI.getOpcode() == G_LOAD;
-  assert(IsLoad || MI.getOpcode() == G_STORE);
-
-  Register Addr = MI.getOperand(1).getReg();
+  Register Addr = MI.getPointerReg();
   int64_t Offset = 0;
   Register Index = 0;
 
-  unsigned Opcode = IsLoad ? MOS::G_LOAD_ABS_IDX : MOS::G_STORE_ABS_IDX;
+  unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS_IDX : MOS::G_STORE_ABS_IDX;
 
   while (true) {
     if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
@@ -1653,11 +1645,11 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
         return true;
       }
     }
-    if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
-      Addr = PtrAddAddr->getOperand(1).getReg();
-      Register NewOffset = PtrAddAddr->getOperand(2).getReg();
-      if (auto ConstOffset =
-              getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
+    if (const auto *PtrAddAddr =
+            cast_if_present<GPtrAdd>(getOpcodeDef(G_PTR_ADD, Addr, MRI))) {
+      Addr = PtrAddAddr->getBaseReg();
+      Register NewOffset = PtrAddAddr->getOffsetReg();
+      if (auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
         Offset += ConstOffset->Value.getSExtValue();
         continue;
       }
@@ -1690,30 +1682,28 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
 
 bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,
                                                 MachineRegisterInfo &MRI,
-                                                MachineInstr &MI) const {
+                                                GLoadStore &MI) const {
   LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
-  bool IsLoad = MI.getOpcode() == G_LOAD;
-  assert(IsLoad || MI.getOpcode() == G_STORE);
-
-  Register Addr = MI.getOperand(1).getReg();
+  Register Addr = MI.getPointerReg();
   Register Index = 0;
 
-  unsigned Opcode = IsLoad ? MOS::G_LOAD_INDIR_IDX : MOS::G_STORE_INDIR_IDX;
+  unsigned Opcode =
+      isa<GLoad>(MI) ? MOS::G_LOAD_INDIR_IDX : MOS::G_STORE_INDIR_IDX;
 
-  if (const MachineInstr *PtrAddAddr = getOpcodeDef(G_PTR_ADD, Addr, MRI)) {
-    Register Base = PtrAddAddr->getOperand(1).getReg();
-    Register NewOffset = PtrAddAddr->getOperand(2).getReg();
-    if (auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
+  if (const auto *PtrAddAddr =
+          cast_if_present<GPtrAdd>(getOpcodeDef(G_PTR_ADD, Addr, MRI))) {
+    Register Base = PtrAddAddr->getBaseReg();
+    Register Offset = PtrAddAddr->getOffsetReg();
+    if (auto ConstOffset = getIConstantVRegValWithLookThrough(Offset, MRI)) {
       if (ConstOffset->Value.getActiveBits() <= 8) {
         Index = Builder.buildConstant(S8, ConstOffset->Value.getSExtValue())
                     .getReg(0);
         Addr = Base;
       }
-    } else if (MachineInstr *ZExtOffset =
-                   getOpcodeDef(G_ZEXT, NewOffset, MRI)) {
+    } else if (MachineInstr *ZExtOffset = getOpcodeDef(G_ZEXT, Offset, MRI)) {
       Register Src = ZExtOffset->getOperand(1).getReg();
       LLT SrcTy = MRI.getType(Src);
       if (SrcTy.getSizeInBits() <= 8) {
@@ -1724,16 +1714,16 @@ bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,
         Addr = Base;
       }
     } else if (Helper.getKnownBits()
-                   ->getKnownBits(NewOffset)
+                   ->getKnownBits(Offset)
                    .countMaxActiveBits() <= 8) {
-      Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
+      Index = Builder.buildTrunc(S8, Offset).getReg(0);
       Addr = Base;
     }
   }
 
   if (!Index) {
     if (STI.has65C02()) {
-      Opcode = IsLoad ? MOS::G_LOAD_INDIR : MOS::G_STORE_INDIR;
+      Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_INDIR : MOS::G_STORE_INDIR;
       Builder.buildInstr(Opcode)
           .add(MI.getOperand(0))
           .addUse(Addr)

@@ -44,7 +44,7 @@ def cmpz_zero : GICombineRule<
           [{ return matchCMPZZero(*${root}, ${matchinfo}); }]),
   (apply [{  return applyCMPZZero(*${root}, ${matchinfo});}])>;
 
-def load_store_to_memcpy_matchdata : GIDefMatchData<"MachineInstr*">;
+def load_store_to_memcpy_matchdata : GIDefMatchData<"GLoad*">;
 def load_store_to_memcpy : GICombineRule<
   (defs root:$root, load_store_to_memcpy_matchdata:$matchinfo),
   (match (wip_match_opcode G_STORE):$root,

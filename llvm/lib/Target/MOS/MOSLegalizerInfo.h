@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_MOS_MOSLEGALIZERINFO_H
 
 #include "llvm/ADT/IndexedMap.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
@@ -76,21 +77,20 @@ private:
 
   // Memory Operations
   bool legalizeLoad(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
+                    GAnyLoad &MI) const;
   bool legalizeStore(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                     MachineInstr &MI) const;
+                     GStore &MI) const;
   bool selectAddressingMode(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                            MachineInstr &MI) const;
+                            GLoadStore &MI) const;
   std::optional<MachineOperand>
   matchAbsoluteAddressing(MachineRegisterInfo &MRI, Register Addr) const;
   bool tryAbsoluteAddressing(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                             MachineInstr &MI) const;
+                             GLoadStore &MI) const;
   bool tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const;
+                                    GLoadStore &MI) const;
   bool selectIndirectAddressing(LegalizerHelper &Helper,
-                                MachineRegisterInfo &MRI,
-                                MachineInstr &MI) const;
+                                MachineRegisterInfo &MRI, GLoadStore &MI) const;
   bool legalizeMemOp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;
   bool tryHuCBlockCopy(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
