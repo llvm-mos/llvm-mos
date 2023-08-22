@@ -1649,7 +1649,8 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
             cast_if_present<GPtrAdd>(getOpcodeDef(G_PTR_ADD, Addr, MRI))) {
       Addr = PtrAddAddr->getBaseReg();
       Register NewOffset = PtrAddAddr->getOffsetReg();
-      if (auto ConstOffset = getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
+      if (auto ConstOffset =
+              getIConstantVRegValWithLookThrough(NewOffset, MRI)) {
         Offset += ConstOffset->Value.getSExtValue();
         continue;
       }

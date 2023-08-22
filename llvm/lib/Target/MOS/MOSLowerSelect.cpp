@@ -121,7 +121,7 @@ MachineFunction::reverse_iterator MOSLowerSelect::lowerSelect(GSelect &MI) {
   // and merge them into this one.
   SmallSet<Register, 8> UsedRegs;
   for (const MachineOperand &MO : MI.all_uses())
-      UsedRegs.insert(MO.getReg());
+    UsedRegs.insert(MO.getReg());
   for (MachineInstr &MBBI : mbb_reverse(MBB.begin(), MI)) {
     for (const MachineOperand &MO : MBBI.all_uses())
       UsedRegs.insert(MO.getReg());

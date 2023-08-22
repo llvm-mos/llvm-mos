@@ -38,14 +38,16 @@ using namespace llvm;
 
 namespace llvm {
 
-static void emitLittleEndian(uint64_t Val, unsigned Size, SmallVectorImpl<char> &CB) {
+static void emitLittleEndian(uint64_t Val, unsigned Size,
+                             SmallVectorImpl<char> &CB) {
   for (int64_t I = 0; I < Size; ++I) {
     CB.push_back((char)(Val & 0xff));
     Val = Val >> 8;
   }
 }
 
-void MOSMCCodeEmitter::encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
+void MOSMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                         SmallVectorImpl<char> &CB,
                                          SmallVectorImpl<MCFixup> &Fixups,
                                          const MCSubtargetInfo &STI) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
