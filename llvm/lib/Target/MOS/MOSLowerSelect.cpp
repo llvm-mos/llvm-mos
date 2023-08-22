@@ -120,13 +120,11 @@ MachineFunction::reverse_iterator MOSLowerSelect::lowerSelect(GSelect &MI) {
   // Collect G_SELECT instructions in the same basic block with the same test
   // and merge them into this one.
   SmallSet<Register, 8> UsedRegs;
-  for (const MachineOperand &MO : MI.operands())
-    if (MO.isReg() && MO.isUse())
+  for (const MachineOperand &MO : MI.all_uses())
       UsedRegs.insert(MO.getReg());
   for (MachineInstr &MBBI : mbb_reverse(MBB.begin(), MI)) {
-    for (const MachineOperand &MO : MBBI.operands())
-      if (MO.isReg() && MO.isUse())
-        UsedRegs.insert(MO.getReg());
+    for (const MachineOperand &MO : MBBI.all_uses())
+      UsedRegs.insert(MO.getReg());
 
     const auto *S = dyn_cast<GSelect>(&MBBI);
     if (!S)
@@ -347,21 +345,16 @@ void MOSLowerSelect::moveAwayFromCalls(MachineFunction &MF) {
           UsedRegs;
 
       const auto DefinesUsedReg = [&](const MachineInstr &MI) {
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isReg() || !MO.isDef())
-            continue;
+        for (const MachineOperand &MO : MI.all_defs())
           if (UsedRegs.contains(MO.getReg()))
             return true;
-        }
         return false;
       };
 
       const auto TrackUsedRegs = [&](const MachineInstr &MI) {
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isReg() || !MO.isUse() || !MO.getReg().isVirtual())
-            continue;
-          UsedRegs.insert(MO.getReg());
-        }
+        for (const MachineOperand &MO : MI.all_uses())
+          if (MO.getReg().isVirtual())
+            UsedRegs.insert(MO.getReg());
       };
 
       auto J = std::prev(I);

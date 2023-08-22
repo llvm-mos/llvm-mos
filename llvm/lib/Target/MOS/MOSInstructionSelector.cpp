@@ -1304,8 +1304,8 @@ GLshrE_match<ADDR_P, CARRYIN_P> m_GLshrE(Register &CarryOut, const ADDR_P &Addr,
 static void replaceUsesAfter(MachineBasicBlock::iterator MI, Register From,
                              Register To, const MachineRegisterInfo &MRI) {
   for (MachineInstr &I : make_range(MI, MI->getParent()->end())) {
-    for (MachineOperand &Op : I.uses())
-      if (Op.isReg() && Op.getReg() == From)
+    for (MachineOperand &Op : I.all_uses())
+      if (Op.getReg() == From)
         Op.setReg(To);
   }
   for (MachineOperand &MO : MRI.use_nodbg_operands(From))
@@ -1679,7 +1679,7 @@ bool MOSInstructionSelector::selectTrunc(MachineInstr &MI) {
 }
 
 bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
-  auto& Add = cast<GAddSubCarryInOut>(MI);
+  auto &Add = cast<GAddSubCarryInOut>(MI);
   Register Result = Add.getDstReg();
   Register CarryOut = Add.getCarryOutReg();
   Register L = Add.getLHS().getReg();
@@ -1915,9 +1915,8 @@ void MOSInstructionSelector::composePtr(MachineIRBuilder &Builder, Register Dst,
 // is defined exactly once, making sure definitions are constrained suffices.
 void MOSInstructionSelector::constrainGenericOp(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  for (MachineOperand &Op : MI.operands()) {
-    if (!Op.isReg() || !Op.isDef() || Op.getReg().isPhysical() ||
-        MRI.getRegClassOrNull(Op.getReg()))
+  for (MachineOperand &Op : MI.all_defs()) {
+    if (Op.getReg().isPhysical() || MRI.getRegClassOrNull(Op.getReg()))
       continue;
     LLT Ty = MRI.getType(Op.getReg());
     constrainOperandRegClass(Op, getRegClassForType(Ty));
