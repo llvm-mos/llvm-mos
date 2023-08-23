@@ -983,6 +983,10 @@ static unsigned getSectionRank(const OutputSection &osec) {
       rank |= 1;
   }
 
+  if (config->emachine == EM_MOS)
+    if (osec.name == ".zp" || osec.name.starts_with(".zp."))
+      rank |= 1;
+
   return rank;
 }
 
