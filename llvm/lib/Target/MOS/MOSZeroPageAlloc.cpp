@@ -351,8 +351,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
     if (!GV.hasSection())
       continue;
     StringRef SecName = GV.getSection();
-    if (SecName.startswith(".zp") || SecName.startswith(".zeropage") ||
-        SecName.startswith(".directpage")) {
+    if (MOS::isZeroPageSectionName(SecName)) {
       size_t Size = (GV.getParent()->getDataLayout().getTypeSizeInBits(
             GV.getValueType()) +
           7) /
