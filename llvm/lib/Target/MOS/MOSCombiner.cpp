@@ -115,6 +115,7 @@ public:
 
   bool matchFoldAddE(MachineInstr &MI, BuildFnTy &MatchInfo) const;
   bool matchFoldSbc(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  bool matchFoldShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -505,6 +506,37 @@ bool MOSCombinerImpl::matchFoldSbc(MachineInstr &MI,
     B.buildConstant(N, Negative);
     B.buildConstant(V, Overflow);
     B.buildConstant(Z, Zero);
+  };
+  return true;
+}
+
+bool MOSCombinerImpl::matchFoldShift(MachineInstr &MI,
+                                     BuildFnTy &MatchInfo) const {
+  auto Val = getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!Val)
+    return false;
+  assert(Val->Value.getBitWidth() == 8);
+  auto CarryIn =
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  if (!CarryIn)
+    return false;
+
+  bool CarryOut;
+  APInt Result;
+
+  if (MI.getOpcode() == MOS::G_LSHRE) {
+    CarryOut = (Val->Value & 1).getBoolValue();
+    Result = Val->Value.lshr(1) | CarryIn->Value.zext(8).shl(7);
+  } else {
+    CarryOut = (Val->Value & 0x80).getBoolValue();
+    Result = Val->Value.shl(1) | CarryIn->Value.zext(8);
+  }
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register C = MI.getOperand(1).getReg();
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildConstant(Dst, Result);
+    B.buildConstant(C, CarryOut);
   };
   return true;
 }

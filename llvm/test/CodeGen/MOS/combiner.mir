@@ -83,6 +83,11 @@
     entry:
       ret void
   }
+
+  define void @fold_shift() {
+    entry:
+      ret void
+  }
 ---
 name: fold_global_offset
 body: |
@@ -357,30 +362,33 @@ body: |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_sbc
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[C]], [[C1]], [[C2]]
+    ; CHECK-NEXT: G_STORE_ABS [[SBC]](s8), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC1]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC2]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC3]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC4]](s1), 1234
+    ; CHECK-NEXT: [[SBC5:%[0-9]+]]:_(s8), [[SBC6:%[0-9]+]]:_(s1), [[SBC7:%[0-9]+]]:_, [[SBC8:%[0-9]+]]:_, [[SBC9:%[0-9]+]]:_ = G_SBC [[C1]], [[C]], [[C2]]
+    ; CHECK-NEXT: G_STORE_ABS [[SBC5]](s8), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC6]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC7]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC8]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC9]](s1), 1234
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
     ; CHECK-NEXT: G_STORE_ABS [[C]](s8), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
-    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 -2
-    ; CHECK-NEXT: G_STORE_ABS [[C3]](s8), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[C3]](s1), 1234
     ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
     ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C]](s8), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[C3]](s1), 1234
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
-    ; CHECK-NEXT: G_STORE_ABS [[C4]](s8), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
-    ; CHECK-NEXT: G_STORE_ABS [[C1]](s1), 1234
+    ; CHECK-NEXT: [[SBC10:%[0-9]+]]:_(s8), [[SBC11:%[0-9]+]]:_(s1), [[SBC12:%[0-9]+]]:_, [[SBC13:%[0-9]+]]:_, [[SBC14:%[0-9]+]]:_ = G_SBC [[C]], [[C4]], [[C3]]
+    ; CHECK-NEXT: G_STORE_ABS [[SBC10]](s8), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC11]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC12]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC13]](s1), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[SBC14]](s1), 1234
     %0:_(s8) = G_CONSTANT i8 0
     %1:_(s8) = G_CONSTANT i8 -1
     %2:_(s1) = G_CONSTANT i1 0
@@ -414,4 +422,45 @@ body: |
     G_STORE_ABS %22, 1234
     G_STORE_ABS %23, 1234
     G_STORE_ABS %24, 1234
+...
+---
+name: fold_shift
+legalized: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: fold_shift
+    ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: G_STORE_ABS [[C1]](s8), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 -2
+    ; CHECK-NEXT: G_STORE_ABS [[C3]](s8), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[C]](s1), 1234
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
+    ; CHECK-NEXT: G_STORE_ABS [[C4]](s8), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[C2]](s1), 1234
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s8) = G_CONSTANT i8 127
+    ; CHECK-NEXT: G_STORE_ABS [[C5]](s8), 1234
+    ; CHECK-NEXT: G_STORE_ABS [[C]](s1), 1234
+    %0:_(s8) = G_CONSTANT i8 0
+    %1:_(s8) = G_CONSTANT i8 255
+    %2:_(s1) = G_CONSTANT i1 0
+    %3:_(s1) = G_CONSTANT i1 1
+
+    %4:_(s8), %5:_(s1) = G_SHLE %0, %3
+    G_STORE_ABS %4, 1234
+    G_STORE_ABS %5, 1234
+
+    %6:_(s8), %7:_(s1) = G_SHLE %1, %0
+    G_STORE_ABS %6, 1234
+    G_STORE_ABS %7, 1234
+
+    %8:_(s8), %9:_(s1) = G_LSHRE %0, %3
+    G_STORE_ABS %8, 1234
+    G_STORE_ABS %9, 1234
+
+    %10:_(s8), %11:_(s1) = G_LSHRE %1, %0
+    G_STORE_ABS %10, 1234
+    G_STORE_ABS %11, 1234
 ...
