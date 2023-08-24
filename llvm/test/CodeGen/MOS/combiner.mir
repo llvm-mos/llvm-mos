@@ -73,6 +73,11 @@
     entry:
       ret void
   }
+
+  define void @fold_adde() {
+    entry:
+      ret void
+  }
 ---
 name: fold_global_offset
 body: |
@@ -309,4 +314,34 @@ body: |
     %0:_(s32) = G_CONSTANT i32 16843009 ; 0x01010101
     G_STORE %0:_(s32), %1:_(p0) :: (store (s32) into @a); example.c:11:3
     RTS implicit %1
+...
+---
+name: fold_adde
+legalized: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: fold_adde
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s8) = G_CONSTANT i8 -127
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
+    ; CHECK-NEXT: RTS implicit [[C]](s8), implicit [[C2]](s1), implicit [[C1]](s8), implicit [[C3]](s1), implicit [[C]](s8), implicit [[C3]](s1), implicit [[C]](s8), implicit [[C2]](s1), implicit [[C4]](s8), implicit [[C3]](s1), implicit [[C5]](s8), implicit [[C3]](s1)
+    %0:_(s8) = G_CONSTANT i8 0
+    %1:_(s8) = G_CONSTANT i8 1
+    %2:_(s8) = G_CONSTANT i8 127
+    %3:_(s8) = G_CONSTANT i8 255
+    %4:_(s1) = G_CONSTANT i1 0
+    %5:_(s1) = G_CONSTANT i1 1
+
+    %6:_(s8), %7:_(s1) = G_UADDE %0, %0, %4
+    %8:_(s8), %9:_(s1) = G_UADDE %3, %1, %5
+    %10:_(s8), %11:_(s1) = G_UADDE %0, %3, %5
+
+    %12:_(s8), %13:_(s1) = G_SADDE %0, %0, %4
+    %14:_(s8), %15:_(s1) = G_SADDE %2, %1, %5
+    %16:_(s8), %17:_(s1) = G_SADDE %0, %2, %5
+
+    RTS implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %13, implicit %14, implicit %15, implicit %16, implicit %17
 ...

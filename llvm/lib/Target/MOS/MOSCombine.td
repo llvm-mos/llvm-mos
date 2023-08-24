@@ -58,9 +58,15 @@ def store_to_memset : GICombineRule<
           [{ return matchStoreToMemset(*${root}, ${matchinfo}); }]),
   (apply [{  return applyStoreToMemset(*${root}, ${matchinfo});}])>;
 
+def fold_adde : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_UADDE, G_SADDE):$root,
+          [{ return matchFoldAddE(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def MOSCombinerHelper
     : GICombinerHelper<"MOSCombinerImpl",
                         [all_combines, fold_global_offset, sbc_equal,
                         extract_low_bit, uaddo_1, cmpz_zero,
-                        load_store_to_memcpy, store_to_memset]> {
+                        load_store_to_memcpy, store_to_memset, fold_adde]> {
 }

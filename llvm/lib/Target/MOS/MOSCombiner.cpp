@@ -113,6 +113,8 @@ public:
   bool matchStoreToMemset(MachineInstr &MI, uint8_t &Value) const;
   void applyStoreToMemset(MachineInstr &MI, uint8_t &Value) const;
 
+  bool matchFoldAddE(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
 #include "MOSGenGICombiner.inc"
@@ -425,6 +427,40 @@ void MOSCombinerImpl::applyStoreToMemset(MachineInstr &MI,
       .addMemOperand(&Store.getMMO());
 
   MI.eraseFromParent();
+}
+
+bool MOSCombinerImpl::matchFoldAddE(MachineInstr &MI, BuildFnTy &MatchInfo) const {
+  auto LHS = getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!LHS)
+    return false;
+  auto RHS = getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  if (!RHS)
+    return false;
+  auto CIn = getIConstantVRegValWithLookThrough(MI.getOperand(4).getReg(), MRI);
+  if (!CIn)
+    return false;
+
+  bool Overflow;
+  APInt Result;
+  if (MI.getOpcode() == MOS::G_UADDE) {
+    Result = LHS->Value.uadd_ov(RHS->Value, Overflow);
+    bool O;
+    Result = Result.uadd_ov(CIn->Value.zext(Result.getBitWidth()), O);
+    Overflow |= O;
+  } else {
+    Result = LHS->Value.sadd_ov(RHS->Value, Overflow);
+    bool O;
+    Result = Result.sadd_ov(CIn->Value.zext(Result.getBitWidth()), O);
+    Overflow |= O;
+  }
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register COut = MI.getOperand(1).getReg();
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildConstant(Dst, Result);
+    B.buildConstant(COut, Overflow);
+  };
+  return true;
 }
 
 class MOSCombinerInfo : public CombinerInfo {
