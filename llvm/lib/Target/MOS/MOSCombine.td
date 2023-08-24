@@ -64,9 +64,15 @@ def fold_adde : GICombineRule<
           [{ return matchFoldAddE(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+def fold_sbc : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SBC):$root,
+          [{ return matchFoldSbc(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def MOSCombinerHelper
     : GICombinerHelper<"MOSCombinerImpl",
-                        [all_combines, fold_global_offset, sbc_equal,
+                        [all_combines, fold_global_offset,
                         extract_low_bit, uaddo_1, cmpz_zero,
-                        load_store_to_memcpy, store_to_memset, fold_adde]> {
-}
+                        load_store_to_memcpy, store_to_memset, fold_adde,
+                        fold_sbc, sbc_equal]>;

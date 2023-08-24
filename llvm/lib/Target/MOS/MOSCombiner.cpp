@@ -114,6 +114,7 @@ public:
   void applyStoreToMemset(MachineInstr &MI, uint8_t &Value) const;
 
   bool matchFoldAddE(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  bool matchFoldSbc(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -204,15 +205,16 @@ void MOSCombinerImpl::applySBCEqual(MachineInstr &MI) const {
   B.setInstrAndDebugLoc(MI);
   B.buildCopy(MI.getOperand(0), B.buildConstant(LLT::scalar(8), 0));
 
-  auto S1Zero = B.buildConstant(S1, 0);
+  auto True = B.buildConstant(S1, 1);
+  auto False = B.buildConstant(S1, 0);
   // C
-  B.buildCopy(MI.getOperand(1), S1Zero);
+  B.buildCopy(MI.getOperand(1), True);
   // N
-  B.buildCopy(MI.getOperand(2), S1Zero);
+  B.buildCopy(MI.getOperand(2), False);
   // V
-  B.buildCopy(MI.getOperand(3), S1Zero);
+  B.buildCopy(MI.getOperand(3), False);
   // Z
-  B.buildCopy(MI.getOperand(4), B.buildConstant(S1, -1));
+  B.buildCopy(MI.getOperand(4), True);
   MI.eraseFromParent();
 }
 
@@ -429,7 +431,8 @@ void MOSCombinerImpl::applyStoreToMemset(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
-bool MOSCombinerImpl::matchFoldAddE(MachineInstr &MI, BuildFnTy &MatchInfo) const {
+bool MOSCombinerImpl::matchFoldAddE(MachineInstr &MI,
+                                    BuildFnTy &MatchInfo) const {
   auto LHS = getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!LHS)
     return false;
@@ -459,6 +462,49 @@ bool MOSCombinerImpl::matchFoldAddE(MachineInstr &MI, BuildFnTy &MatchInfo) cons
   MatchInfo = [=](MachineIRBuilder &B) {
     B.buildConstant(Dst, Result);
     B.buildConstant(COut, Overflow);
+  };
+  return true;
+}
+
+bool MOSCombinerImpl::matchFoldSbc(MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const {
+  auto LHS = getIConstantVRegValWithLookThrough(MI.getOperand(5).getReg(), MRI);
+  if (!LHS)
+    return false;
+  auto RHS = getIConstantVRegValWithLookThrough(MI.getOperand(6).getReg(), MRI);
+  if (!RHS)
+    return false;
+  auto CarryIn =
+      getIConstantVRegValWithLookThrough(MI.getOperand(7).getReg(), MRI);
+  if (!CarryIn)
+    return false;
+
+  APInt NotRHS = ~RHS->Value;
+
+  bool CarryOut;
+  APInt Result;
+  Result = LHS->Value.uadd_ov(~RHS->Value, CarryOut);
+  bool O;
+  Result = Result.uadd_ov(CarryIn->Value.zext(Result.getBitWidth()), O);
+  CarryOut |= O;
+
+  bool Overflow = LHS->Value.isNegative() == !RHS->Value.isNegative() &&
+                  Result.isNegative() != LHS->Value.isNegative();
+
+  bool Negative = Result.isNegative();
+  bool Zero = Result.isZero();
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register C = MI.getOperand(1).getReg();
+  Register N = MI.getOperand(2).getReg();
+  Register V = MI.getOperand(3).getReg();
+  Register Z = MI.getOperand(4).getReg();
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildConstant(Dst, Result);
+    B.buildConstant(C, CarryOut);
+    B.buildConstant(N, Negative);
+    B.buildConstant(V, Overflow);
+    B.buildConstant(Z, Zero);
   };
   return true;
 }
