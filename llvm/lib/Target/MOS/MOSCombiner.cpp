@@ -117,6 +117,11 @@ public:
   bool matchFoldSbc(MachineInstr &MI, BuildFnTy &MatchInfo) const;
   bool matchFoldShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
+  bool matchShiftUnusedCarryIn(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
+  APInt getDemandedBits(Register R) const;
+  APInt getDemandedBits(Register R, DenseMap<Register, APInt> &Cache) const;
+
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
 #include "MOSGenGICombiner.inc"
@@ -541,6 +546,94 @@ bool MOSCombinerImpl::matchFoldShift(MachineInstr &MI,
   return true;
 }
 
+bool MOSCombinerImpl::matchShiftUnusedCarryIn(MachineInstr &MI,
+                                              BuildFnTy &MatchInfo) const {
+  const auto ConstCarryIn =
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  if (ConstCarryIn && ConstCarryIn->Value.isZero())
+    return false;
+
+  APInt DemandedBits = getDemandedBits(MI.getOperand(0).getReg());
+  assert(DemandedBits.getBitWidth() == 8);
+  if (MI.getOpcode() == MOS::G_LSHRE) {
+    if ((DemandedBits & 0x80).getBoolValue())
+      return false;
+  } else {
+    if ((DemandedBits & 1).getBoolValue())
+      return false;
+  }
+
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    Observer.changingInstr(MI);
+    MI.getOperand(3).setReg(B.buildConstant(LLT::scalar(1), 0).getReg(0));
+    Observer.changedInstr(MI);
+  };
+  return true;
+}
+
+APInt MOSCombinerImpl::getDemandedBits(Register R) const {
+  DenseMap<Register, APInt> Cache;
+  return getDemandedBits(R, Cache);
+}
+
+APInt MOSCombinerImpl::getDemandedBits(Register R,
+                                       DenseMap<Register, APInt> &Cache) const {
+  auto It = Cache.find(R);
+  if (It != Cache.end())
+    return It->second;
+
+  uint64_t Size = MRI.getType(R).getSizeInBits();
+
+  APInt DemandedBits = APInt::getZero(Size);
+  for (const MachineOperand &Use : MRI.use_nodbg_operands(R)) {
+    const MachineInstr &MI = *Use.getParent();
+    switch (MI.getOpcode()) {
+    default:
+      DemandedBits = APInt::getAllOnes(Size);
+      break;
+    case MOS::G_AND: {
+      APInt Zeroes = KB->getKnownZeroes(
+          MI.getOperand(Use.getOperandNo() == 1 ? 2 : 1).getReg());
+      DemandedBits |= ~Zeroes;
+      break;
+    }
+    case MOS::G_OR: {
+      APInt Ones = KB->getKnownOnes(
+          MI.getOperand(Use.getOperandNo() == 1 ? 2 : 1).getReg());
+      DemandedBits |= ~Ones;
+      break;
+    }
+    case MOS::G_LSHRE: {
+      APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg());
+      if (Use.getOperandNo() == 2) {
+        APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg());
+        DemandedBits |= DstDemandedBits << 1 | CarryOutDemanded.zext(Size);
+      } else {
+        assert(Use.getOperandNo() == 3);
+        DemandedBits |= DstDemandedBits.lshr(Size - 1).trunc(1);
+      }
+      break;
+    }
+    case MOS::G_SHLE: {
+      APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg());
+      if (Use.getOperandNo() == 2) {
+        APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg());
+        DemandedBits |=
+            DstDemandedBits.lshr(1) | (CarryOutDemanded.zext(Size) << Size - 1);
+      } else {
+        assert(Use.getOperandNo() == 3);
+        DemandedBits |= DstDemandedBits.trunc(1);
+      }
+      break;
+    }
+    }
+    if (DemandedBits.isAllOnes())
+      break;
+  }
+  Cache.try_emplace(R, DemandedBits);
+  return DemandedBits;
+}
+
 class MOSCombinerInfo : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
@@ -569,8 +662,9 @@ bool MOSCombinerInfo::combine(GISelChangeObserver &Observer, MachineInstr &MI,
   bool IsPreLegalize = !MI.getMF()->getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
   CombinerHelper Helper(Observer, B, IsPreLegalize, KB, MDT, LI);
-  MOSCombinerImpl Generated(GeneratedRuleCfg, STI, Observer, B, Helper, *AA);
-  return Generated.tryCombineAll(MI);
+  MOSCombinerImpl Impl(GeneratedRuleCfg, STI, Observer, B, Helper, *AA);
+  Impl.setupMF(*MI.getMF(), KB, nullptr, nullptr, nullptr, AA);
+  return Impl.tryCombineAll(MI);
 }
 
 #define MOSCOMBINERHELPER_GENCOMBINERHELPER_CPP

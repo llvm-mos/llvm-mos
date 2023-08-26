@@ -76,9 +76,15 @@ def fold_shift : GICombineRule<
           [{ return matchFoldShift(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+def shift_unused_carry_in : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHLE, G_LSHRE):$root,
+          [{ return matchShiftUnusedCarryIn(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 def MOSCombinerHelper
     : GICombinerHelper<"MOSCombinerImpl",
                         [all_combines, fold_global_offset,
                         extract_low_bit, uaddo_1, cmpz_zero,
                         load_store_to_memcpy, store_to_memset, fold_adde,
-                        fold_sbc, sbc_equal, fold_shift]>;
+                        fold_sbc, sbc_equal, fold_shift, shift_unused_carry_in]>;

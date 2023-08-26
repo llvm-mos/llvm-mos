@@ -473,17 +473,17 @@ define i16 @rol_5(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    ror __rc3
+; CHECK-NEXT:    lsr __rc3
 ; CHECK-NEXT:    ror
 ; CHECK-NEXT:    ror __rc2
 ; CHECK-NEXT:    ldx __rc2
 ; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    ror __rc3
+; CHECK-NEXT:    lsr __rc3
 ; CHECK-NEXT:    ror
 ; CHECK-NEXT:    ror __rc2
 ; CHECK-NEXT:    ldx __rc2
 ; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    ror __rc3
+; CHECK-NEXT:    lsr __rc3
 ; CHECK-NEXT:    ror
 ; CHECK-NEXT:    ror __rc2
 ; CHECK-NEXT:    tax
@@ -498,7 +498,7 @@ define i16 @rol_7(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    ror __rc3
+; CHECK-NEXT:    lsr __rc3
 ; CHECK-NEXT:    ror
 ; CHECK-NEXT:    ror __rc2
 ; CHECK-NEXT:    tax
@@ -524,7 +524,7 @@ define i16 @rol_15(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    sta __rc3
-; CHECK-NEXT:    ror __rc3
+; CHECK-NEXT:    lsr __rc3
 ; CHECK-NEXT:    ror __rc2
 ; CHECK-NEXT:    ror
 ; CHECK-NEXT:    ldx __rc2
@@ -539,7 +539,7 @@ define i16 @ror_1(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    sta __rc3
-; CHECK-NEXT:    ror __rc3
+; CHECK-NEXT:    lsr __rc3
 ; CHECK-NEXT:    ror __rc2
 ; CHECK-NEXT:    ror
 ; CHECK-NEXT:    ldx __rc2
@@ -553,11 +553,11 @@ define i16 @ror_2(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:    sta __rc3
-; CHECK-NEXT:    ror __rc3
+; CHECK-NEXT:    lsr __rc3
 ; CHECK-NEXT:    ror __rc2
 ; CHECK-NEXT:    ror
 ; CHECK-NEXT:    sta __rc3
-; CHECK-NEXT:    ror __rc3
+; CHECK-NEXT:    lsr __rc3
 ; CHECK-NEXT:    ror __rc2
 ; CHECK-NEXT:    ror
 ; CHECK-NEXT:    ldx __rc2
