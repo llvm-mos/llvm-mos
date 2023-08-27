@@ -47,6 +47,8 @@ void MOS::addClangTargetOptions(const ArgList &DriverArgs,
                                 ArgStringList &CC1Args,
                                 Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
+  // Not yet implemented for GlobalISel.
+  CC1Args.push_back("-fexperimental-assignment-tracking=disabled");
 }
 
 static bool hasLTOEmitAsm(const ArgList &Args) {
