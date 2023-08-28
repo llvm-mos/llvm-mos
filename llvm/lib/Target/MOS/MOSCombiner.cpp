@@ -607,10 +607,10 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
       APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg());
       if (Use.getOperandNo() == 2) {
         APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg());
-        DemandedBits |= DstDemandedBits << 1 | CarryOutDemanded.zext(Size);
+        DemandedBits |= DstDemandedBits << 1 | CarryOutDemanded.zext(8);
       } else {
         assert(Use.getOperandNo() == 3);
-        DemandedBits |= DstDemandedBits.lshr(Size - 1).trunc(1);
+        DemandedBits |= DstDemandedBits.lshr(7).trunc(1);
       }
       break;
     }
@@ -619,7 +619,7 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
       if (Use.getOperandNo() == 2) {
         APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg());
         DemandedBits |=
-            DstDemandedBits.lshr(1) | (CarryOutDemanded.zext(Size) << Size - 1);
+            DstDemandedBits.lshr(1) | (CarryOutDemanded.zext(8) << 7);
       } else {
         assert(Use.getOperandNo() == 3);
         DemandedBits |= DstDemandedBits.trunc(1);
