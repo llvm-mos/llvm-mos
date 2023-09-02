@@ -131,6 +131,7 @@ let Predicates = [Has65C02] in {
     let Constraints = "$dst = $src";
     let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, 1))];
     let isAdd = true;
+    let AddedComplexity = 1;
   }
 
   def DecCMOS : MOSPseudo {
@@ -139,6 +140,7 @@ let Predicates = [Has65C02] in {
 
     let Constraints = "$dst = $src";
     let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, -1))];
+    let AddedComplexity = 1;
   }
 }
 
