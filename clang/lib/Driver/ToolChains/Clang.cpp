@@ -6670,8 +6670,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fshort-enums=0 is default for all architectures except Hexagon and z/OS.
   if (Args.hasFlag(options::OPT_fshort_enums, options::OPT_fno_short_enums,
-                   TC.getArch() == llvm::Triple::hexagon ||
-                       TC.getArch() == llvm::Triple::mos || Triple.isOSzOS()))
+                   TC.getArch() == llvm::Triple::hexagon || Triple.isOSzOS()))
     CmdArgs.push_back("-fshort-enums");
 
   RenderCharacterOptions(Args, AuxTriple ? *AuxTriple : RawTriple, CmdArgs);
