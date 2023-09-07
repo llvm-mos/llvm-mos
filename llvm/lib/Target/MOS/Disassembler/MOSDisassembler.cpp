@@ -58,7 +58,7 @@ MCDisassembler *createMOSDisassembler(const Target &T,
   return new MOSDisassembler(STI, Ctx);
 }
 
-extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheMOSTarget(),
                                          createMOSDisassembler);

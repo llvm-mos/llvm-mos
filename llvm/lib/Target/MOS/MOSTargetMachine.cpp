@@ -51,7 +51,7 @@
 
 using namespace llvm;
 
-extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeMOSTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTarget() {
   // Register the target.
   RegisterTargetMachine<MOSTargetMachine> X(getTheMOSTarget());
 
