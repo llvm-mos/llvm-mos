@@ -721,7 +721,7 @@ public:
 #define GET_MATCHER_IMPLEMENTATION
 #include "MOSGenAsmMatcher.inc"
 
-extern "C" void LLVM_EXTERNAL_VISIBILITY
+extern "C" LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeMOSAsmParser() { // NOLINT
   RegisterMCAsmParser<MOSAsmParser> X(getTheMOSTarget());
 }
