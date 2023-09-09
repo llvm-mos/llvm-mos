@@ -73,7 +73,7 @@ void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
         return;
       }
     }
-    O << *Op.getExpr();
+    Op.getExpr()->print(O, &MAI);
   }
 }
 

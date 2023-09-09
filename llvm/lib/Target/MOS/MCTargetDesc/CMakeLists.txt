@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMMOSDesc
   MOSMCCodeEmitter.cpp
   MOSMCELFStreamer.cpp
   MOSMCExpr.cpp
+  MOSMCInstrAnalysis.cpp
   MOSMCTargetDesc.cpp
   MOSTargetStreamer.cpp
 

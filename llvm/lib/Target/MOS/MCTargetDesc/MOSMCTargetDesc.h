@@ -78,7 +78,9 @@ enum OperandType : unsigned {
   OPERAND_ADDR8,
   OPERAND_ADDR16,
   OPERAND_IMM16,
-  OPERAND_IMM3
+  OPERAND_IMM3,
+  OPERAND_ADDR24,
+  OPERAND_IMM24
 };
 
 } // namespace MOSOp

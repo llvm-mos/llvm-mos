@@ -137,9 +137,12 @@ def BIT_ZeroPage :
 def BIT_Absolute :
 	Inst24<"bit", OpcodeC0<0b001, 0b011>, Absolute>;
 def JMP_Absolute :
-	Inst24<"jmp", OpcodeC0<0b010, 0b011>, Absolute>;
+	Inst24<"jmp", OpcodeC0<0b010, 0b011>, Absolute>, InstUnconditionalBranch;
 def JMP_Indirect16 :
-	Inst24<"jmp", OpcodeC0<0b011, 0b011>, Indirect16>;
+	Inst24<"jmp", OpcodeC0<0b011, 0b011>, Indirect16>,
+	InstUnconditionalBranch {
+  let isIndirectBranch = true;
+}
 def STY_ZeroPage :
 	Inst16<"sty", OpcodeC0<0b100, 0b001>, ZeroPage>;
 def STY_Absolute :
@@ -186,11 +189,11 @@ def BEQ_Relative : ConditionalBranch<"beq", 0b11, 0b1>;
 /// TXA TXS TAX TSX DEX NOP
 /// 8A  9A  AA  BA  CA  EA
 
-def BRK_Implied: InstLow0<"brk", 0b0000>;
+def BRK_Implied: InstLow0<"brk", 0b0000>, InstUnconditionalBranch;
 /// JSR is the only instruction that does not follow the current pattern.
-def JSR_Absolute: Inst24<"jsr", Opcode<0x20>, Absolute>;
-def RTI_Implied: InstLow0<"rti", 0b0100>;
-def RTS_Implied: InstLow0<"rts", 0b0110>;
+def JSR_Absolute: Inst24<"jsr", Opcode<0x20>, Absolute>, InstCall;
+def RTI_Implied: InstLow0<"rti", 0b0100>, InstReturn;
+def RTS_Implied: InstLow0<"rts", 0b0110>, InstReturn;
 
 def PHP_Implied: InstLow8<"php", 0b0000>;
 def PLP_Implied: InstLow8<"plp", 0b0010>;
@@ -287,7 +290,8 @@ let Predicates = [Has65DTV02] in {
 
 let DecoderNamespace = "65dtv02" in {
 
-def BRA_Relative_DTV02 : Inst16<"bra", Opcode<0x12>, Relative>;
+def BRA_Relative_DTV02 : Inst16<"bra", Opcode<0x12>, Relative>,
+  InstConditionalBranch;
 def SAC_Immediate : Inst16<"sac", Opcode<0x32>, Immediate>;
 def SIR_Immediate : Inst16<"sir", Opcode<0x42>, Immediate>;
 
@@ -316,9 +320,13 @@ def PLX_Implied: InstLowA<"plx", 0b1111>; /// Pull X
 /// BRA
 /// 80
 
-def BRA_Relative : Inst16<"bra", OpcodeC0<0b100, 0b000>, Relative>;
+def BRA_Relative : Inst16<"bra", OpcodeC0<0b100, 0b000>, Relative>,
+    InstConditionalBranch;
 
-def JMP_IndexedIndirect : Inst24<"jmp", Opcode<0x7c>, IndexedIndirect16>;
+def JMP_IndexedIndirect : Inst24<"jmp", Opcode<0x7c>, IndexedIndirect16>,
+    InstUnconditionalBranch {
+  let isIndirectBranch = true;
+}
 
 def BIT_ZeroPageX : Inst16<"bit", Opcode<0x34>, ZeroPageX>;
 def BIT_AbsoluteX : Inst24<"bit", Opcode<0x3c>, AbsoluteX>;
@@ -407,21 +415,37 @@ let Predicates = [Has65CE02] in {
 /// Branches and jumps
 
 let DecoderNamespace = "65ce02" in {
-def BPL_Relative16 : Inst24<"bpl", Opcode<0x13>, Relative16>;
-def BMI_Relative16 : Inst24<"bmi", Opcode<0x33>, Relative16>;
-def BVC_Relative16 : Inst24<"bvc", Opcode<0x53>, Relative16>;
-def BSR_Relative16 : Inst24<"bsr", Opcode<0x63>, Relative16>;
-def BVS_Relative16 : Inst24<"bvs", Opcode<0x73>, Relative16>;
-def BRA_Relative16 : Inst24<"bra", Opcode<0x83>, Relative16>; /// BRU
-def BCC_Relative16 : Inst24<"bcc", Opcode<0x93>, Relative16>;
-def BCS_Relative16 : Inst24<"bcs", Opcode<0xb3>, Relative16>;
-def BNE_Relative16 : Inst24<"bne", Opcode<0xd3>, Relative16>;
-def BEQ_Relative16 : Inst24<"beq", Opcode<0xf3>, Relative16>;
+def BPL_Relative16 : Inst24<"bpl", Opcode<0x13>, Relative16>,
+	InstConditionalBranch;
+def BMI_Relative16 : Inst24<"bmi", Opcode<0x33>, Relative16>,
+	InstConditionalBranch;
+def BVC_Relative16 : Inst24<"bvc", Opcode<0x53>, Relative16>,
+	InstConditionalBranch;
+def BSR_Relative16 : Inst24<"bsr", Opcode<0x63>, Relative16>,
+	InstConditionalBranch;
+def BVS_Relative16 : Inst24<"bvs", Opcode<0x73>, Relative16>,
+	InstConditionalBranch;
+def BRA_Relative16 : Inst24<"bra", Opcode<0x83>, Relative16>,
+	InstUnconditionalBranch; /// BRU
+def BCC_Relative16 : Inst24<"bcc", Opcode<0x93>, Relative16>,
+	InstConditionalBranch;
+def BCS_Relative16 : Inst24<"bcs", Opcode<0xb3>, Relative16>,
+	InstConditionalBranch;
+def BNE_Relative16 : Inst24<"bne", Opcode<0xd3>, Relative16>,
+	InstConditionalBranch;
+def BEQ_Relative16 : Inst24<"beq", Opcode<0xf3>, Relative16>,
+	InstConditionalBranch;
 
-def JSR_AbsoluteIndirect: Inst24<"jsr", Opcode<0x22>, Indirect16>;
-def JSR_AbsoluteIndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>;
+def JSR_AbsoluteIndirect: Inst24<"jsr", Opcode<0x22>, Indirect16>,
+	InstConditionalBranch {
+  let isIndirectBranch = true;
+}
+def JSR_AbsoluteIndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>,
+	InstConditionalBranch {
+  let isIndirectBranch = true;
+}
 
-def RTN_Immediate : Inst16<"rtn", Opcode<0x62>, Immediate>;
+def RTN_Immediate : Inst16<"rtn", Opcode<0x62>, Immediate>, InstReturn;
 
 /// Arithmetic Operations
 
@@ -633,7 +657,7 @@ def TST_ZeroPageX : InstImmediate24<"tst", Opcode<0xA3>, ZeroPageXAt2>; // Test 
 def TST_AbsoluteX : InstImmediate32<"tst", Opcode<0xB3>, AbsoluteXAt2>; // Test Immediate with Absolute, X
 
 /// Relative Branch
-def BSR_Relative : Inst16<"bsr", Opcode<0x44>, Relative>;
+def BSR_Relative : Inst16<"bsr", Opcode<0x44>, Relative>, InstCall;
 
 /// CPU Control
 def CSL_Implied : InstLow4<"csl", 0b0101>; /// Set CPU Clock Low
@@ -665,7 +689,9 @@ def LDX_Immediate16 : Inst24<"ldx", OpcodeC2<0b101, 0b000>, Immediate16> {
 /// FC
 
 def JSR_IndexedIndirect16 :
-  Inst24<"jsr", OpcodeC0<0b111, 0b111>, IndexedIndirect16>;
+    Inst24<"jsr", OpcodeC0<0b111, 0b111>, IndexedIndirect16>, InstCall {
+  let isIndirectBranch = true;
+}
 
 /// Stack manipulation instructions
 /// PEA PEI
@@ -697,25 +723,31 @@ let DecoderNamespace = "w65816" in {
 /// BRL
 /// 82
 
-def BRL_Relative16 : Inst24<"brl", OpcodeC2<0b100, 0b000>, Relative16>;
+def BRL_Relative16 : Inst24<"brl", OpcodeC2<0b100, 0b000>, Relative16>,
+    InstUnconditionalBranch;
 
 /// 24-bit long-jumps
 /// JMP JSL
 /// 5C  22
 
-def JMP_AbsoluteLong : Inst32<"jmp", OpcodeC0<0b010, 0b111>, AbsoluteLong>;
-def JSL_AbsoluteLong : Inst32<"jsl", OpcodeC2<0b001, 0b000>, AbsoluteLong>;
+def JMP_AbsoluteLong : Inst32<"jmp", OpcodeC0<0b010, 0b111>, AbsoluteLong>,
+	InstUnconditionalBranch;
+def JSL_AbsoluteLong : Inst32<"jsl", OpcodeC2<0b001, 0b000>, AbsoluteLong>,
+	InstCall;
 
 /// Return from long-jump subroutine
 /// RTL
 /// 6B
 
-def RTL_Implied : Inst8<"rtl", OpcodeC3<0b011, 0b010>>;
+def RTL_Implied : Inst8<"rtl", OpcodeC3<0b011, 0b010>>, InstReturn;
 
 /// 16-bit indirect long-jump
 /// JML
 /// DC
-def JML_Indirect16 : Inst24<"jml", OpcodeC0<0b110, 0b111>, Indirect16>;
+def JML_Indirect16 : Inst24<"jml", OpcodeC0<0b110, 0b111>, Indirect16>,
+	InstUnconditionalBranch {
+  let isIndirectBranch = true;
+}
 
 /// Memory moves
 /// MVN MVP
