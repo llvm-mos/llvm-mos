@@ -22,8 +22,8 @@ rel16next:
 # RELOCS-NEXT: 00000001 R_MOS_PCREL_16           .R_MOS_PCREL_16+0x6
 # RELOCS-NEXT: 00000004 R_MOS_PCREL_16           .R_MOS_PCREL_16
 # CHECK-LABEL: section .R_MOS_PCREL_16:
-# CHECK: brl $3
-# CHECK: brl $fffa
+# CHECK: brl $100bd
+# CHECK: brl $100b7
 
 .section .R_MOS_ADDR24_BANK,"ax",@progbits
   lda #mos24bank(adr24)
