@@ -23,11 +23,13 @@ namespace clang {
 namespace targets {
 
 class MOSTargetInfo : public TargetInfo {
+  std::string CPUName;
+
 public:
   MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &);
 
   void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {}
+                        MacroBuilder &Builder) const override;
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override { return {}; }
 
@@ -55,8 +57,8 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+  bool setCPU(const std::string &Name) override;
 
-  bool setCPU(const std::string &Name) override { return isValidCPUName(Name); }
   bool hasBitIntType() const override { return true; }
 };
 

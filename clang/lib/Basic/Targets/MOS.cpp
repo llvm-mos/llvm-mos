@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOS.h"
+#include "clang/Basic/MacroBuilder.h"
 
 using namespace clang::targets;
 
@@ -167,4 +168,37 @@ bool MOSTargetInfo::isValidCPUName(StringRef Name) const {
 
 void MOSTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+}
+
+bool MOSTargetInfo::setCPU(const std::string &Name) {
+  if (isValidCPUName(Name)) {
+    CPUName = Name;
+    return true;
+  }
+  return false;
+}
+
+void MOSTargetInfo::getTargetDefines(const LangOptions &Opts,
+                                     MacroBuilder &Builder) const {
+  Builder.defineMacro("__mos__");
+  Builder.defineMacro("__ELF__");
+
+  // Generate instruction feature set macros.
+  const auto &CPUDefines = llvm::StringSwitch<std::vector<std::string>>(CPUName)
+    .Case("mos6502", {"6502"})
+    .Case("mos6502x", {"6502", "6502x"})
+    .Case("mos65c02", {"6502", "65c02"})
+    .Case("mosr65c02", {"6502", "65c02", "r65c02"})
+    .Case("mosw65c02", {"6502", "65c02", "r65c02", "w65c02"})
+    .Case("mosw65816", {"6502", "65c02", "w65816", "w65c02"})
+    .Case("mos65el02", {"6502", "65c02", "65el02", "w65c02"})
+    .Case("mos65ce02", {"6502", "65c02", "65ce02", "r65c02"})
+    .Case("moshuc6280", {"6502", "65c02", "huc6280", "r65c02"})
+    .Case("mos65dtv02", {"6502", "65dtv02"})
+    .Case("mos4510", {"4510", "6502", "65c02", "65ce02", "r65c02"})
+    .Case("mos45gs02", {"4510", "45gs02", "6502", "65c02", "65ce02", "r65c02"})
+    .Default({"6502"});
+  for (const auto &CPUDefine: CPUDefines) {
+    Builder.defineMacro("__mos" + CPUDefine + "__");
+  }
 }
