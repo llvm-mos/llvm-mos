@@ -1247,8 +1247,9 @@ static void collectLocalBranchTargets(
     ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA, MCDisassembler *DisAsm,
     MCInstPrinter *IP, const MCSubtargetInfo *STI, uint64_t SectionAddr,
     uint64_t Start, uint64_t End, std::unordered_map<uint64_t, std::string> &Labels) {
-  // So far only supports PowerPC and X86.
-  if (!STI->getTargetTriple().isPPC() && !STI->getTargetTriple().isX86())
+  // So far only supports MOS, PowerPC and X86.
+  if (!STI->getTargetTriple().isMOS() && !STI->getTargetTriple().isPPC()
+      && !STI->getTargetTriple().isX86())
     return;
 
   Labels.clear();

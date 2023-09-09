@@ -14,12 +14,15 @@
 #include "MOSInstPrinter.h"
 #include "MOSMCAsmInfo.h"
 #include "MOSMCELFStreamer.h"
+#include "MOSMCInstrAnalysis.h"
 #include "MOSTargetStreamer.h"
+#include "TargetInfo/MOSTargetInfo.h"
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -129,6 +132,10 @@ static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
   return new MOSTargetAsmStreamer(S, OS);
 }
 
+static MCInstrAnalysis *createMOSMCInstrAnalysis(const MCInstrInfo *Info) {
+  return new MOSMCInstrAnalysis(Info);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<MOSMCAsmInfo> X(getTheMOSTarget());
@@ -146,6 +153,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTargetMC() {
   // Register the MCInstPrinter.
   TargetRegistry::RegisterMCInstPrinter(getTheMOSTarget(),
                                         createMOSMCInstPrinter);
+
+  // Register the MC instruction analyzer.
+  TargetRegistry::RegisterMCInstrAnalysis(getTheMOSTarget(),
+                                          createMOSMCInstrAnalysis);
 
   // Register the MC Code Emitter
   TargetRegistry::RegisterMCCodeEmitter(getTheMOSTarget(),

@@ -116,6 +116,25 @@ class Inst<string asmstr> : Instruction {
   let DecoderNamespace = "MOS";
 }
 
+class InstConditionalBranch {
+  bit isBranch = true;
+  bit isTerminator = true;
+}
+
+class InstUnconditionalBranch : InstConditionalBranch {
+  bit isBarrier = true;
+}
+
+class InstCall {
+  bit isCall = true;
+}
+
+class InstReturn {
+  bit isBarrier = true;
+  bit isReturn = true;
+  bit isTerminator = true;
+}
+
 /// Makes sure that immediate mode operands fit into the required bit field
 /// size.  See also *isImm8 functions in MOS code.
 class MOSAsmOperand<string name> : AsmOperandClass {
@@ -142,6 +161,7 @@ class Addr24Operand<string name> : MOSAsmOperand<name>;
 /// This operand will only match a value from 0 to 7 inclusive.
 def imm3 : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm3">;
+  let DecoderMethod = "decodeUImmOperand<3>";
   let OperandType = "OPERAND_IMM3";
   let OperandNamespace = "MOSOp";
   let Type = i8;
@@ -151,6 +171,7 @@ def imm3 : Operand<i32> {
 class imm8at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8">;
   let EncoderMethod = "encodeImm<MOS::Imm8, " # offset # ">";
+  let DecoderMethod = "decodeUImmOperand<8>";
   let OperandType = "OPERAND_IMM8";
   let OperandNamespace = "MOSOp";
   let Type = i8;
@@ -162,6 +183,7 @@ def imm8at2 : imm8at<2>;
 class imm16at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm16">;
   let EncoderMethod = "encodeImm<MOS::Imm16, " # offset # ">";
+  let DecoderMethod = "decodeUImmOperand<16>";
   let OperandType = "OPERAND_IMM16";
   let OperandNamespace = "MOSOp";
   let Type = i16;
@@ -173,6 +195,7 @@ def imm16at5 : imm16at<5>;
 class pcrel8at<int offset> : Operand<i32> {
   let ParserMatchClass = PCRelativeOperand<"PCRel8">;
   let EncoderMethod = "encodeImm<MOS::PCRel8, " # offset # ">";
+  let DecoderMethod = "decodeSImmOperand<8>";
   let PrintMethod = "printBranchOperand";
   let OperandType = "OPERAND_PCREL";
 }
@@ -183,12 +206,14 @@ def pcrel8at2 : pcrel8at<2>;
 class pcrel16at<int offset> : Operand<i32> {
   let ParserMatchClass = PCRelativeOperand<"PCRel16">;
   let EncoderMethod = "encodeImm<MOS::PCRel16, " # offset # ">";
+  let DecoderMethod = "decodeSImmOperand<16>";
 }
 def pcrel16 : pcrel16at<1>;
 
 class addr8at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr8Operand<"Addr8">;
   let EncoderMethod = "encodeImm<MOS::Addr8, " # offset # ">";
+  let DecoderMethod = "decodeUImmOperand<8>";
   let OperandType = "OPERAND_ADDR8";
   let OperandNamespace = "MOSOp";
   let Type = i8;
@@ -201,6 +226,7 @@ def addr8at4 : addr8at<4>;
 class addr16at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr16Operand<"Addr16">;
   let EncoderMethod = "encodeImm<MOS::Addr16, " # offset # ">";
+  let DecoderMethod = "decodeUImmOperand<16>";
   let OperandType = "OPERAND_ADDR16";
   let OperandNamespace = "MOSOp";
   let Type = i16;
@@ -212,6 +238,7 @@ def addr16at3 : addr16at<3>;
 class addr24at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr24Operand<"Addr24">;
   let EncoderMethod = "encodeImm<MOS::Addr24, " # offset # ">";
+  let DecoderMethod = "decodeUImmOperand<24>";
 }
 def addr24 : addr24at<1>;
 
@@ -219,6 +246,7 @@ def addr24 : addr24at<1>;
 class imm8To16at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8To16">;
   let EncoderMethod = "encodeImm<MOS::Addr16, " # offset # ">";
+  let DecoderMethod = "decodeUImmOperand<16>";
 }
 def imm8To16 : imm8To16at<1>;
 
@@ -226,6 +254,7 @@ def imm8To16 : imm8To16at<1>;
 class imm16To24at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm16To24">;
   let EncoderMethod = "encodeImm<MOS::Addr24, " # offset # ">";
+  let DecoderMethod = "decodeUImmOperand<24>";
 }
 def imm16To24 : imm16To24at<1>;
 
@@ -525,7 +554,7 @@ class InstImmediate32<string opcodestr, Opcode op = DefaultOpcode,
 
 /// A R65C02 bit branch instruction.
 class InstBitBranch<string opcodestr, Opcode op = DefaultOpcode> :
-    Inst<opcodestr> {
+    Inst<opcodestr>, InstConditionalBranch {
   let Size = 3;
   bits<24> Inst;
   bits<3> tbit;
@@ -962,7 +991,7 @@ multiclass CC3_NoImmediate<bits<3> aaa, string OpcodeStr = "nop"> {
 /// 10  30  50  70  90  B0  D0  F0
 
 class ConditionalBranch<string opcodestr, bits<2> flagType, bits<1> value> :
-    Inst16<opcodestr, DefaultOpcode, Relative> {
+    Inst16<opcodestr, DefaultOpcode, Relative>, InstConditionalBranch {
    bits<3> a;
    let a{2-1} = flagType;
    let a{0} = value;

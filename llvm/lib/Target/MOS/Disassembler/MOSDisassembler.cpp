@@ -64,6 +64,26 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSDisassembler() {
                                          createMOSDisassembler);
 }
 
+template <unsigned N>
+static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
+                                      int64_t Address,
+                                      const MCDisassembler *Decoder) {
+  if (!isUInt<N>(Imm))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+template <unsigned N>
+static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
+                                      int64_t Address,
+                                      const MCDisassembler *Decoder) {
+  if (!isUInt<N>(Imm))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm)));
+  return MCDisassembler::Success;
+}
+
 #include "MOSGenDisassemblerTables.inc"
 
 std::optional<const uint8_t *> getDecoderTable(size_t Size) {
