@@ -26,6 +26,10 @@ public:
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
+
+  std::optional<uint64_t>
+  evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
+                               uint64_t Addr, uint64_t Size) const override;
 };
 
 } // end namespace llvm

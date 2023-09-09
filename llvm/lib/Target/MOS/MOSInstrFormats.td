@@ -207,6 +207,8 @@ class pcrel16at<int offset> : Operand<i32> {
   let ParserMatchClass = PCRelativeOperand<"PCRel16">;
   let EncoderMethod = "encodeImm<MOS::PCRel16, " # offset # ">";
   let DecoderMethod = "decodeSImmOperand<16>";
+  let PrintMethod = "printBranchOperand";
+  let OperandType = "OPERAND_PCREL";
 }
 def pcrel16 : pcrel16at<1>;
 
@@ -239,6 +241,8 @@ class addr24at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr24Operand<"Addr24">;
   let EncoderMethod = "encodeImm<MOS::Addr24, " # offset # ">";
   let DecoderMethod = "decodeUImmOperand<24>";
+  let OperandType = "OPERAND_ADDR24";
+  let OperandNamespace = "MOSOp";
 }
 def addr24 : addr24at<1>;
 
@@ -247,6 +251,8 @@ class imm8To16at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm8To16">;
   let EncoderMethod = "encodeImm<MOS::Addr16, " # offset # ">";
   let DecoderMethod = "decodeUImmOperand<16>";
+  let OperandType = "OPERAND_IMM16";
+  let OperandNamespace = "MOSOp";
 }
 def imm8To16 : imm8To16at<1>;
 
@@ -255,6 +261,8 @@ class imm16To24at<int offset> : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm16To24">;
   let EncoderMethod = "encodeImm<MOS::Addr24, " # offset # ">";
   let DecoderMethod = "decodeUImmOperand<24>";
+  let OperandType = "OPERAND_IMM24";
+  let OperandNamespace = "MOSOp";
 }
 def imm16To24 : imm16To24at<1>;
 

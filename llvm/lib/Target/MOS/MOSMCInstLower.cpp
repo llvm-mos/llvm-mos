@@ -750,6 +750,10 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
       case MOSOp::OPERAND_ADDR16:
         return 65536;
         break;
+      case MOSOp::OPERAND_IMM24:
+      case MOSOp::OPERAND_ADDR24:
+        return 16777216;
+        break;
       }
     };
     MCOp = MCOperand::createImm(MO.getImm() >= 0 ? MO.getImm()
