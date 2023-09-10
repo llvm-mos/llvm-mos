@@ -83,7 +83,7 @@ MVT MOSTargetLowering::getRegisterTypeForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT,
     const ISD::ArgFlagsTy &Flags) const {
   if (Flags.isPointer())
-    return MVT::i16;
+    return Flags.getPointerAddrSpace() == 1 ? MVT::i8 : MVT::i16;
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT, Flags);
 }
 

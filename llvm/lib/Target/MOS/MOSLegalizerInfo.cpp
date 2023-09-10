@@ -1174,11 +1174,11 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   // Compare pointers by first converting to integer. This allows the comparison
   // to be reduced to 8-bit comparisons.
   if (Type.isPointer()) {
-    LLT S16 = LLT::scalar(16);
+    LLT S = LLT::scalar(Type.getScalarSizeInBits());
 
     Helper.Observer.changingInstr(MI);
-    MI.getOperand(2).setReg(Builder.buildPtrToInt(S16, LHS).getReg(0));
-    MI.getOperand(3).setReg(Builder.buildPtrToInt(S16, RHS).getReg(0));
+    MI.getOperand(2).setReg(Builder.buildPtrToInt(S, LHS).getReg(0));
+    MI.getOperand(3).setReg(Builder.buildPtrToInt(S, RHS).getReg(0));
     Helper.Observer.changedInstr(MI);
     return true;
   }
