@@ -29,6 +29,6 @@ name: clv
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: clv
-    ; CHECK: $v = REPImm 1
+    ; CHECK: $v = CLV
     $v = LDImm1 0
 ...

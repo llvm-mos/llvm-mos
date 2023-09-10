@@ -985,29 +985,28 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   if (MOS::FlagRegClass.contains(DestReg)) {
     if (DestReg == MOS::C) {
       Opcode = MOS::LDCImm;
+    } else if (DestReg == MOS::V && !Val) {
+      Opcode = MOS::CLV;
+      // Remove imm.
+      MI.removeOperand(1);
     } else if (STI.hasW65816Or65EL02()) {
       Builder.buildInstr(Val ? MOS::SEPImm : MOS::REPImm,
                         {DestReg}, {}).addImm(1);
       MI.eraseFromParent();
       return;
     } else {
-      assert(DestReg == MOS::V);
+      assert(DestReg == MOS::V && Val);
 
-      if (Val) {
-        auto Instr = STI.hasHUC6280()
-          ? Builder.buildInstr(MOS::BITImmHUC6280, {MOS::V}, {})
-                        .addUse(MOS::A, RegState::Undef)
-                        .addImm(0xFF)
-          : Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
-                        .addUse(MOS::A, RegState::Undef)
-                        .addExternalSymbol("__set_v");
-        Instr->getOperand(1).setIsUndef();
-        MI.eraseFromParent();
-        return;
-      }
-      Opcode = MOS::CLV;
-      // Remove imm.
-      MI.removeOperand(1);
+      auto Instr = STI.hasHUC6280()
+        ? Builder.buildInstr(MOS::BITImmHUC6280, {MOS::V}, {})
+                      .addUse(MOS::A, RegState::Undef)
+                      .addImm(0xFF)
+        : Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
+                      .addUse(MOS::A, RegState::Undef)
+                      .addExternalSymbol("__set_v");
+      Instr->getOperand(1).setIsUndef();
+      MI.eraseFromParent();
+      return;
     }
   } else {
     DestReg =
