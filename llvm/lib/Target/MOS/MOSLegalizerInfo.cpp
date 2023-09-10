@@ -1531,8 +1531,10 @@ bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     Builder.buildZExt(MI.getDstReg(), Tmp);
     break;
   default:
-    assert(MRI.getType(MI.getDstReg()).isPointer());
-    Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
+    auto DstType = MRI.getType(MI.getDstReg());
+    assert(DstType.isPointer());
+    Tmp = MRI.createGenericVirtualRegister(
+        LLT::scalar(DstType.getScalarSizeInBits()));
     Builder.buildIntToPtr(MI.getDstReg(), Tmp);
     break;
   }
@@ -1552,8 +1554,12 @@ bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
     return selectAddressingMode(Helper, MRI, MI);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  auto ValueType = MRI.getType(MI.getValueReg());
+  assert(ValueType.isPointer());
+
   Register Tmp =
-      Builder.buildPtrToInt(LLT::scalar(16), MI.getValueReg()).getReg(0);
+      Builder.buildPtrToInt(LLT::scalar(ValueType.getScalarSizeInBits()),
+                            MI.getValueReg()).getReg(0);
   Helper.Observer.changingInstr(MI);
   MI.getOperand(0).setReg(Tmp);
   Helper.Observer.changedInstr(MI);

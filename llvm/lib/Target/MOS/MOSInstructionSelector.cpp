@@ -1347,6 +1347,8 @@ struct IncDecMBAbs_match {
     unsigned DstIdx = 0;
     unsigned SrcIdx = IncDec->getNumExplicitDefs();
     while (IncDec->getOperand(DstIdx).getReg() != Reg) {
+      if (SrcIdx >= IncDec->getNumOperands())
+        return false;
       if (IncDec->getOperand(SrcIdx).isReg())
         ++DstIdx;
       ++SrcIdx;

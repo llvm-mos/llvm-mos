@@ -411,7 +411,8 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
                                GlobalValue::PrivateLinkage,
                                UndefValue::get(Typ), "zp_stack",
                                /*InsertBefore=*/nullptr,
-                               GlobalValue::NotThreadLocal, /*AddressSpace=*/1);
+                               GlobalValue::NotThreadLocal,
+                               MOS::ZeroPageMemory);
     LLVM_DEBUG(dbgs() << "  " << *Stack << '\n');
   }
 
@@ -429,7 +430,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
           Cand->GV->getLinkage(), Cand->GV->getInitializer());
       Cand->GV->replaceAllUsesWith(Tmp);
       Cand->GV->mutateType(
-          PointerType::get(Cand->GV->getValueType(), /*AddressSpace=*/1));
+          PointerType::get(Cand->GV->getValueType(), MOS::ZeroPageMemory));
       Tmp->replaceAllUsesWith(ConstantExpr::getAddrSpaceCast(
           Cand->GV, PointerType::get(Cand->GV->getValueType(), 0)));
       Tmp->eraseFromParent();
@@ -604,7 +605,8 @@ void MOSZeroPageAlloc::collectCandidates(
             continue;
           const auto *GV = dyn_cast<GlobalVariable>(GO);
           if (!GV || GV->isDeclaration() || GV->getAlign().valueOrOne() != 1 ||
-              GV->hasSection() || GV->hasImplicitSection())
+              GV->hasSection() || GV->hasImplicitSection() ||
+              GV->getAddressSpace() == MOS::ZeroPageMemory)
             continue;
 
           // Generally moving an absolute reference to the zero page saves one

@@ -644,10 +644,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 
   SmallSet<const MachineInstr *, 32> Visited;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
-    
     if (!Visited.insert(&MI).second)
       continue;
-
     switch (MI.getOpcode()) {
     default:
       continue;
