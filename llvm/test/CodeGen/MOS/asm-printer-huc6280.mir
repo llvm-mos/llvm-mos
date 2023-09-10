@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=mos -mcpu=moshuc6280 -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: tii_memcpy
+# CHECK-LABEL: tii_memcpy
+body: |
+  bb.0.entry:
+    HuCMemcpy 1234, 5678, 90, 0
+    ; CHECK: tii 1234,5678,#90
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: tdd_memcpy
+# CHECK-LABEL: tdd_memcpy
+body: |
+  bb.0.entry:
+    HuCMemcpy 5678, 1234, 45, 1
+    ; CHECK: tdd 5678,1234,#45
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: cly_implied
+# CHECK-LABEL: cly_implied
+body: |
+  bb.0.entry:
+    $y = CL
+    ; CHECK: cly{{$}}
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: sax_implied
+# CHECK-LABEL: sax_implied
+body: |
+  bb.0.entry:
+    $a, $x = SWAP killed $x, killed undef $a
+    ; CHECK: sax{{$}}
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: sax_implied_sxa
+# CHECK-LABEL: sax_implied_sxa
+body: |
+  bb.0.entry:
+    $x, $a = SWAP killed $a, killed undef $x
+    ; CHECK: sax{{$}}
+    RTS
+    ; CHECK-NEXT: rts
+...
+

@@ -164,6 +164,17 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: bra_relative
+# CHECK-LABEL: bra_relative
+body: |
+  bb.0.entry:
+    BRA %bb.0.entry
+    ; CHECK: [[BLOCK:\.L.*]]: ; %entry
+    ; CHECK: bra [[BLOCK]]
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: cmp_immediate
 # CHECK-LABEL: cmp_immediate
 body: |
@@ -340,6 +351,26 @@ body: |
   bb.0.entry:
     $c = LDCImm -1
     ; CHECK: sec{{$}}
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: dea_implied
+# CHECK-LABEL: dea_implied
+body: |
+  bb.0.entry:
+    $a = DE_CMOS $a
+    ; CHECK: dec{{$}}
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: ina_implied
+# CHECK-LABEL: ina_implied
+body: |
+  bb.0.entry:
+    $a = IN_CMOS $a
+    ; CHECK: inc{{$}}
     RTS
     ; CHECK-NEXT: rts
 ...
