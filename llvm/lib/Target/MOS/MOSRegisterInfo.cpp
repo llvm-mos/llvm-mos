@@ -356,6 +356,7 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getMF();
   MachineIRBuilder Builder(*MI);
   MachineRegisterInfo &MRI = *Builder.getMRI();
+  const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 
   const bool IsLoad = MI->getOpcode() == MOS::LDStk;
@@ -436,8 +437,10 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
       TRI.getMatchingSuperReg(Loc, MOS::sublsb, &MOS::Anyi8RegClass);
   if (Loc8)
     Loc = Loc8;
-
-  assert(Loc == MOS::C || Loc == MOS::V || MOS::Anyi8RegClass.contains(Loc));
+  bool IsValidFlag = STI.hasW65816Or65EL02()
+                     ? MOS::FlagRegClass.contains(Loc)
+                     : (Loc == MOS::C || Loc == MOS::V);
+  assert(IsValidFlag || MOS::Anyi8RegClass.contains(Loc));
 
   Register A = Loc;
   if (A != MOS::A)
@@ -445,7 +448,7 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
 
   // Transfer the value to A to be stored (if applicable).
   if (!IsLoad && Loc != A) {
-    if (Loc == MOS::C || Loc == MOS::V)
+    if (MOS::FlagRegClass.contains(Loc))
       Builder.buildInstr(MOS::COPY)
           .addDef(A, RegState::Undef, MOS::sublsb)
           .addUse(Loc);
@@ -467,7 +470,7 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
 
   // Transfer the loaded value out of A (if applicable).
   if (IsLoad && Loc != A) {
-    if (Loc == MOS::C || Loc == MOS::V)
+    if (MOS::FlagRegClass.contains(Loc))
       Builder.buildInstr(MOS::COPY, {Loc}, {}).addUse(A, 0, MOS::sublsb);
     else {
       assert(MOS::Anyi8RegClass.contains(Loc));
@@ -885,6 +888,7 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
         DestReg = DestReg8;
         return copyCost(DestReg, SrcReg, STI);
       }
+      
       if (DestReg == MOS::C) {
         // Cmp #1
         MOSInstrCost Cost = MOSInstrCost(2, 2);
@@ -892,10 +896,22 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
           Cost += copyCost(MOS::A, SrcReg, STI);
         return Cost;
       }
-      assert(DestReg == MOS::V);
+
       const TargetRegisterClass &StackRegClass =
           STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
 
+      if (STI.hasW65816Or65EL02()) {
+        if (StackRegClass.contains(SrcReg)) {
+          // PHA; PLA; BNE; SEP; JMP; REP
+          return MOSInstrCost(1, 3) + MOSInstrCost(1, 4) + MOSInstrCost(1, 3) +
+                MOSInstrCost(2, 3) + MOSInstrCost(3, 3) + MOSInstrCost(2, 3);
+        }
+        // [PHA]; COPY; BNE; SEP; JMP; REP; [PLA]
+        return copyCost(MOS::A, SrcReg, STI) + MOSInstrCost(1, 3) +
+                MOSInstrCost(2, 3) + MOSInstrCost(3, 3) + MOSInstrCost(2, 3);
+      }
+
+      assert(DestReg == MOS::V);
       if (StackRegClass.contains(SrcReg)) {
         // PHA; PLA; BNE; BIT setv; JMP; CLV
         return MOSInstrCost(1, 3) + MOSInstrCost(1, 4) + MOSInstrCost(1, 3) +

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -671,6 +672,19 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(MOS::CLY_Implied);
       return;
     }
+  }
+  case MOS::REPImm:
+  case MOS::SEPImm: {
+    OutMI.setOpcode(MI->getOpcode() == MOS::REPImm ? MOS::REP_Immediate
+                                                   : MOS::SEP_Immediate);
+    auto Val = MI->getOperand(1).getImm();
+    if (MOS::FlagRegClass.contains(MI->getOperand(0).getReg())) {
+      // Adjust 1-bit register assignments to the proper bit index.
+      const MOSRegisterInfo &TRI =
+          *MI->getMF()->getSubtarget<MOSSubtarget>().getRegisterInfo();
+      Val = Val << TRI.getEncodingValue(MI->getOperand(0).getReg());
+    }
+    OutMI.addOperand(MCOperand::createImm(Val));
   }
   }
 

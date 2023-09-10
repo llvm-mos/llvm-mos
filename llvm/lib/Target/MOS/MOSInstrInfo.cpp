@@ -608,7 +608,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
               MOS::CMPImm, {MOS::C},
               {getRegWithVal(Builder, SrcReg, MOS::GPRRegClass), INT64_C(1)});
         } else {
-          assert(DestReg == MOS::V);
+          assert(MOS::FlagRegClass.contains(DestReg) &&
+                 (STI.hasW65816Or65EL02() || DestReg == MOS::V));
           const TargetRegisterClass &StackRegClass =
               STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
 
@@ -616,7 +617,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
             Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
             Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
                 .addDef(MOS::NZ, RegState::Implicit);
-            Builder.buildInstr(MOS::SelectImm, {MOS::V},
+            Builder.buildInstr(MOS::SelectImm, {DestReg},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
           } else {
             Register Tmp = createVReg(Builder, StackRegClass);
@@ -629,7 +630,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
             // scavenger may try to insert a reload between the load and the
             // select.
             auto Select =
-                Builder.buildInstr(MOS::SelectImm, {MOS::V},
+                Builder.buildInstr(MOS::SelectImm, {DestReg},
                                    {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
             Select.addUse(Tmp, RegState::Implicit);
           }
@@ -981,8 +982,34 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   int64_t Val = MI.getOperand(1).getImm();
 
   unsigned Opcode;
-  switch (DestReg) {
-  default: {
+  if (MOS::FlagRegClass.contains(DestReg)) {
+    if (DestReg == MOS::C) {
+      Opcode = MOS::LDCImm;
+    } else if (STI.hasW65816Or65EL02()) {
+      Builder.buildInstr(Val ? MOS::SEPImm : MOS::REPImm,
+                        {DestReg}, {}).addImm(1);
+      MI.eraseFromParent();
+      return;
+    } else {
+      assert(DestReg == MOS::V);
+
+      if (Val) {
+        auto Instr = STI.hasHUC6280()
+          ? Builder.buildInstr(MOS::BITImmHUC6280, {MOS::V}, {})
+                        .addUse(MOS::A, RegState::Undef)
+                        .addImm(0xFF)
+          : Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
+                        .addUse(MOS::A, RegState::Undef)
+                        .addExternalSymbol("__set_v");
+        Instr->getOperand(1).setIsUndef();
+        MI.eraseFromParent();
+        return;
+      }
+      Opcode = MOS::CLV;
+      // Remove imm.
+      MI.removeOperand(1);
+    }
+  } else {
     DestReg =
         Builder.getMF().getSubtarget().getRegisterInfo()->getMatchingSuperReg(
             DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
@@ -991,28 +1018,6 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
     Opcode = MOS::LDImm;
     MI.getOperand(0).setReg(DestReg);
     MI.getOperand(1).setImm(!!Val);
-    break;
-  }
-  case MOS::C:
-    Opcode = MOS::LDCImm;
-    break;
-  case MOS::V:
-    if (Val) {
-      auto Instr = STI.hasHUC6280()
-        ? Builder.buildInstr(MOS::BITImmHUC6280, {MOS::V}, {})
-                      .addUse(MOS::A, RegState::Undef)
-                      .addImm(0xFF)
-        : Builder.buildInstr(MOS::BITAbs, {MOS::V}, {})
-                      .addUse(MOS::A, RegState::Undef)
-                      .addExternalSymbol("__set_v");
-      Instr->getOperand(1).setIsUndef();
-      MI.eraseFromParent();
-      return;
-    }
-    Opcode = MOS::CLV;
-    // Remove imm.
-    MI.removeOperand(1);
-    break;
   }
 
   MI.setDesc(Builder.getTII().get(Opcode));

@@ -267,6 +267,24 @@ def BITImmHUC6280 : MOSLogicalInstr, PseudoInstExpansion<(BIT_Immediate imm8:$r)
 }
 
 //===---------------------------------------------------------------------===//
+// REP/SEP Instructions
+//===---------------------------------------------------------------------===//
+
+def REPImm : MOSLogicalInstr {
+  let Predicates = [HasW65816Or65EL02];
+
+  dag OutOperandList = (outs FlagP:$dst);
+  dag InOperandList = (ins imm8:$r);
+}
+
+def SEPImm : MOSLogicalInstr {
+  let Predicates = [HasW65816Or65EL02];
+
+  dag OutOperandList = (outs FlagP:$dst);
+  dag InOperandList = (ins imm8:$r);
+}
+
+//===---------------------------------------------------------------------===//
 // Control Flow Instructions
 //===---------------------------------------------------------------------===//
 

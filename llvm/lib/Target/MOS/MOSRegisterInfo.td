@@ -51,7 +51,6 @@ def sublsb : MOSSubRegIndex<1>;
 class MOSReg<bits<16> num, string name>
   : Register<!strconcat("llvm_mos_", name)>, DwarfRegNum<[num]> {
   field bits<16> Num = num;
-  let HWEncoding = num;
   let Namespace = "MOS";
   let AltNames = [name];
 }
@@ -72,10 +71,18 @@ defm X : MOSReg8<2, "x">;
 defm Y : MOSReg8<4, "y">;
 def S : MOSReg<6, "s">;
 
-def C : MOSReg<7, "C">;
-def N : MOSReg<8, "N">;
-def V : MOSReg<9, "V">;
-def Z : MOSReg<10, "Z">;
+def C : MOSReg<7, "C"> {
+  let HWEncoding = 0;
+}
+def N : MOSReg<8, "N"> {
+  let HWEncoding = 7;
+}
+def V : MOSReg<9, "V"> {
+  let HWEncoding = 6;
+}
+def Z : MOSReg<10, "Z"> {
+  let HWEncoding = 1;
+}
 
 // N and Z are always set together, so model them as one register with two
 // one-bit subregisters.
@@ -187,6 +194,7 @@ let isPressureFineGrained = true in {
 }
 let isAllocatable = false in {
   def Flag : MOSReg1Class<(add C, N, V, Z)>;
+  def FlagP : MOSRegClass<[i1, i8], 8, (add C, N, V, Z, P)>;
   def AP : MOSReg8Class<(add A, P)>;
   def AXYP : MOSReg8Class<(add A, X, Y, P)>;
 }
