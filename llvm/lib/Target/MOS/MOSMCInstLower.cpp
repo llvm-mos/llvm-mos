@@ -677,12 +677,15 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::SEPImm: {
     OutMI.setOpcode(MI->getOpcode() == MOS::REPImm ? MOS::REP_Immediate
                                                    : MOS::SEP_Immediate);
+    auto DestReg = MI->getOperand(0).getReg();
     auto Val = MI->getOperand(1).getImm();
-    if (MOS::FlagRegClass.contains(MI->getOperand(0).getReg())) {
+    if (MOS::FlagRegClass.contains(DestReg)) {
       // Adjust 1-bit register assignments to the proper bit index.
       const MOSRegisterInfo &TRI =
           *MI->getMF()->getSubtarget<MOSSubtarget>().getRegisterInfo();
-      Val = Val << TRI.getEncodingValue(MI->getOperand(0).getReg());
+      Val = Val << TRI.getEncodingValue(DestReg);
+    } else {
+      assert(DestReg == MOS::P);
     }
     OutMI.addOperand(MCOperand::createImm(Val));
   }
