@@ -1,0 +1,51 @@
+# RUN: llc -mtriple=mos -mcpu=mosw65816 -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: rep_imm1
+# CHECK-LABEL: rep_imm1
+body: |
+  bb.0.entry:
+    $v = REPImm 1
+    ; CHECK: rep #64
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: sep_imm1
+# CHECK-LABEL: sep_imm1
+body: |
+  bb.0.entry:
+    $v = SEPImm 1
+    ; CHECK: sep #64
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: rep_imm8
+# CHECK-LABEL: rep_imm8
+body: |
+  bb.0.entry:
+    $p = REPImm 170
+    ; CHECK: rep #170
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: sep_imm8
+# CHECK-LABEL: sep_imm8
+body: |
+  bb.0.entry:
+    $p = SEPImm 85
+    ; CHECK: sep #85
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: txy_implied
+# CHECK-LABEL: txy_implied
+body: |
+  bb.0.entry:
+    $y = TX $x
+    ; CHECK: txy{{$}}
+    RTS
+    ; CHECK-NEXT: rts
+...

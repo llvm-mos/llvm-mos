@@ -681,13 +681,15 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     auto Val = MI->getOperand(1).getImm();
     if (MOS::FlagRegClass.contains(DestReg)) {
       // Adjust 1-bit register assignments to the proper bit index.
+      assert(Val == 0 || Val == 1);
       const MOSRegisterInfo &TRI =
           *MI->getMF()->getSubtarget<MOSSubtarget>().getRegisterInfo();
       Val = Val << TRI.getEncodingValue(DestReg);
     } else {
-      assert(DestReg == MOS::P);
+      assert(DestReg == MOS::P && Val >= 0 && Val < 256);
     }
     OutMI.addOperand(MCOperand::createImm(Val));
+    return;
   }
   }
 
