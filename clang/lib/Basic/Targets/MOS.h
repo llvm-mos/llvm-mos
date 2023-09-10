@@ -54,6 +54,7 @@ public:
     return {};
   }
   unsigned getRegisterWidth() const override { return 8; }
+  uint64_t getPointerWidthV(LangAS AddrSpace) const override;
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;

@@ -185,6 +185,8 @@ constexpr StringRef ZPPrefixes[] = {
 };
 
 bool MOS::isZeroPageSectionName(StringRef Name) {
+  if (Name.empty())
+    return false;
   for (StringRef Prefix : ZPPrefixes)
     if (Name.starts_with(Prefix) &&
         (Name.size() == Prefix.size() || Name[Prefix.size()] == '.'))

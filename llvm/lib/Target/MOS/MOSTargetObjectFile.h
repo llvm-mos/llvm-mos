@@ -15,6 +15,14 @@ namespace llvm {
 
 /// Lowering for an MOS ELF32 object file.
 class MOSTargetObjectFile : public TargetLoweringObjectFileELF {
+  MCSection *ZpDataSection;
+  MCSection *ZpBssSection;
+  MCSection *ZpNoinitSection;
+
+public:
+  void Initialize(MCContext &ctx, const TargetMachine &TM) override;
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                    const TargetMachine &TM) const override;
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;
 };

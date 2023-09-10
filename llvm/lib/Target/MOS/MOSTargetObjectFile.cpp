@@ -6,11 +6,41 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MOS.h"
+#include "MOSTargetMachine.h"
 #include "MOSTargetObjectFile.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/GlobalObject.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/SectionKind.h"
 
 using namespace llvm;
+
+void MOSTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  ZpDataSection = Ctx.getELFSection(".zp.data", ELF::SHT_PROGBITS,
+                                    ELF::SHF_ALLOC | ELF::SHF_WRITE);
+  ZpBssSection = Ctx.getELFSection(".zp.bss", ELF::SHT_NOBITS,
+                                   ELF::SHF_ALLOC | ELF::SHF_WRITE);
+  ZpNoinitSection = Ctx.getELFSection(".zp.noinit", ELF::SHT_NOBITS,
+                                      ELF::SHF_ALLOC | ELF::SHF_WRITE);
+}
+
+MCSection *MOSTargetObjectFile::SelectSectionForGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  if (MOS::getAddressSpace(GO) == MOS::ZeroPageMemory && !GO->hasSection()) {
+    if (Kind.isNoInit())
+      return ZpNoinitSection;
+    if (Kind.isBSS())
+      return ZpBssSection;
+    return ZpDataSection;
+  }
+
+  // Otherwise, we work the same way as ELF.
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
+}
 
 MCSection *MOSTargetObjectFile::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind SK, const TargetMachine &TM) const {

@@ -1230,10 +1230,18 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
   MachineOperand Op = MI.getOperand(1);
   if (Op.isCImm())
     Op.ChangeToImmediate(Op.getCImm()->getSExtValue());
-  auto Instr =
-      Builder
-          .buildInstr(MOS::LDImm16, {MI.getOperand(0), &MOS::GPRRegClass}, {})
-          .add(Op);
+
+  LLT DestType = Builder.getMRI()->getType(MI.getOperand(0).getReg());
+  MachineInstrBuilder Instr;
+  if (DestType.getScalarSizeInBits() == 16) {
+    Instr = Builder
+            .buildInstr(MOS::LDImm16, {MI.getOperand(0), &MOS::GPRRegClass}, {})
+            .add(Op);
+  } else {
+    Instr = Builder
+            .buildInstr(MOS::LDImm, {MI.getOperand(0)}, {})
+            .add(Op);
+  }
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
   MI.eraseFromParent();
@@ -1335,6 +1343,7 @@ struct IncDecMBAbs_match {
     default:
       return false;
     }
+
     unsigned DstIdx = 0;
     unsigned SrcIdx = IncDec->getNumExplicitDefs();
     while (IncDec->getOperand(DstIdx).getReg() != Reg) {

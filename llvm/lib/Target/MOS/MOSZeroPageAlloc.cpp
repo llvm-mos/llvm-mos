@@ -348,10 +348,9 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
 
   ModuleZPAvail = ZPAvail;
   for (GlobalVariable &GV : M.globals()) {
-    if (!GV.hasSection())
-      continue;
     StringRef SecName = GV.getSection();
-    if (MOS::isZeroPageSectionName(SecName)) {
+    if (MOS::isZeroPageSectionName(SecName) ||
+        GV.getAddressSpace() == MOS::ZeroPageMemory) {
       size_t Size = (GV.getParent()->getDataLayout().getTypeSizeInBits(
             GV.getValueType()) +
           7) /
