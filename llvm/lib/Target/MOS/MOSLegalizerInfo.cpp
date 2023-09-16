@@ -18,6 +18,7 @@
 #include "MOSLegalizerInfo.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOS.h"
 #include "MOSFrameLowering.h"
 #include "MOSInstrInfo.h"
 #include "MOSMachineFunctionInfo.h"
@@ -203,7 +204,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .custom();
 
   getActionDefinitionsBuilder(G_SELECT)
-      .customFor({P})
+      .customFor({P, PZ})
       .legalFor({S1, S8})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
@@ -1327,12 +1328,12 @@ bool MOSLegalizerInfo::legalizeSelect(LegalizerHelper &Helper,
                                       MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  LLT P = LLT::pointer(0, 16);
-  (void)P;
-  LLT S16 = LLT::scalar(16);
-
   auto [Dst, Test, LHS, RHS] = MI.getFirst4Regs();
-  (void)Test;
+
+  LLT P = MRI.getType(Dst);
+  assert(P.isPointer());
+
+  LLT S = LLT::scalar(P.getScalarSizeInBits());
 
   assert(MRI.getType(Dst) == P);
   assert(MRI.getType(Test) == LLT::scalar(1));
@@ -1340,9 +1341,9 @@ bool MOSLegalizerInfo::legalizeSelect(LegalizerHelper &Helper,
   assert(MRI.getType(RHS) == P);
 
   Helper.Observer.changingInstr(MI);
-  MI.getOperand(2).setReg(Builder.buildPtrToInt(S16, LHS).getReg(0));
-  MI.getOperand(3).setReg(Builder.buildPtrToInt(S16, RHS).getReg(0));
-  Register Tmp = MRI.createGenericVirtualRegister(S16);
+  MI.getOperand(2).setReg(Builder.buildPtrToInt(S, LHS).getReg(0));
+  MI.getOperand(3).setReg(Builder.buildPtrToInt(S, RHS).getReg(0));
+  Register Tmp = MRI.createGenericVirtualRegister(S);
   MI.getOperand(0).setReg(Tmp);
   Helper.Observer.changedInstr(MI);
 
@@ -1579,11 +1580,24 @@ static bool willBeStaticallyAllocated(const MachineOperand &MO) {
 bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
                                             MachineRegisterInfo &MRI,
                                             GLoadStore &MI) const {
-  if (tryAbsoluteAddressing(Helper, MRI, MI))
-    return true;
-  if (tryAbsoluteIndexedAddressing(Helper, MRI, MI))
-    return true;
-  return selectIndirectAddressing(Helper, MRI, MI);
+  switch (MRI.getType(MI.getPointerReg()).getScalarSizeInBits()) {
+  case 8: {
+    if (tryAbsoluteAddressing(Helper, MRI, MI))
+      return true;
+    if (tryAbsoluteIndexedAddressing(Helper, MRI, MI))
+      return true;
+    return selectZeroIndexedAddressing(Helper, MRI, MI);
+  }
+  case 16: {
+    if (tryAbsoluteAddressing(Helper, MRI, MI))
+      return true;
+    if (tryAbsoluteIndexedAddressing(Helper, MRI, MI))
+      return true;
+    return selectIndirectAddressing(Helper, MRI, MI);
+  }
+  default:
+    llvm_unreachable("unknown pointer size");
+  }
 }
 
 std::optional<MachineOperand>
@@ -1731,6 +1745,39 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
     return false;
   }
   return false;
+}
+
+bool MOSLegalizerInfo::selectZeroIndexedAddressing(LegalizerHelper &Helper,
+                                                   MachineRegisterInfo &MRI,
+                                                   GLoadStore &MI) const {
+  // Selects absolute indexed, but with the pointer as the index.
+  // TODO: Handle HuC6280?
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+
+  assert(MRI.getType(MI.getPointerReg()).getScalarSizeInBits() == 8);
+  LLT S = LLT::scalar(8);
+  auto Addr = MI.getOperand(1).getReg();
+  int64_t Offset = 0;
+
+  if (const auto *PtrAddAddr =
+          cast_if_present<GPtrAdd>(getOpcodeDef(G_PTR_ADD, Addr, MRI))) {
+    auto ConstOffset =
+        getIConstantVRegValWithLookThrough(PtrAddAddr->getOffsetReg(), MRI);
+    if (ConstOffset) {
+      Offset += ConstOffset->Value.getSExtValue();
+      Addr = PtrAddAddr->getBaseReg();
+    }
+  }
+  
+  auto AddrP = Builder.buildPtrToInt(S, Addr).getReg(0);
+  unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS_IDX : MOS::G_STORE_ABS_IDX;
+  Builder.buildInstr(Opcode)
+      .add(MI.getOperand(0))
+      .addImm(Offset)
+      .addUse(AddrP)
+      .addMemOperand(*MI.memoperands_begin());
+  MI.eraseFromParent();
+  return true;
 }
 
 bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,

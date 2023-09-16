@@ -11,6 +11,16 @@ body: |
     RTS implicit %0
 ...
 ---
+name: const_zp_ptr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: const_zp_ptr
+    ; CHECK: [[C:%[0-9]+]]:_(p1) = G_CONSTANT i8 123
+    ; CHECK-NEXT: RTS implicit [[C]](p1)
+    %0:_(p1) = G_CONSTANT i8 123
+    RTS implicit %0
+...
+---
 name: mul_s2
 body: |
   bb.0.entry:
@@ -1488,6 +1498,26 @@ body: |
     RTS implicit %2
 ...
 ---
+name: icmp_zp_ptr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: icmp_zp_ptr
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc4
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p1) = COPY $rc6
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY1]](p1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: [[SBC:%[0-9]+]]:_(s8), [[SBC1:%[0-9]+]]:_(s1), [[SBC2:%[0-9]+]]:_, [[SBC3:%[0-9]+]]:_, [[SBC4:%[0-9]+]]:_ = G_SBC [[PTRTOINT]], [[PTRTOINT1]], [[C]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s1) = G_SELECT [[SBC4]](s1), [[C]], [[C1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s1) = COPY [[SELECT]](s1)
+    ; CHECK-NEXT: RTS implicit [[COPY2]](s1)
+    %0:_(p1) = COPY $rc4
+    %1:_(p1) = COPY $rc6
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    RTS implicit %2
+...
+---
 name: icmp_s3
 body: |
   bb.0.entry:
@@ -2052,6 +2082,25 @@ body: |
     RTS implicit %3
 ...
 ---
+name: select_zp
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: select_zp
+    ; CHECK: [[COPY:%[0-9]+]]:_(s1) = COPY $alsb
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p1) = COPY $rc0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p1) = COPY $rc1
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY1]](p1)
+    ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY2]](p1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[COPY]](s1), [[PTRTOINT]], [[PTRTOINT1]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[SELECT]](s8)
+    ; CHECK-NEXT: RTS implicit [[INTTOPTR]](p1)
+    %0:_(s1) = COPY $alsb
+    %1:_(p1) = COPY $rc0
+    %2:_(p1) = COPY $rc1
+    %3:_(p1) = G_SELECT %0, %1, %2
+    RTS implicit %3
+...
+---
 name: abs
 body: |
   bb.0.entry:
@@ -2116,6 +2165,22 @@ body: |
     RTS implicit %2
 ...
 ---
+name: ptradd_zp
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ptradd_zp
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $rc1
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s8) = G_ADD [[PTRTOINT]], [[COPY1]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[ADD]](s8)
+    ; CHECK-NEXT: RTS implicit [[INTTOPTR]](p1)
+    %0:_(p1) = COPY $rc0
+    %1:_(s8) = COPY $rc1
+    %2:_(p1) = G_PTR_ADD %0, %1
+    RTS implicit %2
+...
+---
 name: ptrmask
 body: |
   bb.0.entry:
@@ -2133,6 +2198,22 @@ body: |
     %0:_(p0) = COPY $rs0
     %1:_(s16) = G_CONSTANT i16 1234
     %2:_(p0) = G_PTRMASK %0, %1
+    RTS implicit %2
+...
+---
+name: ptrmask_zp
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ptrmask_zp
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 123
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[PTRTOINT]], [[C]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[AND]](s8)
+    ; CHECK-NEXT: RTS implicit [[INTTOPTR]](p1)
+    %0:_(p1) = COPY $rc0
+    %1:_(s8) = G_CONSTANT i8 123
+    %2:_(p1) = G_PTRMASK %0, %1
     RTS implicit %2
 ...
 ---
@@ -2343,6 +2424,80 @@ body: |
     RTS implicit %4
 ...
 ---
+name: load_zp_ptr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: load_zp_ptr
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX 0, [[PTRTOINT]](s8) :: (load (s8))
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[LOAD_ABS_IDX]](s8)
+    ; CHECK-NEXT: RTS implicit [[INTTOPTR]](p1)
+    %0:_(p1) = COPY $rc0
+    %1:_(p1) = G_LOAD %0 :: (load 1)
+    RTS implicit %1
+...
+---
+name: load_zp_constant_addr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: load_zp_constant_addr
+    ; CHECK: [[LOAD_ABS:%[0-9]+]]:_(s8) = G_LOAD_ABS 123 :: (load (s8))
+    ; CHECK-NEXT: RTS implicit [[LOAD_ABS]](s8)
+    %0:_(s8) = G_CONSTANT i8 123
+    %1:_(p1) = G_INTTOPTR %0
+    %2:_(s8) = G_LOAD %1 :: (load (s8))
+    RTS implicit %2
+...
+---
+name: load_zp_constant_ptradd_zext_8
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: load_zp_constant_ptradd_zext_8
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX 123, [[COPY]](s8) :: (load (s8))
+    ; CHECK-NEXT: RTS implicit [[LOAD_ABS_IDX]](s8)
+    %0:_(p1) = G_CONSTANT i8 123
+    %1:_(s8) = COPY $a
+    %2:_(s16) = G_ZEXT %1
+    %3:_(p1) = G_PTR_ADD %0, %2
+    %4:_(s8) = G_LOAD %3 :: (load (s8))
+    RTS implicit %4
+...
+---
+name: load_zp_constant_zext_1
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: load_zp_constant_zext_1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s1) = COPY $c
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX 123, [[SELECT]](s8) :: (load (s8))
+    ; CHECK-NEXT: RTS implicit [[LOAD_ABS_IDX]](s8)
+    %0:_(p1) = G_CONSTANT i8 123
+    %1:_(s1) = COPY $c
+    %2:_(s16) = G_ZEXT %1
+    %3:_(p1) = G_PTR_ADD %0, %2
+    %4:_(s8) = G_LOAD %3 :: (load (s8))
+    RTS implicit %4
+...
+---
+name: load_zp_ptradd_const8
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: load_zp_ptradd_const8
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX -1, [[PTRTOINT]](s8) :: (load (s8))
+    ; CHECK-NEXT: RTS implicit [[LOAD_ABS_IDX]](s8)
+    %0:_(p1) = COPY $rc0
+    %2:_(s8) = G_CONSTANT i8 255
+    %3:_(p1) = G_PTR_ADD %0, %2
+    %4:_(s8) = G_LOAD %3 :: (load (s8))
+    RTS implicit %4
+...
+---
 name: store_ptradd_zext_8
 body: |
   bb.0.entry:
@@ -2375,6 +2530,42 @@ body: |
     %0:_(p0) = COPY $rs0
     %1:_(p0) = COPY $rs1
     G_STORE %1, %0 :: (store 2)
+    RTS
+...
+---
+name: store_zp_ptradd_8
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: store_zp_ptradd_8
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s8) = G_ADD [[PTRTOINT]], [[COPY1]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[ADD]](s8)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY [[COPY1]](s8)
+    ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s8) = G_PTRTOINT [[INTTOPTR]](p1)
+    ; CHECK-NEXT: G_STORE_ABS_IDX [[COPY1]](s8), 0, [[PTRTOINT1]](s8) :: (store (s8))
+    ; CHECK-NEXT: RTS
+    %0:_(p1) = COPY $rc0
+    %1:_(s8) = COPY $a
+    %2:_(p1) = G_PTR_ADD %0, %1
+    G_STORE %1, %2 :: (store (s8))
+    RTS
+...
+---
+name: store_zp_ptr
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: store_zp_ptr
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p1) = COPY $rc1
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY1]](p1)
+    ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
+    ; CHECK-NEXT: G_STORE_ABS_IDX [[PTRTOINT]](s8), 0, [[PTRTOINT1]](s8) :: (store (s8))
+    ; CHECK-NEXT: RTS
+    %0:_(p1) = COPY $rc0
+    %1:_(p1) = COPY $rc1
+    G_STORE %1, %0 :: (store 1)
     RTS
 ...
 ---
@@ -2695,6 +2886,18 @@ body: |
     ; CHECK-NEXT: RTS implicit [[COPY1]](p0)
     %0:_(p0) = COPY $rs1
     %1:_(p0) = G_FREEZE %0
+    RTS implicit %1
+...
+---
+name: freeze_p1
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: freeze_p1
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p1) = COPY [[COPY]](p1)
+    ; CHECK-NEXT: RTS implicit [[COPY1]](p1)
+    %0:_(p1) = COPY $rc1
+    %1:_(p1) = G_FREEZE %0
     RTS implicit %1
 ...
 ---

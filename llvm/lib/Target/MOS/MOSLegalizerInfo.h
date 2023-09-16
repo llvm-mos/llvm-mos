@@ -93,6 +93,9 @@ private:
                                     GLoadStore &MI) const;
   bool selectIndirectAddressing(LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI, GLoadStore &MI) const;
+  bool selectZeroIndexedAddressing(LegalizerHelper &Helper,
+                                   MachineRegisterInfo &MRI,
+                                   GLoadStore &MI) const;
   bool legalizeMemOp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;
   bool tryHuCBlockCopy(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
