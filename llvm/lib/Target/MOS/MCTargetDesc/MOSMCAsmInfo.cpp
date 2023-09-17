@@ -23,7 +23,7 @@ MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   CalleeSaveStackSlotSize = 0;
   SeparatorString = "\n";
   CommentString = ";";
-  DollarIsHexPrefix = true;
+  UseMotorolaIntegers = true;
   // Maximum instruction length across all supported subtargets.
   MaxInstLength = 7;
   SupportsDebugInformation = true;

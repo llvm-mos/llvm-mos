@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple mos --filetype=obj -o=%t.obj %s
+; RUN: llvm-mc -triple mos -motorola-integers --filetype=obj -o=%t.obj %s
 ; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.obj | FileCheck %s
 
 ; Test all the modifiers for the MOS assembler.

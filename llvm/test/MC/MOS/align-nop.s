@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple mos --filetype=obj -I %S/Inputs -o=%t.obj %s
+; RUN: llvm-mc -triple mos -motorola-integers --filetype=obj -I %S/Inputs -o=%t.obj %s
 ; RUN: llvm-objdump -d %t.obj | FileCheck %s
 
 .text

@@ -1,4 +1,4 @@
-; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mosr65c02 < %s | FileCheck %s
+; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos -motorola-integers --mcpu=mosr65c02 < %s | FileCheck %s
 
 	rmb0    $ea                 ; CHECK: encoding: [0x07,0xea]
 	bbr0    $ea, $ea            ; CHECK: encoding: [0x0f,0xea,0xea]

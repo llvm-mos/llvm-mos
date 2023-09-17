@@ -1,15 +1,15 @@
-# RUN: llvm-mc -filetype=obj -triple=mos %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,6502
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos6502x %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,6502X
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65c02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65C02
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosr65c02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,R65C02
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65c02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,W65C02
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosw65816 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,W65816
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65el02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65EL02
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65ce02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65CE02
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=moshuc6280 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,HUC6280
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos65dtv02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65DTV02
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos4510 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,4510
-# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos45gs02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,45GS02
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,6502
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos6502x %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,6502X
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos65c02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65C02
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mosr65c02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,R65C02
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mosw65c02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,W65C02
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mosw65816 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,W65816
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos65el02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65EL02
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos65ce02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65CE02
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=moshuc6280 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,HUC6280
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos65dtv02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65DTV02
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos4510 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,4510
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos45gs02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,45GS02
 
 # returns with 42 in accumulator
 .globl _start

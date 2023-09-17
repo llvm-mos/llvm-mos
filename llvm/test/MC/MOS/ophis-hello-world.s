@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple mos -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -triple mos -motorola-integers -show-encoding < %s | FileCheck %s
 ; source: https://michaelcmartin.github.io/Ophis/book/x162.html
 
 	ldx	#$0                     ; CHECK: encoding: [0xa2,0x00]
