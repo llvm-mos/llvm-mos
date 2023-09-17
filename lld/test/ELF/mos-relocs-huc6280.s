@@ -1,5 +1,5 @@
 # REQUIRES: mos
-# RUN: llvm-mc -filetype=obj -triple=mos --mcpu=moshuc6280 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers --mcpu=moshuc6280 %s -o %t.o
 # RUN: llvm-objdump -r %t.o | FileCheck %s --check-prefix=RELOCS
 # RUN: ld.lld %t.o --defsym=sym1=0x1234 --defsym=sym2=0x5678 --defsym=sym3=0x9abc --defsym=sym4=0x5a -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s

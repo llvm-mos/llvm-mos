@@ -1,5 +1,5 @@
 # REQUIRES: mos
-# RUN: llvm-mc -filetype=obj -triple=mos -mos-force-pcrel-reloc %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mos-force-pcrel-reloc %s -o %t.o
 # RUN: llvm-objdump -r %t.o | FileCheck %s --check-prefix=RELOCS
 # RUN: ld.lld %t.o --defsym=adr16=0x1234 --defsym=data32=0x12345678 -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s

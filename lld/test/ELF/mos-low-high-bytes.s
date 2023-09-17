@@ -1,5 +1,5 @@
 ; REQUIRES: mos
-; RUN: llvm-mc -triple mos --filetype=obj -o=%t.obj %s
+; RUN: llvm-mc -triple mos -motorola-integers --filetype=obj -o=%t.obj %s
 ; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.obj 
 ; RUN: lld -flavor gnu %t.obj -o %t.elf
 ; RUN: llvm-readelf --all %t.elf 
