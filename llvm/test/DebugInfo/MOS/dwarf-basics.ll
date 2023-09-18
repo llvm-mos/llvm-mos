@@ -21,7 +21,7 @@
 ; CHECK: file format elf32-mos
 
 ; CHECK: .debug_info contents:
-; CHECK: Compile Unit: length = 0x{{.*}}, format = DWARF32, version = 0x0003, abbr_offset = 0x0000, addr_size = 0x02 (next unit at 0x{{.*}})
+; CHECK: Compile Unit: length = 0x{{.*}}, format = DWARF32, version = 0x0003, abbr_offset = 0x0000, addr_size = 0x04 (next unit at 0x{{.*}})
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_AT_producer    ("clang version 14.0.0 (https://github.com/llvm/llvm-project ...)")

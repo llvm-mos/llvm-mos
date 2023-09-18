@@ -19,7 +19,10 @@
 namespace llvm {
 
 MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
-  CodePointerSize = 2;
+  // While the platform uses 2-byte pointers, the ELF files use 4-byte pointers
+  // to convey banking information; this field is used, among others, by the
+  // DWARF debug structures.
+  CodePointerSize = 4;
   CalleeSaveStackSlotSize = 0;
   SeparatorString = "\n";
   CommentString = ";";
