@@ -1423,25 +1423,29 @@ bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   auto [DestReg, SrcReg] = MI.getFirst2Regs();
-  auto DestType = MRI.getType(DestReg);
-  auto SrcType = MRI.getType(SrcReg);
+  auto DestTypeP = MRI.getType(DestReg);
+  auto SrcTypeP = MRI.getType(SrcReg);
+  LLT DestTypeS = LLT::scalar(DestTypeP.getScalarSizeInBits());
+  LLT SrcTypeS = LLT::scalar(SrcTypeP.getScalarSizeInBits());
 
-  LLT DestS = LLT::scalar(DestType.getScalarSizeInBits());
+  auto Tmp = Builder.buildPtrToInt(SrcTypeS, SrcReg);
 
-  if (DestType.getScalarSizeInBits() < SrcType.getScalarSizeInBits()) {
+  if (DestTypeS.getSizeInBits() < SrcTypeS.getSizeInBits()) {
     // larger -> smaller address space: truncate
-    Builder.buildTrunc(DestReg, SrcReg);
-  } else if (DestType.getScalarSizeInBits() == SrcType.getScalarSizeInBits()) {
-    Builder.buildCopy(DestReg, SrcReg);
-  } else {
-    // smaller -> larger address space: zero-extend
-    if (SrcType.getAddressSpace() == MOS::ZeroPageMemory) {
-      Builder.buildOr(DestReg, Builder.buildZExt(DestReg, SrcReg),
-                      Builder.buildConstant(DestS, STI.getZeroPageOffset()));
-    } else {
-      Builder.buildZExt(DestReg, SrcReg);
-    }
+    Tmp = Builder.buildTrunc(DestTypeS, Tmp);
+  } else if (DestTypeS.getSizeInBits() > SrcTypeS.getSizeInBits()) {
+    // smaller -> larger address space: extend
+    assert(SrcTypeP.getAddressSpace() == MOS::ZeroPageMemory);
+    assert(DestTypeP.getAddressSpace() == MOS::DataMemory);
+    // Dest = (Src | ZeroPageOffset)
+    Tmp = Builder.buildOr(DestTypeS, Builder.buildZExt(DestTypeS, Tmp),
+                          Builder.buildConstant(
+                              DestTypeS, STI.getZeroPageOffset()));
   }
+
+  assert(MRI.getType(Tmp->getOperand(0).getReg()) == DestTypeS);
+
+  Builder.buildIntToPtr(DestReg, Tmp);
 
   MI.eraseFromParent();
   return true;
