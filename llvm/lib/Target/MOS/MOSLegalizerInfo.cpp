@@ -1437,10 +1437,12 @@ bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
     // smaller -> larger address space: extend
     assert(SrcTypeP.getAddressSpace() == MOS::ZeroPageMemory);
     assert(DestTypeP.getAddressSpace() == MOS::DataMemory);
-    // Dest = (Src | ZeroPageOffset)
-    Tmp = Builder.buildOr(DestTypeS, Builder.buildZExt(DestTypeS, Tmp),
-                          Builder.buildConstant(
-                              DestTypeS, STI.getZeroPageOffset()));
+    Tmp = Builder.buildZExt(DestTypeS, Tmp);
+    if (STI.getZeroPageOffset() != 0) {
+      // Dest = (Src | ZeroPageOffset)
+      Tmp = Builder.buildOr(DestTypeS, Tmp, Builder.buildConstant(
+                                DestTypeS, STI.getZeroPageOffset()));
+    }
   }
 
   assert(MRI.getType(Tmp->getOperand(0).getReg()) == DestTypeS);

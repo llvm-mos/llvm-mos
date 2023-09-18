@@ -26,6 +26,14 @@
     ret i16 1
   }
 
+  define i16 @addrspace_cast_data_zp() #0 {
+    ret i16 1
+  }
+
+  define i16 @addrspace_cast_zp_data() #0 {
+    ret i16 1
+  }
+
   attributes #0 = { optsize }
 ---
 name: memcpy_to_tii
@@ -133,4 +141,44 @@ body: |
     %3:_(p1) = G_PTR_ADD %0, %2
     %4:_(s8) = G_LOAD %3 :: (load (s8))
     RTS implicit %4
+...
+---
+name: addrspace_cast_data_zp
+body: |
+  bb.1 (%ir-block.0):
+    ; CHECK-LABEL: name: addrspace_cast_data_zp
+    ; CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY $rs2
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]](s16)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s16) = G_PTRTOINT [[INTTOPTR]](p0)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[PTRTOINT]](s16)
+    ; CHECK-NEXT: [[INTTOPTR1:%[0-9]+]]:_(p1) = G_INTTOPTR [[TRUNC]](s8)
+    ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s8) = G_PTRTOINT [[INTTOPTR1]](p1)
+    ; CHECK-NEXT: RTS implicit [[PTRTOINT1]](s8)
+    %0:_(s16) = COPY $rs2
+    %1:_(p0) = G_INTTOPTR %0:_(s16)
+    %2:_(p1) = G_ADDRSPACE_CAST %1:_(p0)
+    %3:_(s8) = G_PTRTOINT %2:_(p1)
+    RTS implicit %3
+...
+---
+name: addrspace_cast_zp_data
+body: |
+  bb.1 (%ir-block.0):
+    ; CHECK-LABEL: name: addrspace_cast_zp_data
+    ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $rc2
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[COPY]](s8)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[INTTOPTR]](p1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 32
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s8) = G_OR [[PTRTOINT]], [[C]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s8) = G_OR [[C]], [[C1]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s16) = G_MERGE_VALUES [[OR]](s8), [[OR1]](s8)
+    ; CHECK-NEXT: [[INTTOPTR1:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s16)
+    ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s16) = G_PTRTOINT [[INTTOPTR1]](p0)
+    ; CHECK-NEXT: RTS implicit [[PTRTOINT1]](s16)
+    %0:_(s8) = COPY $rc2
+    %1:_(p1) = G_INTTOPTR %0:_(s8)
+    %2:_(p0) = G_ADDRSPACE_CAST %1:_(p1)
+    %3:_(s16) = G_PTRTOINT %2:_(p0)
+    RTS implicit %3
 ...
