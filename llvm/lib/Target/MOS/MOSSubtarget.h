@@ -80,6 +80,10 @@ public:
     return &InlineAsmLoweringInfo;
   }
 
+  uint16_t getZeroPageOffset() const {
+    return hasHUC6280() ? 0x2000 : 0;
+  }
+
   bool enableMachineScheduler() const override { return true; }
   bool enableSubRegLiveness() const override { return true; }
 

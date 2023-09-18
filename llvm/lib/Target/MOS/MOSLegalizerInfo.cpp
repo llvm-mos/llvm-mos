@@ -82,11 +82,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .maxScalar(0, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder(G_FRAME_INDEX)
-      .legalFor({P})
-      .unsupported();
-
-  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_BLOCK_ADDR})
+  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_FRAME_INDEX, G_BLOCK_ADDR})
       .legalFor({P, PZ})
       .unsupported();
 
@@ -111,7 +107,6 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   // Type Conversions
 
-  // TODO: Handle HuC6280 zero page conversion
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({{P, S16}, {PZ, S8}})
       .scalarSameSizeAs(1, 0)
@@ -212,9 +207,11 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .customFor({{P, S16}, {PZ, S8}})
+      .scalarSameSizeAs(1, 0)
       .unsupported();
   getActionDefinitionsBuilder(G_PTRMASK)
       .customFor({{P, S16}, {PZ, S8}})
+      .scalarSameSizeAs(1, 0)
       .unsupported();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX}).lower();
@@ -1423,10 +1420,13 @@ bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
                                              MachineRegisterInfo &MRI,
                                              MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   auto [DestReg, SrcReg] = MI.getFirst2Regs();
   auto DestType = MRI.getType(DestReg);
   auto SrcType = MRI.getType(SrcReg);
+
+  LLT DestS = LLT::scalar(DestType.getScalarSizeInBits());
 
   if (DestType.getScalarSizeInBits() < SrcType.getScalarSizeInBits()) {
     // larger -> smaller address space: truncate
@@ -1435,8 +1435,12 @@ bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
     Builder.buildCopy(DestReg, SrcReg);
   } else {
     // smaller -> larger address space: zero-extend
-    // TODO: Handle HuC6280 zero page conversion
-    Builder.buildZExt(DestReg, SrcReg);
+    if (SrcType.getAddressSpace() == MOS::ZeroPageMemory) {
+      Builder.buildOr(DestReg, Builder.buildZExt(DestReg, SrcReg),
+                      Builder.buildConstant(DestS, STI.getZeroPageOffset()));
+    } else {
+      Builder.buildZExt(DestReg, SrcReg);
+    }
   }
 
   MI.eraseFromParent();
@@ -1751,8 +1755,8 @@ bool MOSLegalizerInfo::selectZeroIndexedAddressing(LegalizerHelper &Helper,
                                                    MachineRegisterInfo &MRI,
                                                    GLoadStore &MI) const {
   // Selects absolute indexed, but with the pointer as the index.
-  // TODO: Handle HuC6280?
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   assert(MRI.getType(MI.getPointerReg()).getScalarSizeInBits() == 8);
   LLT S = LLT::scalar(8);
@@ -1773,7 +1777,7 @@ bool MOSLegalizerInfo::selectZeroIndexedAddressing(LegalizerHelper &Helper,
   unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS_IDX : MOS::G_STORE_ABS_IDX;
   Builder.buildInstr(Opcode)
       .add(MI.getOperand(0))
-      .addImm(Offset)
+      .addImm(STI.getZeroPageOffset() + (Offset & 0xFF))
       .addUse(AddrP)
       .addMemOperand(*MI.memoperands_begin());
   MI.eraseFromParent();
