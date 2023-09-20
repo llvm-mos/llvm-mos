@@ -3974,6 +3974,13 @@ size_t MemtagDescriptors::getSize() const {
   return createMemtagDescriptors(symbols);
 }
 
+XO65Section::XO65Section(const XO65Segment &segment)
+    : SyntheticSection(segment.flags, segment.type, segment.alignment,
+                       segment.sectionName),
+      segmentName(segment.name), size(segment.size) {}
+
+void XO65Section::writeTo(uint8_t *buf) { memcpy(buf, contents.data(), size); }
+
 InStruct elf::in;
 
 std::vector<Partition> elf::partitions;

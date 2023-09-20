@@ -37,6 +37,8 @@ namespace lld::elf {
 class InputFile;
 class BinaryFile;
 class BitcodeFile;
+class XO65Enclave;
+class XO65File;
 class ELFFileBase;
 class SharedFile;
 class InputSectionBase;
@@ -345,6 +347,8 @@ struct Config {
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
   StringRef packageMetadata;
+  StringRef ld65Path;
+  StringRef od65Path;
 
   // The following config options do not directly correspond to any
   // particular command line options.
@@ -451,6 +455,7 @@ struct Ctx {
   SmallVector<BinaryFile *, 0> binaryFiles;
   SmallVector<BitcodeFile *, 0> bitcodeFiles;
   SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
+  XO65Enclave *xo65Enclave;
   SmallVector<InputSectionBase *, 0> inputSections;
   SmallVector<EhInputSection *, 0> ehInputSections;
   // Duplicate symbol candidates.

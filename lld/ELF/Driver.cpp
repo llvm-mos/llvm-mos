@@ -97,6 +97,7 @@ void Ctx::reset() {
   binaryFiles.clear();
   bitcodeFiles.clear();
   lazyBitcodeFiles.clear();
+  xo65Enclave = nullptr;
   inputSections.clear();
   ehInputSections.clear();
   duplicates.clear();
@@ -323,6 +324,9 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     break;
   case file_magic::elf_relocatable:
     files.push_back(createObjFile(mbref, "", inLib));
+    break;
+  case file_magic::xo65_object:
+    files.push_back(make<XO65File>(mbref));
     break;
   default:
     error(path + ": unknown file type");
@@ -577,8 +581,8 @@ static void checkZOptions(opt::InputArgList &args) {
 }
 
 constexpr const char *saveTempsValues[] = {
-    "resolution", "preopt",     "promote", "internalize",  "import",
-    "opt",        "precodegen", "prelink", "combinedindex"};
+    "resolution", "preopt",     "promote", "internalize",   "import",
+    "opt",        "precodegen", "prelink", "combinedindex", "ld65"};
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
@@ -1202,6 +1206,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->ignoreFunctionAddressEquality =
       args.hasArg(OPT_ignore_function_address_equality);
   config->init = args.getLastArgValue(OPT_init, "_init");
+  config->ld65Path = args.getLastArgValue(OPT_ld65_path);
   config->ltoAAPipeline = args.getLastArgValue(OPT_lto_aa_pipeline);
   config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
   config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
@@ -1239,6 +1244,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   config->noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   config->nostdlib = args.hasArg(OPT_nostdlib);
+  config->od65Path = args.getLastArgValue(OPT_od65_path);
   config->oFormatBinary = isOutputFormatBinary(args);
   config->omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
@@ -2736,6 +2742,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
     initSectionsAndLocalSyms(file, /*ignoreComdats=*/false);
   });
   parallelForEach(ctx.objectFiles, postParseObjectFile);
+  if (ctx.xo65Enclave)
+    ctx.xo65Enclave->postParse();
   parallelForEach(ctx.bitcodeFiles,
                   [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx.nonPrevailingSyms) {
@@ -2859,6 +2867,11 @@ void LinkerDriver::link(opt::InputArgList &args) {
     for (BinaryFile *f : ctx.binaryFiles)
       for (InputSectionBase *s : f->getSections())
         ctx.inputSections.push_back(cast<InputSection>(s));
+    if (ctx.xo65Enclave) {
+      ctx.xo65Enclave->createSections();
+      for (InputSectionBase *s : ctx.xo65Enclave->getSections())
+        ctx.inputSections.push_back(s);
+    }
   }
 
   {

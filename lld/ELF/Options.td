@@ -273,6 +273,8 @@ defm just_symbols: Eq<"just-symbols", "Just link symbols">;
 
 defm keep_unique: Eq<"keep-unique", "Do not fold this symbol during ICF">;
 
+defm ld65_path: Eq<"ld65-path", "Path to ld65 linker">, MetaVarName<"<path>">;
+
 def library: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
   HelpText<"Search for library <libname>">;
 def library_path: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
@@ -316,6 +318,8 @@ def : Flag<["-"], "w">, Alias<no_warnings>, HelpText<"Alias for --no-warnings">;
 
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
+
+defm od65_path: Eq<"od65-path", "Path to od65 object file dump utility">, MetaVarName<"<path>">;
 
 defm oformat: EEq<"oformat", "Specify the binary format for the output object file">,
   MetaVarName<"[elf,binary]">;
@@ -623,7 +627,7 @@ def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
 def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def save_temps_eq: JJ<"save-temps=">, HelpText<"Save select intermediate LTO compilation results">,
-  Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex">;
+  Values<"resolution,preopt,promote,internalize,import,opt,precodegen,prelink,combinedindex,ld65">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
 defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-names",

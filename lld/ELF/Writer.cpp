@@ -626,6 +626,9 @@ template <class ELFT> void Writer<ELFT>::run() {
   }
 
   writeCustomOutputFormat();
+
+  if (ctx.xo65Enclave)
+    ctx.xo65Enclave->postWrite();
 }
 
 template <class ELFT, class RelTy>
@@ -1648,8 +1651,15 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
-    bool changed = target->needsThunks ? tc.createThunks(pass, outputSections)
-                                       : target->relaxOnce(pass);
+    bool changed = false;
+    if (ctx.xo65Enclave) {
+      changed |= ctx.xo65Enclave->link();
+      if (changed)
+        script->assignAddresses();
+    }
+
+    changed |= target->needsThunks ? tc.createThunks(pass, outputSections)
+                                   : target->relaxOnce(pass);
     ++pass;
 
     // With Thunk Size much smaller than branch range we expect to
