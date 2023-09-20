@@ -49,8 +49,8 @@ namespace MOS {
 
 /// An integer that identifies all of the supported MOS address spaces.
 enum AddressSpace {
-  DataMemory,
-  ZeroPageMemory,
+  MemoryAS,
+  ZeroPageAS,
   NumAddrSpaces,
 };
 

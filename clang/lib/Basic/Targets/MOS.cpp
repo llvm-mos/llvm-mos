@@ -158,12 +158,16 @@ llvm::ArrayRef<const char *> MOSTargetInfo::getGCCRegNames() const {
 }
 
 uint64_t MOSTargetInfo::getPointerWidthV(LangAS AddrSpace) const {
+  // Coerce all non-target address spaces to the default address space.
   if (!isTargetAddressSpace(AddrSpace))
-    return 16;
-  auto AS = toTargetAddressSpace(AddrSpace);
-  if (AS == 1)
+    return getPointerWidthV(LangAS::FirstTargetAddressSpace);
+
+  switch (toTargetAddressSpace(AddrSpace)) {
+  case 1: // Zero page memory
     return 8;
-  return 16;
+  default:
+    return 16;
+  }
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {

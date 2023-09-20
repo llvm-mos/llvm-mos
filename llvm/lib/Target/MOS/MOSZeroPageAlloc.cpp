@@ -350,7 +350,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     StringRef SecName = GV.getSection();
     if (MOS::isZeroPageSectionName(SecName) ||
-        GV.getAddressSpace() == MOS::ZeroPageMemory) {
+        GV.getAddressSpace() == MOS::ZeroPageAS) {
       size_t Size = (GV.getParent()->getDataLayout().getTypeSizeInBits(
             GV.getValueType()) +
           7) /
@@ -412,7 +412,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
                                UndefValue::get(Typ), "zp_stack",
                                /*InsertBefore=*/nullptr,
                                GlobalValue::NotThreadLocal,
-                               MOS::ZeroPageMemory);
+                               MOS::ZeroPageAS);
     LLVM_DEBUG(dbgs() << "  " << *Stack << '\n');
   }
 
@@ -430,7 +430,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
           Cand->GV->getLinkage(), Cand->GV->getInitializer());
       Cand->GV->replaceAllUsesWith(Tmp);
       Cand->GV->mutateType(
-          PointerType::get(Cand->GV->getValueType(), MOS::ZeroPageMemory));
+          PointerType::get(Cand->GV->getValueType(), MOS::ZeroPageAS));
       Tmp->replaceAllUsesWith(ConstantExpr::getAddrSpaceCast(
           Cand->GV, PointerType::get(Cand->GV->getValueType(), 0)));
       Tmp->eraseFromParent();
@@ -606,7 +606,7 @@ void MOSZeroPageAlloc::collectCandidates(
           const auto *GV = dyn_cast<GlobalVariable>(GO);
           if (!GV || GV->isDeclaration() || GV->getAlign().valueOrOne() != 1 ||
               GV->hasSection() || GV->hasImplicitSection() ||
-              GV->getAddressSpace() == MOS::ZeroPageMemory)
+              GV->getAddressSpace() == MOS::ZeroPageAS)
             continue;
 
           // Generally moving an absolute reference to the zero page saves one

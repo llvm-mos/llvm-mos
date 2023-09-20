@@ -2115,7 +2115,6 @@ bool CombinerHelper::matchCombineAddP2IToPtrAdd(
       // Don't handle cases where the integer is implicitly converted to the
       // pointer width.
       LLT PtrTy = MRI.getType(PtrReg.first);
-
       if (isLegalOrBeforeLegalizer({TargetOpcode::G_PTR_ADD, {PtrTy, IntTy}}))
         if (PtrTy.getScalarSizeInBits() == IntTy.getScalarSizeInBits())
           return true;

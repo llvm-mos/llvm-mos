@@ -30,7 +30,8 @@ void MOSTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM) {
 
 MCSection *MOSTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  if (MOS::getAddressSpace(GO) == MOS::ZeroPageMemory && !GO->hasSection()) {
+  // Place zero page variables in the .zp sections by default.
+  if (MOS::getAddressSpace(GO) == MOS::ZeroPageAS && !GO->hasSection()) {
     if (Kind.isNoInit())
       return ZpNoinitSection;
     if (Kind.isBSS())
@@ -38,7 +39,7 @@ MCSection *MOSTargetObjectFile::SelectSectionForGlobal(
     return ZpDataSection;
   }
 
-  // Otherwise, we work the same way as ELF.
+  // Use default ELF handling for all other cases.
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
 }
 

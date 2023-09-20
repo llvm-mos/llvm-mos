@@ -1435,8 +1435,8 @@ bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
     Tmp = Builder.buildTrunc(DestTypeS, Tmp);
   } else if (DestTypeS.getSizeInBits() > SrcTypeS.getSizeInBits()) {
     // smaller -> larger address space: extend
-    assert(SrcTypeP.getAddressSpace() == MOS::ZeroPageMemory);
-    assert(DestTypeP.getAddressSpace() == MOS::DataMemory);
+    assert(SrcTypeP.getAddressSpace() == MOS::ZeroPageAS);
+    assert(DestTypeP.getAddressSpace() == MOS::MemoryAS);
     Tmp = Builder.buildZExt(DestTypeS, Tmp);
     if (STI.getZeroPageOffset() != 0) {
       // Dest = (Src | ZeroPageOffset)
