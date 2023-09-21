@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple mos --filetype=obj -I %S/Inputs -o=%t.obj %s
+; RUN: llvm-mc -triple mos -motorola-integers --filetype=obj -I %S/Inputs -o=%t.obj %s
 ; RUN: llvm-objdump --all-headers --print-imm-hex -D %t.obj | FileCheck %s
 
 ; An 8-bit immediate value to be used as an address

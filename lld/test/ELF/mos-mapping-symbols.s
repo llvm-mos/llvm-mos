@@ -1,5 +1,5 @@
 # REQUIRES: mos
-# RUN: llvm-mc -filetype=obj -triple=mos --mcpu=mosw65816 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers --mcpu=mosw65816 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck %s
 

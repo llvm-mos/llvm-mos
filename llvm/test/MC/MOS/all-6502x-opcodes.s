@@ -1,4 +1,4 @@
-; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mos6502x < %s | FileCheck %s
+; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos -motorola-integers --mcpu=mos6502x < %s | FileCheck %s
 
 	slo ($ea, x)                ; CHECK: encoding: [0x03,0xea]
 	nop $ea                     ; CHECK: encoding: [0x04,0xea]

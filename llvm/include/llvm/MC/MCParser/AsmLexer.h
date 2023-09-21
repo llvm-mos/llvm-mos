@@ -62,12 +62,10 @@ private:
   AsmToken LexIdentifier();
   AsmToken LexSlash();
   AsmToken LexLineComment();
-  AsmToken LexDollarAsHexPrefix();
   AsmToken LexDigit();
   AsmToken LexSingleQuote();
   AsmToken LexQuote();
   AsmToken LexFloatLiteral();
-  AsmToken LexDollar();
   AsmToken LexHexFloatLiteral(bool NoIntDigits);
 
   StringRef LexUntilEndOfLine();

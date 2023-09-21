@@ -1,4 +1,4 @@
-; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mosw65816 < %s | FileCheck %s
+; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos -motorola-integers --mcpu=mosw65816 < %s | FileCheck %s
 
  	ora	$eaeaea                 ; CHECK: encoding: [0x0f,0xea,0xea,0xea]
  	ora	$eaeaea,x               ; CHECK: encoding: [0x1f,0xea,0xea,0xea]

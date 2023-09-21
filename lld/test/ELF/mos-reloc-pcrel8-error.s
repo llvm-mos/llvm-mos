@@ -1,5 +1,5 @@
 # REQUIRES: mos
-# RUN: llvm-mc -filetype=obj -triple=mos -mos-force-pcrel-reloc %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mos-force-pcrel-reloc %s -o %t.o
 # RUN: not ld.lld %t.o -o %t 2> %t.err
 # RUN: FileCheck %s --input-file %t.err
 

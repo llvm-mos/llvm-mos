@@ -126,10 +126,6 @@ protected:
   /// HLASM dialect.
   bool StarIsPC = false;
 
-  /// The '$' token, when followed immediately by hex characters, refers to
-  /// a hex constant.  Defaults to false.
-  bool DollarIsHexPrefix = false;
-
   /// This string, if specified, is used to separate instructions from each
   /// other when on the same line.  Defaults to ';'
   const char *SeparatorString;
@@ -650,7 +646,6 @@ public:
   bool getDollarIsPC() const { return DollarIsPC; }
   bool getDotIsPC() const { return DotIsPC; }
   bool getStarIsPC() const { return StarIsPC; }
-  bool getDollarIsHexPrefix() const { return DollarIsHexPrefix; }
   const char *getSeparatorString() const { return SeparatorString; }
 
   /// This indicates the column (zero-based) at which asm comments should be

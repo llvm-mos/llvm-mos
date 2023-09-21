@@ -1,4 +1,4 @@
-; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mos65el02 < %s | FileCheck %s
+; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos -motorola-integers --mcpu=mos65el02 < %s | FileCheck %s
 
  	ora	$ea,sp                  ; CHECK: encoding: [0x03,0xea]
  	ora	($ea,sp),y              ; CHECK: encoding: [0x13,0xea]

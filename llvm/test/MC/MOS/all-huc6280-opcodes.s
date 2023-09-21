@@ -1,4 +1,4 @@
-; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=moshuc6280 < %s | FileCheck %s
+; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos -motorola-integers --mcpu=moshuc6280 < %s | FileCheck %s
 
 	sxy                         ; CHECK: encoding: [0x02]
 	st0 #$ea                    ; CHECK: encoding: [0x03,0xea]

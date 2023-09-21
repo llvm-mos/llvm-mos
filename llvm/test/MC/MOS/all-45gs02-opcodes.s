@@ -1,4 +1,4 @@
-; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos --mcpu=mos45gs02 < %s | FileCheck %s
+; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos -motorola-integers --mcpu=mos45gs02 < %s | FileCheck %s
 	adc [$ab], z				; CHECK: encoding: [0xea,0x72,0xab]
 
 	adcq ($ab)					; CHECK: encoding: [0x42,0x42,0x72,0xab]

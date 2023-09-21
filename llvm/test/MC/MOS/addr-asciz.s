@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple mos --filetype=obj -o=%t.obj %s
+; RUN: llvm-mc -triple mos -motorola-integers --filetype=obj -o=%t.obj %s
 ; RUN: llvm-readelf --relocs -x .header %t.obj | FileCheck %s
 
 .section .header,"a",@progbits

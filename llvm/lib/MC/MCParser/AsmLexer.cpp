@@ -316,20 +316,6 @@ static std::string radixName(unsigned Radix) {
   }
 }
 
-AsmToken AsmLexer::LexDollarAsHexPrefix() {
-  if (!isHexDigit(*CurPtr)) {
-    return AsmToken(AsmToken::Dollar, StringRef(TokStart, 1));
-  }
-  while (isHexDigit(*(++CurPtr)))
-    ;
-  APInt Value(64, 0);
-  StringRef Result(TokStart+1, CurPtr - TokStart - 1);
-  if (Result.getAsInteger(16, Value)) {
-    return ReturnError(TokStart, "invalid hexdecimal number");
-  }
-  return intToken(Result, Value);
-}
-
 /// LexDigit: First character is [0-9].
 ///   Local Label: [0-9][:]
 ///   Forward/Backward Label: [0-9][fb]
@@ -841,8 +827,6 @@ AsmToken AsmLexer::LexToken() {
   case '*': return AsmToken(AsmToken::Star, StringRef(TokStart, 1));
   case ',': return AsmToken(AsmToken::Comma, StringRef(TokStart, 1));
   case '$': {
-    if (MAI.getDollarIsHexPrefix())
-      return LexDollarAsHexPrefix();
     if (LexMotorolaIntegers && isHexDigit(*CurPtr))
       return LexDigit();
     if (MAI.doesAllowDollarAtStartOfIdentifier())

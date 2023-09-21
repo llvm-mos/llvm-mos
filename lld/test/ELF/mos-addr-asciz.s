@@ -1,5 +1,5 @@
 # REQUIRES: mos
-# RUN: llvm-mc -filetype=obj -triple=mos %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers %s -o %t.o
 # RUN: ld.lld %t.o --defsym=adr16=12345 -o %t
 # RUN: llvm-readelf -x .R_MOS_ADDR_ASCIZ %t | FileCheck %s
 

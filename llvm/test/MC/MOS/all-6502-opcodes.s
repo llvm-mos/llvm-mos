@@ -1,4 +1,4 @@
-; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos < %s | FileCheck %s
+; RUN: llvm-mc -assemble --print-imm-hex --show-encoding -triple mos -motorola-integers < %s | FileCheck %s
 
  	brk                         ; CHECK: encoding: [0x00]
  	ora	($ea,x)                 ; CHECK: encoding: [0x01,0xea]

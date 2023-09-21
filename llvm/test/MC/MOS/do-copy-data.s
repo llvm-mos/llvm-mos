@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple mos < %s | FileCheck %s
+; RUN: llvm-mc -triple mos -motorola-integers < %s | FileCheck %s
 .data
 .fill 1
 
