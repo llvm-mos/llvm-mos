@@ -87,6 +87,7 @@ const MCExpr *MOSAsmPrinter::lowerConstant(const Constant *CV) {
 }
 
 void MOSAsmPrinter::EmitToStreamer(MCStreamer &S, MCInst &Inst) {
+  MOSAsmBackend::translateOpcodeToSubtarget(Inst, MF->getSubtarget());
   // If this instruction contains an out-of-range immediate address, perform an
   // early relax.
   MOSAsmBackend::relaxForImmediate(Inst, MF->getSubtarget<MOSSubtarget>());

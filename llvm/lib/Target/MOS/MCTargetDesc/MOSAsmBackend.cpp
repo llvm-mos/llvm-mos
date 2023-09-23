@@ -56,6 +56,15 @@ struct InstructionRelaxationEntry {
 #define GET_ZeroPageInstructionRelaxation_IMPL
 #define GET_ZeroBankInstructionRelaxation_DECL
 #define GET_ZeroBankInstructionRelaxation_IMPL
+
+struct MOSSPC700Entry {
+  unsigned From;
+  unsigned To;
+};
+
+#define GET_MOSSPC700Table_DECL
+#define GET_MOSSPC700Table_IMPL
+
 #include "MOSGenSearchableTables.inc"
 } // namespace MOS
 
@@ -372,6 +381,17 @@ bool MOSAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     OS << '\xea';
   }
   return true;
+}
+
+void MOSAsmBackend::translateOpcodeToSubtarget(MCInst &Inst,
+                                               const MCSubtargetInfo &STI) {
+  if (STI.hasFeature(MOS::FeatureSPC700)) {
+    // Convert from 6502 to SPC700 MIs.
+    const auto *MOSSPC =
+        MOS::getMOSSPC700Entry(Inst.getOpcode());
+    if (MOSSPC)
+      Inst.setOpcode(MOSSPC->To);
+  }
 }
 
 std::unique_ptr<llvm::MCObjectTargetWriter>

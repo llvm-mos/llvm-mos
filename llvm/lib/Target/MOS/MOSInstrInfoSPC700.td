@@ -14,6 +14,15 @@
 /// For unknown reasons, while many of its opcodes map closely to those of
 /// the 6502, their encoding is completely different.
 
+class MOSSPC700<Instruction from, Instruction to> {
+  Instruction From = from;
+  Instruction To = to;
+}
+
+class MOSSPC700Mode<string MosInstPrefix, string InstPrefix, string Suffix>
+  : MOSSPC700<!cast<Instruction>(MosInstPrefix # Suffix),
+              !cast<Instruction>(InstPrefix # Suffix)>;
+
 /// == SPC700 addressing mode syntax ==
 
 def SPC700ZeroPageZeroPage : AddressingMode {
@@ -184,6 +193,16 @@ multiclass SPC700MosAliasLoadStoreA<string MosOpcodeStr, string InstPrefix> {
   def : InstAlias<MosOpcodeStr # " ( $param ) , y", (!cast<Instruction>(InstPrefix # "_IndirectIndexed") addr8:$param)>;
 }
 
+multiclass SPC700MosSpcLoadStoreA<string MosInstPrefix, string InstPrefix> {
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_ZeroPage">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_Absolute">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_IndexedIndirect">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_ZeroPageX">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_AbsoluteX">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_AbsoluteY">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_IndirectIndexed">;
+}
+
 multiclass SPC700LoadStoreX<string prefix, string suffix, bits<3> aaa> {
   def _Absolute :
     SPC700Inst24<prefix, suffix, OpcodeABC<aaa, 0b010, 0b01>, Absolute>;
@@ -201,6 +220,12 @@ multiclass SPC700MosAliasLoadStoreX<string MosOpcodeStr, string InstPrefix> {
   def : InstAlias<MosOpcodeStr # " $param , y", (!cast<Instruction>(InstPrefix # "_ZeroPageY") addr8:$param)>;
 }
 
+multiclass SPC700MosSpcLoadStoreX<string MosInstPrefix, string InstPrefix> {
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_Absolute">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_ZeroPage">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_ZeroPageY">;
+}
+
 multiclass SPC700LoadStoreY<string prefix, string suffix, bits<3> aaa> {
   def _ZeroPage :
     SPC700Inst16<prefix, suffix, OpcodeABC<aaa, 0b010, 0b11>, ZeroPage>;
@@ -216,6 +241,12 @@ multiclass SPC700MosAliasLoadStoreY<string MosOpcodeStr, string InstPrefix> {
   def : InstAlias<MosOpcodeStr # " $param", (!cast<Instruction>(InstPrefix # "_ZeroPage") addr8:$param)>;
   def : InstAlias<MosOpcodeStr # " $param", (!cast<Instruction>(InstPrefix # "_Absolute") addr16:$param)>;
   def : InstAlias<MosOpcodeStr # " $param , x", (!cast<Instruction>(InstPrefix # "_ZeroPageX") addr8:$param)>;
+}
+
+multiclass SPC700MosSpcLoadStoreY<string MosInstPrefix, string InstPrefix> {
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_ZeroPage">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_Absolute">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_ZeroPageX">;
 }
 
 multiclass SPC700Arithmetic<string OpcodeStr, bits<3> aaa>
@@ -238,6 +269,11 @@ multiclass SPC700MosAliasArithmetic<string MosOpcodeStr, string InstPrefix>
   def : InstAlias<MosOpcodeStr # " #$param", (!cast<Instruction>(InstPrefix # "_Immediate") imm8:$param)>;
 }
 
+multiclass SPC700MosSpcArithmetic<string MosInstPrefix, string InstPrefix>
+    : SPC700MosSpcLoadStoreA<MosInstPrefix, InstPrefix> {
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_Immediate">;
+}
+
 multiclass SPC700ShiftInc<string OpcodeStr, bits<3> aaa> {
   def _ZeroPage :
     SPC700Inst16<OpcodeStr, "", OpcodeABC<aaa, 0b010, 0b11>, ZeroPage>;
@@ -255,6 +291,13 @@ multiclass SPC700ShiftInc<string OpcodeStr, bits<3> aaa> {
 multiclass SPC700MosAliasShiftInc<string MosOpcodeStr, string InstPrefix> {
   def : InstAlias<MosOpcodeStr, (!cast<Instruction>(InstPrefix # "_Accumulator"))>;
   def : InstAlias<MosOpcodeStr # " $param , x", (!cast<Instruction>(InstPrefix # "_ZeroPageX") addr8:$param)>;
+}
+
+multiclass SPC700MosSpcShiftInc<string MosInstPrefix, string InstPrefix> {
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_ZeroPage">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_ZeroPageX">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_Absolute">;
+  def : MOSSPC700Mode<MosInstPrefix, InstPrefix, "_Accumulator">;
 }
 
 class OpcodeSPC700Cmp<bits<1> a = 0, bits<1> b = 0>
@@ -492,8 +535,8 @@ def SPC700_CALL_Absolute : Inst24<"call", Opcode<0x3F>, Absolute>, InstCall;
 def SPC700_PCALL_LastPage : Inst16<"pcall", Opcode<0x4F>, ZeroPage>, InstCall;
 def SPC700_JMP_Absolute
     : Inst24<"jmp", Opcode<0x5F>, Absolute>, InstUnconditionalBranch;
-def SPC700_RET_Implied : Inst8<"ret", Opcode<0x6F>>;
-def SPC700_RETI_Implied : Inst8<"reti", Opcode<0x7F>>;
+def SPC700_RET_Implied : Inst8<"ret", Opcode<0x6F>>, InstReturn;
+def SPC700_RETI_Implied : Inst8<"reti", Opcode<0x7F>>, InstReturn;
 def SPC700_MOV_ZeroPageImmediate
     : SPC700Inst24TwoOp<"mov", "", Opcode<0x8F>, SPC700ZeroPageImmediate>;
 def SPC700_XCN_A : Inst8<"xcn a", Opcode<0x9F>>;
@@ -656,3 +699,89 @@ def : ZPIRE< SPC700_ROR_ZeroPage, SPC700_ROR_Absolute >;
 def : ZPIRE< SPC700_SBC_ZeroPage, SPC700_SBC_Absolute >;
 def : ZPIRE< SPC700_SBC_ZeroPageX, SPC700_SBC_AbsoluteX >;
 
+// MOS -> SPC700 translation table.
+
+// x0 opcodes
+def : MOSSPC700<CLC_Implied, SPC700_CLRC_Implied>;
+def : MOSSPC700<SEC_Implied, SPC700_SETC_Implied>;
+def : MOSSPC700<CLI_Implied, SPC700_EI_Implied>;
+def : MOSSPC700<SEI_Implied, SPC700_DI_Implied>;
+def : MOSSPC700<CLV_Implied, SPC700_CLRV_Implied>;
+
+// x2, x3 opcodes
+def : MOSSPC700<BBR_ZeroPage, SPC700_BBC_ZeroPage>;
+def : MOSSPC700<BBS_ZeroPage, SPC700_BBS_ZeroPage>;
+def : MOSSPC700<RMB_ZeroPage, SPC700_CLR1_ZeroPage>;
+def : MOSSPC700<SMB_ZeroPage, SPC700_SET1_ZeroPage>;
+
+// x4, x5, x6, x7, x8, x9 opcodes
+defm : SPC700MosSpcArithmetic<"ORA", "SPC700_OR">;
+defm : SPC700MosSpcArithmetic<"AND", "SPC700_AND">;
+defm : SPC700MosSpcArithmetic<"EOR", "SPC700_EOR">;
+defm : SPC700MosSpcArithmetic<"CMP", "SPC700_CMP">;
+defm : SPC700MosSpcArithmetic<"ADC", "SPC700_ADC">;
+defm : SPC700MosSpcArithmetic<"SBC", "SPC700_SBC">;
+defm : SPC700MosSpcLoadStoreA<"STA", "SPC700_STORE_A">;
+defm : SPC700MosSpcLoadStoreA<"LDA", "SPC700_LOAD_A">;
+defm : SPC700MosSpcLoadStoreX<"STX", "SPC700_STORE_X">;
+defm : SPC700MosSpcLoadStoreX<"LDX", "SPC700_LOAD_X">;
+def : MOSSPC700<CPX_Immediate, SPC700_CMP_X_Immediate>;
+def : MOSSPC700<LDA_Immediate, SPC700_LOAD_A_Immediate>;
+
+// xB, xC opcodes
+defm : SPC700MosSpcShiftInc<"ASL", "SPC700_ASL">;
+defm : SPC700MosSpcShiftInc<"ROL", "SPC700_ROL">;
+defm : SPC700MosSpcShiftInc<"LSR", "SPC700_LSR">;
+defm : SPC700MosSpcShiftInc<"ROR", "SPC700_ROR">;
+defm : SPC700MosSpcShiftInc<"DEC", "SPC700_DEC">;
+defm : SPC700MosSpcShiftInc<"INC", "SPC700_INC">;
+def : MOSSPC700<DEY_Implied, SPC700_DEC_Y>;
+def : MOSSPC700<INY_Implied, SPC700_INC_Y>;
+defm : SPC700MosSpcLoadStoreY<"STY", "SPC700_STORE_Y">;
+defm : SPC700MosSpcLoadStoreY<"LDY", "SPC700_LOAD_Y">;
+
+// xD opcodes
+def : MOSSPC700<PHP_Implied, SPC700_PUSH_PSW>;
+def : MOSSPC700<PHA_Implied, SPC700_PUSH_A>;
+def : MOSSPC700<PHX_Implied, SPC700_PUSH_X>;
+def : MOSSPC700<PHY_Implied, SPC700_PUSH_Y>;
+def : MOSSPC700<DEX_Implied, SPC700_DEC_X>;
+def : MOSSPC700<INX_Implied, SPC700_INC_X>;
+def : MOSSPC700<TAX_Implied, SPC700_MOV_X_A>;
+def : MOSSPC700<TXA_Implied, SPC700_MOV_A_X>;
+def : MOSSPC700<TSX_Implied, SPC700_MOV_X_SP>;
+def : MOSSPC700<TXS_Implied, SPC700_MOV_SP_X>;
+def : MOSSPC700<TYA_Implied, SPC700_MOV_A_Y>;
+def : MOSSPC700<TAY_Implied, SPC700_MOV_Y_A>;
+def : MOSSPC700<LDX_Immediate, SPC700_LOAD_X_Immediate>;
+def : MOSSPC700<LDY_Immediate, SPC700_LOAD_Y_Immediate>;
+def : MOSSPC700<CPY_Immediate, SPC700_CMP_Y_Immediate>;
+
+// xE opcodes
+def : MOSSPC700<CPX_ZeroPage, SPC700_CMP_X_ZeroPage>;
+def : MOSSPC700<CPY_ZeroPage, SPC700_CMP_Y_ZeroPage>;
+def : MOSSPC700<CPX_Absolute, SPC700_CMP_X_Absolute>;
+def : MOSSPC700<CPY_Absolute, SPC700_CMP_Y_Absolute>;
+def : MOSSPC700<TSB_Absolute, SPC700_TSET1>;
+def : MOSSPC700<TRB_Absolute, SPC700_TCLR1>;
+def : MOSSPC700<PLP_Implied, SPC700_POP_PSW>;
+def : MOSSPC700<PLA_Implied, SPC700_POP_A>;
+def : MOSSPC700<PLX_Implied, SPC700_POP_X>;
+def : MOSSPC700<PLY_Implied, SPC700_POP_Y>;
+
+// xF opcodes
+def : MOSSPC700<JSR_Absolute, SPC700_CALL_Absolute>;
+def : MOSSPC700<JMP_IndexedIndirect, SPC700_JMP_IndexedIndirect16>;
+def : MOSSPC700<RTS_Implied, SPC700_RET_Implied>;
+def : MOSSPC700<RTI_Implied, SPC700_RETI_Implied>;
+def : MOSSPC700<WAI_Implied, SPC700_SLEEP_Implied>;
+def : MOSSPC700<STP_Implied, SPC700_STOP_Implied>;
+
+def MOSSPC700Table : GenericTable {
+  let FilterClass = "MOSSPC700";
+  let CppTypeName = "MOSSPC700Entry";
+  let Fields = ["From", "To"];
+
+  let PrimaryKey = ["From"];
+  let PrimaryKeyName = "getMOSSPC700Entry";
+}
