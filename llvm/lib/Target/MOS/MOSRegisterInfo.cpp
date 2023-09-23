@@ -892,7 +892,13 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
           Cost += copyCost(MOS::A, SrcReg, STI);
         return Cost;
       }
+
       assert(DestReg == MOS::V);
+      if (STI.hasSPC700()) {
+        // PHA, PHP, PLA, ORA #imm, PHA, PLP, PLA
+        return MOSInstrCost(1, 4) * 6 + MOSInstrCost(2, 2);
+      }
+
       const TargetRegisterClass &StackRegClass =
           STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
 
