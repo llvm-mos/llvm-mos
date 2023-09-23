@@ -87,6 +87,11 @@ def Has45GS02 : Predicate<"Subtarget->has45GS02()">,
   let PredicateName = "Feature45GS02";
 }
 
+def HasSPC700 : Predicate<"Subtarget->HasSPC700()">,
+               AssemblerPredicate<(all_of FeatureSPC700), "SPC700"> {
+  let PredicateName = "FeatureSPC700";
+}
+
 /// These instruction format definitions exist, thanks to Neil Parker's
 /// analysis of the 65xx instruction set, at:
 /// http://nparker.llx.com/a2/opcodes.html
@@ -163,6 +168,15 @@ def imm3 : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm3">;
   let DecoderMethod = "decodeUImmOperand<3>";
   let OperandType = "OPERAND_IMM3";
+  let OperandNamespace = "MOSOp";
+  let Type = i8;
+}
+
+/// This operand will only match a value from 0 to 15 inclusive.
+def imm4 : Operand<i32> {
+  let ParserMatchClass = ImmediateAsmOperand<"Imm4">;
+  let DecoderMethod = "decodeUImmOperand<4>";
+  let OperandType = "OPERAND_IMM4";
   let OperandNamespace = "MOSOp";
   let Type = i8;
 }

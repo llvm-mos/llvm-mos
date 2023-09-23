@@ -229,6 +229,19 @@ std::optional<const uint8_t *> getDecoderTable65EL02(size_t Size) {
   }
 }
 
+std::optional<const uint8_t *> getDecoderTableSPC700(size_t Size) {
+  switch (Size) {
+  case 1:
+    return DecoderTablespc7008;
+  case 2:
+    return DecoderTablespc70016;
+  case 3:
+    return DecoderTablespc70024;
+  default:
+    return std::nullopt;
+  }
+}
+
 template <typename InsnType>
 static DecodeStatus
 decodeInstruction(std::optional<const uint8_t *> DecodeTable, MCInst &MI,
@@ -264,6 +277,26 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              uint64_t Address,
                                              raw_ostream &CStream) const {
   Size = 0;
+
+  // If on SPC700, process the SPC700 table only.
+  if (STI.getFeatureBits()[MOS::FeatureSPC700]) {
+    for (size_t InsnSize : seq_inclusive(1, 3)) {
+      if (Bytes.size() < InsnSize) {
+        return MCDisassembler::Fail;
+      }
+      uint64_t Insn = 0;
+      for (size_t Byte : seq((size_t)0, InsnSize)) {
+        Insn |= ((uint64_t)Bytes[Byte]) << (8 * Byte);
+      }
+      DecodeStatus Result = decodeInstruction(getDecoderTableSPC700(InsnSize),
+                                              Instr, Insn, Address, this, STI);
+      if (Result != MCDisassembler::Fail) {
+        Size = InsnSize;
+        return Result;
+      }
+    }
+    return MCDisassembler::Fail;
+  }
 
   // Check for 45GS02 extended mnemonics (5, 4, or 3 bytes)
   if (STI.getFeatureBits()[MOS::Feature45GS02]) {

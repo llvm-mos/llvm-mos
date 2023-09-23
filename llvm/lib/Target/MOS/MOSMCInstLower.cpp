@@ -786,9 +786,15 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
       case MOSOp::OPERAND_IMM3:
         return 8;
         break;
+      case MOSOp::OPERAND_IMM4:
+        return 16;
+        break;
       case MOSOp::OPERAND_IMM8:
       case MOSOp::OPERAND_ADDR8:
         return 256;
+        break;
+      case MOSOp::OPERAND_ADDR13:
+        return 8192;
         break;
       case MOSOp::OPERAND_IMM16:
       case MOSOp::OPERAND_ADDR16:

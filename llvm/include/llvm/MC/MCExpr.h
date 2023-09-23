@@ -365,7 +365,8 @@ public:
     VK_MOS_ADDR24_BANK,         // mos24bank()
     VK_MOS_ADDR24_SEGMENT,      // mos24segment()
     VK_MOS_ADDR24_SEGMENT_LO,   // mos24segmentlo()
-    VK_MOS_ADDR24_SEGMENT_HI    // mos24segmenthi()
+    VK_MOS_ADDR24_SEGMENT_HI,   // mos24segmenthi()
+    VK_MOS_ADDR13,              // mos13()
   };
 
 private:

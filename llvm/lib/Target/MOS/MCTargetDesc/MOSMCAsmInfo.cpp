@@ -27,6 +27,8 @@ MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   SeparatorString = "\n";
   CommentString = ";";
   UseMotorolaIntegers = true;
+  // Required for SPC700 $xx.0 bit addressing.
+  DotAsIntSeparator = true;
   // Maximum instruction length across all supported subtargets.
   MaxInstLength = 7;
   SupportsDebugInformation = true;

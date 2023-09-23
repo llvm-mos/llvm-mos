@@ -74,6 +74,10 @@ def Feature45GS02
     : SubtargetFeature<"mos-insns-45gs02", "Has45GS02Insns", "true",
                         "The new instructions present on 45GS02">;
 
+def FeatureSPC700
+    : SubtargetFeature<"mos-insns-spc700", "HasSPC700Insns", "true",
+                        "The SPC700 instruction set">;
+
 // A feature set aggregates features, grouping them. We don't want to create a
 // new member in MOSSubtarget (to store a value) for each set because we do not
 // care if the set is supported, only the subfeatures inside the set. We fix
@@ -154,6 +158,11 @@ def Family45GS02
       "45GS02",
       Family4510.Implies#[Feature45GS02]>;
 
+def FamilySPC700
+    : Family<"mosspc700",
+      "Sony 6502-like CPUs, including the SPC700",
+      [FeatureSPC700]>;
+
 //===---------------------------------------------------------------------===//
 // MOS Families
 //===---------------------------------------------------------------------===//
@@ -183,3 +192,4 @@ def : Device<"mossweet16", FamilySWEET16>;
 def : Device<"mos65dtv02", Family65DTV02>;
 def : Device<"mos4510", Family4510>;
 def : Device<"mos45gs02", Family45GS02>;
+def : Device<"mosspc700", FamilySPC700>;

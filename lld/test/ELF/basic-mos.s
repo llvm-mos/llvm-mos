@@ -44,6 +44,14 @@
 # RUN: ld.lld %t.o.4510 -o %t.4510
 # RUN: llvm-readobj --file-headers --sections -l %t.4510 | FileCheck %s -check-prefixes=CHECK,4510
 
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mos45gs02 %s -o %t.o.45gs02
+# RUN: ld.lld %t.o.45gs02 -o %t.45gs02
+# RUN: llvm-readobj --file-headers --sections -l %t.45gs02 | FileCheck %s -check-prefixes=CHECK,45GS02
+
+# RUN: llvm-mc -filetype=obj -triple=mos -mcpu=mosspc700 %s -o %t.o.spc700
+# RUN: ld.lld %t.o.spc700 -o %t.spc700
+# RUN: llvm-readobj --file-headers --sections -l %t.spc700 | FileCheck %s -check-prefixes=CHECK,SPC700
+
 # returns with 42 in accumulator
 .globl _start
 _start:
@@ -127,6 +135,16 @@ _start:
 //  4510-NEXT:    EF_MOS_ARCH_65C02 (0x8)
 //  4510-NEXT:    EF_MOS_ARCH_65CE02 (0x400)
 //  4510-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
+// 45GS02-NEXT:  Flags [
+// 45GS02-NEXT:    EF_MOS_ARCH_4510 (0x2000)
+// 45GS02-NEXT:    EF_MOS_ARCH_45GS02 (0x4000)
+// 45GS02-NEXT:    EF_MOS_ARCH_6502 (0x1)
+// 45GS02-NEXT:    EF_MOS_ARCH_6502_BCD (0x2)
+// 45GS02-NEXT:    EF_MOS_ARCH_65C02 (0x8)
+// 45GS02-NEXT:    EF_MOS_ARCH_65CE02 (0x400)
+// 45GS02-NEXT:    EF_MOS_ARCH_R65C02 (0x10)
+// SPC700-NEXT:  Flags [
+// SPC700-NEXT:    EF_MOS_ARCH_SPC700 (0x20000)
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   HeaderSize: 52
 // CHECK-NEXT:   ProgramHeaderEntrySize: 32

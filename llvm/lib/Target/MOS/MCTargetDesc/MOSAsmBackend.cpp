@@ -97,6 +97,7 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     break;
   case FK_Data_2:
   case MOS::Imm16:
+  case MOS::Addr13:
   case MOS::Addr16:
   case MOS::Addr24_Segment:
   case MOS::PCRel16:
