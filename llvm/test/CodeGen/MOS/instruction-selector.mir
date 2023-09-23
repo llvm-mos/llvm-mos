@@ -198,6 +198,30 @@ body: |
     RTS implicit %2
 ...
 ---
+name: add_zp_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: add_zp_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xc = COPY [[COPY]]
+    ; 6502-NEXT: [[ADCZpIdx:%[0-9]+]]:ac, [[ADCZpIdx1:%[0-9]+]]:cc, [[ADCZpIdx2:%[0-9]+]]:vc = ADCZpIdx [[COPY]], i16 123, [[COPY1]], [[LDCImm]] :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[ADCZpIdx]]
+    ;
+    ; 65C02-LABEL: name: add_zp_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm 0
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xc = COPY [[COPY]]
+    ; 65C02-NEXT: [[ADCZpIdx:%[0-9]+]]:ac, [[ADCZpIdx1:%[0-9]+]]:cc, [[ADCZpIdx2:%[0-9]+]]:vc = ADCZpIdx [[COPY]], i16 123, [[COPY1]], [[LDCImm]] :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[ADCZpIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ZP_IDX i16 123, %0 :: (load (s8))
+    %2:any(s8) = G_ADD %0, %1
+    RTS implicit %2
+...
+---
 name: add_abs_idx
 legalized: true
 regBankSelected: true
@@ -294,6 +318,28 @@ body: |
     RTS implicit %2
 ...
 ---
+name: and_zp_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: and_zp_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xc = COPY [[COPY]]
+    ; 6502-NEXT: [[ANDZpIdx:%[0-9]+]]:ac = ANDZpIdx [[COPY]], i8 123, [[COPY1]] :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[ANDZpIdx]]
+    ;
+    ; 65C02-LABEL: name: and_zp_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xc = COPY [[COPY]]
+    ; 65C02-NEXT: [[ANDZpIdx:%[0-9]+]]:ac = ANDZpIdx [[COPY]], i8 123, [[COPY1]] :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[ANDZpIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ZP_IDX i8 123, %0 :: (load (s8))
+    %2:any(s8) = G_AND %0, %1
+    RTS implicit %2
+...
+---
 name: and_abs_idx
 legalized: true
 regBankSelected: true
@@ -384,6 +430,28 @@ body: |
     RTS implicit %2
 ...
 ---
+name: eor_zp_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: eor_zp_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xc = COPY [[COPY]]
+    ; 6502-NEXT: [[EORZpIdx:%[0-9]+]]:ac = EORZpIdx [[COPY]], i16 123, [[COPY1]] :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[EORZpIdx]]
+    ;
+    ; 65C02-LABEL: name: eor_zp_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xc = COPY [[COPY]]
+    ; 65C02-NEXT: [[EORZpIdx:%[0-9]+]]:ac = EORZpIdx [[COPY]], i16 123, [[COPY1]] :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[EORZpIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ZP_IDX i16 123, %0 :: (load (s8))
+    %2:any(s8) = G_XOR %0, %1
+    RTS implicit %2
+...
+---
 name: eor_abs_idx
 legalized: true
 regBankSelected: true
@@ -470,6 +538,28 @@ body: |
     ; 65C02-NEXT: RTS implicit [[ORAAbs]]
     %0:any(s8) = COPY $x
     %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
+    %2:any(s8) = G_OR %0, %1
+    RTS implicit %2
+...
+---
+name: ora_zp_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: ora_zp_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xc = COPY [[COPY]]
+    ; 6502-NEXT: [[ORAZpIdx:%[0-9]+]]:ac = ORAZpIdx [[COPY]], i8 123, [[COPY1]] :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[ORAZpIdx]]
+    ;
+    ; 65C02-LABEL: name: ora_zp_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xc = COPY [[COPY]]
+    ; 65C02-NEXT: [[ORAZpIdx:%[0-9]+]]:ac = ORAZpIdx [[COPY]], i8 123, [[COPY1]] :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[ORAZpIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ZP_IDX i8 123, %0 :: (load (s8))
     %2:any(s8) = G_OR %0, %1
     RTS implicit %2
 ...
@@ -994,6 +1084,31 @@ body: |
     %1:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     %2:any(s8) = G_SUB %0, %1
     RTS implicit %2
+...
+---
+name: sub_zp_idx
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: sub_zp_idx
+    ; 6502: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xc = COPY $a
+    ; 6502-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm -1
+    ; 6502-NEXT: [[SBCZpIdx:%[0-9]+]]:ac, [[SBCZpIdx1:%[0-9]+]]:cc, [[SBCZpIdx2:%[0-9]+]]:vc = SBCZpIdx [[COPY]], i8 123, [[COPY1]], [[LDCImm]] :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[SBCZpIdx]]
+    ;
+    ; 65C02-LABEL: name: sub_zp_idx
+    ; 65C02: [[COPY:%[0-9]+]]:ac = COPY $x
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xc = COPY $a
+    ; 65C02-NEXT: [[LDCImm:%[0-9]+]]:cc = LDCImm -1
+    ; 65C02-NEXT: [[SBCZpIdx:%[0-9]+]]:ac, [[SBCZpIdx1:%[0-9]+]]:cc, [[SBCZpIdx2:%[0-9]+]]:vc = SBCZpIdx [[COPY]], i8 123, [[COPY1]], [[LDCImm]] :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[SBCZpIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = COPY $a
+    %2:any(s8) = G_LOAD_ZP_IDX i8 123, %1 :: (load (s8))
+    %3:any(s8) = G_SUB %0, %2
+    RTS implicit %3
 ...
 ---
 name: sub_abs_idx
@@ -1529,6 +1644,99 @@ body: |
     RTS
 ...
 ---
+name: cmpzpidx_brc
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpzpidx_brc
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xc = COPY $x
+    ; 6502-NEXT: [[CMPZpIdx:%[0-9]+]]:cc = CMPZpIdx [[COPY]], i8 123, [[COPY1]] :: (load (s8))
+    ; 6502-NEXT: GBR %bb.0, [[CMPZpIdx]], 1, implicit-def $c
+    ; 6502-NEXT: RTS
+    ;
+    ; 65C02-LABEL: name: cmpzpidx_brc
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xc = COPY $x
+    ; 65C02-NEXT: [[CMPZpIdx:%[0-9]+]]:cc = CMPZpIdx [[COPY]], i8 123, [[COPY1]] :: (load (s8))
+    ; 65C02-NEXT: GBR %bb.0, [[CMPZpIdx]], 1, implicit-def $c
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = COPY $x
+    %2:any(s8) = G_LOAD_ZP_IDX i8 123, %1 :: (load (s8))
+    %3:any(s1) = G_CONSTANT i1 -1
+    %4:any(s8), %5:any(s1), %6:any(s1), %7:any(s1), %8:any(s1) = G_SBC %0, %2, %3
+    G_BRCOND_IMM %5, %bb.0, 1
+    RTS
+...
+---
+name: cmpzpidx_brn
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpzpidx_brn
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xc = COPY $x
+    ; 6502-NEXT: [[CMPTermZpIdx:%[0-9]+]]:cc = CMPTermZpIdx [[COPY]], i8 123, [[COPY1]], implicit-def $nz :: (load (s8))
+    ; 6502-NEXT: BR %bb.0, $n, 1
+    ; 6502-NEXT: RTS
+    ;
+    ; 65C02-LABEL: name: cmpzpidx_brn
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xc = COPY $x
+    ; 65C02-NEXT: [[CMPTermZpIdx:%[0-9]+]]:cc = CMPTermZpIdx [[COPY]], i8 123, [[COPY1]], implicit-def $nz :: (load (s8))
+    ; 65C02-NEXT: BR %bb.0, $n, 1
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = COPY $x
+    %2:any(s8) = G_LOAD_ZP_IDX i8 123, %1 :: (load (s8))
+    %3:any(s1) = G_CONSTANT i1 -1
+    %4:any(s8), %5:any(s1), %6:any(s1), %7:any(s1), %8:any(s1) = G_SBC %0, %2, %3
+    G_BRCOND_IMM %6, %bb.0, 1
+    RTS
+...
+---
+name: cmpzpidx_brz
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: cmpzpidx_brz
+    ; 6502: successors: %bb.0(0x80000000)
+    ; 6502-NEXT: {{  $}}
+    ; 6502-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 6502-NEXT: [[COPY1:%[0-9]+]]:xc = COPY $x
+    ; 6502-NEXT: [[CMPTermZpIdx:%[0-9]+]]:cc = CMPTermZpIdx [[COPY]], i8 123, [[COPY1]], implicit-def $nz :: (load (s8))
+    ; 6502-NEXT: BR %bb.0, $z, 1
+    ; 6502-NEXT: RTS
+    ;
+    ; 65C02-LABEL: name: cmpzpidx_brz
+    ; 65C02: successors: %bb.0(0x80000000)
+    ; 65C02-NEXT: {{  $}}
+    ; 65C02-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; 65C02-NEXT: [[COPY1:%[0-9]+]]:xc = COPY $x
+    ; 65C02-NEXT: [[CMPTermZpIdx:%[0-9]+]]:cc = CMPTermZpIdx [[COPY]], i8 123, [[COPY1]], implicit-def $nz :: (load (s8))
+    ; 65C02-NEXT: BR %bb.0, $z, 1
+    ; 65C02-NEXT: RTS
+    %0:any(s8) = COPY $a
+    %1:any(s8) = COPY $x
+    %2:any(s8) = G_LOAD_ZP_IDX i8 123, %1 :: (load (s8))
+    %3:any(s1) = G_CONSTANT i1 -1
+    %4:any(s8), %5:any(s1), %6:any(s1), %7:any(s1), %8:any(s1) = G_SBC %0, %2, %3
+    G_BRCOND_IMM %8, %bb.0, 1
+    RTS
+...
+---
 name: cmpabsidx_brc
 legalized: true
 regBankSelected: true
@@ -1957,6 +2165,25 @@ body: |
     %0:any(s8) = COPY $a
     G_STORE_ABS %0, i16 1234 :: (store (s8))
     RTS
+...
+---
+name: load_zeropage_indexed
+legalized: true
+regBankSelected: true
+body: |
+  bb.0.entry:
+    ; 6502-LABEL: name: load_zeropage_indexed
+    ; 6502: [[COPY:%[0-9]+]]:xc = COPY $x
+    ; 6502-NEXT: [[LDAZpIdx:%[0-9]+]]:ac = LDAZpIdx i8 123, [[COPY]] :: (load (s8))
+    ; 6502-NEXT: RTS implicit [[LDAZpIdx]]
+    ;
+    ; 65C02-LABEL: name: load_zeropage_indexed
+    ; 65C02: [[COPY:%[0-9]+]]:xc = COPY $x
+    ; 65C02-NEXT: [[LDAZpIdx:%[0-9]+]]:ac = LDAZpIdx i8 123, [[COPY]] :: (load (s8))
+    ; 65C02-NEXT: RTS implicit [[LDAZpIdx]]
+    %0:any(s8) = COPY $x
+    %1:any(s8) = G_LOAD_ZP_IDX i8 123, %0 :: (load (s8))
+    RTS implicit %1
 ...
 ---
 name: load_absolute_indexed
