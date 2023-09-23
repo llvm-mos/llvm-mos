@@ -624,3 +624,35 @@ def : InstAlias<"wai", (SPC700_SLEEP_Implied)>;
 def : InstAlias<"stp", (SPC700_STOP_Implied)>;
 
 } // Predicates = [HasSPC700]
+
+// Zero page relaxation table entries.
+
+def : ZPIRE< SPC700_ADC_ZeroPage, SPC700_ADC_Absolute >;
+def : ZPIRE< SPC700_ADC_ZeroPageX, SPC700_ADC_AbsoluteX >;
+def : ZPIRE< SPC700_AND_ZeroPage, SPC700_AND_Absolute >;
+def : ZPIRE< SPC700_AND_ZeroPageX, SPC700_AND_AbsoluteX >;
+def : ZPIRE< SPC700_ASL_ZeroPage, SPC700_ASL_Absolute >;
+def : ZPIRE< SPC700_CMP_ZeroPage, SPC700_CMP_Absolute >;
+def : ZPIRE< SPC700_CMP_ZeroPageX, SPC700_CMP_AbsoluteX >;
+def : ZPIRE< SPC700_CMP_X_ZeroPage, SPC700_CMP_X_Absolute >;
+def : ZPIRE< SPC700_CMP_Y_ZeroPage, SPC700_CMP_Y_Absolute >;
+def : ZPIRE< SPC700_DEC_ZeroPage, SPC700_DEC_Absolute >;
+def : ZPIRE< SPC700_EOR_ZeroPage, SPC700_EOR_Absolute >;
+def : ZPIRE< SPC700_EOR_ZeroPageX, SPC700_EOR_AbsoluteX >;
+def : ZPIRE< SPC700_INC_ZeroPage, SPC700_INC_Absolute >;
+def : ZPIRE< SPC700_LOAD_A_ZeroPage, SPC700_LOAD_A_Absolute >;
+def : ZPIRE< SPC700_LOAD_A_ZeroPageX, SPC700_LOAD_A_AbsoluteX >;
+def : ZPIRE< SPC700_LOAD_X_ZeroPage, SPC700_LOAD_X_Absolute >;
+def : ZPIRE< SPC700_LOAD_Y_ZeroPage, SPC700_LOAD_Y_Absolute >;
+def : ZPIRE< SPC700_STORE_A_ZeroPage, SPC700_STORE_A_Absolute >;
+def : ZPIRE< SPC700_STORE_A_ZeroPageX, SPC700_STORE_A_AbsoluteX >;
+def : ZPIRE< SPC700_STORE_X_ZeroPage, SPC700_STORE_X_Absolute >;
+def : ZPIRE< SPC700_STORE_Y_ZeroPage, SPC700_STORE_Y_Absolute >;
+def : ZPIRE< SPC700_LSR_ZeroPage, SPC700_LSR_Absolute >;
+def : ZPIRE< SPC700_OR_ZeroPage, SPC700_OR_Absolute >;
+def : ZPIRE< SPC700_OR_ZeroPageX, SPC700_OR_AbsoluteX >;
+def : ZPIRE< SPC700_ROL_ZeroPage, SPC700_ROL_Absolute >;
+def : ZPIRE< SPC700_ROR_ZeroPage, SPC700_ROR_Absolute >;
+def : ZPIRE< SPC700_SBC_ZeroPage, SPC700_SBC_Absolute >;
+def : ZPIRE< SPC700_SBC_ZeroPageX, SPC700_SBC_AbsoluteX >;
+

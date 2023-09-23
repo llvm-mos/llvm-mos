@@ -829,12 +829,13 @@ def MMU_Immediate : Inst16<"mmu", Opcode<0xEF>, Immediate>;
 
 } // Predicates = [Has65EL02]
 
-include "MOSInstrInfoSPC700.td"
-
 // Operand type for basic block and function labels.
 def label : Operand<OtherVT>;
 
 include "MOSInstrInfoTables.td"
+
+include "MOSInstrInfoSPC700.td"
+
 include "MOSInstrPseudos.td"
 include "MOSInstrLogical.td"
 include "MOSInstrGISel.td"
