@@ -13,6 +13,7 @@
 #include "MCTargetDesc/MOSTargetStreamer.h"
 #include "MOS.h"
 #include "MOSRegisterInfo.h"
+#include "MOSSubtarget.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -46,13 +47,14 @@ class MOSOperand : public MCParsedAsmOperand {
 public:
   MOSOperand() = delete;
   /// Create an immediate MOSOperand.
-  MOSOperand(const MCExpr *Val, SMLoc S, SMLoc E)
-      : Kind(k_Immediate), Imm(Val), Start(S), End(E){};
+  MOSOperand(const MOSSubtarget &STI, const MCExpr *Val, SMLoc S, SMLoc E)
+      : Kind(k_Immediate), Imm(Val), Start(S), End(E), STI(STI){};
   /// Create a register MOSOperand.
-  MOSOperand(unsigned RegNum, SMLoc S, SMLoc E)
-      : Kind(k_Register), Reg(RegNum), Start(S), End(E){};
+  MOSOperand(const MOSSubtarget &STI, unsigned RegNum, SMLoc S, SMLoc E)
+      : Kind(k_Register), Reg(RegNum), Start(S), End(E), STI(STI){};
   /// Create a token MOSOperand.
-  MOSOperand(StringRef Str, SMLoc S) : Kind(k_Token), Tok(Str), Start(S){};
+  MOSOperand(const MOSSubtarget &STI, StringRef Str, SMLoc S)
+      : Kind(k_Token), Tok(Str), Start(S), STI(STI){};
 
 private:
   enum KindTy {
@@ -66,6 +68,7 @@ private:
   unsigned int Reg{};
   StringRef Tok;
   SMLoc Start, End;
+  const MOSSubtarget &STI;
 
 public:
   template <int64_t Low, int64_t High> bool isImmediate() const {
@@ -142,7 +145,18 @@ public:
   bool isImm16To24() const { return (!isImm16() && isImm24()); }
   bool isPCRel8() const { return isImm8(); }
   bool isPCRel16() const { return isImm16(); }
-  bool isAddr8() const { return isImm8(); }
+  bool isAddr8() const {
+    // For constants, use the offseted zero page.
+    auto ZeroPageOffset = STI.hasFeature(MOS::FeatureHUC6280) ? 0x2000 : 0;
+    if (ZeroPageOffset != 0 && isImm()) {
+      const auto *CE = dyn_cast<MCConstantExpr>(getImm());
+      if (CE) {
+        int64_t Value = CE->getValue();
+        return Value >= ZeroPageOffset && Value <= ZeroPageOffset + 0xFF;
+      }
+    }
+    return isImm8();
+  }
   bool isAddr16() const { return isImm16(); }
   bool isAddr24() const { return isImm24(); }
 
@@ -186,18 +200,21 @@ public:
     addImmOperands(Inst, N);
   }
 
-  static std::unique_ptr<MOSOperand> createImm(const MCExpr *Val, SMLoc S,
+  static std::unique_ptr<MOSOperand> createImm(const MOSSubtarget &STI,
+                                               const MCExpr *Val, SMLoc S,
                                                SMLoc E) {
-    return std::make_unique<MOSOperand>(Val, S, E);
+    return std::make_unique<MOSOperand>(STI, Val, S, E);
   }
 
-  static std::unique_ptr<MOSOperand> createReg(unsigned RegNum, SMLoc S,
+  static std::unique_ptr<MOSOperand> createReg(const MOSSubtarget &STI,
+                                               unsigned RegNum, SMLoc S,
                                                SMLoc E) {
-    return std::make_unique<MOSOperand>(RegNum, S, E);
+    return std::make_unique<MOSOperand>(STI, RegNum, S, E);
   }
 
-  static std::unique_ptr<MOSOperand> createToken(StringRef Str, SMLoc S) {
-    return std::make_unique<MOSOperand>(Str, S);
+  static std::unique_ptr<MOSOperand> createToken(const MOSSubtarget &STI,
+                                                 StringRef Str, SMLoc S) {
+    return std::make_unique<MOSOperand>(STI, Str, S);
   }
 
   void print(raw_ostream &O) const override {
@@ -221,7 +238,7 @@ public:
 
 /// Parses MOS assembly from a stream.
 class MOSAsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
+  const MOSSubtarget &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
   const std::string GenerateStubs = "gs";
@@ -239,7 +256,9 @@ public:
 
   MOSAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+      : MCTargetAsmParser(Options, STI, MII),
+        STI(static_cast<const MOSSubtarget &>(STI)),
+        Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -442,7 +461,8 @@ public:
   }
 
   void eatThatToken(OperandVector &Operands) {
-    Operands.push_back(MOSOperand::createToken(getLexer().getTok().getString(),
+    Operands.push_back(MOSOperand::createToken(STI,
+                                               getLexer().getTok().getString(),
                                                getLexer().getLoc()));
     Lex();
   }
@@ -548,7 +568,7 @@ public:
                                                  IsNegated, getContext());
 
     SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-    Operands.push_back(MOSOperand::createImm(Expression, S, E));
+    Operands.push_back(MOSOperand::createImm(STI, Expression, S, E));
 
     return false;
   }
@@ -565,7 +585,7 @@ public:
       Parser.eatToEndOfStatement();
       return Error(getLexer().getLoc(), ErrorMsg);
     }
-    Operands.push_back(MOSOperand::createImm(Expression, S, E));
+    Operands.push_back(MOSOperand::createImm(STI, Expression, S, E));
     return false;
   }
 
@@ -593,7 +613,7 @@ public:
     SMLoc S = getLexer().getLoc();
     SMLoc E = getLexer().getTok().getEndLoc();
     if (tryParseRegister(Reg, S, E) == MatchOperand_Success) {
-      Operands.push_back(MOSOperand::createReg(Reg, S, E));
+      Operands.push_back(MOSOperand::createReg(STI, Reg, S, E));
       return MatchOperand_Success;
     }
     return MatchOperand_NoMatch;
@@ -616,14 +636,14 @@ public:
             .CaseLower("rp", "rp")
             .Default(nullptr);
     if (LowerStr != nullptr) {
-      Operands.push_back(MOSOperand::createToken(LowerStr, S));
+      Operands.push_back(MOSOperand::createToken(STI, LowerStr, S));
       return MatchOperand_Success;
     }
 
     MCRegister Reg = 0;
     SMLoc E = getLexer().getTok().getEndLoc();
     if (tryParseRegister(Reg, S, E) == MatchOperand_Success) {
-      Operands.push_back(MOSOperand::createReg(Reg, S, E));
+      Operands.push_back(MOSOperand::createReg(STI, Reg, S, E));
       return MatchOperand_Success;
     }
     return MatchOperand_NoMatch;
@@ -651,7 +671,7 @@ public:
 
     */
     // First, the mnemonic goes on the stack.
-    Operands.push_back(MOSOperand::createToken(Mnemonic, NameLoc));
+    Operands.push_back(MOSOperand::createToken(STI, Mnemonic, NameLoc));
     AsmToken::TokenKind RightHandSide = AsmToken::Eof;
     while (getLexer().isNot(AsmToken::EndOfStatement) &&
            getLexer().isNot(AsmToken::Eof)) {

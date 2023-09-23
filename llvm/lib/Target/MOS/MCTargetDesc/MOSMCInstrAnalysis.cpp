@@ -53,9 +53,9 @@ MOSMCInstrAnalysis::evaluateMemoryOperandAddress(const MCInst &Inst,
                                                  uint64_t Addr,
                                                  uint64_t Size) const {
   uint64_t ZpAddrOffset = static_cast<const MOSSubtarget *>(STI)
-                            ->getZeroPageOffset();
+                              ->getZeroPageOffset();
   uint64_t AbsAddrMask = STI->hasFeature(MOS::FeatureW65816)
-                         ? 0xFFFFFF : 0xFFFF;
+                             ? 0xFFFFFF : 0xFFFF;
 
   unsigned NumOps = Inst.getNumOperands();
   // Assumption: Every opcode has only one memory operand.
