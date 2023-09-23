@@ -86,3 +86,8 @@
 // CHECK_MOS_45GS02: #define __mos65ce02__ 1
 // CHECK_MOS_45GS02: #define __mos__ 1
 // CHECK_MOS_45GS02: #define __mosr65c02__ 1
+
+// RUN: %clang -E -dM %s -o - 2>&1 -target mos -mcpu=mosspc700 \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_MOS_SPC700
+// CHECK_MOS_SPC700: #define __mos__ 1
+// CHECK_MOS_SPC700: #define __mosspc700__ 1

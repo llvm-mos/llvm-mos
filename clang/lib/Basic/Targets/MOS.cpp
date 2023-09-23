@@ -174,7 +174,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mos6502"},    {"mos6502x"},   {"mos65c02"},   {"mosr65c02"},
     {"mosw65c02"},  {"mosw65816"},  {"mos65el02"},  {"mos65ce02"},
     {"moshuc6280"}, {"mossweet16"}, {"mos65dtv02"}, {"mos4510"},
-    {"mos45gs02"}};
+    {"mos45gs02"},  {"mosspc700"}};
 
 bool MOSTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
@@ -211,6 +211,7 @@ void MOSTargetInfo::getTargetDefines(const LangOptions &Opts,
     .Case("mos65dtv02", {"6502", "65dtv02"})
     .Case("mos4510", {"4510", "6502", "65c02", "65ce02", "r65c02"})
     .Case("mos45gs02", {"4510", "45gs02", "6502", "65c02", "65ce02", "r65c02"})
+    .Case("mosspc700", {"spc700"})
     .Default({"6502"});
   for (const auto &CPUDefine: CPUDefines) {
     Builder.defineMacro("__mos" + CPUDefine + "__");
