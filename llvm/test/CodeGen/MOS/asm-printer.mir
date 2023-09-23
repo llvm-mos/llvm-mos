@@ -345,6 +345,16 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: inc_zeropage_x
+# CHECK-LABEL: inc_zeropage_x
+body: |
+  bb.0.entry:
+    INCIdx target-flags(zeropage) 42, $x
+    ; CHECK: inc 42,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: inc_absolute_x
 # CHECK-LABEL: inc_absolute_x
 body: |

@@ -1592,14 +1592,14 @@ bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
   case 8: {
     if (tryAbsoluteAddressing(Helper, MRI, MI))
       return true;
-    if (tryAbsoluteIndexedAddressing(Helper, MRI, MI))
+    if (tryAbsoluteIndexedAddressing(Helper, MRI, MI, true))
       return true;
     return selectZeroIndexedAddressing(Helper, MRI, MI);
   }
   case 16: {
     if (tryAbsoluteAddressing(Helper, MRI, MI))
       return true;
-    if (tryAbsoluteIndexedAddressing(Helper, MRI, MI))
+    if (tryAbsoluteIndexedAddressing(Helper, MRI, MI, false))
       return true;
     return selectIndirectAddressing(Helper, MRI, MI);
   }
@@ -1665,35 +1665,47 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
 
 bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                                     MachineRegisterInfo &MRI,
-                                                    GLoadStore &MI) const {
+                                                    GLoadStore &MI,
+                                                    bool ZP) const {
   LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   Register Addr = MI.getPointerReg();
   int64_t Offset = 0;
   Register Index = 0;
 
-  unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS_IDX : MOS::G_STORE_ABS_IDX;
+  unsigned Opcode = isa<GLoad>(MI) ?
+      (ZP ? MOS::G_LOAD_ZP_IDX : MOS::G_LOAD_ABS_IDX) :
+      (ZP ? MOS::G_STORE_ZP_IDX : MOS::G_STORE_ABS_IDX);
 
   while (true) {
     if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
       assert(Index); // Otherwise, Absolute addressing would have been selected.
-      Builder.buildInstr(Opcode)
-          .add(MI.getOperand(0))
-          .addImm(ConstAddr->Value.getSExtValue() + Offset)
-          .addUse(Index)
-          .addMemOperand(*MI.memoperands_begin());
+
+      Offset = ConstAddr->Value.getSExtValue() + Offset;
+      if (ZP)
+        Offset = STI.getZeroPageOffset() + (Offset & 0xFF);
+      auto Inst = Builder.buildInstr(Opcode)
+                      .add(MI.getOperand(0))
+                      .addImm(Offset)
+                      .addUse(Index)
+                      .addMemOperand(*MI.memoperands_begin());
+      if (ZP)
+        Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
       MI.eraseFromParent();
       return true;
     }
     if (const MachineInstr *GVAddr = getOpcodeDef(G_GLOBAL_VALUE, Addr, MRI)) {
       assert(Index); // Otherwise, Absolute addressing would have been selected.
       const MachineOperand &GV = GVAddr->getOperand(1);
-      Builder.buildInstr(Opcode)
-          .add(MI.getOperand(0))
-          .addGlobalAddress(GV.getGlobal(), GV.getOffset() + Offset)
-          .addUse(Index)
-          .addMemOperand(*MI.memoperands_begin());
+      auto Inst = Builder.buildInstr(Opcode)
+                      .add(MI.getOperand(0))
+                      .addGlobalAddress(GV.getGlobal(), GV.getOffset() + Offset)
+                      .addUse(Index)
+                      .addMemOperand(*MI.memoperands_begin());
+      if (ZP)
+        Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
       MI.eraseFromParent();
       return true;
     }
@@ -1702,11 +1714,13 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
       if (willBeStaticallyAllocated(FI)) {
         assert(
             Index); // Otherwise, Absolute addressing would have been selected.
-        Builder.buildInstr(Opcode)
-            .add(MI.getOperand(0))
-            .addFrameIndex(FI.getIndex(), FI.getOffset() + Offset)
-            .addUse(Index)
-            .addMemOperand(*MI.memoperands_begin());
+        auto Inst = Builder.buildInstr(Opcode)
+                        .add(MI.getOperand(0))
+                        .addFrameIndex(FI.getIndex(), FI.getOffset() + Offset)
+                        .addUse(Index)
+                        .addMemOperand(*MI.memoperands_begin());
+        if (ZP)
+          Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
         MI.eraseFromParent();
         return true;
       }
@@ -1768,12 +1782,14 @@ bool MOSLegalizerInfo::selectZeroIndexedAddressing(LegalizerHelper &Helper,
       Addr = PtrAddAddr->getBaseReg();
     }
   }
+
+  Offset = STI.getZeroPageOffset() + (Offset & 0xFF);
   
   auto AddrP = Builder.buildPtrToInt(S, Addr).getReg(0);
   unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ZP_IDX : MOS::G_STORE_ZP_IDX;
   auto Inst = Builder.buildInstr(Opcode)
                 .add(MI.getOperand(0))
-                .addImm(STI.getZeroPageOffset() + (Offset & 0xFF))
+                .addImm(Offset)
                 .addUse(AddrP)
                 .addMemOperand(*MI.memoperands_begin());
   Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);

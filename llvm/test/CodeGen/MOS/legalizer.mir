@@ -2456,8 +2456,8 @@ body: |
     ; CHECK-LABEL: name: load_zp_constant_ptradd_8
     ; CHECK: [[COPY:%[0-9]+]]:_(s8) = COPY $a
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY [[COPY]](s8)
-    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX 123, [[COPY1]](s8) :: (load (s8))
-    ; CHECK-NEXT: RTS implicit [[LOAD_ABS_IDX]](s8)
+    ; CHECK-NEXT: [[LOAD_ZP_IDX:%[0-9]+]]:_(s8) = G_LOAD_ZP_IDX target-flags(zeropage) 123, [[COPY1]](s8) :: (load (s8))
+    ; CHECK-NEXT: RTS implicit [[LOAD_ZP_IDX]](s8)
     %0:_(p1) = G_CONSTANT i8 123
     %1:_(s8) = COPY $a
     %2:_(p1) = G_PTR_ADD %0, %1
@@ -2473,8 +2473,8 @@ body: |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s8) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
-    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX 123, [[SELECT]](s8) :: (load (s8))
-    ; CHECK-NEXT: RTS implicit [[LOAD_ABS_IDX]](s8)
+    ; CHECK-NEXT: [[LOAD_ZP_IDX:%[0-9]+]]:_(s8) = G_LOAD_ZP_IDX target-flags(zeropage) 123, [[SELECT]](s8) :: (load (s8))
+    ; CHECK-NEXT: RTS implicit [[LOAD_ZP_IDX]](s8)
     %0:_(p1) = G_CONSTANT i8 123
     %1:_(s1) = COPY $c
     %2:_(s8) = G_ZEXT %1

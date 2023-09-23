@@ -45,12 +45,14 @@ static bool canUseZeroPageIdx(const MachineOperand &MO) {
       MOS::AS_ZeroPage;
 }
 
-// Instructions with indexed addressing must have bases < 256 wrapped in mos16.
-// Otherwise, if the assembly were later parsed, the zero page indexed
-// addressing mode might be selected, which has different semantics when Base +
-// Idx >= 256;
-static MCOperand wrapAbsoluteIdxBase(MCOperand Op, MCContext &Ctx) {
-  if (!Op.isImm() || Op.getImm() >= 256)
+// Instructions with indexed addressing must have zero page-matching bases
+// wrapped in mos16. Otherwise, if the assembly were later parsed, the zero
+// page indexed addressing mode might be selected, which has different
+// semantics when Base + Idx >= 256;
+static MCOperand wrapAbsoluteIdxBase(const MachineInstr *MI, MCOperand Op, MCContext &Ctx) {
+  const auto &STI = MI->getMF()->getSubtarget<MOSSubtarget>();
+  if (!Op.isImm() || Op.getImm() < STI.getZeroPageOffset() ||
+      Op.getImm() > STI.getZeroPageOffset() + 0xFF)
     return Op;
 
   // Using IMM16 here is a hack, but it seems to work. This really should be
@@ -112,7 +114,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     if (!lowerOperand(MI->getOperand(4), Addr))
       llvm_unreachable("Failed to lower operand");
     if (ImmConfusable)
-      Addr = wrapAbsoluteIdxBase(Addr, Ctx);
+      Addr = wrapAbsoluteIdxBase(MI, Addr, Ctx);
     OutMI.addOperand(Addr);
     return;
   }
@@ -180,7 +182,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     if (!lowerOperand(MI->getOperand(2), Addr))
       llvm_unreachable("Failed to lower operand");
     if (ImmConfusable)
-      Addr = wrapAbsoluteIdxBase(Addr, Ctx);
+      Addr = wrapAbsoluteIdxBase(MI, Addr, Ctx);
     OutMI.addOperand(Addr);
     return;
   }
@@ -252,7 +254,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     if (!lowerOperand(MI->getOperand(1), Tgt))
       llvm_unreachable("Failed to lower operand");
     if (!ZP)
-      Tgt = wrapAbsoluteIdxBase(Tgt, Ctx);
+      Tgt = wrapAbsoluteIdxBase(MI, Tgt, Ctx);
     OutMI.addOperand(Tgt);
     return;
   }
@@ -357,7 +359,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     if (!lowerOperand(MI->getOperand(2), Val))
       llvm_unreachable("Failed to lower operand");
     if (ImmConfusable)
-      Val = wrapAbsoluteIdxBase(Val, Ctx);
+      Val = wrapAbsoluteIdxBase(MI, Val, Ctx);
     OutMI.addOperand(Val);
     return;
   }
@@ -375,7 +377,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     if (!lowerOperand(MI->getOperand(0), Tgt))
       llvm_unreachable("Failed to lower operand");
     if (!ZP)
-      Tgt = wrapAbsoluteIdxBase(Tgt, Ctx);
+      Tgt = wrapAbsoluteIdxBase(MI, Tgt, Ctx);
     OutMI.addOperand(Tgt);
     return;
   }
@@ -458,7 +460,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     if (!lowerOperand(MI->getOperand(1), Val))
       llvm_unreachable("Failed to lower operand");
     if (ImmConfusable)
-      Val = wrapAbsoluteIdxBase(Val, Ctx);
+      Val = wrapAbsoluteIdxBase(MI, Val, Ctx);
     OutMI.addOperand(Val);
     return;
   }
@@ -479,7 +481,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     if (!lowerOperand(MI->getOperand(1), Val))
       llvm_unreachable("Failed to lower operand");
     if (!ZP)
-      Val = wrapAbsoluteIdxBase(Val, Ctx);
+      Val = wrapAbsoluteIdxBase(MI, Val, Ctx);
     OutMI.addOperand(Val);
     return;
   }
@@ -672,7 +674,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     if (!lowerOperand(MI->getOperand(0), Tgt))
       llvm_unreachable("Failed to lower operand");
     if (!ZP)
-      Tgt = wrapAbsoluteIdxBase(Tgt, Ctx);
+      Tgt = wrapAbsoluteIdxBase(MI, Tgt, Ctx);
     OutMI.addOperand(Tgt);
     return;
   }

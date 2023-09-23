@@ -90,7 +90,7 @@ private:
                              GLoadStore &MI) const;
   bool tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
-                                    GLoadStore &MI) const;
+                                    GLoadStore &MI, bool ZP) const;
   bool selectIndirectAddressing(LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI, GLoadStore &MI) const;
   bool selectZeroIndexedAddressing(LegalizerHelper &Helper,
