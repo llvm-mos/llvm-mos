@@ -1,0 +1,505 @@
+# RUN: llc -mtriple=mos -mcpu=mosspc700 -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
+---
+name: negative_imm8
+# CHECK-LABEL: negative_imm8
+body: |
+  bb.0.entry:
+    $a = LDImm -42
+    ; CHECK: mov a,#214
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: adc_absolute_x
+# CHECK-LABEL: adc_absolute_x
+body: |
+  bb.0.entry:
+    $a, $c, $v = ADCAbsIdx $a, 1234, $x, $c
+    ; CHECK: adc a,1234+x
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: adc_absolute_y
+# CHECK-LABEL: adc_absolute_y
+body: |
+  bb.0.entry:
+    $a, $c, $v = ADCAbsIdx $a, 1234, $y, $c
+    ; CHECK: adc a,1234+y
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: sbc_absolute_x
+# CHECK-LABEL: sbc_absolute_x
+body: |
+  bb.0.entry:
+    $a, $c, $v = SBCAbsIdx $a, 1234, $x, $c
+    ; CHECK: sbc a,1234+x
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: sbc_absolute_y
+# CHECK-LABEL: sbc_absolute_y
+body: |
+  bb.0.entry:
+    $a, $c, $v = SBCAbsIdx $a, 1234, $y, $c
+    ; CHECK: sbc a,1234+y
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: and_absolute_x
+# CHECK-LABEL: and_absolute_x
+body: |
+  bb.0.entry:
+    $a = ANDAbsIdx $a, 1234, $x
+    ; CHECK: and a,1234+x
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: and_absolute_y
+# CHECK-LABEL: and_absolute_y
+body: |
+  bb.0.entry:
+    $a = ANDAbsIdx $a, 1234, $y
+    ; CHECK: and a,1234+y
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: eor_absolute_x
+# CHECK-LABEL: eor_absolute_x
+body: |
+  bb.0.entry:
+    $a = EORAbsIdx $a, 1234, $x
+    ; CHECK: eor a,1234+x
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: eor_absolute_y
+# CHECK-LABEL: eor_absolute_y
+body: |
+  bb.0.entry:
+    $a = EORAbsIdx $a, 1234, $y
+    ; CHECK: eor a,1234+y
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: ora_absolute_x
+# CHECK-LABEL: ora_absolute_x
+body: |
+  bb.0.entry:
+    $a = ORAAbsIdx $a, 1234, $x
+    ; CHECK: or a,1234+x
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: ora_absolute_y
+# CHECK-LABEL: ora_absolute_y
+body: |
+  bb.0.entry:
+    $a = ORAAbsIdx $a, 1234, $y
+    ; CHECK: or a,1234+y
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: asl_zeropage
+# CHECK-LABEL: asl_zeropage
+body: |
+  bb.0.entry:
+    $rc0, $c = ASL $rc0
+    ; CHECK: asl __rc0
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: asl_accumulator
+# CHECK-LABEL: asl_accumulator
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: bb.0
+    $a, $c = ASL $a
+    ; CHECK: asl a
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: bcs_relative
+# CHECK-LABEL: bcs_relative
+body: |
+  bb.0.entry:
+    BR %bb.0.entry, $c, 1
+    ; CHECK: [[BLOCK:\.L.*]]: ; %entry
+    ; CHECK: bcs [[BLOCK]]
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: bcc_relative
+# CHECK-LABEL: bcc_relative
+body: |
+  bb.0.entry:
+    BR %bb.0.entry, $c, 0
+    ; CHECK: [[BLOCK:\.L.*]]: ; %entry
+    ; CHECK: bcc [[BLOCK]]
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: bra_relative
+# CHECK-LABEL: bra_relative
+body: |
+  bb.0.entry:
+    BRA %bb.0.entry
+    ; CHECK: [[BLOCK:\.L.*]]: ; %entry
+    ; CHECK: bra [[BLOCK]]
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cmp_immediate
+# CHECK-LABEL: cmp_immediate
+body: |
+  bb.0.entry:
+    $c = CMPImm $a, 42
+    ; CHECK: cmp a,#42
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cpx_immediate
+# CHECK-LABEL: cpx_immediate
+body: |
+  bb.0.entry:
+    $c = CMPImm $x, 42
+    ; CHECK: cmp x,#42
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cpy_immediate
+# CHECK-LABEL: cpy_immediate
+body: |
+  bb.0.entry:
+    $c = CMPImm $y, 42
+    ; CHECK: cmp y,#42
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cmp_zeropage
+# CHECK-LABEL: cmp_zeropage
+body: |
+  bb.0.entry:
+    $c = CMPImag8 $a, $rc0
+    ; CHECK: cmp a,__rc0
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cpx_zeropage
+# CHECK-LABEL: cpx_zeropage
+body: |
+  bb.0.entry:
+    $c = CMPImag8 $x, $rc0
+    ; CHECK: cmp x,__rc0
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cpy_zeropage
+# CHECK-LABEL: cpy_zeropage
+body: |
+  bb.0.entry:
+    $c = CMPImag8 $y, $rc0
+    ; CHECK: cmp y,__rc0
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cmp_absolute
+# CHECK-LABEL: cmp_absolute
+body: |
+  bb.0.entry:
+    $c = CMPAbs $a, 1234
+    ; CHECK: cmp a,1234
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cpx_absolute
+# CHECK-LABEL: cpx_absolute
+body: |
+  bb.0.entry:
+    $c = CMPAbs $x, 1234
+    ; CHECK: cmp x,1234
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cpy_absolute
+# CHECK-LABEL: cpy_absolute
+body: |
+  bb.0.entry:
+    $c = CMPAbs $y, 1234
+    ; CHECK: cmp y,1234
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cmp_absolute_x
+# CHECK-LABEL: cmp_absolute_x
+body: |
+  bb.0.entry:
+    $c = CMPAbsIdx $a, 1234, $x
+    ; CHECK: cmp a,1234+x
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: cmp_absolute_y
+# CHECK-LABEL: cmp_absolute_y
+body: |
+  bb.0.entry:
+    $c = CMPAbsIdx $a, 1234, $y
+    ; CHECK: cmp a,1234+y
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: lda_immediate
+# CHECK-LABEL: lda_immediate
+body: |
+  bb.0.entry:
+    $a = LDImm 42
+    ; CHECK: mov a,#42
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: lda_absolutex
+# CHECK-LABEL: lda_absolutex
+body: |
+  bb.0.entry:
+    $a = LDAAbsIdx 1234, $x
+    ; CHECK: mov a,1234+x
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: clc_implied
+# CHECK-LABEL: clc_implied
+body: |
+  bb.0.entry:
+    $c = LDCImm 0
+    ; CHECK: clrc{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: sec_implied
+# CHECK-LABEL: sec_implied
+body: |
+  bb.0.entry:
+    $c = LDCImm -1
+    ; CHECK: setc{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: dea_implied
+# CHECK-LABEL: dea_implied
+body: |
+  bb.0.entry:
+    $a = DE_CMOS $a
+    ; CHECK: dec a{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: ina_implied
+# CHECK-LABEL: ina_implied
+body: |
+  bb.0.entry:
+    $a = IN_CMOS $a
+    ; CHECK: inc a{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: dex_implied
+# CHECK-LABEL: dex_implied
+body: |
+  bb.0.entry:
+    $x = DE $x
+    ; CHECK: dec x{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: inx_implied
+# CHECK-LABEL: inx_implied
+body: |
+  bb.0.entry:
+    $x = IN $x
+    ; CHECK: inc x{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: pha_implied
+# CHECK-LABEL: pha_implied
+body: |
+  bb.0.entry:
+    PH $a
+    ; CHECK: push a{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: pla_implied
+# CHECK-LABEL: pla_implied
+body: |
+  bb.0.entry:
+    $a = PL
+    ; CHECK: pop a{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: phx_implied
+# CHECK-LABEL: phx_implied
+body: |
+  bb.0.entry:
+    PH_CMOS $x
+    ; CHECK: push x{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: plx_implied
+# CHECK-LABEL: plx_implied
+body: |
+  bb.0.entry:
+    $x = PL_CMOS
+    ; CHECK: pop x{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: phy_implied
+# CHECK-LABEL: phy_implied
+body: |
+  bb.0.entry:
+    PH_CMOS $y
+    ; CHECK: push y{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: ply_implied
+# CHECK-LABEL: ply_implied
+body: |
+  bb.0.entry:
+    $y = PL_CMOS
+    ; CHECK: pop y{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: sta_absolutex
+# CHECK-LABEL: sta_absolutex
+body: |
+  bb.0.entry:
+    STAbsIdx $a, 1234, $x
+    ; CHECK: mov 1234+x,a
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: sta_zeropage
+# CHECK-LABEL: sta_zeropage
+body: |
+  bb.0.entry:
+    $rc0 = STImag8 $a
+    ; CHECK: mov __rc0,a
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: sty_zeropage
+# CHECK-LABEL: sty_zeropage
+body: |
+  bb.0.entry:
+    $rc0 = STImag8 $y
+    ; CHECK: mov __rc0,y
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: txa_implied
+# CHECK-LABEL: txa_implied
+body: |
+  bb.0.entry:
+    $a = T_A $x
+    ; CHECK: mov a,x{{$}}
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: external_symbol_offset
+# CHECK-LABEL: external_symbol_offset
+body: |
+  bb.0.entry:
+    $a = LDAbs &external + 1
+    ; CHECK: mov a,external+1
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: global_operand
+# CHECK-LABEL: global_operand
+body: |
+  bb.0.entry:
+    INLINEASM &"mov $0,a", 9 /* sideeffect mayload attdialect */, 13 /* imm */, @global_operand
+    ; CHECK: mov global_operand,a
+    RTS
+    ; CHECK: ret
+...
+---
+name: imm_operand
+# CHECK-LABEL: imm_operand
+body: |
+  bb.0.entry:
+    INLINEASM &"mov $0,a", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42
+    ; CHECK: mov 42,a
+    RTS
+    ; CHECK: ret
+...
+---
+name: memory_operand
+# CHECK-LABEL: memory_operand
+body: |
+  bb.0.entry:
+    INLINEASM &"mov [$0]+y,a", 17 /* sideeffect maystore attdialect */, 196622 /* mem:m */, $rs2
+    ; CHECK: mov [__rc4]+y,a
+    RTS
+    ; CHECK: ret
+...
+---
+name: gpr_operand
+# CHECK-LABEL: gpr_operand
+body: |
+  bb.0.entry:
+    INLINEASM &"mov 1234,$0", 1 /* sideeffect attdialect */, 720905 /* reguse:GPR */, $x
+    ; CHECK: mov 1234,x
+    RTS
+    ; CHECK: ret
+...

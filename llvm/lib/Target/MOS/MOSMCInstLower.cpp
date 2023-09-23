@@ -285,7 +285,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
   case MOS::BRA: {
     const auto &STI = MI->getMF()->getSubtarget<MOSSubtarget>();
-    if (STI.has65C02())
+    if (STI.has65C02() || STI.hasSPC700())
       OutMI.setOpcode(MOS::BRA_Relative);
     else if (STI.has65DTV02())
       OutMI.setOpcode(MOS::BRA_Relative_DTV02);
