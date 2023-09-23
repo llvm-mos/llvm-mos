@@ -10,6 +10,16 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: adc_zeropage_x
+# CHECK-LABEL: adc_zeropage_x
+body: |
+  bb.0.entry:
+    $a, $c, $v = ADCZpIdx $a, 123, $x, $c
+    ; CHECK: adc 123,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: adc_absolute_x
 # CHECK-LABEL: adc_absolute_x
 body: |
@@ -26,6 +36,16 @@ body: |
   bb.0.entry:
     $a, $c, $v = ADCAbsIdx $a, 1234, $y, $c
     ; CHECK: adc 1234,y
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: sbc_zeropage_x
+# CHECK-LABEL: sbc_zeropage_x
+body: |
+  bb.0.entry:
+    $a, $c, $v = SBCZpIdx $a, 123, $x, $c
+    ; CHECK: sbc 123,x
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -50,6 +70,16 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: and_zeropage_x
+# CHECK-LABEL: and_zeropage_x
+body: |
+  bb.0.entry:
+    $a = ANDZpIdx $a, 123, $x
+    ; CHECK: and 123,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: and_absolute_x
 # CHECK-LABEL: and_absolute_x
 body: |
@@ -70,6 +100,16 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: eor_zeropage_x
+# CHECK-LABEL: eor_zeropage_x
+body: |
+  bb.0.entry:
+    $a = EORZpIdx $a, 123, $x
+    ; CHECK: eor 123,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: eor_absolute_x
 # CHECK-LABEL: eor_absolute_x
 body: |
@@ -86,6 +126,16 @@ body: |
   bb.0.entry:
     $a = EORAbsIdx $a, 1234, $y
     ; CHECK: eor 1234,y
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: ora_zeropage_x
+# CHECK-LABEL: ora_zeropage_x
+body: |
+  bb.0.entry:
+    $a = ORAZpIdx $a, 123, $x
+    ; CHECK: ora 123,x
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -136,7 +186,7 @@ name: asl_absolute_x
 body: |
   bb.0.entry:
     ; CHECK-LABEL: bb.0
-    $c = ASLAbsIdx 42, $x
+    $c = ASLIdx 42, $x
     ; CHECK: asl mos16(42),x
     RTS
     ; CHECK-NEXT: rts
@@ -265,6 +315,16 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: cmp_zeropage_x
+# CHECK-LABEL: cmp_zeropage_x
+body: |
+  bb.0.entry:
+    $c = CMPZpIdx $a, 123, $x
+    ; CHECK: cmp 123,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: cmp_absolute_x
 # CHECK-LABEL: cmp_absolute_x
 body: |
@@ -289,7 +349,7 @@ name: inc_absolute_x
 # CHECK-LABEL: inc_absolute_x
 body: |
   bb.0.entry:
-    INCAbsIdx 42, $x
+    INCIdx 42, $x
     ; CHECK: inc mos16(42),x
     RTS
     ; CHECK-NEXT: rts
@@ -301,6 +361,16 @@ body: |
   bb.0.entry:
     $a = LDImm 42
     ; CHECK: lda #42
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: lda_zeropagex
+# CHECK-LABEL: lda_zeropagex
+body: |
+  bb.0.entry:
+    $a = LDAZpIdx 123, $x
+    ; CHECK: lda 123,x
     RTS
     ; CHECK-NEXT: rts
 ...
@@ -319,7 +389,7 @@ name: ldx_absolutey
 # CHECK-LABEL: ldx_absolutey
 body: |
   bb.0.entry:
-    $x = LDXAbsIdx 1234, $y
+    $x = LDXIdx 1234, $y
     ; CHECK: ldx 1234,y
     RTS
     ; CHECK-NEXT: rts
@@ -329,7 +399,7 @@ name: ldy_absolutex
 # CHECK-LABEL: ldy_absolutex
 body: |
   bb.0.entry:
-    $y = LDYAbsIdx 1234, $x
+    $y = LDYIdx 1234, $x
     ; CHECK: ldy 1234,x
     RTS
     ; CHECK-NEXT: rts
@@ -455,6 +525,16 @@ body: |
     ; CHECK-NEXT: rts
 ...
 ---
+name: sta_zeropagex
+# CHECK-LABEL: sta_zeropagex
+body: |
+  bb.0.entry:
+    STZpIdx $a, 123, $x
+    ; CHECK: sta 123,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
 name: sta_absolutex
 # CHECK-LABEL: sta_absolutex
 body: |
@@ -499,7 +579,7 @@ name: stz_absolutex
 # CHECK-LABEL: stz_absolutex
 body: |
   bb.0.entry:
-    STZAbsIdx 42, $x
+    STZIdx 42, $x
     ; CHECK: stz mos16(42),x
     RTS
     ; CHECK-NEXT: rts

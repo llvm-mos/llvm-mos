@@ -902,8 +902,11 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case MOS::DecPtr:
     expandIncDecPtr(Builder);
     break;
+  case MOS::LDZpIdx:
+    expandLDIdx(Builder, true);
+    break;
   case MOS::LDAbsIdx:
-    expandLDIdx(Builder);
+    expandLDIdx(Builder, false);
     break;
   case MOS::LDImm1:
     expandLDImm1(Builder);
@@ -919,10 +922,11 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
   case MOS::CMPTermImm:
   case MOS::CMPTermImag8:
+  case MOS::CMPTermZpIdx:
   case MOS::CMPTermAbs:
+  case MOS::CMPTermAbsIdx:
   case MOS::CMPTermIndir:
   case MOS::CMPTermIndirIdx:
-  case MOS::CMPTermIdx:
     expandCMPTerm(Builder);
     break;
 
@@ -939,15 +943,17 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 // Post RA pseudos
 //===---------------------------------------------------------------------===//
 
-void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
+void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder, bool ZP) const {
   auto &MI = *Builder.getInsertPt();
+  auto DestReg = MI.getOperand(0).getReg();
+  auto IndexReg = MI.getOperand(2).getReg();
 
-  // This occur when X or Y is both the destination and index register.
-  // Since the 6502 has no instruction for this, use A as the destination
-  // instead, then transfer to the real destination.
-  if (MI.getOperand(0).getReg() == MI.getOperand(2).getReg()) {
+  if (DestReg == IndexReg) {
+    // A direct load does not exist for when X or Y is both the destination and
+    // index register. Since the 6502 has no instruction for this, use A as the
+    // destination instead, then transfer to the real destination.
     Register Tmp = createVReg(Builder, MOS::AcRegClass);
-    Builder.buildInstr(MOS::LDAAbsIdx)
+    Builder.buildInstr(ZP ? MOS::LDAZpIdx : MOS::LDAAbsIdx)
         .addDef(Tmp)
         .add(MI.getOperand(1))
         .add(MI.getOperand(2));
@@ -955,19 +961,32 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder) const {
     MI.eraseFromParent();
     return;
   }
+  if (ZP && DestReg == MOS::A && IndexReg == MOS::Y) {
+    // A direct load from the zero page does not exist for when A is used as
+    // the destination register, while Y is used as index register. Similarly,
+    // use X as the destination instead, then transfer to the real destination.
+    Register Tmp = createVReg(Builder, MOS::XcRegClass);
+    Builder.buildInstr(MOS::LDXIdx)
+        .addDef(Tmp)
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2));
+    Builder.buildInstr(MOS::T_A).add(MI.getOperand(0)).addUse(Tmp);
+    MI.eraseFromParent();
+    return;
+  }
 
   unsigned Opcode;
-  switch (MI.getOperand(0).getReg()) {
+  switch (DestReg) {
   default:
-    llvm_unreachable("Bad destination for LDAbsIdx.");
+    llvm_unreachable("Bad destination for LD*Idx.");
   case MOS::A:
-    Opcode = MOS::LDAAbsIdx;
+    Opcode = ZP ? MOS::LDAZpIdx : MOS::LDAAbsIdx;
     break;
   case MOS::X:
-    Opcode = MOS::LDXAbsIdx;
+    Opcode = MOS::LDXIdx;
     break;
   case MOS::Y:
-    Opcode = MOS::LDYAbsIdx;
+    Opcode = MOS::LDYIdx;
     break;
   }
 
@@ -1167,10 +1186,13 @@ void MOSInstrInfo::expandCMPTerm(MachineIRBuilder &Builder) const {
   case MOS::CMPTermImag8:
     MI.setDesc(Builder.getTII().get(MOS::CMPImag8));
     break;
+  case MOS::CMPTermZpIdx:
+    MI.setDesc(Builder.getTII().get(MOS::CMPZpIdx));
+    break;
   case MOS::CMPTermAbs:
     MI.setDesc(Builder.getTII().get(MOS::CMPAbs));
     break;
-  case MOS::CMPTermIdx:
+  case MOS::CMPTermAbsIdx:
     MI.setDesc(Builder.getTII().get(MOS::CMPAbsIdx));
     break;
   case MOS::CMPTermIndir:

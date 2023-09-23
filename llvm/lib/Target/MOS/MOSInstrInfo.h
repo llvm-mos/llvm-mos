@@ -128,7 +128,7 @@ private:
                          const TargetRegisterClass &RC) const;
 
   // Post RA pseudos
-  void expandLDIdx(MachineIRBuilder &Builder) const;
+  void expandLDIdx(MachineIRBuilder &Builder, bool ZP) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;
   void expandLDImm16(MachineIRBuilder &Builder) const;
   void expandLDImm16Remat(MachineIRBuilder &Builder) const;

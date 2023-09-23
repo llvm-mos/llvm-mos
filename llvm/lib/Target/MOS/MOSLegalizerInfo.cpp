@@ -1770,7 +1770,7 @@ bool MOSLegalizerInfo::selectZeroIndexedAddressing(LegalizerHelper &Helper,
   }
   
   auto AddrP = Builder.buildPtrToInt(S, Addr).getReg(0);
-  unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS_IDX : MOS::G_STORE_ABS_IDX;
+  unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ZP_IDX : MOS::G_STORE_ZP_IDX;
   auto Inst = Builder.buildInstr(Opcode)
                 .add(MI.getOperand(0))
                 .addImm(STI.getZeroPageOffset() + (Offset & 0xFF))

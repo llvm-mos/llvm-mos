@@ -66,11 +66,16 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   default:
     OutMI.setOpcode(MI->getOpcode());
     break;
+  case MOS::ADCZpIdx:
+  case MOS::SBCZpIdx:
   case MOS::ADCAbsIdx:
   case MOS::SBCAbsIdx: {
-    bool ZP = canUseZeroPageIdx(MI->getOperand(4));
+    bool MustZP = MI->getOpcode() == MOS::ADCZpIdx ||
+        MI->getOpcode() == MOS::SBCZpIdx;
+    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(4));
     bool ImmConfusable = false;
     switch (MI->getOpcode()) {
+    case MOS::ADCZpIdx:
     case MOS::ADCAbsIdx:
       switch (MI->getOperand(5).getReg()) {
       default:
@@ -80,10 +85,13 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         ImmConfusable = !ZP;
         break;
       case MOS::Y:
+        if (MustZP)
+          llvm_unreachable("Unexpected register.");
         OutMI.setOpcode(MOS::ADC_AbsoluteY);
         break;
       }
       break;
+    case MOS::SBCZpIdx:
     case MOS::SBCAbsIdx:
       switch (MI->getOperand(5).getReg()) {
       default:
@@ -93,6 +101,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         ImmConfusable = !ZP;
         break;
       case MOS::Y:
+        if (MustZP)
+          llvm_unreachable("Unexpected register.");
         OutMI.setOpcode(MOS::SBC_AbsoluteY);
         break;
       }
@@ -106,12 +116,19 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Addr);
     return;
   }
+  case MOS::ANDZpIdx:
+  case MOS::EORZpIdx:
+  case MOS::ORAZpIdx:
   case MOS::ANDAbsIdx:
   case MOS::EORAbsIdx:
   case MOS::ORAAbsIdx: {
-    bool ZP = canUseZeroPageIdx(MI->getOperand(2));
+    bool MustZP = MI->getOpcode() == MOS::ANDZpIdx ||
+        MI->getOpcode() == MOS::EORZpIdx ||
+        MI->getOpcode() == MOS::ORAZpIdx;
+    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(2));
     bool ImmConfusable = false;
     switch (MI->getOpcode()) {
+    case MOS::ANDZpIdx:
     case MOS::ANDAbsIdx:
       switch (MI->getOperand(3).getReg()) {
       default:
@@ -120,10 +137,13 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         OutMI.setOpcode(ZP ? MOS::AND_ZeroPageX : MOS::AND_AbsoluteX);
         break;
       case MOS::Y:
+        if (MustZP)
+          llvm_unreachable("Unexpected register.");
         OutMI.setOpcode(MOS::AND_AbsoluteY);
         break;
       }
       break;
+    case MOS::EORZpIdx:
     case MOS::EORAbsIdx:
       switch (MI->getOperand(3).getReg()) {
       default:
@@ -133,10 +153,13 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         ImmConfusable = !ZP;
         break;
       case MOS::Y:
+        if (MustZP)
+          llvm_unreachable("Unexpected register.");
         OutMI.setOpcode(MOS::EOR_AbsoluteY);
         break;
       }
       break;
+    case MOS::ORAZpIdx:
     case MOS::ORAAbsIdx:
       switch (MI->getOperand(3).getReg()) {
       default:
@@ -146,6 +169,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         ImmConfusable = !ZP;
         break;
       case MOS::Y:
+        if (MustZP)
+          llvm_unreachable("Unexpected register.");
         OutMI.setOpcode(MOS::ORA_AbsoluteY);
         break;
       }
@@ -204,22 +229,22 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         return;
       }
     }
-  case MOS::ASLAbsIdx:
-  case MOS::LSRAbsIdx:
-  case MOS::ROLAbsIdx:
-  case MOS::RORAbsIdx: {
+  case MOS::ASLIdx:
+  case MOS::LSRIdx:
+  case MOS::ROLIdx:
+  case MOS::RORIdx: {
     bool ZP = canUseZeroPageIdx(MI->getOperand(1));
     switch (MI->getOpcode()) {
-    case MOS::ASLAbsIdx:
+    case MOS::ASLIdx:
       OutMI.setOpcode(ZP ? MOS::ASL_ZeroPageX : MOS::ASL_AbsoluteX);
       break;
-    case MOS::LSRAbsIdx:
+    case MOS::LSRIdx:
       OutMI.setOpcode(ZP ? MOS::LSR_ZeroPageX : MOS::LSR_AbsoluteX);
       break;
-    case MOS::ROLAbsIdx:
+    case MOS::ROLIdx:
       OutMI.setOpcode(ZP ? MOS::ROL_ZeroPageX : MOS::ROL_AbsoluteX);
       break;
-    case MOS::RORAbsIdx:
+    case MOS::RORIdx:
       OutMI.setOpcode(ZP ? MOS::ROR_ZeroPageX : MOS::ROR_AbsoluteX);
       break;
     }
@@ -272,6 +297,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   }
   case MOS::CMPImm:
   case MOS::CMPImag8:
+  case MOS::CMPZpIdx:
   case MOS::CMPAbs:
   case MOS::CMPAbsIdx: {
     bool ImmConfusable = false;
@@ -307,8 +333,10 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         break;
       }
       break;
+    case MOS::CMPZpIdx:
     case MOS::CMPAbsIdx: {
-      bool ZP = canUseZeroPageIdx(MI->getOperand(2));
+      bool MustZP = MI->getOpcode() == MOS::CMPZpIdx;
+      bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(2));
       switch (MI->getOperand(3).getReg()) {
       default:
         llvm_unreachable("Unexpected register.");
@@ -317,6 +345,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
         ImmConfusable = !ZP;
         break;
       case MOS::Y:
+        if (MustZP)
+          llvm_unreachable("Unexpected register.");
         OutMI.setOpcode(MOS::CMP_AbsoluteY);
         break;
       }
@@ -331,14 +361,14 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
-  case MOS::INCAbsIdx:
-  case MOS::DECAbsIdx: {
+  case MOS::INCIdx:
+  case MOS::DECIdx: {
     bool ZP = canUseZeroPageIdx(MI->getOperand(0));
     switch (MI->getOpcode()) {
-    case MOS::INCAbsIdx:
+    case MOS::INCIdx:
       OutMI.setOpcode(ZP ? MOS::INC_ZeroPageX : MOS::INC_AbsoluteX);
       break;
-    case MOS::DECAbsIdx:
+    case MOS::DECIdx:
       OutMI.setOpcode(ZP ? MOS::DEC_ZeroPageX : MOS::DEC_AbsoluteX);
     }
     MCOperand Tgt;
@@ -406,8 +436,10 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
+  case MOS::LDAZpIdx:
   case MOS::LDAAbsIdx: {
-    bool ZP = canUseZeroPageIdx(MI->getOperand(1));
+    bool MustZP = MI->getOpcode() == MOS::LDAZpIdx;
+    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(1));
     bool ImmConfusable = false;
     switch (MI->getOperand(2).getReg()) {
     default:
@@ -417,6 +449,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       ImmConfusable = !ZP;
       break;
     case MOS::Y:
+      if (MustZP)
+        llvm_unreachable("Unexpected register.");
       OutMI.setOpcode(MOS::LDA_AbsoluteY);
       break;
     }
@@ -428,16 +462,16 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
-  case MOS::LDXAbsIdx:
-  case MOS::LDYAbsIdx: {
+  case MOS::LDXIdx:
+  case MOS::LDYIdx: {
     bool ZP = canUseZeroPageIdx(MI->getOperand(1));
     switch (MI->getOpcode()) {
     default:
       llvm_unreachable("Unexpected LDAbsIdx register.");
-    case MOS::LDXAbsIdx:
+    case MOS::LDXIdx:
       OutMI.setOpcode(ZP ? MOS::LDX_ZeroPageY : MOS::LDX_AbsoluteY);
       break;
-    case MOS::LDYAbsIdx:
+    case MOS::LDYIdx:
       OutMI.setOpcode(ZP ? MOS::LDY_ZeroPageX : MOS::LDY_AbsoluteX);
       break;
     }
@@ -589,8 +623,10 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     }
     llvm_unreachable("Unexpected register.");
   }
+  case MOS::STZpIdx:
   case MOS::STAbsIdx: {
-    bool ZP = canUseZeroPageIdx(MI->getOperand(0));
+    bool MustZP = MI->getOpcode() == MOS::STZpIdx;
+    bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(0));
     switch (MI->getOperand(2).getReg()) {
     default:
       llvm_unreachable("Unexpected register.");
@@ -598,6 +634,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
       OutMI.setOpcode(ZP ? MOS::STA_ZeroPageX : MOS::STA_AbsoluteX);
       break;
     case MOS::Y:
+      if (MustZP)
+        llvm_unreachable("Unexpected register.");
       OutMI.setOpcode(MOS::STA_AbsoluteY);
       break;
     }
@@ -627,7 +665,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(Val);
     return;
   }
-  case MOS::STZAbsIdx: {
+  case MOS::STZIdx: {
     bool ZP = canUseZeroPageIdx(MI->getOperand(0));
     OutMI.setOpcode(ZP ? MOS::STZ_ZeroPageX : MOS::STZ_AbsoluteX);
     MCOperand Tgt;

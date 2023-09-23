@@ -37,7 +37,18 @@ class MOSPseudo : Instruction {
 // registers before and after the pseudo.
 //===---------------------------------------------------------------------===//
 
-// Abstracts LDAAbsIdx, LDXAbsIdx, and LDYAbsIdx. This is almost a logical instruction,
+// Abstracts LDAZpIdx, LDXIdx, and LDYIdx. This is almost a logical instruction,
+// but the "LDA 123,Y", "LDX 123,X" and "LDY 123,Y" cases aren't natively
+// supported, and more than one instruction is required to emit them.
+def LDZpIdx : MOSPseudo {
+  dag OutOperandList = (outs GPR:$dst);
+  dag InOperandList = (ins i8imm:$addr, XY:$idx);
+
+  let isReMaterializable = true;
+  let mayLoad = true;
+}
+
+// Abstracts LDAAbsIdx, LDXIdx, and LDYIdx. This is almost a logical instruction,
 // but the "LDX 1234,X" and "LDY 1234,Y" cases aren't natively supported, and
 // more than one instruction is required to emit them.
 def LDAbsIdx : MOSPseudo {
@@ -260,10 +271,13 @@ def CMPTermZMB : MOSCMPTerm {
 }
 
 let mayLoad = true in {
+  def CMPTermZpIdx : MOSCMPTerm {
+    dag InOperandList = (ins Ac:$l, i8imm:$addr, Xc:$idx);
+  }
   def CMPTermAbs : MOSCMPTerm {
     dag InOperandList = (ins GPR:$l, i16imm:$addr);
   }
-  def CMPTermIdx : MOSCMPTerm {
+  def CMPTermAbsIdx : MOSCMPTerm {
     dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
   }
   def CMPTermIndir : MOSCMPTerm {
