@@ -565,8 +565,9 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
       Builder.buildInstr(MOS::PH_CMOS, {}, {SrcReg});
-      Builder.buildInstr(MOS::PL_CMOS, {DestReg}, {})
-          .addDef(MOS::NZ, RegState::Implicit);
+      auto I = Builder.buildInstr(MOS::PL_CMOS, {DestReg}, {});
+      if (!STI.hasSPC700())
+        I.addDef(MOS::NZ, RegState::Implicit);
     } else {
       copyPhysRegImpl(Builder, DestReg,
                       getRegWithVal(Builder, SrcReg, MOS::AcRegClass));
@@ -612,9 +613,17 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
               STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
 
           if (StackRegClass.contains(SrcReg)) {
-            Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
-            Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
-                .addDef(MOS::NZ, RegState::Implicit);
+            if (STI.hasSPC700()) {
+              // SPC700 pops do not set NZ flags, so use CMP instead.
+              // TODO: Investigate doing the same for MOS.
+              Builder.buildInstr(MOS::CMPImm, {MOS::C}, {SrcReg, INT64_C(0)})
+                  .addDef(MOS::NZ, RegState::Implicit)
+                  ->getOperand(0).setIsDead();
+            } else {
+              Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
+              Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
+                  .addDef(MOS::NZ, RegState::Implicit);
+            }
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
           } else {
@@ -944,13 +953,16 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder, bool ZP) const {
   auto &MI = *Builder.getInsertPt();
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
   auto DestReg = MI.getOperand(0).getReg();
   auto IndexReg = MI.getOperand(2).getReg();
 
-  if (DestReg == IndexReg) {
+  if (DestReg == IndexReg ||
+      (STI.hasSPC700() && (DestReg == MOS::X || DestReg == MOS::Y))) {
     // A direct load does not exist for when X or Y is both the destination and
     // index register. Since the 6502 has no instruction for this, use A as the
     // destination instead, then transfer to the real destination.
+    // SPC700 does not support absolute indexed loads into X or Y at all.
     Register Tmp = createVReg(Builder, MOS::AcRegClass);
     Builder.buildInstr(ZP ? MOS::LDAZpIdx : MOS::LDAAbsIdx)
         .addDef(Tmp)
@@ -1001,9 +1013,8 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   unsigned Opcode;
   switch (DestReg) {
   default: {
-    DestReg =
-        Builder.getMF().getSubtarget().getRegisterInfo()->getMatchingSuperReg(
-            DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    DestReg = STI.getRegisterInfo()->getMatchingSuperReg(DestReg, MOS::sublsb,
+                                                         &MOS::Anyi8RegClass);
     assert(DestReg && "Unexpected destination for LDImm1");
     assert(MOS::GPRRegClass.contains(DestReg));
     Opcode = MOS::LDImm;
@@ -1016,6 +1027,21 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
     break;
   case MOS::V:
     if (Val) {
+      if (STI.hasSPC700()) {
+        // SPC700 does not have BIT, so we use stack operations to specifically
+        // set V.
+        Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+        Builder.buildInstr(MOS::PH, {}, {Register(MOS::P)});
+        Builder.buildInstr(MOS::PL, {MOS::A}, {});
+        Builder.buildInstr(MOS::ORAImm, {MOS::A},
+                           {Register(MOS::A), INT64_C(0x40)});
+        Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+        Builder.buildInstr(MOS::PL, {MOS::P}, {});
+        Builder.buildInstr(MOS::PL, {MOS::A}, {});
+        MI.eraseFromParent();
+        return;
+      }
+      
       auto Instr = STI.hasHUC6280()
         ? Builder.buildInstr(MOS::BITImmHUC6280, {MOS::V}, {})
                       .addUse(MOS::A, RegState::Undef)

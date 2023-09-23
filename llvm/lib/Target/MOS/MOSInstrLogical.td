@@ -295,7 +295,7 @@ class MOSUnconditionalBranch : MOSBranch {
 }
 
 def BRA : MOSUnconditionalBranch {
-  let Predicates = [Has65C02OrDTV];
+  let Predicates = [HasBRA];
 
   let InOperandList = (ins label:$tgt);
   let Pattern = [(br bb:$tgt)];
