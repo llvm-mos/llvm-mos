@@ -1422,9 +1422,7 @@ bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
-  auto [DestReg, SrcReg] = MI.getFirst2Regs();
-  auto DestTypeP = MRI.getType(DestReg);
-  auto SrcTypeP = MRI.getType(SrcReg);
+  auto [DestReg, DestTypeP, SrcReg, SrcTypeP] = MI.getFirst2RegLLTs();
   LLT DestTypeS = LLT::scalar(DestTypeP.getScalarSizeInBits());
   LLT SrcTypeS = LLT::scalar(SrcTypeP.getScalarSizeInBits());
 
@@ -1740,15 +1738,7 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
           8) {
         if (Index)
           return false;
-
-        LLT NewOffsetTy = MRI.getType(NewOffset);
-        if (NewOffsetTy.getSizeInBits() < 8) 
-          Index = Builder.buildZExt(S8, Index).getReg(0);
-        else if (NewOffsetTy.getSizeInBits() == 8) 
-          Index = Builder.buildCopy(S8, NewOffset).getReg(0);
-        else
-          Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
-
+        Index = Builder.buildZExtOrTrunc(S8, NewOffset).getReg(0);
         continue;
       }
     }
@@ -1826,14 +1816,7 @@ bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,
     } else if (Helper.getKnownBits()
                    ->getKnownBits(Offset)
                    .countMaxActiveBits() <= 8) {
-      LLT OffsetTy = MRI.getType(Offset);
-      if (OffsetTy.getSizeInBits() < 8) 
-        Index = Builder.buildZExt(S8, Offset).getReg(0);
-      else if (OffsetTy.getSizeInBits() == 8) 
-        Index = Builder.buildCopy(S8, Offset).getReg(0);
-      else
-        Index = Builder.buildTrunc(S8, Offset).getReg(0);
-
+      Index = Builder.buildZExtOrTrunc(S8, Offset).getReg(0);
       Addr = Base;
     }
   }
