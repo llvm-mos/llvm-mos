@@ -45,26 +45,6 @@ template <typename ContainerTy> inline auto mbb_reverse(ContainerTy &&C) {
   return mbb_reverse(C.begin(), C.end());
 }
 
-namespace MOS {
-
-/// An integer that identifies all of the supported MOS address spaces.
-enum AddressSpace {
-  MemoryAS,
-  ZeroPageAS,
-  NumAddrSpaces,
-};
-
-template <typename T> AddressSpace getAddressSpace(T *V) {
-  auto *PT = cast<PointerType>(V->getType());
-  assert(PT != nullptr && "unexpected MemSDNode");
-  unsigned AS = PT->getAddressSpace();
-  if (AS < NumAddrSpaces)
-    return static_cast<AddressSpace>(AS);
-  return NumAddrSpaces;
-}
-
-}
-
 } // namespace llvm
 
 #endif // not LLVM_LIB_TARGET_MOS_MOS_H

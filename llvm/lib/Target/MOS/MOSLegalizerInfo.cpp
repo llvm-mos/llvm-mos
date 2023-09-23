@@ -1433,8 +1433,8 @@ bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
     Tmp = Builder.buildTrunc(DestTypeS, Tmp);
   } else if (DestTypeS.getSizeInBits() > SrcTypeS.getSizeInBits()) {
     // smaller -> larger address space: extend
-    assert(SrcTypeP.getAddressSpace() == MOS::ZeroPageAS);
-    assert(DestTypeP.getAddressSpace() == MOS::MemoryAS);
+    assert(SrcTypeP.getAddressSpace() == MOS::AS_ZeroPage);
+    assert(DestTypeP.getAddressSpace() == MOS::AS_Memory);
     Tmp = Builder.buildZExt(DestTypeS, Tmp);
     if (STI.getZeroPageOffset() != 0) {
       // Dest = (Src | ZeroPageOffset)
@@ -1771,11 +1771,12 @@ bool MOSLegalizerInfo::selectZeroIndexedAddressing(LegalizerHelper &Helper,
   
   auto AddrP = Builder.buildPtrToInt(S, Addr).getReg(0);
   unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS_IDX : MOS::G_STORE_ABS_IDX;
-  Builder.buildInstr(Opcode)
-      .add(MI.getOperand(0))
-      .addImm(STI.getZeroPageOffset() + (Offset & 0xFF))
-      .addUse(AddrP)
-      .addMemOperand(*MI.memoperands_begin());
+  auto Inst = Builder.buildInstr(Opcode)
+                .add(MI.getOperand(0))
+                .addImm(STI.getZeroPageOffset() + (Offset & 0xFF))
+                .addUse(AddrP)
+                .addMemOperand(*MI.memoperands_begin());
+  Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
   MI.eraseFromParent();
   return true;
 }

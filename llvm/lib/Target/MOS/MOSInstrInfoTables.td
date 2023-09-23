@@ -111,8 +111,10 @@ def : ZPIRE< STA_ZeroPageX, STA_AbsoluteX >;
 def : ZBIRE< STA_AbsoluteX, STA_AbsoluteXLong >;
 
 def : ZPIRE< STX_ZeroPage, STX_Absolute >;
+def : ZPIRE< STX_ZeroPageY, STX_AbsoluteY >;
 
 def : ZPIRE< STY_ZeroPage, STY_Absolute >;
+def : ZPIRE< STY_ZeroPageX, STY_AbsoluteX >;
 
 def : ZPIRE< STZ_ZeroPage, STZ_Absolute >;
 def : ZPIRE< STZ_ZeroPageX, STZ_AbsoluteX >;

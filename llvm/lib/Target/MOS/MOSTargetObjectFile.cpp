@@ -28,10 +28,19 @@ void MOSTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM) {
                                       ELF::SHF_ALLOC | ELF::SHF_WRITE);
 }
 
+template <typename T> MOS::AddressSpace getAddressSpace(T *V) {
+  auto *PT = cast<PointerType>(V->getType());
+  assert(PT != nullptr && "unexpected MemSDNode");
+  unsigned AS = PT->getAddressSpace();
+  if (AS < MOS::NumAddrSpaces)
+    return static_cast<MOS::AddressSpace>(AS);
+  return MOS::NumAddrSpaces;
+}
+
 MCSection *MOSTargetObjectFile::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   // Place zero page variables in the .zp sections by default.
-  if (MOS::getAddressSpace(GO) == MOS::ZeroPageAS && !GO->hasSection()) {
+  if (getAddressSpace(GO) == MOS::AS_ZeroPage && !GO->hasSection()) {
     if (Kind.isNoInit())
       return ZpNoinitSection;
     if (Kind.isBSS())

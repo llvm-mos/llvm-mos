@@ -31,6 +31,9 @@ using namespace llvm;
 #define DEBUG_TYPE "mos-mcinstlower"
 
 static bool canUseZeroPageIdx(const MachineOperand &MO) {
+  if (MO.getTargetFlags() == MOS::MO_ZEROPAGE)
+    return true;
+
   // Constants may extend past the zero page when added to the index, so they
   // cannot generally use zero page indexed addressing.
   if (!MO.isGlobal())
@@ -38,7 +41,8 @@ static bool canUseZeroPageIdx(const MachineOperand &MO) {
 
   // Global values in the zero page must end before the zero page, which means
   // that pointers based on them can never overflow it.
-  return MO.getGlobal()->getAliaseeObject()->getAddressSpace() == 1;
+  return MO.getGlobal()->getAliaseeObject()->getAddressSpace() ==
+      MOS::AS_ZeroPage;
 }
 
 // Instructions with indexed addressing must have bases < 256 wrapped in mos16.
