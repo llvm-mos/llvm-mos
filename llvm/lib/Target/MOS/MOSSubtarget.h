@@ -116,6 +116,9 @@ public:
   bool has4510() const { return Has4510Insns; }
   bool has45GS02() const { return Has45GS02Insns; }
   bool hasSPC700() const { return HasSPC700Insns; }
+  bool hasGPRStackRegs() const { return has65C02() || hasSPC700(); }
+  bool hasGPRIncDec() const { return has65C02() || hasSPC700(); }
+  bool hasBRA() const { return has65C02() || has65DTV02() || hasSPC700(); }
   bool staticStack() const { return StaticStack; }
 
   bool hasW65816Or65EL02() const { return HasW65816Insns || Has65EL02Insns; }

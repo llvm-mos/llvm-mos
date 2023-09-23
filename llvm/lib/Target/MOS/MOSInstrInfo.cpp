@@ -412,8 +412,7 @@ unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
     // For 65C02/65DTV02, assume BRA and relax into JMP in
     // insertIndirectBranch if necessary.
     auto JMP =
-        Builder.buildInstr((STI.has65C02() || STI.has65DTV02())
-                           ? MOS::BRA : MOS::JMP).addMBB(UBB);
+        Builder.buildInstr(STI.hasBRA() ? MOS::BRA : MOS::JMP).addMBB(UBB);
     ++NumAdded;
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(*JMP);
@@ -561,7 +560,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         .addDef(SrcReg)
         .addUse(SrcReg, RegState::Kill)
         .addUse(DestReg, RegState::Kill | RegState::Undef);
-    } else if (STI.has65C02()) {
+    } else if (STI.hasGPRStackRegs()) {
       // The 65C02 can emit a PHX/PLY or PHY/PLX pair.
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
@@ -610,11 +609,11 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         } else {
           assert(DestReg == MOS::V);
           const TargetRegisterClass &StackRegClass =
-              STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
+              STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
 
           if (StackRegClass.contains(SrcReg)) {
-            Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
-            Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
+            Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
+            Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
@@ -1111,7 +1110,7 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
   bool IsCMOS = MI.getOpcode() == MOS::IncCMOS || MI.getOpcode() == MOS::DecCMOS;
 
   // GPRs on CMOS 6502.
-  if (STI.has65C02()) {
+  if (STI.hasGPRIncDec()) {
     switch (R) {
     case MOS::A:
     case MOS::X:

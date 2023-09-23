@@ -299,7 +299,7 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
     if (!Load) {
       switch (Dst) {
       case MOS::A:
-        if (STI.has65C02())
+        if (STI.hasGPRIncDec())
           if (LoadA.MI && std::abs(LoadA.Val - Val) == 1)
             Load = &LoadA;
         break;
@@ -314,7 +314,7 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       }
 
       if (Load) {
-        if (STI.has65C02())
+        if (STI.hasGPRIncDec())
           MI.setDesc(TII.get(Val > Load->Val ? MOS::IN_CMOS : MOS::DE_CMOS));
         else
           MI.setDesc(TII.get(Val > Load->Val ? MOS::IN : MOS::DE));

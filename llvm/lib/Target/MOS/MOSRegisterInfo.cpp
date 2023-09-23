@@ -172,17 +172,17 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     // preferred.
     Register Save = Reg == MOS::A ? MOS::RC16 : MOS::RC17;
     bool UseHardStack =
-        (Reg == MOS::A || STI.has65C02()) && pushPullBalanced(I, UseMI);
+        (Reg == MOS::A || STI.hasGPRStackRegs()) && pushPullBalanced(I, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {Reg});
+      Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {}, {Reg});
     else
       Builder.buildInstr(MOS::STImag8, {Save}, {Reg});
 
     Builder.setInsertPt(MBB, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {Reg}, {});
+      Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {Reg}, {});
     else
       Builder.buildInstr(MOS::LDImag8, {Reg}, {Save});
     break;
@@ -724,7 +724,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
       // INC zp = (2 bytes + 5 cycles)
       // INXY = (1 bytes + 2 cycles)
       MOSInstrCost INXY = MOSInstrCost(1, 2);
-      if (STI.has65C02() && is_contained(Order, MOS::A))
+      if (STI.hasGPRIncDec() && is_contained(Order, MOS::A))
         RegScores[MOS::A] += INCzp - INXY;
       if (is_contained(Order, MOS::X))
         RegScores[MOS::X] += INCzp - INXY;
@@ -839,7 +839,7 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       return MOSInstrCost(1, 2);
     }
     MOSInstrCost XYCopyCost;
-    if (STI.has65C02()) {
+    if (STI.hasGPRStackRegs()) {
       // PHX/PLY, PHY/PLX
       XYCopyCost = MOSInstrCost(1, 3) + MOSInstrCost(1, 4);
     } else {
@@ -894,7 +894,7 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       }
       assert(DestReg == MOS::V);
       const TargetRegisterClass &StackRegClass =
-          STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
+          STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
 
       if (StackRegClass.contains(SrcReg)) {
         // PHA; PLA; BNE; BIT setv; JMP; CLV
