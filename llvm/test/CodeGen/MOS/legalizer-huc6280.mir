@@ -120,7 +120,7 @@ body: |
     ; CHECK-LABEL: name: load_zp_ptr
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc0
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
-    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX 8192, [[PTRTOINT]](s8) :: (load (s8))
+    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX target-flags(zeropage) 8192, [[PTRTOINT]](s8) :: (load (s8))
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[LOAD_ABS_IDX]](s8)
     ; CHECK-NEXT: RTS implicit [[INTTOPTR]](p1)
     %0:_(p1) = COPY $rc0
@@ -134,7 +134,7 @@ body: |
     ; CHECK-LABEL: name: load_zp_ptradd_const8
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $rc0
     ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s8) = G_PTRTOINT [[COPY]](p1)
-    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX 8447, [[PTRTOINT]](s8) :: (load (s8))
+    ; CHECK-NEXT: [[LOAD_ABS_IDX:%[0-9]+]]:_(s8) = G_LOAD_ABS_IDX target-flags(zeropage) 8447, [[PTRTOINT]](s8) :: (load (s8))
     ; CHECK-NEXT: RTS implicit [[LOAD_ABS_IDX]](s8)
     %0:_(p1) = COPY $rc0
     %2:_(s8) = G_CONSTANT i8 255
