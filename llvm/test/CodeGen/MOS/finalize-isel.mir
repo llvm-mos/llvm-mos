@@ -348,9 +348,9 @@ body: |
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
     ; CHECK-NEXT: liveins: $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = LDAbs i16 1234
+    ; CHECK-NEXT: $a = LDImm 255
     ; CHECK-NEXT: DECAbs i16 1234
-    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: $c = CMPAbs $a, i16 1234, implicit-def $z
     ; CHECK-NEXT: BR %bb.4, $z, -1
     ; CHECK-NEXT: JMP %bb.3
     ; CHECK-NEXT: {{  $}}

@@ -238,6 +238,7 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitSelectImm(MI, MBB);
   case MOS::IncMB:
   case MOS::DecMB:
+  case MOS::DecDcpMB:
     return emitIncDecMB(MI, MBB);
   case MOS::CMPTermZMB:
     return emitCMPTermZMB(MI, MBB);
@@ -416,42 +417,67 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   }
 
   MachineIRBuilder Builder(MI);
-  bool IsDec = MI.getOpcode() == MOS::DecMB;
+  bool IsDec = MI.getOpcode() == MOS::DecMB || MI.getOpcode() == MOS::DecDcpMB;
   assert(IsDec || MI.getOpcode() == MOS::IncMB);
   unsigned FirstUseIdx = MI.getNumExplicitDefs();
   unsigned FirstDefIdx = IsDec ? 1 : 0;
-  if (IsDec && FirstUseIdx < MI.getNumExplicitOperands() - 1) {
-    if (MI.getOperand(FirstUseIdx).isReg()) {
+  bool IsReg = MI.getOperand(FirstUseIdx).isReg();
+  bool IsCmp = FirstUseIdx < MI.getNumExplicitOperands() - 1;
+  // Only use DCP for decrements if:
+  // - a register operand is not used (DCP works only on memory),
+  // - this is not the last byte (CMP is unnecessary then),
+  // - the scratch register is bound to A (via DecDcpMB).
+  bool UseDcpOpcode = !IsReg && IsCmp && STI.has6502X() &&
+                      MI.getOpcode() == MOS::DecDcpMB;
+
+  if (IsDec && IsCmp) {
+    if (IsReg) {
+      // Load, decrement, compare loaded to 0.
       Builder.buildCopy(MI.getOperand(0), MI.getOperand(FirstUseIdx));
     } else {
-      Builder.buildInstr(MOS::LDAbs)
+      // Decrement, compare decremented to 0xFF.
+      Builder.buildInstr(MOS::LDImm)
           .addDef(MI.getOperand(0).getReg())
-          .add(MI.getOperand(FirstUseIdx));
+          .addImm(INT64_C(0xFF));
     }
   }
   MachineInstrBuilder First;
-  if (MI.getOperand(FirstUseIdx).isReg()) {
+  if (IsReg) {
     First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
                 .add(MI.getOperand(FirstDefIdx))
                 .add(MI.getOperand(FirstUseIdx));
     ++FirstDefIdx;
+  } else if (UseDcpOpcode) {
+    First = Builder.buildInstr(MOS::DCPAbs)
+                .addDef(MOS::C)
+                .addUse(MI.getOperand(0).getReg())
+                .add(MI.getOperand(FirstUseIdx));
   } else {
     First = Builder.buildInstr(IsDec ? MOS::DECAbs : MOS::INCAbs)
                 .add(MI.getOperand(FirstUseIdx));
   }
-  if (FirstUseIdx == MI.getNumExplicitOperands() - 1) {
+  if (!IsCmp) {
     MI.eraseFromParent();
     return MBB;
   }
 
-  if (IsDec)
-    Builder.buildInstr(MOS::CMPImm)
-        .addDef(MOS::C)
-        .addUse(MI.getOperand(0).getReg())
-        .addImm(INT64_C(0))
-        .addDef(MOS::Z, RegState::Implicit);
-  else
+  if (IsDec && !UseDcpOpcode) {
+    if (IsReg) {
+      Builder.buildInstr(MOS::CMPImm)
+          .addDef(MOS::C)
+          .addUse(MI.getOperand(0).getReg())
+          .addImm(INT64_C(0))
+          .addDef(MOS::Z, RegState::Implicit);
+    } else {
+      Builder.buildInstr(MOS::CMPAbs)
+          .addDef(MOS::C)
+          .addUse(MI.getOperand(0).getReg())
+          .add(MI.getOperand(FirstUseIdx))
+          .addDef(MOS::Z, RegState::Implicit);
+    }
+  } else {
     First.addDef(MOS::Z, RegState::Implicit);
+  }
 
   MachineBasicBlock *TailMBB = MBB->splitAt(MI);
   // If MI is the last instruction, splitAt won't insert a new block. In that
