@@ -49,6 +49,16 @@ def G_SBC : MOSGenericInstruction {
   let InOperandList = (ins type0:$l, type0:$r, type1:$cin);
 }
 
+// Generalized 8-bit load using the zero page indexed addressing mode. The base
+// argument isn't a pointer; it's either a global value or an 8-bit immediate.
+// The index argument is an 8-bit scalar. Additionally expects a
+// MachineMemOperand.
+def G_LOAD_ZP_IDX : MOSGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$base, type1:$index);
+  let mayLoad = true;
+}
+
 // Generalized 8-bit load using the absolute addressing mode. The address
 // argument isn't a pointer; it's either a global value or a 16-bit immediate.
 // Additionally expects a MachineMemOperand.
@@ -83,6 +93,16 @@ def G_LOAD_INDIR_IDX : MOSGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins ptype1:$base, type1:$index);
   let mayLoad = true;
+}
+
+// Generalized 8-bit store using the zero page indexed addressing mode. The base
+// argument isn't a pointer; it's either a global value or a 8-bit immediate.
+// The index argument is an 8-bit scalar. Additionally expects a
+// MachineMemOperand.
+def G_STORE_ZP_IDX : MOSGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src, unknown:$base, type1:$index);
+  let mayStore = true;
 }
 
 // Generalized 8-bit store using the absolute addressing mode. The address

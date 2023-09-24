@@ -49,4 +49,33 @@ body: |
     RTS
     ; CHECK-NEXT: rts
 ...
-
+---
+name: inc_zeropage_x
+# CHECK-LABEL: inc_zeropage_x
+body: |
+  bb.0.entry:
+    INCIdx target-flags(zeropage) 8242, $x
+    ; CHECK: inc 8242,x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: inc_absolute_x
+# CHECK-LABEL: inc_absolute_x
+body: |
+  bb.0.entry:
+    INCIdx 8242, $x
+    ; CHECK: inc mos16(8242),x
+    RTS
+    ; CHECK-NEXT: rts
+...
+---
+name: inc_absolute_nonzp_x
+# CHECK-LABEL: inc_absolute_nonzp_x
+body: |
+  bb.0.entry:
+    INCIdx 15000, $x
+    ; CHECK: inc 15000,x
+    RTS
+    ; CHECK-NEXT: rts
+...

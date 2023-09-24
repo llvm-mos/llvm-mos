@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MOSSubtarget.h"
 #include "MCTargetDesc/MOSAsmBackend.h"
 #include "MCTargetDesc/MOSELFObjectWriter.h"
 #include "MCTargetDesc/MOSFixupKinds.h"
@@ -321,10 +322,10 @@ static bool isImmediateBankRelaxable(const MCSubtargetInfo &STI,
                                      int64_t Imm, bool BankRelax) {
   if (BankRelax)
     return Imm >= 0 && Imm <= UINT16_MAX;
-  // On HuC6280, the zero page is redirected to 0x2000.
-  if (STI.hasFeature(MOS::FeatureHUC6280))
-    return Imm >= 0x2000 && Imm < 0x2100;
-  return Imm >= 0 && Imm <= UCHAR_MAX;
+
+  uint32_t ZpAddrOffset = static_cast<const MOSSubtarget &>(STI)
+                            .getZeroPageOffset();
+  return Imm >= ZpAddrOffset && Imm <= ZpAddrOffset+0xFF;
 }
 
 void MOSAsmBackend::relaxForImmediate(MCInst &Inst,

@@ -215,7 +215,7 @@ def pcrel16 : pcrel16at<1>;
 class addr8at<int offset> : Operand<i32> {
   let ParserMatchClass = Addr8Operand<"Addr8">;
   let EncoderMethod = "encodeImm<MOS::Addr8, " # offset # ">";
-  let DecoderMethod = "decodeUImmOperand<8>";
+  let DecoderMethod = "decodeAddr8Operand";
   let OperandType = "OPERAND_ADDR8";
   let OperandNamespace = "MOSOp";
   let Type = i8;

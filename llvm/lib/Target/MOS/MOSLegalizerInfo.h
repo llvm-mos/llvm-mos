@@ -70,6 +70,8 @@ private:
                       MachineInstr &MI) const;
   bool legalizePtrMask(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
+  bool legalizeAddrSpaceCast(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                             MachineInstr &MI) const;
   bool legalizeAddSubO(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
   bool legalizeSubE(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
@@ -88,9 +90,12 @@ private:
                              GLoadStore &MI) const;
   bool tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
-                                    GLoadStore &MI) const;
+                                    GLoadStore &MI, bool ZP) const;
   bool selectIndirectAddressing(LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI, GLoadStore &MI) const;
+  bool selectZeroIndexedAddressing(LegalizerHelper &Helper,
+                                   MachineRegisterInfo &MRI,
+                                   GLoadStore &MI) const;
   bool legalizeMemOp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;
   bool tryHuCBlockCopy(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

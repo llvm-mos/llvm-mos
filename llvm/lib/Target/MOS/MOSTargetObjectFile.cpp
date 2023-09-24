@@ -6,11 +6,51 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MOS.h"
+#include "MOSTargetMachine.h"
 #include "MOSTargetObjectFile.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/GlobalObject.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/SectionKind.h"
 
 using namespace llvm;
+
+void MOSTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  ZpDataSection = Ctx.getELFSection(".zp.data", ELF::SHT_PROGBITS,
+                                    ELF::SHF_ALLOC | ELF::SHF_WRITE);
+  ZpBssSection = Ctx.getELFSection(".zp.bss", ELF::SHT_NOBITS,
+                                   ELF::SHF_ALLOC | ELF::SHF_WRITE);
+  ZpNoinitSection = Ctx.getELFSection(".zp.noinit", ELF::SHT_NOBITS,
+                                      ELF::SHF_ALLOC | ELF::SHF_WRITE);
+}
+
+template <typename T> MOS::AddressSpace getAddressSpace(T *V) {
+  auto *PT = cast<PointerType>(V->getType());
+  assert(PT != nullptr && "unexpected MemSDNode");
+  unsigned AS = PT->getAddressSpace();
+  if (AS < MOS::NumAddrSpaces)
+    return static_cast<MOS::AddressSpace>(AS);
+  return MOS::NumAddrSpaces;
+}
+
+MCSection *MOSTargetObjectFile::SelectSectionForGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // Place zero page variables in the .zp sections by default.
+  if (getAddressSpace(GO) == MOS::AS_ZeroPage && !GO->hasSection()) {
+    if (Kind.isNoInit())
+      return ZpNoinitSection;
+    if (Kind.isBSS())
+      return ZpBssSection;
+    return ZpDataSection;
+  }
+
+  // Use default ELF handling for all other cases.
+  return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
+}
 
 MCSection *MOSTargetObjectFile::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind SK, const TargetMachine &TM) const {

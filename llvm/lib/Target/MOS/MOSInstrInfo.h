@@ -128,7 +128,7 @@ private:
                          const TargetRegisterClass &RC) const;
 
   // Post RA pseudos
-  void expandLDIdx(MachineIRBuilder &Builder) const;
+  void expandLDIdx(MachineIRBuilder &Builder, bool ZP) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;
   void expandLDImm16(MachineIRBuilder &Builder) const;
   void expandLDImm16Remat(MachineIRBuilder &Builder) const;
@@ -147,6 +147,12 @@ private:
 
 namespace MOS {
 
+enum AddressSpace {
+  AS_Memory,
+  AS_ZeroPage,
+  NumAddrSpaces
+};
+
 enum TargetIndex {
   TI_STATIC_STACK,
 };
@@ -156,6 +162,7 @@ enum TOF {
   MO_LO,
   MO_HI,
   MO_HI_JT,
+  MO_ZEROPAGE,
 };
 
 } // namespace MOS

@@ -18,6 +18,7 @@
 #include "MOSLegalizerInfo.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOS.h"
 #include "MOSFrameLowering.h"
 #include "MOSInstrInfo.h"
 #include "MOSMachineFunctionInfo.h"
@@ -65,23 +66,24 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   LLT S32 = LLT::scalar(32);
   LLT S64 = LLT::scalar(64);
   LLT P = LLT::pointer(0, 16);
+  LLT PZ = LLT::pointer(1, 8);
 
   // Constants
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalFor({S1, S8, P})
+      .legalFor({S1, S8, P, PZ})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
-      .legalFor({S1, S8, P})
+      .legalFor({S1, S8, P, PZ})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE, G_BLOCK_ADDR})
-      .legalFor({P})
+  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_FRAME_INDEX, G_BLOCK_ADDR})
+      .legalFor({P, PZ})
       .unsupported();
 
   // Integer Extension and Truncation
@@ -106,12 +108,15 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   // Type Conversions
 
   getActionDefinitionsBuilder(G_INTTOPTR)
-      .legalFor({{P, S16}})
-      .clampScalar(1, S16, S16)
+      .legalFor({{P, S16}, {PZ, S8}})
+      .scalarSameSizeAs(1, 0)
       .unsupported();
   getActionDefinitionsBuilder(G_PTRTOINT)
-      .legalFor({{S16, P}})
-      .clampScalar(0, S16, S16)
+      .legalFor({{S16, P}, {S8, PZ}})
+      .scalarSameSizeAs(0, 1)
+      .unsupported();
+  getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
+      .customForCartesianProduct({P, PZ})
       .unsupported();
 
   // Scalar Operations
@@ -119,10 +124,10 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   getActionDefinitionsBuilder({G_EXTRACT, G_INSERT}).lower();
 
   getActionDefinitionsBuilder(G_MERGE_VALUES)
-      .legalForCartesianProduct({S16, P}, {S8})
+      .legalForCartesianProduct({S16, P}, {S8, PZ})
       .unsupported();
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
-      .legalForCartesianProduct({S8}, {S16, P})
+      .legalForCartesianProduct({S8, PZ}, {S16, P})
       .unsupported();
 
   getActionDefinitionsBuilder(G_BSWAP)
@@ -194,14 +199,20 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .custom();
 
   getActionDefinitionsBuilder(G_SELECT)
-      .customFor({P})
+      .customFor({P, PZ})
       .legalFor({S1, S8})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
 
-  getActionDefinitionsBuilder(G_PTR_ADD).customFor({{P, S16}}).unsupported();
-  getActionDefinitionsBuilder(G_PTRMASK).customFor({{P, S16}}).unsupported();
+  getActionDefinitionsBuilder(G_PTR_ADD)
+      .customFor({{P, S16}, {PZ, S8}})
+      .scalarSameSizeAs(1, 0)
+      .unsupported();
+  getActionDefinitionsBuilder(G_PTRMASK)
+      .customFor({{P, S16}, {PZ, S8}})
+      .scalarSameSizeAs(1, 0)
+      .unsupported();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX}).lower();
 
@@ -291,7 +302,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       // Convert to int to load/store; that way the operation can be narrowed to
       // 8 bits. Once 8-bit, select an addressing mode to replace the generic
       // G_LOAD and G_STORE.
-      .customFor({{S8, P}, {P, P}})
+      .customForCartesianProduct({S8, PZ, P}, {PZ, P})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
@@ -304,7 +315,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   // Control Flow
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor({S1, S8, P})
+      .legalFor({S1, S8, P, PZ})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
@@ -329,7 +340,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
   getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).lower();
 
   getActionDefinitionsBuilder(G_FREEZE)
-      .customFor({S1, S8, P})
+      .customFor({S1, S8, P, PZ})
       .widenScalarToNextMultipleOf(0, 8)
       .maxScalar(0, S8)
       .unsupported();
@@ -412,6 +423,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizePtrAdd(Helper, MRI, MI);
   case G_PTRMASK:
     return legalizePtrMask(Helper, MRI, MI);
+  case G_ADDRSPACE_CAST:
+    return legalizeAddrSpaceCast(Helper, MRI, MI);
   case G_UADDO:
   case G_SADDO:
   case G_USUBO:
@@ -1159,11 +1172,11 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   // Compare pointers by first converting to integer. This allows the comparison
   // to be reduced to 8-bit comparisons.
   if (Type.isPointer()) {
-    LLT S16 = LLT::scalar(16);
+    LLT S = LLT::scalar(Type.getScalarSizeInBits());
 
     Helper.Observer.changingInstr(MI);
-    MI.getOperand(2).setReg(Builder.buildPtrToInt(S16, LHS).getReg(0));
-    MI.getOperand(3).setReg(Builder.buildPtrToInt(S16, RHS).getReg(0));
+    MI.getOperand(2).setReg(Builder.buildPtrToInt(S, LHS).getReg(0));
+    MI.getOperand(3).setReg(Builder.buildPtrToInt(S, RHS).getReg(0));
     Helper.Observer.changedInstr(MI);
     return true;
   }
@@ -1312,12 +1325,12 @@ bool MOSLegalizerInfo::legalizeSelect(LegalizerHelper &Helper,
                                       MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
-  LLT P = LLT::pointer(0, 16);
-  (void)P;
-  LLT S16 = LLT::scalar(16);
-
   auto [Dst, Test, LHS, RHS] = MI.getFirst4Regs();
-  (void)Test;
+
+  LLT P = MRI.getType(Dst);
+  assert(P.isPointer());
+
+  LLT S = LLT::scalar(P.getScalarSizeInBits());
 
   assert(MRI.getType(Dst) == P);
   assert(MRI.getType(Test) == LLT::scalar(1));
@@ -1325,9 +1338,9 @@ bool MOSLegalizerInfo::legalizeSelect(LegalizerHelper &Helper,
   assert(MRI.getType(RHS) == P);
 
   Helper.Observer.changingInstr(MI);
-  MI.getOperand(2).setReg(Builder.buildPtrToInt(S16, LHS).getReg(0));
-  MI.getOperand(3).setReg(Builder.buildPtrToInt(S16, RHS).getReg(0));
-  Register Tmp = MRI.createGenericVirtualRegister(S16);
+  MI.getOperand(2).setReg(Builder.buildPtrToInt(S, LHS).getReg(0));
+  MI.getOperand(3).setReg(Builder.buildPtrToInt(S, RHS).getReg(0));
+  Register Tmp = MRI.createGenericVirtualRegister(S);
   MI.getOperand(0).setReg(Tmp);
   Helper.Observer.changedInstr(MI);
 
@@ -1380,11 +1393,10 @@ bool MOSLegalizerInfo::legalizePtrAdd(LegalizerHelper &Helper,
     return true;
   }
 
-  // Generalized pointer additions must be lowered to 16-bit integer
-  // arithmetic.
-  LLT S16 = LLT::scalar(16);
-  auto PtrVal = Builder.buildPtrToInt(S16, Base);
-  auto Sum = Builder.buildAdd(S16, PtrVal, Offset);
+  // Generalized pointer additions must be lowered to integer arithmetic.
+  LLT S = LLT::scalar(MRI.getType(Base).getScalarSizeInBits());
+  auto PtrVal = Builder.buildPtrToInt(S, Base);
+  auto Sum = Builder.buildAdd(S, PtrVal, Offset);
   Builder.buildIntToPtr(Result, Sum);
   MI.eraseFromParent();
   return true;
@@ -1394,12 +1406,47 @@ bool MOSLegalizerInfo::legalizePtrMask(LegalizerHelper &Helper,
                                        MachineRegisterInfo &MRI,
                                        MachineInstr &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
-  LLT S16 = LLT::scalar(16);
 
   auto [Result, Base, Mask] = MI.getFirst3Regs();
+  LLT S = LLT::scalar(MRI.getType(Base).getScalarSizeInBits());
 
   Builder.buildIntToPtr(
-      Result, Builder.buildAnd(S16, Builder.buildPtrToInt(S16, Base), Mask));
+      Result, Builder.buildAnd(S, Builder.buildPtrToInt(S, Base), Mask));
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
+                                             MachineRegisterInfo &MRI,
+                                             MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+
+  auto [DestReg, DestTypeP, SrcReg, SrcTypeP] = MI.getFirst2RegLLTs();
+  LLT DestTypeS = LLT::scalar(DestTypeP.getScalarSizeInBits());
+  LLT SrcTypeS = LLT::scalar(SrcTypeP.getScalarSizeInBits());
+
+  auto Tmp = Builder.buildPtrToInt(SrcTypeS, SrcReg);
+
+  if (DestTypeS.getSizeInBits() < SrcTypeS.getSizeInBits()) {
+    // larger -> smaller address space: truncate
+    Tmp = Builder.buildTrunc(DestTypeS, Tmp);
+  } else if (DestTypeS.getSizeInBits() > SrcTypeS.getSizeInBits()) {
+    // smaller -> larger address space: extend
+    assert(SrcTypeP.getAddressSpace() == MOS::AS_ZeroPage);
+    assert(DestTypeP.getAddressSpace() == MOS::AS_Memory);
+    Tmp = Builder.buildZExt(DestTypeS, Tmp);
+    if (STI.getZeroPageOffset() != 0) {
+      // Dest = (Src | ZeroPageOffset)
+      Tmp = Builder.buildOr(DestTypeS, Tmp, Builder.buildConstant(
+                                DestTypeS, STI.getZeroPageOffset()));
+    }
+  }
+
+  assert(MRI.getType(Tmp->getOperand(0).getReg()) == DestTypeS);
+
+  Builder.buildIntToPtr(DestReg, Tmp);
+
   MI.eraseFromParent();
   return true;
 }
@@ -1493,8 +1540,10 @@ bool MOSLegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     Builder.buildZExt(MI.getDstReg(), Tmp);
     break;
   default:
-    assert(MRI.getType(MI.getDstReg()).isPointer());
-    Tmp = MRI.createGenericVirtualRegister(LLT::scalar(16));
+    auto DstType = MRI.getType(MI.getDstReg());
+    assert(DstType.isPointer());
+    Tmp = MRI.createGenericVirtualRegister(
+        LLT::scalar(DstType.getScalarSizeInBits()));
     Builder.buildIntToPtr(MI.getDstReg(), Tmp);
     break;
   }
@@ -1514,8 +1563,12 @@ bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
     return selectAddressingMode(Helper, MRI, MI);
 
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  auto ValueType = MRI.getType(MI.getValueReg());
+  assert(ValueType.isPointer());
+
   Register Tmp =
-      Builder.buildPtrToInt(LLT::scalar(16), MI.getValueReg()).getReg(0);
+      Builder.buildPtrToInt(LLT::scalar(ValueType.getScalarSizeInBits()),
+                            MI.getValueReg()).getReg(0);
   Helper.Observer.changingInstr(MI);
   MI.getOperand(0).setReg(Tmp);
   Helper.Observer.changedInstr(MI);
@@ -1535,11 +1588,24 @@ static bool willBeStaticallyAllocated(const MachineOperand &MO) {
 bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
                                             MachineRegisterInfo &MRI,
                                             GLoadStore &MI) const {
-  if (tryAbsoluteAddressing(Helper, MRI, MI))
-    return true;
-  if (tryAbsoluteIndexedAddressing(Helper, MRI, MI))
-    return true;
-  return selectIndirectAddressing(Helper, MRI, MI);
+  switch (MRI.getType(MI.getPointerReg()).getScalarSizeInBits()) {
+  case 8: {
+    if (tryAbsoluteAddressing(Helper, MRI, MI))
+      return true;
+    if (tryAbsoluteIndexedAddressing(Helper, MRI, MI, true))
+      return true;
+    return selectZeroIndexedAddressing(Helper, MRI, MI);
+  }
+  case 16: {
+    if (tryAbsoluteAddressing(Helper, MRI, MI))
+      return true;
+    if (tryAbsoluteIndexedAddressing(Helper, MRI, MI, false))
+      return true;
+    return selectIndirectAddressing(Helper, MRI, MI);
+  }
+  default:
+    llvm_unreachable("unknown pointer size");
+  }
 }
 
 std::optional<MachineOperand>
@@ -1599,35 +1665,47 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
 
 bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                                     MachineRegisterInfo &MRI,
-                                                    GLoadStore &MI) const {
+                                                    GLoadStore &MI,
+                                                    bool ZP) const {
   LLT S8 = LLT::scalar(8);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   Register Addr = MI.getPointerReg();
   int64_t Offset = 0;
   Register Index = 0;
 
-  unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS_IDX : MOS::G_STORE_ABS_IDX;
+  unsigned Opcode = isa<GLoad>(MI) ?
+      (ZP ? MOS::G_LOAD_ZP_IDX : MOS::G_LOAD_ABS_IDX) :
+      (ZP ? MOS::G_STORE_ZP_IDX : MOS::G_STORE_ABS_IDX);
 
   while (true) {
     if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
       assert(Index); // Otherwise, Absolute addressing would have been selected.
-      Builder.buildInstr(Opcode)
-          .add(MI.getOperand(0))
-          .addImm(ConstAddr->Value.getSExtValue() + Offset)
-          .addUse(Index)
-          .addMemOperand(*MI.memoperands_begin());
+
+      Offset = ConstAddr->Value.getSExtValue() + Offset;
+      if (ZP)
+        Offset = STI.getZeroPageOffset() + (Offset & 0xFF);
+      auto Inst = Builder.buildInstr(Opcode)
+                      .add(MI.getOperand(0))
+                      .addImm(Offset)
+                      .addUse(Index)
+                      .addMemOperand(*MI.memoperands_begin());
+      if (ZP)
+        Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
       MI.eraseFromParent();
       return true;
     }
     if (const MachineInstr *GVAddr = getOpcodeDef(G_GLOBAL_VALUE, Addr, MRI)) {
       assert(Index); // Otherwise, Absolute addressing would have been selected.
       const MachineOperand &GV = GVAddr->getOperand(1);
-      Builder.buildInstr(Opcode)
-          .add(MI.getOperand(0))
-          .addGlobalAddress(GV.getGlobal(), GV.getOffset() + Offset)
-          .addUse(Index)
-          .addMemOperand(*MI.memoperands_begin());
+      auto Inst = Builder.buildInstr(Opcode)
+                      .add(MI.getOperand(0))
+                      .addGlobalAddress(GV.getGlobal(), GV.getOffset() + Offset)
+                      .addUse(Index)
+                      .addMemOperand(*MI.memoperands_begin());
+      if (ZP)
+        Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
       MI.eraseFromParent();
       return true;
     }
@@ -1636,11 +1714,13 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
       if (willBeStaticallyAllocated(FI)) {
         assert(
             Index); // Otherwise, Absolute addressing would have been selected.
-        Builder.buildInstr(Opcode)
-            .add(MI.getOperand(0))
-            .addFrameIndex(FI.getIndex(), FI.getOffset() + Offset)
-            .addUse(Index)
-            .addMemOperand(*MI.memoperands_begin());
+        auto Inst = Builder.buildInstr(Opcode)
+                        .add(MI.getOperand(0))
+                        .addFrameIndex(FI.getIndex(), FI.getOffset() + Offset)
+                        .addUse(Index)
+                        .addMemOperand(*MI.memoperands_begin());
+        if (ZP)
+          Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
         MI.eraseFromParent();
         return true;
       }
@@ -1672,13 +1752,49 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
           8) {
         if (Index)
           return false;
-        Index = Builder.buildTrunc(S8, NewOffset).getReg(0);
+        Index = Builder.buildZExtOrTrunc(S8, NewOffset).getReg(0);
         continue;
       }
     }
     return false;
   }
   return false;
+}
+
+bool MOSLegalizerInfo::selectZeroIndexedAddressing(LegalizerHelper &Helper,
+                                                   MachineRegisterInfo &MRI,
+                                                   GLoadStore &MI) const {
+  // Selects absolute indexed, but with the pointer as the index.
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
+
+  assert(MRI.getType(MI.getPointerReg()).getScalarSizeInBits() == 8);
+  LLT S = LLT::scalar(8);
+  auto Addr = MI.getOperand(1).getReg();
+  int64_t Offset = 0;
+
+  if (const auto *PtrAddAddr =
+          cast_if_present<GPtrAdd>(getOpcodeDef(G_PTR_ADD, Addr, MRI))) {
+    auto ConstOffset =
+        getIConstantVRegValWithLookThrough(PtrAddAddr->getOffsetReg(), MRI);
+    if (ConstOffset) {
+      Offset += ConstOffset->Value.getSExtValue();
+      Addr = PtrAddAddr->getBaseReg();
+    }
+  }
+
+  Offset = STI.getZeroPageOffset() + (Offset & 0xFF);
+  
+  auto AddrP = Builder.buildPtrToInt(S, Addr).getReg(0);
+  unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ZP_IDX : MOS::G_STORE_ZP_IDX;
+  auto Inst = Builder.buildInstr(Opcode)
+                .add(MI.getOperand(0))
+                .addImm(Offset)
+                .addUse(AddrP)
+                .addMemOperand(*MI.memoperands_begin());
+  Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
+  MI.eraseFromParent();
+  return true;
 }
 
 bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,
@@ -1717,7 +1833,7 @@ bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,
     } else if (Helper.getKnownBits()
                    ->getKnownBits(Offset)
                    .countMaxActiveBits() <= 8) {
-      Index = Builder.buildTrunc(S8, Offset).getReg(0);
+      Index = Builder.buildZExtOrTrunc(S8, Offset).getReg(0);
       Addr = Base;
     }
   }

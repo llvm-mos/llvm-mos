@@ -80,6 +80,14 @@ body: |
     $c = CMPTermImag8 $a, $rc2, implicit-def $nz
 ...
 ---
+name: cmptermzpidx
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: cmptermzpidx
+    ; CHECK: $c = CMPZpIdx $a, 123, $x, implicit-def $nz
+    $c = CMPTermZpIdx $a, 123, $x, implicit-def $nz
+...
+---
 name: cmptermabs
 body: |
   bb.0.entry:
@@ -88,12 +96,12 @@ body: |
     $c = CMPTermAbs $a, 1234, implicit-def $nz
 ...
 ---
-name: cmptermidx
+name: cmptermabsidx
 body: |
   bb.0.entry:
-    ; CHECK-LABEL: name: cmptermidx
+    ; CHECK-LABEL: name: cmptermabsidx
     ; CHECK: $c = CMPAbsIdx $a, 1234, $x, implicit-def $nz
-    $c = CMPTermIdx $a, 1234, $x, implicit-def $nz
+    $c = CMPTermAbsIdx $a, 1234, $x, implicit-def $nz
 ...
 ---
 name: cmptermindir
@@ -220,7 +228,7 @@ name: ldxabsidx_y
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldxabsidx_y
-    ; CHECK: $x = LDXAbsIdx 1234, $y
+    ; CHECK: $x = LDXIdx 1234, $y
     $x = LDAbsIdx 1234, $y
 ...
 ---
@@ -239,7 +247,7 @@ name: ldyabsidx_x
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldyabsidx_x
-    ; CHECK: $y = LDYAbsIdx 1234, $x
+    ; CHECK: $y = LDYIdx 1234, $x
     $y = LDAbsIdx 1234, $x
 ...
 ---

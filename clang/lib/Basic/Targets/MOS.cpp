@@ -12,6 +12,7 @@
 
 #include "MOS.h"
 #include "clang/Basic/MacroBuilder.h"
+#include "clang/Basic/TargetInfo.h"
 
 using namespace clang::targets;
 
@@ -156,6 +157,19 @@ llvm::ArrayRef<const char *> MOSTargetInfo::getGCCRegNames() const {
   return GCCRegNames;
 }
 
+uint64_t MOSTargetInfo::getPointerWidthV(LangAS AddrSpace) const {
+  // Coerce all non-target address spaces to the default address space.
+  if (!isTargetAddressSpace(AddrSpace))
+    return getPointerWidthV(LangAS::FirstTargetAddressSpace);
+
+  switch (toTargetAddressSpace(AddrSpace)) {
+  case 1: // Zero page memory
+    return 8;
+  default:
+    return 16;
+  }
+}
+
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mos6502"},    {"mos6502x"},   {"mos65c02"},   {"mosr65c02"},
     {"mosw65c02"},  {"mosw65816"},  {"mos65el02"},  {"mos65ce02"},
@@ -201,4 +215,7 @@ void MOSTargetInfo::getTargetDefines(const LangOptions &Opts,
   for (const auto &CPUDefine: CPUDefines) {
     Builder.defineMacro("__mos" + CPUDefine + "__");
   }
+
+  Builder.defineMacro("__zp", "__attribute__((__address_space__(1)))");
+  Builder.defineMacro("__zeropage", "__attribute__((__address_space__(1)))");
 }

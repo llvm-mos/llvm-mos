@@ -39,10 +39,13 @@ class MOSDisassembler : public MCDisassembler {
   mutable bool XLow = false;
 
 public:
+  uint16_t ZeroPageOffset = 0;
+
   MOSDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx),
         Has65816RegisterWidths(STI.hasFeature(MOS::FeatureW65816) ||
-                               STI.hasFeature(MOS::Feature65EL02)) {}
+                               STI.hasFeature(MOS::Feature65EL02)),
+        ZeroPageOffset(STI.hasFeature(MOS::FeatureHUC6280) ? 0x2000 : 0) {}
   std::optional<MCDisassembler::DecodeStatus>
   onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
                 uint64_t Address, raw_ostream &CStream) const override;
@@ -62,6 +65,16 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheMOSTarget(),
                                          createMOSDisassembler);
+}
+
+static DecodeStatus decodeAddr8Operand(MCInst &Inst, uint64_t Imm,
+                                      int64_t Address,
+                                      const MCDisassembler *Decoder) {
+  auto *MD = static_cast<const MOSDisassembler *>(Decoder);
+  if (!isUInt<8>(Imm))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm + MD->ZeroPageOffset));
+  return MCDisassembler::Success;
 }
 
 template <unsigned N>
