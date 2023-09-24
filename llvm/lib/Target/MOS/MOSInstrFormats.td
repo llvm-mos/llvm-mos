@@ -88,6 +88,8 @@ def HasSPC700 : Predicate<"Subtarget->HasSPC700()">,
 }
 
 def HasBRA : Predicate<"Subtarget->hasBRA()">;
+def HasGPRStackRegs : Predicate<"Subtarget->hasGPRStackRegs()">;
+def HasGPRIncDec : Predicate<"Subtarget->hasGPRIncDec()">;
 
 /// These instruction format definitions exist, thanks to Neil Parker's
 /// analysis of the 65xx instruction set, at:

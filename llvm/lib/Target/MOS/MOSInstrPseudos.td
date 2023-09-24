@@ -131,7 +131,7 @@ def DEC : MOSPseudo {
   let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, -1))];
 }
 
-let Predicates = [Has65C02] in {
+let Predicates = [HasGPRIncDec] in {
   // As the 65C02 allows incrementing any register with INC/DEC only,
   // separate pseudos are defined which do not define C or V.
 

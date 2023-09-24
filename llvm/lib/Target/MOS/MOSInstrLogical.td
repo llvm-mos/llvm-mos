@@ -404,7 +404,7 @@ multiclass MOSIncDec {
     dag OutOperandList = (outs GPR:$dst);
     dag InOperandList = (ins GPR:$src);
     let Constraints = "$src = $dst";
-    let Predicates = [Has65C02];
+    let Predicates = [HasGPRIncDec];
   }
 
   def CImag8 : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPage) addr8:$dst)> {
@@ -487,7 +487,7 @@ def PL : MOSLogicalInstr {
   let mayLoad = true;
 }
 
-let Predicates = [Has65C02] in {
+let Predicates = [HasGPRStackRegs] in {
   // PHA, PHP
   def PH_CMOS : MOSLogicalInstr {
     dag InOperandList = (ins AXYP:$src);
