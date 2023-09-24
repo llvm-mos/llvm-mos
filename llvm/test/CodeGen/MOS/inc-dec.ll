@@ -131,9 +131,9 @@ define i32 @dec_i32(i32 %a) {
 ; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    ldy __rc2
+; CHECK-NEXT:    ldy #255
 ; CHECK-NEXT:    dec __rc2
-; CHECK-NEXT:    cpy #0
+; CHECK-NEXT:    cpy __rc2
 ; CHECK-NEXT:    bne .LBB7_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    dec __rc3
@@ -149,9 +149,9 @@ entry:
 define i8* @dec_ptr(i8* %a) {
 ; CHECK-LABEL: dec_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx __rc2
+; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    dec __rc2
-; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    cpx __rc2
 ; CHECK-NEXT:    bne .LBB8_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dec __rc3

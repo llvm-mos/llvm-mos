@@ -422,16 +422,18 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   unsigned FirstUseIdx = MI.getNumExplicitDefs();
   unsigned FirstDefIdx = IsDec ? 1 : 0;
   bool IsReg = MI.getOperand(FirstUseIdx).isReg();
+  bool IsImag8 = IsReg && MOS::Imag8RegClass.contains(
+                     MI.getOperand(FirstUseIdx).getReg());
   bool IsCmp = FirstUseIdx < MI.getNumExplicitOperands() - 1;
   // Only use DCP for decrements if:
-  // - a register operand is not used (DCP works only on memory),
+  // - a GPR operand is not used (DCP works only on memory),
   // - this is not the last byte (CMP is unnecessary then),
   // - the scratch register is bound to A (via DecDcpMB).
-  bool UseDcpOpcode = !IsReg && IsCmp && STI.has6502X() &&
+  bool UseDcpOpcode = (!IsReg || IsImag8) && IsCmp && STI.has6502X() &&
                       MI.getOpcode() == MOS::DecDcpMB;
 
   if (IsDec && IsCmp) {
-    if (IsReg) {
+    if (IsReg && !IsImag8) {
       // Load, decrement, compare loaded to 0.
       Builder.buildCopy(MI.getOperand(0), MI.getOperand(FirstUseIdx));
     } else {
@@ -442,16 +444,24 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
     }
   }
   MachineInstrBuilder First;
-  if (IsReg) {
+  if (UseDcpOpcode) {
+    if (IsImag8) {
+      First = Builder.buildInstr(MOS::DCPImag8)
+                  .addDef(MOS::C)
+                  .addUse(MI.getOperand(0).getReg())
+                  .addUse(MI.getOperand(FirstUseIdx).getReg());
+      ++FirstDefIdx;
+    } else {
+      First = Builder.buildInstr(MOS::DCPAbs)
+                  .addDef(MOS::C)
+                  .addUse(MI.getOperand(0).getReg())
+                  .add(MI.getOperand(FirstUseIdx));
+    }
+  } else if (IsReg) {
     First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
                 .add(MI.getOperand(FirstDefIdx))
                 .add(MI.getOperand(FirstUseIdx));
     ++FirstDefIdx;
-  } else if (UseDcpOpcode) {
-    First = Builder.buildInstr(MOS::DCPAbs)
-                .addDef(MOS::C)
-                .addUse(MI.getOperand(0).getReg())
-                .add(MI.getOperand(FirstUseIdx));
   } else {
     First = Builder.buildInstr(IsDec ? MOS::DECAbs : MOS::INCAbs)
                 .add(MI.getOperand(FirstUseIdx));
@@ -462,7 +472,7 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   }
 
   if (IsDec && !UseDcpOpcode) {
-    if (IsReg) {
+    if (IsReg && !IsImag8) {
       Builder.buildInstr(MOS::CMPImm)
           .addDef(MOS::C)
           .addUse(MI.getOperand(0).getReg())
