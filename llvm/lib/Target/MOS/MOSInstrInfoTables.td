@@ -64,6 +64,11 @@ def : ZPIRE< CPX_ZeroPage, CPX_Absolute >;
 
 def : ZPIRE< CPY_ZeroPage, CPY_Absolute >;
 
+def : ZPIRE< CPZ_ZeroPage, CPZ_Absolute >;
+
+def : ZPIRE< DCP_ZeroPage, DCP_Absolute >;
+def : ZPIRE< DCP_ZeroPageX, DCP_AbsoluteX >;
+
 def : ZPIRE< DEC_ZeroPage, DEC_Absolute >;
 def : ZPIRE< DEC_ZeroPageX, DEC_AbsoluteX >;
 
@@ -74,6 +79,9 @@ def : ZBIRE< EOR_AbsoluteX, EOR_AbsoluteXLong >;
 
 def : ZPIRE< INC_ZeroPage, INC_Absolute >;
 def : ZPIRE< INC_ZeroPageX, INC_AbsoluteX >;
+
+def : ZPIRE< ISC_ZeroPage, ISC_Absolute >;
+def : ZPIRE< ISC_ZeroPageX, ISC_AbsoluteX >;
 
 def : ZPIRE< LDA_ZeroPage, LDA_Absolute >;
 def : ZBIRE< LDA_Absolute, LDA_AbsoluteLong >;
@@ -94,16 +102,28 @@ def : ZBIRE< ORA_Absolute, ORA_AbsoluteLong >;
 def : ZPIRE< ORA_ZeroPageX, ORA_AbsoluteX >;
 def : ZBIRE< ORA_AbsoluteX, ORA_AbsoluteXLong >;
 
+def : ZPIRE< RLA_ZeroPage, RLA_Absolute >;
+def : ZPIRE< RLA_ZeroPageX, RLA_AbsoluteX >;
+
 def : ZPIRE< ROL_ZeroPage, ROL_Absolute >;
 def : ZPIRE< ROL_ZeroPageX, ROL_AbsoluteX >;
 
 def : ZPIRE< ROR_ZeroPage, ROR_Absolute >;
 def : ZPIRE< ROR_ZeroPageX, ROR_AbsoluteX >;
 
+def : ZPIRE< RRA_ZeroPage, RRA_Absolute >;
+def : ZPIRE< RRA_ZeroPageX, RRA_AbsoluteX >;
+
 def : ZPIRE< SBC_ZeroPage, SBC_Absolute >;
 def : ZBIRE< SBC_Absolute, SBC_AbsoluteLong >;
 def : ZPIRE< SBC_ZeroPageX, SBC_AbsoluteX >;
 def : ZBIRE< SBC_AbsoluteX, SBC_AbsoluteXLong >;
+
+def : ZPIRE< SLO_ZeroPage, SLO_Absolute >;
+def : ZPIRE< SLO_ZeroPageX, SLO_AbsoluteX >;
+
+def : ZPIRE< SRE_ZeroPage, SRE_Absolute >;
+def : ZPIRE< SRE_ZeroPageX, SRE_AbsoluteX >;
 
 def : ZPIRE< STA_ZeroPage, STA_Absolute >;
 def : ZBIRE< STA_Absolute, STA_AbsoluteLong >;
@@ -111,8 +131,10 @@ def : ZPIRE< STA_ZeroPageX, STA_AbsoluteX >;
 def : ZBIRE< STA_AbsoluteX, STA_AbsoluteXLong >;
 
 def : ZPIRE< STX_ZeroPage, STX_Absolute >;
+def : ZPIRE< STX_ZeroPageY, STX_AbsoluteY >;
 
 def : ZPIRE< STY_ZeroPage, STY_Absolute >;
+def : ZPIRE< STY_ZeroPageX, STY_AbsoluteX >;
 
 def : ZPIRE< STZ_ZeroPage, STZ_Absolute >;
 def : ZPIRE< STZ_ZeroPageX, STZ_AbsoluteX >;
