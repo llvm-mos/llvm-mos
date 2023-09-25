@@ -92,9 +92,9 @@ define i32 @dec_i32(i32 %a) {
 ; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB5_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    ldy __rc2
+; CHECK-NEXT:    ldy #255
 ; CHECK-NEXT:    dec __rc2
-; CHECK-NEXT:    cpy #0
+; CHECK-NEXT:    cpy __rc2
 ; CHECK-NEXT:    bne .LBB5_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    dec __rc3

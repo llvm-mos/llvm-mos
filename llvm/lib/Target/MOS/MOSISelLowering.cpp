@@ -416,28 +416,35 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
     }
   }
 
+  // Emitting INC/DEC sequences of N bytes is done in one of the following
+  // three ways (? denotes a register):
+  // 1. INC:            INC value / BNE increment_done
+  // 2. DEC (register): DE? / CP? #0 / BNE decrement_done
+  // 3. DEC (memory):   LD? #$FF / DEC value / CP? value / BNE decrement_done
+  // In addition:
+  // - The comparison and branch are omitted for the final INC/DEC.
+  // - For DEC value / CP? value, the unofficial 6502X opcode "DCP" is used
+  //   instead, if enabled. This works with a scratch register A only, however.
+  // - "3. DEC (memory)" is also used for imaginary registers, which are
+  //   modeled as registers, but exist in memory.
   MachineIRBuilder Builder(MI);
   bool IsDec = MI.getOpcode() == MOS::DecMB || MI.getOpcode() == MOS::DecDcpMB;
   assert(IsDec || MI.getOpcode() == MOS::IncMB);
   unsigned FirstUseIdx = MI.getNumExplicitDefs();
   unsigned FirstDefIdx = IsDec ? 1 : 0;
   bool IsReg = MI.getOperand(FirstUseIdx).isReg();
-  bool IsImag8 = IsReg && MOS::Imag8RegClass.contains(
-                     MI.getOperand(FirstUseIdx).getReg());
-  bool IsCmp = FirstUseIdx < MI.getNumExplicitOperands() - 1;
-  // Only use DCP for decrements if:
-  // - a GPR operand is not used (DCP works only on memory),
-  // - this is not the last byte (CMP is unnecessary then),
-  // - the scratch register is bound to A (via DecDcpMB).
-  bool UseDcpOpcode = (!IsReg || IsImag8) && IsCmp && STI.has6502X() &&
+  bool IsMemReg = IsReg && MOS::Imag8RegClass.contains(
+                      MI.getOperand(FirstUseIdx).getReg());
+  bool IsLast = FirstUseIdx >= MI.getNumExplicitOperands() - 1;
+  bool UseDcpOpcode = (!IsReg || IsMemReg) && !IsLast && STI.has6502X() &&
                       MI.getOpcode() == MOS::DecDcpMB;
 
-  if (IsDec && IsCmp) {
-    if (IsReg && !IsImag8) {
-      // Load, decrement, compare loaded to 0.
+  if (IsDec && !IsLast) {
+    if (IsReg && !IsMemReg) {
+      // 2. DEC (register): prepare register
       Builder.buildCopy(MI.getOperand(0), MI.getOperand(FirstUseIdx));
     } else {
-      // Decrement, compare decremented to 0xFF.
+      // 3. DEC (memory): LD? #$FF
       Builder.buildInstr(MOS::LDImm)
           .addDef(MI.getOperand(0).getReg())
           .addImm(INT64_C(0xFF));
@@ -445,7 +452,8 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   }
   MachineInstrBuilder First;
   if (UseDcpOpcode) {
-    if (IsImag8) {
+    // 3. DEC (memory): Emit DCP opcode, if requested.
+    if (IsMemReg) {
       First = Builder.buildInstr(MOS::DCPImag8)
                   .addDef(MOS::C)
                   .addUse(MI.getOperand(0).getReg())
@@ -457,22 +465,25 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
                   .addUse(MI.getOperand(0).getReg())
                   .add(MI.getOperand(FirstUseIdx));
     }
-  } else if (IsReg) {
-    First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
-                .add(MI.getOperand(FirstDefIdx))
-                .add(MI.getOperand(FirstUseIdx));
-    ++FirstDefIdx;
   } else {
-    First = Builder.buildInstr(IsDec ? MOS::DECAbs : MOS::INCAbs)
-                .add(MI.getOperand(FirstUseIdx));
+    // 1/2/3. Emit INC/DEC.
+    if (IsReg) {
+      First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
+                  .add(MI.getOperand(FirstDefIdx))
+                  .add(MI.getOperand(FirstUseIdx));
+      ++FirstDefIdx;
+    } else {
+      First = Builder.buildInstr(IsDec ? MOS::DECAbs : MOS::INCAbs)
+                  .add(MI.getOperand(FirstUseIdx));
+    }
   }
-  if (!IsCmp) {
+  if (IsLast) {
     MI.eraseFromParent();
     return MBB;
   }
-
   if (IsDec && !UseDcpOpcode) {
-    if (IsReg && !IsImag8) {
+    // 2/3. DEC: Emit CMP.
+    if (IsReg && !IsMemReg) {
       Builder.buildInstr(MOS::CMPImm)
           .addDef(MOS::C)
           .addUse(MI.getOperand(0).getReg())
@@ -486,6 +497,7 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
           .addDef(MOS::Z, RegState::Implicit);
     }
   } else {
+    // 1. INC: INC sets the Z flag; carry happens when value == 0.
     First.addDef(MOS::Z, RegState::Implicit);
   }
 
