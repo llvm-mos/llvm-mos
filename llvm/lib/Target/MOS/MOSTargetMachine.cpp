@@ -158,7 +158,7 @@ void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 }
 
 StringRef MOSTargetMachine::getSectionPrefix(const GlobalObject *GO) const {
-  return GO->getAddressSpace() == 1 ? ".zp" : "";
+  return GO->getAddressSpace() == MOS::AS_ZeroPage ? ".zp" : "";
 }
 
 MachineFunctionInfo *MOSTargetMachine::createMachineFunctionInfo(

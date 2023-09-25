@@ -26,6 +26,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "MOSTargetMachine.h"
@@ -83,7 +84,7 @@ MVT MOSTargetLowering::getRegisterTypeForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT,
     const ISD::ArgFlagsTy &Flags) const {
   if (Flags.isPointer())
-    return Flags.getPointerAddrSpace() == 1 ? MVT::i8 : MVT::i16;
+    return Flags.getPointerAddrSpace() == MOS::AS_ZeroPage ? MVT::i8 : MVT::i16;
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT, Flags);
 }
 
@@ -170,6 +171,11 @@ bool MOSTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                               Instruction *I) const {
   if (AM.Scale > 1 || AM.Scale < 0)
     return false;
+
+  // Any Base + Index mode can be legally selected with zero page indexed
+  // addressing.
+  if (AddrSpace == MOS::AS_ZeroPage)
+    return true;
 
   if (AM.Scale) {
     assert(AM.Scale == 1);

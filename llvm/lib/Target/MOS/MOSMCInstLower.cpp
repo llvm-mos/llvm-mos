@@ -765,7 +765,7 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
     // locate the symbol completely within the zero-page.
     const auto *GVar = dyn_cast<GlobalVariable>(GV->getAliaseeObject());
     if (MOS::isZeroPageSectionName(GV->getSection()) ||
-        (GVar && GVar->getAddressSpace() == 1)) {
+        (GVar && GVar->getAddressSpace() == MOS::AS_ZeroPage)) {
       const MOSMCExpr *Expr =
           MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, MCOp.getExpr(),
                             /*isNegated=*/false, Ctx);
@@ -851,7 +851,7 @@ MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   } else if (MO.isGlobal()) {
     const auto *GV =
         dyn_cast<GlobalVariable>(MO.getGlobal()->getAliaseeObject());
-    ZP = GV && GV->getAddressSpace() == 1;
+    ZP = GV && GV->getAddressSpace() == MOS::AS_ZeroPage;
   } else {
     ZP = false;
   }
@@ -864,6 +864,7 @@ MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   default:
     llvm_unreachable("Invalid target operand flags.");
   case MOS::MO_NO_FLAGS:
+  case MOS::MO_ZEROPAGE:
     break;
   case MOS::MO_LO:
     if (!ZP) {

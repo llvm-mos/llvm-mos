@@ -1919,6 +1919,9 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   case MOS::G_PHI:
     Opcode = MOS::PHI;
     break;
+  case MOS::G_STORE_ZP_IDX:
+    Opcode = MOS::STZpIdx;
+    break;
   case MOS::G_STORE_ABS:
     Opcode = MOS::STAbs;
     break;

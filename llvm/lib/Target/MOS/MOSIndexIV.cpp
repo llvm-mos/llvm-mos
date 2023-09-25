@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSIndexIV.h"
+#include "MOSInstrInfo.h"
 
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -61,6 +62,9 @@ PreservedAnalyses MOSIndexIV::run(Loop &L, LoopAnalysisManager &AM,
       // Base+Index.
       const auto *R = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(GEP));
       if (!R || R->getLoop() != &L)
+        continue;
+      // Only 16-bit pointer values are currently supported by this pass.
+      if (R->getType()->getPointerAddressSpace() != MOS::AS_Memory)
         continue;
       LLVM_DEBUG(dbgs() << "SCEV: " << *R << "\n");
 
