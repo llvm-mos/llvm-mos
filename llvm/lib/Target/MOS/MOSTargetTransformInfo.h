@@ -56,6 +56,10 @@ public:
   BranchProbability getPredictableBranchThreshold() const {
     return BranchProbability(0, 1);
   }
+
+  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
+    return true;
+  }
 };
 
 } // end namespace llvm
