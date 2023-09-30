@@ -138,6 +138,7 @@ public:
   }
 
   bool isImm3() const { return isImmediate<0, 0x8 - 1>(); }
+  bool isImm4() const { return isImmediate<0, 0x10 - 1>(); }
   bool isImm8() const { return isImmediate<0, 0x100 - 1>(); }
   bool isImm16() const { return isImmediate<0, 0x10000 - 1>(); }
   bool isImm24() const { return isImmediate<0, 0x1000000 - 1>(); }
@@ -157,6 +158,7 @@ public:
     }
     return isImm8();
   }
+  bool isAddr13() const { return isImmediate<0, 0x2000 - 1>(); }
   bool isAddr16() const { return isImm16(); }
   bool isAddr24() const { return isImm24(); }
 
@@ -189,6 +191,10 @@ public:
   }
 
   void addAddr8Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+
+  void addAddr13Operands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
 
@@ -585,6 +591,25 @@ public:
       Parser.eatToEndOfStatement();
       return Error(getLexer().getLoc(), ErrorMsg);
     }
+    // On SPC700, the expression can end in +X or +Y, which should be parsed
+    // as an addressing mode, not as part of the expression.
+    if (STI.hasFeature(MOS::FeatureSPC700)) {
+      if (const auto *BE = dyn_cast<MCBinaryExpr>(Expression)) {
+        if (const auto *SE = dyn_cast<MCSymbolRefExpr>(BE->getRHS())) {
+          if ((SE->getSymbol().getName().equals_insensitive("x") ||
+              SE->getSymbol().getName().equals_insensitive("y")) &&
+              BE->getOpcode() == MCBinaryExpr::Add) {
+            Operands.push_back(MOSOperand::createImm(STI, BE->getLHS(), S, E));
+            Operands.push_back(MOSOperand::createToken(STI, "+",
+                                                       BE->getLoc()));
+            Operands.push_back(MOSOperand::createToken(STI,
+                                   SE->getSymbol().getName(),
+                                   SE->getLoc()));
+            return false;
+          }
+        }
+      }
+    }
     Operands.push_back(MOSOperand::createImm(STI, Expression, S, E));
     return false;
   }
@@ -633,7 +658,10 @@ public:
             .CaseLower("y", "y")
             .CaseLower("z", "z")
             .CaseLower("sp", "sp")
-            .CaseLower("rp", "rp")
+            .CaseLower("rp", "rp") // 65EL02
+            .CaseLower("ya", "ya") // SPC700
+            .CaseLower("c", "c") // SPC700
+            .CaseLower("psw", "psw") // SPC700
             .Default(nullptr);
     if (LowerStr != nullptr) {
       Operands.push_back(MOSOperand::createToken(STI, LowerStr, S));
@@ -662,6 +690,11 @@ public:
     mnemonic [(]expr[),sxyz]*
     mnemonic \[ expr \]
 
+    SPC700:
+    mnemonic expr.bit
+    mnemonic [(]expr[)]+[xy]*
+    mnemonic \[ expr \]
+
     Any constant may be prefixed by a $, indicating that it is a hex constant.
     Such onstants can appear anywhere an integer appears in an expr, so expr
     parsing needs to take that into account.
@@ -675,6 +708,40 @@ public:
     AsmToken::TokenKind RightHandSide = AsmToken::Eof;
     while (getLexer().isNot(AsmToken::EndOfStatement) &&
            getLexer().isNot(AsmToken::Eof)) {
+      // Handle SPC700-specific syntax quirks.
+      if (STI.hasFeature(MOS::FeatureSPC700)) {
+        // Handle bit indexes ($xx.n).
+        if (getLexer().is(AsmToken::Dot)) {
+          eatThatToken(Operands);
+          if (!tryParseExpr(Operands,
+                            "bit index must be an expression evaluating "
+                            "to a value between 0 and 7 inclusive")) {
+            continue;
+          }
+        }
+        // Handle /.
+        if (getLexer().is(AsmToken::Slash)) {
+          eatThatToken(Operands);
+          continue;
+        }
+        // Handle +, +x, +y.
+        if (getLexer().is(AsmToken::Plus)) {
+          eatThatToken(Operands);
+          if (tryParseAsmParamRegClass(Operands) == MatchOperand_Success) {
+            Parser.Lex();
+          }
+          continue;
+        }
+        // SPC700 syntax uses exclamation marks to distinguish between absolute
+        // and zero-page instructions. We do not currently implement this, like
+        // many SPC700 assemblers; for now, skip exclamation marks.
+        if (STI.hasFeature(MOS::FeatureSPC700) &&
+            getLexer().is(AsmToken::Exclaim)) {
+          Lex();
+          continue;
+        }
+      }
+      // Handle special characters.
       if (getLexer().is(AsmToken::Hash)) {
         eatThatToken(Operands);
         if (!tryParseExpr(Operands,
@@ -683,8 +750,17 @@ public:
           continue;
         }
       }
+      // Handle parentheses and brackets.
       if (getLexer().is(AsmToken::LParen)) {
         eatThatToken(Operands);
+        // Handle SPC700 (x), (y)
+        if (STI.hasFeature(MOS::FeatureSPC700)) {
+          if (tryParseAsmParamRegClass(Operands) == MatchOperand_Success) {
+            Parser.Lex();
+            RightHandSide = AsmToken::RParen;
+            continue;
+          }
+        }
         if (!tryParseExpr(Operands,
                           "expression expected after left parenthesis")) {
           RightHandSide = AsmToken::RParen;
@@ -692,6 +768,7 @@ public:
         }
       }
       if ((STI.hasFeature(MOS::FeatureW65816) ||
+           STI.hasFeature(MOS::FeatureSPC700) ||
            STI.hasFeature(MOS::Feature45GS02)) &&
           getLexer().is(AsmToken::LBrac)) {
         eatThatToken(Operands);
@@ -705,7 +782,7 @@ public:
         RightHandSide = AsmToken::Eof;
         continue;
       }
-      // I don't know what llvm has against commas, but for some reason
+      // I don't know what LLVM has against commas, but for some reason
       // TableGen makes an effort to ignore them during parsing.  So,
       // strangely enough, we have to throw out commas too, even though
       // they have semantic meaning on MOS platforms.

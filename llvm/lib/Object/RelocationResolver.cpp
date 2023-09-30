@@ -160,9 +160,15 @@ static bool supportsMOS(uint64_t Type) {
   case ELF::R_MOS_ADDR8:
   case ELF::R_MOS_ADDR16:
   case ELF::R_MOS_ADDR16_LO:
+  case ELF::R_MOS_ADDR24_SEGMENT_LO:
   case ELF::R_MOS_ADDR16_HI:
+  case ELF::R_MOS_ADDR24_SEGMENT_HI:
+  case ELF::R_MOS_ADDR24:
+  case ELF::R_MOS_ADDR24_BANK:
+  case ELF::R_MOS_ADDR24_SEGMENT:
   case ELF::R_MOS_PCREL_8:
   case ELF::R_MOS_PCREL_16:
+  case ELF::R_MOS_ADDR13:
   case ELF::R_MOS_FK_DATA_4:
   case ELF::R_MOS_FK_DATA_8:
     return true;
@@ -179,13 +185,23 @@ static uint64_t resolveMOS(uint64_t Type, uint64_t Offset, uint64_t S,
   case ELF::R_MOS_ADDR16:
     return (S + Addend) & 0xFFFF;
   case ELF::R_MOS_ADDR16_LO:
+  case ELF::R_MOS_ADDR24_SEGMENT_LO:
     return (S + Addend) & 0xFF;
   case ELF::R_MOS_ADDR16_HI:
+  case ELF::R_MOS_ADDR24_SEGMENT_HI:
     return ((S + Addend) >> 8) & 0xFF;
+  case ELF::R_MOS_ADDR24:
+    return (S + Addend) & 0xFFFFFF;
+  case ELF::R_MOS_ADDR24_BANK:
+    return ((S + Addend) >> 16) & 0xFF;
+  case ELF::R_MOS_ADDR24_SEGMENT:
+    return ((S + Addend) >> 8) & 0xFFFF;
   case ELF::R_MOS_PCREL_8:
     return (S + Addend - Offset - 1) & 0xFF;
   case ELF::R_MOS_PCREL_16:
     return (S + Addend - Offset - 2) & 0xFFFF;
+  case ELF::R_MOS_ADDR13:
+    return (S + Addend) & 0x1FFF;
   case ELF::R_MOS_FK_DATA_4:
     return (S + Addend) & 0xFFFFFFFF;
   case ELF::R_MOS_FK_DATA_8:

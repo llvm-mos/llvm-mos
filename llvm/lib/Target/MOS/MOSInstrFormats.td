@@ -67,11 +67,6 @@ def Has6502XOrDTV : Predicate<"(Subtarget->has6502X() || Subtarget->has65DTV02()
   let PredicateName = "Feature6502XOrDTV";
 }
 
-def Has65C02OrDTV : Predicate<"(Subtarget->has65C02() || Subtarget->has65DTV02())">,
-                AssemblerPredicate<(any_of Feature65C02, Feature65DTV02), "65C02 or C64DTV"> {
-  let PredicateName = "Feature65C02OrDTV";
-}
-
 def Has65DTV02 : Predicate<"Subtarget->has65DTV02()">,
                 AssemblerPredicate<(all_of Feature65DTV02), "6502 (C64DTV)"> {
   let PredicateName = "Feature65DTV02";
@@ -86,6 +81,15 @@ def Has45GS02 : Predicate<"Subtarget->has45GS02()">,
                 AssemblerPredicate<(all_of Feature45GS02), "45GS02"> {
   let PredicateName = "Feature45GS02";
 }
+
+def HasSPC700 : Predicate<"Subtarget->HasSPC700()">,
+               AssemblerPredicate<(all_of FeatureSPC700), "SPC700"> {
+  let PredicateName = "FeatureSPC700";
+}
+
+def HasBRA : Predicate<"Subtarget->hasBRA()">;
+def HasGPRStackRegs : Predicate<"Subtarget->hasGPRStackRegs()">;
+def HasGPRIncDec : Predicate<"Subtarget->hasGPRIncDec()">;
 
 /// These instruction format definitions exist, thanks to Neil Parker's
 /// analysis of the 65xx instruction set, at:
@@ -163,6 +167,15 @@ def imm3 : Operand<i32> {
   let ParserMatchClass = ImmediateAsmOperand<"Imm3">;
   let DecoderMethod = "decodeUImmOperand<3>";
   let OperandType = "OPERAND_IMM3";
+  let OperandNamespace = "MOSOp";
+  let Type = i8;
+}
+
+/// This operand will only match a value from 0 to 15 inclusive.
+def imm4 : Operand<i32> {
+  let ParserMatchClass = ImmediateAsmOperand<"Imm4">;
+  let DecoderMethod = "decodeUImmOperand<4>";
+  let OperandType = "OPERAND_IMM4";
   let OperandNamespace = "MOSOp";
   let Type = i8;
 }

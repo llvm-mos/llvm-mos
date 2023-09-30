@@ -55,6 +55,8 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       return ELF::R_MOS_ADDR24_SEGMENT_LO;
     case MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT_HI:
       return ELF::R_MOS_ADDR24_SEGMENT_HI;
+    case MCSymbolRefExpr::VK_MOS_ADDR13:
+      return ELF::R_MOS_ADDR13;
     }
   case FK_Data_2:
     switch (Modifier) {
@@ -62,6 +64,8 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       llvm_unreachable("Unsupported Modifier");
     case MCSymbolRefExpr::VK_None:
       return ELF::R_MOS_ADDR16;
+    case MCSymbolRefExpr::VK_MOS_ADDR13:
+      return ELF::R_MOS_ADDR13;
     case MCSymbolRefExpr::VK_MOS_ADDR24_SEGMENT:
       return ELF::R_MOS_ADDR24_SEGMENT;
     }
@@ -98,6 +102,8 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     return ELF::R_MOS_ADDR_ASCIZ;
   case MOS::Imm16:
     return ELF::R_MOS_IMM16;
+  case MOS::Addr13:
+    return ELF::R_MOS_ADDR13;
 
   default:
     llvm_unreachable("invalid fixup kind!");

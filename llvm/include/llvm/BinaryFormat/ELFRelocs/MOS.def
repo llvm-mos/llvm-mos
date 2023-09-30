@@ -65,3 +65,6 @@ ELF_RELOC(R_MOS_ADDR_ASCIZ,            15)
 
 // A 16-bit immediate value.
 ELF_RELOC(R_MOS_IMM16,                 16)
+
+// A 13-bit address.  Used only on SPC700.
+ELF_RELOC(R_MOS_ADDR13,                17)

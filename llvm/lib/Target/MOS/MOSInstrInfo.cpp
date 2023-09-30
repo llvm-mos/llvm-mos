@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
@@ -412,8 +413,7 @@ unsigned MOSInstrInfo::insertBranch(MachineBasicBlock &MBB,
     // For 65C02/65DTV02, assume BRA and relax into JMP in
     // insertIndirectBranch if necessary.
     auto JMP =
-        Builder.buildInstr((STI.has65C02() || STI.has65DTV02())
-                           ? MOS::BRA : MOS::JMP).addMBB(UBB);
+        Builder.buildInstr(STI.hasBRA() ? MOS::BRA : MOS::JMP).addMBB(UBB);
     ++NumAdded;
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(*JMP);
@@ -561,13 +561,14 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         .addDef(SrcReg)
         .addUse(SrcReg, RegState::Kill)
         .addUse(DestReg, RegState::Kill | RegState::Undef);
-    } else if (STI.has65C02()) {
+    } else if (STI.hasGPRStackRegs()) {
       // The 65C02 can emit a PHX/PLY or PHY/PLX pair.
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
       Builder.buildInstr(MOS::PH_CMOS, {}, {SrcReg});
-      Builder.buildInstr(MOS::PL_CMOS, {DestReg}, {})
-          .addDef(MOS::NZ, RegState::Implicit);
+      auto I = Builder.buildInstr(MOS::PL_CMOS, {DestReg}, {});
+      if (!STI.hasSPC700())
+        I.addDef(MOS::NZ, RegState::Implicit);
     } else {
       copyPhysRegImpl(Builder, DestReg,
                       getRegWithVal(Builder, SrcReg, MOS::AcRegClass));
@@ -609,17 +610,25 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
               {getRegWithVal(Builder, SrcReg, MOS::GPRRegClass), INT64_C(1)});
         } else {
           assert(DestReg == MOS::V);
-          const TargetRegisterClass &StackRegClass =
-              STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
 
-          if (StackRegClass.contains(SrcReg)) {
-            Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
-            Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
+          if (MOS::AcRegClass.contains(SrcReg)) {
+            // ORA #0 defines NZ without impacting other flags or the register.
+            Builder.buildInstr(MOS::ORAImm, {SrcReg}, {SrcReg, INT64_C(0)})
+                .addDef(MOS::NZ, RegState::Implicit);
+            Builder.buildInstr(MOS::SelectImm, {MOS::V},
+                               {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
+          } else if (MOS::XYRegClass.contains(SrcReg)) {
+            // A DEC/INC pair defines NZ without impacting other flags or
+            // the register.
+            Builder.buildInstr(STI.hasGPRIncDec() ? MOS::DE_CMOS : MOS::DE,
+                               {SrcReg}, {SrcReg});
+            Builder.buildInstr(STI.hasGPRIncDec() ? MOS::IN_CMOS : MOS::IN,
+                               {SrcReg}, {SrcReg})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
           } else {
-            Register Tmp = createVReg(Builder, StackRegClass);
+            Register Tmp = createVReg(Builder, MOS::GPRRegClass);
             copyPhysRegImpl(Builder, Tmp, SrcReg, /*Force=*/true);
             std::prev(Builder.getInsertPt())
                 ->addOperand(MachineOperand::CreateReg(MOS::NZ,
@@ -945,13 +954,16 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder, bool ZP) const {
   auto &MI = *Builder.getInsertPt();
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
   auto DestReg = MI.getOperand(0).getReg();
   auto IndexReg = MI.getOperand(2).getReg();
 
-  if (DestReg == IndexReg) {
+  if (DestReg == IndexReg ||
+      (STI.hasSPC700() && (DestReg == MOS::X || DestReg == MOS::Y))) {
     // A direct load does not exist for when X or Y is both the destination and
     // index register. Since the 6502 has no instruction for this, use A as the
     // destination instead, then transfer to the real destination.
+    // SPC700 does not support absolute indexed loads into X or Y at all.
     Register Tmp = createVReg(Builder, MOS::AcRegClass);
     Builder.buildInstr(ZP ? MOS::LDAZpIdx : MOS::LDAAbsIdx)
         .addDef(Tmp)
@@ -1002,9 +1014,8 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
   unsigned Opcode;
   switch (DestReg) {
   default: {
-    DestReg =
-        Builder.getMF().getSubtarget().getRegisterInfo()->getMatchingSuperReg(
-            DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
+    DestReg = STI.getRegisterInfo()->getMatchingSuperReg(DestReg, MOS::sublsb,
+                                                         &MOS::Anyi8RegClass);
     assert(DestReg && "Unexpected destination for LDImm1");
     assert(MOS::GPRRegClass.contains(DestReg));
     Opcode = MOS::LDImm;
@@ -1017,6 +1028,20 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
     break;
   case MOS::V:
     if (Val) {
+      if (STI.hasSPC700()) {
+        // SPC700 does not have BIT, so we use stack operations to specifically
+        // set V.
+        Register ACopy = createVReg(Builder, MOS::AcRegClass);
+        Builder.buildInstr(MOS::PH, {}, {Register(MOS::P)});
+        Builder.buildInstr(MOS::PL, {ACopy}, {});
+        Builder.buildInstr(MOS::ORAImm, {ACopy},
+                           {ACopy, INT64_C(0x40)});
+        Builder.buildInstr(MOS::PH).addUse(ACopy, RegState::Kill);
+        Builder.buildInstr(MOS::PL, {MOS::P}, {});
+        MI.eraseFromParent();
+        return;
+      }
+      
       auto Instr = STI.hasHUC6280()
         ? Builder.buildInstr(MOS::BITImmHUC6280, {MOS::V}, {})
                       .addUse(MOS::A, RegState::Undef)
@@ -1111,7 +1136,7 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
   bool IsCMOS = MI.getOpcode() == MOS::IncCMOS || MI.getOpcode() == MOS::DecCMOS;
 
   // GPRs on CMOS 6502.
-  if (STI.has65C02()) {
+  if (STI.hasGPRIncDec()) {
     switch (R) {
     case MOS::A:
     case MOS::X:

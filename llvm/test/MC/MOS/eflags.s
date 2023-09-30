@@ -10,6 +10,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos65dtv02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,65DTV02
 # RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos4510 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,4510
 # RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mos45gs02 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,45GS02
+# RUN: llvm-mc -filetype=obj -triple=mos -motorola-integers -mcpu=mosspc700 %s | llvm-readobj --file-headers - | FileCheck %s -check-prefixes=CHECK,SPC700
 
 # returns with 42 in accumulator
 .globl _start
@@ -75,7 +76,7 @@ _start:
 //  4510-NEXT:     EF_MOS_ARCH_65C02 (0x8)
 //  4510-NEXT:     EF_MOS_ARCH_65CE02 (0x400)
 //  4510-NEXT:     EF_MOS_ARCH_R65C02 (0x10)
-//  45GS02:       Flags [
+// 45GS02:       Flags [
 // 45GS02-NEXT:     EF_MOS_ARCH_4510 (0x2000)
 // 45GS02-NEXT:     EF_MOS_ARCH_45GS02 (0x4000)
 // 45GS02-NEXT:     EF_MOS_ARCH_6502 (0x1)
@@ -83,4 +84,6 @@ _start:
 // 45GS02-NEXT:     EF_MOS_ARCH_65C02 (0x8)
 // 45GS02-NEXT:     EF_MOS_ARCH_65CE02 (0x400)
 // 45GS02-NEXT:     EF_MOS_ARCH_R65C02 (0x10)
+// SPC700:       Flags [
+// SPC700-NEXT:     EF_MOS_ARCH_SPC700 (0x20000)
 // CHECK-NEXT:   ]

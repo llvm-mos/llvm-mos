@@ -104,7 +104,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
   const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   const TargetRegisterClass &StackRegClass =
-      STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
+      STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
   const auto &FuncInfo = MBB.getParent()->getInfo<MOSFunctionInfo>();
 
   // There are intentionally very few CSRs, few enough to place on the hard
@@ -118,7 +118,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
-    Builder.buildInstr(STI.has65C02() ? MOS::PH_CMOS : MOS::PH, {}, {Reg});
+    Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {}, {Reg});
   }
 
   // Record that the frame pointer is killed by these instructions.
@@ -168,7 +168,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
   const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   const TargetRegisterClass &StackRegClass =
-      STI.has65C02() ? MOS::GPRRegClass : MOS::AcRegClass;
+      STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
   const auto &FuncInfo = MBB.getParent()->getInfo<MOSFunctionInfo>();
 
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
@@ -191,7 +191,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
-    Builder.buildInstr(STI.has65C02() ? MOS::PL_CMOS : MOS::PL, {Reg}, {});
+    Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {Reg}, {});
     if (Reg != CI.getReg())
       Builder.buildCopy(CI.getReg(), Reg);
   }

@@ -66,6 +66,10 @@ MOSMCInstrAnalysis::evaluateMemoryOperandAddress(const MCInst &Inst,
         return (Addr & ~AbsAddrMask) | ZpAddrOffset
                | (Inst.getOperand(OpIdx).getImm() & 0xFF);
       }
+      case MOSOp::OPERAND_ADDR13: {
+        return (Addr & ~AbsAddrMask)
+               | (Inst.getOperand(OpIdx).getImm() & 0x1FFF);
+      }
       case MOSOp::OPERAND_ADDR16: {
         return (Addr & ~AbsAddrMask)
                | (Inst.getOperand(OpIdx).getImm() & 0xFFFF);

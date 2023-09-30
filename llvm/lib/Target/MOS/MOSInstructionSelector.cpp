@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -93,6 +94,7 @@ private:
   bool selectAddE(MachineInstr &MI);
   bool selectIncDecMB(MachineInstr &MI);
   bool selectUnMergeValues(MachineInstr &MI);
+  bool selectBrIndirect(MachineInstr &MI);
 
   // Select instructions that correspond 1:1 to a target instruction.
   bool selectGeneric(MachineInstr &MI);
@@ -241,6 +243,8 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
     return selectUnMergeValues(MI);
 
   case MOS::G_BRINDIRECT:
+    return selectBrIndirect(MI);
+
   case MOS::G_IMPLICIT_DEF:
   case MOS::G_LOAD_ZP_IDX:
   case MOS::G_LOAD_ABS:
@@ -287,18 +291,27 @@ static bool shouldFoldMemAccess(const MachineInstr &Dst,
   // Indirect Indexed: k*(0+2.5) < 5; 2.5k < 5; k <= 1
   //
   // For HuC6280, we have different timings, so:
-  // Absolute: k*(1+2) < (2+3) = 5; k <= 1
+  // Absolute: k*(1+2) < (2+3) = 5; 3k < 5; k <= 1
   // Absolute Indexed: k*(1+2.5) < 5; 3.5k < 5; k <= 1
   // Indirect: k*(0+4) < 5; 4k < 5; k <= 1
   // Indirect Indexed: k*(0+4.5) < 5; 4.5k < 5; k <= 1
+  //
+  // For SPC700:
+  // Absolute: k*(1+1) < (2+3) = 5; 2k < 5; k < 2.5; k <= 2
+  // Absolute Indexed: k*(1+2) < 5; 3k < 5; k <= 1
+  // Indirect: k*(0+3) < 5; 3k < 5; k <= 1
+  // Indirect Indexed: k*(0+3) < 5; 3k < 5; k <= 1
   int MaxNumUsers;
   switch (Src.getOpcode()) {
   default:
     MaxNumUsers = 1;
     break;
-  case MOS::G_LOAD_INDIR:
   case MOS::G_LOAD_ABS:
     MaxNumUsers = STI.hasHUC6280() ? 1 : 2;
+    break;
+  case MOS::G_LOAD_INDIR:
+    MaxNumUsers = (STI.hasHUC6280() || STI.hasSPC700()) ? 1 : 2;
+    break;
   }
   if (NumUsers > MaxNumUsers)
     return false;
@@ -1889,6 +1902,20 @@ bool MOSInstructionSelector::selectUnMergeValues(MachineInstr &MI) {
   MI.eraseFromParent();
   return true;
 }
+
+bool MOSInstructionSelector::selectBrIndirect(MachineInstr &MI) {
+  if (STI.hasSPC700()) {
+    // SPC700 indirect jumps are indexed by X. Since G_BRINDIRECT does not
+    // directly support indexed effective addresses, we simply make X zero.
+    // TODO: Combiner could detect indexed indirect jump addresses.
+    MachineIRBuilder Builder(MI);
+    Register XZero = Builder.getMRI()->createVirtualRegister(&MOS::XcRegClass);
+    Builder.buildInstr(MOS::LDImm, {XZero}, {INT64_C(0)});
+    MI.addOperand(MachineOperand::CreateReg(XZero, false, true, true));
+  }
+  return selectGeneric(MI);
+}
+
 
 bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   unsigned Opcode;

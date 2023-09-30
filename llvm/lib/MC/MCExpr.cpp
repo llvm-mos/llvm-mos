@@ -392,6 +392,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_MOS_ADDR24_SEGMENT: return "mos24segment";
   case VK_MOS_ADDR24_SEGMENT_LO: return "mos24segmentlo";
   case VK_MOS_ADDR24_SEGMENT_HI: return "mos24segmenthi";
+  case VK_MOS_ADDR13: return "mos13";
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -543,6 +544,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("mos24segment", VK_MOS_ADDR24_SEGMENT)
     .Case("mos24segmentlo", VK_MOS_ADDR24_SEGMENT_LO)
     .Case("mos24segmenthi", VK_MOS_ADDR24_SEGMENT_HI)
+    .Case("mos13", VK_MOS_ADDR13)
     .Default(VK_Invalid);
 }
 

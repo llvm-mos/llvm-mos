@@ -1,0 +1,34 @@
+# RUN: llc -run-pass=irtranslator -mcpu=mosspc700 -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+  target triple = "mos"
+
+  %twobyte = type { i8, i8 }
+
+  define void @call_indir(void (i8, i8, i8, i8)* %ptr) {
+  ; CHECK-LABEL: name: call_indir
+  entry:
+  ; CHECK-LABEL: entry:
+    ; CHECK:      %0:_(p0) = COPY $rs1
+
+    call void %ptr(i8 1, i8 2, i8 3, i8 4)
+    ; CHECK-NEXT: %1:_(s8) = G_CONSTANT i8 1
+    ; CHECK-NEXT: %2:_(s8) = G_CONSTANT i8 2
+    ; CHECK-NEXT: %3:_(s8) = G_CONSTANT i8 3
+    ; CHECK-NEXT: %4:_(s8) = G_CONSTANT i8 4
+
+    ; CHECK-NEXT: $rs9 = COPY %0
+    ; CHECK-NEXT: %5:_(s8) = G_CONSTANT i8 95
+    ; CHECK-NEXT: $rc17 = COPY %5(s8)
+
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0
+    ; CHECK-NEXT: $a = COPY %1
+    ; CHECK-NEXT: $x = COPY %2
+    ; CHECK-NEXT: $rc2 = COPY %3
+    ; CHECK-NEXT: $rc3 = COPY %4
+    ; CHECK-NEXT: JSR &__rc17, mos_csr, implicit $rs9, implicit $rc17, implicit $a, implicit $x, implicit $rc2, implicit $rc3
+    ; CHECK-NEXT: ADJCALLSTACKUP 0
+
+    ret void
+    ; CHECK-NEXT: RTS
+  }
+...

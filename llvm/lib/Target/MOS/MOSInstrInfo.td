@@ -833,6 +833,9 @@ def MMU_Immediate : Inst16<"mmu", Opcode<0xEF>, Immediate>;
 def label : Operand<OtherVT>;
 
 include "MOSInstrInfoTables.td"
+
+include "MOSInstrInfoSPC700.td"
+
 include "MOSInstrPseudos.td"
 include "MOSInstrLogical.td"
 include "MOSInstrGISel.td"

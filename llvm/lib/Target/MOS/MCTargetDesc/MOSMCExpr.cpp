@@ -31,6 +31,7 @@ const struct ModifierEntry {
     {"mos24segment", MOSMCExpr::VK_MOS_ADDR24_SEGMENT},
     {"mos24segmentlo", MOSMCExpr::VK_MOS_ADDR24_SEGMENT_LO},
     {"mos24segmenthi", MOSMCExpr::VK_MOS_ADDR24_SEGMENT_HI},
+    {"mos13", MOSMCExpr::VK_MOS_ADDR13},
 };
 
 } // end of anonymous namespace
@@ -124,6 +125,9 @@ int64_t MOSMCExpr::evaluateAsInt64(int64_t Value) const {
   case MOSMCExpr::VK_MOS_IMM16:
     Value &= 0xffff;
     break;
+  case MOSMCExpr::VK_MOS_ADDR13:
+    Value &= 0x1fff;
+    break;
 
   case MOSMCExpr::VK_MOS_ADDR_ASCIZ:
     llvm_unreachable("Unable to evaluate VK_MOS_ADDR_ASCIZ as int64.");
@@ -161,6 +165,9 @@ MOS::Fixups MOSMCExpr::getFixupKind() const {
     break;
   case VK_MOS_ADDR24_SEGMENT_LO:
     Kind = MOS::Addr24_Segment_Low;
+    break;
+  case VK_MOS_ADDR13:
+    Kind = MOS::Addr13;
     break;
   case VK_MOS_ADDR_ASCIZ:
     Kind = MOS::AddrAsciz;

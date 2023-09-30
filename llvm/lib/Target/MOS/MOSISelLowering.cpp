@@ -312,7 +312,7 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
     // Add the unconditional branch from IfFalseMBB to TailMBB.
     Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
     Builder
-        .buildInstr((STI.has65C02() || STI.has65DTV02()) ? MOS::BRA : MOS::JMP)
+        .buildInstr(STI.hasBRA() ? MOS::BRA : MOS::JMP)
         .addMBB(TailMBB);
     for (const auto &LiveIn : IfFalseMBB->liveins())
       IfTrueMBB->addLiveIn(LiveIn);
@@ -357,7 +357,7 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
 }
 
 static unsigned chooseInc8Opcode(const MOSSubtarget &STI, bool IsDec) {
-  if (STI.has65C02()) {
+  if (STI.hasGPRIncDec()) {
     return IsDec ? MOS::DecCMOS : MOS::IncCMOS;
   }
   return IsDec ? MOS::DEC : MOS::INC;

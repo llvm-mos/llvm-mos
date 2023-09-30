@@ -36,6 +36,7 @@ MOSFixupKinds::getFixupKindInfo(const MOS::Fixups Kind,
        0}, // The low byte of the segment of a 24-bit addr
       {"Addr24_Segment_High", 0, 8,
        0}, // The high byte of the segment of a 24-bit addr
+      {"Addr13", 0, 13, 0},         // A 13-bit address.
       // PCRel* is pc-relative and requires target specific handling
       {"PCRel8", 0, 8,
        MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},

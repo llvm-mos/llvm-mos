@@ -157,6 +157,14 @@ AsmToken AsmLexer::LexIdentifier() {
     while (isDigit(*CurPtr))
       ++CurPtr;
 
+    if (MAI.getDotAsIntSeparator() &&
+        !isIdentifierChar(*CurPtr, AllowAtInIdentifier,
+                          AllowHashInIdentifier)) {
+      // Treat .1234 as a dot followed by an integer literal.
+      CurPtr = TokStart + 1;
+      return AsmToken(AsmToken::Dot, StringRef(TokStart, 1));
+    }
+
     if (!isIdentifierChar(*CurPtr, AllowAtInIdentifier,
                           AllowHashInIdentifier) ||
         *CurPtr == 'e' || *CurPtr == 'E')

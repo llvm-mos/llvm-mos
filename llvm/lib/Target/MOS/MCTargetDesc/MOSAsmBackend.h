@@ -120,6 +120,11 @@ public:
     return relaxInstructionTo(Inst, STI, BankRelax);
   }
 
+  /// If the provided subtarget uses a custom set of machine instructions,
+  /// translate the provided MOS machine instruction to the subtarget's.
+  static void translateOpcodeToSubtarget(MCInst &Inst,
+                                         const MCSubtargetInfo &STI);
+
   /// If the provided instruction contains an out-of-range immediate in a
   /// relaxable opcode, perform the relaxation now. MOSAsmPrinter calls this at
   /// the end of lowering so it does not have to deal with the relaxation
