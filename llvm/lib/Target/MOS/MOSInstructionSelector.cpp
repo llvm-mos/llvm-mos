@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -1908,10 +1909,9 @@ bool MOSInstructionSelector::selectBrIndirect(MachineInstr &MI) {
     // directly support indexed effective addresses, we simply make X zero.
     // TODO: Combiner could detect indexed indirect jump addresses.
     MachineIRBuilder Builder(MI);
-    Register XZero =
-        Builder.buildInstr(MOS::LDImm, {MOS::X}, {INT64_C(0)}).getReg(0);
-    MI.addOperand(*MI.getMF(),
-                  MachineOperand::CreateReg(XZero, false, true, true));
+    Register XZero = Builder.getMRI()->createVirtualRegister(&MOS::XcRegClass);
+    Builder.buildInstr(MOS::LDImm, {XZero}, {INT64_C(0)});
+    MI.addOperand(MachineOperand::CreateReg(XZero, false, true, true));
   }
   return selectGeneric(MI);
 }

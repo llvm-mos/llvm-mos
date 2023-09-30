@@ -5,13 +5,11 @@ name: set_v
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: set_v
-    ; CHECK: PH $a
-    ; CHECK-NEXT: PH $p
-    ; CHECK-NEXT: $a = PL
-    ; CHECK-NEXT: $a = ORAImm $a, 64
-    ; CHECK-NEXT: PH $a
+    ; CHECK: PH $p
+    ; CHECK-NEXT: [[PL:%[0-9]+]]:ac = PL
+    ; CHECK-NEXT: [[ORAImm:%[0-9]+]]:ac = ORAImm [[ORAImm]], 64
+    ; CHECK-NEXT: PH killed [[ORAImm]]
     ; CHECK-NEXT: $p = PL
-    ; CHECK-NEXT: $a = PL
     $v = LDImm1 -1
 ...
 ---
@@ -20,7 +18,9 @@ body: |
   bb.0.entry:
     liveins: $y
     ; CHECK-LABEL: name: ldxidx_y
-    ; CHECK: [[LDAAbsIdx:%[0-9]+]]:ac = LDAAbsIdx 1234, $y
+    ; CHECK: liveins: $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[LDAAbsIdx:%[0-9]+]]:ac = LDAAbsIdx 1234, $y
     ; CHECK-NEXT: $x = TA [[LDAAbsIdx]]
     ; CHECK-NEXT: $c = CMPImm $a, 0
     $x = LDAbsIdx 1234, $y
@@ -32,7 +32,9 @@ body: |
   bb.0.entry:
     liveins: $x
     ; CHECK-LABEL: name: ldyidx_x
-    ; CHECK: [[LDAAbsIdx:%[0-9]+]]:ac = LDAAbsIdx 1234, $x
+    ; CHECK: liveins: $x
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[LDAAbsIdx:%[0-9]+]]:ac = LDAAbsIdx 1234, $x
     ; CHECK-NEXT: $y = TA [[LDAAbsIdx]]
     ; CHECK-NEXT: $c = CMPImm $a, 0
     $y = LDAbsIdx 1234, $x

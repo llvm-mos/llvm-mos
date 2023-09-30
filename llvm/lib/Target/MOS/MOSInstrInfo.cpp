@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
@@ -609,25 +610,25 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
               {getRegWithVal(Builder, SrcReg, MOS::GPRRegClass), INT64_C(1)});
         } else {
           assert(DestReg == MOS::V);
-          const TargetRegisterClass &StackRegClass =
-              STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
 
-          if (StackRegClass.contains(SrcReg)) {
-            if (STI.hasSPC700()) {
-              // SPC700 pops do not set NZ flags, so use CMP instead.
-              // TODO: Investigate doing the same for MOS.
-              Builder.buildInstr(MOS::CMPImm, {MOS::C}, {SrcReg, INT64_C(0)})
-                  .addDef(MOS::NZ, RegState::Implicit)
-                  ->getOperand(0).setIsDead();
-            } else {
-              Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {}, {SrcReg});
-              Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {SrcReg}, {})
-                  .addDef(MOS::NZ, RegState::Implicit);
-            }
+          if (MOS::AcRegClass.contains(SrcReg)) {
+            // ORA #0 defines NZ without impacting other flags or the register.
+            Builder.buildInstr(MOS::ORAImm, {SrcReg}, {SrcReg, INT64_C(0)})
+                .addDef(MOS::NZ, RegState::Implicit);
+            Builder.buildInstr(MOS::SelectImm, {MOS::V},
+                               {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
+          } else if (MOS::XYRegClass.contains(SrcReg)) {
+            // A DEC/INC pair defines NZ without impacting other flags or
+            // the register.
+            Builder.buildInstr(STI.hasGPRIncDec() ? MOS::DE_CMOS : MOS::DE,
+                               {SrcReg}, {SrcReg});
+            Builder.buildInstr(STI.hasGPRIncDec() ? MOS::IN_CMOS : MOS::IN,
+                               {SrcReg}, {SrcReg})
+                .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
           } else {
-            Register Tmp = createVReg(Builder, StackRegClass);
+            Register Tmp = createVReg(Builder, MOS::GPRRegClass);
             copyPhysRegImpl(Builder, Tmp, SrcReg, /*Force=*/true);
             std::prev(Builder.getInsertPt())
                 ->addOperand(MachineOperand::CreateReg(MOS::NZ,
@@ -1030,14 +1031,13 @@ void MOSInstrInfo::expandLDImm1(MachineIRBuilder &Builder) const {
       if (STI.hasSPC700()) {
         // SPC700 does not have BIT, so we use stack operations to specifically
         // set V.
-        Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+        Register ACopy = createVReg(Builder, MOS::AcRegClass);
         Builder.buildInstr(MOS::PH, {}, {Register(MOS::P)});
-        Builder.buildInstr(MOS::PL, {MOS::A}, {});
-        Builder.buildInstr(MOS::ORAImm, {MOS::A},
-                           {Register(MOS::A), INT64_C(0x40)});
-        Builder.buildInstr(MOS::PH, {}, {Register(MOS::A)});
+        Builder.buildInstr(MOS::PL, {ACopy}, {});
+        Builder.buildInstr(MOS::ORAImm, {ACopy},
+                           {ACopy, INT64_C(0x40)});
+        Builder.buildInstr(MOS::PH).addUse(ACopy, RegState::Kill);
         Builder.buildInstr(MOS::PL, {MOS::P}, {});
-        Builder.buildInstr(MOS::PL, {MOS::A}, {});
         MI.eraseFromParent();
         return;
       }
