@@ -334,6 +334,8 @@ public:
 
   bool isZExtFree(Type *Ty1, Type *Ty2) const { return false; }
 
+  bool preferNarrowTypes() const { return false; }
+
   bool isProfitableToHoist(Instruction *I) const { return true; }
 
   bool useAA() const { return false; }

@@ -424,6 +424,10 @@ public:
     return getTLI()->isZExtFree(Ty1, Ty2);
   }
 
+  bool preferNarrowTypes() {
+    return getTLI()->preferNarrowTypes();
+  }
+
   bool isProfitableToHoist(Instruction *I) {
     return getTLI()->isProfitableToHoist(I);
   }

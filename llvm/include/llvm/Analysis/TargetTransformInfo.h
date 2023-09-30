@@ -837,6 +837,10 @@ public:
   /// Ty2.
   bool isZExtFree(Type *Ty1, Type *Ty2) const;
 
+  /// Return true if a operations on narrow types are generally cheaper than
+  /// operations on wide types.
+  bool preferNarrowTypes() const;
+
   /// Return true if it is profitable to hoist instruction in the
   /// then/else to before if.
   bool isProfitableToHoist(Instruction *I) const;
@@ -1819,6 +1823,7 @@ public:
   virtual bool LSRWithInstrQueries() = 0;
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) = 0;
   virtual bool isZExtFree(Type *Ty1, Type *Ty2) = 0;
+  virtual bool preferNarrowTypes() = 0;
   virtual bool isProfitableToHoist(Instruction *I) = 0;
   virtual bool useAA() = 0;
   virtual bool isTypeLegal(Type *Ty) = 0;
@@ -2318,6 +2323,9 @@ public:
   }
   bool isZExtFree(Type *Ty1, Type *Ty2) override {
     return Impl.isZExtFree(Ty1, Ty2);
+  }
+  bool preferNarrowTypes() override {
+    return Impl.preferNarrowTypes();
   }
   bool isProfitableToHoist(Instruction *I) override {
     return Impl.isProfitableToHoist(I);

@@ -73,6 +73,8 @@ public:
 
   bool isZExtFree(Type *SrcTy, Type *DstTy) const override;
 
+  bool preferNarrowTypes() const override { return true; }
+
   EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override {
     return MVT::i8;

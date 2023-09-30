@@ -1597,7 +1597,7 @@ unsigned
 SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
                                   SmallVectorImpl<WeakTrackingVH> &DeadInsts,
                                   const TargetTransformInfo *TTI) {
-  // Find integer phis in order of increasing width.
+  // Find integer phis in order of decreasing width.
   SmallVector<PHINode*, 8> Phis;
   for (PHINode &PN : L->getHeader()->phis())
     Phis.push_back(&PN);
@@ -1614,7 +1614,7 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     });
 
   unsigned NumElim = 0;
-  DenseMap<const SCEV *, PHINode *> ExprToIVMap;
+  SmallVector<PHINode*, 8> PhisRemaining;
   // Process phis from wide to narrow. Map wide phis to their truncation
   // so narrow phis can reuse them.
   for (PHINode *Phi : Phis) {
@@ -1643,11 +1643,51 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
                                   << '\n');
       continue;
     }
+    if (SE.isSCEVable(Phi->getType()))
+      PhisRemaining.push_back(Phi);
+  }
+  Phis = std::move(PhisRemaining);
 
-    if (!SE.isSCEVable(Phi->getType()))
-      continue;
+  // Look for opporunities to freely zero extend narrow IVs. For targets that
+  // support this, it is strongly preferred to truncating wide IVs.
+  DenseMap<const SCEV *, PHINode *> ExprToIVMap;
+  if (TTI && TTI->preferNarrowTypes()) {
+    for (PHINode *Phi : reverse(Phis)) {
+      PHINode *&OrigPhiRef = ExprToIVMap[SE.getSCEV(Phi)];
+      if (OrigPhiRef || !Phi->getType()->isIntegerTy() || !TTI)
+        continue;
 
+      // Make sure we only rewrite using simple induction variables;
+      // otherwise, we can make the trip count of a loop unanalyzable
+      // to SCEV.
+      const SCEV *PhiExpr = SE.getSCEV(Phi);
+      if (!isa<SCEVAddRecExpr>(PhiExpr))
+        continue;
+
+      for (PHINode *OtherPhi : Phis) {
+        if (OtherPhi == Phi || !TTI->isZExtFree(Phi->getType(), OtherPhi->getType()))
+          continue;
+
+        // This can be used to create a wider type, so don't create it from
+        // a wider one.
+        OrigPhiRef = Phi;
+
+        // This phi can be freely zero extended to another phi type. Map the
+        // zero extended expression to it so it will be reused for wider
+        // types.
+        const SCEV *ZExtExpr =
+          SE.getZeroExtendExpr(PhiExpr, OtherPhi->getType());
+        ExprToIVMap[ZExtExpr] = Phi;
+      }
+    }
+  }
+
+  // Process phis from wide to narrow. Map wide phis to their truncation
+  // so narrow phis can reuse them.
+  for (PHINode *Phi : Phis) {
     PHINode *&OrigPhiRef = ExprToIVMap[SE.getSCEV(Phi)];
+    if (OrigPhiRef == Phi)
+      continue;
     if (!OrigPhiRef) {
       OrigPhiRef = Phi;
       if (Phi->getType()->isIntegerTy() && TTI &&
@@ -1699,10 +1739,10 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
         // can remove cycles that had postinc uses.
         // Because we may potentially introduce a new use of OrigIV that didn't
         // exist before at this point, its poison flags need readjustment.
-        const SCEV *TruncExpr =
-            SE.getTruncateOrNoop(SE.getSCEV(OrigInc), IsomorphicInc->getType());
+        const SCEV *ResizedExpr =
+            SE.getTruncateOrZeroExtend(SE.getSCEV(OrigInc), IsomorphicInc->getType());
         if (OrigInc != IsomorphicInc &&
-            TruncExpr == SE.getSCEV(IsomorphicInc) &&
+            ResizedExpr == SE.getSCEV(IsomorphicInc) &&
             SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
             hoistIVInc(OrigInc, IsomorphicInc, /*RecomputePoisonFlags*/ true)) {
           SCEV_DEBUG_WITH_TYPE(
@@ -1718,8 +1758,13 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
 
             IRBuilder<> Builder(IP);
             Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
-            NewInc = Builder.CreateTruncOrBitCast(
-                OrigInc, IsomorphicInc->getType(), IVName);
+            if (OrigInc->getType()->getScalarSizeInBits() <
+                IsomorphicInc->getType()->getScalarSizeInBits())
+              NewInc =
+                  Builder.CreateZExt(OrigInc, IsomorphicInc->getType(), IVName);
+            else
+              NewInc = Builder.CreateTruncOrBitCast(
+                  OrigInc, IsomorphicInc->getType(), IVName);
           }
           IsomorphicInc->replaceAllUsesWith(NewInc);
           DeadInsts.emplace_back(IsomorphicInc);
@@ -1736,7 +1781,10 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     if (OrigPhiRef->getType() != Phi->getType()) {
       IRBuilder<> Builder(&*L->getHeader()->getFirstInsertionPt());
       Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
-      NewIV = Builder.CreateTruncOrBitCast(OrigPhiRef, Phi->getType(), IVName);
+      if (OrigPhiRef->getType()->getScalarSizeInBits() < Phi->getType()->getScalarSizeInBits())
+        NewIV = Builder.CreateZExt(OrigPhiRef, Phi->getType(), IVName);
+      else
+        NewIV = Builder.CreateTruncOrBitCast(OrigPhiRef, Phi->getType(), IVName);
     }
     Phi->replaceAllUsesWith(NewIV);
     DeadInsts.emplace_back(Phi);
