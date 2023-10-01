@@ -440,10 +440,7 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
                       MI.getOpcode() == MOS::DecDcpMB;
 
   if (IsDec && !IsLast) {
-    if (IsReg && !IsMemReg) {
-      // 2. DEC (register): prepare register
-      Builder.buildCopy(MI.getOperand(0), MI.getOperand(FirstUseIdx));
-    } else {
+    if (!IsReg || IsMemReg) {
       // 3. DEC (memory): LD? #$FF
       Builder.buildInstr(MOS::LDImm)
           .addDef(MI.getOperand(0).getReg())
@@ -486,8 +483,14 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
     if (IsReg && !IsMemReg) {
       Builder.buildInstr(MOS::CMPImm)
           .addDef(MOS::C)
+          .addUse(MI.getOperand(FirstUseIdx).getReg())
+          .addImm(INT64_C(0xFF))
+          .addDef(MOS::Z, RegState::Implicit);
+    } else if (IsMemReg) {
+      Builder.buildInstr(MOS::CMPImag8)
+          .addDef(MOS::C)
           .addUse(MI.getOperand(0).getReg())
-          .addImm(INT64_C(0))
+          .addUse(MI.getOperand(FirstUseIdx).getReg())
           .addDef(MOS::Z, RegState::Implicit);
     } else {
       Builder.buildInstr(MOS::CMPAbs)

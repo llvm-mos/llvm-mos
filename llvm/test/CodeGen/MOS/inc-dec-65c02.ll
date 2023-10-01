@@ -65,9 +65,8 @@ entry:
 define i16 @dec_i16(i16 %a) {
 ; CHECK-LABEL: dec_i16:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    tay
 ; CHECK-NEXT:    dec
-; CHECK-NEXT:    cpy #0
+; CHECK-NEXT:    cmp #255
 ; CHECK-NEXT:    bne .LBB4_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dex
@@ -81,15 +80,12 @@ entry:
 define i32 @dec_i32(i32 %a) {
 ; CHECK-LABEL: dec_i32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    tay
 ; CHECK-NEXT:    dec
-; CHECK-NEXT:    cpy #0
+; CHECK-NEXT:    cmp #255
 ; CHECK-NEXT:    bne .LBB5_6
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    phx
-; CHECK-NEXT:    ply
 ; CHECK-NEXT:    dex
-; CHECK-NEXT:    cpy #0
+; CHECK-NEXT:    cpx #255
 ; CHECK-NEXT:    bne .LBB5_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
 ; CHECK-NEXT:    ldy #255

@@ -1180,15 +1180,12 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
 
 void MOSInstrInfo::expandIncDecPtr(MachineIRBuilder &Builder) const {
   MachineInstr &MI = *Builder.getInsertPt();
-  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
   const TargetRegisterInfo &TRI = *Builder.getMRI()->getTargetRegisterInfo();
   Register Reg = MI.getOperand(MI.getOpcode() == MOS::IncPtr ? 0 : 1).getReg();
   Register Lo = TRI.getSubReg(Reg, MOS::sublo);
   Register Hi = TRI.getSubReg(Reg, MOS::subhi);
   auto Op = MI.getOpcode() == MOS::IncPtr ? MOS::IncMB :
             (MI.getOpcode() == MOS::DecPtr ? MOS::DecMB : MOS::DecDcpMB);
-  if (Op == MOS::DecMB && STI.has6502X())
-    Op = MOS::DecDcpMB;
   auto Inst = Builder.buildInstr(Op);
   if (MI.getOpcode() != MOS::IncPtr)
     Inst.addDef(MI.getOperand(0).getReg());

@@ -102,7 +102,7 @@ define i16 @dec_i16(i16 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    tay
 ; CHECK-NEXT:    dey
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    cpy #255
 ; CHECK-NEXT:    bne .LBB6_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dex
@@ -119,12 +119,11 @@ define i32 @dec_i32(i32 %a) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    tay
 ; CHECK-NEXT:    dey
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    cpy #255
 ; CHECK-NEXT:    bne .LBB7_6
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    txa
 ; CHECK-NEXT:    dex
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    cpx #255
 ; CHECK-NEXT:    bne .LBB7_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
 ; CHECK-NEXT:    lda #255
