@@ -459,6 +459,11 @@ class MOSTransfer<RegisterClass dst, RegisterClass src> : MOSLogicalInstr {
 def LDImag8 : MOSTransfer<GPR, Imag8>;
 // STA zp, STX zp, STY zp
 def STImag8 : MOSTransfer<Imag8, GPR>;
+// MOV zp, zp
+def MOVImag8 : MOSTransfer<Imag8, Imag8>,
+    PseudoInstExpansion<(SPC700_MOV_ZeroPageZeroPage addr8:$dst, addr8at2:$src)> {
+  let Predicates = [HasSPC700];
+}
 
 // TAX, TAY
 def TA : MOSTransfer<XY, Ac>;

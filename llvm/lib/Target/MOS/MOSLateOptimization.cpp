@@ -65,6 +65,8 @@ static bool definesNZ(const MachineInstr &MI, Register Val, const MOSSubtarget &
     return false;
   if (STI.hasSPC700() && MI.getOpcode() == MOS::PL_CMOS)
     return false;
+  if (MI.getOpcode() == MOS::MOVImag8)
+    return false;
   if (MI.getOpcode() == MOS::STImag8)
     return false;
   if (MI.definesRegister(Val))
@@ -112,6 +114,7 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
         case MOS::CL:
         case MOS::CLV:
         case MOS::LDCImm:
+        case MOS::MOVImag8:
         case MOS::STImag8:
         case MOS::PH:
         case MOS::PH_CMOS:

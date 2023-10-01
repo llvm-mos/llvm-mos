@@ -354,6 +354,16 @@ body: |
     ; CHECK-NEXT: ret
 ...
 ---
+name: mov_imag8
+# CHECK-LABEL: mov_imag8
+body: |
+  bb.0.entry:
+    $rc1 = MOVImag8 $rc0
+    ; CHECK: mov __rc1,__rc0
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
 name: pha_implied
 # CHECK-LABEL: pha_implied
 body: |

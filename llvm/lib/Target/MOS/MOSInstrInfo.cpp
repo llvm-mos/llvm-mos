@@ -462,6 +462,7 @@ bool MOSInstrInfo::shouldOverlapInterval(const MachineInstr &MI) const {
 static bool isTargetCopy(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case MOS::LDImag8:
+  case MOS::MOVImag8:
   case MOS::STImag8:
   case MOS::TA:
   case MOS::T_A:
@@ -579,8 +580,12 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
   } else if (AreClasses(MOS::GPRRegClass, MOS::Imag8RegClass)) {
     Builder.buildInstr(MOS::LDImag8).addDef(DestReg).addUse(SrcReg);
   } else if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
-    copyPhysRegImpl(Builder, DestReg,
-                    getRegWithVal(Builder, SrcReg, MOS::GPRRegClass));
+    if (STI.hasSPC700()) {
+      Builder.buildInstr(MOS::MOVImag8).addDef(DestReg).addUse(SrcReg);
+    } else {
+      copyPhysRegImpl(Builder, DestReg,
+                      getRegWithVal(Builder, SrcReg, MOS::GPRRegClass));
+    }
   } else if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
     assert(SrcReg.isPhysical() && DestReg.isPhysical());
     copyPhysRegImpl(Builder, TRI.getSubReg(DestReg, MOS::sublo),
