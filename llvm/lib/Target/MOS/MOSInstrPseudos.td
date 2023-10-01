@@ -171,11 +171,6 @@ def DecPtr : MOSIncDecPtr {
   let Constraints = "$dst = $src,@earlyclobber $scratch";
 }
 
-def DecDcpPtr : MOSIncDecPtr {
-  dag OutOperandList = (outs Ac:$scratch, Imag16:$dst);
-  let Constraints = "$dst = $src,@earlyclobber $scratch";
-}
-
 //===---------------------------------------------------------------------===//
 // Soft stack
 //===---------------------------------------------------------------------===//
@@ -329,13 +324,6 @@ def IncMB : MOSIncDecMB {
 def DecMB : MOSIncDecMB {
   dag OutOperandList = (outs GPR:$scratch, variable_ops);
   let Constraints = "@earlyclobber $scratch";
-}
-// DCP-based multi-byte decrement for 6502X. DCP is significantly more compact
-// than DEC + CMP, but only supports the A register as scratch.
-def DecDcpMB : MOSIncDecMB {
-  dag OutOperandList = (outs Ac:$scratch, variable_ops);
-  let Constraints = "@earlyclobber $scratch";
-  let Predicates = [Has6502X];
 }
 
 // Use the diamond control flow pattern to load one of two immediates based on

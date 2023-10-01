@@ -5,7 +5,6 @@ target datalayout = "e-m:e-p:16:8-p1:8:8-i16:8-i32:8-i64:8-f32:8-f64:8-a:8-Fi8-n
 target triple = "mos"
 
 @g = global i16 0
-@h = global i32 0
 
 define i8 @inc_i8(i8 %a) {
 ; CHECK-LABEL: inc_i8:
@@ -100,9 +99,10 @@ entry:
 define i16 @dec_i16(i16 %a) {
 ; CHECK-LABEL: dec_i16:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    tay
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #255
-; CHECK-NEXT:    cmp #255
+; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB6_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dex
@@ -116,18 +116,23 @@ entry:
 define i32 @dec_i32(i32 %a) {
 ; CHECK-LABEL: dec_i32:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    tay
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc #255
-; CHECK-NEXT:    cmp #255
+; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_6
 ; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    pla
 ; CHECK-NEXT:    dex
-; CHECK-NEXT:    cpx #255
+; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_5
 ; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    ldy #255
+; CHECK-NEXT:    ldy __rc2
 ; CHECK-NEXT:    dec __rc2
-; CHECK-NEXT:    cpy __rc2
+; CHECK-NEXT:    cpy #0
 ; CHECK-NEXT:    bne .LBB7_4
 ; CHECK-NEXT:  ; %bb.3: ; %entry
 ; CHECK-NEXT:    dec __rc3
@@ -143,9 +148,9 @@ entry:
 define i8* @dec_ptr(i8* %a) {
 ; CHECK-LABEL: dec_ptr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx #255
+; CHECK-NEXT:    ldx __rc2
 ; CHECK-NEXT:    dec __rc2
-; CHECK-NEXT:    cpx __rc2
+; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bne .LBB8_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dec __rc3
@@ -159,9 +164,9 @@ entry:
 define void @dec_global() {
 ; CHECK-LABEL: dec_global:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx #255
+; CHECK-NEXT:    ldx g
 ; CHECK-NEXT:    dec g
-; CHECK-NEXT:    cpx g
+; CHECK-NEXT:    cpx #0
 ; CHECK-NEXT:    bne .LBB9_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    dec g+1
@@ -171,35 +176,5 @@ entry:
   %0 = load i16, i16* @g
   %1 = add i16 %0, -1
   store i16 %1, i16* @g
-  ret void
-}
-
-define void @dec_global_i32() {
-; CHECK-LABEL: dec_global_i32:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx #255
-; CHECK-NEXT:    dec h
-; CHECK-NEXT:    cpx h
-; CHECK-NEXT:    bne .LBB10_6
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    ldx #255
-; CHECK-NEXT:    dec h+1
-; CHECK-NEXT:    cpx h+1
-; CHECK-NEXT:    bne .LBB10_5
-; CHECK-NEXT:  ; %bb.2: ; %entry
-; CHECK-NEXT:    ldx #255
-; CHECK-NEXT:    dec h+2
-; CHECK-NEXT:    cpx h+2
-; CHECK-NEXT:    bne .LBB10_4
-; CHECK-NEXT:  ; %bb.3: ; %entry
-; CHECK-NEXT:    dec h+3
-; CHECK-NEXT:  .LBB10_4: ; %entry
-; CHECK-NEXT:  .LBB10_5: ; %entry
-; CHECK-NEXT:  .LBB10_6: ; %entry
-; CHECK-NEXT:    rts
-entry:
-  %0 = load i32, i32* @h
-  %1 = add i32 %0, -1
-  store i32 %1, i32* @h
   ret void
 }

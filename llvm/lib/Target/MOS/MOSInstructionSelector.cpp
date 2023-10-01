@@ -1830,8 +1830,6 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
   case MOS::G_DEC:
   case MOS::G_DEC_TMP:
     Opcode = MOS::DecMB;
-    if (STI.has6502X())
-      Opcode = MOS::DecDcpMB;
     break;
   }
 
@@ -1841,30 +1839,25 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
           LLT::pointer(0, 16)) {
     assert(MI.getOpcode() == MOS::G_INC || MI.getOpcode() == MOS::G_DEC);
     assert(MI.getNumDefs() == 1);
-    auto Op = Opcode == MOS::IncMB ? MOS::IncPtr :
-              (Opcode == MOS::DecMB ? MOS::DecPtr : MOS::DecDcpPtr);
-    auto Instr = Builder.buildInstr(Op);
-    if (Opcode == MOS::DecMB)
-      Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass));
-    else if (Opcode == MOS::DecDcpMB)
-      Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass));
-    Instr.addDef(MI.getOperand(0).getReg()).addUse(MI.getOperand(1).getReg());
+    auto Op = Builder.buildInstr(MI.getOpcode() == MOS::G_INC ? MOS::IncPtr
+                                                              : MOS::DecPtr);
+    if (MI.getOpcode() == MOS::G_DEC)
+      Op.addDef(Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass));
+    Op.addDef(MI.getOperand(0).getReg()).addUse(MI.getOperand(1).getReg());
     MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
+    return constrainSelectedInstRegOperands(*Op, TII, TRI, RBI);
   }
 
   auto Instr = Builder.buildInstr(Opcode);
   if (Opcode == MOS::DecMB)
     Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass));
-  else if (Opcode == MOS::DecDcpMB)
-    Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::AcRegClass));
   for (MachineOperand &MO : MI.operands())
     Instr.add(MO);
   for (MachineOperand &MO : Instr->explicit_operands())
     if (MO.isReg())
       constrainOperandRegClass(MO, MOS::Anyi8RegClass);
 
-  unsigned DstIdx = Opcode == MOS::IncMB ? 0 : 1;
+  unsigned DstIdx = Opcode == MOS::DecMB ? 1 : 0;
   unsigned SrcIdx = Instr->getNumExplicitDefs();
   while (SrcIdx != Instr->getNumExplicitOperands()) {
     if (Instr->getOperand(SrcIdx).isReg()) {

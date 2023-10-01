@@ -503,18 +503,17 @@ static bool isCopyRedundant(MachineIRBuilder &Builder, Register Dst,
 }
 
 bool MOSInstrInfo::hasCustomTiedOperands(unsigned Opcode) const {
-  return Opcode == MOS::IncMB || Opcode == MOS::DecMB ||
-             Opcode == MOS::DecDcpMB;
+  return Opcode == MOS::IncMB || Opcode == MOS::DecMB;
 }
 
 unsigned MOSInstrInfo::findCustomTiedOperandIdx(const MachineInstr &MI,
                                                 unsigned OpIdx) const {
   assert(hasCustomTiedOperands(MI.getOpcode()));
   if (OpIdx < MI.getNumExplicitDefs())
-    return MI.getOpcode() == MOS::IncMB ? OpIdx + MI.getNumExplicitDefs()
-                                        : OpIdx + MI.getNumExplicitDefs() - 1;
-  return MI.getOpcode() == MOS::IncMB ? OpIdx - MI.getNumExplicitDefs()
-                                      : OpIdx - MI.getNumExplicitDefs() + 1;
+    return MI.getOpcode() == MOS::DecMB ? OpIdx + MI.getNumExplicitDefs() - 1
+                                        : OpIdx + MI.getNumExplicitDefs();
+  return MI.getOpcode() == MOS::DecMB ? OpIdx - MI.getNumExplicitDefs() + 1
+                                      : OpIdx - MI.getNumExplicitDefs();
 }
 
 void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
@@ -910,7 +909,6 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
   case MOS::IncPtr:
   case MOS::DecPtr:
-  case MOS::DecDcpPtr:
     expandIncDecPtr(Builder);
     break;
   case MOS::LDZpIdx:
@@ -1184,19 +1182,18 @@ void MOSInstrInfo::expandIncDecPtr(MachineIRBuilder &Builder) const {
   Register Reg = MI.getOperand(MI.getOpcode() == MOS::IncPtr ? 0 : 1).getReg();
   Register Lo = TRI.getSubReg(Reg, MOS::sublo);
   Register Hi = TRI.getSubReg(Reg, MOS::subhi);
-  auto Op = MI.getOpcode() == MOS::IncPtr ? MOS::IncMB :
-            (MI.getOpcode() == MOS::DecPtr ? MOS::DecMB : MOS::DecDcpMB);
-  auto Inst = Builder.buildInstr(Op);
-  if (MI.getOpcode() != MOS::IncPtr)
-    Inst.addDef(MI.getOperand(0).getReg());
-  Inst.addDef(Lo).addDef(Hi).addUse(Lo).addUse(Hi);
+  auto Op = Builder.buildInstr(MI.getOpcode() == MOS::IncPtr ? MOS::IncMB
+                                                             : MOS::DecMB);
+  if (MI.getOpcode() == MOS::DecPtr)
+    Op.addDef(MI.getOperand(0).getReg());
+  Op.addDef(Lo).addDef(Hi).addUse(Lo).addUse(Hi);
 
   if (MI.getOpcode() == MOS::IncPtr) {
-    Inst->tieOperands(0, 2);
-    Inst->tieOperands(1, 3);
+    Op->tieOperands(0, 2);
+    Op->tieOperands(1, 3);
   } else {
-    Inst->tieOperands(1, 3);
-    Inst->tieOperands(2, 4);
+    Op->tieOperands(1, 3);
+    Op->tieOperands(2, 4);
   }
   MI.eraseFromParent();
 }
