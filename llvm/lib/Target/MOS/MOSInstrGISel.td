@@ -180,3 +180,15 @@ def G_CMPZ : MOSGenericInstruction {
   let OutOperandList = (outs type0:$z);
   let InOperandList = (ins variable_ops);
 }
+
+// Indexed indirect branch.
+def G_BRINDIRECT_IDX : MOSGenericInstruction {
+  let Predicates = [HasJMPIdxIndir];
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src, type1:$index);
+
+  let isBranch = true;
+  let isTerminator = true;
+  let isBarrier = true;
+  let isIndirectBranch = true;
+}

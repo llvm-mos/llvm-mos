@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -2149,7 +2150,9 @@ bool MOSLegalizerInfo::legalizeBrJt(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
   LLT S8 = LLT::scalar(8);
+  LLT P = LLT::pointer(0, 16);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
 #ifndef NDEBUG
   const MachineInstr *Base =
@@ -2161,22 +2164,33 @@ bool MOSLegalizerInfo::legalizeBrJt(LegalizerHelper &Helper,
   assert(MI.getOperand(1).getIndex() == Base->getOperand(1).getIndex() &&
          "Expected G_JUMP_TABLE to have same index.");
 
+  const MachineJumpTableInfo *JTI = MI.getMF()->getJumpTableInfo();
+  const auto &Table = JTI->getJumpTables()[MI.getOperand(1).getIndex()];
+
   // Note: Jump table size is hard-limited to 256 entries.
   Register Offset = Builder.buildTrunc(S8, MI.getOperand(2)).getReg(0);
 
-  Register LoAddr = MRI.createGenericVirtualRegister(S8);
-  Builder.buildInstr(MOS::G_LOAD_ABS_IDX)
-      .addDef(LoAddr)
-      .add(MI.getOperand(1))
-      .addUse(Offset);
-  Register HiAddr = MRI.createGenericVirtualRegister(S8);
-  Builder.buildInstr(MOS::G_LOAD_ABS_IDX)
-      .addDef(HiAddr)
-      .addJumpTableIndex(MI.getOperand(1).getIndex(), MOS::MO_HI_JT)
-      .addUse(Offset);
-  Builder.buildBrIndirect(
-      Builder.buildMergeValues(LLT::pointer(0, 16), {LoAddr, HiAddr})
-          .getReg(0));
+  if (STI.hasJMPIdxIndir() && Table.MBBs.size() <= 128) {
+    Offset =
+        Builder.buildShl(S8, Offset, Builder.buildConstant(S8, 1)).getReg(0);
+    Builder.buildInstr(MOS::G_BRINDIRECT_IDX)
+        .add(MI.getOperand(1))
+        .addUse(Offset);
+  } else {
+    Register LoAddr = MRI.createGenericVirtualRegister(S8);
+    Builder.buildInstr(MOS::G_LOAD_ABS_IDX)
+        .addDef(LoAddr)
+        .add(MI.getOperand(1))
+        .addUse(Offset);
+    Register HiAddr = MRI.createGenericVirtualRegister(S8);
+    Builder.buildInstr(MOS::G_LOAD_ABS_IDX)
+        .addDef(HiAddr)
+        .addJumpTableIndex(MI.getOperand(1).getIndex(), MOS::MO_HI_JT)
+        .addUse(Offset);
+    Builder.buildBrIndirect(
+        Builder.buildMergeValues(LLT::pointer(0, 16), {LoAddr, HiAddr})
+            .getReg(0));
+  }
 
   MI.eraseFromParent();
   return true;

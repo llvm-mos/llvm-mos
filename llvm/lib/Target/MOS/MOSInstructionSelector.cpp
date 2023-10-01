@@ -254,6 +254,7 @@ bool MOSInstructionSelector::select(MachineInstr &MI) {
   case MOS::G_PHI:
   case MOS::G_STORE_INDIR:
   case MOS::G_STORE_INDIR_IDX:
+  case MOS::G_BRINDIRECT_IDX:
     return selectGeneric(MI);
   }
 }
@@ -1907,7 +1908,6 @@ bool MOSInstructionSelector::selectBrIndirect(MachineInstr &MI) {
   if (STI.hasSPC700()) {
     // SPC700 indirect jumps are indexed by X. Since G_BRINDIRECT does not
     // directly support indexed effective addresses, we simply make X zero.
-    // TODO: Combiner could detect indexed indirect jump addresses.
     MachineIRBuilder Builder(MI);
     Register XZero = Builder.getMRI()->createVirtualRegister(&MOS::XcRegClass);
     Builder.buildInstr(MOS::LDImm, {XZero}, {INT64_C(0)});
@@ -1916,7 +1916,6 @@ bool MOSInstructionSelector::selectBrIndirect(MachineInstr &MI) {
   return selectGeneric(MI);
 }
 
-
 bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
   unsigned Opcode;
   switch (MI.getOpcode()) {
@@ -1924,6 +1923,9 @@ bool MOSInstructionSelector::selectGeneric(MachineInstr &MI) {
     llvm_unreachable("Unexpected opcode.");
   case MOS::G_BRINDIRECT:
     Opcode = MOS::JMPIndir;
+    break;
+  case MOS::G_BRINDIRECT_IDX:
+    Opcode = MOS::JMPIdxIndir;
     break;
   case MOS::G_IMPLICIT_DEF:
     Opcode = MOS::IMPLICIT_DEF;
