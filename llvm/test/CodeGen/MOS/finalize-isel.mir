@@ -220,9 +220,8 @@ body: |
     ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = COPY $x
     ; CHECK-NEXT: $x = DEC $x, implicit-def $c, implicit-def $v
-    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: $c = CMPImm $x, 255, implicit-def $z
     ; CHECK-NEXT: BR %bb.2, $z, -1
     ; CHECK-NEXT: JMP %bb.1
     ; CHECK-NEXT: {{  $}}
@@ -230,9 +229,8 @@ body: |
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = COPY $y
     ; CHECK-NEXT: $y = DEC $y, implicit-def $c, implicit-def $v
-    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: $c = CMPImm $y, 255, implicit-def $z
     ; CHECK-NEXT: BR %bb.4, $z, -1
     ; CHECK-NEXT: JMP %bb.3
     ; CHECK-NEXT: {{  $}}
@@ -240,9 +238,9 @@ body: |
     ; CHECK-NEXT: successors: %bb.5(0x40000000), %bb.6(0x40000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = COPY $rc2
+    ; CHECK-NEXT: $a = LDImm 255
     ; CHECK-NEXT: $rc2 = DEC $rc2, implicit-def $c, implicit-def $v
-    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: $c = CMPImag8 $a, $rc2, implicit-def $z
     ; CHECK-NEXT: BR %bb.6, $z, -1
     ; CHECK-NEXT: JMP %bb.5
     ; CHECK-NEXT: {{  $}}
@@ -338,9 +336,8 @@ body: |
     ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = COPY $y
     ; CHECK-NEXT: $y = DEC $y, implicit-def $c, implicit-def $v
-    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: $c = CMPImm $y, 255, implicit-def $z
     ; CHECK-NEXT: BR %bb.2, $z, -1
     ; CHECK-NEXT: JMP %bb.1
     ; CHECK-NEXT: {{  $}}
@@ -348,9 +345,9 @@ body: |
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
     ; CHECK-NEXT: liveins: $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = LDAbs i16 1234
+    ; CHECK-NEXT: $a = LDImm 255
     ; CHECK-NEXT: DECAbs i16 1234
-    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: $c = CMPAbs $a, i16 1234, implicit-def $z
     ; CHECK-NEXT: BR %bb.4, $z, -1
     ; CHECK-NEXT: JMP %bb.3
     ; CHECK-NEXT: {{  $}}
@@ -358,9 +355,9 @@ body: |
     ; CHECK-NEXT: successors: %bb.5(0x40000000), %bb.6(0x40000000)
     ; CHECK-NEXT: liveins: $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = COPY $rc2
+    ; CHECK-NEXT: $a = LDImm 255
     ; CHECK-NEXT: $rc2 = DEC $rc2, implicit-def $c, implicit-def $v
-    ; CHECK-NEXT: $c = CMPImm $a, 0, implicit-def $z
+    ; CHECK-NEXT: $c = CMPImag8 $a, $rc2, implicit-def $z
     ; CHECK-NEXT: BR %bb.6, $z, -1
     ; CHECK-NEXT: JMP %bb.5
     ; CHECK-NEXT: {{  $}}
@@ -517,9 +514,9 @@ body: |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $y = COPY $rc2
+  ; CHECK-NEXT:   $y = LDImm 255
   ; CHECK-NEXT:   $rc2 = DEC $rc2, implicit-def $c, implicit-def $v
-  ; CHECK-NEXT:   $c = CMPImm $y, 0, implicit-def $z
+  ; CHECK-NEXT:   $c = CMPImag8 $y, $rc2, implicit-def $z
   ; CHECK-NEXT:   BR %bb.3, $z, -1
   ; CHECK-NEXT:   JMP %bb.2
   ; CHECK-NEXT: {{  $}}

@@ -34,9 +34,9 @@ define void @cold_func() norecurse {
 ; CHECK-NEXT:  .LBB1_1: ; %for.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jsr hot_func
-; CHECK-NEXT:    ldx __rc20
+; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    dec __rc20
-; CHECK-NEXT:    cpx #0
+; CHECK-NEXT:    cpx __rc20
 ; CHECK-NEXT:    beq .LBB1_4
 ; CHECK-NEXT:  ; %bb.2: ; %for.body
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
