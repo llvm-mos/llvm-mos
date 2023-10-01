@@ -63,7 +63,7 @@ bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
 static bool definesNZ(const MachineInstr &MI, Register Val, const MOSSubtarget &STI) {
   if (MI.getOpcode() == MOS::CL)
     return false;
-  if (STI.hasSPC700() && MI.getOpcode() == MOS::PL_CMOS)
+  if (STI.hasSPC700() && MI.getOpcode() == MOS::PL)
     return false;
   if (MI.getOpcode() == MOS::STImag8)
     return false;
@@ -114,12 +114,10 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
         case MOS::LDCImm:
         case MOS::STImag8:
         case MOS::PH:
-        case MOS::PH_CMOS:
         case MOS::SWAP:
           ClobbersNZ = false;
           break;
         case MOS::PL:
-        case MOS::PL_CMOS:
           if (STI.hasSPC700())
             ClobbersNZ = false;
           break;
@@ -322,10 +320,7 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       }
 
       if (Load) {
-        if (STI.hasGPRIncDec())
-          MI.setDesc(TII.get(Val > Load->Val ? MOS::IN_CMOS : MOS::DE_CMOS));
-        else
-          MI.setDesc(TII.get(Val > Load->Val ? MOS::IN : MOS::DE));
+        MI.setDesc(TII.get(Val > Load->Val ? MOS::IN : MOS::DE));
         MI.getOperand(1).ChangeToRegister(Dst, /*isDef=*/false, /*isImp=*/false,
                                           /*isKill=*/true);
         MI.tieOperands(0, 1);

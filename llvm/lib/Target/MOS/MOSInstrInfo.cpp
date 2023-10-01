@@ -566,8 +566,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
       // The 65C02 can emit a PHX/PLY or PHY/PLX pair.
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
-      Builder.buildInstr(MOS::PH_CMOS, {}, {SrcReg});
-      auto I = Builder.buildInstr(MOS::PL_CMOS, {DestReg}, {});
+      Builder.buildInstr(MOS::PH, {}, {SrcReg});
+      auto I = Builder.buildInstr(MOS::PL, {DestReg}, {});
       if (!STI.hasSPC700())
         I.addDef(MOS::NZ, RegState::Implicit);
     } else {
@@ -621,10 +621,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
           } else if (MOS::XYRegClass.contains(SrcReg)) {
             // A DEC/INC pair defines NZ without impacting other flags or
             // the register.
-            Builder.buildInstr(STI.hasGPRIncDec() ? MOS::DE_CMOS : MOS::DE,
-                               {SrcReg}, {SrcReg});
-            Builder.buildInstr(STI.hasGPRIncDec() ? MOS::IN_CMOS : MOS::IN,
-                               {SrcReg}, {SrcReg})
+            Builder.buildInstr(MOS::DE, {SrcReg}, {SrcReg});
+            Builder.buildInstr(MOS::IN, {SrcReg}, {SrcReg})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});
@@ -1139,11 +1137,8 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
 
   // GPRs on CMOS 6502.
   if (STI.hasGPRIncDec()) {
-    switch (R) {
-    case MOS::A:
-    case MOS::X:
-    case MOS::Y:
-      MI.setDesc(TII.get(IsInc ? MOS::IN_CMOS : MOS::DE_CMOS));
+    if (R == MOS::A) {
+      MI.setDesc(TII.get(IsInc ? MOS::IN : MOS::DE));
       return;
     }
   } else if (IsCMOS) {

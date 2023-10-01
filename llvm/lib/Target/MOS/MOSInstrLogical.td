@@ -395,16 +395,9 @@ let mayLoad = true in {
 
 multiclass MOSIncDec {
   def NAME : MOSLogicalInstr {
-    dag OutOperandList = (outs XY:$dst);
-    dag InOperandList = (ins XY:$src);
+    dag OutOperandList = (outs IncDec:$dst);
+    dag InOperandList = (ins IncDec:$src);
     let Constraints = "$src = $dst";
-  }
-
-  def _CMOS : MOSLogicalInstr {
-    dag OutOperandList = (outs GPR:$dst);
-    dag InOperandList = (ins GPR:$src);
-    let Constraints = "$src = $dst";
-    let Predicates = [HasGPRIncDec];
   }
 
   def CImag8 : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPage) addr8:$dst)> {
@@ -487,32 +480,16 @@ def SWAP : MOSLogicalInstr {
 
 // PHA, PHP
 def PH : MOSLogicalInstr {
-  dag InOperandList = (ins AP:$src);
+  dag InOperandList = (ins PushPop:$src);
 
   let mayStore = true;
 }
 
 // PLA, PLP
 def PL : MOSLogicalInstr {
-  dag OutOperandList = (outs AP:$dst);
+  dag OutOperandList = (outs PushPop:$dst);
 
   let mayLoad = true;
-}
-
-let Predicates = [HasGPRStackRegs] in {
-  // PHA, PHP
-  def PH_CMOS : MOSLogicalInstr {
-    dag InOperandList = (ins AXYP:$src);
-
-    let mayStore = true;
-  }
-
-  // PLA, PLX, PLY, PLP
-  def PL_CMOS : MOSLogicalInstr {
-    dag OutOperandList = (outs AXYP:$dst);
-
-    let mayLoad = true;
-  }
 }
 
 //===---------------------------------------------------------------------===//

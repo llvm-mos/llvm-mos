@@ -67,7 +67,7 @@ body:             |
     ; 6502-NEXT: $rc1 = COPY killed $a
     ; 6502-NEXT: RTS
     ; 65C02-LABEL: name: nonreentrant
-    ; 65C02: PH_CMOS $a
+    ; 65C02: PH $a
     ; 65C02-NEXT: $c = LDCImm 0
     ; 65C02-NEXT: $a = COPY $rc0
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 254, $c
@@ -75,7 +75,7 @@ body:             |
     ; 65C02-NEXT: $a = COPY $rc1
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; 65C02-NEXT: $rc1 = COPY killed $a
-    ; 65C02-NEXT: $a = PL_CMOS
+    ; 65C02-NEXT: $a = PL
     ; 65C02-NEXT: STAbs $a, target-index(mos-static-stack) :: (store (s8) into %stack.0)
     ; 65C02-NEXT: $a = LDAbs target-index(mos-static-stack) + 1 :: (load (s8) from %stack.1)
     ; 65C02-NEXT: $c = LDCImm 0
@@ -117,15 +117,15 @@ body: |
     ; 6502-NEXT: RTS implicit $rc30, implicit $rc31
     ; 65C02-LABEL: name: nonreentrant_variable_sized
     ; 65C02: $x = frame-setup COPY $rc30
-    ; 65C02-NEXT: frame-setup PH_CMOS killed $x
+    ; 65C02-NEXT: frame-setup PH killed $x
     ; 65C02-NEXT: $x = frame-setup COPY $rc31
-    ; 65C02-NEXT: frame-setup PH_CMOS killed $x
+    ; 65C02-NEXT: frame-setup PH killed $x
     ; 65C02-NEXT: $rs15 = COPY $rs0
     ; 65C02-NEXT: $a = LDAbs target-index(mos-static-stack) + 2 :: (load (s8) from %stack.2 + 1)
     ; 65C02-NEXT: $rs0 = COPY $rs15
-    ; 65C02-NEXT: $x = frame-destroy PL_CMOS
+    ; 65C02-NEXT: $x = frame-destroy PL
     ; 65C02-NEXT: $rc31 = frame-destroy COPY killed $x
-    ; 65C02-NEXT: $x = frame-destroy PL_CMOS
+    ; 65C02-NEXT: $x = frame-destroy PL
     ; 65C02-NEXT: $rc30 = frame-destroy COPY killed $x
     ; 65C02-NEXT: RTS implicit $rc30, implicit $rc31
     $a = LDAbs %stack.2 + 1 :: (load 1 from %stack.2 + 1)
@@ -185,7 +185,7 @@ body: |
     ; 65C02: liveins: $a, $x, $y
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: CLD_Implied
-    ; 65C02-NEXT: PH_CMOS $a
+    ; 65C02-NEXT: PH $a
     ; 65C02-NEXT: $c = LDCImm 0
     ; 65C02-NEXT: $a = COPY $rc0
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 255, $c
@@ -193,12 +193,12 @@ body: |
     ; 65C02-NEXT: $a = COPY $rc1
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; 65C02-NEXT: $rc1 = COPY killed $a
-    ; 65C02-NEXT: $a = PL_CMOS
-    ; 65C02-NEXT: frame-setup PH_CMOS $a
-    ; 65C02-NEXT: frame-setup PH_CMOS $x
-    ; 65C02-NEXT: frame-setup PH_CMOS $y
+    ; 65C02-NEXT: $a = PL
+    ; 65C02-NEXT: frame-setup PH $a
+    ; 65C02-NEXT: frame-setup PH $x
+    ; 65C02-NEXT: frame-setup PH $y
     ; 65C02-NEXT: $x = frame-setup COPY $rc16
-    ; 65C02-NEXT: frame-setup PH_CMOS killed $x
+    ; 65C02-NEXT: frame-setup PH killed $x
     ; 65C02-NEXT: $a = COPY $rc17
     ; 65C02-NEXT: $y = LDImm 0
     ; 65C02-NEXT: STIndirIdx killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
@@ -208,12 +208,12 @@ body: |
     ; 65C02-NEXT: $y = LDImm 0
     ; 65C02-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.0)
     ; 65C02-NEXT: $rc17 = COPY killed $a
-    ; 65C02-NEXT: $x = frame-destroy PL_CMOS
+    ; 65C02-NEXT: $x = frame-destroy PL
     ; 65C02-NEXT: $rc16 = frame-destroy COPY killed $x
-    ; 65C02-NEXT: $y = frame-destroy PL_CMOS
-    ; 65C02-NEXT: $x = frame-destroy PL_CMOS
-    ; 65C02-NEXT: $a = frame-destroy PL_CMOS
-    ; 65C02-NEXT: PH_CMOS $a
+    ; 65C02-NEXT: $y = frame-destroy PL
+    ; 65C02-NEXT: $x = frame-destroy PL
+    ; 65C02-NEXT: $a = frame-destroy PL
+    ; 65C02-NEXT: PH $a
     ; 65C02-NEXT: $c = LDCImm 0
     ; 65C02-NEXT: $a = COPY $rc0
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 1, $c
@@ -221,7 +221,7 @@ body: |
     ; 65C02-NEXT: $a = COPY $rc1
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 1, $c
     ; 65C02-NEXT: $rc1 = COPY killed $a
-    ; 65C02-NEXT: $a = PL_CMOS
+    ; 65C02-NEXT: $a = PL
     ; 65C02-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
     CLD_Implied
     $x = LDImm 42
@@ -287,7 +287,7 @@ body: |
   ; 65C02-NEXT:   liveins: $a, $x, $y
   ; 65C02-NEXT: {{  $}}
   ; 65C02-NEXT:   CLD_Implied
-  ; 65C02-NEXT:   PH_CMOS $a
+  ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 255, $c
@@ -295,12 +295,12 @@ body: |
   ; 65C02-NEXT:   $a = COPY $rc1
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 254, $c
   ; 65C02-NEXT:   $rc1 = COPY killed $a
-  ; 65C02-NEXT:   $a = PL_CMOS
-  ; 65C02-NEXT:   frame-setup PH_CMOS $a
-  ; 65C02-NEXT:   frame-setup PH_CMOS $x
-  ; 65C02-NEXT:   frame-setup PH_CMOS $y
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   frame-setup PH $a
+  ; 65C02-NEXT:   frame-setup PH $x
+  ; 65C02-NEXT:   frame-setup PH $y
   ; 65C02-NEXT:   $x = frame-setup COPY $rc16
-  ; 65C02-NEXT:   frame-setup PH_CMOS killed $x
+  ; 65C02-NEXT:   frame-setup PH killed $x
   ; 65C02-NEXT:   $a = COPY $rc17
   ; 65C02-NEXT:   $y = LDImm 0
   ; 65C02-NEXT:   STIndirIdx killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
@@ -310,12 +310,12 @@ body: |
   ; 65C02-NEXT:   $y = LDImm 0
   ; 65C02-NEXT:   $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.0)
   ; 65C02-NEXT:   $rc17 = COPY killed $a
-  ; 65C02-NEXT:   $x = frame-destroy PL_CMOS
+  ; 65C02-NEXT:   $x = frame-destroy PL
   ; 65C02-NEXT:   $rc16 = frame-destroy COPY killed $x
-  ; 65C02-NEXT:   $y = frame-destroy PL_CMOS
-  ; 65C02-NEXT:   $x = frame-destroy PL_CMOS
-  ; 65C02-NEXT:   $a = frame-destroy PL_CMOS
-  ; 65C02-NEXT:   PH_CMOS $a
+  ; 65C02-NEXT:   $y = frame-destroy PL
+  ; 65C02-NEXT:   $x = frame-destroy PL
+  ; 65C02-NEXT:   $a = frame-destroy PL
+  ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 1, $c
@@ -323,7 +323,7 @@ body: |
   ; 65C02-NEXT:   $a = COPY $rc1
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 1, $c
   ; 65C02-NEXT:   $rc1 = COPY killed $a
-  ; 65C02-NEXT:   $a = PL_CMOS
+  ; 65C02-NEXT:   $a = PL
   ; 65C02-NEXT:   RTI implicit $a, implicit $x, implicit $y, implicit $rc16, implicit $rc17
   bb.0.entry:
     CLD_Implied
@@ -395,7 +395,7 @@ body: |
   ; 65C02-NEXT:   liveins: $a, $y, $rc30, $rc31
   ; 65C02-NEXT: {{  $}}
   ; 65C02-NEXT:   CLD_Implied
-  ; 65C02-NEXT:   PH_CMOS $a
+  ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 254, $c
@@ -403,13 +403,13 @@ body: |
   ; 65C02-NEXT:   $a = COPY $rc1
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 254, $c
   ; 65C02-NEXT:   $rc1 = COPY killed $a
-  ; 65C02-NEXT:   $a = PL_CMOS
-  ; 65C02-NEXT:   frame-setup PH_CMOS $a
-  ; 65C02-NEXT:   frame-setup PH_CMOS $y
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   frame-setup PH $a
+  ; 65C02-NEXT:   frame-setup PH $y
   ; 65C02-NEXT:   $y = frame-setup COPY $rc16
-  ; 65C02-NEXT:   frame-setup PH_CMOS killed $y
+  ; 65C02-NEXT:   frame-setup PH killed $y
   ; 65C02-NEXT:   $y = frame-setup COPY $rc17
-  ; 65C02-NEXT:   frame-setup PH_CMOS killed $y
+  ; 65C02-NEXT:   frame-setup PH killed $y
   ; 65C02-NEXT:   $a = COPY $rc30
   ; 65C02-NEXT:   $y = LDImm 1
   ; 65C02-NEXT:   STIndirIdx killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
@@ -425,13 +425,13 @@ body: |
   ; 65C02-NEXT:   $y = LDImm 1
   ; 65C02-NEXT:   $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.0)
   ; 65C02-NEXT:   $rc30 = COPY killed $a
-  ; 65C02-NEXT:   $y = frame-destroy PL_CMOS
+  ; 65C02-NEXT:   $y = frame-destroy PL
   ; 65C02-NEXT:   $rc17 = frame-destroy COPY killed $y
-  ; 65C02-NEXT:   $y = frame-destroy PL_CMOS
+  ; 65C02-NEXT:   $y = frame-destroy PL
   ; 65C02-NEXT:   $rc16 = frame-destroy COPY killed $y
-  ; 65C02-NEXT:   $y = frame-destroy PL_CMOS
-  ; 65C02-NEXT:   $a = frame-destroy PL_CMOS
-  ; 65C02-NEXT:   PH_CMOS $a
+  ; 65C02-NEXT:   $y = frame-destroy PL
+  ; 65C02-NEXT:   $a = frame-destroy PL
+  ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 2, $c
@@ -439,7 +439,7 @@ body: |
   ; 65C02-NEXT:   $a = COPY $rc1
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 1, $c
   ; 65C02-NEXT:   $rc1 = COPY killed $a
-  ; 65C02-NEXT:   $a = PL_CMOS
+  ; 65C02-NEXT:   $a = PL
   ; 65C02-NEXT:   RTI implicit $a, implicit $y, implicit $rc16, implicit $rc17, implicit $rc30, implicit $rc31
   bb.0.entry:
     CLD_Implied
@@ -513,7 +513,7 @@ body: |
   ; 65C02-NEXT:   liveins: $a, $y, $rc30, $rc31
   ; 65C02-NEXT: {{  $}}
   ; 65C02-NEXT:   CLD_Implied
-  ; 65C02-NEXT:   PH_CMOS $a
+  ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 254, $c
@@ -521,13 +521,13 @@ body: |
   ; 65C02-NEXT:   $a = COPY $rc1
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 254, $c
   ; 65C02-NEXT:   $rc1 = COPY killed $a
-  ; 65C02-NEXT:   $a = PL_CMOS
-  ; 65C02-NEXT:   frame-setup PH_CMOS $a
-  ; 65C02-NEXT:   frame-setup PH_CMOS $y
+  ; 65C02-NEXT:   $a = PL
+  ; 65C02-NEXT:   frame-setup PH $a
+  ; 65C02-NEXT:   frame-setup PH $y
   ; 65C02-NEXT:   $y = frame-setup COPY $rc16
-  ; 65C02-NEXT:   frame-setup PH_CMOS killed $y
+  ; 65C02-NEXT:   frame-setup PH killed $y
   ; 65C02-NEXT:   $y = frame-setup COPY $rc17
-  ; 65C02-NEXT:   frame-setup PH_CMOS killed $y
+  ; 65C02-NEXT:   frame-setup PH killed $y
   ; 65C02-NEXT:   $a = COPY $rc30
   ; 65C02-NEXT:   $y = LDImm 1
   ; 65C02-NEXT:   STIndirIdx killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
@@ -545,13 +545,13 @@ body: |
   ; 65C02-NEXT:   $y = LDImm 1
   ; 65C02-NEXT:   $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.0)
   ; 65C02-NEXT:   $rc30 = COPY killed $a
-  ; 65C02-NEXT:   $y = frame-destroy PL_CMOS
+  ; 65C02-NEXT:   $y = frame-destroy PL
   ; 65C02-NEXT:   $rc17 = frame-destroy COPY killed $y
-  ; 65C02-NEXT:   $y = frame-destroy PL_CMOS
+  ; 65C02-NEXT:   $y = frame-destroy PL
   ; 65C02-NEXT:   $rc16 = frame-destroy COPY killed $y
-  ; 65C02-NEXT:   $y = frame-destroy PL_CMOS
-  ; 65C02-NEXT:   $a = frame-destroy PL_CMOS
-  ; 65C02-NEXT:   PH_CMOS $a
+  ; 65C02-NEXT:   $y = frame-destroy PL
+  ; 65C02-NEXT:   $a = frame-destroy PL
+  ; 65C02-NEXT:   PH $a
   ; 65C02-NEXT:   $c = LDCImm 0
   ; 65C02-NEXT:   $a = COPY $rc0
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 2, $c
@@ -559,7 +559,7 @@ body: |
   ; 65C02-NEXT:   $a = COPY $rc1
   ; 65C02-NEXT:   $a, $c, $v = ADCImm $a, 1, $c
   ; 65C02-NEXT:   $rc1 = COPY killed $a
-  ; 65C02-NEXT:   $a = PL_CMOS
+  ; 65C02-NEXT:   $a = PL
   ; 65C02-NEXT:   RTI implicit $a, implicit $y, implicit $rc16, implicit $rc17, implicit $rc30, implicit $rc31
   bb.0.entry:
     CLD_Implied
@@ -717,7 +717,7 @@ body: |
     ; 65C02: liveins: $a, $x, $y, $rc2, $rc3, $rc4, $rc5, $rc6, $rc7, $rc8, $rc9, $rc10, $rc11, $rc12, $rc13, $rc14, $rc15, $rc18, $rc19
     ; 65C02-NEXT: {{  $}}
     ; 65C02-NEXT: CLD_Implied
-    ; 65C02-NEXT: PH_CMOS $a
+    ; 65C02-NEXT: PH $a
     ; 65C02-NEXT: $c = LDCImm 0
     ; 65C02-NEXT: $a = COPY $rc0
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 239, $c
@@ -725,12 +725,12 @@ body: |
     ; 65C02-NEXT: $a = COPY $rc1
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; 65C02-NEXT: $rc1 = COPY killed $a
-    ; 65C02-NEXT: $a = PL_CMOS
-    ; 65C02-NEXT: frame-setup PH_CMOS $a
-    ; 65C02-NEXT: frame-setup PH_CMOS $x
-    ; 65C02-NEXT: frame-setup PH_CMOS $y
+    ; 65C02-NEXT: $a = PL
+    ; 65C02-NEXT: frame-setup PH $a
+    ; 65C02-NEXT: frame-setup PH $x
+    ; 65C02-NEXT: frame-setup PH $y
     ; 65C02-NEXT: $x = frame-setup COPY $rc2
-    ; 65C02-NEXT: frame-setup PH_CMOS killed $x
+    ; 65C02-NEXT: frame-setup PH killed $x
     ; 65C02-NEXT: $a = COPY $rc3
     ; 65C02-NEXT: $y = LDImm 16
     ; 65C02-NEXT: STIndirIdx killed $a, $rs0, killed $y :: (store (s8) into %stack.0)
@@ -834,12 +834,12 @@ body: |
     ; 65C02-NEXT: $y = LDImm 16
     ; 65C02-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.0)
     ; 65C02-NEXT: $rc3 = COPY killed $a
-    ; 65C02-NEXT: $x = frame-destroy PL_CMOS
+    ; 65C02-NEXT: $x = frame-destroy PL
     ; 65C02-NEXT: $rc2 = frame-destroy COPY killed $x
-    ; 65C02-NEXT: $y = frame-destroy PL_CMOS
-    ; 65C02-NEXT: $x = frame-destroy PL_CMOS
-    ; 65C02-NEXT: $a = frame-destroy PL_CMOS
-    ; 65C02-NEXT: PH_CMOS $a
+    ; 65C02-NEXT: $y = frame-destroy PL
+    ; 65C02-NEXT: $x = frame-destroy PL
+    ; 65C02-NEXT: $a = frame-destroy PL
+    ; 65C02-NEXT: PH $a
     ; 65C02-NEXT: $c = LDCImm 0
     ; 65C02-NEXT: $a = COPY $rc0
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 17, $c
@@ -847,7 +847,7 @@ body: |
     ; 65C02-NEXT: $a = COPY $rc1
     ; 65C02-NEXT: $a, $c, $v = ADCImm $a, 1, $c
     ; 65C02-NEXT: $rc1 = COPY killed $a
-    ; 65C02-NEXT: $a = PL_CMOS
+    ; 65C02-NEXT: $a = PL
     ; 65C02-NEXT: RTI implicit $a, implicit $x, implicit $y, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rc8, implicit $rc9, implicit $rc10, implicit $rc11, implicit $rc12, implicit $rc13, implicit $rc14, implicit $rc15, implicit $rc16, implicit $rc17, implicit $rc18, implicit $rc19
     CLD_Implied
     ADJCALLSTACKDOWN 0, 0, implicit $rs0, implicit-def $rs0

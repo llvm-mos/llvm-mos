@@ -191,6 +191,22 @@ let isAllocatable = false in {
   def AXYP : MOSReg8Class<(add A, X, Y, P)>;
 }
 
+// Subtarget-and-instruction-specific register classes.
+let isAllocatable = false in {
+  def PushPop : MOSReg8Class<(add AXYP)> {
+    let AltOrders = [(add AP)];
+    let AltOrderSelect = [{
+      return !MF.getSubtarget<MOSSubtarget>().hasGPRStackRegs();
+    }];
+  }
+  def IncDec : MOSReg8Class<(add GPR)> {
+    let AltOrders = [(add XY)];
+    let AltOrderSelect = [{
+      return !MF.getSubtarget<MOSSubtarget>().hasGPRIncDec();
+    }];
+  }
+}
+
 // While not directly used, unless this is present, the TableGen-erated intersection
 // register class between Anyi1 and Flags will not be allocatable.
 def AllocatableFlags : MOSReg1Class<(add Cc, Vc)>;
