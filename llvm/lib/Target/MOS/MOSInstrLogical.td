@@ -423,6 +423,18 @@ multiclass MOSIncDec {
   }
 }
 
+let mayLoad = true, mayStore = true in {
+  def DCPImag8 : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(DCP_ZeroPage) addr8:$dst)> {
+    dag OutOperandList = (outs Cc:$carry);
+    dag InOperandList = (ins Ac:$value, Imag8:$dst);
+  }
+
+  def DCPAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(DCP_ZeroPage) addr8:$addr)> {
+    dag OutOperandList = (outs Cc:$carry);
+    dag InOperandList = (ins Ac:$value, addr16:$addr);
+  }
+}
+
 // DEX, DEY, DEC
 defm DE : MOSIncDec;
 

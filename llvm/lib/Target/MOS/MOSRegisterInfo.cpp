@@ -510,6 +510,7 @@ bool referencedByIncDec(Register Reg, const MachineRegisterInfo &MRI) {
     case MOS::DecCMOS:
     case MOS::IncMB:
     case MOS::DecMB:
+    case MOS::DecDcpMB:
       return true;
     }
   }
@@ -523,6 +524,7 @@ bool referencedByIncDecMB(Register Reg, const MachineRegisterInfo &MRI) {
       break;
     case MOS::IncMB:
     case MOS::DecMB:
+    case MOS::DecDcpMB:
       return true;
     }
   }
@@ -546,6 +548,7 @@ bool isRmwPattern(Register Reg, const MachineRegisterInfo &MRI) {
     case MOS::ROR:
     case MOS::IncMB:
     case MOS::DecMB:
+    case MOS::DecDcpMB:
       if (Rmw && Rmw != &MI)
         return false;
       Rmw = &MI;
@@ -718,9 +721,11 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
     case MOS::IncCMOS:
     case MOS::DecCMOS:
     case MOS::IncMB:
-    case MOS::DecMB: {
+    case MOS::DecMB:
+    case MOS::DecDcpMB: {
       // The first operand to DecMB is scratch.
-      if (MI.getOpcode() == MOS::DecMB && MI.getOperand(0).getReg() == VirtReg)
+      if ((MI.getOpcode() == MOS::DecMB || MI.getOpcode() == MOS::DecDcpMB) &&
+          MI.getOperand(0).getReg() == VirtReg)
         break;
 
       // INC zp = (2 bytes + 5 cycles)
