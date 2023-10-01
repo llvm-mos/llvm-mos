@@ -87,7 +87,7 @@ private:
   std::optional<MachineOperand>
   matchAbsoluteAddressing(MachineRegisterInfo &MRI, Register Addr) const;
   bool tryAbsoluteAddressing(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                             GLoadStore &MI) const;
+                             GLoadStore &MI, bool ZP) const;
   bool tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     GLoadStore &MI, bool ZP) const;
