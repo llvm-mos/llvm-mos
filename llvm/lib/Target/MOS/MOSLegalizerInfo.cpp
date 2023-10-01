@@ -1590,14 +1590,14 @@ bool MOSLegalizerInfo::selectAddressingMode(LegalizerHelper &Helper,
                                             GLoadStore &MI) const {
   switch (MRI.getType(MI.getPointerReg()).getScalarSizeInBits()) {
   case 8: {
-    if (tryAbsoluteAddressing(Helper, MRI, MI, true))
+    if (tryAbsoluteAddressing(Helper, MRI, MI))
       return true;
     if (tryAbsoluteIndexedAddressing(Helper, MRI, MI, true))
       return true;
     return selectZeroIndexedAddressing(Helper, MRI, MI);
   }
   case 16: {
-    if (tryAbsoluteAddressing(Helper, MRI, MI, false))
+    if (tryAbsoluteAddressing(Helper, MRI, MI))
       return true;
     if (tryAbsoluteIndexedAddressing(Helper, MRI, MI, false))
       return true;
@@ -1645,9 +1645,8 @@ MOSLegalizerInfo::matchAbsoluteAddressing(MachineRegisterInfo &MRI,
 
 bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
                                              MachineRegisterInfo &MRI,
-                                             GLoadStore &MI, bool ZP) const {
+                                             GLoadStore &MI) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
-  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ABS : MOS::G_STORE_ABS;
   auto Operand = matchAbsoluteAddressing(MRI, MI.getPointerReg());
@@ -1656,11 +1655,7 @@ bool MOSLegalizerInfo::tryAbsoluteAddressing(LegalizerHelper &Helper,
     Helper.Observer.changingInstr(MI);
     MI.setDesc(Builder.getTII().get(Opcode));
     MI.removeOperand(1);
-    if (ZP && Operand->isImm())
-      Operand->setImm(STI.getZeroPageOffset() + (Operand->getImm() & 0xFF));
     MI.addOperand(*Operand);
-    if (ZP)
-      MI.getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
     Helper.Observer.changedInstr(MI);
     return true;
   }
