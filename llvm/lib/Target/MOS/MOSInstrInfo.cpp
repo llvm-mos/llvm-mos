@@ -276,6 +276,7 @@ MOSInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case MOS::JMP:
     return MI.getOperand(0).getMBB();
   case MOS::JMPIndir:
+  case MOS::JMPIdxIndir:
     return nullptr;
   }
 }

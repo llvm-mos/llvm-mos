@@ -192,6 +192,7 @@ void MOSAsmPrinter::emitJumpTableInfo() {
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   if (JT.empty())
     return;
+  const MOSSubtarget &STI = MF->getSubtarget<MOSSubtarget>();
 
   // Pick the directive to use to print the jump table entries, and switch to
   // the appropriate section.
@@ -221,21 +222,29 @@ void MOSAsmPrinter::emitJumpTableInfo() {
 
     MCSymbol *JTISymbol = GetJTISymbol(JTI.index());
     OutStreamer->emitLabel(JTISymbol);
+    if (STI.hasJMPIdxIndir() && JTBBs.size() <= 128) {
+      // Jump tables with 128 entries or less can be instead accessed via
+      // indexed-indirect JMP. Emit the array of target addresses as-is.
+      for (const MachineBasicBlock *JTBB : JTBBs) {
+        OutStreamer->emitValue(
+            MCSymbolRefExpr::create(JTBB->getSymbol(), OutContext), 2);
+      }
+    } else {
+      // Emit an array of the low bytes of the target addresses.
+      for (const MachineBasicBlock *JTBB : JTBBs) {
+        OutStreamer->emitValue(
+            MCSymbolRefExpr::create(
+                JTBB->getSymbol(), MCSymbolRefExpr::VK_MOS_ADDR16_LO, OutContext),
+            1);
+      }
 
-    // Emit an array of the low bytes of the target addresses.
-    for (const MachineBasicBlock *JTBB : JTBBs) {
-      OutStreamer->emitValue(
-          MCSymbolRefExpr::create(
-              JTBB->getSymbol(), MCSymbolRefExpr::VK_MOS_ADDR16_LO, OutContext),
-          1);
-    }
-
-    // Emit an array of the high bytes of the target addresses.
-    for (const MachineBasicBlock *JTBB : JTBBs) {
-      OutStreamer->emitValue(
-          MCSymbolRefExpr::create(
-              JTBB->getSymbol(), MCSymbolRefExpr::VK_MOS_ADDR16_HI, OutContext),
-          1);
+      // Emit an array of the high bytes of the target addresses.
+      for (const MachineBasicBlock *JTBB : JTBBs) {
+        OutStreamer->emitValue(
+            MCSymbolRefExpr::create(
+                JTBB->getSymbol(), MCSymbolRefExpr::VK_MOS_ADDR16_HI, OutContext),
+            1);
+      }
     }
   }
   if (!JTInDiffSection)
