@@ -466,8 +466,8 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
     // 1/2/3. Emit INC/DEC.
     if (IsReg) {
       First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
-                  .add(MI.getOperand(FirstDefIdx))
-                  .add(MI.getOperand(FirstUseIdx));
+                  .addDef(MI.getOperand(FirstDefIdx).getReg())
+                  .addUse(MI.getOperand(FirstUseIdx).getReg());
       ++FirstDefIdx;
     } else {
       First = Builder.buildInstr(IsDec ? MOS::DECAbs : MOS::INCAbs)
