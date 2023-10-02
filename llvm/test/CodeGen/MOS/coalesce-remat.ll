@@ -35,9 +35,8 @@ define fastcc void @_ZN9crabquest15write_nametable17h6fe548716a276623E() unnamed
 ; CHECK-NEXT:  .LBB0_3: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    sta 8199
-; CHECK-NEXT:    txa
 ; CHECK-NEXT:    dex
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    cpx #255
 ; CHECK-NEXT:    bne .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1

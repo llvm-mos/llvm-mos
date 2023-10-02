@@ -74,6 +74,7 @@ bool MOSInsertCopies::runOnMachineFunction(MachineFunction &MF) {
       case MOS::DecCMOS:
       case MOS::IncMB:
       case MOS::DecMB:
+      case MOS::DecDcpMB:
         WideRC = &MOS::Anyi8RegClass;
         break;
       }
