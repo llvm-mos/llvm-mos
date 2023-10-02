@@ -465,9 +465,17 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   } else {
     // 1/2/3. Emit INC/DEC.
     if (IsReg) {
-      First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
-                  .addDef(MI.getOperand(FirstDefIdx).getReg())
-                  .addUse(MI.getOperand(FirstUseIdx).getReg());
+      if (IsDec && !IsLast) {
+        // Avoid copying additional register flags here.
+        // They will apply to the last opcode in the chain (CMP) instead.
+        First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
+                    .addDef(MI.getOperand(FirstDefIdx).getReg())
+                    .addUse(MI.getOperand(FirstUseIdx).getReg());
+      } else {
+        First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
+                    .add(MI.getOperand(FirstDefIdx))
+                    .add(MI.getOperand(FirstUseIdx));
+      }
       ++FirstDefIdx;
     } else {
       First = Builder.buildInstr(IsDec ? MOS::DECAbs : MOS::INCAbs)
@@ -486,14 +494,8 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
           .addUse(MI.getOperand(FirstUseIdx).getReg())
           .addImm(INT64_C(0xFF))
           .addDef(MOS::Z, RegState::Implicit);
-    } else if (IsMemReg) {
-      Builder.buildInstr(MOS::CMPImag8)
-          .addDef(MOS::C)
-          .addUse(MI.getOperand(0).getReg())
-          .addUse(MI.getOperand(FirstUseIdx).getReg())
-          .addDef(MOS::Z, RegState::Implicit);
     } else {
-      Builder.buildInstr(MOS::CMPAbs)
+      Builder.buildInstr(IsMemReg ? MOS::CMPImag8 : MOS::CMPAbs)
           .addDef(MOS::C)
           .addUse(MI.getOperand(0).getReg())
           .add(MI.getOperand(FirstUseIdx))
