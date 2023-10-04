@@ -872,8 +872,11 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     return MOSInstrCost(2, (STI.hasHUC6280() || STI.hasSPC700()) ? 4 : 3);
   }
   if (AreClasses(MOS::Imag8RegClass, MOS::Imag8RegClass)) {
+    // MOV dp, dp
+    if (STI.hasSPC700())
+      return MOSInstrCost(3, 5);
     // May need to PHA/PLA around.
-    return MOSInstrCost(2, STI.hasSPC700() ? 8 : 7) / 2 +
+    return MOSInstrCost(2, 7) / 2 +
            copyCost(DestReg, MOS::A, STI) +
            copyCost(MOS::A, SrcReg, STI);
   }
