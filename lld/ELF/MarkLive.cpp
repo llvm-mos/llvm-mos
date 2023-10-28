@@ -235,6 +235,15 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     markSymbol(symtab.cmseSymMap[symName].acleSeSym);
   }
 
+  if (ctx.xo65Enclave) {
+    for (Symbol *sym : ctx.xo65Enclave->getImports()) {
+      auto *defSym = dyn_cast<Defined>(sym);
+      if (defSym && defSym->section &&
+          (!defSym->file || !isa<XO65File>(defSym->file)))
+        markSymbol(defSym);
+    }
+  }
+
   // Mark .eh_frame sections as live because there are usually no relocations
   // that point to .eh_frames. Otherwise, the garbage collector would drop
   // all of them. We also want to preserve personality routines and LSDA

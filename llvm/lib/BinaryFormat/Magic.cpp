@@ -241,6 +241,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::dxcontainer_object;
     break;
 
+  case 0x55: // XO65 (ca65 object file)
+    if (startswith(Magic, "\x55\x7a\x6e\x61"))
+      return file_magic::xo65_object;
+    break;
+
   case 0x41: // ARM64EC windows
     if (Magic[1] == char(0xA6))
       return file_magic::coff_object;

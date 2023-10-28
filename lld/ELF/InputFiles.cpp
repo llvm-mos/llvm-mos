@@ -26,8 +26,12 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/RISCVAttributeParser.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -314,6 +318,12 @@ template <class ELFT> static void doParseFile(InputFile *file) {
   // LLVM bitcode file
   if (auto *f = dyn_cast<BitcodeFile>(file)) {
     ctx.bitcodeFiles.push_back(f);
+    f->parse();
+    return;
+  }
+
+  // XO65 file
+  if (auto *f = dyn_cast<XO65File>(file)) {
     f->parse();
     return;
   }
@@ -1767,6 +1777,482 @@ void BinaryFile::parse() {
   symtab.addAndCheckDuplicate(Defined{nullptr, saver.save(s + "_size"),
                                       STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
                                       data.size(), 0, nullptr});
+}
+
+static std::string findProgramByName(StringRef name, StringRef ctx) {
+  ErrorOr<std::string> errorOrPath = sys::findProgramByName(name);
+  if (std::error_code ec = errorOrPath.getError())
+    fatal(ctx + ": could not find " + name + ": " + ec.message());
+  return *errorOrPath;
+}
+
+XO65TempFile::XO65TempFile(StringRef prefix, StringRef suffix, StringRef ctx,
+                           StringRef description)
+    : ctx(ctx), description(description) {
+  if (std::error_code ec = createTemporaryFile(prefix, suffix, fd, path))
+    fatal(ctx + ": could not create " + description + ": " + ec.message());
+}
+
+XO65TempFile::~XO65TempFile() {
+  buffer.reset();
+  if (config->saveTempsArgs.contains("ld65"))
+    return;
+  if (std::error_code ec = remove(path))
+    warn(ctx + ": could not remove " + description + ": " + ec.message());
+}
+
+void XO65TempFile::read() {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> bufOrError =
+      MemoryBuffer::getOpenFile(fd, path,
+                                /*FileSize=*/-1);
+  if (std::error_code ec = bufOrError.getError())
+    fatal(ctx + ": could not read " + description + ": " + ec.message());
+  buffer = std::move(*bufOrError);
+}
+
+void XO65File::parse() {
+  // ELF cannot straightforwardly support xo65's relocation types, so there's no
+  // straightforward way to merge xo65 objects into a relocatable ELF file.
+  if (config->relocatable)
+    fatal(toString(this) +
+          ": cc65 (xo65) object file cannot be relocatably linked");
+
+  if (config->od65Path.empty())
+    config->od65Path = saver().save(findProgramByName("od65", toString(this)));
+
+  outputFile.emplace("od65", "out", toString(this), "od65 output file");
+
+  std::string errMsg;
+  int resultCode = sys::ExecuteAndWait(
+      config->od65Path, {config->od65Path, "--dump-all", getName()},
+      /*Env=*/std::nullopt, {"", outputFile->getPath(), std::nullopt},
+      /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
+
+  if (resultCode)
+    fatal(toString(this) + ": could not run od65" +
+          (errMsg.empty() ? "" : ": " + errMsg));
+
+  outputFile->read();
+
+  if (!ctx.xo65Enclave)
+    ctx.xo65Enclave = make<XO65Enclave>();
+  ctx.xo65Enclave->addFile(this);
+
+  parseOD65Output(outputFile->getBuffer().getBuffer());
+}
+
+void XO65File::postParse() {
+  for (Symbol *sym : exports)
+    if (sym->file && sym->isDefined() && sym->file != this)
+      ctx.duplicates.push_back(
+          {sym, this, /*errSec=*/nullptr, /*errOffset=*/0});
+}
+
+void XO65File::postWrite() { outputFile.reset(); }
+
+void XO65File::parseOD65Output(StringRef od65Output) {
+  const auto od65Lines = llvm::split(od65Output, "\n");
+  od65Line = od65Lines.begin();
+  od65LinesEnd = od65Lines.end();
+  parseOD65Segments();
+  parseOD65Imports();
+  parseOD65Exports();
+}
+
+static StringRef indexPrefix = "    Index:";
+static StringRef countPrefix = "    Count:";
+
+void XO65File::parseOD65Segments() {
+  advancePast("  Segments:");
+  expectPrefix(countPrefix);
+  while (!isSectionEnd())
+    ctx.xo65Enclave->appendSegment(parseOD65Segment());
+}
+
+XO65Segment XO65File::parseOD65Segment() {
+  expectPrefix(indexPrefix);
+  XO65Segment segment;
+  for (; !isSectionEnd() && !(*od65Line).startswith(indexPrefix); ++od65Line) {
+    const auto [k, v] = parseKV();
+    if (k == "Name") {
+      segment.name = parseQuotedString(k, v);
+      parseSegmentName(segment);
+    } else if (k == "Size") {
+      parseInt(k, v, segment.size);
+    } else if (k == "Alignment") {
+      parseInt(k, v, segment.alignment);
+    }
+  }
+  return segment;
+}
+
+void XO65File::parseOD65Imports() {
+  advancePast("  Imports:");
+  SmallVector<StringRef> names = parseOD65Names();
+  for (const StringRef name : names) {
+    Symbol *sym = symtab.addSymbol(
+        Undefined{this, name, STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
+    sym->isUsedInRegularObj = true;
+    sym->referenced = true;
+    ctx.xo65Enclave->addImport(sym);
+  }
+}
+
+void XO65File::parseOD65Exports() {
+  advancePast("  Exports:");
+  SmallVector<StringRef> names = parseOD65Names();
+  exports.reserve(names.size());
+  for (const StringRef name : names) {
+    // Export values aren't yet known; they will be filled in once ld65 is run
+    // on all xo65 sections.
+    Symbol *sym = symtab.addSymbol(
+        Defined{this, name, STB_GLOBAL, /*st_other=*/0, STT_NOTYPE,
+                /*value=*/0, /*size=*/0, /*section=*/nullptr});
+    sym->isUsedInRegularObj = true;
+    exports.push_back(sym);
+  }
+}
+
+SmallVector<StringRef> XO65File::parseOD65Names() {
+  SmallVector<StringRef> names;
+  for (; !isSectionEnd(); ++od65Line) {
+    if ((*od65Line).startswith(indexPrefix))
+      continue;
+    const auto [k, v] = parseKV();
+    if (k == "Name")
+      names.push_back(parseQuotedString(k, v));
+  }
+  return names;
+}
+
+void XO65File::advancePast(StringRef line) {
+  while (od65Line != od65LinesEnd && *od65Line != line)
+    ++od65Line;
+  expect(line);
+}
+
+void XO65File::expect(StringRef line) {
+  if (*od65Line != line)
+    fatal(toString(this) + ": could not parse od65 output: expected \"" + line +
+          "\"\n");
+  ++od65Line;
+}
+
+void XO65File::expectPrefix(StringRef prefix) {
+  if (!(*od65Line).startswith(prefix))
+    fatal(toString(this) + ": could not parse od65 output: expected prefix \"" +
+          prefix + "\"\n");
+  ++od65Line;
+}
+
+std::pair<StringRef, StringRef> XO65File::parseKV() {
+  static llvm::Regex kvRegex(" *([^ ]+): *([^ ]+)");
+  SmallVector<StringRef> matches;
+  if (od65Line == od65LinesEnd || !kvRegex.match(*od65Line, &matches))
+    fatal(toString(this) + ": could not parse key-value pair: " + *od65Line);
+  return {matches[1], matches[2]};
+}
+
+template <typename T>
+void XO65File::parseInt(StringRef k, StringRef v, T &out, unsigned radix) {
+  if (v.getAsInteger(0, out))
+    fatal(toString(this) + ": could not parse int " + k + ": " + v);
+}
+
+StringRef XO65File::parseQuotedString(StringRef k, StringRef v) {
+  if (v.size() < 2 || v.front() != '"' || v.back() != '"')
+    fatal(toString(this) + ": could not parse quoted string " + k + ": " + v);
+  return v.drop_front().drop_back();
+}
+
+static bool isKnownCC65SegmentName(StringRef name) {
+  return name == "CODE" || name == "LOWCODE" || name == "ONCE" ||
+         name == "STARTUP" || name == "RODATA" || name == "BSS" ||
+         name == "ZEROPAGE" || name == "INIT" || name == "ZPSAVE";
+}
+
+// ELF sections have a richer name, type, and flag system than XO65 segments.
+// Accordingly, decode this information from an underscore-based escaping system
+// in xo65 segment names.
+//
+// Escape sequences:
+//   __  -> _             (underscore)
+//   _d  -> $             (dollar)
+//   _h  -> -             (hyphen)
+//   _p  -> .             (period)
+//   _tn -> SHT_NOBITS    (@nobits)
+//   _tp -> SHT_NOBITS    (@progbits)
+//   _fw -> SHF_WRITE     (w)
+//   _fx -> SHF_EXECINSTR (x)
+void XO65File::parseSegmentName(XO65Segment &segment) {
+  if (isKnownCC65SegmentName(segment.name)) {
+    segment.sectionName = segment.name;
+    segment.flags = SHF_ALLOC | SHF_GNU_RETAIN;
+    segment.type = (segment.name == "BSS" || segment.name == "ZEROPAGE" ||
+                    segment.name == "INIT" || segment.name == "ZPSAVE")
+                       ? SHT_NOBITS
+                       : SHT_PROGBITS;
+
+    if (segment.name == "CODE" || segment.name == "LOWCODE" ||
+        segment.name == "ONCE" || segment.name == "STARTUP")
+      segment.flags |= SHF_EXECINSTR;
+    else if (segment.name != "RODATA")
+      segment.flags |= SHF_WRITE;
+
+    return;
+  }
+
+  segment.flags = SHF_ALLOC | SHF_GNU_RETAIN;
+  segment.type = SHT_PROGBITS;
+  SmallString<64> sectionName;
+  StringRef remaining = segment.name;
+  while (!remaining.empty()) {
+    if (remaining.front() != '_') {
+      sectionName.push_back(remaining.front());
+      remaining = remaining.drop_front();
+      continue;
+    }
+
+    remaining = remaining.drop_front();
+    if (remaining.empty() == 1)
+      fatal(toString(this) + ": unfinished underscore escape: " + segment.name);
+
+    switch (remaining.front()) {
+    default:
+      if (remaining.size() >= 2) {
+        uint8_t v;
+        bool result = tryGetHexFromNibbles(remaining[0], remaining[1], v);
+        if (result) {
+          sectionName.push_back((char)v);
+          remaining = remaining.drop_front();
+          break;
+        }
+      }
+      fatal(toString(this) + ": unknown underscore escape: " + segment.name);
+    case '_':
+      sectionName.push_back('_');
+      break;
+    case 'd':
+      sectionName.push_back('$');
+      break;
+    case 'h':
+      sectionName.push_back('-');
+      break;
+    case 'p':
+      sectionName.push_back('.');
+      break;
+    case 't':
+      if (remaining.size() < 2)
+        fatal(toString(this) +
+              ": unfinished underscore type escape: " + segment.name);
+      switch (remaining[1]) {
+      default:
+        fatal(toString(this) +
+              ": unknown underscore type escape: " + segment.name);
+      case 'n':
+        segment.type = SHT_NOBITS;
+        break;
+      case 'p':
+        segment.type = SHT_PROGBITS;
+        break;
+      }
+      remaining = remaining.drop_front();
+      break;
+    case 'f':
+      if (remaining.size() < 2)
+        fatal(toString(this) +
+              ": unfinished underscore flag escape: " + segment.name);
+      switch (remaining[1]) {
+      default:
+        fatal(toString(this) +
+              ": unknown underscore flag escape: " + segment.name);
+      case 'w':
+        segment.flags |= SHF_WRITE;
+        break;
+      case 'x':
+        segment.flags |= SHF_EXECINSTR;
+        break;
+      }
+      remaining = remaining.drop_front();
+      break;
+    }
+    remaining = remaining.drop_front();
+  }
+  segment.sectionName = saver().save(StringRef(sectionName));
+}
+
+bool XO65File::isSectionEnd() const {
+  if (od65Line == od65LinesEnd)
+    return true;
+  return !(*od65Line).startswith("   ");
+}
+
+XO65Enclave::XO65Enclave()
+    : InputFile(XO65EnclaveKind, MemoryBufferRef{"", "xo65-enclave"}) {}
+
+void XO65Enclave::appendSegment(const XO65Segment &segment) {
+  auto res = segments.insert({segment.name, segment});
+  if (res.second)
+    return;
+  XO65Segment &s = res.first->second;
+  assert(s.name == segment.name);
+  assert(s.sectionName == segment.sectionName);
+  assert(s.type == segment.type);
+  assert(s.flags == segment.flags);
+  s.size += segment.size;
+  s.alignment = std::max(s.alignment, segment.alignment);
+}
+
+void XO65Enclave::postParse() {
+  for (XO65File *file : files)
+    file->postParse();
+}
+
+void XO65Enclave::createSections() {
+  for (const auto &kv : segments) {
+    const XO65Segment &segment = kv.second;
+    sections.push_back(make<XO65Section>(segment));
+    sections.back()->file = this;
+  }
+}
+
+bool XO65Enclave::link() {
+  if (config->ld65Path.empty())
+    config->ld65Path = saver().save(findProgramByName("ld65", toString(this)));
+
+  if (!cfgFile)
+    cfgFile.emplace("ld65", "cfg", toString(this), "ld65 cfg file");
+
+  raw_fd_ostream cfgFileOS(cfgFile->getFD(), /*shouldClose=*/false);
+  cfgFileOS.seek(0);
+  if (std::error_code ec = llvm::sys::fs::resize_file(cfgFile->getFD(), 0))
+    fatal(toString(this) +
+          ": could not truncate ld65 cfg file: " + ec.message());
+
+  generateCfgFile(cfgFileOS);
+  cfgFileOS.flush();
+
+  if (!outputFile)
+    outputFile.emplace("ld65", "o", toString(this), "ld65 output file");
+  if (!mapFile)
+    mapFile.emplace("ld65", "map", toString(this), "ld65 map file");
+
+  SmallVector<StringRef> args = {config->ld65Path,
+                                 "-C",
+                                 cfgFile->getPath(),
+                                 "-o",
+                                 outputFile->getPath(),
+                                 "-vm",
+                                 "-m",
+                                 mapFile->getPath()};
+  for (XO65File *f : files)
+    args.push_back(f->getName());
+
+  std::string errMsg;
+  int resultCode =
+      sys::ExecuteAndWait(config->ld65Path, args,
+                          /*Env=*/std::nullopt, {"", "", std::nullopt},
+                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
+  if (resultCode)
+    fatal(toString(this) + ": could not run ld65" +
+          (errMsg.empty() ? "" : ": " + errMsg));
+
+  outputFile->read();
+  mapFile->read();
+
+  StringRef remainingContents = outputFile->getBuffer().getBuffer();
+  for (InputSectionBase *baseSec : sections) {
+    auto &sec = *cast<XO65Section>(baseSec);
+    sec.setContents(remainingContents.take_front(sec.getSize()));
+    remainingContents = remainingContents.drop_front(sec.getSize());
+  }
+  assert(remainingContents.empty());
+
+  return updateSymbols();
+}
+
+void XO65Enclave::postWrite() {
+  for (XO65File *f : files)
+    f->postWrite();
+  cfgFile.reset();
+  outputFile.reset();
+  mapFile.reset();
+}
+
+void XO65Enclave::generateCfgFile(llvm::raw_fd_ostream &os) const {
+  size_t size = 0;
+  os << "MEMORY {\n";
+  for (const InputSectionBase *baseSec : sections) {
+    const auto &sec = *cast<XO65Section>(baseSec);
+    os << "  " << sec.getSegmentName() << ": start = " << sec.getVA()
+       << ", size = " << sec.getSize() << ", file = \"\";\n";
+    size += sec.getSize();
+  }
+  // Note that then name of this segment include an unfinished escape, so it
+  // cannot conflict with any legal segment name.
+  os << "  CONTENTS_: start = 0, size = " << size << ";\n";
+  os << "}\n"; // end MEMORY
+
+  os << "SEGMENTS {\n";
+  for (const InputSectionBase *baseSec : sections) {
+    const auto &sec = *cast<XO65Section>(baseSec);
+    os << "  " << sec.getSegmentName() << ": "
+       << "load = CONTENTS_, run = " << sec.getSegmentName() << ";\n";
+  }
+  os << "}\n"; // end SEGMENTS
+
+  os << "SYMBOLS {\n";
+  for (const Symbol *sym : imports) {
+    const auto *defSym = dyn_cast<Defined>(sym);
+    if (!defSym || (defSym->file && isa<XO65File>(defSym->file)))
+      continue;
+    os << "  " << defSym->getName() << ": ";
+
+    uint64_t va = defSym->getVA();
+    if (va < 0x100)
+      os << "addrsize = zp, ";
+    os << "type = export, value = " << va << ";\n";
+  }
+  os << "}\n"; // end SYMBOLS
+}
+
+bool XO65Enclave::updateSymbols() const {
+  const auto range = llvm::split(mapFile->getBuffer().getBuffer(), "\n");
+  auto i = range.begin();
+  for (; i != range.end(); ++i) {
+    if (*i == "Exports list by name:")
+      break;
+  }
+  if (i == range.end())
+    fatal("ld65 map file: expected \"Exports list by name:\"\n");
+  ++i;
+  if (i != range.end())
+    ++i;
+  Regex regex("([_0-9a-zA-Z]+) +([0-9a-zA-Z]+) *[^ ]* *");
+  bool changed = false;
+  for (; !(*i).empty(); ++i) {
+    StringRef remaining = *i;
+    while (!remaining.empty()) {
+      SmallVector<StringRef> matches;
+      if (!regex.match(remaining, &matches))
+        fatal("ld65 map file: expected symbol values line; found: " + *i +
+              "\n");
+      StringRef name = matches[1];
+      uint64_t val;
+      if (matches[2].getAsInteger(16, val))
+        fatal("ld65 map file: expected hex integer; found: " + matches[2]);
+      Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name));
+      if (!sym)
+        fatal("ld65 map file: could not find symbol definition: " + name);
+      if (sym->file && isa<XO65File>(sym->file)) {
+        if (sym->value != val)
+          changed = true;
+        sym->value = val;
+      }
+      remaining = remaining.drop_front(matches[0].size());
+    }
+  }
+  return changed;
 }
 
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
