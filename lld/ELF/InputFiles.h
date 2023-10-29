@@ -389,7 +389,7 @@ public:
 
 class XO65TempFile {
   SmallString<64> path;
-  llvm::sys::fs::file_t fd;
+  int fd;
   StringRef ctx;
   StringRef description;
   std::unique_ptr<MemoryBuffer> buffer;
@@ -400,7 +400,7 @@ public:
   ~XO65TempFile();
 
   StringRef getPath() const { return path; }
-  llvm::sys::fs::file_t getFD() const { return fd; }
+  int getFD() const { return fd; }
   MemoryBufferRef getBuffer() const { return *buffer; }
 
   void read();

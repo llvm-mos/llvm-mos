@@ -1803,7 +1803,7 @@ XO65TempFile::~XO65TempFile() {
 
 void XO65TempFile::read() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> bufOrError =
-      MemoryBuffer::getOpenFile(fd, path,
+      MemoryBuffer::getOpenFile(convertFDToNativeFile(fd), path,
                                 /*FileSize=*/-1);
   if (std::error_code ec = bufOrError.getError())
     fatal(ctx + ": could not read " + description + ": " + ec.message());
