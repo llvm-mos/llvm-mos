@@ -1976,14 +1976,15 @@ static bool isKnownCC65SegmentName(StringRef name) {
 // in xo65 segment names.
 //
 // Escape sequences:
-//   __  -> _             (underscore)
-//   _d  -> $             (dollar)
-//   _h  -> -             (hyphen)
-//   _p  -> .             (period)
-//   _tn -> SHT_NOBITS    (@nobits)
-//   _tp -> SHT_NOBITS    (@progbits)
-//   _fw -> SHF_WRITE     (w)
-//   _fx -> SHF_EXECINSTR (x)
+// __   -> _             (underscore)
+// _d   -> $             (dollar)
+// _h   -> -             (hyphen)
+// _p   -> .             (period)
+// _xXX -> Byte          (encoded by hex XX)
+// _tn  -> SHT_NOBITS    (@nobits)
+// _tp  -> SHT_NOBITS    (@progbits)
+// _fw  -> SHF_WRITE     (w)
+// _fx  -> SHF_EXECINSTR (x)
 void XO65File::parseSegmentName(XO65Segment &segment) {
   if (isKnownCC65SegmentName(segment.name)) {
     segment.sectionName = segment.name;
@@ -2019,15 +2020,6 @@ void XO65File::parseSegmentName(XO65Segment &segment) {
 
     switch (remaining.front()) {
     default:
-      if (remaining.size() >= 2) {
-        uint8_t v;
-        bool result = tryGetHexFromNibbles(remaining[0], remaining[1], v);
-        if (result) {
-          sectionName.push_back((char)v);
-          remaining = remaining.drop_front();
-          break;
-        }
-      }
       fatal(toString(this) + ": unknown underscore escape: " + segment.name);
     case '_':
       sectionName.push_back('_');
@@ -2041,6 +2033,22 @@ void XO65File::parseSegmentName(XO65Segment &segment) {
     case 'p':
       sectionName.push_back('.');
       break;
+    case 'x': {
+      remaining = remaining.drop_front();
+      if (remaining.size() < 2)
+        fatal(toString(this) +
+              ": unfinished underscore hex escape: " + segment.name);
+
+      uint8_t v;
+      bool result = tryGetHexFromNibbles(remaining[0], remaining[1], v);
+      if (!result)
+        fatal(toString(this) +
+              ": invalid underscore hex escape: " + segment.name);
+
+      sectionName.push_back((char)v);
+      remaining = remaining.drop_front();
+      break;
+    }
     case 't':
       if (remaining.size() < 2)
         fatal(toString(this) +
