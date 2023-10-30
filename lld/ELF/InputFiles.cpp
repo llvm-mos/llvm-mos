@@ -1976,15 +1976,15 @@ static bool isKnownCC65SegmentName(StringRef name) {
 // in xo65 segment names.
 //
 // Escape sequences:
-// __   -> _             (underscore)
-// _d   -> $             (dollar)
-// _h   -> -             (hyphen)
-// _p   -> .             (period)
-// _xXX -> Byte          (encoded by hex XX)
-// _tn  -> SHT_NOBITS    (@nobits)
-// _tp  -> SHT_NOBITS    (@progbits)
-// _fw  -> SHF_WRITE     (w)
-// _fx  -> SHF_EXECINSTR (x)
+//   __   -> _             (underscore)
+//   _d   -> $             (dollar)
+//   _h   -> -             (hyphen)
+//   _p   -> .             (period)
+//   _xXX -> Byte          (encoded by hex XX)
+//   _tn  -> SHT_NOBITS    (@nobits)
+//   _tp  -> SHT_NOBITS    (@progbits)
+//   _fw  -> SHF_WRITE     (w)
+//   _fx  -> SHF_EXECINSTR (x)
 void XO65File::parseSegmentName(XO65Segment &segment) {
   if (isKnownCC65SegmentName(segment.name)) {
     segment.sectionName = segment.name;
