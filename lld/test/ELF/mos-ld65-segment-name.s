@@ -13,6 +13,14 @@
 ; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unknown-escape.o 2>&1 | FileCheck --check-prefix=UNKNOWN-ESCAPE %s
 ; UNKNOWN-ESCAPE: unknown-escape.o: unknown underscore escape: _g
 
+; RUN: cp %p/Inputs/ca65-dummy.o %t/unfinished-hex-escape.o
+; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unfinished-hex-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-HEX-ESCAPE %s
+; UNFINISHED-HEX-ESCAPE: unfinished-hex-escape.o: unfinished underscore hex escape: _xa
+
+; RUN: cp %p/Inputs/ca65-dummy.o %t/invalid-hex-escape.o
+; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/invalid-hex-escape.o 2>&1 | FileCheck --check-prefix=INVALID-HEX-ESCAPE %s
+; INVALID-HEX-ESCAPE: invalid-hex-escape.o: invalid underscore hex escape: _xgg
+
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unfinished-type-escape.o
 ; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unfinished-type-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-TYPE-ESCAPE %s
 ; UNFINISHED-TYPE-ESCAPE: unfinished-type-escape.o: unfinished underscore type escape: _t
@@ -70,9 +78,9 @@
     Index:
       Name: "_p"
     Index:
-      Name: "_2c"
+      Name: "_x2c"
     Index:
-      Name: "_2F"
+      Name: "_x2F"
     Index:
       Name: "__"
     Index:
@@ -119,6 +127,16 @@
     Count: 0
     Index:
       Name: "_g"
+;--- unfinished-hex-escape.od65
+  Segments:
+    Count: 0
+    Index:
+     Name: "_xa"
+;--- invalid-hex-escape.od65
+  Segments:
+    Count: 0
+    Index:
+      Name: "_xgg"
 ;--- unfinished-type-escape.od65
   Segments:
     Count: 0
