@@ -91,6 +91,12 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
     if (MI.getOpcode() != MOS::CMPTermZ)
       continue;
     assert(MI.getOperand(0).isDead());
+    // Dead CMPTermZs may appear as the result of branch manipulation.
+    if (MI.allDefsAreDead()) {
+      MI.eraseFromParent();
+      Changed = true;
+      continue;
+    }
 
     Register Val = MI.getOperand(1).getReg();
 
