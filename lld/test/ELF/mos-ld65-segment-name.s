@@ -24,7 +24,7 @@
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unfinished-type-escape.o
 ; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unfinished-type-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-TYPE-ESCAPE %s
 ; UNFINISHED-TYPE-ESCAPE: unfinished-type-escape.o: unfinished underscore type escape: _t
-l
+
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unknown-type-escape.o
 ; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unknown-type-escape.o 2>&1 | FileCheck --check-prefix=UNKNOWN-TYPE-ESCAPE %s
 ; UNKNOWN-TYPE-ESCAPE: unknown-type-escape.o: unknown underscore type escape: _ta
