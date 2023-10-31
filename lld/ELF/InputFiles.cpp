@@ -1822,9 +1822,16 @@ void XO65File::parse() {
 
   outputFile.emplace("od65", "out", toString(this), "od65 output file");
 
+  SmallVector<StringRef> args = {config->od65Path, "--dump-all", getName()};
+  StringRef executable = args.front();
+  if (!config->cc65Launcher.empty()) {
+    args.insert(args.begin(), config->cc65Launcher);
+    executable = config->cc65Launcher;
+  }
+
   std::string errMsg;
   int resultCode = sys::ExecuteAndWait(
-      config->od65Path, {config->od65Path, "--dump-all", getName()},
+      executable, args,
       /*Env=*/std::nullopt, {"", outputFile->getPath(), std::nullopt},
       /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
 
@@ -2153,12 +2160,17 @@ bool XO65Enclave::link() {
                                  "-vm",
                                  "-m",
                                  mapFile->getPath()};
+  StringRef executable = args.front();
+  if (!config->cc65Launcher.empty()) {
+    args.insert(args.begin(), config->cc65Launcher);
+    executable = config->cc65Launcher;
+  }
   for (XO65File *f : files)
     args.push_back(f->getName());
 
   std::string errMsg;
   int resultCode =
-      sys::ExecuteAndWait(config->ld65Path, args,
+      sys::ExecuteAndWait(executable, args,
                           /*Env=*/std::nullopt, {"", "", std::nullopt},
                           /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
   if (resultCode)

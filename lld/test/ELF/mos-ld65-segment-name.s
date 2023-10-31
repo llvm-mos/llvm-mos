@@ -1,40 +1,39 @@
-; REQUIRES: system-linux
 ; RUN: split-file %s %t
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/ca65.o
-; RUN: ld.lld -m moself --od65-path=%p/Inputs/od65.py --ld65-path=%p/Inputs/ld65.py -o %t/a.out %t/ca65.o
+; RUN: ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py --ld65-path=%p/Inputs/ld65.py -o %t/a.out %t/ca65.o
 ; RUN: llvm-readelf --sections %t/a.out | FileCheck %s
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unfinished-escape.o
-; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unfinished-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-ESCAPE %s
+; RUN: not ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py %t/unfinished-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-ESCAPE %s
 ; UNFINISHED-ESCAPE: unfinished-escape.o: unfinished underscore escape: _
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unknown-escape.o
-; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unknown-escape.o 2>&1 | FileCheck --check-prefix=UNKNOWN-ESCAPE %s
+; RUN: not ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py %t/unknown-escape.o 2>&1 | FileCheck --check-prefix=UNKNOWN-ESCAPE %s
 ; UNKNOWN-ESCAPE: unknown-escape.o: unknown underscore escape: _g
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unfinished-hex-escape.o
-; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unfinished-hex-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-HEX-ESCAPE %s
+; RUN: not ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py %t/unfinished-hex-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-HEX-ESCAPE %s
 ; UNFINISHED-HEX-ESCAPE: unfinished-hex-escape.o: unfinished underscore hex escape: _xa
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/invalid-hex-escape.o
-; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/invalid-hex-escape.o 2>&1 | FileCheck --check-prefix=INVALID-HEX-ESCAPE %s
+; RUN: not ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py %t/invalid-hex-escape.o 2>&1 | FileCheck --check-prefix=INVALID-HEX-ESCAPE %s
 ; INVALID-HEX-ESCAPE: invalid-hex-escape.o: invalid underscore hex escape: _xgg
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unfinished-type-escape.o
-; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unfinished-type-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-TYPE-ESCAPE %s
+; RUN: not ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py %t/unfinished-type-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-TYPE-ESCAPE %s
 ; UNFINISHED-TYPE-ESCAPE: unfinished-type-escape.o: unfinished underscore type escape: _t
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unknown-type-escape.o
-; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unknown-type-escape.o 2>&1 | FileCheck --check-prefix=UNKNOWN-TYPE-ESCAPE %s
+; RUN: not ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py %t/unknown-type-escape.o 2>&1 | FileCheck --check-prefix=UNKNOWN-TYPE-ESCAPE %s
 ; UNKNOWN-TYPE-ESCAPE: unknown-type-escape.o: unknown underscore type escape: _ta
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unfinished-flag-escape.o
-; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unfinished-flag-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-FLAG-ESCAPE %s
+; RUN: not ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py %t/unfinished-flag-escape.o 2>&1 | FileCheck --check-prefix=UNFINISHED-FLAG-ESCAPE %s
 ; UNFINISHED-FLAG-ESCAPE: unfinished-flag-escape.o: unfinished underscore flag escape: _f
 
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/unknown-flag-escape.o
-; RUN: not ld.lld -m moself --od65-path=%p/Inputs/od65.py %t/unknown-flag-escape.o 2>&1 | FileCheck --check-prefix=UNKNOWN-FLAG-ESCAPE %s
+; RUN: not ld.lld -m moself --cc65-launcher=%python --od65-path=%p/Inputs/od65.py %t/unknown-flag-escape.o 2>&1 | FileCheck --check-prefix=UNKNOWN-FLAG-ESCAPE %s
 ; UNKNOWN-FLAG-ESCAPE: unknown-flag-escape.o: unknown underscore flag escape: _fa
 
 ; CHECK: nobits NOBITS

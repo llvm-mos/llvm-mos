@@ -1,9 +1,8 @@
-; REQUIRES: system-linux
 ; RUN: split-file %s %t
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/ca65.o
 ; RUN: cp %p/Inputs/ca65-dummy.o %t/other-ca65.o
 ; RUN: llvm-mc -filetype=obj -triple=mos -o %t/main.o %t/main.s
-; RUN: ld.lld --od65-path=%p/Inputs/od65.py --ld65-path=%p/Inputs/ld65.py -o %t/a.out -T%t/link.ld %t/main.o %t/ca65.o %t/other-ca65.o
+; RUN: ld.lld --cc65-launcher=%python --od65-path=%p/Inputs/od65.py --ld65-path=%p/Inputs/ld65.py -o %t/a.out -T%t/link.ld %t/main.o %t/ca65.o %t/other-ca65.o
 ; RUN: FileCheck --input-file=%t/ld65.cfg %s
 
 ; CHECK:      MEMORY {
