@@ -402,6 +402,8 @@ public:
   StringRef getPath() const { return path; }
   int getFD() const { return fd; }
   MemoryBufferRef getBuffer() const { return *buffer; }
+  void close();
+  void open();
 
   void read();
 };

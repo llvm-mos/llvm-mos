@@ -1801,6 +1801,18 @@ XO65TempFile::~XO65TempFile() {
     warn(ctx + ": could not remove " + description + ": " + ec.message());
 }
 
+void XO65TempFile::close() {
+  buffer.reset();
+  if (std::error_code ec = closeFile(fd))
+    fatal(ctx + ": could not close " + description + ": " + ec.message());
+  fd = -1;
+}
+
+void XO65TempFile::open() {
+  if (std::error_code ec = openFileForReadWrite(path, fd, CD_OpenExisting, OF_None))
+    fatal(ctx + ": could not open " + description + ": " + ec.message());
+}
+
 void XO65TempFile::read() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> bufOrError =
       MemoryBuffer::getOpenFile(convertFDToNativeFile(fd), path,
@@ -1829,6 +1841,10 @@ void XO65File::parse() {
     executable = config->cc65Launcher;
   }
 
+  // On Windows, a specific quirk of LLVM's redirection requires that the output
+  // file first be closed.
+  outputFile->close();
+
   std::string errMsg;
   int resultCode = sys::ExecuteAndWait(
       executable, args,
@@ -1839,6 +1855,7 @@ void XO65File::parse() {
     fatal(toString(this) + ": could not run od65" +
           (errMsg.empty() ? "" : ": " + errMsg));
 
+  outputFile->open();
   outputFile->read();
 
   if (!ctx.xo65Enclave)
