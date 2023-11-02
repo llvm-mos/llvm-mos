@@ -60,21 +60,22 @@ void MOSTargetStreamer::finish() {
                       "Declaring this symbol tells the CRT that there are "
                       "finalization routines to be run in .fini_array");
 
-  for (const auto &TableEntry : Context.getSymbols()) {
-    if (TableEntry.getKey() != "__rc0" && TableEntry.getKey() != "__rc1")
-      continue;
+  bool ReferencesStackPtr = llvm::any_of(
+      Context.getSymbols(), [](const StringMapEntry<MCSymbol *> &TableEntry) {
+        return TableEntry.getKey() == "__rc0" || TableEntry.getKey() == "__rc1";
+      });
+  if (ReferencesStackPtr)
     stronglyReference("__do_init_stack",
                       "Declaring this symbol tells the CRT that the stack "
                       "pointer needs to be initialized.");
-  }
 }
 
 void MOSTargetStreamer::stronglyReference(StringRef Name, StringRef Comment) {
   MCStreamer &OS = getStreamer();
   MCContext &Context = OS.getContext();
-  MCSymbol *InitStack = Context.getOrCreateSymbol(Name);
+  MCSymbol *Sym = Context.getOrCreateSymbol(Name);
   OS.emitRawComment(Comment);
-  stronglyReference(InitStack);
+  stronglyReference(Sym);
 }
 
 static bool HasPrefix(StringRef Name, StringRef Prefix) {
