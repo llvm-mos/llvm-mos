@@ -349,6 +349,7 @@ struct Config {
   StringRef packageMetadata;
   StringRef ld65Path;
   StringRef od65Path;
+  StringRef cc65Launcher;
 
   // The following config options do not directly correspond to any
   // particular command line options.

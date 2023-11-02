@@ -320,6 +320,7 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
 defm od65_path: Eq<"od65-path", "Path to od65 object file dump utility">, MetaVarName<"<path>">;
+defm cc65_launcher: Eq<"cc65-launcher", "Test-only launcher for cc65 utilities">, Flags<[HelpHidden]>;
 
 defm oformat: EEq<"oformat", "Specify the binary format for the output object file">,
   MetaVarName<"[elf,binary]">;

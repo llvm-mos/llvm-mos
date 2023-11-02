@@ -1801,6 +1801,19 @@ XO65TempFile::~XO65TempFile() {
     warn(ctx + ": could not remove " + description + ": " + ec.message());
 }
 
+void XO65TempFile::close() {
+  buffer.reset();
+  file_t f = convertFDToNativeFile(fd);
+  if (std::error_code ec = closeFile(f))
+    fatal(ctx + ": could not close " + description + ": " + ec.message());
+  fd = -1;
+}
+
+void XO65TempFile::open() {
+  if (std::error_code ec = openFileForReadWrite(path, fd, CD_OpenExisting, OF_None))
+    fatal(ctx + ": could not open " + description + ": " + ec.message());
+}
+
 void XO65TempFile::read() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> bufOrError =
       MemoryBuffer::getOpenFile(convertFDToNativeFile(fd), path,
@@ -1822,9 +1835,20 @@ void XO65File::parse() {
 
   outputFile.emplace("od65", "out", toString(this), "od65 output file");
 
+  SmallVector<StringRef> args = {config->od65Path, "--dump-all", getName()};
+  StringRef executable = args.front();
+  if (!config->cc65Launcher.empty()) {
+    args.insert(args.begin(), config->cc65Launcher);
+    executable = config->cc65Launcher;
+  }
+
+  // On Windows, a specific quirk of LLVM's redirection requires that the output
+  // file first be closed.
+  outputFile->close();
+
   std::string errMsg;
   int resultCode = sys::ExecuteAndWait(
-      config->od65Path, {config->od65Path, "--dump-all", getName()},
+      executable, args,
       /*Env=*/std::nullopt, {"", outputFile->getPath(), std::nullopt},
       /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
 
@@ -1832,6 +1856,7 @@ void XO65File::parse() {
     fatal(toString(this) + ": could not run od65" +
           (errMsg.empty() ? "" : ": " + errMsg));
 
+  outputFile->open();
   outputFile->read();
 
   if (!ctx.xo65Enclave)
@@ -1851,7 +1876,7 @@ void XO65File::postParse() {
 void XO65File::postWrite() { outputFile.reset(); }
 
 void XO65File::parseOD65Output(StringRef od65Output) {
-  const auto od65Lines = llvm::split(od65Output, "\n");
+  const auto od65Lines = llvm::split(od65Output, od65Output.detectEOL());
   od65Line = od65Lines.begin();
   od65LinesEnd = od65Lines.end();
   parseOD65Segments();
@@ -2153,12 +2178,17 @@ bool XO65Enclave::link() {
                                  "-vm",
                                  "-m",
                                  mapFile->getPath()};
+  StringRef executable = args.front();
+  if (!config->cc65Launcher.empty()) {
+    args.insert(args.begin(), config->cc65Launcher);
+    executable = config->cc65Launcher;
+  }
   for (XO65File *f : files)
     args.push_back(f->getName());
 
   std::string errMsg;
   int resultCode =
-      sys::ExecuteAndWait(config->ld65Path, args,
+      sys::ExecuteAndWait(executable, args,
                           /*Env=*/std::nullopt, {"", "", std::nullopt},
                           /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
   if (resultCode)
@@ -2225,7 +2255,8 @@ void XO65Enclave::generateCfgFile(llvm::raw_fd_ostream &os) const {
 }
 
 bool XO65Enclave::updateSymbols() const {
-  const auto range = llvm::split(mapFile->getBuffer().getBuffer(), "\n");
+  StringRef buf = mapFile->getBuffer().getBuffer();
+  const auto range = llvm::split(buf, buf.detectEOL());
   auto i = range.begin();
   for (; i != range.end(); ++i) {
     if (*i == "Exports list by name:")

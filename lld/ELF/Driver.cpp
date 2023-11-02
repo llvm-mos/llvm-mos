@@ -1245,6 +1245,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   config->nostdlib = args.hasArg(OPT_nostdlib);
   config->od65Path = args.getLastArgValue(OPT_od65_path);
+  config->cc65Launcher = args.getLastArgValue(OPT_cc65_launcher);
   config->oFormatBinary = isOutputFormatBinary(args);
   config->omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
