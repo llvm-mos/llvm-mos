@@ -33,6 +33,8 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -205,9 +207,24 @@ MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
 }
 
 unsigned MOSInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
-  // Overestimate the size of each instruction to guarantee that any necessary
-  // branches are relaxed.
-  return 3;
+  if (MI.isDebugInstr())
+    return 0;
+
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MCAsmInfo &MCAI = *MF.getTarget().getMCAsmInfo();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+
+  switch (MI.getOpcode()) {
+  default: {
+    unsigned Size = get(MI.getOpcode()).getSize();
+    if (!Size)
+      Size = MCAI.getMaxInstLength(&STI);
+    return Size;
+  }
+  case MOS::INLINEASM:
+  case MOS::INLINEASM_BR:
+    return getInlineAsmLength(MI.getOperand(0).getSymbolName(), MCAI, &STI);
+  }
 }
 
 // 6502 instructions aren't as regular as most commutable instructions, so this
