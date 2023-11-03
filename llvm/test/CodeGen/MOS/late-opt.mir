@@ -379,6 +379,20 @@ body: |
     RTS implicit $n, implicit $a, implicit $x, implicit $y
 ...
 ---
+name: cmptermz_multiple
+body: |
+  bb.0.entry:
+    liveins: $x, $y
+    ; CHECK-LABEL: name: cmptermz_multiple
+    ; CHECK: liveins: $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $a = T_A $y, implicit-def $nz
+    ; CHECK-NEXT: RTS implicit $n
+    dead $c = CMPTermZ $x, implicit-def dead $nz
+    dead $c = CMPTermZ $y, implicit-def $nz
+    RTS implicit $n
+...
+---
 name: ldxyimm_to_inxydexy
 body: |
   bb.0.entry:
