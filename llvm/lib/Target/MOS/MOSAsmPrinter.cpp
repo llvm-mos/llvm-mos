@@ -115,8 +115,10 @@ bool MOSAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     return false;
 
   const MachineOperand &MO = MI->getOperand(OpNo);
+  const MachineFunction &MF = *MO.getParent()->getMF();
   const MOSRegisterInfo &TRI =
-      *MO.getParent()->getMF()->getSubtarget<MOSSubtarget>().getRegisterInfo();
+      *MF.getSubtarget<MOSSubtarget>().getRegisterInfo();
+  const auto &FuncInfo = *MF.getInfo<MOSFunctionInfo>();
 
   switch (MO.getType()) {
   default:
@@ -128,13 +130,28 @@ bool MOSAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   case MachineOperand::MO_GlobalAddress:
     OS << MO.getGlobal()->getName();
     break;
-  case MachineOperand::MO_Register:
+  case MachineOperand::MO_Register: {
     Register Reg = MO.getReg();
+
+    // Some CSRs may have been "spilled" by silently renaming them to zero page
+    // locations on the zero page stack. We want to maintain the illusion that
+    // these are imaginary registers, so they are rewritten as late as possible.
+    auto It = FuncInfo.CSRZPOffsets.find(Reg);
+    if (It != FuncInfo.CSRZPOffsets.end()) {
+      OS << "mos8(.L" << FuncInfo.ZeroPageStackValue->getName();
+      size_t Offset = It->second;
+      if (Offset)
+        OS << '+' << Offset;
+      OS << ")\n";
+      break;
+    }
+
     if (MOS::Imag16RegClass.contains(Reg) || MOS::Imag8RegClass.contains(Reg))
       OS << TRI.getImag8SymbolName(Reg);
     else
       OS << TRI.getRegAsmName(Reg);
     break;
+  }
   }
   return false;
 }
@@ -233,16 +250,18 @@ void MOSAsmPrinter::emitJumpTableInfo() {
       // Emit an array of the low bytes of the target addresses.
       for (const MachineBasicBlock *JTBB : JTBBs) {
         OutStreamer->emitValue(
-            MCSymbolRefExpr::create(
-                JTBB->getSymbol(), MCSymbolRefExpr::VK_MOS_ADDR16_LO, OutContext),
+            MCSymbolRefExpr::create(JTBB->getSymbol(),
+                                    MCSymbolRefExpr::VK_MOS_ADDR16_LO,
+                                    OutContext),
             1);
       }
 
       // Emit an array of the high bytes of the target addresses.
       for (const MachineBasicBlock *JTBB : JTBBs) {
         OutStreamer->emitValue(
-            MCSymbolRefExpr::create(
-                JTBB->getSymbol(), MCSymbolRefExpr::VK_MOS_ADDR16_HI, OutContext),
+            MCSymbolRefExpr::create(JTBB->getSymbol(),
+                                    MCSymbolRefExpr::VK_MOS_ADDR16_HI,
+                                    OutContext),
             1);
       }
     }
