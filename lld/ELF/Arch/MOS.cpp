@@ -101,6 +101,9 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write16le(loc, static_cast<unsigned short>(val - 2));
     break;
   case R_MOS_ADDR8:
+    // The HuC6280's zero page is at 0x2000.
+    if (config->eflags & ELF::EF_MOS_ARCH_HUC6280)
+      val -= 0x2000;
     checkUInt(loc, val & 0xffff, 8, rel);
     *loc = static_cast<unsigned char>(val);
     break;
