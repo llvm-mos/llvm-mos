@@ -80,10 +80,37 @@ public:
 #include "MOSGenMCPseudoLowering.inc"
 
 const MCExpr *MOSAsmPrinter::lowerConstant(const Constant *CV) {
-  if (auto *CE = dyn_cast<ConstantExpr>(CV))
-    if (CE->getOpcode() == Instruction::AddrSpaceCast)
-      return AsmPrinter::lowerConstant(CE->getOperand(0));
-  return AsmPrinter::lowerConstant(CV);
+  MCContext &Ctx = OutContext;
+
+  const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV);
+  if (!CE)
+    return AsmPrinter::lowerConstant(CV);
+
+  switch (CE->getOpcode()) {
+  case Instruction::AddrSpaceCast:
+    return AsmPrinter::lowerConstant(CE->getOperand(0));
+  case Instruction::GetElementPtr: {
+    unsigned AS = CE->getType()->getPointerAddressSpace();
+    if (AS != MOS::AS_ZeroPage)
+      return AsmPrinter::lowerConstant(CV);
+
+    // Generate a symbolic expression for the byte address
+    APInt OffsetAI(8, 0);
+    cast<GEPOperator>(CE)->accumulateConstantOffset(getDataLayout(), OffsetAI);
+
+    const MCExpr *Base = lowerConstant(CE->getOperand(0));
+    if (!OffsetAI)
+      return Base;
+
+    // Zero page offsets must be zero extended, not sign extended, since
+    // otherwise negative 8-bit addresses would escape the zero page.
+    int64_t Offset = OffsetAI.getZExtValue();
+    return MCBinaryExpr::createAdd(Base, MCConstantExpr::create(Offset, Ctx),
+                                   Ctx);
+  }
+  default:
+    return AsmPrinter::lowerConstant(CV);
+  }
 }
 
 void MOSAsmPrinter::EmitToStreamer(MCStreamer &S, MCInst &Inst) {
