@@ -121,11 +121,14 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       ArgStringList PostLinkToolArgs;
       PostLinkToolArgs.push_back(
           Args.MakeArgString(Twine(Output.getFilename()) + ".elf"));
+
+      std::string Path = PostLinkTool.str();
+      if (!llvm::sys::fs::exists(Path))
+        Path = getToolChain().GetProgramPath(Path.c_str());
+
       C.addCommand(std::make_unique<Command>(
           JA, *this, ResponseFileSupport::None(),
-          Args.MakeArgString(
-              getToolChain().GetProgramPath(PostLinkTool.str().c_str())),
-          PostLinkToolArgs, Inputs, Output));
+          Args.MakeArgString(Path.c_str()), PostLinkToolArgs, Inputs, Output));
     }
   }
 }
