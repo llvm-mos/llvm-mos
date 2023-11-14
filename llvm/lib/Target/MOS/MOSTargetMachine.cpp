@@ -44,6 +44,7 @@
 #include "MOSMachineScheduler.h"
 #include "MOSNonReentrant.h"
 #include "MOSPostRAScavenging.h"
+#include "MOSShiftRotateChain.h"
 #include "MOSStaticStackAlloc.h"
 #include "MOSTargetObjectFile.h"
 #include "MOSTargetTransformInfo.h"
@@ -65,6 +66,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSTarget() {
   initializeMOSLowerSelectPass(PR);
   initializeMOSNonReentrantPass(PR);
   initializeMOSPostRAScavengingPass(PR);
+  initializeMOSShiftRotateChainPass(PR);
   initializeMOSStaticStackAllocPass(PR);
   initializeMOSZeroPageAllocPass(PR);
 }
@@ -241,6 +243,7 @@ void MOSPassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() != CodeGenOpt::None) {
     addPass(createMOSCombiner());
     addPass(createMOSIncDecPhiPass());
+    addPass(createMOSShiftRotateChainPass());
   }
 }
 

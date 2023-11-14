@@ -44,6 +44,7 @@ add_llvm_target(MOSCodeGen
   MOSPostRAScavenging.cpp
   MOSRegisterBankInfo.cpp
   MOSRegisterInfo.cpp
+  MOSShiftRotateChain.cpp
   MOSStaticStackAlloc.cpp
   MOSSubtarget.cpp
   MOSTargetMachine.cpp
