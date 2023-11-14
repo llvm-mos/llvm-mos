@@ -169,6 +169,10 @@ int main(int argc, char **argv) {
         if (Type == SymbolRef::ST_Unknown)
           if (Name.startswith("__") && !Name.startswith("__rc"))
             continue;
+
+        // Mesen 2 incorrectly displays executable symbols with a size attached.
+        if (Type == SymbolRef::ST_Function)
+          Size = 1;
         
         const auto TryPRGRom = [&]() {
           if ((Address & 0xffff) < 0x8000)

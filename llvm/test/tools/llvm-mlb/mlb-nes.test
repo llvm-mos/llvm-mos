@@ -28,6 +28,12 @@ Symbols:
     Index: SHN_ABS
     Value: 0x1235
     Size:  2
+# CHECK: R:1235:two_byte_fn
+  - Name:  two_byte_fn
+    Index: SHN_ABS
+    Value: 0x1235
+    Size:  2
+    Type:  STT_FUNC
 # CHECK: R:34:__rc5
   - Name:  __rc5
     Index: SHN_ABS
