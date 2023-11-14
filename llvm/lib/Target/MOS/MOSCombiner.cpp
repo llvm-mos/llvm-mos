@@ -119,6 +119,8 @@ public:
 
   bool matchShiftUnusedCarryIn(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
+  bool matchMulToShiftAndAdd(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
   APInt getDemandedBits(Register R) const;
   APInt getDemandedBits(Register R, DenseMap<Register, APInt> &Cache) const;
 
@@ -567,6 +569,81 @@ bool MOSCombinerImpl::matchShiftUnusedCarryIn(MachineInstr &MI,
     Observer.changingInstr(MI);
     MI.getOperand(3).setReg(B.buildConstant(LLT::scalar(1), 0).getReg(0));
     Observer.changedInstr(MI);
+  };
+  return true;
+}
+
+// Try to transform:
+// (1) multiply-by-(power-of-2 +/- 1) into shift and add/sub.
+// mul x, (2^N + 1) --> add (shl x, N), x
+// mul x, (2^N - 1) --> sub (shl x, N), x
+// Examples: x * 33 --> (x << 5) + x
+//           x * 15 --> (x << 4) - x
+//           x * -33 --> -((x << 5) + x)
+//           x * -15 --> -((x << 4) - x) ; this reduces --> x - (x << 4)
+// (2) multiply-by-(power-of-2 +/- power-of-2) into shifts and add/sub.
+// mul x, (2^N + 2^M) --> (add (shl x, N), (shl x, M))
+// mul x, (2^N - 2^M) --> (sub (shl x, N), (shl x, M))
+// Examples: x * 0x8800 --> (x << 15) + (x << 11)
+//           x * 0xf800 --> (x << 16) - (x << 11)
+//           x * -0x8800 --> -((x << 15) + (x << 11))
+//           x * -0xf800 --> -((x << 16) - (x << 11)) ; (x << 11) - (x << 16)
+bool MOSCombinerImpl::matchMulToShiftAndAdd(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const {
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  const auto RHSConstOr = getIConstantVRegValWithLookThrough(RHS, MRI);
+  if (!RHSConstOr)
+    return false;
+  APInt RHSConst = RHSConstOr->Value;
+
+  // This combine seems to overide the base mul to shl combine, so do that work
+  // here too.
+  unsigned ShiftVal = RHSConst.exactLogBase2();
+  if (static_cast<int32_t>(ShiftVal) != -1) {
+    MatchInfo = [=, &MI](MachineIRBuilder &B) {
+      LLT ShiftTy = MRI.getType(MI.getOperand(0).getReg());
+      auto ShiftCst = B.buildConstant(ShiftTy, ShiftVal);
+      Observer.changingInstr(MI);
+      MI.setDesc(B.getTII().get(MOS::G_SHL));
+      MI.getOperand(2).setReg(ShiftCst.getReg(0));
+      Observer.changedInstr(MI);
+    };
+    return true;
+  }
+
+  unsigned MathOp;
+  APInt MulC = RHSConst.abs();
+  // The constant `2` should be treated as (2^0 + 1).
+  unsigned TZeros = MulC == 2 ? 0 : MulC.countr_zero();
+  MulC.lshrInPlace(TZeros);
+  if ((MulC - 1).isPowerOf2())
+    MathOp = MOS::G_ADD;
+  else if ((MulC + 1).isPowerOf2())
+    MathOp = MOS::G_SUB;
+  else
+    return false;
+
+  unsigned ShAmt =
+      MathOp == MOS::G_ADD ? (MulC - 1).logBase2() : (MulC + 1).logBase2();
+  ShAmt += TZeros;
+  assert(ShAmt < Ty.getScalarSizeInBits() &&
+         "multiply-by-constant generated out of bounds shift");
+  MatchInfo = [=, &MI](MachineIRBuilder &B) {
+    auto Shl = B.buildShl(Ty, LHS, B.buildConstant(Ty, ShAmt));
+    auto R = TZeros
+                 ? B.buildInstr(
+                       MathOp, {Ty},
+                       {Shl, B.buildShl(Ty, LHS, B.buildConstant(Ty, TZeros))})
+                 : B.buildInstr(MathOp, {Ty}, {Shl, LHS});
+    if (RHSConst.isNegative())
+      R = B.buildNeg(Ty, R);
+    Observer.changingInstr(*R);
+    R->getOperand(0).setReg(MI.getOperand(0).getReg());
+    Observer.changedInstr(*R);
+    MI.eraseFromParent();
   };
   return true;
 }

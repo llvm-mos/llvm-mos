@@ -93,6 +93,16 @@
     entry:
       ret void
   }
+
+  define void @mul_to_shift() {
+    entry:
+      ret void
+  }
+
+  define void @mul_to_shift_and_add() {
+    entry:
+      ret void
+  }
 ---
 name: fold_global_offset
 body: |
@@ -526,3 +536,35 @@ body: |
     %21:_(s8) = G_AND %18, %20
     G_STORE_ABS %21, 1234
 ...
+---
+name: mul_to_shift
+legalized: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: mul_to_shift
+    ; CHECK: [[LOAD_ABS:%[0-9]+]]:_(s8) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s8) = G_SHL [[LOAD_ABS]], [[C]](s8)
+    ; CHECK-NEXT: G_STORE_ABS [[SHL]](s8), 1234
+    %0:_(s8) = G_LOAD_ABS 1234
+    %1:_(s8) = G_CONSTANT i8 4
+    %2:_(s8) = G_MUL %0, %1
+    G_STORE_ABS %2, 1234
+...
+---
+name: mul_to_shift_and_add
+legalized: true
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: mul_to_shift_and_add
+    ; CHECK: [[LOAD_ABS:%[0-9]+]]:_(s8) = G_LOAD_ABS 1234
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 5
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s8) = G_SHL [[LOAD_ABS]], [[C]](s8)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 3
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s8) = G_SHL [[LOAD_ABS]], [[C1]](s8)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s8) = G_ADD [[SHL]], [[SHL1]]
+    ; CHECK-NEXT: G_STORE_ABS [[ADD]](s8), 1234
+    %0:_(s8) = G_LOAD_ABS 1234
+    %1:_(s8) = G_CONSTANT i8 40
+    %2:_(s8) = G_MUL %0, %1
+    G_STORE_ABS %2, 1234
