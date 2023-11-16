@@ -62,11 +62,9 @@ namespace {
 #undef GET_GICOMBINER_TYPES
 
 class MOSCombinerImpl : public GIMatchTableExecutor {
-protected:
   CombinerHelper &Helper;
   const MOSCombinerImplRuleConfig &RuleConfig;
 
-  const MOSSubtarget &STI;
   MachineRegisterInfo &MRI;
   GISelChangeObserver &Observer;
   MachineIRBuilder &B;
@@ -139,7 +137,7 @@ MOSCombinerImpl::MOSCombinerImpl(const MOSCombinerImplRuleConfig &RuleConfig,
                                  GISelChangeObserver &Observer,
                                  MachineIRBuilder &B, CombinerHelper &Helper,
                                  AAResults &AA)
-    : Helper(Helper), RuleConfig(RuleConfig), STI(STI), MRI(*B.getMRI()),
+    : Helper(Helper), RuleConfig(RuleConfig), MRI(*B.getMRI()),
       Observer(Observer), B(B), MF(B.getMF()), AA(AA),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "MOSGenGICombiner.inc"
@@ -681,9 +679,9 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
       break;
     }
     case MOS::G_LSHRE: {
-      APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg());
+      APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg(), Cache);
       if (Use.getOperandNo() == 2) {
-        APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg());
+        APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg(), Cache);
         DemandedBits |= DstDemandedBits << 1 | CarryOutDemanded.zext(8);
       } else {
         assert(Use.getOperandNo() == 3);
@@ -692,9 +690,9 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
       break;
     }
     case MOS::G_SHLE: {
-      APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg());
+      APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg(), Cache);
       if (Use.getOperandNo() == 2) {
-        APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg());
+        APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg(), Cache);
         DemandedBits |=
             DstDemandedBits.lshr(1) | (CarryOutDemanded.zext(8) << 7);
       } else {
