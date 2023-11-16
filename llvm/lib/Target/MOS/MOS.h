@@ -28,6 +28,7 @@ void initializeMOSLateOptimizationPass(PassRegistry &);
 void initializeMOSLowerSelectPass(PassRegistry &);
 void initializeMOSNonReentrantPass(PassRegistry &);
 void initializeMOSPostRAScavengingPass(PassRegistry &);
+void initializeMOSShiftRotateChainPass(PassRegistry &);
 void initializeMOSStaticStackAllocPass(PassRegistry &);
 void initializeMOSZeroPageAllocPass(PassRegistry &);
 

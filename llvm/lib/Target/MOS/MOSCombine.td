@@ -82,9 +82,24 @@ def shift_unused_carry_in : GICombineRule<
           [{ return matchShiftUnusedCarryIn(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
-def MOSCombinerHelper
-    : GICombinerHelper<"MOSCombinerImpl",
-                        [all_combines, fold_global_offset,
-                        extract_low_bit, uaddo_1, cmpz_zero,
-                        load_store_to_memcpy, store_to_memset, fold_adde,
-                        fold_sbc, sbc_equal, fold_shift, shift_unused_carry_in]>;
+def mul_to_shift_and_add : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_MUL):$root,
+          [{ return matchMulToShiftAndAdd(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
+def MOSCombinerHelper : GICombinerHelper<"MOSCombinerImpl", [
+  all_combines,
+  fold_global_offset,
+  extract_low_bit,
+  uaddo_1,
+  cmpz_zero,
+  load_store_to_memcpy,
+  store_to_memset,
+  fold_adde,
+  fold_sbc,
+  sbc_equal,
+  fold_shift,
+  shift_unused_carry_in,
+  mul_to_shift_and_add
+]>;
