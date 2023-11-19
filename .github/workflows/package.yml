@@ -41,6 +41,7 @@ jobs:
           cd build
           cmake \
             -GNinja \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
             -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/llvm-mos \
             -C../clang/cmake/caches/MOS.cmake \
             ../llvm
