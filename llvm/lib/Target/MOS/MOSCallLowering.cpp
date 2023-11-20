@@ -83,7 +83,7 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
       : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
+                        const CCValAssign &VA) override {
     // Ensure that the physical remains alive until control flow leaves the
     // current function.
     MIB.addUse(PhysReg, RegState::Implicit);
@@ -92,7 +92,8 @@ struct MOSOutgoingValueHandler : CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, MemTy,
                                         inferAlignFromPtrInfo(MF, MPO));
@@ -151,7 +152,7 @@ struct MOSIncomingValueHandler : CallLowering::IncomingValueHandler {
       : IncomingValueHandler(MIRBuilder, MRI) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
+                        const CCValAssign &VA) override {
     switch (VA.getLocVT().getSizeInBits()) {
     default:
       report_fatal_error("Not yet implemented.");
@@ -187,7 +188,8 @@ struct MOSIncomingArgsHandler : public MOSIncomingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     // All such loads are invariant: if the values are later spilled, they'll be
     // spilled to spill slots, not the original incoming argument slots.
@@ -231,7 +233,8 @@ struct MOSIncomingReturnHandler : public MOSIncomingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     // Such loads are not invariant; the same stack region may be reused for
     // many different calls.

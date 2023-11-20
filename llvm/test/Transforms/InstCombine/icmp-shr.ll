@@ -579,7 +579,7 @@ define i1 @ashr_ugt_0(i4 %x) {
 define i1 @ashr_ugt_0_multiuse(i4 %x, ptr %p) {
 ; CHECK-LABEL: @ashr_ugt_0_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i4 [[S]], 0
 ; CHECK-NEXT:    store i4 [[S]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

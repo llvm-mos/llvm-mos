@@ -206,15 +206,15 @@ body:             |
   ; GCN-NEXT:   successors: %bb.7(0x40000000), %bb.10(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   SI_SPILL_S32_SAVE [[S_MOV_B32_3]], %stack.5, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.5, addrspace 5)
-  ; GCN-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sgpr_32 = S_LOAD_DWORD_IMM undef %123:sgpr_64, 0, 0 :: ("amdgpu-noclobber" load (s32), align 16, addrspace 1)
-  ; GCN-NEXT:   [[S_LOAD_DWORDX8_IMM4:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef %124:sgpr_64, 152, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
+  ; GCN-NEXT:   [[S_LOAD_DWORD_IMM2:%[0-9]+]]:sgpr_32 = S_LOAD_DWORD_IMM undef %127:sgpr_64, 0, 0 :: ("amdgpu-noclobber" load (s32), align 16, addrspace 1)
+  ; GCN-NEXT:   [[S_LOAD_DWORDX8_IMM4:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef %128:sgpr_64, 152, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
   ; GCN-NEXT:   SI_SPILL_S256_SAVE [[S_LOAD_DWORDX8_IMM4]], %stack.20, implicit $exec, implicit $sgpr32 :: (store (s256) into %stack.20, align 4, addrspace 5)
-  ; GCN-NEXT:   [[S_LOAD_DWORDX8_IMM5:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef %125:sgpr_64, 220, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
+  ; GCN-NEXT:   [[S_LOAD_DWORDX8_IMM5:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef %129:sgpr_64, 220, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
   ; GCN-NEXT:   SI_SPILL_S256_SAVE [[S_LOAD_DWORDX8_IMM5]], %stack.16, implicit $exec, implicit $sgpr32 :: (store (s256) into %stack.16, align 4, addrspace 5)
-  ; GCN-NEXT:   [[S_LOAD_DWORDX8_IMM6:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef %126:sgpr_64, 384, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
+  ; GCN-NEXT:   [[S_LOAD_DWORDX8_IMM6:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef %130:sgpr_64, 384, 0 :: ("amdgpu-noclobber" load (s256), align 4, addrspace 1)
   ; GCN-NEXT:   SI_SPILL_S256_SAVE [[S_LOAD_DWORDX8_IMM6]], %stack.13, implicit $exec, implicit $sgpr32 :: (store (s256) into %stack.13, align 4, addrspace 5)
-  ; GCN-NEXT:   [[S_LOAD_DWORDX16_IMM:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM undef %127:sgpr_64, 440, 0 :: ("amdgpu-noclobber" load (s512), align 8, addrspace 1)
-  ; GCN-NEXT:   [[S_LOAD_DWORDX16_IMM1:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM undef %128:sgpr_64, 584, 0 :: ("amdgpu-noclobber" load (s512), align 16, addrspace 1)
+  ; GCN-NEXT:   [[S_LOAD_DWORDX16_IMM:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM undef %131:sgpr_64, 440, 0 :: ("amdgpu-noclobber" load (s512), align 8, addrspace 1)
+  ; GCN-NEXT:   [[S_LOAD_DWORDX16_IMM1:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM undef %132:sgpr_64, 584, 0 :: ("amdgpu-noclobber" load (s512), align 16, addrspace 1)
   ; GCN-NEXT:   SI_SPILL_S512_SAVE [[S_LOAD_DWORDX16_IMM1]], %stack.12, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.12, align 4, addrspace 5)
   ; GCN-NEXT:   [[S_LOAD_DWORDX8_IMM7:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[V_READFIRSTLANE_B32_]], 156, 0 :: ("amdgpu-noclobber" load (s256), align 8, addrspace 1)
   ; GCN-NEXT:   SI_SPILL_S256_SAVE [[S_LOAD_DWORDX8_IMM7]], %stack.8, implicit $exec, implicit $sgpr32 :: (store (s256) into %stack.8, align 4, addrspace 5)
@@ -273,10 +273,15 @@ body:             |
   ; GCN-NEXT:     internal [[COPY3]].sub4:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE]].sub4
   ; GCN-NEXT:     internal [[COPY3]].sub7:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE]].sub7
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   dead [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY3]].sub7, [[S_LOAD_DWORD_IMM5]], implicit-def dead $scc
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_1:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY3]].sub0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_2:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY3]].sub2, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_3:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY3]].sub4, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   undef [[COPY4:%[0-9]+]].sub0:sgpr_256 = COPY [[COPY3]].sub0 {
+  ; GCN-NEXT:     internal [[COPY4]].sub2:sgpr_256 = COPY [[COPY3]].sub2
+  ; GCN-NEXT:     internal [[COPY4]].sub4:sgpr_256 = COPY [[COPY3]].sub4
+  ; GCN-NEXT:     internal [[COPY4]].sub7:sgpr_256 = COPY [[COPY3]].sub7
+  ; GCN-NEXT:   }
+  ; GCN-NEXT:   dead [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY4]].sub7, [[S_LOAD_DWORD_IMM5]], implicit-def dead $scc
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_1:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_2:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub2, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_3:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub4, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_LOAD_DWORDX8_IMM]].sub0, undef [[S_OR_B32_]], implicit-def dead $scc
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_4:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[S_LOAD_DWORDX8_IMM]].sub1, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_5:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[S_LOAD_DWORDX8_IMM]].sub2, 0, implicit $mode, implicit $exec
@@ -285,10 +290,10 @@ body:             |
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_8:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[S_LOAD_DWORDX8_IMM]].sub5, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_9:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[S_LOAD_DWORDX8_IMM]].sub6, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[SI_SPILL_S128_RESTORE:%[0-9]+]]:sgpr_128 = SI_SPILL_S128_RESTORE %stack.14, implicit $exec, implicit $sgpr32 :: (load (s128) from %stack.14, align 4, addrspace 5)
-  ; GCN-NEXT:   undef [[COPY4:%[0-9]+]].sub0_sub1_sub2:sgpr_128 = COPY [[SI_SPILL_S128_RESTORE]].sub0_sub1_sub2
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_10:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_11:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub1, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_12:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub2, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   undef [[COPY5:%[0-9]+]].sub0_sub1_sub2:sgpr_128 = COPY [[SI_SPILL_S128_RESTORE]].sub0_sub1_sub2
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_10:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY5]].sub0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_11:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY5]].sub1, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_12:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY5]].sub2, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[DEF6:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   dead [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[DEF5]], [[DEF6]], implicit-def dead $scc
   ; GCN-NEXT:   dead [[DEF7:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -298,97 +303,115 @@ body:             |
   ; GCN-NEXT:   dead [[DEF11:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   dead [[S_AND_B32_2:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[DEF11]], undef [[DEF11]], implicit-def dead $scc
   ; GCN-NEXT:   [[SI_SPILL_S256_RESTORE1:%[0-9]+]]:sgpr_256 = SI_SPILL_S256_RESTORE %stack.16, implicit $exec, implicit $sgpr32 :: (load (s256) from %stack.16, align 4, addrspace 5)
-  ; GCN-NEXT:   undef [[COPY5:%[0-9]+]].sub0:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE1]].sub0 {
-  ; GCN-NEXT:     internal [[COPY5]].sub2:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE1]].sub2
-  ; GCN-NEXT:     internal [[COPY5]].sub5:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE1]].sub5
-  ; GCN-NEXT:     internal [[COPY5]].sub7:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE1]].sub7
+  ; GCN-NEXT:   undef [[COPY6:%[0-9]+]].sub0:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE1]].sub0 {
+  ; GCN-NEXT:     internal [[COPY6]].sub2:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE1]].sub2
+  ; GCN-NEXT:     internal [[COPY6]].sub5:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE1]].sub5
+  ; GCN-NEXT:     internal [[COPY6]].sub7:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE1]].sub7
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_13:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY5]].sub0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   undef [[COPY7:%[0-9]+]].sub0:sgpr_256 = COPY [[COPY6]].sub0 {
+  ; GCN-NEXT:     internal [[COPY7]].sub2:sgpr_256 = COPY [[COPY6]].sub2
+  ; GCN-NEXT:     internal [[COPY7]].sub5:sgpr_256 = COPY [[COPY6]].sub5
+  ; GCN-NEXT:     internal [[COPY7]].sub7:sgpr_256 = COPY [[COPY6]].sub7
+  ; GCN-NEXT:   }
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_13:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY7]].sub0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[S_AND_B32_3:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[V_CMP_GT_F32_e64_8]], undef [[V_CMP_GT_F32_e64_9]], implicit-def dead $scc
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_14:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY5]].sub2, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[S_OR_B32_2:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY5]].sub5, [[COPY5]].sub7, implicit-def dead $scc
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_14:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY7]].sub2, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[S_OR_B32_2:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY7]].sub5, [[COPY7]].sub7, implicit-def dead $scc
   ; GCN-NEXT:   [[SI_SPILL_S256_RESTORE2:%[0-9]+]]:sgpr_256 = SI_SPILL_S256_RESTORE %stack.10, implicit $exec, implicit $sgpr32 :: (load (s256) from %stack.10, align 4, addrspace 5)
-  ; GCN-NEXT:   undef [[COPY6:%[0-9]+]].lo16_hi16_sub1_lo16_sub1_hi16_sub2_lo16_sub2_hi16_sub3_lo16_sub3_hi16_sub4_lo16_sub4_hi16_sub5_lo16_sub5_hi16_sub6_lo16_sub6_hi16:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE2]].lo16_hi16_sub1_lo16_sub1_hi16_sub2_lo16_sub2_hi16_sub3_lo16_sub3_hi16_sub4_lo16_sub4_hi16_sub5_lo16_sub5_hi16_sub6_lo16_sub6_hi16
-  ; GCN-NEXT:   dead [[S_OR_B32_3:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY6]].sub0, [[COPY6]].sub1, implicit-def dead $scc
-  ; GCN-NEXT:   dead [[S_OR_B32_4:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY6]].sub2, undef [[S_OR_B32_3]], implicit-def dead $scc
+  ; GCN-NEXT:   undef [[COPY8:%[0-9]+]].lo16_hi16_sub1_lo16_sub1_hi16_sub2_lo16_sub2_hi16_sub3_lo16_sub3_hi16_sub4_lo16_sub4_hi16_sub5_lo16_sub5_hi16_sub6_lo16_sub6_hi16:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE2]].lo16_hi16_sub1_lo16_sub1_hi16_sub2_lo16_sub2_hi16_sub3_lo16_sub3_hi16_sub4_lo16_sub4_hi16_sub5_lo16_sub5_hi16_sub6_lo16_sub6_hi16
+  ; GCN-NEXT:   dead [[S_OR_B32_3:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY8]].sub0, [[COPY8]].sub1, implicit-def dead $scc
+  ; GCN-NEXT:   dead [[S_OR_B32_4:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY8]].sub2, undef [[S_OR_B32_3]], implicit-def dead $scc
   ; GCN-NEXT:   [[SI_SPILL_S32_RESTORE2:%[0-9]+]]:sreg_32_xm0_xexec = SI_SPILL_S32_RESTORE %stack.9, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.9, addrspace 5)
   ; GCN-NEXT:   dead [[S_AND_B32_4:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[S_OR_B32_3]], [[SI_SPILL_S32_RESTORE2]], implicit-def dead $scc
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_15:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY6]].sub3, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_16:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY6]].sub4, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_17:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY6]].sub5, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_18:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY6]].sub6, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_15:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub3, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_16:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub4, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_17:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub5, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_18:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub6, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[SI_SPILL_S32_RESTORE3:%[0-9]+]]:sreg_32_xm0_xexec = SI_SPILL_S32_RESTORE %stack.11, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.11, addrspace 5)
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_19:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[SI_SPILL_S32_RESTORE3]], 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[SI_SPILL_S256_RESTORE3:%[0-9]+]]:sgpr_256 = SI_SPILL_S256_RESTORE %stack.13, implicit $exec, implicit $sgpr32 :: (load (s256) from %stack.13, align 4, addrspace 5)
-  ; GCN-NEXT:   undef [[COPY7:%[0-9]+]].sub0:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE3]].sub0 {
-  ; GCN-NEXT:     internal [[COPY7]].sub2:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE3]].sub2
-  ; GCN-NEXT:     internal [[COPY7]].sub4:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE3]].sub4
-  ; GCN-NEXT:     internal [[COPY7]].sub7:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE3]].sub7
+  ; GCN-NEXT:   undef [[COPY9:%[0-9]+]].sub0:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE3]].sub0 {
+  ; GCN-NEXT:     internal [[COPY9]].sub2:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE3]].sub2
+  ; GCN-NEXT:     internal [[COPY9]].sub4:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE3]].sub4
+  ; GCN-NEXT:     internal [[COPY9]].sub7:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE3]].sub7
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_20:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY7]].sub0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_21:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY7]].sub2, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   undef [[COPY10:%[0-9]+]].sub0:sgpr_256 = COPY [[COPY9]].sub0 {
+  ; GCN-NEXT:     internal [[COPY10]].sub2:sgpr_256 = COPY [[COPY9]].sub2
+  ; GCN-NEXT:     internal [[COPY10]].sub4:sgpr_256 = COPY [[COPY9]].sub4
+  ; GCN-NEXT:     internal [[COPY10]].sub7:sgpr_256 = COPY [[COPY9]].sub7
+  ; GCN-NEXT:   }
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_20:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_21:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub2, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[DEF12:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_22:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY7]].sub4, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_22:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub4, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[S_AND_B32_5:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[DEF12]], undef [[V_CMP_GT_F32_e64_20]], implicit-def dead $scc
-  ; GCN-NEXT:   S_CMP_EQ_U32 [[COPY7]].sub7, 0, implicit-def $scc
-  ; GCN-NEXT:   undef [[COPY8:%[0-9]+]].sub0:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub0 {
-  ; GCN-NEXT:     internal [[COPY8]].sub2:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub2
-  ; GCN-NEXT:     internal [[COPY8]].sub4:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub4
-  ; GCN-NEXT:     internal [[COPY8]].sub6:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub6
-  ; GCN-NEXT:     internal [[COPY8]].sub9:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub9
-  ; GCN-NEXT:     internal [[COPY8]].sub10:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub10
-  ; GCN-NEXT:     internal [[COPY8]].sub13:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub13
-  ; GCN-NEXT:     internal [[COPY8]].sub14:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub14
+  ; GCN-NEXT:   S_CMP_EQ_U32 [[COPY10]].sub7, 0, implicit-def $scc
+  ; GCN-NEXT:   undef [[COPY11:%[0-9]+]].sub0:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub0 {
+  ; GCN-NEXT:     internal [[COPY11]].sub2:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub2
+  ; GCN-NEXT:     internal [[COPY11]].sub4:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub4
+  ; GCN-NEXT:     internal [[COPY11]].sub6:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub6
+  ; GCN-NEXT:     internal [[COPY11]].sub9:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub9
+  ; GCN-NEXT:     internal [[COPY11]].sub10:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub10
+  ; GCN-NEXT:     internal [[COPY11]].sub13:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub13
+  ; GCN-NEXT:     internal [[COPY11]].sub14:sgpr_512 = COPY [[S_LOAD_DWORDX16_IMM]].sub14
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_23:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_24:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub2, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_25:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub4, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_26:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub6, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_23:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_24:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub2, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_25:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub4, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_26:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub6, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[S_AND_B32_6:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[V_CMP_GT_F32_e64_23]], undef [[V_CMP_GT_F32_e64_23]], implicit-def dead $scc
-  ; GCN-NEXT:   dead [[S_OR_B32_5:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY8]].sub10, [[COPY8]].sub9, implicit-def dead $scc
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_27:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub13, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_28:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY8]].sub14, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[S_OR_B32_5:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY11]].sub10, [[COPY11]].sub9, implicit-def dead $scc
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_27:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub13, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_28:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub14, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[SI_SPILL_S512_RESTORE:%[0-9]+]]:sgpr_512 = SI_SPILL_S512_RESTORE %stack.12, implicit $exec, implicit $sgpr32 :: (load (s512) from %stack.12, align 4, addrspace 5)
-  ; GCN-NEXT:   undef [[COPY9:%[0-9]+]].sub1:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub1 {
-  ; GCN-NEXT:     internal [[COPY9]].sub5:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub5
-  ; GCN-NEXT:     internal [[COPY9]].sub6:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub6
-  ; GCN-NEXT:     internal [[COPY9]].sub9:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub9
-  ; GCN-NEXT:     internal [[COPY9]].sub10:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub10
-  ; GCN-NEXT:     internal [[COPY9]].sub12:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub12
-  ; GCN-NEXT:     internal [[COPY9]].sub15:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub15
+  ; GCN-NEXT:   undef [[COPY12:%[0-9]+]].sub1:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub1 {
+  ; GCN-NEXT:     internal [[COPY12]].sub5:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub5
+  ; GCN-NEXT:     internal [[COPY12]].sub6:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub6
+  ; GCN-NEXT:     internal [[COPY12]].sub9:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub9
+  ; GCN-NEXT:     internal [[COPY12]].sub10:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub10
+  ; GCN-NEXT:     internal [[COPY12]].sub12:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub12
+  ; GCN-NEXT:     internal [[COPY12]].sub15:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub15
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   S_CMP_EQ_U32 [[COPY9]].sub1, 0, implicit-def $scc
+  ; GCN-NEXT:   undef [[COPY13:%[0-9]+]].sub1:sgpr_512 = COPY [[COPY12]].sub1 {
+  ; GCN-NEXT:     internal [[COPY13]].sub5:sgpr_512 = COPY [[COPY12]].sub5
+  ; GCN-NEXT:     internal [[COPY13]].sub6:sgpr_512 = COPY [[COPY12]].sub6
+  ; GCN-NEXT:     internal [[COPY13]].sub9:sgpr_512 = COPY [[COPY12]].sub9
+  ; GCN-NEXT:     internal [[COPY13]].sub10:sgpr_512 = COPY [[COPY12]].sub10
+  ; GCN-NEXT:     internal [[COPY13]].sub12:sgpr_512 = COPY [[COPY12]].sub12
+  ; GCN-NEXT:     internal [[COPY13]].sub15:sgpr_512 = COPY [[COPY12]].sub15
+  ; GCN-NEXT:   }
+  ; GCN-NEXT:   S_CMP_EQ_U32 [[COPY13]].sub1, 0, implicit-def $scc
   ; GCN-NEXT:   dead [[DEF13:%[0-9]+]]:sreg_32_xm0_xexec = IMPLICIT_DEF
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_29:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY9]].sub5, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_30:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY9]].sub6, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_29:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY13]].sub5, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_30:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY13]].sub6, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[DEF14:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_31:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY9]].sub9, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_32:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY9]].sub10, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_31:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY13]].sub9, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_32:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY13]].sub10, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[DEF15:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   dead [[S_AND_B32_7:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[DEF15]], undef [[DEF14]], implicit-def dead $scc
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_33:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY9]].sub12, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_33:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY13]].sub12, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[SI_SPILL_S256_RESTORE4:%[0-9]+]]:sgpr_256 = SI_SPILL_S256_RESTORE %stack.6, implicit $exec, implicit $sgpr32 :: (load (s256) from %stack.6, align 4, addrspace 5)
-  ; GCN-NEXT:   undef [[COPY10:%[0-9]+]].lo16_hi16_sub1_lo16_sub1_hi16_sub2_lo16_sub2_hi16_sub3_lo16_sub3_hi16_sub4_lo16_sub4_hi16_sub5_lo16_sub5_hi16_sub6_lo16_sub6_hi16:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE4]].lo16_hi16_sub1_lo16_sub1_hi16_sub2_lo16_sub2_hi16_sub3_lo16_sub3_hi16_sub4_lo16_sub4_hi16_sub5_lo16_sub5_hi16_sub6_lo16_sub6_hi16
-  ; GCN-NEXT:   dead [[S_OR_B32_6:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY10]].sub0, [[COPY9]].sub15, implicit-def dead $scc
+  ; GCN-NEXT:   undef [[COPY14:%[0-9]+]].lo16_hi16_sub1_lo16_sub1_hi16_sub2_lo16_sub2_hi16_sub3_lo16_sub3_hi16_sub4_lo16_sub4_hi16_sub5_lo16_sub5_hi16_sub6_lo16_sub6_hi16:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE4]].lo16_hi16_sub1_lo16_sub1_hi16_sub2_lo16_sub2_hi16_sub3_lo16_sub3_hi16_sub4_lo16_sub4_hi16_sub5_lo16_sub5_hi16_sub6_lo16_sub6_hi16
+  ; GCN-NEXT:   dead [[S_OR_B32_6:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY14]].sub0, [[COPY13]].sub15, implicit-def dead $scc
   ; GCN-NEXT:   dead [[DEF16:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_34:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub1, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_35:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub2, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_34:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY14]].sub1, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_35:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY14]].sub2, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[DEF17:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_36:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub3, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_37:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub4, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_36:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY14]].sub3, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_37:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY14]].sub4, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[DEF18:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_38:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub5, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_39:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY10]].sub6, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_38:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY14]].sub5, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_39:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY14]].sub6, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[S_AND_B32_8:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[DEF18]], undef [[DEF17]], implicit-def dead $scc
   ; GCN-NEXT:   [[SI_SPILL_S256_RESTORE5:%[0-9]+]]:sgpr_256 = SI_SPILL_S256_RESTORE %stack.4, implicit $exec, implicit $sgpr32 :: (load (s256) from %stack.4, align 4, addrspace 5)
-  ; GCN-NEXT:   undef [[COPY11:%[0-9]+]].sub0_sub1_sub2_sub3_sub4_sub5:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE5]].sub0_sub1_sub2_sub3_sub4_sub5
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_40:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_41:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub1, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   undef [[COPY15:%[0-9]+]].sub0_sub1_sub2_sub3_sub4_sub5:sgpr_256 = COPY [[SI_SPILL_S256_RESTORE5]].sub0_sub1_sub2_sub3_sub4_sub5
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_40:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY15]].sub0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_41:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY15]].sub1, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[SI_SPILL_S32_RESTORE4:%[0-9]+]]:sreg_32_xm0_xexec = SI_SPILL_S32_RESTORE %stack.3, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.3, addrspace 5)
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_42:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[SI_SPILL_S32_RESTORE4]], 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_43:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub2, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_44:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY11]].sub3, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   dead [[S_OR_B32_7:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY11]].sub4, [[COPY11]].sub5, implicit-def dead $scc
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_43:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY15]].sub2, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_44:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY15]].sub3, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   dead [[S_OR_B32_7:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY15]].sub4, [[COPY15]].sub5, implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_EQ_U32 [[SI_SPILL_S32_RESTORE4]], 0, implicit-def $scc
   ; GCN-NEXT:   [[SI_SPILL_S32_RESTORE5:%[0-9]+]]:sreg_32_xm0_xexec = SI_SPILL_S32_RESTORE %stack.5, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.5, addrspace 5)
   ; GCN-NEXT:   dead [[S_AND_B32_9:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[S_OR_B32_7]], [[SI_SPILL_S32_RESTORE5]], implicit-def dead $scc

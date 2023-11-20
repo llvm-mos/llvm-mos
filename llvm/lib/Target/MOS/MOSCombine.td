@@ -88,7 +88,7 @@ def mul_to_shift_and_add : GICombineRule<
           [{ return matchMulToShiftAndAdd(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
 
-def MOSCombinerHelper : GICombinerHelper<"MOSCombinerImpl", [
+def MOSCombiner : GICombiner<"MOSCombinerImpl", [
   all_combines,
   fold_global_offset,
   extract_low_bit,

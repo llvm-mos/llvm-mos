@@ -91,86 +91,75 @@ select.end:                                       ; preds = %entry, %select.fals
 define dso_local i16 @repro() {
 ; CHECK-LABEL: repro:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldx #1
-; CHECK-NEXT:    bpl .LBB3_2
-; CHECK-NEXT:  ; %bb.1:
-; CHECK-NEXT:    ldx #255
-; CHECK-NEXT:    jmp .LBB3_3
-; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:  .LBB3_3:
-; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #255
-; CHECK-NEXT:    bmi .LBB3_5
-; CHECK-NEXT:  ; %bb.4:
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:  .LBB3_5:
 ; CHECK-NEXT:    lda 1024
-; CHECK-NEXT:    sta __rc3
+; CHECK-NEXT:    sta __rc2
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    ldy 1025
 ; CHECK-NEXT:    sty __rc5
-; CHECK-NEXT:    sty __rc4
-; CHECK-NEXT:    sta __rc6
-; CHECK-NEXT:    sbc __rc4
-; CHECK-NEXT:    bvc .LBB3_7
-; CHECK-NEXT:  ; %bb.6:
+; CHECK-NEXT:    sty __rc3
+; CHECK-NEXT:    sta __rc4
+; CHECK-NEXT:    sbc __rc3
+; CHECK-NEXT:    bvc .LBB3_2
+; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    eor #128
+; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    bpl .LBB3_4
+; CHECK-NEXT:  ; %bb.3:
+; CHECK-NEXT:    ldy #1
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    lda __rc5
+; CHECK-NEXT:    sbc __rc2
+; CHECK-NEXT:    sty __rc2
+; CHECK-NEXT:    jmp .LBB3_5
+; CHECK-NEXT:  .LBB3_4:
+; CHECK-NEXT:    ldx #255
+; CHECK-NEXT:    sec
+; CHECK-NEXT:    lda __rc4
+; CHECK-NEXT:    sbc __rc5
+; CHECK-NEXT:    stx __rc2
+; CHECK-NEXT:  .LBB3_5:
+; CHECK-NEXT:    stx __rc3
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    bpl .LBB3_7
+; CHECK-NEXT:  ; %bb.6:
+; CHECK-NEXT:    ldx #255
+; CHECK-NEXT:    jmp .LBB3_8
 ; CHECK-NEXT:  .LBB3_7:
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:  .LBB3_8:
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    jmp .LBB3_10
+; CHECK-NEXT:  .LBB3_9: ; in Loop: Header=BB3_10 Depth=1
+; CHECK-NEXT:    lda __rc6
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    adc __rc2
+; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    lda __rc5
+; CHECK-NEXT:    adc __rc3
+; CHECK-NEXT:  .LBB3_10: ; =>This Loop Header: Depth=1
+; CHECK-NEXT:    ; Child Loop BB3_12 Depth 2
+; CHECK-NEXT:    sta __rc5
+; CHECK-NEXT:    lda .Lrepro_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    sta __rc6
+; CHECK-NEXT:    sta __rc4
+; CHECK-NEXT:    lda __rc5
+; CHECK-NEXT:    sta __rc7
+; CHECK-NEXT:    jmp .LBB3_12
+; CHECK-NEXT:  .LBB3_11: ; in Loop: Header=BB3_12 Depth=2
 ; CHECK-NEXT:    cmp #0
 ; CHECK-NEXT:    bpl .LBB3_9
-; CHECK-NEXT:  ; %bb.8:
-; CHECK-NEXT:    ldx #1
-; CHECK-NEXT:    sec
-; CHECK-NEXT:    tya
-; CHECK-NEXT:    sbc __rc3
-; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    jmp .LBB3_10
-; CHECK-NEXT:  .LBB3_9:
-; CHECK-NEXT:    ldy #255
-; CHECK-NEXT:    sec
-; CHECK-NEXT:    lda __rc6
-; CHECK-NEXT:    sbc __rc5
-; CHECK-NEXT:    sty __rc3
-; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:  .LBB3_10:
-; CHECK-NEXT:    sta __rc5
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    bpl .LBB3_12
-; CHECK-NEXT: ; %bb.11:
-; CHECK-NEXT:    ldx #255
-; CHECK-NEXT:    jmp .LBB3_13
-; CHECK-NEXT:  .LBB3_12:
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:  .LBB3_13:
-; CHECK-NEXT:    stx .Lrepro_sstk+1                  ; 1-byte Folded Spill
-; CHECK-NEXT:    ldx #0
-; CHECK-NEXT:    stx .Lrepro_sstk                    ; 1-byte Folded Spill
-; CHECK-NEXT:    jmp .LBB3_15
-; CHECK-NEXT:  .LBB3_14:                               ;   in Loop: Header=BB3_15 Depth=1
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    bpl .LBB3_17
-; CHECK-NEXT:  .LBB3_15:                               ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldy .Lrepro_sstk                    ; 1-byte Folded Reload
-; CHECK-NEXT:    sty __rc4
-; CHECK-NEXT:    ldy __rc5
+; CHECK-NEXT:  .LBB3_12: ; Parent Loop BB3_10 Depth=1
+; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    cpy __rc4
-; CHECK-NEXT:    stx __rc4
-; CHECK-NEXT:    lda .Lrepro_sstk+1                  ; 1-byte Folded Reload
-; CHECK-NEXT:    sbc __rc4
-; CHECK-NEXT:    bvc .LBB3_14
-; CHECK-NEXT:  ; %bb.16:                               ;   in Loop: Header=BB3_15 Depth=1
-; CHECK-NEXT:    eor #128
-; CHECK-NEXT:    jmp .LBB3_14
-; CHECK-NEXT:  .LBB3_17:                               ;   in Loop: Header=BB3_15 Depth=1
-; CHECK-NEXT:    clc
-; CHECK-NEXT:    lda .Lrepro_sstk                    ; 1-byte Folded Reload
-; CHECK-NEXT:    adc __rc3
-; CHECK-NEXT:    sta .Lrepro_sstk                    ; 1-byte Folded Spill
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    adc __rc2
-; CHECK-NEXT:    tax
-; CHECK-NEXT:    jmp .LBB3_15
+; CHECK-NEXT:    sbc __rc5
+; CHECK-NEXT:    bvc .LBB3_11
+; CHECK-NEXT:  ; %bb.13: ; in Loop: Header=BB3_12 Depth=2
+; CHECK-NEXT:    eor #128
+; CHECK-NEXT:    jmp .LBB3_11
 
   %1 = load volatile i8, ptr inttoptr (i16 1024 to ptr), align 1024
   %2 = load volatile i8, ptr inttoptr (i16 1025 to ptr), align 1

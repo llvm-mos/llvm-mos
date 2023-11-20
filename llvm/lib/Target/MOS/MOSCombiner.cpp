@@ -61,24 +61,23 @@ namespace {
 #include "MOSGenGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
 
-class MOSCombinerImpl : public GIMatchTableExecutor {
-  CombinerHelper &Helper;
+class MOSCombinerImpl : public Combiner {
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
   const MOSCombinerImplRuleConfig &RuleConfig;
-
-  MachineRegisterInfo &MRI;
-  GISelChangeObserver &Observer;
-  MachineIRBuilder &B;
-  MachineFunction &MF;
-  AAResults &AA;
+  AAResults *AA;
 
 public:
-  MOSCombinerImpl(const MOSCombinerImplRuleConfig &RuleConfig,
-                  const MOSSubtarget &STI, GISelChangeObserver &Observer,
-                  MachineIRBuilder &B, CombinerHelper &Helper, AAResults &AA);
+  MOSCombinerImpl(MachineFunction &MF, CombinerInfo &CInfo,
+                  const TargetPassConfig *TPC, bool IsPreLegalize,
+                  GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+                  const MOSCombinerImplRuleConfig &RuleConfig,
+                  const MOSSubtarget &STI, MachineDominatorTree *MDT,
+                  const LegalizerInfo *LI, AAResults *AA);
 
   static const char *getName() { return "MOSCombiner"; }
 
-  bool tryCombineAll(MachineInstr &I) const;
+  bool tryCombineAll(MachineInstr &I) const override;
 
   // G_PTR_ADD (GLOBAL_VALUE @x + y_const), z_const =>
   // GLOBAL_VALUE @x + (y_const + z_const)
@@ -132,13 +131,14 @@ private:
 #include "MOSGenGICombiner.inc"
 #undef GET_GICOMBINER_IMPL
 
-MOSCombinerImpl::MOSCombinerImpl(const MOSCombinerImplRuleConfig &RuleConfig,
-                                 const MOSSubtarget &STI,
-                                 GISelChangeObserver &Observer,
-                                 MachineIRBuilder &B, CombinerHelper &Helper,
-                                 AAResults &AA)
-    : Helper(Helper), RuleConfig(RuleConfig), MRI(*B.getMRI()),
-      Observer(Observer), B(B), MF(B.getMF()), AA(AA),
+MOSCombinerImpl::MOSCombinerImpl(
+    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+    bool IsPreLegalize, GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+    const MOSCombinerImplRuleConfig &RuleConfig, const MOSSubtarget &STI,
+    MachineDominatorTree *MDT, const LegalizerInfo *LI, AAResults *AA)
+    : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
+      Helper(Observer, B, IsPreLegalize, &KB, MDT, LI), RuleConfig(RuleConfig),
+      AA(AA),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "MOSGenGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -372,7 +372,7 @@ bool MOSCombinerImpl::matchLoadStoreToMemcpy(MachineInstr &MI,
     return false;
   if (!Load->isUnordered() || !Store->isUnordered())
     return false;
-  if (MI.mayAlias(&AA, *Load, true))
+  if (MI.mayAlias(AA, *Load, true))
     return false;
 
   return true;
@@ -709,47 +709,12 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
   return DemandedBits;
 }
 
-class MOSCombinerInfo : public CombinerInfo {
-  GISelKnownBits *KB;
-  MachineDominatorTree *MDT;
-  AAResults *AA;
-  MOSCombinerImplRuleConfig GeneratedRuleCfg;
-
-public:
-  MOSCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                  GISelKnownBits *KB, MachineDominatorTree *MDT, AAResults *AA)
-      : CombinerInfo(/*AllowIllegalOps*/ true,
-                     /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
-        KB(KB), MDT(MDT), AA(AA) {
-    if (!GeneratedRuleCfg.parseCommandLineOption())
-      report_fatal_error("Invalid rule identifier");
-  }
-
-  virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-                       MachineIRBuilder &B) const override;
-};
-
-bool MOSCombinerInfo::combine(GISelChangeObserver &Observer, MachineInstr &MI,
-                              MachineIRBuilder &B) const {
-  const auto &STI = MI.getMF()->getSubtarget<MOSSubtarget>();
-  const LegalizerInfo *LI = MI.getMF()->getSubtarget().getLegalizerInfo();
-  bool IsPreLegalize = !MI.getMF()->getProperties().hasProperty(
-      MachineFunctionProperties::Property::Legalized);
-  CombinerHelper Helper(Observer, B, IsPreLegalize, KB, MDT, LI);
-  MOSCombinerImpl Impl(GeneratedRuleCfg, STI, Observer, B, Helper, *AA);
-  Impl.setupMF(*MI.getMF(), KB, nullptr, nullptr, nullptr, AA);
-  return Impl.tryCombineAll(MI);
-}
-
-#define MOSCOMBINERHELPER_GENCOMBINERHELPER_CPP
-#include "MOSGenGICombiner.inc"
-#undef MOSCOMBINERHELPER_GENCOMBINERHELPER_CPP
-
 // Pass boilerplate
 // ================
 
 class MOSCombiner : public MachineFunctionPass {
+  MOSCombinerImplRuleConfig RuleConfig;
+
 public:
   static char ID;
 
@@ -781,6 +746,9 @@ void MOSCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 MOSCombiner::MOSCombiner() : MachineFunctionPass(ID) {
   initializeMOSCombinerPass(*PassRegistry::getPassRegistry());
+
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
 }
 
 bool MOSCombiner::runOnMachineFunction(MachineFunction &MF) {
@@ -788,23 +756,30 @@ bool MOSCombiner::runOnMachineFunction(MachineFunction &MF) {
           MachineFunctionProperties::Property::FailedISel))
     return false;
 
-  auto *TPC = &getAnalysis<TargetPassConfig>();
+  auto &TPC = getAnalysis<TargetPassConfig>();
 
   // Enable CSE.
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
+  auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
+
+  const MOSSubtarget &ST = MF.getSubtarget<MOSSubtarget>();
+  const auto *LI = ST.getLegalizerInfo();
 
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
+  bool IsPreLegalize = !MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::Legalized);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  MOSCombinerInfo PCInfo(EnableOpt, F.hasOptSize(), F.hasMinSize(), KB, MDT,
-                         AA);
-  Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, CSEInfo);
+  CombinerInfo CInfo(
+      /*AllowIllegalOps*/ IsPreLegalize, /*ShouldLegalizeIllegal*/ false,
+      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(), F.hasMinSize());
+  MOSCombinerImpl Impl(MF, CInfo, &TPC, IsPreLegalize, *KB, CSEInfo, RuleConfig,
+                       ST, MDT, LI, AA);
+  return Impl.combineMachineInstrs();
 }
 
 char MOSCombiner::ID = 0;

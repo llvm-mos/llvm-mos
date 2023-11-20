@@ -614,7 +614,7 @@ public:
     return false;
   }
 
-  OperandMatchResultTy tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override {
     std::string AnyCase(StartLoc.getPointer(),
                         EndLoc.getPointer() - StartLoc.getPointer());
@@ -630,25 +630,25 @@ public:
         Reg = MatchRegisterAltName(RegisterName);
       }
     }
-    return (Reg != 0) ? MatchOperand_Success : MatchOperand_NoMatch;
+    return (Reg != 0) ? ParseStatus::Success : ParseStatus::NoMatch;
   }
 
-  OperandMatchResultTy tryParseRegister(OperandVector &Operands) {
+  ParseStatus tryParseRegister(OperandVector &Operands) {
     MCRegister Reg = 0;
     SMLoc S = getLexer().getLoc();
     SMLoc E = getLexer().getTok().getEndLoc();
-    if (tryParseRegister(Reg, S, E) == MatchOperand_Success) {
+    if (tryParseRegister(Reg, S, E).isSuccess()) {
       Operands.push_back(MOSOperand::createReg(STI, Reg, S, E));
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   }
 
   // Parse only registers that can be considered parameters to real MOS
   // instructions.  The instruction parser considers a, x, y, z, and sp to be
   // strings, not registers, so make a point of filtering those cases out
   // of what's acceptable.
-  OperandMatchResultTy tryParseAsmParamRegClass(OperandVector &Operands) {
+  ParseStatus tryParseAsmParamRegClass(OperandVector &Operands) {
     SMLoc S = getLexer().getLoc();
 
     const char *LowerStr =
@@ -665,16 +665,16 @@ public:
             .Default(nullptr);
     if (LowerStr != nullptr) {
       Operands.push_back(MOSOperand::createToken(STI, LowerStr, S));
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
 
     MCRegister Reg = 0;
     SMLoc E = getLexer().getTok().getEndLoc();
-    if (tryParseRegister(Reg, S, E) == MatchOperand_Success) {
+    if (tryParseRegister(Reg, S, E).isSuccess()) {
       Operands.push_back(MOSOperand::createReg(STI, Reg, S, E));
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   }
 
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Mnemonic,
@@ -727,7 +727,7 @@ public:
         // Handle +, +x, +y.
         if (getLexer().is(AsmToken::Plus)) {
           eatThatToken(Operands);
-          if (tryParseAsmParamRegClass(Operands) == MatchOperand_Success) {
+          if (tryParseAsmParamRegClass(Operands).isSuccess()) {
             Parser.Lex();
           }
           continue;
@@ -755,7 +755,7 @@ public:
         eatThatToken(Operands);
         // Handle SPC700 (x), (y)
         if (STI.hasFeature(MOS::FeatureSPC700)) {
-          if (tryParseAsmParamRegClass(Operands) == MatchOperand_Success) {
+          if (tryParseAsmParamRegClass(Operands).isSuccess()) {
             Parser.Lex();
             RightHandSide = AsmToken::RParen;
             continue;
@@ -792,7 +792,7 @@ public:
       }
 
       // We'll only ever see a register name on the third or later parameter.
-      if (tryParseAsmParamRegClass(Operands) == MatchOperand_Success) {
+      if (tryParseAsmParamRegClass(Operands).isSuccess()) {
         Parser.Lex();
         continue;
       }
@@ -809,8 +809,7 @@ public:
   }
 
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override {
-    auto Result = tryParseRegister(Reg, StartLoc, EndLoc);
-    return (Result != MatchOperand_Success);
+    return !tryParseRegister(Reg, StartLoc, EndLoc).isSuccess();
   }
 
 }; // class MOSAsmParser

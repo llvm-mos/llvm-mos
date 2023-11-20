@@ -55,7 +55,7 @@ public:
 class MOSAsmBackend : public MCAsmBackend {
 public:
   MOSAsmBackend(Triple::OSType OSType)
-      : llvm::MCAsmBackend(support::little), OSType(OSType) {}
+      : llvm::MCAsmBackend(endianness::little), OSType(OSType) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;

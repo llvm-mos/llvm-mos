@@ -45,8 +45,8 @@ PreservedAnalyses MOSIndexIV::run(Loop &L, LoopAnalysisManager &AM,
                APInt::getMaxValue(8).zext(Range.getBitWidth()));
   };
 
-  Type *i8 = Type::getInt8Ty(SE.getContext());
-  Type *i8Ptr = Type::getInt8PtrTy(SE.getContext());
+  Type *I8 = Type::getInt8Ty(SE.getContext());
+  Type *Ptr = PointerType::get(SE.getContext(), 0);
   bool Changed = false;
 
   for (BasicBlock *B : L.blocks()) {
@@ -107,16 +107,15 @@ PreservedAnalyses MOSIndexIV::run(Loop &L, LoopAnalysisManager &AM,
       // Get a value for the 16-bit base.
       Value *BaseVal = Rewriter.expandCodeFor(R->getStart());
       // Get a value for the 8-bit index.
-      Value *IndexVal = Rewriter.expandCodeFor(SE.getTruncateExpr(Index, i8));
+      Value *IndexVal = Rewriter.expandCodeFor(SE.getTruncateExpr(Index, I8));
 
       // Emit an "uglygep" to avoid having to find a real GEP calculation that
       // leads to the SCEV. This always works, and still preserves at least
       // some aliasing information.
       IRBuilder<> Builder(B, I);
-      Value *V = Builder.CreateBitCast(BaseVal, i8Ptr);
+      Value *V = Builder.CreateBitCast(BaseVal, Ptr);
       V = Builder.CreateGEP(
-          i8, V, Builder.CreateZExt(IndexVal, DL.getIndexType(i8Ptr)),
-          "uglygep");
+          I8, V, Builder.CreateZExt(IndexVal, DL.getIndexType(Ptr)), "uglygep");
       V = Builder.CreateBitCast(V, GEP->getType());
 
       auto Inst = I;

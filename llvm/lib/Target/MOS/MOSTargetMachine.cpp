@@ -88,7 +88,7 @@ MOSTargetMachine::MOSTargetMachine(const Target &T, const Triple &TT,
                                    const TargetOptions &Options,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
-                                   CodeGenOpt::Level OL, bool JIT)
+                                   CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(T, MOSDataLayout, TT, getCPU(CPU), FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
@@ -224,11 +224,11 @@ TargetPassConfig *MOSTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void MOSPassConfig::addIRPasses() {
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createMOSNonReentrantPass());
   TargetPassConfig::addIRPasses();
   // Clean up after LSR in particular.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createInstructionCombiningPass());
 }
 
@@ -240,7 +240,7 @@ bool MOSPassConfig::addIRTranslator() {
 }
 
 void MOSPassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createMOSCombiner());
     addPass(createMOSIncDecPhiPass());
     addPass(createMOSShiftRotateChainPass());
@@ -253,7 +253,7 @@ bool MOSPassConfig::addLegalizeMachineIR() {
 }
 
 void MOSPassConfig::addPreRegBankSelect() {
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createMOSCombiner());
   addPass(createMOSLowerSelectPass());
 }
@@ -277,12 +277,12 @@ bool MOSPassConfig::addGlobalInstructionSelect() {
 
 void MOSPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createMOSInsertCopiesPass());
 }
 
 void MOSPassConfig::addOptimizedRegAlloc() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     // Run the coalescer twice to coalesce RMW patterns revealed by the first
     // coalesce.
     insertPass(&llvm::TwoAddressInstructionPassID, &llvm::RegisterCoalescerID);
@@ -296,12 +296,12 @@ void MOSPassConfig::addOptimizedRegAlloc() {
 
 void MOSPassConfig::addMachineLateOptimization() {
   TargetPassConfig::addMachineLateOptimization();
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createMOSCopyOptPass());
 }
 
 void MOSPassConfig::addPrePEI() {
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createMOSZeroPageAllocPass());
 }
 
@@ -315,7 +315,7 @@ void MOSPassConfig::addPreSched2() {
 
   // This is currently mandatory, since it lowers CMPTermZ.
   addPass(createMOSLateOptimizationPass());
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createMOSStaticStackAllocPass());
 }
 
@@ -350,7 +350,7 @@ bool MOSCSEConfigFull::shouldCSEOpc(unsigned Opc) {
 } // namespace
 
 std::unique_ptr<CSEConfigBase> MOSPassConfig::getCSEConfig() const {
-  if (TM->getOptLevel() == CodeGenOpt::None)
+  if (TM->getOptLevel() == CodeGenOptLevel::None)
     return std::make_unique<CSEConfigConstantOnly>();
   return std::make_unique<MOSCSEConfigFull>();
 }

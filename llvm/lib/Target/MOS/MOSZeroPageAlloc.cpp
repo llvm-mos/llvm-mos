@@ -352,9 +352,9 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
     if (MOS::isZeroPageSectionName(SecName) ||
         GV.getAddressSpace() == MOS::AS_ZeroPage) {
       size_t Size = (GV.getParent()->getDataLayout().getTypeSizeInBits(
-            GV.getValueType()) +
-          7) /
-        8;
+                         GV.getValueType()) +
+                     7) /
+                    8;
       if (Size >= ModuleZPAvail)
         return false;
       ModuleZPAvail -= Size;
@@ -411,8 +411,7 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
                                GlobalValue::PrivateLinkage,
                                UndefValue::get(Typ), "zp_stack",
                                /*InsertBefore=*/nullptr,
-                               GlobalValue::NotThreadLocal,
-                               MOS::AS_ZeroPage);
+                               GlobalValue::NotThreadLocal, MOS::AS_ZeroPage);
     LLVM_DEBUG(dbgs() << "  " << *Stack << '\n');
   }
 
@@ -1006,9 +1005,10 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
 // approximate with the IR block frequencies.
 Freq getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB) {
   if (!MBB.getBasicBlock())
-    return Freq{BFI.getEntryFreq(), BFI.getEntryFreq()};
+    return Freq{BFI.getEntryFreq().getFrequency(),
+                BFI.getEntryFreq().getFrequency()};
   return Freq{BFI.getBlockFreq(MBB.getBasicBlock()).getFrequency(),
-              BFI.getEntryFreq()};
+              BFI.getEntryFreq().getFrequency()};
 }
 
 } // namespace
