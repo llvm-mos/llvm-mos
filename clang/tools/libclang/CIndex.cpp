@@ -2735,6 +2735,7 @@ void OMPClauseEnqueue::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {
 }
 void OMPClauseEnqueue::VisitOMPXAttributeClause(const OMPXAttributeClause *C) {
 }
+void OMPClauseEnqueue::VisitOMPXBareClause(const OMPXBareClause *C) {}
 
 } // namespace
 
@@ -5951,6 +5952,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPSectionsDirective");
   case CXCursor_OMPSectionDirective:
     return cxstring::createRef("OMPSectionDirective");
+  case CXCursor_OMPScopeDirective:
+    return cxstring::createRef("OMPScopeDirective");
   case CXCursor_OMPSingleDirective:
     return cxstring::createRef("OMPSingleDirective");
   case CXCursor_OMPMasterDirective:
@@ -6845,7 +6848,6 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::Captured:
   case Decl::OMPCapturedExpr:
   case Decl::Label: // FIXME: Is this right??
-  case Decl::ClassScopeFunctionSpecialization:
   case Decl::CXXDeductionGuide:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
@@ -8244,15 +8246,17 @@ CXLinkageKind clang_getCursorLinkage(CXCursor cursor) {
   const Decl *D = cxcursor::getCursorDecl(cursor);
   if (const NamedDecl *ND = dyn_cast_or_null<NamedDecl>(D))
     switch (ND->getLinkageInternal()) {
-    case NoLinkage:
-    case VisibleNoLinkage:
+    case Linkage::Invalid:
+      return CXLinkage_Invalid;
+    case Linkage::None:
+    case Linkage::VisibleNone:
       return CXLinkage_NoLinkage;
-    case InternalLinkage:
+    case Linkage::Internal:
       return CXLinkage_Internal;
-    case UniqueExternalLinkage:
+    case Linkage::UniqueExternal:
       return CXLinkage_UniqueExternal;
-    case ModuleLinkage:
-    case ExternalLinkage:
+    case Linkage::Module:
+    case Linkage::External:
       return CXLinkage_External;
     };
 
@@ -8760,7 +8764,8 @@ unsigned clang_Cursor_isObjCOptional(CXCursor C) {
   if (const ObjCPropertyDecl *PD = dyn_cast<ObjCPropertyDecl>(D))
     return PD->getPropertyImplementation() == ObjCPropertyDecl::Optional;
   if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D))
-    return MD->getImplementationControl() == ObjCMethodDecl::Optional;
+    return MD->getImplementationControl() ==
+           ObjCImplementationControl::Optional;
 
   return 0;
 }

@@ -1,4 +1,4 @@
-if (MLIR_ENABLE_CUDA_CONVERSIONS)
+if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(NVPTX_LIBS
     NVPTXCodeGen
     NVPTXDesc
@@ -37,6 +37,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRDLTIDialect
+  MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
   MLIRIR
   MLIRMemRefDialect
@@ -47,6 +48,7 @@ add_mlir_dialect_library(MLIRGPUDialect
 add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AllReduceLowering.cpp
   Transforms/AsyncRegionRewriter.cpp
+  Transforms/BufferDeallocationOpInterfaceImpl.cpp
   Transforms/DecomposeMemrefs.cpp
   Transforms/GlobalIdRewriter.cpp
   Transforms/KernelOutlining.cpp
@@ -58,7 +60,9 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/SerializeToCubin.cpp
   Transforms/SerializeToHsaco.cpp
   Transforms/ShuffleRewriter.cpp
+  Transforms/SPIRVAttachTarget.cpp
   Transforms/ROCDLAttachTarget.cpp
+  Transforms/EliminateBarriers.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
@@ -78,6 +82,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRAsyncDialect
+  MLIRBufferizationDialect
   MLIRBuiltinToLLVMIRTranslation
   MLIRDataLayoutInterfaces
   MLIRExecutionEngineUtils
@@ -92,9 +97,11 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRPass
   MLIRSCFDialect
   MLIRSideEffectInterfaces
+  MLIRSPIRVTarget
   MLIRSupport
   MLIRROCDLTarget
   MLIRTransformUtils
+  MLIRVectorDialect
   )
 
 add_subdirectory(TransformOps)

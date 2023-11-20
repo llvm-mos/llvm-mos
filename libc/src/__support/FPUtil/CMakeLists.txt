@@ -6,6 +6,8 @@ add_header_library(
     libc.include.fenv
     libc.include.math
     libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_header_library(
@@ -225,6 +227,12 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.number_pair
     .multiply_add
+)
+
+add_header_library(
+  triple_double
+  HDRS
+    triple_double.h
 )
 
 add_header_library(

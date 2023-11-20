@@ -63,7 +63,7 @@ Semantics:
     other patterns in that rule/alternative can simply use ``$x``
     (``i32:$x`` is redundant).
 
-* A nammed operand's behavior depends on whether the name has been seen before.
+* A named operand's behavior depends on whether the name has been seen before.
 
   * For match patterns, reusing an operand name checks that the operands
     are identical (see example 2 below).
@@ -101,6 +101,126 @@ pattern, you can try naming your patterns to see exactly where the issue is.
   // using $x again here copies operand 1 from G_AND into the new inst.
   (apply (COPY $root, $x))
 
+Types
+-----
+
+ValueType
+~~~~~~~~~
+
+Subclasses of ``ValueType`` are valid types, e.g. ``i32``.
+
+GITypeOf
+~~~~~~~~
+
+``GITypeOf<"$x">`` is a ``GISpecialType`` that allows for the creation of a
+register or immediate with the same type as another (register) operand.
+
+Operand:
+
+* An operand name as a string, prefixed by ``$``.
+
+Semantics:
+
+* Can only appear in an 'apply' pattern.
+* The operand name used must appear in the 'match' pattern of the
+  same ``GICombineRule``.
+
+.. code-block:: text
+  :caption: Example: Immediate
+
+  def mul_by_neg_one: GICombineRule <
+    (defs root:$root),
+    (match (G_MUL $dst, $x, -1)),
+    (apply (G_SUB $dst, (GITypeOf<"$x"> 0), $x))
+  >;
+
+.. code-block:: text
+  :caption: Example: Temp Reg
+
+  def Test0 : GICombineRule<
+    (defs root:$dst),
+    (match (G_FMUL $dst, $src, -1)),
+    (apply (G_FSUB $dst, $src, $tmp),
+           (G_FNEG GITypeOf<"$dst">:$tmp, $src))>;
+
+Builtin Operations
+------------------
+
+MIR Patterns also offer builtin operations, also called "builtin instructions".
+They offer some powerful features that would otherwise require use of C++ code.
+
+GIReplaceReg
+~~~~~~~~~~~~
+
+.. code-block:: text
+  :caption: Usage
+
+  (apply (GIReplaceReg $old, $new))
+
+Operands:
+
+* ``$old`` (out) register defined by a matched instruction
+* ``$new`` (in)  register
+
+Semantics:
+
+* Can only appear in an 'apply' pattern.
+* If both old/new are operands of matched instructions,
+  ``canReplaceReg`` is checked before applying the rule.
+
+
+GIEraseRoot
+~~~~~~~~~~~
+
+.. code-block:: text
+  :caption: Usage
+
+  (apply (GIEraseRoot))
+
+Semantics:
+
+* Can only appear as the only pattern of an 'apply' pattern list.
+* The root cannot have any output operands.
+* The root must be a CodeGenInstruction
+
+Instruction Flags
+-----------------
+
+MIR Patterns support both matching & writing ``MIFlags``.
+
+.. code-block:: text
+  :caption: Example
+
+  def Test : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs))),
+    (apply (G_BAR $dst, $src, (MIFlags FmReassoc)))>;
+
+In ``apply`` patterns, we also support referring to a matched instruction to
+"take" its MIFlags.
+
+.. code-block:: text
+  :caption: Example
+
+  ; We match NoNans/NoInfs, but $zext may have more flags.
+  ; Copy them all into the output instruction, and set Reassoc on the output inst.
+  def TestCpyFlags : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoNans, FmNoInfs)):$zext),
+    (apply (G_BAR $dst, $src, (MIFlags $zext, FmReassoc)))>;
+
+The ``not`` operator can be used to check that a flag is NOT present
+on a matched instruction, and to remove a flag from a generated instruction.
+
+.. code-block:: text
+  :caption: Example
+
+  ; We match NoInfs but we don't want NoNans/Reassoc to be set. $zext may have more flags.
+  ; Copy them all into the output instruction but remove NoInfs on the output inst.
+  def TestNot : GICombineRule<
+    (defs root:$dst),
+    (match (G_FOO $dst, $src, (MIFlags FmNoInfs, (not FmNoNans, FmReassoc))):$zext),
+    (apply (G_BAR $dst, $src, (MIFlags $zext, (not FmNoInfs))))>;
 
 Limitations
 -----------
@@ -110,12 +230,10 @@ This a non-exhaustive list of known issues with MIR patterns at this time.
 * Matching intrinsics is not yet possible.
 * Using ``GICombinePatFrag`` within another ``GICombinePatFrag`` is not
   supported.
+* ``GICombinePatFrag`` can only have a single root.
+* Instructions with multiple defs cannot be the root of a ``GICombinePatFrag``.
 * Using ``GICombinePatFrag`` in the ``apply`` pattern of a ``GICombineRule``
   is not supported.
-* Deleting the matched pattern in a ``GICombineRule`` needs to be done using
-  ``G_IMPLICIT_DEF`` or C++.
-* Replacing the root of a pattern with another instruction needs to be done
-  using COPY.
 * We cannot rewrite a matched instruction other than the root.
 * Matching/creating a (CImm) immediate >64 bits is not supported
   (see comment in ``GIM_CheckConstantInt``)
@@ -177,33 +295,41 @@ The following expansions are available for MIR patterns:
 Common Pattern #1: Replace a Register with Another
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The 'apply' pattern must always redefine its root.
-It cannot just replace it with something else directly.
-A simple workaround is to just use a COPY that'll be eliminated later.
+The 'apply' pattern must always redefine all operands defined by the match root.
+Sometimes, we do not need to create instructions, simply replace a def with
+another matched register. The ``GIReplaceReg`` builtin can do just that.
 
 .. code-block:: text
 
   def Foo : GICombineRule<
     (defs root:$dst),
     (match (G_FNEG $tmp, $src), (G_FNEG $dst, $tmp)),
-    (apply (COPY $dst, $src))>;
+    (apply (GIReplaceReg $dst, $src))>;
 
-Common Pattern #2: Erasing a Pattern
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This also works if the replacement register is a temporary register from the
+``apply`` pattern.
 
-As said before, we must always emit something in the 'apply' pattern.
-If we wish to delete the matched instruction, we can simply replace its
-definition with a ``G_IMPLICIT_DEF``.
+.. code-block:: text
+
+  def ReplaceTemp : GICombineRule<
+    (defs root:$a),
+    (match    (G_BUILD_VECTOR $tmp, $x, $y),
+              (G_UNMERGE_VALUES $a, $b, $tmp)),
+    (apply  (G_UNMERGE_VALUES $a, i32:$new, $y),
+            (GIReplaceReg $b, $new))>
+
+Common Pattern #2: Erasing a Def-less Root
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If we simply want to erase a def-less match root, we can use the
+``GIEraseRoot`` builtin.
 
 .. code-block:: text
 
   def Foo : GICombineRule<
-    (defs root:$dst),
-    (match (G_FOO $tmp, $src), (G_BAR $dst, $tmp)),
-    (apply (G_IMPLICIT_DEF $dst))>;
-
-If the instruction has no definition, like ``G_STORE``, we cannot use
-an instruction pattern in 'apply' - C++ has to be used.
+    (defs root:$mi),
+    (match (G_STORE $a, $b):$mi),
+    (apply (GIEraseRoot))>;
 
 Common Pattern #3: Emitting a Constant Value
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -211,8 +337,8 @@ Common Pattern #3: Emitting a Constant Value
 When an immediate operand appears in an 'apply' pattern, the behavior
 depends on whether it's typed or not.
 
-* If the immediate is typed, a ``G_CONSTANT`` is implicitly emitted
-  (= a register operand is added to the instruction).
+* If the immediate is typed, ``MachineIRBuilder::buildConstant`` is used
+  to create a ``G_CONSTANT``. A ``G_BUILD_VECTOR`` will be used for vectors.
 * If the immediate is untyped, a simple immediate is added
   (``MachineInstrBuilder::addImm``).
 

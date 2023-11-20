@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace mlir {
 namespace memref {
@@ -53,7 +54,7 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
   unsigned sourceRank = sizes.size();
   assert(sizes.size() == strides.size() &&
          "expected as many sizes as strides for a memref");
-  SmallVector indicesVec = llvm::to_vector(indices);
+  SmallVector<OpFoldResult> indicesVec = llvm::to_vector(indices);
   if (indices.empty())
     indicesVec.resize(sourceRank, builder.getIndexAttr(0));
   assert(indicesVec.size() == strides.size() &&
@@ -102,7 +103,7 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
                                  ArrayRef<OpFoldResult> sizes) {
   SmallVector<OpFoldResult> strides(sizes.size());
-  if (sizes.size() > 0) {
+  if (!sizes.empty()) {
     strides.back() = builder.getIndexAttr(1);
     AffineExpr s0, s1;
     bindSymbols(builder.getContext(), s0, s1);
@@ -118,6 +119,40 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
       getLinearizedMemRefOffsetAndSize(builder, loc, srcBits, dstBits, offset,
                                        sizes, strides);
   return linearizedMemRefInfo;
+}
+
+/// Returns true if all the uses of op are not read/load.
+/// There can be SubviewOp users as long as all its users are also
+/// StoreOp/transfer_write. If return true it also fills out the uses, if it
+/// returns false uses is unchanged.
+static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
+  std::vector<Operation *> opUses;
+  for (OpOperand &use : op->getUses()) {
+    Operation *useOp = use.getOwner();
+    if (isa<memref::DeallocOp>(useOp) ||
+        (useOp->getNumResults() == 0 && useOp->getNumRegions() == 0 &&
+         !mlir::hasEffect<MemoryEffects::Read>(useOp)) ||
+        (isa<memref::SubViewOp>(useOp) && resultIsNotRead(useOp, opUses))) {
+      opUses.push_back(useOp);
+      continue;
+    }
+    return false;
+  }
+  uses.insert(uses.end(), opUses.begin(), opUses.end());
+  return true;
+}
+
+void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp) {
+  std::vector<Operation *> opToErase;
+  parentOp->walk([&](memref::AllocOp op) {
+    std::vector<Operation *> candidates;
+    if (resultIsNotRead(op, candidates)) {
+      opToErase.insert(opToErase.end(), candidates.begin(), candidates.end());
+      opToErase.push_back(op.getOperation());
+    }
+  });
+  for (Operation *op : opToErase)
+    rewriter.eraseOp(op);
 }
 
 } // namespace memref

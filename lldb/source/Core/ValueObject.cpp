@@ -17,6 +17,7 @@
 #include "lldb/Core/ValueObjectDynamicValue.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
+#include "lldb/Core/ValueObjectVTable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -218,10 +219,8 @@ bool ValueObject::UpdateFormatsIfNeeded() {
     SetValueFormat(DataVisualization::GetFormat(*this, eNoDynamicValues));
     SetSummaryFormat(
         DataVisualization::GetSummaryFormat(*this, GetDynamicValueType()));
-#if LLDB_ENABLE_PYTHON
     SetSyntheticChildren(
         DataVisualization::GetSyntheticChildren(*this, GetDynamicValueType()));
-#endif
   }
 
   return any_change;
@@ -336,7 +335,7 @@ bool ValueObject::ResolveValue(Scalar &scalar) {
   {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     Value tmp_value(m_value);
-    scalar = tmp_value.ResolveValue(&exe_ctx);
+    scalar = tmp_value.ResolveValue(&exe_ctx, GetModule().get());
     if (scalar.IsValid()) {
       const uint32_t bitfield_bit_size = GetBitfieldBitSize();
       if (bitfield_bit_size)
@@ -1153,7 +1152,7 @@ bool ValueObject::DumpPrintableRepresentation(
     Stream &s, ValueObjectRepresentationStyle val_obj_display,
     Format custom_format, PrintableRepresentationSpecialCases special,
     bool do_dump_error) {
-    
+
   // If the ValueObject has an error, we might end up dumping the type, which
   // is useful, but if we don't even have a type, then don't examine the object
   // further as that's not meaningful, only the error is.
@@ -2595,34 +2594,30 @@ ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {
 
 ValueObjectSP ValueObject::GetQualifiedRepresentationIfAvailable(
     lldb::DynamicValueType dynValue, bool synthValue) {
-  ValueObjectSP result_sp(GetSP());
-
+  ValueObjectSP result_sp;
   switch (dynValue) {
   case lldb::eDynamicCanRunTarget:
   case lldb::eDynamicDontRunTarget: {
-    if (!result_sp->IsDynamic()) {
-      if (result_sp->GetDynamicValue(dynValue))
-        result_sp = result_sp->GetDynamicValue(dynValue);
-    }
+    if (!IsDynamic())
+      result_sp = GetDynamicValue(dynValue);
   } break;
   case lldb::eNoDynamicValues: {
-    if (result_sp->IsDynamic()) {
-      if (result_sp->GetStaticValue())
-        result_sp = result_sp->GetStaticValue();
-    }
+    if (IsDynamic())
+      result_sp = GetStaticValue();
   } break;
   }
+  if (!result_sp)
+    result_sp = GetSP();
+  assert(result_sp);
 
-  if (synthValue) {
-    if (!result_sp->IsSynthetic()) {
-      if (result_sp->GetSyntheticValue())
-        result_sp = result_sp->GetSyntheticValue();
-    }
-  } else {
-    if (result_sp->IsSynthetic()) {
-      if (result_sp->GetNonSyntheticValue())
-        result_sp = result_sp->GetNonSyntheticValue();
-    }
+  bool is_synthetic = result_sp->IsSynthetic();
+  if (synthValue && !is_synthetic) {
+    if (auto synth_sp = result_sp->GetSyntheticValue())
+      return synth_sp;
+  }
+  if (!synthValue && is_synthetic) {
+    if (auto non_synth_sp = result_sp->GetNonSyntheticValue())
+      return non_synth_sp;
   }
 
   return result_sp;
@@ -2766,15 +2761,15 @@ ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
 
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   // Only allow casts if the original type is equal or larger than the cast
-  // type.  We don't know how to fetch more data for all the ConstResult types, 
+  // type.  We don't know how to fetch more data for all the ConstResult types,
   // so we can't guarantee this will work:
   Status error;
   CompilerType my_type = GetCompilerType();
 
-  ExecutionContextScope *exe_scope 
+  ExecutionContextScope *exe_scope
       = ExecutionContext(GetExecutionContextRef())
           .GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope) 
+  if (compiler_type.GetByteSize(exe_scope)
       <= GetCompilerType().GetByteSize(exe_scope)) {
         return DoCast(compiler_type);
   }
@@ -3156,4 +3151,8 @@ ValueObjectSP ValueObject::Persist() {
   persistent_var_sp->m_flags |= ExpressionVariable::EVIsProgramReference;
 
   return persistent_var_sp->GetValueObject();
+}
+
+lldb::ValueObjectSP ValueObject::GetVTable() {
+  return ValueObjectVTable::Create(*this);
 }

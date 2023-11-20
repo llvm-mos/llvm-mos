@@ -424,6 +424,18 @@ Builtin Macros
   "UTF-16" or "UTF-32" (but may change in the future if the
   ``-fwide-exec-charset="Encoding-Name"`` option is implemented.)
 
+Implementation-defined keywords
+===============================
+
+__datasizeof
+------------
+
+``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
+type ignoring tail padding.
+
+..
+  FIXME: This should list all the keyword extensions
+
 .. _langext-vectors:
 
 Vectors and Extended Vectors
@@ -618,6 +630,14 @@ Let ``T`` be one of the following types:
 * a vector type.
 
 For scalar types, consider the operation applied to a vector with a single element.
+
+*Vector Size*
+To determine the number of elements in a vector, use ``__builtin_vectorelements()``.
+For fixed-sized vectors, e.g., defined via ``__attribute__((vector_size(N)))`` or ARM
+NEON's vector types (e.g., ``uint16x8_t``), this returns the constant number of
+elements at compile-time. For scalable vectors, e.g., SVE or RISC-V V, the number of
+elements is not known at compile-time and is determined at runtime. This builtin can
+be used, e.g., to increment the loop-counter in vector-type agnostic loops.
 
 *Elementwise Builtins*
 
@@ -1621,6 +1641,10 @@ The following type trait primitives are supported by Clang. Those traits marked
   materialized temporary object. If ``T`` is not a reference type the result
   is false. Note this trait will also return false when the initialization of
   ``T`` from ``U`` is ill-formed.
+  Deprecated, use ``__reference_constructs_from_temporary``.
+* ``__reference_constructs_from_temporary(T, U)`` (C++)
+  Returns true if a reference ``T`` can be constructed from a temporary of type
+  a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
 
 In addition, the following expression traits are supported:
@@ -2410,7 +2434,7 @@ this always needs to be called to grow the table.
 It takes three arguments. The first argument is the WebAssembly table
 to grow. The second argument is the reference typed value to store in
 the new table entries (the initialization value), and the third argument
-is the amound to grow the table by. It returns the previous table size
+is the amount to grow the table by. It returns the previous table size
 or -1. It will return -1 if not enough space could be allocated.
 
 .. code-block:: c++
@@ -3163,7 +3187,7 @@ avoid cache misses when the developer has a good understanding of which data
 are going to be used next. ``addr`` is the address that needs to be brought into
 the cache. ``rw`` indicates the expected access mode: ``0`` for *read* and ``1``
 for *write*. In case of *read write* access, ``1`` is to be used. ``locality``
-indicates the expected persistance of data in cache, from ``0`` which means that
+indicates the expected persistence of data in cache, from ``0`` which means that
 data can be discarded from cache after its next use to ``3`` which means that
 data is going to be reused a lot once in cache. ``1`` and ``2`` provide
 intermediate behavior between these two extremes.
@@ -3516,18 +3540,15 @@ Floating point builtins
 ``__builtin_isfpclass``
 -----------------------
 
-``__builtin_isfpclass`` is used to test if the specified floating-point value
-falls into one of the specified floating-point classes.
+``__builtin_isfpclass`` is used to test if the specified floating-point values
+fall into one of the specified floating-point classes.
 
 **Syntax**:
 
 .. code-block:: c++
 
     int __builtin_isfpclass(fp_type expr, int mask)
-
-``fp_type`` is a floating-point type supported by the target. ``mask`` is an
-integer constant expression, where each bit represents floating-point class to
-test. The function returns boolean value.
+    int_vector __builtin_isfpclass(fp_vector expr, int mask)
 
 **Example of use**:
 
@@ -3543,8 +3564,9 @@ test. The function returns boolean value.
 The ``__builtin_isfpclass()`` builtin is a generalization of functions ``isnan``,
 ``isinf``, ``isfinite`` and some others defined by the C standard. It tests if
 the floating-point value, specified by the first argument, falls into any of data
-classes, specified by the second argument. The later is a bitmask, in which each
-data class is represented by a bit using the encoding:
+classes, specified by the second argument. The latter is an integer constant
+bitmask expression, in which each data class is represented by a bit
+using the encoding:
 
 ========== =================== ======================
 Mask value Data class          Macro
@@ -3571,6 +3593,14 @@ these data classes. Using suitable mask value, the function can implement any of
 the standard classification functions, for example, ``__builtin_isfpclass(x, 3)``
 is identical to ``isnan``,``__builtin_isfpclass(x, 504)`` - to ``isfinite``
 and so on.
+
+If the first argument is a vector, the function is equivalent to the set of
+scalar calls of ``__builtin_isfpclass`` applied to the input elementwise.
+
+The result of ``__builtin_isfpclass`` is a boolean value, if the first argument
+is a scalar, or an integer vector with the same element count as the first
+argument. The element type in this vector has the same bit length as the
+element of the the first argument type.
 
 This function never raises floating-point exceptions and does not canonicalize
 its input. The floating-point argument is not promoted, its data class is
@@ -4702,7 +4732,12 @@ settings can be pushed or popped.
 When ``pragma float_control(precise, on)`` is enabled, the section of code
 governed by the pragma uses precise floating point semantics, effectively
 ``-ffast-math`` is disabled and ``-ffp-contract=on``
-(fused multiply add) is enabled.
+(fused multiply add) is enabled. This pragma enables ``-fmath-errno``.
+
+When ``pragma float_control(precise, off)`` is enabled, unsafe-floating point
+optimizations are enabled in the section of code governed by the pragma.
+Effectively ``-ffast-math`` is enabled and ``-ffp-contract=fast``. This pragma
+disables ``-fmath-errno``.
 
 When ``pragma float_control(except, on)`` is enabled, the section of code
 governed by the pragma behaves as though the command-line option

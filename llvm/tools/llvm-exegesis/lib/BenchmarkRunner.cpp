@@ -209,7 +209,8 @@ private:
     ssize_t BytesWritten = sendmsg(SocketFD, &Message, 0);
 
     if (BytesWritten < 0)
-      return make_error<Failure>("Failed to write FD to socket");
+      return make_error<Failure>("Failed to write FD to socket: " +
+                                 Twine(strerror(errno)));
 
     return Error::success();
   }
@@ -221,10 +222,11 @@ private:
     Message.msg_control = ControlBuffer;
     Message.msg_controllen = sizeof(ControlBuffer);
 
-    size_t BytesRead = recvmsg(SocketFD, &Message, 0);
+    ssize_t BytesRead = recvmsg(SocketFD, &Message, 0);
 
     if (BytesRead < 0)
-      return make_error<Failure>("Failed to read FD from socket");
+      return make_error<Failure>("Failed to read FD from socket: " +
+                                 Twine(strerror(errno)));
 
     struct cmsghdr *ControlMessage = CMSG_FIRSTHDR(&Message);
 
@@ -246,7 +248,8 @@ private:
     if (PipeSuccessOrErr != 0) {
       return make_error<Failure>(
           "Failed to create a pipe for interprocess communication between "
-          "llvm-exegesis and the benchmarking subprocess");
+          "llvm-exegesis and the benchmarking subprocess: " +
+          Twine(strerror(errno)));
     }
 
     SubprocessMemory SPMemory;
@@ -260,6 +263,12 @@ private:
       return AddMemDefError;
 
     pid_t ParentOrChildPID = fork();
+
+    if (ParentOrChildPID == -1) {
+      return make_error<Failure>("Failed to create child process: " +
+                                 Twine(strerror(errno)));
+    }
+
     if (ParentOrChildPID == 0) {
       // We are in the child process, close the write end of the pipe
       close(PipeFiles[1]);
@@ -283,13 +292,13 @@ private:
 
     close(PipeFiles[0]);
 
-    int CounterFileDescriptor = Counter->getFileDescriptor();
-    Error SendError =
-        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
-
-    if (SendError)
-      return SendError;
-
+    // Make sure to attach to the process (and wait for the sigstop to be
+    // delivered and for the process to continue) before we write to the counter
+    // file descriptor. Attaching to the process before writing to the socket
+    // ensures that the subprocess at most has blocked on the read call. If we
+    // attach afterwards, the subprocess might exit before we get to the attach
+    // call due to effects like scheduler contention, introducing transient
+    // failures.
     if (ptrace(PTRACE_ATTACH, ParentOrChildPID, NULL, NULL) != 0)
       return make_error<Failure>("Failed to attach to the child process: " +
                                  Twine(strerror(errno)));
@@ -304,6 +313,13 @@ private:
       return make_error<Failure>(
           "Failed to continue execution of the child process: " +
           Twine(strerror(errno)));
+
+    int CounterFileDescriptor = Counter->getFileDescriptor();
+    Error SendError =
+        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
+
+    if (SendError)
+      return SendError;
 
     int ChildStatus;
     if (wait(&ChildStatus) == -1) {

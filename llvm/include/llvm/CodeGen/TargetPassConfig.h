@@ -131,6 +131,11 @@ protected:
   /// Default setting for -enable-tail-merge on this target.
   bool EnableTailMerge = true;
 
+  /// Enable sinking of instructions in MachineSink where a computation can be
+  /// folded into the addressing mode of a memory load/store instruction or
+  /// replace a copy.
+  bool EnableSinkAndFold = false;
+
   /// Require processing of functions such that callees are generated before
   /// callers.
   bool RequireCodeGenSCCOrder = false;
@@ -156,7 +161,7 @@ public:
   //
   void setInitialized() { Initialized = true; }
 
-  CodeGenOpt::Level getOptLevel() const;
+  CodeGenOptLevel getOptLevel() const;
 
   /// Returns true if one of the `-start-after`, `-start-before`, `-stop-after`
   /// or `-stop-before` options is set.
@@ -176,6 +181,9 @@ public:
 
   bool getEnableTailMerge() const { return EnableTailMerge; }
   void setEnableTailMerge(bool Enable) { setOpt(EnableTailMerge, Enable); }
+
+  bool getEnableSinkAndFold() const { return EnableSinkAndFold; }
+  void setEnableSinkAndFold(bool Enable) { setOpt(EnableSinkAndFold, Enable); }
 
   bool requiresCodeGenSCCOrder() const { return RequireCodeGenSCCOrder; }
   void setRequiresCodeGenSCCOrder(bool Enable = true) {
@@ -406,7 +414,7 @@ protected:
   /// all virtual registers.
   ///
   /// Note if the target overloads addRegAssignAndRewriteOptimized, this may not
-  /// be honored. This is also not generally used for the the fast variant,
+  /// be honored. This is also not generally used for the fast variant,
   /// where the allocation and rewriting are done in one pass.
   virtual bool addPreRewrite() {
     return false;

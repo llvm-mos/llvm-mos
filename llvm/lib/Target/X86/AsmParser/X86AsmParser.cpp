@@ -106,6 +106,9 @@ class X86AsmParser : public MCTargetAsmParser {
 
   DispEncoding ForcedDispEncoding = DispEncoding_Default;
 
+  // Does this instruction use apx extended register?
+  bool UseApxExtendedReg = false;
+
 private:
   SMLoc consumeToken() {
     MCAsmParser &Parser = getParser();
@@ -1272,10 +1275,9 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
@@ -1410,6 +1412,9 @@ bool X86AsmParser::MatchRegisterByName(MCRegister &RegNo, StringRef RegName,
                    SMRange(StartLoc, EndLoc));
     }
   }
+
+  if (X86II::isApxExtendedReg(RegNo))
+    UseApxExtendedReg = true;
 
   // If this is "db[0-15]", match it as an alias
   // for dr[0-15].
@@ -1576,23 +1581,21 @@ bool X86AsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
   return false;
 }
 
-bool X86AsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool X86AsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
-  return ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/false);
+  return ParseRegister(Reg, StartLoc, EndLoc, /*RestoreOnFailure=*/false);
 }
 
-OperandMatchResultTy X86AsmParser::tryParseRegister(MCRegister &RegNo,
-                                                    SMLoc &StartLoc,
-                                                    SMLoc &EndLoc) {
-  bool Result =
-      ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/true);
+ParseStatus X86AsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                           SMLoc &EndLoc) {
+  bool Result = ParseRegister(Reg, StartLoc, EndLoc, /*RestoreOnFailure=*/true);
   bool PendingErrors = getParser().hasPendingError();
   getParser().clearPendingErrors();
   if (PendingErrors)
-    return MatchOperand_ParseFail;
+    return ParseStatus::Failure;
   if (Result)
-    return MatchOperand_NoMatch;
-  return MatchOperand_Success;
+    return ParseStatus::NoMatch;
+  return ParseStatus::Success;
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::DefaultMemSIOperand(SMLoc Loc) {
@@ -3087,6 +3090,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // Reset the forced VEX encoding.
   ForcedVEXEncoding = VEXEncoding_Default;
   ForcedDispEncoding = DispEncoding_Default;
+  UseApxExtendedReg = false;
 
   // Parse pseudo prefixes.
   while (true) {
@@ -3956,6 +3960,9 @@ static unsigned getPrefixes(OperandVector &Operands) {
 unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &MCID = MII.get(Opc);
+
+  if (UseApxExtendedReg && !X86II::canUseApxExtendedReg(MCID))
+    return Match_Unsupported;
 
   if (ForcedVEXEncoding == VEXEncoding_EVEX &&
       (MCID.TSFlags & X86II::EncodingMask) != X86II::EVEX)

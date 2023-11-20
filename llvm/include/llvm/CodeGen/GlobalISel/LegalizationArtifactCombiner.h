@@ -36,6 +36,7 @@ class LegalizationArtifactCombiner {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
+  GISelKnownBits *KB;
 
   static bool isArtifactCast(unsigned Opc) {
     switch (Opc) {
@@ -51,8 +52,9 @@ class LegalizationArtifactCombiner {
 
 public:
   LegalizationArtifactCombiner(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                               const LegalizerInfo &LI)
-      : Builder(B), MRI(MRI), LI(LI) {}
+                               const LegalizerInfo &LI,
+                               GISelKnownBits *KB = nullptr)
+      : Builder(B), MRI(MRI), LI(LI), KB(KB) {}
 
   bool tryCombineAnyExt(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts,
@@ -135,13 +137,25 @@ public:
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       LLT SrcTy = MRI.getType(SrcReg);
       APInt MaskVal = APInt::getAllOnes(SrcTy.getScalarSizeInBits());
-      auto Mask = Builder.buildConstant(
-        DstTy, MaskVal.zext(DstTy.getScalarSizeInBits()));
       if (SextSrc && (DstTy != MRI.getType(SextSrc)))
         SextSrc = Builder.buildSExtOrTrunc(DstTy, SextSrc).getReg(0);
       if (TruncSrc && (DstTy != MRI.getType(TruncSrc)))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
-      Builder.buildAnd(DstReg, SextSrc ? SextSrc : TruncSrc, Mask);
+      APInt ExtMaskVal = MaskVal.zext(DstTy.getScalarSizeInBits());
+      Register AndSrc = SextSrc ? SextSrc : TruncSrc;
+      // Elide G_AND and mask constant if possible.
+      // The G_AND would also be removed by the post-legalize redundant_and
+      // combine, but in this very common case, eliding early and regardless of
+      // OptLevel results in significant compile-time and O0 code-size
+      // improvements. Inserting unnecessary instructions between boolean defs
+      // and uses hinders a lot of folding during ISel.
+      if (KB && (KB->getKnownZeroes(AndSrc) | ExtMaskVal).isAllOnes()) {
+        replaceRegOrBuildCopy(DstReg, AndSrc, MRI, Builder, UpdatedDefs,
+                              Observer);
+      } else {
+        auto Mask = Builder.buildConstant(DstTy, ExtMaskVal);
+        Builder.buildAnd(DstReg, AndSrc, Mask);
+      }
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
@@ -971,17 +985,21 @@ public:
     // same sequence. Search for elements using findValueFromDefImpl.
     bool isSequenceFromUnmerge(GMergeLikeInstr &MI, unsigned MergeStartIdx,
                                GUnmerge *Unmerge, unsigned UnmergeIdxStart,
-                               unsigned NumElts, unsigned EltSize) {
+                               unsigned NumElts, unsigned EltSize,
+                               bool AllowUndef) {
       assert(MergeStartIdx + NumElts <= MI.getNumSources());
       for (unsigned i = MergeStartIdx; i < MergeStartIdx + NumElts; ++i) {
         unsigned EltUnmergeIdx;
         GUnmerge *EltUnmerge = findUnmergeThatDefinesReg(
             MI.getSourceReg(i), EltSize, EltUnmergeIdx);
         // Check if source i comes from the same Unmerge.
-        if (!EltUnmerge || EltUnmerge != Unmerge)
-          return false;
-        // Check that source i's def has same index in sequence in Unmerge.
-        if (i - MergeStartIdx != EltUnmergeIdx - UnmergeIdxStart)
+        if (EltUnmerge == Unmerge) {
+          // Check that source i's def has same index in sequence in Unmerge.
+          if (i - MergeStartIdx != EltUnmergeIdx - UnmergeIdxStart)
+            return false;
+        } else if (!AllowUndef ||
+                   MRI.getVRegDef(MI.getSourceReg(i))->getOpcode() !=
+                       TargetOpcode::G_IMPLICIT_DEF)
           return false;
       }
       return true;
@@ -1015,8 +1033,10 @@ public:
       //
       // %Dst:_(Ty) = COPY %UnmergeSrc:_(Ty)
       if ((DstTy == UnmergeSrcTy) && (Elt0UnmergeIdx == 0)) {
-        if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize))
+        if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize,
+                                   /*AllowUndef=*/DstTy.isVector()))
           return false;
+
         replaceRegOrBuildCopy(Dst, UnmergeSrc, MRI, MIB, UpdatedDefs, Observer);
         DeadInsts.push_back(&MI);
         return true;
@@ -1036,7 +1056,7 @@ public:
           (Elt0UnmergeIdx % NumMIElts == 0) &&
           getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy) {
         if (!isSequenceFromUnmerge(MI, 0, Unmerge, Elt0UnmergeIdx, NumMIElts,
-                                   EltSize))
+                                   EltSize, false))
           return false;
         MIB.setInstrAndDebugLoc(MI);
         auto NewUnmerge = MIB.buildUnmerge(DstTy, Unmerge->getSourceReg());
@@ -1069,7 +1089,8 @@ public:
           if ((!UnmergeI) || (UnmergeI->getNumDefs() != NumElts) ||
               (EltUnmergeIdx != 0))
             return false;
-          if (!isSequenceFromUnmerge(MI, i, UnmergeI, 0, NumElts, EltSize))
+          if (!isSequenceFromUnmerge(MI, i, UnmergeI, 0, NumElts, EltSize,
+                                     false))
             return false;
           ConcatSources.push_back(UnmergeI->getSourceReg());
         }

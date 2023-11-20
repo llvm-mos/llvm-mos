@@ -17,9 +17,12 @@
 ! HELP-NEXT: -###                    Print (but do not run) the commands to run for this compilation
 ! HELP-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! HELP-NEXT: -dumpmachine            Display the compiler's target processor
+! HELP-NEXT: -dumpversion            Display the version of the compiler
 ! HELP-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! HELP-NEXT: -E                      Only run the preprocessor
+! HELP-NEXT: -falias-analysis        Pass alias information on to LLVM (default when optimizing for speed)
 ! HELP-NEXT: -falternative-parameter-statement
 ! HELP-NEXT:                         Enable the old style PARAMETER statement
 ! HELP-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
@@ -39,6 +42,7 @@
 ! HELP-NEXT: -fhonor-nans            Specify that floating-point optimizations are not allowed that assume arguments and results are not NANs.
 ! HELP-NEXT: -fimplicit-none         No implicit typing allowed unless overridden by IMPLICIT statements
 ! HELP-NEXT: -finput-charset=<value> Specify the default character set for source files
+! HELP-NEXT: -fintegrated-as         Enable the integrated assembler
 ! HELP-NEXT: -fintrinsic-modules-path <dir>
 ! HELP-NEXT:                         Specify where to find the compiled intrinsic modules
 ! HELP-NEXT: -flarge-sizes           Use INTEGER(KIND=8) for the result type in size-related intrinsics
@@ -47,6 +51,9 @@
 ! HELP-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! HELP-NEXT: -flto=<value>           Set LTO mode
 ! HELP-NEXT: -flto                   Enable LTO in 'full' mode
+! HELP-NEXT: -fms-runtime-lib=<value>
+! HELP-NEXT:                         Select Windows run-time library
+! HELP-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! HELP-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
@@ -62,7 +69,7 @@
 ! HELP-NEXT: -fopenmp-targets=<value>
 ! HELP-NEXT:                         Specify comma-separated list of triples OpenMP offloading targets to be supported
 ! HELP-NEXT: -fopenmp-version=<value>
-! HELP-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
+! HELP-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
 ! HELP-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! HELP-NEXT: -foptimization-record-file=<file>
 ! HELP-NEXT:                         Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.
@@ -72,6 +79,8 @@
 ! HELP-NEXT: -fppc-native-vector-element-order
 ! HELP-NEXT:                         Specifies PowerPC native vector element order (default)
 ! HELP-NEXT: -freciprocal-math       Allow division operations to be reassociated
+! HELP-NEXT: -fropi                  Generate read-only position independent code (ARM only)
+! HELP-NEXT: -frwpi                  Generate read-write position independent code (ARM only)
 ! HELP-NEXT: -fsave-optimization-record=<format>
 ! HELP-NEXT:                         Generate an optimization record file in a specific format
 ! HELP-NEXT: -fsave-optimization-record
@@ -79,6 +88,7 @@
 ! HELP-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -funderscoring          Appends one trailing underscore to external names
+! HELP-NEXT: -fveclib=<value>        Use the given vector functions library
 ! HELP-NEXT: -fversion-loops-for-stride
 ! HELP-NEXT:                         Create unit-strided versions of loops
 ! HELP-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
@@ -88,12 +98,15 @@
 ! HELP-NEXT: --help-hidden           Display help for hidden options
 ! HELP-NEXT: -help                   Display available options
 ! HELP-NEXT: -I <dir>                Add directory to the end of the list of include search paths
+! HELP-NEXT: -L <dir>                Add directory to library search path
 ! HELP-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! HELP-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! HELP-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! HELP-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! HELP-NEXT: -msve-vector-bits=<value>
+! HELP-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! HELP-NEXT: --no-offload-arch=<value>
 ! HELP-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! HELP-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
@@ -117,6 +130,8 @@
 ! HELP-NEXT: --target=<value>        Generate code for the given target
 ! HELP-NEXT: -U <macro>              Undefine macro <macro>
 ! HELP-NEXT: --version               Print version information
+! HELP-NEXT: -v                      Show commands to run and use verbose output
+! HELP-NEXT: -Wl,<arg>               Pass the comma separated arguments in <arg> to the linker
 ! HELP-NEXT: -W<warning>             Enable the specified warning
 ! HELP-NEXT: -Xflang <arg>           Pass <arg> to the flang compiler
 ! HELP-NEXT: -x <language>           Treat subsequent input files as having type <language>
@@ -126,6 +141,7 @@
 ! HELP-FC1-EMPTY:
 ! HELP-FC1-NEXT:OPTIONS:
 ! HELP-FC1-NEXT: -cpp                    Enable predefined and command line preprocessor macros
+! HELP-FC1-NEXT: --dependent-lib=<value> Add dependent library
 ! HELP-FC1-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-fir               Build the parse tree, then lower it to FIR
 ! HELP-FC1-NEXT: -emit-hlfir             Build the parse tree, then lower it to HLFIR
@@ -133,6 +149,7 @@
 ! HELP-FC1-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! HELP-FC1-NEXT: -emit-obj               Emit native object files
 ! HELP-FC1-NEXT: -E                      Only run the preprocessor
+! HELP-FC1-NEXT: -falias-analysis        Pass alias information on to LLVM (default when optimizing for speed)
 ! HELP-FC1-NEXT: -falternative-parameter-statement
 ! HELP-FC1-NEXT:                         Enable the old style PARAMETER statement
 ! HELP-FC1-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
@@ -179,6 +196,7 @@
 ! HELP-FC1-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! HELP-FC1-NEXT: -flto=<value>           Set LTO mode
 ! HELP-FC1-NEXT: -flto                   Enable LTO in 'full' mode
+! HELP-FC1-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! HELP-FC1-NEXT: -fno-analyzed-objects-for-unparse
 ! HELP-FC1-NEXT:                         Do not use the analyzed objects when unparsing
 ! HELP-FC1-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
@@ -197,7 +215,7 @@
 ! HELP-FC1-NEXT:                         Generate code only for an OpenMP target device.
 ! HELP-FC1-NEXT: -fopenmp-target-debug   Enable debugging in the OpenMP offloading device RTL
 ! HELP-FC1-NEXT: -fopenmp-version=<value>
-! HELP-FC1-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
+! HELP-FC1-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
 ! HELP-FC1-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-FC1-NEXT: -fppc-native-vector-element-order
@@ -206,6 +224,7 @@
 ! HELP-FC1-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-FC1-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! HELP-FC1-NEXT: -funderscoring          Appends one trailing underscore to external names
+! HELP-FC1-NEXT: -fveclib=<value>        Use the given vector functions library
 ! HELP-FC1-NEXT: -fversion-loops-for-stride
 ! HELP-FC1-NEXT:                         Create unit-strided versions of loops
 ! HELP-FC1-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
@@ -222,6 +241,8 @@
 ! HELP-FC1-NEXT: -mreassociate           Allow reassociation transformations for floating-point instructions
 ! HELP-FC1-NEXT: -mrelocation-model <value>
 ! HELP-FC1-NEXT:                         The relocation model to use
+! HELP-FC1-NEXT: -mvscale-max=<value>    Specify the vscale maximum. Defaults to the vector length agnostic value of "0". (AArch64/RISC-V only)
+! HELP-FC1-NEXT: -mvscale-min=<value>    Specify the vscale minimum. Defaults to "1". (AArch64/RISC-V only)
 ! HELP-FC1-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: -opt-record-file <value>
 ! HELP-FC1-NEXT:                         File name to use for YAML optimization record output

@@ -13,6 +13,7 @@
 #ifndef BOLT_CORE_BINARY_CONTEXT_H
 #define BOLT_CORE_BINARY_CONTEXT_H
 
+#include "bolt/Core/AddressMap.h"
 #include "bolt/Core/BinaryData.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
@@ -220,6 +221,9 @@ class BinaryContext {
 
   bool ContainsDwarf5{false};
   bool ContainsDwarfLegacy{false};
+
+  /// Mapping from input to output addresses.
+  std::optional<AddressMap> IOAddressMap;
 
   /// Preprocess DWO debug information.
   void preprocessDWODebugInfo();
@@ -676,6 +680,15 @@ public:
   /// the execution of the binary is completed.
   std::optional<uint64_t> FiniFunctionAddress;
 
+  /// DT_FINI.
+  std::optional<uint64_t> FiniAddress;
+
+  /// DT_FINI_ARRAY. Only used when DT_FINI is not set.
+  std::optional<uint64_t> FiniArrayAddress;
+
+  /// DT_FINI_ARRAYSZ. Only used when DT_FINI is not set.
+  std::optional<uint64_t> FiniArraySize;
+
   /// Page alignment used for code layout.
   uint64_t PageAlign{HugePageSize};
 
@@ -867,6 +880,15 @@ public:
     return nullptr;
   }
 
+  /// Retrieves a reference to ELF's _GLOBAL_OFFSET_TABLE_ symbol, which points
+  /// at GOT, or null if it is not present in the input binary symtab.
+  BinaryData *getGOTSymbol();
+
+  /// Checks if symbol name refers to ELF's _GLOBAL_OFFSET_TABLE_ symbol
+  bool isGOTSymbol(StringRef SymName) const {
+    return SymName == "_GLOBAL_OFFSET_TABLE_";
+  }
+
   /// Return true if \p SymbolName was generated internally and was not present
   /// in the input binary.
   bool isInternalSymbolName(const StringRef Name) {
@@ -928,7 +950,7 @@ public:
   bool registerFragment(BinaryFunction &TargetFunction,
                         BinaryFunction &Function) const;
 
-  /// Add unterprocedural reference for \p Function to \p Address
+  /// Add interprocedural reference for \p Function to \p Address
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1217,8 +1239,8 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
-    if (auto Size = MIB->getAnnotationWithDefault<uint32_t>(Inst, "Size"))
-      return Size;
+    if (std::optional<uint32_t> Size = MIB->getSize(Inst))
+      return *Size;
 
     if (!Emitter)
       Emitter = this->MCE.get();
@@ -1342,6 +1364,12 @@ public:
         /* IncrementalLinkerCompatible */ false,
         /* DWARFMustBeAtTheEnd */ false));
     return Streamer;
+  }
+
+  void setIOAddressMap(AddressMap Map) { IOAddressMap = std::move(Map); }
+  const AddressMap &getIOAddressMap() const {
+    assert(IOAddressMap && "Address map not set yet");
+    return *IOAddressMap;
   }
 };
 

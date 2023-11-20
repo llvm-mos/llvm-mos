@@ -51,7 +51,7 @@ export namespace std {
     using std::chrono::round;
 
     // [time.duration.io], duration I/O
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
     using std::chrono::operator<<;
 #endif
     // using std::chrono::from_stream;
@@ -112,8 +112,10 @@ export namespace std {
 
     using std::chrono::file_time;
 
+#ifndef _LIBCPP_HAS_NO_MONOTONIC_CLOCK
     // [time.clock.steady], class steady_clock
     using std::chrono::steady_clock;
+#endif
 
     // [time.clock.hires], class high_resolution_clock
     using std::chrono::high_resolution_clock;
@@ -188,21 +190,28 @@ export namespace std {
     using std::chrono::make12;
     using std::chrono::make24;
 
-#if 0
+#if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                              \
+    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+
+#  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     // [time.zone.db], time zone database
     using std::chrono::tzdb;
     using std::chrono::tzdb_list;
 
     // [time.zone.db.access], time zone database access
-    using std::chrono::current_zone;
+    // using std::chrono::current_zone;
     using std::chrono::get_tzdb;
     using std::chrono::get_tzdb_list;
-    using std::chrono::locate_zone;
+    // using std::chrono::locate_zone;
 
     // [time.zone.db.remote], remote time zone database support
     using std::chrono::reload_tzdb;
     using std::chrono::remote_version;
 
+#  endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
+         //    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+
+#  if 0
     // [time.zone.exception], exception classes
     using std::chrono::ambiguous_local_time;
     using std::chrono::nonexistent_local_time;
@@ -230,10 +239,13 @@ export namespace std {
 
     // [time.format], formatting
     using std::chrono::local_time_format;
-#endif
-  } // namespace chrono
+#  endif
+#endif // _LIBCPP_ENABLE_EXPERIMENTAL
+  }    // namespace chrono
 
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
   using std::formatter;
+#endif // _LIBCPP_HAS_NO_LOCALIZATION
 
   namespace chrono {
     // using std::chrono::parse;

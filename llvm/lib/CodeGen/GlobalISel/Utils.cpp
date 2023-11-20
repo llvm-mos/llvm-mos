@@ -780,6 +780,29 @@ std::optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode,
   return std::nullopt;
 }
 
+std::optional<APInt> llvm::ConstantFoldCastOp(unsigned Opcode, LLT DstTy,
+                                              const Register Op0,
+                                              const MachineRegisterInfo &MRI) {
+  std::optional<APInt> Val = getIConstantVRegVal(Op0, MRI);
+  if (!Val)
+    return Val;
+
+  const unsigned DstSize = DstTy.getScalarSizeInBits();
+
+  switch (Opcode) {
+  case TargetOpcode::G_SEXT:
+    return Val->sext(DstSize);
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT:
+    // TODO: DAG considers target preference when constant folding any_extend.
+    return Val->zext(DstSize);
+  default:
+    break;
+  }
+
+  llvm_unreachable("unexpected cast opcode to constant fold");
+}
+
 std::optional<APFloat>
 llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
                              const MachineRegisterInfo &MRI) {
@@ -1093,9 +1116,9 @@ std::optional<APInt>
 llvm::getIConstantSplatVal(const Register Reg, const MachineRegisterInfo &MRI) {
   if (auto SplatValAndReg =
           getAnyConstantSplat(Reg, MRI, /* AllowUndef */ false)) {
-    std::optional<ValueAndVReg> ValAndVReg =
-        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI);
-    return ValAndVReg->Value;
+    if (std::optional<ValueAndVReg> ValAndVReg =
+        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI))
+      return ValAndVReg->Value;
   }
 
   return std::nullopt;
@@ -1150,7 +1173,7 @@ llvm::getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
   if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
     return RegOrConstant(*Splat);
   auto Reg = MI.getOperand(1).getReg();
-  if (any_of(make_range(MI.operands_begin() + 2, MI.operands_end()),
+  if (any_of(drop_begin(MI.operands(), 2),
              [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
     return std::nullopt;
   return RegOrConstant(Reg);

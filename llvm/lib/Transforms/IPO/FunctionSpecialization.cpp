@@ -5,45 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This specialises functions with constant parameters. Constant parameters
-// like function pointers and constant globals are propagated to the callee by
-// specializing the function. The main benefit of this pass at the moment is
-// that indirect calls are transformed into direct calls, which provides inline
-// opportunities that the inliner would not have been able to achieve. That's
-// why function specialisation is run before the inliner in the optimisation
-// pipeline; that is by design. Otherwise, we would only benefit from constant
-// passing, which is a valid use-case too, but hasn't been explored much in
-// terms of performance uplifts, cost-model and compile-time impact.
-//
-// Current limitations:
-// - It does not yet handle integer ranges. We do support "literal constants",
-//   but that's off by default under an option.
-// - The cost-model could be further looked into (it mainly focuses on inlining
-//   benefits),
-//
-// Ideas:
-// - With a function specialization attribute for arguments, we could have
-//   a direct way to steer function specialization, avoiding the cost-model,
-//   and thus control compile-times / code-size.
-//
-// Todos:
-// - Specializing recursive functions relies on running the transformation a
-//   number of times, which is controlled by option
-//   `func-specialization-max-iters`. Thus, increasing this value and the
-//   number of iterations, will linearly increase the number of times recursive
-//   functions get specialized, see also the discussion in
-//   https://reviews.llvm.org/D106426 for details. Perhaps there is a
-//   compile-time friendlier way to control/limit the number of specialisations
-//   for recursive functions.
-// - Don't transform the function if function specialization does not trigger;
-//   the SCCPSolver may make IR changes.
-//
-// References:
-// - 2021 LLVM Dev Mtg “Introducing function specialisation, and can we enable
-//   it by default?”, https://www.youtube.com/watch?v=zJiCjeXgV5Q
-//
-//===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/FunctionSpecialization.h"
 #include "llvm/ADT/Statistic.h"
@@ -92,6 +53,10 @@ static cl::opt<unsigned> MinFunctionSize(
     "funcspec-min-function-size", cl::init(300), cl::Hidden, cl::desc(
     "Don't specialize functions that have less than this number of "
     "instructions"));
+
+static cl::opt<unsigned> MaxCodeSizeGrowth(
+    "funcspec-max-codesize-growth", cl::init(3), cl::Hidden, cl::desc(
+    "Maximum codesize growth allowed per function"));
 
 static cl::opt<unsigned> MinCodeSizeSavings(
     "funcspec-min-codesize-savings", cl::init(20), cl::Hidden, cl::desc(
@@ -237,7 +202,7 @@ Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) 
   CodeSize += TTI.getInstructionCost(User, TargetTransformInfo::TCK_CodeSize);
 
   uint64_t Weight = BFI.getBlockFreq(User->getParent()).getFrequency() /
-                    BFI.getEntryFreq();
+                    BFI.getEntryFreq().getFrequency();
 
   Cost Latency = Weight *
       TTI.getInstructionCost(User, TargetTransformInfo::TCK_Latency);
@@ -522,10 +487,7 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
 
       Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
                                      GlobalValue::InternalLinkage, ConstVal,
-                                     "funcspec.arg");
-      if (ArgOpType != ConstVal->getType())
-        GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOpType);
-
+                                     "specialized.arg." + Twine(++NGlobals));
       Call->setArgOperand(Idx, GV);
     }
   }
@@ -754,9 +716,10 @@ void FunctionSpecializer::removeDeadFunctions() {
 
 /// Clone the function \p F and remove the ssa_copy intrinsics added by
 /// the SCCPSolver in the cloned version.
-static Function *cloneCandidateFunction(Function *F) {
+static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   ValueToValueMapTy Mappings;
   Function *Clone = CloneFunction(F, Mappings);
+  Clone->setName(F->getName() + ".specialized." + Twine(NSpecs));
   removeSSACopy(*Clone);
   return Clone;
 }
@@ -841,7 +804,10 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                         << B.CodeSize << ", Latency = " << B.Latency
                         << ", Inlining = " << Score << "}\n");
 
-      auto IsProfitable = [&FuncSize](Bonus &B, unsigned Score) -> bool {
+      FunctionGrowth[F] += FuncSize - B.CodeSize;
+
+      auto IsProfitable = [](Bonus &B, unsigned Score, unsigned FuncSize,
+                             unsigned FuncGrowth) -> bool {
         // No check required.
         if (ForceSpecialization)
           return true;
@@ -854,11 +820,14 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
         // Minimum latency savings.
         if (B.Latency < MinLatencySavings * FuncSize / 100)
           return false;
+        // Maximum codesize growth.
+        if (FuncGrowth / FuncSize > MaxCodeSizeGrowth)
+          return false;
         return true;
       };
 
       // Discard unprofitable specialisations.
-      if (!IsProfitable(B, Score))
+      if (!IsProfitable(B, Score, FuncSize, FunctionGrowth[F]))
         continue;
 
       // Create a new specialisation entry.
@@ -908,7 +877,7 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
 
 Function *FunctionSpecializer::createSpecialization(Function *F,
                                                     const SpecSig &S) {
-  Function *Clone = cloneCandidateFunction(F);
+  Function *Clone = cloneCandidateFunction(F, Specializations.size() + 1);
 
   // The original function does not neccessarily have internal linkage, but the
   // clone must.

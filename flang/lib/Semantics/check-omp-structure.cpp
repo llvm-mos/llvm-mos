@@ -10,7 +10,6 @@
 #include "definable.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
-#include <algorithm>
 
 namespace Fortran::semantics {
 
@@ -203,8 +202,8 @@ void OmpStructureChecker::CheckMultListItems() {
                 "ALIGNED clause"_err_en_US,
                 name->ToString());
           } else if (!(IsBuiltinCPtr(*(name->symbol)) ||
-                         IsAllocatableOrPointer(
-                             (name->symbol->GetUltimate())))) {
+                         IsAllocatableOrObjectPointer(
+                             &name->symbol->GetUltimate()))) {
             context_.Say(itr->second->source,
                 "'%s' in ALIGNED clause must be of type C_PTR, POINTER or "
                 "ALLOCATABLE"_err_en_US,
@@ -610,7 +609,8 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
           [&](const auto &c) {},
       },
       c.u);
-  if (!eligibleTarget) {
+  if (!eligibleTarget &&
+      context_.ShouldWarn(common::UsageWarning::Portability)) {
     context_.Say(parser::FindSourceLocation(c),
         "If %s directive is nested inside TARGET region, the behaviour "
         "is unspecified"_port_en_US,
@@ -1174,6 +1174,37 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpDeclareTargetWithList &x) {
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(x.v, symbols);
+  for (auto &[symbol, source] : symbols) {
+    const GenericDetails *genericDetails = symbol->detailsIf<GenericDetails>();
+    if (genericDetails) {
+      context_.Say(source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a generic name."_err_en_US,
+          symbol->name());
+      genericDetails->specific();
+    }
+    if (IsProcedurePointer(*symbol)) {
+      context_.Say(source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a procedure pointer."_err_en_US,
+          symbol->name());
+    }
+    const SubprogramDetails *entryDetails =
+        symbol->detailsIf<SubprogramDetails>();
+    if (entryDetails && entryDetails->entryScope()) {
+      context_.Say(source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be an entry name."_err_en_US,
+          symbol->name());
+    }
+    if (IsStmtFunction(*symbol)) {
+      context_.Say(source,
+          "The procedure '%s' in DECLARE TARGET construct cannot be a statement function."_err_en_US,
+          symbol->name());
+    }
+  }
+}
+
 void OmpStructureChecker::CheckSymbolNames(
     const parser::CharBlock &source, const parser::OmpObjectList &objList) {
   for (const auto &ompObject : objList.v) {
@@ -1394,6 +1425,36 @@ void OmpStructureChecker::CheckOrderedDependClause(
   }
 }
 
+void OmpStructureChecker::CheckTargetUpdate() {
+  const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
+  const parser::OmpClause *fromClause =
+      FindClause(llvm::omp::Clause::OMPC_from);
+  if (!toClause && !fromClause) {
+    context_.Say(GetContext().directiveSource,
+        "At least one motion-clause (TO/FROM) must be specified on TARGET UPDATE construct."_err_en_US);
+  }
+  if (toClause && fromClause) {
+    SymbolSourceMap toSymbols, fromSymbols;
+    GetSymbolsInObjectList(
+        std::get<parser::OmpClause::To>(toClause->u).v, toSymbols);
+    GetSymbolsInObjectList(
+        std::get<parser::OmpClause::From>(fromClause->u).v, fromSymbols);
+    for (auto &[symbol, source] : toSymbols) {
+      auto fromSymbol = fromSymbols.find(symbol);
+      if (fromSymbol != fromSymbols.end()) {
+        context_.Say(source,
+            "A list item ('%s') can only appear in a TO or FROM clause, but not in both."_err_en_US,
+            symbol->name());
+        context_.Say(source, "'%s' appears in the TO clause."_because_en_US,
+            symbol->name());
+        context_.Say(fromSymbol->second,
+            "'%s' appears in the FROM clause."_because_en_US,
+            fromSymbol->first->name());
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
@@ -1402,11 +1463,14 @@ void OmpStructureChecker::Enter(
 }
 
 void OmpStructureChecker::Leave(
-    const parser::OpenMPSimpleStandaloneConstruct &) {
+    const parser::OpenMPSimpleStandaloneConstruct &x) {
   switch (GetContext().directive) {
   case llvm::omp::Directive::OMPD_ordered:
     // [5.1] 2.19.9 Ordered Construct Restriction
     ChecksOnOrderedAsStandalone();
+    break;
+  case llvm::omp::Directive::OMPD_target_update:
+    CheckTargetUpdate();
     break;
   default:
     break;
@@ -1647,6 +1711,67 @@ void OmpStructureChecker::Leave(const parser::OmpEndBlockDirective &x) {
   }
 }
 
+inline void OmpStructureChecker::ErrIfAllocatableVariable(
+    const parser::Variable &var) {
+  // Err out if the given symbol has
+  // ALLOCATABLE attribute
+  if (const auto *e{GetExpr(context_, var)})
+    for (const Symbol &symbol : evaluate::CollectSymbols(*e))
+      if (IsAllocatable(symbol)) {
+        const auto &designator =
+            std::get<common::Indirection<parser::Designator>>(var.u);
+        const auto *dataRef =
+            std::get_if<Fortran::parser::DataRef>(&designator.value().u);
+        const Fortran::parser::Name *name =
+            dataRef ? std::get_if<Fortran::parser::Name>(&dataRef->u) : nullptr;
+        if (name)
+          context_.Say(name->source,
+              "%s must not have ALLOCATABLE "
+              "attribute"_err_en_US,
+              name->ToString());
+      }
+}
+
+inline void OmpStructureChecker::ErrIfLHSAndRHSSymbolsMatch(
+    const parser::Variable &var, const parser::Expr &expr) {
+  // Err out if the symbol on the LHS is also used on the RHS of the assignment
+  // statement
+  const auto *e{GetExpr(context_, expr)};
+  const auto *v{GetExpr(context_, var)};
+  if (e && v) {
+    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    for (const Symbol &symbol : evaluate::GetSymbolVector(*e)) {
+      if (varSymbol == symbol) {
+        context_.Say(expr.source,
+            "RHS expression "
+            "on atomic assignment statement"
+            " cannot access '%s'"_err_en_US,
+            var.GetSource().ToString());
+      }
+    }
+  }
+}
+
+inline void OmpStructureChecker::ErrIfNonScalarAssignmentStmt(
+    const parser::Variable &var, const parser::Expr &expr) {
+  // Err out if either the variable on the LHS or the expression on the RHS of
+  // the assignment statement are non-scalar (i.e. have rank > 0)
+  const auto *e{GetExpr(context_, expr)};
+  const auto *v{GetExpr(context_, var)};
+  if (e && v) {
+    if (e->Rank() != 0)
+      context_.Say(expr.source,
+          "Expected scalar expression "
+          "on the RHS of atomic assignment "
+          "statement"_err_en_US);
+    if (v->Rank() != 0)
+      context_.Say(var.GetSource(),
+          "Expected scalar variable "
+          "on the LHS of atomic assignment "
+          "statement"_err_en_US);
+  }
+}
+
 template <typename T, typename D>
 bool OmpStructureChecker::IsOperatorValid(const T &node, const D &variable) {
   using AllowedBinaryOperators =
@@ -1667,22 +1792,64 @@ bool OmpStructureChecker::IsOperatorValid(const T &node, const D &variable) {
     if ((exprLeft.value().source.ToString() != variableName) &&
         (exprRight.value().source.ToString() != variableName)) {
       context_.Say(variable.GetSource(),
-          "Atomic update variable '%s' not found in the RHS of the "
-          "assignment statement in an ATOMIC (UPDATE) construct"_err_en_US,
-          variableName);
+          "Atomic update statement should be of form "
+          "`%s = %s operator expr` OR `%s = expr operator %s`"_err_en_US,
+          variableName, variableName, variableName, variableName);
     }
     return common::HasMember<T, AllowedBinaryOperators>;
   }
-  return true;
+  return false;
 }
 
-void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
+void OmpStructureChecker::CheckAtomicCaptureStmt(
+    const parser::AssignmentStmt &assignmentStmt) {
+  const auto &var{std::get<parser::Variable>(assignmentStmt.t)};
+  const auto &expr{std::get<parser::Expr>(assignmentStmt.t)};
+  common::visit(
+      common::visitors{
+          [&](const common::Indirection<parser::Designator> &designator) {
+            const auto *dataRef =
+                std::get_if<Fortran::parser::DataRef>(&designator.value().u);
+            const auto *name = dataRef
+                ? std::get_if<Fortran::parser::Name>(&dataRef->u)
+                : nullptr;
+            if (name && IsAllocatable(*name->symbol))
+              context_.Say(name->source,
+                  "%s must not have ALLOCATABLE "
+                  "attribute"_err_en_US,
+                  name->ToString());
+          },
+          [&](const auto &) {
+            // Anything other than a `parser::Designator` is not allowed
+            context_.Say(expr.source,
+                "Expected scalar variable "
+                "of intrinsic type on RHS of atomic "
+                "assignment statement"_err_en_US);
+          }},
+      expr.u);
+  ErrIfLHSAndRHSSymbolsMatch(var, expr);
+  ErrIfNonScalarAssignmentStmt(var, expr);
+}
+
+void OmpStructureChecker::CheckAtomicWriteStmt(
+    const parser::AssignmentStmt &assignmentStmt) {
+  const auto &var{std::get<parser::Variable>(assignmentStmt.t)};
+  const auto &expr{std::get<parser::Expr>(assignmentStmt.t)};
+  ErrIfAllocatableVariable(var);
+  ErrIfLHSAndRHSSymbolsMatch(var, expr);
+  ErrIfNonScalarAssignmentStmt(var, expr);
+}
+
+void OmpStructureChecker::CheckAtomicUpdateStmt(
     const parser::AssignmentStmt &assignment) {
   const auto &expr{std::get<parser::Expr>(assignment.t)};
   const auto &var{std::get<parser::Variable>(assignment.t)};
+  bool isIntrinsicProcedure{false};
+  bool isValidOperator{false};
   common::visit(
       common::visitors{
           [&](const common::Indirection<parser::FunctionReference> &x) {
+            isIntrinsicProcedure = true;
             const auto &procedureDesignator{
                 std::get<parser::ProcedureDesignator>(x.value().v.t)};
             const parser::Name *name{
@@ -1694,46 +1861,62 @@ void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
               context_.Say(expr.source,
                   "Invalid intrinsic procedure name in "
                   "OpenMP ATOMIC (UPDATE) statement"_err_en_US);
-            } else if (name) {
-              bool foundMatch{false};
-              if (auto varDesignatorIndirection =
-                      std::get_if<Fortran::common::Indirection<
-                          Fortran::parser::Designator>>(&var.u)) {
-                const auto &varDesignator = varDesignatorIndirection->value();
-                if (const auto *dataRef = std::get_if<Fortran::parser::DataRef>(
-                        &varDesignator.u)) {
-                  if (const auto *name =
-                          std::get_if<Fortran::parser::Name>(&dataRef->u)) {
-                    const auto &varSymbol = *name->symbol;
-                    if (const auto *e{GetExpr(context_, expr)}) {
-                      for (const Symbol &symbol :
-                          evaluate::CollectSymbols(*e)) {
-                        if (symbol == varSymbol) {
-                          foundMatch = true;
-                          break;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              if (!foundMatch) {
-                context_.Say(expr.source,
-                    "Atomic update variable '%s' not found in the "
-                    "argument list of intrinsic procedure"_err_en_US,
-                    var.GetSource().ToString());
-              }
             }
           },
           [&](const auto &x) {
             if (!IsOperatorValid(x, var)) {
               context_.Say(expr.source,
-                  "Invalid operator in OpenMP ATOMIC (UPDATE) "
+                  "Invalid or missing operator in atomic update "
                   "statement"_err_en_US);
-            }
+            } else
+              isValidOperator = true;
           },
       },
       expr.u);
+  if (const auto *e{GetExpr(context_, expr)}) {
+    const auto *v{GetExpr(context_, var)};
+    if (e->Rank() != 0)
+      context_.Say(expr.source,
+          "Expected scalar expression "
+          "on the RHS of atomic update assignment "
+          "statement"_err_en_US);
+    if (v->Rank() != 0)
+      context_.Say(var.GetSource(),
+          "Expected scalar variable "
+          "on the LHS of atomic update assignment "
+          "statement"_err_en_US);
+    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    int numOfSymbolMatches{0};
+    SymbolVector exprSymbols = evaluate::GetSymbolVector(*e);
+    for (const Symbol &symbol : exprSymbols) {
+      if (varSymbol == symbol)
+        numOfSymbolMatches++;
+    }
+    if (isIntrinsicProcedure) {
+      std::string varName = var.GetSource().ToString();
+      if (numOfSymbolMatches != 1)
+        context_.Say(expr.source,
+            "Intrinsic procedure"
+            " arguments in atomic update statement"
+            " must have exactly one occurence of '%s'"_err_en_US,
+            varName);
+      else if (varSymbol != exprSymbols.front() &&
+          varSymbol != exprSymbols.back())
+        context_.Say(expr.source,
+            "Atomic update statement "
+            "should be of the form `%s = intrinsic_procedure(%s, expr_list)` "
+            "OR `%s = intrinsic_procedure(expr_list, %s)`"_err_en_US,
+            varName, varName, varName, varName);
+    } else if (isValidOperator) {
+      if (numOfSymbolMatches != 1)
+        context_.Say(expr.source,
+            "Exactly one occurence of '%s' "
+            "expected on the RHS of atomic update assignment statement"_err_en_US,
+            var.GetSource().ToString());
+    }
+  }
+
+  ErrIfAllocatableVariable(var);
 }
 
 void OmpStructureChecker::CheckAtomicMemoryOrderClause(
@@ -1760,9 +1943,6 @@ void OmpStructureChecker::CheckAtomicMemoryOrderClause(
   if (rightHandClauseList) {
     checkForValidMemoryOrderClause(rightHandClauseList);
   }
-  if (numMemoryOrderClause == 0) {
-    atomicDirectiveDefaultOrderFound_ = true;
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
@@ -1772,7 +1952,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
             const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
-            CheckAtomicUpdateAssignmentStmt(
+            CheckAtomicUpdateStmt(
                 std::get<parser::Statement<parser::AssignmentStmt>>(
                     atomicConstruct.t)
                     .statement);
@@ -1787,7 +1967,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
             const auto &dir{std::get<parser::Verbatim>(atomicUpdate.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
-            CheckAtomicUpdateAssignmentStmt(
+            CheckAtomicUpdateStmt(
                 std::get<parser::Statement<parser::AssignmentStmt>>(
                     atomicUpdate.t)
                     .statement);
@@ -1795,6 +1975,32 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
                 &std::get<0>(atomicUpdate.t), &std::get<2>(atomicUpdate.t));
             CheckHintClause<const parser::OmpAtomicClauseList>(
                 &std::get<0>(atomicUpdate.t), &std::get<2>(atomicUpdate.t));
+          },
+          [&](const parser::OmpAtomicRead &atomicRead) {
+            const auto &dir{std::get<parser::Verbatim>(atomicRead.t)};
+            PushContextAndClauseSets(
+                dir.source, llvm::omp::Directive::OMPD_atomic);
+            CheckAtomicMemoryOrderClause(
+                &std::get<0>(atomicRead.t), &std::get<2>(atomicRead.t));
+            CheckHintClause<const parser::OmpAtomicClauseList>(
+                &std::get<0>(atomicRead.t), &std::get<2>(atomicRead.t));
+            CheckAtomicCaptureStmt(
+                std::get<parser::Statement<parser::AssignmentStmt>>(
+                    atomicRead.t)
+                    .statement);
+          },
+          [&](const parser::OmpAtomicWrite &atomicWrite) {
+            const auto &dir{std::get<parser::Verbatim>(atomicWrite.t)};
+            PushContextAndClauseSets(
+                dir.source, llvm::omp::Directive::OMPD_atomic);
+            CheckAtomicMemoryOrderClause(
+                &std::get<0>(atomicWrite.t), &std::get<2>(atomicWrite.t));
+            CheckHintClause<const parser::OmpAtomicClauseList>(
+                &std::get<0>(atomicWrite.t), &std::get<2>(atomicWrite.t));
+            CheckAtomicWriteStmt(
+                std::get<parser::Statement<parser::AssignmentStmt>>(
+                    atomicWrite.t)
+                    .statement);
           },
           [&](const auto &atomicConstruct) {
             const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
@@ -1982,8 +2188,6 @@ CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
 CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)
 CHECK_SIMPLE_CLAUSE(Threads, OMPC_threads)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
-CHECK_SIMPLE_CLAUSE(IsDevicePtr, OMPC_is_device_ptr)
-CHECK_SIMPLE_CLAUSE(HasDeviceAddr, OMPC_has_device_addr)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
 CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
@@ -2023,6 +2227,7 @@ CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(CancellationConstructType, OMPC_cancellation_construct_type)
 CHECK_SIMPLE_CLAUSE(Doacross, OMPC_doacross)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
+CHECK_SIMPLE_CLAUSE(OmpxBare, OMPC_ompx_bare)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)
@@ -2565,15 +2770,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
 
 void OmpStructureChecker::CheckCopyingPolymorphicAllocatable(
     SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
-  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
-    const auto *symbol{it->first};
-    const auto source{it->second};
-    if (IsPolymorphicAllocatable(*symbol)) {
-      context_.Say(source,
-          "If a polymorphic variable with allocatable attribute '%s' is in "
-          "%s clause, the behavior is unspecified"_port_en_US,
-          symbol->name(),
-          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+  if (context_.ShouldWarn(common::UsageWarning::Portability)) {
+    for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
+      const auto *symbol{it->first};
+      const auto source{it->second};
+      if (IsPolymorphicAllocatable(*symbol)) {
+        context_.Say(source,
+            "If a polymorphic variable with allocatable attribute '%s' is in "
+            "%s clause, the behavior is unspecified"_port_en_US,
+            symbol->name(),
+            parser::ToUpperCaseLetters(getClauseName(clause).str()));
+      }
     }
   }
 }
@@ -2697,6 +2904,60 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
     }
     CheckMultipleOccurrence(listVars, useDeviceAddrNameList,
         itr->second->source, "USE_DEVICE_ADDR");
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_is_device_ptr);
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  semantics::UnorderedSymbolSet listVars;
+  auto isDevicePtrClauses{FindClauses(llvm::omp::Clause::OMPC_is_device_ptr)};
+  for (auto itr = isDevicePtrClauses.first; itr != isDevicePtrClauses.second;
+       ++itr) {
+    const auto &isDevicePtrClause{
+        std::get<parser::OmpClause::IsDevicePtr>(itr->second->u)};
+    const auto &isDevicePtrList{isDevicePtrClause.v};
+    SymbolSourceMap currSymbols;
+    GetSymbolsInObjectList(isDevicePtrList, currSymbols);
+    for (auto &[symbol, source] : currSymbols) {
+      if (!(IsBuiltinCPtr(*symbol))) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+            source.ToString());
+      } else if (!(IsDummy(*symbol))) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument"_err_en_US,
+            source.ToString());
+      } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
+        context_.Say(itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute."_err_en_US,
+            source.ToString());
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::HasDeviceAddr &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_has_device_addr);
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  semantics::UnorderedSymbolSet listVars;
+  auto hasDeviceAddrClauses{
+      FindClauses(llvm::omp::Clause::OMPC_has_device_addr)};
+  for (auto itr = hasDeviceAddrClauses.first;
+       itr != hasDeviceAddrClauses.second; ++itr) {
+    const auto &hasDeviceAddrClause{
+        std::get<parser::OmpClause::HasDeviceAddr>(itr->second->u)};
+    const auto &hasDeviceAddrList{hasDeviceAddrClause.v};
+    std::list<parser::Name> hasDeviceAddrNameList;
+    for (const auto &ompObject : hasDeviceAddrList.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        if (name->symbol) {
+          hasDeviceAddrNameList.push_back(*name);
+        }
+      }
+    }
   }
 }
 
@@ -3024,16 +3285,7 @@ void OmpStructureChecker::Enter(
 void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
   CheckAllowed(clause);
 
-  if (clause == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-    // Check that it does not appear after an atomic operation without memory
-    // order
-    if (atomicDirectiveDefaultOrderFound_) {
-      context_.Say(GetContext().clauseSource,
-          "REQUIRES directive with '%s' clause found lexically after atomic "
-          "operation without a memory order clause"_err_en_US,
-          parser::ToUpperCaseLetters(getClauseName(clause).str()));
-    }
-  } else {
+  if (clause != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
     // Check that it does not appear after a device construct
     if (deviceConstructFound_) {
       context_.Say(GetContext().clauseSource,

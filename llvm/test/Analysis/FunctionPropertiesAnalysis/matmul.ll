@@ -48,8 +48,28 @@ entry:
 ; DETAILED-PROPERTIES-DAG: CastInstructionCount: 0
 ; DETAILED-PROPERTIES-DAG: FloatingPointInstructionCount: 0
 ; DETAILED-PROPERTIES-DAG: IntegerInstructionCount: 0
-; DETAILED-PROPERTIES-DAG: IntegerConstantCount: 14
-; DETAILED-PROPERTIES-DAG: FloatingPointConstantCount: 0
+; DETAILED-PROPERTIES-DAG: ConstantIntOperandCount: 14
+; DETAILED-PROPERTIES-DAG: ConstantFPOperandCount: 0
+; DETAILED-PROPERTIES-DAG: ConstantOperandCount: 0
+; DETAILED-PROPERTIES-DAG: InstructionOperandCount: 7
+; DETAILED-PROPERTIES-DAG: BasicBlockOperandCount: 0
+; DETAILED-PROPERTIES-DAG: GlobalValueOperandCount: 1
+; DETAILED-PROPERTIES-DAG: InlineAsmOperandCount: 0
+; DETAILED-PROPERTIES-DAG: ArgumentOperandCount: 0
+; DETAILED-PROPERTIES-DAG: UnknownOperandCount: 0
+; DETAILED-PROPERTIES-DAG: CriticalEdgeCount: 0
+; DETAILED-PROPERTIES-DAG: ControlFlowEdgeCount: 0
+; DETAILED-PROPERTIES-DAG: UnconditionalBranchCount: 0
+; DETAILED-PROPERTIES-DAG: DirectCallCount: 1
+; DETAILED-PROPERTIES-DAG: IndirectCallCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsIntegerCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsFloatCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsPointerCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsVectorIntCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsVectorFloatCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsVectorPointerCount: 0
+; DETAILED-PROPERTIES-DAG: CallWithManyArgumentsCount: 0
+; DETAILED-PROPERTIES-DAG: CallWithPointerArgumentCount: 1
 
 define void @multiply([2 x i32]* %mat1, [2 x i32]* %mat2, [2 x i32]* %res) {
 ; CHECK-DAG: Printing analysis results of CFA for function 'multiply':
@@ -185,5 +205,26 @@ for.end26:                                        ; preds = %for.cond
 ; DETAILED-PROPERTIES-DAG: CastInstructionCount: 8
 ; DETAILED-PROPERTIES-DAG: FloatingPointInstructionCount: 0
 ; DETAILED-PROPERTIES-DAG: IntegerInstructionCount: 33
-; DETAILED-PROPERTIES-DAG: IntegerConstantCount: 20
-; DETAILED-PROPERTIES-DAG: FloatingPointConstantCount: 0
+; DETAILED-PROPERTIES-DAG: ConstantIntOperandCount: 20
+; DETAILED-PROPERTIES-DAG: ConstantFPOperandCount: 0
+; DETAILED-PROPERTIES-DAG: ConstantOperandCount: 0
+; DETAILED-PROPERTIES-DAG: InstructionOperandCount: 73
+; DETAILED-PROPERTIES-DAG: BasicBlockOperandCount: 15
+; DETAILED-PROPERTIES-DAG: GlobalValueOperandCount: 0
+; DETAILED-PROPERTIES-DAG: InlineAsmOperandCount: 0
+; DETAILED-PROPERTIES-DAG: ArgumentOperandCount: 3
+; DETAILED-PROPERTIES-DAG: UnknownOperandCount: 0
+; DETAILED-PROPERTIES-DAG: DirectCallCount: 0
+; DETAILED-PROPERTIES-DAG: IndirectCallCount: 0
+; DETAILED-PROPERTIES-DAG: CriticalEdgeCount: 0
+; DETAILED-PROPERTIES-DAG: ControlFlowEdgeCount: 15
+; DETAILED-PROPERTIES-DAG: UnconditionalBranchCount: 9
+; DETAILED-PROPERTIES-DAG: CallReturnsIntegerCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsFloatCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsPointerCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsVectorIntCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsVectorFloatCount: 0
+; DETAILED-PROPERTIES-DAG: CallReturnsVectorPointerCount: 0
+; DETAILED-PROPERTIES-DAG: CallWithManyArgumentsCount: 0
+; DETAILED-PROPERTIES-DAG: CallWithPointerArgumentCount: 0
+

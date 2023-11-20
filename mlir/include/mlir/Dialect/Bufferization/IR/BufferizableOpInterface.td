@@ -93,10 +93,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Return `true` if the operation bufferizes to IR that performs only
-          element-wise accesses on all tensor operands. (All operands must have
-          the same shape.) The `bufferize` method must be implemented in such a
-          way that it is free of loop-carried dependences. I.e., all loads at a
-          position appear before all stores at the same position.
+          element-wise accesses on the specified tensor operands. (The operands
+          must have the same shape.) The `bufferize` method must be implemented
+          in such a way that it is free of loop-carried dependences. I.e., all
+          loads at a position appear before all stores at the same position.
 
           Example: Consider a hypothetical op element-wise op, where the "ins"
           bufferize to a memory read and the "outs" bufferize to a memory write.
@@ -130,10 +130,15 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           equivalent tensors. (It is not possible, if %0 and %1 are merely
           aliasing. It is not necessary if %0 and %1 are not aliasing at all,
           because there would be no conflict anyway.)
+
+          Note: Tensor operands that are not included in `opOperands` can be
+          ignored. A conservative implementation of this interface method may
+          always return "false".
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToElementwiseAccess",
-        /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state),
+        /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state,
+                      "ArrayRef<OpOperand *>":$opOperands),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // It is always safe to assume that the op is not element-wise.
@@ -410,6 +415,13 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           the input IR and returns `failure` in that case. If this op is
           expected to survive bufferization, `success` should be returned
           (together with `allow-unknown-ops` enabled).
+
+          Note: If this op supports unstructured control flow in its regions,
+          then this function should also bufferize all block signatures that
+          belong to this op. Branch ops (that branch to a block) are typically
+          bufferized together with the block signature (this is just a
+          suggestion to make sure IR is valid at every point in time and could
+          be done differently).
         }],
         /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"bufferize",
@@ -542,6 +554,25 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           return ::mlir::bufferization::detail::defaultIsRepetitiveRegion(
               ::llvm::cast<BufferizableOpInterface>($_op.getOperation()), index);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given region of this op is parallel, i.e.,
+          multiple instances of the region may be executing at the same time.
+          If a region is parallel, it must also be marked as "repetitive".
+
+          The RaW conflict detection of One-Shot Analysis is more strict inside
+          parallel regions: Buffer may have to be privatized.
+
+          By default, regions are assumed to be sequential.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isParallelRegion",
+        /*args=*/(ins "unsigned":$index),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
         }]
       >,
       StaticInterfaceMethod<

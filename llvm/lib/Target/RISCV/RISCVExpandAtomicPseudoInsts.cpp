@@ -107,8 +107,8 @@ bool RISCVExpandAtomicPseudo::expandMBB(MachineBasicBlock &MBB) {
 bool RISCVExpandAtomicPseudo::expandMI(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
                                        MachineBasicBlock::iterator &NextMBBI) {
-  // RISCVInstrInfo::getInstSizeInBytes expects that the total size of the       
-  // expanded instructions for each pseudo is correct in the Size field of the   
+  // RISCVInstrInfo::getInstSizeInBytes expects that the total size of the
+  // expanded instructions for each pseudo is correct in the Size field of the
   // tablegen definition for the pseudo.
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoAtomicLoadNand32:
@@ -601,6 +601,15 @@ bool tryToFoldBNEOnCmpXchgResult(MachineBasicBlock &MBB,
   if (!(BNEOp0 == DestReg && BNEOp1 == CmpValReg) &&
       !(BNEOp0 == CmpValReg && BNEOp1 == DestReg))
     return false;
+
+  // Make sure the branch is the only user of the AND.
+  if (MaskReg.isValid()) {
+    if (BNEOp0 == DestReg && !MBBI->getOperand(0).isKill())
+      return false;
+    if (BNEOp1 == DestReg && !MBBI->getOperand(1).isKill())
+      return false;
+  }
+
   ToErase.push_back(&*MBBI);
   LoopHeadBNETarget = MBBI->getOperand(2).getMBB();
   MBBI = skipDebugInstructionsForward(std::next(MBBI), E);

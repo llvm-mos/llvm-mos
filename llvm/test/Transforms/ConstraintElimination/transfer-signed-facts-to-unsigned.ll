@@ -9,8 +9,6 @@ define i1 @len_known_positive_via_idx_1(i8 %len, i8 %idx) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_POS]], [[IDX_SLT_LEN]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i8 [[LEN]], 0
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[LEN]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[LEN]], 2
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
@@ -48,8 +46,6 @@ define i1 @len_known_positive_via_idx_2(i8 %len, i8 %idx) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_SLT_LEN]], [[IDX_POS]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i8 [[LEN]], 0
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[LEN]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[LEN]], 2
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
@@ -118,8 +114,7 @@ define i1 @len_not_known_positive2(i8 %len, i8 %idx) {
 ; CHECK-LABEL: @len_not_known_positive2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_SLT_LEN:%.*]] = icmp slt i8 [[IDX:%.*]], [[LEN:%.*]]
-; CHECK-NEXT:    [[IDX_POS:%.*]] = icmp uge i8 [[IDX]], 0
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_SLT_LEN]], [[IDX_POS]]
+; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_SLT_LEN]], true
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
@@ -162,7 +157,6 @@ define i1 @cnt_positive_sgt_against_base(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CNT:%.*]], -1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i32 [[CNT]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -244,7 +238,6 @@ define i1 @cnt_positive_sgt_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -273,7 +266,6 @@ define i1 @cnt_positive_sge_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -302,7 +294,6 @@ define i1 @cnt_not_known_positive_sgt_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -331,7 +322,6 @@ define i1 @cnt_not_known_positive_sge_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -391,7 +381,6 @@ define i1 @cnt_positive_from_assume_check_against_base_struct_ugt_with_zext(ptr 
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[GEP_EXT:%.*]] = getelementptr inbounds [[T:%.*]], ptr [[P:%.*]], i64 0, i32 1, i64 [[EXT]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt ptr [[GEP_EXT]], [[P]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -423,7 +412,6 @@ define i1 @cnt_positive_from_branch_check_against_base_struct_ugt_with_zext(ptr 
 ; CHECK:       check:
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[GEP_EXT:%.*]] = getelementptr inbounds [[T:%.*]], ptr [[P:%.*]], i64 0, i32 1, i64 [[EXT]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt ptr [[GEP_EXT]], [[P]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -458,7 +446,6 @@ define i1 @cnt_not_known_positive_from_branch_check_against_base_struct_ugt_with
 ; CHECK:       check:
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[GEP_EXT:%.*]] = getelementptr inbounds [[T:%.*]], ptr [[P:%.*]], i64 0, i32 1, i64 [[EXT]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp ugt ptr [[GEP_EXT]], [[P]]
 ; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -489,12 +476,9 @@ define i1 @sge_2(i8 %idx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[IDX:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[IDX]], 2
-; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[IDX]], 1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[IDX]], 3
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[IDX]], 2
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], false
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
@@ -555,7 +539,6 @@ define i1 @sgt_known_neg(i8 %idx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[IDX:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[IDX]], 0
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[IDX]], 1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[T_2]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[IDX]], -1
@@ -578,8 +561,6 @@ define i1 @sgt_known_pos(i8 %idx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[IDX:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[IDX]], 2
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i8 [[IDX]], 1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[IDX]], 3
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
@@ -601,7 +582,6 @@ define i1 @sgt_to_ugt(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], 2
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -616,7 +596,6 @@ define i1 @sgt_to_ugt_less(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], 1
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -633,7 +612,6 @@ define i1 @sgt_to_ugt_var(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sgt i8 [[B]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_2]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -714,8 +692,6 @@ define i1 @slt_first_op_known_pos(i8 %idx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 2, [[IDX:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 2, [[IDX]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 1, [[IDX]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 3, [[IDX]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
@@ -753,4 +729,202 @@ entry:
   %c.1 = icmp ult i8 3, %idx
   %res.2 = xor i1 %res.1, %c.1
   ret i1 %res.2
+}
+
+declare void @use(i1)
+
+define i8 @iv_known_non_negative_constant_trip_count(ptr %dst, i8 %N) {
+; CHECK-LABEL: @iv_known_non_negative_constant_trip_count(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IV]], 2
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[N:%.*]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp sgt i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp sle i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[C_0]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    ret i8 10
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %cmp = icmp slt i8 %iv, 2
+  br i1 %cmp, label %loop.latch, label %exit.1
+
+loop.latch:
+  %t.1 = icmp ugt i8 %N, %iv
+  call void @use(i1 %t.1)
+  %t.2 = icmp sgt i8 %N, %iv
+  call void @use(i1 %t.2)
+  %f.1 = icmp ule i8 %N, %iv
+  call void @use(i1 %f.1)
+  %f.2 = icmp sle i8 %N, %iv
+  call void @use(i1 %f.2)
+  %c.0 = icmp ugt i8 %iv, 2
+  call void @use(i1 %c.0)
+  %iv.next = add nuw nsw i8 %iv, 1
+  br label %loop.header
+
+exit.1:
+  ret i8 10
+}
+
+define i8 @iv_known_non_negative_constant_trip_count_no_nsw_flag(ptr %dst, i8 %N) {
+; CHECK-LABEL: @iv_known_non_negative_constant_trip_count_no_nsw_flag(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IV]], 2
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[N:%.*]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp sgt i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp sle i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[C_0]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    ret i8 10
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %cmp = icmp slt i8 %iv, 2
+  br i1 %cmp, label %loop.latch, label %exit.1
+
+loop.latch:
+  %t.1 = icmp ugt i8 %N, %iv
+  call void @use(i1 %t.1)
+  %t.2 = icmp sgt i8 %N, %iv
+  call void @use(i1 %t.2)
+  %f.1 = icmp ule i8 %N, %iv
+  call void @use(i1 %f.1)
+  %f.2 = icmp sle i8 %N, %iv
+  call void @use(i1 %f.2)
+  %c.0 = icmp ugt i8 %iv, 2
+  call void @use(i1 %c.0)
+  %iv.next = add nuw i8 %iv, 1
+  br label %loop.header
+
+exit.1:
+  ret i8 10
+}
+
+define i8 @iv_known_non_negative_variable_trip_count(ptr %dst, i8 %N) {
+; CHECK-LABEL: @iv_known_non_negative_variable_trip_count(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[C_0]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    ret i8 10
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %cmp = icmp slt i8 %iv, %N
+  br i1 %cmp, label %loop.latch, label %exit.1
+
+loop.latch:
+  %t.1 = icmp ugt i8 %N, %iv
+  call void @use(i1 %t.1)
+  %t.2 = icmp sgt i8 %N, %iv
+  call void @use(i1 %t.2)
+  %f.1 = icmp ule i8 %N, %iv
+  call void @use(i1 %f.1)
+  %f.2 = icmp sle i8 %N, %iv
+  call void @use(i1 %f.2)
+  %c.0 = icmp ugt i8 %iv, 2
+  call void @use(i1 %c.0)
+  %iv.next = add nuw nsw i8 %iv, 1
+  br label %loop.header
+
+exit.1:
+  ret i8 10
+}
+
+define i8 @iv_may_signed_wrap_variable_trip_count(ptr %dst, i8 %N) {
+; CHECK-LABEL: @iv_may_signed_wrap_variable_trip_count(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IV]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[N]], [[IV]]
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i8 [[IV]], 2
+; CHECK-NEXT:    call void @use(i1 [[C_0]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    ret i8 10
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %cmp = icmp slt i8 %iv, %N
+  br i1 %cmp, label %loop.latch, label %exit.1
+
+loop.latch:
+  %t.1 = icmp ugt i8 %N, %iv
+  call void @use(i1 %t.1)
+  %t.2 = icmp sgt i8 %N, %iv
+  call void @use(i1 %t.2)
+  %f.1 = icmp ule i8 %N, %iv
+  call void @use(i1 %f.1)
+  %f.2 = icmp sle i8 %N, %iv
+  call void @use(i1 %f.2)
+  %c.0 = icmp ugt i8 %iv, 2
+  call void @use(i1 %c.0)
+  %iv.next = add nuw i8 %iv, 1
+  br label %loop.header
+
+exit.1:
+  ret i8 10
 }

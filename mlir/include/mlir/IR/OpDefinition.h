@@ -268,6 +268,11 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
 
 public:
   void dump() const { llvm::errs() << *this << "\n"; }
+
+  MLIRContext *getContext() const {
+    return is<Attribute>() ? get<Attribute>().getContext()
+                           : get<Value>().getContext();
+  }
 };
 
 // Temporarily exit the MLIR namespace to add casting support as later code in
@@ -341,6 +346,7 @@ LogicalResult verifySameOperandsAndResultShape(Operation *op);
 LogicalResult verifySameOperandsElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultType(Operation *op);
+LogicalResult verifySameOperandsAndResultRank(Operation *op);
 LogicalResult verifyResultsAreBoolLike(Operation *op);
 LogicalResult verifyResultsAreFloatLike(Operation *op);
 LogicalResult verifyResultsAreSignlessIntegerLike(Operation *op);
@@ -943,9 +949,9 @@ public:
 template <typename TerminatorOpType>
 struct SingleBlockImplicitTerminator {
   template <typename ConcreteType>
-  class Impl : public SingleBlock<ConcreteType> {
+  class Impl : public TraitBase<ConcreteType, SingleBlockImplicitTerminator<
+                                                  TerminatorOpType>::Impl> {
   private:
-    using Base = SingleBlock<ConcreteType>;
     /// Builds a terminator operation without relying on OpBuilder APIs to avoid
     /// cyclic header inclusion.
     static Operation *buildTerminator(OpBuilder &builder, Location loc) {
@@ -959,8 +965,6 @@ struct SingleBlockImplicitTerminator {
     using ImplicitTerminatorOpT = TerminatorOpType;
 
     static LogicalResult verifyRegionTrait(Operation *op) {
-      if (failed(Base::verifyTrait(op)))
-        return failure();
       for (unsigned i = 0, e = op->getNumRegions(); i < e; ++i) {
         Region &region = op->getRegion(i);
         // Empty regions are fine.
@@ -997,37 +1001,6 @@ struct SingleBlockImplicitTerminator {
                                  Location loc) {
       ::mlir::impl::ensureRegionTerminator(region, builder, loc,
                                            buildTerminator);
-    }
-
-    //===------------------------------------------------------------------===//
-    // Single Region Utilities
-    //===------------------------------------------------------------------===//
-    using Base::getBody;
-
-    template <typename OpT, typename T = void>
-    using enable_if_single_region =
-        std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
-
-    /// Insert the operation into the back of the body, before the terminator.
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> push_back(Operation *op) {
-      insert(Block::iterator(getBody()->getTerminator()), op);
-    }
-
-    /// Insert the operation at the given insertion point. Note: The operation
-    /// is never inserted after the terminator, even if the insertion point is
-    /// end().
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> insert(Operation *insertPt, Operation *op) {
-      insert(Block::iterator(insertPt), op);
-    }
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> insert(Block::iterator insertPt,
-                                        Operation *op) {
-      auto *body = getBody();
-      if (insertPt == body->end())
-        insertPt = Block::iterator(body->getTerminator());
-      body->getOperations().insert(insertPt, op);
     }
   };
 };
@@ -1114,6 +1087,17 @@ class SameOperandsAndResultType
 public:
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifySameOperandsAndResultType(op);
+  }
+};
+
+/// This class verifies that op has same ranks for all
+/// operands and results types, if known.
+template <typename ConcreteType>
+class SameOperandsAndResultRank
+    : public TraitBase<ConcreteType, SameOperandsAndResultRank> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifySameOperandsAndResultRank(op);
   }
 };
 
@@ -1760,9 +1744,10 @@ public:
   /// the namespace where the properties are defined. It can also be overridden
   /// in the derived ConcreteOp.
   template <typename PropertiesTy>
-  static LogicalResult setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
-                                             InFlightDiagnostic *diag) {
-    return setPropertiesFromAttribute(prop, attr, diag);
+  static LogicalResult
+  setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
+                        function_ref<InFlightDiagnostic()> emitError) {
+    return setPropertiesFromAttribute(prop, attr, emitError);
   }
   /// Convert the provided properties to an attribute. This default
   /// implementation forwards to a free function `getPropertiesAsAttribute` that
@@ -2078,7 +2063,7 @@ protected:
     // given operation.
     if (Dialect *dialect = name.getDialect()) {
       dialect_extension_detail::handleUseOfUndefinedPromisedInterface(
-          *dialect, ConcreteType::getInterfaceID(),
+          *dialect, name.getTypeID(), ConcreteType::getInterfaceID(),
           llvm::getTypeName<ConcreteType>());
     }
 #endif

@@ -198,7 +198,7 @@ static cl::opt<bool> BBSectionsGuidedSectionPrefix(
              "impacted, i.e., their prefixes will be decided by FDO/sampleFDO "
              "profiles."));
 
-static cl::opt<unsigned> FreqRatioToSkipMerge(
+static cl::opt<uint64_t> FreqRatioToSkipMerge(
     "cgp-freq-ratio-to-skip-merge", cl::Hidden, cl::init(2),
     cl::desc("Skip merging empty blocks if (frequency of empty block) / "
              "(frequency of destination block) is greater than this ratio"));
@@ -268,6 +268,11 @@ static cl::opt<unsigned>
     MaxAddressUsersToScan("cgp-max-address-users-to-scan", cl::init(100),
                           cl::Hidden,
                           cl::desc("Max number of address users to look at"));
+
+static cl::opt<bool>
+    DisableDeletePHIs("disable-cgp-delete-phis", cl::Hidden, cl::init(false),
+                      cl::desc("Disable elimination of dead PHI nodes."));
+
 namespace {
 
 enum ExtType {
@@ -878,8 +883,12 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
   // as we remove them.
   // Note that this intentionally skips the entry block.
   SmallVector<WeakTrackingVH, 16> Blocks;
-  for (auto &Block : llvm::drop_begin(F))
+  for (auto &Block : llvm::drop_begin(F)) {
+    // Delete phi nodes that could block deleting other empty blocks.
+    if (!DisableDeletePHIs)
+      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
     Blocks.push_back(&Block);
+  }
 
   for (auto &Block : Blocks) {
     BasicBlock *BB = cast_or_null<BasicBlock>(Block);
@@ -977,8 +986,8 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
         DestBB == findDestBlockOfMergeableEmptyBlock(SameValueBB))
       BBFreq += BFI->getBlockFreq(SameValueBB);
 
-  return PredFreq.getFrequency() <=
-         BBFreq.getFrequency() * FreqRatioToSkipMerge;
+  std::optional<BlockFrequency> Limit = BBFreq.mul(FreqRatioToSkipMerge);
+  return !Limit || PredFreq <= *Limit;
 }
 
 /// Return true if we can merge BB into DestBB if there is a single
@@ -1200,6 +1209,7 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
       if (RI->getStatepoint() == RelocatedBase->getStatepoint())
         if (RI->getBasePtrIndex() == RelocatedBase->getBasePtrIndex()) {
           RelocatedBase->moveBefore(RI);
+          MadeChange = true;
           break;
         }
 
@@ -2253,7 +2263,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // Create a PHI in the end block to select either the output of the intrinsic
   // or the bit width of the operand.
-  Builder.SetInsertPoint(&EndBlock->front());
+  Builder.SetInsertPoint(EndBlock, EndBlock->begin());
   PHINode *PN = Builder.CreatePHI(Ty, 2, "ctz");
   replaceAllUsesWith(CountZeros, PN, FreshBBs, IsHugeFunc);
   Value *BitWidth = Builder.getInt(APInt(SizeInBits, SizeInBits));
@@ -2581,9 +2591,8 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     (void)FoldReturnIntoUncondBranch(RetI, BB, TailCallBB);
     assert(!VerifyBFIUpdates ||
            BFI->getBlockFreq(BB) >= BFI->getBlockFreq(TailCallBB));
-    BFI->setBlockFreq(
-        BB,
-        (BFI->getBlockFreq(BB) - BFI->getBlockFreq(TailCallBB)).getFrequency());
+    BFI->setBlockFreq(BB,
+                      (BFI->getBlockFreq(BB) - BFI->getBlockFreq(TailCallBB)));
     ModifiedDT = ModifyDT::ModifyBBDT;
     Changed = true;
     ++NumRetsDup;
@@ -4559,8 +4568,6 @@ Value *TypePromotionHelper::promoteOperandForOther(
   // Step #2.
   TPT.replaceAllUsesWith(Ext, ExtOpnd);
   // Step #3.
-  Instruction *ExtForOpnd = Ext;
-
   LLVM_DEBUG(dbgs() << "Propagate Ext to operands\n");
   for (int OpIdx = 0, EndOpIdx = ExtOpnd->getNumOperands(); OpIdx != EndOpIdx;
        ++OpIdx) {
@@ -4588,33 +4595,21 @@ Value *TypePromotionHelper::promoteOperandForOther(
     }
 
     // Otherwise we have to explicitly sign extend the operand.
-    // Check if Ext was reused to extend an operand.
-    if (!ExtForOpnd) {
-      // If yes, create a new one.
-      LLVM_DEBUG(dbgs() << "More operands to ext\n");
-      Value *ValForExtOpnd = IsSExt ? TPT.createSExt(Ext, Opnd, Ext->getType())
-                                    : TPT.createZExt(Ext, Opnd, Ext->getType());
-      if (!isa<Instruction>(ValForExtOpnd)) {
-        TPT.setOperand(ExtOpnd, OpIdx, ValForExtOpnd);
-        continue;
-      }
-      ExtForOpnd = cast<Instruction>(ValForExtOpnd);
-    }
-    if (Exts)
-      Exts->push_back(ExtForOpnd);
-    TPT.setOperand(ExtForOpnd, 0, Opnd);
+    Value *ValForExtOpnd = IsSExt
+                               ? TPT.createSExt(ExtOpnd, Opnd, Ext->getType())
+                               : TPT.createZExt(ExtOpnd, Opnd, Ext->getType());
+    TPT.setOperand(ExtOpnd, OpIdx, ValForExtOpnd);
+    Instruction *InstForExtOpnd = dyn_cast<Instruction>(ValForExtOpnd);
+    if (!InstForExtOpnd)
+      continue;
 
-    // Move the sign extension before the insertion point.
-    TPT.moveBefore(ExtForOpnd, ExtOpnd);
-    TPT.setOperand(ExtOpnd, OpIdx, ExtForOpnd);
-    CreatedInstsCost += !TLI.isExtFree(ExtForOpnd);
-    // If more sext are required, new instructions will have to be created.
-    ExtForOpnd = nullptr;
+    if (Exts)
+      Exts->push_back(InstForExtOpnd);
+
+    CreatedInstsCost += !TLI.isExtFree(InstForExtOpnd);
   }
-  if (ExtForOpnd == Ext) {
-    LLVM_DEBUG(dbgs() << "Extension is useless now\n");
-    TPT.eraseInstruction(Ext);
-  }
+  LLVM_DEBUG(dbgs() << "Extension is useless now\n");
+  TPT.eraseInstruction(Ext);
   return ExtOpnd;
 }
 
@@ -6295,7 +6290,7 @@ bool CodeGenPrepare::optimizePhiType(
   // correct type.
   ValueToValueMap ValMap;
   for (ConstantData *C : Constants)
-    ValMap[C] = ConstantExpr::getCast(Instruction::BitCast, C, ConvertTy);
+    ValMap[C] = ConstantExpr::getBitCast(C, ConvertTy);
   for (Instruction *D : Defs) {
     if (isa<BitCastInst>(D)) {
       ValMap[D] = D->getOperand(0);
@@ -7060,7 +7055,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     FreshBBs.insert(EndBlock);
   }
 
-  BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock).getFrequency());
+  BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock));
 
   static const unsigned MD[] = {
       LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
@@ -7090,7 +7085,8 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // to get the PHI operand.
   for (SelectInst *SI : llvm::reverse(ASI)) {
     // The select itself is replaced with a PHI Node.
-    PHINode *PN = PHINode::Create(SI->getType(), 2, "", &EndBlock->front());
+    PHINode *PN = PHINode::Create(SI->getType(), 2, "");
+    PN->insertBefore(EndBlock->begin());
     PN->takeName(SI);
     PN->addIncoming(getTrueOrFalseValue(SI, true, INS), TrueBlock);
     PN->addIncoming(getTrueOrFalseValue(SI, false, INS), FalseBlock);
@@ -7992,6 +7988,8 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
       return false;
     if (UGEPI->getOperand(0) != GEPIOp)
       return false;
+    if (UGEPI->getSourceElementType() != GEPI->getSourceElementType())
+      return false;
     if (GEPIIdx->getType() !=
         cast<ConstantInt>(UGEPI->getOperand(1))->getType())
       return false;
@@ -8221,7 +8219,6 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     if (tryUnmergingGEPsAcrossIndirectBr(GEPI, TTI)) {
       return true;
     }
-    return false;
   }
 
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {

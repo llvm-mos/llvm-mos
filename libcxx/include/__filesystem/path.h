@@ -107,7 +107,6 @@ struct __is_pathable_string<
     _Void<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str = basic_string<_ECharT, _Traits, _Alloc>;
-  using _Base = __can_convert_char<_ECharT>;
 
   _LIBCPP_HIDE_FROM_ABI
   static _ECharT const* __range_begin(_Str const& __s) { return __s.data(); }
@@ -129,7 +128,6 @@ struct __is_pathable_string<
     _Void<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str = basic_string_view<_ECharT, _Traits>;
-  using _Base = __can_convert_char<_ECharT>;
 
   _LIBCPP_HIDE_FROM_ABI
   static _ECharT const* __range_begin(_Str const& __s) { return __s.data(); }
@@ -155,8 +153,6 @@ struct __is_pathable_char_array : false_type {};
 template <class _Source, class _ECharT, class _UPtr>
 struct __is_pathable_char_array<_Source, _ECharT*, _UPtr, true>
     : __can_convert_char<__remove_const_t<_ECharT> > {
-  using _Base = __can_convert_char<__remove_const_t<_ECharT> >;
-
   _LIBCPP_HIDE_FROM_ABI
   static _ECharT const* __range_begin(const _ECharT* __b) { return __b; }
 
@@ -185,7 +181,6 @@ struct __is_pathable_iter<
         typename iterator_traits<_Iter>::value_type>::__char_type> >
     : __can_convert_char<typename iterator_traits<_Iter>::value_type> {
   using _ECharT = typename iterator_traits<_Iter>::value_type;
-  using _Base = __can_convert_char<_ECharT>;
 
   _LIBCPP_HIDE_FROM_ABI
   static _Iter __range_begin(_Iter __b) { return __b; }
@@ -445,8 +440,7 @@ struct _PathExport<char8_t> {
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>
-  using _EnableIfPathable =
-      typename enable_if<__is_pathable<_SourceOrIter>::value, _Tp>::type;
+  using _EnableIfPathable = __enable_if_t<__is_pathable<_SourceOrIter>::value, _Tp>;
 
   template <class _Tp>
   using _SourceChar = typename __is_pathable<_Tp>::__char_type;
@@ -465,7 +459,7 @@ public:
   typedef basic_string<value_type> string_type;
   typedef basic_string_view<value_type> __string_view;
 
-  enum _LIBCPP_ENUM_VIS format : unsigned char {
+  enum format : unsigned char {
     auto_format,
     native_format,
     generic_format
@@ -1069,8 +1063,7 @@ public:
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
 private:
-  inline _LIBCPP_HIDE_FROM_ABI path&
-  __assign_view(__string_view const& __s) noexcept {
+  inline _LIBCPP_HIDE_FROM_ABI path& __assign_view(__string_view const& __s) {
     __pn_ = string_type(__s);
     return *this;
   }

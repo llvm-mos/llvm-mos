@@ -54,6 +54,7 @@
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
@@ -354,12 +355,10 @@ public:
   };
   // This is all the event bits the public process broadcaster broadcasts.
   // The process shadow listener signs up for all these bits...
-  static constexpr int g_all_event_bits = eBroadcastBitStateChanged 
-                                        | eBroadcastBitInterrupt
-                                        | eBroadcastBitSTDOUT 
-                                        | eBroadcastBitSTDERR
-                                        | eBroadcastBitProfileData 
-                                        | eBroadcastBitStructuredData;
+  static constexpr int g_all_event_bits =
+      eBroadcastBitStateChanged | eBroadcastBitInterrupt | eBroadcastBitSTDOUT |
+      eBroadcastBitSTDERR | eBroadcastBitProfileData |
+      eBroadcastBitStructuredData;
 
   enum {
     eBroadcastInternalStateControlStop = (1 << 0),
@@ -390,7 +389,7 @@ public:
   ConstString &GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
-  
+
 /// A notification structure that can be used by clients to listen
 /// for changes in a process's lifetime.
 ///
@@ -579,7 +578,7 @@ public:
   ///     of CommandObject like CommandObjectRaw, CommandObjectParsed,
   ///     or CommandObjectMultiword.
   virtual CommandObject *GetPluginCommandObject() { return nullptr; }
-  
+
   /// The underlying plugin might store the low-level communication history for
   /// this session.  Dump it into the provided stream.
   virtual void DumpPluginHistory(Stream &s) { return; }
@@ -614,7 +613,7 @@ public:
     return error;
   }
 
-  /// The "ShadowListener" for a process is just an ordinary Listener that 
+  /// The "ShadowListener" for a process is just an ordinary Listener that
   /// listens for all the Process event bits.  It's convenient because you can
   /// specify it in the LaunchInfo or AttachInfo, so it will get events from
   /// the very start of the process.
@@ -703,6 +702,35 @@ public:
   ///     true if saved successfully, false if saving the core dump
   ///     is not supported by the plugin, error otherwise.
   virtual llvm::Expected<bool> SaveCore(llvm::StringRef outfile);
+
+  struct CoreFileMemoryRange {
+    llvm::AddressRange range;  /// The address range to save into the core file.
+    uint32_t lldb_permissions; /// A bit set of lldb::Permissions bits.
+
+    bool operator==(const CoreFileMemoryRange &rhs) const {
+      return range == rhs.range && lldb_permissions == rhs.lldb_permissions;
+    }
+
+    bool operator!=(const CoreFileMemoryRange &rhs) const {
+      return !(*this == rhs);
+    }
+
+    bool operator<(const CoreFileMemoryRange &rhs) const {
+      if (range < rhs.range)
+        return true;
+      if (range == rhs.range)
+        return lldb_permissions < rhs.lldb_permissions;
+      return false;
+    }
+  };
+
+  using CoreFileMemoryRanges = std::vector<CoreFileMemoryRange>;
+
+  /// Helper function for Process::SaveCore(...) that calculates the address
+  /// ranges that should be saved. This allows all core file plug-ins to save
+  /// consistent memory ranges given a \a core_style.
+  Status CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+                                     CoreFileMemoryRanges &ranges);
 
 protected:
   virtual JITLoaderList &GetJITLoaders();
@@ -1224,7 +1252,7 @@ public:
   /// this function if the platform fails to identify the host OS version. The
   /// platform should be checked first in case you are running a simulator
   /// platform that might itself be running natively, but have different
-  /// heuristics for figuring out which OS is is emulating.
+  /// heuristics for figuring out which OS is emulating.
   ///
   /// \return
   ///     Returns the version tuple of the host OS. In case of failure an empty
@@ -1840,7 +1868,7 @@ public:
   ///
   /// \param[in] load_addr
   ///     The load address to query the range_info for. May include non
-  ///     address bits, these will be removed by the the ABI plugin if there is
+  ///     address bits, these will be removed by the ABI plugin if there is
   ///     one.
   ///
   /// \param[out] range_info
@@ -3008,6 +3036,7 @@ protected:
       m_unix_signals_sp; /// This is the current signal set for this process.
   lldb::ABISP m_abi_sp;
   lldb::IOHandlerSP m_process_input_reader;
+  mutable std::mutex m_process_input_reader_mutex;
   ThreadedCommunication m_stdio_communication;
   std::recursive_mutex m_stdio_communication_mutex;
   bool m_stdin_forward; /// Remember if stdin must be forwarded to remote debug
@@ -3133,6 +3162,7 @@ protected:
   bool ProcessIOHandlerIsActive();
 
   bool ProcessIOHandlerExists() const {
+    std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
     return static_cast<bool>(m_process_input_reader);
   }
 

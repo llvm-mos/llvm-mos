@@ -478,6 +478,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->relocatable = args.hasArg(OPT_relocatable);
   config->gcSections =
       args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !config->relocatable);
+  for (auto *arg : args.filtered(OPT_keep_section))
+    config->keepSections.insert(arg->getValue());
   config->mergeDataSegments =
       args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
                    !config->relocatable);
@@ -502,6 +504,7 @@ static void readConfigs(opt::InputArgList &args) {
 
   config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
   config->globalBase = args::getInteger(args, OPT_global_base, 0);
+  config->tableBase = args::getInteger(args, OPT_table_base, 0);
   config->maxMemory = args::getInteger(args, OPT_max_memory, 0);
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
@@ -573,6 +576,17 @@ static void setConfigs() {
     if (config->exportTable)
       error("-shared/-pie is incompatible with --export-table");
     config->importTable = true;
+  } else {
+    // Default table base.  Defaults to 1, reserving 0 for the NULL function
+    // pointer.
+    if (!config->tableBase)
+      config->tableBase = 1;
+    // The default offset for static/global data, for when --global-base is
+    // not specified on the command line.  The precise value of 1024 is
+    // somewhat arbitrary, and pre-dates wasm-ld (Its the value that
+    // emscripten used prior to wasm-ld).
+    if (!config->globalBase && !config->relocatable && !config->stackFirst)
+      config->globalBase = 1024;
   }
 
   if (config->relocatable) {
@@ -666,8 +680,11 @@ static void checkOptions(opt::InputArgList &args) {
     warn("-Bsymbolic is only meaningful when combined with -shared");
   }
 
-  if (config->globalBase && config->isPic) {
-    error("--global-base may not be used with -shared/-pie");
+  if (config->isPic) {
+    if (config->globalBase)
+      error("--global-base may not be used with -shared/-pie");
+    if (config->tableBase)
+      error("--table-base may not be used with -shared/-pie");
   }
 }
 

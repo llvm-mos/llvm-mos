@@ -17,6 +17,10 @@
 
 class GenericInstruction : StandardPseudoInstruction {
   let isPreISelOpcode = true;
+
+  // When all variadic ops share a type with another operand,
+  // this is the type they share. Used by MIR patterns type inference.
+  TypedOperand variadicOpsType = ?;
 }
 
 // Provide a variant of an instruction with the same operands, but
@@ -914,6 +918,13 @@ def G_FEXP2 : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point base-10 exponential of a value.
+def G_FEXP10 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point base-e logarithm of a value.
 def G_FLOG : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -999,6 +1010,35 @@ def G_FNEARBYINT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
   let hasSideEffects = false;
+}
+
+//------------------------------------------------------------------------------
+// Access to floating-point environment.
+//------------------------------------------------------------------------------
+
+// These operations read/write floating-point environment. The interaction with
+// it is modeled as a side effect, because constrained intrinsics use the same
+// method.
+
+// Reading floating-point control modes.
+def G_GET_FPMODE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+// Setting floating-point control modes.
+def G_SET_FPMODE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = true;
+}
+
+// Setting floating-point control modes to default state.
+def G_RESET_FPMODE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
 }
 
 //------------------------------------------------------------------------------
@@ -1192,6 +1232,7 @@ def G_UNMERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst0, variable_ops);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
+  let variadicOpsType = type0;
 }
 
 // Insert a smaller register into a larger one at the specified bit-index.
@@ -1209,6 +1250,7 @@ def G_MERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = false;
+  let variadicOpsType = type1;
 }
 
 /// Create a vector from multiple scalar registers. No implicit
@@ -1218,6 +1260,7 @@ def G_BUILD_VECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = false;
+  let variadicOpsType = type1;
 }
 
 /// Like G_BUILD_VECTOR, but truncates the larger operand types to fit the

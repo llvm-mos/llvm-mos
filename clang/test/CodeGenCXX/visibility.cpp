@@ -271,7 +271,6 @@ namespace Test5 {
   }
 }
 
-// <rdar://problem/8091955>
 namespace Test6 {
   struct HIDDEN foo {
     foo() { }
@@ -409,7 +408,6 @@ namespace Test14 {
   struct A *test() { return var; }
 }
 
-// rdar://problem/8613093
 namespace Test15 {
   struct A {};
   template <class T> struct Temp {
@@ -572,7 +570,6 @@ namespace Test20 {
     A<1>::test3();
   }
 
-  // <rdar://problem/8778497>
   // But we should assume that an unknown specialization has the
   // explicit visibility settings of the template.
   template <class T> struct B {
@@ -602,7 +599,6 @@ namespace test21 {
   template void A<en>::foo();
 }
 
-// rdar://problem/9616154
 // Visibility on explicit specializations should take precedence.
 namespace test22 {
   class A1 {};
@@ -1011,8 +1007,8 @@ namespace test51 {
   // a default symbol.
 
   struct HIDDEN foo {};
-  DEFAULT foo da, db, dc, dd;
-  HIDDEN foo ha, hb, hc, hd;
+  DEFAULT foo da, db, dc, dd, de, df;
+  HIDDEN foo ha, hb, hc, hd, he, hf;
   template<foo *z>
   void DEFAULT zed() {
   }
@@ -1040,14 +1036,26 @@ namespace test51 {
   // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hcEEEEEvv(
   // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hcEEEEEvv(
 
+#pragma GCC visibility push(hidden)
+  template void zed<&dd>();
+  template void zed<&hd>();
+  template void DEFAULT zed<&he>();
+#pragma GCC visibility pop
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2heEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2heEEEEEvv(
+
   void use() {
-    zed<&dd>();
-    zed<&hd>();
+    zed<&df>();
+    zed<&hf>();
   }
-  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
-  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hfEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2dfEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hfEEEEEvv(
 }
 
 namespace test52 {

@@ -678,3 +678,81 @@ func.func @multi_entry_loop(%cond: i1) {
 // CHECK:        scf.yield
 // CHECK:      call @foo(%[[WHILE]]#1)
 // CHECK-NEXT: return
+
+// -----
+
+func.func @nested_region() {
+  scf.execute_region {
+    %cond = "test.test1"() : () -> i1
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:
+    "test.test2"() : () -> ()
+    cf.br ^bb3
+  ^bb2:
+    "test.test3"() : () -> ()
+    cf.br ^bb3
+  ^bb3:
+    "test.test4"() : () -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @nested_region
+// CHECK:      scf.execute_region {
+// CHECK:      %[[COND:.*]] = "test.test1"()
+// CHECK-NEXT: scf.if %[[COND]]
+// CHECK-NEXT:   "test.test2"()
+// CHECK-NEXT: else
+// CHECK-NEXT:   "test.test3"()
+// CHECK-NEXT: }
+// CHECK-NEXT: "test.test4"()
+// CHECK-NEXT: scf.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+
+// -----
+
+func.func @nested_region_inside_loop_use() {
+  cf.br ^bb1
+
+^bb1:
+  %3 = "test.test1"() : () -> i32
+  scf.execute_region {
+    "test.foo"(%3) : (i32) -> ()
+    scf.yield
+  }
+  cf.br ^bb1
+}
+
+// CHECK-LABEL: func @nested_region_inside_loop_use
+// CHECK: scf.while
+// CHECK-NEXT: %[[DEF:.*]] = "test.test1"()
+// CHECK-NEXT: scf.execute_region
+// CHECK-NEXT: "test.foo"(%[[DEF]])
+
+// -----
+
+func.func @nested_region_outside_loop_use() {
+  cf.br ^bb1
+
+^bb1:
+  %3 = "test.test1"() : () -> i32
+  %cond = "test.test2"() : () -> i1
+  cf.cond_br %cond, ^bb1, ^bb2
+
+^bb2:
+  scf.execute_region {
+    "test.foo"(%3) : (i32) -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @nested_region_outside_loop_use
+// CHECK: %[[RES:.*]] = scf.while
+// CHECK: %[[DEF:.*]] = "test.test1"()
+// CHECK: scf.condition(%{{.*}}) %[[DEF]]
+
+// CHECK: scf.execute_region
+// CHECK-NEXT: "test.foo"(%[[RES]])

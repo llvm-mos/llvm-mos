@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/TargetOptions.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -274,6 +275,8 @@ public:
   void setFunctionDeclAttributes(const FunctionDecl *FD, llvm::Function *F,
                                  CodeGenModule &CGM) const;
 
+  void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const override;
+
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   unsigned getOpenCLKernelCallingConv() const override;
@@ -305,12 +308,13 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
   if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
     return false;
 
-  return D->hasAttr<OpenCLKernelAttr>() ||
-         (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
-         (isa<VarDecl>(D) &&
-          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-           cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
-           cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType()));
+  return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
+         (D->hasAttr<OpenCLKernelAttr>() ||
+          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
+          (isa<VarDecl>(D) &&
+           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
 }
 
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
@@ -351,6 +355,40 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
+  }
+}
+
+/// Emits control constants used to change per-architecture behaviour in the
+/// AMDGPU ROCm device libraries.
+void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
+    CodeGen::CodeGenModule &CGM) const {
+  StringRef Name = "__oclc_ABI_version";
+  llvm::GlobalVariable *OriginalGV = CGM.getModule().getNamedGlobal(Name);
+  if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
+    return;
+
+  if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
+      clang::TargetOptions::COV_None)
+    return;
+
+  auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
+  llvm::Constant *COV = llvm::ConstantInt::get(
+      Type, CGM.getTarget().getTargetOpts().CodeObjectVersion);
+
+  // It needs to be constant weak_odr without externally_initialized so that
+  // the load instuction can be eliminated by the IPSCCP.
+  auto *GV = new llvm::GlobalVariable(
+      CGM.getModule(), Type, true, llvm::GlobalValue::WeakODRLinkage, COV, Name,
+      nullptr, llvm::GlobalValue::ThreadLocalMode::NotThreadLocal,
+      CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
+  GV->setVisibility(llvm::GlobalValue::VisibilityTypes::HiddenVisibility);
+
+  // Replace any external references to this variable with the new global.
+  if (OriginalGV) {
+    OriginalGV->replaceAllUsesWith(GV);
+    GV->takeName(OriginalGV);
+    OriginalGV->eraseFromParent();
   }
 }
 
@@ -413,7 +451,6 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     return DefaultGlobalAS;
 
   LangAS AddrSpace = D->getType().getAddressSpace();
-  assert(AddrSpace == LangAS::Default || isTargetAddressSpace(AddrSpace));
   if (AddrSpace != LangAS::Default)
     return AddrSpace;
 
@@ -561,7 +598,8 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
 
 void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
     llvm::Function *F, const AMDGPUFlatWorkGroupSizeAttr *FlatWGS,
-    const ReqdWorkGroupSizeAttr *ReqdWGS) {
+    const ReqdWorkGroupSizeAttr *ReqdWGS, int32_t *MinThreadsVal,
+    int32_t *MaxThreadsVal) {
   unsigned Min = 0;
   unsigned Max = 0;
   if (FlatWGS) {
@@ -574,8 +612,13 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
   if (Min != 0) {
     assert(Min <= Max && "Min must be less than or equal Max");
 
+    if (MinThreadsVal)
+      *MinThreadsVal = Min;
+    if (MaxThreadsVal)
+      *MaxThreadsVal = Max;
     std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
-    F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
+    if (F)
+      F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   } else
     assert(Max == 0 && "Max must be zero");
 }

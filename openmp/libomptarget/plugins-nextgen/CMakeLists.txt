@@ -49,13 +49,16 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
         PRIVATE
         elf_common
         MemoryManager
-        OMPT
         PluginInterface
         ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
         ${OPENMP_PTHREAD_LIB}
 
       NO_INSTALL_RPATH
     )
+
+    if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+      target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE OMPT)
+    endif()
 
     if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
       target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE
@@ -93,6 +96,7 @@ add_subdirectory(cuda)
 add_subdirectory(ppc64)
 add_subdirectory(ppc64le)
 add_subdirectory(x86_64)
+add_subdirectory(s390x)
 
 # Make sure the parent scope can see the plugins that will be created.
 set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)

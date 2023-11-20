@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
+#if _LIBCPP_STD_VER >= 23
   // [mdspan.extents], class template extents
   using std::extents;
 
@@ -17,11 +18,12 @@ export namespace std {
   // [mdspan.layout], layout mapping
   using std::layout_left;
   using std::layout_right;
-  // using std::layout_stride;
+  using std::layout_stride;
 
   // [mdspan.accessor.default], class template default_accessor
   using std::default_accessor;
 
   // [mdspan.mdspan], class template mdspan
   using std::mdspan;
+#endif // _LIBCPP_STD_VER >= 23
 } // namespace std

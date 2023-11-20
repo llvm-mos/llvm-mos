@@ -245,7 +245,10 @@ public:
   /// The cursor to the start of the input-files block.
   llvm::BitstreamCursor InputFilesCursor;
 
-  /// Offsets for all of the input file entries in the AST file.
+  /// Absolute offset of the start of the input-files block.
+  uint64_t InputFilesOffsetBase = 0;
+
+  /// Relative offsets for all of the input file entries in the AST file.
   const llvm::support::unaligned_uint64_t *InputFileOffsets = nullptr;
 
   /// The input files that have been loaded from this AST file.
@@ -288,9 +291,6 @@ public:
   /// Offsets for all of the source location entries in the
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
-
-  /// SLocEntries that we're going to preload.
-  SmallVector<uint64_t, 4> PreloadSLocEntries;
 
   /// Remapping table for source locations in this module.
   ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy, 2>

@@ -10,9 +10,9 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Iterators.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -724,9 +724,18 @@ Block *ArgConverter::applySignatureConversion(
   Block *newBlock = block->splitBlock(block->begin());
   block->replaceAllUsesWith(newBlock);
 
-  // FIXME: We should map the new arguments to proper locations.
+  // Map all new arguments to the location of the argument they originate from.
   SmallVector<Location> newLocs(convertedTypes.size(),
                                 rewriter.getUnknownLoc());
+  for (unsigned i = 0; i < origArgCount; ++i) {
+    auto inputMap = signatureConversion.getInputMapping(i);
+    if (!inputMap || inputMap->replacementValue)
+      continue;
+    Location origLoc = block->getArgument(i).getLoc();
+    for (unsigned j = 0; j < inputMap->size; ++j)
+      newLocs[inputMap->inputNo + j] = origLoc;
+  }
+
   SmallVector<Value, 4> newArgRange(
       newBlock->addArguments(convertedTypes, newLocs));
   ArrayRef<Value> newArgs(newArgRange);
@@ -2911,27 +2920,34 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
 
 LogicalResult TypeConverter::convertType(Type t,
                                          SmallVectorImpl<Type> &results) const {
-  auto existingIt = cachedDirectConversions.find(t);
-  if (existingIt != cachedDirectConversions.end()) {
-    if (existingIt->second)
-      results.push_back(existingIt->second);
-    return success(existingIt->second != nullptr);
+  {
+    std::shared_lock<decltype(cacheMutex)> cacheReadLock(cacheMutex,
+                                                         std::defer_lock);
+    if (t.getContext()->isMultithreadingEnabled())
+      cacheReadLock.lock();
+    auto existingIt = cachedDirectConversions.find(t);
+    if (existingIt != cachedDirectConversions.end()) {
+      if (existingIt->second)
+        results.push_back(existingIt->second);
+      return success(existingIt->second != nullptr);
+    }
+    auto multiIt = cachedMultiConversions.find(t);
+    if (multiIt != cachedMultiConversions.end()) {
+      results.append(multiIt->second.begin(), multiIt->second.end());
+      return success();
+    }
   }
-  auto multiIt = cachedMultiConversions.find(t);
-  if (multiIt != cachedMultiConversions.end()) {
-    results.append(multiIt->second.begin(), multiIt->second.end());
-    return success();
-  }
-
   // Walk the added converters in reverse order to apply the most recently
   // registered first.
   size_t currentCount = results.size();
-  conversionCallStack.push_back(t);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([this]() { conversionCallStack.pop_back(); });
+
+  std::unique_lock<decltype(cacheMutex)> cacheWriteLock(cacheMutex,
+                                                        std::defer_lock);
+
   for (const ConversionCallbackFn &converter : llvm::reverse(conversions)) {
-    if (std::optional<LogicalResult> result =
-            converter(t, results, conversionCallStack)) {
+    if (std::optional<LogicalResult> result = converter(t, results)) {
+      if (t.getContext()->isMultithreadingEnabled())
+        cacheWriteLock.lock();
       if (!succeeded(*result)) {
         cachedDirectConversions.try_emplace(t, nullptr);
         return failure();

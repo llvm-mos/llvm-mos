@@ -40,7 +40,8 @@ protected:
 
 public:
   AArch64AsmBackend(const Target &T, const Triple &TT, bool IsLittleEndian)
-      : MCAsmBackend(IsLittleEndian ? support::little : support::big),
+      : MCAsmBackend(IsLittleEndian ? llvm::endianness::little
+                                    : llvm::endianness::big),
         TheTriple(TT) {}
 
   unsigned getNumFixupKinds() const override {
@@ -360,7 +361,7 @@ AArch64AsmBackend::getFixupKind(StringRef Name) const {
 /// getFixupKindContainereSizeInBytes - The number of bytes of the
 /// container involved in big endian or 0 if the item is little endian
 unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) const {
-  if (Endian == support::little)
+  if (Endian == llvm::endianness::little)
     return 0;
 
   switch (Kind) {
@@ -400,6 +401,19 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                    MutableArrayRef<char> Data, uint64_t Value,
                                    bool IsResolved,
                                    const MCSubtargetInfo *STI) const {
+  if (Fixup.getTargetKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
+    auto RefKind = static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+    AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+    if (SymLoc == AArch64AuthMCExpr::VK_AUTH ||
+        SymLoc == AArch64AuthMCExpr::VK_AUTHADDR) {
+      assert(Value == 0);
+      const auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
+      Value = (uint64_t(Expr->getDiscriminator()) << 32) |
+              (uint64_t(Expr->getKey()) << 60) |
+              (uint64_t(Expr->hasAddressDiversity()) << 63);
+    }
+  }
+
   if (!Value)
     return; // Doesn't change encoding.
   unsigned Kind = Fixup.getKind();

@@ -72,8 +72,8 @@ enum {
 
 } // namespace
 
-ConstString PlatformProperties::GetSettingName() {
-  static ConstString g_setting_name("platform");
+llvm::StringRef PlatformProperties::GetSettingName() {
+  static constexpr llvm::StringLiteral g_setting_name("platform");
   return g_setting_name;
 }
 
@@ -987,6 +987,14 @@ uint32_t Platform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   if (IsHost())
     match_count = Host::FindProcesses(match_info, process_infos);
   return match_count;
+}
+
+ProcessInstanceInfoList Platform::GetAllProcesses() {
+  ProcessInstanceInfoList processes;
+  ProcessInstanceInfoMatch match;
+  assert(match.MatchAllProcesses());
+  FindProcesses(match, processes);
+  return processes;
 }
 
 Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {

@@ -21,9 +21,12 @@
 ! CHECK-NEXT: -ccc-print-phases       Dump list of actions to perform
 ! CHECK-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! CHECK-NEXT: -dumpmachine            Display the compiler's target processor
+! CHECK-NEXT: -dumpversion            Display the version of the compiler
 ! CHECK-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! CHECK-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! CHECK-NEXT: -E                      Only run the preprocessor
+! CHECK-NEXT: -falias-analysis        Pass alias information on to LLVM (default when optimizing for speed)
 ! CHECK-NEXT: -falternative-parameter-statement
 ! CHECK-NEXT:                         Enable the old style PARAMETER statement
 ! CHECK-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
@@ -43,8 +46,11 @@
 ! CHECK-NEXT: -fhonor-nans            Specify that floating-point optimizations are not allowed that assume arguments and results are not NANs.
 ! CHECK-NEXT: -fimplicit-none         No implicit typing allowed unless overridden by IMPLICIT statements
 ! CHECK-NEXT: -finput-charset=<value> Specify the default character set for source files
+! CHECK-NEXT: -fintegrated-as         Enable the integrated assembler
 ! CHECK-NEXT: -fintrinsic-modules-path <dir>
 ! CHECK-NEXT:                         Specify where to find the compiled intrinsic modules
+! CHECK-NEXT: -flang-deprecated-no-hlfir
+! CHECK-NEXT:                         Do not use HLFIR lowering (deprecated)
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                         Use HLFIR lowering (experimental)
 ! CHECK-NEXT: -flang-experimental-polymorphism
@@ -55,6 +61,9 @@
 ! CHECK-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! CHECK-NEXT: -flto=<value>           Set LTO mode
 ! CHECK-NEXT: -flto                   Enable LTO in 'full' mode
+! CHECK-NEXT: -fms-runtime-lib=<value>
+! CHECK-NEXT:                         Select Windows run-time library
+! CHECK-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! CHECK-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! CHECK-NEXT: -fno-integrated-as      Disable the integrated assembler
@@ -74,7 +83,7 @@
 ! CHECK-NEXT: -fopenmp-targets=<value>
 ! CHECK-NEXT:                         Specify comma-separated list of triples OpenMP offloading targets to be supported
 ! CHECK-NEXT: -fopenmp-version=<value>
-! CHECK-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
+! CHECK-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
 ! CHECK-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -foptimization-record-file=<file>
 ! CHECK-NEXT:                         Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.
@@ -84,6 +93,8 @@
 ! CHECK-NEXT: -fppc-native-vector-element-order
 ! CHECK-NEXT:                         Specifies PowerPC native vector element order (default)
 ! CHECK-NEXT: -freciprocal-math       Allow division operations to be reassociated
+! CHECK-NEXT: -fropi                  Generate read-only position independent code (ARM only)
+! CHECK-NEXT: -frwpi                  Generate read-write position independent code (ARM only)
 ! CHECK-NEXT: -fsave-optimization-record=<format>
 ! CHECK-NEXT:                         Generate an optimization record file in a specific format
 ! CHECK-NEXT: -fsave-optimization-record
@@ -91,6 +102,7 @@
 ! CHECK-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! CHECK-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -funderscoring          Appends one trailing underscore to external names
+! CHECK-NEXT: -fveclib=<value>        Use the given vector functions library
 ! CHECK-NEXT: -fversion-loops-for-stride
 ! CHECK-NEXT:                         Create unit-strided versions of loops
 ! CHECK-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
@@ -100,12 +112,15 @@
 ! CHECK-NEXT: --help-hidden           Display help for hidden options
 ! CHECK-NEXT: -help                   Display available options
 ! CHECK-NEXT: -I <dir>                Add directory to the end of the list of include search paths
+! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! CHECK-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! CHECK-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! CHECK-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! CHECK-NEXT: -msve-vector-bits=<value>
+! CHECK-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! CHECK-NEXT: --no-offload-arch=<value>
 ! CHECK-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! CHECK-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
@@ -129,9 +144,12 @@
 ! CHECK-NEXT: --target=<value>        Generate code for the given target
 ! CHECK-NEXT: -U <macro>              Undefine macro <macro>
 ! CHECK-NEXT: --version               Print version information
+! CHECK-NEXT: -v                      Show commands to run and use verbose output
+! CHECK-NEXT: -Wl,<arg>               Pass the comma separated arguments in <arg> to the linker
 ! CHECK-NEXT: -W<warning>             Enable the specified warning
 ! CHECK-NEXT: -Xflang <arg>           Pass <arg> to the flang compiler
 ! CHECK-NEXT: -x <language>           Treat subsequent input files as having type <language>
+
 
 ! ERROR-FLANG: error: unknown argument '-help-hidden'; did you mean '--help-hidden'?
 

@@ -26,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/NoSanitizeList.h"
+#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -214,16 +215,14 @@ struct ObjCEntrypoints {
 
 /// This class records statistics on instrumentation based profiling.
 class InstrProfStats {
-  uint32_t VisitedInMainFile;
-  uint32_t MissingInMainFile;
-  uint32_t Visited;
-  uint32_t Missing;
-  uint32_t Mismatched;
+  uint32_t VisitedInMainFile = 0;
+  uint32_t MissingInMainFile = 0;
+  uint32_t Visited = 0;
+  uint32_t Missing = 0;
+  uint32_t Mismatched = 0;
 
 public:
-  InstrProfStats()
-      : VisitedInMainFile(0), MissingInMainFile(0), Visited(0), Missing(0),
-        Mismatched(0) {}
+  InstrProfStats() = default;
   /// Record that we've visited a function and whether or not that function was
   /// in the main source file.
   void addVisited(bool MainFile) {
@@ -1261,26 +1260,11 @@ public:
                               llvm::AttributeList &Attrs, unsigned &CallingConv,
                               bool AttrOnCallSite, bool IsThunk);
 
-  /// Adds attributes to F according to our CodeGenOptions and LangOptions, as
-  /// though we had emitted it ourselves.  We remove any attributes on F that
-  /// conflict with the attributes we add here.
-  ///
-  /// This is useful for adding attrs to bitcode modules that you want to link
-  /// with but don't control, such as CUDA's libdevice.  When linking with such
-  /// a bitcode library, you might want to set e.g. its functions'
-  /// "unsafe-fp-math" attribute to match the attr of the functions you're
-  /// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
-  /// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
-  /// will propagate unsafe-fp-math=false up to every transitive caller of a
-  /// function in the bitcode library!
-  ///
-  /// With the exception of fast-math attrs, this will only make the attributes
-  /// on the function more conservative.  But it's unsafe to call this on a
-  /// function which relies on particular fast-math attributes for correctness.
-  /// It's up to you to ensure that this is safe.
-  void addDefaultFunctionDefinitionAttributes(llvm::Function &F);
-  void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
-                                                bool WillInternalize);
+  /// Adjust Memory attribute to ensure that the BE gets the right attribute
+  // in order to generate the library call or the intrinsic for the function
+  // name 'Name'.
+  void AdjustMemoryAttribute(StringRef Name, CGCalleeInfo CalleeInfo,
+                             llvm::AttributeList &Attrs);
 
   /// Like the overload taking a `Function &`, but intended specifically
   /// for frontends that want to build on Clang's target-configuration logic.
@@ -1559,19 +1543,39 @@ public:
   void moveLazyEmissionStates(CodeGenModule *NewBuilder);
 
   /// Emit the IR encoding to attach the CUDA launch bounds attribute to \p F.
+  /// If \p MaxThreadsVal is not nullptr, the max threads value is stored in it,
+  /// if a valid one was found.
   void handleCUDALaunchBoundsAttr(llvm::Function *F,
-                                  const CUDALaunchBoundsAttr *A);
+                                  const CUDALaunchBoundsAttr *A,
+                                  int32_t *MaxThreadsVal = nullptr,
+                                  int32_t *MinBlocksVal = nullptr,
+                                  int32_t *MaxClusterRankVal = nullptr);
 
   /// Emit the IR encoding to attach the AMD GPU flat-work-group-size attribute
   /// to \p F. Alternatively, the work group size can be taken from a \p
-  /// ReqdWGS.
+  /// ReqdWGS. If \p MinThreadsVal is not nullptr, the min threads value is
+  /// stored in it, if a valid one was found. If \p MaxThreadsVal is not
+  /// nullptr, the max threads value is stored in it, if a valid one was found.
   void handleAMDGPUFlatWorkGroupSizeAttr(
       llvm::Function *F, const AMDGPUFlatWorkGroupSizeAttr *A,
-      const ReqdWorkGroupSizeAttr *ReqdWGS = nullptr);
+      const ReqdWorkGroupSizeAttr *ReqdWGS = nullptr,
+      int32_t *MinThreadsVal = nullptr, int32_t *MaxThreadsVal = nullptr);
 
   /// Emit the IR encoding to attach the AMD GPU waves-per-eu attribute to \p F.
   void handleAMDGPUWavesPerEUAttr(llvm::Function *F,
                                   const AMDGPUWavesPerEUAttr *A);
+
+  llvm::Constant *
+  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty, LangAS AddrSpace,
+                        const VarDecl *D,
+                        ForDefinition_t IsForDefinition = NotForDefinition);
+
+  // FIXME: Hardcoding priority here is gross.
+  void AddGlobalCtor(llvm::Function *Ctor, int Priority = 65535,
+                     unsigned LexOrder = ~0U,
+                     llvm::Constant *AssociatedData = nullptr);
+  void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
+                     bool IsDtorAttrFunc = false);
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -1594,11 +1598,6 @@ private:
   // is responsible for performing such mangled name updates.
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD,
                                StringRef &CurName);
-
-  llvm::Constant *
-  GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty, LangAS AddrSpace,
-                        const VarDecl *D,
-                        ForDefinition_t IsForDefinition = NotForDefinition);
 
   bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    llvm::AttrBuilder &AttrBuilder,
@@ -1648,13 +1647,6 @@ private:
 
   void EmitPointerToInitFunc(const VarDecl *VD, llvm::GlobalVariable *Addr,
                              llvm::Function *InitFunc, InitSegAttr *ISA);
-
-  // FIXME: Hardcoding priority here is gross.
-  void AddGlobalCtor(llvm::Function *Ctor, int Priority = 65535,
-                     unsigned LexOrder = ~0U,
-                     llvm::Constant *AssociatedData = nullptr);
-  void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
-                     bool IsDtorAttrFunc = false);
 
   /// EmitCtorList - Generates a global array of functions and priorities using
   /// the given list and name. This array will have appending linkage and is

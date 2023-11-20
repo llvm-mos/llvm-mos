@@ -514,19 +514,40 @@ void LookupResult::resolveKind() {
   const NamedDecl *HasNonFunction = nullptr;
 
   llvm::SmallVector<const NamedDecl *, 4> EquivalentNonFunctions;
+  llvm::BitVector RemovedDecls(N);
 
-  unsigned UniqueTagIndex = 0;
-
-  unsigned I = 0;
-  while (I < N) {
+  for (unsigned I = 0; I < N; I++) {
     const NamedDecl *D = Decls[I]->getUnderlyingDecl();
     D = cast<NamedDecl>(D->getCanonicalDecl());
 
     // Ignore an invalid declaration unless it's the only one left.
     // Also ignore HLSLBufferDecl which not have name conflict with other Decls.
-    if ((D->isInvalidDecl() || isa<HLSLBufferDecl>(D)) && !(I == 0 && N == 1)) {
-      Decls[I] = Decls[--N];
+    if ((D->isInvalidDecl() || isa<HLSLBufferDecl>(D)) &&
+        N - RemovedDecls.count() > 1) {
+      RemovedDecls.set(I);
       continue;
+    }
+
+    // C++ [basic.scope.hiding]p2:
+    //   A class name or enumeration name can be hidden by the name of
+    //   an object, function, or enumerator declared in the same
+    //   scope. If a class or enumeration name and an object, function,
+    //   or enumerator are declared in the same scope (in any order)
+    //   with the same name, the class or enumeration name is hidden
+    //   wherever the object, function, or enumerator name is visible.
+    if (HideTags && isa<TagDecl>(D)) {
+      bool Hidden = false;
+      for (auto *OtherDecl : Decls) {
+        if (canHideTag(OtherDecl) && !OtherDecl->isInvalidDecl() &&
+            getContextForScopeMatching(OtherDecl)->Equals(
+                getContextForScopeMatching(Decls[I]))) {
+          RemovedDecls.set(I);
+          Hidden = true;
+          break;
+        }
+      }
+      if (Hidden)
+        continue;
     }
 
     std::optional<unsigned> ExistingI;
@@ -561,7 +582,7 @@ void LookupResult::resolveKind() {
       if (isPreferredLookupResult(getSema(), getLookupKind(), Decls[I],
                                   Decls[*ExistingI]))
         Decls[*ExistingI] = Decls[I];
-      Decls[I] = Decls[--N];
+      RemovedDecls.set(I);
       continue;
     }
 
@@ -572,7 +593,6 @@ void LookupResult::resolveKind() {
     } else if (isa<TagDecl>(D)) {
       if (HasTag)
         Ambiguous = true;
-      UniqueTagIndex = I;
       HasTag = true;
     } else if (isa<FunctionTemplateDecl>(D)) {
       HasFunction = true;
@@ -588,7 +608,7 @@ void LookupResult::resolveKind() {
         if (getSema().isEquivalentInternalLinkageDeclaration(HasNonFunction,
                                                              D)) {
           EquivalentNonFunctions.push_back(D);
-          Decls[I] = Decls[--N];
+          RemovedDecls.set(I);
           continue;
         }
         if (D->isPlaceholderVar(getSema().getLangOpts()) &&
@@ -600,28 +620,6 @@ void LookupResult::resolveKind() {
       }
       HasNonFunction = D;
     }
-    I++;
-  }
-
-  // C++ [basic.scope.hiding]p2:
-  //   A class name or enumeration name can be hidden by the name of
-  //   an object, function, or enumerator declared in the same
-  //   scope. If a class or enumeration name and an object, function,
-  //   or enumerator are declared in the same scope (in any order)
-  //   with the same name, the class or enumeration name is hidden
-  //   wherever the object, function, or enumerator name is visible.
-  // But it's still an error if there are distinct tag types found,
-  // even if they're not visible. (ref?)
-  if (N > 1 && HideTags && HasTag && !Ambiguous &&
-      (HasFunction || HasNonFunction || HasUnresolved)) {
-    const NamedDecl *OtherDecl = Decls[UniqueTagIndex ? 0 : N - 1];
-    if (isa<TagDecl>(Decls[UniqueTagIndex]->getUnderlyingDecl()) &&
-        getContextForScopeMatching(Decls[UniqueTagIndex])->Equals(
-            getContextForScopeMatching(OtherDecl)) &&
-        canHideTag(OtherDecl))
-      Decls[UniqueTagIndex] = Decls[--N];
-    else
-      Ambiguous = true;
   }
 
   // FIXME: This diagnostic should really be delayed until we're done with
@@ -630,9 +628,15 @@ void LookupResult::resolveKind() {
     getSema().diagnoseEquivalentInternalLinkageDeclarations(
         getNameLoc(), HasNonFunction, EquivalentNonFunctions);
 
+  // Remove decls by replacing them with decls from the end (which
+  // means that we need to iterate from the end) and then truncating
+  // to the new size.
+  for (int I = RemovedDecls.find_last(); I >= 0; I = RemovedDecls.find_prev(I))
+    Decls[I] = Decls[--N];
   Decls.truncate(N);
 
-  if (HasNonFunction && (HasFunction || HasUnresolved))
+  if ((HasNonFunction && (HasFunction || HasUnresolved)) ||
+      (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
     Ambiguous = true;
 
   if (Ambiguous && ReferenceToPlaceHolderVariable)
@@ -1589,7 +1593,6 @@ bool Sema::isUsableModule(const Module *M) {
   //   The global module fragment can be used to provide declarations that are
   //   attached to the global module and usable within the module unit.
   if (M == TheGlobalModuleFragment || M == TheImplicitGlobalModuleFragment ||
-      M == TheExportedImplicitGlobalModuleFragment ||
       // If M is the module we're parsing, it should be usable. This covers the
       // private module fragment. The private module fragment is usable only if
       // it is within the current module unit. And it must be the current
@@ -3907,7 +3910,7 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             // exports are only valid in module purview and outside of any
             // PMF (although a PMF should not even be present in a module
             // with an import).
-            assert(FM && FM->isModulePurview() && !FM->isPrivateModule() &&
+            assert(FM && FM->isNamedModule() && !FM->isPrivateModule() &&
                    "bad export context");
             // .. are attached to a named module M, do not appear in the
             // translation unit containing the point of the lookup..
@@ -5695,7 +5698,7 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
 
 /// Get a "quoted.h" or <angled.h> include path to use in a diagnostic
 /// suggesting the addition of a #include of the specified file.
-static std::string getHeaderNameForHeader(Preprocessor &PP, const FileEntry *E,
+static std::string getHeaderNameForHeader(Preprocessor &PP, FileEntryRef E,
                                           llvm::StringRef IncludingFile) {
   bool IsAngled = false;
   auto Path = PP.getHeaderSearchInfo().suggestPathToFileForDiagnostics(
@@ -5720,7 +5723,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
   llvm::SmallVector<Module*, 8> UniqueModules;
   llvm::SmallDenseSet<Module*, 8> UniqueModuleSet;
   for (auto *M : Modules) {
-    if (M->isGlobalModule() || M->isPrivateModule())
+    if (M->isExplicitGlobalModule() || M->isPrivateModule())
       continue;
     if (UniqueModuleSet.insert(M).second)
       UniqueModules.push_back(M);
@@ -5728,11 +5731,12 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
 
   // Try to find a suitable header-name to #include.
   std::string HeaderName;
-  if (const FileEntry *Header =
+  if (OptionalFileEntryRef Header =
           PP.getHeaderToIncludeForDiagnostics(UseLoc, DeclLoc)) {
     if (const FileEntry *FE =
             SourceMgr.getFileEntryForID(SourceMgr.getFileID(UseLoc)))
-      HeaderName = getHeaderNameForHeader(PP, Header, FE->tryGetRealPathName());
+      HeaderName =
+          getHeaderNameForHeader(PP, *Header, FE->tryGetRealPathName());
   }
 
   // If we have a #include we should suggest, or if all definition locations
@@ -5751,6 +5755,28 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
 
   Modules = UniqueModules;
 
+  auto GetModuleNameForDiagnostic = [this](const Module *M) -> std::string {
+    if (M->isModuleMapModule())
+      return M->getFullModuleName();
+
+    Module *CurrentModule = getCurrentModule();
+
+    if (M->isImplicitGlobalModule())
+      M = M->getTopLevelModule();
+
+    bool IsInTheSameModule =
+        CurrentModule && CurrentModule->getPrimaryModuleInterfaceName() ==
+                             M->getPrimaryModuleInterfaceName();
+
+    // If the current module unit is in the same module with M, it is OK to show
+    // the partition name. Otherwise, it'll be sufficient to show the primary
+    // module name.
+    if (IsInTheSameModule)
+      return M->getTopLevelModuleName().str();
+    else
+      return M->getPrimaryModuleInterfaceName().str();
+  };
+
   if (Modules.size() > 1) {
     std::string ModuleList;
     unsigned N = 0;
@@ -5760,7 +5786,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
         ModuleList += "[...]";
         break;
       }
-      ModuleList += M->getFullModuleName();
+      ModuleList += GetModuleNameForDiagnostic(M);
     }
 
     Diag(UseLoc, diag::err_module_unimported_use_multiple)
@@ -5768,7 +5794,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
   } else {
     // FIXME: Add a FixItHint that imports the corresponding module.
     Diag(UseLoc, diag::err_module_unimported_use)
-      << (int)MIK << Decl << Modules[0]->getFullModuleName();
+        << (int)MIK << Decl << GetModuleNameForDiagnostic(Modules[0]);
   }
 
   NotePrevious();

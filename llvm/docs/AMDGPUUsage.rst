@@ -360,7 +360,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx90a``                  ``amdgcn``   dGPU  - sramecc         - Absolute      - *rocm-amdhsa* *TBA*
                                                     - tgsplit           flat
                                                     - xnack             scratch                       .. TODO::
-                                                                      - Packed
+                                                    - kernarg preload - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
@@ -381,21 +381,21 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx940``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
                                                     - tgsplit           flat
                                                     - xnack             scratch                       .. TODO::
-                                                                      - Packed
+                                                    - kernarg preload - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
      ``gfx941``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
                                                     - tgsplit           flat
                                                     - xnack             scratch                       .. TODO::
-                                                                      - Packed
+                                                    - kernarg preload - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
      ``gfx942``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
                                                     - tgsplit           flat
                                                     - xnack             scratch                       .. TODO::
-                                                                      - Packed
+                                                    - kernarg preload - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
@@ -966,10 +966,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   LLVM Intrinsic                                   Description
   ==============================================   ==========================================================
   llvm.amdgcn.sqrt                                 Provides direct access to v_sqrt_f64, v_sqrt_f32 and v_sqrt_f16
-                                                   (on targets with half support). Peforms sqrt function.
+                                                   (on targets with half support). Performs sqrt function.
 
   llvm.amdgcn.log                                  Provides direct access to v_log_f32 and v_log_f16
-                                                   (on targets with half support). Peforms log2 function.
+                                                   (on targets with half support). Performs log2 function.
 
   llvm.amdgcn.exp2                                 Provides direct access to v_exp_f32 and v_exp_f16
                                                    (on targets with half support). Performs exp2 function.
@@ -999,6 +999,27 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   :ref:`llvm.stacksave.p5 <int_stacksave>`         Implemented, must use the alloca address space.
   :ref:`llvm.stackrestore.p5 <int_stackrestore>`   Implemented, must use the alloca address space.
 
+  :ref:`llvm.get.fpmode.i32 <int_get_fpmode>`      The natural floating-point mode type is i32. This
+                                                   implemented by extracting relevant bits out of the MODE
+                                                   register with s_getreg_b32. The first 10 bits are the
+                                                   core floating-point mode. Bits 12:18 are the exception
+                                                   mask. On gfx9+, bit 23 is FP16_OVFL. Bitfields not
+                                                   relevant to floating-point instructions are 0s.
+
+  :ref:`llvm.get.rounding<int_get_rounding>`       AMDGPU supports two separately controllable rounding
+                                                   modes depending on the floating-point type. One
+                                                   controls float, and the other controls both double and
+                                                   half operations. If both modes are the same, returns
+                                                   one of the standard return values. If the modes are
+                                                   different, returns one of :ref:`12 extended values
+                                                   <amdgpu-rounding-mode-enumeration-values-table>`
+                                                   describing the two modes.
+
+                                                   To nearest, ties away from zero is not a supported
+                                                   mode. The raw rounding mode values in the MODE
+                                                   register do not exactly match the FLT_ROUNDS values,
+                                                   so a conversion is performed.
+
   llvm.amdgcn.wave.reduce.umin                     Performs an arithmetic unsigned min reduction on the unsigned values
                                                    provided by each lane in the wavefront.
                                                    Intrinsic takes a hint for reduction strategy using second operand
@@ -1018,6 +1039,118 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    If target does not support the DPP operations (e.g. gfx6/7),
                                                    reduction will be performed using default iterative strategy.
                                                    Intrinsic is currently only implemented for i32.
+
+  llvm.amdgcn.udot2                                Provides direct access to v_dot2_u32_u16 across targets which
+                                                   support such instructions. This performs unsigned dot product
+                                                   with two v2i16 operands, summed with the third i32 operand. The
+                                                   i1 fourth operand is used to clamp the output.
+
+  llvm.amdgcn.udot4                                Provides direct access to v_dot4_u32_u8 across targets which
+                                                   support such instructions. This performs unsigned dot product
+                                                   with two i32 operands (holding a vector of 4 8bit values), summed
+                                                   with the third i32 operand. The i1 fourth operand is used to clamp
+                                                   the output.
+
+  llvm.amdgcn.udot8                                Provides direct access to v_dot8_u32_u4 across targets which
+                                                   support such instructions. This performs unsigned dot product
+                                                   with two i32 operands (holding a vector of 8 4bit values), summed
+                                                   with the third i32 operand. The i1 fourth operand is used to clamp
+                                                   the output.
+
+  llvm.amdgcn.sdot2                                Provides direct access to v_dot2_i32_i16 across targets which
+                                                   support such instructions. This performs signed dot product
+                                                   with two v2i16 operands, summed with the third i32 operand. The
+                                                   i1 fourth operand is used to clamp the output.
+                                                   When applicable (e.g. no clamping), this is lowered into
+                                                   v_dot2c_i32_i16 for targets which support it.
+
+  llvm.amdgcn.sdot4                                Provides direct access to v_dot4_i32_i8 across targets which
+                                                   support such instructions. This performs signed dot product
+                                                   with two i32 operands (holding a vector of 4 8bit values), summed
+                                                   with the third i32 operand. The i1 fourth operand is used to clamp
+                                                   the output.
+                                                   When applicable (i.e. no clamping / operand modifiers), this is lowered
+                                                   into v_dot4c_i32_i8 for targets which support it.
+                                                   RDNA3 does not offer v_dot4_i32_i8, and rather offers
+                                                   v_dot4_i32_iu8 which has operands to hold the signedness of the
+                                                   vector operands. Thus, this intrinsic lowers to the signed version
+                                                   of this instruction for gfx11 targets.
+
+  llvm.amdgcn.sdot8                                Provides direct access to v_dot8_u32_u4 across targets which
+                                                   support such instructions. This performs signed dot product
+                                                   with two i32 operands (holding a vector of 8 4bit values), summed
+                                                   with the third i32 operand. The i1 fourth operand is used to clamp
+                                                   the output.
+                                                   When applicable (i.e. no clamping / operand modifiers), this is lowered
+                                                   into v_dot8c_i32_i4 for targets which support it.
+                                                   RDNA3 does not offer v_dot8_i32_i4, and rather offers
+                                                   v_dot4_i32_iu4 which has operands to hold the signedness of the
+                                                   vector operands. Thus, this intrinsic lowers to the signed version
+                                                   of this instruction for gfx11 targets.
+
+  llvm.amdgcn.sudot4                               Provides direct access to v_dot4_i32_iu8 on gfx11 targets. This performs
+                                                   dot product with two i32 operands (holding a vector of 4 8bit values), summed
+                                                   with the fifth i32 operand. The i1 sixth operand is used to clamp
+                                                   the output. The i1s preceding the vector operands decide the signedness.
+
+  llvm.amdgcn.sudot8                               Provides direct access to v_dot8_i32_iu4 on gfx11 targets. This performs
+                                                   dot product with two i32 operands (holding a vector of 8 4bit values), summed
+                                                   with the fifth i32 operand. The i1 sixth operand is used to clamp
+                                                   the output. The i1s preceding the vector operands decide the signedness.
+
+  llvm.amdgcn.sched_barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
+                                                   during instruction scheduling. The parameter is a mask for the instruction types
+                                                   that can cross the intrinsic.
+
+                                                   - 0x0000: No instructions may be scheduled across sched_barrier.
+                                                   - 0x0001: All, non-memory, non-side-effect producing instructions may be
+                                                     scheduled across sched_barrier, *i.e.* allow ALU instructions to pass.
+                                                   - 0x0002: VALU instructions may be scheduled across sched_barrier.
+                                                   - 0x0004: SALU instructions may be scheduled across sched_barrier.
+                                                   - 0x0008: MFMA/WMMA instructions may be scheduled across sched_barrier.
+                                                   - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
+                                                   - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
+                                                   - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
+                                                   - 0x0080: All DS instructions may be scheduled across sched_barrier.
+                                                   - 0x0100: All DS read instructions may be scheduled accoss sched_barrier.
+                                                   - 0x0200: All DS write instructions may be scheduled across sched_barrier.
+
+  llvm.amdgcn.sched_group_barrier                  Creates schedule groups with specific properties to create custom scheduling
+                                                   pipelines. The ordering between groups is enforced by the instruction scheduler.
+                                                   The intrinsic applies to the code that preceeds the intrinsic. The intrinsic
+                                                   takes three values that control the behavior of the schedule groups.
+
+                                                   - Mask : Classify instruction groups using the llvm.amdgcn.sched_barrier mask values.
+                                                   - Size : The number of instructions that are in the group.
+                                                   - SyncID : Order is enforced between groups with matching values.
+
+                                                   The mask can include multiple instruction types. It is undefined behavior to set
+                                                   values beyond the range of valid masks.
+
+                                                   Combining multiple sched_group_barrier intrinsics enables an ordering of specific
+                                                   instruction types during instruction scheduling. For example, the following enforces
+                                                   a sequence of 1 VMEM read, followed by 1 VALU instruction, followed by 5 MFMA
+                                                   instructions.
+
+                                                   |  ``// 1 VMEM read``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(32, 1, 0)``
+                                                   |  ``// 1 VALU``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(2, 1, 0)``
+                                                   |  ``// 5 MFMA``
+                                                   |  ``__builtin_amdgcn_sched_group_barrier(8, 5, 0)``
+
+  llvm.amdgcn.iglp_opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
+                                                   implements predefined intruction scheduling orderings. The intrinsic applies to the
+                                                   surrounding scheduling region. The intrinsic takes a value that specifies the
+                                                   strategy.  The compiler implements two strategies.
+
+                                                   0. Interleave DS and MFMA instructions for small GEMM kernels.
+                                                   1. Interleave DS and MFMA instructions for single wave small GEMM kernels.
+
+                                                   Only one iglp_opt intrinsic may be used in a scheduling region. The iglp_opt intrinsic
+                                                   cannot be combined with sched_barrier or sched_group_barrier.
+
+                                                   The iglp_opt strategy implementations are subject to change.
 
   ==============================================   ==========================================================
 
@@ -1196,6 +1329,8 @@ The AMDGPU backend supports the following calling conventions:
                                      uniform control flow.
 
      ``amdgpu_cs_chain_preserve``    Same as ``amdgpu_cs_chain``, but active lanes for VGPRs starting at v8 are preserved.
+                                     Calls to ``amdgpu_gfx`` functions are not allowed, and any calls to ``llvm.amdgcn.cs.chain``
+                                     must not pass more VGPR arguments than the caller's VGPR function parameters.
 
      ``amdgpu_es``                   Used for AMDPAL shader stage before geometry shader if geometry is in
                                      use. So either the domain (= tessellation evaluation) shader if
@@ -1327,12 +1462,10 @@ The AMDGPU backend uses the following ELF header:
   object conforms:
 
   * ``ELFABIVERSION_AMDGPU_HSA_V2`` is used to specify the version of AMD HSA
-    runtime ABI for code object V2. Specify using the Clang option
-    ``-mcode-object-version=2``.
+    runtime ABI for code object V2. Can no longer be emitted by this version of LLVM.
 
   * ``ELFABIVERSION_AMDGPU_HSA_V3`` is used to specify the version of AMD HSA
-    runtime ABI for code object V3. Specify using the Clang option
-    ``-mcode-object-version=3``.
+    runtime ABI for code object V3. Can no longer be emitted by this version of LLVM.
 
   * ``ELFABIVERSION_AMDGPU_HSA_V4`` is used to specify the version of AMD HSA
     runtime ABI for code object V4. Specify using the Clang option
@@ -1623,8 +1756,7 @@ Code Object V2 Note Records
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-  Code object V2 is not the default code object version emitted by
-  this version of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 The AMDGPU backend code object uses the following ELF note record in the
 ``.note`` section when compiling for code object V2.
@@ -2892,8 +3024,7 @@ Code Object V2 Metadata
 +++++++++++++++++++++++
 
 .. warning::
-  Code object V2 is not the default code object version emitted by this version
-  of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 Code object V2 metadata is specified by the ``NT_AMD_HSA_METADATA`` note record
 (see :ref:`amdgpu-note-records-v2`).
@@ -3322,8 +3453,7 @@ Code Object V3 Metadata
 +++++++++++++++++++++++
 
 .. warning::
-  Code object V3 is not the default code object version emitted by this version
-  of LLVM.
+  Code object V3 generation is no longer supported by this version of LLVM.
 
 Code object V3 and above metadata is specified by the ``NT_AMDGPU_METADATA`` note
 record (see :ref:`amdgpu-note-records-v3-onwards`).
@@ -4295,12 +4425,24 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      dynamically sized stack.
                                                      This is only set in code
                                                      object v5 and later.
-     463:460 1 bit                                   Reserved, must be 0.
-     464     1 bit   RESERVED_464                    Deprecated, must be 0.
-     467:465 3 bits                                  Reserved, must be 0.
-     468     1 bit   RESERVED_468                    Deprecated, must be 0.
-     469:471 3 bits                                  Reserved, must be 0.
-     511:472 5 bytes                                 Reserved, must be 0.
+     463:460 4 bits                                  Reserved, must be 0.
+     470:464 7 bits  KERNARG_PRELOAD_SPEC_LENGTH     GFX6-GFX9
+                                                       - Reserved, must be 0.
+                                                     GFX90A, GFX940
+                                                       - The number of dwords from
+                                                         the kernarg segment to preload
+                                                         into User SGPRs before kernel
+                                                         execution. (see
+                                                         :ref:`amdgpu-amdhsa-kernarg-preload`).
+     479:471 9 bits  KERNARG_PRELOAD_SPEC_OFFSET     GFX6-GFX9
+                                                       - Reserved, must be 0.
+                                                     GFX90A, GFX940
+                                                       - An offset in dwords into the
+                                                         kernarg segment to begin
+                                                         preloading data into User
+                                                         SGPRs. (see
+                                                         :ref:`amdgpu-amdhsa-kernarg-preload`).
+     511:480 4 bytes                                 Reserved, must be 0.
      512     **Total size 64 bytes.**
      ======= ====================================================================
 
@@ -4855,6 +4997,22 @@ The fields used by CP for code objects before V3 also match those specified in
      FLOAT_ROUND_MODE_ZERO                  3     Round Toward 0
      ====================================== ===== ==============================
 
+
+  .. table:: Extended FLT_ROUNDS Enumeration Values
+     :name: amdgpu-rounding-mode-enumeration-values-table
+
+     +------------------------+---------------+-------------------+--------------------+----------+
+     |                        | F32 NEAR_EVEN | F32 PLUS_INFINITY | F32 MINUS_INFINITY | F32 ZERO |
+     +------------------------+---------------+-------------------+--------------------+----------+
+     | F64/F16 NEAR_EVEN      |      1        |        11         |        14          |     17   |
+     +------------------------+---------------+-------------------+--------------------+----------+
+     | F64/F16 PLUS_INFINITY  |      8        |         2         |        15          |     18   |
+     +------------------------+---------------+-------------------+--------------------+----------+
+     | F64/F16 MINUS_INFINITY |      9        |        12         |         3          |     19   |
+     +------------------------+---------------+-------------------+--------------------+----------+
+     | F64/F16 ZERO           |     10        |        13         |        16          |     0    |
+     +------------------------+---------------+-------------------+--------------------+----------+
+
 ..
 
   .. table:: Floating Point Denorm Mode Enumeration Values
@@ -4906,7 +5064,7 @@ for enabled registers are dense starting at SGPR0: the first enabled register is
 SGPR0, the next enabled register is SGPR1 etc.; disabled registers do not have
 an SGPR number.
 
-The initial SGPRs comprise up to 16 User SRGPs that are set by CP and apply to
+The initial SGPRs comprise up to 16 User SGPRs that are set by CP and apply to
 all wavefronts of the grid. It is possible to specify more than 16 User SGPRs
 using the ``enable_sgpr_*`` bit fields, in which case only the first 16 are
 actually initialized. These are then immediately followed by the System SGPRs
@@ -4949,6 +5107,9 @@ SGPR register initial state is defined in
      then       Flat Scratch Init          2      See
                 (enable_sgpr_flat_scratch         :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
                 _init)
+     then       Preloaded Kernargs         N/A    See
+                (kernarg_preload_spec             :ref:`amdgpu-amdhsa-kernarg-preload`.
+                _length)
      then       Private Segment Size       1      The 32-bit byte size of a
                 (enable_sgpr_private              single work-item's memory
                 _segment_size)                    allocation. This is the
@@ -5080,6 +5241,31 @@ following properties:
 * ptr64: 1
 * MTYPE set to support memory coherence that matches the runtime (such as CC for
   APU and NC for dGPU).
+
+.. _amdgpu-amdhsa-kernarg-preload:
+
+Preloaded Kernel Arguments
+++++++++++++++++++++++++++
+
+On hardware that supports this feature, kernel arguments can be preloaded into
+User SGPRs, up to the maximum number of User SGPRs available. The allocation of
+Preload SGPRs occurs directly after the last enabled non-kernarg preload User
+SGPR. (See :ref:`amdgpu-amdhsa-initial-kernel-execution-state`)
+
+The data preloaded is copied from the kernarg segment, the amount of data is
+determined by the value specified in the kernarg_preload_spec_length field of
+the kernel descriptor. This data is then loaded into consecutive User SGPRs. The
+number of SGPRs receiving preloaded kernarg data corresponds with the value
+given by kernarg_preload_spec_length. The preloading starts at the dword offset
+within the kernarg segment, which is specified by the
+kernarg_preload_spec_offset field.
+
+If the kernarg_preload_spec_length is non-zero, the CP firmware will append an
+additional 256 bytes to the kernel_code_entry_byte_offset. This addition
+facilitates the incorporation of a prologue to the kernel entry to handle cases
+where code designed for kernarg preloading is executed on hardware equipped with
+incompatible firmware. If hardware has compatible firmware the 256 bytes at the
+start of the kernel entry will be skipped.
 
 .. _amdgpu-amdhsa-kernel-prolog:
 
@@ -5402,7 +5588,7 @@ following sections:
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
-* :ref:`amdgpu-amdhsa-memory-model-gfx940`
+* :ref:`amdgpu-amdhsa-memory-model-gfx942`
 * :ref:`amdgpu-amdhsa-memory-model-gfx10-gfx11`
 
 .. _amdgpu-amdhsa-memory-model-gfx6-gfx9:
@@ -9054,12 +9240,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
 
-.. _amdgpu-amdhsa-memory-model-gfx940:
+.. _amdgpu-amdhsa-memory-model-gfx942:
 
-Memory Model GFX940
+Memory Model GFX942
 +++++++++++++++++++
 
-For GFX940:
+For GFX942:
 
 * Each agent has multiple shader arrays (SA).
 * Each SA has multiple compute units (CU).
@@ -9113,7 +9299,7 @@ For GFX940:
   model. See :ref:`amdgpu-amdhsa-memory-spaces`.
 * The vector and scalar memory operations use an L2 cache.
 
-  * The gfx940 can be configured as a number of smaller agents with each having
+  * The gfx942 can be configured as a number of smaller agents with each having
     a single L2 shared by all CUs on the same agent, or as fewer (possibly one)
     larger agents with groups of CUs on each agent each sharing separate L2
     caches.
@@ -9189,15 +9375,15 @@ only accessed by a single thread, and is always write-before-read, there is
 never a need to invalidate these entries from the L1 cache. Hence all cache
 invalidates are done as ``*_vol`` to only invalidate the volatile cache lines.
 
-The code sequences used to implement the memory model for GFX940 are defined
-in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
+The code sequences used to implement the memory model for GFX940, GFX941, GFX942
+are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx941-gfx942-table`.
 
-  .. table:: AMDHSA Memory Model Code Sequences GFX940
-     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx940-table
+  .. table:: AMDHSA Memory Model Code Sequences GFX940, GFX941, GFX942
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx941-gfx942-table
 
      ============ ============ ============== ========== ================================
      LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
-                  Ordering     Sync Scope     Address    GFX940
+                  Ordering     Sync Scope     Address    GFX940, GFX941, GFX942
                                               Space
      ============ ============ ============== ========== ================================
      **Non-Atomic**
@@ -9232,12 +9418,20 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
      load         *none*       *none*         - local    1. ds_load
      store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
-                                              - private    1. buffer/global/flat_store
-                                              - constant
+                                              - private    1. GFX940, GFX941
+                                              - constant        buffer/global/flat_store
+                                                                sc0=1 sc1=1
+                                                              GFX942
+                                                                buffer/global/flat_store
+
                                                          - !volatile & nontemporal
 
-                                                           1. buffer/global/flat_store
-                                                              nt=1
+                                                           1. GFX940, GFX941
+                                                                buffer/global/flat_store
+                                                                nt=1 sc0=1 sc1=1
+                                                              GFX942
+                                                                buffer/global/flat_store
+                                                                nt=1
 
                                                          - volatile
 
@@ -9929,8 +10123,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
 
      **Release Atomic**
      ------------------------------------------------------------------------------------
-     store atomic release      - singlethread - global   1. buffer/global/flat_store
-                               - wavefront    - generic
+     store atomic release      - singlethread - global   1. GFX940, GFX941
+                               - wavefront    - generic       buffer/global/flat_store
+                                                              sc0=1 sc1=1
+                                                            GFX942
+                                                              buffer/global/flat_store
+
      store atomic release      - singlethread - local    *If TgSplit execution mode,
                                - wavefront               local address space cannot
                                                          be used.*
@@ -9967,7 +10165,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                                              store that is being
                                                              released.
 
-                                                         2. buffer/global/flat_store sc0=1
+                                                         2. GFX940, GFX941
+                                                              buffer/global/flat_store
+                                                              sc0=1 sc1=1
+                                                            GFX942
+                                                              buffer/global/flat_store
+                                                              sc0=1
      store atomic release      - workgroup    - local    *If TgSplit execution mode,
                                                          local address space cannot
                                                          be used.*
@@ -10026,7 +10229,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                                              store that is being
                                                              released.
 
-                                                         3. buffer/global/flat_store sc1=1
+                                                         3. GFX940, GFX941
+                                                              buffer/global/flat_store
+                                                              sc0=1 sc1=1
+                                                            GFX942
+                                                              buffer/global/flat_store
+                                                              sc1=1
      store atomic release      - system       - global   1. buffer_wbl2 sc0=1 sc1=1
                                               - generic
                                                            - Must happen before
@@ -14609,6 +14817,10 @@ in this description.
 
     CDNA 3        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx940<AMDGPU/AMDGPUAsmGFX940>`
 
+                                                                :doc:`gfx941<AMDGPU/AMDGPUAsmGFX940>`
+
+                                                                :doc:`gfx942<AMDGPU/AMDGPUAsmGFX940>`
+
     RDNA 1        :doc:`GFX10 RDNA1<AMDGPU/AMDGPUAsmGFX10>`     :doc:`gfx1010<AMDGPU/AMDGPUAsmGFX10>`
 
                                                                 :doc:`gfx1011<AMDGPU/AMDGPUAsmGFX1011>`
@@ -14857,8 +15069,7 @@ Code Object V2 Predefined Symbols
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-  Code object V2 is not the default code object version emitted by
-  this version of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 The AMDGPU assembler defines and updates some symbols automatically. These
 symbols do not affect code generation.
@@ -14913,8 +15124,7 @@ Code Object V2 Directives
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-  Code object V2 is not the default code object version emitted by
-  this version of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 AMDGPU ABI defines auxiliary data in output code object. In assembly source,
 one can specify them with assembler directives.
@@ -14989,8 +15199,7 @@ Code Object V2 Example Source Code
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning::
-  Code Object V2 is not the default code object version emitted by
-  this version of LLVM.
+  Code object V2 generation is no longer supported by this version of LLVM.
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 
@@ -15259,6 +15468,10 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
      ``.amdhsa_exception_int_div_zero``                       0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
+     ``.amdhsa_user_sgpr_kernarg_preload_length``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_LENGTH in
+                                                                                  GFX940       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_user_sgpr_kernarg_preload_offset``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_OFFSET in
+                                                                                  GFX940       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ======================================================== =================== ============ ===================
 
 .amdgpu_metadata

@@ -115,25 +115,10 @@ entry:
 }
 
 define <3 x float> @sqrt_v3f32(<3 x float> %a) {
-; CHECK-SD-LABEL: sqrt_v3f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fsqrt v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sqrt_v3f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
-; CHECK-GI-NEXT:    fsqrt v0.4s, v0.4s
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sqrt_v3f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fsqrt v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %c = call <3 x float> @llvm.sqrt.v3f32(<3 x float> %a)
   ret <3 x float> %c
@@ -212,32 +197,22 @@ define <7 x half> @sqrt_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[4]
 ; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[5]
-; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[6]
+; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v0.4h
+; CHECK-GI-NOFP16-NEXT:    mov h0, v0.h[6]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    fsqrt v2.4s, v3.4s
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[2], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v1.h[3], v0.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    mov s2, v1.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov s3, v1.s[2]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[2], v3.s[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[3], v0.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
 ; CHECK-GI-NOFP16-NEXT:    fsqrt v1.4s, v1.4s
-; CHECK-GI-NOFP16-NEXT:    fsqrt v0.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov s2, v1.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov s3, v1.s[2]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[2], v3.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[2]
-; CHECK-GI-NOFP16-NEXT:    mov h5, v0.h[3]
+; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov h4, v0.h[3]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.s[3], v0.s[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v4.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v3.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v5.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v4.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov h2, v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[4], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov h1, v1.h[2]
@@ -248,33 +223,7 @@ define <7 x half> @sqrt_v7f16(<7 x half> %a) {
 ;
 ; CHECK-GI-FP16-LABEL: sqrt_v7f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    mov h4, v0.h[4]
-; CHECK-GI-FP16-NEXT:    mov h5, v0.h[5]
-; CHECK-GI-FP16-NEXT:    mov h6, v0.h[6]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[3], v3.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[4], v4.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[5], v5.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[6], v6.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[7], v0.h[0]
 ; CHECK-GI-FP16-NEXT:    fsqrt v0.8h, v0.8h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    mov h4, v0.h[4]
-; CHECK-GI-FP16-NEXT:    mov h5, v0.h[5]
-; CHECK-GI-FP16-NEXT:    mov h6, v0.h[6]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[3], v3.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[4], v4.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[5], v5.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[6], v6.h[0]
-; CHECK-GI-FP16-NEXT:    mov v0.h[7], v0.h[0]
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = call <7 x half> @llvm.sqrt.v7f16(<7 x half> %a)
@@ -418,7 +367,6 @@ define <16 x half> @sqrt_v16f16(<16 x half> %a) {
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-SD-NOFP16-NEXT:    fsqrt s18, s0
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h1
-; CHECK-SD-NOFP16-NEXT:    fcvt h18, s18
 ; CHECK-SD-NOFP16-NEXT:    fsqrt s19, s0
 ; CHECK-SD-NOFP16-NEXT:    mov h0, v1.h[2]
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
@@ -430,48 +378,49 @@ define <16 x half> @sqrt_v16f16(<16 x half> %a) {
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-SD-NOFP16-NEXT:    fsqrt s2, s2
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s2
-; CHECK-SD-NOFP16-NEXT:    fsqrt s4, s4
 ; CHECK-SD-NOFP16-NEXT:    fsqrt s22, s0
 ; CHECK-SD-NOFP16-NEXT:    mov h0, v1.h[5]
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-SD-NOFP16-NEXT:    fsqrt s4, s4
 ; CHECK-SD-NOFP16-NEXT:    fsqrt s5, s5
-; CHECK-SD-NOFP16-NEXT:    fsqrt s6, s6
 ; CHECK-SD-NOFP16-NEXT:    fsqrt s23, s0
 ; CHECK-SD-NOFP16-NEXT:    mov h0, v1.h[6]
-; CHECK-SD-NOFP16-NEXT:    mov h1, v1.h[7]
 ; CHECK-SD-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-SD-NOFP16-NEXT:    fsqrt s6, s6
 ; CHECK-SD-NOFP16-NEXT:    fsqrt s7, s7
-; CHECK-SD-NOFP16-NEXT:    fsqrt s16, s16
 ; CHECK-SD-NOFP16-NEXT:    fsqrt s24, s0
-; CHECK-SD-NOFP16-NEXT:    fcvt h0, s3
-; CHECK-SD-NOFP16-NEXT:    fcvt s3, h1
+; CHECK-SD-NOFP16-NEXT:    mov h0, v1.h[7]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h1, s19
+; CHECK-SD-NOFP16-NEXT:    fcvt s25, h0
+; CHECK-SD-NOFP16-NEXT:    fcvt h0, s3
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s18
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s4
-; CHECK-SD-NOFP16-NEXT:    mov v1.h[1], v18.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s20
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[1], v3.h[0]
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s20
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s5
-; CHECK-SD-NOFP16-NEXT:    mov v1.h[2], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s21
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[2], v3.h[0]
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s21
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[3], v2.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s6
-; CHECK-SD-NOFP16-NEXT:    mov v1.h[3], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s22
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[3], v3.h[0]
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s22
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[4], v2.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s7
-; CHECK-SD-NOFP16-NEXT:    mov v1.h[4], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s23
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[4], v3.h[0]
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s23
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[5], v2.h[0]
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[5], v3.h[0]
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s24
+; CHECK-SD-NOFP16-NEXT:    fsqrt s16, s16
+; CHECK-SD-NOFP16-NEXT:    mov v1.h[6], v3.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s16
-; CHECK-SD-NOFP16-NEXT:    mov v1.h[5], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s24
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[6], v2.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s17
-; CHECK-SD-NOFP16-NEXT:    mov v1.h[6], v4.h[0]
+; CHECK-SD-NOFP16-NEXT:    fsqrt s18, s25
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[7], v2.h[0]
-; CHECK-SD-NOFP16-NEXT:    fsqrt s3, s3
-; CHECK-SD-NOFP16-NEXT:    fcvt h3, s3
+; CHECK-SD-NOFP16-NEXT:    fcvt h3, s18
 ; CHECK-SD-NOFP16-NEXT:    mov v1.h[7], v3.h[0]
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;

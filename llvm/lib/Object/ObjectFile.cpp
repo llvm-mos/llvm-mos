@@ -79,7 +79,7 @@ uint32_t ObjectFile::getSymbolAlignment(DataRefImpl DRI) const { return 0; }
 bool ObjectFile::isSectionBitcode(DataRefImpl Sec) const {
   Expected<StringRef> NameOrErr = getSectionName(Sec);
   if (NameOrErr)
-    return *NameOrErr == ".llvmbc" || *NameOrErr == ".llvm.lto";
+    return *NameOrErr == ".llvm.lto";
   consumeError(NameOrErr.takeError());
   return false;
 }
@@ -159,6 +159,8 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::offload_binary:
   case file_magic::dxcontainer_object:
   case file_magic::xo65_object:
+  case file_magic::offload_bundle:
+  case file_magic::offload_bundle_compressed:
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::tapi_file:
     return errorCodeToError(object_error::invalid_file_type);

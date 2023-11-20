@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -48,19 +49,49 @@ static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
   return success();
 }
 
-/// Checks if 'memref' may or must alias a MemRef in 'memrefList'. It is often a
+/// Given a memref value, return the "base" value by skipping over all
+/// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
+static Value getViewBase(Value value) {
+  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
+    value = viewLikeOp.getViewSource();
+  return value;
+}
+
+/// Return "true" if the given values are guaranteed to be different (and
+/// non-aliasing) allocations based on the fact that one value is the result
+/// of an allocation and the other value is a block argument of a parent block.
+/// Note: This is a best-effort analysis that will eventually be replaced by a
+/// proper "is same allocation" analysis. This function may return "false" even
+/// though the two values are distinct allocations.
+static bool distinctAllocAndBlockArgument(Value v1, Value v2) {
+  Value v1Base = getViewBase(v1);
+  Value v2Base = getViewBase(v2);
+  auto areDistinct = [](Value v1, Value v2) {
+    if (Operation *op = v1.getDefiningOp())
+      if (hasEffect<MemoryEffects::Allocate>(op, v1))
+        if (auto bbArg = dyn_cast<BlockArgument>(v2))
+          if (bbArg.getOwner()->findAncestorOpInBlock(*op))
+            return true;
+    return false;
+  };
+  return areDistinct(v1Base, v2Base) || areDistinct(v2Base, v1Base);
+}
+
+/// Checks if `memref` may or must alias a MemRef in `otherList`. It is often a
 /// requirement of optimization patterns that there cannot be any aliasing
-/// memref in order to perform the desired simplification. The 'allowSelfAlias'
-/// argument indicates whether 'memref' may be present in 'memrefList' which
+/// memref in order to perform the desired simplification. The `allowSelfAlias`
+/// argument indicates whether `memref` may be present in `otherList` which
 /// makes this helper function applicable to situations where we already know
-/// that 'memref' is in the list but also when we don't want it in the list.
+/// that `memref` is in the list but also when we don't want it in the list.
 static bool potentiallyAliasesMemref(AliasAnalysis &analysis,
-                                     ValueRange memrefList, Value memref,
+                                     ValueRange otherList, Value memref,
                                      bool allowSelfAlias) {
-  for (auto mr : memrefList) {
-    if (allowSelfAlias && mr == memref)
+  for (auto other : otherList) {
+    if (allowSelfAlias && other == memref)
       continue;
-    if (!analysis.alias(mr, memref).isNo())
+    if (distinctAllocAndBlockArgument(other, memref))
+      continue;
+    if (!analysis.alias(other, memref).isNo())
       return true;
   }
   return false;
@@ -73,19 +104,19 @@ static bool potentiallyAliasesMemref(AliasAnalysis &analysis,
 namespace {
 
 /// Remove values from the `memref` operand list that are also present in the
-/// `retained` list since they will always alias and thus never actually be
-/// deallocated. However, we also need to be certain that no other value in the
-/// `retained` list can alias, for which we use a static alias analysis. This is
-/// necessary because the `dealloc` operation is defined to return one `i1`
-/// value per memref in the `retained` list which represents the disjunction of
-/// the condition values corresponding to all aliasing values in the `memref`
-/// list. In particular, this means that if there is some value R in the
-/// `retained` list which aliases with a value M in the `memref` list (but can
-/// only be staticaly determined to may-alias) and M is also present in the
-/// `retained` list, then it would be illegal to remove M because the result
-/// corresponding to R would be computed incorrectly afterwards.
-/// Because we require an alias analysis, this pattern cannot be applied as a
-/// regular canonicalization pattern.
+/// `retained` list (or a guaranteed alias of it) because they will never
+/// actually be deallocated. However, we also need to be certain about which
+/// other memrefs in the `retained` list can alias, i.e., there must not by any
+/// may-aliasing memref. This is necessary because the `dealloc` operation is
+/// defined to return one `i1` value per memref in the `retained` list which
+/// represents the disjunction of the condition values corresponding to all
+/// aliasing values in the `memref` list. In particular, this means that if
+/// there is some value R in the `retained` list which aliases with a value M in
+/// the `memref` list (but can only be staticaly determined to may-alias) and M
+/// is also present in the `retained` list, then it would be illegal to remove M
+/// because the result corresponding to R would be computed incorrectly
+/// afterwards.  Because we require an alias analysis, this pattern cannot be
+/// applied as a regular canonicalization pattern.
 ///
 /// Example:
 /// ```mlir
@@ -101,62 +132,74 @@ namespace {
 /// // replace %0#0 with %1
 /// ```
 /// given that `%r0` and `%r1` may not alias with `%m0`.
-struct DeallocRemoveDeallocMemrefsContainedInRetained
+struct RemoveDeallocMemrefsContainedInRetained
     : public OpRewritePattern<DeallocOp> {
-  DeallocRemoveDeallocMemrefsContainedInRetained(MLIRContext *context,
-                                                 AliasAnalysis &aliasAnalysis)
+  RemoveDeallocMemrefsContainedInRetained(MLIRContext *context,
+                                          AliasAnalysis &aliasAnalysis)
       : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+
+  /// The passed 'memref' must not have a may-alias relation to any retained
+  /// memref, and at least one must-alias relation. If there is no must-aliasing
+  /// memref in the retain list, we cannot simply remove the memref as there
+  /// could be situations in which it actually has to be deallocated. If it's
+  /// no-alias, then just proceed, if it's must-alias we need to update the
+  /// updated condition returned by the dealloc operation for that alias.
+  LogicalResult handleOneMemref(DeallocOp deallocOp, Value memref, Value cond,
+                                PatternRewriter &rewriter) const {
+    rewriter.setInsertionPointAfter(deallocOp);
+
+    // Check that there is no may-aliasing memref and that at least one memref
+    // in the retain list aliases (because otherwise it might have to be
+    // deallocated in some situations and can thus not be dropped).
+    bool atLeastOneMustAlias = false;
+    for (Value retained : deallocOp.getRetained()) {
+      AliasResult analysisResult = aliasAnalysis.alias(retained, memref);
+      if (analysisResult.isMay())
+        return failure();
+      if (analysisResult.isMust() || analysisResult.isPartial())
+        atLeastOneMustAlias = true;
+    }
+    if (!atLeastOneMustAlias)
+      return failure();
+
+    // Insert arith.ori operations to update the corresponding dealloc result
+    // values to incorporate the condition of the must-aliasing memref such that
+    // we can remove that operand later on.
+    for (auto [i, retained] : llvm::enumerate(deallocOp.getRetained())) {
+      Value updatedCondition = deallocOp.getUpdatedConditions()[i];
+      AliasResult analysisResult = aliasAnalysis.alias(retained, memref);
+      if (analysisResult.isMust() || analysisResult.isPartial()) {
+        auto disjunction = rewriter.create<arith::OrIOp>(
+            deallocOp.getLoc(), updatedCondition, cond);
+        rewriter.replaceAllUsesExcept(updatedCondition, disjunction.getResult(),
+                                      disjunction);
+      }
+    }
+
+    return success();
+  }
 
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
-    // Unique memrefs to be deallocated.
-    DenseMap<Value, unsigned> retained;
-    for (auto [i, ret] : llvm::enumerate(deallocOp.getRetained()))
-      retained[ret] = i;
-
     // There must not be any duplicates in the retain list anymore because we
     // would miss updating one of the result values otherwise.
+    DenseSet<Value> retained(deallocOp.getRetained().begin(),
+                             deallocOp.getRetained().end());
     if (retained.size() != deallocOp.getRetained().size())
       return failure();
 
     SmallVector<Value> newMemrefs, newConditions;
-    for (auto memrefAndCond :
+    for (auto [memref, cond] :
          llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
-      Value memref = std::get<0>(memrefAndCond);
-      Value cond = std::get<1>(memrefAndCond);
 
-      auto replaceResultsIfNoInvalidAliasing = [&](Value memref) -> bool {
-        Value retainedMemref = deallocOp.getRetained()[retained[memref]];
-        // The current memref must not have a may-alias relation to any retained
-        // memref, and exactly one must-alias relation.
-        // TODO: it is possible to extend this pattern to allow an arbitrary
-        // number of must-alias relations as long as there is no may-alias. If
-        // it's no-alias, then just proceed (only supported case as of now), if
-        // it's must-alias, we also need to update the condition for that alias.
-        if (llvm::all_of(deallocOp.getRetained(), [&](Value mr) {
-              return aliasAnalysis.alias(mr, memref).isNo() ||
-                     mr == retainedMemref;
-            })) {
-          rewriter.setInsertionPointAfter(deallocOp);
-          auto orOp = rewriter.create<arith::OrIOp>(
-              deallocOp.getLoc(),
-              deallocOp.getUpdatedConditions()[retained[memref]], cond);
-          rewriter.replaceAllUsesExcept(
-              deallocOp.getUpdatedConditions()[retained[memref]],
-              orOp.getResult(), orOp);
-          return true;
-        }
-        return false;
-      };
-
-      if (retained.contains(memref) &&
-          replaceResultsIfNoInvalidAliasing(memref))
+      if (succeeded(handleOneMemref(deallocOp, memref, cond, rewriter)))
         continue;
 
-      auto extractOp = memref.getDefiningOp<memref::ExtractStridedMetadataOp>();
-      if (extractOp && retained.contains(extractOp.getOperand()) &&
-          replaceResultsIfNoInvalidAliasing(extractOp.getOperand()))
-        continue;
+      if (auto extractOp =
+              memref.getDefiningOp<memref::ExtractStridedMetadataOp>())
+        if (succeeded(handleOneMemref(deallocOp, extractOp.getOperand(), cond,
+                                      rewriter)))
+          continue;
 
       newMemrefs.push_back(memref);
       newConditions.push_back(cond);
@@ -315,6 +358,88 @@ private:
   AliasAnalysis &aliasAnalysis;
 };
 
+/// Check for every retained memref if a must-aliasing memref exists in the
+/// 'memref' operand list with constant 'true' condition. If so, we can replace
+/// the operation result corresponding to that retained memref with 'true'. If
+/// this condition holds for all retained memrefs we can also remove the
+/// aliasing memrefs and their conditions since they will never be deallocated
+/// due to the must-alias and we don't need them to compute the result value
+/// anymore since it got replaced with 'true'.
+///
+/// Example:
+/// ```mlir
+/// %0:2 = bufferization.dealloc (%arg0, %arg1, %arg2 : ...)
+///                           if (%true, %true, %true)
+///                       retain (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
+/// ```
+/// becomes
+/// ```mlir
+/// %0:2 = bufferization.dealloc (%arg2 : memref<2xi32>) if (%true)
+///                       retain (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
+/// // replace %0#0 with %true
+/// // replace %0#1 with %true
+/// ```
+/// Note that the dealloc operation will still have the result values, but they
+/// don't have uses anymore.
+struct RetainedMemrefAliasingAlwaysDeallocatedMemref
+    : public OpRewritePattern<DeallocOp> {
+  RetainedMemrefAliasingAlwaysDeallocatedMemref(MLIRContext *context,
+                                                AliasAnalysis &aliasAnalysis)
+      : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    BitVector aliasesWithConstTrueMemref(deallocOp.getRetained().size());
+    SmallVector<Value> newMemrefs, newConditions;
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      bool canDropMemref = false;
+      for (auto [i, retained, res] : llvm::enumerate(
+               deallocOp.getRetained(), deallocOp.getUpdatedConditions())) {
+        if (!matchPattern(cond, m_One()))
+          continue;
+
+        AliasResult analysisResult = aliasAnalysis.alias(retained, memref);
+        if (analysisResult.isMust() || analysisResult.isPartial()) {
+          rewriter.replaceAllUsesWith(res, cond);
+          aliasesWithConstTrueMemref[i] = true;
+          canDropMemref = true;
+          continue;
+        }
+
+        // TODO: once our alias analysis is powerful enough we can remove the
+        // rest of this loop body
+        auto extractOp =
+            memref.getDefiningOp<memref::ExtractStridedMetadataOp>();
+        if (!extractOp)
+          continue;
+
+        AliasResult extractAnalysisResult =
+            aliasAnalysis.alias(retained, extractOp.getOperand());
+        if (extractAnalysisResult.isMust() ||
+            extractAnalysisResult.isPartial()) {
+          rewriter.replaceAllUsesWith(res, cond);
+          aliasesWithConstTrueMemref[i] = true;
+          canDropMemref = true;
+        }
+      }
+
+      if (!canDropMemref) {
+        newMemrefs.push_back(memref);
+        newConditions.push_back(cond);
+      }
+    }
+    if (!aliasesWithConstTrueMemref.all())
+      return failure();
+
+    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                  rewriter);
+  }
+
+private:
+  AliasAnalysis &aliasAnalysis;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -332,10 +457,12 @@ struct BufferDeallocationSimplificationPass
   void runOnOperation() override {
     AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
     RewritePatternSet patterns(&getContext());
-    patterns.add<DeallocRemoveDeallocMemrefsContainedInRetained,
+    patterns.add<RemoveDeallocMemrefsContainedInRetained,
                  RemoveRetainedMemrefsGuaranteedToNotAlias,
-                 SplitDeallocWhenNotAliasingAnyOther>(&getContext(),
-                                                      aliasAnalysis);
+                 SplitDeallocWhenNotAliasingAnyOther,
+                 RetainedMemrefAliasingAlwaysDeallocatedMemref>(&getContext(),
+                                                                aliasAnalysis);
+    populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
 
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))

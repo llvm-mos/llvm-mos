@@ -110,7 +110,7 @@ class GlobalISelMatchTableExecutorEmitter {
         OS << "  case GICXXPred_" << TypeIdentifier << "_Predicate_"
            << GetPredEnumName(Pred) << ": {\n"
            << "    " << Code << "\n";
-        if (!StringRef(Code).ltrim().startswith("return")) {
+        if (!StringRef(Code).ltrim().starts_with("return")) {
           OS << "    llvm_unreachable(\"" << GetPredEnumName(Pred)
              << " should have returned\");\n";
         }
@@ -223,6 +223,8 @@ public:
 
   // Map of predicates to their subtarget features.
   SubtargetFeatureInfoMap SubtargetFeatures;
+
+  std::map<std::string, unsigned> HwModes;
 };
 } // namespace llvm
 

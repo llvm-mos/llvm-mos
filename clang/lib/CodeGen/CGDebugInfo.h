@@ -148,7 +148,7 @@ class CGDebugInfo {
   llvm::BumpPtrAllocator DebugInfoNames;
   StringRef CWDName;
 
-  llvm::StringMap<llvm::TrackingMDRef> DIFileCache;
+  llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;
   /// Cache declarations relevant to DW_TAG_imported_declarations (C++
   /// using declarations and global alias variables) that aren't covered
@@ -160,6 +160,9 @@ class CGDebugInfo {
       NamespaceAliasCache;
   llvm::DenseMap<const Decl *, llvm::TypedTrackingMDRef<llvm::DIDerivedType>>
       StaticDataMemberCache;
+
+  /// Keeps track of static data members for which we should emit a definition.
+  std::vector<const VarDecl *> StaticDataMemberDefinitionsToEmit;
 
   using ParamDecl2StmtTy = llvm::DenseMap<const ParmVarDecl *, const Stmt *>;
   using Param2DILocTy =
@@ -526,6 +529,9 @@ public:
   /// Emit a constant global variable's debug info.
   void EmitGlobalVariable(const ValueDecl *VD, const APValue &Init);
 
+  /// Emit debug-info for a variable with a constant initializer.
+  void EmitGlobalVariable(const VarDecl *VD);
+
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 
@@ -800,6 +806,11 @@ private:
                            llvm::MDTuple *&TemplateParameters,
                            llvm::DIScope *&VDContext);
 
+  /// Create a DIExpression representing the constant corresponding
+  /// to the specified 'Val'. Returns nullptr on failure.
+  llvm::DIExpression *createConstantValueExpression(const clang::ValueDecl *VD,
+                                                    const APValue &Val);
+
   /// Allocate a copy of \p A using the DebugInfoNames allocator
   /// and return a reference to it. If multiple arguments are given the strings
   /// are concatenated.
@@ -835,8 +846,10 @@ public:
 
   // Define copy assignment operator.
   ApplyDebugLocation &operator=(ApplyDebugLocation &&Other) {
-    CGF = Other.CGF;
-    Other.CGF = nullptr;
+    if (this != &Other) {
+      CGF = Other.CGF;
+      Other.CGF = nullptr;
+    }
     return *this;
   }
 

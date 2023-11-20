@@ -168,11 +168,26 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
   Value operandA = op.getOperand(0);
   Value operandB = op.getOperand(1);
   Type opType = operandA.getType();
+  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
+  Value two = createFloatConst(op->getLoc(), opType, 2.00, rewriter);
+  Value negOne = createFloatConst(op->getLoc(), opType, -1.00, rewriter);
+  Value opASquared = b.create<arith::MulFOp>(opType, operandA, operandA);
+  Value opBHalf = b.create<arith::DivFOp>(opType, operandB, two);
 
-  Value logA = b.create<math::LogOp>(opType, operandA);
-  Value mult = b.create<arith::MulFOp>(opType, logA, operandB);
+  Value logA = b.create<math::LogOp>(opType, opASquared);
+  Value mult = b.create<arith::MulFOp>(opType, opBHalf, logA);
   Value expResult = b.create<math::ExpOp>(opType, mult);
-  rewriter.replaceOp(op, expResult);
+  Value negExpResult = b.create<arith::MulFOp>(opType, expResult, negOne);
+  Value remainder = b.create<arith::RemFOp>(opType, operandB, two);
+  Value negCheck =
+      b.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, operandA, zero);
+  Value oddPower =
+      b.create<arith::CmpFOp>(arith::CmpFPredicate::ONE, remainder, zero);
+  Value oddAndNeg = b.create<arith::AndIOp>(op->getLoc(), oddPower, negCheck);
+
+  Value res = b.create<arith::SelectOp>(op->getLoc(), oddAndNeg, negExpResult,
+                                        expResult);
+  rewriter.replaceOp(op, res);
   return success();
 }
 
@@ -322,18 +337,19 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   unsigned exponentWidth = bitWidth - mantissaWidth - 1;
 
   // The names of the variables correspond to f32.
-  // f32: 1 bit sign | 8 bits exponent | 23 bits mantissa.
-  // f16: 1 bit sign | 5 bits exponent | 10 bits mantissa.
+  // f64: 1 bit sign | 11 bits exponent | 52 bits mantissa.
+  // f32: 1 bit sign | 8 bits exponent  | 23 bits mantissa.
+  // f16: 1 bit sign | 5 bits exponent  | 10 bits mantissa.
   Value c1Float = createFloatConst(loc, fTy, 1.0, b);
   Value c0 = createIntConst(loc, iTy, 0, b);
   Value c1 = createIntConst(loc, iTy, 1, b);
   Value cNeg1 = createIntConst(loc, iTy, -1, b);
   Value c23 = createIntConst(loc, iTy, mantissaWidth, b);
   Value c31 = createIntConst(loc, iTy, bitWidth - 1, b);
-  Value c127 = createIntConst(loc, iTy, (1 << (exponentWidth - 1)) - 1, b);
-  Value c2To22 = createIntConst(loc, iTy, 1 << (mantissaWidth - 1), b);
-  Value c23Mask = createIntConst(loc, iTy, (1 << mantissaWidth) - 1, b);
-  Value expMask = createIntConst(loc, iTy, (1 << exponentWidth) - 1, b);
+  Value c127 = createIntConst(loc, iTy, (1ull << (exponentWidth - 1)) - 1, b);
+  Value c2To22 = createIntConst(loc, iTy, 1ull << (mantissaWidth - 1), b);
+  Value c23Mask = createIntConst(loc, iTy, (1ull << mantissaWidth) - 1, b);
+  Value expMask = createIntConst(loc, iTy, (1ull << exponentWidth) - 1, b);
 
   Value operandBitcast = b.create<arith::BitcastOp>(iTy, operand);
   Value round = b.create<math::RoundOp>(operand);

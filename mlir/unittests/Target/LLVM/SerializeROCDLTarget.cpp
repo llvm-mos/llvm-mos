@@ -16,6 +16,7 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/FileSystem.h"
@@ -42,7 +43,8 @@ protected:
     registerBuiltinDialectTranslation(registry);
     registerLLVMDialectTranslation(registry);
     registerGPUDialectTranslation(registry);
-    registerROCDLTarget(registry);
+    registerROCDLDialectTranslation(registry);
+    ROCDL::registerROCDLTargetInterfaceExternalModels(registry);
   }
 
   // Checks if a ROCm installation is available.
@@ -81,7 +83,7 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLMToLLVM)) {
   // Serialize the module.
   auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
   ASSERT_TRUE(!!serializer);
-  gpu::TargetOptions options("", {}, "", gpu::TargetOptions::offload);
+  gpu::TargetOptions options("", {}, "", gpu::CompilationTarget::Offload);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
     std::optional<SmallVector<char, 0>> object =
         serializer.serializeToObject(gpuModule, options);
@@ -117,7 +119,7 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLToPTX)) {
   // Serialize the module.
   auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
   ASSERT_TRUE(!!serializer);
-  gpu::TargetOptions options("", {}, "", gpu::TargetOptions::assembly);
+  gpu::TargetOptions options("", {}, "", gpu::CompilationTarget::Assembly);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
     std::optional<SmallVector<char, 0>> object =
         serializer.serializeToObject(gpuModule, options);
@@ -147,7 +149,7 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLToBinary)) {
   // Serialize the module.
   auto serializer = dyn_cast<gpu::TargetAttrInterface>(target);
   ASSERT_TRUE(!!serializer);
-  gpu::TargetOptions options("", {}, "", gpu::TargetOptions::binary);
+  gpu::TargetOptions options("", {}, "", gpu::CompilationTarget::Binary);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
     std::optional<SmallVector<char, 0>> object =
         serializer.serializeToObject(gpuModule, options);

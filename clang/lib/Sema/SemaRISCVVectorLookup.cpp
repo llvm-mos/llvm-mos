@@ -117,6 +117,9 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
   case ScalarTypeKind::UnsignedInteger:
     QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
     break;
+  case ScalarTypeKind::BFloat:
+    QT = Context.BFloat16Ty;
+    break;
   case ScalarTypeKind::Float:
     switch (Type->getElementBitwidth()) {
     case 64:
@@ -202,9 +205,22 @@ public:
 void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     ArrayRef<RVVIntrinsicRecord> Recs, IntrinsicKind K) {
   const TargetInfo &TI = Context.getTargetInfo();
-  static const std::pair<const char *, uint8_t> FeatureCheckList[] = {
+  static const std::pair<const char *, RVVRequire> FeatureCheckList[] = {
       {"64bit", RVV_REQ_RV64},
-      {"xsfvcp", RVV_REQ_Xsfvcp}};
+      {"xsfvcp", RVV_REQ_Xsfvcp},
+      {"xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf},
+      {"xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq},
+      {"xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod},
+      {"xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq},
+      {"experimental-zvbb", RVV_REQ_Zvbb},
+      {"experimental-zvbc", RVV_REQ_Zvbc},
+      {"experimental-zvkb", RVV_REQ_Zvkb},
+      {"experimental-zvkg", RVV_REQ_Zvkg},
+      {"experimental-zvkned", RVV_REQ_Zvkned},
+      {"experimental-zvknha", RVV_REQ_Zvknha},
+      {"experimental-zvknhb", RVV_REQ_Zvknhb},
+      {"experimental-zvksed", RVV_REQ_Zvksed},
+      {"experimental-zvksh", RVV_REQ_Zvksh}};
 
   // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
   // in RISCVVEmitter.cpp.
@@ -238,11 +254,12 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
             /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
             UnMaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
-    llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq =
-        RVVIntrinsic::computeBuiltinTypes(
-            BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-            Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
-            Record.IsTuple);
+    llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq;
+    if (Record.HasMasked)
+      ProtoMaskSeq = RVVIntrinsic::computeBuiltinTypes(
+          BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
+          Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
+          Record.IsTuple);
 
     bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
     bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
@@ -260,6 +277,16 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
 
       if ((BaseTypeI & Record.TypeRangeMask) != BaseTypeI)
         continue;
+
+      if (BaseType == BasicType::Float16) {
+        if ((Record.RequiredExtensions & RVV_REQ_ZvfhminOrZvfh) ==
+            RVV_REQ_ZvfhminOrZvfh) {
+          if (!TI.hasFeature("zvfh") && !TI.hasFeature("zvfhmin"))
+            continue;
+        } else if (!TI.hasFeature("zvfh")) {
+          continue;
+        }
+      }
 
       // Expanded with different LMUL.
       for (int Log2LMUL = -3; Log2LMUL <= 3; Log2LMUL++) {
