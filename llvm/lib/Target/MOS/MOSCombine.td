@@ -101,5 +101,5 @@ def MOSCombinerHelper : GICombinerHelper<"MOSCombinerImpl", [
   sbc_equal,
   fold_shift,
   shift_unused_carry_in,
-  mul_to_shift_and_add
+  mul_to_shift_and_add,
 ]>;

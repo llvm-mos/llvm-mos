@@ -638,9 +638,7 @@ bool MOSCombinerImpl::matchMulToShiftAndAdd(MachineInstr &MI,
                  : B.buildInstr(MathOp, {Ty}, {Shl, LHS});
     if (RHSConst.isNegative())
       R = B.buildNeg(Ty, R);
-    Observer.changingInstr(*R);
-    R->getOperand(0).setReg(MI.getOperand(0).getReg());
-    Observer.changedInstr(*R);
+    B.buildCopy(MI.getOperand(0).getReg(), R);
     MI.eraseFromParent();
   };
   return true;
@@ -681,7 +679,8 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
     case MOS::G_LSHRE: {
       APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg(), Cache);
       if (Use.getOperandNo() == 2) {
-        APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg(), Cache);
+        APInt CarryOutDemanded =
+            getDemandedBits(MI.getOperand(1).getReg(), Cache);
         DemandedBits |= DstDemandedBits << 1 | CarryOutDemanded.zext(8);
       } else {
         assert(Use.getOperandNo() == 3);
@@ -692,7 +691,8 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
     case MOS::G_SHLE: {
       APInt DstDemandedBits = getDemandedBits(MI.getOperand(0).getReg(), Cache);
       if (Use.getOperandNo() == 2) {
-        APInt CarryOutDemanded = getDemandedBits(MI.getOperand(1).getReg(), Cache);
+        APInt CarryOutDemanded =
+            getDemandedBits(MI.getOperand(1).getReg(), Cache);
         DemandedBits |=
             DstDemandedBits.lshr(1) | (CarryOutDemanded.zext(8) << 7);
       } else {
