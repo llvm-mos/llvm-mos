@@ -59,88 +59,6 @@ cl::opt<uint64_t> ZPAvail("zp-avail",
                                    "the compiler in the current TU"),
                           cl::value_desc("bytes"));
 
-// A rational number expressed as a numerator and denominator pair. Binary
-// arithmetic operations between entries generally uses the denominator of the
-// larger operand and rounds, avoiding the explosion typical of exact rational
-// libraries in exchange. The tradeoff is that the results are only approximate.
-struct Freq {
-  uint64_t Num;
-  uint64_t Denom;
-
-  Freq(uint64_t Num, uint64_t Denom) : Num(Num), Denom(Denom) {}
-  Freq(uint64_t Scalar) : Num(Scalar), Denom(1) {}
-  Freq() : Num(0), Denom(1) {}
-
-  Freq operator+(const Freq &Other) const {
-    if (Denom < Other.Denom)
-      return Other + *this;
-    if (Denom == Other.Denom)
-      return {Num + Other.Num, Denom};
-    return *this + scaleToDenom(Other);
-  }
-
-  Freq &operator+=(const Freq &Other) {
-    *this = *this + Other;
-    return *this;
-  }
-
-  Freq operator*(const Freq &Other) const {
-    if (Denom < Other.Denom)
-      return Other * *this;
-    if (Denom == Other.Denom)
-      return {Num * Other.Num / Denom, Denom};
-    return *this * scaleToDenom(Other);
-  }
-  Freq &operator*=(const Freq &Other) {
-    *this = *this * Other;
-    return *this;
-  }
-
-  Freq operator-(const Freq &Other) const { return *this + Freq(-1) * Other; }
-  Freq &operator-=(const Freq &Other) {
-    *this = *this - Other;
-    return *this;
-  }
-
-  Freq operator/(const Freq &Other) const {
-    return *this * Freq(Other.Denom, Other.Num);
-  }
-  Freq &operator/=(const Freq &Other) {
-    *this = *this / Other;
-    return *this;
-  }
-
-  bool operator==(const Freq &Other) const {
-    return Num == Other.Num && Denom == Other.Denom;
-  }
-  bool operator!=(const Freq &Other) const { return !(*this == Other); }
-  bool operator<(const Freq &Other) const {
-    return Num * Other.Denom < Other.Num * Denom;
-  }
-  bool operator<=(const Freq &Other) const {
-    return *this == Other || *this < Other;
-  }
-  bool operator>(const Freq &Other) const { return Other < *this; }
-  bool operator>=(const Freq &Other) const { return Other <= *this; }
-
-private:
-  Freq scaleToDenom(const Freq &Other) const {
-    return Freq{Other.Num * Denom / Other.Denom, Denom};
-  }
-};
-
-Freq operator*(uint64_t Scalar, const Freq &F) { return Freq(Scalar) * F; }
-} // namespace
-
-#ifndef NDEBUG
-static raw_ostream &operator<<(raw_ostream &OS, const Freq &Freq) {
-  OS << Freq.Num << '/' << Freq.Denom;
-  return OS;
-}
-#endif
-
-namespace {
-
 struct SCC;
 
 struct Candidate {
@@ -162,12 +80,12 @@ struct Candidate {
 struct LocalCandidate {
   Candidate *Cand;
   // Benefit relative to local function entry.
-  Freq Benefit;
+  float Benefit;
 };
 
 struct EntryCandidate {
   LocalCandidate *LC;
-  Freq Benefit;
+  float Benefit;
 };
 
 } // namespace
@@ -336,7 +254,9 @@ void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<SCEVAAWrapperPass>();
 }
 
-static Freq getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB);
+} // namespace
+  
+static float getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB);
 
 bool MOSZeroPageAlloc::runOnModule(Module &M) {
   if (!ZPAvail)
@@ -593,7 +513,7 @@ void MOSZeroPageAlloc::collectCandidates(
   auto &BFI =
       getAnalysis<BlockFrequencyInfoWrapperPass>(MF.getFunction()).getBFI();
 
-  DenseMap<GlobalVariable *, Freq> GlobalBenefit;
+  DenseMap<GlobalVariable *, float> GlobalBenefit;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       for (const MachineOperand &MO : MI.operands()) {
@@ -633,7 +553,7 @@ void MOSZeroPageAlloc::collectCandidates(
     }
     assert(It != GVCandidates.end());
     Candidate *Cand = It->second;
-    Freq Benefit = KV.second;
+    float Benefit = KV.second;
     Benefit /= Cand->Size;
     LocalCandidates.push_back(LocalCandidate{Cand, Benefit});
   }
@@ -643,8 +563,8 @@ void MOSZeroPageAlloc::collectCandidates(
   if (!TFL.usesStaticStack(MF))
     return;
 
-  Freq SaveFreq;
-  Freq RestoreFreq;
+  float SaveFreq;
+  float RestoreFreq = 0;
   if (MFI.getSavePoint()) {
     SaveFreq = getFreq(BFI, *MFI.getSavePoint());
     MachineBasicBlock *RestoreBlock = MFI.getRestorePoint();
@@ -652,7 +572,7 @@ void MOSZeroPageAlloc::collectCandidates(
     // then the end point is unreachable and we do not need to insert any
     // epilogue.
     if (!RestoreBlock->succ_empty() || RestoreBlock->isReturnBlock())
-      RestoreFreq += getFreq(BFI, *RestoreBlock);
+      RestoreFreq = getFreq(BFI, *RestoreBlock);
   } else {
     SaveFreq = getFreq(BFI, *MF.begin());
     for (MachineBasicBlock &MBB : MF) {
@@ -677,7 +597,7 @@ void MOSZeroPageAlloc::collectCandidates(
       continue;
 
     size_t Size = 1;
-    Freq Benefit;
+    float Benefit = 0;
     if (Idx++ < 4) {
       Benefit = 9 * SaveFreq;      // LDA ZP,PHA
       Benefit += 10 * RestoreFreq; // PLA,STA ZP
@@ -729,7 +649,7 @@ void MOSZeroPageAlloc::collectCandidates(
     if (MFI.isDeadObjectIndex(I) || MFI.isVariableSizedObjectIndex(I))
       continue;
 
-    Freq Benefit;
+    float Benefit = 0;
     for (MachineInstr *MI : FIMIs[I]) {
       // Generally moving an absolute reference to the zero page saves one
       // cycle and one byte.
@@ -791,8 +711,8 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
       dbgs() << '\n';
     });
 
-    DenseMap<const SCC *, Freq> EntryFreqs;
-    EntryFreqs[EG.Entry] = Freq{1, 1};
+    DenseMap<const SCC *, float> EntryFreqs;
+    EntryFreqs[EG.Entry] = 1;
 
     // Callers are traversed before callees.
     for (SCC *Component : ReversePostOrderTraversal<EntryGraph>(EG)) {
@@ -800,16 +720,16 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
       // within the SCC should increase the entry frequency, but this shouldn't
       // compound, so they're scaled to the original entry frequency, not the
       // increased one.
-      Freq OldEntryFreq = EntryFreqs[Component];
+      float OldEntryFreq = EntryFreqs[Component];
 
       // This is the current entry frequency of the SCC, based on SCC callers
       // and recursive calls seen so far.
-      Freq EntryFreq = OldEntryFreq;
+      float EntryFreq = OldEntryFreq;
       LLVM_DEBUG(dbgs() << "  SCC " << EntryFreq << "\n");
 
       // Find all calls within the SCC and propagate entry frequencies across
       // the edges.
-      DenseMap<const Function *, Freq> CalleeFreqs;
+      DenseMap<const Function *, float> CalleeFreqs;
       for (Function *F : Component->Funcs) {
         LLVM_DEBUG(dbgs() << "    " << F->getName() << "\n");
         MachineFunction *MF = MMI->getMachineFunction(*F);
@@ -829,7 +749,7 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
                 Callee = M.getFunction(MO.getSymbolName());
               if (!Callee)
                 continue;
-              Freq Freq = getFreq(BFI, MBB);
+              float Freq = getFreq(BFI, MBB);
               if (is_contained(Component->Funcs, Callee)) {
                 LLVM_DEBUG(dbgs() << "      Recursively calls "
                                   << Callee->getName() << " " << Freq << '\n');
@@ -874,7 +794,7 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
       // Apply the final entry frequency to each outgoing call from the SCC and
       // propagate the resulting entry frequencies to callee SCCs.
       for (const auto &KV : CalleeFreqs) {
-        Freq Freq = EntryFreq * KV.second;
+        float Freq = EntryFreq * KV.second;
         LLVM_DEBUG(dbgs() << "    " << KV.first->getName() << " += " << Freq
                           << '\n');
         EntryFreqs[SCCGraph.FunctionSCCs[KV.first]] += Freq;
@@ -1003,15 +923,12 @@ bool MOSZeroPageAlloc::assignZP(SCCGraph &SCCGraph, EntryGraph &EG) {
 
 // We can't use machine block frequency due to a pass scheduling SNAFU, so
 // approximate with the IR block frequencies.
-Freq getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB) {
+static float getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB) {
   if (!MBB.getBasicBlock())
-    return Freq{BFI.getEntryFreq().getFrequency(),
-                BFI.getEntryFreq().getFrequency()};
-  return Freq{BFI.getBlockFreq(MBB.getBasicBlock()).getFrequency(),
-              BFI.getEntryFreq().getFrequency()};
+    return 1;
+  return (float)BFI.getBlockFreq(MBB.getBasicBlock()).getFrequency() /
+         (float)BFI.getEntryFreq().getFrequency();
 }
-
-} // namespace
 
 char MOSZeroPageAlloc::ID = 0;
 
