@@ -15,7 +15,6 @@ set(LLVM_ENABLE_RUNTIMES compiler-rt CACHE STRING "")
 set(LLVM_BUILTIN_TARGETS mos-unknown-unknown CACHE STRING "")
 set(LLVM_RUNTIME_TARGETS mos-unknown-unknown CACHE STRING "")
 set(BUILTINS_mos-unknown-unknown_COMPILER_RT_BAREMETAL_BUILD ON CACHE BOOL "")
-set(BUILTINS_mos-unknown-unknown_COMPILER_RT_BUILD_CRT OFF CACHE BOOL "")
 set(BUILTINS_mos-unknown-unknown_CMAKE_BUILD_TYPE MinSizeRel CACHE BOOL "")
 set(RUNTIMES_mos-unknown-unknown_CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY CACHE STRING "")
 
@@ -52,6 +51,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-symbolizer CACHE STRING "")
 
 set(LLVM_DISTRIBUTION_COMPONENTS
+  builtins
   clang
   lld
   clang-apply-replacements
