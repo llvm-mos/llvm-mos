@@ -998,19 +998,6 @@ void MOSInstrInfo::expandLDIdx(MachineIRBuilder &Builder, bool ZP) const {
     MI.eraseFromParent();
     return;
   }
-  if (ZP && DestReg == MOS::A && IndexReg == MOS::Y) {
-    // A direct load from the zero page does not exist for when A is used as
-    // the destination register, while Y is used as index register. Similarly,
-    // use X as the destination instead, then transfer to the real destination.
-    Register Tmp = createVReg(Builder, MOS::XcRegClass);
-    Builder.buildInstr(MOS::LDXIdx)
-        .addDef(Tmp)
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2));
-    Builder.buildInstr(MOS::T_A).add(MI.getOperand(0)).addUse(Tmp);
-    MI.eraseFromParent();
-    return;
-  }
 
   unsigned Opcode;
   switch (DestReg) {

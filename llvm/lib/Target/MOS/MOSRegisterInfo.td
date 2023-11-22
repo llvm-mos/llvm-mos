@@ -183,6 +183,7 @@ def Imag16 : MOSReg16Class<(sequence "RS%u", 0, !add(MaxImag16Regs, -1))>;
 // Instruction-specific register classes.
 def AImag8 : MOSReg8Class<(add Imag8, A)>;
 let isPressureFineGrained = true in {
+  def AY : MOSReg8Class<(add A, Y)>;
   def XY : MOSReg8Class<(add X, Y)>;
 }
 let isAllocatable = false in {

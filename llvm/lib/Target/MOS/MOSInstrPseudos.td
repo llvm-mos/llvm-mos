@@ -37,12 +37,12 @@ class MOSPseudo : Instruction {
 // registers before and after the pseudo.
 //===---------------------------------------------------------------------===//
 
-// Abstracts LDAZpIdx, LDXIdx, and LDYIdx. This is almost a logical instruction,
-// but the "LDA 123,Y", "LDX 123,X" and "LDY 123,Y" cases aren't natively
-// supported, and more than one instruction is required to emit them.
+// Abstracts LDAZpIdx and LDYIdx. LDXIdx isn't yet supported, since there's no
+// good way to save and restore $x on a NMOS 6502 when lowering $a = LDZpIdx
+// $y.
 def LDZpIdx : MOSPseudo {
-  dag OutOperandList = (outs GPR:$dst);
-  dag InOperandList = (ins i8imm:$addr, XY:$idx);
+  dag OutOperandList = (outs AY:$dst);
+  dag InOperandList = (ins i8imm:$addr, Xc:$idx);
 
   let isReMaterializable = true;
   let mayLoad = true;

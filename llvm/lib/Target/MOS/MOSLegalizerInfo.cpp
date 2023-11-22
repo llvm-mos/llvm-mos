@@ -2150,7 +2150,6 @@ bool MOSLegalizerInfo::legalizeBrJt(LegalizerHelper &Helper,
                                     MachineRegisterInfo &MRI,
                                     MachineInstr &MI) const {
   LLT S8 = LLT::scalar(8);
-  LLT P = LLT::pointer(0, 16);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
