@@ -206,24 +206,24 @@ bool MOSRegisterInfo::canSaveScavengerRegister(
 
   const MOSSubtarget &STI = I->getMF()->getSubtarget<MOSSubtarget>();
 
-  // Because the scavenger may run more than once, RC17 may already be in use.
-  // In such cases, it's not safe to save Y.
-  if (Reg == MOS::Y) {
-    if (STI.hasGPRStackRegs() && pushPullBalanced(I, UseMI))
-      return true;
+  bool UseHardStack =
+      (Reg == MOS::A || STI.hasGPRStackRegs()) && pushPullBalanced(I, UseMI);
+  if (UseHardStack)
+    return true;
 
-    LivePhysRegs LPR(*STI.getRegisterInfo());
-    LPR.addLiveOuts(*I->getParent());
-    for (MachineBasicBlock::iterator J = std::prev(I->getParent()->end());
-         J != I; --J) {
-      LPR.stepBackward(*J);
-      if (J == UseMI && LPR.contains(MOS::RC17))
-        return false;
-    }
-    LPR.stepBackward(*I);
-    return !LPR.contains(MOS::RC17);
+  // Because the scavenger may run more than once, the reserved register may already be in use.
+  // In such cases, it's not safe to save it, and a different register must be used.
+  Register Save = Reg == MOS::A ? MOS::RC16 : MOS::RC17;
+  LivePhysRegs LPR(*STI.getRegisterInfo());
+  LPR.addLiveOuts(*I->getParent());
+  for (MachineBasicBlock::iterator J = std::prev(I->getParent()->end());
+       J != I; --J) {
+    LPR.stepBackward(*J);
+    if (J == UseMI && LPR.contains(Save))
+      return false;
   }
-  return true;
+  LPR.stepBackward(*I);
+  return !LPR.contains(Save);
 }
 
 bool MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
