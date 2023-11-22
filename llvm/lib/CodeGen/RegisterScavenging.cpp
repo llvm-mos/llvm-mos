@@ -173,9 +173,13 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
 
       if (Survivor == 0 || !Used.available(Survivor)) {
         MCPhysReg AvilableReg = 0;
+        MachineBasicBlock::iterator RestorePos = From;
+        ++RestorePos;
+        if (RestoreAfter)
+          ++RestorePos;
         for (MCPhysReg Reg : AllocationOrder) {
           if (!MRI.isReserved(Reg) && Used.available(Reg) &&
-              TRI.canSaveScavengerRegister(Reg)) {
+              TRI.canSaveScavengerRegister(Reg, Pos, RestorePos)) {
             AvilableReg = Reg;
             break;
           }

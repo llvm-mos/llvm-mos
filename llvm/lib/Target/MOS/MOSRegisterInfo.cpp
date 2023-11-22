@@ -20,6 +20,8 @@
 #include "MOSSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -175,14 +177,16 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
         (Reg == MOS::A || STI.hasGPRStackRegs()) && pushPullBalanced(I, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {}, {Reg});
+      Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {},
+                         {Reg});
     else
       Builder.buildInstr(MOS::STImag8, {Save}, {Reg});
 
     Builder.setInsertPt(MBB, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {Reg}, {});
+      Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {Reg},
+                         {});
     else
       Builder.buildInstr(MOS::LDImag8, {Reg}, {Save});
     break;
@@ -192,8 +196,34 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
   return true;
 }
 
-bool MOSRegisterInfo::canSaveScavengerRegister(Register Reg) const {
-  return Reg != MOS::X;
+bool MOSRegisterInfo::canSaveScavengerRegister(
+    Register Reg, MachineBasicBlock::iterator I,
+    MachineBasicBlock::iterator UseMI) const {
+  if (Reg == MOS::X)
+    return false;
+  if (Reg != MOS::Y)
+    return true;
+
+  const MOSSubtarget &STI = I->getMF()->getSubtarget<MOSSubtarget>();
+
+  // Because the scavenger may run more than once, RC17 may already be in use.
+  // In such cases, it's not safe to save Y.
+  if (Reg == MOS::Y) {
+    if (STI.hasGPRStackRegs() && pushPullBalanced(I, UseMI))
+      return true;
+
+    LivePhysRegs LPR(*STI.getRegisterInfo());
+    LPR.addLiveOuts(*I->getParent());
+    for (MachineBasicBlock::iterator J = std::prev(I->getParent()->end());
+         J != I; --J) {
+      LPR.stepBackward(*J);
+      if (J == UseMI && LPR.contains(MOS::RC17))
+        return false;
+    }
+    LPR.stepBackward(*I);
+    return !LPR.contains(MOS::RC17);
+  }
+  return true;
 }
 
 bool MOSRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
@@ -642,10 +672,10 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
     return true;
   }
 
-  MOSInstrCost INCzp = MOSInstrCost(2, STI.hasHUC6280() ? 6 :
-                                    (STI.hasSPC700() ? 4 : 5));
-  MOSInstrCost ASLzp = MOSInstrCost(2, STI.hasHUC6280() ? 6 :
-                                    (STI.hasSPC700() ? 4 : 5));
+  MOSInstrCost INCzp =
+      MOSInstrCost(2, STI.hasHUC6280() ? 6 : (STI.hasSPC700() ? 4 : 5));
+  MOSInstrCost ASLzp =
+      MOSInstrCost(2, STI.hasHUC6280() ? 6 : (STI.hasSPC700() ? 4 : 5));
 
   SmallSet<const MachineInstr *, 32> Visited;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
@@ -848,8 +878,8 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     MOSInstrCost XYCopyCost;
     if (STI.hasGPRStackRegs()) {
       // PHX/PLY, PHY/PLX
-      XYCopyCost = MOSInstrCost(1, STI.hasSPC700() ? 4 : 3) +
-                   MOSInstrCost(1, 4);
+      XYCopyCost =
+          MOSInstrCost(1, STI.hasSPC700() ? 4 : 3) + MOSInstrCost(1, 4);
     } else {
       // May need to PHA/PLA around.
       XYCopyCost = MOSInstrCost(2, STI.hasSPC700() ? 8 : 7) / 2 +
@@ -876,8 +906,7 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     if (STI.hasSPC700())
       return MOSInstrCost(3, 5);
     // May need to PHA/PLA around.
-    return MOSInstrCost(2, 7) / 2 +
-           copyCost(DestReg, MOS::A, STI) +
+    return MOSInstrCost(2, 7) / 2 + copyCost(DestReg, MOS::A, STI) +
            copyCost(MOS::A, SrcReg, STI);
   }
   if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
@@ -938,8 +967,8 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     }
     if (STI.hasSPC700()) {
       // PHA, PHP, PLA, ORA #imm, PHA, PLP, PLA, BR, CLV
-      return MOSInstrCost(1, 4) * 6 + MOSInstrCost(2, 2) +
-              MOSInstrCost(1, 3) + MOSInstrCost(1, 3);
+      return MOSInstrCost(1, 4) * 6 + MOSInstrCost(2, 2) + MOSInstrCost(1, 3) +
+             MOSInstrCost(1, 3);
     }
     // BIT setv; BR; CLV;
     return BitCost + MOSInstrCost(1, 3) + MOSInstrCost(1, 3);

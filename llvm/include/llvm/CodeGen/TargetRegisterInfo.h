@@ -1051,8 +1051,10 @@ public:
   }
 
   /// Returns whether or not a target can support saveScavengerRegister for the
-  /// given Register.
-  virtual bool canSaveScavengerRegister(Register Reg) const {
+  /// given Register and spill locations
+  virtual bool
+  canSaveScavengerRegister(Register Reg, MachineBasicBlock::iterator I,
+                           MachineBasicBlock::iterator UseMI) const {
     return true;
   }
 
