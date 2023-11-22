@@ -89,8 +89,8 @@ private:
   bool tryAbsoluteAddressing(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                              GLoadStore &MI, bool ZP) const;
   bool tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    GLoadStore &MI, bool ZP) const;
+                                    MachineRegisterInfo &MRI, GLoadStore &MI,
+                                    bool ZP) const;
   bool selectIndirectAddressing(LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI, GLoadStore &MI) const;
   bool selectZeroIndexedAddressing(LegalizerHelper &Helper,
@@ -115,6 +115,8 @@ private:
                        MachineInstr &MI) const;
 
   // Floating Point Operations
+  bool legalizeFAbs(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
   bool legalizeFCmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeFConst(LegalizerHelper &Helper, MachineRegisterInfo &MRI,

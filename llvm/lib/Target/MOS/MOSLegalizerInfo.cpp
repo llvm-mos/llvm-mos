@@ -260,7 +260,6 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_FEXP2,
                                G_FLOG,
                                G_FLOG2,
-                               G_FABS,
                                G_FMINNUM,
                                G_FMINNUM,
                                G_FMAXNUM,
@@ -277,6 +276,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_FMAXIMUM,
                                G_INTRINSIC_ROUNDEVEN})
       .libcallFor({S32, S64});
+
+  getActionDefinitionsBuilder(G_FABS).custom();
 
   getActionDefinitionsBuilder({G_FCOPYSIGN, G_IS_FPCLASS}).lower();
 
@@ -462,6 +463,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeVAStart(Helper, MRI, MI);
 
   // Floating Point
+  case G_FABS:
+    return legalizeFAbs(Helper, MRI, MI);
   case G_FCMP:
     return legalizeFCmp(Helper, MRI, MI);
   case G_FCONSTANT:
@@ -2252,6 +2255,21 @@ bool MOSLegalizerInfo::legalizeVAStart(LegalizerHelper &Helper,
   auto *FuncInfo = Builder.getMF().getInfo<MOSFunctionInfo>();
   Builder.buildStore(Builder.buildFrameIndex(P, FuncInfo->VarArgsStackIndex),
                      MI.getOperand(0), **MI.memoperands_begin());
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeFAbs(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  MachineIRBuilder &Builder = Helper.MIRBuilder;
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  Register Src = MI.getOperand(1).getReg();
+
+  Builder.buildAnd(
+      Dst, Src,
+      Builder.buildConstant(Ty, ~APInt::getSignMask(Ty.getScalarSizeInBits())));
   MI.eraseFromParent();
   return true;
 }
