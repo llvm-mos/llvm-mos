@@ -679,6 +679,27 @@ set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
 set(mos_SOURCES ${GENERIC_SOURCES})
+# MOS SDK integer division is already smaller and faster
+list(REMOVE_ITEM mos_SOURCES
+  divdi3.c
+  divmoddi4.c
+  divmodsi4.c
+  divmodti4.c
+  divsi3.c
+  divti3.c
+  moddi3.c
+  modsi3.c
+  modti3.c
+  udivdi3.c
+  udivmoddi4.c
+  udivmodsi4.c
+  udivmodti4.c
+  udivsi3.c
+  udivti3.c
+  umoddi3.c
+  umodsi3.c
+  umodti3.c
+)
 
 set(powerpc_SOURCES ${GENERIC_SOURCES})
 
