@@ -262,6 +262,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_FLOG2,
                                G_FABS,
                                G_FMINNUM,
+                               G_FMINNUM,
                                G_FMAXNUM,
                                G_FCEIL,
                                G_FCOS,
@@ -277,7 +278,7 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_INTRINSIC_ROUNDEVEN})
       .libcallFor({S32, S64});
 
-  getActionDefinitionsBuilder(G_FCOPYSIGN).lower();
+  getActionDefinitionsBuilder({G_FCOPYSIGN, G_IS_FPCLASS}).lower();
 
   getActionDefinitionsBuilder(G_FPEXT).libcallFor({{S64, S32}});
   getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{S32, S64}});
@@ -1439,8 +1440,9 @@ bool MOSLegalizerInfo::legalizeAddrSpaceCast(LegalizerHelper &Helper,
     Tmp = Builder.buildZExt(DestTypeS, Tmp);
     if (STI.getZeroPageOffset() != 0) {
       // Dest = (Src | ZeroPageOffset)
-      Tmp = Builder.buildOr(DestTypeS, Tmp, Builder.buildConstant(
-                                DestTypeS, STI.getZeroPageOffset()));
+      Tmp = Builder.buildOr(
+          DestTypeS, Tmp,
+          Builder.buildConstant(DestTypeS, STI.getZeroPageOffset()));
     }
   }
 
@@ -1568,8 +1570,10 @@ bool MOSLegalizerInfo::legalizeStore(LegalizerHelper &Helper,
   assert(ValueType.isPointer());
 
   Register Tmp =
-      Builder.buildPtrToInt(LLT::scalar(ValueType.getScalarSizeInBits()),
-                            MI.getValueReg()).getReg(0);
+      Builder
+          .buildPtrToInt(LLT::scalar(ValueType.getScalarSizeInBits()),
+                         MI.getValueReg())
+          .getReg(0);
   Helper.Observer.changingInstr(MI);
   MI.getOperand(0).setReg(Tmp);
   Helper.Observer.changedInstr(MI);
@@ -1681,9 +1685,9 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
   int64_t Offset = 0;
   Register Index = 0;
 
-  unsigned Opcode = isa<GLoad>(MI) ?
-      (ZP ? MOS::G_LOAD_ZP_IDX : MOS::G_LOAD_ABS_IDX) :
-      (ZP ? MOS::G_STORE_ZP_IDX : MOS::G_STORE_ABS_IDX);
+  unsigned Opcode = isa<GLoad>(MI)
+                        ? (ZP ? MOS::G_LOAD_ZP_IDX : MOS::G_LOAD_ABS_IDX)
+                        : (ZP ? MOS::G_STORE_ZP_IDX : MOS::G_STORE_ABS_IDX);
 
   while (true) {
     if (auto ConstAddr = getIConstantVRegValWithLookThrough(Addr, MRI)) {
@@ -1790,14 +1794,14 @@ bool MOSLegalizerInfo::selectZeroIndexedAddressing(LegalizerHelper &Helper,
   }
 
   Offset = STI.getZeroPageOffset() + (Offset & 0xFF);
-  
+
   auto AddrP = Builder.buildPtrToInt(S, Addr).getReg(0);
   unsigned Opcode = isa<GLoad>(MI) ? MOS::G_LOAD_ZP_IDX : MOS::G_STORE_ZP_IDX;
   auto Inst = Builder.buildInstr(Opcode)
-                .add(MI.getOperand(0))
-                .addImm(Offset)
-                .addUse(AddrP)
-                .addMemOperand(*MI.memoperands_begin());
+                  .add(MI.getOperand(0))
+                  .addImm(Offset)
+                  .addUse(AddrP)
+                  .addMemOperand(*MI.memoperands_begin());
   Inst->getOperand(1).setTargetFlags(MOS::MO_ZEROPAGE);
   MI.eraseFromParent();
   return true;
