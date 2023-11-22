@@ -929,6 +929,10 @@ if (COMPILER_RT_BUILD_CRT)
   endif()
 
   foreach(arch ${BUILTIN_SUPPORTED_ARCH})
+    if (arch STREQUAL mos)
+      continue()
+    endif()
+
     add_compiler_rt_runtime(clang_rt.crtbegin
       OBJECT
       ARCHS ${arch}
