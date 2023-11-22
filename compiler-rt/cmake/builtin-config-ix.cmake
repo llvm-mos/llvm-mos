@@ -54,6 +54,7 @@ set(HEXAGON hexagon)
 set(X86 i386)
 set(X86_64 x86_64)
 set(LOONGARCH64 loongarch64)
+set(MOS mos)
 set(MIPS32 mips mipsel)
 set(MIPS64 mips64 mips64el)
 set(PPC32 powerpc powerpcspe)
@@ -74,7 +75,7 @@ endif()
 
 set(ALL_BUILTIN_SUPPORTED_ARCH
   ${X86} ${X86_64} ${ARM32} ${ARM64} ${AVR}
-  ${HEXAGON} ${MIPS32} ${MIPS64} ${PPC32} ${PPC64}
+  ${HEXAGON} ${MIPS32} ${MIPS64} ${MOS} ${PPC32} ${PPC64}
   ${RISCV32} ${RISCV64} ${SPARC} ${SPARCV9}
   ${WASM32} ${WASM64} ${VE} ${LOONGARCH64})
 
