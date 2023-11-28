@@ -52,7 +52,7 @@ cl::opt<bool> AlignLargeGlobals("align-large-globals",
 //===----------------------------------------------------------------------===//
 
 StructLayout::StructLayout(StructType *ST, const DataLayout &DL)
-    : StructSize(TypeSize::Fixed(0)) {
+    : StructSize(TypeSize::getFixed(0)) {
   assert(!ST->isOpaque() && "Cannot get layout of opaque structs");
   IsPadded = false;
   NumElements = ST->getNumElements();
@@ -61,7 +61,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL)
   for (unsigned i = 0, e = NumElements; i != e; ++i) {
     Type *Ty = ST->getElementType(i);
     if (i == 0 && Ty->isScalableTy())
-      StructSize = TypeSize::Scalable(0);
+      StructSize = TypeSize::getScalable(0);
 
     const Align TyAlign = ST->isPacked() ? Align(1) : DL.getABITypeAlign(Ty);
 
@@ -74,7 +74,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL)
     // contains both fixed size and scalable size data type members).
     if (!StructSize.isScalable() && !isAligned(TyAlign, StructSize)) {
       IsPadded = true;
-      StructSize = TypeSize::Fixed(alignTo(StructSize, TyAlign));
+      StructSize = TypeSize::getFixed(alignTo(StructSize, TyAlign));
     }
 
     // Keep track of maximum alignment constraint.
@@ -89,7 +89,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL)
   // and all array elements would be aligned correctly.
   if (!StructSize.isScalable() && !isAligned(StructAlignment, StructSize)) {
     IsPadded = true;
-    StructSize = TypeSize::Fixed(alignTo(StructSize, StructAlignment));
+    StructSize = TypeSize::getFixed(alignTo(StructSize, StructAlignment));
   }
 }
 
@@ -99,7 +99,7 @@ unsigned StructLayout::getElementContainingOffset(uint64_t FixedOffset) const {
   assert(!StructSize.isScalable() &&
          "Cannot get element at offset for structure containing scalable "
          "vector types");
-  TypeSize Offset = TypeSize::Fixed(FixedOffset);
+  TypeSize Offset = TypeSize::getFixed(FixedOffset);
   ArrayRef<TypeSize> MemberOffsets = getMemberOffsets();
 
   const auto *SI =
