@@ -707,8 +707,7 @@ bool MOSLegalizerInfo::legalizeDivRem(LegalizerHelper &Helper,
 
   // Pass a pointer to receive the remainder.
   MachinePointerInfo PtrInfo;
-  auto FI = Helper.createStackTemporary(TypeSize::Fixed(Ty.getSizeInBytes()),
-                                        Align(), PtrInfo);
+  auto FI = Helper.createStackTemporary(Ty.getSizeInBytes(), Align(), PtrInfo);
 
   Type *PtrTy = PointerType::get(HLTy, 0);
   Args.push_back({FI->getOperand(0).getReg(), PtrTy, 2});
