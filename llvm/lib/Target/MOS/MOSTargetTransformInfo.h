@@ -60,6 +60,8 @@ public:
   bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
     return true;
   }
+
+  bool strictInliningCosts() const { return true; }
 };
 
 } // end namespace llvm

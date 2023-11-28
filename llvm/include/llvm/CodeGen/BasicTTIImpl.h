@@ -568,6 +568,7 @@ public:
   }
 
   int getInlinerVectorBonusPercent() const { return 150; }
+  bool strictInliningCosts() const { return false; }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,

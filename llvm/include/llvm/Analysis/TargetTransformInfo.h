@@ -370,6 +370,14 @@ public:
   /// scientific. A target may has no bonus on vector instructions.
   int getInlinerVectorBonusPercent() const;
 
+  /// \returns Whether inlining costs should be boosted or taken as law.
+  ///
+  /// Some targets typically have extreme size constraints; in such cases,
+  /// inlining may be inappropriate even if it provides a great runtime benefit.
+  /// If true, the inlining costs are always compared directly against the
+  /// threshold; boosts for desireable runtime benefits are not applied.
+  bool strictInliningCosts() const;
+
   /// \return the expected cost of a memcpy, which could e.g. depend on the
   /// source/destination type and alignment and the number of bytes copied.
   InstructionCost getMemcpyCost(const Instruction *I) const;
@@ -1746,6 +1754,7 @@ public:
   getInliningCostBenefitAnalysisProfitableMultiplier() const = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() const = 0;
+  virtual bool strictInliningCosts() const = 0;
   virtual unsigned getCallerAllocaCost(const CallBase *CB,
                                        const AllocaInst *AI) const = 0;
   virtual InstructionCost getMemcpyCost(const Instruction *I) = 0;
@@ -2135,6 +2144,9 @@ public:
   }
   int getInlinerVectorBonusPercent() const override {
     return Impl.getInlinerVectorBonusPercent();
+  }
+  bool strictInliningCosts() const override {
+    return Impl.strictInliningCosts();
   }
   unsigned getCallerAllocaCost(const CallBase *CB,
                                const AllocaInst *AI) const override {

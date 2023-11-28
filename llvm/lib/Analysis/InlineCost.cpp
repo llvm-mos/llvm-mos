@@ -680,7 +680,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // during devirtualization and so we want to give it a hefty bonus for
     // inlining, but cap that bonus in the event that inlining wouldn't pan out.
     // Pretend to inline the function, with a custom threshold.
-    if (IsIndirectCall && BoostIndirectCalls) {
+    if (IsIndirectCall && BoostIndirectCalls && !TTI.strictInliningCosts()) {
       auto IndirectCallParams = Params;
       IndirectCallParams.DefaultThreshold =
           InlineConstants::IndirectCallThreshold;

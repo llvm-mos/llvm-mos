@@ -237,6 +237,10 @@ int TargetTransformInfo::getInlinerVectorBonusPercent() const {
   return TTIImpl->getInlinerVectorBonusPercent();
 }
 
+bool TargetTransformInfo::strictInliningCosts() const {
+  return TTIImpl->strictInliningCosts();
+}
+
 InstructionCost TargetTransformInfo::getGEPCost(
     Type *PointeeType, const Value *Ptr, ArrayRef<const Value *> Operands,
     Type *AccessType, TTI::TargetCostKind CostKind) const {
