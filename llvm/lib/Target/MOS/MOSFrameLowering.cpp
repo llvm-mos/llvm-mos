@@ -118,7 +118,8 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
-    Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {}, {Reg});
+    Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {},
+                       {Reg});
   }
 
   // Record that the frame pointer is killed by these instructions.
@@ -191,7 +192,8 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
-    Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {Reg}, {});
+    Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {Reg},
+                       {});
     if (Reg != CI.getReg())
       Builder.buildCopy(CI.getReg(), Reg);
   }
@@ -380,7 +382,10 @@ uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
 void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
                                 int64_t Offset) const {
   assert(Offset);
-  assert(-32768 <= Offset && Offset < 32768);
+  if (Offset < SHRT_MIN)
+    report_fatal_error("Stack pointer decrement too large: " + Twine(-Offset));
+  if (Offset > SHRT_MAX)
+    report_fatal_error("Stack pointer increment too large: " + Twine(Offset));
 
   auto Bytes = static_cast<uint16_t>(Offset);
   int64_t LoBytes = Bytes & 0xFF;
