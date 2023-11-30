@@ -29,6 +29,11 @@ MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
   IntAlign = 8;
   LongAlign = 8;
   LongLongAlign = 8;
+  BFloat16Align = 8;
+  FloatAlign = 8;
+  DoubleAlign = 8;
+  LongDoubleAlign = 8;
+  Float128Align = 8;
   ShortAccumAlign = 8;
   AccumWidth = 16;
   AccumAlign = 8;
