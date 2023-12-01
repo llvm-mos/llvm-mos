@@ -70,6 +70,10 @@ ABIArgInfo MOSABIInfo::classifyArgumentType(QualType Ty) const {
     if (getRecordArgABI(Ty, getCXXABI()) == CGCXXABI::RAA_DirectInMemory ||
         getContext().getTypeSize(Ty) > 32)
       return getNaturalAlignIndirect(Ty, false);
+
+    if (isEmptyRecord(getContext(), Ty, true))
+      return ABIArgInfo::getIgnore();
+
     return ABIArgInfo::getDirect();
   }
   return DefaultABIInfo::classifyArgumentType(Ty);
@@ -78,6 +82,9 @@ ABIArgInfo MOSABIInfo::classifyArgumentType(QualType Ty) const {
 ABIArgInfo MOSABIInfo::classifyReturnType(QualType RetTy) const {
   // Large records should not be passed by value.
   if (isAggregateTypeForABI(RetTy)) {
+    if (isEmptyRecord(getContext(), RetTy, true))
+      return ABIArgInfo::getIgnore();
+
     return getContext().getTypeSize(RetTy) > 32
                ? getNaturalAlignIndirect(RetTy, false)
                : ABIArgInfo::getDirect();
