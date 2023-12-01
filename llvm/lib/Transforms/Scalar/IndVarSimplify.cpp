@@ -2009,10 +2009,12 @@ bool IndVarSimplify::run(Loop *L) {
         if (!Cond)
           continue;
 
-        uint64_t CondWidth =
-            SE->getTypeSizeInBits(Cond->getOperand(0)->getType());
+        Type *CondTy = Cond->getOperand(0)->getType();
+        if (!SE->isSCEVable(CondTy))
+          continue;
 
         // Don't replace a legal exit condition with an illegal one.
+        uint64_t CondWidth = SE->getTypeSizeInBits(CondTy);
         if (DL.isLegalInteger(CondWidth))
           continue;
 
