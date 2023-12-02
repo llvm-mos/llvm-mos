@@ -679,17 +679,25 @@ set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
 set(mos_SOURCES ${GENERIC_SOURCES})
-# MOS SDK integer division is already smaller and faster
+# MOS SDK implementations are already smaller and faster.
 list(REMOVE_ITEM mos_SOURCES
+  ashldi3.c
+  ashlti3.c
+  ashrdi3.c
+  ashrti3.c
   divdi3.c
   divmoddi4.c
   divmodsi4.c
   divmodti4.c
   divsi3.c
   divti3.c
+  lshrdi3.c
+  lshrti3.c
   moddi3.c
   modsi3.c
   modti3.c
+  muldi3.c
+  multi3.c
   udivdi3.c
   udivmoddi4.c
   udivmodsi4.c
