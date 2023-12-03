@@ -21,6 +21,7 @@ add_public_tablegen_target(MOSCommonTableGen)
 
 add_llvm_target(MOSCodeGen
   MOSAsmPrinter.cpp
+  MOSCallGraphUtils.cpp
   MOSCallLowering.cpp
   MOSCallingConv.cpp
   MOSCombiner.cpp

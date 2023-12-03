@@ -15,6 +15,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSCallGraphUtils.h"
 #include "MOSFrameLowering.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
@@ -409,39 +410,8 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
 SCCGraph MOSZeroPageAlloc::buildSCCGraph(Module &M) {
   auto &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
-  // Collect any external libcalls and add them to the call graph, which was
-  // computed before code generation.
-  for (auto &KV : CG) {
-    CallGraphNode &CGN = *KV.second;
-    if (!CGN.getFunction())
-      continue;
-    MachineFunction *MF = MMI->getMachineFunction(*CGN.getFunction());
-    if (!MF)
-      continue;
-    for (const MachineBasicBlock &MBB : *MF) {
-      for (const MachineInstr &MI : MBB) {
-        if (!MI.isCall())
-          continue;
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isSymbol())
-            continue;
-          Function *Callee = M.getFunction(MO.getSymbolName());
-          if (Callee && MMI->getMachineFunction(*Callee))
-            CGN.addCalledFunction(nullptr, CG[Callee]);
-        }
-      }
-    }
-  }
-
-  // External calls may call any externally callable node except interrupt
-  // handlers.
-  assert(CG.getCallsExternalNode()->empty());
-  for (auto &KV : *CG.getExternalCallingNode()) {
-    Function *F = KV.second->getFunction();
-    if (F && !F->hasFnAttribute("interrupt") &&
-        !F->hasFnAttribute("interrupt-norecurse"))
-      CG.getCallsExternalNode()->addCalledFunction(nullptr, KV.second);
-  }
+  mos::addLibcallEdges(CG, *MMI);
+  mos::addExternalEdges(CG);
   LLVM_DEBUG(CG.dump());
 
   std::vector<SCC> SCCs;
