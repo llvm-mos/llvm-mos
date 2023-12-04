@@ -281,6 +281,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   getActionDefinitionsBuilder({G_FCOPYSIGN, G_IS_FPCLASS}).lower();
 
+  getActionDefinitionsBuilder(G_FCANONICALIZE).custom();
+
   getActionDefinitionsBuilder(G_FPEXT).libcallFor({{S64, S32}});
   getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{S32, S64}});
 
@@ -397,9 +399,10 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_ZEXT:
     return legalizeZExt(Helper, MRI, MI);
 
-  // Scalar Operations
   case G_BSWAP:
-    return legalizeBSwap(Helper, MRI, MI);
+  case G_FCANONICALIZE:
+  case G_FREEZE:
+    return legalizeToCopy(Helper, MRI, MI);
 
   // Integer Operations
   case G_ADD:
@@ -473,8 +476,6 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   // Other Operations
   case G_DYN_STACKALLOC:
     return legalizeDynStackAlloc(Helper, MRI, MI);
-  case G_FREEZE:
-    return legalizeFreeze(Helper, MRI, MI);
   }
 }
 
@@ -563,21 +564,6 @@ bool MOSLegalizerInfo::legalizeZExt(LegalizerHelper &Helper,
   auto Zero = Builder.buildConstant(DstTy, 0);
   Builder.buildSelect(Dst, Src, One, Zero);
   MI.eraseFromParent();
-  return true;
-}
-
-//===----------------------------------------------------------------------===//
-// Scalar Operations
-//===----------------------------------------------------------------------===//
-
-bool MOSLegalizerInfo::legalizeBSwap(LegalizerHelper &Helper,
-                                     MachineRegisterInfo &MRI,
-                                     MachineInstr &MI) const {
-  assert(MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(8));
-  assert(MRI.getType(MI.getOperand(1).getReg()) == LLT::scalar(8));
-  Helper.Observer.changingInstr(MI);
-  MI.setDesc(Helper.MIRBuilder.getTII().get(COPY));
-  Helper.Observer.changedInstr(MI);
   return true;
 }
 
@@ -2393,11 +2379,9 @@ bool MOSLegalizerInfo::legalizeDynStackAlloc(LegalizerHelper &Helper,
   return true;
 }
 
-bool MOSLegalizerInfo::legalizeFreeze(LegalizerHelper &Helper,
+bool MOSLegalizerInfo::legalizeToCopy(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
                                       MachineInstr &MI) const {
-  // G_FREEZE is lowered to COPY here to ensure getDefSrcRegIgnoringCopies
-  // will work across the entire function during instruction selection.
   Helper.Observer.changingInstr(MI);
   MI.setDesc(Helper.MIRBuilder.getTII().get(COPY));
   Helper.Observer.changedInstr(MI);

@@ -45,10 +45,6 @@ private:
   bool legalizeZExt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
 
-  // Scalar Operations
-  bool legalizeBSwap(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                     MachineInstr &MI) const;
-
   // Integer Operations
   bool legalizeAddSub(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
@@ -126,6 +122,9 @@ private:
   bool legalizeDynStackAlloc(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                              MachineInstr &MI) const;
   bool legalizeFreeze(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                      MachineInstr &MI) const;
+
+  bool legalizeToCopy(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
 
   bool preferZext() const override { return true; }
