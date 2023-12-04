@@ -244,6 +244,8 @@ public:
 
   bool isNumRegsMajorCostOfLSR() const { return true; }
 
+  bool shouldFoldTerminatingConditionAfterLSR() const { return false; }
+
   bool isProfitableLSRChainElement(Instruction *I) const { return false; }
 
   bool canMacroFuseCmp() const { return false; }
