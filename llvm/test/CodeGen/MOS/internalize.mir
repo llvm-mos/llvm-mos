@@ -1,0 +1,76 @@
+# RUN: llc -mtriple=mos -run-pass=mos-internalize -verify-machineinstrs -o - %s | FileCheck %s
+# CHECK: @used_alias = internal alias void (), ptr @used_contingent
+# CHECK-NOT: @unused_contingent()
+# CHECK: define internal void @used_contingent() {
+# CHECK-NOT: define void @used_only_by_unused_contingent() {
+# CHECK: define internal void @used_by_used_contingent() {
+# CHECK-NOT: @alias
+# CHECK: define void @user() {
+--- |
+  define void @unused_contingent() partition "contingent" {
+    entry:
+      ret void
+  }
+
+  define void @used_contingent() partition "contingent" {
+    entry:
+      ret void
+  }
+
+  define void @used_only_by_unused_contingent() partition "contingent" {
+    entry:
+      ret void
+  }
+
+  define void @used_by_used_contingent() partition "contingent" {
+    entry:
+      ret void
+  }
+
+  @unused_alias = alias void (), ptr @unused_contingent, partition "contingent"
+  @used_alias = alias void (), ptr @used_contingent, partition "contingent"
+
+  define void @user() {
+    entry:
+      ret void
+  }
+...
+---
+# CHECK-NOT: name: unused_contingent
+name: unused_contingent
+body: |
+  bb.0.entry:
+    JSR &used_only_by_unused_contingent
+    RTS
+...
+---
+# CHECK: name: used_contingent
+name: used_contingent
+body: |
+  bb.0.entry:
+    JSR &used_by_used_contingent
+    RTS
+...
+---
+# CHECK-NOT: name: used_only_by_unused_contingent
+name: used_only_by_unused_contingent
+body: |
+  bb.0.entry:
+    RTS
+...
+---
+# CHECK: name: used_by_used_contingent
+name: used_by_used_contingent
+body: |
+  bb.0.entry:
+    RTS
+...
+---
+# CHECK: name: user
+name: user
+body: |
+  bb.0.entry:
+    JSR &used_contingent
+    JSR &used_alias
+    RTS
+...

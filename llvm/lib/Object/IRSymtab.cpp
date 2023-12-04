@@ -291,8 +291,10 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
       buildPreservedSymbolsSet();
   bool IsPreservedSymbol = PreservedSymbolsSet.contains(GV->getName());
 
-  if (Used.count(GV) || IsPreservedSymbol)
+  if (Used.count(GV))
     Sym.Flags |= 1 << storage::Symbol::FB_used;
+  if (IsPreservedSymbol)
+    Sym.Flags |= 1 << storage::Symbol::FB_preserved;
   if (GV->isThreadLocal())
     Sym.Flags |= 1 << storage::Symbol::FB_tls;
   if (GV->hasGlobalUnnamedAddr())

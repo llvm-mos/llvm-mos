@@ -19,7 +19,14 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
-void llvm::mos::addLibcallEdges(CallGraph &CG, const MachineModuleInfo &MMI) {
+using namespace llvm;
+
+Function *mos::getSymbolFunction(Module &M, StringRef Name) {
+  Value *V = M.getNamedValue(Name);
+  return V ? dyn_cast<Function>(V->stripPointerCastsAndAliases()) : nullptr;
+}
+
+void mos::addLibcallEdges(CallGraph &CG, const MachineModuleInfo &MMI) {
   for (auto &KV : CG) {
     CallGraphNode &CGN = *KV.second;
     if (!CGN.getFunction())
@@ -34,7 +41,8 @@ void llvm::mos::addLibcallEdges(CallGraph &CG, const MachineModuleInfo &MMI) {
         for (const MachineOperand &MO : MI.operands()) {
           if (!MO.isSymbol())
             continue;
-          Function *Callee = CG.getModule().getFunction(MO.getSymbolName());
+          CG.getModule().getNamedGlobal(MO.getSymbolName());
+          Function *Callee = getSymbolFunction(CG.getModule(), MO.getSymbolName());
           if (Callee && MMI.getMachineFunction(*Callee))
             CGN.addCalledFunction(nullptr, CG[Callee]);
         }
@@ -43,7 +51,7 @@ void llvm::mos::addLibcallEdges(CallGraph &CG, const MachineModuleInfo &MMI) {
   }
 }
 
-void llvm::mos::addExternalEdges(CallGraph &CG) {
+void mos::addExternalEdges(CallGraph &CG) {
   assert(CG.getCallsExternalNode()->empty());
   for (auto &KV : *CG.getExternalCallingNode()) {
     Function *F = KV.second->getFunction();

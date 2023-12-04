@@ -17,12 +17,20 @@
 #ifndef LLVM_LIB_TARGET_MOS_MOSCALLGRAPHUTILS_H
 #define LLVM_LIB_TARGET_MOS_MOSCALLGRAPHUTILS_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 
 class CallGraph;
+class Function;
 class MachineModuleInfo;
+class Module;
 
 namespace mos {
+
+// Returns the function that an symbol reference will ultimately resolve to,
+// looking through aliases and pointer casts.
+Function *getSymbolFunction(Module &M, StringRef Name);
 
 // Collect libcalls and added edges for them to the call graph.
 //

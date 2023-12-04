@@ -256,7 +256,7 @@ void MOSZeroPageAlloc::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 } // namespace
-  
+
 static float getFreq(const BlockFrequencyInfo &BFI, MachineBasicBlock &MBB);
 
 bool MOSZeroPageAlloc::runOnModule(Module &M) {
@@ -716,7 +716,7 @@ std::vector<EntryGraph> MOSZeroPageAlloc::buildEntryGraphs(Module &M,
               if (MO.isGlobal())
                 Callee = dyn_cast<Function>(MO.getGlobal());
               else if (MO.isSymbol())
-                Callee = M.getFunction(MO.getSymbolName());
+                Callee = mos::getSymbolFunction(M, MO.getSymbolName());
               if (!Callee)
                 continue;
               float Freq = getFreq(BFI, MBB);
