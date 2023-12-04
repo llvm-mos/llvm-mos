@@ -876,6 +876,11 @@ else ()
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 
+      # MOS builtins can be called inside interrupts and are no-LTO.
+      if (${arch} STREQUAL "mos")
+        list(APPEND BUILTIN_CFLAGS_${arch} -fno-static-stack)
+      endif()
+
       add_compiler_rt_runtime(clang_rt.builtins
                               STATIC
                               ARCHS ${arch}
