@@ -71,12 +71,14 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   auto &TC = static_cast<const toolchains::MOS &>(getToolChain());
   auto &D = TC.getDriver();
 
+  // Pass defaults before AddLinkerInputs, since that includes -Wl
+  // options, which should override these.
+  CmdArgs.push_back("--gc-sections");
+  CmdArgs.push_back("--sort-section=alignment");
+
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
   AddLTOOptions(TC, Args, Output, Inputs, CmdArgs);
-
-  CmdArgs.push_back("--gc-sections");
-  CmdArgs.push_back("--sort-section=alignment");
 
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));

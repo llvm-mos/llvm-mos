@@ -648,10 +648,13 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // with -defsym or -wrap options, used elsewhere, e.g. it is visible to a
     // regular object, is referenced from llvm.compiler.used/llvm.used, or was
     // already recorded as being referenced from a different partition.
-    if (Res.LinkerRedefined || Res.VisibleToRegularObj || Sym.isUsed() ||
+    const bool KnownExternal = Res.LinkerRedefined || Res.VisibleToRegularObj || Sym.isUsed() ||
         (GlobalRes.Partition != GlobalResolution::Unknown &&
-         GlobalRes.Partition != Partition)) {
+         GlobalRes.Partition != Partition);
+    if (KnownExternal || Sym.isPreserved()) {
       GlobalRes.Partition = GlobalResolution::External;
+      if (!KnownExternal)
+        GlobalRes.Contingent = true;
     } else
       // First recorded reference, save the current partition.
       GlobalRes.Partition = Partition;
@@ -659,7 +662,8 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // Flag as visible outside of summary if visible from a regular object or
     // from a module that does not have a summary.
     GlobalRes.VisibleOutsideSummary |=
-        (Res.VisibleToRegularObj || Sym.isUsed() || !InSummary);
+        (Res.VisibleToRegularObj || Sym.isUsed() || Sym.isPreserved() ||
+         !InSummary);
 
     GlobalRes.ExportDynamic |= Res.ExportDynamic;
   }
@@ -1322,8 +1326,14 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
       GV->setUnnamedAddr(R.second.UnnamedAddr ? GlobalValue::UnnamedAddr::Global
                                               : GlobalValue::UnnamedAddr::None);
-      if (EnableLTOInternalization && R.second.Partition == 0)
-        GV->setLinkage(GlobalValue::InternalLinkage);
+      if (EnableLTOInternalization) {
+        if (R.second.Partition == 0)
+          GV->setLinkage(GlobalValue::InternalLinkage);
+        else if (R.second.Contingent) {
+          // Abuse partitions to mark any kind of value (e.g. aliases).
+          GV->setPartition("contingent");
+        }
+      }
     }
 
     if (Conf.PostInternalizeModuleHook &&

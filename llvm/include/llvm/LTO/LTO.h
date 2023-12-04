@@ -156,6 +156,7 @@ public:
     using irsymtab::Symbol::getSectionName;
     using irsymtab::Symbol::isExecutable;
     using irsymtab::Symbol::isUsed;
+    using irsymtab::Symbol::isPreserved;
   };
 
   /// A range over the symbols in this InputFile.
@@ -388,6 +389,8 @@ private:
     /// Any partitioning of the combined LTO object is done internally by the
     /// LTO backend.
     unsigned Partition = Unknown;
+
+    bool Contingent = false;
 
     /// Special partition numbers.
     enum : unsigned {

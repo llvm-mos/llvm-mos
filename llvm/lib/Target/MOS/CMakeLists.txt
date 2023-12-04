@@ -26,15 +26,16 @@ add_llvm_target(MOSCodeGen
   MOSCallingConv.cpp
   MOSCombiner.cpp
   MOSCopyOpt.cpp
-  MOSInstrCost.cpp
   MOSFrameLowering.cpp
   MOSISelLowering.cpp
+  MOSIncDecPhi.cpp
   MOSIndexIV.cpp
   MOSInlineAsmLowering.cpp
-  MOSIncDecPhi.cpp
   MOSInsertCopies.cpp
+  MOSInstrCost.cpp
   MOSInstrInfo.cpp
   MOSInstructionSelector.cpp
+  MOSInternalize.cpp
   MOSLateOptimization.cpp
   MOSLegalizerInfo.cpp
   MOSLowerSelect.cpp

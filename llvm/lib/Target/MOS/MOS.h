@@ -24,6 +24,7 @@ void initializeMOSCopyOptPass(PassRegistry &);
 void initializeMOSIncDecPhiPass(PassRegistry &);
 void initializeMOSIndexIVPass(PassRegistry &);
 void initializeMOSInsertCopiesPass(PassRegistry &);
+void initializeMOSInternalizePass(PassRegistry &);
 void initializeMOSLateOptimizationPass(PassRegistry &);
 void initializeMOSLowerSelectPass(PassRegistry &);
 void initializeMOSNonReentrantPass(PassRegistry &);
