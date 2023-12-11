@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MOSSubtarget.h"
 #include "MCTargetDesc/MOSAsmBackend.h"
 #include "MCTargetDesc/MOSELFObjectWriter.h"
 #include "MCTargetDesc/MOSFixupKinds.h"
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
+#include "MOSSubtarget.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -158,12 +158,10 @@ static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
          SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
 }
 
-bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
-                                        const MCAsmLayout &Layout,
-                                        const MCFixup &Fixup,
-                                        const MCFragment *DF,
-                                        const MCValue &Target, uint64_t &Value,
-                                        bool &WasForced) {
+bool MOSAsmBackend::evaluateTargetFixup(
+    const MCAssembler &Asm, const MCAsmLayout &Layout, const MCFixup &Fixup,
+    const MCFragment *DF, const MCValue &Target, const MCSubtargetInfo *STI,
+    uint64_t &Value, bool &WasForced) {
   // ForcePCRelReloc is a CLI option to force relocation emit, primarily for
   // testing R_MOS_PCREL_*.
   WasForced = ForcePCRelReloc;
@@ -328,33 +326,36 @@ static bool visitRelaxableOperand(const MCInst &Inst,
          Visit(Inst.getOperand(Inst.getNumOperands() - 1), RelaxTo, BankRelax);
 }
 
-static bool isImmediateBankRelaxable(const MCSubtargetInfo &STI,
-                                     int64_t Imm, bool BankRelax) {
+static bool isImmediateBankRelaxable(const MCSubtargetInfo &STI, int64_t Imm,
+                                     bool BankRelax) {
   if (BankRelax)
     return Imm >= 0 && Imm <= UINT16_MAX;
 
-  uint32_t ZpAddrOffset = static_cast<const MOSSubtarget &>(STI)
-                            .getZeroPageOffset();
-  return Imm >= ZpAddrOffset && Imm <= ZpAddrOffset+0xFF;
+  uint32_t ZpAddrOffset =
+      static_cast<const MOSSubtarget &>(STI).getZeroPageOffset();
+  return Imm >= ZpAddrOffset && Imm <= ZpAddrOffset + 0xFF;
 }
 
 void MOSAsmBackend::relaxForImmediate(MCInst &Inst,
                                       const MCSubtargetInfo &STI) {
   // Two steps are required for zero-bank relaxation on 65816.
-  while (visitRelaxableOperand(
-      Inst, STI,
-      [&Inst, &STI](const MCOperand &Operand, unsigned RelaxTo, bool BankRelax) {
-        int64_t Imm;
-        if (!Operand.evaluateAsConstantImm(Imm) ||
-            isImmediateBankRelaxable(STI, Imm, BankRelax)) {
-          // If the expression evaluates cleanly to an 8-bit value
-          // (or 16-bit for bank relaxation), then it doesn't need relaxation.
-          return false;
-        }
-        // This instruction can be relaxed, do it now.
-        Inst.setOpcode(RelaxTo);
-        return true;
-      }))
+  while (visitRelaxableOperand(Inst, STI,
+                               [&Inst, &STI](const MCOperand &Operand,
+                                             unsigned RelaxTo, bool BankRelax) {
+                                 int64_t Imm;
+                                 if (!Operand.evaluateAsConstantImm(Imm) ||
+                                     isImmediateBankRelaxable(STI, Imm,
+                                                              BankRelax)) {
+                                   // If the expression evaluates cleanly to an
+                                   // 8-bit value (or 16-bit for bank
+                                   // relaxation), then it doesn't need
+                                   // relaxation.
+                                   return false;
+                                 }
+                                 // This instruction can be relaxed, do it now.
+                                 Inst.setOpcode(RelaxTo);
+                                 return true;
+                               }))
     ;
 }
 
@@ -387,8 +388,7 @@ void MOSAsmBackend::translateOpcodeToSubtarget(MCInst &Inst,
                                                const MCSubtargetInfo &STI) {
   if (STI.hasFeature(MOS::FeatureSPC700)) {
     // Convert from 6502 to SPC700 MIs.
-    const auto *MOSSPC =
-        MOS::getMOSSPC700Entry(Inst.getOpcode());
+    const auto *MOSSPC = MOS::getMOSSPC700Entry(Inst.getOpcode());
     if (MOSSPC)
       Inst.setOpcode(MOSSPC->To);
   }

@@ -66,15 +66,15 @@ public:
   /// reported via \p Ctx.
   /// The  \p STI is present only for fragments of type MCRelaxableFragment and
   /// MCDataFragment with hasInstructions() == true.
-  virtual void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                          const MCValue &Target, MutableArrayRef<char> Data,
-                          uint64_t Value, bool IsResolved,
-                          const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsResolved,
+                  const MCSubtargetInfo *STI) const override;
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
                            const MCFixup &Fixup, const MCFragment *DF,
-                           const MCValue &Target, uint64_t &Value,
-                           bool &WasForced) override;
+                           const MCValue &Target, const MCSubtargetInfo *STI,
+                           uint64_t &Value, bool &WasForced) override;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
