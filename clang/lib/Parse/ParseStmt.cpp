@@ -443,6 +443,14 @@ Retry:
     ConsumeAnnotationToken();
     return StmtError();
 
+  case tok::annot_pragma_cx_limited_range:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    Diag(Tok, diag::err_pragma_file_or_compound_scope)
+        << "STDC CX_LIMITED_RANGE";
+    ConsumeAnnotationToken();
+    return StmtError();
+
   case tok::annot_pragma_float_control:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
@@ -1064,6 +1072,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_fenv_round:
       HandlePragmaFEnvRound();
+      break;
+    case tok::annot_pragma_cx_limited_range:
+      HandlePragmaCXLimitedRange();
       break;
     case tok::annot_pragma_float_control:
       HandlePragmaFloatControl();
