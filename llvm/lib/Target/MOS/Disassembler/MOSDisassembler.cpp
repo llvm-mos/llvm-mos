@@ -68,8 +68,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMOSDisassembler() {
 }
 
 static DecodeStatus decodeAddr8Operand(MCInst &Inst, uint64_t Imm,
-                                      int64_t Address,
-                                      const MCDisassembler *Decoder) {
+                                       int64_t Address,
+                                       const MCDisassembler *Decoder) {
   auto *MD = static_cast<const MOSDisassembler *>(Decoder);
   if (!isUInt<8>(Imm))
     return MCDisassembler::Fail;
@@ -260,13 +260,13 @@ MOSDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
   // 16-bit flags for decoding immediates are set based on the occurrence of
   // mapping symbols $ml, $mh, $xl, $xh.
   if (Has65816RegisterWidths) {
-    if (Symbol.Name.startswith("$ml"))
+    if (Symbol.Name.starts_with("$ml"))
       MLow = true;
-    else if (Symbol.Name.startswith("$mh"))
+    else if (Symbol.Name.starts_with("$mh"))
       MLow = false;
-    else if (Symbol.Name.startswith("$xl"))
+    else if (Symbol.Name.starts_with("$xl"))
       XLow = true;
-    else if (Symbol.Name.startswith("$xh"))
+    else if (Symbol.Name.starts_with("$xh"))
       XLow = false;
   }
   return std::nullopt;

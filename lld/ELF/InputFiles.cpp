@@ -1911,7 +1911,7 @@ void XO65File::parseOD65Segments() {
 XO65Segment XO65File::parseOD65Segment() {
   expectPrefix(indexPrefix);
   XO65Segment segment;
-  for (; !isSectionEnd() && !(*od65Line).startswith(indexPrefix); ++od65Line) {
+  for (; !isSectionEnd() && !(*od65Line).starts_with(indexPrefix); ++od65Line) {
     const auto [k, v] = parseKV();
     if (k == "Name") {
       segment.name = parseQuotedString(k, v);
@@ -1955,7 +1955,7 @@ void XO65File::parseOD65Exports() {
 SmallVector<StringRef> XO65File::parseOD65Names() {
   SmallVector<StringRef> names;
   for (; !isSectionEnd(); ++od65Line) {
-    if ((*od65Line).startswith(indexPrefix))
+    if ((*od65Line).starts_with(indexPrefix))
       continue;
     const auto [k, v] = parseKV();
     if (k == "Name")
@@ -1978,7 +1978,7 @@ void XO65File::expect(StringRef line) {
 }
 
 void XO65File::expectPrefix(StringRef prefix) {
-  if (!(*od65Line).startswith(prefix))
+  if (!(*od65Line).starts_with(prefix))
     fatal(toString(this) + ": could not parse od65 output: expected prefix \"" +
           prefix + "\"\n");
   ++od65Line;
@@ -2131,7 +2131,7 @@ void XO65File::parseSegmentName(XO65Segment &segment) {
 bool XO65File::isSectionEnd() const {
   if (od65Line == od65LinesEnd)
     return true;
-  return !(*od65Line).startswith("   ");
+  return !(*od65Line).starts_with("   ");
 }
 
 XO65Enclave::XO65Enclave()

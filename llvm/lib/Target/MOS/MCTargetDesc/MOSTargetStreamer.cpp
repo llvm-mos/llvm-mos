@@ -81,7 +81,7 @@ void MOSTargetStreamer::stronglyReference(StringRef Name, StringRef Comment) {
 static bool HasPrefix(StringRef Name, StringRef Prefix) {
   SmallString<32> PrefixDot = Prefix;
   PrefixDot += ".";
-  return Name == Prefix || Name.startswith(PrefixDot);
+  return Name == Prefix || Name.starts_with(PrefixDot);
 }
 
 void MOSTargetAsmStreamer::changeSection(const MCSection *CurSection,

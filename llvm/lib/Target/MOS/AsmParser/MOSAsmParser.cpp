@@ -206,15 +206,13 @@ public:
     addImmOperands(Inst, N);
   }
 
-  static std::unique_ptr<MOSOperand> createImm(const MOSSubtarget &STI,
-                                               const MCExpr *Val, SMLoc S,
-                                               SMLoc E) {
+  static std::unique_ptr<MOSOperand>
+  createImm(const MOSSubtarget &STI, const MCExpr *Val, SMLoc S, SMLoc E) {
     return std::make_unique<MOSOperand>(STI, Val, S, E);
   }
 
-  static std::unique_ptr<MOSOperand> createReg(const MOSSubtarget &STI,
-                                               unsigned RegNum, SMLoc S,
-                                               SMLoc E) {
+  static std::unique_ptr<MOSOperand>
+  createReg(const MOSSubtarget &STI, unsigned RegNum, SMLoc S, SMLoc E) {
     return std::make_unique<MOSOperand>(STI, RegNum, S, E);
   }
 
@@ -263,8 +261,7 @@ public:
   MOSAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII),
-        STI(static_cast<const MOSSubtarget &>(STI)),
-        Parser(Parser) {
+        STI(static_cast<const MOSSubtarget &>(STI)), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -373,9 +370,9 @@ public:
   /// \param DirectiveID - the identifier token of the directive.
   bool ParseDirective(AsmToken DirectiveID) override {
     StringRef IDVal = DirectiveID.getIdentifier();
-    if (IDVal.startswith(".mos_addr_asciz"))
+    if (IDVal.starts_with(".mos_addr_asciz"))
       return parseAddrAsciz(DirectiveID.getLoc());
-    if (IDVal.startswith(".zeropage"))
+    if (IDVal.starts_with(".zeropage"))
       return parseZeropage(DirectiveID.getLoc());
     return true;
   }
@@ -467,9 +464,8 @@ public:
   }
 
   void eatThatToken(OperandVector &Operands) {
-    Operands.push_back(MOSOperand::createToken(STI,
-                                               getLexer().getTok().getString(),
-                                               getLexer().getLoc()));
+    Operands.push_back(MOSOperand::createToken(
+        STI, getLexer().getTok().getString(), getLexer().getLoc()));
     Lex();
   }
 
@@ -597,14 +593,12 @@ public:
       if (const auto *BE = dyn_cast<MCBinaryExpr>(Expression)) {
         if (const auto *SE = dyn_cast<MCSymbolRefExpr>(BE->getRHS())) {
           if ((SE->getSymbol().getName().equals_insensitive("x") ||
-              SE->getSymbol().getName().equals_insensitive("y")) &&
+               SE->getSymbol().getName().equals_insensitive("y")) &&
               BE->getOpcode() == MCBinaryExpr::Add) {
             Operands.push_back(MOSOperand::createImm(STI, BE->getLHS(), S, E));
-            Operands.push_back(MOSOperand::createToken(STI, "+",
-                                                       BE->getLoc()));
-            Operands.push_back(MOSOperand::createToken(STI,
-                                   SE->getSymbol().getName(),
-                                   SE->getLoc()));
+            Operands.push_back(MOSOperand::createToken(STI, "+", BE->getLoc()));
+            Operands.push_back(MOSOperand::createToken(
+                STI, SE->getSymbol().getName(), SE->getLoc()));
             return false;
           }
         }
@@ -615,7 +609,7 @@ public:
   }
 
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override {
+                               SMLoc &EndLoc) override {
     std::string AnyCase(StartLoc.getPointer(),
                         EndLoc.getPointer() - StartLoc.getPointer());
     std::transform(AnyCase.begin(), AnyCase.end(), AnyCase.begin(),
@@ -658,9 +652,9 @@ public:
             .CaseLower("y", "y")
             .CaseLower("z", "z")
             .CaseLower("sp", "sp")
-            .CaseLower("rp", "rp") // 65EL02
-            .CaseLower("ya", "ya") // SPC700
-            .CaseLower("c", "c") // SPC700
+            .CaseLower("rp", "rp")   // 65EL02
+            .CaseLower("ya", "ya")   // SPC700
+            .CaseLower("c", "c")     // SPC700
             .CaseLower("psw", "psw") // SPC700
             .Default(nullptr);
     if (LowerStr != nullptr) {

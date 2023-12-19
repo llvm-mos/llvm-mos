@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MOSTargetObjectFile.h"
 #include "MOS.h"
 #include "MOSTargetMachine.h"
-#include "MOSTargetObjectFile.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/GlobalObject.h"
@@ -55,12 +55,12 @@ MCSection *MOSTargetObjectFile::SelectSectionForGlobal(
 MCSection *MOSTargetObjectFile::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind SK, const TargetMachine &TM) const {
   StringRef SectionName = GO->getSection();
-  if (SectionName == ".zp.bss" || SectionName.startswith(".zp.bss."))
+  if (SectionName == ".zp.bss" || SectionName.starts_with(".zp.bss."))
     SK = SectionKind::getBSS();
-  else if (SectionName == ".zp.data" || SectionName.startswith(".zp.data."))
+  else if (SectionName == ".zp.data" || SectionName.starts_with(".zp.data."))
     SK = SectionKind::getData();
-  else if (SectionName == ".zp" || SectionName.startswith(".zp.") ||
-           SectionName.endswith(".noinit") || SectionName.contains(".noinit."))
+  else if (SectionName == ".zp" || SectionName.starts_with(".zp.") ||
+           SectionName.ends_with(".noinit") || SectionName.contains(".noinit."))
     SK = SectionKind::getNoInit();
   return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, SK, TM);
 }

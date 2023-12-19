@@ -41,7 +41,7 @@ void MOSMCELFStreamer::initSections(bool NoExecStack,
 static bool HasPrefix(StringRef Name, StringRef Prefix) {
   SmallString<32> PrefixDot = Prefix;
   PrefixDot += ".";
-  return Name == Prefix || Name.startswith(PrefixDot);
+  return Name == Prefix || Name.starts_with(PrefixDot);
 }
 
 void MOSMCELFStreamer::changeSection(MCSection *Section, const MCExpr *Subsection) {
