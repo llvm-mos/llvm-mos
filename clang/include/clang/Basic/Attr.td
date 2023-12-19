@@ -456,6 +456,9 @@ def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch6
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
+def TargetELFOrMachO : TargetSpec {
+  let ObjectFormats = ["ELF", "MachO"];
+}
 
 def TargetSupportsInitPriority : TargetSpec {
   let CustomCode = [{ !Target.getTriple().isOSzOS() }];
@@ -1666,7 +1669,7 @@ def IBOutletCollection : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def IFunc : Attr, TargetSpecificAttr<TargetELF> {
+def IFunc : Attr, TargetSpecificAttr<TargetELFOrMachO> {
   let Spellings = [GCC<"ifunc">];
   let Args = [StringArgument<"Resolver">];
   let Subjects = SubjectList<[Function]>;
@@ -2244,7 +2247,8 @@ def NotTailCalled : InheritableAttr {
 def : MutualExclusions<[AlwaysInline, NotTailCalled]>;
 
 def NoStackProtector : InheritableAttr {
-  let Spellings = [Clang<"no_stack_protector">, Declspec<"safebuffers">];
+  let Spellings = [Clang<"no_stack_protector">, CXX11<"gnu", "no_stack_protector">,
+                   C23<"gnu", "no_stack_protector">, Declspec<"safebuffers">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [NoStackProtectorDocs];
   let SimpleHandler = 1;
@@ -2824,9 +2828,10 @@ def SwiftAsyncError : InheritableAttr {
   let Documentation = [SwiftAsyncErrorDocs];
 }
 
-def Suppress : StmtAttr {
-  let Spellings = [CXX11<"gsl", "suppress">];
+def Suppress : DeclOrStmtAttr {
+  let Spellings = [CXX11<"gsl", "suppress">, Clang<"suppress">];
   let Args = [VariadicStringArgument<"DiagnosticIdentifiers">];
+  let Accessors = [Accessor<"isGSL", [CXX11<"gsl", "suppress">]>];
   let Documentation = [SuppressDocs];
 }
 
@@ -2910,7 +2915,7 @@ def Target : InheritableAttr {
 
       for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
-        if (Feature.startswith("arch="))
+        if (Feature.starts_with("arch="))
           return Feature.drop_front(sizeof("arch=") - 1);
       }
       return "";
@@ -2928,8 +2933,8 @@ def Target : InheritableAttr {
       for (auto &Feature : AttrFeatures) {
         Feature = Feature.trim();
 
-        if (!Feature.startswith("no-") && !Feature.startswith("arch=") &&
-            !Feature.startswith("fpmath=") && !Feature.startswith("tune="))
+        if (!Feature.starts_with("no-") && !Feature.starts_with("arch=") &&
+            !Feature.starts_with("fpmath=") && !Feature.starts_with("tune="))
           Out.push_back(Feature);
       }
     }
@@ -4356,24 +4361,6 @@ def AvailableOnlyInDefaultEvalMethod : InheritableAttr {
   let Spellings = [Clang<"available_only_in_default_eval_method">];
   let Subjects = SubjectList<[TypedefName], ErrorDiag>;
   let Documentation = [Undocumented];
-}
-
-def CountedBy : InheritableAttr {
-  let Spellings = [Clang<"counted_by">];
-  let Subjects = SubjectList<[Field]>;
-  let Args = [IdentifierArgument<"CountedByField">];
-  let Documentation = [CountedByDocs];
-  let LangOpts = [COnly];
-  // FIXME: This is ugly. Let using a DeclArgument would be nice, but a Decl
-  // isn't yet available due to the fact that we're still parsing the
-  // structure. Maybe that code could be changed sometime in the future.
-  code AdditionalMembers = [{
-    private:
-      SourceRange CountedByFieldLoc;
-    public:
-      SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
-      void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
-  }];
 }
 
 def PreferredType: InheritableAttr {
