@@ -98,14 +98,15 @@ define void @divergent_i1_phi_used_inside_loop(float %val, ptr %addr) {
 ; GFX10-LABEL: divergent_i1_phi_used_inside_loop:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s5, 1
 ; GFX10-NEXT:    s_mov_b32 s4, 0
-; GFX10-NEXT:    v_mov_b32_e32 v3, 1
+; GFX10-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX10-NEXT:  .LBB2_1: ; %loop
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v5, v4
-; GFX10-NEXT:    v_xor_b32_e32 v3, 1, v3
 ; GFX10-NEXT:    v_add_nc_u32_e32 v4, 1, v4
+; GFX10-NEXT:    v_add_nc_u16 v3, v3, -1
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v5, v0
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
@@ -149,8 +150,8 @@ define void @divergent_i1_phi_used_inside_loop_bigger_loop_body(float %val, floa
 ; GFX10-NEXT:  .LBB3_1: ; %loop_body
 ; GFX10-NEXT:    ; in Loop: Header=BB3_2 Depth=1
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v10, v9
-; GFX10-NEXT:    v_xor_b32_e32 v1, 1, v1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v9, 1, v9
+; GFX10-NEXT:    v_add_nc_u16 v1, v1, -1
 ; GFX10-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v10, v0
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4

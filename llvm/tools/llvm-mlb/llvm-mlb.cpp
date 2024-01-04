@@ -28,31 +28,27 @@ using namespace llvm;
 using namespace llvm::object;
 
 namespace {
-  static cl::OptionCategory MLBCategory("MLB Options");
+static cl::OptionCategory MLBCategory("MLB Options");
 
-  enum class MLBPlatform {
-    Auto, NES, PCE
-  };
+enum class MLBPlatform { Auto, NES, PCE };
 
-  cl::opt<MLBPlatform> Platform(
-      "platform", cl::desc(""),
-      cl::init(MLBPlatform::Auto),
-      cl::values(clEnumValN(MLBPlatform::Auto, "Auto",
-                            "Detect automatically based on filename."),
-                 clEnumValN(MLBPlatform::NES, "NES", "NES"),
-                 clEnumValN(MLBPlatform::PCE, "PCE", "PCE")),
-      cl::NotHidden,
-      cl::cat(MLBCategory));
+cl::opt<MLBPlatform>
+    Platform("platform", cl::desc(""), cl::init(MLBPlatform::Auto),
+             cl::values(clEnumValN(MLBPlatform::Auto, "Auto",
+                                   "Detect automatically based on filename."),
+                        clEnumValN(MLBPlatform::NES, "NES", "NES"),
+                        clEnumValN(MLBPlatform::PCE, "PCE", "PCE")),
+             cl::NotHidden, cl::cat(MLBCategory));
 
-  cl::list<std::string> ClInputFilenames(cl::Positional, cl::OneOrMore,
-                                    cl::desc("<input ELF files>"),
-                                    cl::cat(MLBCategory));
+cl::list<std::string> ClInputFilenames(cl::Positional, cl::OneOrMore,
+                                       cl::desc("<input ELF files>"),
+                                       cl::cat(MLBCategory));
 
-  cl::opt<std::string> ClOutputFilename("o", cl::init(""),
+cl::opt<std::string> ClOutputFilename("o", cl::init(""),
                                       cl::desc("Override output filename"),
                                       cl::value_desc("filename"),
                                       cl::cat(MLBCategory));
-}
+} // namespace
 
 static void reportWarning(StringRef File, const Twine &Message) {
   outs().flush();
@@ -106,9 +102,9 @@ int main(int argc, char **argv) {
     bool IsInputExtPCE = OutputBase.consume_back(".pce");
     if (Platform == MLBPlatform::Auto) {
       // Try detecting by filename extension.
-      Platform = IsInputExtNES ? MLBPlatform::NES
-        : (IsInputExtPCE ? MLBPlatform::PCE
-        : MLBPlatform::Auto);
+      Platform = IsInputExtNES
+                     ? MLBPlatform::NES
+                     : (IsInputExtPCE ? MLBPlatform::PCE : MLBPlatform::Auto);
 
       if (Platform == MLBPlatform::Auto) {
         // When all else fails, assume NES for now.
@@ -124,17 +120,17 @@ int main(int argc, char **argv) {
     raw_fd_ostream OS(OutputFilename, EC);
     if (EC)
       reportError(OutputFilename, Twine("cannot open: ") + EC.message());
-    
+
     const auto BoundsStr = [](uint64_t Address, uint16_t Size) {
-      auto UpperBoundStr = Size > 1 ? formatv("-{0:x-}", Address + Size - 1)
-                                    : SmallString<10>();
+      auto UpperBoundStr =
+          Size > 1 ? formatv("-{0:x-}", Address + Size - 1) : SmallString<10>();
       return formatv("{0:x-}{1}", Address, UpperBoundStr).sstr<10>();
     };
 
     if (Platform == MLBPlatform::NES) {
       DenseMap<uint64_t, SmallVector<const ELF32LE::Phdr *>> PRGSegsByOffset;
       for (const auto &Seg :
-          unwrapOrError(ELFFile.program_headers(), InputFilename))
+           unwrapOrError(ELFFile.program_headers(), InputFilename))
         if (Seg.p_paddr >= 0x03000000 && Seg.p_paddr < 0x04000000)
           PRGSegsByOffset[Seg.p_offset].push_back(&Seg);
 
@@ -167,13 +163,13 @@ int main(int argc, char **argv) {
         if (Type == SymbolRef::ST_File)
           continue;
         if (Type == SymbolRef::ST_Unknown)
-          if (Name.startswith("__") && !Name.startswith("__rc"))
+          if (Name.starts_with("__") && !Name.starts_with("__rc"))
             continue;
 
         // Mesen 2 incorrectly displays executable symbols with a size attached.
         if (Type == SymbolRef::ST_Function)
           Size = 1;
-        
+
         const auto TryPRGRom = [&]() {
           if ((Address & 0xffff) < 0x8000)
             return false;
@@ -203,7 +199,8 @@ int main(int argc, char **argv) {
           // variable PRG-RAM banking, add a symbol to declare the bank size.
           OS << formatv(
               "{0}:{1}:{2}\n", PRGRAMType,
-              BoundsStr((Address & 0xffff) - 0x6000 + Bank * 0x2000, Size), Name);
+              BoundsStr((Address & 0xffff) - 0x6000 + Bank * 0x2000, Size),
+              Name);
           continue;
         }
 
@@ -235,7 +232,7 @@ int main(int argc, char **argv) {
         if (Type == SymbolRef::ST_File)
           continue;
         if (Type == SymbolRef::ST_Unknown)
-          if (Name.startswith("__") && !Name.startswith("__rc"))
+          if (Name.starts_with("__") && !Name.starts_with("__rc"))
             continue;
 
         const auto TryCard = [&]() {
@@ -270,7 +267,8 @@ int main(int argc, char **argv) {
               return false;
             }
           } else if (Group <= 0x11) {
-            // (0x02-0x11)XXXXXX, bank 40-7F - card ROM bank address (SF2 mapper)
+            // (0x02-0x11)XXXXXX, bank 40-7F - card ROM bank address (SF2
+            // mapper)
             if (Bank < 0x40 || Bank >= 0x80)
               return false;
             Type = "PcePrgRom";
@@ -302,8 +300,9 @@ int main(int argc, char **argv) {
             BankLMA = Address & 0xFFFFE000;
             Offset = DefaultOffset;
           }
-          
-          OS << formatv("{0}:{1}:{2}\n", Type, BoundsStr(Address - BankLMA + Offset, Size), Name);
+
+          OS << formatv("{0}:{1}:{2}\n", Type,
+                        BoundsStr(Address - BankLMA + Offset, Size), Name);
           return true;
         };
         if (TryCard())
@@ -311,17 +310,20 @@ int main(int argc, char **argv) {
 
         // 0x00F7XXXX - CD backup RAM bank address
         if ((Address & 0xFFFF0000) == 0x00F70000) {
-          OS << formatv("PceSaveRam:{0}:{1}\n", BoundsStr(Address & 0x1FFF, Size), Name);
+          OS << formatv("PceSaveRam:{0}:{1}\n",
+                        BoundsStr(Address & 0x1FFF, Size), Name);
           continue;
         }
         // 0x00FFXXXX - I/O address
         if ((Address & 0xFFFF0000) == 0x00FF0000) {
-          OS << formatv("PceMemory:{0}:{1}\n", BoundsStr(Address & 0x1FFF, Size), Name);
+          OS << formatv("PceMemory:{0}:{1}\n",
+                        BoundsStr(Address & 0x1FFF, Size), Name);
           continue;
         }
 
         // Unknown address
-        reportWarning(InputFilename, formatv("Could not map symbol '{0}'", Name));
+        reportWarning(InputFilename,
+                      formatv("Could not map symbol '{0}'", Name));
       }
     }
   }
