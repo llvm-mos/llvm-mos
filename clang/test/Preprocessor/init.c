@@ -2851,7 +2851,7 @@
 // MOS: #define __SIZE_MAX__ 65535U
 // MOS: #define __SIZE_TYPE__ unsigned short
 // MOS: #define __SIZE_WIDTH__ 16
-// MOS: #define __STDC_HOSTED__ 1
+// MOS: #define __STDC_HOSTED__ 0
 // MOS: #define __STDC_UTF_16__ 1
 // MOS: #define __STDC_UTF_32__ 1
 // MOS: #define __STDC_VERSION__ 201710L

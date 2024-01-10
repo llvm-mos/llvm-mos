@@ -428,10 +428,16 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //   -- __STDC_HOSTED__
   //      The integer literal 1 if the implementation is a hosted
   //      implementation or the integer literal 0 if it is not.
-  if (LangOpts.Freestanding)
+  if (LangOpts.Freestanding) {
     Builder.defineMacro("__STDC_HOSTED__", "0");
-  else
+  } else if (TI.getTriple().isMOS()) {
+    // MOS targets are technically freestanding, but all builtins are expected
+    // to be present, and everything present conforms to the hosted spec, so we
+    // don't actually default to -ffreestanding.
+    Builder.defineMacro("__STDC_HOSTED__", "0");
+  } else {
     Builder.defineMacro("__STDC_HOSTED__");
+  }
 
   //   -- __STDC_VERSION__
   //      [C++] Whether __STDC_VERSION__ is predefined and if so, what its
