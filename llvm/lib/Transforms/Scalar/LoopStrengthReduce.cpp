@@ -7158,7 +7158,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
       LLVM_DEBUG(dbgs() << "Old term-cond:\n"
                         << *OldTermCond << "\n"
-                        << "New term-cond:\b" << *NewTermCond << "\n");
+                        << "New term-cond:\n" << *NewTermCond << "\n");
 
       BI->setCondition(NewTermCond);
 

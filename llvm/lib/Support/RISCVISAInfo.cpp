@@ -75,7 +75,6 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xcvmac", RISCVExtensionVersion{1, 0}},
     {"xcvmem", RISCVExtensionVersion{1, 0}},
     {"xcvsimd", RISCVExtensionVersion{1, 0}},
-    {"xsfcie", RISCVExtensionVersion{1, 0}},
     {"xsfvcp", RISCVExtensionVersion{1, 0}},
     {"xsfvfnrclipxfqf", RISCVExtensionVersion{1, 0}},
     {"xsfvfwmaccqqq", RISCVExtensionVersion{1, 0}},
@@ -191,10 +190,16 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zacas", RISCVExtensionVersion{1, 0}},
 
+    {"zcmop", RISCVExtensionVersion{0, 2}},
+
     {"zfbfmin", RISCVExtensionVersion{0, 8}},
 
     {"zicfilp", RISCVExtensionVersion{0, 4}},
+    {"zicfiss", RISCVExtensionVersion{0, 4}},
+
     {"zicond", RISCVExtensionVersion{1, 0}},
+
+    {"zimop", RISCVExtensionVersion{0, 1}},
 
     {"ztso", RISCVExtensionVersion{0, 1}},
 
@@ -461,35 +466,38 @@ bool RISCVISAInfo::compareExtension(const std::string &LHS,
   return LHS < RHS;
 }
 
-void RISCVISAInfo::toFeatures(
-    std::vector<StringRef> &Features,
-    llvm::function_ref<StringRef(const Twine &)> StrAlloc,
-    bool AddAllExtensions) const {
-  for (auto const &Ext : Exts) {
-    StringRef ExtName = Ext.first;
-
+std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
+                                                  bool IgnoreUnknown) const {
+  std::vector<std::string> Features;
+  for (const auto &[ExtName, _] : Exts) {
+    // i is a base instruction set, not an extension (see
+    // https://github.com/riscv/riscv-isa-manual/blob/main/src/naming.adoc#base-integer-isa)
+    // and is not recognized in clang -cc1
     if (ExtName == "i")
+      continue;
+    if (IgnoreUnknown && !isSupportedExtension(ExtName))
       continue;
 
     if (isExperimentalExtension(ExtName)) {
-      Features.push_back(StrAlloc("+experimental-" + ExtName));
+      Features.push_back((llvm::Twine("+experimental-") + ExtName).str());
     } else {
-      Features.push_back(StrAlloc("+" + ExtName));
+      Features.push_back((llvm::Twine("+") + ExtName).str());
     }
   }
   if (AddAllExtensions) {
     for (const RISCVSupportedExtension &Ext : SupportedExtensions) {
       if (Exts.count(Ext.Name))
         continue;
-      Features.push_back(StrAlloc(Twine("-") + Ext.Name));
+      Features.push_back((llvm::Twine("-") + Ext.Name).str());
     }
 
     for (const RISCVSupportedExtension &Ext : SupportedExperimentalExtensions) {
       if (Exts.count(Ext.Name))
         continue;
-      Features.push_back(StrAlloc(Twine("-experimental-") + Ext.Name));
+      Features.push_back((llvm::Twine("-experimental-") + Ext.Name).str());
     }
   }
+  return Features;
 }
 
 // Extensions may have a version number, and may be separated by
@@ -998,7 +1006,7 @@ static const char *ImpliedExtsV[] = {"zvl128b", "zve64d"};
 static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsXSfvcp[] = {"zve32x"};
 static const char *ImpliedExtsXSfvfnrclipxfqf[] = {"zve32f"};
-static const char *ImpliedExtsXSfvfwmaccqqq[] = {"zve32f", "zvfbfmin"};
+static const char *ImpliedExtsXSfvfwmaccqqq[] = {"zvfbfmin"};
 static const char *ImpliedExtsXSfvqmaccdod[] = {"zve32x"};
 static const char *ImpliedExtsXSfvqmaccqoq[] = {"zve32x"};
 static const char *ImpliedExtsZacas[] = {"a"};
@@ -1006,8 +1014,9 @@ static const char *ImpliedExtsZcb[] = {"zca"};
 static const char *ImpliedExtsZcd[] = {"d", "zca"};
 static const char *ImpliedExtsZce[] = {"zcb", "zcmp", "zcmt"};
 static const char *ImpliedExtsZcf[] = {"f", "zca"};
+static const char *ImpliedExtsZcmop[] = {"zca"};
 static const char *ImpliedExtsZcmp[] = {"zca"};
-static const char *ImpliedExtsZcmt[] = {"zca"};
+static const char *ImpliedExtsZcmt[] = {"zca", "zicsr"};
 static const char *ImpliedExtsZdinx[] = {"zfinx"};
 static const char *ImpliedExtsZfa[] = {"f"};
 static const char *ImpliedExtsZfbfmin[] = {"f"};
@@ -1017,6 +1026,7 @@ static const char *ImpliedExtsZfinx[] = {"zicsr"};
 static const char *ImpliedExtsZhinx[] = {"zhinxmin"};
 static const char *ImpliedExtsZhinxmin[] = {"zfinx"};
 static const char *ImpliedExtsZicntr[] = {"zicsr"};
+static const char *ImpliedExtsZicfiss[] = {"zicsr", "zimop"};
 static const char *ImpliedExtsZihpm[] = {"zicsr"};
 static const char *ImpliedExtsZk[] = {"zkn", "zkt", "zkr"};
 static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx",
@@ -1028,8 +1038,8 @@ static const char *ImpliedExtsZve32x[] = {"zvl32b", "zicsr"};
 static const char *ImpliedExtsZve64d[] = {"zve64f", "d"};
 static const char *ImpliedExtsZve64f[] = {"zve64x", "zve32f"};
 static const char *ImpliedExtsZve64x[] = {"zve32x", "zvl64b"};
-static const char *ImpliedExtsZvfbfmin[] = {"zve32f", "zfbfmin"};
-static const char *ImpliedExtsZvfbfwma[] = {"zvfbfmin"};
+static const char *ImpliedExtsZvfbfmin[] = {"zve32f"};
+static const char *ImpliedExtsZvfbfwma[] = {"zvfbfmin", "zfbfmin"};
 static const char *ImpliedExtsZvfh[] = {"zvfhmin", "zfhmin"};
 static const char *ImpliedExtsZvfhmin[] = {"zve32f"};
 static const char *ImpliedExtsZvkn[] = {"zvkb", "zvkned", "zvknhb", "zvkt"};
@@ -1078,6 +1088,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"zcd"}, {ImpliedExtsZcd}},
     {{"zce"}, {ImpliedExtsZce}},
     {{"zcf"}, {ImpliedExtsZcf}},
+    {{"zcmop"}, {ImpliedExtsZcmop}},
     {{"zcmp"}, {ImpliedExtsZcmp}},
     {{"zcmt"}, {ImpliedExtsZcmt}},
     {{"zdinx"}, {ImpliedExtsZdinx}},
@@ -1088,6 +1099,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"zfinx"}, {ImpliedExtsZfinx}},
     {{"zhinx"}, {ImpliedExtsZhinx}},
     {{"zhinxmin"}, {ImpliedExtsZhinxmin}},
+    {{"zicfiss"}, {ImpliedExtsZicfiss}},
     {{"zicntr"}, {ImpliedExtsZicntr}},
     {{"zihpm"}, {ImpliedExtsZihpm}},
     {{"zk"}, {ImpliedExtsZk}},
@@ -1258,22 +1270,6 @@ std::string RISCVISAInfo::toString() const {
   }
 
   return Arch.str();
-}
-
-std::vector<std::string> RISCVISAInfo::toFeatureVector() const {
-  std::vector<std::string> FeatureVector;
-  for (auto const &Ext : Exts) {
-    std::string ExtName = Ext.first;
-    if (ExtName == "i") // i is not recognized in clang -cc1
-      continue;
-    if (!isSupportedExtension(ExtName))
-      continue;
-    std::string Feature = isExperimentalExtension(ExtName)
-                              ? "+experimental-" + ExtName
-                              : "+" + ExtName;
-    FeatureVector.push_back(Feature);
-  }
-  return FeatureVector;
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>

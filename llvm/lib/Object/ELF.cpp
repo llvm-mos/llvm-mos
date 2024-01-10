@@ -781,7 +781,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     }
     FunctionEntries.emplace_back(Address, std::move(BBEntries));
 
-    if (FeatEnable.FuncEntryCount || FeatEnable.BBFreq || FeatEnable.BrProb) {
+    if (PGOAnalyses || FeatEnable.anyEnabled()) {
       // Function entry count
       uint64_t FuncEntryCount =
           FeatEnable.FuncEntryCount
@@ -789,8 +789,9 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
               : 0;
 
       std::vector<PGOAnalysisMap::PGOBBEntry> PGOBBEntries;
-      for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr && Cur &&
-                                    (BlockIndex < NumBlocks);
+      for (uint32_t BlockIndex = 0;
+           (FeatEnable.BBFreq || FeatEnable.BrProb) && !MetadataDecodeErr &&
+           !ULEBSizeErr && Cur && (BlockIndex < NumBlocks);
            ++BlockIndex) {
         // Block frequency
         uint64_t BBF = FeatEnable.BBFreq

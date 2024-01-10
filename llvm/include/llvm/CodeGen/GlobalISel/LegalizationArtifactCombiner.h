@@ -1437,6 +1437,9 @@ public:
           // Adding Use to ArtifactList.
           WrapperObserver.changedInstr(Use);
           break;
+        case TargetOpcode::G_ASSERT_SEXT:
+        case TargetOpcode::G_ASSERT_ZEXT:
+        case TargetOpcode::G_ASSERT_ALIGN:
         case TargetOpcode::COPY: {
           Register Copy = Use.getOperand(0).getReg();
           if (Copy.isVirtual())
@@ -1463,6 +1466,9 @@ private:
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_EXTRACT:
+    case TargetOpcode::G_ASSERT_SEXT:
+    case TargetOpcode::G_ASSERT_ZEXT:
+    case TargetOpcode::G_ASSERT_ALIGN:
       return MI.getOperand(1).getReg();
     case TargetOpcode::G_UNMERGE_VALUES:
       return MI.getOperand(MI.getNumOperands() - 1).getReg();
@@ -1496,7 +1502,8 @@ private:
       if (MRI.hasOneUse(PrevRegSrc)) {
         if (TmpDef != &DefMI) {
           assert((TmpDef->getOpcode() == TargetOpcode::COPY ||
-                  isArtifactCast(TmpDef->getOpcode())) &&
+                  isArtifactCast(TmpDef->getOpcode()) ||
+                  isPreISelGenericOptimizationHint(TmpDef->getOpcode())) &&
                  "Expecting copy or artifact cast here");
 
           DeadInsts.push_back(TmpDef);
@@ -1580,16 +1587,8 @@ private:
   /// Looks through copy instructions and returns the actual
   /// source register.
   Register lookThroughCopyInstrs(Register Reg) {
-    using namespace llvm::MIPatternMatch;
-
-    Register TmpReg;
-    while (mi_match(Reg, MRI, m_Copy(m_Reg(TmpReg)))) {
-      if (MRI.getType(TmpReg).isValid())
-        Reg = TmpReg;
-      else
-        break;
-    }
-    return Reg;
+    Register TmpReg = getSrcRegIgnoringCopies(Reg, MRI);
+    return TmpReg.isValid() ? TmpReg : Reg;
   }
 };
 
