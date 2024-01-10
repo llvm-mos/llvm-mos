@@ -739,132 +739,110 @@ entry:
 define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-LABEL: fold_addi_from_different_bb:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a4
 ; RV32I-NEXT:    mv s1, a3
 ; RV32I-NEXT:    mv s2, a2
-; RV32I-NEXT:    beqz a3, .LBB20_3
+; RV32I-NEXT:    beqz a3, .LBB20_2
 ; RV32I-NEXT:  # %bb.1: # %entry
 ; RV32I-NEXT:    slti a1, s1, 0
-; RV32I-NEXT:    beqz a1, .LBB20_4
+; RV32I-NEXT:    j .LBB20_3
 ; RV32I-NEXT:  .LBB20_2:
-; RV32I-NEXT:    li s3, 0
-; RV32I-NEXT:    li s4, 0
-; RV32I-NEXT:    j .LBB20_6
-; RV32I-NEXT:  .LBB20_3:
 ; RV32I-NEXT:    seqz a1, s2
-; RV32I-NEXT:    bnez a1, .LBB20_2
-; RV32I-NEXT:  .LBB20_4: # %for.body.lr.ph
-; RV32I-NEXT:    li s5, 0
-; RV32I-NEXT:    li s6, 0
+; RV32I-NEXT:  .LBB20_3: # %entry
 ; RV32I-NEXT:    li s3, 0
 ; RV32I-NEXT:    li s4, 0
+; RV32I-NEXT:    bnez a1, .LBB20_6
+; RV32I-NEXT:  # %bb.4: # %for.body.lr.ph
 ; RV32I-NEXT:    slli a0, a0, 4
-; RV32I-NEXT:    add s7, s0, a0
+; RV32I-NEXT:    add s5, s0, a0
 ; RV32I-NEXT:  .LBB20_5: # %for.body
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call f
-; RV32I-NEXT:    lw a0, 12(s7)
-; RV32I-NEXT:    lw a1, 8(s7)
+; RV32I-NEXT:    lw a0, 12(s5)
+; RV32I-NEXT:    lw a1, 8(s5)
 ; RV32I-NEXT:    add a0, a0, s4
 ; RV32I-NEXT:    add s3, a1, s3
 ; RV32I-NEXT:    sltu s4, s3, a1
-; RV32I-NEXT:    addi s5, s5, 1
-; RV32I-NEXT:    seqz a1, s5
-; RV32I-NEXT:    add s6, s6, a1
-; RV32I-NEXT:    xor a1, s5, s2
-; RV32I-NEXT:    xor a2, s6, s1
-; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    seqz a1, s2
+; RV32I-NEXT:    sub s1, s1, a1
+; RV32I-NEXT:    addi s2, s2, -1
+; RV32I-NEXT:    or a1, s2, s1
 ; RV32I-NEXT:    add s4, a0, s4
 ; RV32I-NEXT:    bnez a1, .LBB20_5
 ; RV32I-NEXT:  .LBB20_6: # %for.cond.cleanup
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a1, s4
-; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    addi sp, sp, 48
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: fold_addi_from_different_bb:
 ; RV32I-MEDIUM:       # %bb.0: # %entry
-; RV32I-MEDIUM-NEXT:    addi sp, sp, -48
-; RV32I-MEDIUM-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32I-MEDIUM-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32I-MEDIUM-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; RV32I-MEDIUM-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
-; RV32I-MEDIUM-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; RV32I-MEDIUM-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; RV32I-MEDIUM-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
-; RV32I-MEDIUM-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
-; RV32I-MEDIUM-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    addi sp, sp, -32
+; RV32I-MEDIUM-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
 ; RV32I-MEDIUM-NEXT:    mv s0, a4
 ; RV32I-MEDIUM-NEXT:    mv s1, a3
 ; RV32I-MEDIUM-NEXT:    mv s2, a2
-; RV32I-MEDIUM-NEXT:    beqz a3, .LBB20_3
+; RV32I-MEDIUM-NEXT:    beqz a3, .LBB20_2
 ; RV32I-MEDIUM-NEXT:  # %bb.1: # %entry
 ; RV32I-MEDIUM-NEXT:    slti a1, s1, 0
-; RV32I-MEDIUM-NEXT:    beqz a1, .LBB20_4
+; RV32I-MEDIUM-NEXT:    j .LBB20_3
 ; RV32I-MEDIUM-NEXT:  .LBB20_2:
-; RV32I-MEDIUM-NEXT:    li s3, 0
-; RV32I-MEDIUM-NEXT:    li s4, 0
-; RV32I-MEDIUM-NEXT:    j .LBB20_6
-; RV32I-MEDIUM-NEXT:  .LBB20_3:
 ; RV32I-MEDIUM-NEXT:    seqz a1, s2
-; RV32I-MEDIUM-NEXT:    bnez a1, .LBB20_2
-; RV32I-MEDIUM-NEXT:  .LBB20_4: # %for.body.lr.ph
-; RV32I-MEDIUM-NEXT:    li s5, 0
-; RV32I-MEDIUM-NEXT:    li s6, 0
+; RV32I-MEDIUM-NEXT:  .LBB20_3: # %entry
 ; RV32I-MEDIUM-NEXT:    li s3, 0
 ; RV32I-MEDIUM-NEXT:    li s4, 0
+; RV32I-MEDIUM-NEXT:    bnez a1, .LBB20_6
+; RV32I-MEDIUM-NEXT:  # %bb.4: # %for.body.lr.ph
 ; RV32I-MEDIUM-NEXT:    slli a0, a0, 4
-; RV32I-MEDIUM-NEXT:    add s7, s0, a0
+; RV32I-MEDIUM-NEXT:    add s5, s0, a0
 ; RV32I-MEDIUM-NEXT:  .LBB20_5: # %for.body
 ; RV32I-MEDIUM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-MEDIUM-NEXT:    mv a0, s0
 ; RV32I-MEDIUM-NEXT:    call f
-; RV32I-MEDIUM-NEXT:    lw a0, 12(s7)
-; RV32I-MEDIUM-NEXT:    lw a1, 8(s7)
+; RV32I-MEDIUM-NEXT:    lw a0, 12(s5)
+; RV32I-MEDIUM-NEXT:    lw a1, 8(s5)
 ; RV32I-MEDIUM-NEXT:    add a0, a0, s4
 ; RV32I-MEDIUM-NEXT:    add s3, a1, s3
 ; RV32I-MEDIUM-NEXT:    sltu s4, s3, a1
-; RV32I-MEDIUM-NEXT:    addi s5, s5, 1
-; RV32I-MEDIUM-NEXT:    seqz a1, s5
-; RV32I-MEDIUM-NEXT:    add s6, s6, a1
-; RV32I-MEDIUM-NEXT:    xor a1, s5, s2
-; RV32I-MEDIUM-NEXT:    xor a2, s6, s1
-; RV32I-MEDIUM-NEXT:    or a1, a1, a2
+; RV32I-MEDIUM-NEXT:    seqz a1, s2
+; RV32I-MEDIUM-NEXT:    sub s1, s1, a1
+; RV32I-MEDIUM-NEXT:    addi s2, s2, -1
+; RV32I-MEDIUM-NEXT:    or a1, s2, s1
 ; RV32I-MEDIUM-NEXT:    add s4, a0, s4
 ; RV32I-MEDIUM-NEXT:    bnez a1, .LBB20_5
 ; RV32I-MEDIUM-NEXT:  .LBB20_6: # %for.cond.cleanup
 ; RV32I-MEDIUM-NEXT:    mv a0, s3
 ; RV32I-MEDIUM-NEXT:    mv a1, s4
-; RV32I-MEDIUM-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; RV32I-MEDIUM-NEXT:    addi sp, sp, 48
+; RV32I-MEDIUM-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s5, 4(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    addi sp, sp, 32
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LABEL: fold_addi_from_different_bb:

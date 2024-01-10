@@ -128,9 +128,10 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; SELDAG-NEXT:    .cfi_personality 155, ___gxx_personality_v0
 ; SELDAG-NEXT:    .cfi_lsda 16, Lexception0
 ; SELDAG-NEXT:  ; %bb.0: ; %entry
-; SELDAG-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; SELDAG-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; SELDAG-NEXT:    .cfi_def_cfa_offset 32
+; SELDAG-NEXT:    sub sp, sp, #48
+; SELDAG-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; SELDAG-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; SELDAG-NEXT:    .cfi_def_cfa_offset 48
 ; SELDAG-NEXT:    .cfi_offset w30, -8
 ; SELDAG-NEXT:    .cfi_offset w29, -16
 ; SELDAG-NEXT:    .cfi_offset w19, -24
@@ -143,16 +144,17 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; SELDAG-NEXT:    bl _objc_object
 ; SELDAG-NEXT:  Ltmp1:
 ; SELDAG-NEXT:  ; %bb.1: ; %invoke.cont
-; SELDAG-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; SELDAG-NEXT:    mov x0, x19
-; SELDAG-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; SELDAG-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; SELDAG-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; SELDAG-NEXT:    add sp, sp, #48
 ; SELDAG-NEXT:    b _objc_release
 ; SELDAG-NEXT:  LBB3_2: ; %lpad
 ; SELDAG-NEXT:  Ltmp2:
-; SELDAG-NEXT:    mov x20, x0
+; SELDAG-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
 ; SELDAG-NEXT:    mov x0, x19
 ; SELDAG-NEXT:    bl _objc_release
-; SELDAG-NEXT:    mov x0, x20
+; SELDAG-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
 ; SELDAG-NEXT:    bl __Unwind_Resume
 ; SELDAG-NEXT:  Lfunc_end0:
 ; SELDAG-NEXT:    .cfi_endproc
@@ -186,9 +188,10 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    .cfi_personality 155, ___gxx_personality_v0
 ; GISEL-NEXT:    .cfi_lsda 16, Lexception0
 ; GISEL-NEXT:  ; %bb.0: ; %entry
-; GISEL-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; GISEL-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; GISEL-NEXT:    .cfi_def_cfa_offset 32
+; GISEL-NEXT:    sub sp, sp, #48
+; GISEL-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; GISEL-NEXT:    .cfi_def_cfa_offset 48
 ; GISEL-NEXT:    .cfi_offset w30, -8
 ; GISEL-NEXT:    .cfi_offset w29, -16
 ; GISEL-NEXT:    .cfi_offset w19, -24
@@ -201,16 +204,17 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    bl _objc_object
 ; GISEL-NEXT:  Ltmp1:
 ; GISEL-NEXT:  ; %bb.1: ; %invoke.cont
-; GISEL-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; GISEL-NEXT:    mov x0, x19
-; GISEL-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; GISEL-NEXT:    add sp, sp, #48
 ; GISEL-NEXT:    b _objc_release
 ; GISEL-NEXT:  LBB3_2: ; %lpad
 ; GISEL-NEXT:  Ltmp2:
-; GISEL-NEXT:    mov x20, x0
+; GISEL-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
 ; GISEL-NEXT:    mov x0, x19
 ; GISEL-NEXT:    bl _objc_release
-; GISEL-NEXT:    mov x0, x20
+; GISEL-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
 ; GISEL-NEXT:    bl __Unwind_Resume
 ; GISEL-NEXT:  Lfunc_end0:
 ; GISEL-NEXT:    .cfi_endproc
@@ -289,17 +293,17 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; SELDAG-NEXT:    ret
 ; SELDAG-NEXT:  LBB4_3: ; %lpad1
 ; SELDAG-NEXT:  Ltmp8:
-; SELDAG-NEXT:    mov x20, x0
+; SELDAG-NEXT:    str x0, [sp] ; 8-byte Folded Spill
 ; SELDAG-NEXT:    mov x0, x19
 ; SELDAG-NEXT:    bl _objc_release
 ; SELDAG-NEXT:    b LBB4_5
 ; SELDAG-NEXT:  LBB4_4: ; %lpad
 ; SELDAG-NEXT:  Ltmp5:
-; SELDAG-NEXT:    mov x20, x0
+; SELDAG-NEXT:    str x0, [sp] ; 8-byte Folded Spill
 ; SELDAG-NEXT:  LBB4_5: ; %ehcleanup
 ; SELDAG-NEXT:    add x0, sp, #15
 ; SELDAG-NEXT:    bl __ZN1SD1Ev
-; SELDAG-NEXT:    mov x0, x20
+; SELDAG-NEXT:    ldr x0, [sp] ; 8-byte Folded Reload
 ; SELDAG-NEXT:    bl __Unwind_Resume
 ; SELDAG-NEXT:  Lfunc_end1:
 ; SELDAG-NEXT:    .cfi_endproc
@@ -362,17 +366,17 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  LBB4_3: ; %lpad1
 ; GISEL-NEXT:  Ltmp8:
-; GISEL-NEXT:    mov x20, x0
+; GISEL-NEXT:    str x0, [sp] ; 8-byte Folded Spill
 ; GISEL-NEXT:    mov x0, x19
 ; GISEL-NEXT:    bl _objc_release
 ; GISEL-NEXT:    b LBB4_5
 ; GISEL-NEXT:  LBB4_4: ; %lpad
 ; GISEL-NEXT:  Ltmp5:
-; GISEL-NEXT:    mov x20, x0
+; GISEL-NEXT:    str x0, [sp] ; 8-byte Folded Spill
 ; GISEL-NEXT:  LBB4_5: ; %ehcleanup
 ; GISEL-NEXT:    add x0, sp, #15
 ; GISEL-NEXT:    bl __ZN1SD1Ev
-; GISEL-NEXT:    mov x0, x20
+; GISEL-NEXT:    ldr x0, [sp] ; 8-byte Folded Reload
 ; GISEL-NEXT:    bl __Unwind_Resume
 ; GISEL-NEXT:  Lfunc_end1:
 ; GISEL-NEXT:    .cfi_endproc

@@ -43,7 +43,8 @@ public:
 
   bool hasNoInitSection() const override { return true; }
 
-  void registerPassBuilderCallbacks(PassBuilder &) override;
+  void registerPassBuilderCallbacks(PassBuilder &,
+                                    bool PopulateClassToPassNames) override;
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 

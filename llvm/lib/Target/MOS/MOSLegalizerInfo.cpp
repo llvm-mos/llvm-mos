@@ -362,9 +362,10 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::trap: {
     auto &Ctx = MI.getMF()->getFunction().getContext();
     auto *RetTy = Type::getVoidTy(Ctx);
-    if (!createLibcall(Builder, "abort", {{}, RetTy, 0}, {}, CallingConv::C)) {
+    LostDebugLocObserver LocObserver("");
+    if (!createLibcall(Builder, "abort", {{}, RetTy, 0}, {}, CallingConv::C,
+                       LocObserver))
       return false;
-    }
     MI.eraseFromParent();
     return true;
   }
@@ -384,8 +385,8 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   return false;
 }
 
-bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                      MachineInstr &MI) const {
+bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                                      LostDebugLocObserver &LocObserver) const {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
 
   switch (MI.getOpcode()) {
@@ -412,13 +413,13 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeXor(Helper, MRI, MI);
   case G_SDIVREM:
   case G_UDIVREM:
-    return legalizeDivRem(Helper, MRI, MI);
+    return legalizeDivRem(Helper, MRI, MI, LocObserver);
   case G_LSHR:
   case G_SHL:
   case G_ASHR:
   case G_ROTL:
   case G_ROTR:
-    return legalizeShiftRotate(Helper, MRI, MI);
+    return legalizeShiftRotate(Helper, MRI, MI, LocObserver);
   case G_ICMP:
     return legalizeICmp(Helper, MRI, MI);
   case G_SELECT:
@@ -451,7 +452,7 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_MEMCPY_INLINE:
   case G_MEMMOVE:
   case G_MEMSET:
-    return legalizeMemOp(Helper, MRI, MI);
+    return legalizeMemOp(Helper, MRI, MI, LocObserver);
 
   // Control Flow
   case G_BRCOND:
@@ -469,7 +470,7 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_FABS:
     return legalizeFAbs(Helper, MRI, MI);
   case G_FCMP:
-    return legalizeFCmp(Helper, MRI, MI);
+    return legalizeFCmp(Helper, MRI, MI, LocObserver);
   case G_FCONSTANT:
     return legalizeFConst(Helper, MRI, MI);
 
@@ -679,7 +680,8 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
 
 bool MOSLegalizerInfo::legalizeDivRem(LegalizerHelper &Helper,
                                       MachineRegisterInfo &MRI,
-                                      MachineInstr &MI) const {
+                                      MachineInstr &MI,
+                                      LostDebugLocObserver &LocObserver) const {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
   auto &Ctx = MI.getMF()->getFunction().getContext();
 
@@ -699,7 +701,7 @@ bool MOSLegalizerInfo::legalizeDivRem(LegalizerHelper &Helper,
   Args.push_back({FI->getOperand(0).getReg(), PtrTy, 2});
 
   if (!createLibcall(Helper.MIRBuilder, Libcall,
-                     {MI.getOperand(0).getReg(), HLTy, 0}, Args))
+                     {MI.getOperand(0).getReg(), HLTy, 0}, Args, LocObserver))
     return false;
 
   Helper.MIRBuilder.buildLoad(
@@ -726,9 +728,9 @@ static bool shouldOverCorrect(uint64_t Amt, LLT Ty, bool IsRotate) {
   return Amt * Ty.getSizeInBytes() > (8 - Amt) * (Ty.getSizeInBytes() + 1);
 }
 
-bool MOSLegalizerInfo::legalizeShiftRotate(LegalizerHelper &Helper,
-                                           MachineRegisterInfo &MRI,
-                                           MachineInstr &MI) const {
+bool MOSLegalizerInfo::legalizeShiftRotate(
+    LegalizerHelper &Helper, MachineRegisterInfo &MRI, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
 
   auto [Dst, Src, AmtReg] = MI.getFirst3Regs();
@@ -758,7 +760,7 @@ bool MOSLegalizerInfo::legalizeShiftRotate(LegalizerHelper &Helper,
     LLT AmtTy = MRI.getType(AmtReg);
     if (AmtTy != S8)
       MI.getOperand(2).setReg(Builder.buildTrunc(S8, AmtReg).getReg(0));
-    return shiftRotateLibcall(Helper, MRI, MI);
+    return shiftRotateLibcall(Helper, MRI, MI, LocObserver);
   }
 
   uint64_t Amt = ConstantAmt->Value.getZExtValue();
@@ -987,9 +989,9 @@ bool MOSLegalizerInfo::legalizeLshrEShlE(LegalizerHelper &Helper,
   return true;
 }
 
-bool MOSLegalizerInfo::shiftRotateLibcall(LegalizerHelper &Helper,
-                                          MachineRegisterInfo &MRI,
-                                          MachineInstr &MI) const {
+bool MOSLegalizerInfo::shiftRotateLibcall(
+    LegalizerHelper &Helper, MachineRegisterInfo &MRI, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
   auto &Ctx = MI.getMF()->getFunction().getContext();
 
@@ -1002,7 +1004,7 @@ bool MOSLegalizerInfo::shiftRotateLibcall(LegalizerHelper &Helper,
   Args.push_back({MI.getOperand(1).getReg(), HLTy, 0});
   Args.push_back({MI.getOperand(2).getReg(), HLAmtTy, 1});
   if (!createLibcall(Helper.MIRBuilder, Libcall,
-                     {MI.getOperand(0).getReg(), HLTy, 0}, Args))
+                     {MI.getOperand(0).getReg(), HLTy, 0}, Args, LocObserver))
     return false;
 
   MI.eraseFromParent();
@@ -1858,8 +1860,8 @@ bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,
 }
 
 bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
-                                     MachineRegisterInfo &MRI,
-                                     MachineInstr &MI) const {
+                                     MachineRegisterInfo &MRI, MachineInstr &MI,
+                                     LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
@@ -1903,7 +1905,6 @@ bool MOSLegalizerInfo::legalizeMemOp(LegalizerHelper &Helper,
   }
 
   // Try emitting a libcall.
-  LostDebugLocObserver LocObserver("");
   Result = createMemLibcall(Builder, MRI, MI, LocObserver);
   if (Result == LegalizerHelper::Legalized) {
     MI.eraseFromParent();
@@ -2261,8 +2262,8 @@ bool MOSLegalizerInfo::legalizeFAbs(LegalizerHelper &Helper,
 
 // Legalize floating-point comparisons to libcalls.
 bool MOSLegalizerInfo::legalizeFCmp(LegalizerHelper &Helper,
-                                    MachineRegisterInfo &MRI,
-                                    MachineInstr &MI) const {
+                                    MachineRegisterInfo &MRI, MachineInstr &MI,
+                                    LostDebugLocObserver &LocObserver) const {
   assert(MRI.getType(MI.getOperand(2).getReg()) ==
              MRI.getType(MI.getOperand(3).getReg()) &&
          "Mismatched operands for G_FCMP");
@@ -2296,7 +2297,8 @@ bool MOSLegalizerInfo::legalizeFCmp(LegalizerHelper &Helper,
     auto Status =
         createLibcall(Builder, Libcall.LibcallID, {LibcallResult, RetTy, 0},
                       {{MI.getOperand(2).getReg(), ArgTy, 0},
-                       {MI.getOperand(3).getReg(), ArgTy, 0}});
+                       {MI.getOperand(3).getReg(), ArgTy, 0}},
+                      LocObserver);
 
     if (Status != LegalizerHelper::Legalized)
       return false;

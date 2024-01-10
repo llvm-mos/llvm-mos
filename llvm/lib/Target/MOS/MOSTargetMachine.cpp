@@ -128,7 +128,8 @@ MOSTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(MOSTTIImpl(this, F));
 }
 
-void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void MOSTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
   PB.registerPipelineParsingCallback(
       [](StringRef Name, LoopPassManager &PM,
          ArrayRef<PassBuilder::PipelineElement>) {

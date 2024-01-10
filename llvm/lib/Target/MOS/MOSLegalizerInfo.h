@@ -16,6 +16,7 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/IR/Instructions.h"
@@ -31,7 +32,8 @@ public:
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 
   bool legalizeLshrEShlE(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                          MachineInstr &MI) const;
@@ -49,13 +51,13 @@ private:
   bool legalizeAddSub(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
   bool legalizeDivRem(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                      MachineInstr &MI) const;
+                      MachineInstr &MI, LostDebugLocObserver &LocObserver) const;
   bool legalizeXor(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                    MachineInstr &MI) const;
   bool legalizeShiftRotate(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                           MachineInstr &MI) const;
+                           MachineInstr &MI, LostDebugLocObserver &LocObserver) const;
   bool shiftRotateLibcall(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                          MachineInstr &MI) const;
+                          MachineInstr &MI, LostDebugLocObserver &LocObserver) const;
   bool legalizeICmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeSelect(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
@@ -93,7 +95,7 @@ private:
                                    MachineRegisterInfo &MRI,
                                    GLoadStore &MI) const;
   bool legalizeMemOp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                     MachineInstr &MI) const;
+                     MachineInstr &MI, LostDebugLocObserver &LocObserver) const;
   bool tryHuCBlockCopy(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                        MachineInstr &MI) const;
 
@@ -114,7 +116,7 @@ private:
   bool legalizeFAbs(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
   bool legalizeFCmp(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
-                    MachineInstr &MI) const;
+                    MachineInstr &MI, LostDebugLocObserver &LocObserver) const;
   bool legalizeFConst(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                       MachineInstr &MI) const;
 
