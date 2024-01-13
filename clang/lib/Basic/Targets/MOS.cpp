@@ -48,6 +48,7 @@ MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
   IntPtrType = SignedShort;
   WCharType = UnsignedLong;
   WIntType = UnsignedLong;
+  Int16Type = SignedInt;
   Char32Type = UnsignedLong;
   SigAtomicType = UnsignedChar;
 }

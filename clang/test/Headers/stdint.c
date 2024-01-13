@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -std=c2x -fsyntax-only -triple=i386-none-none
 // RUN: %clang_cc1 %s -ffreestanding -std=c2x -fsyntax-only -triple=mips-none-none
 // RUN: %clang_cc1 %s -ffreestanding -std=c2x -fsyntax-only -triple=mips64-none-none
+// RUN: %clang_cc1 %s -ffreestanding -std=c2x -fsyntax-only -triple=mos-none-none
 // RUN: %clang_cc1 %s -ffreestanding -std=c2x -fsyntax-only -triple=msp430-none-none
 // RUN: %clang_cc1 %s -ffreestanding -std=c2x -fsyntax-only -triple=powerpc64-none-none
 // RUN: %clang_cc1 %s -ffreestanding -std=c2x -fsyntax-only -triple=powerpc64-none-netbsd

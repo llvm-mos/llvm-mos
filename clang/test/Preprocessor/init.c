@@ -2718,10 +2718,10 @@
 // MOS: #define __FLT_MIN__ 1.17549435e-38F
 // MOS: #define __FLT_RADIX__ 2
 // MOS: #define __INT16_C_SUFFIX__
-// MOS: #define __INT16_FMTd__ "hd"
-// MOS: #define __INT16_FMTi__ "hi"
+// MOS: #define __INT16_FMTd__ "d"
+// MOS: #define __INT16_FMTi__ "i"
 // MOS: #define __INT16_MAX__ 32767
-// MOS: #define __INT16_TYPE__ short
+// MOS: #define __INT16_TYPE__ int
 // MOS: #define __INT32_C_SUFFIX__ L
 // MOS: #define __INT32_FMTd__ "ld"
 // MOS: #define __INT32_FMTi__ "li"
@@ -2857,12 +2857,12 @@
 // MOS: #define __STDC_VERSION__ 201710L
 // MOS: #define __STDC__ 1
 // MOS: #define __UINT16_C_SUFFIX__ U
-// MOS: #define __UINT16_FMTX__ "hX"
-// MOS: #define __UINT16_FMTo__ "ho"
-// MOS: #define __UINT16_FMTu__ "hu"
-// MOS: #define __UINT16_FMTx__ "hx"
+// MOS: #define __UINT16_FMTX__ "X"
+// MOS: #define __UINT16_FMTo__ "o"
+// MOS: #define __UINT16_FMTu__ "u"
+// MOS: #define __UINT16_FMTx__ "x"
 // MOS: #define __UINT16_MAX__ 65535U
-// MOS: #define __UINT16_TYPE__ unsigned short
+// MOS: #define __UINT16_TYPE__ unsigned int
 // MOS: #define __UINT32_C_SUFFIX__ UL
 // MOS: #define __UINT32_FMTX__ "lX"
 // MOS: #define __UINT32_FMTo__ "lo"
