@@ -511,7 +511,7 @@ enum {
 #include "ELFRelocs/MOS.def"
 };
 
-// https://github.com/johnwbyrd/llvm-mos/wiki/ELF-format-for-MOS-compatible-processors
+// https://llvm-mos.org/wiki/ELF_specification
 enum : unsigned {
   EF_MOS_ARCH_6502 = 0x00000001, // Core NMOS 6502 instruction set, no BCD
   EF_MOS_ARCH_6502_BCD = 0x00000002, // BCD support, including CLD and SED
