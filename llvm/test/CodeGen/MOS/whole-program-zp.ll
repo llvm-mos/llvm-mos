@@ -26,11 +26,11 @@ define void @cold_func() norecurse {
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    lda __rc21
 ; CHECK-NEXT:    pha
-; CHECK-NEXT:    ldx #57
-; CHECK-NEXT:    ldy #48
 ; CHECK-NEXT:    inc cold
-; CHECK-NEXT:    stx __rc20
-; CHECK-NEXT:    sty __rc21
+; CHECK-NEXT:    ldx #48
+; CHECK-NEXT:    ldy #57
+; CHECK-NEXT:    sty __rc20
+; CHECK-NEXT:    stx __rc21
 ; CHECK-NEXT:  .LBB1_1: ; %for.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jsr hot_func

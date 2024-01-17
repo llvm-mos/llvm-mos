@@ -62,10 +62,10 @@ declare void @ext() nocallback
 define void @csr() norecurse {
 ; CHECK-LABEL: csr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldx #57
-; CHECK-NEXT:    ldy #48
-; CHECK-NEXT:    stx mos8(.Lcsr_zp_stk)
-; CHECK-NEXT:    sty mos8(.Lcsr_zp_stk+1)
+; CHECK-NEXT:    ldx #48
+; CHECK-NEXT:    ldy #57
+; CHECK-NEXT:    sty mos8(.Lcsr_zp_stk)
+; CHECK-NEXT:    stx mos8(.Lcsr_zp_stk+1)
 ; CHECK-NEXT:  .LBB2_1: ; %for.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jsr ext

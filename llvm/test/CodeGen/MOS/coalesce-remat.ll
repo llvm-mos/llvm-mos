@@ -13,15 +13,15 @@ target triple = "mos-unknown-none"
 define fastcc void @_ZN9crabquest15write_nametable17h6fe548716a276623E() unnamed_addr #0 {
 ; CHECK-LABEL: _ZN9crabquest15write_nametable17h6fe548716a276623E:
 ; CHECK:       ; %bb.0: ; %start
-; CHECK-NEXT:    lda #4
-; CHECK-NEXT:    ldx #mos16lo(_ZN9crabquest9NAMETABLE17hd51a107367afa20aE)
-; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #mos16hi(_ZN9crabquest9NAMETABLE17hd51a107367afa20aE)
-; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    stx 8198
 ; CHECK-NEXT:    ldy #0
 ; CHECK-NEXT:    sty 8198
+; CHECK-NEXT:    ldx #mos16lo(_ZN9crabquest9NAMETABLE17hd51a107367afa20aE)
+; CHECK-NEXT:    stx __rc2
+; CHECK-NEXT:    ldx #mos16hi(_ZN9crabquest9NAMETABLE17hd51a107367afa20aE)
+; CHECK-NEXT:    stx __rc3
+; CHECK-NEXT:    lda #4
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    sta __rc4
 ; CHECK-NEXT:  .LBB0_1: ; %bb6

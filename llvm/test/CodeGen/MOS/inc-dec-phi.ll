@@ -106,18 +106,18 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:    tax
 ; CHECK-NEXT:    bpl .LBB3_4
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    ldy #1
-; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    sec
-; CHECK-NEXT:    lda __rc5
+; CHECK-NEXT:    tya
 ; CHECK-NEXT:    sbc __rc2
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:    ldy #1
 ; CHECK-NEXT:    sty __rc2
 ; CHECK-NEXT:    jmp .LBB3_5
 ; CHECK-NEXT:  .LBB3_4:
-; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    sec
 ; CHECK-NEXT:    lda __rc4
 ; CHECK-NEXT:    sbc __rc5
+; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:  .LBB3_5:
 ; CHECK-NEXT:    stx __rc3

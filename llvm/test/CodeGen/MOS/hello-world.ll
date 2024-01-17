@@ -11,8 +11,8 @@ target triple = "mos"
 define i16 @main() local_unnamed_addr #0 {
 ; NMOS-LABEL: main:
 ; NMOS:       ; %bb.0: ; %entry
-; NMOS-NEXT:    ldx #1
 ; NMOS-NEXT:    lda #72
+; NMOS-NEXT:    ldx #1
 ; NMOS-NEXT:  .LBB0_1: ; %while.body
 ; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NMOS-NEXT:    ;APP
@@ -29,8 +29,8 @@ define i16 @main() local_unnamed_addr #0 {
 ;
 ; CMOS-LABEL: main:
 ; CMOS:       ; %bb.0: ; %entry
-; CMOS-NEXT:    ldx #1
 ; CMOS-NEXT:    lda #72
+; CMOS-NEXT:    ldx #1
 ; CMOS-NEXT:  .LBB0_1: ; %while.body
 ; CMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CMOS-NEXT:    ;APP

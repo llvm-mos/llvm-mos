@@ -19,8 +19,8 @@ define dso_local i16 @getchar() #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    tax
+; CHECK-NEXT:    sta .Lgetchar_sstk
 ; CHECK-NEXT:    lda #10
-; CHECK-NEXT:    stx .Lgetchar_sstk
 ; CHECK-NEXT:    cpx #155
 ; CHECK-NEXT:    beq .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %cond.false

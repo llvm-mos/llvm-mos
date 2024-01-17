@@ -26,12 +26,12 @@ define void @light_spill(i8 zeroext %sel) {
 ; CHECK-NEXT:    lda __rc20
 ; CHECK-NEXT:    beq .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %select.false
-; CHECK-NEXT:    lda #46
 ; CHECK-NEXT:    ldx #22
+; CHECK-NEXT:    lda #46
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    lda #210
 ; CHECK-NEXT:    ldx #4
+; CHECK-NEXT:    lda #210
 ; CHECK-NEXT:  .LBB0_3: ; %select.end
 ; CHECK-NEXT:    ldy #0
 ; CHECK-NEXT:    sta (__rc2),y
