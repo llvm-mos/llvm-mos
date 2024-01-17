@@ -2346,9 +2346,8 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
     auto *Offset = CreateMul(Index, Step);
     return CreateAdd(StartValue, Offset);
   }
-  case InductionDescriptor::IK_PtrInduction: {
-    return B.CreateGEP(B.getInt8Ty(), StartValue, CreateMul(Index, Step));
-  }
+  case InductionDescriptor::IK_PtrInduction:
+    return B.CreatePtrAdd(StartValue, CreateMul(Index, Step));
   case InductionDescriptor::IK_FpInduction: {
     assert(!isa<VectorType>(Index->getType()) &&
            "Vector indices not supported for FP inductions yet");
@@ -5004,9 +5003,8 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor(
     VectorizationFactor Candidate(i, C.first, ScalarCost.ScalarCost);
 
 #ifndef NDEBUG
-    unsigned AssumedMinimumVscale = 1;
-    if (std::optional<unsigned> VScale = getVScaleForTuning(OrigLoop, TTI))
-      AssumedMinimumVscale = *VScale;
+    unsigned AssumedMinimumVscale =
+        getVScaleForTuning(OrigLoop, TTI).value_or(1);
     unsigned Width =
         Candidate.Width.isScalable()
             ? Candidate.Width.getKnownMinValue() * AssumedMinimumVscale
@@ -8031,6 +8029,7 @@ void VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlan &Plan) {
     VPValue *EdgeMask = createEdgeMask(Predecessor, BB, Plan);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is too.
       BlockMaskCache[BB] = EdgeMask;
+      return;
     }
 
     if (!BlockMask) { // BlockMask has its initialized nullptr value.
@@ -9047,9 +9046,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PreviousLink = RedRecipe;
     }
   }
-    Builder.setInsertPoint(&*LatchVPBB->begin());
-    for (VPRecipeBase &R :
-         Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+  Builder.setInsertPoint(&*LatchVPBB->begin());
+  for (VPRecipeBase &R :
+       Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!PhiR)
       continue;
