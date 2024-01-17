@@ -6,7 +6,9 @@ body: |
   bb.0.entry:
     liveins: $a
     ; CHECK-LABEL: name: scavenge_gpr
-    ; CHECK: dead $x = LDImm 42
+    ; CHECK: liveins: $a
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: dead $x = LDImm 42
     ; CHECK-NEXT: RTS implicit $a
     %0:gpr = LDImm 42
     RTS implicit $a
@@ -17,7 +19,9 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_a
-    ; CHECK: $rc17 = STImag8 $y
+    ; CHECK: liveins: $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc17 = STImag8 $y
     ; CHECK-NEXT: dead $y = LDImm 42
     ; CHECK-NEXT: $y = LDImag8 $rc17
     ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $y
@@ -30,7 +34,9 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_a_around_pha
-    ; CHECK: $rc16 = STImag8 $a
+    ; CHECK: liveins: $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc16 = STImag8 $a
     ; CHECK-NEXT: $a = LDImm 42
     ; CHECK-NEXT: PH killed $a
     ; CHECK-NEXT: $a = LDImag8 $rc16
@@ -45,7 +51,9 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_a_around_pla
-    ; CHECK: $rc16 = STImag8 $a
+    ; CHECK: liveins: $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc16 = STImag8 $a
     ; CHECK-NEXT: dead $a = PL
     ; CHECK-NEXT: $a = LDImag8 $rc16
     ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $y
@@ -58,10 +66,27 @@ body: |
   bb.0.entry:
     liveins: $a, $x, $y
     ; CHECK-LABEL: name: spill_y
-    ; CHECK: $rc17 = STImag8 $y
+    ; CHECK: liveins: $a, $x, $y
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $rc17 = STImag8 $y
     ; CHECK-NEXT: dead $y = LDImm 42
     ; CHECK-NEXT: $y = LDImag8 $rc17
     ; CHECK-NEXT: RTS implicit $a, implicit $x, implicit $y
     %0:yc = LDImm 42
     RTS implicit $a, implicit $x, implicit $y
+...
+---
+name: spill_p
+body: |
+  bb.0.entry:
+    liveins: $c
+    ; CHECK-LABEL: name: spill_p
+    ; CHECK: liveins: $c
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: PH $p
+    ; CHECK-NEXT: $c = LDImm1 0
+    ; CHECK-NEXT: $p = PL
+    ; CHECK-NEXT: RTS implicit $c
+    undef %0.subcarry:pc = LDImm1 0
+    RTS implicit $c
 ...

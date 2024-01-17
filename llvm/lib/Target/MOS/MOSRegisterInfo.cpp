@@ -169,12 +169,19 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     errs() << "Register: " << getName(Reg) << "\n";
     report_fatal_error("Scavenger spill for register not yet implemented.");
   case MOS::A:
-  case MOS::Y: {
+  case MOS::Y:
+  case MOS::P: {
     // RS8 is reserved to save A and Y if necessary, but pushing is still
     // preferred.
     Register Save = Reg == MOS::A ? MOS::RC16 : MOS::RC17;
     bool UseHardStack =
-        (Reg == MOS::A || STI.hasGPRStackRegs()) && pushPullBalanced(I, UseMI);
+        (Reg == MOS::A || Reg == MOS::P || STI.hasGPRStackRegs()) &&
+        pushPullBalanced(I, UseMI);
+
+    // P can only be efficiently saved to the hard stack.
+    assert(!(Reg == MOS::P && !UseHardStack) &&
+           "expected P live range to fully contain all overlapping vreg live "
+           "ranges");
 
     if (UseHardStack)
       Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {},
@@ -192,17 +199,21 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
     break;
   }
   }
-
   return true;
 }
 
 bool MOSRegisterInfo::canSaveScavengerRegister(
     Register Reg, MachineBasicBlock::iterator I,
     MachineBasicBlock::iterator UseMI) const {
-  if (Reg == MOS::X)
+  // Easy cases
+  switch (Reg) {
+  case MOS::X:
     return false;
-  if (Reg != MOS::Y)
-    return true;
+  case MOS::P:
+    return pushPullBalanced(I, UseMI);
+  default:
+    break;
+  }
 
   const MOSSubtarget &STI = I->getMF()->getSubtarget<MOSSubtarget>();
 
@@ -211,13 +222,14 @@ bool MOSRegisterInfo::canSaveScavengerRegister(
   if (UseHardStack)
     return true;
 
-  // Because the scavenger may run more than once, the reserved register may already be in use.
-  // In such cases, it's not safe to save it, and a different register must be used.
+  // Because the scavenger may run more than once, the reserved register may
+  // already be in use. In such cases, it's not safe to save it, and a
+  // different register must be used.
   Register Save = Reg == MOS::A ? MOS::RC16 : MOS::RC17;
   LivePhysRegs LPR(*STI.getRegisterInfo());
   LPR.addLiveOuts(*I->getParent());
-  for (MachineBasicBlock::iterator J = std::prev(I->getParent()->end());
-       J != I; --J) {
+  for (MachineBasicBlock::iterator J = std::prev(I->getParent()->end()); J != I;
+       --J) {
     LPR.stepBackward(*J);
     if (J == UseMI && LPR.contains(Save))
       return false;
@@ -396,12 +408,12 @@ void MOSRegisterInfo::expandLDSTStk(MachineBasicBlock::iterator MI) const {
 
   if (Offset >= 256) {
     Register P = MRI.createVirtualRegister(&MOS::PcRegClass);
-    // Far stack accesses need a virtual base register, so materialize one here
-    // using the pointer provided.
+    // Far stack accesses need a virtual base register, so materialize one
+    // here using the pointer provided.
     Register NewBase =
         IsLoad ? MI->getOperand(1).getReg() : MI->getOperand(0).getReg();
-    // We can't scavenge a 16-bit register, so this can't be virtual here (after
-    // register allocation).
+    // We can't scavenge a 16-bit register, so this can't be virtual here
+    // (after register allocation).
     assert(!NewBase.isVirtual() && "LDSTStk must not use a virtual base "
                                    "pointer after register allocation.");
 
@@ -791,9 +803,10 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
 // If the VirtReg is trivially rematerializable, and the only uses of VirtReg
 // are copies with exactly one register, returns a hint containing that
 // register. If there are more than one such register, returns Some(0).
-// Otherwise, returns None. This prevents the register allocator from assigning
-// a value to a useless register; it's always better to split or spill in such
-// cases, since absolutely nothing can use the value in that register.
+// Otherwise, returns None. This prevents the register allocator from
+// assigning a value to a useless register; it's always better to split or
+// spill in such cases, since absolutely nothing can use the value in that
+// register.
 std::optional<Register>
 MOSRegisterInfo::getStrongCopyHint(Register VirtReg, const MachineFunction &MF,
                                    const VirtRegMap *VRM) const {
