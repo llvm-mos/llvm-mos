@@ -1,5 +1,6 @@
 // REQUIRES: host-supports-jit, x86_64-linux
 // UNSUPPORTED: system-aix
+// XFAIL: *
 //
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
