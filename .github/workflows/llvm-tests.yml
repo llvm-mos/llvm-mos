@@ -29,16 +29,8 @@ concurrency:
 jobs:
   check_all:
     if: github.repository_owner == 'llvm-mos'
-    name: Test llvm,clang
+    name: Build and Test
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-all
-      projects: clang
-
-  check_lld:
-    if: github.repository_owner == 'llvm-mos'
-    name: Test lld
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: check-lld
-      projects: lld
+      projects: clang;lld

@@ -67,14 +67,17 @@ public:
     BinaryKind,
     XO65EnclaveKind,
     XO65Kind,
+    InternalKind,
   };
 
+  InputFile(Kind k, MemoryBufferRef m);
   Kind kind() const { return fileKind; }
 
   bool isElf() const {
     Kind k = kind();
     return k == ObjKind || k == SharedKind;
   }
+  bool isInternal() const { return kind() == InternalKind; }
 
   StringRef getName() const { return mb.getBufferIdentifier(); }
   MemoryBufferRef mb;
@@ -133,8 +136,8 @@ public:
   uint8_t osabi = 0;
   uint8_t abiVersion = 0;
 
-  // True if this is a relocatable object file/bitcode file between --start-lib
-  // and --end-lib.
+  // True if this is a relocatable object file/bitcode file in an ar archive
+  // or between --start-lib and --end-lib.
   bool lazy = false;
 
   // True if this is an argument for --just-symbols. Usually false.
@@ -157,9 +160,6 @@ public:
   // True if the file has TLSGD/TLSLD GOT relocations without R_PPC64_TLSGD or
   // R_PPC64_TLSLD. Disable TLS relaxation to avoid bad code generation.
   bool ppc64DisableTLSRelax = false;
-
-protected:
-  InputFile(Kind k, MemoryBufferRef m);
 
 public:
   // If not empty, this stores the name of the archive containing this file.
@@ -491,6 +491,7 @@ public:
   bool updateSymbols() const;
 };
 
+InputFile *createInternalFile(StringRef name);
 ELFFileBase *createObjFile(MemoryBufferRef mb, StringRef archiveName = "",
                            bool lazy = false);
 

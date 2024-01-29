@@ -786,6 +786,12 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     return false;
   }
 
+  const auto *CalleeDecl = CE->getCalleeDecl();
+  if (CalleeDecl && CalleeDecl->hasAttr<CXX11NoReturnAttr>()) {
+    Diag(St->getBeginLoc(), diag::err_musttail_no_return) << &MTA;
+    return false;
+  }
+
   // Caller and callee must match in whether they have a "this" parameter.
   if (CallerType.This.isNull() != CalleeType.This.isNull()) {
     if (const auto *ND = dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl())) {
@@ -3384,6 +3390,8 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E,
     return NamedReturnInfo();
   const auto *VD = dyn_cast<VarDecl>(DR->getDecl());
   if (!VD)
+    return NamedReturnInfo();
+  if (VD->getInit() && VD->getInit()->containsErrors())
     return NamedReturnInfo();
   NamedReturnInfo Res = getNamedReturnInfo(VD);
   if (Res.Candidate && !E->isXValue() &&
