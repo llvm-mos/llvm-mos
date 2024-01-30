@@ -61,9 +61,6 @@ jobs:
       - name: Build
         run: cd build; ninja clang lld
 
-      - name: Install
-        run: cd build; ninja install-distribution-stripped
-
       - name: Archive Linux
         if: startsWith(matrix.os, 'ubuntu')
         run: |
