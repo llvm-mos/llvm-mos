@@ -2,9 +2,8 @@ name: Debug packaging
 concurrency: compiler-package-debug
 on:
   workflow_dispatch:
-  push:
-    ignore-forks: true
-    branches: [main]
+  schedule:
+    - cron: '0 0 * * *'
 jobs:
   package:
     runs-on: ${{ matrix.os }}
