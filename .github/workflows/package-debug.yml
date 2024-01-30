@@ -1,4 +1,4 @@
-name: Packaging
+name: Debug packaging
 concurrency: compiler-package-debug
 on:
   workflow_dispatch:
