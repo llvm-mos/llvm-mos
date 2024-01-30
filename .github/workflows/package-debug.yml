@@ -1,0 +1,109 @@
+name: Packaging
+concurrency: compiler-package-debug
+on:
+  workflow_dispatch:
+  push:
+    ignore-forks: true
+    branches: [main]
+jobs:
+  package:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2019, macos-latest, ubuntu-20.04]
+    steps:
+      - name: Setup Windows
+        if: startsWith(matrix.os, 'windows')
+        uses: llvm/actions/setup-windows@main
+        with:
+          arch: amd64
+      # On Windows, starting with win19/20220814.1, cmake choose the 32-bit
+      # python3.10.6 libraries instead of the 64-bit libraries when building
+      # lldb.  Using this setup-python action to make 3.10 the default
+      # python fixes this.
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+
+      # actions/checkout deletes any existing files in the new git directory,
+      # so this needs to either run before ccache-action or it has to use
+      # clean: false.
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure POSIX
+        if: ${{!startsWith(matrix.os, 'windows')}}
+        run: |
+          mkdir build
+          cd build
+          cmake \
+            -GNinja \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -C../clang/cmake/caches/MOS.cmake \
+            ../llvm
+
+      - name: Configure Windows
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          mkdir build
+          cd build
+          cmake `
+            -GNinja `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
+            -DCMAKE_BUILD_TYPE=Debug `
+            -C../clang/cmake/caches/MOS.cmake `
+            ../llvm
+
+      - name: Build
+        run: cd build; ninja clang lld
+
+      - name: Install
+        run: cd build; ninja install-distribution-stripped
+
+      - name: Archive Linux
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          cd build/bin
+          tar -cJvf llvm-mos-linux-debug.tar.xz *
+      - name: Archive Windows
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          cd build\bin
+          7z a llvm-mos-windows-debug.7z *
+      - name: Archive macOS
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          cd build/bin
+          tar -cJvf llvm-mos-darwin-debug.tar.xz *
+
+      - name: Release Linux
+        if: startsWith(matrix.os, 'ubuntu')
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          body: "Debug compiler build for Linux"
+          tag_name: llvm-mos-linux-debug
+          files: llvm-mos-linux-debug.tar.xz
+
+      - name: Release macOS
+        if: startsWith(matrix.os, 'macos')
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          body: "Debug compiler build for macOS"
+          tag_name: llvm-mos-darwin-debug
+          files: llvm-mos-darwin-debug.tar.xz
+
+      - name: Release Windows
+        if: startsWith(matrix.os, 'windows')
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          body: "Debug compiler build for Windows"
+          tag_name: llvm-mos-windows-debug
+          files: llvm-mos-windows-debug.7z
