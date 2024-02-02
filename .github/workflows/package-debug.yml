@@ -65,17 +65,17 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           cd build/bin
-          tar -cJvf llvm-mos-linux-debug.tar.xz *
+          tar -cJvf ../../llvm-mos-linux-debug.tar.xz *
       - name: Archive Windows
         if: startsWith(matrix.os, 'windows')
         run: |
           cd build\bin
-          7z a llvm-mos-windows-debug.7z *
+          7z a ..\..\llvm-mos-windows-debug.7z *
       - name: Archive macOS
         if: startsWith(matrix.os, 'macos')
         run: |
           cd build/bin
-          tar -cJvf llvm-mos-darwin-debug.tar.xz *
+          tar -cJvf ../../llvm-mos-darwin-debug.tar.xz *
 
       - name: Release Linux
         if: startsWith(matrix.os, 'ubuntu')
