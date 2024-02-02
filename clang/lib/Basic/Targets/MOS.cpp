@@ -43,13 +43,14 @@ MOSTargetInfo::MOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
   AccumScale = 7;
   SuitableAlign = 8;
   DefaultAlignForAttributeAligned = 8;
-  SizeType = UnsignedShort;
-  PtrDiffType = SignedShort;
-  IntPtrType = SignedShort;
+  SizeType = UnsignedInt;
+  PtrDiffType = SignedInt;
+  IntPtrType = SignedInt;
   WCharType = UnsignedLong;
-  WIntType = UnsignedLong;
-  Int16Type = SignedInt;
+  WIntType = SignedLong;
+  Char16Type = UnsignedInt;
   Char32Type = UnsignedLong;
+  Int16Type = SignedInt;
   SigAtomicType = UnsignedChar;
 }
 

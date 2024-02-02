@@ -2672,7 +2672,7 @@
 // MOS: #define __BITINT_MAXWIDTH__ 128
 // MOS: #define __BOOL_WIDTH__ 8
 // MOS: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
-// MOS: #define __CHAR16_TYPE__ unsigned short
+// MOS: #define __CHAR16_TYPE__ unsigned int
 // MOS: #define __CHAR32_TYPE__ long unsigned int
 // MOS: #define __CHAR_BIT__ 8
 // MOS: #define __CLANG_ATOMIC_BOOL_LOCK_FREE 1
@@ -2743,10 +2743,10 @@
 // MOS: #define __INTMAX_MAX__ 9223372036854775807LL
 // MOS: #define __INTMAX_TYPE__ long long int
 // MOS: #define __INTMAX_WIDTH__ 64
-// MOS: #define __INTPTR_FMTd__ "hd"
-// MOS: #define __INTPTR_FMTi__ "hi"
+// MOS: #define __INTPTR_FMTd__ "d"
+// MOS: #define __INTPTR_FMTi__ "i"
 // MOS: #define __INTPTR_MAX__ 32767
-// MOS: #define __INTPTR_TYPE__ short
+// MOS: #define __INTPTR_TYPE__ int
 // MOS: #define __INTPTR_WIDTH__ 16
 // MOS: #define __INT_FAST16_FMTd__ "hd"
 // MOS: #define __INT_FAST16_FMTi__ "hi"
@@ -2822,10 +2822,10 @@
 // MOS: #define __ORDER_PDP_ENDIAN__ 3412
 // MOS: #define __POINTER_WIDTH__ 16
 // MOS: #define __PRAGMA_REDEFINE_EXTNAME 1
-// MOS: #define __PTRDIFF_FMTd__ "hd"
-// MOS: #define __PTRDIFF_FMTi__ "hi"
+// MOS: #define __PTRDIFF_FMTd__ "d"
+// MOS: #define __PTRDIFF_FMTi__ "i"
 // MOS: #define __PTRDIFF_MAX__ 32767
-// MOS: #define __PTRDIFF_TYPE__ short
+// MOS: #define __PTRDIFF_TYPE__ int
 // MOS: #define __PTRDIFF_WIDTH__ 16
 // MOS: #define __SCHAR_MAX__ 127
 // MOS: #define __SHRT_MAX__ 32767
@@ -2844,12 +2844,12 @@
 // MOS: #define __SIZEOF_SIZE_T__ 2
 // MOS: #define __SIZEOF_WCHAR_T__ 4
 // MOS: #define __SIZEOF_WINT_T__ 4
-// MOS: #define __SIZE_FMTX__ "hX"
-// MOS: #define __SIZE_FMTo__ "ho"
-// MOS: #define __SIZE_FMTu__ "hu"
-// MOS: #define __SIZE_FMTx__ "hx"
+// MOS: #define __SIZE_FMTX__ "X"
+// MOS: #define __SIZE_FMTo__ "o"
+// MOS: #define __SIZE_FMTu__ "u"
+// MOS: #define __SIZE_FMTx__ "x"
 // MOS: #define __SIZE_MAX__ 65535U
-// MOS: #define __SIZE_TYPE__ unsigned short
+// MOS: #define __SIZE_TYPE__ unsigned int
 // MOS: #define __SIZE_WIDTH__ 16
 // MOS: #define __STDC_HOSTED__ 0
 // MOS: #define __STDC_UTF_16__ 1
@@ -2892,12 +2892,12 @@
 // MOS: #define __UINTMAX_MAX__ 18446744073709551615ULL
 // MOS: #define __UINTMAX_TYPE__ long long unsigned int
 // MOS: #define __UINTMAX_WIDTH__ 64
-// MOS: #define __UINTPTR_FMTX__ "hX"
-// MOS: #define __UINTPTR_FMTo__ "ho"
-// MOS: #define __UINTPTR_FMTu__ "hu"
-// MOS: #define __UINTPTR_FMTx__ "hx"
+// MOS: #define __UINTPTR_FMTX__ "X"
+// MOS: #define __UINTPTR_FMTo__ "o"
+// MOS: #define __UINTPTR_FMTu__ "u"
+// MOS: #define __UINTPTR_FMTx__ "x"
 // MOS: #define __UINTPTR_MAX__ 65535U
-// MOS: #define __UINTPTR_TYPE__ unsigned short
+// MOS: #define __UINTPTR_TYPE__ unsigned int
 // MOS: #define __UINTPTR_WIDTH__ 16
 // MOS: #define __UINT_FAST16_FMTX__ "hX"
 // MOS: #define __UINT_FAST16_FMTo__ "ho"
@@ -2953,7 +2953,6 @@
 // MOS: #define __WCHAR_TYPE__ long unsigned int
 // MOS: #define __WCHAR_UNSIGNED__ 1
 // MOS: #define __WCHAR_WIDTH__ 32
-// MOS: #define __WINT_MAX__ 4294967295UL
-// MOS: #define __WINT_TYPE__ long unsigned int
-// MOS: #define __WINT_UNSIGNED__ 1
+// MOS: #define __WINT_MAX__ 2147483647L
+// MOS: #define __WINT_TYPE__ long int
 // MOS: #define __WINT_WIDTH__ 32
