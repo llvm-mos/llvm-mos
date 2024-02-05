@@ -50,6 +50,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -358,6 +359,7 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                          MachineInstr &MI) const {
   LLT P = LLT::pointer(0, 16);
   MachineIRBuilder &Builder = Helper.MIRBuilder;
+  const MachineRegisterInfo &MRI = *Builder.getMRI();
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   case Intrinsic::trap: {
     auto &Ctx = MI.getMF()->getFunction().getContext();
@@ -378,6 +380,40 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     Builder.buildStore(Tmp, MI.getOperand(1),
                        *MI.getMF()->getMachineMemOperand(
                            MPO, MachineMemOperand::MOStore, 2, Align()));
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::fptoui_sat: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    Builder.buildFPTOUI(
+        Ty,
+        Builder.buildFMinNum(
+            MI.getOperand(0),
+            // This also projects NaN to 0.
+            Builder.buildFMaxNum(Ty, MI.getOperand(2),
+                                 Builder.buildFConstant(Ty, 0)),
+            Builder.buildFConstant(
+                Ty, APInt::getMaxValue(Ty.getSizeInBits()).roundToDouble())));
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::fptosi_sat: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    Builder.buildSelect(
+        MI.getOperand(0),
+        Builder.buildIsFPClass(LLT::scalar(1), MI.getOperand(2), fcNan),
+        Builder.buildConstant(Ty, 0),
+        Builder.buildFPTOUI(
+            Ty, Builder.buildFMinNum(
+                    Ty,
+                    Builder.buildFMaxNum(
+                        Ty, MI.getOperand(2),
+                        Builder.buildFConstant(
+                            Ty, APInt::getSignedMinValue(Ty.getSizeInBits())
+                                    .roundToDouble())),
+                    Builder.buildFConstant(
+                        Ty, APInt::getSignedMaxValue(Ty.getSizeInBits())
+                                .roundToDouble()))));
     MI.eraseFromParent();
     return true;
   }
@@ -621,11 +657,11 @@ bool MOSLegalizerInfo::legalizeXor(LegalizerHelper &Helper,
   Register Not;
   if (mi_match(Dst, MRI, m_Not(m_Reg(Not)))) {
     // The G_XOR may have been created by legalizing the definition of Dst.
-    // If so, since uses are legalized before defs, the legalization of the use
-    // of Dst has already occurred. Since the G_XOR didn't exist when the use
-    // was being legalized, there hasn't yet been any opportunity to fold the
-    // G_XOR in to the use. We do such folding here; hopefully that will make
-    // the G_XOR dead.
+    // If so, since uses are legalized before defs, the legalization of the
+    // use of Dst has already occurred. Since the G_XOR didn't exist when the
+    // use was being legalized, there hasn't yet been any opportunity to fold
+    // the G_XOR in to the use. We do such folding here; hopefully that will
+    // make the G_XOR dead.
 
     for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Dst)) {
       if (UseMI.getOpcode() == MOS::G_BRCOND_IMM) {
@@ -723,8 +759,8 @@ static bool shouldOverCorrect(uint64_t Amt, LLT Ty, bool IsRotate) {
   if (IsRotate)
     return Amt > 4;
 
-  // The choice is between emitting Amt operations at width Ty, or emitting 8 -
-  // Amt operations (in the opposite direction) at width Ty + 8.
+  // The choice is between emitting Amt operations at width Ty, or emitting 8
+  // - Amt operations (in the opposite direction) at width Ty + 8.
   return Amt * Ty.getSizeInBytes() > (8 - Amt) * (Ty.getSizeInBytes() + 1);
 }
 
@@ -800,8 +836,8 @@ bool MOSLegalizerInfo::legalizeShiftRotate(
       Fill = Builder.buildConstant(S8, 0).getReg(0);
       break;
     }
-    // Instead of decomposing the problem recursively byte-by-byte, looping here
-    // ensures that Fill is reused for G_ASHR.
+    // Instead of decomposing the problem recursively byte-by-byte, looping
+    // here ensures that Fill is reused for G_ASHR.
     while (Amt >= 8) {
       switch (MI.getOpcode()) {
       default:
@@ -1161,8 +1197,8 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
 
   LLT Type = MRI.getType(LHS);
 
-  // Compare pointers by first converting to integer. This allows the comparison
-  // to be reduced to 8-bit comparisons.
+  // Compare pointers by first converting to integer. This allows the
+  // comparison to be reduced to 8-bit comparisons.
   if (Type.isPointer()) {
     LLT S = LLT::scalar(Type.getScalarSizeInBits());
 
@@ -1712,8 +1748,8 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
     if (const MachineInstr *FIAddr = getOpcodeDef(G_FRAME_INDEX, Addr, MRI)) {
       const MachineOperand &FI = FIAddr->getOperand(1);
       if (willBeStaticallyAllocated(FI)) {
-        assert(
-            Index); // Otherwise, Absolute addressing would have been selected.
+        assert(Index); // Otherwise, Absolute addressing would have been
+                       // selected.
         auto Inst = Builder.buildInstr(Opcode)
                         .add(MI.getOperand(0))
                         .addFrameIndex(FI.getIndex(), FI.getOffset() + Offset)
