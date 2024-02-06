@@ -385,35 +385,34 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::fptoui_sat: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    auto ZeroConst = Builder.buildFConstant(Ty, 0);
+    auto MaxConst = Builder.buildFConstant(
+        Ty, APInt::getMaxValue(Ty.getSizeInBits()).roundToDouble());
     Builder.buildFPTOUI(
         Ty,
         Builder.buildFMinNum(
             MI.getOperand(0),
             // This also projects NaN to 0.
-            Builder.buildFMaxNum(Ty, MI.getOperand(2),
-                                 Builder.buildFConstant(Ty, 0)),
-            Builder.buildFConstant(
-                Ty, APInt::getMaxValue(Ty.getSizeInBits()).roundToDouble())));
+            Builder.buildFMaxNum(Ty, MI.getOperand(2), ZeroConst), MaxConst));
     MI.eraseFromParent();
     return true;
   }
   case Intrinsic::fptosi_sat: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+    auto IsNan =
+        Builder.buildIsFPClass(LLT::scalar(1), MI.getOperand(2), fcNan);
+    auto ZeroConst = Builder.buildConstant(Ty, 0);
+    auto MinConst = Builder.buildFConstant(
+        Ty, APInt::getSignedMinValue(Ty.getSizeInBits()).roundToDouble());
+    auto MaxConst = Builder.buildFConstant(
+        Ty, APInt::getSignedMaxValue(Ty.getSizeInBits()).roundToDouble());
     Builder.buildSelect(
-        MI.getOperand(0),
-        Builder.buildIsFPClass(LLT::scalar(1), MI.getOperand(2), fcNan),
-        Builder.buildConstant(Ty, 0),
+        MI.getOperand(0), IsNan, ZeroConst,
         Builder.buildFPTOUI(
             Ty, Builder.buildFMinNum(
-                    Ty,
-                    Builder.buildFMaxNum(
-                        Ty, MI.getOperand(2),
-                        Builder.buildFConstant(
-                            Ty, APInt::getSignedMinValue(Ty.getSizeInBits())
-                                    .roundToDouble())),
-                    Builder.buildFConstant(
-                        Ty, APInt::getSignedMaxValue(Ty.getSizeInBits())
-                                .roundToDouble()))));
+                    Ty, Builder.buildFMaxNum(Ty, MI.getOperand(2), MinConst),
+                    MaxConst)));
     MI.eraseFromParent();
     return true;
   }

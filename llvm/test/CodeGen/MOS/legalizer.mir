@@ -3126,6 +3126,8 @@ body: |
     ; CHECK-NEXT: [[LOAD_INDIR_IDX2:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C2]] :: (load (s8) from unknown-address + 2, align 2)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 3
     ; CHECK-NEXT: [[LOAD_INDIR_IDX3:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C3]] :: (load (s8) from unknown-address + 3)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s8) = G_CONSTANT i8 79
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: $a = COPY [[LOAD_INDIR_IDX]](s8)
     ; CHECK-NEXT: $x = COPY [[LOAD_INDIR_IDX1]](s8)
@@ -3141,8 +3143,6 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY $rc2
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s8) = COPY $rc3
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
-    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
-    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s8) = G_CONSTANT i8 79
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: $a = COPY [[COPY1]](s8)
     ; CHECK-NEXT: $x = COPY [[COPY2]](s8)
