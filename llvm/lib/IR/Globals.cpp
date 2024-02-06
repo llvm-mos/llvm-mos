@@ -353,6 +353,7 @@ findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,
         return nullptr;
       return findBaseObject(CE->getOperand(0), Aliases, Op);
     }
+    case Instruction::AddrSpaceCast:
     case Instruction::IntToPtr:
     case Instruction::PtrToInt:
     case Instruction::BitCast:

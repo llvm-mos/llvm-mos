@@ -6,6 +6,7 @@ target triple = "mos-sim"
 
 @global = global i8 0, align 1
 @global_noinit = global i8 undef, align 1
+@global_alias = alias i8, ptr @global_noinit
 
 define i64 @foo(i64 %live_across_call) norecurse {
 ; CHECK-LABEL: foo:
@@ -52,8 +53,12 @@ entry:
 define void @bar() norecurse noinline {
 ; CHECK-LABEL: bar:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ldx global
+; CHECK-NEXT:    stx mos8(global_alias)
 ; CHECK-NEXT:    rts
 entry:
+  %0 = load i8, ptr @global, align 1
+  store i8 %0, ptr @global_alias, align 1
   ret void
 }
 
