@@ -141,14 +141,34 @@ static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
   return !PushCount;
 }
 
+static void assertNZDeadAt(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator Pos) {
+#ifdef NDEBUG
+  LivePhysRegs LiveRegs;
+  LiveRegs.addLiveOutsNoPristines(MBB);
+  for (MachineBasicBlock::reverse_iterator
+           I = MBB.rbegin(),
+           E = std::prev(Pos.getReverseIterator());
+       I != E; ++I) {
+    LiveRegs.stepBackward(*I);
+  }
+  assert(!LiveRegs.contains(MOS::N) &&
+         "expected N to be free when saving scavenger register");
+  assert(!LiveRegs.contains(MOS::Z) &&
+         "expected Z to be free when saving scavenger register");
+#endif
+}
+
 bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator I,
                                             MachineBasicBlock::iterator &UseMI,
                                             const TargetRegisterClass *RC,
                                             Register Reg) const {
 
-  // Note: NZ cannot be live at this point, since it's only live in terminators,
-  // and virtual registers are never inserted into terminators.
+  // Note: NZ cannot be live at this point, since virtual registers are never
+  // inserted into CmpBr instructions.
+  assertNZDeadAt(MBB, I);
+  assertNZDeadAt(MBB, UseMI);
 
   // Consider the regions in a basic block where a physical register is live.
   // The register scavenger will select one of these regions to spill and mark
@@ -159,10 +179,6 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
 
   MachineIRBuilder Builder(MBB, I);
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
-  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-  (void)TRI;
-  assert(!I->readsRegister(MOS::NZ, &TRI));
-  assert(UseMI == MBB.end() || !UseMI->readsRegister(MOS::NZ, &TRI));
 
   switch (Reg) {
   default:
@@ -740,21 +756,22 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
         RegScores[MOS::A] += ASLzp - MOSInstrCost(1, 2);
       break;
 
-    case MOS::CMPTermZ: {
-      // CMPTermZ GPR best case: 0 (TAX)
-      // CMPTermZ GPR worst case: 4 (CMP #0)
+    case MOS::CmpBrZero: {
+      // Branch costs are uniform; factor them out.
+      // CmpZero GPR best case: 0 (TAX)
+      // CmpZero GPR worst case: 4 (CMP #0)
       // Splitting the difference: 2
-      MOSInstrCost CMPTermZGPR = MOSInstrCost(2, 2) / 2;
-      // CMPTermZ ZP best case: 0 (elided)
-      // CMPTermZ ZP worst case: 14 (INC DEC)
+      MOSInstrCost CmpZeroGPR = MOSInstrCost(2, 2) / 2;
+      // CmpZero ZP best case: 0 (elided)
+      // CmpZero ZP worst case: 14 (INC DEC)
       // Splitting the difference: 7
-      MOSInstrCost CMPTermZZP = INCzp * 2 / 2;
+      MOSInstrCost CmpZeroZP = INCzp * 2 / 2;
       if (is_contained(Order, MOS::A))
-        RegScores[MOS::A] += CMPTermZZP - CMPTermZGPR;
+        RegScores[MOS::A] += CmpZeroZP - CmpZeroGPR;
       if (is_contained(Order, MOS::X))
-        RegScores[MOS::X] += CMPTermZZP - CMPTermZGPR;
+        RegScores[MOS::X] += CmpZeroZP - CmpZeroGPR;
       if (is_contained(Order, MOS::Y))
-        RegScores[MOS::Y] += CMPTermZZP - CMPTermZGPR;
+        RegScores[MOS::Y] += CmpZeroZP - CmpZeroGPR;
       break;
     }
 

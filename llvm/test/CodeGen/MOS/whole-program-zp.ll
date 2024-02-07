@@ -31,29 +31,27 @@ define void @cold_func() norecurse {
 ; CHECK-NEXT:    ldy #57
 ; CHECK-NEXT:    sty __rc20
 ; CHECK-NEXT:    stx __rc21
+; CHECK-NEXT:    jmp .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: ; %for.body
+; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    lda __rc21
+; CHECK-NEXT:    beq .LBB1_4
+; CHECK-NEXT:  .LBB1_2: ; %for.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jsr hot_func
 ; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    dec __rc20
 ; CHECK-NEXT:    cpx __rc20
-; CHECK-NEXT:    beq .LBB1_4
-; CHECK-NEXT:  ; %bb.2: ; %for.body
-; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    lda __rc21
 ; CHECK-NEXT:    bne .LBB1_1
-; CHECK-NEXT:  .LBB1_3: ; %for.body
-; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    lda __rc20
-; CHECK-NEXT:    bne .LBB1_1
-; CHECK-NEXT:    jmp .LBB1_5
-; CHECK-NEXT:  .LBB1_4: ; %for.body
-; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:  ; %bb.3: ; %for.body
+; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    dec __rc21
-; CHECK-NEXT:    lda __rc21
-; CHECK-NEXT:    bne .LBB1_1
-; CHECK-NEXT:    jmp .LBB1_3
-; CHECK-NEXT:  .LBB1_5: ; %for.cond.cleanup
+; CHECK-NEXT:    jmp .LBB1_1
+; CHECK-NEXT:  .LBB1_4: ; %for.body
+; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    lda __rc20
+; CHECK-NEXT:    bne .LBB1_2
+; CHECK-NEXT:  ; %bb.5: ; %for.cond.cleanup
 ; CHECK-NEXT:    pla
 ; CHECK-NEXT:    sta __rc21
 ; CHECK-NEXT:    pla

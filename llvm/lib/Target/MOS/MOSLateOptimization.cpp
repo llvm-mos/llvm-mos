@@ -44,8 +44,8 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool lowerCMPTermZs(MachineBasicBlock &MBB) const;
-  void lowerCMPTermZ(MachineInstr &MI) const;
+  bool lowerCmpZeros(MachineBasicBlock &MBB) const;
+  void lowerCmpZero(MachineInstr &MI) const;
   bool combineLdImm(MachineBasicBlock &MBB) const;
   bool tailJMP(MachineBasicBlock &MBB) const;
 };
@@ -53,7 +53,7 @@ public:
 bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
-    Changed |= lowerCMPTermZs(MBB);
+    Changed |= lowerCmpZeros(MBB);
     Changed |= combineLdImm(MBB);
     Changed |= tailJMP(MBB);
   }
@@ -82,23 +82,21 @@ static bool definesNZ(const MachineInstr &MI, Register Val, const MOSSubtarget &
   }
 }
 
-bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
+bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
   const auto &MRI = MBB.getParent()->getRegInfo();
   const auto &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
   const auto *TRI = MRI.getTargetRegisterInfo();
   bool Changed = false;
   for (MachineInstr &MI : make_early_inc_range(mbb_reverse(MBB))) {
-    if (MI.getOpcode() != MOS::CMPTermZ)
+    if (MI.getOpcode() != MOS::CmpZero)
       continue;
-    assert(MI.getOperand(0).isDead());
-    // Dead CMPTermZs may appear as the result of branch manipulation.
+
     if (MI.allDefsAreDead()) {
       MI.eraseFromParent();
-      Changed = true;
       continue;
     }
 
-    Register Val = MI.getOperand(1).getReg();
+    Register Val = MI.getOperand(0).getReg();
 
     for (auto &J : mbb_reverse(MBB.begin(), MI)) {
       if (J.isCall() || J.isInlineAsm())
@@ -140,17 +138,17 @@ bool MOSLateOptimization::lowerCMPTermZs(MachineBasicBlock &MBB) const {
       continue;
 
     Changed = true;
-    lowerCMPTermZ(MI);
+    lowerCmpZero(MI);
   }
   return Changed;
 }
 
-void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
+void MOSLateOptimization::lowerCmpZero(MachineInstr &MI) const {
   auto &MBB = *MI.getParent();
   const auto &MRI = MBB.getParent()->getRegInfo();
   const auto *TRI = MRI.getTargetRegisterInfo();
   const MOSSubtarget &STI = MBB.getParent()->getSubtarget<MOSSubtarget>();
-  Register Val = MI.getOperand(1).getReg();
+  Register Val = MI.getOperand(0).getReg();
 
   LivePhysRegs PhysRegs;
   PhysRegs.init(*TRI);
@@ -183,16 +181,16 @@ void MOSLateOptimization::lowerCMPTermZ(MachineInstr &MI) const {
         if (J.getOpcode() == MOS::LDImag8 && J.getOperand(1).getReg() == Val &&
             !Defined.contains(J.getOperand(0).getReg())) {
           Register GPR = J.getOperand(0).getReg();
-          MI.getOperand(1).setReg(GPR);
-          lowerCMPTermZ(MI);
+          MI.getOperand(0).setReg(GPR);
+          lowerCmpZero(MI);
           return;
         }
 
         if (J.getOpcode() == MOS::STImag8 && J.getOperand(0).getReg() == Val &&
             !Defined.contains(J.getOperand(1).getReg())) {
           Register GPR = J.getOperand(1).getReg();
-          MI.getOperand(1).setReg(GPR);
-          lowerCMPTermZ(MI);
+          MI.getOperand(0).setReg(GPR);
+          lowerCmpZero(MI);
           return;
         }
 

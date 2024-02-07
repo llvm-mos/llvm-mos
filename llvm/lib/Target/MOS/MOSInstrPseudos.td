@@ -110,6 +110,12 @@ def LDZ : MOSPseudo {
   let isReMaterializable = true;
 }
 
+def CmpZero : MOSPseudo {
+  dag InOperandList = (ins Anyi8:$val);
+  let Defs = [C];
+  let isCompare = true;
+}
+
 def INC : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi8:$src);
@@ -247,54 +253,6 @@ def STStk : MOSPseudo {
 }
 
 //===---------------------------------------------------------------------===//
-// CMPTerm
-//===---------------------------------------------------------------------===//
-
-// Terminator versions of CMP. Each of these instructions is ensured to stay
-// adjacent to the branch that consumes its N or Z value.
-class MOSCMPTerm : MOSPseudo {
-  dag OutOperandList = (outs Cc:$carry);
-
-  let Defs = [NZ];
-
-  let isCompare = true;
-  let isTerminator = true;
-}
-
-def CMPTermImm : MOSCMPTerm {
-  dag InOperandList = (ins GPR:$l, i8imm:$r);
-}
-def CMPTermImag8 : MOSCMPTerm {
-  dag InOperandList = (ins GPR:$l, Imag8:$r);
-}
-def CMPTermZ : MOSCMPTerm {
-  dag InOperandList = (ins Anyi8:$val);
-}
-def CMPTermZMB : MOSCMPTerm {
-  dag InOperandList = (ins variable_ops);
-  let usesCustomInserter = true;
-}
-
-let mayLoad = true in {
-  def CMPTermZpIdx : MOSCMPTerm {
-    dag InOperandList = (ins Ac:$l, i8imm:$addr, Xc:$idx);
-  }
-  def CMPTermAbs : MOSCMPTerm {
-    dag InOperandList = (ins GPR:$l, i16imm:$addr);
-  }
-  def CMPTermAbsIdx : MOSCMPTerm {
-    dag InOperandList = (ins Ac:$l, i16imm:$addr, XY:$idx);
-  }
-  def CMPTermIndir : MOSCMPTerm {
-    let Predicates = [Has65C02];
-    dag InOperandList = (ins Ac:$l, Imag16:$addr);
-  }
-  def CMPTermIndirIdx : MOSCMPTerm {
-    dag InOperandList = (ins Ac:$l, Imag16:$addr, Yc:$idx);
-  }
-}
-
-//===---------------------------------------------------------------------===//
 // Control flow
 //===---------------------------------------------------------------------===//
 
@@ -345,4 +303,52 @@ def SelectImm : MOSPseudo {
   dag InOperandList = (ins Flag:$tst, i8imm:$true, i8imm:$false);
 
   let usesCustomInserter = true;
+}
+
+// Joined compare-and-branch instructions on N and Z. These flags are not
+// explicitly tracked, since they're very difficult to keep alive. Accordingly,
+// they are always bundled with their use, which is always a branch.
+class MOSCmpBr : MOSPseudo {
+  let Defs = [C];
+
+  let isCompare = true;
+  let isBranch = true;
+  let isTerminator = true;
+}
+
+def CmpBrImm : MOSCmpBr {
+  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$flag_val, GPR:$l, i8imm:$r);
+}
+def CmpBrImag8 : MOSCmpBr {
+  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$flag_val, GPR:$l, Imag8:$r);
+}
+def CmpBrZero : MOSCmpBr {
+  dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$flag_val, Anyi8:$val);
+}
+
+// (ins label:$tgt, i1imm:$flag_val, Anyi8:$val...)
+// Note that the flag is always Z; N only requires the first byte, so it is
+// legalized to a single CMP.
+def CmpBrZeroMultiByte : MOSCmpBr {
+  dag InOperandList = (ins variable_ops);
+  let usesCustomInserter = true;
+}
+
+let mayLoad = true in {
+  def CmpBrZpIdx : MOSCmpBr {
+    dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$flag_val, Ac:$l, i8imm:$addr, Xc:$idx);
+  }
+  def CmpBrAbs : MOSCmpBr {
+    dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$flag_val, GPR:$l, i16imm:$addr);
+  }
+  def CmpBrAbsIdx : MOSCmpBr {
+    dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$flag_val, Ac:$l, i16imm:$addr, XY:$idx);
+  }
+  def CmpBrIndir : MOSCmpBr {
+    let Predicates = [Has65C02];
+    dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$flag_val, Ac:$l, Imag16:$addr);
+  }
+  def CmpBrIndirIdx : MOSCmpBr {
+    dag InOperandList = (ins label:$tgt, Flag:$flag, i1imm:$flag_val, Ac:$l, Imag16:$addr, Yc:$idx);
+  }
 }

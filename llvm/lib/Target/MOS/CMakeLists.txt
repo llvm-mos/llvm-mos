@@ -40,7 +40,6 @@ add_llvm_target(MOSCodeGen
   MOSLegalizerInfo.cpp
   MOSLowerSelect.cpp
   MOSMCInstLower.cpp
-  MOSMachineFunctionInfo.cpp
   MOSMachineScheduler.cpp
   MOSNonReentrant.cpp
   MOSPostRAScavenging.cpp

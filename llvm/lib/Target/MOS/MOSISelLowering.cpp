@@ -16,6 +16,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -225,8 +227,8 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
                                         MachineBasicBlock *MBB);
 static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
                                        MachineBasicBlock *MBB);
-static MachineBasicBlock *emitCMPTermZMB(MachineInstr &MI,
-                                         MachineBasicBlock *MBB);
+static MachineBasicBlock *emitCmpBrZeroMultiByte(MachineInstr &MI,
+                                                 MachineBasicBlock *MBB);
 
 MachineBasicBlock *
 MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -240,8 +242,8 @@ MOSTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case MOS::DecMB:
   case MOS::DecDcpMB:
     return emitIncDecMB(MI, MBB);
-  case MOS::CMPTermZMB:
-    return emitCMPTermZMB(MI, MBB);
+  case MOS::CmpBrZeroMultiByte:
+    return emitCmpBrZeroMultiByte(MI, MBB);
   }
 }
 
@@ -312,9 +314,7 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
 
     // Add the unconditional branch from IfFalseMBB to TailMBB.
     Builder.setInsertPt(*IfFalseMBB, IfFalseMBB->begin());
-    Builder
-        .buildInstr(STI.hasBRA() ? MOS::BRA : MOS::JMP)
-        .addMBB(TailMBB);
+    Builder.buildInstr(STI.hasBRA() ? MOS::BRA : MOS::JMP).addMBB(TailMBB);
     for (const auto &LiveIn : IfFalseMBB->liveins())
       IfTrueMBB->addLiveIn(LiveIn);
 
@@ -357,15 +357,15 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
   return TailMBB;
 }
 
-static unsigned chooseInc8Opcode(const MOSSubtarget &STI, bool IsDec) {
+static unsigned incDec8Opcode(const MOSSubtarget &STI, bool IsDec) {
   if (STI.hasGPRIncDec()) {
     return IsDec ? MOS::DecCMOS : MOS::IncCMOS;
   }
   return IsDec ? MOS::DEC : MOS::INC;
 }
 
-// Returns an IncMB that is safe to fold into the given CMPTermZ.
-static MachineInstr *findCMPTermZMBInc(MachineInstr &MI) {
+// Returns an IncMB that is safe to fold into the given CmpBrZeroMultiByte.
+static MachineInstr *findCmpBrZeroMultiByteInc(MachineInstr &MI) {
   const TargetRegisterInfo *TRI = MI.getMF()->getSubtarget().getRegisterInfo();
   for (auto I = MachineBasicBlock::reverse_iterator(MI.getIterator()),
             E = MI.getParent()->rend();
@@ -374,6 +374,8 @@ static MachineInstr *findCMPTermZMBInc(MachineInstr &MI) {
       return nullptr;
     bool ReferencesCmpReg = false;
     for (const MachineOperand &MO : MI.explicit_uses()) {
+      if (!MO.isReg())
+        continue;
       if (I->readsRegister(MO.getReg(), TRI) ||
           I->definesRegister(MO.getReg(), TRI)) {
         ReferencesCmpReg = true;
@@ -384,9 +386,12 @@ static MachineInstr *findCMPTermZMBInc(MachineInstr &MI) {
       continue;
     if (I->getOpcode() != MOS::IncMB)
       return nullptr;
-    for (auto IdxMO : enumerate(MI.explicit_uses()))
-      if (I->getOperand(IdxMO.index()).getReg() != IdxMO.value().getReg())
+    for (unsigned MOI = MI.getNumExplicitDefs() + 2,
+                  MOE = MI.getNumExplicitOperands();
+         MOI != MOE; ++MOI) {
+      if (I->getOperand(MOI - 2).getReg() != MI.getOperand(MOI).getReg())
         return nullptr;
+    }
     return &*I;
   }
   return nullptr;
@@ -400,16 +405,17 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
 
   const MOSSubtarget &STI = MBB->getParent()->getSubtarget<MOSSubtarget>();
 
-  // If this instruction will be folded into a later CMPTermZMB, then defer
-  // expanding it.
+  // If this instruction will be folded into a later CmpBrZeroMultiByte, then
+  // defer expanding it.
   if (MI.getOpcode() == MOS::IncMB && MI.getNumExplicitDefs() > 1) {
     auto Term = MBB->getFirstTerminator();
-    if (Term != MBB->end() && Term->getOpcode() == MOS::CMPTermZMB &&
-        findCMPTermZMBInc(*Term) == &MI) {
+    if (Term != MBB->end() && Term->getOpcode() == MOS::CmpBrZeroMultiByte &&
+        findCmpBrZeroMultiByteInc(*Term) == &MI) {
       if (std::prev(Term) != MI) {
         // The expansion of an intervening multi-byte instruction could separate
-        // the IncMB from its CMPTermZMB, so move it right before the
-        // CMPTermZMB. This is guaranteed safe by findCMPTermZMBInc.
+        // the IncMB from its CmpBrZeroMultiByte, so move it right before the
+        // CmpBrZeroMultiByte. This is guaranteed safe by
+        // findCmpBrZeroMultiByteInc.
         MBB->insert(Term, MI.removeFromParent());
       }
       return MBB;
@@ -433,8 +439,8 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   unsigned FirstUseIdx = MI.getNumExplicitDefs();
   unsigned FirstDefIdx = IsDec ? 1 : 0;
   bool IsReg = MI.getOperand(FirstUseIdx).isReg();
-  bool IsMemReg = IsReg && MOS::Imag8RegClass.contains(
-                      MI.getOperand(FirstUseIdx).getReg());
+  bool IsMemReg =
+      IsReg && MOS::Imag8RegClass.contains(MI.getOperand(FirstUseIdx).getReg());
   bool IsLast = FirstUseIdx >= MI.getNumExplicitOperands() - 1;
   bool UseDcpOpcode = (!IsReg || IsMemReg) && !IsLast && STI.has6502X() &&
                       MI.getOpcode() == MOS::DecDcpMB;
@@ -468,11 +474,11 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
       if (IsDec && !IsLast) {
         // Avoid copying additional register flags here.
         // They will apply to the last opcode in the chain (CMP) instead.
-        First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
+        First = Builder.buildInstr(incDec8Opcode(STI, IsDec))
                     .addDef(MI.getOperand(FirstDefIdx).getReg())
                     .addUse(MI.getOperand(FirstUseIdx).getReg());
       } else {
-        First = Builder.buildInstr(chooseInc8Opcode(STI, IsDec))
+        First = Builder.buildInstr(incDec8Opcode(STI, IsDec))
                     .add(MI.getOperand(FirstDefIdx))
                     .add(MI.getOperand(FirstUseIdx));
       }
@@ -544,85 +550,127 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   return RestMBB;
 }
 
-static MachineBasicBlock *emitCMPTermZMB(MachineInstr &MI,
-                                         MachineBasicBlock *MBB) {
+static MachineBasicBlock *emitCmpBrZeroMultiByte(MachineInstr &MI,
+                                                 MachineBasicBlock *MBB) {
   if (!MBB->getParent()->getProperties().hasProperty(
           MachineFunctionProperties::Property::NoVRegs))
     return MBB;
-  const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
   const MOSSubtarget &STI = MBB->getParent()->getSubtarget<MOSSubtarget>();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
 
-  if (MI.getNumExplicitOperands() - 1 == 1) {
-    MI.setDesc(TII.get(MOS::CMPTermZ));
+  MachineFunction &MF = *MBB->getParent();
+
+  MachineBasicBlock *Target = MI.getOperand(0).getMBB();
+  bool Val = MI.getOperand(1).getImm();
+
+  MachineIRBuilder Builder(MI);
+
+  if (MI.getNumExplicitOperands() == 3) {
+    Builder.buildInstr(MOS::CmpBrZero)
+        .addMBB(Target)
+        .addUse(MOS::Z, RegState::Undef)
+        .addImm(Val)
+        .add(/*LowReg*/ MI.getOperand(2));
+    MI.eraseFromParent();
     return MBB;
   }
-
-  MachineInstr *Inc = findCMPTermZMBInc(MI);
-
-  SmallVector<MachineBasicBlock::RegisterMaskPair> LiveOuts;
-  for (const MachineBasicBlock::RegisterMaskPair &P : MBB->liveouts())
-    LiveOuts.push_back(P);
 
   MachineBasicBlock *TBB;
   MachineBasicBlock *FBB;
   SmallVector<MachineOperand> Cond;
-  if (TII.analyzeBranch(*MBB, TBB, FBB, Cond))
-    llvm_unreachable("Could not analyze branch.");
-  assert(TBB && Cond.size() == 2 && "Expected conditional branch.");
-  assert(Cond[0].getReg() == MOS::Z && "Must branch on Z.");
-  if (Cond[1].getImm()) {
-    TII.reverseBranchCondition(Cond);
-    std::swap(TBB, FBB);
+  bool CannotAnalyze = TII.analyzeBranch(*MBB, TBB, FBB, Cond);
+  assert(!CannotAnalyze &&
+         "all CmpBr branches structures should be analyzable");
+  assert(!Cond.empty() && "expected conditional branch");
+  assert(Cond.front().getImm() == MOS::CmpBrZeroMultiByte &&
+         "expected CmpBrZeroMultiByte");
+
+  // Normalize TBB and FBB to always be initialized.
+  if (!TBB || !FBB) {
+    auto FallthroughIter = std::next(MBB->getIterator());
+    assert(
+        FallthroughIter != MF.end() &&
+        "unexpected fallthrough past CmpBrZeroMultiByte off end of function");
+    MachineBasicBlock *Fallthrough = &*FallthroughIter;
+    if (!TBB)
+      TBB = Fallthrough;
+    if (!FBB)
+      FBB = Fallthrough;
   }
-  assert(!Cond[1].getImm());
-  if (!TBB)
-    TBB = MBB->getFallThrough();
+
+  MachineInstr *Inc = findCmpBrZeroMultiByteInc(MI);
+
+  // Determine the byte to check for non-zero-ness first.
+  unsigned CondIdx;
+  if (Inc) {
+    Builder.buildInstr(incDec8Opcode(STI, /*IsDec=*/false))
+        .add(Inc->getOperand(0))
+        .add(Inc->getOperand(Inc->getNumExplicitDefs()));
+    CondIdx = 2; // Opcode, Val, [LSB]
+  } else {
+    CondIdx = Cond.size() - 1; // MSB
+  }
+  MachineOperand CondMO = std::move(Cond[CondIdx]);
+  Cond.erase(Cond.begin() + CondIdx);
+
+  // If the byte comparison is zero, then maybe the whole comparison is. This
+  // block makes this determination.
+  MachineBasicBlock *MaybeZero =
+      MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+  MF.insert(std::next(MBB->getIterator()), MaybeZero);
+
+  TII.insertBranch(*MaybeZero, TBB, FBB, Cond, MBB->findDebugLoc(MBB->end()));
+  for (auto I = MBB->succ_begin(), E = MBB->succ_end(); I != E; ++I)
+    MaybeZero->copySuccessor(MBB, I);
+
+  // Set up the byte non-zero comparison.
+  SmallVector<MachineOperand> NonZeroCond;
+  NonZeroCond.push_back(MachineOperand::CreateImm(MOS::CmpBrZero));
+  NonZeroCond.push_back(MachineOperand::CreateReg(
+      MOS::Z, /*isDef=*/false, /*isImp=*/false, /*isKill=*/false,
+      /*isDead=*/false, /*isUndef=*/true));
+  NonZeroCond.push_back(MachineOperand::CreateImm(0));
+  NonZeroCond.push_back(std::move(CondMO));
+
+  // Determine where to branch to if the byte is non-zero. At that point, we
+  // know the whole value is non-zero, so we either use the original FBB or the
+  // original target.
+  MachineBasicBlock *NonZeroTBB = Val ? FBB : Target;
+
+  // If the value is zero, fall through to MaybeZero.
+  MachineBasicBlock *NonZeroFBB = MaybeZero;
+
   TII.removeBranch(*MBB);
 
-  Register Reg;
-  if (Inc) {
-    Reg = MI.getOperand(1).getReg();
-    MI.removeOperand(1);
-  } else {
-    Reg = MI.getOperand(MI.getNumExplicitOperands() - 1).getReg();
-    MI.removeOperand(MI.getNumExplicitOperands() - 1);
-  }
-  MI.removeFromParent();
+  MachineBasicBlock *ZeroSucc = Val ? TBB : FBB;
+  MachineBasicBlock *NonZeroSucc = Val ? FBB : TBB;
+  MBB->replaceSuccessor(NonZeroSucc, NonZeroTBB);
+  MBB->replaceSuccessor(ZeroSucc, NonZeroFBB);
 
-  MachineFunction &MF = *MBB->getParent();
-
-  const BasicBlock *BB = MBB->getBasicBlock();
-  auto MBBI = std::next(MBB->getIterator());
-  MachineBasicBlock *NextMBB = MF.CreateMachineBasicBlock(BB);
-  MF.insert(MBBI, NextMBB);
-  NextMBB->transferSuccessors(MBB);
-  for (const auto &P : LiveOuts)
-    NextMBB->addLiveIn(P.PhysReg, P.LaneMask);
-  for (MachineOperand &MO : MI.explicit_uses())
-    NextMBB->addLiveIn(MO.getReg());
-  NextMBB->sortUniqueLiveIns();
-
-  MachineIRBuilder Builder(*MBB, MBB->end());
-  Builder.setDebugLoc(MI.getDebugLoc());
-  if (Inc)
-    Builder.buildInstr(chooseInc8Opcode(STI, false), {Reg}, {Reg});
-  auto Cmp = Builder.buildInstr(MOS::CMPTermZ, {MOS::C}, {Reg});
-  Cmp->getOperand(0).setIsDead();
-  TII.insertBranch(*MBB, TBB, nullptr, Cond, Builder.getDL());
-  MBB->addSuccessor(TBB);
-  MBB->addSuccessor(NextMBB);
+  TII.insertBranch(*MBB, NonZeroTBB, NonZeroFBB, NonZeroCond,
+                   MBB->findDebugLoc(MBB->end()));
 
   if (Inc) {
-    Builder.setInsertPt(*NextMBB, NextMBB->end());
+    Builder.setInsertPt(*MaybeZero, MaybeZero->begin());
+
+    unsigned NumBytes = Inc->getNumExplicitDefs();
+
+    // Illegal to remove tied operands, so recreate the increment one byte
+    // smaller.
     auto NewInc = Builder.buildInstr(MOS::IncMB);
-    for (unsigned I = 1, E = Inc->getNumExplicitDefs(); I != E; ++I)
-      NewInc.addDef(Inc->getOperand(I).getReg());
-    for (unsigned I = 1, E = Inc->getNumExplicitDefs(); I != E; ++I)
-      NewInc.addUse(Inc->getOperand(I).getReg());
+    for (unsigned I = 1, E = Inc->getNumOperands(); I != E; ++I)
+      if (I != NumBytes)
+        NewInc.add(Inc->getOperand(I));
+
+    for (unsigned I = 0, E = NumBytes - 1; I != E; ++I)
+      NewInc->tieOperands(I, I + NumBytes - 1);
+
     Inc->eraseFromParent();
   }
-  NextMBB->insert(NextMBB->end(), &MI);
-  TII.insertBranch(*NextMBB, TBB, FBB, Cond, Builder.getDL());
 
-  return NextMBB;
+  // Update live regs.
+  recomputeLiveIns(*MaybeZero);
+  recomputeLiveIns(*MBB);
+
+  return MaybeZero;
 }

@@ -71,29 +71,27 @@ define void @csr() norecurse {
 ; CHECK-NEXT:    ldy #57
 ; CHECK-NEXT:    sty mos8(.Lcsr_zp_stk)
 ; CHECK-NEXT:    stx mos8(.Lcsr_zp_stk+1)
+; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:  .LBB2_1: ; %for.body
+; CHECK-NEXT:    ; in Loop: Header=BB2_2 Depth=1
+; CHECK-NEXT:    lda mos8(.Lcsr_zp_stk+1)
+; CHECK-NEXT:    beq .LBB2_4
+; CHECK-NEXT:  .LBB2_2: ; %for.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jsr ext
 ; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    dec mos8(.Lcsr_zp_stk)
 ; CHECK-NEXT:    cpx mos8(.Lcsr_zp_stk)
-; CHECK-NEXT:    beq .LBB2_4
-; CHECK-NEXT:  ; %bb.2: ; %for.body
-; CHECK-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; CHECK-NEXT:    lda mos8(.Lcsr_zp_stk+1)
 ; CHECK-NEXT:    bne .LBB2_1
-; CHECK-NEXT:  .LBB2_3: ; %for.body
-; CHECK-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; CHECK-NEXT:    lda mos8(.Lcsr_zp_stk)
-; CHECK-NEXT:    bne .LBB2_1
-; CHECK-NEXT:    jmp .LBB2_5
-; CHECK-NEXT:  .LBB2_4: ; %for.body
-; CHECK-NEXT:    ; in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:  ; %bb.3: ; %for.body
+; CHECK-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    dec mos8(.Lcsr_zp_stk+1)
-; CHECK-NEXT:    lda mos8(.Lcsr_zp_stk+1)
-; CHECK-NEXT:    bne .LBB2_1
-; CHECK-NEXT:    jmp .LBB2_3
-; CHECK-NEXT:  .LBB2_5: ; %for.cond.cleanup
+; CHECK-NEXT:    jmp .LBB2_1
+; CHECK-NEXT:  .LBB2_4: ; %for.body
+; CHECK-NEXT:    ; in Loop: Header=BB2_2 Depth=1
+; CHECK-NEXT:    lda mos8(.Lcsr_zp_stk)
+; CHECK-NEXT:    bne .LBB2_2
+; CHECK-NEXT:  ; %bb.5: ; %for.cond.cleanup
 ; CHECK-NEXT:    rts
 entry:
   br label %for.body

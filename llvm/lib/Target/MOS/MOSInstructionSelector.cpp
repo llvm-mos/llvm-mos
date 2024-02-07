@@ -655,10 +655,10 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
     Opcode = ZP ? MOS::EORZpIdx : MOS::EORAbsIdx;
     break;
   case MOS::G_OR:
-    Success =
-        mi_match(Dst, MRI,
-                 m_GOr(m_Reg(LHS), m_all_of(m_MInstr(Load),
-                                            m_FoldedLdIdx(MI, Addr, Idx, ZP, AA))));
+    Success = mi_match(
+        Dst, MRI,
+        m_GOr(m_Reg(LHS),
+              m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA))));
     Opcode = ZP ? MOS::ORAZpIdx : MOS::ORAAbsIdx;
     break;
   }
@@ -766,15 +766,15 @@ static Register getSbcFlagForRegister(const MachineInstr &Sbc, Register Reg) {
   llvm_unreachable("Could not find register in G_SBC outputs.");
 }
 
-// Match criteria common to all CMP addressing modes.
-struct Cmp_match {
+// Match criteria common to all Cmp where N or Z are used.
+struct CmpNZ_match {
   Register &LHS;
   Register &Flag;
 
   // The matched G_SBC representing a CMP.
   MachineInstr *CondMI;
 
-  Cmp_match(Register &LHS, Register &Flag) : LHS(LHS), Flag(Flag) {}
+  CmpNZ_match(Register &LHS, Register &Flag) : LHS(LHS), Flag(Flag) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
     auto DefSrcReg = getDefSrcRegIgnoringCopies(CondReg, MRI);
@@ -793,11 +793,11 @@ struct Cmp_match {
   }
 };
 
-struct CMPTermZ_match : public Cmp_match {
-  CMPTermZ_match(Register &LHS, Register &Flag) : Cmp_match(LHS, Flag) {}
+struct CmpNZZero_match : public CmpNZ_match {
+  CmpNZZero_match(Register &LHS, Register &Flag) : CmpNZ_match(LHS, Flag) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
-    if (!Cmp_match::match(MRI, CondReg))
+    if (!CmpNZ_match::match(MRI, CondReg))
       return false;
 
     auto RHSConst =
@@ -806,18 +806,18 @@ struct CMPTermZ_match : public Cmp_match {
   }
 };
 
-inline CMPTermZ_match m_CMPTermZ(Register &LHS, Register &Flag) {
+inline CmpNZZero_match m_CmpNZZero(Register &LHS, Register &Flag) {
   return {LHS, Flag};
 }
 
-struct CMPTermImm_match : public Cmp_match {
+struct CmpNZImm_match : public CmpNZ_match {
   int64_t &RHS;
 
-  CMPTermImm_match(Register &LHS, int64_t &RHS, Register &Flag)
-      : Cmp_match(LHS, Flag), RHS(RHS) {}
+  CmpNZImm_match(Register &LHS, int64_t &RHS, Register &Flag)
+      : CmpNZ_match(LHS, Flag), RHS(RHS) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
-    if (!Cmp_match::match(MRI, CondReg))
+    if (!CmpNZ_match::match(MRI, CondReg))
       return false;
 
     auto RHSConst =
@@ -830,79 +830,77 @@ struct CMPTermImm_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPTermImm operation. LHS and RHS
+// Match one of the outputs of a G_SBC to a CmpNZImm operation. LHS and RHS
 // are the left and right hand side of the comparison, while Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CMPTermImm_match m_CMPTermImm(Register &LHS, int64_t &RHS,
-                                     Register &Flag) {
+inline CmpNZImm_match m_CmpNZImm(Register &LHS, int64_t &RHS, Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
-struct CMPTermImag8_match : public Cmp_match {
+struct CmpNZImag8_match : public CmpNZ_match {
   Register &RHS;
 
-  CMPTermImag8_match(Register &LHS, Register &RHS, Register &Flag)
-      : Cmp_match(LHS, Flag), RHS(RHS) {}
+  CmpNZImag8_match(Register &LHS, Register &RHS, Register &Flag)
+      : CmpNZ_match(LHS, Flag), RHS(RHS) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
-    if (!Cmp_match::match(MRI, CondReg))
+    if (!CmpNZ_match::match(MRI, CondReg))
       return false;
     RHS = CondMI->getOperand(6).getReg();
     return true;
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPTermImag8 operation. LHS and
+// Match one of the outputs of a G_SBC to a CmpNZImag8 operation. LHS and
 // RHS are the left and right hand side of the comparison, while Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CMPTermImag8_match m_CMPTermImag8(Register &LHS, Register &RHS,
-                                         Register &Flag) {
+inline CmpNZImag8_match m_CmpNZImag8(Register &LHS, Register &RHS,
+                                     Register &Flag) {
   return {LHS, RHS, Flag};
 }
 
-struct CMPTermAbs_match : public Cmp_match {
+struct CmpNZAbs_match : public CmpNZ_match {
   MachineOperand &Addr;
   MachineInstr *&Load;
   AAResults *AA;
 
-  CMPTermAbs_match(Register &LHS, MachineOperand &Addr, Register &Flag,
-                   MachineInstr *&Load, AAResults *AA)
-      : Cmp_match(LHS, Flag), Addr(Addr), Load(Load), AA(AA) {}
+  CmpNZAbs_match(Register &LHS, MachineOperand &Addr, Register &Flag,
+                 MachineInstr *&Load, AAResults *AA)
+      : CmpNZ_match(LHS, Flag), Addr(Addr), Load(Load), AA(AA) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
-    if (!Cmp_match::match(MRI, CondReg))
+    if (!CmpNZ_match::match(MRI, CondReg))
       return false;
     return mi_match(CondMI->getOperand(6).getReg(), MRI,
                     m_all_of(m_MInstr(Load), m_FoldedLdAbs(*CondMI, Addr, AA)));
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPTermAbs operation. Flag is the
+// Match one of the outputs of a G_SBC to a CmpNZAbs operation. Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CMPTermAbs_match m_CMPTermAbs(Register &LHS, MachineOperand &Addr,
-                                     Register &Flag, MachineInstr *&Load,
-                                     AAResults *AA) {
+inline CmpNZAbs_match m_CmpNZAbs(Register &LHS, MachineOperand &Addr,
+                                 Register &Flag, MachineInstr *&Load,
+                                 AAResults *AA) {
   return {LHS, Addr, Flag, Load, AA};
 }
 
-struct CMPTermIdx_match : public Cmp_match {
+struct CmpNZIdx_match : public CmpNZ_match {
   MachineOperand &Addr;
   Register &Idx;
   MachineInstr *&Load;
   bool &ZP;
   AAResults *AA;
 
-  CMPTermIdx_match(Register &LHS, MachineOperand &Addr, Register &Idx,
-                   Register &Flag, MachineInstr *&Load, bool &ZP,
-                   AAResults *AA)
-      : Cmp_match(LHS, Flag), Addr(Addr), Idx(Idx), Load(Load), ZP(ZP),
-          AA(AA) {}
+  CmpNZIdx_match(Register &LHS, MachineOperand &Addr, Register &Idx,
+                 Register &Flag, MachineInstr *&Load, bool &ZP, AAResults *AA)
+      : CmpNZ_match(LHS, Flag), Addr(Addr), Idx(Idx), Load(Load), ZP(ZP),
+        AA(AA) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
-    if (!Cmp_match::match(MRI, CondReg))
+    if (!CmpNZ_match::match(MRI, CondReg))
       return false;
     return mi_match(
         CondMI->getOperand(6).getReg(), MRI,
@@ -910,27 +908,26 @@ struct CMPTermIdx_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPTermIdx operation. Flag is the
+// Match one of the outputs of a G_SBC to a CmpNZIdx operation. Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CMPTermIdx_match m_CMPTermIdx(Register &LHS, MachineOperand &Addr,
-                                     Register &Idx, Register &Flag,
-                                     MachineInstr *&Load, bool &ZP,
-                                     AAResults *AA) {
+inline CmpNZIdx_match m_CmpNZIdx(Register &LHS, MachineOperand &Addr,
+                                 Register &Idx, Register &Flag,
+                                 MachineInstr *&Load, bool &ZP, AAResults *AA) {
   return {LHS, Addr, Idx, Flag, Load, ZP, AA};
 }
 
-struct CMPTermIndir_match : public Cmp_match {
+struct CmpNZIndir_match : public CmpNZ_match {
   Register &Addr;
   MachineInstr *&Load;
   AAResults *AA;
 
-  CMPTermIndir_match(Register &LHS, Register &Addr, Register &Flag,
-                     MachineInstr *&Load, AAResults *AA)
-      : Cmp_match(LHS, Flag), Addr(Addr), Load(Load), AA(AA) {}
+  CmpNZIndir_match(Register &LHS, Register &Addr, Register &Flag,
+                   MachineInstr *&Load, AAResults *AA)
+      : CmpNZ_match(LHS, Flag), Addr(Addr), Load(Load), AA(AA) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
-    if (!Cmp_match::match(MRI, CondReg))
+    if (!CmpNZ_match::match(MRI, CondReg))
       return false;
     return mi_match(
         CondMI->getOperand(6).getReg(), MRI,
@@ -938,27 +935,27 @@ struct CMPTermIndir_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPTermIndir operation. Flag is the
+// Match one of the outputs of a G_SBC to a CmpNZIndir operation. Flag is the
 // physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CMPTermIndir_match m_CMPTermIndir(Register &LHS, Register &Addr,
-                                         Register &Flag, MachineInstr *&Load,
-                                         AAResults *AA) {
+inline CmpNZIndir_match m_CmpNZIndir(Register &LHS, Register &Addr,
+                                     Register &Flag, MachineInstr *&Load,
+                                     AAResults *AA) {
   return {LHS, Addr, Flag, Load, AA};
 }
 
-struct CMPTermIndirIdx_match : public Cmp_match {
+struct CmpNZIndirIdx_match : public CmpNZ_match {
   Register &Addr;
   Register &Idx;
   MachineInstr *&Load;
   AAResults *AA;
 
-  CMPTermIndirIdx_match(Register &LHS, Register &Addr, Register &Idx,
-                        Register &Flag, MachineInstr *&Load, AAResults *AA)
-      : Cmp_match(LHS, Flag), Addr(Addr), Idx(Idx), Load(Load), AA(AA) {}
+  CmpNZIndirIdx_match(Register &LHS, Register &Addr, Register &Idx,
+                      Register &Flag, MachineInstr *&Load, AAResults *AA)
+      : CmpNZ_match(LHS, Flag), Addr(Addr), Idx(Idx), Load(Load), AA(AA) {}
 
   bool match(const MachineRegisterInfo &MRI, Register CondReg) {
-    if (!Cmp_match::match(MRI, CondReg))
+    if (!CmpNZ_match::match(MRI, CondReg))
       return false;
     return mi_match(
         CondMI->getOperand(6).getReg(), MRI,
@@ -966,13 +963,12 @@ struct CMPTermIndirIdx_match : public Cmp_match {
   }
 };
 
-// Match one of the outputs of a G_SBC to a CMPTermIndirIdx operation. Flag is
+// Match one of the outputs of a G_SBC to a CmpNZIndirIdx operation. Flag is
 // the physical (N or Z) register corresponding to the output by which the G_SBC
 // was reached.
-inline CMPTermIndirIdx_match m_CMPTermIndirIdx(Register &LHS, Register &Addr,
-                                               Register &Idx, Register &Flag,
-                                               MachineInstr *&Load,
-                                               AAResults *AA) {
+inline CmpNZIndirIdx_match m_CmpNZIndirIdx(Register &LHS, Register &Addr,
+                                           Register &Idx, Register &Flag,
+                                           MachineInstr *&Load, AAResults *AA) {
   return {LHS, Addr, Idx, Flag, Load, AA};
 }
 
@@ -983,9 +979,6 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineBasicBlock *Tgt = MI.getOperand(1).getMBB();
   int64_t FlagVal = MI.getOperand(2).getImm();
 
-  LLT S1 = LLT::scalar(1);
-
-  MachineInstr *Compare = nullptr;
   Register Flag;
 
   MachineIRBuilder Builder(MI);
@@ -993,59 +986,110 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
   MachineInstr *Load;
 
   Register LHS;
-  if (!Compare) {
-    if (MachineInstr *CMPZ = getOpcodeDef(MOS::G_CMPZ, CondReg, MRI)) {
-      auto Cmp = Builder.buildInstr(MOS::CMPTermZMB, {S1}, {});
-      for (const MachineOperand &MO : CMPZ->uses())
-        Cmp.addUse(MO.getReg());
-      Compare = Cmp;
-      Flag = MOS::Z;
-    }
+  if (MachineInstr *CMPZ = getOpcodeDef(MOS::G_CMPZ, CondReg, MRI)) {
+    auto Branch =
+        Builder.buildInstr(MOS::CmpBrZeroMultiByte).addMBB(Tgt).addImm(FlagVal);
+    for (const MachineOperand &MO : CMPZ->uses())
+      Branch.addUse(MO.getReg());
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
   }
-  if (!Compare && mi_match(CondReg, MRI, m_CMPTermZ(LHS, Flag)))
-    Compare = Builder.buildInstr(MOS::CMPTermZ, {S1}, {LHS});
+  if (mi_match(CondReg, MRI, m_CmpNZZero(LHS, Flag))) {
+    auto Branch = Builder.buildInstr(MOS::CmpBrZero)
+                      .addMBB(Tgt)
+                      .addUse(Flag, RegState::Undef)
+                      .addImm(FlagVal)
+                      .addUse(LHS);
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
+  }
   int64_t RHSConst;
-  if (!Compare && mi_match(CondReg, MRI, m_CMPTermImm(LHS, RHSConst, Flag)))
-    Compare = Builder.buildInstr(MOS::CMPTermImm, {S1}, {LHS, RHSConst});
+  if (mi_match(CondReg, MRI, m_CmpNZImm(LHS, RHSConst, Flag))) {
+    auto Branch = Builder.buildInstr(MOS::CmpBrImm)
+                      .addMBB(Tgt)
+                      .addUse(Flag, RegState::Undef)
+                      .addImm(FlagVal)
+                      .addUse(LHS)
+                      .addImm(RHSConst);
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
+  }
   MachineOperand Addr =
       MachineOperand::CreateReg(MOS::NoRegister, /*isDef=*/false);
-  if (!Compare &&
-      mi_match(CondReg, MRI, m_CMPTermAbs(LHS, Addr, Flag, Load, AA)))
-    Compare = Builder.buildInstr(MOS::CMPTermAbs, {S1}, {LHS})
-                  .add(Addr)
-                  .cloneMemRefs(*Load);
+  if (mi_match(CondReg, MRI, m_CmpNZAbs(LHS, Addr, Flag, Load, AA))) {
+    auto Branch = Builder.buildInstr(MOS::CmpBrAbs)
+                      .addMBB(Tgt)
+                      .addUse(Flag, RegState::Undef)
+                      .addImm(FlagVal)
+                      .addUse(LHS)
+                      .add(Addr)
+                      .cloneMemRefs(*Load);
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
+  }
   Register Idx;
   bool ZP;
-  if (!Compare &&
-      mi_match(CondReg, MRI, m_CMPTermIdx(LHS, Addr, Idx, Flag, Load, ZP, AA))) {
-    Compare = Builder.buildInstr(ZP ? MOS::CMPTermZpIdx : MOS::CMPTermAbsIdx,
-                                    {S1}, {LHS})
-                                .add(Addr)
-                                .addUse(Idx)
-                                .cloneMemRefs(*Load);
+  if (mi_match(CondReg, MRI, m_CmpNZIdx(LHS, Addr, Idx, Flag, Load, ZP, AA))) {
+    auto Branch = Builder.buildInstr(ZP ? MOS::CmpBrZpIdx : MOS::CmpBrAbsIdx)
+                      .addMBB(Tgt)
+                      .addUse(Flag, RegState::Undef)
+                      .addImm(FlagVal)
+                      .addUse(LHS)
+                      .add(Addr)
+                      .addUse(Idx)
+                      .cloneMemRefs(*Load);
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
   }
   Register RegAddr;
-  if (!Compare &&
-      mi_match(CondReg, MRI, m_CMPTermIndir(LHS, RegAddr, Flag, Load, AA))) {
-    Compare = Builder.buildInstr(MOS::CMPTermIndir, {S1}, {LHS, RegAddr})
-                  .cloneMemRefs(*Load);
+  if (mi_match(CondReg, MRI, m_CmpNZIndir(LHS, RegAddr, Flag, Load, AA))) {
+    auto Branch = Builder.buildInstr(MOS::CmpBrIndir)
+                      .addMBB(Tgt)
+                      .addUse(Flag, RegState::Undef)
+                      .addImm(FlagVal)
+                      .addUse(LHS)
+                      .addUse(RegAddr)
+                      .cloneMemRefs(*Load);
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
   }
-  if (!Compare &&
-      mi_match(CondReg, MRI,
-               m_CMPTermIndirIdx(LHS, RegAddr, Idx, Flag, Load, AA))) {
-    Compare =
-        Builder.buildInstr(MOS::CMPTermIndirIdx, {S1}, {LHS, RegAddr, Idx})
-            .cloneMemRefs(*Load);
+  if (mi_match(CondReg, MRI,
+               m_CmpNZIndirIdx(LHS, RegAddr, Idx, Flag, Load, AA))) {
+    auto Branch = Builder.buildInstr(MOS::CmpBrIndirIdx)
+                      .addMBB(Tgt)
+                      .addUse(Flag, RegState::Undef)
+                      .addImm(FlagVal)
+                      .addUse(LHS)
+                      .addUse(RegAddr)
+                      .addUse(Idx)
+                      .cloneMemRefs(*Load);
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
+      return false;
+    MI.eraseFromParent();
+    return true;
   }
   Register RHS;
-  if (!Compare && mi_match(CondReg, MRI, m_CMPTermImag8(LHS, RHS, Flag)))
-    Compare = Builder.buildInstr(MOS::CMPTermImag8, {S1}, {LHS, RHS});
-
-  if (Compare) {
-    if (!constrainSelectedInstRegOperands(*Compare, TII, TRI, RBI))
+  if (mi_match(CondReg, MRI, m_CmpNZImag8(LHS, RHS, Flag))) {
+    auto Branch = Builder.buildInstr(MOS::CmpBrImag8)
+                      .addMBB(Tgt)
+                      .addUse(Flag, RegState::Undef)
+                      .addImm(FlagVal)
+                      .addUse(LHS)
+                      .addUse(RHS);
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
       return false;
-    assert(Flag != MOS::C);
-    Builder.buildInstr(MOS::BR).addMBB(Tgt).addUse(Flag).addImm(FlagVal);
     MI.eraseFromParent();
     return true;
   }
@@ -1114,13 +1158,12 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     }
     Register Idx;
     bool ZP;
-    if (!Instr &&
-        mi_match(MI.getOperand(6).getReg(), MRI,
-                 m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)))) {
+    if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
+                           m_all_of(m_MInstr(Load),
+                                    m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)))) {
       Instr = Builder
                   .buildInstr(ZP ? MOS::CMPZpIdx : MOS::CMPAbsIdx,
-                              {MI.getOperand(1)},
-                              {MI.getOperand(5)})
+                              {MI.getOperand(1)}, {MI.getOperand(5)})
                   .add(Addr)
                   .addUse(Idx)
                   .cloneMemRefs(*Load);
@@ -1170,9 +1213,9 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
     }
     Register Idx;
     bool ZP;
-    if (!Instr &&
-        mi_match(MI.getOperand(6).getReg(), MRI,
-                 m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)))) {
+    if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
+                           m_all_of(m_MInstr(Load),
+                                    m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)))) {
       Instr = Builder
                   .buildInstr(
                       ZP ? MOS::SBCZpIdx : MOS::SBCAbsIdx,
@@ -1277,13 +1320,12 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
   LLT DestType = Builder.getMRI()->getType(MI.getOperand(0).getReg());
   MachineInstrBuilder Instr;
   if (DestType.getScalarSizeInBits() == 16) {
-    Instr = Builder
+    Instr =
+        Builder
             .buildInstr(MOS::LDImm16, {MI.getOperand(0), &MOS::GPRRegClass}, {})
             .add(Op);
   } else {
-    Instr = Builder
-            .buildInstr(MOS::LDImm, {MI.getOperand(0)}, {})
-            .add(Op);
+    Instr = Builder.buildInstr(MOS::LDImm, {MI.getOperand(0)}, {}).add(Op);
   }
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
@@ -1555,10 +1597,10 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
     Register Idx;
     bool ZP;
-    if (mi_match(
-            Val, MRI,
-            m_GAdd(m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
-                   m_SpecificICst(1))) &&
+    if (mi_match(Val, MRI,
+                 m_GAdd(m_all_of(m_MInstr(Load),
+                                 m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
+                        m_SpecificICst(1))) &&
         Addr.isIdenticalTo(MI.getOperand(1)) &&
         Idx == MI.getOperand(2).getReg()) {
       auto Inc = Builder.buildInstr(MOS::INCIdx)
@@ -1570,10 +1612,10 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
-    if (mi_match(
-            Val, MRI,
-            m_GAdd(m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
-                   m_SpecificICst(-1))) &&
+    if (mi_match(Val, MRI,
+                 m_GAdd(m_all_of(m_MInstr(Load),
+                                 m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
+                        m_SpecificICst(-1))) &&
         Addr.isIdenticalTo(MI.getOperand(1)) &&
         Idx == MI.getOperand(2).getReg()) {
       auto Inc = Builder.buildInstr(MOS::DECIdx)
@@ -1586,11 +1628,11 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
       return true;
     }
     Register CarryOut;
-    if (mi_match(
-            Val, MRI,
-            m_GShlE(CarryOut,
-                    m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
-                    m_SpecificICst(0))) &&
+    if (mi_match(Val, MRI,
+                 m_GShlE(CarryOut,
+                         m_all_of(m_MInstr(Load),
+                                  m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
+                         m_SpecificICst(0))) &&
         Addr.isIdenticalTo(MI.getOperand(1)) &&
         Idx == MI.getOperand(2).getReg()) {
       auto Asl = Builder.buildInstr(MOS::ASLIdx, {&MOS::CcRegClass}, {})
@@ -1603,11 +1645,11 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
-    if (mi_match(
-            Val, MRI,
-            m_GLshrE(CarryOut,
-                     m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
-                     m_SpecificICst(0))) &&
+    if (mi_match(Val, MRI,
+                 m_GLshrE(CarryOut,
+                          m_all_of(m_MInstr(Load),
+                                   m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
+                          m_SpecificICst(0))) &&
         Addr.isIdenticalTo(MI.getOperand(1)) &&
         Idx == MI.getOperand(2).getReg()) {
       auto Lsr = Builder.buildInstr(MOS::LSRIdx, {&MOS::CcRegClass}, {})
@@ -1621,11 +1663,11 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
       return true;
     }
     Register CarryIn;
-    if (mi_match(
-            Val, MRI,
-            m_GShlE(CarryOut,
-                    m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
-                    m_Reg(CarryIn))) &&
+    if (mi_match(Val, MRI,
+                 m_GShlE(CarryOut,
+                         m_all_of(m_MInstr(Load),
+                                  m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
+                         m_Reg(CarryIn))) &&
         Addr.isIdenticalTo(MI.getOperand(1)) &&
         Idx == MI.getOperand(2).getReg()) {
       auto Rol = Builder.buildInstr(MOS::ROLIdx, {&MOS::CcRegClass}, {})
@@ -1639,11 +1681,11 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
       MI.eraseFromParent();
       return true;
     }
-    if (mi_match(
-            Val, MRI,
-            m_GLshrE(CarryOut,
-                     m_all_of(m_MInstr(Load), m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
-                     m_Reg(CarryIn))) &&
+    if (mi_match(Val, MRI,
+                 m_GLshrE(CarryOut,
+                          m_all_of(m_MInstr(Load),
+                                   m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
+                          m_Reg(CarryIn))) &&
         Addr.isIdenticalTo(MI.getOperand(1)) &&
         Idx == MI.getOperand(2).getReg()) {
       auto Ror = Builder.buildInstr(MOS::RORIdx, {&MOS::CcRegClass}, {})
@@ -1842,8 +1884,9 @@ bool MOSInstructionSelector::selectIncDecMB(MachineInstr &MI) {
           LLT::pointer(0, 16)) {
     assert(MI.getOpcode() == MOS::G_INC || MI.getOpcode() == MOS::G_DEC);
     assert(MI.getNumDefs() == 1);
-    auto Op = Opcode == MOS::IncMB ? MOS::IncPtr :
-              (Opcode == MOS::DecMB ? MOS::DecPtr : MOS::DecDcpPtr);
+    auto Op = Opcode == MOS::IncMB
+                  ? MOS::IncPtr
+                  : (Opcode == MOS::DecMB ? MOS::DecPtr : MOS::DecDcpPtr);
     auto Instr = Builder.buildInstr(Op);
     if (Opcode == MOS::DecMB)
       Instr.addDef(Builder.getMRI()->createVirtualRegister(&MOS::GPRRegClass));

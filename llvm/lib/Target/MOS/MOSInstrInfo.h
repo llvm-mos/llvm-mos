@@ -136,11 +136,9 @@ private:
   void expandIncDec(MachineIRBuilder &Builder) const;
   void expandIncDecPtr(MachineIRBuilder &Builder) const;
 
-  // CMP pseudos
-  void expandCMPTerm(MachineIRBuilder &Builder) const;
-
   // Control flow pseudos
   void expandGBR(MachineIRBuilder &Builder) const;
+  void expandCmpBr(MachineIRBuilder &Builder) const;
 
   bool shouldRematPhysRegCopy() const override { return false; }
 };

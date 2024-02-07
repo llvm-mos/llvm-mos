@@ -94,16 +94,19 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:    lda 1024
 ; CHECK-NEXT:    sta __rc2
 ; CHECK-NEXT:    sec
-; CHECK-NEXT:    ldy 1025
-; CHECK-NEXT:    sty __rc5
-; CHECK-NEXT:    sty __rc3
-; CHECK-NEXT:    sta __rc4
+; CHECK-NEXT:    ldx 1025
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    stx __rc3
+; CHECK-NEXT:    tax
 ; CHECK-NEXT:    sbc __rc3
 ; CHECK-NEXT:    bvc .LBB3_2
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    eor #128
 ; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    tax
+; CHECK-NEXT:    cmp #0
 ; CHECK-NEXT:    bpl .LBB3_4
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    sec
@@ -114,14 +117,16 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:    sty __rc2
 ; CHECK-NEXT:    jmp .LBB3_5
 ; CHECK-NEXT:  .LBB3_4:
+; CHECK-NEXT:    sty __rc2
 ; CHECK-NEXT:    sec
-; CHECK-NEXT:    lda __rc4
-; CHECK-NEXT:    sbc __rc5
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    sbc __rc2
 ; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:  .LBB3_5:
 ; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    tay
+; CHECK-NEXT:    sta __rc6
+; CHECK-NEXT:    tax
 ; CHECK-NEXT:    bpl .LBB3_7
 ; CHECK-NEXT:  ; %bb.6:
 ; CHECK-NEXT:    ldx #255
@@ -129,30 +134,29 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:  .LBB3_7:
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:  .LBB3_8:
-; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    ldy #0
+; CHECK-NEXT:    tya
 ; CHECK-NEXT:    jmp .LBB3_10
 ; CHECK-NEXT:  .LBB3_9: ; in Loop: Header=BB3_10 Depth=1
-; CHECK-NEXT:    lda __rc6
+; CHECK-NEXT:    lda __rc7
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc __rc2
-; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
-; CHECK-NEXT:    lda __rc5
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    lda __rc8
 ; CHECK-NEXT:    adc __rc3
 ; CHECK-NEXT:  .LBB3_10: ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB3_12 Depth 2
+; CHECK-NEXT:    sty __rc7
+; CHECK-NEXT:    sty __rc4
+; CHECK-NEXT:    sta __rc8
 ; CHECK-NEXT:    sta __rc5
-; CHECK-NEXT:    lda .Lrepro_sstk ; 1-byte Folded Reload
-; CHECK-NEXT:    sta __rc6
-; CHECK-NEXT:    sta __rc4
-; CHECK-NEXT:    lda __rc5
-; CHECK-NEXT:    sta __rc7
 ; CHECK-NEXT:    jmp .LBB3_12
 ; CHECK-NEXT:  .LBB3_11: ; in Loop: Header=BB3_12 Depth=2
-; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    tay
 ; CHECK-NEXT:    bpl .LBB3_9
 ; CHECK-NEXT:  .LBB3_12: ; Parent Loop BB3_10 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    ldy __rc6
 ; CHECK-NEXT:    cpy __rc4
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    sbc __rc5

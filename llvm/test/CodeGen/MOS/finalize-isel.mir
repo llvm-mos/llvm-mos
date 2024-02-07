@@ -388,128 +388,123 @@ body: |
     RTS implicit $y, implicit $rc2
 ...
 ---
-name: brnz_cmpz_s16
+name: cmpbrzero_nz_s16
 tracksRegLiveness: true
 body: |
-  ; CHECK-LABEL: name: brnz_cmpz_s16
+  ; CHECK-LABEL: name: cmpbrzero_nz_s16
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $c = CMPTermZ $x, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $x, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $c = CMPTermZ $a, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $a, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   RTS
   bb.0.entry:
     liveins: $a, $x
-    $c = CMPTermZMB $a, $x, implicit-def $nz
-    BR %bb.0, $z, 0
+    CmpBrZeroMultiByte %bb.0, 0, $a, $x
   bb.1.entry:
     RTS
 ...
 ---
-name: brz_cmpz_s16
+name: cmpbrzero_z_s16
 tracksRegLiveness: true
 body: |
-  ; CHECK-LABEL: name: brz_cmpz_s16
+  ; CHECK-LABEL: name: cmpbrzero_z_s16
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $c = CMPTermZ $x, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.1, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.1, undef $z, 0, $x, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $c = CMPTermZ $a, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.1, $z, 0
-  ; CHECK-NEXT:   JMP %bb.0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 1, $a, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   RTS
   bb.0.entry:
     liveins: $a, $x
-    $c = CMPTermZMB $a, $x, implicit-def $nz
-    BR %bb.0, $z, 1
+    CmpBrZeroMultiByte %bb.0, 1, $a, $x
   bb.1.entry:
     RTS
 ...
 ---
-name: brnz_cmpz_incmb_s16
+name: cmpbrzeromultibyte_nz_incmb_s16
 tracksRegLiveness: true
 body: |
-  ; CHECK-LABEL: name: brnz_cmpz_incmb_s16
+  ; CHECK-LABEL: name: cmpbrzeromultibyte_nz_incmb_s16
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $a, $x
+  ; CHECK-NEXT:   liveins: $x, $a
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $a = INC $a, implicit-def $c, implicit-def $v
-  ; CHECK-NEXT:   dead $c = CMPTermZ $a, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $a, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x = INC $x, implicit-def $c, implicit-def $v
-  ; CHECK-NEXT:   $c = CMPTermZ $x, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $x, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   RTS
   bb.0.entry:
     liveins: $a, $x
     $a, $x = IncMB $a, $x, implicit-def $c
-    $c = CMPTermZMB $a, $x, implicit-def $nz
-    BR %bb.0, $z, 0
+    CmpBrZeroMultiByte %bb.0, 0, $a, $x
   bb.1.entry:
     RTS
 ...
 ---
-name: brnz_cmpz_s16_generated
+name: cmpbrzeromultibyte_nz_s16_generated
 tracksRegLiveness: true
 body: |
-  ; CHECK-LABEL: name: brnz_cmpz_s16_generated
+  ; CHECK-LABEL: name: cmpbrzeromultibyte_nz_s16_generated
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $a = LDImm 12
   ; CHECK-NEXT:   $x = LDImm 34
-  ; CHECK-NEXT:   dead $c = CMPTermZ $x, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $x, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $a
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $c = CMPTermZ $a, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $a, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   RTS
   bb.0.entry:
     $a = LDImm 12
     $x = LDImm 34
-    $c = CMPTermZMB $a, $x, implicit-def $nz
-    BR %bb.0, $z, 0
+    CmpBrZeroMultiByte %bb.0, 0, $a, $x
   bb.1.entry:
     RTS
 ...
 ---
-name: brnz_cmpz_decmb_incmb_s16
+name: cmpbrzeromultibyte_nz_decmb_incmb_s16
 tracksRegLiveness: true
 body: |
-  ; CHECK-LABEL: name: brnz_cmpz_decmb_incmb_s16
+  ; CHECK-LABEL: name: cmpbrzeromultibyte_nz_decmb_incmb_s16
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
@@ -529,19 +524,19 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.4(0x40000000)
-  ; CHECK-NEXT:   liveins: $rc3, $rc2, $a, $x
+  ; CHECK-NEXT:   liveins: $rc3, $x, $rc2, $a
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $a = INC $a, implicit-def $c, implicit-def $v
-  ; CHECK-NEXT:   dead $c = CMPTermZ $a, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $a, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
+  ; CHECK-NEXT:   liveins: $a, $rc3, $rc2, $x
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x = INC $x, implicit-def $c, implicit-def $v
-  ; CHECK-NEXT:   $c = CMPTermZ $x, implicit-def $nz
-  ; CHECK-NEXT:   BR %bb.0, $z, 0
+  ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $x, implicit-def $c
+  ; CHECK-NEXT:   JMP %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   RTS
@@ -549,8 +544,7 @@ body: |
     liveins: $a, $x, $rc2, $rc3
     $a, $x = IncMB $a, $x, implicit-def $c
     $y, $rc2, $rc3 = DecMB $rc2, $rc3, implicit-def $c
-    $c = CMPTermZMB $a, $x, implicit-def $nz
-    BR %bb.0, $z, 0
+    CmpBrZeroMultiByte %bb.0, 0, $a, $x
   bb.1.entry:
     RTS
 ...
