@@ -2,40 +2,6 @@
 
 LLVM-MOS is a LLVM fork supporting the MOS 65xx series of microprocessors.
 
-```C
-#include <stdio.h>
-
-int main(void) {
-  printf("HELLO, 6502!\n");
-}
-```
-
-```
-main:
-	ldx	#1
-	lda	#72
-.LBB0_1:
-	cmp	#10
-	beq	.LBB0_4
-.LBB0_2:
-	jsr	__CHROUT
-	lda	.Lstr,x
-	inx
-	cpx	#12
-	bne	.LBB0_1
-	lda	#13
-	jsr	__CHROUT
-	ldx	#0
-	txa
-	rts
-.LBB0_4:
-	lda	#13
-	jmp	.LBB0_2
-
-.Lstr:
-	.asciz	"HELLO, 6502!"
-```
-
 For more information about this project, please see
 [llvm-mos.org](https://www.llvm-mos.org).
 
