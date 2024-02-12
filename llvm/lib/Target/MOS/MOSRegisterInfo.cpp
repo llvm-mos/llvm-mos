@@ -145,6 +145,7 @@ static void assertNZDeadAt(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator Pos) {
 #ifndef NDEBUG
   LivePhysRegs LiveRegs;
+  LiveRegs.init(*MBB.getParent()->getSubtarget().getRegisterInfo());
   LiveRegs.addLiveOutsNoPristines(MBB);
   for (MachineBasicBlock::reverse_iterator
            I = MBB.rbegin(),
