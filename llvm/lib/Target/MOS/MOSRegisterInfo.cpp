@@ -143,12 +143,12 @@ static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
 
 static void assertNZDeadAt(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator Pos) {
-#ifdef NDEBUG
+#ifndef NDEBUG
   LivePhysRegs LiveRegs;
   LiveRegs.addLiveOutsNoPristines(MBB);
   for (MachineBasicBlock::reverse_iterator
            I = MBB.rbegin(),
-           E = std::prev(Pos.getReverseIterator());
+           E = MachineBasicBlock::reverse_iterator(Pos);
        I != E; ++I) {
     LiveRegs.stepBackward(*I);
   }
