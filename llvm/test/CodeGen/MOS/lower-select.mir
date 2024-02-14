@@ -177,10 +177,8 @@ body: |
   ; CHECK-NEXT: bb.6:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:any(s1) = G_PHI [[C1]](s1), %bb.2, [[C]](s1), %bb.5
@@ -233,10 +231,8 @@ body: |
   ; CHECK-NEXT: bb.6:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:any(s1) = G_PHI [[C1]](s1), %bb.2, [[C]](s1), %bb.5

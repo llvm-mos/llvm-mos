@@ -54,16 +54,15 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NMOS-NEXT:    asl
 ; NMOS-NEXT:    sta __rc2
-; NMOS-NEXT:    ldx __rc22
-; NMOS-NEXT:    stx __rc3
-; NMOS-NEXT:    rol __rc3
+; NMOS-NEXT:    lda __rc22
+; NMOS-NEXT:    rol
+; NMOS-NEXT:    sta __rc3
 ; NMOS-NEXT:    clc
 ; NMOS-NEXT:    lda __rc0
-; NMOS-NEXT:    ldx __rc1
 ; NMOS-NEXT:    clc
 ; NMOS-NEXT:    adc __rc2
 ; NMOS-NEXT:    sta __rc2
-; NMOS-NEXT:    txa
+; NMOS-NEXT:    lda __rc1
 ; NMOS-NEXT:    adc __rc3
 ; NMOS-NEXT:    sta __rc3
 ; NMOS-NEXT:    ldy #0
@@ -135,15 +134,15 @@ define void @char_stats() local_unnamed_addr #0 {
 ; CMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CMOS-NEXT:    asl
 ; CMOS-NEXT:    sta __rc2
-; CMOS-NEXT:    stz __rc3
-; CMOS-NEXT:    rol __rc3
+; CMOS-NEXT:    lda #0
+; CMOS-NEXT:    rol
+; CMOS-NEXT:    sta __rc3
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    lda __rc0
-; CMOS-NEXT:    ldx __rc1
 ; CMOS-NEXT:    clc
 ; CMOS-NEXT:    adc __rc2
 ; CMOS-NEXT:    sta __rc2
-; CMOS-NEXT:    txa
+; CMOS-NEXT:    lda __rc1
 ; CMOS-NEXT:    adc __rc3
 ; CMOS-NEXT:    sta __rc3
 ; CMOS-NEXT:    lda (__rc2)

@@ -93,8 +93,8 @@ define dso_local i16 @repro() {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lda 1024
 ; CHECK-NEXT:    sta __rc2
-; CHECK-NEXT:    sec
 ; CHECK-NEXT:    ldx 1025
+; CHECK-NEXT:    sec
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    tay
@@ -117,53 +117,62 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:    sty __rc2
 ; CHECK-NEXT:    jmp .LBB3_5
 ; CHECK-NEXT:  .LBB3_4:
-; CHECK-NEXT:    sty __rc2
 ; CHECK-NEXT:    sec
+; CHECK-NEXT:    sty __rc2
 ; CHECK-NEXT:    txa
 ; CHECK-NEXT:    sbc __rc2
 ; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    stx __rc2
 ; CHECK-NEXT:  .LBB3_5:
 ; CHECK-NEXT:    stx __rc3
-; CHECK-NEXT:    sta __rc6
 ; CHECK-NEXT:    tax
 ; CHECK-NEXT:    bpl .LBB3_7
 ; CHECK-NEXT:  ; %bb.6:
+; CHECK-NEXT:    tay
 ; CHECK-NEXT:    ldx #255
 ; CHECK-NEXT:    jmp .LBB3_8
 ; CHECK-NEXT:  .LBB3_7:
+; CHECK-NEXT:    tay
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:  .LBB3_8:
-; CHECK-NEXT:    ldy #0
-; CHECK-NEXT:    tya
+; CHECK-NEXT:    lda #0
+; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    sty __rc6
 ; CHECK-NEXT:    jmp .LBB3_10
 ; CHECK-NEXT:  .LBB3_9: ; in Loop: Header=BB3_10 Depth=1
-; CHECK-NEXT:    lda __rc7
+; CHECK-NEXT:    lda __rc5
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc __rc2
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    lda __rc8
+; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    lda __rc7
 ; CHECK-NEXT:    adc __rc3
 ; CHECK-NEXT:  .LBB3_10: ; =>This Loop Header: Depth=1
-; CHECK-NEXT:    ; Child Loop BB3_12 Depth 2
-; CHECK-NEXT:    sty __rc7
+; CHECK-NEXT:    ; Child Loop BB3_14 Depth 2
+; CHECK-NEXT:    ldy .Lrepro_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    sty __rc5
 ; CHECK-NEXT:    sty __rc4
-; CHECK-NEXT:    sta __rc8
-; CHECK-NEXT:    sta __rc5
-; CHECK-NEXT:    jmp .LBB3_12
-; CHECK-NEXT:  .LBB3_11: ; in Loop: Header=BB3_12 Depth=2
-; CHECK-NEXT:    tay
-; CHECK-NEXT:    bpl .LBB3_9
-; CHECK-NEXT:  .LBB3_12: ; Parent Loop BB3_10 Depth=1
-; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    ldy __rc6
 ; CHECK-NEXT:    cpy __rc4
+; CHECK-NEXT:    ldy #1
+; CHECK-NEXT:    bcs .LBB3_12
+; CHECK-NEXT:  ; %bb.11: ; in Loop: Header=BB3_10 Depth=1
+; CHECK-NEXT:    ldy #0
+; CHECK-NEXT:  .LBB3_12: ; in Loop: Header=BB3_10 Depth=1
+; CHECK-NEXT:    sta __rc7
+; CHECK-NEXT:    sta __rc4
+; CHECK-NEXT:    jmp .LBB3_14
+; CHECK-NEXT:  .LBB3_13: ; in Loop: Header=BB3_14 Depth=2
+; CHECK-NEXT:    cmp #0
+; CHECK-NEXT:    bpl .LBB3_9
+; CHECK-NEXT:  .LBB3_14: ; Parent Loop BB3_10 Depth=1
+; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    txa
-; CHECK-NEXT:    sbc __rc5
-; CHECK-NEXT:    bvc .LBB3_11
-; CHECK-NEXT:  ; %bb.13: ; in Loop: Header=BB3_12 Depth=2
+; CHECK-NEXT:    cpy #1
+; CHECK-NEXT:    sbc __rc4
+; CHECK-NEXT:    bvc .LBB3_13
+; CHECK-NEXT:  ; %bb.15: ; in Loop: Header=BB3_14 Depth=2
 ; CHECK-NEXT:    eor #128
-; CHECK-NEXT:    jmp .LBB3_11
+; CHECK-NEXT:    jmp .LBB3_13
 
   %1 = load volatile i8, ptr inttoptr (i16 1024 to ptr), align 1024
   %2 = load volatile i8, ptr inttoptr (i16 1025 to ptr), align 1

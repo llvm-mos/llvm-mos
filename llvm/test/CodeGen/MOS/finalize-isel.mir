@@ -448,7 +448,7 @@ body: |
   ; CHECK-LABEL: name: cmpbrzeromultibyte_nz_incmb_s16
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $x, $a
+  ; CHECK-NEXT:   liveins: $a, $x
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $a = INC $a, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $a, implicit-def $c
@@ -524,7 +524,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.4(0x40000000)
-  ; CHECK-NEXT:   liveins: $rc3, $x, $rc2, $a
+  ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $a = INC $a, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $a, implicit-def $c
@@ -532,7 +532,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $a, $rc3, $rc2, $x
+  ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x = INC $x, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $x, implicit-def $c
