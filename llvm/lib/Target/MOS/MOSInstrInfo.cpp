@@ -60,7 +60,7 @@ bool MOSInstrInfo::isReallyTriviallyReMaterializable(
   }
 }
 
-unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:
@@ -76,7 +76,7 @@ unsigned MOSInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   }
 }
 
-unsigned MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   switch (MI.getOpcode()) {
   default:

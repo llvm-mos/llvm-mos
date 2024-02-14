@@ -27,10 +27,10 @@ public:
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
 
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
@@ -145,11 +145,7 @@ private:
 
 namespace MOS {
 
-enum AddressSpace {
-  AS_Memory,
-  AS_ZeroPage,
-  NumAddrSpaces
-};
+enum AddressSpace { AS_Memory, AS_ZeroPage, NumAddrSpaces };
 
 enum TargetIndex {
   TI_STATIC_STACK,
