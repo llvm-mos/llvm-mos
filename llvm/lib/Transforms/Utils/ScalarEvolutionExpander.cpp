@@ -1572,10 +1572,8 @@ void SCEVExpander::replaceCongruentIVInc(
   // are NUW/NSW, then we can preserve them on the wider increment; the narrower
   // IsomorphicInc would wrap before the wider OrigInc, so the replacement won't
   // make IsomorphicInc's uses more poisonous.
-  assert(OrigInc->getType()->getScalarSizeInBits() >=
-             IsomorphicInc->getType()->getScalarSizeInBits() &&
-         "Should only replace an increment with a wider one.");
-  if (BothHaveNUW || BothHaveNSW) {
+  if (OrigInc->getType()->getScalarSizeInBits() >=
+      IsomorphicInc->getType()->getScalarSizeInBits() && (BothHaveNUW || BothHaveNSW)) {
     OrigInc->setHasNoUnsignedWrap(OBOIncV->hasNoUnsignedWrap() || BothHaveNUW);
     OrigInc->setHasNoSignedWrap(OBOIncV->hasNoSignedWrap() || BothHaveNSW);
   }
