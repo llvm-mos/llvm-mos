@@ -12,8 +12,6 @@ Foundation or LLVM project. Our project is a fork of LLVM that provides a new
 backend/target; our project is based on LLVM, not a part of LLVM. Our use of
 LLVM or other related trademarks does not imply affiliation or endorsement.
 
-# Getting started
-
 This repository only contains the core llvm-mos utilities, and it doesn't form a
 complete toolchain. Accordingly, there are no official binary releases for this
 repository; it's for internal development only.

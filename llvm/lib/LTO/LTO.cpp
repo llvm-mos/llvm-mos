@@ -1559,7 +1559,7 @@ public:
   }
 
   unsigned getThreadCount() override {
-    return BackendThreadPool.getThreadCount();
+    return BackendThreadPool.getMaxConcurrency();
   }
 };
 } // end anonymous namespace

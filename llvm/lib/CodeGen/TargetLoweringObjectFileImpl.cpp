@@ -638,6 +638,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
                            Mangler &Mang, const TargetMachine &TM,
                            unsigned EntrySize, bool UniqueSectionName) {
   SmallString<128> Name = TM.getSectionPrefix(GO);
+  Name += getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
 
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
@@ -646,13 +647,13 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Align Alignment = GO->getParent()->getDataLayout().getPreferredAlign(
         cast<GlobalVariable>(GO));
 
-    std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
-    Name += SizeSpec + utostr(Alignment.value());
-  } else if (Kind.isMergeableConst()) {
-    Name += ".rodata.cst";
+    Name += ".str";
     Name += utostr(EntrySize);
-  } else {
-    Name += getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
+    Name += ".";
+    Name += utostr(Alignment.value());
+  } else if (Kind.isMergeableConst()) {
+    Name += ".cst";
+    Name += utostr(EntrySize);
   }
 
   bool HasPrefix = false;
