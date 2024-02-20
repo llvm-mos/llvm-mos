@@ -31,9 +31,9 @@ struct Large test_large_struct_param(struct Large s) {
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[LIST]], align 1
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST]], align 1
-// CHECK-NEXT:    [[RETVAL_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[ARGP_CUR]], align 1, !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
+// CHECK-NEXT:    [[RETVAL_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[ARGP_CUR]], align 1, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-NEXT:    [[RETVAL_SROA_2_0_ARGP_CUR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 2
-// CHECK-NEXT:    [[RETVAL_SROA_2_0_COPYLOAD:%.*]] = load i16, ptr [[RETVAL_SROA_2_0_ARGP_CUR_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT10:![0-9]+]]
+// CHECK-NEXT:    [[RETVAL_SROA_2_0_COPYLOAD:%.*]] = load i16, ptr [[RETVAL_SROA_2_0_ARGP_CUR_SROA_IDX]], align 1, !tbaa [[TBAA7]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[STRUCT_SMALL:%.*]] poison, i16 [[RETVAL_SROA_0_0_COPYLOAD]], 0
 // CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [[STRUCT_SMALL]] [[DOTFCA_0_INSERT]], i16 [[RETVAL_SROA_2_0_COPYLOAD]], 1
