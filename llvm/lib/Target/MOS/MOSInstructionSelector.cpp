@@ -1319,13 +1319,19 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
 
   LLT DestType = Builder.getMRI()->getType(MI.getOperand(0).getReg());
   MachineInstrBuilder Instr;
-  if (DestType.getScalarSizeInBits() == 16) {
-    Instr =
-        Builder
-            .buildInstr(MOS::LDImm16, {MI.getOperand(0), &MOS::GPRRegClass}, {})
-            .add(Op);
+  if (STI.hasSPC700()) {
+    Instr = Builder.buildInstr(DestType.getScalarSizeInBits() == 16
+                                ? MOS::LDImm16SPC700 : MOS::LDImmSPC700,
+                                {MI.getOperand(0)}, {}).add(Op);
   } else {
-    Instr = Builder.buildInstr(MOS::LDImm, {MI.getOperand(0)}, {}).add(Op);
+    if (DestType.getScalarSizeInBits() == 16) {
+      Instr =
+          Builder
+              .buildInstr(MOS::LDImm16, {MI.getOperand(0), &MOS::GPRRegClass}, {})
+              .add(Op);
+    } else {
+      Instr = Builder.buildInstr(MOS::LDImm, {MI.getOperand(0)}, {}).add(Op);
+    }
   }
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
@@ -1337,11 +1343,12 @@ std::pair<Register, Register>
 MOSInstructionSelector::selectAddrLoHi(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   LLT S8 = LLT::scalar(8);
-  auto LoImm = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
+  auto LdImm = STI.hasSPC700() ? MOS::LDImmSPC700 : MOS::LDImm;
+  auto LoImm = Builder.buildInstr(LdImm, {S8}, {}).add(MI.getOperand(1));
   LoImm->getOperand(1).setTargetFlags(MOS::MO_LO);
   if (!constrainSelectedInstRegOperands(*LoImm, TII, TRI, RBI))
     llvm_unreachable("Cannot constrain instruction.");
-  auto HiImm = Builder.buildInstr(MOS::LDImm, {S8}, {}).add(MI.getOperand(1));
+  auto HiImm = Builder.buildInstr(LdImm, {S8}, {}).add(MI.getOperand(1));
   HiImm->getOperand(1).setTargetFlags(MOS::MO_HI);
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     llvm_unreachable("Cannot constrain instruction.");
@@ -1714,8 +1721,9 @@ bool MOSInstructionSelector::selectMergeValues(MachineInstr &MI) {
   if (LoConst && HiConst) {
     uint64_t Val =
         HiConst->Value.getZExtValue() << 8 | LoConst->Value.getZExtValue();
-    auto Instr =
-        Builder.buildInstr(MOS::LDImm16, {Dst, &MOS::GPRRegClass}, {Val});
+    auto Instr = STI.hasSPC700()
+        ? Builder.buildInstr(MOS::LDImm16SPC700, {Dst}, {Val})
+        : Builder.buildInstr(MOS::LDImm16, {Dst, &MOS::GPRRegClass}, {Val});
     if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
       return false;
     MI.eraseFromParent();

@@ -4,8 +4,18 @@ name: negative_imm8
 # CHECK-LABEL: negative_imm8
 body: |
   bb.0.entry:
-    $a = LDImm -42
+    $a = LDImmSPC700 -42
     ; CHECK: mov a,#214
+    RTS
+    ; CHECK-NEXT: ret
+...
+---
+name: negative_imm8_imag
+# CHECK-LABEL: negative_imm8_imag
+body: |
+  bb.0.entry:
+    $rc0 = LDImmSPC700 -42
+    ; CHECK: mov __rc0,#214
     RTS
     ; CHECK-NEXT: ret
 ...
@@ -278,7 +288,7 @@ name: lda_immediate
 # CHECK-LABEL: lda_immediate
 body: |
   bb.0.entry:
-    $a = LDImm 42
+    $a = LDImmSPC700 42
     ; CHECK: mov a,#42
     RTS
     ; CHECK-NEXT: ret

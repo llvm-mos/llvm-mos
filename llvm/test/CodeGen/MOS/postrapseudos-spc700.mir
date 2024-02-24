@@ -7,8 +7,8 @@ body: |
     ; CHECK-LABEL: name: set_v
     ; CHECK: PH $p
     ; CHECK-NEXT: [[PL:%[0-9]+]]:ac = PL
-    ; CHECK-NEXT: [[ORAImm:%[0-9]+]]:ac = ORAImm [[ORAImm]], 64
-    ; CHECK-NEXT: PH killed [[ORAImm]]
+    ; CHECK-NEXT: [[PL:%[0-9]+]]:ac = ORAImm [[PL]], 64
+    ; CHECK-NEXT: PH killed [[PL]]
     ; CHECK-NEXT: $p = PL
     $v = LDImm1 -1
 ...
@@ -39,4 +39,13 @@ body: |
     ; CHECK-NEXT: $c = CMPImm $a, 0
     $y = LDAbsIdx 1234, $x
     $c = CMPImm $a, 0
+...
+---
+name: ldimm16
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: ldimm16
+    ; CHECK: $rc2 = LDImmSPC700 210
+    ; CHECK-NEXT: $rc3 = LDImmSPC700 4
+    $rs1 = LDImm16SPC700 1234
 ...

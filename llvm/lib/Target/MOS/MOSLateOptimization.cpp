@@ -260,7 +260,8 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
   } LoadA, LoadX, LoadY;
 
   for (MachineInstr &MI : MBB) {
-    if (MI.getOpcode() != MOS::LDImm || !MI.getOperand(1).isImm()) {
+    if ((MI.getOpcode() != MOS::LDImm && MI.getOpcode() != MOS::LDImmSPC700)
+        || !MI.getOperand(1).isImm()) {
       if (MI.modifiesRegister(MOS::A, TRI))
         LoadA.MI = nullptr;
       if (MI.modifiesRegister(MOS::X, TRI))

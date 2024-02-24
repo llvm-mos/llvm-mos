@@ -87,6 +87,18 @@ def LDImm16 : MOSPseudo {
   let isReMaterializable = true;
 }
 
+// Version of LDImm16 that doesn't use a scratch register, which is possible
+// on the SPC700 architecture.
+def LDImm16SPC700 : MOSPseudo {
+  let Predicates = [HasSPC700];
+  dag OutOperandList = (outs Imag16:$dst);
+  dag InOperandList = (ins i16imm:$val);
+
+  let isAsCheapAsAMove = true;
+  let isMoveImm = true;
+  let isReMaterializable = true;
+}
+
 // Version of LDImm16 that doesn't use a scratch register, to satisfy the
 // requirements for rematerialization. Instead, the register scavenger locates a
 // scratch register at expansion time.
