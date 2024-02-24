@@ -82,7 +82,7 @@ def Has45GS02 : Predicate<"Subtarget->has45GS02()">,
   let PredicateName = "Feature45GS02";
 }
 
-def HasSPC700 : Predicate<"Subtarget->HasSPC700()">,
+def HasSPC700 : Predicate<"Subtarget->hasSPC700()">,
                AssemblerPredicate<(all_of FeatureSPC700), "SPC700"> {
   let PredicateName = "FeatureSPC700";
 }
