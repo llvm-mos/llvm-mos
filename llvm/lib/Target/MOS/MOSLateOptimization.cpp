@@ -18,6 +18,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSInstrBuilder.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
@@ -330,10 +331,8 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       }
 
       if (Load) {
-        if (STI.hasGPRIncDec())
-          MI.setDesc(TII.get(Val > Load->Val ? MOS::IN_CMOS : MOS::DE_CMOS));
-        else
-          MI.setDesc(TII.get(Val > Load->Val ? MOS::IN : MOS::DE));
+        MachineIRBuilder Builder(MI);
+        MI.setDesc(TII.get(Val > Load->Val ? getIncOpcode(Builder) : getDecOpcode(Builder)));
         MI.getOperand(1).ChangeToRegister(Dst, /*isDef=*/false, /*isImp=*/false,
                                           /*isKill=*/true);
         MI.tieOperands(0, 1);

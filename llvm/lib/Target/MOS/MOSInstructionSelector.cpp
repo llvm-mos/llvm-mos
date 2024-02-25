@@ -17,6 +17,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSFrameLowering.h"
+#include "MOSInstrBuilder.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
@@ -1317,22 +1318,8 @@ bool MOSInstructionSelector::selectAddr(MachineInstr &MI) {
   if (Op.isCImm())
     Op.ChangeToImmediate(Op.getCImm()->getSExtValue());
 
-  LLT DestType = Builder.getMRI()->getType(MI.getOperand(0).getReg());
-  MachineInstrBuilder Instr;
-  if (STI.hasSPC700()) {
-    Instr = Builder.buildInstr(DestType.getScalarSizeInBits() == 16
-                                ? MOS::LDImm16SPC700 : MOS::LDImmSPC700,
-                                {MI.getOperand(0)}, {}).add(Op);
-  } else {
-    if (DestType.getScalarSizeInBits() == 16) {
-      Instr =
-          Builder
-              .buildInstr(MOS::LDImm16, {MI.getOperand(0), &MOS::GPRRegClass}, {})
-              .add(Op);
-    } else {
-      Instr = Builder.buildInstr(MOS::LDImm, {MI.getOperand(0)}, {}).add(Op);
-    }
-  }
+  MachineInstrBuilder Instr = buildLdImm(Builder, MI.getOperand(0))
+                                  .add(Op);
   if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
     return false;
   MI.eraseFromParent();
@@ -1343,12 +1330,11 @@ std::pair<Register, Register>
 MOSInstructionSelector::selectAddrLoHi(MachineInstr &MI) {
   MachineIRBuilder Builder(MI);
   LLT S8 = LLT::scalar(8);
-  auto LdImm = STI.hasSPC700() ? MOS::LDImmSPC700 : MOS::LDImm;
-  auto LoImm = Builder.buildInstr(LdImm, {S8}, {}).add(MI.getOperand(1));
+  auto LoImm = buildLdImm(Builder, S8).add(MI.getOperand(1));
   LoImm->getOperand(1).setTargetFlags(MOS::MO_LO);
   if (!constrainSelectedInstRegOperands(*LoImm, TII, TRI, RBI))
     llvm_unreachable("Cannot constrain instruction.");
-  auto HiImm = Builder.buildInstr(LdImm, {S8}, {}).add(MI.getOperand(1));
+  auto HiImm = buildLdImm(Builder, S8).add(MI.getOperand(1));
   HiImm->getOperand(1).setTargetFlags(MOS::MO_HI);
   if (!constrainSelectedInstRegOperands(*HiImm, TII, TRI, RBI))
     llvm_unreachable("Cannot constrain instruction.");

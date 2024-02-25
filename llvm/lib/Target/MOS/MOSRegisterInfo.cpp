@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSRegisterInfo.h"
+
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
 #include "MOSFrameLowering.h"
+#include "MOSInstrBuilder.h"
 #include "MOSInstrCost.h"
 #include "MOSInstrInfo.h"
 #include "MOSMachineFunctionInfo.h"
@@ -201,16 +203,14 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
            "ranges");
 
     if (UseHardStack)
-      Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {},
-                         {Reg});
+      Builder.buildInstr(getPushOpcode(Builder), {}, {Reg});
     else
       Builder.buildInstr(MOS::STImag8, {Save}, {Reg});
 
     Builder.setInsertPt(MBB, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL, {Reg},
-                         {});
+      Builder.buildInstr(getPopOpcode(Builder), {Reg}, {});
     else
       Builder.buildInstr(MOS::LDImag8, {Reg}, {Save});
     break;
