@@ -28,6 +28,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSInstrBuilder.h"
 #include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
@@ -357,13 +358,6 @@ static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
   return TailMBB;
 }
 
-static unsigned incDec8Opcode(const MOSSubtarget &STI, bool IsDec) {
-  if (STI.hasGPRIncDec()) {
-    return IsDec ? MOS::DecCMOS : MOS::IncCMOS;
-  }
-  return IsDec ? MOS::DEC : MOS::INC;
-}
-
 // Returns an IncMB that is safe to fold into the given CmpBrZeroMultiByte.
 static MachineInstr *findCmpBrZeroMultiByteInc(MachineInstr &MI) {
   const TargetRegisterInfo *TRI = MI.getMF()->getSubtarget().getRegisterInfo();
@@ -471,16 +465,16 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   } else {
     // 1/2/3. Emit INC/DEC.
     if (IsReg) {
+      First = Builder.buildInstr(IsDec ? getDecPseudoOpcode(Builder)
+                                       : getIncPseudoOpcode(Builder));
       if (IsDec && !IsLast) {
         // Avoid copying additional register flags here.
         // They will apply to the last opcode in the chain (CMP) instead.
-        First = Builder.buildInstr(incDec8Opcode(STI, IsDec))
-                    .addDef(MI.getOperand(FirstDefIdx).getReg())
-                    .addUse(MI.getOperand(FirstUseIdx).getReg());
+        First.addDef(MI.getOperand(FirstDefIdx).getReg())
+             .addUse(MI.getOperand(FirstUseIdx).getReg());
       } else {
-        First = Builder.buildInstr(incDec8Opcode(STI, IsDec))
-                    .add(MI.getOperand(FirstDefIdx))
-                    .add(MI.getOperand(FirstUseIdx));
+        First.add(MI.getOperand(FirstDefIdx))
+             .add(MI.getOperand(FirstUseIdx));
       }
       ++FirstDefIdx;
     } else {
@@ -603,7 +597,7 @@ static MachineBasicBlock *emitCmpBrZeroMultiByte(MachineInstr &MI,
   // Determine the byte to check for non-zero-ness first.
   unsigned CondIdx;
   if (Inc) {
-    Builder.buildInstr(incDec8Opcode(STI, /*IsDec=*/false))
+    Builder.buildInstr(getIncPseudoOpcode(Builder))
         .add(Inc->getOperand(0))
         .add(Inc->getOperand(Inc->getNumExplicitDefs()));
     CondIdx = 2; // Opcode, Val, [LSB]

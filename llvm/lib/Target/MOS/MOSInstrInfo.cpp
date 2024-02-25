@@ -14,6 +14,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOSFrameLowering.h"
+#include "MOSInstrBuilder.h"
 #include "MOSRegisterInfo.h"
 
 #include "MOSSubtarget.h"
@@ -653,11 +654,9 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
           } else if (MOS::XYRegClass.contains(SrcReg)) {
             // A DEC/INC pair defines NZ without impacting other flags or
             // the register.
-            Builder.buildInstr(STI.hasGPRIncDec() ? MOS::DE_CMOS : MOS::DE,
-                               {SrcReg}, {SrcReg});
+            Builder.buildInstr(getDecOpcode(Builder), {SrcReg}, {SrcReg});
             Builder
-                .buildInstr(STI.hasGPRIncDec() ? MOS::IN_CMOS : MOS::IN,
-                            {SrcReg}, {SrcReg})
+                .buildInstr(getIncOpcode(Builder), {SrcReg}, {SrcReg})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});

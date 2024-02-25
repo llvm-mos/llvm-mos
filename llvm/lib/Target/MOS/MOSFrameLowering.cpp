@@ -14,6 +14,7 @@
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSInstrBuilder.h"
 #include "MOSMachineFunctionInfo.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
@@ -118,8 +119,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       continue;
     if (!StackRegClass.contains(Reg))
       Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
-    Builder.buildInstr(STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH, {},
-                       {Reg});
+    Builder.buildInstr(getPushOpcode(Builder), {}, {Reg});
   }
 
   // Record that the frame pointer is killed by these instructions.
