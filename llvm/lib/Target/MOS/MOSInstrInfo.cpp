@@ -956,10 +956,8 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandLDImm1(Builder);
     break;
   case MOS::LDImm16:
-    expandLDImm16(Builder);
-    break;
   case MOS::LDImm16SPC700:
-    expandLDImm16SPC700(Builder);
+    expandLDImm16(Builder);
     break;
   case MOS::LDImm16Remat:
     expandLDImm16Remat(Builder);
@@ -1091,60 +1089,43 @@ void MOSInstrInfo::expandLDImm16(MachineIRBuilder &Builder) const {
   auto &MI = *Builder.getInsertPt();
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
+  bool UseScratch = MI.getOpcode() != MOS::LDImm16SPC700;
+  auto LdImm = MOS::LDImm;
+  if (MI.getOpcode() == MOS::LDImm16SPC700)
+    LdImm = MOS::LDImmSPC700;
 
   Register Dst = MI.getOperand(0).getReg();
-  Register Tmp = MI.getOperand(1).getReg();
-  MachineOperand Src = MI.getOperand(2);
+  MachineOperand Src = MI.getOperand(UseScratch ? 2 : 1);
+  // This value is only valid if UseScratch is true.
+  Register Tmp = UseScratch ? MI.getOperand(1).getReg() : Register(0);
 
-  auto Lo = Builder.buildInstr(MOS::LDImm, {Tmp}, {});
+  Register LoReg = TRI.getSubReg(Dst, MOS::sublo);
+  auto Lo = Builder.buildInstr(LdImm);
+  Lo.addDef(UseScratch ? Tmp : LoReg);
   if (Src.isImm()) {
     Lo.addImm(Src.getImm() & 0xff);
   } else {
     Lo.add(Src);
     Lo->getOperand(1).setTargetFlags(MOS::MO_LO);
   }
-  copyPhysRegImpl(Builder, TRI.getSubReg(Dst, MOS::sublo), Tmp);
+  if (UseScratch)
+    copyPhysRegImpl(Builder, LoReg, Tmp);
 
-  auto Hi = Builder.buildInstr(MOS::LDImm, {Tmp}, {});
+  Register HiReg = TRI.getSubReg(Dst, MOS::subhi);
+  auto Hi = Builder.buildInstr(LdImm);
+  Hi.addDef(UseScratch ? Tmp : HiReg);
   if (Src.isImm()) {
     Hi.addImm(Src.getImm() >> 8);
   } else {
     Hi.add(Src);
     Hi->getOperand(1).setTargetFlags(MOS::MO_HI);
   }
-  // Appease the register scavenger by making this appear to be a
-  // redefinition.
-  if (Tmp.isVirtual())
-    Hi.addUse(Tmp, RegState::Implicit);
-  copyPhysRegImpl(Builder, TRI.getSubReg(Dst, MOS::subhi), Tmp);
-
-  MI.eraseFromParent();
-}
-
-void MOSInstrInfo::expandLDImm16SPC700(MachineIRBuilder &Builder) const {
-  auto &MI = *Builder.getInsertPt();
-  const TargetRegisterInfo &TRI =
-      *Builder.getMF().getSubtarget().getRegisterInfo();
-
-  Register Dst = MI.getOperand(0).getReg();
-  MachineOperand Src = MI.getOperand(1);
-
-  auto Lo = Builder.buildInstr(MOS::LDImmSPC700)
-                .addDef(TRI.getSubReg(Dst, MOS::sublo));
-  if (Src.isImm()) {
-    Lo.addImm(Src.getImm() & 0xff);
-  } else {
-    Lo.add(Src);
-    Lo->getOperand(1).setTargetFlags(MOS::MO_LO);
-  }
-
-  auto Hi = Builder.buildInstr(MOS::LDImmSPC700)
-                .addDef(TRI.getSubReg(Dst, MOS::subhi));
-  if (Src.isImm()) {
-    Hi.addImm(Src.getImm() >> 8);
-  } else {
-    Hi.add(Src);
-    Hi->getOperand(1).setTargetFlags(MOS::MO_HI);
+  if (UseScratch) {
+    // Appease the register scavenger by making this appear to be a
+    // redefinition.
+    if (Tmp.isVirtual())
+      Hi.addUse(Tmp, RegState::Implicit);
+    copyPhysRegImpl(Builder, HiReg, Tmp);
   }
 
   MI.eraseFromParent();

@@ -131,7 +131,6 @@ private:
   void expandLDIdx(MachineIRBuilder &Builder, bool ZP) const;
   void expandLDImm1(MachineIRBuilder &Builder) const;
   void expandLDImm16(MachineIRBuilder &Builder) const;
-  void expandLDImm16SPC700(MachineIRBuilder &Builder) const;
   void expandLDImm16Remat(MachineIRBuilder &Builder) const;
   void expandLDZ(MachineIRBuilder &Builder) const;
   void expandIncDec(MachineIRBuilder &Builder) const;
