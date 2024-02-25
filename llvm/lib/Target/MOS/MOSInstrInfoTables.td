@@ -13,16 +13,20 @@
 include "llvm/TableGen/SearchableTable.td"
 
 /// ---------------------------------------------------------------------------
-/// A MOS zero page instruction relaxation entry.  Used to relax 8 bit
+/// A MOS instruction relaxation entry.  Used primarily to relax 8 bit
 /// instructions that access zero page, to 16 bit equivalents, if the 
 /// target addresses do not necessarily reside in 8 bit memory. The same
 /// pattern is used to further relax 16 bit zero bank instructions into
 /// 24 bit equivalents for 65816.
+///
+/// On 65CE02, this is also used to relax branch operations.
 class MOSRelaxationEntry< InstAddressMode from, 
                           InstAddressMode to> {
   InstAddressMode From = from;
   InstAddressMode To = to;
 }
+
+/// MOS zero page/bank instruction relaxation entries.
 
 class ZeroPageInstructionRelaxationEntry< InstAddressMode from, 
                                           InstAddressMode to> :
@@ -151,8 +155,27 @@ def : ZPIRE< MUL_ZeroPageX_EL02, MUL_AbsoluteX_EL02 >;
 def : ZPIRE< DIV_ZeroPage_EL02, DIV_Absolute_EL02 >;
 def : ZPIRE< DIV_ZeroPageX_EL02, DIV_AbsoluteX_EL02 >;
 
+/// MOS branch instruction relaxation entries.
+
+class BranchInstructionRelaxationEntry< InstAddressMode from,
+                                        InstAddressMode to> :
+                                        MOSRelaxationEntry<from, to>;
+
+class BIRE< InstAddressMode from, InstAddressMode to> :
+	BranchInstructionRelaxationEntry< from, to >;
+
+def : BIRE< BCC_Relative, BCC_Relative16 >;
+def : BIRE< BCS_Relative, BCS_Relative16 >;
+def : BIRE< BEQ_Relative, BEQ_Relative16 >;
+def : BIRE< BMI_Relative, BMI_Relative16 >;
+def : BIRE< BNE_Relative, BNE_Relative16 >;
+def : BIRE< BPL_Relative, BPL_Relative16 >;
+def : BIRE< BRA_Relative, BRA_Relative16 >;
+def : BIRE< BVC_Relative, BVC_Relative16 >;
+def : BIRE< BVS_Relative, BVS_Relative16 >;
+
 /// ---------------------------------------------------------------------------
-/// The MOS zero page instruction lowering table.
+/// MOS instruction lowering tables.
 class MOSRelaxationTable : GenericTable {
   let FilterClass = NAME # "Entry";
   let CppTypeName = "InstructionRelaxationEntry";
@@ -164,3 +187,4 @@ class MOSRelaxationTable : GenericTable {
 
 def ZeroPageInstructionRelaxation : MOSRelaxationTable;
 def ZeroBankInstructionRelaxation : MOSRelaxationTable;
+def BranchInstructionRelaxation : MOSRelaxationTable;

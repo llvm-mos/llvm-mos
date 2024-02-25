@@ -56,6 +56,8 @@ struct InstructionRelaxationEntry {
 #define GET_ZeroPageInstructionRelaxation_IMPL
 #define GET_ZeroBankInstructionRelaxation_DECL
 #define GET_ZeroBankInstructionRelaxation_IMPL
+#define GET_BranchInstructionRelaxation_DECL
+#define GET_BranchInstructionRelaxation_IMPL
 
 struct MOSSPC700Entry {
   unsigned From;
@@ -256,6 +258,12 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   if (Info.TargetSize > (BankRelax ? 16 : 8))
     return true;
 
+  if (Info.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+    // This fixup concerns a relative branch.
+    // If the fixup is unresolved, we can't know if relaxation is needed.
+    return !Resolved || !fitsIntoFixup(Value, false);
+  }
+
   // See if the expression is derived from a zero page symbol.
   if (isBasedOnZeroPageSymbol(Fixup.getValue()))
     return false;
@@ -298,6 +306,24 @@ unsigned MOSAsmBackend::getNumFixupKinds() const {
 unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst,
                                            const MCSubtargetInfo &STI,
                                            bool &BankRelax) {
+  // Attempt branch relaxation.
+  const auto *BIRE =
+      MOS::getBranchInstructionRelaxationEntry(Inst.getOpcode());
+  if (BIRE) {
+    if (STI.hasFeature(MOS::FeatureW65816)) {
+      if (BIRE->To == MOS::BRA_Relative16)
+        return MOS::BRL_Relative16;
+      return 0;
+    }
+
+    if (STI.hasFeature(MOS::Feature65CE02)) {
+      return BIRE->To;
+    }
+
+    return 0;
+  }
+
+  // Attempt zero page/bank relaxation.
   const auto *ZPIRE =
       MOS::getZeroPageInstructionRelaxationEntry(Inst.getOpcode());
   if (ZPIRE)
