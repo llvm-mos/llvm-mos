@@ -1201,6 +1201,18 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(MachineInstr &MI,
   if (!VecEltTy.isByteSized())
     return false;
 
+  // Check for load fold barriers between the extraction and the load.
+  if (MI.getParent() != LoadMI->getParent())
+    return false;
+  const unsigned MaxIter = 20;
+  unsigned Iter = 0;
+  for (auto II = LoadMI->getIterator(), IE = MI.getIterator(); II != IE; ++II) {
+    if (II->isLoadFoldBarrier())
+      return false;
+    if (Iter++ == MaxIter)
+      return false;
+  }
+
   // Check if the new load that we are going to create is legal
   // if we are in the post-legalization phase.
   MachineMemOperand MMO = LoadMI->getMMO();
@@ -6530,7 +6542,8 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       B.setInstrAndDebugLoc(*Select);
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
       B.buildZExtOrTrunc(Ext, Cond);
-      B.buildOr(DstReg, Ext, False, Flags);
+      auto FreezeFalse = B.buildFreeze(TrueTy, False);
+      B.buildOr(DstReg, Ext, FreezeFalse, Flags);
     };
     return true;
   }
@@ -6543,7 +6556,8 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       B.setInstrAndDebugLoc(*Select);
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
       B.buildZExtOrTrunc(Ext, Cond);
-      B.buildAnd(DstReg, Ext, True);
+      auto FreezeTrue = B.buildFreeze(TrueTy, True);
+      B.buildAnd(DstReg, Ext, FreezeTrue);
     };
     return true;
   }
@@ -6560,7 +6574,8 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       // Then an ext to match the destination register.
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
       B.buildZExtOrTrunc(Ext, Inner);
-      B.buildOr(DstReg, Ext, True, Flags);
+      auto FreezeTrue = B.buildFreeze(TrueTy, True);
+      B.buildOr(DstReg, Ext, FreezeTrue, Flags);
     };
     return true;
   }
@@ -6577,7 +6592,8 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
       // Then an ext to match the destination register.
       Register Ext = MRI.createGenericVirtualRegister(TrueTy);
       B.buildZExtOrTrunc(Ext, Inner);
-      B.buildAnd(DstReg, Ext, False);
+      auto FreezeFalse = B.buildFreeze(TrueTy, False);
+      B.buildAnd(DstReg, Ext, FreezeFalse);
     };
     return true;
   }
