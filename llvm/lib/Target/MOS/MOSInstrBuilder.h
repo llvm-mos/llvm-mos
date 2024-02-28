@@ -33,16 +33,6 @@ static inline unsigned getDecPseudoOpcode(const MachineIRBuilder &Builder) {
   return STI.hasGPRIncDec() ? MOS::R_DEC_CMOS: MOS::R_DEC;
 }
 
-static inline unsigned getPushOpcode(const MachineIRBuilder &Builder) {
-  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
-  return STI.hasGPRStackRegs() ? MOS::PH_CMOS : MOS::PH;
-}
-
-static inline unsigned getPopOpcode(const MachineIRBuilder &Builder) {
-  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
-  return STI.hasGPRStackRegs() ? MOS::PL_CMOS : MOS::PL;
-}
-
 static inline MachineInstrBuilder
 buildLdImm(MachineIRBuilder &Builder, DstOp Dest) {
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();

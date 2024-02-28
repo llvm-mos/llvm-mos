@@ -129,11 +129,9 @@ static bool pushPullBalanced(MachineBasicBlock::iterator Begin,
   for (const MachineInstr &MI : make_range(Begin, End)) {
     switch (MI.getOpcode()) {
     case MOS::PH:
-    case MOS::PH_CMOS:
       ++PushCount;
       break;
     case MOS::PL:
-    case MOS::PL_CMOS:
       if (!PushCount)
         return false;
       --PushCount;
@@ -203,14 +201,14 @@ bool MOSRegisterInfo::saveScavengerRegister(MachineBasicBlock &MBB,
            "ranges");
 
     if (UseHardStack)
-      Builder.buildInstr(getPushOpcode(Builder), {}, {Reg});
+      Builder.buildInstr(MOS::PH, {}, {Reg});
     else
       Builder.buildInstr(MOS::STImag8, {Save}, {Reg});
 
     Builder.setInsertPt(MBB, UseMI);
 
     if (UseHardStack)
-      Builder.buildInstr(getPopOpcode(Builder), {Reg}, {});
+      Builder.buildInstr(MOS::PL, {Reg}, {});
     else
       Builder.buildInstr(MOS::LDImag8, {Reg}, {Save});
     break;

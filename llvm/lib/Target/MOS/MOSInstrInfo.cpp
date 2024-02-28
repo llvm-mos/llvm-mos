@@ -595,8 +595,8 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
       // The 65C02 can emit a PHX/PLY or PHY/PLX pair.
       assert(MOS::XYRegClass.contains(SrcReg));
       assert(MOS::XYRegClass.contains(DestReg));
-      Builder.buildInstr(MOS::PH_CMOS, {}, {SrcReg});
-      auto I = Builder.buildInstr(MOS::PL_CMOS, {DestReg}, {});
+      Builder.buildInstr(MOS::PH, {}, {SrcReg});
+      auto I = Builder.buildInstr(MOS::PL, {DestReg}, {});
       if (!STI.hasSPC700())
         I.addDef(MOS::NZ, RegState::Implicit);
     } else {
