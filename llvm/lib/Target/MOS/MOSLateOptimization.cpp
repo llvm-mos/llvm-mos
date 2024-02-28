@@ -209,8 +209,8 @@ void MOSLateOptimization::lowerCmpZero(MachineInstr &MI) const {
           break;
       }
 
-      Builder.buildInstr(MOS::INCImag8, {Val}, {Val});
-      Access = Builder.buildInstr(MOS::DECImag8, {Val}, {Val});
+      Builder.buildInstr(MOS::INC, {Val}, {Val});
+      Access = Builder.buildInstr(MOS::DEC, {Val}, {Val});
     }
     Access.addDef(MOS::NZ, RegState::Implicit);
     Access->getOperand(0).setIsDead();
@@ -332,7 +332,7 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
 
       if (Load) {
         MachineIRBuilder Builder(MI);
-        MI.setDesc(TII.get(Val > Load->Val ? getIncOpcode(Builder) : getDecOpcode(Builder)));
+        MI.setDesc(TII.get(Val > Load->Val ? MOS::INC : MOS::DEC));
         MI.getOperand(1).ChangeToRegister(Dst, /*isDef=*/false, /*isImp=*/false,
                                           /*isKill=*/true);
         MI.tieOperands(0, 1);

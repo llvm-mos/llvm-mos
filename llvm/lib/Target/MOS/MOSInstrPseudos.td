@@ -128,7 +128,7 @@ def CmpZero : MOSPseudo {
   let isCompare = true;
 }
 
-def INC : MOSPseudo {
+def R_INC : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi8:$src);
 
@@ -139,7 +139,7 @@ def INC : MOSPseudo {
   let isAdd = true;
 }
 
-def DEC : MOSPseudo {
+def R_DEC : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi8:$src);
 
@@ -153,7 +153,7 @@ let Predicates = [HasGPRIncDec] in {
   // As the 65C02 allows incrementing any register with INC/DEC only,
   // separate pseudos are defined which do not define C or V.
 
-  def IncCMOS : MOSPseudo {
+  def R_INC_CMOS : MOSPseudo {
     dag OutOperandList = (outs Anyi8:$dst);
     dag InOperandList = (ins Anyi8:$src);
 
@@ -163,7 +163,7 @@ let Predicates = [HasGPRIncDec] in {
     let AddedComplexity = 1;
   }
 
-  def DecCMOS : MOSPseudo {
+  def R_DEC_CMOS : MOSPseudo {
     dag OutOperandList = (outs Anyi8:$dst);
     dag InOperandList = (ins Anyi8:$src);
 

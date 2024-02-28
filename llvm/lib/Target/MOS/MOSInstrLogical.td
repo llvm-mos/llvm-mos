@@ -406,29 +406,16 @@ let mayLoad = true in {
 
 multiclass MOSIncDec {
   def NAME : MOSLogicalInstr {
-    dag OutOperandList = (outs XY:$dst);
-    dag InOperandList = (ins XY:$src);
-    let Constraints = "$src = $dst";
-  }
-
-  def _CMOS : MOSLogicalInstr {
-    dag OutOperandList = (outs GPR:$dst);
-    dag InOperandList = (ins GPR:$src);
-    let Constraints = "$src = $dst";
-    let Predicates = [HasGPRIncDec];
-  }
-
-  def CImag8 : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPage) addr8:$dst)> {
-    dag OutOperandList = (outs Imag8:$dst);
-    dag InOperandList = (ins Imag8:$src);
+    dag OutOperandList = (outs Anyi8:$dst);
+    dag InOperandList = (ins Anyi8:$src);
     let Constraints = "$src = $dst";
   }
 
   let mayLoad = true, mayStore = true in {
-    def CAbs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # C_ZeroPage) addr8:$addr)> {
+    def Abs : MOSLogicalInstr, PseudoInstExpansion<(!cast<Instruction>(NAME # _ZeroPage) addr8:$addr)> {
       dag InOperandList = (ins addr16:$addr);
     }
-    def CIdx : MOSLogicalInstr {
+    def Idx : MOSLogicalInstr {
       dag InOperandList = (ins addr16:$addr, Xc:$idx);
     }
   }
@@ -447,11 +434,11 @@ let mayLoad = true, mayStore = true in {
 }
 
 // DEX, DEY, DEC
-defm DE : MOSIncDec;
+defm DEC : MOSIncDec;
 
 // INX, INY, INC
 let isAdd = true in {
-  defm IN : MOSIncDec;
+  defm INC : MOSIncDec;
 }
 
 //===---------------------------------------------------------------------===//
