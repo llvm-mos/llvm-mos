@@ -64,7 +64,7 @@ bool MOSLateOptimization::runOnMachineFunction(MachineFunction &MF) {
 static bool definesNZ(const MachineInstr &MI, Register Val, const MOSSubtarget &STI) {
   if (MI.getOpcode() == MOS::CL)
     return false;
-  if (STI.hasSPC700() && MI.getOpcode() == MOS::PL_CMOS)
+  if (STI.hasSPC700() && MI.getOpcode() == MOS::PL)
     return false;
   if (MI.getOpcode() == MOS::MOVImag8)
     return false;
@@ -122,12 +122,10 @@ bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
         case MOS::MOVImag8:
         case MOS::STImag8:
         case MOS::PH:
-        case MOS::PH_CMOS:
         case MOS::SWAP:
           ClobbersNZ = false;
           break;
         case MOS::PL:
-        case MOS::PL_CMOS:
           if (STI.hasSPC700())
             ClobbersNZ = false;
           break;

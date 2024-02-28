@@ -488,34 +488,18 @@ def SWAP : MOSLogicalInstr {
 // Stack Instructions
 //===---------------------------------------------------------------------===//
 
-// PHA, PHP
+// PHA, PLX, PLY, PHP
 def PH : MOSLogicalInstr {
-  dag InOperandList = (ins AP:$src);
+  dag InOperandList = (ins AXYP:$src);
 
   let mayStore = true;
 }
 
-// PLA, PLP
+// PLA, PLX, PLY, PLP
 def PL : MOSLogicalInstr {
-  dag OutOperandList = (outs AP:$dst);
+  dag OutOperandList = (outs AXYP:$dst);
 
   let mayLoad = true;
-}
-
-let Predicates = [HasGPRStackRegs] in {
-  // PHA, PHP
-  def PH_CMOS : MOSLogicalInstr {
-    dag InOperandList = (ins AXYP:$src);
-
-    let mayStore = true;
-  }
-
-  // PLA, PLX, PLY, PLP
-  def PL_CMOS : MOSLogicalInstr {
-    dag OutOperandList = (outs AXYP:$dst);
-
-    let mayLoad = true;
-  }
 }
 
 //===---------------------------------------------------------------------===//
