@@ -114,8 +114,8 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_zp_global
-    ; CHECK: [[LDImmSPC700_:%[0-9]+]]:anyi8 = LDImmSPC700 @.str
-    ; CHECK-NEXT: RTS implicit [[LDImmSPC700_]]
+    ; CHECK: [[LDImm_:%[0-9]+]]:anyi8 = LDImm @.str
+    ; CHECK-NEXT: RTS implicit [[LDImm_]]
     %0:any(p1) = G_GLOBAL_VALUE @.str
     RTS implicit %0
 ...
@@ -126,8 +126,8 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm_zp_global_offset
-    ; CHECK: [[LDImmSPC700_:%[0-9]+]]:anyi8 = LDImmSPC700 @.str + 123
-    ; CHECK-NEXT: RTS implicit [[LDImmSPC700_]]
+    ; CHECK: [[LDImm_:%[0-9]+]]:anyi8 = LDImm @.str + 123
+    ; CHECK-NEXT: RTS implicit [[LDImm_]]
     %0:any(p1) = G_GLOBAL_VALUE @.str + 123
     RTS implicit %0
 ...
@@ -138,9 +138,9 @@ regBankSelected: true
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: unmerge_global
-    ; CHECK: [[LDImmSPC700_:%[0-9]+]]:anyi8 = LDImmSPC700 target-flags(lo) @.str
-    ; CHECK-NEXT: [[LDImmSPC700_1:%[0-9]+]]:anyi8 = LDImmSPC700 target-flags(hi) @.str
-    ; CHECK-NEXT: RTS implicit [[LDImmSPC700_]], implicit [[LDImmSPC700_1]]
+    ; CHECK: [[LDImm_:%[0-9]+]]:anyi8 = LDImm target-flags(lo) @.str
+    ; CHECK-NEXT: [[LDImm_1:%[0-9]+]]:anyi8 = LDImm target-flags(hi) @.str
+    ; CHECK-NEXT: RTS implicit [[LDImm_]], implicit [[LDImm_1]]
     %0:any(p0) = G_GLOBAL_VALUE @.str
     %1:any(s8), %2:any(s8) = G_UNMERGE_VALUES %0
     RTS implicit %1, implicit %2

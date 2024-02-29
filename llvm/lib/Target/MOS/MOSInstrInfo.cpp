@@ -925,6 +925,21 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   });
 }
 
+const TargetRegisterClass *
+MOSInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
+                          const TargetRegisterInfo *TRI,
+                          const MachineFunction &MF) const {
+  auto *RC = TargetInstrInfo::getRegClass(MCID, OpNum, TRI, MF);
+  const MOSSubtarget &STI = MF.getSubtarget<MOSSubtarget>();
+
+  // On SPC700, LDImm can be used for imaginary registers.
+  if (STI.hasSPC700() && MCID.getOpcode() == MOS::LDImm && OpNum == 0) {
+    return &MOS::Anyi8RegClass;
+  }
+
+  return RC;
+}
+
 bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineIRBuilder Builder(MI);
 
@@ -1089,9 +1104,6 @@ void MOSInstrInfo::expandLDImm16(MachineIRBuilder &Builder) const {
   const TargetRegisterInfo &TRI =
       *Builder.getMF().getSubtarget().getRegisterInfo();
   bool UseScratch = MI.getOpcode() != MOS::LDImm16SPC700;
-  auto LdImm = MOS::LDImm;
-  if (MI.getOpcode() == MOS::LDImm16SPC700)
-    LdImm = MOS::LDImmSPC700;
 
   Register Dst = MI.getOperand(0).getReg();
   MachineOperand Src = MI.getOperand(UseScratch ? 2 : 1);
@@ -1099,7 +1111,7 @@ void MOSInstrInfo::expandLDImm16(MachineIRBuilder &Builder) const {
   Register Tmp = UseScratch ? MI.getOperand(1).getReg() : Register(0);
 
   Register LoReg = TRI.getSubReg(Dst, MOS::sublo);
-  auto Lo = Builder.buildInstr(LdImm);
+  auto Lo = Builder.buildInstr(MOS::LDImm);
   Lo.addDef(UseScratch ? Tmp : LoReg);
   if (Src.isImm()) {
     Lo.addImm(Src.getImm() & 0xff);
@@ -1111,7 +1123,7 @@ void MOSInstrInfo::expandLDImm16(MachineIRBuilder &Builder) const {
     copyPhysRegImpl(Builder, LoReg, Tmp);
 
   Register HiReg = TRI.getSubReg(Dst, MOS::subhi);
-  auto Hi = Builder.buildInstr(LdImm);
+  auto Hi = Builder.buildInstr(MOS::LDImm);
   Hi.addDef(UseScratch ? Tmp : HiReg);
   if (Src.isImm()) {
     Hi.addImm(Src.getImm() >> 8);

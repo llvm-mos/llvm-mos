@@ -98,6 +98,11 @@ public:
                              const TargetRegisterClass *RC,
                              const TargetRegisterInfo *TRI, bool IsLoad) const;
 
+  const TargetRegisterClass *
+  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
+              const TargetRegisterInfo *TRI,
+              const MachineFunction &MF) const override;
+
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   bool

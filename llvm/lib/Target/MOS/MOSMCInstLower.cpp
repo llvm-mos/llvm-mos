@@ -382,22 +382,19 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     return;
   }
   case MOS::LDImm:
-  case MOS::LDImmSPC700:
   case MOS::LDAbs:
   case MOS::LDImag8:
   case MOS::STAbs: {
-    if (MI->getOpcode() == MOS::LDImmSPC700) {
-      if (MOS::Imag8RegClass.contains(MI->getOperand(0).getReg())) {
-        OutMI.setOpcode(MOS::SPC700_MOV_ZeroPageImmediate);
-        MCOperand Dst, Val;
-        if (!lowerOperand(MI->getOperand(0), Dst))
-          llvm_unreachable("Failed to lower operand");
-        OutMI.addOperand(Dst);
-        if (!lowerOperand(MI->getOperand(1), Val))
-          llvm_unreachable("Failed to lower operand");
-        OutMI.addOperand(Val);
-        return;
-      }
+    if (MOS::Imag8RegClass.contains(MI->getOperand(0).getReg())) {
+      OutMI.setOpcode(MOS::SPC700_MOV_ZeroPageImmediate);
+      MCOperand Dst, Val;
+      if (!lowerOperand(MI->getOperand(0), Dst))
+        llvm_unreachable("Failed to lower operand");
+      OutMI.addOperand(Dst);
+      if (!lowerOperand(MI->getOperand(1), Val))
+        llvm_unreachable("Failed to lower operand");
+      OutMI.addOperand(Val);
+      return;
     }
     switch (MI->getOperand(0).getReg()) {
     default:
@@ -405,7 +402,6 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     case MOS::A:
       switch (MI->getOpcode()) {
       case MOS::LDImm:
-      case MOS::LDImmSPC700:
         OutMI.setOpcode(MOS::LDA_Immediate);
         break;
       case MOS::LDAbs:
@@ -420,7 +416,6 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     case MOS::X:
       switch (MI->getOpcode()) {
       case MOS::LDImm:
-      case MOS::LDImmSPC700:
         OutMI.setOpcode(MOS::LDX_Immediate);
         break;
       case MOS::LDAbs:
@@ -435,7 +430,6 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     case MOS::Y:
       switch (MI->getOpcode()) {
       case MOS::LDImm:
-      case MOS::LDImmSPC700:
         OutMI.setOpcode(MOS::LDY_Immediate);
         break;
       case MOS::LDAbs:

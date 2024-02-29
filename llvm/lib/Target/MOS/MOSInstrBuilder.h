@@ -39,13 +39,12 @@ buildLdImm(MachineIRBuilder &Builder, DstOp Dest) {
   LLT DestType = Dest.getLLTTy(*Builder.getMRI());
   assert(DestType.isByteSized() && DestType.getScalarSizeInBits() <= 16);
 
-  if (STI.hasSPC700()) {
-    return Builder.buildInstr(DestType.getScalarSizeInBits() == 16
-                                ? MOS::LDImm16SPC700 : MOS::LDImmSPC700,
-                                {Dest}, {});
-  }
-
   if (DestType.getScalarSizeInBits() == 16) {
+    if (STI.hasSPC700()) {
+      return Builder
+              .buildInstr(MOS::LDImm16SPC700, {Dest}, {});
+    }
+
     return Builder
             .buildInstr(MOS::LDImm16, {Dest, &MOS::GPRRegClass}, {});
   }
