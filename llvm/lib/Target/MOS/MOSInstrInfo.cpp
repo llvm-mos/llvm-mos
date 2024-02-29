@@ -934,10 +934,10 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Changed = false;
     break;
   // Post RA
-  case MOS::R_INC:
-  case MOS::R_DEC:
-  case MOS::R_INC_CMOS:
-  case MOS::R_DEC_CMOS:
+  case MOS::IncNMOS:
+  case MOS::DecNMOS:
+  case MOS::IncCMOS:
+  case MOS::DecCMOS:
     expandIncDec(Builder);
     break;
   case MOS::IncPtr:
@@ -1165,11 +1165,11 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
 
   auto &MI = *Builder.getInsertPt();
   Register R = MI.getOperand(0).getReg();
-  bool IsInc = MI.getOpcode() == MOS::R_INC || MI.getOpcode() == MOS::R_INC_CMOS;
-  assert(IsInc || MI.getOpcode() == MOS::R_DEC || MI.getOpcode() == MOS::R_DEC_CMOS);
+  bool IsInc = MI.getOpcode() == MOS::IncNMOS || MI.getOpcode() == MOS::IncCMOS;
+  assert(IsInc || MI.getOpcode() == MOS::DecNMOS || MI.getOpcode() == MOS::DecCMOS);
 
   bool IsCMOS =
-      MI.getOpcode() == MOS::R_INC_CMOS || MI.getOpcode() == MOS::R_DEC_CMOS;
+      MI.getOpcode() == MOS::IncCMOS || MI.getOpcode() == MOS::DecCMOS;
   if (IsCMOS && !STI.hasGPRIncDec()) {
     llvm_unreachable(
         "Unexpected CMOS pseudoinstruction on non-CMOS subtarget.");

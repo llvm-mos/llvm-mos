@@ -561,10 +561,10 @@ bool referencedByIncDec(Register Reg, const MachineRegisterInfo &MRI) {
     switch (MI.getOpcode()) {
     default:
       break;
-    case MOS::R_INC:
-    case MOS::R_DEC:
-    case MOS::R_INC_CMOS:
-    case MOS::R_DEC_CMOS:
+    case MOS::IncNMOS:
+    case MOS::DecNMOS:
+    case MOS::IncCMOS:
+    case MOS::DecCMOS:
     case MOS::IncMB:
     case MOS::DecMB:
     case MOS::DecDcpMB:
@@ -774,10 +774,10 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
       break;
     }
 
-    case MOS::R_INC:
-    case MOS::R_DEC:
-    case MOS::R_INC_CMOS:
-    case MOS::R_DEC_CMOS:
+    case MOS::IncNMOS:
+    case MOS::DecNMOS:
+    case MOS::IncCMOS:
+    case MOS::DecCMOS:
     case MOS::IncMB:
     case MOS::DecMB:
     case MOS::DecDcpMB: {

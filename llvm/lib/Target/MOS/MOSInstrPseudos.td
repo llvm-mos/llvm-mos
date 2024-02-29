@@ -128,7 +128,9 @@ def CmpZero : MOSPseudo {
   let isCompare = true;
 }
 
-def R_INC : MOSPseudo {
+// On 6502, INC/DEC cannot be directly performed on the A register;
+// to do so, one has to use ADC/SBC, which affects the C and V flags.
+def IncNMOS : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi8:$src);
 
@@ -139,7 +141,7 @@ def R_INC : MOSPseudo {
   let isAdd = true;
 }
 
-def R_DEC : MOSPseudo {
+def DecNMOS : MOSPseudo {
   dag OutOperandList = (outs Anyi8:$dst);
   dag InOperandList = (ins Anyi8:$src);
 
@@ -149,11 +151,11 @@ def R_DEC : MOSPseudo {
   let Pattern = [(set Anyi8:$dst, (add Anyi8:$src, -1))];
 }
 
+// As the 65C02 allows incrementing any register with INC/DEC only,
+// separate pseudos are defined which do not define C or V.
+// These correspond directly to INC and DEC.
 let Predicates = [HasGPRIncDec] in {
-  // As the 65C02 allows incrementing any register with INC/DEC only,
-  // separate pseudos are defined which do not define C or V.
-
-  def R_INC_CMOS : MOSPseudo {
+  def IncCMOS : MOSPseudo {
     dag OutOperandList = (outs Anyi8:$dst);
     dag InOperandList = (ins Anyi8:$src);
 
@@ -163,7 +165,7 @@ let Predicates = [HasGPRIncDec] in {
     let AddedComplexity = 1;
   }
 
-  def R_DEC_CMOS : MOSPseudo {
+  def DecCMOS : MOSPseudo {
     dag OutOperandList = (outs Anyi8:$dst);
     dag InOperandList = (ins Anyi8:$src);
 
@@ -173,6 +175,7 @@ let Predicates = [HasGPRIncDec] in {
   }
 }
 
+// Pointer increment/decrement.
 class MOSIncDecPtr : MOSPseudo {
   dag InOperandList = (ins Imag16:$src);
   let Defs = [C, V];

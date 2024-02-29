@@ -25,12 +25,12 @@ namespace llvm {
 
 static inline unsigned getIncPseudoOpcode(const MachineIRBuilder &Builder) {
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
-  return STI.hasGPRIncDec() ? MOS::R_INC_CMOS : MOS::R_INC;
+  return STI.hasGPRIncDec() ? MOS::IncCMOS : MOS::IncNMOS;
 }
 
 static inline unsigned getDecPseudoOpcode(const MachineIRBuilder &Builder) {
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
-  return STI.hasGPRIncDec() ? MOS::R_DEC_CMOS: MOS::R_DEC;
+  return STI.hasGPRIncDec() ? MOS::DecCMOS: MOS::DecNMOS;
 }
 
 static inline MachineInstrBuilder

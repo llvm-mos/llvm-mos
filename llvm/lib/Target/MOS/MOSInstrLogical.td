@@ -621,8 +621,9 @@ def : Pat<(i8 (trunc Imag16:$s)), (EXTRACT_SUBREG Imag16:$s, sublo)>;
 // Constant Patterns
 //===---------------------------------------------------------------------===//
 
-let Predicates = [HasSPC700] in {
-  def : Pat<(i8 imm:$s), (LDImmSPC700 imm:$s)>;
+def : Pat<(i8 imm:$s), (LDImmSPC700 imm:$s)> {
+  let Predicates = [HasSPC700];
+  let AddedComplexity = 1;
 }
 
 def : Pat<(i1 imm:$s), (LDImm1 imm:$s)>;
