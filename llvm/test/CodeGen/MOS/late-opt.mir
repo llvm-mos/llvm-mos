@@ -231,8 +231,8 @@ body: |
     ; CHECK-LABEL: name: cmpzero_imag8_no_gpr_free
     ; CHECK: liveins: $rc2, $a, $x, $y
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rc2 = INCImag8 $rc2
-    ; CHECK-NEXT: dead $rc2 = DECImag8 $rc2, implicit-def $nz
+    ; CHECK-NEXT: $rc2 = INC $rc2
+    ; CHECK-NEXT: dead $rc2 = DEC $rc2, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     CmpZero $rc2, implicit-def $n, implicit-def $c
     RTS implicit $n, implicit $a, implicit $x, implicit $y
@@ -246,11 +246,11 @@ body: |
     ; CHECK: liveins: $rc2, $x, $y
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $a = LDImag8 $rc2
-    ; CHECK-NEXT: $x = IN $x
+    ; CHECK-NEXT: $x = INC $x
     ; CHECK-NEXT: dead $c = CMPImm $a, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     $a = LDImag8 $rc2
-    $x = IN $x
+    $x = INC $x
     CmpZero $rc2, implicit-def $n, implicit-def $c
     RTS implicit $n, implicit $a, implicit $x, implicit $y
 ...
@@ -263,11 +263,11 @@ body: |
     ; CHECK: liveins: $rc2, $a, $x, $y
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x = LDImag8 $rc2
-    ; CHECK-NEXT: $y = IN $y
+    ; CHECK-NEXT: $y = INC $y
     ; CHECK-NEXT: dead $c = CMPImm $x, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     $x = LDImag8 $rc2
-    $y = IN $y
+    $y = INC $y
     CmpZero $rc2, implicit-def $n, implicit-def $c
     RTS implicit $n, implicit $a, implicit $x, implicit $y
 ...
@@ -280,11 +280,11 @@ body: |
     ; CHECK: liveins: $rc2, $a, $x, $y
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $y = LDImag8 $rc2
-    ; CHECK-NEXT: $x = IN $x
+    ; CHECK-NEXT: $x = INC $x
     ; CHECK-NEXT: dead $c = CMPImm $y, 0, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     $y = LDImag8 $rc2
-    $x = IN $x
+    $x = INC $x
     CmpZero $rc2, implicit-def $n, implicit-def $c
     RTS implicit $n, implicit $a, implicit $x, implicit $y
 ...
@@ -298,8 +298,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $a = LDImag8 $rc2
     ; CHECK-NEXT: $a = COPY $x
-    ; CHECK-NEXT: $rc2 = INCImag8 $rc2
-    ; CHECK-NEXT: dead $rc2 = DECImag8 $rc2, implicit-def $nz
+    ; CHECK-NEXT: $rc2 = INC $rc2
+    ; CHECK-NEXT: dead $rc2 = DEC $rc2, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     $a = LDImag8 $rc2
     $a = COPY $x
@@ -349,14 +349,14 @@ body: |
     ; CHECK: liveins: $rc2, $a, $x, $y
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $a = LDImag8 $rc2
-    ; CHECK-NEXT: $rc2 = INCImag8 $rc2
-    ; CHECK-NEXT: $x = IN $x
-    ; CHECK-NEXT: $rc2 = INCImag8 $rc2
-    ; CHECK-NEXT: dead $rc2 = DECImag8 $rc2, implicit-def $nz
+    ; CHECK-NEXT: $rc2 = INC $rc2
+    ; CHECK-NEXT: $x = INC $x
+    ; CHECK-NEXT: $rc2 = INC $rc2
+    ; CHECK-NEXT: dead $rc2 = DEC $rc2, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     $a = LDImag8 $rc2
-    $rc2 = INCImag8 $rc2
-    $x = IN $x
+    $rc2 = INC $rc2
+    $x = INC $x
     CmpZero $rc2, implicit-def $n, implicit-def $c
     RTS implicit $n, implicit $a, implicit $x, implicit $y
 ...
@@ -370,8 +370,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $rc2 = STImag8 $a
     ; CHECK-NEXT: $a = EORImm $a, 42
-    ; CHECK-NEXT: $rc2 = INCImag8 $rc2
-    ; CHECK-NEXT: dead $rc2 = DECImag8 $rc2, implicit-def $nz
+    ; CHECK-NEXT: $rc2 = INC $rc2
+    ; CHECK-NEXT: dead $rc2 = DEC $rc2, implicit-def $nz
     ; CHECK-NEXT: RTS implicit $n, implicit $a, implicit $x, implicit $y
     $rc2 = STImag8 $a
     $a = EORImm $a, 42
@@ -399,10 +399,10 @@ body: |
     ; CHECK-LABEL: name: ldxyimm_to_inxydexy
     ; CHECK: $x = LDImm 0
     ; CHECK-NEXT: $y = LDImm 5
-    ; CHECK-NEXT: $x = IN $x
-    ; CHECK-NEXT: $y = IN $y
-    ; CHECK-NEXT: $x = DE killed $x
-    ; CHECK-NEXT: $y = DE killed $y
+    ; CHECK-NEXT: $x = INC $x
+    ; CHECK-NEXT: $y = INC $y
+    ; CHECK-NEXT: $x = DEC killed $x
+    ; CHECK-NEXT: $y = DEC killed $y
     ; CHECK-NEXT: RTS implicit $x, implicit $y
     dead $x = LDImm 0
     dead $y = LDImm 5
@@ -445,7 +445,7 @@ body: |
     ; CHECK-LABEL: name: ldxyimm_clear_killed
     ; CHECK: $x = LDImm 0
     ; CHECK-NEXT: $rc0 = STImag8 $x
-    ; CHECK-NEXT: $x = IN killed $x
+    ; CHECK-NEXT: $x = INC killed $x
     ; CHECK-NEXT: RTS implicit $x
     $x = LDImm 0
     $rc0 = STImag8 killed $x

@@ -21,7 +21,7 @@ body: |
     ; CHECK-LABEL: name: xy_to_xy_src_alive
     ; CHECK: liveins: $x
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: PH_CMOS $x
-    ; CHECK-NEXT: $y = PL_CMOS implicit-def $nz
+    ; CHECK-NEXT: PH $x
+    ; CHECK-NEXT: $y = PL implicit-def $nz
     $y = COPY $x
 ...
