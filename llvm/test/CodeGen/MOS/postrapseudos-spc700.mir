@@ -45,7 +45,7 @@ name: ldimm16
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: ldimm16
-    ; CHECK: $rc2 = LDImmSPC700 210
-    ; CHECK-NEXT: $rc3 = LDImmSPC700 4
+    ; CHECK: $rc2 = LDImm 210
+    ; CHECK-NEXT: $rc3 = LDImm 4
     $rs1 = LDImm16SPC700 1234
 ...
