@@ -37,8 +37,8 @@ body: |
     ; CHECK: liveins: $x, $y, $rc0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $rc0 = STImag8 $x
-    ; CHECK-NEXT: PH_CMOS $y
-    ; CHECK-NEXT: $x = PL_CMOS
+    ; CHECK-NEXT: PH $y
+    ; CHECK-NEXT: $x = PL
     ; CHECK-NEXT: $rc1 = MOVImag8 $rc0
     $rc0 = COPY $x
     $x = COPY $y
@@ -100,8 +100,8 @@ body: |
     ; CHECK: liveins: $x, $y, $rc0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x = LDImag8 $rc0
-    ; CHECK-NEXT: PH_CMOS $y
-    ; CHECK-NEXT: $x = PL_CMOS
+    ; CHECK-NEXT: PH $y
+    ; CHECK-NEXT: $x = PL
     ; CHECK-NEXT: $rc1 = MOVImag8 $rc0
     $x = COPY $rc0
     $x = COPY $y

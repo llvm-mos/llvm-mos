@@ -108,7 +108,7 @@ body: |
     ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = INC $a, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: $a = IncNMOS $a, implicit-def $c, implicit-def $v, implicit-def $z
     ; CHECK-NEXT: BR %bb.2, $z, -1
     ; CHECK-NEXT: JMP %bb.1
     ; CHECK-NEXT: {{  $}}
@@ -116,7 +116,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
     ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x = INC $x, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: $x = IncNMOS $x, implicit-def $c, implicit-def $v, implicit-def $z
     ; CHECK-NEXT: BR %bb.4, $z, -1
     ; CHECK-NEXT: JMP %bb.3
     ; CHECK-NEXT: {{  $}}
@@ -124,7 +124,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.5(0x40000000), %bb.6(0x40000000)
     ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $y = INC $y, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: $y = IncNMOS $y, implicit-def $c, implicit-def $v, implicit-def $z
     ; CHECK-NEXT: BR %bb.6, $z, -1
     ; CHECK-NEXT: JMP %bb.5
     ; CHECK-NEXT: {{  $}}
@@ -132,7 +132,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.5(0x80000000)
     ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rc2 = INC $rc2, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $rc2 = IncNMOS $rc2, implicit-def $c, implicit-def $v
     ; CHECK-NEXT: JMP %bb.5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .5.entry:
@@ -164,7 +164,7 @@ body: |
     ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = INC $a, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: $a = IncNMOS $a, implicit-def $c, implicit-def $v, implicit-def $z
     ; CHECK-NEXT: BR %bb.2, $z, -1
     ; CHECK-NEXT: JMP %bb.1
     ; CHECK-NEXT: {{  $}}
@@ -172,7 +172,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x = INC $x, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: $x = IncNMOS $x, implicit-def $c, implicit-def $v, implicit-def $z
     ; CHECK-NEXT: BR %bb.4, $z, -1
     ; CHECK-NEXT: JMP %bb.3
     ; CHECK-NEXT: {{  $}}
@@ -180,7 +180,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.5(0x40000000), %bb.6(0x40000000)
     ; CHECK-NEXT: liveins: $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $y = INC $y, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: $y = IncNMOS $y, implicit-def $c, implicit-def $v, implicit-def $z
     ; CHECK-NEXT: BR %bb.6, $z, -1
     ; CHECK-NEXT: JMP %bb.5
     ; CHECK-NEXT: {{  $}}
@@ -188,7 +188,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.5(0x80000000)
     ; CHECK-NEXT: liveins: $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rc2 = INC $rc2, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $rc2 = IncNMOS $rc2, implicit-def $c, implicit-def $v
     ; CHECK-NEXT: JMP %bb.5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .5.entry:
@@ -220,7 +220,7 @@ body: |
     ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x = DEC $x, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $x = DecNMOS $x, implicit-def $c, implicit-def $v
     ; CHECK-NEXT: $c = CMPImm $x, 255, implicit-def $z
     ; CHECK-NEXT: BR %bb.2, $z, -1
     ; CHECK-NEXT: JMP %bb.1
@@ -229,7 +229,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.4(0x40000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $y = DEC $y, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $y = DecNMOS $y, implicit-def $c, implicit-def $v
     ; CHECK-NEXT: $c = CMPImm $y, 255, implicit-def $z
     ; CHECK-NEXT: BR %bb.4, $z, -1
     ; CHECK-NEXT: JMP %bb.3
@@ -239,7 +239,7 @@ body: |
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $a = LDImm 255
-    ; CHECK-NEXT: $rc2 = DEC $rc2, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $rc2 = DecNMOS $rc2, implicit-def $c, implicit-def $v
     ; CHECK-NEXT: $c = CMPImag8 $a, $rc2, implicit-def $z
     ; CHECK-NEXT: BR %bb.6, $z, -1
     ; CHECK-NEXT: JMP %bb.5
@@ -248,7 +248,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.5(0x80000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $rc3 = DEC $rc3, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $rc3 = DecNMOS $rc3, implicit-def $c, implicit-def $v
     ; CHECK-NEXT: JMP %bb.5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .5.entry:
@@ -280,7 +280,7 @@ body: |
     ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; CHECK-NEXT: liveins: $a, $x, $y, $rc2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $a = INC $a, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: $a = IncNMOS $a, implicit-def $c, implicit-def $v, implicit-def $z
     ; CHECK-NEXT: BR %bb.2, $z, -1
     ; CHECK-NEXT: JMP %bb.1
     ; CHECK-NEXT: {{  $}}
@@ -296,7 +296,7 @@ body: |
     ; CHECK-NEXT: successors: %bb.5(0x40000000), %bb.6(0x40000000)
     ; CHECK-NEXT: liveins: $a, $y
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $y = INC $y, implicit-def $c, implicit-def $v, implicit-def $z
+    ; CHECK-NEXT: $y = IncNMOS $y, implicit-def $c, implicit-def $v, implicit-def $z
     ; CHECK-NEXT: BR %bb.6, $z, -1
     ; CHECK-NEXT: JMP %bb.5
     ; CHECK-NEXT: {{  $}}
@@ -336,7 +336,7 @@ body: |
     ; CHECK: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; CHECK-NEXT: liveins: $x, $y, $rc2, $rc3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $y = DEC $y, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $y = DecNMOS $y, implicit-def $c, implicit-def $v
     ; CHECK-NEXT: $c = CMPImm $y, 255, implicit-def $z
     ; CHECK-NEXT: BR %bb.2, $z, -1
     ; CHECK-NEXT: JMP %bb.1
@@ -356,7 +356,7 @@ body: |
     ; CHECK-NEXT: liveins: $y, $rc2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $a = LDImm 255
-    ; CHECK-NEXT: $rc2 = DEC $rc2, implicit-def $c, implicit-def $v
+    ; CHECK-NEXT: $rc2 = DecNMOS $rc2, implicit-def $c, implicit-def $v
     ; CHECK-NEXT: $c = CMPImag8 $a, $rc2, implicit-def $z
     ; CHECK-NEXT: BR %bb.6, $z, -1
     ; CHECK-NEXT: JMP %bb.5
@@ -450,7 +450,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $a = INC $a, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   $a = IncNMOS $a, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $a, implicit-def $c
   ; CHECK-NEXT:   JMP %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -458,7 +458,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x = INC $x, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   $x = IncNMOS $x, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $x, implicit-def $c
   ; CHECK-NEXT:   JMP %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -510,7 +510,7 @@ body: |
   ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $y = LDImm 255
-  ; CHECK-NEXT:   $rc2 = DEC $rc2, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   $rc2 = DecNMOS $rc2, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   $c = CMPImag8 $y, $rc2, implicit-def $z
   ; CHECK-NEXT:   BR %bb.3, $z, -1
   ; CHECK-NEXT:   JMP %bb.2
@@ -519,14 +519,14 @@ body: |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $rc3 = DEC $rc3, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   $rc3 = DecNMOS $rc3, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   JMP %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $a = INC $a, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   $a = IncNMOS $a, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $a, implicit-def $c
   ; CHECK-NEXT:   JMP %bb.4
   ; CHECK-NEXT: {{  $}}
@@ -534,7 +534,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $a, $x, $rc2, $rc3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x = INC $x, implicit-def $c, implicit-def $v
+  ; CHECK-NEXT:   $x = IncNMOS $x, implicit-def $c, implicit-def $v
   ; CHECK-NEXT:   CmpBrZero %bb.0, undef $z, 0, $x, implicit-def $c
   ; CHECK-NEXT:   JMP %bb.1
   ; CHECK-NEXT: {{  $}}

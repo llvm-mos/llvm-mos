@@ -9,8 +9,8 @@ body: |
     ; CHECK-LABEL: name: xlsb_to_v
     ; CHECK: liveins: $xlsb
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x = DE_CMOS $x
-    ; CHECK-NEXT: $x = IN_CMOS $x, implicit-def $nz
+    ; CHECK-NEXT: $x = DEC $x
+    ; CHECK-NEXT: $x = INC $x, implicit-def $nz
     ; CHECK-NEXT: $v = SelectImm $z, 0, -1
     $v = COPY $xlsb
 ...
@@ -23,8 +23,8 @@ body: |
     ; CHECK-LABEL: name: ylsb_to_v
     ; CHECK: liveins: $ylsb
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $y = DE_CMOS $y
-    ; CHECK-NEXT: $y = IN_CMOS $y, implicit-def $nz
+    ; CHECK-NEXT: $y = DEC $y
+    ; CHECK-NEXT: $y = INC $y, implicit-def $nz
     ; CHECK-NEXT: $v = SelectImm $z, 0, -1
     $v = COPY $ylsb
 ...
@@ -37,7 +37,7 @@ body: |
     ; CHECK-LABEL: name: xy_to_xy
     ; CHECK: liveins: $x
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: PH_CMOS $x
-    ; CHECK-NEXT: $y = PL_CMOS implicit-def $nz
+    ; CHECK-NEXT: PH $x
+    ; CHECK-NEXT: $y = PL implicit-def $nz
     $y = COPY $x
 ...

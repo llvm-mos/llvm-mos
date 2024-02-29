@@ -439,7 +439,7 @@ name: dea_implied
 # CHECK-LABEL: dea_implied
 body: |
   bb.0.entry:
-    $a = DE_CMOS $a
+    $a = DEC $a
     ; CHECK: dec{{$}}
     RTS
     ; CHECK-NEXT: rts
@@ -449,7 +449,7 @@ name: ina_implied
 # CHECK-LABEL: ina_implied
 body: |
   bb.0.entry:
-    $a = IN_CMOS $a
+    $a = INC $a
     ; CHECK: inc{{$}}
     RTS
     ; CHECK-NEXT: rts
@@ -459,7 +459,7 @@ name: dex_implied
 # CHECK-LABEL: dex_implied
 body: |
   bb.0.entry:
-    $x = DE $x
+    $x = DEC $x
     ; CHECK: dex{{$}}
     RTS
     ; CHECK-NEXT: rts
@@ -469,7 +469,7 @@ name: inx_implied
 # CHECK-LABEL: inx_implied
 body: |
   bb.0.entry:
-    $x = IN $x
+    $x = INC $x
     ; CHECK: inx{{$}}
     RTS
     ; CHECK-NEXT: rts
@@ -499,7 +499,7 @@ name: phx_implied
 # CHECK-LABEL: phx_implied
 body: |
   bb.0.entry:
-    PH_CMOS $x
+    PH $x
     ; CHECK: phx{{$}}
     RTS
     ; CHECK-NEXT: rts
@@ -509,7 +509,7 @@ name: plx_implied
 # CHECK-LABEL: plx_implied
 body: |
   bb.0.entry:
-    $x = PL_CMOS
+    $x = PL
     ; CHECK: plx{{$}}
     RTS
     ; CHECK-NEXT: rts
@@ -519,7 +519,7 @@ name: phy_implied
 # CHECK-LABEL: phy_implied
 body: |
   bb.0.entry:
-    PH_CMOS $y
+    PH $y
     ; CHECK: phy{{$}}
     RTS
     ; CHECK-NEXT: rts
@@ -529,7 +529,7 @@ name: ply_implied
 # CHECK-LABEL: ply_implied
 body: |
   bb.0.entry:
-    $y = PL_CMOS
+    $y = PL
     ; CHECK: ply{{$}}
     RTS
     ; CHECK-NEXT: rts

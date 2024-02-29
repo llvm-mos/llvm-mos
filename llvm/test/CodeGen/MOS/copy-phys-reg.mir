@@ -250,8 +250,8 @@ body: |
     ; CHECK-LABEL: name: non_alsb_to_v
     ; CHECK: liveins: $xlsb
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x = DE $x
-    ; CHECK-NEXT: $x = IN $x, implicit-def $nz
+    ; CHECK-NEXT: $x = DEC $x
+    ; CHECK-NEXT: $x = INC $x, implicit-def $nz
     ; CHECK-NEXT: $v = SelectImm $z, 0, -1
     $v = COPY $xlsb
 ...

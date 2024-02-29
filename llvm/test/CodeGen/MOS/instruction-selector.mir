@@ -185,8 +185,8 @@ body: |
   bb.0.entry:
     ; 6502-LABEL: name: add_abs_one
     ; 6502: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
-    ; 6502-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[LDAbs]], implicit-def dead $c, implicit-def dead $v
-    ; 6502-NEXT: RTS implicit [[INC]]
+    ; 6502-NEXT: [[IncNMOS:%[0-9]+]]:anyi8 = IncNMOS [[LDAbs]], implicit-def dead $c, implicit-def dead $v
+    ; 6502-NEXT: RTS implicit [[IncNMOS]]
     ;
     ; 65C02-LABEL: name: add_abs_one
     ; 65C02: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
@@ -733,9 +733,9 @@ body: |
     ; 6502-LABEL: name: inc_abs_across_store
     ; 6502: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
     ; 6502-NEXT: [[LDImm:%[0-9]+]]:gpr = LDImm 1
-    ; 6502-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]], implicit-def dead $c, implicit-def dead $v
+    ; 6502-NEXT: [[IncNMOS:%[0-9]+]]:gpr = IncNMOS [[LDAbs]], implicit-def dead $c, implicit-def dead $v
     ; 6502-NEXT: STAbs [[LDImm]], i16 1234 :: (store (s8))
-    ; 6502-NEXT: STAbs [[INC]], i16 1234 :: (store (s8))
+    ; 6502-NEXT: STAbs [[IncNMOS]], i16 1234 :: (store (s8))
     ; 6502-NEXT: RTS
     ;
     ; 65C02-LABEL: name: inc_abs_across_store
@@ -787,8 +787,8 @@ body: |
   bb.0.entry:
     ; 6502-LABEL: name: inc_abs_volatile_load
     ; 6502: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (volatile load (s8))
-    ; 6502-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]], implicit-def dead $c, implicit-def dead $v
-    ; 6502-NEXT: STAbs [[INC]], i16 1234 :: (store (s8))
+    ; 6502-NEXT: [[IncNMOS:%[0-9]+]]:gpr = IncNMOS [[LDAbs]], implicit-def dead $c, implicit-def dead $v
+    ; 6502-NEXT: STAbs [[IncNMOS]], i16 1234 :: (store (s8))
     ; 6502-NEXT: RTS
     ;
     ; 65C02-LABEL: name: inc_abs_volatile_load
@@ -810,8 +810,8 @@ body: |
   bb.0.entry:
     ; 6502-LABEL: name: inc_abs_volatile_store
     ; 6502: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
-    ; 6502-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]], implicit-def dead $c, implicit-def dead $v
-    ; 6502-NEXT: STAbs [[INC]], i16 1234 :: (volatile store (s8))
+    ; 6502-NEXT: [[IncNMOS:%[0-9]+]]:gpr = IncNMOS [[LDAbs]], implicit-def dead $c, implicit-def dead $v
+    ; 6502-NEXT: STAbs [[IncNMOS]], i16 1234 :: (volatile store (s8))
     ; 6502-NEXT: RTS
     ;
     ; 65C02-LABEL: name: inc_abs_volatile_store

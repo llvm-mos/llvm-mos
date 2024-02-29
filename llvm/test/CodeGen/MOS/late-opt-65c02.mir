@@ -7,10 +7,10 @@ body: |
     ; CHECK-LABEL: name: ldayimm_to_inaydeay
     ; CHECK: $a = LDImm 0
     ; CHECK-NEXT: $y = LDImm 5
-    ; CHECK-NEXT: $a = IN_CMOS $a
-    ; CHECK-NEXT: $y = IN_CMOS $y
-    ; CHECK-NEXT: $a = DE_CMOS killed $a
-    ; CHECK-NEXT: $y = DE_CMOS killed $y
+    ; CHECK-NEXT: $a = INC $a
+    ; CHECK-NEXT: $y = INC $y
+    ; CHECK-NEXT: $a = DEC killed $a
+    ; CHECK-NEXT: $y = DEC killed $y
     ; CHECK-NEXT: RTS implicit $a, implicit $y
     dead $a = LDImm 0
     dead $y = LDImm 5
