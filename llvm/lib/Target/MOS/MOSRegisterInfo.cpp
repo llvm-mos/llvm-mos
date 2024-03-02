@@ -701,10 +701,22 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
     return true;
   }
 
-  MOSInstrCost INCzp =
-      MOSInstrCost(2, STI.hasHUC6280() ? 6 : (STI.hasSPC700() ? 4 : 5));
-  MOSInstrCost ASLzp =
-      MOSInstrCost(2, STI.hasHUC6280() ? 6 : (STI.hasSPC700() ? 4 : 5));
+  MOSInstrCost INCzp = MOSInstrCost(2, 5);
+  MOSInstrCost INCxy = MOSInstrCost(1, 2);
+  MOSInstrCost ASLzp = MOSInstrCost(2, 5);
+  MOSInstrCost ASLa = MOSInstrCost(1, 2);
+  if (STI.hasHUC6280()) {
+    INCzp = MOSInstrCost(2, 6);
+    ASLzp = MOSInstrCost(2, 6);
+  }
+  if (STI.has65CE02() || STI.hasSPC700()) {
+    INCzp = MOSInstrCost(2, 4);
+    ASLzp = MOSInstrCost(2, 4);
+  }
+  if (STI.has65CE02()) {
+    INCxy = MOSInstrCost(1, 1);
+    ASLa = MOSInstrCost(1, 1);
+  }
 
   SmallSet<const MachineInstr *, 32> Visited;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
@@ -751,10 +763,8 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
     case MOS::LSR:
     case MOS::ROR:
     case MOS::ROL:
-      // ASL zp = 7
-      // ASL a = 3
       if (is_contained(Order, MOS::A))
-        RegScores[MOS::A] += ASLzp - MOSInstrCost(1, 2);
+        RegScores[MOS::A] += ASLzp - ASLa;
       break;
 
     case MOS::CmpBrZero: {
@@ -788,15 +798,12 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
           MI.getOperand(0).getReg() == VirtReg)
         break;
 
-      // INC zp = (2 bytes + 5 cycles)
-      // INXY = (1 bytes + 2 cycles)
-      MOSInstrCost INXY = MOSInstrCost(1, 2);
       if (STI.hasGPRIncDec() && is_contained(Order, MOS::A))
-        RegScores[MOS::A] += INCzp - INXY;
+        RegScores[MOS::A] += INCzp - INCxy;
       if (is_contained(Order, MOS::X))
-        RegScores[MOS::X] += INCzp - INXY;
+        RegScores[MOS::X] += INCzp - INCxy;
       if (is_contained(Order, MOS::Y))
-        RegScores[MOS::Y] += INCzp - INXY;
+        RegScores[MOS::Y] += INCzp - INCxy;
       break;
     }
     }
@@ -890,30 +897,38 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     return Dest.contains(DestReg) && Src.contains(SrcReg);
   };
 
+  auto TransferCost = MOSInstrCost(1, STI.has65CE02() ? 1 : 2);
+  auto PushCost = MOSInstrCost(1, STI.hasSPC700() ? 4 : 3);
+  auto PopCost = MOSInstrCost(1, STI.has65CE02() ? 3 : 4);
+  auto ClvCost = MOSInstrCost(1, STI.has65CE02() ? 1 : 2);
+  auto JumpCost = MOSInstrCost(3, 3);
+  auto BranchCost = MOSInstrCost(2, 3);
+  auto LoadImmCost = MOSInstrCost(2, 2);
+  auto AluImmCost = MOSInstrCost(2, 2);
+
   if (AreClasses(MOS::GPRRegClass, MOS::GPRRegClass)) {
     if (MOS::AcRegClass.contains(SrcReg)) {
       assert(MOS::XYRegClass.contains(DestReg));
       // TAX
-      return MOSInstrCost(1, 2);
+      return TransferCost;
     }
     if (MOS::AcRegClass.contains(DestReg)) {
       // TXA
-      return MOSInstrCost(1, 2);
+      return TransferCost;
     }
 
     // X<->Y copies
     if (STI.hasW65816Or65EL02()) {
       // TXY, TYX
-      return MOSInstrCost(1, 2);
+      return TransferCost;
     }
     MOSInstrCost XYCopyCost;
     if (STI.hasGPRStackRegs()) {
       // PHX/PLY, PHY/PLX
-      XYCopyCost =
-          MOSInstrCost(1, STI.hasSPC700() ? 4 : 3) + MOSInstrCost(1, 4);
+      XYCopyCost = PushCost + PopCost;
     } else {
       // May need to PHA/PLA around.
-      XYCopyCost = MOSInstrCost(2, STI.hasSPC700() ? 8 : 7) / 2 +
+      XYCopyCost = (PushCost + PopCost) / 2 +
                    copyCost(DestReg, MOS::A, STI) +
                    copyCost(MOS::A, SrcReg, STI);
     }
@@ -937,7 +952,7 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     if (STI.hasSPC700())
       return MOSInstrCost(3, 5);
     // May need to PHA/PLA around.
-    return MOSInstrCost(2, 7) / 2 + copyCost(DestReg, MOS::A, STI) +
+    return (PushCost + PopCost) / 2 + copyCost(DestReg, MOS::A, STI) +
            copyCost(MOS::A, SrcReg, STI);
   }
   if (AreClasses(MOS::Imag16RegClass, MOS::Imag16RegClass)) {
@@ -949,8 +964,9 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
     Register DestReg8 =
         getMatchingSuperReg(DestReg, MOS::sublsb, &MOS::Anyi8RegClass);
     // BIT imm (HUC6280), BIT abs
-    const MOSInstrCost BitCost =
-        STI.hasHUC6280() ? MOSInstrCost(2, 2) : MOSInstrCost(3, 4);
+    auto BitCost = STI.hasHUC6280() ? MOSInstrCost(2, 2) :
+                   STI.has65CE02() ? MOSInstrCost(3, 5) :
+                   MOSInstrCost(3, 4);
 
     if (SrcReg8) {
       SrcReg = SrcReg8;
@@ -960,7 +976,7 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       }
       if (DestReg == MOS::C) {
         // Cmp #1
-        MOSInstrCost Cost = MOSInstrCost(2, 2);
+        MOSInstrCost Cost = AluImmCost;
         if (!MOS::GPRRegClass.contains(SrcReg))
           Cost += copyCost(MOS::A, SrcReg, STI);
         return Cost;
@@ -969,7 +985,7 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       assert(DestReg == MOS::V);
       if (STI.hasSPC700()) {
         // PHP, PLA, ORA #imm, PHA, PLP; may PHA/PLA
-        return MOSInstrCost(1, 4) * 5 + MOSInstrCost(2, 2);
+        return ((PushCost + PopCost) * 5 / 2) + AluImmCost;
       }
 
       const TargetRegisterClass &StackRegClass =
@@ -977,12 +993,11 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
 
       if (StackRegClass.contains(SrcReg)) {
         // PHA; PLA; BNE; BIT setv; JMP; CLV
-        return MOSInstrCost(1, 3) + MOSInstrCost(1, 4) + MOSInstrCost(2, 3) +
-               BitCost + MOSInstrCost(3, 3) + MOSInstrCost(1, 3);
+        return PushCost + PopCost + BranchCost + BitCost + JumpCost + ClvCost;
       }
       // [PHA]; COPY; BNE; BIT setv; JMP; CLV; [PLA]
-      return copyCost(MOS::A, SrcReg, STI) + MOSInstrCost(2, 3) + BitCost +
-             MOSInstrCost(3, 3) + MOSInstrCost(1, 3);
+      return copyCost(MOS::A, SrcReg, STI) + BranchCost + BitCost +
+             JumpCost + ClvCost;
     }
     if (DestReg8) {
       DestReg = DestReg8;
@@ -991,18 +1006,18 @@ MOSInstrCost MOSRegisterInfo::copyCost(Register DestReg, Register SrcReg,
       if (!MOS::GPRRegClass.contains(Tmp))
         Tmp = MOS::A;
       // LDImm; BNE; LDImm;
-      MOSInstrCost Cost = MOSInstrCost(2, 2) * 2 + MOSInstrCost(2, 3);
+      MOSInstrCost Cost = LoadImmCost * 2 + BranchCost;
       if (Tmp != DestReg)
         Cost += copyCost(DestReg, Tmp, STI);
       return Cost;
     }
     if (STI.hasSPC700()) {
       // PHA, PHP, PLA, ORA #imm, PHA, PLP, PLA, BR, CLV
-      return MOSInstrCost(1, 4) * 6 + MOSInstrCost(2, 2) + MOSInstrCost(1, 3) +
-             MOSInstrCost(1, 3);
+      return (PushCost + PopCost) * 3 + AluImmCost + BranchCost +
+             ClvCost;
     }
     // BIT setv; BR; CLV;
-    return BitCost + MOSInstrCost(1, 3) + MOSInstrCost(1, 3);
+    return BitCost + BranchCost + ClvCost;
   }
 
   llvm_unreachable("Unexpected physical register copy.");
