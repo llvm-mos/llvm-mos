@@ -190,8 +190,8 @@ body: |
     ;
     ; 65C02-LABEL: name: add_abs_one
     ; 65C02: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
-    ; 65C02-NEXT: [[IncCMOS:%[0-9]+]]:anyi8 = IncCMOS [[LDAbs]]
-    ; 65C02-NEXT: RTS implicit [[IncCMOS]]
+    ; 65C02-NEXT: [[INC:%[0-9]+]]:anyi8 = INC [[LDAbs]]
+    ; 65C02-NEXT: RTS implicit [[INC]]
     %0:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     %1:any(s8) = G_CONSTANT i8 1
     %2:any(s8) = G_ADD %0, %1
@@ -741,9 +741,9 @@ body: |
     ; 65C02-LABEL: name: inc_abs_across_store
     ; 65C02: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
     ; 65C02-NEXT: [[LDImm:%[0-9]+]]:gpr = LDImm 1
-    ; 65C02-NEXT: [[IncCMOS:%[0-9]+]]:gpr = IncCMOS [[LDAbs]]
+    ; 65C02-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]]
     ; 65C02-NEXT: STAbs [[LDImm]], i16 1234 :: (store (s8))
-    ; 65C02-NEXT: STAbs [[IncCMOS]], i16 1234 :: (store (s8))
+    ; 65C02-NEXT: STAbs [[INC]], i16 1234 :: (store (s8))
     ; 65C02-NEXT: RTS
     %0:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     %1:any(s8) = G_CONSTANT i8 1
@@ -793,8 +793,8 @@ body: |
     ;
     ; 65C02-LABEL: name: inc_abs_volatile_load
     ; 65C02: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (volatile load (s8))
-    ; 65C02-NEXT: [[IncCMOS:%[0-9]+]]:gpr = IncCMOS [[LDAbs]]
-    ; 65C02-NEXT: STAbs [[IncCMOS]], i16 1234 :: (store (s8))
+    ; 65C02-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]]
+    ; 65C02-NEXT: STAbs [[INC]], i16 1234 :: (store (s8))
     ; 65C02-NEXT: RTS
     %0:any(s8) = G_LOAD_ABS i16 1234 :: (volatile load (s8))
     %1:any(s8) = G_CONSTANT i8 1
@@ -816,8 +816,8 @@ body: |
     ;
     ; 65C02-LABEL: name: inc_abs_volatile_store
     ; 65C02: [[LDAbs:%[0-9]+]]:gpr = LDAbs i16 1234 :: (load (s8))
-    ; 65C02-NEXT: [[IncCMOS:%[0-9]+]]:gpr = IncCMOS [[LDAbs]]
-    ; 65C02-NEXT: STAbs [[IncCMOS]], i16 1234 :: (volatile store (s8))
+    ; 65C02-NEXT: [[INC:%[0-9]+]]:gpr = INC [[LDAbs]]
+    ; 65C02-NEXT: STAbs [[INC]], i16 1234 :: (volatile store (s8))
     ; 65C02-NEXT: RTS
     %0:any(s8) = G_LOAD_ABS i16 1234 :: (load (s8))
     %1:any(s8) = G_CONSTANT i8 1

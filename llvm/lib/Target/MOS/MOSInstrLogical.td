@@ -603,6 +603,14 @@ def : Pat<(add Ac:$l, Imag8:$r), (ADCImag8 Ac:$l, Imag8:$r, (LDCImm 0))>;
 def : Pat<(sub Ac:$l, (i8 imm:$imm)), (SBCImm Ac:$l, imm:$imm, (LDCImm -1))>;
 def : Pat<(sub Ac:$l, Imag8:$r), (SBCImag8 Ac:$l, Imag8:$r, (LDCImm -1))>;
 
+// These increment/decrement patterns apply only for the 65C02 and derivatives
+// which support incrementing A directly. The original 6502 uses IncNMOS and
+// DecNMOS pseudos.
+let Predicates = [Has65C02], AddedComplexity = 1 in {
+  def : Pat<(add Anyi8:$dst, 1), (INC Anyi8:$dst)>;
+  def : Pat<(add Anyi8:$dst, -1), (DEC Anyi8:$dst)>;
+}
+
 //===---------------------------------------------------------------------===//
 // Integer Extension/Truncation Patterns
 //===---------------------------------------------------------------------===//
