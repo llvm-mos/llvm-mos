@@ -138,7 +138,7 @@ private:
   void expandLDImm16(MachineIRBuilder &Builder) const;
   void expandLDImm16Remat(MachineIRBuilder &Builder) const;
   void expandLDZ(MachineIRBuilder &Builder) const;
-  void expandIncDec(MachineIRBuilder &Builder) const;
+  void expandIncDecNMOS(MachineIRBuilder &Builder) const;
   void expandIncDecPtr(MachineIRBuilder &Builder) const;
 
   // Control flow pseudos

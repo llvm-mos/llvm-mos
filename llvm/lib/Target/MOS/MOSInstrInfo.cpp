@@ -951,9 +951,7 @@ bool MOSInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   // Post RA
   case MOS::IncNMOS:
   case MOS::DecNMOS:
-  case MOS::IncCMOS:
-  case MOS::DecCMOS:
-    expandIncDec(Builder);
+    expandIncDecNMOS(Builder);
     break;
   case MOS::IncPtr:
   case MOS::DecPtr:
@@ -1171,24 +1169,16 @@ void MOSInstrInfo::expandLDZ(MachineIRBuilder &Builder) const {
   }
 }
 
-void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
+void MOSInstrInfo::expandIncDecNMOS(MachineIRBuilder &Builder) const {
   const auto &TII = Builder.getTII();
   const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   auto &MI = *Builder.getInsertPt();
   Register R = MI.getOperand(0).getReg();
-  bool IsInc = MI.getOpcode() == MOS::IncNMOS || MI.getOpcode() == MOS::IncCMOS;
-  assert(IsInc || MI.getOpcode() == MOS::DecNMOS || MI.getOpcode() == MOS::DecCMOS);
+  bool IsInc = MI.getOpcode() == MOS::IncNMOS;
+  assert(IsInc || MI.getOpcode() == MOS::DecNMOS);
 
-  bool IsCMOS =
-      MI.getOpcode() == MOS::IncCMOS || MI.getOpcode() == MOS::DecCMOS;
-  if (IsCMOS && !STI.hasGPRIncDec()) {
-    llvm_unreachable(
-        "Unexpected CMOS pseudoinstruction on non-CMOS subtarget.");
-  }
-
-  // Handle A on NMOS 6502.
-  if (R == MOS::A && !STI.hasGPRIncDec()) {
+  if (R == MOS::A) {
     Builder.buildInstr(MOS::LDCImm).addDef(MOS::C).addImm(0);
     auto Instr = Builder.buildInstr(MOS::ADCImm)
                      .addDef(MOS::A)
@@ -1204,8 +1194,7 @@ void MOSInstrInfo::expandIncDec(MachineIRBuilder &Builder) const {
     return;
   }
 
-  assert(R == MOS::A || R == MOS::X || R == MOS::Y
-         || MOS::Imag8RegClass.contains(R));
+  assert(R == MOS::X || R == MOS::Y || MOS::Imag8RegClass.contains(R));
   MI.setDesc(TII.get(IsInc ? MOS::INC : MOS::DEC));
 }
 
