@@ -267,6 +267,66 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   return true;
 }
 
+bool MOSInstrInfo::hasCommutePreference(MachineInstr &MI,
+                                        bool &Commute) const {
+  unsigned CommutableOpIdx1 = CommuteAnyOperandIndex;
+  unsigned CommutableOpIdx2 = CommuteAnyOperandIndex;
+  if (!findCommutedOpIndices(MI, CommutableOpIdx1, CommutableOpIdx2)) {
+    return false;
+  }
+
+  MachineFunction &MF = *MI.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // Detect trivial copies of the form:
+  //
+  // %0:ac = COPY $a
+  // %1:imag8 = COPY $x
+  // ...
+  // %3:ac, %4:cc, %7:vc = ADCImag8 %0:ac(tied-def 0), %1:imag8, %6:cc
+  //
+  // Avoid or prefer commuting based on target register classes.
+  // This tries to ensure that relevant copies remain trivial.
+
+  auto Reg1 = MI.getOperand(CommutableOpIdx1).getReg();
+  auto Reg2 = MI.getOperand(CommutableOpIdx2).getReg();
+  if (!Reg1.isVirtual() || !Reg2.isVirtual())
+    return false;
+  if (!MRI.hasOneDef(Reg1) || !MRI.hasOneDef(Reg2))
+    return false;
+
+  MachineInstr *Instr1 = MRI.getOneDef(Reg1)->getParent();
+  MachineInstr *Instr2 = MRI.getOneDef(Reg2)->getParent();
+  if (!Instr1 || Instr1->getOpcode() != MOS::COPY ||
+      !Instr1->getOperand(1).isReg() ||
+      !Instr1->getOperand(1).getReg().isPhysical())
+    return false;
+  if (!Instr2 || Instr2->getOpcode() != MOS::COPY ||
+      !Instr2->getOperand(1).isReg() ||
+      !Instr2->getOperand(1).getReg().isPhysical())
+    return false;
+
+  auto SrcReg1 = Instr1->getOperand(1).getReg();
+  auto SrcReg2 = Instr2->getOperand(1).getReg();
+  auto *DstRC1 = MRI.getRegClassOrNull(Reg1);
+  auto *DstRC2 = MRI.getRegClassOrNull(Reg2);
+  if (!DstRC1 || !DstRC2)
+    return false;
+
+  if (DstRC1->contains(SrcReg1) && DstRC2->contains(SrcReg2))
+    Commute = false;
+  else if (DstRC2->contains(SrcReg1) && DstRC1->contains(SrcReg2))
+    Commute = true;
+  else if (DstRC1->contains(SrcReg1) || DstRC2->contains(SrcReg2))
+    Commute = false;
+  else if (DstRC2->contains(SrcReg1) || DstRC1->contains(SrcReg2))
+    Commute = true;
+  else
+    return false;
+
+  return true;
+}
+
 bool MOSInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
                                          int64_t BrOffset) const {
   switch (BranchOpc) {
