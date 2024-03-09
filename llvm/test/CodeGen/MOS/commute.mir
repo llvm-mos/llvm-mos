@@ -6,12 +6,14 @@ body: |
   bb.0.entry:
     liveins: $c
     ; CHECK-LABEL: name: ADCImag8
-    ; CHECK: [[COPY:%[0-9]+]]:imag8 = COPY $x
-    ; CHECK: [[COPY1:%[0-9]+]]:ac = COPY $y
-    ; CHECK: [[COPY2:%[0-9]+]]:cc = COPY $v
-    ; CHECK: [[COPY3:%[0-9]+]]:ac = COPY [[COPY1]]
-    ; CHECK: [[COPY3]]:ac, dead %4:cc, dead %5:vc = ADCImag8 [[COPY3]], [[COPY]], [[COPY2]]
-    ; CHECK: RTS implicit [[COPY]], implicit [[COPY3]]
+    ; CHECK: liveins: $c
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY $x
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ac = COPY $y
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:cc = COPY $v
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:ac = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:ac, dead [[ADCImag8_:%[0-9]+]]:cc, dead [[ADCImag8_1:%[0-9]+]]:vc = ADCImag8 [[COPY3]], [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: RTS implicit [[COPY]], implicit [[COPY3]]
     %0:ac = COPY $x
     %1:imag8 = COPY $y
     %2:cc = COPY $v
@@ -19,16 +21,38 @@ body: |
     RTS implicit %0, implicit %3
 ...
 ---
+name: ADCImag8_avoid_commuting_if_preferable
+body: |
+  bb.0.entry:
+    liveins: $c
+    ; CHECK-LABEL: name: ADCImag8_avoid_commuting_if_preferable
+    ; CHECK: liveins: $c
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:ac = COPY $a
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:imag8 = COPY $x
+    ; CHECK-NEXT: [[LDImm1_:%[0-9]+]]:cc = LDImm1 0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac = COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac, [[ADCImag8_:%[0-9]+]]:cc, dead [[ADCImag8_1:%[0-9]+]]:vc = ADCImag8 [[COPY2]], killed [[COPY1]], killed [[LDImm1_]]
+    ; CHECK-NEXT: RTS implicit [[ADCImag8_]]
+    %0:ac = COPY $a
+    %1:imag8 = COPY $x
+    %2:cc = LDImm1 0
+    %3:ac, %4:cc, dead %5:vc = ADCImag8 killed %0, killed %1, killed %2
+    RTS implicit %4
+...
+---
 name: ANDImag8
 body: |
   bb.0.entry:
     liveins: $c
     ; CHECK-LABEL: name: ANDImag8
-    ; CHECK: [[COPY:%[0-9]+]]:imag8 = COPY $x
-    ; CHECK: [[COPY1:%[0-9]+]]:ac = COPY $y
-    ; CHECK: [[COPY2:%[0-9]+]]:ac = COPY [[COPY1]]
-    ; CHECK: [[ANDImag8_:%[0-9]+]]:ac = ANDImag8 [[ANDImag8_]], [[COPY]]
-    ; CHECK: RTS implicit [[ANDImag8_]]
+    ; CHECK: liveins: $c
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY $x
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ac = COPY $y
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac = ANDImag8 [[COPY2]], [[COPY]]
+    ; CHECK-NEXT: RTS implicit [[COPY2]]
     %0:ac = COPY $x
     %1:imag8 = COPY $y
     %2:ac = ANDImag8 %0, killed %1
@@ -40,11 +64,13 @@ body: |
   bb.0.entry:
     liveins: $c
     ; CHECK-LABEL: name: EORImag8
-    ; CHECK: [[COPY:%[0-9]+]]:imag8 = COPY $x
-    ; CHECK: [[COPY1:%[0-9]+]]:ac = COPY $y
-    ; CHECK: [[COPY2:%[0-9]+]]:ac = COPY [[COPY1]]
-    ; CHECK: [[EORImag8_:%[0-9]+]]:ac = EORImag8 [[EORImag8_]], [[COPY]]
-    ; CHECK: RTS implicit [[EORImag8_]]
+    ; CHECK: liveins: $c
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY $x
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ac = COPY $y
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac = EORImag8 [[COPY2]], [[COPY]]
+    ; CHECK-NEXT: RTS implicit [[COPY2]]
     %0:ac = COPY $x
     %1:imag8 = COPY $y
     %2:ac = EORImag8 %0, killed %1
@@ -56,11 +82,13 @@ body: |
   bb.0.entry:
     liveins: $c
     ; CHECK-LABEL: name: ORAImag8
-    ; CHECK: [[COPY:%[0-9]+]]:imag8 = COPY $x
-    ; CHECK: [[COPY1:%[0-9]+]]:ac = COPY $y
-    ; CHECK: [[COPY2:%[0-9]+]]:ac = COPY [[COPY1]]
-    ; CHECK: [[ORAImag8_:%[0-9]+]]:ac = ORAImag8 [[ORAImag8_]], [[COPY]]
-    ; CHECK: RTS implicit [[ORAImag8_]]
+    ; CHECK: liveins: $c
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:imag8 = COPY $x
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:ac = COPY $y
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac = COPY [[COPY1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ac = ORAImag8 [[COPY2]], [[COPY]]
+    ; CHECK-NEXT: RTS implicit [[COPY2]]
     %0:ac = COPY $x
     %1:imag8 = COPY $y
     %2:ac = ORAImag8 %0, killed %1
