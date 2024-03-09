@@ -142,8 +142,6 @@ public:
   bool isImm8() const { return isImmediate<0, 0x100 - 1>(); }
   bool isImm16() const { return isImmediate<0, 0x10000 - 1>(); }
   bool isImm24() const { return isImmediate<0, 0x1000000 - 1>(); }
-  bool isImm8To16() const { return (!isImm8() && isImm16()); }
-  bool isImm16To24() const { return (!isImm16() && isImm24()); }
   bool isPCRel8() const { return isImm8(); }
   bool isPCRel16() const { return isImm16(); }
   bool isAddr8() const {

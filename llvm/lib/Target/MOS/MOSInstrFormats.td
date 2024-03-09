@@ -260,26 +260,6 @@ class addr24at<int offset> : Operand<i32> {
 }
 def addr24 : addr24at<1>;
 
-/// This operand will only match a value from 256 to 65535 inclusive.
-class imm8To16at<int offset> : Operand<i32> {
-  let ParserMatchClass = ImmediateAsmOperand<"Imm8To16">;
-  let EncoderMethod = "encodeImm<MOS::Addr16, " # offset # ">";
-  let DecoderMethod = "decodeUImmOperand<16>";
-  let OperandType = "OPERAND_IMM16";
-  let OperandNamespace = "MOSOp";
-}
-def imm8To16 : imm8To16at<1>;
-
-/// This operand will only match a value from 65536 to 16777215 inclusive.
-class imm16To24at<int offset> : Operand<i32> {
-  let ParserMatchClass = ImmediateAsmOperand<"Imm16To24">;
-  let EncoderMethod = "encodeImm<MOS::Addr24, " # offset # ">";
-  let DecoderMethod = "decodeUImmOperand<24>";
-  let OperandType = "OPERAND_IMM24";
-  let OperandNamespace = "MOSOp";
-}
-def imm16To24 : imm16To24at<1>;
-
 /// All non-virtual MOS opcodes are 8 bits long.
 class Opcode<bits<8> opcode = 0> {
   bits<8> op = opcode;
