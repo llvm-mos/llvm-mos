@@ -88,6 +88,14 @@ enum OperandType : unsigned {
 } // namespace MOSOp
 
 namespace MOS {
+
+enum TSFlag {
+  TSFlagMLow = (1 << 0),
+  TSFlagMHigh = (1 << 1),
+  TSFlagXLow = (1 << 2),
+  TSFlagXHigh = (1 << 3)
+};
+
 bool isZeroPageSectionName(StringRef Name);
 } // namespace MOS
 } // namespace llvm

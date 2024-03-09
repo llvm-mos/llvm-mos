@@ -10,6 +10,7 @@
 // instructions on to the real streamer.
 //
 //===----------------------------------------------------------------------===//
+#include "MOSMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFStreamer.h"
 #define DEBUG_TYPE "mosmcelfstreamer"
@@ -21,7 +22,9 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Casting.h"
 
 using namespace llvm;
@@ -30,6 +33,8 @@ namespace llvm {
 
 void MOSMCELFStreamer::initSections(bool NoExecStack,
                                     const MCSubtargetInfo &STI) {
+  Has65816Instructions = STI.hasFeature(MOS::FeatureW65816);
+
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(Align(1), &STI);
@@ -53,6 +58,18 @@ void MOSMCELFStreamer::changeSection(MCSection *Section, const MCExpr *Subsectio
   HasZPData |= HasPrefix(Section->getName(), ".zp.rodata");
   HasInitArray |= HasPrefix(Section->getName(), ".init_array");
   HasFiniArray |= HasPrefix(Section->getName(), ".fini_array");
+
+  if (Section->hasInstructions()) {
+    MState = MXFlagUnknown;
+    XState = MXFlagUnknown;
+  }
+}
+
+void MOSMCELFStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) {
+  auto TSFlags = MCII.get()->get(Inst.getOpcode()).TSFlags;
+  emit816MXState(TSFlags & MOS::TSFlagMLow, TSFlags & MOS::TSFlagMHigh,
+                 TSFlags & MOS::TSFlagXLow, TSFlags & MOS::TSFlagXHigh);
+  MCELFStreamer::emitInstruction(Inst, STI);
 }
 
 void MOSMCELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
@@ -77,6 +94,35 @@ void MOSMCELFStreamer::emitMosAddrAsciz(const MCExpr *Value, unsigned Size,
       MCFixup::create(DF->getContents().size(), Value,
                       (MCFixupKind)MOS::AddrAsciz, Loc));
   DF->getContents().resize(DF->getContents().size() + Size, 0);
+}
+
+void MOSMCELFStreamer::emitMappingSymbol(StringRef Name) {
+  auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
+      Name + "." + Twine(MappingSymbolCounter++)));
+  emitLabel(Symbol);
+  Symbol->setType(ELF::STT_NOTYPE);
+  Symbol->setBinding(ELF::STB_LOCAL);
+  Symbol->setExternal(false);
+}
+
+void MOSMCELFStreamer::emit816MXState(bool IsMLow, bool IsMHigh, bool IsXLow,
+                                      bool IsXHigh) {
+  if (!Has65816Instructions)
+    return;
+
+  assert(!(IsMLow && IsMHigh) && !(IsXLow && IsXHigh));
+  auto NewMState = IsMLow ? MXFlagLow : (IsMHigh ? MXFlagHigh : MXFlagUnknown);
+  auto NewXState = IsXLow ? MXFlagLow : (IsXHigh ? MXFlagHigh : MXFlagUnknown);
+  if (NewMState != MXFlagUnknown && NewMState != MState) {
+    emitMappingSymbol(NewMState == MXFlagLow ? "$ml" : "$mh");
+    MState = NewMState;
+  }
+  if (NewXState != MXFlagUnknown && NewXState != XState) {
+    emitMappingSymbol(NewXState == MXFlagLow ? "$xl" : "$xh");
+    XState = NewXState;
+  }
+  MState = NewMState;
+  XState = NewXState;
 }
 
 MCStreamer *createMOSMCELFStreamer(const Triple & /*T*/, MCContext &Ctx,
