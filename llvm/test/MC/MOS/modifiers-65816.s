@@ -3,10 +3,6 @@
 
 ; Test all the 65816-specific (24-bit) modifiers for the MOS assembler.
 
-val8 = 0x01
-val16 = 0x0202
-val24 = 0x030303
-
 . = 0x01
 addr8:
 .ds.b 0
