@@ -72,7 +72,9 @@ def STX_Absolute :
 	Inst24<"stx", OpcodeC2<0b100, 0b011>, Absolute>;
 
 def LDX_Immediate :
-	Inst16<"ldx", OpcodeC2<0b101, 0b000>, Immediate>;
+	Inst16<"ldx", OpcodeC2<0b101, 0b000>, Immediate> {
+  let XHigh = 1;
+}
 def LDX_ZeroPage :
 	Inst16<"ldx", OpcodeC2<0b101, 0b001>, ZeroPage>;
 def LDX_Absolute :
@@ -330,7 +332,9 @@ def JMP_IndexedIndirect : Inst24<"jmp", Opcode<0x7c>, IndexedIndirect16>,
 
 def BIT_ZeroPageX : Inst16<"bit", Opcode<0x34>, ZeroPageX>;
 def BIT_AbsoluteX : Inst24<"bit", Opcode<0x3c>, AbsoluteX>;
-def BIT_Immediate : Inst16<"bit", Opcode<0x89>, Immediate>;
+def BIT_Immediate : Inst16<"bit", Opcode<0x89>, Immediate> {
+  let MHigh = 1;
+}
 
 def TRB_ZeroPage : Inst16<"trb", Opcode<0x14>, ZeroPage>; /// Test and Reset Bits
 def TRB_Absolute : Inst24<"trb", Opcode<0x1c>, Absolute>; /// Test and Reset Bits
@@ -676,12 +680,16 @@ let Predicates = [HasW65816Or65EL02] in {
 def SEP_Immediate : Inst16<"sep", OpcodeC2<0b111, 0b000>, Immediate>;
 def REP_Immediate : Inst16<"rep", OpcodeC2<0b110, 0b000>, Immediate>;
 
-/// 16-bit immediate load
-/// LDX
-/// A2
+/// 16-bit immediate opcode variants
+
+def BIT_Immediate16 : Inst24<"bit", Opcode<0x89>, Immediate16> {
+  let DecoderNamespace = "MOSMLow";
+  let MLow = 1;
+}
 
 def LDX_Immediate16 : Inst24<"ldx", OpcodeC2<0b101, 0b000>, Immediate16> {
   let DecoderNamespace = "MOSXLow";
+  let XLow = 1;
 }
 
 /// 16-bit indexed-indirect jumps

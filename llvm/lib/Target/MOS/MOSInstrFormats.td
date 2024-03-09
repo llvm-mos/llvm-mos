@@ -119,6 +119,15 @@ class Inst<string asmstr> : Instruction {
 
   field bits<56> SoftFail = 0;
   let DecoderNamespace = "MOS";
+
+  bit MLow = 0;
+  bit MHigh = 0;
+  bit XLow = 0;
+  bit XHigh = 0;
+  let TSFlags{0} = MLow;
+  let TSFlags{1} = MHigh;
+  let TSFlags{2} = XLow;
+  let TSFlags{3} = XHigh;
 }
 
 class InstConditionalBranch {
@@ -841,12 +850,14 @@ multiclass CC1_All<bits<3> aaa, string OpcodeStr = "nop", list<Predicate> preds 
   // CC1 pattern
   def _Immediate : Inst16<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate> {
     let Predicates = preds;
+    let MHigh = 1;
   }
 
   // 16-bit immediate operand on 65816 when M flag is low.
   def _Immediate16 : Inst24<OpcodeStr, OpcodeC1< aaa, 0b010 >, Immediate16> {
     let Predicates = preds # [HasW65816Or65EL02];
     let DecoderNamespace = "MOSMLow";
+    let MLow = 1;
   }
 }
 
@@ -939,12 +950,15 @@ multiclass CC2_NonShift<bits<3> aaa, string OpcodeStr = "nop"> {
 
 /// The 9 instructions in the top right corner
 multiclass CC0_Regular< bits<3> aaa, string OpcodeStr = "nop"> {
-  def _Immediate : Inst16<OpcodeStr, OpcodeC0<aaa, 0b000>, Immediate>;
+  def _Immediate : Inst16<OpcodeStr, OpcodeC0<aaa, 0b000>, Immediate> {
+    let XHigh = 1;
+  }
 
   // 16-bit immediate operand on 65816 when X flag is low.
   def _Immediate16 : Inst24<OpcodeStr, OpcodeC0<aaa, 0b000>, Immediate16> {
     let Predicates = [HasW65816Or65EL02];
     let DecoderNamespace = "MOSXLow";
+    let XLow = 1;
   }
 
   def _ZeroPage : Inst16<OpcodeStr, OpcodeC0<aaa, 0b001>, ZeroPage>;

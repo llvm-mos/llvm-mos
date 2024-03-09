@@ -76,6 +76,7 @@
  	jsl	$eaeaea                 ; CHECK: encoding: [0x22,0xea,0xea,0xea]
  	rtl                             ; CHECK: encoding: [0x6b]
 
+ 	bit	#$eaea                  ; CHECK: encoding: [0x89,0xea,0xea]
  	ldx	#$eaea                  ; CHECK: encoding: [0xa2,0xea,0xea]
  	ldy	#$eaea                  ; CHECK: encoding: [0xa0,0xea,0xea]
  	cpy	#$eaea                  ; CHECK: encoding: [0xc0,0xea,0xea]

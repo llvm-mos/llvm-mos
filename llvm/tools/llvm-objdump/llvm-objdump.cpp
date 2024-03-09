@@ -622,8 +622,13 @@ static bool isCSKYElf(const ObjectFile &Obj) {
   return Elf && Elf->getEMachine() == ELF::EM_CSKY;
 }
 
+static bool isMOSElf(const ObjectFile &Obj) {
+  const auto *Elf = dyn_cast<ELFObjectFileBase>(&Obj);
+  return Elf && Elf->getEMachine() == ELF::EM_MOS;
+}
+
 static bool hasMappingSymbols(const ObjectFile &Obj) {
-  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) ;
+  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) || isMOSElf(Obj);
 }
 
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
@@ -1662,7 +1667,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           uint64_t Address = cantFail(Symbol.getAddress());
           StringRef Name = *NameOrErr;
           if (Name.consume_front("$") && Name.size() &&
-              strchr("adtx", Name[0])) {
+              strchr("admtx", Name[0])) {
             AllMappingSymbols[*SecI].emplace_back(Address - SectionAddr,
                                                   Name[0]);
             AllSymbols[*SecI].push_back(
