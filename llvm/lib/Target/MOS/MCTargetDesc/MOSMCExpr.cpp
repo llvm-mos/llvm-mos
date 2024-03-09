@@ -27,6 +27,7 @@ const struct ModifierEntry {
     {"mos16", MOSMCExpr::VK_MOS_IMM16},
     {"mos16lo", MOSMCExpr::VK_MOS_ADDR16_LO},
     {"mos16hi", MOSMCExpr::VK_MOS_ADDR16_HI},
+    {"mos24", MOSMCExpr::VK_MOS_ADDR24},
     {"mos24bank", MOSMCExpr::VK_MOS_ADDR24_BANK},
     {"mos24segment", MOSMCExpr::VK_MOS_ADDR24_SEGMENT},
     {"mos24segmentlo", MOSMCExpr::VK_MOS_ADDR24_SEGMENT_LO},
@@ -125,6 +126,9 @@ int64_t MOSMCExpr::evaluateAsInt64(int64_t Value) const {
   case MOSMCExpr::VK_MOS_IMM16:
     Value &= 0xffff;
     break;
+  case MOSMCExpr::VK_MOS_ADDR24:
+    Value &= 0xffffff;
+    break;
   case MOSMCExpr::VK_MOS_ADDR13:
     Value &= 0x1fff;
     break;
@@ -153,6 +157,9 @@ MOS::Fixups MOSMCExpr::getFixupKind() const {
     break;
   case VK_MOS_ADDR16_LO:
     Kind = MOS::Addr16_Low;
+    break;
+  case VK_MOS_ADDR24:
+    Kind = MOS::Addr24;
     break;
   case VK_MOS_ADDR24_BANK:
     Kind = MOS::Addr24_Bank;
