@@ -58,11 +58,8 @@ void MOSMCELFStreamer::changeSection(MCSection *Section, const MCExpr *Subsectio
   HasZPData |= HasPrefix(Section->getName(), ".zp.rodata");
   HasInitArray |= HasPrefix(Section->getName(), ".init_array");
   HasFiniArray |= HasPrefix(Section->getName(), ".fini_array");
-
-  if (Section->hasInstructions()) {
-    MState = MXFlagUnknown;
-    XState = MXFlagUnknown;
-  }
+  MState = MXFlagUnknown;
+  XState = MXFlagUnknown;
 }
 
 void MOSMCELFStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) {
