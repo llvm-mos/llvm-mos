@@ -33,7 +33,8 @@ namespace llvm {
 
 void MOSMCELFStreamer::initSections(bool NoExecStack,
                                     const MCSubtargetInfo &STI) {
-  Has65816Instructions = STI.hasFeature(MOS::FeatureW65816);
+  Has65816Instructions = STI.hasFeature(MOS::FeatureW65816) ||
+                         STI.hasFeature(MOS::Feature65EL02);
 
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
