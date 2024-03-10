@@ -20,8 +20,10 @@ public:
   /// Specifies the type of an expression.
   enum VariantKind {
     VK_MOS_NONE,
+    VK_MOS_ADDR16,
     VK_MOS_IMM16,
     VK_MOS_ADDR8,
+    VK_MOS_IMM8,
     VK_MOS_ADDR16_HI,
     VK_MOS_ADDR16_LO,
     VK_MOS_ADDR24,
@@ -67,7 +69,7 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-  static VariantKind getKindByName(StringRef Name);
+  static VariantKind getKindByName(StringRef Name, bool IsImmediate);
 
 private:
   int64_t evaluateAsInt64(int64_t Value) const;
