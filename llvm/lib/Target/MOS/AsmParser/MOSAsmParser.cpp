@@ -716,7 +716,7 @@ public:
   }
 
   // Parse only registers that can be considered parameters to real MOS
-  // instructions.  The instruction parser considers a, x, y, z, and sp to be
+  // instructions.  The instruction parser considers a, x, y, z, and s to be
   // strings, not registers, so make a point of filtering those cases out
   // of what's acceptable.
   ParseStatus tryParseAsmParamRegClass(OperandVector &Operands) {
@@ -728,8 +728,10 @@ public:
             .CaseLower("x", "x")
             .CaseLower("y", "y")
             .CaseLower("z", "z")
-            .CaseLower("sp", "sp")
-            .CaseLower("rp", "rp")   // 65EL02
+            .CaseLower("s", "s")
+            .CaseLower("sp", "s")
+            .CaseLower("r", "r")     // 65EL02
+            .CaseLower("rp", "r")    // 65EL02
             .CaseLower("ya", "ya")   // SPC700
             .CaseLower("c", "c")     // SPC700
             .CaseLower("psw", "psw") // SPC700
