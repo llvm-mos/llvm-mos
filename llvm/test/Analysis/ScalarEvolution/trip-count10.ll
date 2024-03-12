@@ -124,9 +124,9 @@ retbb:
 define void @constant_phi_operands() nounwind {
 ; CHECK-LABEL: 'constant_phi_operands'
 ; CHECK-NEXT:  Determining loop execution counts for: @constant_phi_operands
-; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 1
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i2 1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i2 1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i2 1
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
 entry:

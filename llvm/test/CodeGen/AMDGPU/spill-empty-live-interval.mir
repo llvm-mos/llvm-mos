@@ -29,7 +29,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_1]].sub1
   ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   S_NOP 0, implicit [[SI_SPILL_V64_RESTORE]].sub1
-  ; CHECK-NEXT:   S_NOP 0, implicit undef %9.sub0:vreg_64
+  ; CHECK-NEXT:   S_NOP 0, implicit undef %10.sub0:vreg_64
   bb.0:
     successors: %bb.1
 

@@ -82,9 +82,9 @@ define i32 @test2() nounwind uwtable readonly {
 ; CHECK-NEXT:    %1 = load ptr, ptr %next, align 8
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: null LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test2
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 4
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 4
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i4 4
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i4 4
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i4 4
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 5
 ;
 entry:

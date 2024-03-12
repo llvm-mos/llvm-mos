@@ -58,18 +58,18 @@ define dso_local i32 @f() {
 ; CHECK-NEXT:    --> {2,+,-1}<nsw><%outer.loop> U: [0,3) S: [0,3) Exits: <<Unknown>> LoopDispositions: { %outer.loop: Computable, %for.cond6: Invariant, %inner.loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %for.cond6: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for for.cond6: i32 0
+; CHECK-NEXT:    exit count for for.cond6: i2 0
 ; CHECK-NEXT:    exit count for for.end: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %for.cond6: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %for.cond6: symbolic max backedge-taken count is i32 0
-; CHECK-NEXT:    symbolic max exit count for for.cond6: i32 0
+; CHECK-NEXT:  Loop %for.cond6: constant max backedge-taken count is i2 0
+; CHECK-NEXT:  Loop %for.cond6: symbolic max backedge-taken count is i2 0
+; CHECK-NEXT:    symbolic max exit count for for.cond6: i2 0
 ; CHECK-NEXT:    symbolic max exit count for for.end: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %inner.loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for inner.loop: i32 0
+; CHECK-NEXT:    exit count for inner.loop: i2 0
 ; CHECK-NEXT:    exit count for for.end.3: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is i32 0
-; CHECK-NEXT:    symbolic max exit count for inner.loop: i32 0
+; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is i2 0
+; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is i2 0
+; CHECK-NEXT:    symbolic max exit count for inner.loop: i2 0
 ; CHECK-NEXT:    symbolic max exit count for for.end.3: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:  Loop %outer.loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for for.cond6: ***COULDNOTCOMPUTE***

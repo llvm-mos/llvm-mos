@@ -743,7 +743,6 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
         Builder.CreateAssumption(AssumptionVal);
       }
     } break;
-    }
     case attr::Leaf:
       leaf = true;
       break;

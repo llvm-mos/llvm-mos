@@ -111,9 +111,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @smul_exhaustive() {
 ; CHECK-LABEL: 'smul_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @smul_exhaustive
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 14
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 14
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 14
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i5 14
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i5 14
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i5 14
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 15
 ;
 entry:
@@ -136,9 +136,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @umul_exhaustive() {
 ; CHECK-LABEL: 'umul_exhaustive'
 ; CHECK-NEXT:  Determining loop execution counts for: @umul_exhaustive
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 15
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 15
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 15
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i5 15
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i5 15
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i5 15
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 16
 ;
 entry:

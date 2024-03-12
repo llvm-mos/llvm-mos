@@ -149,9 +149,9 @@ for.end:                                          ; preds = %for.body, %entry
 define void @ult_ub1() {
 ; CHECK-LABEL: 'ult_ub1'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_ub1
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 2
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 2
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i3 2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i3 2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i3 2
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 3
 ;
 entry:

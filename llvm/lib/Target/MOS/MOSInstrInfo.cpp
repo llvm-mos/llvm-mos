@@ -1231,7 +1231,6 @@ void MOSInstrInfo::expandLDZ(MachineIRBuilder &Builder) const {
 
 void MOSInstrInfo::expandIncDecNMOS(MachineIRBuilder &Builder) const {
   const auto &TII = Builder.getTII();
-  const MOSSubtarget &STI = Builder.getMF().getSubtarget<MOSSubtarget>();
 
   auto &MI = *Builder.getInsertPt();
   Register R = MI.getOperand(0).getReg();
