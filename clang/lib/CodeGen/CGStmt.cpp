@@ -734,7 +734,15 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       const Stmt *Sub = S.getSubStmt();
       const ReturnStmt *R = cast<ReturnStmt>(Sub);
       musttail = cast<CallExpr>(R->getRetValue()->IgnoreParens());
-      break;
+    } break;
+    case attr::CXXAssume: {
+      const Expr *Assumption = cast<CXXAssumeAttr>(A)->getAssumption();
+      if (getLangOpts().CXXAssumptions &&
+          !Assumption->HasSideEffects(getContext())) {
+        llvm::Value *AssumptionVal = EvaluateExprAsBool(Assumption);
+        Builder.CreateAssumption(AssumptionVal);
+      }
+    } break;
     }
     case attr::Leaf:
       leaf = true;
