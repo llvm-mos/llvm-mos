@@ -7821,6 +7821,29 @@ static void handleMOSInterruptNorecurseAttr(Sema &S, Decl *D, const ParsedAttr &
   handleSimpleAttribute<MOSInterruptNorecurseAttr>(S, D, AL);
 }
 
+static void handleMOSInterruptWedgeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!isFunctionOrMethod(D)) {
+    S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << "'wedge'" << ExpectedFunction;
+    return;
+  }
+
+  // Interrupt handler must have void return type.
+  if (!getFunctionOrMethodResultType(D)->isVoidType()) {
+    return;
+  }
+
+  if (!AL.checkExactlyNumArgs(S, 1))
+    return;
+
+  uint32_t ChainISR = 0;
+  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), ChainISR, 0, true))
+      return;
+
+  D->addAttr(::new (S.Context) MOSWedgeAttr(S.Context, AL, (uint16_t)(ChainISR)));
+  D->addAttr(UsedAttr::CreateImplicit(S.Context));
+}
+
 static void handleMOSInterruptNoISRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!isFunctionOrMethod(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
@@ -9271,6 +9294,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_MOSWedge:
+    handleMOSInterruptWedgeAttr(S, D, AL);
     break;
   case ParsedAttr::AT_MOSInterruptNorecurse:
     handleMOSInterruptNorecurseAttr(S, D, AL);

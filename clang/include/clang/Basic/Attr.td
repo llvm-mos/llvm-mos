@@ -1869,6 +1869,13 @@ def MOSNoISR : InheritableAttr, TargetSpecificAttr<TargetMOS> {
   let Documentation = [Undocumented];
 }
 
+def MOSWedge : InheritableAttr, TargetSpecificAttr<TargetMOS> {
+  let Spellings = [GCC<"wedge">];
+  let Args = [UnsignedArgument<"ChainISR">];
+  let Subjects = SubjectList<[HasFunctionProto]>;
+  let Documentation = [Undocumented];
+}
+
 def Reentrant : InheritableAttr {
   let Spellings = [GCC<"reentrant">];
   let Subjects = SubjectList<[Function]>;

@@ -248,6 +248,117 @@ entry:
   ret void
 }
 
+define void @inr() wedge "interrupt-wedge" {
+; CHECK-LABEL: inr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cld
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    lda __rc1
+; CHECK-NEXT:    adc #255
+; CHECK-NEXT:    sta __rc1
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    txa
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    tya
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    lda __rc2
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    ldx __rc3
+; CHECK-NEXT:    stx .Linr_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Linr_sstk+1 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Linr_sstk+2 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc6
+; CHECK-NEXT:    stx .Linr_sstk+3 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc7
+; CHECK-NEXT:    stx .Linr_sstk+4 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc8
+; CHECK-NEXT:    stx .Linr_sstk+5 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc9
+; CHECK-NEXT:    stx .Linr_sstk+6 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc10
+; CHECK-NEXT:    stx .Linr_sstk+7 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc11
+; CHECK-NEXT:    stx .Linr_sstk+8 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc12
+; CHECK-NEXT:    stx .Linr_sstk+9 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc13
+; CHECK-NEXT:    stx .Linr_sstk+10 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc14
+; CHECK-NEXT:    stx .Linr_sstk+11 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc15
+; CHECK-NEXT:    stx .Linr_sstk+12 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc16
+; CHECK-NEXT:    stx .Linr_sstk+13 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc17
+; CHECK-NEXT:    stx .Linr_sstk+14 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc18
+; CHECK-NEXT:    stx .Linr_sstk+15 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc19
+; CHECK-NEXT:    stx .Linr_sstk+16 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx global
+; CHECK-NEXT:    stx mos8(.Linr_zp_stk) ; 1-byte Folded Spill
+; CHECK-NEXT:    jsr inr_callee
+; CHECK-NEXT:    ldx mos8(.Linr_zp_stk) ; 1-byte Folded Reload
+; CHECK-NEXT:    stx mos8(vol)
+; CHECK-NEXT:    ldx .Linr_sstk+16 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc19
+; CHECK-NEXT:    ldx .Linr_sstk+15 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc18
+; CHECK-NEXT:    ldx .Linr_sstk+14 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc17
+; CHECK-NEXT:    ldx .Linr_sstk+13 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc16
+; CHECK-NEXT:    ldx .Linr_sstk+12 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc15
+; CHECK-NEXT:    ldx .Linr_sstk+11 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc14
+; CHECK-NEXT:    ldx .Linr_sstk+10 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc13
+; CHECK-NEXT:    ldx .Linr_sstk+9 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc12
+; CHECK-NEXT:    ldx .Linr_sstk+8 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc11
+; CHECK-NEXT:    ldx .Linr_sstk+7 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc10
+; CHECK-NEXT:    ldx .Linr_sstk+6 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc9
+; CHECK-NEXT:    ldx .Linr_sstk+5 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc8
+; CHECK-NEXT:    ldx .Linr_sstk+4 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc7
+; CHECK-NEXT:    ldx .Linr_sstk+3 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc6
+; CHECK-NEXT:    ldx .Linr_sstk+2 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx .Linr_sstk+1 ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx .Linr_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    stx __rc3
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    sta __rc2
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    tay
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    tax
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    pha
+; CHECK-NEXT:    clc
+; CHECK-NEXT:    lda __rc1
+; CHECK-NEXT:    adc #1
+; CHECK-NEXT:    sta __rc1
+; CHECK-NEXT:    pla
+; CHECK-NEXT:    jmp $0000
+entry:
+  %0 = load i8, ptr @global, align 1
+  call void @inr_callee();
+  store volatile i8 %0, ptr @vol, align 1
+  ret void
+}
+
 define void @inr_callee() norecurse noinline {
 ; CHECK-LABEL: inr_callee:
 ; CHECK:       ; %bb.0: ; %entry

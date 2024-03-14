@@ -54,6 +54,10 @@ public:
       Fn->addFnAttr("interrupt");
     if (FD->getAttr<MOSInterruptNorecurseAttr>())
       Fn->addFnAttr("interrupt-norecurse");
+    if (FD->getAttr<MOSWedgeAttr>()) {
+      auto mosattr = D->getAttr<MOSWedgeAttr>();
+      Fn->addFnAttr("wedge", llvm::utostr(mosattr->getChainISR()));
+    }
     if (FD->getAttr<MOSNoISRAttr>())
       Fn->addFnAttr("no-isr");
   }
