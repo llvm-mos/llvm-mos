@@ -63,6 +63,7 @@ unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     default:
       llvm_unreachable("Unsupported Modifier");
     case MCSymbolRefExpr::VK_None:
+    case MCSymbolRefExpr::VK_MOS_ADDR16:
       return ELF::R_MOS_ADDR16;
     case MCSymbolRefExpr::VK_MOS_ADDR13:
       return ELF::R_MOS_ADDR13;

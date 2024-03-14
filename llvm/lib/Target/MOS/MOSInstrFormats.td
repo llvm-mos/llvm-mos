@@ -425,22 +425,22 @@ def IndirectZeroPageZ : AddressingMode {
 }
 
 def StackRelative : AddressingMode {
-  let OperandsStr = "$param , sp";
+  let OperandsStr = "$param , s";
   let InOperandList = (ins addr8:$param);
 }
 
 def IndirectStackRelativeY : AddressingMode {
-  let OperandsStr = "( $param , sp ) , y";
+  let OperandsStr = "( $param , s ) , y";
   let InOperandList = (ins addr8:$param);
 }
 
 def RStackRelative : AddressingMode {
-  let OperandsStr = "$param , rp";
+  let OperandsStr = "$param , r";
   let InOperandList = (ins addr8:$param);
 }
 
 def IndirectRStackRelativeY : AddressingMode {
-  let OperandsStr = "( $param , rp ) , y";
+  let OperandsStr = "( $param , r ) , y";
   let InOperandList = (ins addr8:$param);
 }
 

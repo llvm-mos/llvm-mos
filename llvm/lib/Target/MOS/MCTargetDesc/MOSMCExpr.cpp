@@ -22,9 +22,13 @@ namespace {
 const struct ModifierEntry {
   const char *const Spelling;
   MOSMCExpr::VariantKind VariantKind;
+  bool ImmediateOnly = false;
 } ModifierNames[] = {
+    // Define immediate variants of mos8() and mos16() first.
+    {"mos8", MOSMCExpr::VK_MOS_IMM8, true},
+    {"mos16", MOSMCExpr::VK_MOS_IMM16, true},
     {"mos8", MOSMCExpr::VK_MOS_ADDR8},
-    {"mos16", MOSMCExpr::VK_MOS_IMM16},
+    {"mos16", MOSMCExpr::VK_MOS_ADDR16},
     {"mos16lo", MOSMCExpr::VK_MOS_ADDR16_LO},
     {"mos16hi", MOSMCExpr::VK_MOS_ADDR16_HI},
     {"mos24", MOSMCExpr::VK_MOS_ADDR24},
@@ -108,6 +112,7 @@ int64_t MOSMCExpr::evaluateAsInt64(int64_t Value) const {
   }
 
   switch (Kind) {
+  case MOSMCExpr::VK_MOS_IMM8:
   case MOSMCExpr::VK_MOS_ADDR8:
   case MOSMCExpr::VK_MOS_ADDR16_LO:
   case MOSMCExpr::VK_MOS_ADDR24_SEGMENT_LO:
@@ -122,8 +127,9 @@ int64_t MOSMCExpr::evaluateAsInt64(int64_t Value) const {
     Value &= 0xff0000;
     Value >>= 16;
     break;
-  case MOSMCExpr::VK_MOS_ADDR24_SEGMENT:
   case MOSMCExpr::VK_MOS_IMM16:
+  case MOSMCExpr::VK_MOS_ADDR16:
+  case MOSMCExpr::VK_MOS_ADDR24_SEGMENT:
     Value &= 0xffff;
     break;
   case MOSMCExpr::VK_MOS_ADDR24:
@@ -146,11 +152,17 @@ MOS::Fixups MOSMCExpr::getFixupKind() const {
   MOS::Fixups Kind = MOS::Fixups::LastTargetFixupKind;
 
   switch (getKind()) {
+  case VK_MOS_IMM8:
+    Kind = MOS::Imm8;
+    break;
   case VK_MOS_IMM16:
     Kind = MOS::Imm16;
     break;
   case VK_MOS_ADDR8:
     Kind = MOS::Addr8;
+    break;
+  case VK_MOS_ADDR16:
+    Kind = MOS::Addr16;
     break;
   case VK_MOS_ADDR16_HI:
     Kind = MOS::Addr16_High;
@@ -201,10 +213,15 @@ const char *MOSMCExpr::getName() const {
   return nullptr;
 }
 
-MOSMCExpr::VariantKind MOSMCExpr::getKindByName(StringRef Name) {
+MOSMCExpr::VariantKind MOSMCExpr::getKindByName(StringRef Name,
+                                                bool IsImmediate) {
   const auto &Modifier = std::find_if(
       std::begin(ModifierNames), std::end(ModifierNames),
-      [&Name](ModifierEntry const &Mod) { return Mod.Spelling == Name; });
+      [&Name, IsImmediate](ModifierEntry const &Mod) {
+        if (Mod.ImmediateOnly && !IsImmediate)
+          return false;
+        return Mod.Spelling == Name;
+      });
 
   if (Modifier != std::end(ModifierNames)) {
     return Modifier->VariantKind;
