@@ -83,7 +83,7 @@ bool MOSNonReentrantImpl::run(Module &M) {
 
   // Mark all functions reachable from an interrupt function as non-reentrant.
   for (Function &F : M.functions()) {
-    if (F.hasFnAttribute("interrupt")) {
+    if (F.hasFnAttribute("interrupt") || F.hasFnAttribute("interrupt-wedge")) {
       HasInterrupts = true;
       markReentrant(*CG[&F]);
     }

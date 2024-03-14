@@ -64,6 +64,9 @@ public:
   // Return whether or not the function is a direct ISR.
   bool isISR(const MachineFunction& MF) const;
 
+  // Return whether or not the function is a wedge ISR.
+  bool isWedgeISR(const MachineFunction& MF) const;
+
 private:
   void offsetSP(MachineIRBuilder &Builder, int64_t Offset) const;
 };

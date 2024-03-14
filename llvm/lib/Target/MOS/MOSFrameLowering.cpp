@@ -421,5 +421,11 @@ bool MOSFrameLowering::isISR(const MachineFunction &MF) const {
   if (F.hasFnAttribute("no-isr"))
     return false;
   return F.hasFnAttribute("interrupt") ||
-         F.hasFnAttribute("interrupt-norecurse");
+         F.hasFnAttribute("interrupt-norecurse") ||
+         F.hasFnAttribute("interrupt-wedge");
+}
+
+bool MOSFrameLowering::isWedgeISR(const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  return F.hasFnAttribute("wedge");
 }

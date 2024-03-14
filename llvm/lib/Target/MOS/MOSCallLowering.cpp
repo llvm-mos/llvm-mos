@@ -20,6 +20,7 @@
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -270,8 +271,17 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       *MF.getSubtarget().getFrameLowering());
   const Function &F = MF.getFunction();
 
-  auto Return =
-      MIRBuilder.buildInstrNoInsert(TFI.isISR(MF) ? MOS::RTI : MOS::RTS);
+  MachineInstrBuilder Return;
+  if (TFI.isWedgeISR(MF)) {
+    auto str = F.getFnAttribute("wedge").getValueAsString();
+    uint16_t chain_isr = 0;
+    llvm::to_integer<uint16_t>(str, chain_isr, 0);
+    Return = MIRBuilder.buildInstrNoInsert(MOS::TailJMP).addImm(chain_isr);
+  } else if (TFI.isISR(MF)) {
+    Return = MIRBuilder.buildInstrNoInsert(MOS::RTI);
+  } else {
+    Return = MIRBuilder.buildInstrNoInsert(MOS::RTS);
+  }
 
   if (Val) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
