@@ -452,9 +452,14 @@ public:
             DestTy.isVector() ? CastSrcTy.getNumElements() / NumDefs : 1;
         LLT UnmergeTy = CastSrcTy.changeElementCount(
             ElementCount::getFixed(UnmergeNumElts));
+        LLT SrcWideTy =
+            SrcTy.changeElementCount(ElementCount::getFixed(UnmergeNumElts));
 
-        if (IsSupported && isInstUnsupported(
-                {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, CastSrcTy}}))
+        if (IsSupported &&
+            (isInstUnsupported(
+                 {TargetOpcode::G_UNMERGE_VALUES, {UnmergeTy, CastSrcTy}}) ||
+             LI.getAction({TargetOpcode::G_TRUNC, {SrcWideTy, UnmergeTy}})
+                     .Action == LegalizeActions::MoreElements))
           return false;
 
         Builder.setInstr(MI);

@@ -704,6 +704,12 @@ public:
   /// immediate without having to materialize the immediate into a register.
   bool isLegalAddImmediate(int64_t Imm) const;
 
+  /// Return true if adding the specified scalable immediate is legal, that is
+  /// the target has add instructions which can add a register with the
+  /// immediate (multiplied by vscale) without having to materialize the
+  /// immediate into a register.
+  bool isLegalAddScalableImmediate(int64_t Imm) const;
+
   /// Return true if the specified immediate is legal icmp immediate,
   /// that is the target has icmp instructions which can compare a register
   /// against the immediate without having to materialize the immediate into a
@@ -715,11 +721,15 @@ public:
   /// The type may be VoidTy, in which case only return true if the addressing
   /// mode is legal for a load/store of any legal type.
   /// If target returns true in LSRWithInstrQueries(), I may be valid.
+  /// \param ScalableOffset represents a quantity of bytes multiplied by vscale,
+  /// an invariant value known only at runtime. Most targets should not accept
+  /// a scalable offset.
+  ///
   /// TODO: Handle pre/postinc as well.
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, int64_t Scale,
-                             unsigned AddrSpace = 0,
-                             Instruction *I = nullptr) const;
+                             unsigned AddrSpace = 0, Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) const;
 
   /// Return true if the addressing mode represented by AM is legal for
   /// this target, for a load/store of the specified type.
@@ -1275,13 +1285,16 @@ public:
   /// cases or optimizations based on those values.
   /// \p CxtI is the optional original context instruction, if one exists, to
   /// provide even more information.
+  /// \p TLibInfo is used to search for platform specific vector library
+  /// functions for instructions that might be converted to calls (e.g. frem).
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
-      const Instruction *CxtI = nullptr) const;
+      const Instruction *CxtI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr) const;
 
   /// Returns the cost estimation for alternating opcode pattern that can be
   /// lowered to a single instruction on the target. In X86 this is for the
@@ -1866,15 +1879,18 @@ public:
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
+  virtual bool isLegalAddScalableImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace,
+                                     int64_t ScalableOffset,
                                      Instruction *I) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
                                      Type *BaseType, int64_t Scale,
                                      Type *ScaleType, unsigned AddrSpace,
+                                     int64_t ScalableOffset,
                                      Instruction *I) = 0;
   virtual bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                              const TargetTransformInfo::LSRCost &C2) = 0;
@@ -2338,14 +2354,17 @@ public:
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);
   }
+  bool isLegalAddScalableImmediate(int64_t Imm) override {
+    return Impl.isLegalAddScalableImmediate(Imm);
+  }
   bool isLegalICmpImmediate(int64_t Imm) override {
     return Impl.isLegalICmpImmediate(Imm);
   }
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, int64_t Scale, unsigned AddrSpace,
-                             Instruction *I) override {
+                             Instruction *I, int64_t ScalableOffset) override {
     return Impl.isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
-                                      AddrSpace, I);
+                                      AddrSpace, I, ScalableOffset);
   }
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, Type *BaseType, int64_t Scale,

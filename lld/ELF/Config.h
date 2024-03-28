@@ -128,7 +128,7 @@ public:
 private:
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
-  void link(llvm::opt::InputArgList &args);
+  template <class ELFT> void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
   bool tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
                         uint64_t offsetInArchive, bool lazy);
@@ -140,7 +140,7 @@ private:
 
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<InputFile *> files;
-  std::optional<InputFile *> armCmseImpLib;
+  InputFile *armCmseImpLib = nullptr;
 
 public:
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
@@ -224,7 +224,9 @@ struct Config {
   CGProfileSortKind callGraphProfileSort;
   bool checkSections;
   bool checkDynamicRelocs;
-  llvm::DebugCompressionType compressDebugSections;
+  std::optional<llvm::DebugCompressionType> compressDebugSections;
+  llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::DebugCompressionType>, 0>
+      compressSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
@@ -273,6 +275,7 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  bool rejectMismatch;
   bool relax;
   bool relaxGP;
   bool relocatable;
