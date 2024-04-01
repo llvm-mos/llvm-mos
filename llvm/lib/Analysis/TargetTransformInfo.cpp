@@ -418,15 +418,13 @@ bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                         Scale, AddrSpace, I, ScalableOffset);
 }
 
-bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
-                                                int64_t BaseOffset,
-                                                bool HasBaseReg, Type *BaseType,
-                                                int64_t Scale, Type *ScaleType,
-                                                unsigned AddrSpace,
-                                                Instruction *I) const {
+bool TargetTransformInfo::isLegalAddressingMode(
+    Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset, bool HasBaseReg,
+    Type *BaseType, int64_t Scale, Type *ScaleType, unsigned AddrSpace,
+    Instruction *I, int64_t ScalableOffset) const {
   return TTIImpl->isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg,
                                         BaseType, Scale, ScaleType, AddrSpace,
-                                        I);
+                                        I, ScalableOffset);
 }
 
 bool TargetTransformInfo::isLSRCostLess(const LSRCost &C1,

@@ -352,7 +352,8 @@ public:
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, Type *BaseType, int64_t Scale,
                              Type *ScaleType, unsigned AddrSpace,
-                             Instruction *I = nullptr) {
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;
@@ -360,6 +361,7 @@ public:
     AM.BaseType = BaseType;
     AM.Scale = Scale;
     AM.ScaleType = ScaleType;
+    AM.ScalableOffset = ScalableOffset;
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 

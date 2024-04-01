@@ -41,6 +41,8 @@
   }
 ---
 name: nonreentrant
+frameInfo:
+  adjustsStack: true
 stack:
   - { id: 0, size: 1}
   - { id: 1, size: 1}
@@ -577,6 +579,8 @@ body: |
 ...
 ---
 name: interrupt_caller
+frameInfo:
+  adjustsStack: true
 body: |
   bb.0.entry:
     ; 6502-LABEL: name: interrupt_caller

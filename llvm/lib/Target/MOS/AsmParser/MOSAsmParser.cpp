@@ -132,7 +132,7 @@ public:
     assert(isImm());
     return Imm;
   };
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(isReg());
     return Reg;
   }

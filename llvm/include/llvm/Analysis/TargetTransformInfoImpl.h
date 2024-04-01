@@ -233,9 +233,10 @@ public:
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, Type *BaseType, int64_t Scale,
                              Type *ScaleType, unsigned AddrSpace,
-                             Instruction *I = nullptr) const {
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) const {
     return isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
-                                 AddrSpace, I);
+                                 AddrSpace, I, ScalableOffset);
   }
 
   bool isLSRCostLess(const TTI::LSRCost &C1, const TTI::LSRCost &C2) const {

@@ -740,7 +740,8 @@ public:
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, Type *BaseType, int64_t Scale,
                              Type *ScaleType, unsigned AddrSpace = 0,
-                             Instruction *I = nullptr) const;
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) const;
 
   /// Return true if LSR cost of C1 is lower than C2.
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
@@ -1884,14 +1885,14 @@ public:
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace,
-                                     int64_t ScalableOffset,
-                                     Instruction *I) = 0;
+                                     Instruction *I,
+                                     int64_t ScalableOffset) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
                                      Type *BaseType, int64_t Scale,
                                      Type *ScaleType, unsigned AddrSpace,
-                                     int64_t ScalableOffset,
-                                     Instruction *I) = 0;
+                                     Instruction *I,
+                                     int64_t ScalableOffset) = 0;
   virtual bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                              const TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool isNumRegsMajorCostOfLSR() = 0;
@@ -2369,9 +2370,10 @@ public:
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                              bool HasBaseReg, Type *BaseType, int64_t Scale,
                              Type *ScaleType, unsigned AddrSpace,
-                             Instruction *I) override {
+                             Instruction *I, int64_t ScalableOffset) override {
     return Impl.isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg,
-                                      BaseType, Scale, ScaleType, AddrSpace, I);
+                                      BaseType, Scale, ScaleType, AddrSpace, I,
+                                      ScalableOffset);
   }
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) override {
