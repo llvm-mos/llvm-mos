@@ -106,6 +106,9 @@ private:
   bool legalizeBrJt(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                     MachineInstr &MI) const;
 
+  bool legalizeTrap(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
+                    MachineInstr &MI) const;
+
   // Variadic Arguments
   bool legalizeVAArg(LegalizerHelper &Helper, MachineRegisterInfo &MRI,
                      MachineInstr &MI) const;

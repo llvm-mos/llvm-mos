@@ -335,6 +335,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
 
   getActionDefinitionsBuilder(G_JUMP_TABLE).unsupported();
 
+  getActionDefinitionsBuilder(G_TRAP).custom();
+
   // Variadic Arguments
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG}).custom();
@@ -361,16 +363,6 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   MachineIRBuilder &Builder = Helper.MIRBuilder;
   const MachineRegisterInfo &MRI = *Builder.getMRI();
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-  case Intrinsic::trap: {
-    auto &Ctx = MI.getMF()->getFunction().getContext();
-    auto *RetTy = Type::getVoidTy(Ctx);
-    LostDebugLocObserver LocObserver("");
-    if (!createLibcall(Builder, "abort", {{}, RetTy, 0}, {}, CallingConv::C,
-                       LocObserver))
-      return false;
-    MI.eraseFromParent();
-    return true;
-  }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
     auto Tmp =
@@ -494,6 +486,8 @@ bool MOSLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeBrCond(Helper, MRI, MI);
   case G_BRJT:
     return legalizeBrJt(Helper, MRI, MI);
+  case G_TRAP:
+    return legalizeTrap(Helper, MRI, MI);
 
   // Variadic Arguments
   case G_VAARG:
@@ -2219,6 +2213,18 @@ bool MOSLegalizerInfo::legalizeBrJt(LegalizerHelper &Helper,
             .getReg(0));
   }
 
+  MI.eraseFromParent();
+  return true;
+}
+
+bool MOSLegalizerInfo::legalizeTrap(LegalizerHelper &Helper,
+                                    MachineRegisterInfo &MRI,
+                                    MachineInstr &MI) const {
+  auto *RetTy = Type::getVoidTy(MI.getMF()->getFunction().getContext());
+  LostDebugLocObserver LocObserver("");
+  if (!createLibcall(Helper.MIRBuilder, "abort", {{}, RetTy, 0}, {},
+                     CallingConv::C, LocObserver))
+    return false;
   MI.eraseFromParent();
   return true;
 }

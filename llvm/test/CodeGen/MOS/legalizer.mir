@@ -2762,7 +2762,7 @@ body: |
     ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
     ; CHECK-NEXT: JSR &abort, mos_csr
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 ...
 ---
 name: dyn_stackalloc
