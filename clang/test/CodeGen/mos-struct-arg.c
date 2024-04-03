@@ -27,7 +27,7 @@ struct Large test_large_struct_param(struct Large s) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[LIST:%.*]] = alloca ptr, align 1
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR6:[0-9]+]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[LIST]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[LIST]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[LIST]], align 1
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST]], align 1
@@ -49,7 +49,7 @@ struct Small test_small_struct_vaarg(int x, ...) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[LIST:%.*]] = alloca ptr, align 1
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[LIST]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[LIST]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[LIST]], align 1
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 2
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST]], align 1
