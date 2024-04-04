@@ -1289,6 +1289,19 @@ APInt APInt::multiplicativeInverse(const APInt& modulo) const {
   return std::move(t[i]);
 }
 
+/// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
+APInt APInt::multiplicativeInverse() const {
+  assert((*this)[0] &&
+         "multiplicative inverse is only defined for odd numbers!");
+
+  // Use Newton's method.
+  APInt Factor = *this;
+  APInt T;
+  while (!(T = *this * Factor).isOne())
+    Factor *= 2 - T;
+  return Factor;
+}
+
 /// Implementation of Knuth's Algorithm D (Division of nonnegative integers)
 /// from "Art of Computer Programming, Volume 2", section 4.3.1, p. 272. The
 /// variables here have the same names as in the algorithm. Comments explain
@@ -3120,4 +3133,20 @@ APInt APIntOps::avgCeilS(const APInt &C1, const APInt &C2) {
 APInt APIntOps::avgCeilU(const APInt &C1, const APInt &C2) {
   // Return ceil((C1 + C2) / 2)
   return (C1 | C2) - (C1 ^ C2).lshr(1);
+}
+
+APInt APIntOps::mulhs(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.sext(FullWidth);
+  APInt C2Ext = C2.sext(FullWidth);
+  return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
+}
+
+APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.zext(FullWidth);
+  APInt C2Ext = C2.zext(FullWidth);
+  return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
 }
