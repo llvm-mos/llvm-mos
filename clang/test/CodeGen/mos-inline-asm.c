@@ -10,7 +10,7 @@ _Bool b;
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @c, align 1, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NEXT:    tail call void asm sideeffect "", "a"(i8 [[TMP0]]) #[[ATTR2:[0-9]+]], !srcloc !5
+// CHECK-NEXT:    tail call void asm sideeffect "", "a"(i8 [[TMP0]]) #[[ATTR1:[0-9]+]], !srcloc [[META5:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_a() {
@@ -21,7 +21,7 @@ void test_a() {
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @c, align 1, !tbaa [[TBAA2]]
-// CHECK-NEXT:    tail call void asm sideeffect "", "x"(i8 [[TMP0]]) #[[ATTR2]], !srcloc !6
+// CHECK-NEXT:    tail call void asm sideeffect "", "x"(i8 [[TMP0]]) #[[ATTR1]], !srcloc [[META6:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_x() {
@@ -32,7 +32,7 @@ void test_x() {
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @c, align 1, !tbaa [[TBAA2]]
-// CHECK-NEXT:    tail call void asm sideeffect "", "y"(i8 [[TMP0]]) #[[ATTR2]], !srcloc !7
+// CHECK-NEXT:    tail call void asm sideeffect "", "y"(i8 [[TMP0]]) #[[ATTR1]], !srcloc [[META7:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_y() {
@@ -43,7 +43,7 @@ void test_y() {
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @c, align 1, !tbaa [[TBAA2]]
-// CHECK-NEXT:    tail call void asm sideeffect "", "R"(i8 [[TMP0]]) #[[ATTR2]], !srcloc !8
+// CHECK-NEXT:    tail call void asm sideeffect "", "R"(i8 [[TMP0]]) #[[ATTR1]], !srcloc [[META8:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_R() {
@@ -54,7 +54,7 @@ void test_R() {
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @c, align 1, !tbaa [[TBAA2]]
-// CHECK-NEXT:    tail call void asm sideeffect "", "d"(i8 [[TMP0]]) #[[ATTR2]], !srcloc !9
+// CHECK-NEXT:    tail call void asm sideeffect "", "d"(i8 [[TMP0]]) #[[ATTR1]], !srcloc [[META9:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_d() {
@@ -64,9 +64,9 @@ void test_d() {
 // CHECK-LABEL: define dso_local void @test_c
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @b, align 1, !tbaa [[TBAA10:![0-9]+]], !range [[RNG12:![0-9]+]], !noundef !13
-// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[TMP0]], 0
-// CHECK-NEXT:    tail call void asm sideeffect "", "c"(i1 [[TOBOOL]]) #[[ATTR2]], !srcloc !14
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @b, align 1, !tbaa [[TBAA10:![0-9]+]], !range [[RNG12:![0-9]+]], !noundef [[META13:![0-9]+]]
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    tail call void asm sideeffect "", "c"(i1 [[TOBOOL]]) #[[ATTR1]], !srcloc [[META14:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_c() {
@@ -76,9 +76,9 @@ void test_c() {
 // CHECK-LABEL: define dso_local void @test_v
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @b, align 1, !tbaa [[TBAA10]], !range [[RNG12]], !noundef !13
-// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[TMP0]], 0
-// CHECK-NEXT:    tail call void asm sideeffect "", "v"(i1 [[TOBOOL]]) #[[ATTR2]], !srcloc !15
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @b, align 1, !tbaa [[TBAA10]], !range [[RNG12]], !noundef [[META13]]
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    tail call void asm sideeffect "", "v"(i1 [[TOBOOL]]) #[[ATTR1]], !srcloc [[META15:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_v() {
@@ -88,16 +88,16 @@ void test_v() {
 // CHECK-LABEL: define dso_local void @test_clobber
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{a}"() #[[ATTR2]], !srcloc !16
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{x}"() #[[ATTR2]], !srcloc !17
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{y}"() #[[ATTR2]], !srcloc !18
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{c}"() #[[ATTR2]], !srcloc !19
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{v}"() #[[ATTR2]], !srcloc !20
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{p}"() #[[ATTR2]], !srcloc !21
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{rc0}"() #[[ATTR2]], !srcloc !22
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{rc31}"() #[[ATTR2]], !srcloc !23
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{rs0}"() #[[ATTR2]], !srcloc !24
-// CHECK-NEXT:    tail call void asm sideeffect "", "~{rs15}"() #[[ATTR2]], !srcloc !25
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{a}"() #[[ATTR1]], !srcloc [[META16:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{x}"() #[[ATTR1]], !srcloc [[META17:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{y}"() #[[ATTR1]], !srcloc [[META18:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{c}"() #[[ATTR1]], !srcloc [[META19:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{v}"() #[[ATTR1]], !srcloc [[META20:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{p}"() #[[ATTR1]], !srcloc [[META21:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{rc0}"() #[[ATTR1]], !srcloc [[META22:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{rc31}"() #[[ATTR1]], !srcloc [[META23:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{rs0}"() #[[ATTR1]], !srcloc [[META24:![0-9]+]]
+// CHECK-NEXT:    tail call void asm sideeffect "", "~{rs15}"() #[[ATTR1]], !srcloc [[META25:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_clobber() {
@@ -114,9 +114,9 @@ void test_clobber() {
 }
 
 // CHECK-LABEL: define dso_local void @test_leaf_asm
-// CHECK-SAME: () local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void asm sideeffect "", ""() #[[ATTR3:[0-9]+]], !srcloc !26
+// CHECK-NEXT:    tail call void asm sideeffect "", ""() #[[ATTR2:[0-9]+]], !srcloc [[META26:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_leaf_asm() {

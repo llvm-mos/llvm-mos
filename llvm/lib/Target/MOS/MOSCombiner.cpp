@@ -313,11 +313,17 @@ bool MOSCombinerImpl::matchUAddO1(MachineInstr &MI) const {
 
 void MOSCombinerImpl::applyUAddO1(MachineInstr &MI) const {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  B.setInstrAndDebugLoc(MI);
-  B.buildAdd(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
-  B.buildICmp(CmpInst::ICMP_EQ, MI.getOperand(1), MI.getOperand(0),
-              B.buildConstant(Ty, 0));
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Overflow = MI.getOperand(1).getReg();
+  Register LHS = MI.getOperand(2).getReg();
+  Register RHS = MI.getOperand(3).getReg();
+
+  B.setInsertPt(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)));
+  B.setDebugLoc(MI.getDebugLoc());
   MI.eraseFromParent();
+  B.buildAdd(Dst, LHS, RHS);
+  B.buildICmp(CmpInst::ICMP_EQ, Overflow, Dst, B.buildConstant(Ty, 0));
 }
 
 bool MOSCombinerImpl::matchCMPZZero(MachineInstr &MI,

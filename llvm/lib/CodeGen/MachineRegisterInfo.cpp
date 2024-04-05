@@ -407,6 +407,9 @@ void MachineRegisterInfo::replaceRegWith(Register FromReg, Register ToReg) {
 MachineInstr *MachineRegisterInfo::getVRegDef(Register Reg) const {
   // Since we are in SSA form, we can use the first definition.
   def_instr_iterator I = def_instr_begin(Reg);
+  if(!I.atEnd() && std::next(I) != def_instr_end())
+      dbgs() << *I << *std::next(I);
+
   assert((I.atEnd() || std::next(I) == def_instr_end()) &&
          "getVRegDef assumes a single definition or no definition");
   return !I.atEnd() ? &*I : nullptr;
