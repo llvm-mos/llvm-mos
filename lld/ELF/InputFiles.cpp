@@ -2221,8 +2221,9 @@ bool XO65Enclave::link() {
   generateCfgFile(cfgFileOS);
   cfgFileOS.flush();
 
-  if (!outputFile)
-    outputFile.emplace("ld65", "o", toString(this), "ld65 output file");
+  // Always nuke the output file; otherwise it will still be open if multiple
+  // calls to ld65 occur (causes issues on Windows).
+  outputFile.emplace("ld65", "o", toString(this), "ld65 output file");
   if (!mapFile)
     mapFile.emplace("ld65", "map", toString(this), "ld65 map file");
 
