@@ -1393,7 +1393,7 @@ public:
 
           return TargetTTI->getShuffleCost(
               IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc, VecTy,
-              AdjustMask, CostKind, 0, nullptr, {}, Shuffle);
+              AdjustMask, CostKind, 0, nullptr, Operands, Shuffle);
         }
 
         // Narrowing shuffle - perform shuffle at original wider width and
@@ -1402,7 +1402,7 @@ public:
 
         InstructionCost ShuffleCost = TargetTTI->getShuffleCost(
             IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc,
-            VecSrcTy, AdjustMask, CostKind, 0, nullptr, {}, Shuffle);
+            VecSrcTy, AdjustMask, CostKind, 0, nullptr, Operands, Shuffle);
 
         SmallVector<int, 16> ExtractMask(Mask.size());
         std::iota(ExtractMask.begin(), ExtractMask.end(), 0);

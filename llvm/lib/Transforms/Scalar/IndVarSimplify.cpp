@@ -71,6 +71,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -138,6 +139,8 @@ class IndVarSimplify {
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   bool WidenIndVars;
 
+  bool RunUnswitching = false;
+
   bool handleFloatingPointIV(Loop *L, PHINode *PH);
   bool rewriteNonIntegerIVs(Loop *L);
 
@@ -171,6 +174,8 @@ public:
   }
 
   bool run(Loop *L);
+
+  bool runUnswitching() const { return RunUnswitching; }
 };
 
 } // end anonymous namespace
@@ -616,9 +621,11 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
       // Information about sign/zero extensions of CurrIV.
       IndVarSimplifyVisitor Visitor(CurrIV, SE, TTI, DT);
 
-      Changed |= simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts, Rewriter,
-                                   &Visitor);
+      const auto &[C, U] = simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts,
+                                             Rewriter, &Visitor);
 
+      Changed |= C;
+      RunUnswitching |= U;
       if (Visitor.WI.WidestNativeType) {
         WideIVs.push_back(Visitor.WI);
       }
@@ -1885,6 +1892,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (OldCond->use_empty())
       DeadInsts.emplace_back(OldCond);
     Changed = true;
+    RunUnswitching = true;
   }
 
   return Changed;
@@ -2091,6 +2099,11 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
 
   auto PA = getLoopPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  if (IVS.runUnswitching()) {
+    AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(L, AR);
+    PA.preserve<ShouldRunExtraSimpleLoopUnswitch>();
+  }
+
   if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
