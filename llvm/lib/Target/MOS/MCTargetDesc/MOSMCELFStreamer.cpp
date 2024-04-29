@@ -126,13 +126,9 @@ void MOSMCELFStreamer::emit816MXState(bool IsMLow, bool IsMHigh, bool IsXLow,
 MCStreamer *createMOSMCELFStreamer(const Triple & /*T*/, MCContext &Ctx,
                                    std::unique_ptr<MCAsmBackend> &&TAB,
                                    std::unique_ptr<MCObjectWriter> &&OW,
-                                   std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                   bool RelaxAll) {
+                                   std::unique_ptr<MCCodeEmitter> &&Emitter) {
   auto *S = new MOSMCELFStreamer(Ctx, std::move(TAB), std::move(OW),
                                  std::move(Emitter));
-  if (RelaxAll) {
-    S->getAssembler().setRelaxAll(true);
-  }
   return S;
 }
 

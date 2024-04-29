@@ -693,7 +693,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
         DestReg = DestReg8;
         // MOS defines LSB writes to write the whole 8-bit register, not just
         // part of it.
-        assert(!Builder.getInsertPt()->readsRegister(DestReg));
+        assert(!Builder.getInsertPt()->readsRegister(DestReg, /*TRI=*/nullptr));
 
         copyPhysRegImpl(Builder, DestReg, SrcReg);
       } else {

@@ -73,8 +73,7 @@ private:
 MCStreamer *createMOSMCELFStreamer(const Triple &T, MCContext &Ctx,
                                    std::unique_ptr<MCAsmBackend> &&TAB,
                                    std::unique_ptr<MCObjectWriter> &&OW,
-                                   std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                   bool RelaxAll);
+                                   std::unique_ptr<MCCodeEmitter> &&Emitter);
 
 } // end namespace llvm
 

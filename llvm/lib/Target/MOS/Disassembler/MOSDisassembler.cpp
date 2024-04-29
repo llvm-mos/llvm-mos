@@ -46,9 +46,9 @@ public:
         Has65816RegisterWidths(STI.hasFeature(MOS::FeatureW65816) ||
                                STI.hasFeature(MOS::Feature65EL02)),
         ZeroPageOffset(STI.hasFeature(MOS::FeatureHUC6280) ? 0x2000 : 0) {}
-  std::optional<MCDisassembler::DecodeStatus>
-  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
-                uint64_t Address, raw_ostream &CStream) const override;
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
@@ -253,10 +253,10 @@ decodeInstruction(std::optional<const uint8_t *> DecodeTable, MCInst &MI,
   return decodeInstruction(DecodeTable.value(), MI, insn, Address, DisAsm, STI);
 }
 
-std::optional<MCDisassembler::DecodeStatus>
-MOSDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                               raw_ostream &CStream) const {
+Expected<bool> MOSDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                              uint64_t &Size,
+                                              ArrayRef<uint8_t> Bytes,
+                                              uint64_t Address) const {
   // 16-bit flags for decoding immediates are set based on the occurrence of
   // mapping symbols $ml, $mh, $xl, $xh.
   if (Has65816RegisterWidths) {
@@ -269,7 +269,7 @@ MOSDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
     else if (Symbol.Name.starts_with("$xh"))
       XLow = false;
   }
-  return std::nullopt;
+  return false;
 }
 
 DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,

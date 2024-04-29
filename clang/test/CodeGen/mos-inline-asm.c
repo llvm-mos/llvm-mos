@@ -65,7 +65,7 @@ void test_d() {
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @b, align 1, !tbaa [[TBAA10:![0-9]+]], !range [[RNG12:![0-9]+]], !noundef [[META13:![0-9]+]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    tail call void asm sideeffect "", "c"(i1 [[TOBOOL]]) #[[ATTR1]], !srcloc [[META14:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
@@ -77,7 +77,7 @@ void test_c() {
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @b, align 1, !tbaa [[TBAA10]], !range [[RNG12]], !noundef [[META13]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    tail call void asm sideeffect "", "v"(i1 [[TOBOOL]]) #[[ATTR1]], !srcloc [[META15:![0-9]+]]
 // CHECK-NEXT:    ret void
 //

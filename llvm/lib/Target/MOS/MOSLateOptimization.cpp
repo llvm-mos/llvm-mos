@@ -70,7 +70,7 @@ static bool definesNZ(const MachineInstr &MI, Register Val, const MOSSubtarget &
     return false;
   if (MI.getOpcode() == MOS::STImag8)
     return false;
-  if (MI.definesRegister(Val))
+  if (MI.definesRegister(Val, /*TRI=*/nullptr))
     return true;
   switch (MI.getOpcode()) {
   default:
