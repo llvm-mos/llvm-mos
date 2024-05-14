@@ -254,7 +254,7 @@ public:
   /// If the AM is supported, the return value must be >= 0.
   /// If the AM is not supported, it returns a negative value.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
+                                       StackOffset BaseOffset, bool HasBaseReg,
                                        Type *BaseTy, int64_t Scale,
                                        Type *ScaleTy, unsigned AddrSpace) const;
 
@@ -297,9 +297,6 @@ public:
 
 private:
   bool supportsGather() const;
-  InstructionCost getGSScalarCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                  Type *DataTy, bool VariableMask,
-                                  Align Alignment, unsigned AddressSpace);
   InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                   Type *DataTy, const Value *Ptr,
                                   Align Alignment, unsigned AddressSpace);

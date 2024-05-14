@@ -10,6 +10,7 @@
 #define LLD_ELF_LINKER_SCRIPT_H
 
 #include "Config.h"
+#include "InputSection.h"
 #include "Writer.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Strings.h"
@@ -310,7 +311,8 @@ class LinkerScript final {
 
   SmallVector<InputSectionBase *, 0>
   computeInputSections(const InputSectionDescription *,
-                       ArrayRef<InputSectionBase *>);
+                       ArrayRef<InputSectionBase *>,
+                       const OutputSection &outCmd);
 
   SmallVector<InputSectionBase *, 0> createInputSectionList(OutputSection &cmd);
 
@@ -356,6 +358,8 @@ public:
 
   bool shouldKeep(InputSectionBase *s);
   const Defined *assignAddresses();
+  bool spillSections();
+  void erasePotentialSpillSections();
   void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();
@@ -425,9 +429,23 @@ public:
   //
   // then provideMap should contain the mapping: 'v' -> ['a', 'b', 'c']
   llvm::MapVector<StringRef, SmallVector<StringRef, 0>> provideMap;
+
+  // List of potential spill locations (PotentialSpillSection) for an input
+  // section.
+  struct PotentialSpillList {
+    // Never nullptr.
+    PotentialSpillSection *head;
+    PotentialSpillSection *tail;
+  };
+  llvm::DenseMap<InputSectionBase *, PotentialSpillList> potentialSpillLists;
 };
 
-LLVM_LIBRARY_VISIBILITY extern std::unique_ptr<LinkerScript> script;
+struct ScriptWrapper {
+  LinkerScript s;
+  LinkerScript *operator->() { return &s; }
+};
+
+LLVM_LIBRARY_VISIBILITY extern ScriptWrapper script;
 
 } // end namespace lld::elf
 
