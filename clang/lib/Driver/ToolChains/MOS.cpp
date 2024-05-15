@@ -23,10 +23,7 @@ using namespace clang::driver::toolchains;
 MOS::MOS(const Driver &D, const llvm::Triple &Triple,
          const llvm::opt::ArgList &Args)
     : ToolChain(D, Triple, Args) {
-  // Look for binaries in both the installation and driver directory.
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 }
 
 Tool *MOS::buildLinker() const { return new tools::mos::Linker(*this); }
