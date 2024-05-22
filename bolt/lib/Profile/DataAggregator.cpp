@@ -613,7 +613,8 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
         if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
           report_error("cannot create output data file", EC);
     }
-    BC.logBOLTErrorsAndQuitOnFatal(PrintProgramStats().runOnFunctions(BC));
+    PrintProgramStats PPS(BAT);
+    BC.logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(BC));
   }
 
   return Error::success();
@@ -673,7 +674,8 @@ DataAggregator::getBATParentFunction(const BinaryFunction &Func) const {
   return nullptr;
 }
 
-StringRef DataAggregator::getLocationName(const BinaryFunction &Func) const {
+StringRef DataAggregator::getLocationName(const BinaryFunction &Func,
+                                          bool BAT) {
   if (!BAT)
     return Func.getOneName();
 
@@ -702,7 +704,7 @@ bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
   auto I = NamesToSamples.find(Func.getOneName());
   if (I == NamesToSamples.end()) {
     bool Success;
-    StringRef LocName = getLocationName(Func);
+    StringRef LocName = getLocationName(Func, BAT);
     std::tie(I, Success) = NamesToSamples.insert(
         std::make_pair(Func.getOneName(),
                        FuncSampleData(LocName, FuncSampleData::ContainerTy())));
@@ -722,7 +724,7 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
   FuncBranchData *AggrData = getBranchData(Func);
   if (!AggrData) {
     AggrData = &NamesToBranches[Func.getOneName()];
-    AggrData->Name = getLocationName(Func);
+    AggrData->Name = getLocationName(Func, BAT);
     setBranchData(Func, AggrData);
   }
 
@@ -741,7 +743,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   StringRef SrcFunc;
   StringRef DstFunc;
   if (FromFunc) {
-    SrcFunc = getLocationName(*FromFunc);
+    SrcFunc = getLocationName(*FromFunc, BAT);
     FromAggrData = getBranchData(*FromFunc);
     if (!FromAggrData) {
       FromAggrData = &NamesToBranches[FromFunc->getOneName()];
@@ -752,7 +754,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
     recordExit(*FromFunc, From, Mispreds, Count);
   }
   if (ToFunc) {
-    DstFunc = getLocationName(*ToFunc);
+    DstFunc = getLocationName(*ToFunc, BAT);
     ToAggrData = getBranchData(*ToFunc);
     if (!ToAggrData) {
       ToAggrData = &NamesToBranches[ToFunc->getOneName()];
@@ -1227,7 +1229,7 @@ ErrorOr<Location> DataAggregator::parseLocationOrOffset() {
   if (Sep == StringRef::npos)
     return parseOffset();
   StringRef LookAhead = ParsingBuf.substr(0, Sep);
-  if (LookAhead.find_first_of(":") == StringRef::npos)
+  if (!LookAhead.contains(':'))
     return parseOffset();
 
   ErrorOr<StringRef> BuildID = parseString(':');
@@ -1464,7 +1466,7 @@ uint64_t DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     uint64_t To = getBinaryFunctionContainingAddress(LBR.To) ? LBR.To : 0;
     if (!From && !To)
       continue;
-    BranchInfo &Info = BranchLBRs[Trace(From, To)];
+    TakenBranchInfo &Info = BranchLBRs[Trace(From, To)];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
   }
@@ -1609,7 +1611,7 @@ void DataAggregator::processBranchEvents() {
 
   for (const auto &AggrLBR : BranchLBRs) {
     const Trace &Loc = AggrLBR.first;
-    const BranchInfo &Info = AggrLBR.second;
+    const TakenBranchInfo &Info = AggrLBR.second;
     doBranch(Loc.From, Loc.To, Info.TakenCount, Info.MispredCount);
   }
 }
@@ -2253,13 +2255,13 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
   } else {
     for (const auto &KV : NamesToBranches) {
       const FuncBranchData &FBD = KV.second;
-      for (const llvm::bolt::BranchInfo &BI : FBD.Data) {
+      for (const BranchInfo &BI : FBD.Data) {
         writeLocation(BI.From);
         writeLocation(BI.To);
         OutFile << BI.Mispreds << " " << BI.Branches << "\n";
         ++BranchValues;
       }
-      for (const llvm::bolt::BranchInfo &BI : FBD.EntryData) {
+      for (const BranchInfo &BI : FBD.EntryData) {
         // Do not output if source is a known symbol, since this was already
         // accounted for in the source function
         if (BI.From.IsSymbol)
@@ -2340,7 +2342,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);
-      YamlBF.Name = getLocationName(*BF);
+      YamlBF.Name = getLocationName(*BF, BAT);
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
@@ -2366,7 +2368,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         return std::pair(BlockIt->first, BlockIt->second.getBBIndex());
       };
 
-      for (const llvm::bolt::BranchInfo &BI : Branches.Data) {
+      for (const BranchInfo &BI : Branches.Data) {
         using namespace yaml::bolt;
         const auto &[BlockOffset, BlockIndex] = getBlock(BI.From.Offset);
         BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[BlockIndex];
@@ -2388,7 +2390,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         }
       }
       // Set entry counts, similar to DataReader::readProfile.
-      for (const llvm::bolt::BranchInfo &BI : Branches.EntryData) {
+      for (const BranchInfo &BI : Branches.EntryData) {
         if (!BlockMap.isInputBlock(BI.To.Offset)) {
           if (opts::Verbosity >= 1)
             errs() << "BOLT-WARNING: Unexpected EntryData in " << FuncName
