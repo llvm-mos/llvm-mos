@@ -14,7 +14,7 @@ define i16 @main() {
 ; CHECK-NEXT:    [[CUR:%.*]] = phi ptr [ @.str, [[ENTRY]] ], [ [[UGLYGEP:%.*]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[CUR]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[MOS_INDEXIV_IV]] to i16
-; CHECK-NEXT:    [[UGLYGEP]] = getelementptr i8, ptr getelementptr inbounds ([4 x i8], ptr @.str, i16 0, i16 1), i16 [[TMP1]]
+; CHECK-NEXT:    [[UGLYGEP]] = getelementptr i8, ptr getelementptr inbounds (i8, ptr @.str, i16 1), i16 [[TMP1]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[MOS_INDEXIV_IV_NEXT]] = add nuw nsw i8 [[MOS_INDEXIV_IV]], 1
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[WHILE_END:%.*]], label [[WHILE_BODY]]
