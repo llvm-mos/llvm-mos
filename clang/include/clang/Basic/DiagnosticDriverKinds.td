@@ -776,11 +776,11 @@ def err_drv_invalid_empty_dxil_validator_version : Error<
   "version must also be 0">;
 
 def err_drv_invalid_zp : Error<
-  "invalid zero page amount : %0\n"
-  "Zero page amounts must be unsigned integers.">;
+  "invalid zero page amount : %0; "
+  "zero page amounts must be unsigned integers">;
 def err_drv_too_much_zp_reserved : Error<
-  "reserved more zp than available: %0 \n"
-  "Cannot reserve more bytes of zero page than allocated to the compiler.">;
+  "reserved more zp than available: %0; "
+  "cannot reserve more bytes of zero page than allocated to the compiler">;
 
 def warn_drv_sarif_format_unstable : Warning<
   "diagnostic formatting in SARIF mode is currently unstable">,
