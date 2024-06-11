@@ -43,8 +43,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -157,7 +157,7 @@ bool MOSShiftRotateChain::runOnMachineFunction(MachineFunction &MF) {
 void MOSShiftRotateChain::ensureDominates(const MachineInstr &Base,
                                           MachineInstr &PrevMI,
                                           MachineInstr &MI) const {
-  auto &MDT = getAnalysis<MachineDominatorTree>();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   if (MDT.dominates(&PrevMI, &MI))
     return;
 

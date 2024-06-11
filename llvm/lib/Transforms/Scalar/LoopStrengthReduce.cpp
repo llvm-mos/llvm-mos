@@ -1893,7 +1893,7 @@ static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
 
   return isAMCompletelyFolded(TTI, Kind, AccessTy, BaseGV, BaseOffset,
                               HasBaseReg, BaseType, Scale,
-                              /*ScaleType=*/nullptr, ScalableOffset);
+                              /*ScaleType=*/nullptr, nullptr, ScalableOffset);
 }
 
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,

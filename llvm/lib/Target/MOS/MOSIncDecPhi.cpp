@@ -37,7 +37,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -117,7 +117,7 @@ static MachineBasicBlock *splitCriticalEdge(MachineBasicBlock &MBB,
 bool MOSIncDecPhi::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   bool Changed = false;
-  const auto &MDT = getAnalysis<MachineDominatorTree>();
+  const auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   for (MachineBasicBlock &MBB : MF) {
     for (auto I = MBB.begin(), E = MBB.end(); I != E; ++I) {
       MachineInstr &MI = *I;
@@ -164,7 +164,8 @@ bool MOSIncDecPhi::runOnMachineFunction(MachineFunction &MF) {
         // If the value is defined in some other basic block, we don't try to
         // rematerialize it. Instead, just check that it's available in both
         // predecessors.
-        if (!MDT.dominates(ValDefMBB, IncMBB) || !MDT.dominates(ValDefMBB, DecMBB))
+        if (!MDT.dominates(ValDefMBB, IncMBB) ||
+            !MDT.dominates(ValDefMBB, DecMBB))
           continue;
       }
 
@@ -231,7 +232,7 @@ char MOSIncDecPhi::ID = 0;
 INITIALIZE_PASS_BEGIN(MOSIncDecPhi, DEBUG_TYPE,
                       "Optimize MOS Increment/Decrement PHI pattern", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MOSIncDecPhi, DEBUG_TYPE,
                     "Optimize MOS Increment/Decrement PHI pattern", false,
                     false)

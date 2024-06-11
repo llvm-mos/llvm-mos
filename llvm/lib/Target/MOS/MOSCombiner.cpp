@@ -741,8 +741,8 @@ void MOSCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
@@ -778,7 +778,8 @@ bool MOSCombiner::runOnMachineFunction(MachineFunction &MF) {
   bool IsPreLegalize = !MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
-  MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree *MDT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   CombinerInfo CInfo(
       /*AllowIllegalOps*/ IsPreLegalize, /*ShouldLegalizeIllegal*/ false,

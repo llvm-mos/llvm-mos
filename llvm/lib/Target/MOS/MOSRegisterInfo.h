@@ -15,6 +15,7 @@
 
 #include "MOSInstrCost.h"
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
