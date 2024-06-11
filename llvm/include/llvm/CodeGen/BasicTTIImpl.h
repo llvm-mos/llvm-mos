@@ -415,6 +415,10 @@ public:
         shouldFoldTerminatingConditionAfterLSR();
   }
 
+  bool shouldDropLSRSolutionIfLessProfitable() const {
+    return TargetTransformInfoImplBase::shouldDropLSRSolutionIfLessProfitable();
+  }
+
   bool isProfitableLSRChainElement(Instruction *I) {
     return TargetTransformInfoImplBase::isProfitableLSRChainElement(I);
   }
@@ -2000,6 +2004,9 @@ public:
       break;
     case Intrinsic::cos:
       ISD = ISD::FCOS;
+      break;
+    case Intrinsic::tan:
+      ISD = ISD::FTAN;
       break;
     case Intrinsic::exp:
       ISD = ISD::FEXP;

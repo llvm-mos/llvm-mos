@@ -193,8 +193,8 @@ static cl::opt<cl::boolOrDefault> AllowTerminatingConditionFoldingAfterLSR(
     "lsr-term-fold", cl::Hidden,
     cl::desc("Attempt to replace primary IV with other IV."));
 
-static cl::opt<bool> AllowDropSolutionIfLessProfitable(
-    "lsr-drop-solution", cl::Hidden, cl::init(false),
+static cl::opt<cl::boolOrDefault> AllowDropSolutionIfLessProfitable(
+    "lsr-drop-solution", cl::Hidden,
     cl::desc("Attempt to drop solution if it is less profitable"));
 
 STATISTIC(NumTermFold,
@@ -1270,7 +1270,8 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
                                  GlobalValue *BaseGV, int64_t BaseOffset,
                                  bool HasBaseReg, Type *BaseType, int64_t Scale,
-                                 Type *ScaleType, Instruction *Fixup = nullptr);
+                                 Type *ScaleType, Instruction *Fixup = nullptr,
+                                 int64_t ScalableOffset = 0);
 
 static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
   if (isa<SCEVUnknown>(Reg) || isa<SCEVConstant>(Reg))
@@ -1699,17 +1700,18 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  GlobalValue *BaseGV, int64_t BaseOffset,
                                  bool HasBaseReg, Type *BaseType, int64_t Scale,
                                  Type *ScaleType,
-                                 Instruction *Fixup /*= nullptr*/) {
+                                 Instruction *Fixup /*= nullptr*/,
+                                 int64_t ScalableOffset) {
   switch (Kind) {
   case LSRUse::Address:
     return TTI.isLegalAddressingMode(AccessTy.MemTy, BaseGV, BaseOffset,
                                      HasBaseReg, BaseType, Scale, ScaleType,
-                                     AccessTy.AddrSpace, Fixup);
+                                     AccessTy.AddrSpace, Fixup, ScalableOffset);
 
   case LSRUse::ICmpZero:
     // There's not even a target hook for querying whether it would be legal to
     // fold a GV into an ICmp.
-    if (BaseGV)
+    if (BaseGV || ScalableOffset != 0)
       return false;
 
     // ICmp only has two operands; don't allow more than two non-trivial parts.
@@ -1740,11 +1742,12 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
 
   case LSRUse::Basic:
     // Only handle single-register values.
-    return !BaseGV && Scale == 0 && BaseOffset == 0;
+    return !BaseGV && Scale == 0 && BaseOffset == 0 && ScalableOffset == 0;
 
   case LSRUse::Special:
     // Special case Basic to handle -1 scales.
-    return !BaseGV && (Scale == 0 || Scale == -1) && BaseOffset == 0;
+    return !BaseGV && (Scale == 0 || Scale == -1) && BaseOffset == 0 &&
+           ScalableOffset == 0;
   }
 
   llvm_unreachable("Invalid LSRUse Kind!");
@@ -1872,7 +1875,8 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
                              LSRUse::KindType Kind, MemAccessTy AccessTy,
                              GlobalValue *BaseGV, int64_t BaseOffset,
-                             bool HasBaseReg, Type *BaseType) {
+                             bool HasBaseReg, Type *BaseType,
+                             int64_t ScalableOffset = 0) {
   // Fast-path: zero is always foldable.
   if (BaseOffset == 0 && !BaseGV) return true;
 
@@ -1889,7 +1893,7 @@ static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
 
   return isAMCompletelyFolded(TTI, Kind, AccessTy, BaseGV, BaseOffset,
                               HasBaseReg, BaseType, Scale,
-                              /*ScaleType=*/nullptr);
+                              /*ScaleType=*/nullptr, ScalableOffset);
 }
 
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
@@ -3201,16 +3205,31 @@ void LSRInstance::FinalizeChain(IVChain &Chain) {
 static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
                              Value *Operand, const TargetTransformInfo &TTI) {
   const SCEVConstant *IncConst = dyn_cast<SCEVConstant>(IncExpr);
-  if (!IncConst || !isAddressUse(TTI, UserInst, Operand))
-    return false;
+  int64_t IncOffset = 0;
+  int64_t ScalableOffset = 0;
+  if (IncConst) {
+    if (IncConst && IncConst->getAPInt().getSignificantBits() > 64)
+      return false;
+    IncOffset = IncConst->getValue()->getSExtValue();
+  } else {
+    // Look for mul(vscale, constant), to detect ScalableOffset.
+    auto *IncVScale = dyn_cast<SCEVMulExpr>(IncExpr);
+    if (!IncVScale || IncVScale->getNumOperands() != 2 ||
+        !isa<SCEVVScale>(IncVScale->getOperand(1)))
+      return false;
+    auto *Scale = dyn_cast<SCEVConstant>(IncVScale->getOperand(0));
+    if (!Scale || Scale->getType()->getScalarSizeInBits() > 64)
+      return false;
+    ScalableOffset = Scale->getValue()->getSExtValue();
+  }
 
-  if (IncConst->getAPInt().getSignificantBits() > 64)
+  if (!isAddressUse(TTI, UserInst, Operand))
     return false;
 
   MemAccessTy AccessTy = getAccessType(TTI, UserInst, Operand);
-  int64_t IncOffset = IncConst->getValue()->getSExtValue();
   if (!isAlwaysFoldable(TTI, LSRUse::Address, AccessTy, /*BaseGV=*/nullptr,
-                        IncOffset, /*HasBaseReg=*/false, /*BaseType=*/nullptr))
+                        IncOffset, /*HasBaseReg=*/false, /*BaseType=*/nullptr,
+                        ScalableOffset))
     return false;
 
   return true;
@@ -3256,6 +3275,10 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain,
   Type *IVTy = IVSrc->getType();
   Type *IntTy = SE.getEffectiveSCEVType(IVTy);
   const SCEV *LeftOverExpr = nullptr;
+  const SCEV *Accum = SE.getZero(IntTy);
+  SmallVector<std::pair<const SCEV *, Value *>> Bases;
+  Bases.emplace_back(Accum, IVSrc);
+
   for (const IVInc &Inc : Chain) {
     Instruction *InsertPt = Inc.UserInst;
     if (isa<PHINode>(InsertPt))
@@ -3268,10 +3291,31 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain,
       // IncExpr was the result of subtraction of two narrow values, so must
       // be signed.
       const SCEV *IncExpr = SE.getNoopOrSignExtend(Inc.IncExpr, IntTy);
+      Accum = SE.getAddExpr(Accum, IncExpr);
       LeftOverExpr = LeftOverExpr ?
         SE.getAddExpr(LeftOverExpr, IncExpr) : IncExpr;
     }
-    if (LeftOverExpr && !LeftOverExpr->isZero()) {
+
+    // Look through each base to see if any can produce a nice addressing mode.
+    bool FoundBase = false;
+    for (auto [MapScev, MapIVOper] : reverse(Bases)) {
+      const SCEV *Remainder = SE.getMinusSCEV(Accum, MapScev);
+      if (canFoldIVIncExpr(Remainder, Inc.UserInst, Inc.IVOperand, TTI)) {
+        if (!Remainder->isZero()) {
+          Rewriter.clearPostInc();
+          Value *IncV = Rewriter.expandCodeFor(Remainder, IntTy, InsertPt);
+          const SCEV *IVOperExpr =
+              SE.getAddExpr(SE.getUnknown(MapIVOper), SE.getUnknown(IncV));
+          IVOper = Rewriter.expandCodeFor(IVOperExpr, IVTy, InsertPt);
+        } else {
+          IVOper = MapIVOper;
+        }
+
+        FoundBase = true;
+        break;
+      }
+    }
+    if (!FoundBase && LeftOverExpr && !LeftOverExpr->isZero()) {
       // Expand the IV increment.
       Rewriter.clearPostInc();
       Value *IncV = Rewriter.expandCodeFor(LeftOverExpr, IntTy, InsertPt);
@@ -3282,6 +3326,7 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain,
       // If an IV increment can't be folded, use it as the next IV value.
       if (!canFoldIVIncExpr(LeftOverExpr, Inc.UserInst, Inc.IVOperand, TTI)) {
         assert(IVTy == IVOper->getType() && "inconsistent IV increment type");
+        Bases.emplace_back(Accum, IVOper);
         IVSrc = IVOper;
         LeftOverExpr = nullptr;
       }
@@ -5400,8 +5445,20 @@ void LSRInstance::Solve(SmallVectorImpl<const Formula *> &Solution) const {
 
   assert(Solution.size() == Uses.size() && "Malformed solution!");
 
+  const bool EnableDropUnprofitableSolution = [&] {
+    switch (AllowDropSolutionIfLessProfitable) {
+    case cl::BOU_TRUE:
+      return true;
+    case cl::BOU_FALSE:
+      return false;
+    case cl::BOU_UNSET:
+      return TTI.shouldDropLSRSolutionIfLessProfitable();
+    }
+    llvm_unreachable("Unhandled cl::boolOrDefault enum");
+  }();
+
   if (BaselineCost.isLess(SolutionCost)) {
-    if (!AllowDropSolutionIfLessProfitable)
+    if (!EnableDropUnprofitableSolution)
       LLVM_DEBUG(
           dbgs() << "Baseline is more profitable than chosen solution, "
                     "add option 'lsr-drop-solution' to drop LSR solution.\n");

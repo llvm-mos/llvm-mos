@@ -470,6 +470,8 @@ RTLIB::Libcall llvm::getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(SIN_F);
   case TargetOpcode::G_FCOS:
     RTLIBCASE(COS_F);
+  case TargetOpcode::G_FTAN:
+    RTLIBCASE(TAN_F);
   case TargetOpcode::G_FLOG10:
     RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
@@ -1059,6 +1061,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
@@ -2915,6 +2918,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
@@ -4681,6 +4685,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_INTRINSIC_TRUNC:
   case G_FCOS:
   case G_FSIN:
+  case G_FTAN:
   case G_FSQRT:
   case G_BSWAP:
   case G_BITREVERSE:

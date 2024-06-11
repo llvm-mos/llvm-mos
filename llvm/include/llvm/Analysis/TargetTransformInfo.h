@@ -760,6 +760,10 @@ public:
   /// When successful, makes the primary IV dead.
   bool shouldFoldTerminatingConditionAfterLSR() const;
 
+  /// Return true if LSR should drop a found solution if it's calculated to be
+  /// less profitable than the baseline.
+  bool shouldDropLSRSolutionIfLessProfitable() const;
+
   /// \returns true if LSR should not optimize a chain that includes \p I.
   bool isProfitableLSRChainElement(Instruction *I) const;
 
@@ -1902,6 +1906,7 @@ public:
                              const TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool isNumRegsMajorCostOfLSR() = 0;
   virtual bool shouldFoldTerminatingConditionAfterLSR() const = 0;
+  virtual bool shouldDropLSRSolutionIfLessProfitable() const = 0;
   virtual bool isProfitableLSRChainElement(Instruction *I) = 0;
   virtual bool canMacroFuseCmp() = 0;
   virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
@@ -2389,6 +2394,9 @@ public:
   }
   bool shouldFoldTerminatingConditionAfterLSR() const override {
     return Impl.shouldFoldTerminatingConditionAfterLSR();
+  }
+  bool shouldDropLSRSolutionIfLessProfitable() const override {
+    return Impl.shouldDropLSRSolutionIfLessProfitable();
   }
   bool isProfitableLSRChainElement(Instruction *I) override {
     return Impl.isProfitableLSRChainElement(I);
