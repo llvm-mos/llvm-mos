@@ -12,6 +12,7 @@
 
 #include "clang/Sema/SemaMOS.h"
 
+#include "clang/AST/ASTContext.h"
 #include "clang/Sema/Attr.h"
 
 using namespace llvm;
