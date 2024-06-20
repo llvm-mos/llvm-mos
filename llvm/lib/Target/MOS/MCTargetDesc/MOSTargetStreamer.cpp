@@ -61,7 +61,8 @@ void MOSTargetStreamer::finish() {
                       "finalization routines to be run in .fini_array");
 
   bool ReferencesStackPtr = llvm::any_of(
-      Context.getSymbols(), [](const StringMapEntry<MCSymbol *> &TableEntry) {
+      Context.getSymbols(),
+      [](const StringMapEntry<MCSymbolTableValue> &TableEntry) {
         return TableEntry.getKey() == "__rc0" || TableEntry.getKey() == "__rc1";
       });
   if (ReferencesStackPtr)

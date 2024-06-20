@@ -32,8 +32,8 @@ public:
       I.info = classifyArgumentType(I.type);
   }
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class MOSTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -92,13 +92,13 @@ ABIArgInfo MOSABIInfo::classifyReturnType(QualType RetTy) const {
   return DefaultABIInfo::classifyReturnType(RetTy);
 }
 
-Address MOSABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType Ty) const {
+RValue MOSABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty, AggValueSlot Slot) const {
   ABIArgInfo ArgInfo = classifyArgumentType(Ty);
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, ArgInfo.isIndirect(),
                           getContext().getTypeInfoInChars(Ty),
                           /*SlotSize=*/CharUnits::One(),
-                          /*AllowHigherAlign=*/true);
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>
