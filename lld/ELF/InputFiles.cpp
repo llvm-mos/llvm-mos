@@ -893,7 +893,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // We handle that situation gracefully by discarding dangling relocation
       // sections.
       const uint32_t info = sec.sh_info;
-      InputSectionBase *s = getRelocTarget(i, sec, info);
+      InputSectionBase *s = getRelocTarget(i, info);
       if (!s)
         continue;
 
@@ -1030,9 +1030,7 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
 }
 
 template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx,
-                                                const Elf_Shdr &sec,
-                                                uint32_t info) {
+InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, uint32_t info) {
   if (info < this->sections.size()) {
     InputSectionBase *target = this->sections[info];
 
