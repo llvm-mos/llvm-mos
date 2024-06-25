@@ -50,7 +50,7 @@ static bool HasPrefix(StringRef Name, StringRef Prefix) {
   return Name == Prefix || Name.starts_with(PrefixDot);
 }
 
-void MOSMCELFStreamer::changeSection(MCSection *Section, const MCExpr *Subsection) {
+void MOSMCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCELFStreamer::changeSection(Section, Subsection);
   HasBSS |= HasPrefix(Section->getName(), ".bss");
   HasZPBSS |= HasPrefix(Section->getName(), ".zp.bss");
@@ -86,7 +86,6 @@ void MOSMCELFStreamer::emitMosAddrAsciz(const MCExpr *Value, unsigned Size,
   visitUsedExpr(*Value);
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
   MCDataFragment *DF = getOrCreateDataFragment();
-  flushPendingLabels(DF, DF->getContents().size());
 
   DF->getFixups().push_back(
       MCFixup::create(DF->getContents().size(), Value,

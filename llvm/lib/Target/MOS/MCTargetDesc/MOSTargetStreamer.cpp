@@ -87,8 +87,7 @@ static bool HasPrefix(StringRef Name, StringRef Prefix) {
 
 void MOSTargetAsmStreamer::changeSection(const MCSection *CurSection,
                                          MCSection *Section,
-                                         const MCExpr *SubSection,
-                                         raw_ostream &OS) {
+                                         uint32_t SubSection, raw_ostream &OS) {
   MCTargetStreamer::changeSection(CurSection, Section, SubSection, OS);
   HasBSS |= HasPrefix(Section->getName(), ".bss");
   HasZPBSS |= HasPrefix(Section->getName(), ".zp.bss");
