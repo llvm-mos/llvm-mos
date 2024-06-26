@@ -225,7 +225,7 @@ class pcrel8at<int offset> : Operand<i32> {
 def pcrel8 : pcrel8at<1>;
 def pcrel8at2 : pcrel8at<2>;
 
-/// An 16-bit pc-relative reference, for 65816 BRL instruction.
+/// A 16-bit pc-relative reference, for 65816 BRL instruction.
 class pcrel16at<int offset> : Operand<i32> {
   let ParserMatchClass = PCRelativeOperand<"PCRel16">;
   let EncoderMethod = "encodeImm<MOS::PCRel16, " # offset # ">";
@@ -889,7 +889,7 @@ multiclass CC1_All<bits<3> aaa, string OpcodeStr = "nop", list<Predicate> preds 
 /// These fit together like this:"
 ///
 ///             ASL ROL LSR ROR STX LDX DEC INC
-///                                 A2
+/// #                               A2
 /// zp          06  26  46  66  86  A6  C6  E6
 /// A           0A  2A  4A  6A
 /// abs         0E  2E  4E  6E  8E  AE  CE  EE

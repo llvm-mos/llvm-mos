@@ -106,7 +106,7 @@ defm LDY : CC0_Regular<0b101, "ldy">;
 defm CPY : CC0_Regular<0b110, "cpy">;
 defm CPX : CC0_Regular<0b111, "cpx">;
 
-/// CC0 irregular instructions, e.g. most of them
+/// CC0 irregular instructions, i.e. most of them
 
 /// "Next, the cc = 00 instructions. Again, the opcodes are different:
 /// aaa opcode
