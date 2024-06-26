@@ -293,7 +293,7 @@ let Predicates = [Has65DTV02] in {
 let DecoderNamespace = "65dtv02" in {
 
 def BRA_Relative_DTV02 : Inst16<"bra", Opcode<0x12>, Relative>,
-  InstConditionalBranch;
+  InstUnconditionalBranch;
 def SAC_Immediate : Inst16<"sac", Opcode<0x32>, Immediate>;
 def SIR_Immediate : Inst16<"sir", Opcode<0x42>, Immediate>;
 
@@ -426,7 +426,7 @@ def BMI_Relative16 : Inst24<"bmi", Opcode<0x33>, Relative16>,
 def BVC_Relative16 : Inst24<"bvc", Opcode<0x53>, Relative16>,
 	InstConditionalBranch;
 def BSR_Relative16 : Inst24<"bsr", Opcode<0x63>, Relative16>,
-	InstConditionalBranch;
+	InstCall;
 def BVS_Relative16 : Inst24<"bvs", Opcode<0x73>, Relative16>,
 	InstConditionalBranch;
 def BRA_Relative16 : Inst24<"bra", Opcode<0x83>, Relative16>,
@@ -441,11 +441,11 @@ def BEQ_Relative16 : Inst24<"beq", Opcode<0xf3>, Relative16>,
 	InstConditionalBranch;
 
 def JSR_AbsoluteIndirect: Inst24<"jsr", Opcode<0x22>, Indirect16>,
-	InstConditionalBranch {
+	InstCall {
   let isIndirectBranch = true;
 }
 def JSR_AbsoluteIndirectX: Inst24<"jsr", Opcode<0x23>, IndexedIndirect16>,
-	InstConditionalBranch {
+	InstCall {
   let isIndirectBranch = true;
 }
 
