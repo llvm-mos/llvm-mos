@@ -100,9 +100,6 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
 #include "MOSGenDisassemblerTables.inc"
 
 std::optional<const uint8_t *> getDecoderTable(size_t Size) {
-  // Suppress unused variable warning for generated function.
-  (void)Check;
-
   switch (Size) {
   case 1:
     return DecoderTableMOS8;
@@ -127,9 +124,6 @@ std::optional<const uint8_t *> getDecoderTable6502X(size_t Size) {
 }
 
 std::optional<const uint8_t *> getDecoderTable65DTV02(size_t Size) {
-  // Suppress unused variable warning for generated function.
-  (void)Check;
-
   switch (Size) {
   case 2:
     return DecoderTable65dtv0216;
@@ -176,9 +170,6 @@ std::optional<const uint8_t *> getDecoderTable45GS02(size_t Size) {
 }
 
 std::optional<const uint8_t *> getDecoderTableHUC6280(size_t Size) {
-  // Suppress unused variable warning for generated function.
-  (void)Check;
-
   switch (Size) {
   case 1:
     return DecoderTablehuc62808;
@@ -196,9 +187,6 @@ std::optional<const uint8_t *> getDecoderTableHUC6280(size_t Size) {
 }
 
 std::optional<const uint8_t *> getDecoderTableW65816(size_t Size) {
-  // Suppress unused variable warning for generated function.
-  (void)Check;
-
   switch (Size) {
   case 1:
     return DecoderTablew658168;
@@ -214,9 +202,6 @@ std::optional<const uint8_t *> getDecoderTableW65816(size_t Size) {
 }
 
 std::optional<const uint8_t *> getDecoderTable65EL02(size_t Size) {
-  // Suppress unused variable warning for generated function.
-  (void)Check;
-
   switch (Size) {
   case 1:
     return DecoderTable65el028;
