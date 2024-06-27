@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-2019, macos-13, ubuntu-20.04]
+        os: [windows-2019, macos-14, ubuntu-20.04]
     steps:
       - name: Setup Windows
         if: startsWith(matrix.os, 'windows')
@@ -24,7 +24,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install Ninja
         uses: llvm/actions/install-ninja@main
 
