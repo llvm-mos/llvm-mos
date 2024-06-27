@@ -31,7 +31,7 @@
 #include "ToolChains/Hurd.h"
 #include "ToolChains/Lanai.h"
 #include "ToolChains/Linux.h"
-#include "ToolChains/MOS.h"
+#include "ToolChains/MOSToolchain.h"
 #include "ToolChains/MSP430.h"
 #include "ToolChains/MSVC.h"
 #include "ToolChains/MinGW.h"
@@ -6485,7 +6485,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);
         break;
       case llvm::Triple::mos:
-        TC = std::make_unique<toolchains::MOS>(*this, Target, Args);
+        TC = std::make_unique<toolchains::MOSToolChain>(*this, Target, Args);
         break;
       case llvm::Triple::csky:
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
