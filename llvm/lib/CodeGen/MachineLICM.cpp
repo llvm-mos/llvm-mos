@@ -188,12 +188,12 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
       if (DisableHoistingToHotterBlocks != UseBFI::None)
         AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
-      AU.addPreserved<MachineLoopInfo>();
+      AU.addPreserved<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -261,8 +261,7 @@ namespace {
         DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
         const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
 
-    void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop,
-                        MachineBasicBlock *CurPreheader);
+    void HoistOutOfLoop(MachineLoop *CurLoop, MachineBasicBlock *CurPreheader);
 
     void InitRegPressure(MachineBasicBlock *BB);
 
@@ -323,7 +322,7 @@ char &llvm::EarlyMachineLICMID = EarlyMachineLICM::ID;
 
 INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -332,7 +331,7 @@ INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
 
 INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
                       "Early Machine Loop Invariant Code Motion", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -374,7 +373,7 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   // Get our Loop information...
   if (DisableHoistingToHotterBlocks != UseBFI::None)
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
@@ -391,9 +390,8 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
     else {
       // CSEMap is initialized for loop header when the first instruction is
       // being hoisted.
-      MachineDomTreeNode *N = DT->getNode(CurLoop->getHeader());
       FirstInLoop = true;
-      HoistOutOfLoop(N, CurLoop, CurPreheader);
+      HoistOutOfLoop(CurLoop, CurPreheader);
       CSEMap.clear();
     }
   }
@@ -796,10 +794,10 @@ void MachineLICMBase::ExitScopeIfDone(MachineDomTreeNode *Node,
 /// specified header block, and that are in the current loop) in depth first
 /// order w.r.t the DominatorTree. This allows us to visit definitions before
 /// uses, allowing us to hoist a loop body in one pass without iteration.
-void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
-                                     MachineLoop *CurLoop,
+void MachineLICMBase::HoistOutOfLoop(MachineLoop *CurLoop,
                                      MachineBasicBlock *CurPreheader) {
   MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);
+  MachineDomTreeNode *HeaderN = DT->getNode(CurLoop->getHeader());
   if (!Preheader)
     return;
 

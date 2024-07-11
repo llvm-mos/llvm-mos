@@ -43,6 +43,7 @@
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
@@ -644,7 +645,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     // We also need alignment here.
     // FIXME: this is getting the alignment of the character, not the
     // alignment of the global!
-    Align Alignment = GO->getParent()->getDataLayout().getPreferredAlign(
+    Align Alignment = GO->getDataLayout().getPreferredAlign(
         cast<GlobalVariable>(GO));
 
     Name += ".str";
@@ -1362,7 +1363,7 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
 
   // FIXME: Alignment check should be handled by section classifier.
   if (Kind.isMergeable1ByteCString() &&
-      GO->getParent()->getDataLayout().getPreferredAlign(
+      GO->getDataLayout().getPreferredAlign(
           cast<GlobalVariable>(GO)) < Align(32))
     return CStringSection;
 
@@ -1370,7 +1371,7 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
   // externally visible label, this runs into issues with certain linker
   // versions.
   if (Kind.isMergeable2ByteCString() && !GO->hasExternalLinkage() &&
-      GO->getParent()->getDataLayout().getPreferredAlign(
+      GO->getDataLayout().getPreferredAlign(
           cast<GlobalVariable>(GO)) < Align(32))
     return UStringSection;
 
@@ -1558,7 +1559,7 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
 
 static bool canUsePrivateLabel(const MCAsmInfo &AsmInfo,
                                const MCSection &Section) {
-  if (!AsmInfo.isSectionAtomizableBySymbols(Section))
+  if (!MCAsmInfoDarwin::isSectionAtomizableBySymbols(Section))
     return true;
 
   // FIXME: we should be able to use private labels for sections that can't be

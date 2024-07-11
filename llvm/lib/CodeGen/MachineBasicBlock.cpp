@@ -16,11 +16,13 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -313,6 +315,12 @@ bool MachineBasicBlock::isLegalToHoistInto() const {
   if (isReturnBlock() || hasEHPadSuccessor() || mayHaveInlineAsmBr())
     return false;
   return true;
+}
+
+bool MachineBasicBlock::hasName() const {
+  if (const BasicBlock *LBB = getBasicBlock())
+    return LBB->hasName();
+  return false;
 }
 
 StringRef MachineBasicBlock::getName() const {
@@ -1155,8 +1163,10 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
                     << " -- " << printMBBReference(*NMBB) << " -- "
                     << printMBBReference(*Succ) << '\n');
 
-  LiveIntervals *LIS = P.getAnalysisIfAvailable<LiveIntervals>();
-  SlotIndexes *Indexes = P.getAnalysisIfAvailable<SlotIndexes>();
+  auto *LISWrapper = P.getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  auto *SIWrapper = P.getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   if (LIS)
     LIS->insertMBBInMaps(NMBB);
   else if (Indexes)
@@ -1165,7 +1175,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   // On some targets like Mips, branches may kill virtual registers. Make sure
   // that LiveVariables is properly updated after updateTerminator replaces the
   // terminators.
-  LiveVariables *LV = P.getAnalysisIfAvailable<LiveVariables>();
+  auto *LVWrapper = P.getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LiveVariables *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
 
   // Collect a list of virtual registers killed by the terminators.
   SmallVector<Register, 4> KilledRegs;
@@ -1330,24 +1341,33 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (auto *MDTWrapper =
-          P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
-    MDTWrapper->getDomTree().recordSplitCriticalEdge(this, Succ, NMBB);
+  auto *MDTWrapper =
+      P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  auto *MPDTWrapper =
+      P.getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
+  auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  auto *MPDT = MPDTWrapper ? &MPDTWrapper->getPostDomTree() : nullptr;
+  MachineDomTreeUpdater MDTU(MDT, MPDT,
+                             MachineDomTreeUpdater::UpdateStrategy::Eager);
+  MDTU.applyUpdates({{MachineDominatorTree::Insert, this, NMBB},
+                     {MachineDominatorTree::Insert, NMBB, Succ},
+                     {MachineDominatorTree::Delete, this, Succ}});
 
-  if (MachineLoopInfo *MLI = P.getAnalysisIfAvailable<MachineLoopInfo>())
+  auto *MLIWrapper = P.getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+  if (MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr)
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {
       // If one or the other blocks were not in a loop, the new block is not
       // either, and thus LI doesn't need to be updated.
       if (MachineLoop *DestLoop = MLI->getLoopFor(Succ)) {
         if (TIL == DestLoop) {
           // Both in the same loop, the NMBB joins loop.
-          DestLoop->addBasicBlockToLoop(NMBB, MLI->getBase());
+          DestLoop->addBasicBlockToLoop(NMBB, *MLI);
         } else if (TIL->contains(DestLoop)) {
           // Edge from an outer loop to an inner loop.  Add to the outer loop.
-          TIL->addBasicBlockToLoop(NMBB, MLI->getBase());
+          TIL->addBasicBlockToLoop(NMBB, *MLI);
         } else if (DestLoop->contains(TIL)) {
           // Edge from an inner loop to an outer loop.  Add to the outer loop.
-          DestLoop->addBasicBlockToLoop(NMBB, MLI->getBase());
+          DestLoop->addBasicBlockToLoop(NMBB, *MLI);
         } else {
           // Edge from two loops with no containment relation.  Because these
           // are natural loops, we know that the destination block must be the
@@ -1356,7 +1376,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           assert(DestLoop->getHeader() == Succ &&
                  "Should not create irreducible loops!");
           if (MachineLoop *P = DestLoop->getParentLoop())
-            P->addBasicBlockToLoop(NMBB, MLI->getBase());
+            P->addBasicBlockToLoop(NMBB, *MLI);
         }
       }
     }
