@@ -33,6 +33,7 @@ class AAManager;
 using ModulePassManager = PassManager<Module>;
 
 class Function;
+class GlobalObject;
 class GlobalValue;
 class MachineModuleInfoWrapperPass;
 class Mangler;
