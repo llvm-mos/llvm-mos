@@ -77,10 +77,10 @@ bool MOSMCExpr::evaluateAsConstant(int64_t &Result) const {
 }
 
 bool MOSMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
-                                          const MCAsmLayout *Layout,
+                                          const MCAssembler *Asm,
                                           const MCFixup *Fixup) const {
   MCValue Value;
-  bool IsRelocatable = SubExpr->evaluateAsRelocatable(Value, Layout, Fixup);
+  bool IsRelocatable = SubExpr->evaluateAsRelocatable(Value, Asm, Fixup);
 
   if (!IsRelocatable)
     return false;
@@ -88,11 +88,10 @@ bool MOSMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
   if (Value.isAbsolute()) {
     Result = MCValue::get(evaluateAsInt64(Value.getConstant()));
   } else {
-    if (!Layout) {
+    if (!Asm)
       return false;
-    }
 
-    MCContext &Context = Layout->getAssembler().getContext();
+    MCContext &Context = Asm->getContext();
     const MCSymbolRefExpr *Sym = Value.getSymA();
     MCSymbolRefExpr::VariantKind Modifier = Sym->getKind();
     if (Modifier != MCSymbolRefExpr::VK_None) {
@@ -215,13 +214,13 @@ const char *MOSMCExpr::getName() const {
 
 MOSMCExpr::VariantKind MOSMCExpr::getKindByName(StringRef Name,
                                                 bool IsImmediate) {
-  const auto &Modifier = std::find_if(
-      std::begin(ModifierNames), std::end(ModifierNames),
-      [&Name, IsImmediate](ModifierEntry const &Mod) {
-        if (Mod.ImmediateOnly && !IsImmediate)
-          return false;
-        return Mod.Spelling == Name;
-      });
+  const auto &Modifier =
+      std::find_if(std::begin(ModifierNames), std::end(ModifierNames),
+                   [&Name, IsImmediate](ModifierEntry const &Mod) {
+                     if (Mod.ImmediateOnly && !IsImmediate)
+                       return false;
+                     return Mod.Spelling == Name;
+                   });
 
   if (Modifier != std::end(ModifierNames)) {
     return Modifier->VariantKind;

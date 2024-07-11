@@ -18,6 +18,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -42,7 +43,8 @@ void mos::addLibcallEdges(CallGraph &CG, const MachineModuleInfo &MMI) {
           if (!MO.isSymbol())
             continue;
           CG.getModule().getNamedGlobal(MO.getSymbolName());
-          Function *Callee = getSymbolFunction(CG.getModule(), MO.getSymbolName());
+          Function *Callee =
+              getSymbolFunction(CG.getModule(), MO.getSymbolName());
           if (Callee && MMI.getMachineFunction(*Callee))
             CGN.addCalledFunction(nullptr, CG[Callee]);
         }

@@ -4177,8 +4177,8 @@ void LSRInstance::GenerateConstantOffsetsImpl(
     F.BaseOffset = Base.BaseOffset.subUnsigned(Offset);
 
     // Add the offset to the base register.
-    const SCEV *NewG =
-        SE.getAddExpr(SE.getConstant(G->getType(), Offset.getFixedValue()), G);
+    const SCEV *NewOffset = Offset.getSCEV(SE, G->getType());
+    const SCEV *NewG = SE.getAddExpr(NewOffset, G);
     if (SE.getTypeSizeInBits(G->getType()) < SE.getTypeSizeInBits(F.Ty)) {
       // LLVM-MOS: Todo.
       return;

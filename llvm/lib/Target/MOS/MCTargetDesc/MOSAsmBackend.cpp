@@ -138,9 +138,8 @@ void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                                         const MCRelaxableFragment *DF,
-                                         const MCAsmLayout &Layout) const {
+bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
+                                         uint64_t Value) const {
   return true;
 }
 
@@ -160,10 +159,12 @@ static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
          SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
 }
 
-bool MOSAsmBackend::evaluateTargetFixup(
-    const MCAssembler &Asm, const MCAsmLayout &Layout, const MCFixup &Fixup,
-    const MCFragment *DF, const MCValue &Target, const MCSubtargetInfo *STI,
-    uint64_t &Value, bool &WasForced) {
+bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
+                                        const MCFixup &Fixup,
+                                        const MCFragment *DF,
+                                        const MCValue &Target,
+                                        const MCSubtargetInfo *STI,
+                                        uint64_t &Value, bool &WasForced) {
   // ForcePCRelReloc is a CLI option to force relocation emit, primarily for
   // testing R_MOS_PCREL_*.
   WasForced = ForcePCRelReloc;
@@ -194,15 +195,15 @@ bool MOSAsmBackend::evaluateTargetFixup(
   if (const MCSymbolRefExpr *A = Target.getSymA()) {
     const MCSymbol &Sym = A->getSymbol();
     if (Sym.isDefined())
-      Value += Layout.getSymbolOffset(Sym);
+      Value += Asm.getSymbolOffset(Sym);
   }
   if (const MCSymbolRefExpr *B = Target.getSymB()) {
     const MCSymbol &Sym = B->getSymbol();
     if (Sym.isDefined())
-      Value -= Layout.getSymbolOffset(Sym);
+      Value -= Asm.getSymbolOffset(Sym);
   }
 
-  Value -= Layout.getFragmentOffset(DF) + Fixup.getOffset();
+  Value -= Asm.getFragmentOffset(*DF) + Fixup.getOffset();
   Value += getRelativeMOSPCCorrection(IsPCRel16);
 
   return IsResolved && !WasForced && fitsIntoFixup(Value, IsPCRel16);
@@ -234,10 +235,10 @@ bool isBasedOnZeroPageSymbol(const MCExpr *E) {
   llvm_unreachable("Invalid assembly expression kind!");
 }
 
-bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                                 const MCFixup &Fixup,
                                                  bool Resolved, uint64_t Value,
                                                  const MCRelaxableFragment *DF,
-                                                 const MCAsmLayout &Layout,
                                                  const bool WasForced) const {
   // On 65816, it is possible to zero-bank relax from Addr16 to Addr24. The
   // assembler relaxes in a loop until instructions cannot be relaxed further,
@@ -307,8 +308,7 @@ unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst,
                                            const MCSubtargetInfo &STI,
                                            bool &BankRelax) {
   // Attempt branch relaxation.
-  const auto *BIRE =
-      MOS::getBranchInstructionRelaxationEntry(Inst.getOpcode());
+  const auto *BIRE = MOS::getBranchInstructionRelaxationEntry(Inst.getOpcode());
   if (BIRE) {
     if (STI.hasFeature(MOS::FeatureW65816)) {
       if (BIRE->To == MOS::BRA_Relative16)

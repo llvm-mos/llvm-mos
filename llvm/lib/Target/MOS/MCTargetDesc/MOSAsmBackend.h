@@ -71,22 +71,21 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
 
-  bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                           const MCFixup &Fixup, const MCFragment *DF,
-                           const MCValue &Target, const MCSubtargetInfo *STI,
-                           uint64_t &Value, bool &WasForced) override;
+  bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                           const MCFragment *DF, const MCValue &Target,
+                           const MCSubtargetInfo *STI, uint64_t &Value,
+                           bool &WasForced) override;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup,
+                            uint64_t Value) const override;
   /// Carefully determine whether the instruction in question requires
   /// relaxation.  This implementation considers the fixup as well as
   /// the section that the symbol points to.
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &ASM,
+                                    const MCFixup &Fixup, bool Resolved,
                                     uint64_t Value,
                                     const MCRelaxableFragment *DF,
-                                    const MCAsmLayout &Layout,
                                     const bool WasForced) const override;
   unsigned getNumFixupKinds() const override;
   MCFixupKindInfo const &getFixupKindInfo(MCFixupKind Kind) const override;
