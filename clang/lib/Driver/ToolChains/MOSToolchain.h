@@ -1,4 +1,4 @@
-//===-- MOS.h - MOS ToolChain -----------------------------------*- C++ -*-===//
+//===-- MOSToolchain.h - MOS ToolChain --------------------------*- C++ -*-===//
 //
 // Part of the LLVM-MOS Project, under Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_LIB_DRIVER_TOOLCHAINS_MOS_H_
-#define CLANG_LIB_DRIVER_TOOLCHAINS_MOS_H_
+#ifndef CLANG_LIB_DRIVER_TOOLCHAINS_MOSTOOLCHAIN_H_
+#define CLANG_LIB_DRIVER_TOOLCHAINS_MOSTOOLCHAIN_H_
 
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -19,9 +19,9 @@ namespace driver {
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY MOS : public ToolChain {
+class LLVM_LIBRARY_VISIBILITY MOSToolChain : public ToolChain {
 public:
-  MOS(const Driver &D, const llvm::Triple &Triple,
+  MOSToolChain(const Driver &D, const llvm::Triple &Triple,
       const llvm::opt::ArgList &Args);
 
 protected:
@@ -69,7 +69,7 @@ public:
                     const char *LinkingOutput) const override;
 
 private:
-  void AddLTOOptions(const toolchains::MOS &TC, const llvm::opt::ArgList &Args,
+  void AddLTOOptions(const toolchains::MOSToolChain &TC, const llvm::opt::ArgList &Args,
                      const InputInfo &Output, const InputInfoList &Inputs,
                      llvm::opt::ArgStringList &CmdArgs) const;
 };
@@ -80,4 +80,4 @@ private:
 } // namespace driver
 } // namespace clang
 
-#endif // not CLANG_LIB_DRIVER_TOOLCHAINS_MOS_H_
+#endif // not CLANG_LIB_DRIVER_TOOLCHAINS_MOSTOOLCHAIN_H_

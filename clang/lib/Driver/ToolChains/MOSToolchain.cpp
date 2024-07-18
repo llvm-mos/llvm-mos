@@ -1,4 +1,4 @@
-//===-- MOS.cpp - MOS ToolChain -------------------------------------------===//
+//===-- MOSToolchain.cpp - MOS ToolChain ----------------------------------===//
 //
 // Part of the LLVM-MOS Project, under Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MOS.h"
+#include "MOSToolchain.h"
 
 #include "CommonArgs.h"
 
@@ -20,16 +20,16 @@ using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
 
-MOS::MOS(const Driver &D, const llvm::Triple &Triple,
-         const llvm::opt::ArgList &Args)
+MOSToolChain::MOSToolChain(const Driver &D, const llvm::Triple &Triple,
+                           const llvm::opt::ArgList &Args)
     : ToolChain(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().Dir);
 }
 
-Tool *MOS::buildLinker() const { return new tools::mos::Linker(*this); }
+Tool *MOSToolChain::buildLinker() const { return new tools::mos::Linker(*this); }
 
-void MOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
-                                    ArgStringList &CC1Args) const {
+void MOSToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                             ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
@@ -40,7 +40,7 @@ void MOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-void MOS::addClangTargetOptions(const ArgList &DriverArgs,
+void MOSToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                 ArgStringList &CC1Args,
                                 Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
@@ -65,7 +65,7 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const char *LinkingOutput) const {
   ArgStringList CmdArgs;
 
-  auto &TC = static_cast<const toolchains::MOS &>(getToolChain());
+  auto &TC = static_cast<const toolchains::MOSToolChain &>(getToolChain());
   auto &D = TC.getDriver();
 
   // Pass defaults before AddLinkerInputs, since that includes -Wl
@@ -132,7 +132,7 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 }
 
-void mos::Linker::AddLTOOptions(const toolchains::MOS &TC, const ArgList &Args,
+void mos::Linker::AddLTOOptions(const toolchains::MOSToolChain &TC, const ArgList &Args,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
                                 ArgStringList &CmdArgs) const {
