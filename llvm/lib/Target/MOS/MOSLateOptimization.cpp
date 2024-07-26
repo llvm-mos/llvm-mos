@@ -100,6 +100,8 @@ bool MOSLateOptimization::lowerCmpZeros(MachineBasicBlock &MBB) const {
     Register Val = MI.getOperand(0).getReg();
 
     for (auto &J : mbb_reverse(MBB.begin(), MI)) {
+      if (J.isDebugInstr())
+        continue;
       if (J.isCall() || J.isInlineAsm())
         break;
       if (definesNZ(J, Val, STI)) {
