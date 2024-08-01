@@ -1810,15 +1810,17 @@ void TargetInstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(Attribute::NoUnwind);
 }
 
-outliner::InstrType TargetInstrInfo::getOutliningType(
-    MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+outliner::InstrType
+TargetInstrInfo::getOutliningType(const MachineModuleInfo &MMI,
+                                  MachineBasicBlock::iterator &MIT,
+                                  unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
   // NOTE: MI.isMetaInstruction() will match CFI_INSTRUCTION, but some targets
   // have support for outlining those. Special-case that here.
   if (MI.isCFIInstruction())
     // Just go right to the target implementation.
-    return getOutliningTypeImpl(MIT, Flags);
+    return getOutliningTypeImpl(MMI, MIT, Flags);
 
   // Be conservative about inline assembly.
   if (MI.isInlineAsm())
@@ -1884,7 +1886,7 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
   }
 
   // If we don't know, delegate to the target-specific hook.
-  return getOutliningTypeImpl(MIT, Flags);
+  return getOutliningTypeImpl(MMI, MIT, Flags);
 }
 
 bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,

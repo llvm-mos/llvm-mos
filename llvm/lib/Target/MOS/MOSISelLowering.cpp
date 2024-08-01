@@ -44,21 +44,6 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   addRegisterClass(MVT::i16, &MOS::Imag16RegClass);
   computeRegisterProperties(STI.getRegisterInfo());
 
-  // The memset intrinsic takes an char, while the C memset takes an int. These
-  // are different in the MOS calling convention, since arguments are not
-  // automatically promoted to int. "memset" is the C version, and "__memset" is
-  // the intrinsic version.
-  setLibcallName(RTLIB::MEMSET, "__memset");
-
-  setLibcallName(RTLIB::UDIVREM_I8, "__udivmodqi4");
-  setLibcallName(RTLIB::UDIVREM_I16, "__udivmodhi4");
-  setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
-  setLibcallName(RTLIB::UDIVREM_I64, "__udivmoddi4");
-  setLibcallName(RTLIB::SDIVREM_I8, "__divmodqi4");
-  setLibcallName(RTLIB::SDIVREM_I16, "__divmodhi4");
-  setLibcallName(RTLIB::SDIVREM_I32, "__divmodsi4");
-  setLibcallName(RTLIB::SDIVREM_I64, "__divmoddi4");
-
   // Used in legalizer (etc.) to refer to the stack pointer.
   setStackPointerRegisterToSaveRestore(MOS::RS0);
 

@@ -47,6 +47,7 @@ class LiveIntervals;
 class LiveVariables;
 class MachineLoop;
 class MachineMemOperand;
+class MachineModuleInfo;
 class MachineRegisterInfo;
 class MCAsmInfo;
 class MCInst;
@@ -2096,6 +2097,7 @@ public:
   /// information for a set of outlining candidates. Returns std::nullopt if the
   /// candidates are not suitable for outlining.
   virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");
@@ -2110,7 +2112,8 @@ public:
 protected:
   /// Target-dependent implementation for getOutliningTypeImpl.
   virtual outliner::InstrType
-  getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+  getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                       MachineBasicBlock::iterator &MIT, unsigned Flags) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningTypeImpl!");
   }
@@ -2118,8 +2121,9 @@ protected:
 public:
   /// Returns how or if \p MIT should be outlined. \p Flags is the
   /// target-specific information returned by isMBBSafeToOutlineFrom.
-  outliner::InstrType
-  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const;
+  outliner::InstrType getOutliningType(const MachineModuleInfo &MMI,
+                                       MachineBasicBlock::iterator &MIT,
+                                       unsigned Flags) const;
 
   /// Optional target hook that returns true if \p MBB is safe to outline from,
   /// and returns any target-specific information in \p Flags.
@@ -2231,6 +2235,12 @@ public:
   /// not provided.
   virtual unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
     return OptLevel >= CodeGenOptLevel::Aggressive ? 4 : 2;
+  }
+
+  /// Returns the target-specific default value for tail merging.
+  /// This value will be used if the tail-merge-size argument is not provided.
+  virtual unsigned getTailMergeSize(const MachineFunction &MF) const {
+    return 3;
   }
 
   /// Returns the callee operand from the given \p MI.

@@ -279,6 +279,16 @@ struct InsertCommand {
   StringRef where;
 };
 
+// A NOCROSSREFS/NOCROSSREFS_TO command that prohibits references between
+// certain output sections.
+struct NoCrossRefCommand {
+  SmallVector<StringRef, 0> outputSections;
+
+  // When true, this describes a NOCROSSREFS_TO command that probits references
+  // to the first output section from any of the other sections.
+  bool toFirst = false;
+};
+
 struct PhdrsCommand {
   StringRef name;
   unsigned type = llvm::ELF::PT_NULL;
@@ -419,6 +429,9 @@ public:
 
   // OutputSections specified by OVERWRITE_SECTIONS.
   SmallVector<OutputDesc *, 0> overwriteSections;
+
+  // NOCROSSREFS(_TO) commands.
+  SmallVector<NoCrossRefCommand, 0> noCrossRefs;
 
   // Sections that will be warned/errored by --orphan-handling.
   SmallVector<const InputSectionBase *, 0> orphanSections;

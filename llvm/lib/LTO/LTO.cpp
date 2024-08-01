@@ -31,6 +31,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
@@ -1368,25 +1369,12 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 }
 
-static const char *libcallRoutineNames[] = {
-#define HANDLE_LIBCALL(code, name) name,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-  // Needed by MOS target.
-  "__memset",
-  "__udivmodqi4",
-  "__udivmodhi4",
-  "__udivmodsi4",
-  "__udivmoddi4",
-  "__divmodqi4",
-  "__divmodhi4",
-  "__divmodsi4",
-  "__divmoddi4",
-  "abort",
-};
-
-ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
-  return ArrayRef(libcallRoutineNames);
+SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  SmallVector<const char *> LibcallSymbols;
+  copy_if(Libcalls.getLibcallNames(), std::back_inserter(LibcallSymbols),
+          [](const char *Name) { return Name; });
+  return LibcallSymbols;
 }
 
 /// This class defines the interface to the ThinLTO backend.
