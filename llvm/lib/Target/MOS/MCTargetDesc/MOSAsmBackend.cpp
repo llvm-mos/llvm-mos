@@ -183,9 +183,9 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
     const MCSymbol &SA = A->getSymbol();
     if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
       IsResolved = false;
-    } else if (auto *Writer = Asm.getWriterPtr()) {
-      IsResolved = Writer->isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, *DF,
-                                                                  false, true);
+    } else {
+      IsResolved = Asm.getWriter().isSymbolRefDifferenceFullyResolvedImpl(
+          Asm, SA, *DF, false, true);
     }
   }
 

@@ -16,7 +16,9 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Casting.h"
 
@@ -102,9 +104,50 @@ void MOSTargetAsmStreamer::stronglyReference(MCSymbol *Sym) {
   getStreamer().emitSymbolAttribute(Sym, MCSA_Global);
 }
 
+/// Makes an e_flags value based on subtarget features.
+static unsigned getEFlagsForFeatureSet(const FeatureBitset &Features) {
+  unsigned ELFArch = 0;
+  if (Features[MOS::Feature65C02])
+    ELFArch |= ELF::EF_MOS_ARCH_65C02;
+  if (Features[MOS::Feature65CE02])
+    ELFArch |= ELF::EF_MOS_ARCH_65CE02;
+  if (Features[MOS::Feature65EL02])
+    ELFArch |= ELF::EF_MOS_ARCH_65EL02;
+  if (Features[MOS::Feature6502])
+    ELFArch |= ELF::EF_MOS_ARCH_6502;
+  if (Features[MOS::Feature6502BCD])
+    ELFArch |= ELF::EF_MOS_ARCH_6502_BCD;
+  if (Features[MOS::Feature6502X])
+    ELFArch |= ELF::EF_MOS_ARCH_6502X;
+  if (Features[MOS::FeatureR65C02])
+    ELFArch |= ELF::EF_MOS_ARCH_R65C02;
+  if (Features[MOS::FeatureSWEET16])
+    ELFArch |= ELF::EF_MOS_ARCH_SWEET16;
+  if (Features[MOS::FeatureW65C02])
+    ELFArch |= ELF::EF_MOS_ARCH_W65C02;
+  if (Features[MOS::FeatureW65816])
+    ELFArch |= ELF::EF_MOS_ARCH_W65816;
+  if (Features[MOS::FeatureHUC6280])
+    ELFArch |= ELF::EF_MOS_ARCH_HUC6280;
+  if (Features[MOS::Feature65DTV02])
+    ELFArch |= ELF::EF_MOS_ARCH_65DTV02;
+  if (Features[MOS::Feature4510])
+    ELFArch |= ELF::EF_MOS_ARCH_4510;
+  if (Features[MOS::Feature45GS02])
+    ELFArch |= ELF::EF_MOS_ARCH_45GS02;
+  if (Features[MOS::FeatureSPC700])
+    ELFArch |= ELF::EF_MOS_ARCH_SPC700;
+  return ELFArch;
+}
+
 MOSTargetELFStreamer::MOSTargetELFStreamer(MCStreamer &S,
                                            const MCSubtargetInfo &STI)
-    : MOSTargetStreamer(S) {}
+    : MOSTargetStreamer(S) {
+  ELFObjectWriter &W = getStreamer().getWriter();
+  unsigned EFlags = W.getELFHeaderEFlags();
+  EFlags |= getEFlagsForFeatureSet(STI.getFeatureBits());
+  W.setELFHeaderEFlags(EFlags);
+}
 
 bool MOSTargetELFStreamer::hasBSS() {
   return static_cast<MOSMCELFStreamer &>(getStreamer()).hasBSS();

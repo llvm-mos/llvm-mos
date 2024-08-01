@@ -180,7 +180,7 @@ MachineFunction::reverse_iterator MOSLowerSelect::lowerSelect(GSelect &MI) {
       return;
     MachineInstr &DefMI = *MRI.def_instr_begin(Value);
     bool SawStore = true;
-    if (!DefMI.isSafeToMove(nullptr, SawStore))
+    if (!DefMI.isSafeToMove(SawStore))
       return;
 
     for (const MachineOperand &MO : DefMI.operands()) {
@@ -207,7 +207,7 @@ MachineFunction::reverse_iterator MOSLowerSelect::lowerSelect(GSelect &MI) {
 
     for (auto &SrcMI : make_early_inc_range(SrcRange)) {
       SawStore = true;
-      if (!SrcMI.isSafeToMove(nullptr, SawStore))
+      if (!SrcMI.isSafeToMove(SawStore))
         continue;
 
       LLVM_DEBUG(dbgs() << "Considering sinking: " << SrcMI);
@@ -364,7 +364,7 @@ void MOSLowerSelect::moveAwayFromCalls(MachineFunction &MF) {
 #ifndef NDEBUG
           bool SawStore = true;
 #endif
-          assert(J->isSafeToMove(nullptr, SawStore));
+          assert(J->isSafeToMove(SawStore));
           TrackUsedRegs(*J);
           auto NewJ = std::next(J);
           PushedMIs.push_back(J->removeFromParent());

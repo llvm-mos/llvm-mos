@@ -79,6 +79,10 @@ public:
   MOSTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
 private:
+  MCELFStreamer &getStreamer() {
+    return static_cast<MCELFStreamer &>(Streamer);
+  }
+
   bool emitDirectiveZeroPage(MCSymbol *Symbol) override;
   bool hasBSS() override;
   bool hasZPBSS() override;

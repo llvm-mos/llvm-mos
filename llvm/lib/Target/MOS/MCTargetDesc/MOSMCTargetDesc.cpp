@@ -39,46 +39,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-namespace MOS_MC {
-/// Makes an e_flags value based on subtarget features.
-unsigned makeEFlags(const FeatureBitset &Features) {
-  unsigned ELFArch = 0;
-  if (Features[MOS::Feature65C02])
-    ELFArch |= ELF::EF_MOS_ARCH_65C02;
-  if (Features[MOS::Feature65CE02])
-    ELFArch |= ELF::EF_MOS_ARCH_65CE02;
-  if (Features[MOS::Feature65EL02])
-    ELFArch |= ELF::EF_MOS_ARCH_65EL02;
-  if (Features[MOS::Feature6502])
-    ELFArch |= ELF::EF_MOS_ARCH_6502;
-  if (Features[MOS::Feature6502BCD])
-    ELFArch |= ELF::EF_MOS_ARCH_6502_BCD;
-  if (Features[MOS::Feature6502X])
-    ELFArch |= ELF::EF_MOS_ARCH_6502X;
-  if (Features[MOS::FeatureR65C02])
-    ELFArch |= ELF::EF_MOS_ARCH_R65C02;
-  if (Features[MOS::FeatureSWEET16])
-    ELFArch |= ELF::EF_MOS_ARCH_SWEET16;
-  if (Features[MOS::FeatureW65C02])
-    ELFArch |= ELF::EF_MOS_ARCH_W65C02;
-  if (Features[MOS::FeatureW65816])
-    ELFArch |= ELF::EF_MOS_ARCH_W65816;
-  if (Features[MOS::FeatureHUC6280])
-    ELFArch |= ELF::EF_MOS_ARCH_HUC6280;
-  if (Features[MOS::Feature65DTV02])
-    ELFArch |= ELF::EF_MOS_ARCH_65DTV02;
-  if (Features[MOS::Feature4510])
-    ELFArch |= ELF::EF_MOS_ARCH_4510;
-  if (Features[MOS::Feature45GS02])
-    ELFArch |= ELF::EF_MOS_ARCH_45GS02;
-  if (Features[MOS::FeatureSPC700])
-    ELFArch |= ELF::EF_MOS_ARCH_SPC700;
-  return ELFArch;
-}
-} // namespace MOS_MC
-} // end namespace llvm
-
 MCInstrInfo *llvm::createMOSMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
   InitMOSMCInstrInfo(X);
@@ -129,8 +89,7 @@ createMOSObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
 
 static MCTargetStreamer *createMCAsmTargetStreamer(MCStreamer &S,
                                                    formatted_raw_ostream &OS,
-                                                   MCInstPrinter *InstPrint,
-                                                   bool isVerboseAsm) {
+                                                   MCInstPrinter *InstPrint) {
   return new MOSTargetAsmStreamer(S, OS);
 }
 

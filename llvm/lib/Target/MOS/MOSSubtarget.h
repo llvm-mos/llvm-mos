@@ -43,13 +43,6 @@ public:
   MOSSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const MOSTargetMachine &TM);
 
-  /// Gets the e_flags value of an ELF object file.
-  unsigned getEFlags() const {
-    assert(EFlags != 0 &&
-           "every MOS subtarget must set at least one architecture feature");
-    return EFlags;
-  }
-
   const MOSFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
@@ -125,9 +118,6 @@ public:
   bool hasW65816Or65EL02() const { return HasW65816Insns || Has65EL02Insns; }
 
 private:
-  /// The ELF e_flags architecture features.
-  unsigned EFlags = 0;
-
   // Subtarget feature settings
   // See MOS.td for details.
   bool HasTinyEncoding = false;

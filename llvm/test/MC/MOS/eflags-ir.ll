@@ -1,16 +1,16 @@
-; RUN: sed -e 's/__mos_target_cpu/mos6502/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,6502 %s
-; RUN: sed -e 's/__mos_target_cpu/mos6502x/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,6502X %s
-; RUN: sed -e 's/__mos_target_cpu/mos65c02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65C02 %s
-; RUN: sed -e 's/__mos_target_cpu/mosr65c02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,R65C02 %s
-; RUN: sed -e 's/__mos_target_cpu/mosw65c02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,W65C02 %s
-; RUN: sed -e 's/__mos_target_cpu/mosw65816/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,W65816 %s
-; RUN: sed -e 's/__mos_target_cpu/mos65el02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65EL02 %s
-; RUN: sed -e 's/__mos_target_cpu/mos65ce02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65CE02 %s
-; RUN: sed -e 's/__mos_target_cpu/moshuc6280/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,HUC6280 %s
-; RUN: sed -e 's/__mos_target_cpu/mos65dtv02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65DTV02 %s
-; RUN: sed -e 's/__mos_target_cpu/mos4510/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,4510 %s
-; RUN: sed -e 's/__mos_target_cpu/mos45gs02/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,45GS02 %s
-; RUN: sed -e 's/__mos_target_cpu/mosspc700/' %s | llc -mtriple=mos -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,SPC700 %s
+; RUN: llc -mtriple=mos -mcpu=mos6502 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,6502 %s
+; RUN: llc -mtriple=mos -mcpu=mos6502x -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,6502X %s
+; RUN: llc -mtriple=mos -mcpu=mos65c02 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65C02 %s
+; RUN: llc -mtriple=mos -mcpu=mosr65c02 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,R65C02 %s
+; RUN: llc -mtriple=mos -mcpu=mosw65c02 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,W65C02 %s
+; RUN: llc -mtriple=mos -mcpu=mosw65816 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,W65816 %s
+; RUN: llc -mtriple=mos -mcpu=mos65el02 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65EL02 %s
+; RUN: llc -mtriple=mos -mcpu=mos65ce02 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65CE02 %s
+; RUN: llc -mtriple=mos -mcpu=moshuc6280 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,HUC6280 %s
+; RUN: llc -mtriple=mos -mcpu=mos65dtv02 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,65DTV02 %s
+; RUN: llc -mtriple=mos -mcpu=mos4510 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,4510 %s
+; RUN: llc -mtriple=mos -mcpu=mos45gs02 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,45GS02 %s
+; RUN: llc -mtriple=mos -mcpu=mosspc700 -filetype=obj | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK,SPC700 %s
 
 ; CHECK:        Machine: EM_MOS (0x1966)
 ; 6502:         Flags [
@@ -82,9 +82,8 @@
 ; SPC700-NEXT:    EF_MOS_ARCH_SPC700 (0x20000)
 ; CHECK-NEXT:   ]
 
-define void @func0() #0 {
+define void @func0() {
 entry:
   ret void
 }
 
-attributes #0 = { "target-cpu"="__mos_target_cpu" }

@@ -110,7 +110,8 @@ bool MOSNonReentrantImpl::run(Module &M) {
     // before the interrupt is compiled. But the compilation of the interrupt
     // depends on whether or not it's norecurse, so we don't have much choice
     // other than making the conservative assumption here.
-    for (const char *LibcallName : lto::LTO::getRuntimeLibcallSymbols()) {
+    for (const char *LibcallName :
+         lto::LTO::getRuntimeLibcallSymbols(Triple(M.getTargetTriple()))) {
       Function *Libcall = M.getFunction(LibcallName);
       if (Libcall && !Libcall->isDeclaration()) {
         LLVM_DEBUG(dbgs() << "Marking libcall as reentrant: "

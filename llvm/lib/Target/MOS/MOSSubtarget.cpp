@@ -49,9 +49,6 @@ MOSSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   // Parse features string.
   ParseSubtargetFeatures(CPU, /* TuneCPU */ CPU, FS);
 
-  // Convert feature bits to e_flags
-  EFlags = MOS_MC::makeEFlags(getFeatureBits());
-
   return *this;
 }
 
