@@ -24,7 +24,6 @@
 #include "Targets/DirectX.h"
 #include "Targets/Hexagon.h"
 #include "Targets/Lanai.h"
-#include "Targets/Le64.h"
 #include "Targets/LoongArch.h"
 #include "Targets/M68k.h"
 #include "Targets/MOS.h"
@@ -348,17 +347,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     default:
       return std::make_unique<M68kTargetInfo>(Triple, Opts);
     }
-
-  case llvm::Triple::le32:
-    switch (os) {
-    case llvm::Triple::NaCl:
-      return std::make_unique<NaClTargetInfo<PNaClTargetInfo>>(Triple, Opts);
-    default:
-      return nullptr;
-    }
-
-  case llvm::Triple::le64:
-    return std::make_unique<Le64TargetInfo>(Triple, Opts);
 
   case llvm::Triple::ppc:
     switch (os) {

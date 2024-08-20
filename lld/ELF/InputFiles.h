@@ -86,6 +86,7 @@ public:
            fileKind == XO65Kind || fileKind == XO65EnclaveKind);
     return sections;
   }
+  void cacheDecodedCrel(size_t i, InputSectionBase *s) { sections[i] = s; }
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
