@@ -145,7 +145,6 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                                            : MF.getTarget().getOptLevel();
 
   KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
-  AAResults *AA = nullptr;
   if (OptLevel != CodeGenOptLevel::None) {
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     if (PSI && PSI->hasProfileSummary())

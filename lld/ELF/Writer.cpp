@@ -2879,7 +2879,7 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
         parallel::TaskGroup tg;
         // Collect each output section that LMA overlaps with the memory region
         // and write it to the corresponding portion of the buffer.
-        for (OutputSection *sec : outputSections) {
+        for (OutputSection *sec : ctx.outputSections) {
           if (!(sec->flags & SHF_ALLOC) || sec->type != SHT_PROGBITS ||
               !sec->size)
             continue;
