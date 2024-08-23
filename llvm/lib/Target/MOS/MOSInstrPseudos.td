@@ -71,7 +71,7 @@ def LDImm1 : MOSPseudo {
 
 // Loads a 16-bit value into an imaginary pointer pair. This is generally more
 // constrained than loading two 8-bit values using a REG_SEQUENCE, but bundling
-// this functionality into a single pseudo-instruction allows thee register
+// this functionality into a single pseudo-instruction allows the register
 // allocator to rematerialize the load at point of use. This is particularly
 // important for immediate loads, since GlobalISel places these at the beginning
 // of basic blocks, which maximizes the chance that they'll be live across

@@ -404,7 +404,7 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
   // Emitting INC/DEC sequences of N bytes is done in one of the following
   // three ways (? denotes a register):
   // 1. INC:            INC value / BNE increment_done
-  // 2. DEC (register): DE? / CP? #0 / BNE decrement_done
+  // 2. DEC (register): DE? / CP? #$FF / BNE decrement_done
   // 3. DEC (memory):   LD? #$FF / DEC value / CP? value / BNE decrement_done
   // In addition:
   // - The comparison and branch are omitted for the final INC/DEC.
