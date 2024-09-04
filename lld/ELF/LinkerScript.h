@@ -323,6 +323,7 @@ class LinkerScript final {
 
   llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
+  StringRef getOutputSectionName(const InputSectionBase *s) const;
   void addSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
   void setDot(Expr e, const Twine &loc, bool inSec);
@@ -354,7 +355,7 @@ class LinkerScript final {
 
   OutputSection *aether;
 
-  uint64_t dot;
+  uint64_t dot = 0;
 
 public:
   OutputDesc *createOutputSection(StringRef name, StringRef location);
@@ -469,13 +470,6 @@ public:
   // one output section to another.
   llvm::DenseMap<llvm::CachedHashStringRef, SectionClassDesc *> sectionClasses;
 };
-
-struct ScriptWrapper {
-  LinkerScript s;
-  LinkerScript *operator->() { return &s; }
-};
-
-LLVM_LIBRARY_VISIBILITY extern ScriptWrapper script;
 
 } // end namespace lld::elf
 

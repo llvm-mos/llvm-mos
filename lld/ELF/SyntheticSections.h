@@ -1492,8 +1492,6 @@ struct Partition {
   unsigned getNumber() const { return this - &partitions[0] + 1; }
 };
 
-LLVM_LIBRARY_VISIBILITY extern Partition *mainPart;
-
 inline Partition &SectionBase::getPartition() const {
   assert(isLive());
   return partitions[partition - 1];
