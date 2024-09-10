@@ -267,8 +267,7 @@ bool MOSInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   return true;
 }
 
-bool MOSInstrInfo::hasCommutePreference(MachineInstr &MI,
-                                        bool &Commute) const {
+bool MOSInstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
   unsigned CommutableOpIdx1 = CommuteAnyOperandIndex;
   unsigned CommutableOpIdx2 = CommuteAnyOperandIndex;
   if (!findCommutedOpIndices(MI, CommutableOpIdx1, CommutableOpIdx2)) {
@@ -530,7 +529,8 @@ void MOSInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
                                const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               MCRegister SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   MachineIRBuilder Builder(MBB, MI);
   Builder.setDebugLoc(DL);
   copyPhysRegImpl(Builder, DestReg, SrcReg, false, KillSrc);
@@ -715,8 +715,7 @@ void MOSInstrInfo::copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
             // A DEC/INC pair defines NZ without impacting other flags or
             // the register.
             Builder.buildInstr(MOS::DEC, {SrcReg}, {SrcReg});
-            Builder
-                .buildInstr(MOS::INC, {SrcReg}, {SrcReg})
+            Builder.buildInstr(MOS::INC, {SrcReg}, {SrcReg})
                 .addDef(MOS::NZ, RegState::Implicit);
             Builder.buildInstr(MOS::SelectImm, {MOS::V},
                                {Register(MOS::Z), INT64_C(0), INT64_C(-1)});

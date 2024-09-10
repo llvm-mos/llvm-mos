@@ -47,8 +47,7 @@ using namespace lld::elf;
 namespace {
 class ScriptParser final : ScriptLexer {
 public:
-  ScriptParser(MemoryBufferRef mb) : ScriptLexer(mb) {
-  }
+  ScriptParser(MemoryBufferRef mb) : ScriptLexer(mb) {}
 
   void readLinkerScript();
   void readVersionScript();
@@ -906,8 +905,7 @@ Expr ScriptParser::readAssert() {
   };
 }
 
-#define ECase(X)                                                               \
-  { #X, X }
+#define ECase(X) {#X, X}
 constexpr std::pair<const char *, unsigned> typeMap[] = {
     ECase(SHT_PROGBITS),   ECase(SHT_NOTE),       ECase(SHT_NOBITS),
     ECase(SHT_INIT_ARRAY), ECase(SHT_FINI_ARRAY), ECase(SHT_PREINIT_ARRAY),
@@ -1417,12 +1415,13 @@ MemoryRegionCommand *ScriptParser::readMemoryRegionCommand(StringRef tok) {
     }
   }
   expect(")");
-  auto iter = script->memoryRegions.find(name);
-  if (iter == script->memoryRegions.end()) {
+  auto *iter = ctx.script->memoryRegions.find(name);
+  if (iter == ctx.script->memoryRegions.end()) {
     setError("memory region '" + name + "' is not defined");
     return nullptr;
   }
-  return make<MemoryRegionCommand>(iter->second, isFull, regionStart, regionLength);
+  return make<MemoryRegionCommand>(iter->second, isFull, regionStart,
+                                   regionLength);
 }
 
 static std::optional<uint64_t> parseFlag(StringRef tok) {
@@ -1830,9 +1829,9 @@ void ScriptParser::readCustomOutputFormat() {
     if (tok == "INCLUDE")
       readInclude();
     else if (ByteCommand *data = readByteCommand(tok))
-      script->outputFormat.push_back(data);
+      ctx.script->outputFormat.push_back(data);
     else if (MemoryRegionCommand *region = readMemoryRegionCommand(tok))
-      script->outputFormat.push_back(region);
+      ctx.script->outputFormat.push_back(region);
     else
       setError("custom output format command expected, but got " + tok);
   }

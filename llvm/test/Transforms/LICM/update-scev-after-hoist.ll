@@ -23,9 +23,9 @@ define i16 @main() {
 ; SCEV-EXPR-NEXT:    %mul.lcssa = phi i16 [ %mul.n.reass.reass, %loop ]
 ; SCEV-EXPR-NEXT:    --> (8 * %mul) U: [0,-7) S: [-32768,32761) --> -32768 U: [-32768,-32767) S: [-32768,-32767)
 ; SCEV-EXPR-NEXT:  Determining loop execution counts for: @main
-; SCEV-EXPR-NEXT:  Loop %loop: backedge-taken count is i32 3
-; SCEV-EXPR-NEXT:  Loop %loop: constant max backedge-taken count is i32 3
-; SCEV-EXPR-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 3
+; SCEV-EXPR-NEXT:  Loop %loop: backedge-taken count is i3 3
+; SCEV-EXPR-NEXT:  Loop %loop: constant max backedge-taken count is i3 3
+; SCEV-EXPR-NEXT:  Loop %loop: symbolic max backedge-taken count is i3 3
 ; SCEV-EXPR-NEXT:  Loop %loop: Trip multiple is 4
 ;
 entry:

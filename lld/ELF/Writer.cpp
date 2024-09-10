@@ -359,7 +359,7 @@ template <class ELFT> void Writer<ELFT>::run() {
       config->outputFile = customOutputFile;
     });
     SmallString<64> outputFile = customOutputFile;
-    if (!script->outputFormat.empty()) {
+    if (!ctx.script->outputFormat.empty()) {
       outputFile += ".elf";
       config->outputFile = outputFile;
     }
@@ -2832,7 +2832,7 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
-  if (script->outputFormat.empty())
+  if (ctx.script->outputFormat.empty())
     return;
 
   llvm::TimeTraceScope timeScope("Write custom output file");
@@ -2844,7 +2844,7 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
     return;
   }
 
-  for (SectionCommand *command : script->outputFormat) {
+  for (SectionCommand *command : ctx.script->outputFormat) {
     if (ByteCommand *data = dyn_cast<ByteCommand>(command)) {
       uint64_t value = data->expression().getValue();
       char buf[8];
