@@ -48,13 +48,13 @@ public:
   MOSOperand() = delete;
   /// Create an immediate MOSOperand.
   MOSOperand(const MOSSubtarget &STI, const MCExpr *Val, SMLoc S, SMLoc E)
-      : Kind(k_Immediate), Imm(Val), Start(S), End(E), STI(STI){};
+      : Kind(k_Immediate), Imm(Val), Start(S), End(E), STI(STI) {};
   /// Create a register MOSOperand.
   MOSOperand(const MOSSubtarget &STI, unsigned RegNum, SMLoc S, SMLoc E)
-      : Kind(k_Register), Reg(RegNum), Start(S), End(E), STI(STI){};
+      : Kind(k_Register), Reg(RegNum), Start(S), End(E), STI(STI) {};
   /// Create a token MOSOperand.
   MOSOperand(const MOSSubtarget &STI, StringRef Str, SMLoc S)
-      : Kind(k_Token), Tok(Str), Start(S), STI(STI){};
+      : Kind(k_Token), Tok(Str), Start(S), STI(STI) {};
 
 private:
   enum KindTy {
@@ -315,7 +315,7 @@ public:
   ///
   /// On failure, the target parser is responsible for emitting a diagnostic
   /// explaining the match failure.
-  bool MatchAndEmitInstruction(SMLoc Loc, unsigned & /*Opcode*/,
+  bool matchAndEmitInstruction(SMLoc Loc, unsigned & /*Opcode*/,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override {
@@ -464,16 +464,15 @@ public:
   }
 
   bool tryPushSPC700AdditionExpr(OperandVector &Operands, const MCExpr *LHS,
-                                const MCBinaryExpr *BE, SMLoc S, SMLoc E) {
+                                 const MCBinaryExpr *BE, SMLoc S, SMLoc E) {
     // On SPC700, the expression can end in +X or +Y, which should be parsed
     // as an addressing mode, not as part of the expression.
     if (const auto *SE = dyn_cast<MCSymbolRefExpr>(BE->getRHS())) {
       if ((SE->getSymbol().getName().equals_insensitive("x") ||
-          SE->getSymbol().getName().equals_insensitive("y")) &&
+           SE->getSymbol().getName().equals_insensitive("y")) &&
           BE->getOpcode() == MCBinaryExpr::Add) {
         Operands.push_back(MOSOperand::createImm(STI, LHS, S, E));
-        Operands.push_back(MOSOperand::createToken(
-            STI, "+", BE->getLoc()));
+        Operands.push_back(MOSOperand::createToken(STI, "+", BE->getLoc()));
         Operands.push_back(MOSOperand::createToken(
             STI, SE->getSymbol().getName(), SE->getLoc()));
         return false;
@@ -504,11 +503,7 @@ public:
     Operands.push_back(MOSOperand::createImm(STI, Val, S, E));
   }
 
-  enum ExpressionType {
-    ExprTypeOther,
-    ExprTypeImmediate,
-    ExprTypeAddress
-  };
+  enum ExpressionType { ExprTypeOther, ExprTypeImmediate, ExprTypeAddress };
 
   bool tryParseRelocExpression(OperandVector &Operands, ExpressionType EType) {
     bool IsNegated = false;
@@ -562,14 +557,12 @@ public:
       bool IsImm16 = false;
       switch (Parser.getTok().getKind()) {
       case AsmToken::Less:
-        ModifierKind = IsImm16 ?
-                       MOSMCExpr::VK_MOS_ADDR16 :
-                       MOSMCExpr::VK_MOS_ADDR16_LO;
+        ModifierKind =
+            IsImm16 ? MOSMCExpr::VK_MOS_ADDR16 : MOSMCExpr::VK_MOS_ADDR16_LO;
         break;
       case AsmToken::Greater:
-        ModifierKind = IsImm16 ?
-                       MOSMCExpr::VK_MOS_ADDR24_SEGMENT :
-                       MOSMCExpr::VK_MOS_ADDR16_HI;
+        ModifierKind = IsImm16 ? MOSMCExpr::VK_MOS_ADDR24_SEGMENT
+                               : MOSMCExpr::VK_MOS_ADDR16_HI;
         break;
       case AsmToken::Caret:
         ModifierKind = MOSMCExpr::VK_MOS_ADDR24_BANK;
@@ -625,8 +618,8 @@ public:
         if (Parser.getTok().getString() == GenerateStubs &&
             Parser.getTok().getKind() == AsmToken::Identifier) {
           std::string GSModName = ModifierName.str() + "_" + GenerateStubs;
-          ModifierKind = MOSMCExpr::getKindByName(GSModName,
-                                                  EType != ExprTypeAddress);
+          ModifierKind =
+              MOSMCExpr::getKindByName(GSModName, EType != ExprTypeAddress);
           if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
             Parser.Lex(); // Eat gs modifier name
           }
@@ -747,7 +740,7 @@ public:
     return ParseStatus::NoMatch;
   }
 
-  bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Mnemonic,
+  bool parseInstruction(ParseInstructionInfo & /*Info*/, StringRef Mnemonic,
                         SMLoc NameLoc, OperandVector &Operands) override {
     /*
     On 65xx family instructions, mnemonics and addressing modes take the form:
@@ -806,12 +799,13 @@ public:
       // Handle special characters.
       if (getLexer().is(AsmToken::Hash)) {
         eatThatToken(Operands);
-        if (!tryParseExpr(Operands, ExprTypeImmediate,
-                          STI.hasW65816Or65EL02() ?
-                          "immediate operand must be an expression evaluating "
-                          "to a value between 0 and 65535 inclusive" :
-                          "immediate operand must be an expression evaluating "
-                          "to a value between 0 and 255 inclusive")) {
+        if (!tryParseExpr(
+                Operands, ExprTypeImmediate,
+                STI.hasW65816Or65EL02()
+                    ? "immediate operand must be an expression evaluating "
+                      "to a value between 0 and 65535 inclusive"
+                    : "immediate operand must be an expression evaluating "
+                      "to a value between 0 and 255 inclusive")) {
           continue;
         }
       }
