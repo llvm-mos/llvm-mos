@@ -399,6 +399,7 @@ public:
   LegalizeResult lowerSITOFP(MachineInstr &MI);
   LegalizeResult lowerFPTOUI(MachineInstr &MI);
   LegalizeResult lowerFPTOSI(MachineInstr &MI);
+  LegalizeResult lowerFPTOINT_SAT(MachineInstr &MI);
 
   LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LegalizeResult lowerFPTRUNC(MachineInstr &MI);

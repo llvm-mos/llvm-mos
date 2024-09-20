@@ -3548,6 +3548,22 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
     }
   }
 
+  // ((-C + (C smax %x)) /u %x) evaluates to zero, for any positive constant C.
+  if (const auto *AE = dyn_cast<SCEVAddExpr>(LHS);
+      AE && AE->getNumOperands() == 2) {
+    if (const auto *VC = dyn_cast<SCEVConstant>(AE->getOperand(0))) {
+      const APInt &NegC = VC->getAPInt();
+      if (NegC.isNegative() && !NegC.isMinSignedValue()) {
+        const auto *MME = dyn_cast<SCEVSMaxExpr>(AE->getOperand(1));
+        if (MME && MME->getNumOperands() == 2 &&
+            isa<SCEVConstant>(MME->getOperand(0)) &&
+            cast<SCEVConstant>(MME->getOperand(0))->getAPInt() == -NegC &&
+            MME->getOperand(1) == RHS)
+          return getZero(LHS->getType());
+      }
+    }
+  }
+
   // The Insertion Point (IP) might be invalid by now (due to UniqueSCEVs
   // changes). Make sure we get a new one.
   IP = nullptr;
@@ -4504,7 +4520,7 @@ bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
 ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
-    return std::nullopt;
+    return {};
   return SI->second.getArrayRef();
 }
 
@@ -8579,8 +8595,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
     Ops.push_back(BECount);
 
     if (Preds)
-      for (const auto *P : ENT.Predicates)
-        Preds->push_back(P);
+      append_range(*Preds, ENT.Predicates);
 
     assert((Preds || ENT.hasAlwaysTruePredicate()) &&
            "Predicate should be always true!");
@@ -8601,8 +8616,7 @@ ScalarEvolution::BackedgeTakenInfo::getExitNotTaken(
       if (ENT.hasAlwaysTruePredicate())
         return &ENT;
       else if (Predicates) {
-        for (const auto *P : ENT.Predicates)
-          Predicates->push_back(P);
+        append_range(*Predicates, ENT.Predicates);
         return &ENT;
       }
     }
@@ -8644,8 +8658,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
                "dominate latch!");
         ExitCounts.push_back(ExitCount);
         if (Predicates)
-          for (const auto *P : ENT.Predicates)
-            Predicates->push_back(P);
+          append_range(*Predicates, ENT.Predicates);
 
         assert((Predicates || ENT.hasAlwaysTruePredicate()) &&
                "Predicate should be always true!");
@@ -8669,7 +8682,7 @@ bool ScalarEvolution::BackedgeTakenInfo::isConstantMaxOrZero(
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
-    : ExitLimit(E, E, E, false, std::nullopt) {}
+    : ExitLimit(E, E, E, false, {}) {}
 
 ScalarEvolution::ExitLimit::ExitLimit(
     const SCEV *E, const SCEV *ConstantMaxNotTaken,
@@ -13728,7 +13741,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   SmallVector<const SCEVPredicate *, 4> Preds;
   auto *PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
-  if (PBT != BTC || !Preds.empty()) {
+  if (PBT != BTC) {
+    assert(!Preds.empty() && "Different predicated BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
@@ -13747,6 +13761,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   auto *PredSymbolicMax =
       SE->getPredicatedSymbolicMaxBackedgeTakenCount(L, Preds);
   if (SymbolicBTC != PredSymbolicMax) {
+    assert(!Preds.empty() &&
+           "Different predicated symbolic max BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
@@ -14795,8 +14811,7 @@ const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
 
   // Since the transformation was successful, we can now transfer the SCEV
   // predicates.
-  for (const auto *P : TransformPreds)
-    Preds.insert(P);
+  Preds.insert(TransformPreds.begin(), TransformPreds.end());
 
   return AddRec;
 }

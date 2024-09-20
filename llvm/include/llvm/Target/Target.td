@@ -1260,6 +1260,13 @@ def IMPLICIT_DEF : StandardPseudoInstruction {
   let isAsCheapAsAMove = true;
   let isMeta = true;
 }
+def INIT_UNDEF : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let Size = 0;
+}
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$implsrc, unknown:$subsrc, i32imm:$subidx);

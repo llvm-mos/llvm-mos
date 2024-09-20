@@ -302,6 +302,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
     return createSPIRVTargetCodeGenInfo(CGM);
+  case llvm::Triple::dxil:
+    return createDirectXTargetCodeGenInfo(CGM);
   case llvm::Triple::ve:
     return createVETargetCodeGenInfo(CGM);
   case llvm::Triple::csky: {
@@ -2483,11 +2485,14 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute(llvm::Attribute::StackProtectReq);
 
   if (!D) {
+    // Non-entry HLSL functions must always be inlined.
+    if (getLangOpts().HLSL && !F->hasFnAttribute(llvm::Attribute::NoInline))
+      B.addAttribute(llvm::Attribute::AlwaysInline);
     // If we don't have a declaration to control inlining, the function isn't
     // explicitly marked as alwaysinline for semantic reasons, and inlining is
     // disabled, mark the function as noinline.
-    if (!F->hasFnAttribute(llvm::Attribute::AlwaysInline) &&
-        CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
+    else if (!F->hasFnAttribute(llvm::Attribute::AlwaysInline) &&
+             CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
       B.addAttribute(llvm::Attribute::NoInline);
 
     if (CodeGenOpts.AssumeNonReentrant)
@@ -2517,9 +2522,13 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   ShouldAddOptNone &= !D->hasAttr<MinSizeAttr>();
   ShouldAddOptNone &= !D->hasAttr<AlwaysInlineAttr>();
 
-  // Add optnone, but do so only if the function isn't always_inline.
-  if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
-      !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
+  // Non-entry HLSL functions must always be inlined.
+  if (getLangOpts().HLSL && !F->hasFnAttribute(llvm::Attribute::NoInline) &&
+      !D->hasAttr<NoInlineAttr>()) {
+    B.addAttribute(llvm::Attribute::AlwaysInline);
+  } else if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
+             !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
+    // Add optnone, but do so only if the function isn't always_inline.
     B.addAttribute(llvm::Attribute::OptimizeNone);
 
     // OptimizeNone implies noinline; we should not be inlining such functions.
@@ -2539,7 +2548,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute(llvm::Attribute::NoInline);
   } else if (D->hasAttr<NoDuplicateAttr>()) {
     B.addAttribute(llvm::Attribute::NoDuplicate);
-  } else if (D->hasAttr<NoInlineAttr>() && !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
+  } else if (D->hasAttr<NoInlineAttr>() &&
+             !F->hasFnAttribute(llvm::Attribute::AlwaysInline)) {
     // Add noinline if the function isn't always_inline.
     B.addAttribute(llvm::Attribute::NoInline);
   } else if (D->hasAttr<AlwaysInlineAttr>() &&
@@ -4300,7 +4310,10 @@ void CodeGenModule::emitMultiVersionFunctions() {
               Feats.clear();
               if (getTarget().getTriple().isAArch64())
                 TC->getFeatures(Feats, I);
-              else {
+              else if (getTarget().getTriple().isRISCV()) {
+                StringRef Version = TC->getFeatureStr(I);
+                Feats.push_back(Version);
+              } else {
                 StringRef Version = TC->getFeatureStr(I);
                 if (Version.starts_with("arch="))
                   Architecture = Version.drop_front(sizeof("arch=") - 1);

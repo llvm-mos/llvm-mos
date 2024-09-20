@@ -6606,7 +6606,7 @@ static Function *createOutlinedFunction(
         // TODO: We are using nullopt for arguments at the moment. This will
         // need to be updated when debug data is being generated for variables.
         DISubroutineType *Ty =
-            DB.createSubroutineType(DB.getOrCreateTypeArray(std::nullopt));
+            DB.createSubroutineType(DB.getOrCreateTypeArray({}));
         DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
                                           DISubprogram::SPFlagOptimized |
                                           DISubprogram::SPFlagLocalToUnit;
@@ -7936,6 +7936,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
     llvm_unreachable("Unsupported atomic update operation");
   }
   llvm_unreachable("Unsupported atomic update operation");
