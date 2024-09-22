@@ -197,16 +197,31 @@ bool MOSTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
-bool MOSTargetLowering::isTruncateFree(Type *SrcTy, Type *DstTy) const {
-  if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+bool MOSTargetLowering::isTruncateFree(Type *FromTy, Type *ToTy) const {
+  if (!FromTy->isIntegerTy() || !ToTy->isIntegerTy())
     return false;
-  return SrcTy->getPrimitiveSizeInBits() > DstTy->getPrimitiveSizeInBits();
+  return FromTy->getPrimitiveSizeInBits() > ToTy->getPrimitiveSizeInBits();
 }
 
-bool MOSTargetLowering::isZExtFree(Type *SrcTy, Type *DstTy) const {
-  if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+bool MOSTargetLowering::isTruncateFree(LLT FromTy, LLT ToTy,
+                                       const DataLayout &DL,
+                                       LLVMContext &Ctx) const {
+  if (!FromTy.isScalar() || !ToTy.isScalar())
     return false;
-  return SrcTy->getPrimitiveSizeInBits() < DstTy->getPrimitiveSizeInBits();
+  return FromTy.getScalarSizeInBits() > ToTy.getScalarSizeInBits();
+}
+
+bool MOSTargetLowering::isZExtFree(Type *FromTy, Type *ToTy) const {
+  if (!FromTy->isIntegerTy() || !ToTy->isIntegerTy())
+    return false;
+  return FromTy->getPrimitiveSizeInBits() < ToTy->getPrimitiveSizeInBits();
+}
+
+bool MOSTargetLowering::isZExtFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
+                                   LLVMContext &Ctx) const {
+  if (!FromTy.isScalar() || !ToTy.isScalar())
+    return false;
+  return FromTy.getScalarSizeInBits() < ToTy.getScalarSizeInBits();
 }
 
 static MachineBasicBlock *emitSelectImm(MachineInstr &MI,
@@ -456,10 +471,9 @@ static MachineBasicBlock *emitIncDecMB(MachineInstr &MI,
         // Avoid copying additional register flags here.
         // They will apply to the last opcode in the chain (CMP) instead.
         First.addDef(MI.getOperand(FirstDefIdx).getReg())
-             .addUse(MI.getOperand(FirstUseIdx).getReg());
+            .addUse(MI.getOperand(FirstUseIdx).getReg());
       } else {
-        First.add(MI.getOperand(FirstDefIdx))
-             .add(MI.getOperand(FirstUseIdx));
+        First.add(MI.getOperand(FirstDefIdx)).add(MI.getOperand(FirstUseIdx));
       }
       ++FirstDefIdx;
     } else {

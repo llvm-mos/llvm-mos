@@ -69,9 +69,13 @@ public:
                              unsigned AddrSpace,
                              Instruction *I = nullptr) const override;
 
-  bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
+  bool isTruncateFree(Type *FromTy, Type *ToTy) const override;
+  bool isTruncateFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
+                      LLVMContext &Ctx) const override;
 
-  bool isZExtFree(Type *SrcTy, Type *DstTy) const override;
+  bool isZExtFree(Type *FromTy, Type *ToTy) const override;
+  bool isZExtFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
+                  LLVMContext &Ctx) const override;
 
   bool preferNarrowTypes() const override { return true; }
 
