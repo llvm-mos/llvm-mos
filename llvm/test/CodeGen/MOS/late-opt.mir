@@ -527,7 +527,7 @@ body: |
     ; CHECK-LABEL: name: ldimm_tay_to_iny
     ; CHECK: $a = LDImm 0
     ; CHECK-NEXT: $y = TA $a
-    ; CHECK-NEXT: $y = LDImm 1
+    ; CHECK-NEXT: $y = INC killed $y
     ; CHECK-NEXT: RTS implicit $a
     $a = LDImm 0
     $y = TA $a
