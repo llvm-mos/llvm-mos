@@ -248,6 +248,9 @@ void MOSLateOptimization::lowerCmpZero(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+// Replaces immediate register loads with register transfers
+// and increments/decrements.
+// The resulting code is just as fast, but shorter.
 bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
   const auto &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
   const auto *TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
@@ -256,12 +259,35 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
   bool Changed = false;
 
   struct ImmLoad {
+    // nullptr means exact register value is unknown.
+    // Otherwise, points to the instruction that recently loaded this register.
     MachineInstr *MI = nullptr;
+    // Current register value.
     int64_t Val;
   } LoadA, LoadX, LoadY;
 
   for (MachineInstr &MI : MBB) {
+    ImmLoad *Load = nullptr;
+    if (MI.getOpcode() == MOS::TA && LoadA.MI) {
+      // We see a TAX or TAY and know the accumulator value.
+      // TODO: handle TXA, TYA, TXY, TYX, maybe INX etc.
+      switch (MI.getOperand(0).getReg()) {
+      case MOS::X:
+        Load = &LoadX;
+        break;
+      case MOS::Y:
+        Load = &LoadY;
+        break;
+      }
+      // Copy A value to X or Y.
+      Load->MI = &MI;
+      Load->Val = LoadA.Val;
+      continue;
+    }
+
     if (MI.getOpcode() != MOS::LDImm || !MI.getOperand(1).isImm()) {
+      // If a register is overwritten with an instruction other than
+      // an immediate load, mark register value as unknown.
       if (MI.modifiesRegister(MOS::A, TRI))
         LoadA.MI = nullptr;
       if (MI.modifiesRegister(MOS::X, TRI))
@@ -271,19 +297,21 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       continue;
     }
 
+    // Process LD_ #.
     Register Dst = MI.getOperand(0).getReg();
     int64_t Val = MI.getOperand(1).getImm();
 
-    ImmLoad *Load = nullptr;
     // Try to replace with T__.
     switch (Dst) {
     case MOS::A: {
       Register Src;
       if (LoadX.MI && LoadX.Val == Val) {
+        // LDA #imm -> TXA if X==imm
         Src = MOS::X;
         Load = &LoadX;
       }
       if (LoadY.MI && LoadY.Val == Val) {
+        // LDA #imm -> TYA if Y==imm
         Src = MOS::Y;
         Load = &LoadY;
       }
@@ -296,14 +324,17 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
     case MOS::X:
     case MOS::Y:
       if (LoadA.MI && LoadA.Val == Val) {
+        // LDX/LDY #imm -> TAX/TAY if A==imm
         Load = &LoadA;
         MI.setDesc(TII.get(MOS::TA));
         MI.getOperand(1).ChangeToRegister(MOS::A, /*isDef=*/false);
       } else if (STI.hasW65816Or65EL02()) {
         if (Dst == MOS::X && LoadY.MI && LoadY.Val == Val) {
+          // LDX #imm -> TYX if Y==imm
           MI.setDesc(TII.get(MOS::TX));
           MI.getOperand(1).ChangeToRegister(MOS::Y, /*isDef=*/false);
         } else if (Dst == MOS::Y && LoadX.MI && LoadX.Val == Val) {
+          // LDY #imm -> TXY if X==imm
           MI.setDesc(TII.get(MOS::TX));
           MI.getOperand(1).ChangeToRegister(MOS::X, /*isDef=*/false);
         }
@@ -317,20 +348,19 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
       case MOS::A:
         if (STI.hasGPRIncDec())
           if (LoadA.MI && std::abs(LoadA.Val - Val) == 1)
-            Load = &LoadA;
+            Load = &LoadA; // LDA # -> INA/DEA
         break;
       case MOS::X:
         if (LoadX.MI && std::abs(LoadX.Val - Val) == 1)
-          Load = &LoadX;
+          Load = &LoadX; // LDX # -> INX/DEX
         break;
       case MOS::Y:
         if (LoadY.MI && std::abs(LoadY.Val - Val) == 1)
-          Load = &LoadY;
+          Load = &LoadY; // LDY # -> INY/DEY
         break;
       }
 
       if (Load) {
-        MachineIRBuilder Builder(MI);
         MI.setDesc(TII.get(Val > Load->Val ? MOS::INC : MOS::DEC));
         MI.getOperand(1).ChangeToRegister(Dst, /*isDef=*/false, /*isImp=*/false,
                                           /*isKill=*/true);
@@ -339,6 +369,7 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
     }
 
     if (Load) {
+      // Replace LD_ # with T__, IN_ or DE_.
       Changed = true;
       Load->MI->getOperand(0).setIsDead(false);
       for (MachineInstr &J : make_range(MachineBasicBlock::iterator(Load->MI),
@@ -346,6 +377,7 @@ bool MOSLateOptimization::combineLdImm(MachineBasicBlock &MBB) const {
         J.clearRegisterKills(Load->MI->getOperand(0).getReg(), TRI);
     }
 
+    // Store this instruction (changed or not) and the new register value.
     switch (Dst) {
     case MOS::A:
       Load = &LoadA;
