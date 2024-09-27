@@ -18,6 +18,7 @@ set(BUILTINS_mos-unknown-unknown_COMPILER_RT_BAREMETAL_BUILD ON CACHE BOOL "")
 set(BUILTINS_mos-unknown-unknown_COMPILER_RT_BUILTINS_ENABLE_PIC OFF CACHE BOOL "")
 set(BUILTINS_mos-unknown-unknown_CMAKE_BUILD_TYPE MinSizeRel CACHE BOOL "")
 set(BUILTINS_mos-unknown-unknown_CMAKE_SYSTEM_NAME Generic CACHE STRING "")
+set(RUNTIMES_mos-unknown-unknown_CMAKE_SYSTEM_NAME Generic CACHE STRING "")
 
 set(LLVM_DEFAULT_TARGET_TRIPLE "mos-unknown-unknown" CACHE STRING "")
 
