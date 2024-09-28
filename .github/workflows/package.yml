@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-2019, macos-14, ubuntu-20.04]
+        os: [windows-2019, macos-13, macos-14, ubuntu-20.04]
     steps:
       - name: Setup Windows
         if: startsWith(matrix.os, 'windows')
@@ -71,9 +71,12 @@ jobs:
       - name: Archive Windows
         if: startsWith(matrix.os, 'windows')
         run: 7z a llvm-mos-windows-main.7z llvm-mos
-      - name: Archive macOS
-        if: startsWith(matrix.os, 'macos')
+      - name: Archive Intel MacOS
+        if: startsWith(matrix.os, 'macos-13')
         run: tar -cJvf llvm-mos-darwin-main.tar.xz llvm-mos
+      - name: Archive Apple Silicon MacOS
+        if: startsWith(matrix.os, 'macos-14')
+        run: tar -cJvf llvm-mos-macos-arm64-main.tar.xz llvm-mos
 
       - name: Release Linux
         if: startsWith(matrix.os, 'ubuntu')
@@ -84,14 +87,23 @@ jobs:
           tag_name: llvm-mos-linux-main
           files: llvm-mos-linux-main.tar.xz
 
-      - name: Release macOS
-        if: startsWith(matrix.os, 'macos')
+      - name: Release Intel MacOS
+        if: startsWith(matrix.os, 'macos-13')
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          body: "Internal compiler build for macOS"
+          body: "Internal compiler build for Intel MacOS"
           tag_name: llvm-mos-darwin-main
           files: llvm-mos-darwin-main.tar.xz
+
+      - name: Release Apple Silicon MacOS
+        if: startsWith(matrix.os, 'macos-14')
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          body: "Internal compiler build for Apple Silicon MacOS"
+          tag_name: llvm-mos-macos-arm64-main
+          files: llvm-mos-macos-arm64-main.tar.xz
 
       - name: Release Windows
         if: startsWith(matrix.os, 'windows')
