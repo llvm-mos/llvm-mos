@@ -456,7 +456,7 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
 
   if (VerifyScheduling) {
     LLVM_DEBUG(LIS->dump());
-    MF->verify(this, "Before machine scheduling.");
+    MF->verify(this, "Before machine scheduling.", &errs());
   }
   RegClassInfo->runOnMachineFunction(*MF);
 
@@ -475,7 +475,7 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
 
   LLVM_DEBUG(LIS->dump());
   if (VerifyScheduling)
-    MF->verify(this, "After machine scheduling.");
+    MF->verify(this, "After machine scheduling.", &errs());
   return true;
 }
 
@@ -499,7 +499,7 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   if (VerifyScheduling)
-    MF->verify(this, "Before post machine scheduling.");
+    MF->verify(this, "Before post machine scheduling.", &errs());
 
   // Instantiate the selected scheduler for this target, function, and
   // optimization level.
@@ -515,7 +515,7 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   scheduleRegions(*Scheduler, true);
 
   if (VerifyScheduling)
-    MF->verify(this, "After post machine scheduling.");
+    MF->verify(this, "After post machine scheduling.", &errs());
   return true;
 }
 

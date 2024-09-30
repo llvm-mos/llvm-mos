@@ -1029,6 +1029,10 @@ define void @store() {
 
 define void @strided_load() {
 ; CHECK-LABEL: 'strided_load'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %ti1_2 = call <2 x i1> @llvm.experimental.vp.strided.load.v2i1.p0.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %ti1_4 = call <4 x i1> @llvm.experimental.vp.strided.load.v4i1.p0.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %ti1_8 = call <8 x i1> @llvm.experimental.vp.strided.load.v8i1.p0.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 65 for instruction: %ti1_16 = call <16 x i1> @llvm.experimental.vp.strided.load.v16i1.p0.i64(ptr undef, i64 undef, <16 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t0 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t2 = call <4 x i8> @llvm.experimental.vp.strided.load.v4i8.p0.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t4 = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
@@ -1052,6 +1056,10 @@ define void @strided_load() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'strided_load'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %ti1_2 = call <2 x i1> @llvm.experimental.vp.strided.load.v2i1.p0.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %ti1_4 = call <4 x i1> @llvm.experimental.vp.strided.load.v4i1.p0.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %ti1_8 = call <8 x i1> @llvm.experimental.vp.strided.load.v8i1.p0.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 97 for instruction: %ti1_16 = call <16 x i1> @llvm.experimental.vp.strided.load.v16i1.p0.i64(ptr undef, i64 undef, <16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %t0 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %t2 = call <4 x i8> @llvm.experimental.vp.strided.load.v4i8.p0.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %t4 = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
@@ -1074,6 +1082,10 @@ define void @strided_load() {
 ; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
+  %ti1_2 = call <2 x i1> @llvm.experimental.vp.strided.load.v2i1.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
+  %ti1_4 = call <4 x i1> @llvm.experimental.vp.strided.load.v4i1.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
+  %ti1_8 = call <8 x i1> @llvm.experimental.vp.strided.load.v8i1.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)
+  %ti1_16 = call <16 x i1> @llvm.experimental.vp.strided.load.v16i1.i64(ptr undef, i64 undef, <16 x i1> undef, i32 undef)
   %t0 = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
   %t2 = call <4 x i8> @llvm.experimental.vp.strided.load.v4i8.i64(ptr undef, i64 undef, <4 x i1> undef, i32 undef)
   %t4 = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.i64(ptr undef, i64 undef, <8 x i1> undef, i32 undef)

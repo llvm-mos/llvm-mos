@@ -46,6 +46,7 @@ class InputSectionBase;
 class EhInputSection;
 class Defined;
 class Symbol;
+class SymbolTable;
 class BitcodeCompiler;
 class OutputSection;
 class LinkerScript;
@@ -174,9 +175,9 @@ private:
 
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<InputFile *> files;
-  InputFile *armCmseImpLib = nullptr;
 
 public:
+  InputFile *armCmseImpLib = nullptr;
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
 };
 
@@ -489,12 +490,6 @@ struct Config {
   llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::StringRef>, 0>
       remapInputsWildcards;
 };
-struct ConfigWrapper {
-  Config c;
-  Config *operator->() { return &c; }
-};
-
-LLVM_LIBRARY_VISIBILITY extern ConfigWrapper config;
 
 // Some index properties of a symbol are stored separately in this auxiliary
 // struct to decrease sizeof(SymbolUnion) in the majority of cases.
@@ -549,7 +544,7 @@ struct InStruct {
 };
 
 struct Ctx {
-  Config &arg;
+  Config arg;
   LinkerDriver driver;
   LinkerScript *script;
   TargetInfo *target;
@@ -611,6 +606,7 @@ struct Ctx {
     Defined *tlsModuleBase;
   };
   ElfSym sym;
+  std::unique_ptr<SymbolTable> symtab;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -676,7 +672,7 @@ LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.
 static inline ArrayRef<VersionDefinition> namedVersionDefs() {
-  return llvm::ArrayRef(config->versionDefinitions).slice(2);
+  return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 
 void errorOrWarn(const Twine &msg);
