@@ -388,12 +388,12 @@ public:
 class XO65TempFile {
   SmallString<64> path;
   int fd;
-  StringRef ctx;
+  StringRef ctxStr;
   StringRef description;
   std::unique_ptr<MemoryBuffer> buffer;
 
 public:
-  XO65TempFile(StringRef prefix, StringRef suffix, StringRef ctx,
+  XO65TempFile(StringRef prefix, StringRef suffix, StringRef ctxStr,
                StringRef description);
   ~XO65TempFile();
 

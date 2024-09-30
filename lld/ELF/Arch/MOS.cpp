@@ -26,7 +26,7 @@ namespace elf {
 namespace {
 class MOS final : public TargetInfo {
 public:
-  MOS();
+  MOS(Ctx &ctx);
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -35,7 +35,7 @@ public:
 };
 } // namespace
 
-MOS::MOS() {
+MOS::MOS(Ctx &ctx) : TargetInfo(ctx) {
   defaultMaxPageSize = 1;
   defaultCommonPageSize = 1;
 }
@@ -102,7 +102,7 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_MOS_ADDR8:
     // The HuC6280's zero page is at 0x2000.
-    if (config->eflags & ELF::EF_MOS_ARCH_HUC6280)
+    if (ctx.arg.eflags & ELF::EF_MOS_ARCH_HUC6280)
       val -= 0x2000;
     checkUInt(loc, val & 0xffff, 8, rel);
     *loc = static_cast<unsigned char>(val);
@@ -159,8 +159,8 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *getMOSTargetInfo() {
-  static MOS target;
+TargetInfo *getMOSTargetInfo(Ctx &ctx) {
+  static MOS target(ctx);
   return &target;
 }
 

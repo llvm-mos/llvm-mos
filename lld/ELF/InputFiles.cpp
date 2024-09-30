@@ -1874,32 +1874,32 @@ static std::string findProgramByName(StringRef name, StringRef ctx) {
   return *errorOrPath;
 }
 
-XO65TempFile::XO65TempFile(StringRef prefix, StringRef suffix, StringRef ctx,
+XO65TempFile::XO65TempFile(StringRef prefix, StringRef suffix, StringRef ctxStr,
                            StringRef description)
-    : ctx(ctx), description(description) {
+    : ctxStr(ctxStr), description(description) {
   if (std::error_code ec = createTemporaryFile(prefix, suffix, fd, path))
-    fatal(ctx + ": could not create " + description + ": " + ec.message());
+    fatal(ctxStr + ": could not create " + description + ": " + ec.message());
 }
 
 XO65TempFile::~XO65TempFile() {
   buffer.reset();
-  if (config->saveTempsArgs.contains("ld65"))
+  if (ctx.arg.saveTempsArgs.contains("ld65"))
     return;
   if (std::error_code ec = remove(path))
-    warn(ctx + ": could not remove " + description + ": " + ec.message());
+    warn(ctxStr + ": could not remove " + description + ": " + ec.message());
 }
 
 void XO65TempFile::close() {
   buffer.reset();
   file_t f = convertFDToNativeFile(fd);
   if (std::error_code ec = closeFile(f))
-    fatal(ctx + ": could not close " + description + ": " + ec.message());
+    fatal(ctxStr + ": could not close " + description + ": " + ec.message());
   fd = -1;
 }
 
 void XO65TempFile::open() {
   if (std::error_code ec = openFileForReadWrite(path, fd, CD_OpenExisting, OF_None))
-    fatal(ctx + ": could not open " + description + ": " + ec.message());
+    fatal(ctxStr + ": could not open " + description + ": " + ec.message());
 }
 
 void XO65TempFile::read() {
@@ -1907,27 +1907,27 @@ void XO65TempFile::read() {
       MemoryBuffer::getOpenFile(convertFDToNativeFile(fd), path,
                                 /*FileSize=*/-1);
   if (std::error_code ec = bufOrError.getError())
-    fatal(ctx + ": could not read " + description + ": " + ec.message());
+    fatal(ctxStr + ": could not read " + description + ": " + ec.message());
   buffer = std::move(*bufOrError);
 }
 
 void XO65File::parse() {
   // ELF cannot straightforwardly support xo65's relocation types, so there's no
   // straightforward way to merge xo65 objects into a relocatable ELF file.
-  if (config->relocatable)
+  if (ctx.arg.relocatable)
     fatal(toString(this) +
           ": cc65 (xo65) object file cannot be relocatably linked");
 
-  if (config->od65Path.empty())
-    config->od65Path = saver().save(findProgramByName("od65", toString(this)));
+  if (ctx.arg.od65Path.empty())
+    ctx.arg.od65Path = saver().save(findProgramByName("od65", toString(this)));
 
   outputFile.emplace("od65", "out", toString(this), "od65 output file");
 
-  SmallVector<StringRef> args = {config->od65Path, "--dump-all", getName()};
+  SmallVector<StringRef> args = {ctx.arg.od65Path, "--dump-all", getName()};
   StringRef executable = args.front();
-  if (!config->cc65Launcher.empty()) {
-    args.insert(args.begin(), config->cc65Launcher);
-    executable = config->cc65Launcher;
+  if (!ctx.arg.cc65Launcher.empty()) {
+    args.insert(args.begin(), ctx.arg.cc65Launcher);
+    executable = ctx.arg.cc65Launcher;
   }
 
   // On Windows, a specific quirk of LLVM's redirection requires that the output
@@ -2003,7 +2003,7 @@ void XO65File::parseOD65Imports() {
   advancePast("  Imports:");
   SmallVector<StringRef> names = parseOD65Names();
   for (const StringRef name : names) {
-    Symbol *sym = symtab.addSymbol(
+    Symbol *sym = ctx.symtab->addSymbol(
         Undefined{this, name, STB_GLOBAL, STV_DEFAULT, STT_NOTYPE});
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
@@ -2018,7 +2018,7 @@ void XO65File::parseOD65Exports() {
   for (const StringRef name : names) {
     // Export values aren't yet known; they will be filled in once ld65 is run
     // on all xo65 sections.
-    Symbol *sym = symtab.addSymbol(
+    Symbol *sym = ctx.symtab->addSymbol(
         Defined{this, name, STB_GLOBAL, /*st_other=*/0, STT_NOTYPE,
                 /*value=*/0, /*size=*/0, /*section=*/nullptr});
     sym->isUsedInRegularObj = true;
@@ -2238,8 +2238,8 @@ void XO65Enclave::createSections() {
 }
 
 bool XO65Enclave::link() {
-  if (config->ld65Path.empty())
-    config->ld65Path = saver().save(findProgramByName("ld65", toString(this)));
+  if (ctx.arg.ld65Path.empty())
+    ctx.arg.ld65Path = saver().save(findProgramByName("ld65", toString(this)));
 
   if (!cfgFile)
     cfgFile.emplace("ld65", "cfg", toString(this), "ld65 cfg file");
@@ -2259,7 +2259,7 @@ bool XO65Enclave::link() {
   if (!mapFile)
     mapFile.emplace("ld65", "map", toString(this), "ld65 map file");
 
-  SmallVector<StringRef> args = {config->ld65Path,
+  SmallVector<StringRef> args = {ctx.arg.ld65Path,
                                  "-C",
                                  cfgFile->getPath(),
                                  "-o",
@@ -2268,9 +2268,9 @@ bool XO65Enclave::link() {
                                  "-m",
                                  mapFile->getPath()};
   StringRef executable = args.front();
-  if (!config->cc65Launcher.empty()) {
-    args.insert(args.begin(), config->cc65Launcher);
-    executable = config->cc65Launcher;
+  if (!ctx.arg.cc65Launcher.empty()) {
+    args.insert(args.begin(), ctx.arg.cc65Launcher);
+    executable = ctx.arg.cc65Launcher;
   }
   for (XO65File *f : files)
     args.push_back(f->getName());
@@ -2369,7 +2369,7 @@ bool XO65Enclave::updateSymbols() const {
       uint64_t val;
       if (matches[2].getAsInteger(16, val))
         fatal("ld65 map file: expected hex integer; found: " + matches[2]);
-      Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name));
+      Defined *sym = dyn_cast_or_null<Defined>(ctx.symtab->find(name));
       if (!sym)
         fatal("ld65 map file: could not find symbol definition: " + name);
       if (sym->file && isa<XO65File>(sym->file)) {

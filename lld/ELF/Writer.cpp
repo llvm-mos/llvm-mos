@@ -355,16 +355,15 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (errorCount())
     return;
 
-  StringRef customOutputFile = config->outputFile;
+  StringRef customOutputFile = ctx.arg.outputFile;
   {
     llvm::TimeTraceScope timeScope("Write output file");
-    auto restoreOutputFile = llvm::make_scope_exit([&]() {
-      config->outputFile = customOutputFile;
-    });
+    auto restoreOutputFile =
+        llvm::make_scope_exit([&]() { ctx.arg.outputFile = customOutputFile; });
     SmallString<64> outputFile = customOutputFile;
     if (!ctx.script->outputFormat.empty()) {
       outputFile += ".elf";
-      config->outputFile = outputFile;
+      ctx.arg.outputFile = outputFile;
     }
 
     // Write the result down to a file.
@@ -794,7 +793,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
       rank |= 1;
   }
 
-  if (config->emachine == EM_MOS)
+  if (ctx.arg.emachine == EM_MOS)
     if (osec.name == ".zp" || osec.name.starts_with(".zp."))
       rank |= 1;
 
@@ -2846,9 +2845,9 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
   llvm::TimeTraceScope timeScope("Write custom output file");
 
   std::error_code ec;
-  raw_fd_ostream os(config->outputFile, ec);
+  raw_fd_ostream os(ctx.arg.outputFile, ec);
   if (ec) {
-    error("cannot open " + config->outputFile + ": " + ec.message());
+    error("cannot open " + ctx.arg.outputFile + ": " + ec.message());
     return;
   }
 
