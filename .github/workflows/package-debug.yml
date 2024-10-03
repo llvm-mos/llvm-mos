@@ -61,6 +61,24 @@ jobs:
       - name: Build
         run: cd build; ninja clang lld
 
+      - name: Check that universal binaries are produced for MacOS
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          clang="./build/bin/clang-20"                                                                                                                                                         ─╯
+
+          if [ ! -f "$clang" ]; then
+            echo "Clang not found"
+            exit 1
+          fi
+
+          supported_hosts=$(lipo -archs $clang)
+          if [[ $supported_hosts != *"x86_64"* || $supported_hosts != *"arm64"* ]]; then
+            echo "clang is not a universal binary!"
+            exit 1
+          fi
+
+          echo "clang is a universal binary!"
+
       - name: Archive Linux
         if: startsWith(matrix.os, 'ubuntu')
         run: |
@@ -71,16 +89,11 @@ jobs:
         run: |
           cd build\bin
           7z a ..\..\llvm-mos-windows-debug.7z *
-      - name: Archive Intel MacOS
+      - name: Archive MacOS
         if: startsWith(matrix.os, 'macos-13')
         run: |
           cd build/bin
           tar -cJvf ../../llvm-mos-darwin-debug.tar.xz *
-      - name: Archive Apple Silicon MacOS
-        if: startsWith(matrix.os, 'macos-14')
-        run: |
-          cd build/bin
-          tar -cJvf ../../llvm-mos-macos-arm64-debug.tar.xz *
 
       - name: Release Linux
         if: startsWith(matrix.os, 'ubuntu')
@@ -91,23 +104,14 @@ jobs:
           tag_name: llvm-mos-linux-debug
           files: llvm-mos-linux-debug.tar.xz
 
-      - name: Release Intel MacOS
+      - name: Release MacOS
         if: startsWith(matrix.os, 'macos-13')
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          body: "Debug compiler build for Intel MacOS"
+          body: "Debug compiler build for MacOS"
           tag_name: llvm-mos-darwin-debug
           files: llvm-mos-darwin-debug.tar.xz
-
-      - name: Release Apple Silicon MacOS
-        if: startsWith(matrix.os, 'macos-14')
-        uses: softprops/action-gh-release@v1
-        with:
-          prerelease: true
-          body: "Debug compiler build for Apple Silicon MacOS"
-          tag_name: llvm-mos-macos-arm64-debug
-          files: llvm-mos-macos-arm64-debug.tar.xz
 
       - name: Release Windows
         if: startsWith(matrix.os, 'windows')

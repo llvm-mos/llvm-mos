@@ -62,6 +62,24 @@ jobs:
       - name: Build
         run: cd build; ninja distribution
 
+      - name: Check that universal binaries are produced for MacOS
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          clang="./build/bin/clang-20"                                                                                                                                                         ─╯
+
+          if [ ! -f "$clang" ]; then
+            echo "Clang not found"
+            exit 1
+          fi
+
+          supported_hosts=$(lipo -archs $clang)
+          if [[ $supported_hosts != *"x86_64"* || $supported_hosts != *"arm64"* ]]; then
+            echo "clang is not a universal binary!"
+            exit 1
+          fi
+
+          echo "clang is a universal binary!"
+
       - name: Install
         run: cd build; ninja install-distribution-stripped
 
@@ -71,12 +89,9 @@ jobs:
       - name: Archive Windows
         if: startsWith(matrix.os, 'windows')
         run: 7z a llvm-mos-windows-main.7z llvm-mos
-      - name: Archive Intel MacOS
+      - name: Archive MacOS
         if: startsWith(matrix.os, 'macos-13')
         run: tar -cJvf llvm-mos-darwin-main.tar.xz llvm-mos
-      - name: Archive Apple Silicon MacOS
-        if: startsWith(matrix.os, 'macos-14')
-        run: tar -cJvf llvm-mos-macos-arm64-main.tar.xz llvm-mos
 
       - name: Release Linux
         if: startsWith(matrix.os, 'ubuntu')
@@ -87,23 +102,14 @@ jobs:
           tag_name: llvm-mos-linux-main
           files: llvm-mos-linux-main.tar.xz
 
-      - name: Release Intel MacOS
+      - name: Release MacOS
         if: startsWith(matrix.os, 'macos-13')
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          body: "Internal compiler build for Intel MacOS"
+          body: "Internal compiler build for MacOS"
           tag_name: llvm-mos-darwin-main
           files: llvm-mos-darwin-main.tar.xz
-
-      - name: Release Apple Silicon MacOS
-        if: startsWith(matrix.os, 'macos-14')
-        uses: softprops/action-gh-release@v1
-        with:
-          prerelease: true
-          body: "Internal compiler build for Apple Silicon MacOS"
-          tag_name: llvm-mos-macos-arm64-main
-          files: llvm-mos-macos-arm64-main.tar.xz
 
       - name: Release Windows
         if: startsWith(matrix.os, 'windows')
