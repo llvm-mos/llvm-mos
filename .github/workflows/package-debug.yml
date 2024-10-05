@@ -64,7 +64,7 @@ jobs:
       - name: Check that universal binaries are produced for MacOS
         if: startsWith(matrix.os, 'macos')
         run: |
-          clang="./build/bin/clang-20"                                                                                                                                                         ─╯
+          clang="./build/bin/clang-20"
 
           if [ ! -f "$clang" ]; then
             echo "Clang not found"
