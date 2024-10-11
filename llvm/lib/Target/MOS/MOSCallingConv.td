@@ -81,9 +81,7 @@ def CC_MOS_PreserveMost : CallingConv<[
 
   // 8-bit values are assigned to A, then X, then Y.
   CCIfType<[i8], CCAssignToReg<[
-    A, X, Y, RC2, RC3, RC4, RC5, RC6, RC7, RC8, RC9, RC10, RC11, RC12, RC13, RC14,
-    RC15, RC16, RC17, RC18, RC19, RC20, RC21, RC22, RC23, RC24, RC25, RC26, RC27, RC28,
-    RC29, RC30, RC31
+    A, X
   ]>>,
 
   // All other values are passed directly on the stack.
