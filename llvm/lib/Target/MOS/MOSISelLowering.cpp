@@ -23,11 +23,13 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MOS.h"
+#include "MOSCallingConv.h"
 #include "MOSInstrBuilder.h"
 #include "MOSInstrInfo.h"
 #include "MOSRegisterInfo.h"
@@ -666,4 +668,21 @@ static MachineBasicBlock *emitCmpBrZeroMultiByte(MachineInstr &MI,
   recomputeLiveIns(*MBB);
 
   return MaybeZero;
+}
+
+/// Selects the correct CCAssignFn for a given CallingConvention value.
+CCAssignFn *MOSTargetLowering::CCAssignFnForCall(CallingConv::ID CC,
+                                                 bool IsVarArg) {
+  switch (CC) {
+  default:
+    report_fatal_error("Unsupported calling convention.");
+  case CallingConv::C:
+    return IsVarArg ? CC_MOS_VarArgs : CC_MOS;
+  case CallingConv::PreserveMost:
+    return CC_MOS_PreserveMost;
+  }
+}
+
+CCAssignFn *MOSTargetLowering::CCAssignFnForReturn(CallingConv::ID CC) {
+  return CC_MOS;
 }

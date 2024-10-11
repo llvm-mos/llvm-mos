@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_MOS_MOSISELLOWERING_H
 
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
 
 #include "llvm/Target/TargetMachine.h"
 
@@ -92,6 +93,9 @@ public:
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
+                              
+  static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
+  static CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC);
 };
 
 } // namespace llvm

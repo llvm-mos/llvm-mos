@@ -30,6 +30,13 @@ bool CC_MOS_VarArgs(unsigned ValNo, MVT ValVT, MVT LocVT,
                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                         CCState &State);
 
+/// Calling convention intended for usecases like interrupts where the main 6502
+/// registers A/X/Y can remain caller saved, but the ZP registers need to be
+/// callee saved.
+bool CC_MOS_PreserveMost(unsigned ValNo, MVT ValVT, MVT LocVT,
+                        CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                        CCState &State);
+
 } // namespace llvm
 
 #endif // not LLVM_LIB_TARGET_MOS_MOSCALLINGCONV_H

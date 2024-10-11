@@ -76,6 +76,26 @@ def CC_MOS : CallingConv<[
 
 // Calling convention for the variable section of a variadic function call.
 // Named arguments in such functions still use the above calling convention.
+def CC_MOS_PreserveMost : CallingConv<[
+  CCIfType<[i1], CCPromoteToType<i8>>,
+
+  // 8-bit values are assigned to A, then X, then Y.
+  CCIfType<[i8], CCAssignToReg<[
+    A, X, Y, RC2, RC3, RC4, RC5, RC6, RC7, RC8, RC9, RC10, RC11, RC12, RC13, RC14,
+    RC15, RC16, RC17, RC18, RC19, RC20, RC21, RC22, RC23, RC24, RC25, RC26, RC27, RC28,
+    RC29, RC30, RC31
+  ]>>,
+
+  // All other values are passed directly on the stack.
+  CCAssignToStack<0, 1>,
+
+  //CCAssignToRegAndStack<[
+  //  RC0, RC1, RC2, RC3, RC4, RC5, RC6, RC7, RC8, RC9, RC10, RC11, RC12, RC13, RC14,
+  //  RC15], 0, 1>,
+]>;
+
+// Calling convention for the variable section of a variadic function call.
+// Named arguments in such functions still use the above calling convention.
 def CC_MOS_VarArgs : CallingConv<[
   CCIfType<[i1], CCPromoteToType<i8>>,
 
@@ -93,3 +113,9 @@ def MOS_CSR : CalleeSavedRegs<(sequence "RC%u", 20, 31)>;
 // interrupt).
 def MOS_Interrupt_CSR :
   CalleeSavedRegs<(add A, X, Y, (sequence "RC%u", 2, 31))>;
+
+// Interrupts save all registers except the stack pointers (which are restored
+// upon return by any function) and the flags (which are implicitly saved by the
+// interrupt).
+def MOS_PreserveMost_CSR :
+  CalleeSavedRegs<(sequence "RC%u", 2, 31)>;
