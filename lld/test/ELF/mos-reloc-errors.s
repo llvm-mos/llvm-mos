@@ -23,7 +23,7 @@ out_of_range:
 .section .R_MOS_IMM_8,"ax",@progbits
   adc #large
 
-; CHECK: (.R_MOS_ADDR8+0x1): relocation R_MOS_ADDR8 out of range: 722 is not in [0, 255]
+; CHECK: (.R_MOS_ADDR8+0x1): relocation R_MOS_ADDR8 out of range: 722 is not in [-128, 255]
 .section .R_MOS_ADDR8,"ax",@progbits
   adc mos8(large)
 

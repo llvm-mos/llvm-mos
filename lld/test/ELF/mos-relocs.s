@@ -10,11 +10,14 @@ adrzp: .ds.b 1
 
 .section .R_MOS_ADDR8,"ax",@progbits
   lda adrzp
+  lda adrzp-1
 # RELOCS-LABEL: RELOCATION RECORDS FOR [.R_MOS_ADDR8]:
 # RELOCS-NEXT: OFFSET   TYPE                     VALUE
 # RELOCS-NEXT: 00000001 R_MOS_ADDR8              .zp
+# RELOCS-NEXT: 00000003 R_MOS_ADDR8              .zp-0x1
 # CHECK-LABEL: section .R_MOS_ADDR8:
 # CHECK: lda $0
+# CHECK: lda $ff
 
 .section .R_MOS_ADDR16,"ax",@progbits
   lda adr16
@@ -50,8 +53,8 @@ relnext:
 # RELOCS-NEXT: 00000001 R_MOS_PCREL_8            .R_MOS_PCREL_8+0x4
 # RELOCS-NEXT: 00000003 R_MOS_PCREL_8            .R_MOS_PCREL_8
 # CHECK-LABEL: section .R_MOS_PCREL_8:
-# CHECK: bpl $100c6
-# CHECK: bpl $100c2
+# CHECK: bpl $100c8
+# CHECK: bpl $100c4
 
 .section .R_MOS_DATA,"a",@progbits
   .long data32
