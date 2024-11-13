@@ -830,7 +830,6 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     uint32_t NumBlocksInBBRange = 0;
     uint32_t NumBBRanges = 1;
     typename ELFFile<ELFT>::uintX_t RangeBaseAddress = 0;
-    std::vector<BBAddrMap::BBEntry> BBEntries;
     if (FeatEnable.MultiBBRange) {
       NumBBRanges = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       if (!Cur || ULEBSizeErr)
@@ -858,6 +857,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         RangeBaseAddress = *AddressOrErr;
         NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       }
+      std::vector<BBAddrMap::BBEntry> BBEntries;
       for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr && Cur &&
                                     (BlockIndex < NumBlocksInBBRange);
            ++BlockIndex) {

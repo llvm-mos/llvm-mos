@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -170,6 +169,10 @@ class InlineSpiller : public Spiller {
   // All registers to spill to StackSlot, including the main register.
   SmallVector<Register, 8> RegsToSpill;
 
+  // All registers that were replaced by the spiller through some other method,
+  // e.g. rematerialization.
+  SmallVector<Register, 8> RegsReplaced;
+
   // All COPY instructions to/from snippets.
   // They are ignored since both operands refer to the same stack slot.
   // For bundled copies, this will only include the first header copy.
@@ -202,6 +205,8 @@ public:
         HSpiller(Pass, MF, VRM), VRAI(VRAI) {}
 
   void spill(LiveRangeEdit &) override;
+  ArrayRef<Register> getSpilledRegs() override { return RegsToSpill; }
+  ArrayRef<Register> getReplacedRegs() override { return RegsReplaced; }
   void postOptimization() override;
 
 private:
@@ -388,6 +393,7 @@ void InlineSpiller::collectRegsToSpill() {
   // Main register always spills.
   RegsToSpill.assign(1, Reg);
   SnippetCopies.clear();
+  RegsReplaced.clear();
 
   // Snippets all have the same original, so there can't be any for an original
   // register.
@@ -801,6 +807,7 @@ void InlineSpiller::reMaterializeAll() {
   for (Register Reg : RegsToSpill) {
     if (MRI.reg_nodbg_empty(Reg)) {
       Edit->eraseVirtReg(Reg);
+      RegsReplaced.push_back(Reg);
       continue;
     }
 
@@ -1260,8 +1267,13 @@ void InlineSpiller::spillAll() {
   LLVM_DEBUG(dbgs() << "Merged spilled regs: " << *StackInt << '\n');
 
   // Spill around uses of all RegsToSpill.
-  for (Register Reg : RegsToSpill)
+  for (Register Reg : RegsToSpill) {
     spillAroundUses(Reg);
+    // Assign all of the spilled registers to the slot so that
+    // LiveDebugVariables knows about these locations later on.
+    if (VRM.getStackSlot(Reg) == VirtRegMap::NO_STACK_SLOT)
+      VRM.assignVirt2StackSlot(Reg, StackSlot);
+  }
 
   // Hoisted spills may cause dead code.
   if (!DeadDefs.empty()) {
