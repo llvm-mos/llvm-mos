@@ -42,14 +42,15 @@ static bool canUseZeroPageIdx(const MachineOperand &MO) {
   // Global values in the zero page must end before the zero page, which means
   // that pointers based on them can never overflow it.
   return MO.getGlobal()->getAliaseeObject()->getAddressSpace() ==
-      MOS::AS_ZeroPage;
+         MOS::AS_ZeroPage;
 }
 
 // Instructions with indexed addressing must have zero page-matching bases
 // wrapped in mos16. Otherwise, if the assembly were later parsed, the zero
 // page indexed addressing mode might be selected, which has different
 // semantics when Base + Idx >= 256;
-static MCOperand wrapAbsoluteIdxBase(const MachineInstr *MI, MCOperand Op, MCContext &Ctx) {
+static MCOperand wrapAbsoluteIdxBase(const MachineInstr *MI, MCOperand Op,
+                                     MCContext &Ctx) {
   const auto &STI = MI->getMF()->getSubtarget<MOSSubtarget>();
   if (!Op.isImm() || Op.getImm() < STI.getZeroPageOffset() ||
       Op.getImm() > STI.getZeroPageOffset() + 0xFF)
@@ -72,8 +73,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::SBCZpIdx:
   case MOS::ADCAbsIdx:
   case MOS::SBCAbsIdx: {
-    bool MustZP = MI->getOpcode() == MOS::ADCZpIdx ||
-        MI->getOpcode() == MOS::SBCZpIdx;
+    bool MustZP =
+        MI->getOpcode() == MOS::ADCZpIdx || MI->getOpcode() == MOS::SBCZpIdx;
     bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(4));
     bool ImmConfusable = false;
     switch (MI->getOpcode()) {
@@ -125,8 +126,8 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::EORAbsIdx:
   case MOS::ORAAbsIdx: {
     bool MustZP = MI->getOpcode() == MOS::ANDZpIdx ||
-        MI->getOpcode() == MOS::EORZpIdx ||
-        MI->getOpcode() == MOS::ORAZpIdx;
+                  MI->getOpcode() == MOS::EORZpIdx ||
+                  MI->getOpcode() == MOS::ORAZpIdx;
     bool ZP = MustZP || canUseZeroPageIdx(MI->getOperand(2));
     bool ImmConfusable = false;
     switch (MI->getOpcode()) {
@@ -510,13 +511,13 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
   case MOS::DEC:
   case MOS::INC:
     if (MOS::Imag8RegClass.contains(MI->getOperand(0).getReg())) {
-        OutMI.setOpcode(MI->getOpcode() == MOS::DEC ? MOS::DEC_ZeroPage
-                                                    : MOS::INC_ZeroPage);
-        MCOperand Dst;
-        if (!lowerOperand(MI->getOperand(0), Dst))
-          llvm_unreachable("Failed to lower operand");
-        OutMI.addOperand(Dst);
-        return;
+      OutMI.setOpcode(MI->getOpcode() == MOS::DEC ? MOS::DEC_ZeroPage
+                                                  : MOS::INC_ZeroPage);
+      MCOperand Dst;
+      if (!lowerOperand(MI->getOperand(0), Dst))
+        llvm_unreachable("Failed to lower operand");
+      OutMI.addOperand(Dst);
+      return;
     }
     switch (MI->getOperand(0).getReg()) {
     default:
@@ -703,8 +704,7 @@ void MOSMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) {
     }
   case MOS::HuCMemcpy: {
     uint8_t Descending = MI->getOperand(3).getImm();
-    OutMI.setOpcode(Descending ? MOS::TDD_HuCBlockMove
-                               : MOS::TII_HuCBlockMove);
+    OutMI.setOpcode(Descending ? MOS::TDD_HuCBlockMove : MOS::TII_HuCBlockMove);
     for (auto I = 0; I < 3; I++) {
       MCOperand Val;
       if (!lowerOperand(MI->getOperand(I), Val))
@@ -774,10 +774,13 @@ bool MOSMCInstLower::lowerOperand(const MachineOperand &MO, MCOperand &MCOp) {
 
     // This is the last chance to catch values that are attributed a zero-page
     // section. It is the user's responsibility to ensure the linker will
-    // locate the symbol completely within the zero-page.
+    // locate the symbol completely within the zero-page. Large
+    // negative offsets do require 16-bit addressing, even if the target is in
+    // the zero page.
     const auto *GVar = dyn_cast<GlobalVariable>(GV->getAliaseeObject());
-    if (MOS::isZeroPageSectionName(GV->getSection()) ||
-        (GVar && GVar->getAddressSpace() == MOS::AS_ZeroPage)) {
+    if ((MOS::isZeroPageSectionName(GV->getSection()) ||
+         (GVar && GVar->getAddressSpace() == MOS::AS_ZeroPage)) &&
+        MO.getOffset() >= -128) {
       const MOSMCExpr *Expr =
           MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR8, MCOp.getExpr(),
                             /*isNegated=*/false, Ctx);

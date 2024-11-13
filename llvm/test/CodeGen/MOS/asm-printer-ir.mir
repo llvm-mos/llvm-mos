@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=mos -start-after=machine-opt-remark-emitter -verify-machineinstrs -o - %s | FileCheck %s
+--- |
+  @z = addrspace(1) constant i8 0
+  define void @zero_page_offsets() {
+    entry:
+      ret void
+  }
+---
+name: zero_page_offsets
+# CHECK-LABEL: zero_page_offsets
+body: |
+  bb.0.entry:
+    $a = LDAAbsIdx @z, $y
+    ; CHECK: lda mos8(z),y
+    $a = LDAAbsIdx @z + 1, $y
+    ; CHECK-NEXT: lda mos8(z+1),y
+    $a = LDAAbsIdx @z - 1, $y
+    ; CHECK-NEXT: lda mos8(z-1),y
+    $a = LDAAbsIdx @z - 128, $y
+    ; CHECK-NEXT: lda mos8(z-128),y
+    $a = LDAAbsIdx @z - 129, $y
+    ; CHECK-NEXT: lda z-129,y
+    RTS
+    ; CHECK-NEXT: rts
+...
