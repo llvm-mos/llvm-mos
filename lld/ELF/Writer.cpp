@@ -2868,13 +2868,13 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
         buf[0] = value;
         break;
       case 2:
-        write16(buf, value);
+        write16(ctx, buf, value);
         break;
       case 4:
-        write32(buf, value);
+        write32(ctx, buf, value);
         break;
       case 8:
-        write64(buf, value);
+        write64(ctx, buf, value);
         break;
       default:
         llvm_unreachable("unsupported Size argument");
@@ -2912,6 +2912,7 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
           if (lmaBegin >= regionBegin && lmaEnd <= regionEnd) {
             regionAreaEnd = std::max(regionAreaEnd, lmaEnd);
             sec->writeTo<ELFT>(
+                ctx,
                 reinterpret_cast<uint8_t *>(buf->getBufferStart() +
                                             (lmaBegin - regionBegin)),
                 tg);
@@ -2923,7 +2924,7 @@ template <class ELFT> void Writer<ELFT>::writeCustomOutputFormat() {
           {
             parallel::TaskGroup tg;
             sec->writeTo<ELFT>(
-                reinterpret_cast<uint8_t *>(secBuf->getBufferStart()), tg);
+                ctx, reinterpret_cast<uint8_t *>(secBuf->getBufferStart()), tg);
           }
 
           // Trim the output section against the memory region.

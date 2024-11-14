@@ -365,17 +365,17 @@ void MOSFrameLowering::emitEpilogue(MachineFunction &MF,
     offsetSP(Builder, StackSize);
 }
 
-bool MOSFrameLowering::hasFP(const MachineFunction &MF) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.isFrameAddressTaken() || MFI.hasVarSizedObjects();
-}
-
 uint64_t MOSFrameLowering::staticSize(const MachineFrameInfo &MFI) const {
   uint64_t Size = 0;
   for (int Idx : seq(0, MFI.getObjectIndexEnd()))
     if (MFI.getStackID(Idx) == TargetStackID::MosStatic)
       Size += MFI.getObjectSize(Idx);
   return Size;
+}
+
+bool MOSFrameLowering::hasFPImpl(const MachineFunction &MF) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  return MFI.isFrameAddressTaken() || MFI.hasVarSizedObjects();
 }
 
 void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,

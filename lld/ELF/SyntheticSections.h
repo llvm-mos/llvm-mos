@@ -1428,7 +1428,7 @@ class XO65Section final : public SyntheticSection {
   size_t size;
 
 public:
-  XO65Section(const XO65Segment &segment);
+  XO65Section(Ctx &ctx, const XO65Segment &segment);
 
   StringRef getSegmentName() const { return segmentName; }
   size_t getSize() const override { return size; }

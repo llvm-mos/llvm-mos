@@ -1910,7 +1910,8 @@ void XO65TempFile::close() {
 }
 
 void XO65TempFile::open() {
-  if (std::error_code ec = openFileForReadWrite(path, fd, CD_OpenExisting, OF_None))
+  if (std::error_code ec =
+          openFileForReadWrite(path, fd, CD_OpenExisting, OF_None))
     fatal(ctxStr + ": could not open " + description + ": " + ec.message());
 }
 
@@ -1960,7 +1961,7 @@ void XO65File::parse() {
   outputFile->read();
 
   if (!ctx.xo65Enclave)
-    ctx.xo65Enclave = make<XO65Enclave>();
+    ctx.xo65Enclave = make<XO65Enclave>(ctx);
   ctx.xo65Enclave->addFile(this);
 
   parseOD65Output(outputFile->getBuffer().getBuffer());
@@ -2031,7 +2032,7 @@ void XO65File::parseOD65Exports() {
     // Export values aren't yet known; they will be filled in once ld65 is run
     // on all xo65 sections.
     Symbol *sym = ctx.symtab->addSymbol(
-        Defined{this, name, STB_GLOBAL, /*st_other=*/0, STT_NOTYPE,
+        Defined{ctx, this, name, STB_GLOBAL, /*st_other=*/0, STT_NOTYPE,
                 /*value=*/0, /*size=*/0, /*section=*/nullptr});
     sym->isUsedInRegularObj = true;
     exports.push_back(sym);
@@ -2220,8 +2221,8 @@ bool XO65File::isSectionEnd() const {
   return !(*od65Line).starts_with("   ");
 }
 
-XO65Enclave::XO65Enclave()
-    : InputFile(XO65EnclaveKind, MemoryBufferRef{"", "xo65-enclave"}) {}
+XO65Enclave::XO65Enclave(Ctx &ctx)
+    : InputFile(ctx, XO65EnclaveKind, MemoryBufferRef{"", "xo65-enclave"}) {}
 
 void XO65Enclave::appendSegment(const XO65Segment &segment) {
   auto res = segments.insert({segment.name, segment});
@@ -2244,7 +2245,7 @@ void XO65Enclave::postParse() {
 void XO65Enclave::createSections() {
   for (const auto &kv : segments) {
     const XO65Segment &segment = kv.second;
-    sections.push_back(make<XO65Section>(segment));
+    sections.push_back(make<XO65Section>(ctx, segment));
     sections.back()->file = this;
   }
 }
@@ -2347,7 +2348,7 @@ void XO65Enclave::generateCfgFile(llvm::raw_fd_ostream &os) const {
       continue;
     os << "  " << defSym->getName() << ": ";
 
-    uint64_t va = defSym->getVA();
+    uint64_t va = defSym->getVA(ctx);
     if (va < 0x100)
       os << "addrsize = zp, ";
     os << "type = export, value = " << va << ";\n";

@@ -381,7 +381,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       files.push_back(createObjFile(ctx, mbref, "", inLib));
     break;
   case file_magic::xo65_object:
-    files.push_back(make<XO65File>(mbref));
+    files.push_back(make<XO65File>(ctx, mbref));
     break;
   default:
     ErrAlways(ctx) << path << ": unknown file type";

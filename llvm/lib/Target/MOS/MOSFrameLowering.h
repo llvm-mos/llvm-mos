@@ -56,15 +56,16 @@ public:
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
-  bool hasFP(const MachineFunction &MF) const override;
 
   // Computes the size of the static stack.
   uint64_t staticSize(const MachineFrameInfo &MFI) const;
 
   // Return whether or not the function is a direct ISR.
-  bool isISR(const MachineFunction& MF) const;
+  bool isISR(const MachineFunction &MF) const;
 
 private:
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
   void offsetSP(MachineIRBuilder &Builder, int64_t Offset) const;
 };
 

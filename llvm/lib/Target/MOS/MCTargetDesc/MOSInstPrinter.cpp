@@ -37,7 +37,7 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                raw_ostream &OS) {
   std::string AiryOperands;
   raw_string_ostream AiryOperandStream(AiryOperands);
-  assert(getMnemonic(MI).second && "Missing opcode for instruction.");
+  assert(getMnemonic(*MI).second && "Missing opcode for instruction.");
   printInstruction(MI, Address, AiryOperandStream);
   AiryOperands = AiryOperandStream.str();
   size_t SpacesSeen = 0;
@@ -55,13 +55,13 @@ void MOSInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                  raw_ostream &O) {
+                                  raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
 
   if (Op.isReg()) {
-    printRegName(O, Op.getReg());
+    printRegName(OS, Op.getReg());
   } else if (Op.isImm()) {
-    O << formatImm(Op.getImm());
+    OS << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
     // Format mos16 immediates using formatImm.
@@ -69,26 +69,26 @@ void MOSInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       int64_t Value = 0;
       if (MME->getKind() == MOSMCExpr::VK_MOS_IMM16 &&
           MME->getSubExpr()->evaluateAsAbsolute(Value)) {
-        O << "mos16(" << formatImm(Value) << ')';
+        OS << "mos16(" << formatImm(Value) << ')';
         return;
       }
     }
-    Op.getExpr()->print(O, &MAI);
+    Op.getExpr()->print(OS, &MAI);
   }
 }
 
 void MOSInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
-                                          unsigned OpNo,
-                                          raw_ostream &O) {
+                                        unsigned OpNo, raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (!Op.isImm())
-    return printOperand(MI, OpNo, O);
+    return printOperand(MI, OpNo, OS);
   uint64_t Target = Op.getImm();
-  O << formatImm(PrintBranchImmAsAddress ? (int8_t)Target + Address + 2: Target);
+  OS << formatImm(PrintBranchImmAsAddress ? (int8_t)Target + Address + 2
+                                          : Target);
 }
 
-void MOSInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
-  O << getRegisterName(Reg);
+void MOSInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
+  OS << getRegisterName(Reg);
 }
 
 format_object<int64_t> MOSInstPrinter::formatHex(int64_t Value) const {

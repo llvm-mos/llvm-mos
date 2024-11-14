@@ -4670,8 +4670,8 @@ size_t MemtagGlobalDescriptors::getSize() const {
   return createMemtagGlobalDescriptors(ctx, symbols);
 }
 
-XO65Section::XO65Section(const XO65Segment &segment)
-    : SyntheticSection(segment.flags, segment.type, segment.alignment,
+XO65Section::XO65Section(Ctx &ctx, const XO65Segment &segment)
+    : SyntheticSection(ctx, segment.flags, segment.type, segment.alignment,
                        segment.sectionName),
       segmentName(segment.name), size(segment.size) {}
 

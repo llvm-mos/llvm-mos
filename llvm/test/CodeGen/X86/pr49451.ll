@@ -8,13 +8,13 @@
 define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-LABEL: func_6:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $-1, %ecx
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    # implicit-def: $si
+; X86-NEXT:    xorl %esi, %esi
+; X86-NEXT:    # implicit-def: $di
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %for.body612
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -22,11 +22,11 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-NEXT:    je .LBB0_2
 ; X86-NEXT:  # %bb.3: # %if.end1401
 ; X86-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; X86-NEXT:    addl %eax, %esi
-; X86-NEXT:    movw %si, s_2
-; X86-NEXT:    movw %bx, s_0
+; X86-NEXT:    addl %eax, %edi
+; X86-NEXT:    movw %di, s_2
+; X86-NEXT:    movw %si, s_0
 ; X86-NEXT:    incl %ecx
-; X86-NEXT:    incl %ebx
+; X86-NEXT:    incl %esi
 ; X86-NEXT:    cmpw $73, %cx
 ; X86-NEXT:    jl .LBB0_1
 ; X86-NEXT:  # %bb.4: # %for.body1703

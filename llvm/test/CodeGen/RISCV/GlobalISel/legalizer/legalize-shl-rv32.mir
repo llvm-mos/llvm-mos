@@ -179,6 +179,7 @@ body:             |
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), %lo2(s32), [[C]]
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), %lo2(s32), [[C1]]
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB %lo2, [[C2]]
     ; CHECK-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[C2]], %lo2
     ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), %lo2(s32), [[C2]]
@@ -191,6 +192,7 @@ body:             |
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s32), [[SHL]], [[C1]]
     ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s32), [[OR]], [[SHL2]]
     ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s32), %mid1, [[SELECT1]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
     ; CHECK-NEXT: [[SUB4:%[0-9]+]]:_(s32) = G_SUB [[SUB1]], [[C2]]
     ; CHECK-NEXT: [[SUB5:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[SUB1]]
     ; CHECK-NEXT: [[ICMP4:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[SUB1]](s32), [[C2]]
@@ -205,6 +207,7 @@ body:             |
     ; CHECK-NEXT: [[SHL4:%[0-9]+]]:_(s32) = G_SHL %hi1, %lo2(s32)
     ; CHECK-NEXT: [[SELECT5:%[0-9]+]]:_(s32) = G_SELECT [[ICMP6]](s32), [[SHL4]], [[C1]]
     ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[SELECT4]], [[SELECT5]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
     ; CHECK-NEXT: [[ICMP7:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[SUB]](s32), [[C2]]
     ; CHECK-NEXT: [[SHL5:%[0-9]+]]:_(s32) = G_SHL %lo1, [[SUB]](s32)
     ; CHECK-NEXT: [[SELECT6:%[0-9]+]]:_(s32) = G_SELECT [[ICMP7]](s32), [[SHL5]], [[C1]]

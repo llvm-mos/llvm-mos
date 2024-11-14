@@ -432,7 +432,7 @@ private:
   llvm::SplittingIterator od65LinesEnd = {"", ""};
 
 public:
-  explicit XO65File(MemoryBufferRef m) : InputFile(XO65Kind, m) {}
+  XO65File(Ctx &ctx, MemoryBufferRef m) : InputFile(ctx, XO65Kind, m) {}
 
   static bool classof(const InputFile *f) { return f->kind() == XO65Kind; }
 
@@ -470,7 +470,7 @@ private:
   std::optional<XO65TempFile> mapFile;
 
 public:
-  explicit XO65Enclave();
+  explicit XO65Enclave(Ctx &ctx);
   static bool classof(const InputFile *f) {
     return f->kind() == XO65EnclaveKind;
   }
