@@ -160,10 +160,7 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *getMOSTargetInfo(Ctx &ctx) {
-  static MOS target(ctx);
-  return &target;
-}
+void setMOSTargetInfo(Ctx &ctx) { ctx.target.reset(new MOS(ctx)); }
 
 } // namespace elf
 } // namespace lld
