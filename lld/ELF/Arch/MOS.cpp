@@ -155,8 +155,7 @@ void MOS::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   }
   default:
-    error(getErrorLoc(ctx, loc) + "unrecognized relocation " +
-          toString(rel.type));
+    error(getErrorLoc(ctx, loc) + "unrecognized relocation " + toStr(ctx, rel.type));
   }
 }
 

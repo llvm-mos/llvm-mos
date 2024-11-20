@@ -13,6 +13,7 @@
 #ifndef LLVM_MOS_TARGET_MACHINE_H
 #define LLVM_MOS_TARGET_MACHINE_H
 
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -24,7 +25,7 @@
 namespace llvm {
 
 /// A generic MOS implementation.
-class MOSTargetMachine : public LLVMTargetMachine {
+class MOSTargetMachine : public CodeGenTargetMachineImpl {
 public:
   MOSTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                    StringRef FS, const TargetOptions &Options,

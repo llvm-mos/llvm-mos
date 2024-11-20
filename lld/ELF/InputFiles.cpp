@@ -1889,9 +1889,9 @@ static std::string findProgramByName(StringRef name, StringRef ctx) {
   return *errorOrPath;
 }
 
-XO65TempFile::XO65TempFile(StringRef prefix, StringRef suffix, StringRef ctxStr,
-                           StringRef description)
-    : ctxStr(ctxStr), description(description) {
+XO65TempFile::XO65TempFile(Ctx &ctx, StringRef prefix, StringRef suffix,
+                           StringRef ctxStr, StringRef description)
+    : ctx(ctx), ctxStr(ctxStr), description(description) {
   if (std::error_code ec = createTemporaryFile(prefix, suffix, fd, path))
     fatal(ctxStr + ": could not create " + description + ": " + ec.message());
 }
@@ -1931,13 +1931,14 @@ void XO65File::parse() {
   // ELF cannot straightforwardly support xo65's relocation types, so there's no
   // straightforward way to merge xo65 objects into a relocatable ELF file.
   if (ctx.arg.relocatable)
-    fatal(toString(this) +
+    fatal(toStr(ctx, this) +
           ": cc65 (xo65) object file cannot be relocatably linked");
 
   if (ctx.arg.od65Path.empty())
-    ctx.arg.od65Path = saver().save(findProgramByName("od65", toString(this)));
+    ctx.arg.od65Path =
+        saver().save(findProgramByName("od65", toStr(ctx, this)));
 
-  outputFile.emplace("od65", "out", toString(this), "od65 output file");
+  outputFile.emplace(ctx, "od65", "out", toStr(ctx, this), "od65 output file");
 
   SmallVector<StringRef> args = {ctx.arg.od65Path, "--dump-all", getName()};
   StringRef executable = args.front();
@@ -1957,7 +1958,7 @@ void XO65File::parse() {
       /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
 
   if (resultCode)
-    fatal(toString(this) + ": could not run od65" +
+    fatal(toStr(ctx, this) + ": could not run od65" +
           (errMsg.empty() ? "" : ": " + errMsg));
 
   outputFile->open();
@@ -2062,15 +2063,16 @@ void XO65File::advancePast(StringRef line) {
 
 void XO65File::expect(StringRef line) {
   if (*od65Line != line)
-    fatal(toString(this) + ": could not parse od65 output: expected \"" + line +
-          "\"\n");
+    fatal(toStr(ctx, this) + ": could not parse od65 output: expected \"" +
+          line + "\"\n");
   ++od65Line;
 }
 
 void XO65File::expectPrefix(StringRef prefix) {
   if (!(*od65Line).starts_with(prefix))
-    fatal(toString(this) + ": could not parse od65 output: expected prefix \"" +
-          prefix + "\"\n");
+    fatal(toStr(ctx, this) +
+          ": could not parse od65 output: expected prefix \"" + prefix +
+          "\"\n");
   ++od65Line;
 }
 
@@ -2078,19 +2080,19 @@ std::pair<StringRef, StringRef> XO65File::parseKV() {
   static llvm::Regex kvRegex(" *([^ ]+): *([^ ]+)");
   SmallVector<StringRef> matches;
   if (od65Line == od65LinesEnd || !kvRegex.match(*od65Line, &matches))
-    fatal(toString(this) + ": could not parse key-value pair: " + *od65Line);
+    fatal(toStr(ctx, this) + ": could not parse key-value pair: " + *od65Line);
   return {matches[1], matches[2]};
 }
 
 template <typename T>
 void XO65File::parseInt(StringRef k, StringRef v, T &out, unsigned radix) {
   if (v.getAsInteger(0, out))
-    fatal(toString(this) + ": could not parse int " + k + ": " + v);
+    fatal(toStr(ctx, this) + ": could not parse int " + k + ": " + v);
 }
 
 StringRef XO65File::parseQuotedString(StringRef k, StringRef v) {
   if (v.size() < 2 || v.front() != '"' || v.back() != '"')
-    fatal(toString(this) + ": could not parse quoted string " + k + ": " + v);
+    fatal(toStr(ctx, this) + ": could not parse quoted string " + k + ": " + v);
   return v.drop_front().drop_back();
 }
 
@@ -2145,11 +2147,12 @@ void XO65File::parseSegmentName(XO65Segment &segment) {
 
     remaining = remaining.drop_front();
     if (remaining.empty() == 1)
-      fatal(toString(this) + ": unfinished underscore escape: " + segment.name);
+      fatal(toStr(ctx, this) +
+            ": unfinished underscore escape: " + segment.name);
 
     switch (remaining.front()) {
     default:
-      fatal(toString(this) + ": unknown underscore escape: " + segment.name);
+      fatal(toStr(ctx, this) + ": unknown underscore escape: " + segment.name);
     case '_':
       sectionName.push_back('_');
       break;
@@ -2165,13 +2168,13 @@ void XO65File::parseSegmentName(XO65Segment &segment) {
     case 'x': {
       remaining = remaining.drop_front();
       if (remaining.size() < 2)
-        fatal(toString(this) +
+        fatal(toStr(ctx, this) +
               ": unfinished underscore hex escape: " + segment.name);
 
       uint8_t v;
       bool result = tryGetHexFromNibbles(remaining[0], remaining[1], v);
       if (!result)
-        fatal(toString(this) +
+        fatal(toStr(ctx, this) +
               ": invalid underscore hex escape: " + segment.name);
 
       sectionName.push_back((char)v);
@@ -2180,11 +2183,11 @@ void XO65File::parseSegmentName(XO65Segment &segment) {
     }
     case 't':
       if (remaining.size() < 2)
-        fatal(toString(this) +
+        fatal(toStr(ctx, this) +
               ": unfinished underscore type escape: " + segment.name);
       switch (remaining[1]) {
       default:
-        fatal(toString(this) +
+        fatal(toStr(ctx, this) +
               ": unknown underscore type escape: " + segment.name);
       case 'n':
         segment.type = SHT_NOBITS;
@@ -2197,11 +2200,11 @@ void XO65File::parseSegmentName(XO65Segment &segment) {
       break;
     case 'f':
       if (remaining.size() < 2)
-        fatal(toString(this) +
+        fatal(toStr(ctx, this) +
               ": unfinished underscore flag escape: " + segment.name);
       switch (remaining[1]) {
       default:
-        fatal(toString(this) +
+        fatal(toStr(ctx, this) +
               ": unknown underscore flag escape: " + segment.name);
       case 'w':
         segment.flags |= SHF_WRITE;
@@ -2255,15 +2258,15 @@ void XO65Enclave::createSections() {
 
 bool XO65Enclave::link() {
   if (ctx.arg.ld65Path.empty())
-    ctx.arg.ld65Path = saver().save(findProgramByName("ld65", toString(this)));
+    ctx.arg.ld65Path = saver().save(findProgramByName("ld65", toStr(ctx, this)));
 
   if (!cfgFile)
-    cfgFile.emplace("ld65", "cfg", toString(this), "ld65 cfg file");
+    cfgFile.emplace(ctx, "ld65", "cfg", toStr(ctx, this), "ld65 cfg file");
 
   raw_fd_ostream cfgFileOS(cfgFile->getFD(), /*shouldClose=*/false);
   cfgFileOS.seek(0);
   if (std::error_code ec = llvm::sys::fs::resize_file(cfgFile->getFD(), 0))
-    fatal(toString(this) +
+    fatal(toStr(ctx, this) +
           ": could not truncate ld65 cfg file: " + ec.message());
 
   generateCfgFile(cfgFileOS);
@@ -2271,9 +2274,9 @@ bool XO65Enclave::link() {
 
   // Always nuke the output file; otherwise it will still be open if multiple
   // calls to ld65 occur (causes issues on Windows).
-  outputFile.emplace("ld65", "o", toString(this), "ld65 output file");
+  outputFile.emplace(ctx, "ld65", "o", toStr(ctx, this), "ld65 output file");
   if (!mapFile)
-    mapFile.emplace("ld65", "map", toString(this), "ld65 map file");
+    mapFile.emplace(ctx, "ld65", "map", toStr(ctx, this), "ld65 map file");
 
   SmallVector<StringRef> args = {ctx.arg.ld65Path,
                                  "-C",
@@ -2297,7 +2300,7 @@ bool XO65Enclave::link() {
                           /*Env=*/std::nullopt, {"", "", std::nullopt},
                           /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
   if (resultCode)
-    fatal(toString(this) + ": could not run ld65" +
+    fatal(toStr(ctx, this) + ": could not run ld65" +
           (errMsg.empty() ? "" : ": " + errMsg));
 
   outputFile->read();
