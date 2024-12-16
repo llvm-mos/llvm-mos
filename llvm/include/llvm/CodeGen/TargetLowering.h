@@ -1726,10 +1726,9 @@ public:
     return getValueType(DL, Ty, AllowUnknown).getSimpleVT();
   }
 
-  /// Return the desired alignment for ByVal or InAlloca aggregate function
-  /// arguments in the caller parameter area.  This is the actual alignment, not
-  /// its logarithm.
-  virtual uint64_t getByValTypeAlignment(Type *Ty, const DataLayout &DL) const;
+  /// Returns the desired alignment for ByVal or InAlloca aggregate function
+  /// arguments in the caller parameter area.
+  virtual Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const;
 
   /// Return the type of registers that this ValueType will eventually require.
   virtual MVT getRegisterType(MVT VT) const {
@@ -2317,7 +2316,7 @@ public:
   virtual void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const {}
 
   /// Returns true if arguments should be sign-extended in lib calls.
-  virtual bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const {
+  virtual bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const {
     return IsSigned;
   }
 
@@ -3007,10 +3006,9 @@ public:
   }
 
   virtual bool isTruncateFree(EVT FromVT, EVT ToVT) const { return false; }
-  virtual bool isTruncateFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
-                              LLVMContext &Ctx) const {
-    return isTruncateFree(getApproximateEVTForLLT(FromTy, DL, Ctx),
-                          getApproximateEVTForLLT(ToTy, DL, Ctx));
+  virtual bool isTruncateFree(LLT FromTy, LLT ToTy, LLVMContext &Ctx) const {
+    return isTruncateFree(getApproximateEVTForLLT(FromTy, Ctx),
+                          getApproximateEVTForLLT(ToTy, Ctx));
   }
 
   /// Return true if truncating the specific node Val to type VT2 is free.
@@ -3093,10 +3091,9 @@ public:
   }
 
   virtual bool isZExtFree(EVT FromTy, EVT ToTy) const { return false; }
-  virtual bool isZExtFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
-                          LLVMContext &Ctx) const {
-    return isZExtFree(getApproximateEVTForLLT(FromTy, DL, Ctx),
-                      getApproximateEVTForLLT(ToTy, DL, Ctx));
+  virtual bool isZExtFree(LLT FromTy, LLT ToTy, LLVMContext &Ctx) const {
+    return isZExtFree(getApproximateEVTForLLT(FromTy, Ctx),
+                      getApproximateEVTForLLT(ToTy, Ctx));
   }
 
   /// Return true if zero-extending the specific node Val to type VT2 is free
@@ -4337,6 +4334,12 @@ public:
   /// @param Level the current DAGCombine legalization level.
   virtual bool isDesirableToCommuteWithShift(const SDNode *N,
                                              CombineLevel Level) const {
+    SDValue ShiftLHS = N->getOperand(0);
+    if (!ShiftLHS->hasOneUse())
+      return false;
+    if (ShiftLHS.getOpcode() == ISD::SIGN_EXTEND &&
+        !ShiftLHS.getOperand(0)->hasOneUse())
+      return false;
     return true;
   }
 
@@ -4745,18 +4748,18 @@ public:
     // shouldExtendTypeInLibCall can get the original type before soften.
     ArrayRef<EVT> OpsVTBeforeSoften;
     EVT RetVTBeforeSoften;
-    bool IsSExt : 1;
+    bool IsSigned : 1;
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
     bool IsPostTypeLegalization : 1;
     bool IsSoften : 1;
 
     MakeLibCallOptions()
-        : IsSExt(false), DoesNotReturn(false), IsReturnValueUsed(true),
+        : IsSigned(false), DoesNotReturn(false), IsReturnValueUsed(true),
           IsPostTypeLegalization(false), IsSoften(false) {}
 
-    MakeLibCallOptions &setSExt(bool Value = true) {
-      IsSExt = Value;
+    MakeLibCallOptions &setIsSigned(bool Value = true) {
+      IsSigned = Value;
       return *this;
     }
 

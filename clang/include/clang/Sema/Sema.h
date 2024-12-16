@@ -1764,6 +1764,9 @@ public:
   /// Add [[clang:::lifetimebound]] attr for std:: functions and methods.
   void inferLifetimeBoundAttribute(FunctionDecl *FD);
 
+  /// Add [[clang:::lifetime_capture_by(this)]] to STL container methods.
+  void inferLifetimeCaptureByAttribute(FunctionDecl *FD);
+
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
@@ -2330,6 +2333,9 @@ public:
   bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
+  void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
+                              const Expr *ThisArg, ArrayRef<const Expr *> Args);
+
   /// Handles the checks for format strings, non-POD arguments to vararg
   /// functions, NULL arguments passed to non-NULL parameters, diagnose_if
   /// attributes and AArch64 SME attributes.
@@ -2525,6 +2531,17 @@ private:
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
 
+  enum BuiltinCountedByRefKind {
+    AssignmentKind,
+    InitializerKind,
+    FunctionArgKind,
+    ReturnArgKind,
+    ArraySubscriptKind,
+    BinaryExprKind,
+  };
+
+  bool CheckInvalidBuiltinCountedByRef(const Expr *E,
+                                       BuiltinCountedByRefKind K);
   bool BuiltinCountedByRef(CallExpr *TheCall);
 
   // Matrix builtin handling.
@@ -5307,7 +5324,7 @@ public:
   /// is complete.
   void ActOnFinishCXXInClassMemberInitializer(Decl *VarDecl,
                                               SourceLocation EqualLoc,
-                                              Expr *Init);
+                                              ExprResult Init);
 
   /// Handle a C++ member initializer using parentheses syntax.
   MemInitResult
@@ -14261,7 +14278,7 @@ public:
                                    SourceLocation EllipsisLoc, Expr *IndexExpr,
                                    SourceLocation RSquareLoc,
                                    ArrayRef<Expr *> ExpandedExprs = {},
-                                   bool EmptyPack = false);
+                                   bool FullySubstituted = false);
 
   /// Handle a C++1z fold-expression: ( expr op ... op expr ).
   ExprResult ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,

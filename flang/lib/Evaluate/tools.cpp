@@ -1051,6 +1051,23 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
 }
 
+// HasConstant()
+struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
+                               /*TraverseAssocEntityDetails=*/false> {
+  using Base = AnyTraverse<HasConstantHelper, bool, false>;
+  HasConstantHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename T> bool operator()(const Constant<T> &) const {
+    return true;
+  }
+  // Only look for constant not in subscript.
+  bool operator()(const Subscript &) const { return false; }
+};
+
+bool HasConstant(const Expr<SomeType> &expr) {
+  return HasConstantHelper{}(expr);
+}
+
 parser::Message *AttachDeclaration(
     parser::Message &message, const Symbol &symbol) {
   const Symbol *unhosted{&symbol};
@@ -1702,7 +1719,8 @@ bool IsSaved(const Symbol &original) {
     return false;
   } else if (scopeKind == Scope::Kind::Module ||
       (scopeKind == Scope::Kind::MainProgram &&
-          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)))) {
+          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)) &&
+          Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol))) {
     // 8.5.16p4
     // In main programs, implied SAVE matters only for pointer
     // initialization targets and coarrays.
