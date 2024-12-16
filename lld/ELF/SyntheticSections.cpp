@@ -4654,8 +4654,8 @@ size_t MemtagGlobalDescriptors::getSize() const {
 }
 
 XO65Section::XO65Section(Ctx &ctx, const XO65Segment &segment)
-    : SyntheticSection(ctx, segment.flags, segment.type, segment.alignment,
-                       segment.sectionName),
+    : SyntheticSection(ctx, segment.sectionName, segment.type, segment.flags,
+                       segment.alignment),
       segmentName(segment.name), size(segment.size) {}
 
 void XO65Section::writeTo(uint8_t *buf) { memcpy(buf, contents.data(), size); }

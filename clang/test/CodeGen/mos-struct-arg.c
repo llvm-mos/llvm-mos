@@ -29,10 +29,10 @@ struct Large test_large_struct_param(struct Large s) {
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[LIST]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[LIST]], align 1
-// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[ARGP_CUR]], i16 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST]], align 1
 // CHECK-NEXT:    [[RETVAL_SROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[ARGP_CUR]], align 1, !tbaa [[TBAA7:![0-9]+]]
-// CHECK-NEXT:    [[RETVAL_SROA_2_0_ARGP_CUR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 2
+// CHECK-NEXT:    [[RETVAL_SROA_2_0_ARGP_CUR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[ARGP_CUR]], i16 2
 // CHECK-NEXT:    [[RETVAL_SROA_2_0_COPYLOAD:%.*]] = load i16, ptr [[RETVAL_SROA_2_0_ARGP_CUR_SROA_IDX]], align 1, !tbaa [[TBAA7]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [[STRUCT_SMALL:%.*]] poison, i16 [[RETVAL_SROA_0_0_COPYLOAD]], 0
@@ -51,7 +51,7 @@ struct Small test_small_struct_vaarg(int x, ...) {
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr nonnull [[LIST]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[LIST]])
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[LIST]], align 1
-// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i16 2
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[ARGP_CUR]], i16 2
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[LIST]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGP_CUR]], align 1
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i16(ptr noundef nonnull align 1 dereferenceable(8) [[AGG_RESULT:%.*]], ptr noundef nonnull align 1 dereferenceable(8) [[TMP0]], i16 8, i1 false), !tbaa.struct [[TBAA_STRUCT2]]

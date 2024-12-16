@@ -204,7 +204,6 @@ bool MOSTargetLowering::isTruncateFree(Type *FromTy, Type *ToTy) const {
 }
 
 bool MOSTargetLowering::isTruncateFree(LLT FromTy, LLT ToTy,
-                                       const DataLayout &DL,
                                        LLVMContext &Ctx) const {
   if (!FromTy.isScalar() || !ToTy.isScalar())
     return false;
@@ -217,7 +216,7 @@ bool MOSTargetLowering::isZExtFree(Type *FromTy, Type *ToTy) const {
   return FromTy->getPrimitiveSizeInBits() < ToTy->getPrimitiveSizeInBits();
 }
 
-bool MOSTargetLowering::isZExtFree(LLT FromTy, LLT ToTy, const DataLayout &DL,
+bool MOSTargetLowering::isZExtFree(LLT FromTy, LLT ToTy,
                                    LLVMContext &Ctx) const {
   if (!FromTy.isScalar() || !ToTy.isScalar())
     return false;

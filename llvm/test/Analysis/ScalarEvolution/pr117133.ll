@@ -19,11 +19,11 @@ define i32 @widget() {
 ; CHECK-NEXT:  Determining loop execution counts for: @widget
 ; CHECK-NEXT:  Loop %b1: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for b1: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for b3: i32 0
-; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:    exit count for b3: i2 0
+; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is i2 0
+; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is i2 0
 ; CHECK-NEXT:    symbolic max exit count for b1: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for b3: i32 0
+; CHECK-NEXT:    symbolic max exit count for b3: i2 0
 ;
 b:
   br label %b1

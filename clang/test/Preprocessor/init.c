@@ -2752,7 +2752,7 @@
 // MOS: #define __ATOMIC_SEQ_CST 5
 // MOS: #define __BIGGEST_ALIGNMENT__ 1
 // MOS: #define __BITINT_MAXWIDTH__ 128
-// MOS: #define __BOOL_WIDTH__ 8
+// MOS: #define __BOOL_WIDTH__ 1
 // MOS: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // MOS: #define __CHAR16_TYPE__ unsigned int
 // MOS: #define __CHAR32_TYPE__ long unsigned int

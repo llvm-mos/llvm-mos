@@ -1236,7 +1236,7 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
                          : Builder.buildICmp(Pred, S1, LHSHigh, RHSHigh);
       auto RestPred = Pred;
       if (CmpInst::isSigned(RestPred))
-        RestPred = CmpInst::getUnsignedPredicate(Pred);
+        RestPred = ICmpInst::getUnsignedPredicate(Pred);
       auto CmpRest =
           Builder.buildICmp(RestPred, S1, LHSRest, RHSRest).getReg(0);
 
