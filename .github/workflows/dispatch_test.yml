@@ -5,6 +5,7 @@ on:
 
 jobs:
   dispatch:
+    if: github.repository_owner == 'llvm-mos'
     runs-on: ubuntu-latest
     steps:
       - name: Repository Dispatch
