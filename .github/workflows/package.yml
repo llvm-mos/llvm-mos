@@ -5,6 +5,12 @@ on:
   push:
     ignore-forks: true
     branches: [main]
+    paths:
+      - 'clang/**'
+      - 'compiler-rt/**'
+      - 'lld/**'
+      - 'llvm/**'
+      - '.github/workflows/package.yml'
 jobs:
   package:
     if: github.repository_owner == 'llvm-mos'

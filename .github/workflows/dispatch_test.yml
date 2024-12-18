@@ -2,6 +2,12 @@ name: Dispatch Test Suite
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'clang/**'
+      - 'compiler-rt/**'
+      - 'lld/**'
+      - 'llvm/**'
+      - '.github/workflows/dispatch_test.yml'
 
 jobs:
   dispatch:
