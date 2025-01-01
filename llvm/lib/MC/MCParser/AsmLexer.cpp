@@ -716,7 +716,7 @@ size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
 }
 
 bool AsmLexer::isAtStartOfComment(const char *Ptr) {
-  if (MAI.getRestrictCommentStringToStartOfStatement() && !IsAtStartOfStatement)
+  if (MAI.isHLASM() && !IsAtStartOfStatement)
     return false;
 
   StringRef CommentString = MAI.getCommentString();
@@ -845,7 +845,7 @@ AsmToken AsmLexer::LexToken() {
       return LexIdentifier();
     return AsmToken(AsmToken::At, StringRef(TokStart, 1));
   case '#':
-    if (MAI.doesAllowHashAtStartOfIdentifier())
+    if (MAI.isHLASM())
       return LexIdentifier();
     return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
   case '?':
