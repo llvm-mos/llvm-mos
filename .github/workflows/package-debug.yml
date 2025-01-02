@@ -3,14 +3,14 @@ concurrency: compiler-package-debug
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
 jobs:
   package:
     if: github.repository_owner == 'llvm-mos'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-2019, macos-13, ubuntu-20.04]
+        os: [windows-2019, macos-13, macos-14, ubuntu-20.04]
     steps:
       - name: Setup Windows
         if: startsWith(matrix.os, 'windows')
@@ -24,7 +24,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install Ninja
         uses: llvm/actions/install-ninja@main
 
@@ -62,6 +62,24 @@ jobs:
       - name: Build
         run: cd build; ninja clang lld
 
+      - name: Check that universal binaries are produced for MacOS
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          clang="./build/bin/clang-20"
+
+          if [ ! -f "$clang" ]; then
+            echo "Clang not found"
+            exit 1
+          fi
+
+          supported_hosts=$(lipo -archs $clang)
+          if [[ $supported_hosts != *"x86_64"* || $supported_hosts != *"arm64"* ]]; then
+            echo "clang is not a universal binary!"
+            exit 1
+          fi
+
+          echo "clang is a universal binary!"
+
       - name: Archive Linux
         if: startsWith(matrix.os, 'ubuntu')
         run: |
@@ -72,8 +90,8 @@ jobs:
         run: |
           cd build\bin
           7z a ..\..\llvm-mos-windows-debug.7z *
-      - name: Archive macOS
-        if: startsWith(matrix.os, 'macos')
+      - name: Archive MacOS
+        if: startsWith(matrix.os, 'macos-13')
         run: |
           cd build/bin
           tar -cJvf ../../llvm-mos-darwin-debug.tar.xz *
@@ -87,12 +105,12 @@ jobs:
           tag_name: llvm-mos-linux-debug
           files: llvm-mos-linux-debug.tar.xz
 
-      - name: Release macOS
-        if: startsWith(matrix.os, 'macos')
+      - name: Release MacOS
+        if: startsWith(matrix.os, 'macos-13')
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          body: "Debug compiler build for macOS"
+          body: "Debug compiler build for MacOS"
           tag_name: llvm-mos-darwin-debug
           files: llvm-mos-darwin-debug.tar.xz
 

@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-2019, macos-13, ubuntu-20.04]
+        os: [windows-2019, macos-13, macos-14, ubuntu-20.04]
     steps:
       - name: Setup Windows
         if: startsWith(matrix.os, 'windows')
@@ -31,7 +31,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install Ninja
         uses: llvm/actions/install-ninja@main
 
@@ -69,6 +69,24 @@ jobs:
       - name: Build
         run: cd build; ninja distribution
 
+      - name: Check that universal binaries are produced for MacOS
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          clang="./build/bin/clang-20"
+
+          if [ ! -f "$clang" ]; then
+            echo "Clang not found"
+            exit 1
+          fi
+
+          supported_hosts=$(lipo -archs $clang)
+          if [[ $supported_hosts != *"x86_64"* || $supported_hosts != *"arm64"* ]]; then
+            echo "clang is not a universal binary!"
+            exit 1
+          fi
+
+          echo "clang is a universal binary!"
+
       - name: Install
         run: cd build; ninja install-distribution-stripped
 
@@ -78,8 +96,8 @@ jobs:
       - name: Archive Windows
         if: startsWith(matrix.os, 'windows')
         run: 7z a llvm-mos-windows-main.7z llvm-mos
-      - name: Archive macOS
-        if: startsWith(matrix.os, 'macos')
+      - name: Archive MacOS
+        if: startsWith(matrix.os, 'macos-13')
         run: tar -cJvf llvm-mos-darwin-main.tar.xz llvm-mos
 
       - name: Release Linux
@@ -91,12 +109,12 @@ jobs:
           tag_name: llvm-mos-linux-main
           files: llvm-mos-linux-main.tar.xz
 
-      - name: Release macOS
-        if: startsWith(matrix.os, 'macos')
+      - name: Release MacOS
+        if: startsWith(matrix.os, 'macos-13')
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          body: "Internal compiler build for macOS"
+          body: "Internal compiler build for MacOS"
           tag_name: llvm-mos-darwin-main
           files: llvm-mos-darwin-main.tar.xz
 
