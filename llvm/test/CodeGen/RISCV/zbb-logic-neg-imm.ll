@@ -126,40 +126,19 @@ define i32 @andxorlow16(i32 %x) {
 }
 
 define void @orarray100(ptr %a) {
-; RV32-LABEL: orarray100:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    li a2, 0
-; RV32-NEXT:    lui a3, 1048560
-; RV32-NEXT:  .LBB8_1: # %for.body
-; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    slli a4, a1, 2
-; RV32-NEXT:    addi a1, a1, 1
-; RV32-NEXT:    add a4, a0, a4
-; RV32-NEXT:    lw a5, 0(a4)
-; RV32-NEXT:    seqz a6, a1
-; RV32-NEXT:    add a2, a2, a6
-; RV32-NEXT:    xori a6, a1, 100
-; RV32-NEXT:    orn a5, a5, a3
-; RV32-NEXT:    or a6, a6, a2
-; RV32-NEXT:    sw a5, 0(a4)
-; RV32-NEXT:    bnez a6, .LBB8_1
-; RV32-NEXT:  # %bb.2: # %for.cond.cleanup
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: orarray100:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi a1, a0, 400
-; RV64-NEXT:    lui a2, 1048560
-; RV64-NEXT:  .LBB8_1: # %for.body
-; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64-NEXT:    lw a3, 0(a0)
-; RV64-NEXT:    orn a3, a3, a2
-; RV64-NEXT:    sw a3, 0(a0)
-; RV64-NEXT:    addi a0, a0, 4
-; RV64-NEXT:    bne a0, a1, .LBB8_1
-; RV64-NEXT:  # %bb.2: # %for.cond.cleanup
-; RV64-NEXT:    ret
+; CHECK-LABEL: orarray100:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a1, a0, 400
+; CHECK-NEXT:    lui a2, 1048560
+; CHECK-NEXT:  .LBB8_1: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    lw a3, 0(a0)
+; CHECK-NEXT:    orn a3, a3, a2
+; CHECK-NEXT:    sw a3, 0(a0)
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    bne a0, a1, .LBB8_1
+; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    ret
 entry:
   br label %for.body
 

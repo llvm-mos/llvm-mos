@@ -6888,7 +6888,9 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   }
 
   // select Cond, 0, Pow2 --> (zext (!Cond)) << log2(Pow2)
-  if (FalseValue.isPowerOf2() && TrueValue.isZero()) {
+  if (FalseValue.isPowerOf2() && TrueValue.isZero() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {TrueTy, CondTy}}) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_SHL, {TrueTy, ShiftTy}})) {
     MatchInfo = [=](MachineIRBuilder &B) {
       B.setInstrAndDebugLoc(*Select);
       Register Not = MRI.createGenericVirtualRegister(CondTy);
