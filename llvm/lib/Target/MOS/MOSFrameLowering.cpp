@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -422,4 +423,10 @@ bool MOSFrameLowering::isISR(const MachineFunction &MF) const {
     return false;
   return F.hasFnAttribute("interrupt") ||
          F.hasFnAttribute("interrupt-norecurse");
+}
+ 
+bool MOSFrameLowering::isProfitableForNoCSROpt(const Function &F) const {
+  // The no-CSR optimisation is bad for code size on ARM, because we can save
+  // many registers with a single PUSH/POP pair.
+  return F.getCallingConv() == CallingConv::PreserveMost ? false : true;
 }
