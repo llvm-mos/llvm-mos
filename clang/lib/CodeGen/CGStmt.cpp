@@ -77,6 +77,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
       // Verify that any decl statements were handled as simple, they may be in
       // scope of subsequent reachable statements.
       assert(!isa<DeclStmt>(*S) && "Unexpected DeclStmt!");
+      PGO.markStmtMaybeUsed(S);
       return;
     }
 
@@ -332,21 +333,23 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPMasterTaskLoopDirective(cast<OMPMasterTaskLoopDirective>(*S));
     break;
   case Stmt::OMPMaskedTaskLoopDirectiveClass:
-    llvm_unreachable("masked taskloop directive not supported yet.");
+    EmitOMPMaskedTaskLoopDirective(cast<OMPMaskedTaskLoopDirective>(*S));
     break;
   case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
     EmitOMPMasterTaskLoopSimdDirective(
         cast<OMPMasterTaskLoopSimdDirective>(*S));
     break;
   case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
-    llvm_unreachable("masked taskloop simd directive not supported yet.");
+    EmitOMPMaskedTaskLoopSimdDirective(
+        cast<OMPMaskedTaskLoopSimdDirective>(*S));
     break;
   case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
     EmitOMPParallelMasterTaskLoopDirective(
         cast<OMPParallelMasterTaskLoopDirective>(*S));
     break;
   case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
-    llvm_unreachable("parallel masked taskloop directive not supported yet.");
+    EmitOMPParallelMaskedTaskLoopDirective(
+        cast<OMPParallelMaskedTaskLoopDirective>(*S));
     break;
   case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
     EmitOMPParallelMasterTaskLoopSimdDirective(
@@ -479,6 +482,12 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OpenACCShutdownConstructClass:
     EmitOpenACCShutdownConstruct(cast<OpenACCShutdownConstruct>(*S));
+    break;
+  case Stmt::OpenACCSetConstructClass:
+    EmitOpenACCSetConstruct(cast<OpenACCSetConstruct>(*S));
+    break;
+  case Stmt::OpenACCUpdateConstructClass:
+    EmitOpenACCUpdateConstruct(cast<OpenACCUpdateConstruct>(*S));
     break;
   }
 }
@@ -752,6 +761,8 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool noinline = false;
   bool alwaysinline = false;
   bool noconvergent = false;
+  HLSLControlFlowHintAttr::Spelling flattenOrBranch =
+      HLSLControlFlowHintAttr::SpellingNotCalculated;
   const CallExpr *musttail = nullptr;
   bool leaf = false;
 
@@ -787,6 +798,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     case attr::Leaf:
       leaf = true;
       break;
+    case attr::HLSLControlFlowHint: {
+      flattenOrBranch = cast<HLSLControlFlowHintAttr>(A)->getSemanticSpelling();
+    } break;
     }
   }
   SaveAndRestore save_nomerge(InNoMergeAttributedStmt, nomerge);
@@ -795,6 +809,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt, noconvergent);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   SaveAndRestore save_leaf(InLeafAttributedStmt, leaf);
+  SaveAndRestore save_flattenOrBranch(HLSLControlFlowAttr, flattenOrBranch);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
 
@@ -875,6 +890,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
       }
+      PGO.markStmtMaybeUsed(Skipped);
       return;
     }
   }
@@ -1030,8 +1046,8 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   EmitBlock(LoopHeader.getBlock());
 
   if (CGM.shouldEmitConvergenceTokens())
-    ConvergenceTokenStack.push_back(emitConvergenceLoopToken(
-        LoopHeader.getBlock(), ConvergenceTokenStack.back()));
+    ConvergenceTokenStack.push_back(
+        emitConvergenceLoopToken(LoopHeader.getBlock()));
 
   // Create an exit block for when the condition fails, which will
   // also become the break target.
@@ -1158,8 +1174,7 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
     EmitBlockWithFallThrough(LoopBody, &S);
 
   if (CGM.shouldEmitConvergenceTokens())
-    ConvergenceTokenStack.push_back(
-        emitConvergenceLoopToken(LoopBody, ConvergenceTokenStack.back()));
+    ConvergenceTokenStack.push_back(emitConvergenceLoopToken(LoopBody));
 
   {
     RunCleanupsScope BodyScope(*this);
@@ -1237,8 +1252,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   EmitBlock(CondBlock);
 
   if (CGM.shouldEmitConvergenceTokens())
-    ConvergenceTokenStack.push_back(
-        emitConvergenceLoopToken(CondBlock, ConvergenceTokenStack.back()));
+    ConvergenceTokenStack.push_back(emitConvergenceLoopToken(CondBlock));
 
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
@@ -1375,8 +1389,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   EmitBlock(CondBlock);
 
   if (CGM.shouldEmitConvergenceTokens())
-    ConvergenceTokenStack.push_back(
-        emitConvergenceLoopToken(CondBlock, ConvergenceTokenStack.back()));
+    ConvergenceTokenStack.push_back(emitConvergenceLoopToken(CondBlock));
 
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
@@ -2200,6 +2213,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       for (unsigned i = 0, e = CaseStmts.size(); i != e; ++i)
         EmitStmt(CaseStmts[i]);
       incrementProfileCounter(&S);
+      PGO.markStmtMaybeUsed(S.getBody());
 
       // Now we want to restore the saved switch instance so that nested
       // switches continue to function properly
@@ -3253,35 +3267,32 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   return F;
 }
 
-namespace {
 // Returns the first convergence entry/loop/anchor instruction found in |BB|.
 // std::nullptr otherwise.
-llvm::IntrinsicInst *getConvergenceToken(llvm::BasicBlock *BB) {
+static llvm::ConvergenceControlInst *getConvergenceToken(llvm::BasicBlock *BB) {
   for (auto &I : *BB) {
-    auto *II = dyn_cast<llvm::IntrinsicInst>(&I);
-    if (II && llvm::isConvergenceControlIntrinsic(II->getIntrinsicID()))
-      return II;
+    if (auto *CI = dyn_cast<llvm::ConvergenceControlInst>(&I))
+      return CI;
   }
   return nullptr;
 }
 
-} // namespace
-
 llvm::CallBase *
-CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input,
-                                            llvm::Value *ParentToken) {
+CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input) {
+  llvm::ConvergenceControlInst *ParentToken = ConvergenceTokenStack.back();
+  assert(ParentToken);
+
   llvm::Value *bundleArgs[] = {ParentToken};
   llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
-  auto Output = llvm::CallBase::addOperandBundle(
+  auto *Output = llvm::CallBase::addOperandBundle(
       Input, llvm::LLVMContext::OB_convergencectrl, OB, Input->getIterator());
   Input->replaceAllUsesWith(Output);
   Input->eraseFromParent();
   return Output;
 }
 
-llvm::IntrinsicInst *
-CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB,
-                                          llvm::Value *ParentToken) {
+llvm::ConvergenceControlInst *
+CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB) {
   CGBuilderTy::InsertPoint IP = Builder.saveIP();
   if (BB->empty())
     Builder.SetInsertPoint(BB);
@@ -3292,14 +3303,14 @@ CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB,
       llvm::Intrinsic::experimental_convergence_loop, {}, {});
   Builder.restoreIP(IP);
 
-  llvm::CallBase *I = addConvergenceControlToken(CB, ParentToken);
-  return cast<llvm::IntrinsicInst>(I);
+  CB = addConvergenceControlToken(CB);
+  return cast<llvm::ConvergenceControlInst>(CB);
 }
 
-llvm::IntrinsicInst *
+llvm::ConvergenceControlInst *
 CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
   llvm::BasicBlock *BB = &F->getEntryBlock();
-  llvm::IntrinsicInst *Token = getConvergenceToken(BB);
+  llvm::ConvergenceControlInst *Token = getConvergenceToken(BB);
   if (Token)
     return Token;
 
@@ -3314,5 +3325,5 @@ CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
   assert(isa<llvm::IntrinsicInst>(I));
   Builder.restoreIP(IP);
 
-  return cast<llvm::IntrinsicInst>(I);
+  return cast<llvm::ConvergenceControlInst>(I);
 }
