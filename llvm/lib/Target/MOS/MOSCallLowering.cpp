@@ -50,8 +50,8 @@ struct MOSValueAssigner : CallLowering::ValueAssigner {
   BitVector Reserved;
 
   MOSValueAssigner(bool IsIncoming, MachineRegisterInfo &MRI,
-                   const MachineFunction &MF)
-      : CallLowering::ValueAssigner(IsIncoming, CC_MOS, CC_MOS_VarArgs) {
+                   const MachineFunction &MF, CCAssignFn AF, CCAssignFn AFVa)
+      : CallLowering::ValueAssigner(IsIncoming, AF, AFVa) {
     Reserved = MRI.getTargetRegisterInfo()->getReservedRegs(MF);
   }
 
@@ -303,7 +303,9 @@ bool MOSCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     // Invoke TableGen compatibility layer. This will generate copies and stores
     // from the return value virtual register to physical and stack locations.
     MOSOutgoingReturnHandler Handler(MIRBuilder, Return, MRI);
-    MOSValueAssigner Assigner(/*IsIncoming=*/false, MRI, MF);
+    auto CCFn = MOSTargetLowering::CCAssignFnForCall(F.getCallingConv(), false);
+    auto CCVaFn = MOSTargetLowering::CCAssignFnForCall(F.getCallingConv(), true);
+    MOSValueAssigner Assigner(/*IsIncoming=*/false, MRI, MF, CCFn, CCVaFn);
     if (!determineAndHandleAssignments(Handler, Assigner, Args, MIRBuilder,
                                        F.getCallingConv(), F.isVarArg()))
       return false;
@@ -342,7 +344,9 @@ bool MOSCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   }
 
   MOSIncomingArgsHandler Handler(MIRBuilder, MRI);
-  MOSValueAssigner Assigner(/*IsIncoming=*/true, MRI, MF);
+  auto CCFn = MOSTargetLowering::CCAssignFnForCall(F.getCallingConv(), false);
+  auto CCVaFn = MOSTargetLowering::CCAssignFnForCall(F.getCallingConv(), true);
+  MOSValueAssigner Assigner(/*IsIncoming=*/true, MRI, MF, CCFn, CCVaFn);
   // Invoke TableGen compatibility layer to create loads and copies from the
   // formal argument physical and stack locations to virtual registers.
   if (!determineAndHandleAssignments(Handler, Assigner, SplitArgs, MIRBuilder,
@@ -426,7 +430,9 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Copy arguments from virtual registers to their real physical locations.
   MOSOutgoingArgsHandler ArgsHandler(MIRBuilder, Call, MRI);
-  MOSValueAssigner ArgsAssigner(/*IsIncoming=*/false, MRI, MF);
+  auto CCFn = MOSTargetLowering::CCAssignFnForCall(Info.CallConv, false);
+  auto CCVaFn = MOSTargetLowering::CCAssignFnForCall(Info.CallConv, true);
+  MOSValueAssigner ArgsAssigner(/*IsIncoming=*/false, MRI, MF, CCFn, CCVaFn);
   if (!determineAndHandleAssignments(ArgsHandler, ArgsAssigner, OutArgs,
                                      MIRBuilder, Info.CallConv, Info.IsVarArg))
     return false;
@@ -439,7 +445,9 @@ bool MOSCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!Info.OrigRet.Ty->isVoidTy()) {
     // Copy the return value from its physical location into a virtual register.
     MOSIncomingReturnHandler RetHandler(MIRBuilder, MRI, Call);
-    MOSValueAssigner RetAssigner(/*IsIncoming=*/true, MRI, MF);
+    auto RetCCFn = MOSTargetLowering::CCAssignFnForReturn(Info.CallConv);
+    auto RetCCVaFn = MOSTargetLowering::CCAssignFnForReturn(Info.CallConv);
+    MOSValueAssigner RetAssigner(/*IsIncoming=*/true, MRI, MF, RetCCFn, RetCCVaFn);
     if (!determineAndHandleAssignments(RetHandler, RetAssigner, InArgs,
                                        MIRBuilder, Info.CallConv,
                                        Info.IsVarArg))
