@@ -15,6 +15,7 @@
 ; CHECK-NEXT: SYMBOLS {
 ; CHECK-NEXT:   abs_sym_without_file: type = export, value = 1234;
 ; CHECK-NEXT:   zp_sym: addrsize = zp, type = export, value = 123;
+; CHECK-NEXT:   banked_sym: type = export, value = 4660;
 ; CHECK-NEXT: }
 
 ;--- main.s
@@ -31,6 +32,8 @@
       Name: "defined_in_other_ca65"
     Index:
       Name: "zp_sym"
+    Index:
+      Name: "banked_sym"
   Exports:
     Count: 0
 ;--- other-ca65.od65
@@ -45,6 +48,7 @@
 ;--- link.ld
 abs_sym_without_file = 1234;
 zp_sym = 123;
+banked_sym = 0xab1234;
 ;--- ld65.map
 Exports list by name:
 ---------------------
