@@ -2216,7 +2216,8 @@ void XO65Enclave::createSections() {
 
 bool XO65Enclave::link() {
   if (ctx.arg.ld65Path.empty())
-    ctx.arg.ld65Path = saver().save(findProgramByName("ld65", toStr(ctx, this)));
+    ctx.arg.ld65Path =
+        saver().save(findProgramByName("ld65", toStr(ctx, this)));
 
   if (!cfgFile)
     cfgFile.emplace(ctx, "ld65", "cfg", toStr(ctx, this), "ld65 cfg file");
@@ -2290,8 +2291,15 @@ void XO65Enclave::generateCfgFile(llvm::raw_fd_ostream &os) const {
   bool isBanked = true;
   for (const InputSectionBase *baseSec : sections) {
     const auto &sec = *cast<XO65Section>(baseSec);
-    os << "  " << sec.getSegmentName() << ": start = " << sec.getVA()
-       << ", size = " << sec.getSize() << ", file = \"\";\n";
+    uint64_t va = sec.getVA();
+    uint64_t bank = va >> 16 & 0xff;
+    if (isBanked)
+      va &= 0xffff;
+    os << "  " << sec.getSegmentName() << ": start = " << va
+       << ", size = " << sec.getSize() << ", file = \"\"";
+    if (isBanked && bank)
+      os << ", bank = " << bank;
+    os << ";\n";
     size += sec.getSize();
   }
   // Note that then name of this segment include an unfinished escape, so it
