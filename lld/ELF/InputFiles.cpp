@@ -1969,6 +1969,8 @@ XO65Segment XO65File::parseOD65Segment() {
       parseInt(k, v, segment.size);
     } else if (k == "Alignment") {
       parseInt(k, v, segment.alignment);
+    } else if (k == "Address size") {
+      parseInt(k, v, segment.addrSize);
     }
   }
   return segment;
@@ -2035,7 +2037,7 @@ void XO65File::expectPrefix(StringRef prefix) {
 }
 
 std::pair<StringRef, StringRef> XO65File::parseKV() {
-  static llvm::Regex kvRegex(" *([^ ]+): *([^ ]+)");
+  static llvm::Regex kvRegex(" *([^ ].*): *([^ ]+)");
   SmallVector<StringRef> matches;
   if (od65Line == od65LinesEnd || !kvRegex.match(*od65Line, &matches))
     fatal(toStr(ctx, this) + ": could not parse key-value pair: " + *od65Line);
@@ -2189,6 +2191,7 @@ XO65Enclave::XO65Enclave(Ctx &ctx)
     : InputFile(ctx, XO65EnclaveKind, MemoryBufferRef{"", "xo65-enclave"}) {}
 
 void XO65Enclave::appendSegment(const XO65Segment &segment) {
+  mHasFar |= segment.addrSize > 0x02;
   auto res = segments.insert({segment.name, segment});
   if (res.second)
     return;
@@ -2199,6 +2202,7 @@ void XO65Enclave::appendSegment(const XO65Segment &segment) {
   assert(s.flags == segment.flags);
   s.size += segment.size;
   s.alignment = std::max(s.alignment, segment.alignment);
+  s.addrSize = std::max(s.addrSize, segment.addrSize);
 }
 
 void XO65Enclave::postParse() {
@@ -2216,7 +2220,8 @@ void XO65Enclave::createSections() {
 
 bool XO65Enclave::link() {
   if (ctx.arg.ld65Path.empty())
-    ctx.arg.ld65Path = saver().save(findProgramByName("ld65", toStr(ctx, this)));
+    ctx.arg.ld65Path =
+        saver().save(findProgramByName("ld65", toStr(ctx, this)));
 
   if (!cfgFile)
     cfgFile.emplace(ctx, "ld65", "cfg", toStr(ctx, this), "ld65 cfg file");
@@ -2286,10 +2291,18 @@ void XO65Enclave::postWrite() {
 void XO65Enclave::generateCfgFile(llvm::raw_fd_ostream &os) const {
   size_t size = 0;
   os << "MEMORY {\n";
+  bool isBanked = !ctx.xo65Enclave->hasFar();
   for (const InputSectionBase *baseSec : sections) {
     const auto &sec = *cast<XO65Section>(baseSec);
-    os << "  " << sec.getSegmentName() << ": start = " << sec.getVA()
-       << ", size = " << sec.getSize() << ", file = \"\";\n";
+    uint64_t va = sec.getVA();
+    uint64_t bank = va >> 16 & 0xff;
+    if (isBanked)
+      va &= 0xffff;
+    os << "  " << sec.getSegmentName() << ": start = " << va
+       << ", size = " << sec.getSize() << ", file = \"\"";
+    if (isBanked && bank)
+      os << ", bank = " << bank;
+    os << ";\n";
     size += sec.getSize();
   }
   // Note that then name of this segment include an unfinished escape, so it
@@ -2313,6 +2326,8 @@ void XO65Enclave::generateCfgFile(llvm::raw_fd_ostream &os) const {
     os << "  " << defSym->getName() << ": ";
 
     uint64_t va = defSym->getVA(ctx);
+    if (isBanked)
+      va &= 0xffff;
     if (va < 0x100)
       os << "addrsize = zp, ";
     os << "type = export, value = " << va << ";\n";

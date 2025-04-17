@@ -410,6 +410,7 @@ struct XO65Segment {
   unsigned flags;
   uint64_t size = 0;
   uint64_t alignment = 1;
+  unsigned addrSize = 0x02;
 };
 
 class XO65File : public InputFile {
@@ -464,6 +465,8 @@ private:
   std::optional<XO65TempFile> outputFile;
   std::optional<XO65TempFile> mapFile;
 
+  bool mHasFar = false;
+
 public:
   explicit XO65Enclave(Ctx &ctx);
   static bool classof(const InputFile *f) {
@@ -474,6 +477,7 @@ public:
   void appendSegment(const XO65Segment &segment);
   void addImport(Symbol *sym) { imports.insert(sym); }
   const llvm::SetVector<Symbol *> &getImports() const { return imports; }
+  bool hasFar() const { return mHasFar; };
 
   void postParse();
 
