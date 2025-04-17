@@ -2286,6 +2286,8 @@ void XO65Enclave::postWrite() {
 void XO65Enclave::generateCfgFile(llvm::raw_fd_ostream &os) const {
   size_t size = 0;
   os << "MEMORY {\n";
+  // TODO
+  bool isBanked = true;
   for (const InputSectionBase *baseSec : sections) {
     const auto &sec = *cast<XO65Section>(baseSec);
     os << "  " << sec.getSegmentName() << ": start = " << sec.getVA()
@@ -2313,6 +2315,8 @@ void XO65Enclave::generateCfgFile(llvm::raw_fd_ostream &os) const {
     os << "  " << defSym->getName() << ": ";
 
     uint64_t va = defSym->getVA(ctx);
+    if (isBanked)
+      va &= 0xffff;
     if (va < 0x100)
       os << "addrsize = zp, ";
     os << "type = export, value = " << va << ";\n";
