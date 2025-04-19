@@ -58,6 +58,9 @@ public:
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
 
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   MOSSubtarget SubTarget;

@@ -399,7 +399,7 @@ public:
                                         CharCountValue - ValueStr.size() + 1));
     } else {
       const MOSMCExpr *Expr =
-          MOSMCExpr::create(MOSMCExpr::VK_MOS_ADDR_ASCIZ, AddrValue,
+          MOSMCExpr::create(MOSMCExpr::VK_ADDR_ASCIZ, AddrValue,
                             /*isNegated=*/false, getContext());
       getStreamer().emitValue(Expr, CharCountValue + 1, DirectiveLoc);
     }
@@ -507,7 +507,7 @@ public:
 
   bool tryParseRelocExpression(OperandVector &Operands, ExpressionType EType) {
     bool IsNegated = false;
-    MOSMCExpr::VariantKind ModifierKind = MOSMCExpr::VK_MOS_NONE;
+    MOSMCExpr::VariantKind ModifierKind = MOSMCExpr::VK_NONE;
 
     SMLoc S = Parser.getTok().getLoc();
 
@@ -557,15 +557,14 @@ public:
       bool IsImm16 = false;
       switch (Parser.getTok().getKind()) {
       case AsmToken::Less:
-        ModifierKind =
-            IsImm16 ? MOSMCExpr::VK_MOS_ADDR16 : MOSMCExpr::VK_MOS_ADDR16_LO;
+        ModifierKind = IsImm16 ? MOSMCExpr::VK_ADDR16 : MOSMCExpr::VK_ADDR16_LO;
         break;
       case AsmToken::Greater:
-        ModifierKind = IsImm16 ? MOSMCExpr::VK_MOS_ADDR24_SEGMENT
-                               : MOSMCExpr::VK_MOS_ADDR16_HI;
+        ModifierKind =
+            IsImm16 ? MOSMCExpr::VK_ADDR24_SEGMENT : MOSMCExpr::VK_ADDR16_HI;
         break;
       case AsmToken::Caret:
-        ModifierKind = MOSMCExpr::VK_MOS_ADDR24_BANK;
+        ModifierKind = MOSMCExpr::VK_ADDR24_BANK;
         break;
       default:
         assert(false);
@@ -583,14 +582,14 @@ public:
 
       switch (Parser.getTok().getKind()) {
       case AsmToken::Less:
-        ModifierKind = MOSMCExpr::VK_MOS_ADDR8;
+        ModifierKind = MOSMCExpr::VK_ADDR8;
         break;
       case AsmToken::Exclaim:
       case AsmToken::Pipe:
-        ModifierKind = MOSMCExpr::VK_MOS_ADDR16;
+        ModifierKind = MOSMCExpr::VK_ADDR16;
         break;
       case AsmToken::Greater:
-        ModifierKind = MOSMCExpr::VK_MOS_ADDR24;
+        ModifierKind = MOSMCExpr::VK_ADDR24;
         break;
       default:
         assert(false);
@@ -612,7 +611,7 @@ public:
       ModifierKind = MOSMCExpr::getKindByName(ModifierName.str(),
                                               EType != ExprTypeAddress);
 
-      if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
+      if (ModifierKind != MOSMCExpr::VK_NONE) {
         Parser.Lex();
         Parser.Lex(); // Eat modifier name and parenthesis
         if (Parser.getTok().getString() == GenerateStubs &&
@@ -620,7 +619,7 @@ public:
           std::string GSModName = ModifierName.str() + "_" + GenerateStubs;
           ModifierKind =
               MOSMCExpr::getKindByName(GSModName, EType != ExprTypeAddress);
-          if (ModifierKind != MOSMCExpr::VK_MOS_NONE) {
+          if (ModifierKind != MOSMCExpr::VK_NONE) {
             Parser.Lex(); // Eat gs modifier name
           }
         }

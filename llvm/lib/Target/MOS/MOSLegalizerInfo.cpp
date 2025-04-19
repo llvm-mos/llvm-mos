@@ -727,7 +727,7 @@ bool MOSLegalizerInfo::legalizeDivRem(LegalizerHelper &Helper,
   MachinePointerInfo PtrInfo;
   auto FI = Helper.createStackTemporary(Ty.getSizeInBytes(), Align(), PtrInfo);
 
-  Type *PtrTy = PointerType::get(HLTy, 0);
+  Type *PtrTy = PointerType::get(Ctx, 0);
   Args.push_back({FI->getOperand(0).getReg(), PtrTy, 2});
 
   if (!createLibcall(Helper.MIRBuilder, Libcall,
@@ -1778,8 +1778,9 @@ bool MOSLegalizerInfo::tryAbsoluteIndexedAddressing(LegalizerHelper &Helper,
         Index = Src;
         continue;
       }
-      if (Helper.getKnownBits()->getKnownBits(NewOffset).countMaxActiveBits() <=
-          8) {
+      if (Helper.getValueTracking()
+              ->getKnownBits(NewOffset)
+              .countMaxActiveBits() <= 8) {
         if (Index)
           return false;
         Index = Builder.buildZExtOrTrunc(S8, NewOffset).getReg(0);
@@ -1860,7 +1861,7 @@ bool MOSLegalizerInfo::selectIndirectAddressing(LegalizerHelper &Helper,
         Index = Src;
         Addr = Base;
       }
-    } else if (Helper.getKnownBits()
+    } else if (Helper.getValueTracking()
                    ->getKnownBits(Offset)
                    .countMaxActiveBits() <= 8) {
       Index = Builder.buildZExtOrTrunc(S8, Offset).getReg(0);

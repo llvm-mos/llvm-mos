@@ -528,8 +528,8 @@ void MOSInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
 void MOSInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
   MachineIRBuilder Builder(MBB, MI);
   Builder.setDebugLoc(DL);
@@ -827,8 +827,9 @@ const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
 void MOSInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
-  loadStoreRegStackSlot(MBB, MI, SrcReg, isKill, FrameIndex, RC, TRI,
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
+  loadStoreRegStackSlot(MBB, MI, SrcReg, isKill, FrameIndex, RC, TRI, Flags,
                         /*IsLoad=*/false);
 }
 
@@ -837,8 +838,9 @@ void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
-  loadStoreRegStackSlot(MBB, MI, DestReg, false, FrameIndex, RC, TRI,
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
+  loadStoreRegStackSlot(MBB, MI, DestReg, false, FrameIndex, RC, TRI, Flags,
                         /*IsLoad=*/true);
 }
 
@@ -910,7 +912,8 @@ static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
 void MOSInstrInfo::loadStoreRegStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register Reg,
     bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, bool IsLoad) const {
+    const TargetRegisterInfo *TRI, MachineInstr::MIFlag Flags,
+    bool IsLoad) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -976,6 +979,9 @@ void MOSInstrInfo::loadStoreRegStackSlot(
           Builder, MachineOperand::CreateReg(Reg, IsLoad), FrameIndex, 0, MMO);
     }
   }
+
+  for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
+    MI.setFlag(Flags);
 
   LLVM_DEBUG({
     dbgs() << "Inserted stack slot load/store:\n";

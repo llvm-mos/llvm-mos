@@ -16,7 +16,7 @@ target triple = "mos-nes-mmc1"
 ; Function Attrs: mustprogress noinline nounwind optsize
 define dso_local void @_ZNK13TextureColumn6renderEv(ptr nocapture noundef nonnull readonly align 1 dereferenceable(1) %this) local_unnamed_addr #1 align 2 {
 ; CHECK-LABEL: define dso_local void @_ZNK13TextureColumn6renderEv
-; CHECK-SAME: (ptr nocapture noundef nonnull readonly align 1 dereferenceable(1) [[THIS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
+; CHECK-SAME: (ptr noundef nonnull readonly align 1 captures(none) dereferenceable(1) [[THIS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @_ZN10SpanBuffer5clearEv(ptr noundef nonnull align 1 dereferenceable(85) @span_buffer) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[THIS]], align 1, !tbaa [[TBAA3:![0-9]+]]

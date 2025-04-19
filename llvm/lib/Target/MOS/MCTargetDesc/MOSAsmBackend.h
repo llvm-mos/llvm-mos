@@ -73,8 +73,8 @@ public:
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                            const MCFragment *DF, const MCValue &Target,
-                           const MCSubtargetInfo *STI, uint64_t &Value,
-                           bool &WasForced) override;
+                           const MCSubtargetInfo *STI,
+                           uint64_t &Value) override;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -83,11 +83,9 @@ public:
   /// relaxation.  This implementation considers the fixup as well as
   /// the section that the symbol points to.
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &ASM,
-                                    const MCFixup &Fixup, bool Resolved,
+                                    const MCFixup &Fixup, const MCValue &Target,
                                     uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override;
-  unsigned getNumFixupKinds() const override;
+                                    bool Resolved) const override;
   MCFixupKindInfo const &getFixupKindInfo(MCFixupKind Kind) const override;
   /// Check whether the given instruction may need relaxation.
   ///
@@ -139,6 +137,8 @@ public:
 
 private:
   Triple::OSType OSType;
+  mutable const MCInst *RelaxedMC = nullptr;
+  mutable const MCSubtargetInfo *RelaxedSTI = nullptr;
 };
 
 } // end namespace llvm

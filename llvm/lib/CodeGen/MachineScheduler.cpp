@@ -548,9 +548,8 @@ bool PostMachineSchedulerImpl::run(MachineFunction &Func,
 /// design would be to split blocks at scheduling boundaries, but LLVM has a
 /// general bias against block splitting purely for implementation simplicity.
 bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
-  PassConfig = &getAnalysis<TargetPassConfig>();
-  if (!PassConfig->alwaysRequiresMachineScheduler() &&
-      skipFunction(MF.getFunction()))
+  const auto &PC = getAnalysis<TargetPassConfig>();
+  if (!PC.alwaysRequiresMachineScheduler() && skipFunction(MF.getFunction()))
     return false;
 
   if (EnableMachineSched.getNumOccurrences()) {
@@ -564,7 +563,7 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
 
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  auto &TM = PC.getTM<TargetMachine>();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   Impl.setLegacyPass(this);

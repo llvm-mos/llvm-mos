@@ -136,22 +136,23 @@ define dso_local i16 @repro() {
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:  .LBB3_8:
 ; CHECK-NEXT:    lda #0
-; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
-; CHECK-NEXT:    sty __rc6
+; CHECK-NEXT:    sta __rc4
 ; CHECK-NEXT:    jmp .LBB3_10
 ; CHECK-NEXT:  .LBB3_9: ; in Loop: Header=BB3_10 Depth=1
 ; CHECK-NEXT:    lda __rc5
 ; CHECK-NEXT:    clc
 ; CHECK-NEXT:    adc __rc2
-; CHECK-NEXT:    sta .Lrepro_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    sta __rc4
 ; CHECK-NEXT:    lda __rc7
 ; CHECK-NEXT:    adc __rc3
+; CHECK-NEXT:    ldy __rc6
 ; CHECK-NEXT:  .LBB3_10: ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB3_14 Depth 2
-; CHECK-NEXT:    ldy .Lrepro_sstk ; 1-byte Folded Reload
+; CHECK-NEXT:    sty __rc17
+; CHECK-NEXT:    ldy __rc4
 ; CHECK-NEXT:    sty __rc5
-; CHECK-NEXT:    sty __rc4
-; CHECK-NEXT:    ldy __rc6
+; CHECK-NEXT:    ldy __rc17
+; CHECK-NEXT:    sty __rc6
 ; CHECK-NEXT:    cpy __rc4
 ; CHECK-NEXT:    ldy #1
 ; CHECK-NEXT:    bcs .LBB3_12

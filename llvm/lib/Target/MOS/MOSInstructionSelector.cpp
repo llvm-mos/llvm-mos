@@ -62,7 +62,7 @@ public:
   MOSInstructionSelector(const MOSTargetMachine &TM, MOSSubtarget &STI,
                          MOSRegisterBankInfo &RBI);
 
-  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+  void setupMF(MachineFunction &MF, GISelValueTracking *VT,
                CodeGenCoverage *CovInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI, AAResults *AA) override;
 
@@ -144,11 +144,12 @@ MOSInstructionSelector::MOSInstructionSelector(const MOSTargetMachine &TM,
 {
 }
 
-void MOSInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
+void MOSInstructionSelector::setupMF(MachineFunction &MF,
+                                     GISelValueTracking *VT,
                                      CodeGenCoverage *CovInfo,
                                      ProfileSummaryInfo *PSI,
                                      BlockFrequencyInfo *BFI, AAResults *AA) {
-  InstructionSelector::setupMF(MF, KB, CovInfo, PSI, BFI, AA);
+  InstructionSelector::setupMF(MF, VT, CovInfo, PSI, BFI, AA);
 
   // The machine verifier doesn't allow COPY instructions to have differing
   // types, but the various GlobalISel utilities used in the instruction

@@ -158,15 +158,12 @@ static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
          SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
 }
 
-bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
-                                        const MCFixup &Fixup,
-                                        const MCFragment *DF,
-                                        const MCValue &Target,
-                                        const MCSubtargetInfo *STI,
-                                        uint64_t &Value, bool &WasForced) {
+bool MOSAsmBackend::evaluateTargetFixup(
+    const MCAssembler &Asm, const MCFixup &Fixup, const MCFragment *DF,
+    const MCValue &Target, const MCSubtargetInfo *STI, uint64_t &Value) {
   // ForcePCRelReloc is a CLI option to force relocation emit, primarily for
   // testing R_MOS_PCREL_*.
-  WasForced = ForcePCRelReloc;
+  bool WasForced = ForcePCRelReloc;
 
   const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
   assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
@@ -174,14 +171,13 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
 
   // Logic taken from MCAssembler::evaluateFixup.
   bool IsResolved = false;
-  if (Target.getSymB()) {
+  if (Target.getSubSym()) {
     IsResolved = false;
-  } else if (!Target.getSymA()) {
+  } else if (!Target.getAddSym()) {
     IsResolved = false;
   } else {
-    const MCSymbolRefExpr *A = Target.getSymA();
-    const MCSymbol &SA = A->getSymbol();
-    if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
+    const MCSymbol &SA = *Target.getAddSym();
+    if (SA.isUndefined()) {
       IsResolved = false;
     } else {
       IsResolved = Asm.getWriter().isSymbolRefDifferenceFullyResolvedImpl(
@@ -191,15 +187,13 @@ bool MOSAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
 
   Value = Target.getConstant();
 
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    const MCSymbol &Sym = A->getSymbol();
-    if (Sym.isDefined())
-      Value += Asm.getSymbolOffset(Sym);
+  if (const MCSymbol *A = Target.getAddSym()) {
+    if (A->isDefined())
+      Value += Asm.getSymbolOffset(*A);
   }
-  if (const MCSymbolRefExpr *B = Target.getSymB()) {
-    const MCSymbol &Sym = B->getSymbol();
-    if (Sym.isDefined())
-      Value -= Asm.getSymbolOffset(Sym);
+  if (const MCSymbol *B = Target.getSubSym()) {
+    if (B->isDefined())
+      Value -= Asm.getSymbolOffset(*B);
   }
 
   Value -= Asm.getFragmentOffset(*DF) + Fixup.getOffset();
@@ -236,15 +230,14 @@ bool isBasedOnZeroPageSymbol(const MCExpr *E) {
 
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
                                                  const MCFixup &Fixup,
-                                                 bool Resolved, uint64_t Value,
-                                                 const MCRelaxableFragment *DF,
-                                                 const bool WasForced) const {
+                                                 const MCValue &Target,
+                                                 uint64_t Value,
+                                                 bool Resolved) const {
   // On 65816, it is possible to zero-bank relax from Addr16 to Addr24. The
   // assembler relaxes in a loop until instructions cannot be relaxed further,
   // so this is able to follow zero-page relaxation.
   bool BankRelax = false;
-  MOSAsmBackend::relaxInstructionTo(DF->getInst(), *DF->getSubtargetInfo(),
-                                    BankRelax);
+  MOSAsmBackend::relaxInstructionTo(*RelaxedMC, *RelaxedSTI, BankRelax);
 
   auto Info = getFixupKindInfo(Fixup.getKind());
   const auto *MME = dyn_cast<MOSMCExpr>(Fixup.getValue());
@@ -297,10 +290,6 @@ MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   }
 
   return MOSFixupKinds::getFixupKindInfo(static_cast<MOS::Fixups>(Kind), this);
-}
-
-unsigned MOSAsmBackend::getNumFixupKinds() const {
-  return MOS::Fixups::NumTargetFixupKinds;
 }
 
 unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst,
@@ -386,6 +375,8 @@ void MOSAsmBackend::relaxForImmediate(MCInst &Inst,
 
 bool MOSAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
+  RelaxedMC = &Inst;
+  RelaxedSTI = &STI;
   return visitRelaxableOperand(Inst, STI,
                                [](const MCOperand &Operand, unsigned RelaxTo,
                                   bool BankRelax) { return Operand.isExpr(); });

@@ -194,7 +194,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
     Builder.buildInstr(MOS::PL, {Reg}, {});
     if (Reg != CI.getReg())
-      Builder.buildCopy(CI.getReg(), Reg);
+      Builder.buildCopy(Register(CI.getReg()), Reg);
   }
 
   // Mark the CSRs as used by the return to ensure Machine Copy Propagation

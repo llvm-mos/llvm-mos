@@ -324,7 +324,7 @@ DecodeStatus MOSDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
         if ((uint64_t)Op.getImm() <= UCHAR_MAX) {
           // Add mos16 modifier if necessary to retain 16-bit width.
           Op = MCOperand::createExpr(MOSMCExpr::create(
-              MOSMCExpr::VK_MOS_IMM16,
+              MOSMCExpr::VK_IMM16,
               MCConstantExpr::create(Op.getImm(), getContext()), false,
               getContext()));
         }

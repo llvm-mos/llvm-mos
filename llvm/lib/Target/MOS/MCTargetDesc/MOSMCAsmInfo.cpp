@@ -12,11 +12,27 @@
 
 #include "MOSMCAsmInfo.h"
 #include "MOSMCTargetDesc.h"
+#include "MCTargetDesc/MOSMCExpr.h"
 
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
+
+static const MCAsmInfo::VariantKindDesc VariantKindDescs[] = {
+    {MOSMCExpr::VK_IMM8, "mosimm8"},
+    {MOSMCExpr::VK_IMM16, "mosimm16"},
+    {MOSMCExpr::VK_ADDR8, "mos8"},
+    {MOSMCExpr::VK_ADDR16, "mos16"},
+    {MOSMCExpr::VK_ADDR16_LO, "mos16lo"},
+    {MOSMCExpr::VK_ADDR16_HI, "mos16hi"},
+    {MOSMCExpr::VK_ADDR24, "mos24"},
+    {MOSMCExpr::VK_ADDR24_BANK, "mos24bank"},
+    {MOSMCExpr::VK_ADDR24_SEGMENT, "mos24segment"},
+    {MOSMCExpr::VK_ADDR24_SEGMENT_LO, "mos24segmentlo"},
+    {MOSMCExpr::VK_ADDR24_SEGMENT_HI, "mos24segmenthi"},
+    {MOSMCExpr::VK_ADDR13, "mos13"},
+};
 
 MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   // While the platform uses 2-byte pointers, the ELF files use 4-byte pointers
@@ -32,6 +48,8 @@ MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   // Maximum instruction length across all supported subtargets.
   MaxInstLength = 7;
   SupportsDebugInformation = true;
+
+  initializeVariantKinds(VariantKindDescs);
 }
 
 unsigned MOSMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {

@@ -31,27 +31,25 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    ldx #2
 ; NMOS-NEXT:    stx __rc4
 ; NMOS-NEXT:    ldx #0
-; NMOS-NEXT:    txa
-; NMOS-NEXT:    jsr __memset
-; NMOS-NEXT:    jsr next_char
-; NMOS-NEXT:    tax
-; NMOS-NEXT:    beq .LBB0_5
-; NMOS-NEXT:  ; %bb.1: ; %while.body.preheader
-; NMOS-NEXT:    ldx #0
-; NMOS-NEXT:    stx __rc22
-; NMOS-NEXT:    jmp .LBB0_3
-; NMOS-NEXT:  .LBB0_2: ; %while.body
-; NMOS-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; NMOS-NEXT:    ldy #0
+; NMOS-NEXT:    sty __rc22
+; NMOS-NEXT:    tya
+; NMOS-NEXT:    jsr __memset
+; NMOS-NEXT:    jmp .LBB0_2
+; NMOS-NEXT:  .LBB0_1: ; %while.body
+; NMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; NMOS-NEXT:    ldy __rc4
 ; NMOS-NEXT:    sta (__rc2),y
 ; NMOS-NEXT:    txa
-; NMOS-NEXT:    iny
+; NMOS-NEXT:    ldy __rc5
 ; NMOS-NEXT:    sta (__rc2),y
+; NMOS-NEXT:  .LBB0_2: ; %while.body
+; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NMOS-NEXT:    jsr next_char
 ; NMOS-NEXT:    tax
 ; NMOS-NEXT:    beq .LBB0_5
-; NMOS-NEXT:  .LBB0_3: ; %while.body
-; NMOS-NEXT:    ; =>This Inner Loop Header: Depth=1
+; NMOS-NEXT:  ; %bb.3: ; %while.body
+; NMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; NMOS-NEXT:    asl
 ; NMOS-NEXT:    sta __rc2
 ; NMOS-NEXT:    lda __rc22
@@ -67,18 +65,20 @@ define void @char_stats() local_unnamed_addr #0 {
 ; NMOS-NEXT:    sta __rc3
 ; NMOS-NEXT:    ldy #0
 ; NMOS-NEXT:    lda (__rc2),y
-; NMOS-NEXT:    sta __rc4
+; NMOS-NEXT:    sta __rc6
+; NMOS-NEXT:    sty __rc4
 ; NMOS-NEXT:    iny
 ; NMOS-NEXT:    lda (__rc2),y
 ; NMOS-NEXT:    tax
-; NMOS-NEXT:    lda __rc4
+; NMOS-NEXT:    sty __rc5
+; NMOS-NEXT:    lda __rc6
 ; NMOS-NEXT:    clc
 ; NMOS-NEXT:    adc #1
-; NMOS-NEXT:    bne .LBB0_2
+; NMOS-NEXT:    bne .LBB0_1
 ; NMOS-NEXT:  ; %bb.4: ; %while.body
-; NMOS-NEXT:    ; in Loop: Header=BB0_3 Depth=1
+; NMOS-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; NMOS-NEXT:    inx
-; NMOS-NEXT:    jmp .LBB0_2
+; NMOS-NEXT:    jmp .LBB0_1
 ; NMOS-NEXT:  .LBB0_5: ; %while.end
 ; NMOS-NEXT:    ldx __rc20
 ; NMOS-NEXT:    stx __rc2

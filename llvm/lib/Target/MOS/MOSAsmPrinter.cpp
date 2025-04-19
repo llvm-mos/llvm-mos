@@ -55,7 +55,9 @@ public:
   // Wrapper needed for tblgenned pseudo lowering.
   void lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
-  const MCExpr *lowerConstant(const Constant *CV) override;
+  const MCExpr *lowerConstant(const Constant *CV,
+                              const Constant *BaseCV = nullptr,
+                              uint64_t Offset = 0) override;
 
   void EmitToStreamer(MCStreamer &S, MCInst &Inst);
 
@@ -78,7 +80,9 @@ public:
 // instructions) auto-generated.
 #include "MOSGenMCPseudoLowering.inc"
 
-const MCExpr *MOSAsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *MOSAsmPrinter::lowerConstant(const Constant *CV,
+                                           const Constant *BaseCV,
+                                           uint64_t Offset) {
   MCContext &Ctx = OutContext;
 
   const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV);
@@ -248,20 +252,18 @@ void MOSAsmPrinter::emitJumpTableInfo() {
     } else {
       // Emit an array of the low bytes of the target addresses.
       for (const MachineBasicBlock *JTBB : JTBBs) {
-        OutStreamer->emitValue(
-            MCSymbolRefExpr::create(JTBB->getSymbol(),
-                                    MCSymbolRefExpr::VK_MOS_ADDR16_LO,
-                                    OutContext),
-            1);
+        OutStreamer->emitValue(MCSymbolRefExpr::create(JTBB->getSymbol(),
+                                                       MOSMCExpr::VK_ADDR16_LO,
+                                                       OutContext),
+                               1);
       }
 
       // Emit an array of the high bytes of the target addresses.
       for (const MachineBasicBlock *JTBB : JTBBs) {
-        OutStreamer->emitValue(
-            MCSymbolRefExpr::create(JTBB->getSymbol(),
-                                    MCSymbolRefExpr::VK_MOS_ADDR16_HI,
-                                    OutContext),
-            1);
+        OutStreamer->emitValue(MCSymbolRefExpr::create(JTBB->getSymbol(),
+                                                       MOSMCExpr::VK_ADDR16_HI,
+                                                       OutContext),
+                               1);
       }
     }
   }

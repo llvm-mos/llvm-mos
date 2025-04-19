@@ -28,7 +28,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -70,7 +70,7 @@ class MOSCombinerImpl : public Combiner {
 public:
   MOSCombinerImpl(MachineFunction &MF, CombinerInfo &CInfo,
                   const TargetPassConfig *TPC, bool IsPreLegalize,
-                  GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+                  GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
                   const MOSCombinerImplRuleConfig &RuleConfig,
                   const MOSSubtarget &STI, MachineDominatorTree *MDT,
                   const LegalizerInfo *LI, AAResults *AA);
@@ -133,11 +133,11 @@ private:
 
 MOSCombinerImpl::MOSCombinerImpl(
     MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    bool IsPreLegalize, GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
+    bool IsPreLegalize, GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
     const MOSCombinerImplRuleConfig &RuleConfig, const MOSSubtarget &STI,
     MachineDominatorTree *MDT, const LegalizerInfo *LI, AAResults *AA)
-    : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
-      Helper(Observer, B, IsPreLegalize, &KB, MDT, LI), RuleConfig(RuleConfig),
+    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+      Helper(Observer, B, IsPreLegalize, &VT, MDT, LI), RuleConfig(RuleConfig),
       AA(AA),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "MOSGenGICombiner.inc"
@@ -671,13 +671,13 @@ APInt MOSCombinerImpl::getDemandedBits(Register R,
       DemandedBits = APInt::getAllOnes(Size);
       break;
     case MOS::G_AND: {
-      APInt Zeroes = KB->getKnownZeroes(
+      APInt Zeroes = VT->getKnownZeroes(
           MI.getOperand(Use.getOperandNo() == 1 ? 2 : 1).getReg());
       DemandedBits |= ~Zeroes;
       break;
     }
     case MOS::G_OR: {
-      APInt Ones = KB->getKnownOnes(
+      APInt Ones = VT->getKnownOnes(
           MI.getOperand(Use.getOperandNo() == 1 ? 2 : 1).getReg());
       DemandedBits |= ~Ones;
       break;
@@ -739,8 +739,8 @@ void MOSCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysis>();
+  AU.addPreserved<GISelValueTrackingAnalysis>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
@@ -777,14 +777,14 @@ bool MOSCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   bool IsPreLegalize = !MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
-  GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   CombinerInfo CInfo(
       /*AllowIllegalOps*/ IsPreLegalize, /*ShouldLegalizeIllegal*/ false,
       /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(), F.hasMinSize());
-  MOSCombinerImpl Impl(MF, CInfo, &TPC, IsPreLegalize, *KB, CSEInfo, RuleConfig,
+  MOSCombinerImpl Impl(MF, CInfo, &TPC, IsPreLegalize, *VT, CSEInfo, RuleConfig,
                        ST, MDT, LI, AA);
   return Impl.combineMachineInstrs();
 }
@@ -793,7 +793,7 @@ char MOSCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(MOSCombiner, DEBUG_TYPE, "Combine MOS machine instrs",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
 INITIALIZE_PASS_END(MOSCombiner, DEBUG_TYPE, "Combine MOS machine instrs",
                     false, false)
 

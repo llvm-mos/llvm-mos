@@ -174,6 +174,11 @@ MachineFunctionInfo *MOSTargetMachine::createMachineFunctionInfo(
       Allocator, F, static_cast<const MOSSubtarget *>(STI));
 }
 
+ScheduleDAGInstrs *
+MOSTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  return new ScheduleDAGMILive(C, std::make_unique<MOSSchedStrategy>(C));
+}
+
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration
 //===----------------------------------------------------------------------===//
@@ -214,9 +219,6 @@ public:
   void addPrePEI() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -324,11 +326,6 @@ void MOSPassConfig::addPreSched2() {
 }
 
 void MOSPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
-
-ScheduleDAGInstrs *
-MOSPassConfig::createMachineScheduler(MachineSchedContext *C) const {
-  return new ScheduleDAGMILive(C, std::make_unique<MOSSchedStrategy>(C));
-}
 
 namespace {
 

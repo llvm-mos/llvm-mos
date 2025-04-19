@@ -1335,7 +1335,7 @@ enum : unsigned {
   SHF_ARM_PURECODE = 0x20000000,
 
   // Section contains only program instructions and no program data.
-  SHF_AARCH64_PURECODE = 0x20000000
+  SHF_AARCH64_PURECODE = 0x20000000,
 
   // 8-bit addressable section
   SHF_MOS_ZEROPAGE = 0x10000000
