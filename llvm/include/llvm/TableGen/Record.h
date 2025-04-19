@@ -316,6 +316,7 @@ protected:
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_ExistsOpInit,
+    IK_InstancesOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -910,6 +911,7 @@ public:
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
+    MATCH,
     EQ,
     NE,
     LE,
@@ -1180,6 +1182,41 @@ public:
 
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.
+  const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
+
+  bool isComplete() const override { return false; }
+
+  const Init *resolveReferences(Resolver &R) const override;
+
+  const Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
+/// !instances<type>([regex]) - Produces a list of records whose type is `type`.
+/// If `regex` is provided, only records whose name matches the regular
+/// expression `regex` will be included.
+class InstancesOpInit final : public TypedInit, public FoldingSetNode {
+private:
+  const RecTy *Type;
+  const Init *Regex;
+
+  InstancesOpInit(const RecTy *Type, const Init *Regex)
+      : TypedInit(IK_InstancesOpInit, ListRecTy::get(Type)), Type(Type),
+        Regex(Regex) {}
+
+public:
+  InstancesOpInit(const InstancesOpInit &) = delete;
+  InstancesOpInit &operator=(const InstancesOpInit &) = delete;
+
+  static bool classof(const Init *I) {
+    return I->getKind() == IK_InstancesOpInit;
+  }
+
+  static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
   bool isComplete() const override { return false; }
@@ -1523,7 +1560,7 @@ private:
   bool IsUsed = false;
 
   /// Reference locations to this record value.
-  SmallVector<SMRange> ReferenceLocs;
+  SmallVector<SMRange, 0> ReferenceLocs;
 
 public:
   RecordVal(const Init *N, const RecTy *T, FieldKind K);
@@ -1816,7 +1853,7 @@ public:
     assert(!CorrespondingDefInit &&
            "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
-    SuperClasses.push_back(std::make_pair(R, Range));
+    SuperClasses.emplace_back(R, Range);
   }
 
   /// If there are any field references that refer to fields that have been
@@ -1967,25 +2004,27 @@ public:
   }
 
   void saveInputFilename(std::string Filename) {
-    InputFilename = Filename;
+    InputFilename = std::move(Filename);
   }
 
   void addClass(std::unique_ptr<Record> R) {
-    bool Ins = Classes.insert(std::make_pair(std::string(R->getName()),
-                                             std::move(R))).second;
+    bool Ins =
+        Classes.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Class already exists");
   }
 
   void addDef(std::unique_ptr<Record> R) {
-    bool Ins = Defs.insert(std::make_pair(std::string(R->getName()),
-                                          std::move(R))).second;
+    bool Ins = Defs.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
+    // Clear cache
+    if (!Cache.empty())
+      Cache.clear();
   }
 
   void addExtraGlobal(StringRef Name, const Init *I) {
-    bool Ins = ExtraGlobals.insert(std::make_pair(std::string(Name), I)).second;
+    bool Ins = ExtraGlobals.try_emplace(std::string(Name), I).second;
     (void)Ins;
     assert(!getDef(Name));
     assert(Ins && "Global already exists");
@@ -2071,14 +2110,14 @@ struct LessRecordRegister {
       for (size_t I = 0, E = Rec.size(); I != E; ++I, ++Len) {
         bool IsDigit = isDigit(Curr[I]);
         if (IsDigit != IsDigitPart) {
-          Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
+          Parts.emplace_back(IsDigitPart, StringRef(Start, Len));
           Len = 0;
           Start = &Curr[I];
           IsDigitPart = isDigit(Curr[I]);
         }
       }
       // Push the last part.
-      Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
+      Parts.emplace_back(IsDigitPart, StringRef(Start, Len));
     }
 
     size_t size() { return Parts.size(); }

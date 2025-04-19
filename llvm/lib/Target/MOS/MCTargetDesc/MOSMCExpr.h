@@ -19,20 +19,21 @@ class MOSMCExpr : public MCTargetExpr {
 public:
   /// Specifies the type of an expression.
   enum VariantKind {
-    VK_MOS_NONE,
-    VK_MOS_ADDR16,
-    VK_MOS_IMM16,
-    VK_MOS_ADDR8,
-    VK_MOS_IMM8,
-    VK_MOS_ADDR16_HI,
-    VK_MOS_ADDR16_LO,
-    VK_MOS_ADDR24,
-    VK_MOS_ADDR24_BANK,
-    VK_MOS_ADDR24_SEGMENT,
-    VK_MOS_ADDR24_SEGMENT_LO,
-    VK_MOS_ADDR24_SEGMENT_HI,
-    VK_MOS_ADDR13,
-    VK_MOS_ADDR_ASCIZ
+    VK_NONE,
+
+    VK_ADDR16 = MCSymbolRefExpr::FirstTargetSpecifier,
+    VK_IMM16,
+    VK_ADDR8,
+    VK_IMM8,
+    VK_ADDR16_HI,
+    VK_ADDR16_LO,
+    VK_ADDR24,
+    VK_ADDR24_BANK,
+    VK_ADDR24_SEGMENT,
+    VK_ADDR24_SEGMENT_LO,
+    VK_ADDR24_SEGMENT_HI,
+    VK_ADDR13,
+    VK_ADDR_ASCIZ
   };
 
 

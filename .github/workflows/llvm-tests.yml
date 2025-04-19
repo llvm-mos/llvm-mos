@@ -11,14 +11,12 @@ on:
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
   pull_request:
     branches:
       - 'main'
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.

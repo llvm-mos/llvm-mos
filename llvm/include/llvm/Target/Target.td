@@ -44,8 +44,11 @@ def DefaultMode : HwMode<"", []>;
 // "Objects", which is a list of the same length as the list of modes.
 // The n-th element on the Objects list will be associated with the n-th
 // element on the Modes list.
-class HwModeSelect<list<HwMode> Ms> {
+class HwModeSelect<list<HwMode> Ms, int ObjectsLength> {
   list<HwMode> Modes = Ms;
+
+  assert !eq(ObjectsLength, !size(Modes)),
+     "The Objects and Modes lists must be the same length";
 }
 
 // A common class that implements a counterpart of ValueType, which is
@@ -54,7 +57,7 @@ class HwModeSelect<list<HwMode> Ms> {
 // objects could be used. This is specifically applicable to selection
 // patterns.
 class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
-    : HwModeSelect<Ms>, ValueType<0, 0> {
+    : HwModeSelect<Ms, !size(Ts)>, ValueType<0, 0> {
   // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = Ts;
 }
@@ -65,7 +68,9 @@ class ValueTypeByHwMode<list<HwMode> Ms, list<ValueType> Ts>
 // or ValueType could be used. This is specifically applicable to selection
 // patterns.
 class PtrValueTypeByHwMode<ValueTypeByHwMode scalar, int addrspace>
-    : HwModeSelect<scalar.Modes>, PtrValueType<ValueType<0, 0>, addrspace> {
+    : HwModeSelect<scalar.Modes, !size(scalar.Objects)>,
+      PtrValueType<ValueType<0, 0>, addrspace> {
+  // The length of this list must be the same as the length of Ms.
   list<ValueType> Objects = scalar.Objects;
 }
 
@@ -79,7 +84,7 @@ class RegInfo<int RS, int SS, int SA> {
 
 // The register size/alignment information, parameterized by a HW mode.
 class RegInfoByHwMode<list<HwMode> Ms = [], list<RegInfo> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<RegInfo> Objects = Ts;
 }
@@ -90,7 +95,7 @@ class SubRegRange<int size, int offset = 0> {
 }
 
 class SubRegRangeByHwMode<list<HwMode> Ms = [], list<SubRegRange> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<SubRegRange> Objects = Ts;
 }
@@ -101,7 +106,7 @@ class SubRegIndex<int size, int offset = 0> {
 
   // The size/offset information, parameterized by a HW mode.
   // If the HwModes provided for SubRegRanges does not include the DefaultMode,
-  // the/ Size and Offset fields below will be used for the default. Otherwise,
+  // the Size and Offset fields below will be used for the default. Otherwise,
   // the Size and Offset fields are ignored.
   SubRegRangeByHwMode SubRegRanges;
 
@@ -160,13 +165,13 @@ class RegAltNameIndex {
 def NoRegAltName : RegAltNameIndex;
 
 // Register - You should define one instance of this class for each register
-// in the target machine.  String n will become the "name" of the register.
+// in the target machine. String n will become the "name" of the register.
 class Register<string n, list<string> altNames = []> {
   string Namespace = "";
   string AsmName = n;
   list<string> AltNames = altNames;
 
-  // Aliases - A list of registers that this register overlaps with.  A read or
+  // Aliases - A list of registers that this register overlaps with. A read or
   // modification of this register can potentially read or modify the aliased
   // registers.
   list<Register> Aliases = [];
@@ -188,8 +193,8 @@ class Register<string n, list<string> altNames = []> {
 
   // DwarfNumbers - Numbers used internally by gcc/gdb to identify the register.
   // These values can be determined by locating the <target>.h file in the
-  // directory llvmgcc/gcc/config/<target>/ and looking for REGISTER_NAMES.  The
-  // order of these names correspond to the enumeration used by gcc.  A value of
+  // directory llvmgcc/gcc/config/<target>/ and looking for REGISTER_NAMES. The
+  // order of these names correspond to the enumeration used by gcc. A value of
   // -1 indicates that the gcc number is undefined and -2 that register number
   // is invalid for this mode/flavour.
   list<int> DwarfNumbers = [];
@@ -210,7 +215,7 @@ class Register<string n, list<string> altNames = []> {
   list<int> CostPerUse = [0];
 
   // CoveredBySubRegs - When this bit is set, the value of this register is
-  // completely determined by the value of its sub-registers.  For example, the
+  // completely determined by the value of its sub-registers. For example, the
   // x86 register AX is covered by its sub-registers AL and AH, but EAX is not
   // covered by its sub-register AX.
   bit CoveredBySubRegs = false;
@@ -240,7 +245,7 @@ class RegisterWithSubRegs<string n, list<Register> subregs> : Register<n> {
 }
 
 // DAGOperand - An empty base class that unifies RegisterClass's and other forms
-// of Operand's that are legal as type qualifiers in DAG patterns.  This should
+// of Operand's that are legal as type qualifiers in DAG patterns. This should
 // only ever be used for defining multiclasses that are polymorphic over both
 // RegisterClass's and other Operand's.
 class DAGOperand {
@@ -250,7 +255,7 @@ class DAGOperand {
 
 // RegisterClass - Now that all of the registers are defined, and aliases
 // between registers are defined, specify which registers belong to which
-// register classes.  This also defines the default allocation order of
+// register classes. This also defines the default allocation order of
 // registers by register allocators.
 //
 class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
@@ -262,14 +267,14 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   RegInfoByHwMode RegInfos;
 
   // RegType - Specify the list ValueType of the registers in this register
-  // class.  Note that all registers in a register class must have the same
-  // ValueTypes.  This is a list because some targets permit storing different
+  // class. Note that all registers in a register class must have the same
+  // ValueTypes. This is a list because some targets permit storing different
   // types in same register, for example vector values with 128-bit total size,
   // but different count/size of items, like SSE on x86.
   //
   list<ValueType> RegTypes = regTypes;
 
-  // Size - Specify the spill size in bits of the registers.  A default value of
+  // Size - Specify the spill size in bits of the registers. A default value of
   // zero lets tablegen pick an appropriate size.
   int Size = 0;
 
@@ -284,7 +289,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // value means copying is extremely expensive or impossible.
   int CopyCost = 1;
 
-  // MemberList - Specify which registers are in this class.  If the
+  // MemberList - Specify which registers are in this class. If the
   // allocation_order_* method are not specified, this also defines the order of
   // allocation used by the register allocator.
   //
@@ -296,7 +301,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   RegAltNameIndex altNameIndex = idx;
 
   // isAllocatable - Specify that the register class can be used for virtual
-  // registers and register allocation.  Some register classes are only used to
+  // registers and register allocation. Some register classes are only used to
   // model instruction operand constraints, and should have isAllocatable = 0.
   bit isAllocatable = true;
 
@@ -362,9 +367,9 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   bits<8> TSFlags = 0;
 
   // If set then consider this register class to be the base class for registers in
-  // its MemberList.  The base class for registers present in multiple base register
+  // its MemberList. The base class for registers present in multiple base register
   // classes will be resolved in the order defined by this value, with lower values
-  // taking precedence over higher ones.  Ties are resolved by enumeration order.
+  // taking precedence over higher ones. Ties are resolved by enumeration order.
   int BaseClassOrder = ?;
 }
 
@@ -383,7 +388,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
 // also in the second set.
 //
 // (sequence "R%u", 0, 15) -> [R0, R1, ..., R15]. Generate a sequence of
-// numbered registers.  Takes an optional 4th operand which is a stride to use
+// numbered registers. Takes an optional 4th operand which is a stride to use
 // when generating the sequence.
 //
 // (shl GPR, 4) - Remove the first N elements.
@@ -461,14 +466,14 @@ class RegisterCategory<list<RegisterClass> classes> {
 
 //===----------------------------------------------------------------------===//
 // DwarfRegNum - This class provides a mapping of the llvm register enumeration
-// to the register numbering used by gcc and gdb.  These values are used by a
+// to the register numbering used by gcc and gdb. These values are used by a
 // debug information writer to describe where values may be located during
 // execution.
 class DwarfRegNum<list<int> Numbers> {
   // DwarfNumbers - Numbers used internally by gcc/gdb to identify the register.
   // These values can be determined by locating the <target>.h file in the
-  // directory llvmgcc/gcc/config/<target>/ and looking for REGISTER_NAMES.  The
-  // order of these names correspond to the enumeration used by gcc.  A value of
+  // directory llvmgcc/gcc/config/<target>/ and looking for REGISTER_NAMES. The
+  // order of these names correspond to the enumeration used by gcc. A value of
   // -1 indicates that the gcc number is undefined and -2 that register number
   // is invalid for this mode/flavour.
   list<int> DwarfNumbers = Numbers;
@@ -487,7 +492,7 @@ class DwarfRegAlias<Register reg> {
 //
 class SubtargetFeature<string n, string f, string v, string d,
                        list<SubtargetFeature> i = []> {
-  // Name - Feature name.  Used by command line (-mattr=) to determine the
+  // Name - Feature name. Used by command line (-mattr=) to determine the
   // appropriate target chip.
   //
   string Name = n;
@@ -506,7 +511,7 @@ class SubtargetFeature<string n, string f, string v, string d,
   //
   string Value = v;
 
-  // Desc - Feature description.  Used by command line (-mattr=) to display help
+  // Desc - Feature description. Used by command line (-mattr=) to display help
   // information.
   //
   string Desc = d;
@@ -580,7 +585,7 @@ class InstructionEncoding {
 // an EncodingByHwMode, its Inst and Size members are ignored and Ts are used
 // to encode and decode based on HwMode.
 class EncodingByHwMode<list<HwMode> Ms = [], list<InstructionEncoding> Ts = []>
-    : HwModeSelect<Ms> {
+    : HwModeSelect<Ms, !size(Ts)> {
   // The length of this list must be the same as the length of Ms.
   list<InstructionEncoding> Objects = Ts;
 }
@@ -824,7 +829,7 @@ class Predicate<string cond> {
   string CondString = cond;
 
   /// AssemblerMatcherPredicate - If this feature can be used by the assembler
-  /// matcher, this is true.  Targets should set this by inheriting their
+  /// matcher, this is true. Targets should set this by inheriting their
   /// feature from the AssemblerPredicate class in addition to Predicate.
   bit AssemblerMatcherPredicate = false;
 
@@ -912,7 +917,7 @@ def encoder;
 def decoder;
 
 /// PointerLikeRegClass - Values that are designed to have pointer width are
-/// derived from this.  TableGen treats the register class as having a symbolic
+/// derived from this. TableGen treats the register class as having a symbolic
 /// type that it doesn't know, and resolves the actual regclass to use by using
 /// the TargetRegisterInfo::getPointerRegClass() hook at codegen time.
 class PointerLikeRegClass<int Kind> {
@@ -998,7 +1003,7 @@ def ImmAsmOperand : AsmOperandClass {
 }
 
 /// Operand Types - These provide the built-in operand types that may be used
-/// by a target.  Targets can optionally provide their own operand types as
+/// by a target. Targets can optionally provide their own operand types as
 /// needed, though this should not be needed for RISC targets.
 class Operand<ValueType ty> : DAGOperand {
   ValueType Type = ty;
@@ -1113,7 +1118,7 @@ class PredicateOp;
 
 /// OperandWithDefaultOps - This Operand class can be used as the parent class
 /// for an Operand that needs to be initialized with a default value if
-/// no value is supplied in a pattern.  This class can be used to simplify the
+/// no value is supplied in a pattern. This class can be used to simplify the
 /// pattern definitions for instructions that have target specific flags
 /// encoded as immediate operands.
 class OperandWithDefaultOps<ValueType ty, dag defaultops>
@@ -1122,7 +1127,7 @@ class OperandWithDefaultOps<ValueType ty, dag defaultops>
 }
 
 /// PredicateOperand - This can be used to define a predicate operand for an
-/// instruction.  OpTypes specifies the MIOperandInfo for the operand, and
+/// instruction. OpTypes specifies the MIOperandInfo for the operand, and
 /// AlwaysVal specifies the value of this predicate when set to "always
 /// execute".
 class PredicateOperand<ValueType ty, dag OpTypes, dag AlwaysVal>
@@ -1565,7 +1570,7 @@ include "llvm/Target/GenericOpcodes.td"
 //
 class AsmParser {
   // AsmParserClassName - This specifies the suffix to use for the asmparser
-  // class.  Generated AsmParser classes are always prefixed with the target
+  // class. Generated AsmParser classes are always prefixed with the target
   // name.
   string AsmParserClassName  = "AsmParser";
 
@@ -1638,7 +1643,7 @@ def DefaultAsmParser : AsmParser;
 // implemented by targets to describe such variants.
 //
 class AsmParserVariant {
-  // Variant - AsmParsers can be of multiple different variants.  Variants are
+  // Variant - AsmParsers can be of multiple different variants. Variants are
   // used to support targets that need to parse multiple formats for the
   // assembly language.
   int Variant = 0;
@@ -1696,8 +1701,8 @@ class TokenAlias<string From, string To> {
 }
 
 /// MnemonicAlias - This class allows targets to define assembler mnemonic
-/// aliases.  This should be used when all forms of one mnemonic are accepted
-/// with a different mnemonic.  For example, X86 allows:
+/// aliases. This should be used when all forms of one mnemonic are accepted
+/// with a different mnemonic. For example, X86 allows:
 ///   sal %al, 1    -> shl %al, 1
 ///   sal %ax, %cl  -> shl %ax, %cl
 ///   sal %eax, %cl -> shl %eax, %cl
@@ -1775,11 +1780,11 @@ class AsmWriter {
   // FIXME: Remove after all ports are updated.
   int PassSubtarget = 0;
 
-  // Variant - AsmWriters can be of multiple different variants.  Variants are
+  // Variant - AsmWriters can be of multiple different variants. Variants are
   // used to support targets that need to emit assembly code in ways that are
   // mostly the same for different targets, but have minor differences in
-  // syntax.  If the asmstring contains {|} characters in them, this integer
-  // will specify which alternative to use.  For example "{x|y|z}" with Variant
+  // syntax. If the asmstring contains {|} characters in them, this integer
+  // will specify which alternative to use. For example "{x|y|z}" with Variant
   // == 1, will expand to "y".
   int Variant = 0;
 }
@@ -1804,7 +1809,7 @@ class Target {
   list<AsmWriter> AssemblyWriters = [DefaultAsmWriter];
 
   // AllowRegisterRenaming - Controls whether this target allows
-  // post-register-allocation renaming of registers.  This is done by
+  // post-register-allocation renaming of registers. This is done by
   // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
   // for all opcodes if this flag is set to 0.
   int AllowRegisterRenaming = 0;
@@ -1812,12 +1817,12 @@ class Target {
 
 //===----------------------------------------------------------------------===//
 // Processor chip sets - These values represent each of the chip sets supported
-// by the scheduler.  Each Processor definition requires corresponding
+// by the scheduler. Each Processor definition requires corresponding
 // instruction itineraries.
 //
 class Processor<string n, ProcessorItineraries pi, list<SubtargetFeature> f,
                 list<SubtargetFeature> tunef = []> {
-  // Name - Chip set name.  Used by command line (-mcpu=) to determine the
+  // Name - Chip set name. Used by command line (-mcpu=) to determine the
   // appropriate target chip.
   //
   string Name = n;
@@ -1835,7 +1840,7 @@ class Processor<string n, ProcessorItineraries pi, list<SubtargetFeature> f,
 
   // TuneFeatures - list of features for tuning for this CPU. If the target
   // supports -mtune, this should contain the list of features used to make
-  // microarchitectural optimization decisions for a given processor.  While
+  // microarchitectural optimization decisions for a given processor. While
   // Features should contain the architectural features for the processor.
   list<SubtargetFeature> TuneFeatures = tunef;
 }
@@ -1875,7 +1880,7 @@ class InstrMapping {
   //
   // def Add: { let BaseOp = 'ADD'; let predSense = 'nopred' }
   // def Add_predtrue: { let BaseOp = 'ADD'; let predSense = 'true' }
-  // def Add_predfalse: { let BaseOp = 'ADD'; let predSense = 'false'  }
+  // def Add_predfalse: { let BaseOp = 'ADD'; let predSense = 'false' }
   list<string> RowFields = [];
 
   // List of fields/attributes that are same for all the instructions

@@ -334,6 +334,7 @@ class LinkerScript final {
     MemoryRegion *lmaRegion = nullptr;
     uint64_t lmaOffset = 0;
     uint64_t tbssAddr = 0;
+    uint64_t overlaySize;
   };
 
   Ctx &ctx;

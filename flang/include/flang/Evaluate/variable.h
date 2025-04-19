@@ -44,7 +44,6 @@ using SymbolVector = std::vector<SymbolRef>;
 
 // Forward declarations
 struct DataRef;
-template <typename T> struct Variable;
 
 // Reference a base object in memory.  This can be a Fortran symbol,
 // static data (e.g., CHARACTER literal), or compiler-created temporary.
@@ -331,8 +330,14 @@ public:
   }
 
   Expr<SubscriptInteger> lower() const;
+  const Expr<SubscriptInteger> *GetLower() const {
+    return lower_.has_value() ? &lower_->value() : nullptr;
+  }
   Substring &set_lower(Expr<SubscriptInteger> &&);
   std::optional<Expr<SubscriptInteger>> upper() const;
+  const Expr<SubscriptInteger> *GetUpper() const {
+    return upper_.has_value() ? &upper_->value() : nullptr;
+  }
   Substring &set_upper(Expr<SubscriptInteger> &&);
   const Parent &parent() const { return parent_; }
   Parent &parent() { return parent_; }
