@@ -420,7 +420,6 @@ struct Config {
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
-  StringRef packageMetadata;
   StringRef ld65Path;
   StringRef od65Path;
   StringRef cc65Launcher;

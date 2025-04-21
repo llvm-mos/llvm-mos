@@ -16,7 +16,7 @@ struct Small test_small_struct_param(struct Small s) {
 
 // CHECK-LABEL: @test_large_struct_param(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i16(ptr noundef nonnull align 1 dereferenceable(8) [[AGG_RESULT:%.*]], ptr noundef nonnull align 1 dereferenceable(8) [[S:%.*]], i16 8, i1 false), !tbaa.struct [[TBAA_STRUCT2:![0-9]+]]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i16(ptr noundef nonnull align 1 dereferenceable(8) [[AGG_RESULT:%.*]], ptr noundef nonnull align 1 dereferenceable(8) [[S:%.*]], i16 8, i1 false), !tbaa.struct [[TBAA_STRUCT2:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 struct Large test_large_struct_param(struct Large s) {

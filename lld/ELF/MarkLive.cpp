@@ -363,7 +363,7 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
       auto *defSym = dyn_cast<Defined>(sym);
       if (defSym && defSym->section &&
           (!defSym->file || !isa<XO65File>(defSym->file)))
-        markSymbol(defSym);
+        markSymbol(defSym, "ld65 import");
     }
   }
 
