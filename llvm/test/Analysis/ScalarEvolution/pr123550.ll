@@ -24,9 +24,9 @@ define i32 @test() {
 ; CHECK-NEXT:    %srem.lcssa = phi i32 [ %srem, %loop ]
 ; CHECK-NEXT:    --> %srem U: [0,1073741824) S: [0,1073741824) --> 130 U: [130,131) S: [130,131)
 ; CHECK-NEXT:  Determining loop execution counts for: @test
-; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i2 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i2 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i2 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 bb:

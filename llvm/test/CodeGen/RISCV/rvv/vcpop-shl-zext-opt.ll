@@ -18,59 +18,65 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV32-NEXT:    and a4, a5, a4
 ; RV32-NEXT:    bnez a4, .LBB0_7
 ; RV32-NEXT:  # %bb.3: # %vector.ph
-; RV32-NEXT:    lui a5, 524288
-; RV32-NEXT:    addi a5, a5, -8
-; RV32-NEXT:    and a5, a3, a5
+; RV32-NEXT:    li a5, 0
+; RV32-NEXT:    lui a4, 524288
+; RV32-NEXT:    addi a4, a4, -8
+; RV32-NEXT:    and a4, a3, a4
+; RV32-NEXT:    mv a6, a1
+; RV32-NEXT:    mv t0, a4
 ; RV32-NEXT:    li a7, 0
-; RV32-NEXT:    li a6, 0
 ; RV32-NEXT:  .LBB0_4: # %vector.body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    slli t0, a7, 2
-; RV32-NEXT:    addi t1, a7, 8
-; RV32-NEXT:    add t0, a1, t0
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle32.v v8, (t0)
-; RV32-NEXT:    sltu a7, t1, a7
-; RV32-NEXT:    xor t0, t1, a5
-; RV32-NEXT:    add a6, a6, a7
+; RV32-NEXT:    vle32.v v8, (a6)
+; RV32-NEXT:    addi t1, t0, -8
+; RV32-NEXT:    sltu t0, t1, t0
+; RV32-NEXT:    add a7, a7, t0
+; RV32-NEXT:    addi a7, a7, -1
 ; RV32-NEXT:    vmslt.vx v12, v8, a2
 ; RV32-NEXT:    vcompress.vm v10, v8, v12
-; RV32-NEXT:    vcpop.m a7, v12
-; RV32-NEXT:    vsetvli zero, a7, e32, m2, ta, ma
+; RV32-NEXT:    vcpop.m t0, v12
+; RV32-NEXT:    vsetvli zero, t0, e32, m2, ta, ma
 ; RV32-NEXT:    vse32.v v10, (a0)
-; RV32-NEXT:    slli a7, a7, 2
-; RV32-NEXT:    or t0, t0, a6
-; RV32-NEXT:    add a0, a0, a7
-; RV32-NEXT:    mv a7, t1
-; RV32-NEXT:    bnez t0, .LBB0_4
+; RV32-NEXT:    slli t0, t0, 2
+; RV32-NEXT:    add a0, a0, t0
+; RV32-NEXT:    or t2, t1, a7
+; RV32-NEXT:    addi a6, a6, 32
+; RV32-NEXT:    mv t0, t1
+; RV32-NEXT:    bnez t2, .LBB0_4
 ; RV32-NEXT:  # %bb.5: # %middle.block
-; RV32-NEXT:    bne a5, a3, .LBB0_9
+; RV32-NEXT:    bne a4, a3, .LBB0_8
 ; RV32-NEXT:  .LBB0_6: # %for.cond.cleanup
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB0_7:
-; RV32-NEXT:    li a5, 0
 ; RV32-NEXT:    li a4, 0
-; RV32-NEXT:    j .LBB0_9
-; RV32-NEXT:  .LBB0_8: # %for.inc
-; RV32-NEXT:    # in Loop: Header=BB0_9 Depth=1
-; RV32-NEXT:    addi a5, a5, 1
-; RV32-NEXT:    seqz a6, a5
-; RV32-NEXT:    add a4, a4, a6
-; RV32-NEXT:    xor a6, a5, a3
-; RV32-NEXT:    or a6, a6, a4
-; RV32-NEXT:    beqz a6, .LBB0_6
-; RV32-NEXT:  .LBB0_9: # %for.body
+; RV32-NEXT:    li a5, 0
+; RV32-NEXT:  .LBB0_8: # %for.body.preheader13
+; RV32-NEXT:    sub a6, a3, a4
+; RV32-NEXT:    sltu a3, a3, a4
+; RV32-NEXT:    neg a5, a5
+; RV32-NEXT:    slli a4, a4, 2
+; RV32-NEXT:    sub a3, a5, a3
+; RV32-NEXT:    add a1, a1, a4
+; RV32-NEXT:    j .LBB0_10
+; RV32-NEXT:  .LBB0_9: # %for.inc
+; RV32-NEXT:    # in Loop: Header=BB0_10 Depth=1
+; RV32-NEXT:    seqz a4, a6
+; RV32-NEXT:    sub a3, a3, a4
+; RV32-NEXT:    addi a6, a6, -1
+; RV32-NEXT:    or a4, a6, a3
+; RV32-NEXT:    addi a1, a1, 4
+; RV32-NEXT:    beqz a4, .LBB0_6
+; RV32-NEXT:  .LBB0_10: # %for.body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    slli a6, a5, 2
-; RV32-NEXT:    add a6, a1, a6
-; RV32-NEXT:    lw a6, 0(a6)
-; RV32-NEXT:    bge a6, a2, .LBB0_8
-; RV32-NEXT:  # %bb.10: # %if.then
-; RV32-NEXT:    # in Loop: Header=BB0_9 Depth=1
-; RV32-NEXT:    addi a7, a0, 4
-; RV32-NEXT:    sw a6, 0(a0)
-; RV32-NEXT:    mv a0, a7
-; RV32-NEXT:    j .LBB0_8
+; RV32-NEXT:    lw a4, 0(a1)
+; RV32-NEXT:    bge a4, a2, .LBB0_9
+; RV32-NEXT:  # %bb.11: # %if.then
+; RV32-NEXT:    # in Loop: Header=BB0_10 Depth=1
+; RV32-NEXT:    addi a5, a0, 4
+; RV32-NEXT:    sw a4, 0(a0)
+; RV32-NEXT:    mv a0, a5
+; RV32-NEXT:    j .LBB0_9
 ;
 ; RV64-LABEL: test_store1:
 ; RV64:       # %bb.0: # %entry
