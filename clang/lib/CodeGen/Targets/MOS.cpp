@@ -69,7 +69,7 @@ ABIArgInfo MOSABIInfo::classifyArgumentType(QualType Ty) const {
     // should not be passed by value.
     if (getRecordArgABI(Ty, getCXXABI()) == CGCXXABI::RAA_DirectInMemory ||
         getContext().getTypeSize(Ty) > 32)
-      return getNaturalAlignIndirect(Ty, false);
+      return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*ByVal=*/false);
 
     if (isEmptyRecord(getContext(), Ty, true))
       return ABIArgInfo::getIgnore();
@@ -86,7 +86,8 @@ ABIArgInfo MOSABIInfo::classifyReturnType(QualType RetTy) const {
       return ABIArgInfo::getIgnore();
 
     return getContext().getTypeSize(RetTy) > 32
-               ? getNaturalAlignIndirect(RetTy, false)
+               ? getNaturalAlignIndirect(RetTy, /*AddrSpace=*/0,
+                                         /*ByVal=*/false)
                : ABIArgInfo::getDirect();
   }
   return DefaultABIInfo::classifyReturnType(RetTy);
