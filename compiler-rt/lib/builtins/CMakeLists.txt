@@ -25,9 +25,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(base-config-ix)
   include(CompilerRTUtils)
 
-  if (NOT LLVM_RUNTIMES_BUILD)
-    load_llvm_config()
-  endif()
+  # FIXME (llvm-mos): We don't support shared libraries, so this fails, but
+  # it's also extremely weird that this check uses the MOS target.
+  #if (NOT LLVM_RUNTIMES_BUILD)
+  #load_llvm_config()
+  #endif()
   construct_compiler_rt_default_triple()
 
   include(SetPlatformToolchainTools)
