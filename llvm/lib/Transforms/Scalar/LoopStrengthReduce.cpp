@@ -1305,7 +1305,7 @@ struct UniquifierDenseMapInfo {
   }
 
   static unsigned getHashValue(const SmallVector<const SCEV *, 4> &V) {
-    return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
+    return static_cast<unsigned>(hash_combine_range(V));
   }
 
   static bool isEqual(const SmallVector<const SCEV *, 4> &LHS,
@@ -1552,7 +1552,7 @@ void Cost::RateFormula(const Formula &F,
   NumBaseAdds += (F.UnfoldedOffset.isNonZero());
 
   // Accumulate non-free scaling amounts.
-  C.ScaleCost += *getScalingFactorCost(*TTI, LU, F, *L).getValue();
+  C.ScaleCost += getScalingFactorCost(*TTI, LU, F, *L).getValue();
 
   // Tally up the non-zero immediates.
   for (const LSRFixup &Fixup : LU.Fixups) {

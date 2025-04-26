@@ -307,9 +307,7 @@ void IVUsers::releaseMemory() {
   IVUses.clear();
 }
 
-IVUsersWrapperPass::IVUsersWrapperPass() : LoopPass(ID) {
-  initializeIVUsersWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+IVUsersWrapperPass::IVUsersWrapperPass() : LoopPass(ID) {}
 
 void IVUsersWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AssumptionCacheTracker>();
