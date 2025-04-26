@@ -15,7 +15,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 
 namespace llvm {
-const MCFixupKindInfo &
+MCFixupKindInfo 
 MOSFixupKinds::getFixupKindInfo(const MOS::Fixups Kind,
                                 const MCAsmBackend *Alternative) {
   const static MCFixupKindInfo Infos[MOS::NumTargetFixupKinds] = {

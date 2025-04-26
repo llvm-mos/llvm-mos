@@ -86,7 +86,7 @@ public:
                                     const MCFixup &Fixup, const MCValue &Target,
                                     uint64_t Value,
                                     bool Resolved) const override;
-  MCFixupKindInfo const &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   /// Check whether the given instruction may need relaxation.
   ///
   /// \param Inst - The instruction to test.

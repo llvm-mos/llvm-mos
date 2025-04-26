@@ -126,7 +126,7 @@ MOSTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 MOSTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(MOSTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<MOSTTIImpl>(this, F));
 }
 
 void MOSTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {

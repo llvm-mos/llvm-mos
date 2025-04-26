@@ -284,7 +284,7 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
   return !MOS::isZeroPageSectionName(Sec->getName());
 }
 
-MCFixupKindInfo const &MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind) {
     return MCAsmBackend::getFixupKindInfo(Kind);
   }

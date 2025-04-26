@@ -457,7 +457,7 @@ public:
                              bool HasBaseReg, Type *BaseType, int64_t Scale,
                              Type *ScaleType, unsigned AddrSpace,
                              Instruction *I = nullptr,
-                             int64_t ScalableOffset = 0) {
+                             int64_t ScalableOffset = 0) const override {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;

@@ -349,10 +349,9 @@ bool MOSZeroPageAlloc::runOnModule(Module &M) {
           M, Cand->GV->getValueType(), Cand->GV->isConstant(),
           Cand->GV->getLinkage(), Cand->GV->getInitializer());
       Cand->GV->replaceAllUsesWith(Tmp);
-      Cand->GV->mutateType(
-          PointerType::get(Cand->GV->getValueType(), MOS::AS_ZeroPage));
+      Cand->GV->mutateType(PointerType::get(M.getContext(), MOS::AS_ZeroPage));
       Tmp->replaceAllUsesWith(ConstantExpr::getAddrSpaceCast(
-          Cand->GV, PointerType::get(Cand->GV->getValueType(), 0)));
+          Cand->GV, PointerType::get(M.getContext(), 0)));
       Tmp->eraseFromParent();
       LLVM_DEBUG(dbgs() << "  " << *Cand->GV << '\n');
     } else {

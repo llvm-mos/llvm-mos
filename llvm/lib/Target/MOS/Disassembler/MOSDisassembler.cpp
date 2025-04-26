@@ -99,7 +99,7 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
 
 #include "MOSGenDisassemblerTables.inc"
 
-std::optional<const uint8_t *> getDecoderTable(size_t Size) {
+const uint8_t * getDecoderTable(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTableMOS8;
@@ -108,42 +108,42 @@ std::optional<const uint8_t *> getDecoderTable(size_t Size) {
   case 3:
     return DecoderTableMOS24;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTable6502X(size_t Size) {
+const uint8_t * getDecoderTable6502X(size_t Size) {
   switch (Size) {
   case 2:
     return DecoderTable6502x16;
   case 3:
     return DecoderTable6502x24;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTable65DTV02(size_t Size) {
+const uint8_t * getDecoderTable65DTV02(size_t Size) {
   switch (Size) {
   case 2:
     return DecoderTable65dtv0216;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTableR65C02(size_t Size) {
+const uint8_t * getDecoderTableR65C02(size_t Size) {
   switch (Size) {
   case 2:
     return DecoderTabler65c0216;
   case 3:
     return DecoderTabler65c0224;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTable65CE02(size_t Size) {
+const uint8_t * getDecoderTable65CE02(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTable65ce028;
@@ -152,11 +152,11 @@ std::optional<const uint8_t *> getDecoderTable65CE02(size_t Size) {
   case 3:
     return DecoderTable65ce0224;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTable45GS02(size_t Size) {
+const uint8_t * getDecoderTable45GS02(size_t Size) {
   switch (Size) {
   case 3:
     return DecoderTable45gs0224;
@@ -165,11 +165,11 @@ std::optional<const uint8_t *> getDecoderTable45GS02(size_t Size) {
   case 5:
     return DecoderTable45gs0240;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTableHUC6280(size_t Size) {
+const uint8_t * getDecoderTableHUC6280(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTablehuc62808;
@@ -182,11 +182,11 @@ std::optional<const uint8_t *> getDecoderTableHUC6280(size_t Size) {
   case 7:
     return DecoderTablehuc628056;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTableW65816(size_t Size) {
+const uint8_t * getDecoderTableW65816(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTablew658168;
@@ -197,11 +197,11 @@ std::optional<const uint8_t *> getDecoderTableW65816(size_t Size) {
   case 4:
     return DecoderTablew6581632;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTable65EL02(size_t Size) {
+const uint8_t * getDecoderTable65EL02(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTable65el028;
@@ -210,11 +210,11 @@ std::optional<const uint8_t *> getDecoderTable65EL02(size_t Size) {
   case 3:
     return DecoderTable65el0224;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
-std::optional<const uint8_t *> getDecoderTableSPC700(size_t Size) {
+const uint8_t * getDecoderTableSPC700(size_t Size) {
   switch (Size) {
   case 1:
     return DecoderTablespc7008;
@@ -223,7 +223,7 @@ std::optional<const uint8_t *> getDecoderTableSPC700(size_t Size) {
   case 3:
     return DecoderTablespc70024;
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected instruction size");
   }
 }
 
