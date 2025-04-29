@@ -2671,7 +2671,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                        TimerGroupDescription, TimePassesIsEnabled);
     LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-    spiller().spill(LRE);
+    spiller().spill(LRE, &Order);
     ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
     for (Register VReg : NewVRegs)
       LIS->getInterval(VReg).markNotSpillable();
@@ -2917,8 +2917,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   PriorityAdvisor = PriorityProvider->getAdvisor(*MF, *this, *Indexes);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
-  SpillerInstance.reset(
-      createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF, *VRM, *VRAI));
+  SpillerInstance.reset(createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF,
+                                            *VRM, *VRAI, Matrix));
 
   VRAI->calculateSpillWeightsAndHints();
 
