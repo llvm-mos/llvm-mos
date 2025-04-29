@@ -1980,8 +1980,7 @@ static std::optional<int> compareOperandLocations(const MachineOperand &A,
   if (A.isImm() && B.isImm())
     return compareNumbers(A.getImm(), B.getImm());
   if (A.isGlobal() && B.isGlobal())
-    if (A.getGlobal()->getGlobalIdentifier() ==
-        B.getGlobal()->getGlobalIdentifier())
+    if (A.getGlobal() == B.getGlobal())
       return compareNumbers(A.getOffset(), B.getOffset());
   return std::nullopt;
 }
