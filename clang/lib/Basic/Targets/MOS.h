@@ -64,6 +64,8 @@ public:
   bool setCPU(const std::string &Name) override;
 
   bool hasBitIntType() const override { return true; }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 };
 
 } // namespace targets
