@@ -1460,7 +1460,6 @@ bool ArchSpec::IsFullySpecifiedTriple() const {
 }
 
 bool ArchSpec::IsAlwaysThumbInstructions() const {
-  std::string Status;
   if (GetTriple().getArch() == llvm::Triple::arm ||
       GetTriple().getArch() == llvm::Triple::thumb) {
     // v. https://en.wikipedia.org/wiki/ARM_Cortex-M

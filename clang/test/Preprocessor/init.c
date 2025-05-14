@@ -3131,6 +3131,7 @@
 // MOS: #define __WINT_WIDTH__ 32
 
 // RUN: %clang_cc1 -dM -triple=x86_64-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
+// RUN: %clang_cc1 -dM -triple=x86_64-unknown-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
 
 // UEFI: #define __UEFI__ 1
 
