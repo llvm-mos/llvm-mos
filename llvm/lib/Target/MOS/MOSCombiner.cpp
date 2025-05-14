@@ -739,8 +739,8 @@ void MOSCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysis>();
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
@@ -777,7 +777,7 @@ bool MOSCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   bool IsPreLegalize = !MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::Legalized);
-  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AAResults *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -793,7 +793,7 @@ char MOSCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(MOSCombiner, DEBUG_TYPE, "Combine MOS machine instrs",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(MOSCombiner, DEBUG_TYPE, "Combine MOS machine instrs",
                     false, false)
 
