@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MOSELFObjectWriter.h"
+
 #include "MCTargetDesc/MOSFixupKinds.h"
 #include "MCTargetDesc/MOSMCExpr.h"
 #include "MCTargetDesc/MOSMCTargetDesc.h"
@@ -22,20 +24,11 @@
 
 namespace llvm {
 
-/// Writes MOS machine code into an ELF32 object file.
-class MOSELFObjectWriter : public MCELFObjectTargetWriter {
-public:
-  explicit MOSELFObjectWriter(uint8_t OSABI);
-
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
-};
-
 MOSELFObjectWriter::MOSELFObjectWriter(uint8_t OSABI)
     : MCELFObjectTargetWriter(false, OSABI, ELF::EM_MOS, true) {}
 
-unsigned MOSELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned MOSELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
   unsigned Kind = Fixup.getTargetKind();
   auto Specifier = static_cast<MOSMCExpr::VariantKind>(Target.getSpecifier());

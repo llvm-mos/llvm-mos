@@ -23,12 +23,9 @@ namespace llvm {
 class MOSELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   explicit MOSELFObjectWriter(uint8_t OSABI);
-  virtual ~MOSELFObjectWriter();
-  unsigned getRelocType(MCContext &Ctx,
-                        const MCValue &Target,
-                        const MCFixup &Fixup,
+  virtual ~MOSELFObjectWriter() = default;
+  unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
                         bool IsPCRel) const override;
 };
 
 } // end of namespace llvm
-

@@ -39,8 +39,8 @@ public:
 
   ~MOSObjectTargetWriter() override { val = 0; }
 
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override {
+  unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                        bool IsPCRel) const override {
     return 0;
   }
 
@@ -66,10 +66,9 @@ public:
   /// reported via \p Ctx.
   /// The  \p STI is present only for fragments of type MCRelaxableFragment and
   /// MCDataFragment with hasInstructions() == true.
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  void applyFixup(const MCFragment &F, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+                  uint64_t Value, bool IsResolved) override;
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                            const MCFragment *DF, const MCValue &Target,
@@ -82,8 +81,7 @@ public:
   /// Carefully determine whether the instruction in question requires
   /// relaxation.  This implementation considers the fixup as well as
   /// the section that the symbol points to.
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &ASM,
-                                    const MCFixup &Fixup, const MCValue &Target,
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &Target,
                                     uint64_t Value,
                                     bool Resolved) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;

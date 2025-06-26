@@ -9,19 +9,19 @@ declare dso_local void @ext(ptr noundef) nocallback
 ; CHECK-NEXT:    .zero	29
 ; CHECK-NEXT:    .size	.Lstatic_stack, 29
 
-; CHECK-LABEL: .set .Lleaf1_sstk, .Lstatic_stack
+; CHECK-LABEL: .Lleaf1_sstk = .Lstatic_stack
 ; CHECK-NEXT:    .size	.Lleaf1_sstk, 10
-; CHECK-LABEL: .set .Lleaf2_sstk, .Lstatic_stack
+; CHECK-LABEL: .Lleaf2_sstk = .Lstatic_stack
 ; CHECK-NEXT:    .size	.Lleaf2_sstk, 1
-; CHECK-LABEL: .set .Lpath_leaf_sstk, .Lstatic_stack+10
+; CHECK-LABEL: .Lpath_leaf_sstk = .Lstatic_stack+10
 ; CHECK-NEXT:    .size	.Lpath_leaf_sstk, 1
-; CHECK-LABEL: .set .Lpath_root_sstk, .Lstatic_stack
+; CHECK-LABEL: .Lpath_root_sstk = .Lstatic_stack
 ; CHECK-NEXT:    .size	.Lpath_root_sstk, 10
-; CHECK-LABEL: .set .Lrecur_leaf_sstk, .Lstatic_stack+1
+; CHECK-LABEL: .Lrecur_leaf_sstk = .Lstatic_stack+1
 ; CHECK-NEXT:    .size	.Lrecur_leaf_sstk, 4
-; CHECK-LABEL: .set .Lrecur_root_sstk, .Lstatic_stack
+; CHECK-LABEL: .Lrecur_root_sstk = .Lstatic_stack
 ; CHECK-NEXT:    .size	.Lrecur_root_sstk, 1
-; CHECK-LABEL: .set .Linr_sstk, .Lstatic_stack+11
+; CHECK-LABEL: .Linr_sstk = .Lstatic_stack+11
 ; CHECK-NEXT:    .size	.Linr_sstk, 18
 
 define void @leaf1() {

@@ -300,17 +300,17 @@ entry:
 ; CHECK-LABEL: .Lstatic_stack:
 ; CHECK-NEXT:  	.zero	17
 
-; CHECK-LABEL: .set .Lfoo_zp_stk, .Lzp_stack+2
+; CHECK-LABEL: .Lfoo_zp_stk = .Lzp_stack+2
 ; CHECK-NEXT:  	.size	.Lfoo_zp_stk, 8
-; CHECK-NEXT:  .set .Lcsr_zp_stk, .Lzp_stack+2
+; CHECK-NEXT:  .Lcsr_zp_stk = .Lzp_stack+2
 ; CHECK-NEXT:  	.size	.Lcsr_zp_stk, 2
-; CHECK-NEXT:  .set .Lalloca_zp_stk, .Lzp_stack+2
+; CHECK-NEXT:  .Lalloca_zp_stk = .Lzp_stack+2
 ; CHECK-NEXT:  	.size	.Lalloca_zp_stk, 1
-; CHECK-NEXT:  .set .Linr_zp_stk, .Lzp_stack+12
+; CHECK-NEXT:  .Linr_zp_stk = .Lzp_stack+12
 ; CHECK-NEXT:  	.size	.Linr_zp_stk, 1
-; CHECK-NEXT:  .set .Lapparent_recursion_callee_zp_stk, .Lzp_stack
+; CHECK-NEXT:  .Lapparent_recursion_callee_zp_stk = .Lzp_stack
 ; CHECK-NEXT:  	.size	.Lapparent_recursion_callee_zp_stk, 2
-; CHECK-NEXT:  .set .Lapparent_recursion_zp_stk, .Lzp_stack
+; CHECK-NEXT:  .Lapparent_recursion_zp_stk = .Lzp_stack
 ; CHECK-NEXT:  	.size	.Lapparent_recursion_zp_stk, 2
-; CHECK-NEXT:  .set .Linr_sstk, .Lstatic_stack
+; CHECK-NEXT:  .Linr_sstk = .Lstatic_stack
 ; CHECK-NEXT:  	.size	.Linr_sstk, 17

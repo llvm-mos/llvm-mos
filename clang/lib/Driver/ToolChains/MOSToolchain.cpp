@@ -8,8 +8,7 @@
 
 #include "MOSToolchain.h"
 
-#include "CommonArgs.h"
-
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -137,7 +136,7 @@ void mos::Linker::AddLTOOptions(const toolchains::MOSToolChain &TC, const ArgLis
                                 const InputInfoList &Inputs,
                                 ArgStringList &CmdArgs) const {
   assert(!Inputs.empty() && "Must have at least one input.");
-  addLTOOptions(TC, Args, CmdArgs, Output, Inputs[0],
+  addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
                 TC.getDriver().getLTOMode() == LTOK_Thin);
   addMOSCodeGenArgs(CmdArgs);
   unsigned ZPBytes = 0;

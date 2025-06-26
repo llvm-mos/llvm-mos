@@ -75,11 +75,10 @@ MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
   return new MOSAsmBackend(STI.getTargetTriple().getOS());
 }
 
-void MOSAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void MOSAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
+                               bool IsResolved) {
   unsigned int Kind = Fixup.getKind();
   uint32_t Offset = Fixup.getOffset();
 
@@ -158,9 +157,9 @@ static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
          SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
 }
 
-bool MOSAsmBackend::evaluateTargetFixup(
-    const MCAssembler &Asm, const MCFixup &Fixup, const MCFragment *DF,
-    const MCValue &Target, const MCSubtargetInfo *STI, uint64_t &Value) {
+bool MOSAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
+                                        const MCValue &Target,
+                                        uint64_t &Value) {
   // ForcePCRelReloc is a CLI option to force relocation emit, primarily for
   // testing R_MOS_PCREL_*.
   bool WasForced = ForcePCRelReloc;
@@ -228,8 +227,7 @@ bool isBasedOnZeroPageSymbol(const MCExpr *E) {
   llvm_unreachable("Invalid assembly expression kind!");
 }
 
-bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                                 const MCFixup &Fixup,
+bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  const MCValue &Target,
                                                  uint64_t Value,
                                                  bool Resolved) const {
