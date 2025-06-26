@@ -21,7 +21,6 @@ namespace llvm {
 
 void initializeMOSCombinerPass(PassRegistry &);
 void initializeMOSCopyOptPass(PassRegistry &);
-void initializeMOSIncDecPhiPass(PassRegistry &);
 void initializeMOSIndexIVPass(PassRegistry &);
 void initializeMOSInsertCopiesPass(PassRegistry &);
 void initializeMOSInternalizePass(PassRegistry &);
