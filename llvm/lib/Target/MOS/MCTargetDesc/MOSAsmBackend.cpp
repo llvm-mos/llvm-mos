@@ -69,82 +69,21 @@ struct MOSSPC700Entry {
 #include "MOSGenSearchableTables.inc"
 } // namespace MOS
 
+static cl::opt<bool> ForcePCRelReloc(
+    "mos-force-pcrel-reloc",
+    cl::desc("Force relocation entries to be emitted for PCREL fixups."),
+    cl::init(false), cl::Hidden);
+
 MCAsmBackend *createMOSAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                   const MCRegisterInfo &MRI,
                                   const llvm::MCTargetOptions &TO) {
   return new MOSAsmBackend(STI.getTargetTriple().getOS());
 }
 
-void MOSAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
-  unsigned int Kind = Fixup.getKind();
-  uint32_t Offset = Fixup.getOffset();
-
-  if (Kind == MOS::AddrAsciz) {
-    std::string ValueStr = utostr(Value);
-    assert(((ValueStr.size() + 1 + Offset) <= Data.size()) &&
-           "Invalid offset within MOS instruction for modifier!");
-    std::copy(ValueStr.begin(), ValueStr.end(), Data.begin() + Offset);
-    Data[Offset + ValueStr.size()] = '\0';
-    return;
-  }
-
-  unsigned int Bytes = 0;
-  switch (Kind) {
-  case MOS::Imm8:
-  case MOS::Addr8:
-  case MOS::Addr16_High:
-  case MOS::Addr16_Low:
-  case MOS::Addr24_Bank:
-  case MOS::Addr24_Segment_Low:
-  case MOS::Addr24_Segment_High:
-  case MOS::PCRel8:
-  case FK_Data_1:
-    Bytes = 1;
-    break;
-  case FK_Data_2:
-  case MOS::Imm16:
-  case MOS::Addr13:
-  case MOS::Addr16:
-  case MOS::Addr24_Segment:
-  case MOS::PCRel16:
-    Bytes = 2;
-    break;
-  case MOS::Addr24:
-    Bytes = 3;
-    break;
-  case FK_Data_4:
-    Bytes = 4;
-    break;
-  case FK_Data_8:
-    Bytes = 8;
-    break;
-  default:
-    llvm_unreachable("unknown fixup kind");
-    return;
-  }
-
-  assert(((Bytes + Offset) <= Data.size()) &&
-         "Invalid offset within MOS instruction for modifier!");
-  char *RangeStart = Data.begin() + Offset;
-
-  for (char &Out : make_range(RangeStart, RangeStart + Bytes)) {
-    Out = Value & 0xff;
-    Value = Value >> 8;
-  }
-}
-
 bool MOSAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
                                          uint64_t Value) const {
   return true;
 }
-
-static cl::opt<bool> ForcePCRelReloc(
-    "mos-force-pcrel-reloc",
-    cl::desc("Force relocation entries to be emitted for PCREL fixups."),
-    cl::init(false), cl::Hidden);
 
 static int getRelativeMOSPCCorrection(const bool IsPCRel16) {
   // MOS's PC relative addressing is off by one or two from the standard LLVM
@@ -155,50 +94,6 @@ static int getRelativeMOSPCCorrection(const bool IsPCRel16) {
 static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
   return SignedValue >= (IsPCRel16 ? INT16_MIN : INT8_MIN) &&
          SignedValue <= (IsPCRel16 ? INT16_MAX : INT8_MAX);
-}
-
-bool MOSAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
-                                        const MCValue &Target,
-                                        uint64_t &Value) {
-  // ForcePCRelReloc is a CLI option to force relocation emit, primarily for
-  // testing R_MOS_PCREL_*.
-  bool WasForced = ForcePCRelReloc;
-
-  const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
-  assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
-         "unexpected target fixup kind");
-
-  // Logic taken from MCAssembler::evaluateFixup.
-  bool IsResolved = false;
-  if (Target.getSubSym()) {
-    IsResolved = false;
-  } else if (!Target.getAddSym()) {
-    IsResolved = false;
-  } else {
-    const MCSymbol &SA = *Target.getAddSym();
-    if (SA.isUndefined()) {
-      IsResolved = false;
-    } else {
-      IsResolved = Asm.getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-          Asm, SA, *DF, false, true);
-    }
-  }
-
-  Value = Target.getConstant();
-
-  if (const MCSymbol *A = Target.getAddSym()) {
-    if (A->isDefined())
-      Value += Asm.getSymbolOffset(*A);
-  }
-  if (const MCSymbol *B = Target.getSubSym()) {
-    if (B->isDefined())
-      Value -= Asm.getSymbolOffset(*B);
-  }
-
-  Value -= Asm.getFragmentOffset(*DF) + Fixup.getOffset();
-  Value += getRelativeMOSPCCorrection(IsPCRel16);
-
-  return IsResolved && !WasForced && fitsIntoFixup(Value, IsPCRel16);
 }
 
 // Derived from findAssociatedFragment.
@@ -250,9 +145,13 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
     return true;
 
   if (Info.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+    const bool IsPCRel16 = Fixup.getKind() == (MCFixupKind)MOS::PCRel16;
+    assert((IsPCRel16 || Fixup.getKind() == (MCFixupKind)MOS::PCRel8) &&
+           "unexpected target fixup kind");
     // This fixup concerns a relative branch.
     // If the fixup is unresolved, we can't know if relaxation is needed.
-    return !Resolved || !fitsIntoFixup(Value, false);
+    return !Resolved ||
+           !fitsIntoFixup(Value + getRelativeMOSPCCorrection(IsPCRel16), false);
   }
 
   // See if the expression is derived from a zero page symbol.
@@ -288,6 +187,81 @@ MCFixupKindInfo MOSAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   }
 
   return MOSFixupKinds::getFixupKindInfo(static_cast<MOS::Fixups>(Kind), this);
+}
+
+bool MOSAsmBackend::shouldForceRelocation(const MCFixup &F, const MCValue &V) {
+  if (!ForcePCRelReloc)
+    return false;
+  return getFixupKindInfo(F.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel;
+}
+
+void MOSAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data, uint64_t Value,
+                               bool IsResolved) {
+  unsigned int Kind = Fixup.getKind();
+  uint32_t Offset = Fixup.getOffset();
+
+  switch (Kind) {
+  case MOS::AddrAsciz: {
+    std::string ValueStr = utostr(Value);
+    assert(((ValueStr.size() + 1 + Offset) <= Data.size()) &&
+           "Invalid offset within MOS instruction for modifier!");
+    std::copy(ValueStr.begin(), ValueStr.end(), Data.begin() + Offset);
+    Data[Offset + ValueStr.size()] = '\0';
+    return;
+  }
+  case MOS::PCRel8:
+  case MOS::PCRel16:
+    Value += getRelativeMOSPCCorrection(Kind == MOS::PCRel16);;
+    break;
+  default:
+    break;
+  }
+
+  unsigned int Bytes = 0;
+  switch (Kind) {
+  case MOS::Imm8:
+  case MOS::Addr8:
+  case MOS::Addr16_High:
+  case MOS::Addr16_Low:
+  case MOS::Addr24_Bank:
+  case MOS::Addr24_Segment_Low:
+  case MOS::Addr24_Segment_High:
+  case MOS::PCRel8:
+  case FK_Data_1:
+    Bytes = 1;
+    break;
+  case FK_Data_2:
+  case MOS::Imm16:
+  case MOS::Addr13:
+  case MOS::Addr16:
+  case MOS::Addr24_Segment:
+  case MOS::PCRel16:
+    Bytes = 2;
+    break;
+  case MOS::Addr24:
+    Bytes = 3;
+    break;
+  case FK_Data_4:
+    Bytes = 4;
+    break;
+  case FK_Data_8:
+    Bytes = 8;
+    break;
+  default:
+    llvm_unreachable("unknown fixup kind");
+    return;
+  }
+
+  assert(((Bytes + Offset) <= Data.size()) &&
+         "Invalid offset within MOS instruction for modifier!");
+  char *RangeStart = Data.begin() + Offset;
+
+  for (char &Out : make_range(RangeStart, RangeStart + Bytes)) {
+    Out = Value & 0xff;
+    Value = Value >> 8;
+  }
 }
 
 unsigned MOSAsmBackend::relaxInstructionTo(const MCInst &Inst,
