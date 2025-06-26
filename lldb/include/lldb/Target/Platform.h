@@ -21,6 +21,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
@@ -452,22 +453,6 @@ public:
   ///          (e.g., a public and internal SDK).
   virtual llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
-
-  /// Returns the full path of the most appropriate SDK for the
-  /// specified 'module'. This function gets this path by parsing
-  /// debug-info (see \ref `GetSDKPathFromDebugInfo`).
-  ///
-  /// \param[in] module Module whose debug-info to parse for
-  ///                   which SDK it was compiled against.
-  ///
-  /// \returns If successful, returns the full path to an
-  ///          Xcode SDK.
-  virtual llvm::Expected<std::string>
-  ResolveSDKPathFromDebugInfo(Module &module) {
     return llvm::createStringError(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
@@ -959,6 +944,8 @@ public:
   }
 
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
+
+  virtual lldb::StopInfoSP GetStopInfoFromSiginfo(Thread &thread) { return {}; }
 
   virtual Args GetExtraStartupCommands();
 

@@ -35,8 +35,7 @@ CallGraph::CallGraph(Module &M)
       CallsExternalNode(std::make_unique<CallGraphNode>(this, nullptr)) {
   // Add every interesting function to the call graph.
   for (Function &F : M)
-    if (!isDbgInfoIntrinsic(F.getIntrinsicID()))
-      addToCallGraph(&F);
+    addToCallGraph(&F);
 }
 
 CallGraph::CallGraph(CallGraph &&Arg)
@@ -104,8 +103,9 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
         if (!Callee) {
           if (!Call->hasFnAttr(Attribute::NoCallback))
             Node->addCalledFunction(Call, CallsExternalNode.get());
-        } else if (!isDbgInfoIntrinsic(Callee->getIntrinsicID()))
+        } else {
           Node->addCalledFunction(Call, getOrInsertFunction(Callee));
+        }
 
         // Add reference to callback functions or the external node if the
         // callback is indirect.

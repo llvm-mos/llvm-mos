@@ -33,11 +33,7 @@
 ; CHECK-DAG:    st.param.b8  [param0+3], [[P2_1_or]];
 ; CHECK-DAG:    st.param.b8  [param0+4], [[P2_1]];
 ; CHECK:        .param .align 8 .b8 retval0[16];
-; CHECK-NEXT:   call.uni (retval0),
-; CHECK-NEXT:   test_s_i8i16p,
-; CHECK-NEXT:   (
-; CHECK-NEXT:   param0
-; CHECK-NEXT:   );
+; CHECK-NEXT:   call.uni (retval0), test_s_i8i16p, (param0);
 ; CHECK-DAG:    ld.param.b16 [[R0:%rs[0-9]+]],   [retval0];
 ; CHECK-DAG:    ld.param.b8  [[R2_0:%rs[0-9]+]], [retval0+3];
 ; CHECK-DAG:    ld.param.b8  [[R2_1:%rs[0-9]+]], [retval0+4];
@@ -80,11 +76,7 @@ define %s_i8i16p @test_s_i8i16p(%s_i8i16p %a) {
 ; CHECK-DAG:    st.param.b8  [param0+7], [[P2_2_shr]];
 ; CHECK-DAG:    st.param.b8  [param0+8], [[P2_3]];
 ; CHECK:        .param .align 8 .b8 retval0[24];
-; CHECK-NEXT:   call.uni (retval0),
-; CHECK-NEXT:   test_s_i8i32p,
-; CHECK-NEXT:   (
-; CHECK-NEXT:   param0
-; CHECK-NEXT:   );
+; CHECK-NEXT:   call.uni (retval0), test_s_i8i32p, (param0);
 ; CHECK-DAG:    ld.param.b32 [[R0:%r[0-9]+]],   [retval0];
 ; CHECK-DAG:    ld.param.b8  [[R2_0:%rs[0-9]+]], [retval0+5];
 ; CHECK-DAG:    ld.param.b8  [[R2_1:%rs[0-9]+]], [retval0+6];
@@ -147,11 +139,7 @@ define %s_i8i32p @test_s_i8i32p(%s_i8i32p %a) {
 ; CHECK-DAG:    st.param.b8  [param0+15], [[P2_bfe_5]];
 ; CHECK-DAG:    st.param.b8  [param0+16], [[P2_bfe_6]];
 ; CHECK:        .param .align 8 .b8 retval0[32];
-; CHECK-NEXT:   call.uni (retval0),
-; CHECK-NEXT:   test_s_i8i64p,
-; CHECK-NEXT:   (
-; CHECK-NEXT:   param0
-; CHECK-NEXT:   );
+; CHECK-NEXT:   call.uni (retval0), test_s_i8i64p, (param0);
 ; CHECK-DAG:    ld.param.b64 [[R0:%rd[0-9]+]],   [retval0];
 ; CHECK-DAG:    ld.param.b8  [[R2_0:%rs[0-9]+]], [retval0+9];
 ; CHECK-DAG:    ld.param.b8  [[R2_1:%rs[0-9]+]], [retval0+10];
@@ -192,11 +180,7 @@ define %s_i8i64p @test_s_i8i64p(%s_i8i64p %a) {
 ; CHECK-DAG:    st.param.b8  [param0+3], [[P2_1_or]];
 ; CHECK-DAG:    st.param.b8  [param0+4], [[P2_1]];
 ; CHECK:        .param .align 8 .b8 retval0[16];
-; CHECK-NEXT:   call.uni (retval0),
-; CHECK-NEXT:   test_s_i8f16p,
-; CHECK-NEXT:   (
-; CHECK-NEXT:   param0
-; CHECK-NEXT:   );
+; CHECK-NEXT:   call.uni (retval0), test_s_i8f16p, (param0);
 ; CHECK-DAG:    ld.param.b16 [[R0:%rs[0-9]+]],     [retval0];
 ; CHECK-DAG:    ld.param.b8  [[R2I_0:%rs[0-9]+]], [retval0+3];
 ; CHECK-DAG:    ld.param.b8  [[R2I_1:%rs[0-9]+]], [retval0+4];
@@ -239,11 +223,7 @@ define %s_i8f16p @test_s_i8f16p(%s_i8f16p %a) {
 ; CHECK-DAG:    st.param.b8  [param0+7], [[P2_2_shr]];
 ; CHECK-DAG:    st.param.b8  [param0+8], [[P2_3]];
 ; CHECK:        .param .align 8 .b8 retval0[24];
-; CHECK-NEXT:   call.uni (retval0),
-; CHECK-NEXT:   test_s_i8f16x2p,
-; CHECK-NEXT:   (
-; CHECK-NEXT:   param0
-; CHECK-NEXT:   );
+; CHECK-NEXT:   call.uni (retval0), test_s_i8f16x2p, (param0);
 ; CHECK-DAG:    ld.param.b32 [[R0:%r[0-9]+]],   [retval0];
 ; CHECK-DAG:    ld.param.b8  [[R2_0:%rs[0-9]+]], [retval0+5];
 ; CHECK-DAG:    ld.param.b8  [[R2_1:%rs[0-9]+]], [retval0+6];
@@ -265,7 +245,7 @@ define %s_i8f16x2p @test_s_i8f16x2p(%s_i8f16x2p %a) {
 ; CHECK:       .visible .func (.param .align 8 .b8 func_retval0[24])
 ; CHECK-LABEL: test_s_i8f32p(
 ; CHECK:        .param .align 8 .b8 test_s_i8f32p_param_0[24]
-; CHECK-DAG:    ld.param.b32 [[P0:%f[0-9]+]],    [test_s_i8f32p_param_0];
+; CHECK-DAG:    ld.param.b32 [[P0:%r[0-9]+]],    [test_s_i8f32p_param_0];
 ; CHECK-DAG:    ld.param.b8  [[P2_0:%r[0-9]+]],   [test_s_i8f32p_param_0+5];
 ; CHECK-DAG:    ld.param.b8  [[P2_1:%r[0-9]+]],   [test_s_i8f32p_param_0+6];
 ; CHECK-DAG:    ld.param.b8  [[P2_2:%r[0-9]+]],   [test_s_i8f32p_param_0+7];
@@ -286,12 +266,8 @@ define %s_i8f16x2p @test_s_i8f16x2p(%s_i8f16x2p %a) {
 ; CHECK-DAG:    st.param.b8  [param0+7], [[P2_2_shr]];
 ; CHECK-DAG:    st.param.b8  [param0+8], [[P2_3]];
 ; CHECK:        .param .align 8 .b8 retval0[24];
-; CHECK-NEXT:   call.uni (retval0),
-; CHECK-NEXT:   test_s_i8f32p,
-; CHECK-NEXT:   (
-; CHECK-NEXT:   param0
-; CHECK-NEXT:   );
-; CHECK-DAG:    ld.param.b32 [[R0:%f[0-9]+]],    [retval0];
+; CHECK-NEXT:   call.uni (retval0), test_s_i8f32p, (param0);
+; CHECK-DAG:    ld.param.b32 [[R0:%r[0-9]+]],    [retval0];
 ; CHECK-DAG:    ld.param.b8  [[R2_0:%rs[0-9]+]], [retval0+5];
 ; CHECK-DAG:    ld.param.b8  [[R2_1:%rs[0-9]+]], [retval0+6];
 ; CHECK-DAG:    ld.param.b8  [[R2_2:%rs[0-9]+]], [retval0+7];
@@ -312,7 +288,7 @@ define %s_i8f32p @test_s_i8f32p(%s_i8f32p %a) {
 ; CHECK:       .visible .func (.param .align 8 .b8 func_retval0[32])
 ; CHECK-LABEL: test_s_i8f64p(
 ; CHECK:        .param .align 8 .b8 test_s_i8f64p_param_0[32]
-; CHECK-DAG:    ld.param.b64 [[P0:%fd[0-9]+]],    [test_s_i8f64p_param_0];
+; CHECK-DAG:    ld.param.b64 [[P0:%rd[0-9]+]],    [test_s_i8f64p_param_0];
 ; CHECK-DAG:    ld.param.b8  [[P2_0:%rd[0-9]+]],   [test_s_i8f64p_param_0+9];
 ; CHECK-DAG:    ld.param.b8  [[P2_1:%rd[0-9]+]],   [test_s_i8f64p_param_0+10];
 ; CHECK-DAG:    ld.param.b8  [[P2_2:%rd[0-9]+]],   [test_s_i8f64p_param_0+11];
@@ -353,12 +329,8 @@ define %s_i8f32p @test_s_i8f32p(%s_i8f32p %a) {
 ; CHECK-DAG:    st.param.b8  [param0+15], [[P2_bfe_5]];
 ; CHECK-DAG:    st.param.b8  [param0+16], [[P2_bfe_6]];
 ; CHECK:        .param .align 8 .b8 retval0[32];
-; CHECK-NEXT:   call.uni (retval0),
-; CHECK-NEXT:   test_s_i8f64p,
-; CHECK-NEXT:   (
-; CHECK-NEXT:   param0
-; CHECK-NEXT:   );
-; CHECK-DAG:    ld.param.b64 [[R0:%fd[0-9]+]],   [retval0];
+; CHECK-NEXT:   call.uni (retval0), test_s_i8f64p, (param0);
+; CHECK-DAG:    ld.param.b64 [[R0:%rd[0-9]+]],   [retval0];
 ; CHECK-DAG:    ld.param.b8  [[R2_0:%rs[0-9]+]], [retval0+9];
 ; CHECK-DAG:    ld.param.b8  [[R2_1:%rs[0-9]+]], [retval0+10];
 ; CHECK-DAG:    ld.param.b8  [[R2_2:%rs[0-9]+]], [retval0+11];

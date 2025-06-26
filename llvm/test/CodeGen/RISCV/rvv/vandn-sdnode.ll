@@ -2239,43 +2239,52 @@ declare i64 @llvm.vscale.i64()
 define void @vand_vx_loop_hoisted_not(ptr %a, i32 noundef signext %mask) {
 ; CHECK-RV32-LABEL: vand_vx_loop_hoisted_not:
 ; CHECK-RV32:       # %bb.0: # %entry
-; CHECK-RV32-NEXT:    csrr a5, vlenb
-; CHECK-RV32-NEXT:    srli a3, a5, 3
-; CHECK-RV32-NEXT:    li a2, 64
+; CHECK-RV32-NEXT:    csrr a4, vlenb
+; CHECK-RV32-NEXT:    srli a2, a4, 3
+; CHECK-RV32-NEXT:    li a3, 64
 ; CHECK-RV32-NEXT:    not a1, a1
-; CHECK-RV32-NEXT:    bltu a2, a3, .LBB98_4
-; CHECK-RV32-NEXT:  # %bb.1: # %vector.ph
+; CHECK-RV32-NEXT:    bgeu a3, a2, .LBB98_2
+; CHECK-RV32-NEXT:  # %bb.1:
+; CHECK-RV32-NEXT:    li a3, 0
 ; CHECK-RV32-NEXT:    li a2, 0
-; CHECK-RV32-NEXT:    slli a3, a3, 2
-; CHECK-RV32-NEXT:    neg a3, a3
+; CHECK-RV32-NEXT:    j .LBB98_5
+; CHECK-RV32-NEXT:  .LBB98_2: # %vector.ph
+; CHECK-RV32-NEXT:    li a2, 0
+; CHECK-RV32-NEXT:    srli a4, a4, 1
+; CHECK-RV32-NEXT:    neg a3, a4
 ; CHECK-RV32-NEXT:    andi a3, a3, 256
-; CHECK-RV32-NEXT:    srli a4, a5, 1
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    mv a6, a0
-; CHECK-RV32-NEXT:    mv a7, a3
-; CHECK-RV32-NEXT:    vsetvli t0, zero, e32, m2, ta, ma
-; CHECK-RV32-NEXT:  .LBB98_2: # %vector.body
+; CHECK-RV32-NEXT:    li a6, 0
+; CHECK-RV32-NEXT:    li a5, 0
+; CHECK-RV32-NEXT:    vsetvli a7, zero, e32, m2, ta, ma
+; CHECK-RV32-NEXT:  .LBB98_3: # %vector.body
 ; CHECK-RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-RV32-NEXT:    vl2re32.v v8, (a6)
-; CHECK-RV32-NEXT:    sltu t0, a7, a4
-; CHECK-RV32-NEXT:    sub a7, a7, a4
-; CHECK-RV32-NEXT:    sub a2, a2, t0
-; CHECK-RV32-NEXT:    or t0, a7, a2
+; CHECK-RV32-NEXT:    slli a7, a6, 2
+; CHECK-RV32-NEXT:    add t0, a6, a4
+; CHECK-RV32-NEXT:    add a7, a0, a7
+; CHECK-RV32-NEXT:    vl2re32.v v8, (a7)
+; CHECK-RV32-NEXT:    sltu a6, t0, a6
+; CHECK-RV32-NEXT:    add a5, a5, a6
+; CHECK-RV32-NEXT:    xor a6, t0, a3
 ; CHECK-RV32-NEXT:    vand.vx v8, v8, a1
-; CHECK-RV32-NEXT:    vs2r.v v8, (a6)
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    bnez t0, .LBB98_2
-; CHECK-RV32-NEXT:  # %bb.3: # %middle.block
+; CHECK-RV32-NEXT:    or t1, a6, a5
+; CHECK-RV32-NEXT:    vs2r.v v8, (a7)
+; CHECK-RV32-NEXT:    mv a6, t0
+; CHECK-RV32-NEXT:    bnez t1, .LBB98_3
+; CHECK-RV32-NEXT:  # %bb.4: # %middle.block
 ; CHECK-RV32-NEXT:    bnez a3, .LBB98_6
-; CHECK-RV32-NEXT:  .LBB98_4: # %for.body.preheader
-; CHECK-RV32-NEXT:    addi a2, a0, 1024
 ; CHECK-RV32-NEXT:  .LBB98_5: # %for.body
 ; CHECK-RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-RV32-NEXT:    lw a3, 0(a0)
-; CHECK-RV32-NEXT:    and a3, a3, a1
-; CHECK-RV32-NEXT:    sw a3, 0(a0)
-; CHECK-RV32-NEXT:    addi a0, a0, 4
-; CHECK-RV32-NEXT:    bne a0, a2, .LBB98_5
+; CHECK-RV32-NEXT:    slli a4, a3, 2
+; CHECK-RV32-NEXT:    addi a3, a3, 1
+; CHECK-RV32-NEXT:    add a4, a0, a4
+; CHECK-RV32-NEXT:    lw a5, 0(a4)
+; CHECK-RV32-NEXT:    seqz a6, a3
+; CHECK-RV32-NEXT:    add a2, a2, a6
+; CHECK-RV32-NEXT:    xori a6, a3, 256
+; CHECK-RV32-NEXT:    and a5, a5, a1
+; CHECK-RV32-NEXT:    or a6, a6, a2
+; CHECK-RV32-NEXT:    sw a5, 0(a4)
+; CHECK-RV32-NEXT:    bnez a6, .LBB98_5
 ; CHECK-RV32-NEXT:  .LBB98_6: # %for.cond.cleanup
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -2290,10 +2299,9 @@ define void @vand_vx_loop_hoisted_not(ptr %a, i32 noundef signext %mask) {
 ; CHECK-RV64-NEXT:    li a2, 0
 ; CHECK-RV64-NEXT:    j .LBB98_5
 ; CHECK-RV64-NEXT:  .LBB98_2: # %vector.ph
-; CHECK-RV64-NEXT:    slli a2, a2, 2
-; CHECK-RV64-NEXT:    negw a2, a2
-; CHECK-RV64-NEXT:    andi a2, a2, 256
 ; CHECK-RV64-NEXT:    srli a3, a4, 1
+; CHECK-RV64-NEXT:    negw a2, a3
+; CHECK-RV64-NEXT:    andi a2, a2, 256
 ; CHECK-RV64-NEXT:    slli a4, a4, 1
 ; CHECK-RV64-NEXT:    mv a5, a0
 ; CHECK-RV64-NEXT:    mv a6, a2
@@ -2324,44 +2332,54 @@ define void @vand_vx_loop_hoisted_not(ptr %a, i32 noundef signext %mask) {
 ;
 ; CHECK-ZVKB-NOZBB32-LABEL: vand_vx_loop_hoisted_not:
 ; CHECK-ZVKB-NOZBB32:       # %bb.0: # %entry
-; CHECK-ZVKB-NOZBB32-NEXT:    csrr a5, vlenb
-; CHECK-ZVKB-NOZBB32-NEXT:    srli a3, a5, 3
-; CHECK-ZVKB-NOZBB32-NEXT:    li a2, 64
-; CHECK-ZVKB-NOZBB32-NEXT:    bltu a2, a3, .LBB98_4
-; CHECK-ZVKB-NOZBB32-NEXT:  # %bb.1: # %vector.ph
+; CHECK-ZVKB-NOZBB32-NEXT:    csrr a4, vlenb
+; CHECK-ZVKB-NOZBB32-NEXT:    srli a2, a4, 3
+; CHECK-ZVKB-NOZBB32-NEXT:    li a3, 64
+; CHECK-ZVKB-NOZBB32-NEXT:    bgeu a3, a2, .LBB98_2
+; CHECK-ZVKB-NOZBB32-NEXT:  # %bb.1:
+; CHECK-ZVKB-NOZBB32-NEXT:    li a3, 0
 ; CHECK-ZVKB-NOZBB32-NEXT:    li a2, 0
-; CHECK-ZVKB-NOZBB32-NEXT:    slli a3, a3, 2
-; CHECK-ZVKB-NOZBB32-NEXT:    neg a3, a3
+; CHECK-ZVKB-NOZBB32-NEXT:    j .LBB98_5
+; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_2: # %vector.ph
+; CHECK-ZVKB-NOZBB32-NEXT:    li a2, 0
+; CHECK-ZVKB-NOZBB32-NEXT:    srli a4, a4, 1
+; CHECK-ZVKB-NOZBB32-NEXT:    neg a3, a4
 ; CHECK-ZVKB-NOZBB32-NEXT:    andi a3, a3, 256
-; CHECK-ZVKB-NOZBB32-NEXT:    srli a4, a5, 1
-; CHECK-ZVKB-NOZBB32-NEXT:    slli a5, a5, 1
-; CHECK-ZVKB-NOZBB32-NEXT:    mv a6, a0
-; CHECK-ZVKB-NOZBB32-NEXT:    mv a7, a3
-; CHECK-ZVKB-NOZBB32-NEXT:    vsetvli t0, zero, e32, m2, ta, ma
-; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_2: # %vector.body
+; CHECK-ZVKB-NOZBB32-NEXT:    li a6, 0
+; CHECK-ZVKB-NOZBB32-NEXT:    li a5, 0
+; CHECK-ZVKB-NOZBB32-NEXT:    vsetvli a7, zero, e32, m2, ta, ma
+; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_3: # %vector.body
 ; CHECK-ZVKB-NOZBB32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ZVKB-NOZBB32-NEXT:    vl2re32.v v8, (a6)
-; CHECK-ZVKB-NOZBB32-NEXT:    sltu t0, a7, a4
-; CHECK-ZVKB-NOZBB32-NEXT:    sub a7, a7, a4
-; CHECK-ZVKB-NOZBB32-NEXT:    sub a2, a2, t0
-; CHECK-ZVKB-NOZBB32-NEXT:    or t0, a7, a2
+; CHECK-ZVKB-NOZBB32-NEXT:    slli a7, a6, 2
+; CHECK-ZVKB-NOZBB32-NEXT:    add t0, a6, a4
+; CHECK-ZVKB-NOZBB32-NEXT:    add a7, a0, a7
+; CHECK-ZVKB-NOZBB32-NEXT:    vl2re32.v v8, (a7)
+; CHECK-ZVKB-NOZBB32-NEXT:    sltu a6, t0, a6
+; CHECK-ZVKB-NOZBB32-NEXT:    add a5, a5, a6
+; CHECK-ZVKB-NOZBB32-NEXT:    xor a6, t0, a3
 ; CHECK-ZVKB-NOZBB32-NEXT:    vandn.vx v8, v8, a1
-; CHECK-ZVKB-NOZBB32-NEXT:    vs2r.v v8, (a6)
-; CHECK-ZVKB-NOZBB32-NEXT:    add a6, a6, a5
-; CHECK-ZVKB-NOZBB32-NEXT:    bnez t0, .LBB98_2
-; CHECK-ZVKB-NOZBB32-NEXT:  # %bb.3: # %middle.block
-; CHECK-ZVKB-NOZBB32-NEXT:    bnez a3, .LBB98_6
-; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_4: # %for.body.preheader
+; CHECK-ZVKB-NOZBB32-NEXT:    or t1, a6, a5
+; CHECK-ZVKB-NOZBB32-NEXT:    vs2r.v v8, (a7)
+; CHECK-ZVKB-NOZBB32-NEXT:    mv a6, t0
+; CHECK-ZVKB-NOZBB32-NEXT:    bnez t1, .LBB98_3
+; CHECK-ZVKB-NOZBB32-NEXT:  # %bb.4: # %middle.block
+; CHECK-ZVKB-NOZBB32-NEXT:    bnez a3, .LBB98_7
+; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_5: # %for.body.preheader
 ; CHECK-ZVKB-NOZBB32-NEXT:    not a1, a1
-; CHECK-ZVKB-NOZBB32-NEXT:    addi a2, a0, 1024
-; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_5: # %for.body
+; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_6: # %for.body
 ; CHECK-ZVKB-NOZBB32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ZVKB-NOZBB32-NEXT:    lw a3, 0(a0)
-; CHECK-ZVKB-NOZBB32-NEXT:    and a3, a3, a1
-; CHECK-ZVKB-NOZBB32-NEXT:    sw a3, 0(a0)
-; CHECK-ZVKB-NOZBB32-NEXT:    addi a0, a0, 4
-; CHECK-ZVKB-NOZBB32-NEXT:    bne a0, a2, .LBB98_5
-; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_6: # %for.cond.cleanup
+; CHECK-ZVKB-NOZBB32-NEXT:    slli a4, a3, 2
+; CHECK-ZVKB-NOZBB32-NEXT:    addi a3, a3, 1
+; CHECK-ZVKB-NOZBB32-NEXT:    add a4, a0, a4
+; CHECK-ZVKB-NOZBB32-NEXT:    lw a5, 0(a4)
+; CHECK-ZVKB-NOZBB32-NEXT:    seqz a6, a3
+; CHECK-ZVKB-NOZBB32-NEXT:    add a2, a2, a6
+; CHECK-ZVKB-NOZBB32-NEXT:    xori a6, a3, 256
+; CHECK-ZVKB-NOZBB32-NEXT:    and a5, a5, a1
+; CHECK-ZVKB-NOZBB32-NEXT:    or a6, a6, a2
+; CHECK-ZVKB-NOZBB32-NEXT:    sw a5, 0(a4)
+; CHECK-ZVKB-NOZBB32-NEXT:    bnez a6, .LBB98_6
+; CHECK-ZVKB-NOZBB32-NEXT:  .LBB98_7: # %for.cond.cleanup
 ; CHECK-ZVKB-NOZBB32-NEXT:    ret
 ;
 ; CHECK-ZVKB-NOZBB64-LABEL: vand_vx_loop_hoisted_not:
@@ -2374,10 +2392,9 @@ define void @vand_vx_loop_hoisted_not(ptr %a, i32 noundef signext %mask) {
 ; CHECK-ZVKB-NOZBB64-NEXT:    li a2, 0
 ; CHECK-ZVKB-NOZBB64-NEXT:    j .LBB98_5
 ; CHECK-ZVKB-NOZBB64-NEXT:  .LBB98_2: # %vector.ph
-; CHECK-ZVKB-NOZBB64-NEXT:    slli a2, a2, 2
-; CHECK-ZVKB-NOZBB64-NEXT:    negw a2, a2
-; CHECK-ZVKB-NOZBB64-NEXT:    andi a2, a2, 256
 ; CHECK-ZVKB-NOZBB64-NEXT:    srli a3, a4, 1
+; CHECK-ZVKB-NOZBB64-NEXT:    negw a2, a3
+; CHECK-ZVKB-NOZBB64-NEXT:    andi a2, a2, 256
 ; CHECK-ZVKB-NOZBB64-NEXT:    slli a4, a4, 1
 ; CHECK-ZVKB-NOZBB64-NEXT:    mv a5, a0
 ; CHECK-ZVKB-NOZBB64-NEXT:    mv a6, a2
@@ -2409,42 +2426,51 @@ define void @vand_vx_loop_hoisted_not(ptr %a, i32 noundef signext %mask) {
 ;
 ; CHECK-ZVKB-ZBB32-LABEL: vand_vx_loop_hoisted_not:
 ; CHECK-ZVKB-ZBB32:       # %bb.0: # %entry
-; CHECK-ZVKB-ZBB32-NEXT:    csrr a5, vlenb
-; CHECK-ZVKB-ZBB32-NEXT:    srli a3, a5, 3
-; CHECK-ZVKB-ZBB32-NEXT:    li a2, 64
-; CHECK-ZVKB-ZBB32-NEXT:    bltu a2, a3, .LBB98_4
-; CHECK-ZVKB-ZBB32-NEXT:  # %bb.1: # %vector.ph
+; CHECK-ZVKB-ZBB32-NEXT:    csrr a4, vlenb
+; CHECK-ZVKB-ZBB32-NEXT:    srli a2, a4, 3
+; CHECK-ZVKB-ZBB32-NEXT:    li a3, 64
+; CHECK-ZVKB-ZBB32-NEXT:    bgeu a3, a2, .LBB98_2
+; CHECK-ZVKB-ZBB32-NEXT:  # %bb.1:
+; CHECK-ZVKB-ZBB32-NEXT:    li a3, 0
 ; CHECK-ZVKB-ZBB32-NEXT:    li a2, 0
-; CHECK-ZVKB-ZBB32-NEXT:    slli a3, a3, 2
-; CHECK-ZVKB-ZBB32-NEXT:    neg a3, a3
+; CHECK-ZVKB-ZBB32-NEXT:    j .LBB98_5
+; CHECK-ZVKB-ZBB32-NEXT:  .LBB98_2: # %vector.ph
+; CHECK-ZVKB-ZBB32-NEXT:    li a2, 0
+; CHECK-ZVKB-ZBB32-NEXT:    srli a4, a4, 1
+; CHECK-ZVKB-ZBB32-NEXT:    neg a3, a4
 ; CHECK-ZVKB-ZBB32-NEXT:    andi a3, a3, 256
-; CHECK-ZVKB-ZBB32-NEXT:    srli a4, a5, 1
-; CHECK-ZVKB-ZBB32-NEXT:    slli a5, a5, 1
-; CHECK-ZVKB-ZBB32-NEXT:    mv a6, a0
-; CHECK-ZVKB-ZBB32-NEXT:    mv a7, a3
-; CHECK-ZVKB-ZBB32-NEXT:    vsetvli t0, zero, e32, m2, ta, ma
-; CHECK-ZVKB-ZBB32-NEXT:  .LBB98_2: # %vector.body
+; CHECK-ZVKB-ZBB32-NEXT:    li a6, 0
+; CHECK-ZVKB-ZBB32-NEXT:    li a5, 0
+; CHECK-ZVKB-ZBB32-NEXT:    vsetvli a7, zero, e32, m2, ta, ma
+; CHECK-ZVKB-ZBB32-NEXT:  .LBB98_3: # %vector.body
 ; CHECK-ZVKB-ZBB32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ZVKB-ZBB32-NEXT:    vl2re32.v v8, (a6)
-; CHECK-ZVKB-ZBB32-NEXT:    sltu t0, a7, a4
-; CHECK-ZVKB-ZBB32-NEXT:    sub a7, a7, a4
-; CHECK-ZVKB-ZBB32-NEXT:    sub a2, a2, t0
-; CHECK-ZVKB-ZBB32-NEXT:    or t0, a7, a2
+; CHECK-ZVKB-ZBB32-NEXT:    slli a7, a6, 2
+; CHECK-ZVKB-ZBB32-NEXT:    add t0, a6, a4
+; CHECK-ZVKB-ZBB32-NEXT:    add a7, a0, a7
+; CHECK-ZVKB-ZBB32-NEXT:    vl2re32.v v8, (a7)
+; CHECK-ZVKB-ZBB32-NEXT:    sltu a6, t0, a6
+; CHECK-ZVKB-ZBB32-NEXT:    add a5, a5, a6
+; CHECK-ZVKB-ZBB32-NEXT:    xor a6, t0, a3
 ; CHECK-ZVKB-ZBB32-NEXT:    vandn.vx v8, v8, a1
-; CHECK-ZVKB-ZBB32-NEXT:    vs2r.v v8, (a6)
-; CHECK-ZVKB-ZBB32-NEXT:    add a6, a6, a5
-; CHECK-ZVKB-ZBB32-NEXT:    bnez t0, .LBB98_2
-; CHECK-ZVKB-ZBB32-NEXT:  # %bb.3: # %middle.block
+; CHECK-ZVKB-ZBB32-NEXT:    or t1, a6, a5
+; CHECK-ZVKB-ZBB32-NEXT:    vs2r.v v8, (a7)
+; CHECK-ZVKB-ZBB32-NEXT:    mv a6, t0
+; CHECK-ZVKB-ZBB32-NEXT:    bnez t1, .LBB98_3
+; CHECK-ZVKB-ZBB32-NEXT:  # %bb.4: # %middle.block
 ; CHECK-ZVKB-ZBB32-NEXT:    bnez a3, .LBB98_6
-; CHECK-ZVKB-ZBB32-NEXT:  .LBB98_4: # %for.body.preheader
-; CHECK-ZVKB-ZBB32-NEXT:    addi a2, a0, 1024
 ; CHECK-ZVKB-ZBB32-NEXT:  .LBB98_5: # %for.body
 ; CHECK-ZVKB-ZBB32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-ZVKB-ZBB32-NEXT:    lw a3, 0(a0)
-; CHECK-ZVKB-ZBB32-NEXT:    andn a3, a3, a1
-; CHECK-ZVKB-ZBB32-NEXT:    sw a3, 0(a0)
-; CHECK-ZVKB-ZBB32-NEXT:    addi a0, a0, 4
-; CHECK-ZVKB-ZBB32-NEXT:    bne a0, a2, .LBB98_5
+; CHECK-ZVKB-ZBB32-NEXT:    slli a4, a3, 2
+; CHECK-ZVKB-ZBB32-NEXT:    addi a3, a3, 1
+; CHECK-ZVKB-ZBB32-NEXT:    add a4, a0, a4
+; CHECK-ZVKB-ZBB32-NEXT:    lw a5, 0(a4)
+; CHECK-ZVKB-ZBB32-NEXT:    seqz a6, a3
+; CHECK-ZVKB-ZBB32-NEXT:    add a2, a2, a6
+; CHECK-ZVKB-ZBB32-NEXT:    xori a6, a3, 256
+; CHECK-ZVKB-ZBB32-NEXT:    andn a5, a5, a1
+; CHECK-ZVKB-ZBB32-NEXT:    or a6, a6, a2
+; CHECK-ZVKB-ZBB32-NEXT:    sw a5, 0(a4)
+; CHECK-ZVKB-ZBB32-NEXT:    bnez a6, .LBB98_5
 ; CHECK-ZVKB-ZBB32-NEXT:  .LBB98_6: # %for.cond.cleanup
 ; CHECK-ZVKB-ZBB32-NEXT:    ret
 ;
@@ -2458,10 +2484,9 @@ define void @vand_vx_loop_hoisted_not(ptr %a, i32 noundef signext %mask) {
 ; CHECK-ZVKB-ZBB64-NEXT:    li a2, 0
 ; CHECK-ZVKB-ZBB64-NEXT:    j .LBB98_5
 ; CHECK-ZVKB-ZBB64-NEXT:  .LBB98_2: # %vector.ph
-; CHECK-ZVKB-ZBB64-NEXT:    slli a2, a2, 2
-; CHECK-ZVKB-ZBB64-NEXT:    negw a2, a2
-; CHECK-ZVKB-ZBB64-NEXT:    andi a2, a2, 256
 ; CHECK-ZVKB-ZBB64-NEXT:    srli a3, a4, 1
+; CHECK-ZVKB-ZBB64-NEXT:    negw a2, a3
+; CHECK-ZVKB-ZBB64-NEXT:    andi a2, a2, 256
 ; CHECK-ZVKB-ZBB64-NEXT:    slli a4, a4, 1
 ; CHECK-ZVKB-ZBB64-NEXT:    mv a5, a0
 ; CHECK-ZVKB-ZBB64-NEXT:    mv a6, a2
