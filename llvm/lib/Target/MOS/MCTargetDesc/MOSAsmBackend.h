@@ -71,7 +71,7 @@ public:
                                     bool Resolved) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCFixup &, const MCValue &) override;
+  bool shouldForceRelocation(const MCFixup &, const MCValue &);
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
@@ -84,11 +84,7 @@ public:
                   uint64_t Value, bool IsResolved) override;
 
   /// Check whether the given instruction may need relaxation.
-  ///
-  /// \param Inst - The instruction to test.
-  /// \param STI - The MCSubtargetInfo in effect when the instruction was
-  /// encoded.
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   /// Relax the instruction in the given fragment to the next wider instruction.
@@ -104,13 +100,13 @@ public:
   /// that this instruction can be relaxed to. If the instruction cannot be
   /// relaxed, return zero. When 65816 subtarget is active and the instruction
   /// is relaxed to Addr24, BankRelax is set to true.
-  static unsigned relaxInstructionTo(const MCInst &Inst,
+  static unsigned relaxInstructionTo(unsigned Opcode,
                                      const MCSubtargetInfo &STI,
                                      bool &BankRelax);
-  static unsigned relaxInstructionTo(const MCInst &Inst,
+  static unsigned relaxInstructionTo(unsigned Opcode,
                                      const MCSubtargetInfo &STI) {
     bool BankRelax = false;
-    return relaxInstructionTo(Inst, STI, BankRelax);
+    return relaxInstructionTo(Opcode, STI, BankRelax);
   }
 
   /// If the provided subtarget uses a custom set of machine instructions,
@@ -133,7 +129,7 @@ public:
 
 private:
   Triple::OSType OSType;
-  mutable const MCInst *RelaxedMC = nullptr;
+  mutable unsigned RelaxedOpcode = 0;
   mutable const MCSubtargetInfo *RelaxedSTI = nullptr;
 };
 

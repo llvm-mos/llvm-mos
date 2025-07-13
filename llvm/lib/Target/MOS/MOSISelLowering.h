@@ -77,7 +77,7 @@ public:
 
   bool preferNarrowTypes() const override { return true; }
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override {
     return MVT::i8;
   }

@@ -9,6 +9,7 @@
 #include "MOSMCExpr.h"
 #include "MOSFixupKinds.h"
 
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
@@ -53,7 +54,7 @@ void MOSMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   }
 
   OS << getName() << '(';
-  getSubExpr()->print(OS, MAI);
+  MAI->printExpr(OS, *getSubExpr());
   OS << ')';
 }
 

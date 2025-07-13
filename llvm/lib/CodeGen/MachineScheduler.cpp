@@ -1292,13 +1292,13 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
                    SchedModel.getWriteProcResEnd(SC)));
 
     if (MISchedSortResourcesInTrace)
-      llvm::stable_sort(ResourcesIt,
-                        [](const MCWriteProcResEntry &LHS,
-                           const MCWriteProcResEntry &RHS) -> bool {
-                          return LHS.AcquireAtCycle < RHS.AcquireAtCycle ||
-                                 (LHS.AcquireAtCycle == RHS.AcquireAtCycle &&
-                                  LHS.ReleaseAtCycle < RHS.ReleaseAtCycle);
-                        });
+      llvm::stable_sort(
+          ResourcesIt,
+          [](const MCWriteProcResEntry &LHS,
+             const MCWriteProcResEntry &RHS) -> bool {
+            return std::tie(LHS.AcquireAtCycle, LHS.ReleaseAtCycle) <
+                   std::tie(RHS.AcquireAtCycle, RHS.ReleaseAtCycle);
+          });
     for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =
@@ -1373,13 +1373,13 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
                    SchedModel.getWriteProcResEnd(SC)));
 
     if (MISchedSortResourcesInTrace)
-      llvm::stable_sort(ResourcesIt,
-                        [](const MCWriteProcResEntry &LHS,
-                           const MCWriteProcResEntry &RHS) -> bool {
-                          return LHS.AcquireAtCycle < RHS.AcquireAtCycle ||
-                                 (LHS.AcquireAtCycle == RHS.AcquireAtCycle &&
-                                  LHS.ReleaseAtCycle < RHS.ReleaseAtCycle);
-                        });
+      llvm::stable_sort(
+          ResourcesIt,
+          [](const MCWriteProcResEntry &LHS,
+             const MCWriteProcResEntry &RHS) -> bool {
+            return std::tie(LHS.AcquireAtCycle, LHS.ReleaseAtCycle) <
+                   std::tie(RHS.AcquireAtCycle, RHS.ReleaseAtCycle);
+          });
     for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =

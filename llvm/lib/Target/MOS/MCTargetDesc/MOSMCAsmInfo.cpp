@@ -11,15 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "MOSMCAsmInfo.h"
-#include "MOSMCTargetDesc.h"
 #include "MCTargetDesc/MOSMCExpr.h"
+#include "MOSMCTargetDesc.h"
 
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
-static const MCAsmInfo::VariantKindDesc VariantKindDescs[] = {
+static const MCAsmInfo::AtSpecifier AtSpecifiers[] = {
     {MOSMCExpr::VK_IMM8, "mosimm8"},
     {MOSMCExpr::VK_IMM16, "mosimm16"},
     {MOSMCExpr::VK_ADDR8, "mos8"},
@@ -49,7 +49,7 @@ MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   MaxInstLength = 7;
   SupportsDebugInformation = true;
 
-  initializeVariantKinds(VariantKindDescs);
+  initializeAtSpecifiers(AtSpecifiers);
 }
 
 unsigned MOSMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {

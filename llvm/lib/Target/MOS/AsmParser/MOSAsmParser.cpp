@@ -17,6 +17,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -219,7 +220,7 @@ public:
     return std::make_unique<MOSOperand>(STI, Str, S);
   }
 
-  void print(raw_ostream &O) const override {
+  void print(raw_ostream &O, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_None:
       O << "None";
@@ -231,7 +232,9 @@ public:
       O << "Register: " << getReg();
       break;
     case k_Immediate:
-      O << "Immediate: \"" << *getImm() << "\"";
+      O << "Immediate: \"";
+      MAI.printExpr(O, *getImm());
+      O << "\"";
       break;
     }
     O << "\n";

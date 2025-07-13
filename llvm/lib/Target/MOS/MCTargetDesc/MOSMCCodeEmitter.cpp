@@ -46,6 +46,17 @@ static void emitLittleEndian(uint64_t Val, unsigned Size,
   }
 }
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case MOS::PCRel8:
+  case MOS::PCRel16:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 void MOSMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                          SmallVectorImpl<char> &CB,
                                          SmallVectorImpl<MCFixup> &Fixups,
@@ -76,7 +87,7 @@ unsigned MOSMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(Fixup);
-    Fixups.push_back(MCFixup::create(Offset, MO.getExpr(), FixupKind, MI.getLoc()));
+    addFixup(Fixups, Offset, MO.getExpr(), FixupKind);
 
     return 0;
   }
@@ -105,7 +116,7 @@ unsigned MOSMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(MOSExpr->getFixupKind());
-    Fixups.push_back(MCFixup::create(Offset, MOSExpr, FixupKind));
+    addFixup(Fixups, Offset, MOSExpr, FixupKind);
     return 0;
   }
 
@@ -125,7 +136,7 @@ unsigned MOSMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   const MCExpr *Expr = MO.getExpr();
   if (isa<MCSymbolRefExpr>(Expr)) {
-    Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind::FK_Data_1));
+    addFixup(Fixups, 0, Expr, FK_Data_1);
     return 0;
   }
 

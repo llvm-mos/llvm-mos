@@ -39,6 +39,7 @@ using ModulePassManager = PassManager<Module>;
 class Function;
 class GlobalObject;
 class GlobalValue;
+class MachineInstr;
 class MachineModuleInfoWrapperPass;
 struct MachineSchedContext;
 class Mangler;
@@ -242,6 +243,15 @@ public:
   const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
   const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
+
+  /// Return the ExceptionHandling to use, considering TargetOptions and the
+  /// Triple's default.
+  ExceptionHandling getExceptionModel() const {
+    // FIXME: This interface fails to distinguish default from not supported.
+    return Options.ExceptionModel == ExceptionHandling::None
+               ? TargetTriple.getDefaultExceptionHandling()
+               : Options.ExceptionModel;
+  }
 
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
@@ -526,6 +536,15 @@ public:
 
   // MachineRegisterInfo callback function
   virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
+
+  /// Remove all Linker Optimization Hints (LOH) associated with instructions in
+  /// \p MIs and \return the number of hints removed. This is useful in
+  /// transformations that cause these hints to be illegal, like in the machine
+  /// outliner.
+  virtual size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const {
+    return 0;
+  }
 };
 
 } // end namespace llvm

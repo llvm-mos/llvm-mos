@@ -90,9 +90,9 @@ unsigned MOSELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return ELF::R_MOS_PCREL_8;
   case MOS::PCRel16:
     return ELF::R_MOS_PCREL_16;
-  case MCFixupKind::FK_Data_4:
+  case FK_Data_4:
     return ELF::R_MOS_FK_DATA_4;
-  case MCFixupKind::FK_Data_8:
+  case FK_Data_8:
     return ELF::R_MOS_FK_DATA_8;
   case MOS::AddrAsciz:
     return ELF::R_MOS_ADDR_ASCIZ;
