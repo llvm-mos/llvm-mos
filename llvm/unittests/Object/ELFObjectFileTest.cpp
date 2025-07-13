@@ -285,6 +285,13 @@ TEST(ELFObjectFileTest, MachineTestForXtensa) {
     checkFormatAndArch(Data, Formats[Idx], Triple::xtensa);
 }
 
+TEST(ELFObjectFileTest, MachineTestForMOS) {
+  std::array<StringRef, 4> Formats = {"elf32-mos", "elf32-mos",
+                                      "elf64-unknown", "elf64-unknown"};
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_MOS)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::mos);
+}
+
 TEST(ELFObjectFileTest, CheckOSAndTriple) {
   std::tuple<uint16_t, uint8_t, StringRef> Formats[] = {
       {ELF::EM_AMDGPU, ELF::ELFOSABI_AMDGPU_HSA, "amdgcn-amd-amdhsa"},
