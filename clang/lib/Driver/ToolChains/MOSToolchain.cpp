@@ -103,8 +103,9 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // No matter what's included in the link, the default linker script is
   // nonsense for the 6502. Accordingly, use one named "link.ld" if none is
-  // specified.
-  if (!Args.hasArg(options::OPT_T))
+  // specified. However, relocatable linking (-r) should not use a linker
+  // script since it's just combining object files without final layout.
+  if (!Args.hasArg(options::OPT_T) && !Args.hasArg(options::OPT_r))
     CmdArgs.push_back("-Tlink.ld");
 
   CmdArgs.push_back("-o");
