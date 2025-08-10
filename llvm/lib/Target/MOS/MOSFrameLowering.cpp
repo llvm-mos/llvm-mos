@@ -108,37 +108,25 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
   const auto &FuncInfo = MBB.getParent()->getInfo<MOSFunctionInfo>();
 
-  // There are intentionally very few CSRs, few enough to place on the hard
-  // stack without much risk of overflow. This is the only across-calls way
-  // the compiler uses the hard stack, since the free CSRs can then be used
-  // with impunity. This is slightly more expensive than saving/resting values
-  // directly on the hard stack, but it's significantly simpler.
   for (const CalleeSavedInfo &CI : CSI) {
     Register Reg = CI.getReg();
-    if (!CI.isTargetSpilled() || FuncInfo->CSRZPOffsets.count(Reg))
+    if (FuncInfo->CSRZPOffsets.count(Reg))
       continue;
-    if (!StackRegClass.contains(Reg))
-      Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
-    Builder.buildInstr(MOS::PH, {}, {Reg});
+    if (CI.isTargetSpilled()) {
+      if (!StackRegClass.contains(Reg))
+        Reg = Builder.buildCopy(&StackRegClass, Reg).getReg(0);
+      Builder.buildInstr(MOS::PH, {}, {Reg});
+    } else {
+      assert(!CI.isSpilledToReg());
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      TII.storeRegToStackSlot(MBB, Builder.getInsertPt(), Reg, true,
+                              CI.getFrameIdx(), RC, TRI, Register{});
+    }
   }
-
-  // Record that the frame pointer is killed by these instructions.
-  for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
-    MI.setFlag(MachineInstr::FrameSetup);
 
   // The frame pointer will be generated after the last frame setup instruction.
-
-  // Save registers to the soft stack afterwards, since this may require the
-  // frame pointer.
-  for (const CalleeSavedInfo &CI : CSI) {
-    Register Reg = CI.getReg();
-    if (CI.isTargetSpilled())
-      continue;
-    assert(!CI.isSpilledToReg());
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, Builder.getInsertPt(), Reg, true,
-                            CI.getFrameIdx(), RC, TRI, Register{});
-  }
+  for (auto &MI : make_range(MIS.begin(), MIS.getInitial()))
+    MI.setFlag(MachineInstr::FrameSetup);
 
   return true;
 }
@@ -172,29 +160,24 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       STI.hasGPRStackRegs() ? MOS::GPRRegClass : MOS::AcRegClass;
   const auto &FuncInfo = MBB.getParent()->getInfo<MOSFunctionInfo>();
 
-  for (const CalleeSavedInfo &CI : reverse(CSI)) {
-    Register Reg = CI.getReg();
-    if (CI.isTargetSpilled())
-      continue;
-    assert(!CI.isSpilledToReg());
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.loadRegFromStackSlot(MBB, Builder.getInsertPt(), Reg, CI.getFrameIdx(),
-                             RC, TRI, Register{});
-  }
-
-  // Begin tracking the frame pointer exclusion region only after all soft stack
-  // CSR restores are emitted.
   MachineInstrSpan MIS(MI, &MBB);
 
   for (const CalleeSavedInfo &CI : reverse(CSI)) {
     Register Reg = CI.getReg();
-    if (!CI.isTargetSpilled() || FuncInfo->CSRZPOffsets.count(Reg))
+    if (FuncInfo->CSRZPOffsets.count(Reg))
       continue;
-    if (!StackRegClass.contains(Reg))
-      Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
-    Builder.buildInstr(MOS::PL, {Reg}, {});
-    if (Reg != CI.getReg())
-      Builder.buildCopy(Register(CI.getReg()), Reg);
+    if (CI.isTargetSpilled()) {
+      if (!StackRegClass.contains(Reg))
+        Reg = Builder.getMRI()->createVirtualRegister(&StackRegClass);
+      Builder.buildInstr(MOS::PL, {Reg}, {});
+      if (Reg != CI.getReg())
+        Builder.buildCopy(Register(CI.getReg()), Reg);
+    } else {
+      assert(!CI.isSpilledToReg());
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      TII.loadRegFromStackSlot(MBB, Builder.getInsertPt(), Reg,
+                               CI.getFrameIdx(), RC, TRI, Register{});
+    }
   }
 
   // Mark the CSRs as used by the return to ensure Machine Copy Propagation
