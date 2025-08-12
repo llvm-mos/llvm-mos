@@ -169,12 +169,12 @@ bool MOSTargetELFStreamer::hasFiniArray() {
 }
 
 bool MOSTargetELFStreamer::emitDirectiveZeroPage(MCSymbol *Sym) {
-  cast<MCSymbolELF>(Sym)->setOther(ELF::STO_MOS_ZEROPAGE);
+  static_cast<MCSymbolELF *>(Sym)->setOther(ELF::STO_MOS_ZEROPAGE);
   return true;
 }
 
 void MOSTargetELFStreamer::stronglyReference(MCSymbol *Sym) {
-  auto *ES = cast<MCSymbolELF>(Sym);
+  auto *ES = static_cast<MCSymbolELF *>(Sym);
   // There's an explicit check in emitSymbolAttribute to avoid accidentally
   // overriding weak->global due to a GCC corner case, but it should always be
   // safe for symbols under complete compiler control.

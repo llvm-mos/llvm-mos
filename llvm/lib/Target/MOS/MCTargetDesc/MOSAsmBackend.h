@@ -66,8 +66,8 @@ public:
   /// Carefully determine whether the instruction in question requires
   /// relaxation.  This implementation considers the fixup as well as
   /// the section that the symbol points to.
-  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &Target,
-                                    uint64_t Value,
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &Fixup,
+                                    const MCValue &Target, uint64_t Value,
                                     bool Resolved) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
@@ -80,8 +80,8 @@ public:
   /// The  \p STI is present only for fragments of type MCRelaxableFragment and
   /// MCDataFragment with hasInstructions() == true.
   void applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) override;
+                  const MCValue &Target, uint8_t *Data, uint64_t Value,
+                  bool IsResolved) override;
 
   /// Check whether the given instruction may need relaxation.
   bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,

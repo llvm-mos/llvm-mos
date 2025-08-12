@@ -81,7 +81,7 @@ public:
   bool enableSubRegLiveness() const override { return true; }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   bool useAA() const override { return true; }
 

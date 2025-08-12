@@ -86,16 +86,13 @@ void MOSMCELFStreamer::emitMosAddrAsciz(const MCExpr *Value, unsigned Size,
                                         SMLoc Loc) {
   visitUsedExpr(*Value);
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
-                               (MCFixupKind)MOS::AddrAsciz));
+  addFixup(Value, (MCFixupKind)MOS::AddrAsciz);
   SmallVector<char> Zeroes(Size, 0);
-  DF->appendContents(Zeroes);
+  appendContents(Zeroes);
 }
 
 void MOSMCELFStreamer::emitMappingSymbol(StringRef Name) {
-  auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
+  auto *Symbol = static_cast<MCSymbolELF *>(getContext().getOrCreateSymbol(
       Name + "." + Twine(MappingSymbolCounter++)));
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);

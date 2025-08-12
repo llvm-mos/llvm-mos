@@ -98,13 +98,16 @@ static bool fitsIntoFixup(const int64_t SignedValue, const bool IsPCRel16) {
 bool isBasedOnZeroPageSymbol(const MCExpr *E) {
   switch (E->getKind()) {
   case MCExpr::Target:
-    return isBasedOnZeroPageSymbol(cast<MOSMCExpr>(E)->getSubExpr());
+    return isBasedOnZeroPageSymbol(
+        static_cast<const MOSMCExpr *>(E)->getSubExpr());
 
   case MCExpr::Constant:
     return false;
 
   case MCExpr::SymbolRef:
-    return cast<MCSymbolELF>(cast<MCSymbolRefExpr>(E)->getSymbol()).getOther() &
+    return static_cast<const MCSymbolELF &>(
+               cast<MCSymbolRefExpr>(E)->getSymbol())
+               .getOther() &
            ELF::STO_MOS_ZEROPAGE;
 
   case MCExpr::Unary:
@@ -115,12 +118,13 @@ bool isBasedOnZeroPageSymbol(const MCExpr *E) {
     return isBasedOnZeroPageSymbol(BE->getLHS()) ||
            isBasedOnZeroPageSymbol(BE->getRHS());
   }
+  default:
+    llvm_unreachable("Invalid assembly expression kind!");
   }
-
-  llvm_unreachable("Invalid assembly expression kind!");
 }
 
-bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &F,
+                                                 const MCFixup &Fixup,
                                                  const MCValue &Target,
                                                  uint64_t Value,
                                                  bool Resolved) const {
@@ -160,13 +164,12 @@ bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   // to figure out whether the symbol in question is in zero page or not.  If
   // it is in zero page, then we don't need to do anything.  If not, we need
   // to relax the instruction to 16 bits.
+  // If we're not writing to ELF, punt on this whole idea, just do the
+  // relaxation for safety's sake
   MCFragment *Frag = Fixup.getValue()->findAssociatedFragment();
   if (!Frag)
     return true;
-
-  // If we're not writing to ELF, punt on this whole idea, just do the
-  // relaxation for safety's sake
-  const auto *Sec = dyn_cast_if_present<MCSectionELF>(Frag->getParent());
+  const auto *Sec = static_cast<const MCSectionELF *>(Frag->getParent());
   if (!Sec)
     return true;
 
@@ -192,24 +195,20 @@ bool MOSAsmBackend::shouldForceRelocation(const MCFixup &F, const MCValue &V) {
 }
 
 void MOSAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   if (!IsResolved)
     Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
 
   unsigned int Kind = Fixup.getKind();
-  uint32_t Offset = Fixup.getOffset();
 
   switch (Kind) {
   case MOS::AddrAsciz: {
     std::string ValueStr = utostr(Value);
-    assert(((ValueStr.size() + 1 + Offset) <= Data.size()) &&
-           "Invalid offset within MOS instruction for modifier!");
-    std::copy(ValueStr.begin(), ValueStr.end(), Data.begin() + Offset);
-    Data[Offset + ValueStr.size()] = '\0';
+    std::copy(ValueStr.begin(), ValueStr.end(), Data);
+    Data[ValueStr.size()] = '\0';
     return;
   }
   case MOS::PCRel8:
@@ -256,11 +255,7 @@ void MOSAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return;
   }
 
-  assert(((Bytes + Offset) <= Data.size()) &&
-         "Invalid offset within MOS instruction for modifier!");
-  char *RangeStart = Data.begin() + Offset;
-
-  for (char &Out : make_range(RangeStart, RangeStart + Bytes)) {
+  for (uint8_t &Out : make_range(Data, Data + Bytes)) {
     Out = Value & 0xff;
     Value = Value >> 8;
   }

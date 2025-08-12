@@ -11,6 +11,7 @@ add_clang_library(clangCIR
   CIRGenBuilder.cpp
   CIRGenCall.cpp
   CIRGenClass.cpp
+  CIRGenCleanup.cpp
   CIRGenCXX.cpp
   CIRGenCXXABI.cpp
   CIRGenCXXExpr.cpp
@@ -32,6 +33,7 @@ add_clang_library(clangCIR
   CIRGenStmtOpenACC.cpp
   CIRGenStmtOpenACCLoop.cpp
   CIRGenTypes.cpp
+  CIRGenVTables.cpp
   TargetInfo.cpp
 
   DEPENDS

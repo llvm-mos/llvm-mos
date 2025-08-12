@@ -64,7 +64,8 @@ struct MOSValueAssigner : CallLowering::ValueAssigner {
     for (Register R : Reserved.set_bits())
       State.AllocateReg(R);
 
-    if (getAssignFn(!Info.IsFixed)(ValNo, ValVT, LocVT, LocInfo, Flags, State))
+    if (getAssignFn(Flags.isVarArg())(ValNo, ValVT, LocVT, LocInfo, Flags,
+                                      Info.Ty, State))
       return true;
     StackSize = State.getStackSize();
     return false;
