@@ -52,8 +52,7 @@ MOSMCInstrAnalysis::evaluateMemoryOperandAddress(const MCInst &Inst,
                                                  const MCSubtargetInfo *STI,
                                                  uint64_t Addr,
                                                  uint64_t Size) const {
-  uint64_t ZpAddrOffset = static_cast<const MOSSubtarget *>(STI)
-                              ->getZeroPageOffset();
+  uint64_t ZpAddrOffset = STI->hasFeature(MOS::FeatureHUC6280) ? 0x2000 : 0;
   uint64_t AbsAddrMask = STI->hasFeature(MOS::FeatureW65816)
                              ? 0xFFFFFF : 0xFFFF;
 

@@ -312,8 +312,7 @@ static bool isImmediateBankRelaxable(const MCSubtargetInfo &STI, int64_t Imm,
   if (BankRelax)
     return Imm >= 0 && Imm <= UINT16_MAX;
 
-  uint32_t ZpAddrOffset =
-      static_cast<const MOSSubtarget &>(STI).getZeroPageOffset();
+  uint32_t ZpAddrOffset = STI.hasFeature(MOS::FeatureHUC6280) ? 0x2000 : 0;
   return Imm >= ZpAddrOffset && Imm <= ZpAddrOffset + 0xFF;
 }
 
