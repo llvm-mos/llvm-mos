@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   check_clang:
-    if: github.repository_owner == 'llvm-mos'
+    if: vars.LLVM_MOS_ENABLE_WORKFLOWS == 'true'
     name: Test clang
     uses: ./.github/workflows/llvm-project-tests.yml
     with:

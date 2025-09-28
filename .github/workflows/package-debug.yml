@@ -6,7 +6,7 @@ on:
     - cron: '0 0 * * *'
 jobs:
   package:
-    if: github.repository_owner == 'llvm-mos'
+    if: vars.LLVM_MOS_ENABLE_WORKFLOWS == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

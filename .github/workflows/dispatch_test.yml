@@ -11,7 +11,7 @@ on:
 
 jobs:
   dispatch:
-    if: github.repository_owner == 'llvm-mos'
+    if: vars.LLVM_MOS_ENABLE_WORKFLOWS == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Repository Dispatch

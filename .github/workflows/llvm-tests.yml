@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   check_all:
-    if: github.repository_owner == 'llvm-mos'
+    if: vars.LLVM_MOS_ENABLE_WORKFLOWS == 'true'
     name: Build and Test
     uses: ./.github/workflows/llvm-project-tests.yml
     with:

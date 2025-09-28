@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   check_lld:
-    if: github.repository_owner == 'llvm-mos'
+    if: vars.LLVM_MOS_ENABLE_WORKFLOWS == 'true'
     name: Test lld
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
