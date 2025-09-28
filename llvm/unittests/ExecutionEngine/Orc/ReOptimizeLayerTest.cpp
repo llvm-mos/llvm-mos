@@ -64,6 +64,10 @@ protected:
     if (Triple.isARM())
       GTEST_SKIP();
 
+    // MOS is not supported yet
+    if (Triple.isMOS())
+      GTEST_SKIP();
+
     auto EPC = SelfExecutorProcessControl::Create();
     if (!EPC) {
       consumeError(EPC.takeError());

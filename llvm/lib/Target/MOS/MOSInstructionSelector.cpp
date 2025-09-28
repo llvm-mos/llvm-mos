@@ -493,7 +493,7 @@ bool MOSInstructionSelector::selectAddSub(MachineInstr &MI) {
   }
 
   Register Idx;
-  bool ZP;
+  bool ZP = false;
   if (MI.getOpcode() == MOS::G_ADD) {
     Success = mi_match(
         Dst, MRI,
@@ -640,7 +640,7 @@ bool MOSInstructionSelector::selectLogical(MachineInstr &MI) {
   }
 
   Register Idx;
-  bool ZP;
+  bool ZP = false;
   switch (MI.getOpcode()) {
   case MOS::G_AND:
     Success = mi_match(
@@ -1038,7 +1038,7 @@ bool MOSInstructionSelector::selectBrCondImm(MachineInstr &MI) {
     return true;
   }
   Register Idx;
-  bool ZP;
+  bool ZP = false;
   if (mi_match(CondReg, MRI, m_CmpNZIdx(LHS, Addr, Idx, Flag, Load, ZP, AA))) {
     auto Branch = Builder.buildInstr(ZP ? MOS::CmpBrZpIdx : MOS::CmpBrAbsIdx)
                       .addMBB(Tgt)
@@ -1159,7 +1159,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
               .cloneMemRefs(*Load);
     }
     Register Idx;
-    bool ZP;
+    bool ZP = false;
     if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
                            m_all_of(m_MInstr(Load),
                                     m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)))) {
@@ -1214,7 +1214,7 @@ bool MOSInstructionSelector::selectSbc(MachineInstr &MI) {
                   .cloneMemRefs(*Load);
     }
     Register Idx;
-    bool ZP;
+    bool ZP = false;
     if (!Instr && mi_match(MI.getOperand(6).getReg(), MRI,
                            m_all_of(m_MInstr(Load),
                                     m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)))) {
@@ -1590,7 +1590,7 @@ bool MOSInstructionSelector::selectRMW(MachineInstr &MI) {
   } else if (MI.getOpcode() == MOS::G_STORE_ABS_IDX) {
     MachineOperand Addr = MachineOperand::CreateReg(0, false);
     Register Idx;
-    bool ZP;
+    bool ZP = false;
     if (mi_match(Val, MRI,
                  m_GAdd(m_all_of(m_MInstr(Load),
                                  m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)),
@@ -1803,7 +1803,7 @@ bool MOSInstructionSelector::selectAddE(MachineInstr &MI) {
           .addUse(CarryIn);
     }
     Register Idx;
-    bool ZP;
+    bool ZP = false;
     if (mi_match(L, MRI, m_FoldedLdIdx(MI, Addr, Idx, ZP, AA)))
       std::swap(L, R);
     if (mi_match(R, MRI, m_FoldedLdIdx(MI, Addr, Idx, ZP, AA))) {
