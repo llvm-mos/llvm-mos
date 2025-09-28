@@ -154,6 +154,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     if (PSI && PSI->hasProfileSummary())
       BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  } else {
+    // When not optimizing, explicitly clear analysis pointers to avoid stale values
+    AA = nullptr;
+    PSI = nullptr;
+    BFI = nullptr;
   }
 
   return selectMachineFunction(MF);
