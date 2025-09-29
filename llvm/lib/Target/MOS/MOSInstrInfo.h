@@ -21,11 +21,11 @@
 
 namespace llvm {
 
+class MOSSubtarget;
+
 class MOSInstrInfo : public MOSGenInstrInfo {
 public:
-  MOSInstrInfo();
-
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  MOSInstrInfo(const MOSSubtarget &STI);
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -103,8 +103,7 @@ public:
 
   const TargetRegisterClass *
   getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI,
-              const MachineFunction &MF) const override;
+              const TargetRegisterInfo *TRI) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -128,6 +127,8 @@ public:
                                     unsigned OpIdx) const override;
 
 private:
+  const MOSSubtarget *STI;
+
   void copyPhysRegImpl(MachineIRBuilder &Builder, Register DestReg,
                        Register SrcReg, bool Force = false,
                        bool KillSrc = false) const;

@@ -8,158 +8,294 @@ target triple = "mos"
 define dso_local void @clear_screen(i8* nocapture writeonly %scr) local_unnamed_addr #0 {
 ; CHECK-LABEL: clear_screen:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+32 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+33 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #164
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+30 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+31 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #204
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+28 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+29 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #244
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+26 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+27 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #28
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+24 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+25 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #68
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+22 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+23 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #108
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+20 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+21 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #148
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+18 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+19 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #188
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+16 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+17 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #228
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+14 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+15 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #12
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+12 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+13 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #52
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+10 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+11 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #92
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+8 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+9 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #132
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+6 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+7 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #172
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+4 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+5 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #212
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk+2 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+3 ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx #252
+; CHECK-NEXT:    stx __rc4
+; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    stx __rc5
+; CHECK-NEXT:    ldx __rc4
+; CHECK-NEXT:    stx .Lclear_screen_sstk ; 1-byte Folded Spill
+; CHECK-NEXT:    ldx __rc5
+; CHECK-NEXT:    stx .Lclear_screen_sstk+1 ; 1-byte Folded Spill
 ; CHECK-NEXT:    lda #15
 ; CHECK-NEXT:    ldx #3
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #232
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #0
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+32 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+33 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    lda #11
 ; CHECK-NEXT:    ldx #3
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #232
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #164
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+30 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+31 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #204
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+28 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+29 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #244
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+26 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #216
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+27 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #28
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+24 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+25 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #68
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+22 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+23 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #108
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+20 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+21 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #148
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+18 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+19 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #188
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+16 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+17 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #228
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+14 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #217
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+15 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #12
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+12 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+13 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #52
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+10 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+11 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #92
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+8 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+9 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #132
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+6 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+7 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #172
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+4 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+5 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #212
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+2 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+3 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4
 ; CHECK-NEXT:    ldx #32
 ; CHECK-NEXT:    lda #7
 ; CHECK-NEXT:    jsr __memset
-; CHECK-NEXT:    ldx #252
+; CHECK-NEXT:    ldx .Lclear_screen_sstk ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc2
-; CHECK-NEXT:    ldx #218
+; CHECK-NEXT:    ldx .Lclear_screen_sstk+1 ; 1-byte Folded Reload
 ; CHECK-NEXT:    stx __rc3
 ; CHECK-NEXT:    ldx #0
 ; CHECK-NEXT:    stx __rc4

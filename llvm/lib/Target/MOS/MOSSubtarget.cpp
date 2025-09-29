@@ -36,7 +36,7 @@ using namespace llvm;
 
 MOSSubtarget::MOSSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const MOSTargetMachine &TM)
-    : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), InstrInfo(),
+    : MOSGenSubtargetInfo(TT, CPU, /* TuneCPU */ CPU, FS), InstrInfo(*this),
       RegInfo(), FrameLowering(),
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)),
       CallLoweringInfo(&TLInfo), Legalizer(*this),

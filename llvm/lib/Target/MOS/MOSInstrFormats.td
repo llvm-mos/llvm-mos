@@ -117,7 +117,6 @@ class Inst<string asmstr> : Instruction {
   let mayStore = true;
   let hasSideEffects = true;
 
-  field bits<56> SoftFail = 0;
   let DecoderNamespace = "MOS";
 
   bit MLow = 0;

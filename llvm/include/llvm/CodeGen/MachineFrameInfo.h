@@ -87,6 +87,9 @@ public:
   bool isTargetSpilled()                   const { return TargetSpilled; }
 };
 
+using SaveRestorePoints =
+    DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>>;
+
 /// The MachineFrameInfo class represents an abstract stack frame until
 /// prolog/epilog code is inserted.  This class is key to allowing stack frame
 /// representation optimizations, such as frame pointer elimination.  It also
@@ -344,9 +347,9 @@ private:
   bool HasTailCall = false;
 
   /// Not empty, if shrink-wrapping found a better place for the prologue.
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
+  SaveRestorePoints SavePoints;
   /// Not empty, if shrink-wrapping found a better place for the epilogue.
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
+  SaveRestorePoints RestorePoints;
 
   /// Size of the UnsafeStack Frame
   uint64_t UnsafeStackSize = 0;
@@ -836,25 +839,20 @@ public:
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  ArrayRef<MachineBasicBlock *> getSavePoints() const { return SavePoints; }
-  void setSavePoints(ArrayRef<MachineBasicBlock *> NewSavePoints) {
-    SavePoints = SmallVector<MachineBasicBlock *>(NewSavePoints);
-  }
-  ArrayRef<MachineBasicBlock *> getRestorePoints() const {
-    return RestorePoints;
-  }
-  void setRestorePoints(ArrayRef<MachineBasicBlock *> NewRestorePoints) {
-    RestorePoints = SmallVector<MachineBasicBlock *>(NewRestorePoints);
+  const SaveRestorePoints &getRestorePoints() const { return RestorePoints; }
+
+  const SaveRestorePoints &getSavePoints() const { return SavePoints; }
+
+  void setSavePoints(SaveRestorePoints NewSavePoints) {
+    SavePoints = std::move(NewSavePoints);
   }
 
-  static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
-      ArrayRef<MachineBasicBlock *> SRPoints,
-      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
-    SmallVector<MachineBasicBlock *> Pts;
-    for (auto &Src : SRPoints)
-      Pts.push_back(BBMap.find(Src)->second);
-    return Pts;
+  void setRestorePoints(SaveRestorePoints NewRestorePoints) {
+    RestorePoints = std::move(NewRestorePoints);
   }
+
+  void clearSavePoints() { SavePoints.clear(); }
+  void clearRestorePoints() { RestorePoints.clear(); }
 
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
   void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }

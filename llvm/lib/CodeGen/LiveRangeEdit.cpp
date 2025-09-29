@@ -68,19 +68,11 @@ Register LiveRangeEdit::createFrom(Register OldReg) {
   return VReg;
 }
 
-bool LiveRangeEdit::checkRematerializable(VNInfo *VNI,
-                                          const MachineInstr *DefMI) {
-  assert(DefMI && "Missing instruction");
-  ScannedRemattable = true;
-  if (!EnableRemat)
-    return false;
-  if (!TII.isTriviallyReMaterializable(*DefMI))
-    return false;
-  Remattable.insert(VNI);
-  return true;
-}
-
 void LiveRangeEdit::scanRemattable() {
+  if (!EnableRemat) {
+    ScannedRemattable = true;
+    return;
+  }
   for (VNInfo *VNI : getParent().valnos) {
     if (VNI->isUnused())
       continue;
@@ -92,7 +84,8 @@ void LiveRangeEdit::scanRemattable() {
     MachineInstr *DefMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (!DefMI)
       continue;
-    checkRematerializable(OrigVNI, DefMI);
+    if (TII.isReMaterializable(*DefMI))
+      Remattable.insert(OrigVNI);
   }
   ScannedRemattable = true;
 }
@@ -101,60 +94,6 @@ bool LiveRangeEdit::anyRematerializable() {
   if (!ScannedRemattable)
     scanRemattable();
   return !Remattable.empty();
-}
-
-/// allUsesAvailableAt - Return true if all registers used by OrigMI at
-/// OrigIdx are also available with the same value at UseIdx.
-bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
-                                       SlotIndex OrigIdx,
-                                       SlotIndex UseIdx) const {
-  OrigIdx = OrigIdx.getRegSlot(true);
-  UseIdx = std::max(UseIdx, UseIdx.getRegSlot(true));
-  for (const MachineOperand &MO : OrigMI->operands()) {
-    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
-      continue;
-
-    // We can't remat physreg uses, unless it is a constant or target wants
-    // to ignore this use.
-    if (MO.getReg().isPhysical()) {
-      if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
-        continue;
-      return false;
-    }
-
-    LiveInterval &li = LIS.getInterval(MO.getReg());
-    const VNInfo *OVNI = li.getVNInfoAt(OrigIdx);
-    if (!OVNI)
-      continue;
-
-    // Don't allow rematerialization immediately after the original def.
-    // It would be incorrect if OrigMI redefines the register.
-    // See PR14098.
-    if (SlotIndex::isSameInstr(OrigIdx, UseIdx))
-      return false;
-
-    if (OVNI != li.getVNInfoAt(UseIdx))
-      return false;
-
-    // Check that subrange is live at UseIdx.
-    if (li.hasSubRanges()) {
-      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      unsigned SubReg = MO.getSubReg();
-      LaneBitmask LM = SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
-                              : MRI.getMaxLaneMaskForVReg(MO.getReg());
-      for (LiveInterval::SubRange &SR : li.subranges()) {
-        if ((SR.LaneMask & LM).none())
-          continue;
-        if (!SR.liveAt(UseIdx))
-          return false;
-        // Early exit if all used lanes are checked. No need to continue.
-        LM &= ~SR.LaneMask;
-        if (LM.none())
-          break;
-      }
-    }
-  }
-  return true;
 }
 
 void LiveRangeEdit::setRematEnable(bool Enable) {
@@ -170,12 +109,10 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM, VNInfo *OrigVNI,
     return false;
 
   // No defining instruction provided.
-  SlotIndex DefIdx;
   assert(RM.OrigMI && "No defining instruction for remattable value");
-  DefIdx = LIS.getInstructionIndex(*RM.OrigMI);
 
   // Verify that all used registers are available with the same values.
-  if (!allUsesAvailableAt(RM.OrigMI, DefIdx, UseIdx))
+  if (!VirtRegAuxInfo::allUsesAvailableAt(RM.OrigMI, UseIdx, LIS, MRI, TII))
     return false;
 
   return true;
@@ -196,9 +133,12 @@ SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
   Rematted.insert(RM.ParentVNI);
   ++NumReMaterialization;
 
+  bool EarlyClobber = MI->getOperand(0).isEarlyClobber();
   if (ReplaceIndexMI)
-    return LIS.ReplaceMachineInstrInMaps(*ReplaceIndexMI, *MI).getRegSlot();
-  return LIS.getSlotIndexes()->insertMachineInstrInMaps(*MI, Late).getRegSlot();
+    return LIS.ReplaceMachineInstrInMaps(*ReplaceIndexMI, *MI)
+        .getRegSlot(EarlyClobber);
+  return LIS.getSlotIndexes()->insertMachineInstrInMaps(*MI, Late).getRegSlot(
+      EarlyClobber);
 }
 
 void LiveRangeEdit::eraseVirtReg(Register Reg) {
@@ -233,8 +173,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
 
   // Since we're moving the DefMI load, make sure we're not extending any live
   // ranges.
-  if (!allUsesAvailableAt(DefMI, LIS.getInstructionIndex(*DefMI),
-                          LIS.getInstructionIndex(*UseMI)))
+  if (!VirtRegAuxInfo::allUsesAvailableAt(
+          DefMI, LIS.getInstructionIndex(*UseMI), LIS, MRI, TII))
     return false;
 
   // We also need to make sure it is safe to move the load.
@@ -399,7 +339,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // register uses. That may provoke RA to split an interval at the KILL
     // and later result in an invalid live segment end.
     if (isOrigDef && DeadRemats && !HasLiveVRegUses &&
-        TII.isTriviallyReMaterializable(*MI)) {
+        TII.isReMaterializable(*MI)) {
       LiveInterval &NewLI = createEmptyIntervalFrom(Dest, false);
       VNInfo::Allocator &Alloc = LIS.getVNInfoAllocator();
       VNInfo *VNI = NewLI.getNextValue(Idx, Alloc);

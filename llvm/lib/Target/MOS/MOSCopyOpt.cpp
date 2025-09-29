@@ -128,8 +128,7 @@ static bool findLdImm(MachineInstr &MI,
       return false;
     if (Def.getOperand(0).getReg() != Src)
       return false;
-    const TargetRegisterClass *RC =
-        TII.getRegClass(Def.getDesc(), 0, &TRI, *MI.getMF());
+    const TargetRegisterClass *RC = TII.getRegClass(Def.getDesc(), 0, &TRI);
     if (!RC->contains(Dst))
       return false;
     if (LdImms.empty())
@@ -200,7 +199,8 @@ bool MOSCopyOpt::runOnMachineFunction(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "Found candidate: " << printReg(NewSrc, &TRI)
                         << '\n');
 
-      if (TRI.copyCost(Dst, NewSrc, STI).value(CostMode) > TRI.copyCost(Dst, Src, STI).value(CostMode)) {
+      if (TRI.copyCost(Dst, NewSrc, STI).value(CostMode) >
+          TRI.copyCost(Dst, Src, STI).value(CostMode)) {
         LLVM_DEBUG(dbgs() << "New copy is more expensive.\n");
         continue;
       }

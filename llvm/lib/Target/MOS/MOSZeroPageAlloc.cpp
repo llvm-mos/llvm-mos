@@ -541,9 +541,9 @@ void MOSZeroPageAlloc::collectCandidates(
         RestoreFreq += getFreq(BFI, MBB);
     }
   } else {
-    for (MachineBasicBlock *SavePoint : MFI.getSavePoints())
+    for (const auto &[SavePoint, _] : MFI.getSavePoints())
       SaveFreq += getFreq(BFI, *SavePoint);
-    for (MachineBasicBlock *RestorePoint : MFI.getRestorePoints()) {
+    for (const auto &[RestorePoint, _] : MFI.getRestorePoints()) {
       // If block does not have any successor and is not a return block
       // then the end point is unreachable and we do not need to insert any
       // epilogue.

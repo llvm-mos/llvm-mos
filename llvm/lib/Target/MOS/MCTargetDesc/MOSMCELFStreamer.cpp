@@ -97,7 +97,6 @@ void MOSMCELFStreamer::emitMappingSymbol(StringRef Name) {
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);
   Symbol->setBinding(ELF::STB_LOCAL);
-  Symbol->setExternal(false);
 }
 
 void MOSMCELFStreamer::emit816MXState(bool IsMLow, bool IsMHigh, bool IsXLow,

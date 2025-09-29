@@ -687,7 +687,7 @@ Sections:
               - AddressOffset:   0x0
                 Size:            0x1
                 Metadata:        0x2
-                CallsiteOffsets: [ 0x1 ]
+                CallsiteEndOffsets: [ 0x1 ]
 )";
 
   {
@@ -720,7 +720,7 @@ Sections:
                 AddressOffset:   0x0
                 Size:            0x1
                 Metadata:        0x2
-                CallsiteOffsets: [ 0x1 , 0x1 ]
+                CallsiteEndOffsets: [ 0x1 , 0x1 ]
   - Name: .llvm_bb_addr_map_2
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1

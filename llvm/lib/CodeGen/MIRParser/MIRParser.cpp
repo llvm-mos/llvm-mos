@@ -126,8 +126,8 @@ public:
 
   bool initializeSaveRestorePoints(
       PerFunctionMIParsingState &PFS,
-      const yaml::SaveRestorePoints &YamlSRPoints,
-      SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints);
+      const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+      llvm::SaveRestorePoints &SaveRestorePoints);
 
   bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
                               const yaml::MachineFunction &YamlMF);
@@ -872,11 +872,11 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasTailCall(YamlMFI.HasTailCall);
   MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
+  llvm::SaveRestorePoints SavePoints;
   if (initializeSaveRestorePoints(PFS, YamlMFI.SavePoints, SavePoints))
     return true;
   MFI.setSavePoints(SavePoints);
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
+  llvm::SaveRestorePoints RestorePoints;
   if (initializeSaveRestorePoints(PFS, YamlMFI.RestorePoints, RestorePoints))
     return true;
   MFI.setRestorePoints(RestorePoints);
@@ -1096,30 +1096,24 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
 
 // Return true if basic block was incorrectly specified in MIR
 bool MIRParserImpl::initializeSaveRestorePoints(
-    PerFunctionMIParsingState &PFS, const yaml::SaveRestorePoints &YamlSRPoints,
-    SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints) {
+    PerFunctionMIParsingState &PFS,
+    const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+    llvm::SaveRestorePoints &SaveRestorePoints) {
+  SMDiagnostic Error;
   MachineBasicBlock *MBB = nullptr;
-  if (std::holds_alternative<std::vector<yaml::SaveRestorePointEntry>>(
-          YamlSRPoints)) {
-    const auto &VectorRepr =
-        std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
-    if (VectorRepr.empty())
-      return false;
-    for (const yaml::SaveRestorePointEntry &Entry : VectorRepr) {
-      const yaml::StringValue &MBBSource = Entry.Point;
-      if (parseMBBReference(PFS, MBB, MBBSource.Value))
-        return true;
-      SaveRestorePoints.push_back(MBB);
-    }
-  } else {
-    yaml::StringValue StringRepr = std::get<yaml::StringValue>(YamlSRPoints);
-    if (StringRepr.Value.empty())
-      return false;
-    if (parseMBBReference(PFS, MBB, StringRepr))
+  for (const yaml::SaveRestorePointEntry &Entry : YamlSRPoints) {
+    if (parseMBBReference(PFS, MBB, Entry.Point.Value))
       return true;
-    SaveRestorePoints.push_back(MBB);
-  }
 
+    std::vector<CalleeSavedInfo> Registers;
+    for (auto &RegStr : Entry.Registers) {
+      Register Reg;
+      if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
+        return error(Error, RegStr.SourceRange);
+      Registers.push_back(CalleeSavedInfo(Reg));
+    }
+    SaveRestorePoints.try_emplace(MBB, std::move(Registers));
+  }
   return false;
 }
 

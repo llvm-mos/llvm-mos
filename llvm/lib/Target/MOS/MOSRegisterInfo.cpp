@@ -829,7 +829,7 @@ bool MOSRegisterInfo::getRegAllocationHints(Register VirtReg,
   return false;
 }
 
-// If the VirtReg is trivially rematerializable, and the only uses of VirtReg
+// If the VirtReg is rematerializable, and the only uses of VirtReg
 // are copies with exactly one register, returns a hint containing that
 // register. If there are more than one such register, returns Some(0).
 // Otherwise, returns None. This prevents the register allocator from
@@ -846,8 +846,7 @@ MOSRegisterInfo::getStrongCopyHint(Register VirtReg, const MachineFunction &MF,
 
   if (!MRI.hasOneDef(VirtReg))
     return std::nullopt;
-  if (!TII.isReallyTriviallyReMaterializable(
-          *MRI.getOneDef(VirtReg)->getParent()))
+  if (!TII.isReMaterializable(*MRI.getOneDef(VirtReg)->getParent()))
     return std::nullopt;
 
   std::optional<Register> Hint;
