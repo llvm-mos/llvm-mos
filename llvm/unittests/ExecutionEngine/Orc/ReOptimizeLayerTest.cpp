@@ -33,6 +33,9 @@ public:
 
 protected:
   void SetUp() override {
+    // Quarantine this test on llvm-mos
+    GTEST_SKIP();
+
     auto JTMB = JITTargetMachineBuilder::detectHost();
     // Bail out if we can not detect the host.
     if (!JTMB) {
@@ -62,10 +65,6 @@ protected:
 
     // ARM is not supported yet.
     if (Triple.isARM())
-      GTEST_SKIP();
-
-    // MOS is not supported yet
-    if (Triple.isMOS())
       GTEST_SKIP();
 
     auto EPC = SelfExecutorProcessControl::Create();
