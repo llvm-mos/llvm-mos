@@ -770,6 +770,7 @@ def : MOSSPC700<PLX_Implied, SPC700_POP_X>;
 def : MOSSPC700<PLY_Implied, SPC700_POP_Y>;
 
 // xF opcodes
+def : MOSSPC700<BRA_Relative, SPC700_BRA_Relative>;
 def : MOSSPC700<JSR_Absolute, SPC700_CALL_Absolute>;
 def : MOSSPC700<JMP_IndexedIndirect, SPC700_JMP_IndexedIndirect16>;
 def : MOSSPC700<RTS_Implied, SPC700_RET_Implied>;
