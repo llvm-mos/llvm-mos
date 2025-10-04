@@ -530,7 +530,7 @@ def SPC700_JMP_IndexedIndirect16
   let isIndirectBranch = true;  
 }
 def SPC700_BRA_Relative
-    : Inst16<"bra", Opcode<0x2F>, Relative>, InstConditionalBranch;
+    : Inst16<"bra", Opcode<0x2F>, Relative>, InstUnconditionalBranch;
 def SPC700_CALL_Absolute : Inst24<"call", Opcode<0x3F>, Absolute>, InstCall;
 def SPC700_PCALL_LastPage : Inst16<"pcall", Opcode<0x4F>, ZeroPage>, InstCall;
 def SPC700_JMP_Absolute

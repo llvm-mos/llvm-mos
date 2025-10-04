@@ -323,7 +323,7 @@ def PLX_Implied: InstLowA<"plx", 0b1111>; /// Pull X
 /// 80
 
 def BRA_Relative : Inst16<"bra", OpcodeC0<0b100, 0b000>, Relative>,
-    InstConditionalBranch;
+    InstUnconditionalBranch;
 
 def JMP_IndexedIndirect : Inst24<"jmp", Opcode<0x7c>, IndexedIndirect16>,
     InstUnconditionalBranch {
