@@ -593,6 +593,11 @@ bool InlineAsmLowering::lowerInlineAsm(
         MIRBuilder.buildCopy(Tmp1Reg, SrcReg);
         // Need to truncate the result of the register
         MIRBuilder.buildTrunc(ResRegs[i], Tmp1Reg);
+      } else if (ResTy.isScalar() && ResTy.getSizeInBits() > SrcSize) {
+         Register Tmp = SrcReg;
+         if (!MRI->getType(SrcReg).isValid())
+            Tmp = MRI->createGenericVirtualRegister(LLT::scalar(SrcSize)), MIRBuilder.buildCopy(Tmp, SrcReg);
+         MIRBuilder.buildZExt(ResRegs[i], Tmp);
       } else if (ResTy.getSizeInBits() == SrcSize) {
         MIRBuilder.buildCopy(ResRegs[i], SrcReg);
       } else {
