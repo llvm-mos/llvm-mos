@@ -198,6 +198,20 @@
     ret void
   }
 
+  define zeroext i1 @constraint_c_out() {
+  entry:
+    ; CHECK:      INLINEASM &"nop\0A", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $c
+    ; CHECK-NEXT: %1:_(s1) = COPY $c
+    ; CHECK-NEXT: %0:_(s8) = G_ZEXT %1(s1)
+    ; CHECK-NEXT: %2:_(s1) = G_TRUNC %0(s8)
+    ; CHECK-NEXT: %3:_(s8) = G_ZEXT %2(s1)
+    ; CHECK-NEXT: $a = COPY %3(s8)
+    ; CHECK-NEXT: RTS implicit $a
+    %0 = tail call i8 asm sideeffect "nop\0A", "=c"() #1
+    %loadedv = trunc i8 %0 to i1
+    ret i1 %loadedv
+  }
+
   define void @constraint_v() {
   ; CHECK-LABEL: name: constraint_v
   entry:
