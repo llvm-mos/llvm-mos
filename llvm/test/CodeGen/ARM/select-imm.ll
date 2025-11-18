@@ -435,11 +435,11 @@ define void @t9(ptr %a, i8 %b) {
 ; ARM-NEXT:    add r2, r0, #1
 ; ARM-NEXT:  .LBB8_2: @ %while.body
 ; ARM-NEXT:    @ =>This Inner Loop Header: Depth=1
-; ARM-NEXT:    add r3, r2, #1
-; ARM-NEXT:    and r2, r2, #255
+; ARM-NEXT:    mov r3, r2
 ; ARM-NEXT:    add r1, r1, #1
-; ARM-NEXT:    cmp r2, r0
-; ARM-NEXT:    mov r2, r3
+; ARM-NEXT:    add r2, r2, #1
+; ARM-NEXT:    and r3, r3, #255
+; ARM-NEXT:    cmp r3, r0
 ; ARM-NEXT:    blt .LBB8_2
 ; ARM-NEXT:  .LBB8_3: @ %while.end
 ; ARM-NEXT:    pop {r4, lr}
@@ -460,11 +460,11 @@ define void @t9(ptr %a, i8 %b) {
 ; ARMT2-NEXT:    add r2, r0, #1
 ; ARMT2-NEXT:  .LBB8_2: @ %while.body
 ; ARMT2-NEXT:    @ =>This Inner Loop Header: Depth=1
-; ARMT2-NEXT:    add r3, r2, #1
-; ARMT2-NEXT:    uxtb r2, r2
-; ARMT2-NEXT:    cmp r2, r0
+; ARMT2-NEXT:    mov r3, r2
 ; ARMT2-NEXT:    add r1, r1, #1
-; ARMT2-NEXT:    mov r2, r3
+; ARMT2-NEXT:    add r2, r2, #1
+; ARMT2-NEXT:    uxtb r3, r3
+; ARMT2-NEXT:    cmp r3, r0
 ; ARMT2-NEXT:    blt .LBB8_2
 ; ARMT2-NEXT:  @ %bb.3: @ %while.end
 ; ARMT2-NEXT:    pop {r4, pc}
@@ -485,11 +485,11 @@ define void @t9(ptr %a, i8 %b) {
 ; THUMB1-NEXT:    adds r2, r0, #1
 ; THUMB1-NEXT:  .LBB8_2: @ %while.body
 ; THUMB1-NEXT:    @ =>This Inner Loop Header: Depth=1
+; THUMB1-NEXT:    mov r3, r2
 ; THUMB1-NEXT:    adds r1, r1, #1
-; THUMB1-NEXT:    adds r3, r2, #1
-; THUMB1-NEXT:    uxtb r2, r2
-; THUMB1-NEXT:    cmp r2, r0
-; THUMB1-NEXT:    mov r2, r3
+; THUMB1-NEXT:    adds r2, r2, #1
+; THUMB1-NEXT:    uxtb r3, r3
+; THUMB1-NEXT:    cmp r3, r0
 ; THUMB1-NEXT:    blt .LBB8_2
 ; THUMB1-NEXT:  .LBB8_3: @ %while.end
 ; THUMB1-NEXT:    pop {r4, pc}
@@ -510,11 +510,11 @@ define void @t9(ptr %a, i8 %b) {
 ; THUMB2-NEXT:    adds r2, r0, #1
 ; THUMB2-NEXT:  .LBB8_2: @ %while.body
 ; THUMB2-NEXT:    @ =>This Inner Loop Header: Depth=1
-; THUMB2-NEXT:    adds r3, r2, #1
-; THUMB2-NEXT:    uxtb r2, r2
-; THUMB2-NEXT:    cmp r2, r0
-; THUMB2-NEXT:    add.w r1, r1, #1
-; THUMB2-NEXT:    mov r2, r3
+; THUMB2-NEXT:    mov r3, r2
+; THUMB2-NEXT:    adds r1, #1
+; THUMB2-NEXT:    adds r2, #1
+; THUMB2-NEXT:    uxtb r3, r3
+; THUMB2-NEXT:    cmp r3, r0
 ; THUMB2-NEXT:    blt .LBB8_2
 ; THUMB2-NEXT:  @ %bb.3: @ %while.end
 ; THUMB2-NEXT:    pop {r4, pc}
@@ -535,11 +535,11 @@ define void @t9(ptr %a, i8 %b) {
 ; V8MBASE-NEXT:    adds r2, r0, #1
 ; V8MBASE-NEXT:  .LBB8_2: @ %while.body
 ; V8MBASE-NEXT:    @ =>This Inner Loop Header: Depth=1
+; V8MBASE-NEXT:    mov r3, r2
 ; V8MBASE-NEXT:    adds r1, r1, #1
-; V8MBASE-NEXT:    adds r3, r2, #1
-; V8MBASE-NEXT:    uxtb r2, r2
-; V8MBASE-NEXT:    cmp r2, r0
-; V8MBASE-NEXT:    mov r2, r3
+; V8MBASE-NEXT:    adds r2, r2, #1
+; V8MBASE-NEXT:    uxtb r3, r3
+; V8MBASE-NEXT:    cmp r3, r0
 ; V8MBASE-NEXT:    blt .LBB8_2
 ; V8MBASE-NEXT:  .LBB8_3: @ %while.end
 ; V8MBASE-NEXT:    pop {r4, pc}

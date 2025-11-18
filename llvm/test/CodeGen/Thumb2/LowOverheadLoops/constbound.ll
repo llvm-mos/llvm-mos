@@ -7,12 +7,12 @@ define dso_local i32 @test_500_504(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #126
-; CHECK-NEXT:    adr r2, .LCPI0_0
-; CHECK-NEXT:    vldrw.u32 q0, [r2]
-; CHECK-NEXT:    mov.w r2, #500
-; CHECK-NEXT:    vdup.32 q1, r2
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    adr r1, .LCPI0_0
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    mov.w r1, #500
+; CHECK-NEXT:    vdup.32 q1, r1
 ; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vqadd.u32 q2, q0, r1

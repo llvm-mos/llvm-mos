@@ -120,7 +120,7 @@ bool MOSFrameLowering::spillCalleeSavedRegisters(
       assert(!CI.isSpilledToReg());
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       TII.storeRegToStackSlot(MBB, Builder.getInsertPt(), Reg, true,
-                              CI.getFrameIdx(), RC, TRI, Register{});
+                              CI.getFrameIdx(), RC, Register{});
     }
   }
 
@@ -176,7 +176,7 @@ bool MOSFrameLowering::restoreCalleeSavedRegisters(
       assert(!CI.isSpilledToReg());
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       TII.loadRegFromStackSlot(MBB, Builder.getInsertPt(), Reg,
-                               CI.getFrameIdx(), RC, TRI, Register{});
+                               CI.getFrameIdx(), RC, Register{});
     }
   }
 

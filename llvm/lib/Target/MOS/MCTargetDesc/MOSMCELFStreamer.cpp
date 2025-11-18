@@ -41,7 +41,7 @@ void MOSMCELFStreamer::initSections(bool NoExecStack,
   emitCodeAlignment(Align(1), &STI);
 
   if (NoExecStack)
-    switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+    switchSection(Ctx.getAsmInfo()->getStackSection(Ctx, false));
 }
 
 static bool HasPrefix(StringRef Name, StringRef Prefix) {

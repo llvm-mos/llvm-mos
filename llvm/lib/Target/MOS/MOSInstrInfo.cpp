@@ -48,7 +48,8 @@ using namespace llvm;
 #include "MOSGenInstrInfo.inc"
 
 MOSInstrInfo::MOSInstrInfo(const MOSSubtarget &STI)
-    : MOSGenInstrInfo(STI, /*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
+    : MOSGenInstrInfo(STI, *STI.getRegisterInfo(),
+                      /*CFSetupOpcode=*/MOS::ADJCALLSTACKDOWN,
                       /*CFDestroyOpcode=*/MOS::ADJCALLSTACKUP),
       STI(&STI) {}
 
@@ -87,8 +88,8 @@ Register MOSInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  Register DestReg, unsigned SubIdx,
-                                 const MachineInstr &Orig,
-                                 const TargetRegisterInfo &TRI) const {
+                                 const MachineInstr &Orig) const {
+  const TargetRegisterInfo &TRI = *STI->getRegisterInfo();
   if (Orig.getOpcode() == MOS::LDImm16) {
     MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
     MI->removeOperand(1);
@@ -96,7 +97,7 @@ void MOSInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     MI->setDesc(get(MOS::LDImm16Remat));
     MBB.insert(I, MI);
   } else {
-    TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, TRI);
+    TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig);
   }
 }
 
@@ -136,8 +137,8 @@ MachineInstr *MOSInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     return RC;
   };
 
-  const TargetRegisterClass *RegClass1 = getRegClass(MI.getDesc(), Idx1, &TRI);
-  const TargetRegisterClass *RegClass2 = getRegClass(MI.getDesc(), Idx2, &TRI);
+  const TargetRegisterClass *RegClass1 = getRegClass(MI.getDesc(), Idx1);
+  const TargetRegisterClass *RegClass2 = getRegClass(MI.getDesc(), Idx2);
   Register Reg1 = MI.getOperand(Idx1).getReg();
   Register Reg2 = MI.getOperand(Idx2).getReg();
 
@@ -813,20 +814,16 @@ const TargetRegisterClass *MOSInstrInfo::canFoldCopy(const MachineInstr &MI,
 void MOSInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
-  loadStoreRegStackSlot(MBB, MI, SrcReg, isKill, FrameIndex, RC, TRI, Flags,
+    Register VReg, MachineInstr::MIFlag Flags) const {
+  loadStoreRegStackSlot(MBB, MI, SrcReg, isKill, FrameIndex, RC, Flags,
                         /*IsLoad=*/false);
 }
 
-void MOSInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIndex,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg,
-                                        MachineInstr::MIFlag Flags) const {
-  loadStoreRegStackSlot(MBB, MI, DestReg, false, FrameIndex, RC, TRI, Flags,
+void MOSInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags) const {
+  loadStoreRegStackSlot(MBB, MI, DestReg, false, FrameIndex, RC, Flags,
                         /*IsLoad=*/true);
 }
 
@@ -898,13 +895,13 @@ static void loadStoreByteStaticStackSlot(MachineIRBuilder &Builder,
 void MOSInstrInfo::loadStoreRegStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register Reg,
     bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, MachineInstr::MIFlag Flags,
-    bool IsLoad) const {
+    MachineInstr::MIFlag Flags, bool IsLoad) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const MOSFrameLowering &TFL =
       *MF.getSubtarget<MOSSubtarget>().getFrameLowering();
+  const TargetRegisterInfo *TRI = STI->getRegisterInfo();
 
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(MF, FrameIndex);
@@ -977,9 +974,8 @@ void MOSInstrInfo::loadStoreRegStackSlot(
 }
 
 const TargetRegisterClass *
-MOSInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                          const TargetRegisterInfo *TRI) const {
-  auto *RC = TargetInstrInfo::getRegClass(MCID, OpNum, TRI);
+MOSInstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum) const {
+  auto *RC = TargetInstrInfo::getRegClass(MCID, OpNum);
 
   // On SPC700, LDImm can be used for imaginary registers.
   if (STI->hasSPC700() && MCID.getOpcode() == MOS::LDImm && OpNum == 0) {

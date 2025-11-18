@@ -35,8 +35,7 @@ public:
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
@@ -81,7 +80,7 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
       bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
@@ -91,19 +90,17 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
       int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadStoreRegStackSlot(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MI, Register Reg,
                              bool IsKill, int FrameIndex,
                              const TargetRegisterClass *RC,
-                             const TargetRegisterInfo *TRI,
                              MachineInstr::MIFlag Flags, bool IsLoad) const;
 
   const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI) const override;
+  getRegClass(const MCInstrDesc &MCID, unsigned OpNum) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 

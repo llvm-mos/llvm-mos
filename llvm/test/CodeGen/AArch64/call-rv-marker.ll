@@ -151,10 +151,10 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; SELDAG-NEXT:    b _objc_release
 ; SELDAG-NEXT:  LBB3_2: ; %lpad
 ; SELDAG-NEXT:  Ltmp2: ; EH_LABEL
-; SELDAG-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; SELDAG-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; SELDAG-NEXT:    mov x0, x19
 ; SELDAG-NEXT:    bl _objc_release
-; SELDAG-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
+; SELDAG-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
 ; SELDAG-NEXT:    bl __Unwind_Resume
 ; SELDAG-NEXT:  Lfunc_end0:
 ; SELDAG-NEXT:    .cfi_endproc
@@ -219,10 +219,10 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    adrp x8, _objc_release@GOTPAGE
 ; GISEL-NEXT:  Lloh3:
 ; GISEL-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
-; GISEL-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; GISEL-NEXT:    mov x0, x19
 ; GISEL-NEXT:    blr x8
-; GISEL-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
 ; GISEL-NEXT:    bl __Unwind_Resume
 ; GISEL-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
 ; GISEL-NEXT:    .loh AdrpLdrGot Lloh2, Lloh3
@@ -303,17 +303,17 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; SELDAG-NEXT:    ret
 ; SELDAG-NEXT:  LBB4_3: ; %lpad1
 ; SELDAG-NEXT:  Ltmp8: ; EH_LABEL
-; SELDAG-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; SELDAG-NEXT:    str x0, [sp] ; 8-byte Spill
 ; SELDAG-NEXT:    mov x0, x19
 ; SELDAG-NEXT:    bl _objc_release
 ; SELDAG-NEXT:    b LBB4_5
 ; SELDAG-NEXT:  LBB4_4: ; %lpad
 ; SELDAG-NEXT:  Ltmp5: ; EH_LABEL
-; SELDAG-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; SELDAG-NEXT:    str x0, [sp] ; 8-byte Spill
 ; SELDAG-NEXT:  LBB4_5: ; %ehcleanup
 ; SELDAG-NEXT:    add x0, sp, #15
 ; SELDAG-NEXT:    bl __ZN1SD1Ev
-; SELDAG-NEXT:    ldr x0, [sp] ; 8-byte Folded Reload
+; SELDAG-NEXT:    ldr x0, [sp] ; 8-byte Reload
 ; SELDAG-NEXT:    bl __Unwind_Resume
 ; SELDAG-NEXT:  Lfunc_end1:
 ; SELDAG-NEXT:    .cfi_endproc
@@ -384,17 +384,17 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    adrp x8, _objc_release@GOTPAGE
 ; GISEL-NEXT:  Lloh7:
 ; GISEL-NEXT:    ldr x8, [x8, _objc_release@GOTPAGEOFF]
-; GISEL-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x0, [sp] ; 8-byte Spill
 ; GISEL-NEXT:    mov x0, x19
 ; GISEL-NEXT:    blr x8
 ; GISEL-NEXT:    b LBB4_5
 ; GISEL-NEXT:  LBB4_4: ; %lpad
 ; GISEL-NEXT:  Ltmp5: ; EH_LABEL
-; GISEL-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x0, [sp] ; 8-byte Spill
 ; GISEL-NEXT:  LBB4_5: ; %ehcleanup
 ; GISEL-NEXT:    add x0, sp, #15
 ; GISEL-NEXT:    bl __ZN1SD1Ev
-; GISEL-NEXT:    ldr x0, [sp] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x0, [sp] ; 8-byte Reload
 ; GISEL-NEXT:    bl __Unwind_Resume
 ; GISEL-NEXT:    .loh AdrpLdrGot Lloh4, Lloh5
 ; GISEL-NEXT:    .loh AdrpLdrGot Lloh6, Lloh7

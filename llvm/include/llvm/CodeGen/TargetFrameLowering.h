@@ -33,8 +33,9 @@ enum Value {
   SGPRSpill = 1,
   ScalableVector = 2,
   WasmLocal = 3,
-  MosStatic = 4,
-  MosZeroPage = 5,
+  ScalablePredicateVector = 4,
+  MosStatic = 5,
+  MosZeroPage = 6,
   NoAlloc = 255
 };
 }
