@@ -96,3 +96,31 @@ _start:
                                 ; CHECK: R_MOS_ADDR24_SEGMENT_HI	.text+0x203
     lda mos24segmenthi(addr24)  ; CHECK: a5 00
                                 ; CHECK: R_MOS_ADDR24_SEGMENT_HI	.text+0x405
+
+    lda #<1234                  ; CHECK: a9 d2
+    lda #<$1234                 ; CHECK: a9 34
+
+    lda #>1234                  ; CHECK: a9 04
+    lda #>$1234                 ; CHECK: a9 12
+
+    lda #^1234                  ; CHECK: a9 00
+    lda #^$1234                 ; CHECK: a9 00
+
+.byte 1234@mos16lo              ; CHECK: d2
+.byte $1234@mos16lo             ; CHECK: 34
+
+.byte 1234@mos16hi              ; CHECK: 04
+.byte $1234@mos16hi             ; CHECK: 12
+
+.byte 1234@mos24bank            ; CHECK: 00
+.byte $1234@mos24bank           ; CHECK: 00
+
+.byte <1234                     ; CHECK: d2
+.byte <$1234                    ; CHECK: 34
+
+.byte >1234                     ; CHECK: 04
+.byte >$1234                    ; CHECK: 12
+
+.byte ^1234                     ; CHECK: 00
+.byte ^$1234                    ; CHECK: 00
+

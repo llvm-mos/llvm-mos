@@ -164,6 +164,11 @@ public:
                                                bool PrintInHex = false,
                                                unsigned SizeInBytes = 0);
 
+  LLVM_ABI static const MCConstantExpr *create(int64_t Value,
+                                               Spec specifier, MCContext &Ctx,
+                                               bool PrintInHex = false,
+                                               unsigned SizeInBytes = 0);
+
   /// @}
   /// \name Accessors
   /// @{

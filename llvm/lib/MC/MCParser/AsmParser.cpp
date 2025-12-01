@@ -1336,8 +1336,14 @@ const MCExpr *MCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
   case MCExpr::Specifier:
     llvm_unreachable("cannot apply another specifier to MCSpecifierExpr");
   case MCExpr::Target:
-  case MCExpr::Constant:
     return nullptr;
+
+  case MCExpr::Constant: {
+    const MCConstantExpr *CE = cast<MCConstantExpr>(E);
+
+    return MCConstantExpr::create(CE->getValue(), Spec, getContext(),
+                                  CE->useHexFormat(), CE->getSizeInBytes()); 
+  }
 
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);

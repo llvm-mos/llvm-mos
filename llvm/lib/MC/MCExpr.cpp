@@ -27,6 +27,28 @@
 #include <cassert>
 #include <cstdint>
 
+// TODO FIX this comes from ./llvm/lib/Target/MOS/MCTargetDesc/MOSMCExpr.h
+// but i cannot figure out how to include it
+// this is a GROSS distortion of what it probably should be.
+enum MOSMCExpr {
+  VK_NONE,
+
+  VK_ADDR16 = llvm::MCSymbolRefExpr::FirstTargetSpecifier,
+  VK_IMM16,
+  VK_ADDR8,
+  VK_IMM8,
+  VK_ADDR16_HI,
+  VK_ADDR16_LO,
+  VK_ADDR24,
+  VK_ADDR24_BANK,
+  VK_ADDR24_SEGMENT,
+  VK_ADDR24_SEGMENT_LO,
+  VK_ADDR24_SEGMENT_HI,
+  VK_ADDR13,
+  VK_ADDR_ASCIZ
+};
+// end of TODO FIX
+
 using namespace llvm;
 
 #define DEBUG_TYPE "mcexpr"
@@ -213,6 +235,47 @@ const MCUnaryExpr *MCUnaryExpr::create(Opcode Opc, const MCExpr *Expr,
 const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
                                              bool PrintInHex,
                                              unsigned SizeInBytes) {
+  return new (Ctx) MCConstantExpr(Value, PrintInHex, SizeInBytes);
+}
+
+const MCConstantExpr *MCConstantExpr::create(int64_t Value,
+                                             Spec specifier, MCContext &Ctx,
+                                             bool PrintInHex,
+                                             unsigned SizeInBytes) {
+  switch (specifier) {
+  case MOSMCExpr::VK_IMM8:
+  case MOSMCExpr::VK_ADDR8:
+    Value &= 0xFF;
+    break;
+  case MOSMCExpr::VK_IMM16:
+  case MOSMCExpr::VK_ADDR16:
+    Value &= 0xFFFF;
+    break;
+  case MOSMCExpr::VK_ADDR24:
+    Value &= 0xFFFFFF;
+    break;
+  case MOSMCExpr::VK_ADDR16_LO:
+    Value &= 0xFF;
+    break;
+  case MOSMCExpr::VK_ADDR16_HI:
+    Value = (Value >> 8) & 0xFF;
+    break;
+  case MOSMCExpr::VK_ADDR13: // TODO FIX is this correct ???
+  case MOSMCExpr::VK_ADDR24_BANK:
+    Value = (Value >> 16) & 0xFF;
+    break;
+  case MOSMCExpr::VK_ADDR24_SEGMENT:
+    Value = (Value >> 8) & 0xFFFF;
+    break;
+  case MOSMCExpr::VK_ADDR24_SEGMENT_LO:
+    Value = (Value >> 8) & 0xFF;
+    break;
+  case MOSMCExpr::VK_ADDR24_SEGMENT_HI:
+    Value = (Value >> 16) & 0xFF;
+    break;
+  default:
+    break;
+  }
   return new (Ctx) MCConstantExpr(Value, PrintInHex, SizeInBytes);
 }
 
