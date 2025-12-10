@@ -123,4 +123,3 @@ _start:
 
 .byte ^1234                     ; CHECK: 00
 .byte ^$1234                    ; CHECK: 00
-
