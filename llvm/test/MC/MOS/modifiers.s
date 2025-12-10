@@ -106,20 +106,21 @@ _start:
     lda #^1234                  ; CHECK: a9 00
     lda #^$1234                 ; CHECK: a9 00
 
-.byte 1234@mos16lo              ; CHECK: d2
-.byte $1234@mos16lo             ; CHECK: 34
+.byte $a9, <1234                ; CHECK: a9 d2
+.byte $a9, <$1234               ; CHECK: a9 34
 
-.byte 1234@mos16hi              ; CHECK: 04
-.byte $1234@mos16hi             ; CHECK: 12
+.byte $a9, >1234                ; CHECK: a9 04
+.byte $a9, >$1234               ; CHECK: a9 12
 
-.byte 1234@mos24bank            ; CHECK: 00
-.byte $1234@mos24bank           ; CHECK: 00
+.byte $a9, ^1234                ; CHECK: a9 00
+.byte $a9, ^$1234               ; CHECK: a9 00
 
-.byte <1234                     ; CHECK: d2
-.byte <$1234                    ; CHECK: 34
+.byte $a9, 1234@mos16lo         ; CHECK: a9 d2
+.byte $a9, $1234@mos16lo        ; CHECK: a9 34
 
-.byte >1234                     ; CHECK: 04
-.byte >$1234                    ; CHECK: 12
+.byte $a9, 1234@mos16hi         ; CHECK: a9 04
+.byte $a9, $1234@mos16hi        ; CHECK: a9 12
 
-.byte ^1234                     ; CHECK: 00
-.byte ^$1234                    ; CHECK: 00
+.byte $a9, 1234@mos24bank       ; CHECK: a9 00
+.byte $a9, $1234@mos24bank      ; CHECK: a9 00
+

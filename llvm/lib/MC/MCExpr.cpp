@@ -129,10 +129,13 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
   case MCExpr::Unary: {
     const MCUnaryExpr &UE = cast<MCUnaryExpr>(*this);
     switch (UE.getOpcode()) {
-    case MCUnaryExpr::LNot:  OS << '!'; break;
-    case MCUnaryExpr::Minus: OS << '-'; break;
-    case MCUnaryExpr::Not:   OS << '~'; break;
-    case MCUnaryExpr::Plus:  OS << '+'; break;
+    case MCUnaryExpr::LNot:     OS << '!'; break;
+    case MCUnaryExpr::Minus:    OS << '-'; break;
+    case MCUnaryExpr::Not:      OS << '~'; break;
+    case MCUnaryExpr::Plus:     OS << '+'; break;
+    case MCUnaryExpr::LoByte:   OS << '<'; break;
+    case MCUnaryExpr::HiByte:   OS << '>'; break;
+    case MCUnaryExpr::BankByte: OS << '^'; break;
     }
     UE.getSubExpr()->print(OS, MAI, MaxPrec);
     return;
@@ -624,6 +627,21 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       break;
     case MCUnaryExpr::Plus:
       Res = Value;
+      break;
+    case MCUnaryExpr::LoByte:
+      if (!Value.isAbsolute())
+        return false;
+      Res = MCValue::get(Value.getConstant() & 0xff);
+      break;
+    case MCUnaryExpr::HiByte:
+      if (!Value.isAbsolute())
+        return false;
+      Res = MCValue::get((Value.getConstant() & 0xff00) >> 8);
+      break;
+    case MCUnaryExpr::BankByte:
+      if (!Value.isAbsolute())
+        return false;
+      Res = MCValue::get((Value.getConstant() & 0xff0000) >> 16);
       break;
     }
 

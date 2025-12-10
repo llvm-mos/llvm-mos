@@ -1121,7 +1121,7 @@ bool AsmParser::parseBracketExpr(const MCExpr *&Res, SMLoc &EndLoc) {
 ///  primaryexpr ::= symbol
 ///  primaryexpr ::= number
 ///  primaryexpr ::= '.'
-///  primaryexpr ::= ~,+,- primaryexpr
+///  primaryexpr ::= ~,+,-,<,>,^ primaryexpr
 bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
                                  AsmTypeInfo *TypeInfo) {
   SMLoc FirstTokenLoc = getLexer().getLoc();
@@ -1316,6 +1316,24 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     if (parsePrimaryExpr(Res, EndLoc, TypeInfo))
       return true;
     Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
+    return false;
+  case AsmToken::Less:
+    Lex(); // Eat the operator.
+    if (parsePrimaryExpr(Res, EndLoc, TypeInfo))
+      return true;
+    Res = MCUnaryExpr::createLoByte(Res, getContext(), FirstTokenLoc);
+    return false;
+  case AsmToken::Greater:
+    Lex(); // Eat the operator.
+    if (parsePrimaryExpr(Res, EndLoc, TypeInfo))
+      return true;
+    Res = MCUnaryExpr::createHiByte(Res, getContext(), FirstTokenLoc);
+    return false;
+  case AsmToken::Caret:
+    Lex(); // Eat the operator.
+    if (parsePrimaryExpr(Res, EndLoc, TypeInfo))
+      return true;
+    Res = MCUnaryExpr::createBankByte(Res, getContext(), FirstTokenLoc);
     return false;
   }
 }

@@ -248,10 +248,13 @@ public:
 class MCUnaryExpr : public MCExpr {
 public:
   enum Opcode {
-    LNot,  ///< Logical negation.
-    Minus, ///< Unary minus.
-    Not,   ///< Bitwise negation.
-    Plus   ///< Unary plus.
+    LNot,     ///< Logical negation.
+    Minus,    ///< Unary minus.
+    Not,      ///< Bitwise negation.
+    Plus,     ///< Unary plus.
+    LoByte,   ///< Unary less than (low byte).
+    HiByte,   ///< Unary greater than (second lowest byte).
+    BankByte, ///< Unary caret (third lowest byte).
   };
 
 private:
@@ -281,6 +284,18 @@ public:
 
   static const MCUnaryExpr *createPlus(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
     return create(Plus, Expr, Ctx, Loc);
+  }
+
+  static const MCUnaryExpr *createLoByte(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(LoByte, Expr, Ctx, Loc);
+  }
+
+  static const MCUnaryExpr *createHiByte(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(HiByte, Expr, Ctx, Loc);
+  }
+
+  static const MCUnaryExpr *createBankByte(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(BankByte, Expr, Ctx, Loc);
   }
 
   /// @}
