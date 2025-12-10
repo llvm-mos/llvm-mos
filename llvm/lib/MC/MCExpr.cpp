@@ -28,7 +28,8 @@
 #include <cstdint>
 
 // TODO FIX this comes from ./llvm/lib/Target/MOS/MCTargetDesc/MOSMCExpr.h
-// but i cannot figure out how to include it
+// but i cannot figure out how to include it without dragging in a whole
+// bunch of dependencies.
 // this is a GROSS distortion of what it probably should be.
 enum MOSMCExpr {
   VK_NONE,
