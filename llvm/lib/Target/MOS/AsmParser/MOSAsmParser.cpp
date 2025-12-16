@@ -322,7 +322,42 @@ public:
       return false;
     }
 
-    return MCTargetAsmParser::parsePrimaryExpr(Res, EndLoc);
+    // Parse the primary expression normally first.
+    if (MCTargetAsmParser::parsePrimaryExpr(Res, EndLoc))
+      return true;
+
+    // Accept constant@mos... in directives by translating it into MOSMCExpr.
+    // LLVM's built-in @modifier path rejects constants with:
+    // "invalid modifier 'X' (no symbols present)".
+    if (Parser.getTok().getKind() == AsmToken::At) {
+      if (isa<MCConstantExpr>(Res)) {
+        Parser.Lex(); // Eat '@'
+
+        if (Parser.getTok().getKind() != AsmToken::Identifier)
+          return Error(Parser.getTok().getLoc(),
+                       "expected modifier name after '@'");
+
+        StringRef ModifierName = Parser.getTok().getString();
+
+        MOSMCExpr::VariantKind VK =
+            MOSMCExpr::getKindByName(ModifierName.str(),
+                                     /*IsImmediate=*/true);
+        if (VK == MOSMCExpr::VK_NONE)
+          return Error(Parser.getTok().getLoc(), "unknown modifier");
+
+        Parser.Lex(); // Eat modifier identifier
+
+        Res = MOSMCExpr::create(VK, Res, /*Negated=*/false, getContext());
+
+        // Keep EndLoc consistent with the rest of this file.
+        EndLoc =
+            SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+      }
+      // If it's not a constant, leave it alone so symbol@modifier keeps using
+      // LLVM's normal handling (which already works).
+    }
+
+    return false;
   }
 
   bool invalidOperand(SMLoc const &Loc, OperandVector const &Operands,
