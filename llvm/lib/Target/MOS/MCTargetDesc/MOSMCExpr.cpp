@@ -77,7 +77,18 @@ bool MOSMCExpr::evaluateAsConstant(int64_t &Result) const {
 
 bool MOSMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
                                           const MCAssembler *Asm) const {
-  return SubExpr->evaluateAsRelocatable(Result, Asm);
+  if (!SubExpr->evaluateAsRelocatable(Result, Asm))
+    return false;
+
+  // If the subexpression is an absolute constant, apply the variant transform
+  // here so generic directive range checks (e.g. .byte) see the masked value.
+  if (Result.isAbsolute()) {
+    int64_t V = Result.getConstant();
+    V = evaluateAsInt64(V);
+    Result = MCValue::get(V);
+  }
+
+  return true;
 }
 
 int64_t MOSMCExpr::evaluateAsInt64(int64_t Value) const {

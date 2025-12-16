@@ -275,6 +275,53 @@ public:
   MCAsmParser &getParser() const { return Parser; }
 
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override {
+    /*
+      This is the one place we can hook the generic directive parser (.byte,
+      .2byte, etc). Those directives parse "expr" lists using the generic
+      expression parser, which calls parsePrimaryExpr() to parse the first
+      "atom" of an expression.
+
+      We want WDC 65816-style shorthands to work in directives too:
+
+        <expr  -> mos16lo(expr)
+        >expr  -> mos16hi(expr)
+        ^expr  -> mos24bank(expr)
+
+      (Instruction operands already handle these in tryParseRelocExpression().)
+    */
+    const AsmToken &Tok = Parser.getTok();
+    if (Tok.getKind() == AsmToken::Less || Tok.getKind() == AsmToken::Greater ||
+        Tok.getKind() == AsmToken::Caret) {
+
+      AsmToken::TokenKind OpTok = Tok.getKind();
+      Parser.Lex(); // Eat '<', '>', or '^'
+
+      const MCExpr *Inner = nullptr;
+      if (Parser.parseExpression(Inner))
+        return true;
+
+      MOSMCExpr::VariantKind VK = MOSMCExpr::VK_NONE;
+      switch (OpTok) {
+      case AsmToken::Less:
+        VK = MOSMCExpr::VK_ADDR16_LO;
+        break;
+      case AsmToken::Greater:
+        VK = MOSMCExpr::VK_ADDR16_HI;
+        break;
+      case AsmToken::Caret:
+        VK = MOSMCExpr::VK_ADDR24_BANK;
+        break;
+      default:
+        assert(false);
+      }
+
+      Res = MOSMCExpr::create(VK, Inner, /*Negated=*/false, getContext());
+
+      // EndLoc is "one char before the next token" (same style as elsewhere).
+      EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+      return false;
+    }
+
     return MCTargetAsmParser::parsePrimaryExpr(Res, EndLoc);
   }
 
