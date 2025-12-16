@@ -106,6 +106,15 @@ _start:
     lda #^1234                  ; CHECK: a9 00
     lda #^$1234                 ; CHECK: a9 00
 
+    lda #1234@mos16lo           ; CHECK: a9 d2
+    lda #$1234@mos16lo          ; CHECK: a9 34
+
+    lda #1234@mos16hi           ; CHECK: a9 04
+    lda #$1234@mos16hi          ; CHECK: a9 12
+
+    lda #1234@mos24bank         ; CHECK: a9 00
+    lda #$1234@mos24bank        ; CHECK: a9 00
+
 .byte $a9, <1234                ; CHECK: a9 d2
 .byte $a9, <$1234               ; CHECK: a9 34
 
