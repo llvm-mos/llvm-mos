@@ -4450,9 +4450,11 @@ Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
   Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
   Value *LenV = ConstantInt::get(SizeTTy, Len);
   Value *Ret = emitMemCpyChk(Dst, Src, LenV, ObjSize, B, DL, TLI);
+  if (!Ret)
+    return nullptr;
   // If the function was an __stpcpy_chk, and we were able to fold it into
   // a __memcpy_chk, we still need to return the correct end pointer.
-  if (Ret && Func == LibFunc_stpcpy_chk)
+  if (Func == LibFunc_stpcpy_chk)
     return B.CreateInBoundsGEP(B.getInt8Ty(), Dst,
                                ConstantInt::get(SizeTTy, Len - 1));
   return copyFlags(*CI, cast<CallInst>(Ret));
