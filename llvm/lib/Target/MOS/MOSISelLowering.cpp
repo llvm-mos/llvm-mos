@@ -47,7 +47,23 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   // Used in legalizer (etc.) to refer to the stack pointer.
   setStackPointerRegisterToSaveRestore(MOS::RS0);
 
-  setMaximumJumpTableSize(std::min(256u, getMaximumJumpTableSize()));
+  // MOS jump tables use split low/high byte arrays indexed by an 8-bit register.
+  // To access the high byte array, the index is offset by the table size.
+  // With 256 entries, this offset would overflow 8-bit arithmetic, so limit to 255.
+  setMaximumJumpTableSize(std::min(255u, getMaximumJumpTableSize()));
+}
+
+bool MOSTargetLowering::isSuitableForJumpTable(const SwitchInst *SI,
+                                               uint64_t NumCases,
+                                               uint64_t Range,
+                                               ProfileSummaryInfo *PSI,
+                                               BlockFrequencyInfo *BFI) const {
+  // MOS jump tables use split low/high byte arrays indexed by an 8-bit register.
+  // This is a hard architectural limit that must be enforced regardless of
+  // optimization level (the base class bypasses MaxJumpTableSize for -Os).
+  if (Range > 255)
+    return false;
+  return TargetLowering::isSuitableForJumpTable(SI, NumCases, Range, PSI, BFI);
 }
 
 MVT MOSTargetLowering::getRegisterType(MVT VT) const {
