@@ -406,3 +406,26 @@ bool MOSFrameLowering::isISR(const MachineFunction &MF) const {
   return F.hasFnAttribute("interrupt") ||
          F.hasFnAttribute("interrupt-norecurse");
 }
+
+StackOffset MOSFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                     int FI,
+                                                     Register &FrameReg) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  int64_t Offset = MFI.getObjectOffset(FI);
+
+  if (MFI.getStackID(FI) == TargetStackID::Default) {
+    // For soft stack variables, offset is relative to the frame pointer.
+    // The frame pointer points to the base of the frame, so we need to add
+    // the stack size to get the correct offset.
+    Offset += MFI.getStackSize();
+    FrameReg = TRI->getFrameRegister(MF);
+  } else {
+    // For static stack and zero-page allocations, use a zero base register.
+    // The offset is the absolute address in these cases.
+    FrameReg = MOS::NoRegister;
+  }
+
+  return StackOffset::getFixed(Offset);
+}
