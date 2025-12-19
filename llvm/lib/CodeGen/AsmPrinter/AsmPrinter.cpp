@@ -662,12 +662,17 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
     EHHandlers.push_back(std::make_unique<WinCFGuard>(this));
 
-  for (auto &Handler : Handlers)
-    Handler->beginModule(&M);
-  for (auto &Handler : EHHandlers)
-    Handler->beginModule(&M);
+  if (shouldCallBeginModule())
+    callBeginModule(&M);
 
   return false;
+}
+
+void AsmPrinter::callBeginModule(Module *M) {
+  for (auto &Handler : Handlers)
+    Handler->beginModule(M);
+  for (auto &Handler : EHHandlers)
+    Handler->beginModule(M);
 }
 
 static bool canBeHidden(const GlobalValue *GV, const MCAsmInfo &MAI) {

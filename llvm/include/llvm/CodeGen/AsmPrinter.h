@@ -311,6 +311,29 @@ public:
     return nullptr;
   }
 
+  /// Returns true if beginModule should be called during doInitialization.
+  ///
+  /// DwarfDebug::beginModule iterates over all GlobalVariables in the
+  /// module and creates debug info entries (DIEs) for them. Some
+  /// targets (like MOS) run GlobalDCE after AsmPrinter::doInitialization,
+  /// which can delete GlobalVariables that debug info already references.
+  /// This causes "undefined temporary symbol" linker errors because the
+  /// .debug_addr section contains relocations to symbols that no longer exist.
+  ///
+  /// Targets that run GlobalDCE after codegen starts can override this to
+  /// return false and call beginModule later via callBeginModule(), after
+  /// GlobalDCE has finished. This ensures debug info only references globals
+  /// that survive dead code elimination.
+  virtual bool shouldCallBeginModule() const { return true; }
+
+  /// Manually trigger beginModule for all debug/EH handlers.
+  ///
+  /// This is called automatically during doInitialization if
+  /// shouldCallBeginModule() returns true. Targets that override
+  /// shouldCallBeginModule() to return false, must call this manually
+  /// after any passes that may delete GlobalVariables have completed.
+  void callBeginModule(Module *M);
+
   MCSymbol *getFunctionBegin() const { return CurrentFnBegin; }
   MCSymbol *getFunctionEnd() const { return CurrentFnEnd; }
 
