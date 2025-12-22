@@ -36,6 +36,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -638,6 +639,219 @@ void EhFrameSection::writeTo(uint8_t *buf) {
 
   if (getPartition(ctx).ehFrameHdr && getPartition(ctx).ehFrameHdr->getParent())
     getPartition(ctx).ehFrameHdr->write();
+}
+
+// .debug_frame section implementation.
+// Unlike .eh_frame, .debug_frame is not loaded at runtime. We still process
+// it to discard FDEs for garbage-collected functions.
+DebugFrameSection::DebugFrameSection(Ctx &ctx)
+    : SyntheticSection(ctx, ".debug_frame", SHT_PROGBITS, 0, 1) {}
+
+// Check if an FDE is live (i.e., its function was not garbage-collected).
+// Unlike .eh_frame where the first relocation points to the function,
+// in .debug_frame the first relocation points to the CIE (absolute offset)
+// and the second relocation points to the function's start address.
+Defined *DebugFrameSection::isFdeLive(EhSectionPiece &fde,
+                                       ArrayRef<Relocation> rels) {
+  unsigned firstRelI = fde.firstRelocation;
+  if (firstRelI == (unsigned)-1) {
+    DEBUG_WITH_TYPE("debug-frame",
+                    dbgs() << "isFdeLive: FDE at " << fde.inputOff << " has no relocations\n");
+    return nullptr;
+  }
+
+  // In .debug_frame, FDE layout is:
+  //   Bytes 0-3: Length
+  //   Bytes 4-7: CIE pointer (relocated - points to .debug_frame)
+  //   Bytes 8-11: Initial location (PC start - points to function)
+  // So we need to find the relocation at FDE offset + 8, not the first one.
+  uint64_t pcRelOffset = fde.inputOff + 8;
+
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "isFdeLive: FDE at " << fde.inputOff
+                         << " size=" << fde.size
+                         << " firstRelI=" << firstRelI
+                         << " looking for reloc at " << pcRelOffset << "\n");
+
+  // Find the relocation that points to the function's start address.
+  for (unsigned i = firstRelI; i < rels.size(); ++i) {
+    DEBUG_WITH_TYPE("debug-frame",
+                    dbgs() << "isFdeLive: checking rel[" << i << "] offset=" << rels[i].offset << "\n");
+    if (rels[i].offset >= fde.inputOff + fde.size)
+      break; // Past this FDE
+    if (rels[i].offset == pcRelOffset) {
+      // FDEs for garbage-collected or merged-by-ICF sections are dead.
+      if (auto *d = dyn_cast<Defined>(rels[i].sym)) {
+        DEBUG_WITH_TYPE("debug-frame",
+                        dbgs() << "isFdeLive: found Defined sym, folded=" << d->folded
+                               << " section=" << (d->section ? d->section->name.str() : "null")
+                               << " isLive=" << (d->section ? d->section->isLive() : false) << "\n");
+        if (!d->folded && d->section && d->section->isLive())
+          return d;
+      } else {
+        DEBUG_WITH_TYPE("debug-frame",
+                        dbgs() << "isFdeLive: sym is not Defined\n");
+      }
+      return nullptr;
+    }
+  }
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "isFdeLive: no reloc found at offset " << pcRelOffset << "\n");
+  return nullptr;
+}
+
+template <endianness E>
+void DebugFrameSection::addRecords(DebugFrameInputSection *sec) {
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "addRecords: file=" << sec->file->getName()
+                         << " cies=" << sec->cies.size() << " fdes=" << sec->fdes.size()
+                         << " rels=" << sec->rels.size() << "\n");
+  auto rels = sec->rels;
+  // For .debug_frame, we need to track which CIEs are referenced by live FDEs.
+  // First, collect all live FDEs and their CIE references.
+  llvm::DenseSet<size_t> usedCieOffsets;
+
+  for (EhSectionPiece &fde : sec->fdes) {
+    if (!isFdeLive(fde, rels))
+      continue;
+    // In .debug_frame, the CIE pointer is an absolute offset from the start
+    // of the section, stored at fde.data()[4..7].
+    uint32_t cieOffset = endian::read32<E>(fde.data().data() + 4);
+    DEBUG_WITH_TYPE("debug-frame",
+                    dbgs() << "addRecords: FDE at " << fde.inputOff << " is LIVE, cieOffset=" << cieOffset << "\n");
+    usedCieOffsets.insert(cieOffset);
+    livePieces.push_back(&fde);
+  }
+
+  // Now add the CIEs that are referenced by live FDEs
+  for (EhSectionPiece &cie : sec->cies) {
+    if (usedCieOffsets.contains(cie.inputOff)) {
+      DEBUG_WITH_TYPE("debug-frame",
+                      dbgs() << "addRecords: CIE at " << cie.inputOff << " is LIVE\n");
+      livePieces.push_back(&cie);
+    }
+  }
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "addRecords: livePieces now has " << livePieces.size() << " entries\n");
+}
+
+void DebugFrameSection::finalizeContents() {
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "finalizeContents: sections.size=" << sections.size() << "\n");
+  assert(!this->size); // Not finalized.
+
+  switch (ctx.arg.ekind) {
+  case ELFNoneKind:
+    llvm_unreachable("invalid ekind");
+  case ELF32LEKind:
+  case ELF64LEKind:
+    for (DebugFrameInputSection *sec : sections) {
+      DEBUG_WITH_TYPE("debug-frame",
+                      dbgs() << "finalizeContents: processing section, cies="
+                             << sec->cies.size() << " fdes=" << sec->fdes.size() << "\n");
+      // .debug_frame is a non-SHF_ALLOC section, so partition is not set.
+      // Process all input sections unconditionally.
+      addRecords<endianness::little>(sec);
+    }
+    break;
+  case ELF32BEKind:
+  case ELF64BEKind:
+    for (DebugFrameInputSection *sec : sections)
+      addRecords<endianness::big>(sec);
+    break;
+  }
+
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "finalizeContents: livePieces.size=" << livePieces.size() << "\n");
+
+  // Sort pieces: CIEs first (by input offset), then FDEs.
+  // This maintains the invariant that CIEs appear before FDEs that reference them.
+  llvm::stable_sort(livePieces, [](const EhSectionPiece *a, const EhSectionPiece *b) {
+    // CIEs have id == 0xFFFFFFFF, FDEs have CIE offset
+    bool aIsCie = endian::read32le(a->data().data() + 4) == 0xFFFFFFFF;
+    bool bIsCie = endian::read32le(b->data().data() + 4) == 0xFFFFFFFF;
+    if (aIsCie != bIsCie)
+      return aIsCie; // CIEs first
+    return a->inputOff < b->inputOff;
+  });
+
+  // Assign output offsets
+  size_t off = 0;
+  for (EhSectionPiece *piece : livePieces) {
+    piece->outputOff = off;
+    off += piece->size;
+  }
+
+  this->size = off;
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "finalizeContents: final size=" << this->size << "\n");
+}
+
+size_t DebugFrameSection::getSize() const {
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "getSize() returning " << size
+                         << " parent=" << (getParent() ? getParent()->name.str() : "null") << "\n");
+  return size;
+}
+
+void DebugFrameSection::writeTo(uint8_t *buf) {
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "writeTo: buf=" << (void*)buf << " size=" << size
+                         << " livePieces.size=" << livePieces.size() << "\n");
+  // Write CIE and FDE records.
+  // Unlike .eh_frame, .debug_frame uses absolute CIE pointers, so we need to
+  // update FDE's CIE pointer to reflect the new output offset.
+  llvm::DenseMap<size_t, size_t> cieInputToOutput;
+
+  // First pass: collect CIE mappings
+  for (EhSectionPiece *piece : livePieces) {
+    uint32_t id = endian::read32le(piece->data().data() + 4);
+    if (id == 0xFFFFFFFF) // CIE
+      cieInputToOutput[piece->inputOff] = piece->outputOff;
+  }
+
+  // Second pass: write and fix up
+  for (EhSectionPiece *piece : livePieces) {
+    size_t off = piece->outputOff;
+    memcpy(buf + off, piece->data().data(), piece->size);
+
+    uint32_t id = endian::read32le(piece->data().data() + 4);
+    if (id != 0xFFFFFFFF) {
+      // FDE: fix up CIE pointer to new output offset
+      auto it = cieInputToOutput.find(id);
+      if (it != cieInputToOutput.end())
+        write32le(buf + off + 4, it->second);
+    }
+  }
+
+  // Apply relocations for live pieces only.
+  // Skip CIE pointer relocations (at offset 4 within FDEs) - we fix those up
+  // manually above. Only apply function address relocations.
+  for (EhSectionPiece *piece : livePieces) {
+    auto *s = cast<DebugFrameInputSection>(piece->sec);
+    uint32_t id = endian::read32le(piece->data().data() + 4);
+    bool isFde = (id != 0xFFFFFFFF);
+
+    for (const Relocation &rel : s->rels) {
+      // Check if relocation is within this piece
+      if (rel.offset < piece->inputOff ||
+          rel.offset >= piece->inputOff + piece->size)
+        continue;
+
+      size_t relOffsetInPiece = rel.offset - piece->inputOff;
+
+      // Skip CIE pointer relocation in FDEs (at offset 4).
+      // We already fixed up CIE pointers manually.
+      if (isFde && relOffsetInPiece == 4)
+        continue;
+
+      size_t pieceOff = piece->outputOff + relOffsetInPiece;
+      uint64_t va = 0;
+      if (auto *d = dyn_cast<Defined>(rel.sym))
+        va = d->getVA(ctx, rel.addend);
+      ctx.target->relocateNoSym(buf + pieceOff, rel.type, static_cast<int64_t>(va));
+    }
+  }
 }
 
 GotSection::GotSection(Ctx &ctx)
@@ -3995,6 +4209,8 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
         s->splitIntoPieces();
       else if (auto *eh = dyn_cast<EhInputSection>(sec))
         eh->split<ELFT>();
+      else if (auto *df = dyn_cast<DebugFrameInputSection>(sec))
+        df->split<ELFT>();
     }
   });
 }
@@ -4020,6 +4236,28 @@ void elf::combineEhSections(Ctx &ctx) {
     return s->kind() == SectionBase::Regular && part.armExidx &&
            part.armExidx->addSection(cast<InputSection>(s));
   });
+}
+
+void elf::combineDebugFrameSections(Ctx &ctx) {
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "combineDebugFrameSections: ctx.in.debugFrame="
+                         << (ctx.in.debugFrame ? "exists" : "null")
+                         << " inputSections.size=" << ctx.debugFrameInputSections.size() << "\n");
+  if (!ctx.in.debugFrame)
+    return;
+
+  llvm::TimeTraceScope timeScope("Combine debug frame sections");
+  DebugFrameSection &df = *ctx.in.debugFrame;
+  for (DebugFrameInputSection *sec : ctx.debugFrameInputSections) {
+    DEBUG_WITH_TYPE("debug-frame",
+                    dbgs() << "combineDebugFrameSections: adding section from "
+                           << sec->file->getName() << " size=" << sec->getSize() << "\n");
+    sec->parent = &df;
+    df.addralign = std::max(df.addralign, sec->addralign);
+    df.sections.push_back(sec);
+  }
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "combineDebugFrameSections: total sections=" << df.sections.size() << "\n");
 }
 
 MipsRldMapSection::MipsRldMapSection(Ctx &ctx)
@@ -4937,6 +5175,18 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   if (ctx.arg.gdbIndex) {
     ctx.in.gdbIndex = GdbIndexSection::create<ELFT>(ctx);
     add(*ctx.in.gdbIndex);
+  }
+
+  // Create .debug_frame section if we have any debug frame input sections.
+  // This filters out FDEs for garbage-collected functions.
+  DEBUG_WITH_TYPE("debug-frame",
+                  dbgs() << "createSyntheticSections: debugFrameInputSections.size="
+                         << ctx.debugFrameInputSections.size() << "\n");
+  if (!ctx.debugFrameInputSections.empty()) {
+    DEBUG_WITH_TYPE("debug-frame",
+                    dbgs() << "createSyntheticSections: creating DebugFrameSection\n");
+    ctx.in.debugFrame = std::make_unique<DebugFrameSection>(ctx);
+    add(*ctx.in.debugFrame);
   }
 
   // .note.GNU-stack is always added when we are creating a re-linkable

@@ -45,6 +45,7 @@ class ELFFileBase;
 class SharedFile;
 class InputSectionBase;
 class EhInputSection;
+class DebugFrameInputSection;
 class Defined;
 class Undefined;
 class Symbol;
@@ -58,6 +59,7 @@ struct Partition;
 struct PhdrEntry;
 
 class BssSection;
+class DebugFrameSection;
 class GdbIndexSection;
 class GotPltSection;
 class GotSection;
@@ -600,6 +602,7 @@ struct InStruct {
   std::unique_ptr<IBTPltSection> ibtPlt;
   std::unique_ptr<RelocationBaseSection> relaPlt;
   // Non-SHF_ALLOC sections
+  std::unique_ptr<DebugFrameSection> debugFrame;
   std::unique_ptr<SyntheticSection> debugNames;
   std::unique_ptr<GdbIndexSection> gdbIndex;
   std::unique_ptr<StringTableSection> shStrTab;
@@ -683,6 +686,7 @@ struct Ctx : CommonLinkerContext {
   XO65Enclave *xo65Enclave = nullptr;
   SmallVector<InputSectionBase *, 0> inputSections;
   SmallVector<EhInputSection *, 0> ehInputSections;
+  SmallVector<DebugFrameInputSection *, 0> debugFrameInputSections;
 
   SmallVector<SymbolAux, 0> symAux;
   // Duplicate symbol candidates.

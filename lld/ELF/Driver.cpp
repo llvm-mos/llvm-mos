@@ -63,6 +63,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -3370,6 +3371,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
           continue;
         if (LLVM_UNLIKELY(isa<EhInputSection>(s)))
           ctx.ehInputSections.push_back(cast<EhInputSection>(s));
+        else if (LLVM_UNLIKELY(isa<DebugFrameInputSection>(s))) {
+          DEBUG_WITH_TYPE("debug-frame",
+                          dbgs() << "Driver: collecting DebugFrameInputSection from "
+                                 << f->getName() << "\n");
+          ctx.debugFrameInputSections.push_back(cast<DebugFrameInputSection>(s));
+        }
         else
           ctx.inputSections.push_back(s);
       }
@@ -3469,8 +3476,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
   // output sections in the usual way.
-  if (!ctx.arg.relocatable)
+  if (!ctx.arg.relocatable) {
     combineEhSections(ctx);
+    combineDebugFrameSections(ctx);
+  }
 
   // Merge .hexagon.attributes sections.
   if (ctx.arg.emachine == EM_HEXAGON)

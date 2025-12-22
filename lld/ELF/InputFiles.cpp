@@ -33,6 +33,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -1191,6 +1192,15 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   // class. For relocatable outputs, they are just passed through.
   if (name == ".eh_frame" && !ctx.arg.relocatable)
     return makeThreadLocal<EhInputSection>(*this, sec, name);
+
+  // .debug_frame sections need special handling to discard FDEs for
+  // garbage-collected functions, similar to .eh_frame.
+  if (name == ".debug_frame" && !ctx.arg.relocatable) {
+    DEBUG_WITH_TYPE("debug-frame",
+                    dbgs() << "creating DebugFrameInputSection for "
+                           << this->getName() << " size=" << sec.sh_size << "\n");
+    return makeThreadLocal<DebugFrameInputSection>(*this, sec, name);
+  }
 
   if ((sec.sh_flags & SHF_MERGE) && shouldMerge(sec, name))
     return makeThreadLocal<MergeInputSection>(*this, sec, name);
