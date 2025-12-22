@@ -78,9 +78,10 @@ unsigned
 MOSTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
                                    std::optional<MVT> RegisterVT) const {
   // Even though a 16-bit register is available, it's not actually an integer
-  // register, so split to 8 bits instead.
+  // register, so split to 8 bits instead. Use ceiling division to ensure
+  // non-power-of-2 types like i9 get enough registers.
   if (VT.getSizeInBits() > 8)
-    return VT.getSizeInBits() / 8;
+    return (VT.getSizeInBits() + 7) / 8;
   return TargetLowering::getNumRegisters(Context, VT, RegisterVT);
 }
 

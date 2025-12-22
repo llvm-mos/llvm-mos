@@ -39,7 +39,9 @@ MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   // to convey banking information; this field is used, among others, by the
   // DWARF debug structures.
   CodePointerSize = 4;
-  CalleeSaveStackSlotSize = 0;
+  // MOS is an 8-bit architecture with 1-byte stack slots.
+  // This is also used as the DWARF data alignment factor for CFI.
+  CalleeSaveStackSlotSize = 1;
   SeparatorString = "\n";
   CommentString = ";";
   UseMotorolaIntegers = true;
@@ -48,6 +50,7 @@ MOSMCAsmInfo::MOSMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   // Maximum instruction length across all supported subtargets.
   MaxInstLength = 7;
   SupportsDebugInformation = true;
+  ExceptionsType = ExceptionHandling::DwarfCFI;
 
   initializeAtSpecifiers(AtSpecifiers);
 }

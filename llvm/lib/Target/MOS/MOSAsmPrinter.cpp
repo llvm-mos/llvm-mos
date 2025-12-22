@@ -112,6 +112,18 @@ public:
     }
     AsmPrinter::SetupMachineFunction(MF);
   }
+
+  /// For modules with no functions, beginModule was never called in
+  /// SetupMachineFunction. Call it now so retained types and other
+  /// module-level debug info get emitted. By this point, MOSInternalize
+  /// has already run GlobalDCE.
+  bool doFinalization(Module &M) override {
+    if (!BeginModuleCalled) {
+      callBeginModule(&M);
+      BeginModuleCalled = true;
+    }
+    return AsmPrinter::doFinalization(M);
+  }
 };
 
 // Simple pseudo-instructions have their lowering (with expansion to real

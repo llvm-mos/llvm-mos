@@ -7,6 +7,10 @@
 
 ; REQUIRES: asserts, default_triple
 ; UNSUPPORTED: target=nvptx{{.*}}
+; MOS is unsupported because: (1) it overrides alwaysRequiresMachineScheduler()
+; to require the scheduler even for optnone (needed for correctness on this
+; register-constrained target), and (2) it uses GlobalISel, not FastISel.
+; UNSUPPORTED: target=mos{{.*}}
 
 ; This test verifies that we don't run Machine Function optimizations
 ; on optnone functions, and that we can turn off FastISel.

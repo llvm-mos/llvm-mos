@@ -6,6 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// MOS register numbers are expected to follow the DWARF Specification for MOS
+// Compatible Processors, at https://www.llvm-mos.org/wiki/DWARF_specification .
+// Some DWARF-defined registers overlap one another in this specification.
+// This behavior is by design.  There is no penalty in ELF or DWARF for having
+// overlapping register ranges, and coding is often easier than with purely 
+// unique numbering.
+
 //===----------------------------------------------------------------------===//
 //  Subregister indices
 //===----------------------------------------------------------------------===//
@@ -48,44 +55,58 @@ def sublsb : MOSSubRegIndex<1>;
 // with legacy assembly code that depends on the register names as variables.
 // (The MOS instructions generally don't name the target register as a
 // parameter. The target registers are implied by the opcode.)
-class MOSReg<bits<16> num, string name>
-  : Register<!strconcat("llvm_mos_", name)>, DwarfRegNum<[num]> {
-  field bits<16> Num = num;
-  let HWEncoding = num;
+class MOSReg<bits<32> dwarfnum, string name, bits<16> hwenc = 0>
+  : Register<!strconcat("llvm_mos_", name)>, DwarfRegNum<[dwarfnum]> {
+  field bits<32> Num = dwarfnum;
+  let HWEncoding = hwenc;
   let Namespace = "MOS";
   let AltNames = [name];
 }
 
 // An 8-bit value register (GPR or imaginary). Contains a 1-bit LSB subregister
 // to allow them to store boolean values.
-multiclass MOSReg8<bits<16> num, string name> {
-  def LSB : MOSReg<!add(num, 1), name#"LSB">;
+multiclass MOSReg8<bits<32> dwarfnum, string name, bits<16> hwenc = 0> {
+  def LSB : MOSReg<!add(0x100, dwarfnum), name#"LSB">;
 
-  def NAME : MOSReg<num, name> {
+  def NAME : MOSReg<dwarfnum, name, hwenc> {
     let SubRegs = [!cast<Register>(NAME#LSB)];
     let SubRegIndices = [sublsb];
   }
 }
 
+// MOS 8-bit accumulator
 defm A : MOSReg8<0, "a">;
-defm X : MOSReg8<2, "x">;
-defm Y : MOSReg8<4, "y">;
-def S : MOSReg<6, "s">;
 
-def C : MOSReg<7, "C">;
-def N : MOSReg<8, "N">;
-def V : MOSReg<9, "V">;
-def Z : MOSReg<10, "Z">;
+// MOS 8-bit X register
+defm X : MOSReg8<1, "x">;
+
+// MOS 8-bit Y register
+defm Y : MOSReg8<2, "y">;
+
+// MOS 8-bit stack register.  Some debuggers falsely claim this to be
+// a 16-bit value that always has 0x01 in the high byte.
+def S : MOSReg<4, "s">;
+
+// Program counter - not directly accessible but needed for DWARF CFI.
+// DWARF register 5 per MOS DWARF specification.
+def PC : MOSReg<5, "pc">;
+
+def C : MOSReg<0x200, "C">;
+def N : MOSReg<0x206, "N">;
+def V : MOSReg<0x205, "V">;
+def Z : MOSReg<0x201, "Z">;
 
 // N and Z are always set together, so model them as one register with two
 // one-bit subregisters.
-def NZ : MOSReg<11, "NZ"> {
+def NZ : MOSReg<0x207, "NZ"> {
   let SubRegs = [N, Z];
   let SubRegIndices = [subn, subz];
   let CoveredBySubRegs = true;
 }
 
-def P : MOSReg<12, "P"> {
+// The 8-bit processor status register, known occasionally as P and
+// occasionally as SR
+def P : MOSReg<3, "P"> {
   let SubRegs = [C, NZ, V];
   let SubRegIndices = [subcarry, subnz, subv];
 }
@@ -114,35 +135,46 @@ def P : MOSReg<12, "P"> {
 // The second 16-bit imaginary register is reserved as a frame pointer whenever
 // necessary, on a function-by-function basis.
 
+defvar MaxImag8Regs = 256;
+// DWARF register offsets according to MOS DWARF specification
+// Type 0x02: RC imaginary registers start at 0x00020000
+defvar Imag8RegsOffset = 0x20000;
+// RC LSB registers start at 0x00021000
+defvar Imag8LSBOffset = 0x21000;
+
+defvar MaxImag16Regs = !sra(MaxImag8Regs, 1);
+// Type 0x03: RS imaginary registers start at 0x00030000
+defvar Imag16RegsOffset = 0x30000;
+
 // 8-bit imaginary registers.
-multiclass MOSImagReg8<bits<16> num, string name> : MOSReg8<num, name>;
+multiclass MOSImagReg8<bits<32> num, string name> {
+  def LSB : MOSReg<!add(Imag8LSBOffset, num), name#"LSB">;
+
+  def NAME : MOSReg<!add(Imag8RegsOffset, num), name> {
+    let SubRegs = [!cast<Register>(NAME#LSB)];
+    let SubRegIndices = [sublsb];
+  }
+}
 
 // 16-bit imaginary registers (consecutive pairs of 8-bit registers).
-class MOSImagReg16<bits<16> num, string name, list<Register> subregs>
-    : MOSReg<num, name> {
+class MOSImagReg16<bits<32> num, string name, list<Register> subregs>
+    : MOSReg<!add(Imag16RegsOffset, num), name, 0> {
   let SubRegs = subregs;
   let SubRegIndices = [sublo, subhi];
   let CoveredBySubRegs = 1;
 }
 
-defvar MaxImag8Regs = 256;
-// The starting DWARF number for the imaginary registers.
-defvar Imag8RegsOffset = 0x10;
-
-defvar MaxImag16Regs = !sra(MaxImag8Regs, 1);
-defvar Imag16RegsOffset = !add(Imag8RegsOffset, !shl(MaxImag8Regs,1));
-
 // Now we enumerate the imaginary registers.
 // Imaginary 8-bit registers, starting with the prefix rc
 foreach I = 0...!add(MaxImag8Regs, -1) in {
   // There exist MaxImag8Regs rcXX registers...
-  defm RC#I: MOSImagReg8<!add(!shl(I,1), Imag8RegsOffset), "rc"#!cast<string>(I)>;
+  defm RC#I: MOSImagReg8<I, "rc"#!cast<string>(I)>;
 }
 
 // Imaginary 16-bit registers, starting with the prefix rs
 foreach I = 0...!add(MaxImag16Regs, -1) in {
   // There exist MaxImag16Regs rsXX registers...
-  def RS#I: MOSImagReg16<!add(I, Imag16RegsOffset), "rs"#!cast<string>(I),
+  def RS#I: MOSImagReg16<I, "rs"#!cast<string>(I),
       [!cast<Register>("RC"#!shl(I, 1)),
        !cast<Register>("RC"#!add(!shl(I,1),1))]>;
 }
@@ -205,8 +237,10 @@ def MOSAsmParamRegClass : MOSReg8Class<(add X, Y, S)>;
 def Anyi1 : MOSReg1Class<(add (sequence "RC%uLSB", 0, !add(MaxImag8Regs, -1)), CV_GPR_LSB)>;
 def Anyi8 : MOSReg8Class<(add Imag8, GPR)>;
 
-def Fake : MOSReg<13, "Fake">;
+def Fake : MOSReg<0x300, "Fake">;
 let isAllocatable = false in {
   def Fakei32 : MOSRegClass<[i32], 8, (add Fake)>;
   def Fakei64 : MOSRegClass<[i64], 8, (add Fake)>;
+  // PC is not directly accessible but needed for DWARF CFI
+  def PCc : MOSReg16Class<(add PC)>;
 }

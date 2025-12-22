@@ -21,6 +21,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <cstdint>
 using namespace llvm;
@@ -248,6 +249,54 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
     OutStreamer->AddComment(Inst.getComment());
     OutStreamer->emitCFIEscape(Inst.getValues(), Loc);
     break;
+  case MCCFIInstruction::OpDefCfaExpression: {
+    // Emit DW_CFA_def_cfa_expression as an escape sequence.
+    // Format: opcode, ULEB128 length, expression bytes
+    SmallString<64> Escaped;
+    Escaped.push_back(dwarf::DW_CFA_def_cfa_expression);
+    StringRef Expr = Inst.getValues();
+    uint8_t Buffer[16];
+    Escaped.append(reinterpret_cast<const char *>(Buffer),
+                   reinterpret_cast<const char *>(Buffer) +
+                       encodeULEB128(Expr.size(), Buffer));
+    Escaped.append(Expr.begin(), Expr.end());
+    OutStreamer->emitCFIEscape(Escaped, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpExpression: {
+    // Emit DW_CFA_expression as an escape sequence.
+    // Format: opcode, ULEB128 register, ULEB128 length, expression bytes
+    SmallString<64> Escaped;
+    Escaped.push_back(dwarf::DW_CFA_expression);
+    uint8_t Buffer[16];
+    Escaped.append(reinterpret_cast<const char *>(Buffer),
+                   reinterpret_cast<const char *>(Buffer) +
+                       encodeULEB128(Inst.getRegister(), Buffer));
+    StringRef Expr = Inst.getValues();
+    Escaped.append(reinterpret_cast<const char *>(Buffer),
+                   reinterpret_cast<const char *>(Buffer) +
+                       encodeULEB128(Expr.size(), Buffer));
+    Escaped.append(Expr.begin(), Expr.end());
+    OutStreamer->emitCFIEscape(Escaped, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpValExpression: {
+    // Emit DW_CFA_val_expression as an escape sequence.
+    // Format: opcode, ULEB128 register, ULEB128 length, expression bytes
+    SmallString<64> Escaped;
+    Escaped.push_back(dwarf::DW_CFA_val_expression);
+    uint8_t Buffer[16];
+    Escaped.append(reinterpret_cast<const char *>(Buffer),
+                   reinterpret_cast<const char *>(Buffer) +
+                       encodeULEB128(Inst.getRegister(), Buffer));
+    StringRef Expr = Inst.getValues();
+    Escaped.append(reinterpret_cast<const char *>(Buffer),
+                   reinterpret_cast<const char *>(Buffer) +
+                       encodeULEB128(Expr.size(), Buffer));
+    Escaped.append(Expr.begin(), Expr.end());
+    OutStreamer->emitCFIEscape(Escaped, Loc);
+    break;
+  }
   case MCCFIInstruction::OpRestore:
     OutStreamer->emitCFIRestore(Inst.getRegister(), Loc);
     break;

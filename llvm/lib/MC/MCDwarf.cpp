@@ -1521,6 +1521,31 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpEscape:
     Streamer.emitBytes(Instr.getValues());
     return;
+  case MCCFIInstruction::OpDefCfaExpression:
+    Streamer.emitInt8(dwarf::DW_CFA_def_cfa_expression);
+    Streamer.emitULEB128IntValue(Instr.getValues().size());
+    Streamer.emitBytes(Instr.getValues());
+    return;
+  case MCCFIInstruction::OpExpression: {
+    unsigned Reg = Instr.getRegister();
+    if (!IsEH)
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
+    Streamer.emitInt8(dwarf::DW_CFA_expression);
+    Streamer.emitULEB128IntValue(Reg);
+    Streamer.emitULEB128IntValue(Instr.getValues().size());
+    Streamer.emitBytes(Instr.getValues());
+    return;
+  }
+  case MCCFIInstruction::OpValExpression: {
+    unsigned Reg = Instr.getRegister();
+    if (!IsEH)
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
+    Streamer.emitInt8(dwarf::DW_CFA_val_expression);
+    Streamer.emitULEB128IntValue(Reg);
+    Streamer.emitULEB128IntValue(Instr.getValues().size());
+    Streamer.emitBytes(Instr.getValues());
+    return;
+  }
   case MCCFIInstruction::OpLabel:
     Streamer.emitLabel(Instr.getCfiLabel(), Instr.getLoc());
     return;

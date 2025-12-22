@@ -264,6 +264,9 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpGnuArgsSize:
       case MCCFIInstruction::OpLabel:
       case MCCFIInstruction::OpValOffset:
+      case MCCFIInstruction::OpDefCfaExpression:
+      case MCCFIInstruction::OpExpression:
+      case MCCFIInstruction::OpValExpression:
         break;
       }
       if (CSRReg || CSROffset) {

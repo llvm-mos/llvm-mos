@@ -2355,6 +2355,7 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   case Triple::hexagon:
   case Triple::lanai:
   case Triple::m68k:
+  case Triple::mos:
   case Triple::msp430:
   case Triple::systemz:
   case Triple::xcore:

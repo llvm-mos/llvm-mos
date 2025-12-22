@@ -517,12 +517,15 @@ public:
     OpDefCfaRegister,
     OpDefCfaOffset,
     OpDefCfa,
+    OpDefCfaExpression,
     OpRelOffset,
     OpAdjustCfaOffset,
     OpEscape,
     OpRestore,
     OpUndefined,
     OpRegister,
+    OpExpression,
+    OpValExpression,
     OpWindowSave,
     OpNegateRAState,
     OpNegateRAStateWithPC,
@@ -717,6 +720,27 @@ public:
     return MCCFIInstruction(OpValOffset, L, Register, Offset, Loc);
   }
 
+  /// .cfi_def_cfa_expression CFA is computed by evaluating the DWARF
+  /// expression in Expr.
+  static MCCFIInstruction createDefCfaExpression(MCSymbol *L, StringRef Expr,
+                                                  SMLoc Loc = {}) {
+    return MCCFIInstruction(OpDefCfaExpression, L, 0, 0, Loc, Expr);
+  }
+
+  /// .cfi_expression The value of Register is computed by evaluating the
+  /// DWARF expression in Expr as a memory location and dereferencing it.
+  static MCCFIInstruction createExpression(MCSymbol *L, unsigned Register,
+                                            StringRef Expr, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpExpression, L, Register, 0, Loc, Expr);
+  }
+
+  /// .cfi_val_expression The value of Register is computed by evaluating
+  /// the DWARF expression in Expr directly (not as a memory location).
+  static MCCFIInstruction createValExpression(MCSymbol *L, unsigned Register,
+                                               StringRef Expr, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpValExpression, L, Register, 0, Loc, Expr);
+  }
+
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
 
@@ -728,7 +752,8 @@ public:
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
-           Operation == OpRelOffset || Operation == OpValOffset);
+           Operation == OpRelOffset || Operation == OpValOffset ||
+           Operation == OpExpression || Operation == OpValExpression);
     return U.RI.Register;
   }
 
@@ -758,7 +783,8 @@ public:
   }
 
   StringRef getValues() const {
-    assert(Operation == OpEscape);
+    assert(Operation == OpEscape || Operation == OpDefCfaExpression ||
+           Operation == OpExpression || Operation == OpValExpression);
     return StringRef(&Values[0], Values.size());
   }
 
