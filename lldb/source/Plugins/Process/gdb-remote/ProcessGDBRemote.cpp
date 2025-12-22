@@ -5126,11 +5126,17 @@ void ProcessGDBRemote::AddRemoteRegisters(
                     remote_reg_info.invalidate_regs.begin(), proc_to_lldb);
   }
 
-  // Don't use Process::GetABI, this code gets called from DidAttach, and
-  // in that context we haven't set the Target's architecture yet, so the
-  // ABI is also potentially incorrect.
-  if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use))
+  // ABI override for register info, if enabled
+  if (ABISP abi_sp = ABI::FindPlugin(shared_from_this(), arch_to_use)) {
+    if (abi_sp->ProvidesRegisterInfoOverride()) {
+      for (auto &reg : registers) {
+        auto canonical = abi_sp->GetCanonicalRegisterInfo(reg.name.GetStringRef());
+        if (canonical)
+          reg = *canonical;
+      }
+    }
     abi_sp->AugmentRegisterInfo(registers);
+  }
 
   m_register_info_sp->SetRegisterInfo(std::move(registers), arch_to_use);
 }

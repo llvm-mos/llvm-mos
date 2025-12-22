@@ -246,7 +246,7 @@ static constexpr const CoreDefinition g_core_definitions[] = {
 
     {eByteOrderLittle, 2, 2, 4, llvm::Triple::avr, ArchSpec::eCore_avr, "avr"},
 
-    {eByteOrderLittle, 4, 1, 7, llvm::Triple::mos, ArchSpec::eCore_mos, "mos"},
+    {eByteOrderLittle, 2, 1, 7, llvm::Triple::mos, ArchSpec::eCore_mos, "mos"},
 
     {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
      "wasm32"},
