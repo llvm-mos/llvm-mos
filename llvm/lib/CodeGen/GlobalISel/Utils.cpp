@@ -1705,13 +1705,16 @@ void llvm::eraseInstrs(ArrayRef<MachineInstr *> DeadInstrs,
                        MachineRegisterInfo &MRI,
                        LostDebugLocObserver *LocObserver) {
   SmallInstListTy DeadInstChain;
-  for (MachineInstr *MI : DeadInstrs)
+  for (MachineInstr *MI : DeadInstrs) {
+    salvageDebugInfo(MRI, *MI);
     saveUsesAndErase(*MI, MRI, LocObserver, DeadInstChain);
+  }
 
   while (!DeadInstChain.empty()) {
     MachineInstr *Inst = DeadInstChain.pop_back_val();
     if (!isTriviallyDead(*Inst, MRI))
       continue;
+    salvageDebugInfo(MRI, *Inst);
     saveUsesAndErase(*Inst, MRI, LocObserver, DeadInstChain);
   }
 }
