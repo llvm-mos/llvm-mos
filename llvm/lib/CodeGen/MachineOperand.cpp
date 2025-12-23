@@ -732,6 +732,13 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     printCFIRegister(CFI.getRegister(), OS, TRI);
     OS << ", " << CFI.getOffset();
     break;
+  case MCCFIInstruction::OpValOffset:
+    OS << "val_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", " << CFI.getOffset();
+    break;
   case MCCFIInstruction::OpAdjustCfaOffset:
     OS << "adjust_cfa_offset ";
     if (MCSymbol *Label = CFI.getLabel())
@@ -748,6 +755,46 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << "escape ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
+    if (!CFI.getValues().empty()) {
+      size_t e = CFI.getValues().size() - 1;
+      for (size_t i = 0; i < e; ++i)
+        OS << format("0x%02x", uint8_t(CFI.getValues()[i])) << ", ";
+      OS << format("0x%02x", uint8_t(CFI.getValues()[e]));
+    }
+    break;
+  }
+  case MCCFIInstruction::OpDefCfaExpression: {
+    OS << "def_cfa_expression ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    if (!CFI.getValues().empty()) {
+      size_t e = CFI.getValues().size() - 1;
+      for (size_t i = 0; i < e; ++i)
+        OS << format("0x%02x", uint8_t(CFI.getValues()[i])) << ", ";
+      OS << format("0x%02x", uint8_t(CFI.getValues()[e]));
+    }
+    break;
+  }
+  case MCCFIInstruction::OpExpression: {
+    OS << "expression ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", ";
+    if (!CFI.getValues().empty()) {
+      size_t e = CFI.getValues().size() - 1;
+      for (size_t i = 0; i < e; ++i)
+        OS << format("0x%02x", uint8_t(CFI.getValues()[i])) << ", ";
+      OS << format("0x%02x", uint8_t(CFI.getValues()[e]));
+    }
+    break;
+  }
+  case MCCFIInstruction::OpValExpression: {
+    OS << "val_expression ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", ";
     if (!CFI.getValues().empty()) {
       size_t e = CFI.getValues().size() - 1;
       for (size_t i = 0; i < e; ++i)

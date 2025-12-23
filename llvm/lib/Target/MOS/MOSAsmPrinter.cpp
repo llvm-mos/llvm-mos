@@ -235,10 +235,12 @@ bool MOSAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 void MOSAsmPrinter::emitStartOfAsmFile(Module &M) {
-  auto &MTS =
-      *static_cast<MOSTargetStreamer *>(OutStreamer->getTargetStreamer());
+  auto *MTS =
+      static_cast<MOSTargetStreamer *>(OutStreamer->getTargetStreamer());
+  if (!MTS)
+    return;
   for (int I = 0; I < 32; I++)
-    MTS.emitDirectiveZeroPage(OutContext.getOrCreateSymbol("__rc" + Twine(I)));
+    MTS->emitDirectiveZeroPage(OutContext.getOrCreateSymbol("__rc" + Twine(I)));
 }
 
 void MOSAsmPrinter::emitJumpTableInfo() {

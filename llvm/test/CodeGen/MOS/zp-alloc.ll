@@ -10,7 +10,8 @@ target triple = "mos-sim"
 
 define i64 @foo(i64 %live_across_call) norecurse {
 ; CHECK-LABEL: foo:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta mos8(.Lfoo_zp_stk) ; 1-byte Folded Spill
 ; CHECK-NEXT:    stx mos8(.Lfoo_zp_stk+1) ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx __rc2
@@ -52,7 +53,8 @@ entry:
 
 define void @bar() norecurse noinline {
 ; CHECK-LABEL: bar:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx mos8(global_alias)
 ; CHECK-NEXT:    rts
@@ -66,7 +68,8 @@ declare void @ext() nocallback
 
 define void @csr() norecurse {
 ; CHECK-LABEL: csr:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx #48
 ; CHECK-NEXT:    ldy #57
 ; CHECK-NEXT:    sty mos8(.Lcsr_zp_stk)
@@ -111,7 +114,8 @@ declare void @ext_ptr(ptr %p) nocallback
 
 define void @alloca() norecurse {
 ; CHECK-LABEL: alloca:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx #mos8(.Lalloca_zp_stk)
 ; CHECK-NEXT:    ldy #mos8(0)
 ; CHECK-NEXT:    stx __rc2
@@ -127,7 +131,8 @@ entry:
 
 define void @extern_global_user(i8 %i) norecurse {
 ; CHECK-LABEL: extern_global_user:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    sta extern_global
 ; CHECK-NEXT:    rts
 entry:
@@ -139,7 +144,8 @@ entry:
 
 define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-LABEL: inr:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    cld
 ; CHECK-NEXT:    pha
 ; CHECK-NEXT:    clc
@@ -188,6 +194,10 @@ define void @inr() norecurse "interrupt-norecurse" {
 ; CHECK-NEXT:    stx .Linr_sstk+15 ; 1-byte Folded Spill
 ; CHECK-NEXT:    ldx __rc19
 ; CHECK-NEXT:    stx .Linr_sstk+16 ; 1-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa llvm_mos_rs0, 256
+; CHECK-NEXT:    .cfi_val_offset llvm_mos_rs0, 0
+; CHECK-NEXT:    .cfi_escape 0x10, 0x05, 0x09, 0x74, 0x05, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+; CHECK-NEXT:    .cfi_escape 0x16, 0x04, 0x09, 0x74, 0x06, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx mos8(.Linr_zp_stk) ; 1-byte Folded Spill
 ; CHECK-NEXT:    jsr inr_callee
@@ -250,7 +260,8 @@ entry:
 
 define void @inr_callee() norecurse noinline {
 ; CHECK-LABEL: inr_callee:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    rts
 entry:
   ret void
@@ -260,7 +271,8 @@ declare void @ext_callback()
 
 define void @apparent_recursion() norecurse {
 ; CHECK-LABEL: apparent_recursion:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx mos8(.Lapparent_recursion_zp_stk) ; 1-byte Folded Spill
 ; CHECK-NEXT:    jsr apparent_recursion_callee
@@ -276,7 +288,8 @@ entry:
 
 define void @apparent_recursion_callee() norecurse {
 ; CHECK-LABEL: apparent_recursion_callee:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldx global
 ; CHECK-NEXT:    stx mos8(.Lapparent_recursion_callee_zp_stk) ; 1-byte Folded Spill
 ; CHECK-NEXT:    jsr ext_callback

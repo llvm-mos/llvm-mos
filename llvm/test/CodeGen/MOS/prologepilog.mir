@@ -15,6 +15,10 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 258
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $a = COPY $rc0
     ; CHECK-NEXT: $a, $c, dead $v = ADCImm $a, 1, $c
@@ -36,6 +40,10 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 258
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $rc2 = COPY $rc0
     $rc2, $c, dead $v = AddrLostk %stack.1, 0
@@ -55,6 +63,10 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 258
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, dead $c, dead $v = ADCImm $a, 1, $c
@@ -77,6 +89,10 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 258
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $rc3 = COPY $rc1
     $c = LDCImm 0
@@ -96,6 +112,10 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 251, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 1234
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $a = COPY $rc0
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 210, $c
@@ -117,6 +137,10 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 512
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 2, $c
@@ -139,6 +163,10 @@ body:             |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $y = LDImm 1
     ; CHECK-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.1 + 1)
     $a, early-clobber $rs1 = LDStk %stack.1, 1 :: (load 1 from %stack.1 + 1)
@@ -158,6 +186,10 @@ body:             |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 258
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $rc2 = COPY $rc0
     ; CHECK-NEXT: $a = COPY $rc1
@@ -182,6 +214,10 @@ body:             |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $y = LDImm 1
     ; CHECK-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.1 + 1)
     ; CHECK-NEXT: $x = COPY killed $a
@@ -202,6 +238,10 @@ body:             |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $y = LDImm 1
     ; CHECK-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.1 + 1)
     ; CHECK-NEXT: $x = COPY killed $a
@@ -222,6 +262,10 @@ body:             |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $y = LDImm 1
     ; CHECK-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.1 + 1)
     ; CHECK-NEXT: $c = COPY $alsb
@@ -243,6 +287,10 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 4
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $y = LDImm 2
     ; CHECK-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.0 + 2, align 2)
     ; CHECK-NEXT: $rc0 = COPY killed $a
@@ -269,6 +317,10 @@ body:             |
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
     ; CHECK-NEXT: $a = PL
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $y = LDImm 1
     ; CHECK-NEXT: STIndirIdx $a, $rs0, killed $y :: (store (s8) into %stack.1 + 1)
     early-clobber $rs1 = STStk $a, %stack.1, 1 :: (store 1 into %stack.1 + 1)
@@ -288,6 +340,10 @@ body:             |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = COPY $xlsb
     ; CHECK-NEXT: $alsb = COPY $c
     ; CHECK-NEXT: $y = LDImm 1
@@ -310,6 +366,10 @@ body:             |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 254, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 258
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $rc2 = COPY $rc0
     ; CHECK-NEXT: $a = COPY $rc1
@@ -334,6 +394,10 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc1
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 255, $c
     ; CHECK-NEXT: $rc1 = COPY killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 4
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x01, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x02, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $rs0 = KILL $rs0
     ; CHECK-NEXT: $a = COPY $rc0
     ; CHECK-NEXT: $y = LDImm 2
@@ -364,11 +428,17 @@ body: |
     ; CHECK-NEXT: frame-setup PH killed $a
     ; CHECK-NEXT: $a = frame-setup COPY $rc31
     ; CHECK-NEXT: frame-setup PH killed $a
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x03, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x04, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
     ; CHECK-NEXT: $rs15 = COPY $rs0
     ; CHECK-NEXT: $y = LDImm 1
     ; CHECK-NEXT: $a = LDIndirIdx $rs15, killed $y :: (load (s8) from %stack.2 + 1)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_register $rs15
     ; CHECK-NEXT: $rs0 = COPY $rs15
     ; CHECK-NEXT: $a = frame-destroy PL
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $rs0, 3
     ; CHECK-NEXT: $rc31 = frame-destroy COPY killed $a
     ; CHECK-NEXT: $a = frame-destroy PL
     ; CHECK-NEXT: $rc30 = frame-destroy COPY killed $a
@@ -412,6 +482,12 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc31
     ; CHECK-NEXT: $y = LDImm 0
     ; CHECK-NEXT: STIndirIdx killed $a, $rs0, killed $y :: (store (s8) into %stack.1)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 2
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x05, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x06, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $rc30, -1
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $rc31, -2
     ; CHECK-NEXT: $rs13 = IMPLICIT_DEF
     ; CHECK-NEXT: $rs14 = IMPLICIT_DEF
     ; CHECK-NEXT: $rs15 = IMPLICIT_DEF
@@ -429,6 +505,8 @@ body: |
     ; CHECK-NEXT: $rc27 = frame-destroy COPY killed $a
     ; CHECK-NEXT: $a = frame-destroy PL
     ; CHECK-NEXT: $rc26 = frame-destroy COPY killed $a
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $rc30
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $rc31
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $a = COPY $rc0
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 2, $c
@@ -478,14 +556,24 @@ body: |
     ; CHECK-NEXT: $a = COPY $rc31
     ; CHECK-NEXT: $y = LDImm 0
     ; CHECK-NEXT: STIndirIdx killed $a, $rs0, killed $y :: (store (s8) into %stack.4)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $rs0, 4
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x05, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x06, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $rc28, -1
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $rc29, -2
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $rc30, -3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $rc31, -4
     ; CHECK-NEXT: $rs15 = COPY $rs0
     ; CHECK-NEXT: $rs12 = IMPLICIT_DEF
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_register $rs15
     ; CHECK-NEXT: $rs13 = IMPLICIT_DEF
     ; CHECK-NEXT: $rs14 = IMPLICIT_DEF
     ; CHECK-NEXT: $rs0 = COPY $rs15
     ; CHECK-NEXT: $y = LDImm 0
     ; CHECK-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.4)
     ; CHECK-NEXT: $rc31 = COPY killed $a
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $rs0, 4
     ; CHECK-NEXT: $y = LDImm 1
     ; CHECK-NEXT: $a = LDIndirIdx $rs0, killed $y :: (load (s8) from %stack.3)
     ; CHECK-NEXT: $rc30 = COPY killed $a
@@ -503,6 +591,10 @@ body: |
     ; CHECK-NEXT: $rc25 = frame-destroy COPY killed $a
     ; CHECK-NEXT: $a = frame-destroy PL
     ; CHECK-NEXT: $rc24 = frame-destroy COPY killed $a
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $rc28
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $rc29
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $rc30
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $rc31
     ; CHECK-NEXT: $c = LDCImm 0
     ; CHECK-NEXT: $a = COPY $rc0
     ; CHECK-NEXT: $a, $c, $v = ADCImm $a, 4, $c
@@ -552,6 +644,12 @@ body: |
   ; CHECK-NEXT:   $a = COPY $rc31
   ; CHECK-NEXT:   $y = LDImm 0
   ; CHECK-NEXT:   STIndirIdx killed $a, $rs0, killed $y :: (store (s8) into %stack.1)
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa $rs0, 2
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION val_offset $rs0, 0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION expression $pc, 0x74, 0x05, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION val_expression $s, 0x74, 0x06, 0x08, 0xff, 0x1a, 0x0a, 0x00, 0x01, 0x21
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $rc30, -1
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $rc31, -2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -573,6 +671,8 @@ body: |
   ; CHECK-NEXT:   $rc27 = frame-destroy COPY killed $a
   ; CHECK-NEXT:   $a = frame-destroy PL
   ; CHECK-NEXT:   $rc26 = frame-destroy COPY killed $a
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $rc30
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION restore $rc31
   ; CHECK-NEXT:   $c = LDCImm 0
   ; CHECK-NEXT:   $a = COPY $rc0
   ; CHECK-NEXT:   $a, $c, $v = ADCImm $a, 2, $c

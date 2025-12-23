@@ -2625,6 +2625,39 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, Values));
     break;
   }
+  case MIToken::kw_cfi_val_offset:
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(Offset))
+      return true;
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createValOffset(nullptr, Reg, Offset));
+    break;
+  case MIToken::kw_cfi_def_cfa_expression: {
+    std::string Values;
+    if (parseCFIEscapeValues(Values))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createDefCfaExpression(nullptr, Values));
+    break;
+  }
+  case MIToken::kw_cfi_expression: {
+    std::string Values;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIEscapeValues(Values))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createExpression(nullptr, Reg, Values));
+    break;
+  }
+  case MIToken::kw_cfi_val_expression: {
+    std::string Values;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIEscapeValues(Values))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createValExpression(nullptr, Reg, Values));
+    break;
+  }
   default:
     // TODO: Parse the other CFI operands.
     llvm_unreachable("The current token should be a cfi operand");
