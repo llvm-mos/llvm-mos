@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "mos-framelowering"
@@ -514,10 +515,29 @@ bool MOSFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 void MOSFrameLowering::offsetSP(MachineIRBuilder &Builder,
                                 int64_t Offset) const {
   assert(Offset);
-  if (Offset < SHRT_MIN)
-    report_fatal_error("Stack pointer decrement too large: " + Twine(-Offset));
-  if (Offset > SHRT_MAX)
-    report_fatal_error("Stack pointer increment too large: " + Twine(Offset));
+  MachineFunction &MF = Builder.getMF();
+  const Function &F = MF.getFunction();
+
+  // MOS uses a 16-bit soft stack pointer (RS0), so stack adjustments are
+  // limited to 65535 bytes (the range of a 16-bit value). Larger adjustments
+  // cannot be represented in a single 16-bit addition.
+  // This is a target limitation, not a compiler bug.
+  constexpr int64_t MaxOffset = 65535;
+  if (Offset < -MaxOffset || Offset > MaxOffset) {
+    uint64_t RequestedSize = static_cast<uint64_t>(Offset < 0 ? -Offset : Offset);
+    F.getContext().diagnose(DiagnosticInfoStackSize(
+        F, RequestedSize, MaxOffset, DS_Error));
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F,
+        "stack frame too large for MOS target: the 16-bit soft stack pointer "
+        "can only be adjusted by up to 65535 bytes per function, but this "
+        "function requires " +
+            Twine(RequestedSize) +
+            " bytes. The MOS 6502 has a 64KB address space, so stack frames "
+            "this large are not practical. Consider reducing local variable "
+            "size, splitting the function, or using heap allocation."));
+    return;
+  }
 
   auto Bytes = static_cast<uint16_t>(Offset);
   int64_t LoBytes = Bytes & 0xFF;
