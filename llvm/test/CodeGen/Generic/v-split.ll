@@ -1,4 +1,5 @@
 ; RUN: llc < %s
+; UNSUPPORTED: no-vector-legalization
 
 %f8 = type <8 x float>
 

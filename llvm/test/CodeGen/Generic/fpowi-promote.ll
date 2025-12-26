@@ -4,6 +4,7 @@
 
 ; Undefined external symbol "__powisf2"
 ; XFAIL: target=nvptx{{.*}}
+; UNSUPPORTED: no-vector-legalization
 
 define float @test(float %tmp23302331, i32 %tmp23282329 ) {
 

@@ -1,13 +1,7 @@
 ; RUN: llc -no-integrated-as < %s
 ; PR1308
 ; PR1557
-
-; MOS uses GlobalISel which doesn't support inline asm with multi-register
-; tied operands. The "0" constraint ties an input to the i32 output, but MOS
-; needs 4 registers for i32 (8-bit registers). GlobalISel's InlineAsmLowering
-; asserts that tied operands use exactly 1 register. See the FIXME comment in
-; llvm/lib/CodeGen/GlobalISel/InlineAsmLowering.cpp.
-; UNSUPPORTED: target=mos{{.*}}
+; UNSUPPORTED: limited-inline-asm
 
 ; Bug: PR31336
 

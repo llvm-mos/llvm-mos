@@ -1,4 +1,7 @@
 ; REQUIRES: object-emission
+; MOS emits DW_AT_const_value instead of DW_AT_location with DW_OP_lit0/lit1
+; for boolean constants. Both are valid DWARF representations.
+; UNSUPPORTED: target=mos{{.*}}
 ; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: {{.*}} DW_TAG_variable
