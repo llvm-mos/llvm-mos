@@ -31,6 +31,12 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
 
+  // Validate that program is specified (required per README docs).
+  // launchCommands can be used as an alternative for custom launch logic.
+  if (arguments.configuration.program.empty() && arguments.launchCommands.empty())
+    return make_error<DAPError>(
+        "'program' is required for launch configurations");
+
   PrintWelcomeMessage();
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
