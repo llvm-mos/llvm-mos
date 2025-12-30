@@ -22,6 +22,13 @@ class MOSSubtarget;
 struct MOSFunctionInfo : public MachineFunctionInfo {
   MOSFunctionInfo(const Function &F, const MOSSubtarget *STI) {}
 
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override {
+    return DestMF.cloneInfo<MOSFunctionInfo>(*this);
+  }
+
   int VarArgsStackIndex = -1;
   const GlobalValue *StaticStackValue = nullptr;
   const GlobalValue *ZeroPageStackValue = nullptr;
