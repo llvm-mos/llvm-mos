@@ -47,7 +47,23 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   // Used in legalizer (etc.) to refer to the stack pointer.
   setStackPointerRegisterToSaveRestore(MOS::RS0);
 
-  setMaximumJumpTableSize(std::min(256u, getMaximumJumpTableSize()));
+  // MOS jump tables use split low/high byte arrays indexed by an 8-bit register.
+  // To access the high byte array, the index is offset by the table size.
+  // With 256 entries, this offset would overflow 8-bit arithmetic, so limit to 255.
+  setMaximumJumpTableSize(std::min(255u, getMaximumJumpTableSize()));
+}
+
+bool MOSTargetLowering::isSuitableForJumpTable(const SwitchInst *SI,
+                                               uint64_t NumCases,
+                                               uint64_t Range,
+                                               ProfileSummaryInfo *PSI,
+                                               BlockFrequencyInfo *BFI) const {
+  // MOS jump tables use split low/high byte arrays indexed by an 8-bit register.
+  // This is a hard architectural limit that must be enforced regardless of
+  // optimization level (the base class bypasses MaxJumpTableSize for -Os).
+  if (Range > 255)
+    return false;
+  return TargetLowering::isSuitableForJumpTable(SI, NumCases, Range, PSI, BFI);
 }
 
 MVT MOSTargetLowering::getRegisterType(MVT VT) const {
@@ -62,9 +78,10 @@ unsigned
 MOSTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
                                    std::optional<MVT> RegisterVT) const {
   // Even though a 16-bit register is available, it's not actually an integer
-  // register, so split to 8 bits instead.
+  // register, so split to 8 bits instead. Use ceiling division to ensure
+  // non-power-of-2 types like i9 get enough registers.
   if (VT.getSizeInBits() > 8)
-    return VT.getSizeInBits() / 8;
+    return (VT.getSizeInBits() + 7) / 8;
   return TargetLowering::getNumRegisters(Context, VT, RegisterVT);
 }
 
