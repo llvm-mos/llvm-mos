@@ -67,11 +67,13 @@ uint32_t MOS::calcEFlags() const {
 RelExpr MOS::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
   switch (type) {
-  default:
-    return R_ABS;
+  case R_MOS_NONE:
+    return R_NONE;
   case R_MOS_PCREL_8:
   case R_MOS_PCREL_16:
     return R_PC;
+  default:
+    return R_ABS;
   }
 }
 
