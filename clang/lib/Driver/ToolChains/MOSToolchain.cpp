@@ -69,7 +69,10 @@ void mos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Pass defaults before AddLinkerInputs, since that includes -Wl
   // options, which should override these.
-  CmdArgs.push_back("--gc-sections");
+  // Don't use --gc-sections for relocatable links (-r) since we're just
+  // combining objects, not producing a final executable.
+  if (!Args.hasArg(options::OPT_r))
+    CmdArgs.push_back("--gc-sections");
   CmdArgs.push_back("--sort-section=alignment");
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
