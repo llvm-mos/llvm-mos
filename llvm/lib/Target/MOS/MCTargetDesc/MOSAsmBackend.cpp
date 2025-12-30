@@ -102,6 +102,7 @@ bool isBasedOnZeroPageSymbol(const MCExpr *E) {
         static_cast<const MOSMCExpr *>(E)->getSubExpr());
 
   case MCExpr::Constant:
+  case MCExpr::Specifier:
     return false;
 
   case MCExpr::SymbolRef:
@@ -118,9 +119,8 @@ bool isBasedOnZeroPageSymbol(const MCExpr *E) {
     return isBasedOnZeroPageSymbol(BE->getLHS()) ||
            isBasedOnZeroPageSymbol(BE->getRHS());
   }
-  default:
-    llvm_unreachable("Invalid assembly expression kind!");
   }
+  llvm_unreachable("Invalid assembly expression kind!");
 }
 
 bool MOSAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &F,
