@@ -1030,6 +1030,12 @@ void DataExtractor::Checksum(llvm::SmallVectorImpl<uint8_t> &dest,
   else
     max_data = std::min(max_data, GetByteSize());
 
+  // Give up early if no data to checksum
+  if (max_data == 0 || GetDataStart() == nullptr) {
+    dest.clear();
+    return;
+  }
+
   llvm::MD5 md5;
 
   const llvm::ArrayRef<uint8_t> data(GetDataStart(), max_data);
