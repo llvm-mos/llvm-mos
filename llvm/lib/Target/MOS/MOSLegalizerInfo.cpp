@@ -18,7 +18,6 @@
 #include "MOSLegalizerInfo.h"
 
 #include "MCTargetDesc/MOSMCTargetDesc.h"
-#include "MOS.h"
 #include "MOSFrameLowering.h"
 #include "MOSInstrInfo.h"
 #include "MOSMachineFunctionInfo.h"
@@ -46,8 +45,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Demangle/Demangle.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -260,24 +257,39 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_FPOW,
                                G_FEXP,
                                G_FEXP2,
+                               G_FEXP10,
                                G_FLOG,
                                G_FLOG2,
-                               G_FMINNUM,
+                               G_FLOG10,
                                G_FMINNUM,
                                G_FMAXNUM,
+                               G_FMINIMUM,
+                               G_FMAXIMUM,
+                               G_FMINIMUMNUM,
+                               G_FMAXIMUMNUM,
                                G_FCEIL,
                                G_FCOS,
                                G_FSIN,
+                               G_FTAN,
+                               G_FACOS,
+                               G_FASIN,
+                               G_FATAN,
+                               G_FATAN2,
+                               G_FCOSH,
+                               G_FSINH,
+                               G_FTANH,
                                G_FSQRT,
                                G_FFLOOR,
                                G_FRINT,
                                G_FNEARBYINT,
                                G_INTRINSIC_ROUND,
                                G_INTRINSIC_TRUNC,
-                               G_FMINIMUM,
-                               G_FMAXIMUM,
-                               G_INTRINSIC_ROUNDEVEN})
+                               G_INTRINSIC_ROUNDEVEN,
+                               G_FSINCOS})
       .libcallFor({S32, S64});
+
+  // TODO: G_FFREXP needs custom libcall lowering with output pointer
+  // (no generic LegalizerHelper support). Will fail if encountered.
 
   getActionDefinitionsBuilder(G_FABS).custom();
 
@@ -409,6 +421,46 @@ bool MOSLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::modf: {
+    // modf(x) returns (fractional_part, integer_part)
+    // The C library modf takes (x, &iptr) and returns fractional part
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = Ty.getSizeInBits();
+    auto &Ctx = MI.getMF()->getFunction().getContext();
+
+    RTLIB::Libcall Libcall = Size == 32 ? RTLIB::MODF_F32 : RTLIB::MODF_F64;
+    Type *HLTy = Size == 32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
+    Type *PtrTy = PointerType::get(Ctx, 0);
+
+    // Create stack temporary for the integer part output
+    MachinePointerInfo PtrInfo;
+    auto FI =
+        Helper.createStackTemporary(Ty.getSizeInBytes(), Align(), PtrInfo);
+
+    SmallVector<CallLowering::ArgInfo, 2> Args;
+    // For G_INTRINSIC with 2 results: op0=result0, op1=result1,
+    // op2=intrinsic_id, op3=input
+    Args.push_back({MI.getOperand(3).getReg(), HLTy, 0});   // input value
+    Args.push_back({FI->getOperand(0).getReg(), PtrTy, 1}); // output pointer
+
+    LostDebugLocObserver LocObserver("");
+    if (!createLibcall(Builder, Libcall, {MI.getOperand(0).getReg(), HLTy, 0},
+                       Args, LocObserver))
+      return false;
+
+    // Load the integer part from the stack temporary
+    Builder.buildLoad(
+        MI.getOperand(1), FI,
+        *MI.getMF()->getMachineMemOperand(
+            PtrInfo,
+            MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable,
+            Ty.getSizeInBytes(), Align()));
+
+    MI.eraseFromParent();
+    return true;
+  }
+    // TODO: Handle other intrinsics with odd calling conventions such as
+    // sincospi
   }
   return false;
 }

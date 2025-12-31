@@ -3250,3 +3250,125 @@ body: |
     %3:_(s8) = G_TRUNC %2
     RTS implicit %3
 ...
+---
+name: modf_f32
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: modf_f32
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C]] :: (load (s8), align 4)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX1:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C1]] :: (load (s8) from unknown-address + 1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 2
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX2:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C2]] :: (load (s8) from unknown-address + 2, align 2)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 3
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX3:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C3]] :: (load (s8) from unknown-address + 3)
+    ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[LOAD_INDIR_IDX]](s8)
+    ; CHECK-NEXT: $x = COPY [[LOAD_INDIR_IDX1]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[LOAD_INDIR_IDX2]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[LOAD_INDIR_IDX3]](s8)
+    ; CHECK-NEXT: $rs2 = COPY [[FRAME_INDEX]](p0)
+    ; CHECK-NEXT: JSR &modff, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rs2, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY $rc2
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s8) = COPY $rc3
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX4:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C]] :: (dereferenceable load (s8) from %stack.0)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX5:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C1]] :: (dereferenceable load (s8) from %stack.0 + 1)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX6:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C2]] :: (dereferenceable load (s8) from %stack.0 + 2)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX7:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C3]] :: (dereferenceable load (s8) from %stack.0 + 3)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY1]](s8), [[COPY]](p0), [[C]] :: (store (s8), align 4)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY2]](s8), [[COPY]](p0), [[C1]] :: (store (s8) into unknown-address + 1)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY3]](s8), [[COPY]](p0), [[C2]] :: (store (s8) into unknown-address + 2, align 2)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY4]](s8), [[COPY]](p0), [[C3]] :: (store (s8) into unknown-address + 3)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX4]](s8), [[COPY]](p0), [[C]] :: (store (s8), align 4)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX5]](s8), [[COPY]](p0), [[C1]] :: (store (s8) into unknown-address + 1)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX6]](s8), [[COPY]](p0), [[C2]] :: (store (s8) into unknown-address + 2, align 2)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX7]](s8), [[COPY]](p0), [[C3]] :: (store (s8) into unknown-address + 3)
+    ; CHECK-NEXT: RTS
+    %0:_(p0) = COPY $rs0
+    %1:_(s32) = G_LOAD %0 :: (load (s32))
+    %2:_(s32), %3:_(s32) = G_INTRINSIC intrinsic(@llvm.modf), %1(s32)
+    G_STORE %2(s32), %0(p0) :: (store (s32))
+    G_STORE %3(s32), %0(p0) :: (store (s32), align 4)
+    RTS
+...
+---
+name: modf_f64
+body: |
+  bb.0.entry:
+    ; CHECK-LABEL: name: modf_f64
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $rs0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C]] :: (load (s8), align 8)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX1:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C1]] :: (load (s8) from unknown-address + 1)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 2
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX2:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C2]] :: (load (s8) from unknown-address + 2, align 2)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s8) = G_CONSTANT i8 3
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX3:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C3]] :: (load (s8) from unknown-address + 3)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s8) = G_CONSTANT i8 4
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX4:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C4]] :: (load (s8) from unknown-address + 4, align 4)
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s8) = G_CONSTANT i8 5
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX5:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C5]] :: (load (s8) from unknown-address + 5)
+    ; CHECK-NEXT: [[C6:%[0-9]+]]:_(s8) = G_CONSTANT i8 6
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX6:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C6]] :: (load (s8) from unknown-address + 6, align 2)
+    ; CHECK-NEXT: [[C7:%[0-9]+]]:_(s8) = G_CONSTANT i8 7
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX7:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[COPY]](p0), [[C7]] :: (load (s8) from unknown-address + 7)
+    ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: $a = COPY [[LOAD_INDIR_IDX]](s8)
+    ; CHECK-NEXT: $x = COPY [[LOAD_INDIR_IDX1]](s8)
+    ; CHECK-NEXT: $rc2 = COPY [[LOAD_INDIR_IDX2]](s8)
+    ; CHECK-NEXT: $rc3 = COPY [[LOAD_INDIR_IDX3]](s8)
+    ; CHECK-NEXT: $rc4 = COPY [[LOAD_INDIR_IDX4]](s8)
+    ; CHECK-NEXT: $rc5 = COPY [[LOAD_INDIR_IDX5]](s8)
+    ; CHECK-NEXT: $rc6 = COPY [[LOAD_INDIR_IDX6]](s8)
+    ; CHECK-NEXT: $rc7 = COPY [[LOAD_INDIR_IDX7]](s8)
+    ; CHECK-NEXT: $rs4 = COPY [[FRAME_INDEX]](p0)
+    ; CHECK-NEXT: JSR &modf, mos_csr, implicit $a, implicit $x, implicit $rc2, implicit $rc3, implicit $rc4, implicit $rc5, implicit $rc6, implicit $rc7, implicit $rs4, implicit-def $a, implicit-def $x, implicit-def $rc2, implicit-def $rc3, implicit-def $rc4, implicit-def $rc5, implicit-def $rc6, implicit-def $rc7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY $a
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY $x
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY $rc2
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s8) = COPY $rc3
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s8) = COPY $rc4
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s8) = COPY $rc5
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s8) = COPY $rc6
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s8) = COPY $rc7
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $rs0, implicit $rs0
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX8:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C]] :: (dereferenceable load (s8) from %stack.0)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX9:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C1]] :: (dereferenceable load (s8) from %stack.0 + 1)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX10:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C2]] :: (dereferenceable load (s8) from %stack.0 + 2)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX11:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C3]] :: (dereferenceable load (s8) from %stack.0 + 3)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX12:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C4]] :: (dereferenceable load (s8) from %stack.0 + 4)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX13:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C5]] :: (dereferenceable load (s8) from %stack.0 + 5)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX14:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C6]] :: (dereferenceable load (s8) from %stack.0 + 6)
+    ; CHECK-NEXT: [[LOAD_INDIR_IDX15:%[0-9]+]]:_(s8) = G_LOAD_INDIR_IDX [[FRAME_INDEX]](p0), [[C7]] :: (dereferenceable load (s8) from %stack.0 + 7)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY1]](s8), [[COPY]](p0), [[C]] :: (store (s8), align 8)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY2]](s8), [[COPY]](p0), [[C1]] :: (store (s8) into unknown-address + 1)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY3]](s8), [[COPY]](p0), [[C2]] :: (store (s8) into unknown-address + 2, align 2)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY4]](s8), [[COPY]](p0), [[C3]] :: (store (s8) into unknown-address + 3)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY5]](s8), [[COPY]](p0), [[C4]] :: (store (s8) into unknown-address + 4, align 4)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY6]](s8), [[COPY]](p0), [[C5]] :: (store (s8) into unknown-address + 5)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY7]](s8), [[COPY]](p0), [[C6]] :: (store (s8) into unknown-address + 6, align 2)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[COPY8]](s8), [[COPY]](p0), [[C7]] :: (store (s8) into unknown-address + 7)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX8]](s8), [[COPY]](p0), [[C]] :: (store (s8), align 8)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX9]](s8), [[COPY]](p0), [[C1]] :: (store (s8) into unknown-address + 1)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX10]](s8), [[COPY]](p0), [[C2]] :: (store (s8) into unknown-address + 2, align 2)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX11]](s8), [[COPY]](p0), [[C3]] :: (store (s8) into unknown-address + 3)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX12]](s8), [[COPY]](p0), [[C4]] :: (store (s8) into unknown-address + 4, align 4)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX13]](s8), [[COPY]](p0), [[C5]] :: (store (s8) into unknown-address + 5)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX14]](s8), [[COPY]](p0), [[C6]] :: (store (s8) into unknown-address + 6, align 2)
+    ; CHECK-NEXT: G_STORE_INDIR_IDX [[LOAD_INDIR_IDX15]](s8), [[COPY]](p0), [[C7]] :: (store (s8) into unknown-address + 7)
+    ; CHECK-NEXT: RTS
+    %0:_(p0) = COPY $rs0
+    %1:_(s64) = G_LOAD %0 :: (load (s64))
+    %2:_(s64), %3:_(s64) = G_INTRINSIC intrinsic(@llvm.modf), %1(s64)
+    G_STORE %2(s64), %0(p0) :: (store (s64))
+    G_STORE %3(s64), %0(p0) :: (store (s64), align 8)
+    RTS
+...
