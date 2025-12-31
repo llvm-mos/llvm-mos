@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -1258,12 +1259,28 @@ bool MOSLegalizerInfo::legalizeICmp(LegalizerHelper &Helper,
   LLT S1 = LLT::scalar(1);
   LLT S8 = LLT::scalar(8);
 
-  bool RHSIsZero = mi_match(RHS, MRI, m_SpecificICst(0));
+  auto RHSConst = getIConstantVRegValWithLookThrough(RHS, MRI);
+  bool RHSIsZero = RHSConst && RHSConst->Value.isZero();
+
+  if (Pred == CmpInst::ICMP_SLT && RHSConst && !RHSIsZero) {
+    auto Negative = Builder.buildICmp(CmpInst::ICMP_SLT, S1, LHS, Builder.buildConstant(Type, 0));
+    auto UnsignedCmp = Builder.buildICmp(CmpInst::ICMP_ULT, S1, LHS, RHS);
+    if (RHSConst->Value.isNonNegative()) {
+      // RHS > 0: (x s< RHS) ==>  (x s< 0) ? true : (x u< RHS)
+      Builder.buildSelect(Dst, Negative, Builder.buildConstant(S1, -1), UnsignedCmp);
+    } else {
+      // RHS < 0: (x s< RHS) ==>  (x s< 0) ? (x u< RHS) : false
+      Builder.buildSelect(Dst, Negative, UnsignedCmp, Builder.buildConstant(S1, 0));
+    }
+    MI.eraseFromParent();
+    return true;
+  }
+
   Register CIn;
 
   if (Type != S8) {
     if (RHSIsZero && Pred == CmpInst::ICMP_EQ &&
-        all_of(MRI.use_instructions(Dst), [](const MachineInstr &MI) {
+        all_of(MRI.use_nodbg_instructions(Dst), [](const MachineInstr &MI) {
           return MI.getOpcode() == MOS::G_BRCOND_IMM;
         })) {
       auto Unmerge = Builder.buildUnmerge(S8, LHS);
