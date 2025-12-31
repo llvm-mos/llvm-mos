@@ -44,6 +44,30 @@ namespace llvm {
 #define GET_REGISTER_MATCHER
 #include "MOSGenAsmMatcher.inc"
 
+namespace {
+
+const struct ModifierEntry {
+  const char *const Spelling;
+  MOSMCExpr::VariantKind VariantKind;
+  bool ImmediateOnly = false;
+} ModifierNames[] = {
+    // Define immediate variants of mos8() and mos16() first.
+    {"mos8", MOSMCExpr::VK_IMM8, true},
+    {"mos16", MOSMCExpr::VK_IMM16, true},
+    {"mos8", MOSMCExpr::VK_ADDR8},
+    {"mos16", MOSMCExpr::VK_ADDR16},
+    {"mos16lo", MOSMCExpr::VK_ADDR16_LO},
+    {"mos16hi", MOSMCExpr::VK_ADDR16_HI},
+    {"mos24", MOSMCExpr::VK_ADDR24},
+    {"mos24bank", MOSMCExpr::VK_ADDR24_BANK},
+    {"mos24segment", MOSMCExpr::VK_ADDR24_SEGMENT},
+    {"mos24segmentlo", MOSMCExpr::VK_ADDR24_SEGMENT_LO},
+    {"mos24segmenthi", MOSMCExpr::VK_ADDR24_SEGMENT_HI},
+    {"mos13", MOSMCExpr::VK_ADDR13},
+};
+
+} // end of anonymous namespace
+
 class MOSOperand : public MCParsedAsmOperand {
 public:
   MOSOperand() = delete;
@@ -320,6 +344,41 @@ public:
       // EndLoc is "one char before the next token" (same style as elsewhere).
       EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
       return false;
+    }
+
+    // Accept mos16lo(expr), mos16hi(expr), mos24bank(expr) in directives.
+    // The generic MC expression parser does not support function-call syntax,
+    // so we translate these into MOSMCExpr variants here.
+    if (Tok.getKind() == AsmToken::Identifier) {
+      StringRef Name = Tok.getString();
+
+      MOSMCExpr::VariantKind VK = MOSMCExpr::VK_NONE;
+      if (Name == "mos16lo") VK = MOSMCExpr::VK_ADDR16_LO;
+      else if (Name == "mos16hi") VK = MOSMCExpr::VK_ADDR16_HI;
+      else if (Name == "mos24bank") VK = MOSMCExpr::VK_ADDR24_BANK;
+      else if (Name == ModifierNames[0].Spelling) VK = ModifierNames[0].VariantKind;
+
+      if (VK != MOSMCExpr::VK_NONE) {
+        Parser.Lex(); // Eat identifier
+
+        if (Parser.getTok().getKind() != AsmToken::LParen)
+          return Error(Parser.getTok().getLoc(), "expected '(' after modifier");
+        Parser.Lex(); // Eat '('
+
+        const MCExpr *Inner = nullptr;
+        if (Parser.parseExpression(Inner))
+          return true;
+
+        if (Parser.getTok().getKind() != AsmToken::RParen)
+          return Error(Parser.getTok().getLoc(), "expected ')' after expression");
+        EndLoc = Parser.getTok().getLoc();
+        Parser.Lex(); // Eat ')'
+
+        Res = MOSMCExpr::create(VK, Inner, /*Negated=*/false, getContext());
+        // Match file style: EndLoc = char before next token
+        EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+        return false;
+      }
     }
 
     // Parse the primary expression normally first.
