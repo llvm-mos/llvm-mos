@@ -275,7 +275,89 @@ public:
   MCAsmParser &getParser() const { return Parser; }
 
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override {
-    return MCTargetAsmParser::parsePrimaryExpr(Res, EndLoc);
+    /*
+      This is the one place we can hook the generic directive parser (.byte,
+      .2byte, etc). Those directives parse "expr" lists using the generic
+      expression parser, which calls parsePrimaryExpr() to parse the first
+      "atom" of an expression.
+
+      We want WDC 65816-style shorthands to work in directives too:
+
+        <expr  -> mos16lo(expr)
+        >expr  -> mos16hi(expr)
+        ^expr  -> mos24bank(expr)
+
+      (Instruction operands already handle these in tryParseRelocExpression().)
+    */
+    const AsmToken &Tok = Parser.getTok();
+    if (Tok.getKind() == AsmToken::Less || Tok.getKind() == AsmToken::Greater ||
+        Tok.getKind() == AsmToken::Caret) {
+
+      AsmToken::TokenKind OpTok = Tok.getKind();
+      Parser.Lex(); // Eat '<', '>', or '^'
+
+      const MCExpr *Inner = nullptr;
+      if (Parser.parseExpression(Inner))
+        return true;
+
+      MOSMCExpr::VariantKind VK = MOSMCExpr::VK_NONE;
+      switch (OpTok) {
+      case AsmToken::Less:
+        VK = MOSMCExpr::VK_ADDR16_LO;
+        break;
+      case AsmToken::Greater:
+        VK = MOSMCExpr::VK_ADDR16_HI;
+        break;
+      case AsmToken::Caret:
+        VK = MOSMCExpr::VK_ADDR24_BANK;
+        break;
+      default:
+        assert(false);
+      }
+
+      Res = MOSMCExpr::create(VK, Inner, /*Negated=*/false, getContext());
+
+      // EndLoc is "one char before the next token" (same style as elsewhere).
+      EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+      return false;
+    }
+
+    // Parse the primary expression normally first.
+    if (MCTargetAsmParser::parsePrimaryExpr(Res, EndLoc))
+      return true;
+
+    // Accept constant@mos... in directives by translating it into MOSMCExpr.
+    // LLVM's built-in @modifier path rejects constants with:
+    // "invalid modifier 'X' (no symbols present)".
+    if (Parser.getTok().getKind() == AsmToken::At) {
+      if (isa<MCConstantExpr>(Res)) {
+        Parser.Lex(); // Eat '@'
+
+        if (Parser.getTok().getKind() != AsmToken::Identifier)
+          return Error(Parser.getTok().getLoc(),
+                       "expected modifier name after '@'");
+
+        StringRef ModifierName = Parser.getTok().getString();
+
+        MOSMCExpr::VariantKind VK =
+            MOSMCExpr::getKindByName(ModifierName.str(),
+                                     /*IsImmediate=*/true);
+        if (VK == MOSMCExpr::VK_NONE)
+          return Error(Parser.getTok().getLoc(), "unknown modifier");
+
+        Parser.Lex(); // Eat modifier identifier
+
+        Res = MOSMCExpr::create(VK, Res, /*Negated=*/false, getContext());
+
+        // Keep EndLoc consistent with the rest of this file.
+        EndLoc =
+            SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+      }
+      // If it's not a constant, leave it alone so symbol@modifier keeps using
+      // LLVM's normal handling (which already works).
+    }
+
+    return false;
   }
 
   bool invalidOperand(SMLoc const &Loc, OperandVector const &Operands,
