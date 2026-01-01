@@ -334,7 +334,7 @@ public:
       const auto &Modifier =
           std::find_if(std::begin(MOS::modifierNames()), std::end(MOS::modifierNames()),
                        [&Name](MOS::ModifierEntry const &Mod) {
-                         return !Mod.ImmediateOnly && Mod.Spelling == Name;
+                         return Mod.Spelling == Name;
                        });
 
       if (Modifier != std::end(MOS::modifierNames())) {
