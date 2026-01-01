@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMMOSDesc
   MOSMCExpr.cpp
   MOSMCInstrAnalysis.cpp
   MOSMCTargetDesc.cpp
+  MOSModifierNames.cpp
   MOSTargetStreamer.cpp
 
   LINK_COMPONENTS

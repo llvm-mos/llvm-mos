@@ -12,6 +12,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MCTargetDesc/MOSTargetStreamer.h"
 #include "MOS.h"
+#include "MOSModifierNames.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "llvm/ADT/APInt.h"
@@ -43,30 +44,6 @@ namespace llvm {
 
 #define GET_REGISTER_MATCHER
 #include "MOSGenAsmMatcher.inc"
-
-namespace {
-
-const struct ModifierEntry {
-  const char *const Spelling;
-  MOSMCExpr::VariantKind VariantKind;
-  bool ImmediateOnly = false;
-} ModifierNames[] = {
-    // Define immediate variants of mos8() and mos16() first.
-    {"mos8", MOSMCExpr::VK_IMM8, true},
-    {"mos16", MOSMCExpr::VK_IMM16, true},
-    {"mos8", MOSMCExpr::VK_ADDR8},
-    {"mos16", MOSMCExpr::VK_ADDR16},
-    {"mos16lo", MOSMCExpr::VK_ADDR16_LO},
-    {"mos16hi", MOSMCExpr::VK_ADDR16_HI},
-    {"mos24", MOSMCExpr::VK_ADDR24},
-    {"mos24bank", MOSMCExpr::VK_ADDR24_BANK},
-    {"mos24segment", MOSMCExpr::VK_ADDR24_SEGMENT},
-    {"mos24segmentlo", MOSMCExpr::VK_ADDR24_SEGMENT_LO},
-    {"mos24segmenthi", MOSMCExpr::VK_ADDR24_SEGMENT_HI},
-    {"mos13", MOSMCExpr::VK_ADDR13},
-};
-
-} // end of anonymous namespace
 
 class MOSOperand : public MCParsedAsmOperand {
 public:
@@ -353,10 +330,16 @@ public:
       StringRef Name = Tok.getString();
 
       MOSMCExpr::VariantKind VK = MOSMCExpr::VK_NONE;
-      if (Name == "mos16lo") VK = MOSMCExpr::VK_ADDR16_LO;
-      else if (Name == "mos16hi") VK = MOSMCExpr::VK_ADDR16_HI;
-      else if (Name == "mos24bank") VK = MOSMCExpr::VK_ADDR24_BANK;
-      else if (Name == ModifierNames[0].Spelling) VK = ModifierNames[0].VariantKind;
+
+      const auto &Modifier =
+          std::find_if(std::begin(MOS::modifierNames()), std::end(MOS::modifierNames()),
+                       [&Name](MOS::ModifierEntry const &Mod) {
+                         return !Mod.ImmediateOnly && Mod.Spelling == Name;
+                       });
+
+      if (Modifier != std::end(MOS::modifierNames())) {
+        VK = Modifier->VariantKind;
+      }
 
       if (VK != MOSMCExpr::VK_NONE) {
         Parser.Lex(); // Eat identifier
