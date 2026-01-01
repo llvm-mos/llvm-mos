@@ -48,9 +48,8 @@ MOSTargetLowering::MOSTargetLowering(const MOSTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(MOS::RS0);
 
   // MOS jump tables use split low/high byte arrays indexed by an 8-bit register.
-  // To access the high byte array, the index is offset by the table size.
-  // With 256 entries, this offset would overflow 8-bit arithmetic, so limit to 255.
-  setMaximumJumpTableSize(std::min(255u, getMaximumJumpTableSize()));
+  // The 8-bit index register can hold values 0-255, allowing up to 256 entries.
+  setMaximumJumpTableSize(std::min(256u, getMaximumJumpTableSize()));
 }
 
 bool MOSTargetLowering::isSuitableForJumpTable(const SwitchInst *SI,
@@ -61,7 +60,7 @@ bool MOSTargetLowering::isSuitableForJumpTable(const SwitchInst *SI,
   // MOS jump tables use split low/high byte arrays indexed by an 8-bit register.
   // This is a hard architectural limit that must be enforced regardless of
   // optimization level (the base class bypasses MaxJumpTableSize for -Os).
-  if (Range > 255)
+  if (Range > 256)
     return false;
   return TargetLowering::isSuitableForJumpTable(SI, NumCases, Range, PSI, BFI);
 }
