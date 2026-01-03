@@ -41,6 +41,10 @@ public:
     return !Fn->getFnAttribute("no-jump-tables").getValueAsBool();
   }
 
+  bool isSuitableForJumpTable(const SwitchInst *SI, uint64_t NumCases,
+                              uint64_t Range, ProfileSummaryInfo *PSI,
+                              BlockFrequencyInfo *BFI) const override;
+
   MVT getRegisterType(MVT VT) const override;
 
   unsigned

@@ -909,7 +909,7 @@ MCOperand MOSMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
     const MachineJumpTableInfo *JTI =
         MO.getParent()->getMF()->getJumpTableInfo();
     const auto &Table = JTI->getJumpTables()[MO.getIndex()];
-    assert(Table.MBBs.size() < 256);
+    assert(Table.MBBs.size() <= 256);
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(Table.MBBs.size(), Ctx), Ctx);
     break;
