@@ -3,7 +3,9 @@
 ; This file is the output of clang -g -O2
 ; int test_dbg_trunc(unsigned long long a) { return a; }
 ;
-; The intent of this check is to ensure the DBG_VALUE use of G_MERGE_VALUES is undef'd when the legalizer erases it.
+; The intent of this check is to ensure the DBG_VALUE use of G_MERGE_VALUES is
+; properly salvaged with fragment expressions when the legalizer erases it.
+; The 64-bit parameter is split into two 32-bit fragments.
 
 ; ModuleID = 'x86-calllowering-dbg-trunc.c'
 source_filename = "x86-calllowering-dbg-trunc.c"
@@ -17,7 +19,10 @@ define dso_local i32 @test_dbg_trunc(i64 %a) local_unnamed_addr #0 !dbg !9 {
 ; ALL:       pushl	%ebp
 ; ALL:       movl	%esp, %ebp
 ; ALL:       movl	8(%ebp), %eax
-; ALL:       #DEBUG_VALUE: test_dbg_trunc:a <- undef
+; Debug info is now properly salvaged with fragment expressions when G_MERGE_VALUES
+; is legalized. The 64-bit parameter is split: lower 32 bits in $eax, upper undefined.
+; ALL:       #DEBUG_VALUE: test_dbg_trunc:a <- [DW_OP_LLVM_fragment 32 32] undef
+; ALL:       #DEBUG_VALUE: test_dbg_trunc:a <- [DW_OP_LLVM_fragment 0 32] $eax
 ; ALL:       popl	%ebp
 ; ALL:       retl
 entry:
