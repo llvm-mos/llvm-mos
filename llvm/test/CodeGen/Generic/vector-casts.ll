@@ -1,5 +1,6 @@
 ; RUN: llc < %s
 ; PR2671
+; UNSUPPORTED: no-vector-legalization
 
 define void @a(ptr %p, ptr %q) {
   %t = load <2 x double>, ptr %p

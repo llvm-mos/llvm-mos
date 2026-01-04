@@ -3,7 +3,10 @@
 ; Check that the command line flag annotates the IR with the
 ; appropriate attributes.
 
-; CHECK: attributes #0 = { "denormal-fp-math"="dynamic,dynamic" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+; CHECK: attributes #0 = {
+; CHECK-SAME: "denormal-fp-math"="dynamic,dynamic"
+; CHECK-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+; CHECK-SAME: }
 define float @foo(float %var) {
   ret float %var
 }

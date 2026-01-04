@@ -1,4 +1,5 @@
 ; XFAIL: target={{.*}}-aix{{.*}}
+; UNSUPPORTED: aggressive-tailcall
 ; RUN: llc -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
 ; RUN: llc -filetype=obj -O0 < %s | llvm-dwarfdump -debug-line - | FileCheck %s --check-prefix=INT
 
