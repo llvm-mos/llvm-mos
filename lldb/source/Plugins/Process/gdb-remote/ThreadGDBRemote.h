@@ -90,6 +90,8 @@ public:
 
   StructuredData::ObjectSP FetchThreadExtendedInfo() override;
 
+  GDBRemoteDynamicRegisterInfoSP GetRegisterInfoSP() const { return m_reg_info_sp; }
+
 protected:
   friend class ProcessGDBRemote;
 
