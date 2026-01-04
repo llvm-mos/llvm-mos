@@ -132,3 +132,12 @@ _start:
 
 .byte $a9, 1234@mos24bank       ; CHECK: a9 00
 .byte $a9, $1234@mos24bank      ; CHECK: a9 00
+
+.byte $a9, mos16lo(1234)        ; CHECK: a9 d2
+.byte $a9, mos16lo($1234)       ; CHECK: a9 34
+
+.byte $a9, mos16hi(1234)        ; CHECK: a9 04
+.byte $a9, mos16hi($1234)       ; CHECK: a9 12
+
+.byte $a9, mos24bank(1234)      ; CHECK: a9 00
+.byte $a9, mos24bank($1234)     ; CHECK: a9 00

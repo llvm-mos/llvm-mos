@@ -12,6 +12,7 @@
 #include "MCTargetDesc/MOSMCTargetDesc.h"
 #include "MCTargetDesc/MOSTargetStreamer.h"
 #include "MOS.h"
+#include "MOSModifierNames.h"
 #include "MOSRegisterInfo.h"
 #include "MOSSubtarget.h"
 #include "llvm/ADT/APInt.h"
@@ -320,6 +321,47 @@ public:
       // EndLoc is "one char before the next token" (same style as elsewhere).
       EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
       return false;
+    }
+
+    // Accept mos16lo(expr), mos16hi(expr), mos24bank(expr) in directives.
+    // The generic MC expression parser does not support function-call syntax,
+    // so we translate these into MOSMCExpr variants here.
+    if (Tok.getKind() == AsmToken::Identifier) {
+      StringRef Name = Tok.getString();
+
+      MOSMCExpr::VariantKind VK = MOSMCExpr::VK_NONE;
+
+      const auto &Modifier =
+          std::find_if(std::begin(MOS::modifierNames()), std::end(MOS::modifierNames()),
+                       [&Name](MOS::ModifierEntry const &Mod) {
+                         return Mod.Spelling == Name;
+                       });
+
+      if (Modifier != std::end(MOS::modifierNames())) {
+        VK = Modifier->VariantKind;
+      }
+
+      if (VK != MOSMCExpr::VK_NONE) {
+        Parser.Lex(); // Eat identifier
+
+        if (Parser.getTok().getKind() != AsmToken::LParen)
+          return Error(Parser.getTok().getLoc(), "expected '(' after modifier");
+        Parser.Lex(); // Eat '('
+
+        const MCExpr *Inner = nullptr;
+        if (Parser.parseExpression(Inner))
+          return true;
+
+        if (Parser.getTok().getKind() != AsmToken::RParen)
+          return Error(Parser.getTok().getLoc(), "expected ')' after expression");
+        EndLoc = Parser.getTok().getLoc();
+        Parser.Lex(); // Eat ')'
+
+        Res = MOSMCExpr::create(VK, Inner, /*Negated=*/false, getContext());
+        // Match file style: EndLoc = char before next token
+        EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+        return false;
+      }
     }
 
     // Parse the primary expression normally first.
