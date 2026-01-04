@@ -111,6 +111,36 @@ public:
   size_t size = 0;
 };
 
+// Section for .debug_frame. Unlike .eh_frame, this is not loaded at runtime
+// and uses absolute CIE pointers. We discard FDEs for garbage-collected
+// functions to prevent debuggers from seeing stale frame information.
+class DebugFrameSection final : public SyntheticSection {
+public:
+  DebugFrameSection(Ctx &);
+  void writeTo(uint8_t *buf) override;
+  void finalizeContents() override;
+  bool isNeeded() const override { return !sections.empty(); }
+  size_t getSize() const override;
+
+  static bool classof(const SectionBase *d) {
+    return SyntheticSection::classof(d) && d->name == ".debug_frame";
+  }
+
+  SmallVector<DebugFrameInputSection *, 0> sections;
+
+private:
+  template <llvm::endianness E> void addRecords(DebugFrameInputSection *s);
+  template <llvm::endianness E> void writeToImpl(uint8_t *buf);
+  Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
+
+  // Live CIEs and FDEs to be written to output, kept separate so that
+  // downstream code never needs to re-derive CIE-vs-FDE classification by
+  // re-reading id bytes (which would require knowing endianness).
+  SmallVector<EhSectionPiece *, 0> liveCies;
+  SmallVector<EhSectionPiece *, 0> liveFdes;
+  size_t size = 0;
+};
+
 class GotSection final : public SyntheticSection {
 public:
   GotSection(Ctx &);
@@ -1361,6 +1391,7 @@ InputSection *createInterpSection(Ctx &);
 MergeInputSection *createCommentSection(Ctx &);
 template <class ELFT> void splitSections(Ctx &);
 void combineEhSections(Ctx &);
+void combineDebugFrameSections(Ctx &);
 
 bool hasMemtag(Ctx &);
 bool canHaveMemtagGlobals(Ctx &);

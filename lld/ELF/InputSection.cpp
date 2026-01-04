@@ -18,12 +18,15 @@
 #include "lld/Common/DWARF.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <optional>
 #include <vector>
+
+#define DEBUG_TYPE "lld"
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -217,6 +220,21 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
     if (!es->content().empty())
       if (InputSection *isec = es->getParent())
         return isec->outSecOff + es->getParentOffset(offset);
+    return offset;
+  }
+  case DebugFrame: {
+    // Analogous to EHFrame's second path only. .debug_frame pieces (CIEs and
+    // FDEs) may be dropped when their referenced functions are GC'd, so an
+    // input offset does not equal the output offset -- use getParentOffset
+    // to walk the surviving pieces and produce the compacted output offset.
+    //
+    // The EHFrame case has a first path for crtbegin/crtbeginT boundary
+    // symbols; that does not apply here because .debug_frame is not
+    // SHF_ALLOC and no CRT code references its start.
+    const DebugFrameInputSection *dfs = cast<DebugFrameInputSection>(this);
+    if (!dfs->content().empty())
+      if (SyntheticSection *ss = dfs->getParent())
+        return ss->outSecOff + dfs->getParentOffset(offset);
     return offset;
   }
   case Merge:
@@ -1617,3 +1635,133 @@ template void EhInputSection::split<ELF32LE>();
 template void EhInputSection::split<ELF32BE>();
 template void EhInputSection::split<ELF64LE>();
 template void EhInputSection::split<ELF64BE>();
+
+template <class ELFT>
+DebugFrameInputSection::DebugFrameInputSection(ObjFile<ELFT> &f,
+                                               const typename ELFT::Shdr &header,
+                                               StringRef name)
+    : InputSectionBase(f, header, name, InputSectionBase::DebugFrame) {}
+
+SyntheticSection *DebugFrameInputSection::getParent() const {
+  return cast_or_null<SyntheticSection>(parent);
+}
+
+// Return the offset within the parent synthetic section for a given input
+// offset. Mirrors EhInputSection::getParentOffset: pieces (CIEs, FDEs) may
+// be dropped when the FDE's target function is GC'd, and the surviving
+// pieces are re-packed in DebugFrameSection::finalizeContents. A dropped
+// piece keeps its default outputOff of -1; report a piece-relative offset
+// in that case so that callers do not produce addresses that overlap
+// unrelated pieces in the compacted output.
+uint64_t DebugFrameInputSection::getParentOffset(uint64_t offset) const {
+  auto it = partition_point(
+      fdes, [=](EhSectionPiece p) { return p.inputOff <= offset; });
+  if (it == fdes.begin() || it[-1].inputOff + it[-1].size <= offset) {
+    it = partition_point(
+        cies, [=](EhSectionPiece p) { return p.inputOff <= offset; });
+    if (it == cies.begin()) // invalid piece
+      return offset;
+  }
+  if (it[-1].outputOff == -1) // dropped piece
+    return offset - it[-1].inputOff;
+  return it[-1].outputOff + (offset - it[-1].inputOff);
+}
+
+// .debug_frame is a sequence of CIE or FDE records, similar to .eh_frame
+// but with different CIE identification (0xFFFFFFFF instead of 0).
+template <class ELFT> void DebugFrameInputSection::split() {
+  LLVM_DEBUG(llvm::dbgs()
+             << "DebugFrameInputSection::split(): file=" << file->getName()
+             << " contentSize=" << content().size() << "\n");
+  const RelsOrRelas<ELFT> elfRels = relsOrRelas<ELFT>();
+  if (elfRels.areRelocsCrel())
+    preprocessRelocs<ELFT>(elfRels.crels);
+  else if (elfRels.areRelocsRel())
+    preprocessRelocs<ELFT>(elfRels.rels);
+  else
+    preprocessRelocs<ELFT>(elfRels.relas);
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrameInputSection::split(): preprocessed "
+                          << rels.size() << " relocs\n");
+
+  // The loop below expects the relocations to be sorted by offset.
+  auto cmp = [](const Relocation &a, const Relocation &b) {
+    return a.offset < b.offset;
+  };
+  if (!llvm::is_sorted(rels, cmp))
+    llvm::stable_sort(rels, cmp);
+
+  ArrayRef<uint8_t> d = content();
+  const char *msg = nullptr;
+  unsigned relI = 0;
+  while (!d.empty()) {
+    if (d.size() < 4) {
+      msg = "CIE/FDE too small";
+      break;
+    }
+    uint64_t size = endian::read32<ELFT::Endianness>(d.data());
+    if (size == 0) // ZERO terminator
+      break;
+    uint32_t id = endian::read32<ELFT::Endianness>(d.data() + 4);
+    size += 4;
+    if (LLVM_UNLIKELY(size > d.size())) {
+      msg = size == UINT32_MAX + uint64_t(4)
+                ? "CIE/FDE too large"
+                : "CIE/FDE ends past the end of the section";
+      break;
+    }
+
+    // Find the first relocation that points to [off,off+size). Relocations
+    // have been sorted by r_offset.
+    const uint64_t off = d.data() - content().data();
+    while (relI != rels.size() && rels[relI].offset < off)
+      ++relI;
+    unsigned firstRel = -1;
+    if (relI != rels.size() && rels[relI].offset < off + size)
+      firstRel = relI;
+    // In .debug_frame, CIE is identified by id == 0xFFFFFFFF (not 0 like .eh_frame)
+    LLVM_DEBUG(llvm::dbgs()
+               << "DebugFrameInputSection::split(): record at " << off
+               << " size=" << size << " id=" << id << " is "
+               << (id == 0xFFFFFFFF ? "CIE" : "FDE")
+               << " firstRel=" << (int)firstRel << "\n");
+    (id == 0xFFFFFFFF ? cies : fdes).emplace_back(off, this, size, firstRel);
+    d = d.slice(size);
+  }
+  LLVM_DEBUG(llvm::dbgs() << "DebugFrameInputSection::split(): found "
+                          << cies.size() << " CIEs and " << fdes.size()
+                          << " FDEs\n");
+  if (msg)
+    Err(file->ctx) << "corrupted .debug_frame: " << msg << "\n>>> defined in "
+                   << getObjMsg(d.data() - content().data());
+}
+
+template <class ELFT, class RelTy>
+void DebugFrameInputSection::preprocessRelocs(Relocs<RelTy> elfRels) {
+  Ctx &ctx = file->ctx;
+  rels.reserve(elfRels.size());
+  for (auto rel : elfRels) {
+    uint64_t offset = rel.r_offset;
+    Symbol &sym = file->getSymbol(rel.getSymbol(ctx.arg.isMips64EL));
+    RelType type = rel.getType(ctx.arg.isMips64EL);
+    RelExpr expr = ctx.target->getRelExpr(type, sym, content().data() + offset);
+    int64_t addend =
+        RelTy::HasAddend
+            ? getAddend<ELFT>(rel)
+            : ctx.target->getImplicitAddend(content().data() + offset, type);
+    rels.push_back({expr, type, offset, addend, &sym});
+  }
+}
+
+template DebugFrameInputSection::DebugFrameInputSection(ObjFile<ELF32LE> &,
+                                                        const ELF32LE::Shdr &, StringRef);
+template DebugFrameInputSection::DebugFrameInputSection(ObjFile<ELF32BE> &,
+                                                        const ELF32BE::Shdr &, StringRef);
+template DebugFrameInputSection::DebugFrameInputSection(ObjFile<ELF64LE> &,
+                                                        const ELF64LE::Shdr &, StringRef);
+template DebugFrameInputSection::DebugFrameInputSection(ObjFile<ELF64BE> &,
+                                                        const ELF64BE::Shdr &, StringRef);
+
+template void DebugFrameInputSection::split<ELF32LE>();
+template void DebugFrameInputSection::split<ELF32BE>();
+template void DebugFrameInputSection::split<ELF64LE>();
+template void DebugFrameInputSection::split<ELF64BE>();
