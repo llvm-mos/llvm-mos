@@ -332,7 +332,7 @@ public:
       MOSMCExpr::VariantKind VK = MOSMCExpr::VK_NONE;
 
       const auto &Modifier =
-          std::find_if(std::begin(MOS::modifierNames()), std::end(MOS::modifierNames()),
+          llvm::find_if(MOS::modifierNames(),
                        [&Name](MOS::ModifierEntry const &Mod) {
                          return Mod.Spelling == Name;
                        });
