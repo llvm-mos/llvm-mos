@@ -134,7 +134,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
       .customFor({S8})
       .unsupportedIf(scalarNarrowerThan(0, 8))
       .widenScalarToNextMultipleOf(0, 8)
-      .maxScalar(0, S8);
+      .maxScalar(0, S8)
+      .unsupported();
 
   getActionDefinitionsBuilder(G_BITREVERSE).lower();
 
@@ -286,7 +287,8 @@ MOSLegalizerInfo::MOSLegalizerInfo(const MOSSubtarget &STI) {
                                G_INTRINSIC_TRUNC,
                                G_INTRINSIC_ROUNDEVEN,
                                G_FSINCOS})
-      .libcallFor({S32, S64});
+      .libcallFor({S32, S64})
+      .unsupported();
 
   // TODO: G_FFREXP needs custom libcall lowering with output pointer
   // (no generic LegalizerHelper support). Will fail if encountered.
