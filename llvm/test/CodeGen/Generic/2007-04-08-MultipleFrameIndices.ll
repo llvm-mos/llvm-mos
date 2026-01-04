@@ -1,6 +1,7 @@
 ; RUN: llc -no-integrated-as < %s
 ; PR1308
 ; PR1557
+; UNSUPPORTED: limited-inline-asm
 
 ; Bug: PR31336
 

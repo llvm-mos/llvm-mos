@@ -38,6 +38,11 @@ Triple llvm::dwarf::utils::getDefaultTargetTripleForAddrSize(uint8_t AddrSize) {
   assert((AddrSize == 4 || AddrSize == 8) &&
          "Only 32-bit/64-bit address size variants are supported");
 
+  // 16-bit architectures (AVR, MOS, MSP430) don't have 32/64-bit variants.
+  // Return UnknownArch so tests will skip.
+  if (T.isArch16Bit())
+    return Triple();
+
   // If a 32-bit/64-bit address size was specified, try to convert the triple
   // if it is for the wrong variant.
   if (AddrSize == 8 && T.isArch32Bit())

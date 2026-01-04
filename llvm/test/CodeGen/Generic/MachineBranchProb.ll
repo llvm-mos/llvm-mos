@@ -3,6 +3,7 @@
 ; Hexagon runs passes that renumber the basic blocks, causing this test
 ; to fail.
 ; XFAIL: target=hexagon-{{.*}}
+; UNSUPPORTED: no-selectiondag-debug
 
 declare void @foo()
 

@@ -4,6 +4,7 @@
 ; Make sure the original -debug-only=isel still works.
 ; RUN: llc -debug-only=isel < %s 2>&1 | FileCheck %s  --check-prefixes=FOO,BAR,ZAP
 ; REQUIRES: asserts
+; UNSUPPORTED: no-selectiondag-debug
 
 ; FOO:     === foo
 ; BAR-NOT: === foo

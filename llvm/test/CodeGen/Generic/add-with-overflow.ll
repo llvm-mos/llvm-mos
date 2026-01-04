@@ -1,5 +1,6 @@
 ; RUN: llc < %s
 ; RUN: llc < %s -fast-isel
+; UNSUPPORTED: global-isel-only
 
 @ok = internal constant [4 x i8] c"%d\0A\00"
 @no = internal constant [4 x i8] c"no\0A\00"
