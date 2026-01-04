@@ -96,6 +96,8 @@ public:
   void SetNewlyAddedBinaries(const std::vector<lldb::addr_t> &added_binaries);
   void SetDetailedBinariesInfo(StructuredData::ObjectSP &detailed_info);
 
+  lldb::DynamicRegisterInfoSP GetRegisterInfoSP() const { return m_reg_info_sp; }
+
 protected:
   friend class ProcessGDBRemote;
 

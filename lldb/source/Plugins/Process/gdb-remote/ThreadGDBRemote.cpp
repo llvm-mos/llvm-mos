@@ -25,6 +25,8 @@
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 
+#include "lldb/Target/ABI.h"
+
 #include <memory>
 
 using namespace lldb;
@@ -314,6 +316,13 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
       bool read_all_registers_at_once =
           !pSupported || gdb_process->m_use_g_packet_for_reading;
       bool write_all_registers_at_once = !pSupported;
+      ABI *abi = process_sp->GetABI().get();
+      if (abi) {
+        auto custom_ctx = abi->CreateRegisterContextForThread(
+            *this, concrete_frame_idx);
+        if (custom_ctx)
+          return custom_ctx;
+      }
       reg_ctx_sp = std::make_shared<GDBRemoteRegisterContext>(
           *this, concrete_frame_idx, m_reg_info_sp, read_all_registers_at_once,
           write_all_registers_at_once);
