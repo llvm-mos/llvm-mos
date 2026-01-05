@@ -337,9 +337,8 @@ public:
                          return Mod.Spelling == Name;
                        });
 
-      if (Modifier != std::end(MOS::modifierNames())) {
+      if (Modifier != std::end(MOS::modifierNames()))
         VK = Modifier->VariantKind;
-      }
 
       if (VK != MOSMCExpr::VK_NONE) {
         Parser.Lex(); // Eat identifier
