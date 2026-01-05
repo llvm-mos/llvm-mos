@@ -916,13 +916,27 @@ void MOSInstrInfo::loadStoreRegStackSlot(
   // be either 8 or 16 bits. Emit a 16-bit pseudo to be lowered during frame
   // index elimination.
   if (!TFL.usesStaticStack(MF)) {
-    Register Ptr = MRI.createVirtualRegister(&MOS::Imag16RegClass);
+    // STStk/LDStk need a scratch Imag16 for far accesses (offset >= 256).
+    // For near accesses, the scratch is a dead def.
+    //
+    // We use the reserved RS8 directly instead of creating a virtual register.
+    // This function is called by the spiller during register allocation;
+    // virtual registers created here would never be allocated, causing
+    // VirtRegRewriter to crash.
+    //
+    // RS8 is reserved for scavenging (see MOSRegisterInfo::getReservedRegs).
+    // This is safe because: (1) for near accesses RS8 is dead, (2) for far
+    // accesses RS8 is used atomically within expandLDSTStk(), and (3) the
+    // scavenger checks liveness via canSaveScavengerRegister() before using
+    // RS8, so conflicts are detected. See also saveScavengerRegister() which
+    // has a defensive assertion.
+    Register Ptr = MOS::RS8;
     auto Instr = Builder.buildInstr(IsLoad ? MOS::LDStk : MOS::STStk);
     if (!IsLoad)
-      Instr.addDef(Ptr, RegState::EarlyClobber);
+      Instr.addDef(Ptr, RegState::EarlyClobber | RegState::Dead);
     Instr.addReg(Reg, getDefRegState(IsLoad) | getKillRegState(IsKill));
     if (IsLoad)
-      Instr.addDef(Ptr, RegState::EarlyClobber);
+      Instr.addDef(Ptr, RegState::EarlyClobber | RegState::Dead);
     Instr.addFrameIndex(FrameIndex).addImm(0).addMemOperand(MMO);
   } else {
     if ((Reg.isPhysical() && MOS::Imag16RegClass.contains(Reg)) ||
