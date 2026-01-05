@@ -165,9 +165,10 @@ void MOSMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 }
 
 const char *MOSMCExpr::getName() const {
-  const auto &Modifier = llvm::find_if(
-      MOS::modifierNames(),
-      [this](MOS::ModifierEntry const &Mod) { return Mod.VariantKind == Kind; });
+  const auto &Modifier = llvm::find_if(MOS::modifierNames(),
+                                       [this](MOS::ModifierEntry const &Mod) {
+                                         return Mod.VariantKind == Kind;
+                                       });
 
   if (Modifier != std::end(MOS::modifierNames())) {
     return Modifier->Spelling;
@@ -179,11 +180,11 @@ MOSMCExpr::VariantKind MOSMCExpr::getKindByName(StringRef Name,
                                                 bool IsImmediate) {
   const auto &Modifier =
       llvm::find_if(MOS::modifierNames(),
-                   [&Name, IsImmediate](MOS::ModifierEntry const &Mod) {
-                     if (Mod.ImmediateOnly && !IsImmediate)
-                       return false;
-                     return Mod.Spelling == Name;
-                   });
+                    [&Name, IsImmediate](MOS::ModifierEntry const &Mod) {
+                      if (Mod.ImmediateOnly && !IsImmediate)
+                        return false;
+                      return Mod.Spelling == Name;
+                    });
 
   if (Modifier != std::end(MOS::modifierNames())) {
     return Modifier->VariantKind;

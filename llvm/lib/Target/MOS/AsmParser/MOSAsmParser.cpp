@@ -331,11 +331,10 @@ public:
 
       MOSMCExpr::VariantKind VK = MOSMCExpr::VK_NONE;
 
-      const auto &Modifier =
-          llvm::find_if(MOS::modifierNames(),
-                       [&Name](MOS::ModifierEntry const &Mod) {
-                         return Mod.Spelling == Name;
-                       });
+      const auto &Modifier = llvm::find_if(
+          MOS::modifierNames(), [&Name](MOS::ModifierEntry const &Mod) {
+            return Mod.Spelling == Name;
+          });
 
       if (Modifier != std::end(MOS::modifierNames()))
         VK = Modifier->VariantKind;
@@ -352,13 +351,15 @@ public:
           return true;
 
         if (Parser.getTok().getKind() != AsmToken::RParen)
-          return Error(Parser.getTok().getLoc(), "expected ')' after expression");
+          return Error(Parser.getTok().getLoc(),
+                       "expected ')' after expression");
         EndLoc = Parser.getTok().getLoc();
         Parser.Lex(); // Eat ')'
 
         Res = MOSMCExpr::create(VK, Inner, /*Negated=*/false, getContext());
         // Match file style: EndLoc = char before next token
-        EndLoc = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+        EndLoc =
+            SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
         return false;
       }
     }
